@@ -5,9 +5,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HealthRecordCard } from "@/components/dashboard/health-record-card";
 import { HealthUploadDialog } from "@/components/dashboard/health-upload-dialog";
 import { useHousehold } from "@/context/household-context";
+import { useRequireOwner } from "@/hooks/use-require-owner";
 
 export default function HealthPage() {
   const { pets, medicalRecords, activePetId, loading } = useHousehold();
+  const isOwner = useRequireOwner();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
 
   const filtered = useMemo(() => {
@@ -16,6 +18,8 @@ export default function HealthPage() {
       .filter((r) => r.entity_id === activePet.id)
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
   }, [medicalRecords, activePet]);
+
+  if (!isOwner) return null;
 
   if (loading) {
     return (

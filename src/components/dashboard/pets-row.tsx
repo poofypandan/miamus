@@ -22,8 +22,16 @@ import type { TaskEntity } from "@/types/database";
 const LONG_PRESS_MS = 500;
 
 export function PetsRow() {
-  const { pets, activePetId, setActivePetId, createEntity, updateEntity, deleteEntity } =
-    useHousehold();
+  const {
+    pets,
+    activePetId,
+    setActivePetId,
+    userRole,
+    createEntity,
+    updateEntity,
+    deleteEntity,
+  } = useHousehold();
+  const canManagePets = userRole === "owner";
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<TaskEntity | null>(null);
 
@@ -48,35 +56,40 @@ export function PetsRow() {
             <PetAvatar
               pet={pet}
               active={pet.id === activePetId}
+              canEdit={canManagePets}
               onTap={() => setActivePetId(pet.id)}
               onLongPress={() => openEdit(pet)}
             />
           </div>
         ))}
-        <div className="shrink-0 p-2">
-          <button
-            type="button"
-            onClick={openCreate}
-            className="flex min-h-[48px] flex-col items-center gap-1"
-          >
-            <span className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-primary/50 bg-primary/5 text-primary shadow-sm">
-              <Plus className="size-6" />
-            </span>
-            <span className="max-w-16 truncate text-center text-xs text-muted-foreground">
-              Add pet
-            </span>
-          </button>
-        </div>
+        {canManagePets && (
+          <div className="shrink-0 p-2">
+            <button
+              type="button"
+              onClick={openCreate}
+              className="flex min-h-[48px] flex-col items-center gap-1"
+            >
+              <span className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-primary/50 bg-primary/5 text-primary shadow-sm">
+                <Plus className="size-6" />
+              </span>
+              <span className="max-w-16 truncate text-center text-xs text-muted-foreground">
+                Add pet
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
-      <PetFormDialog
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        pet={editing}
-        createEntity={createEntity}
-        updateEntity={updateEntity}
-        deleteEntity={deleteEntity}
-      />
+      {canManagePets && (
+        <PetFormDialog
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          pet={editing}
+          createEntity={createEntity}
+          updateEntity={updateEntity}
+          deleteEntity={deleteEntity}
+        />
+      )}
     </div>
   );
 }
@@ -84,11 +97,13 @@ export function PetsRow() {
 function PetAvatar({
   pet,
   active,
+  canEdit,
   onTap,
   onLongPress,
 }: {
   pet: TaskEntity;
   active: boolean;
+  canEdit: boolean;
   onTap: () => void;
   onLongPress: () => void;
 }) {
@@ -98,6 +113,7 @@ function PetAvatar({
 
   function startPress() {
     longPressed.current = false;
+    if (!canEdit) return;
     timerRef.current = setTimeout(() => {
       longPressed.current = true;
       onLongPress();

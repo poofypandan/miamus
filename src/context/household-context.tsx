@@ -12,6 +12,12 @@ import type {
 import { isActivePet } from "@/lib/pets";
 import type { TaskEntity, MasterSchedule, TaskLog, MedicalRecord } from "@/types/database";
 
+export type UserRole = "staff" | "owner";
+
+// Hardcoded for now — there's no auth backend yet, this is a lightweight UI
+// gate so staff devices don't casually stumble into owner-only controls.
+const OWNER_PIN = "2205";
+
 interface HouseholdContextValue {
   entities: TaskEntity[];
   pets: TaskEntity[];
@@ -22,6 +28,9 @@ interface HouseholdContextValue {
   isMockMode: boolean;
   activePetId: string | null;
   setActivePetId: (id: string) => void;
+  userRole: UserRole;
+  unlockOwner: (pin: string) => boolean;
+  lockOwner: () => void;
   refresh: () => Promise<void>;
   createEntity: (input: CreateEntityInput) => Promise<TaskEntity>;
   updateEntity: (id: string, patch: Partial<TaskEntity>) => Promise<TaskEntity>;
@@ -80,6 +89,18 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setActivePetId(pets[0].id);
     }
   }, [pets, activePetId]);
+
+  const [userRole, setUserRole] = useState<UserRole>("staff");
+
+  const unlockOwner = useCallback((pin: string) => {
+    if (pin !== OWNER_PIN) return false;
+    setUserRole("owner");
+    return true;
+  }, []);
+
+  const lockOwner = useCallback(() => {
+    setUserRole("staff");
+  }, []);
 
   const createEntity = useCallback(async (input: CreateEntityInput) => {
     const entity = await dataProvider.createEntity(input);
@@ -157,6 +178,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       isMockMode,
       activePetId,
       setActivePetId,
+      userRole,
+      unlockOwner,
+      lockOwner,
       refresh,
       createEntity,
       updateEntity,
@@ -178,6 +202,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       medicalRecords,
       loading,
       activePetId,
+      userRole,
+      unlockOwner,
+      lockOwner,
       refresh,
       createEntity,
       updateEntity,

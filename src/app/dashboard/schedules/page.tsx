@@ -3,10 +3,14 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleEditor } from "@/components/dashboard/schedule-editor";
 import { useHousehold } from "@/context/household-context";
+import { useRequireOwner } from "@/hooks/use-require-owner";
 
 export default function SchedulesPage() {
   const { pets, activePetId, loading } = useHousehold();
+  const isOwner = useRequireOwner();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
+
+  if (!isOwner) return null;
 
   if (loading) {
     return (
