@@ -70,10 +70,12 @@ export interface DataProvider {
   deleteEntity(id: string): Promise<void>;
   createLog(input: CreateLogInput): Promise<TaskLog>;
   createLogsBatch(input: CreateBatchLogInput): Promise<TaskLog[]>;
+  deleteLog(id: string): Promise<void>;
   createSchedule(input: CreateScheduleInput): Promise<MasterSchedule>;
   createSchedulesBatch(entries: CreateScheduleInput[]): Promise<MasterSchedule[]>;
   updateSchedule(id: string, patch: Partial<MasterSchedule>): Promise<MasterSchedule>;
   deleteSchedule(id: string): Promise<void>;
   createMedicalRecord(input: CreateMedicalRecordInput): Promise<MedicalRecord>;
   uploadPhoto(file: File, pathPrefix: string): Promise<string>;
+  deletePhoto(url: string): Promise<void>;
 }

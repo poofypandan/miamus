@@ -6,6 +6,17 @@ function client() {
   return supabase;
 }
 
+const STORAGE_BUCKET = "household-logs";
+
+// getPublicUrl() returns ".../storage/v1/object/public/<bucket>/<path>" — the
+// storage API needs just <path> back to delete the object.
+function extractStoragePath(url: string): string | null {
+  const marker = `/object/public/${STORAGE_BUCKET}/`;
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return decodeURIComponent(url.slice(idx + marker.length));
+}
+
 export const supabaseProvider: DataProvider = {
   async listEntities() {
     const { data, error } = await client().from("task_entities").select("*").order("created_at");
@@ -72,6 +83,10 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
+  async deleteLog(id) {
+    const { error } = await client().from("task_logs").delete().eq("id", id);
+    if (error) throw error;
+  },
   async createSchedule(input) {
     const { data, error } = await client()
       .from("master_schedules")
@@ -114,10 +129,16 @@ export const supabaseProvider: DataProvider = {
     const ext = file.type === "image/webp" ? "webp" : (file.name.split(".").pop() ?? "jpg");
     const path = `${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await c.storage
-      .from("household-logs")
+      .from(STORAGE_BUCKET)
       .upload(path, file, { contentType: file.type });
     if (error) throw error;
-    const { data } = c.storage.from("household-logs").getPublicUrl(path);
+    const { data } = c.storage.from(STORAGE_BUCKET).getPublicUrl(path);
     return data.publicUrl;
+  },
+  async deletePhoto(url) {
+    const path = extractStoragePath(url);
+    if (!path) return;
+    const { error } = await client().storage.from(STORAGE_BUCKET).remove([path]);
+    if (error) throw error;
   },
 };

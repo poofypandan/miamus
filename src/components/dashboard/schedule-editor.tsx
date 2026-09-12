@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Loader2, Plus, X } from "lucide-react";
+import { Copy, Loader2, Plus, Settings2, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,10 @@ import {
   medicationTitle,
 } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
+import type { AgendaItem } from "@/lib/scheduleEngine";
 import { getTaskIcon } from "@/lib/task-icons";
 import { formatTime12h } from "@/lib/time";
-import type { TaskEntity, MasterSchedule } from "@/types/database";
+import type { TaskEntity, MasterSchedule, TaskLog } from "@/types/database";
 
 const INTERVAL_HOUR_OPTIONS = [1, 2, 3, 4];
 const DOSE_COUNT_OPTIONS = [1, 2, 3, 4];
@@ -127,6 +128,7 @@ type DeleteScheduleFn = (id: string) => Promise<void>;
 export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
   const { pets, schedules, createSchedule, createSchedulesBatch, deleteSchedule } =
     useHousehold();
+  const [manageOpen, setManageOpen] = useState(false);
   const dogSchedules = schedules.filter((s) => s.entity_id === entity.id);
   const mealSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "meal");
   const pottySchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "potty");
@@ -136,43 +138,69 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <MealTimesCard
-        entity={entity}
-        meals={mealSchedules}
-        createSchedule={createSchedule}
-        deleteSchedule={deleteSchedule}
-      />
-      <PottyRoutineCard
-        entity={entity}
-        items={pottySchedules}
-        createSchedulesBatch={createSchedulesBatch}
-        deleteSchedule={deleteSchedule}
-      />
-      <MedicationsCard
-        entity={entity}
-        items={medicationSchedules}
-        createSchedulesBatch={createSchedulesBatch}
-        deleteSchedule={deleteSchedule}
-      />
-      <GroomingCareCard
-        entity={entity}
-        items={groomingSchedules}
-        createSchedulesBatch={createSchedulesBatch}
-        deleteSchedule={deleteSchedule}
-      />
-      <OthersCard
-        entity={entity}
-        tasks={otherSchedules}
-        createSchedule={createSchedule}
-        deleteSchedule={deleteSchedule}
-      />
+      <Button
+        onClick={() => setManageOpen(true)}
+        size="lg"
+        className="min-h-[52px] w-full text-base"
+      >
+        <Settings2 /> Manage Routines
+      </Button>
+
       <LivePreviewCard entity={entity} schedules={dogSchedules} />
-      <CopyScheduleDrawer
-        entity={entity}
-        pets={pets}
-        sourceSchedules={dogSchedules}
-        createSchedulesBatch={createSchedulesBatch}
-      />
+
+      <Sheet open={manageOpen} onOpenChange={setManageOpen}>
+        <SheetContent
+          side="right"
+          className="w-full max-w-none gap-0 p-0 sm:max-w-none"
+        >
+          <SheetHeader className="border-b px-4 py-3">
+            <SheetTitle>Manage {entity.name}&apos;s Routines</SheetTitle>
+            <SheetDescription className="sr-only">
+              Meals, potty routine, medications, grooming, and other one-off tasks.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            <div className="flex flex-col gap-4">
+              <MealTimesCard
+                entity={entity}
+                meals={mealSchedules}
+                createSchedule={createSchedule}
+                deleteSchedule={deleteSchedule}
+              />
+              <PottyRoutineCard
+                entity={entity}
+                items={pottySchedules}
+                createSchedulesBatch={createSchedulesBatch}
+                deleteSchedule={deleteSchedule}
+              />
+              <MedicationsCard
+                entity={entity}
+                items={medicationSchedules}
+                createSchedulesBatch={createSchedulesBatch}
+                deleteSchedule={deleteSchedule}
+              />
+              <GroomingCareCard
+                entity={entity}
+                items={groomingSchedules}
+                createSchedulesBatch={createSchedulesBatch}
+                deleteSchedule={deleteSchedule}
+              />
+              <OthersCard
+                entity={entity}
+                tasks={otherSchedules}
+                createSchedule={createSchedule}
+                deleteSchedule={deleteSchedule}
+              />
+              <CopyScheduleDrawer
+                entity={entity}
+                pets={pets}
+                sourceSchedules={dogSchedules}
+                createSchedulesBatch={createSchedulesBatch}
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -1017,6 +1045,12 @@ function CopyScheduleDrawer({
   );
 }
 
+function statusIcon(status: AgendaItem["status"]) {
+  if (status === "completed") return "✅";
+  if (status === "overdue") return "❌";
+  return "⏳";
+}
+
 function LivePreviewCard({
   entity,
   schedules,
@@ -1024,11 +1058,27 @@ function LivePreviewCard({
   entity: TaskEntity;
   schedules: MasterSchedule[];
 }) {
+  const { logs, userRole, deleteLogWithPhoto } = useHousehold();
   const today = formatDateLocal(new Date());
   const groups = useMemo(
-    () => buildAgenda({ date: today, entities: [entity], schedules, logs: [] }),
-    [today, entity, schedules]
+    () => buildAgenda({ date: today, entities: [entity], schedules, logs }),
+    [today, entity, schedules, logs]
   );
+
+  function canDelete(log: TaskLog) {
+    if (userRole === "owner") return true;
+    return formatDateLocal(new Date(log.completed_at)) === today;
+  }
+
+  async function handleUndo(log: TaskLog) {
+    try {
+      await deleteLogWithPhoto(log);
+      toast.success("Task undone");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to undo task");
+    }
+  }
 
   return (
     <Card className="gap-3 py-4">
@@ -1045,7 +1095,32 @@ function LivePreviewCard({
                 {formatTime12h(g.time)}
               </span>
               <span>{getTaskIcon(g.title)}</span>
-              <span className="font-medium">{g.title}</span>
+              <span className="flex-1 font-medium">{g.title}</span>
+              {g.items.map((item) =>
+                item.log?.photo_url ? (
+                  <div
+                    key={item.key}
+                    className="relative size-9 shrink-0 overflow-hidden rounded-md ring-1 ring-border"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.log.photo_url} alt="" className="h-full w-full object-cover" />
+                    {canDelete(item.log) && (
+                      <button
+                        type="button"
+                        onClick={() => handleUndo(item.log!)}
+                        className="absolute inset-0 flex items-center justify-center bg-black/45 text-white"
+                        aria-label={`Undo ${g.title}`}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <span key={item.key} className="shrink-0 text-xs">
+                    {statusIcon(item.status)}
+                  </span>
+                )
+              )}
             </div>
           ))
         )}

@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { DateStrip } from "@/components/staff/date-strip";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { AdHocSheet } from "@/components/staff/adhoc-sheet";
@@ -20,6 +22,12 @@ export default function StaffPage() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col gap-4 bg-slate-50 px-4 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <header className="flex flex-col gap-3">
+        <Link
+          href="/dashboard"
+          className="flex min-h-[48px] w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" /> Back to Dashboard
+        </Link>
         <h1 className="text-xl font-semibold">Tugas Hari Ini</h1>
         <DateStrip value={selectedDate} onChange={setSelectedDate} />
       </header>

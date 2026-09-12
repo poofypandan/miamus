@@ -37,6 +37,7 @@ interface HouseholdContextValue {
   deleteEntity: (id: string) => Promise<void>;
   logTask: (input: CreateLogInput) => Promise<TaskLog>;
   logTasksBatch: (input: CreateBatchLogInput) => Promise<TaskLog[]>;
+  deleteLogWithPhoto: (log: TaskLog) => Promise<void>;
   createSchedule: (input: CreateScheduleInput) => Promise<MasterSchedule>;
   createSchedulesBatch: (entries: CreateScheduleInput[]) => Promise<MasterSchedule[]>;
   updateSchedule: (id: string, patch: Partial<MasterSchedule>) => Promise<MasterSchedule>;
@@ -134,6 +135,21 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     return newLogs;
   }, []);
 
+  // Deletes the completion record first (so the UI reverts to pending
+  // immediately) and best-effort cleans up the storage object after — a
+  // transient storage failure shouldn't leave the task stuck "done".
+  const deleteLogWithPhoto = useCallback(async (log: TaskLog) => {
+    await dataProvider.deleteLog(log.id);
+    setLogs((prev) => prev.filter((l) => l.id !== log.id));
+    if (log.photo_url) {
+      try {
+        await dataProvider.deletePhoto(log.photo_url);
+      } catch (err) {
+        console.error("Failed to delete photo from storage", err);
+      }
+    }
+  }, []);
+
   const createSchedule = useCallback(async (input: CreateScheduleInput) => {
     const newSchedule = await dataProvider.createSchedule(input);
     setSchedules((prev) => [...prev, newSchedule]);
@@ -187,6 +203,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteEntity,
       logTask,
       logTasksBatch,
+      deleteLogWithPhoto,
       createSchedule,
       createSchedulesBatch,
       updateSchedule,
@@ -211,6 +228,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteEntity,
       logTask,
       logTasksBatch,
+      deleteLogWithPhoto,
       createSchedule,
       createSchedulesBatch,
       updateSchedule,

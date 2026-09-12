@@ -116,6 +116,12 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(logs);
   },
+  async deleteLog(id) {
+    const db = loadDB();
+    db.logs = db.logs.filter((l) => l.id !== id);
+    saveDB(db);
+    return delay(undefined);
+  },
   async createSchedule(input) {
     const db = loadDB();
     const newSchedule: MasterSchedule = {
@@ -191,5 +197,11 @@ export const mockProvider: DataProvider = {
     // No real storage in mock mode — an object URL is enough to preview
     // within this browser session.
     return delay(URL.createObjectURL(file), 300);
+  },
+  async deletePhoto(url) {
+    // Mirrors uploadPhoto: nothing persisted server-side in mock mode, but
+    // release the blob: URL so the browser can free the memory.
+    if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+    return delay(undefined);
   },
 };
