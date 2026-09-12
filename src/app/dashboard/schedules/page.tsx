@@ -6,7 +6,7 @@ import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 
 export default function SchedulesPage() {
-  const { pets, activePetId, loading } = useHousehold();
+  const { pets, activePetId, viewMode, loading } = useHousehold();
   const isOwner = useRequireOwner();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
 
@@ -21,6 +21,31 @@ export default function SchedulesPage() {
     );
   }
 
+  if (pets.length === 0) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold">Schedules</h1>
+        <p className="pt-8 text-center text-sm text-muted-foreground">
+          No pets yet. Add a pet above to start building schedules.
+        </p>
+      </div>
+    );
+  }
+
+  if (viewMode === "all") {
+    return (
+      <div className="flex flex-col">
+        <h1 className="text-xl font-semibold">Schedules</h1>
+        {pets.map((pet) => (
+          <div key={pet.id}>
+            <h3 className="mt-6 mb-2 text-lg font-bold">{pet.name}</h3>
+            <ScheduleEditor entity={pet} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Schedules</h1>
@@ -28,9 +53,7 @@ export default function SchedulesPage() {
         <ScheduleEditor entity={activePet} />
       ) : (
         <p className="pt-8 text-center text-sm text-muted-foreground">
-          {pets.length === 0
-            ? "No pets yet. Add a pet above to start building schedules."
-            : "Select a pet above to view their schedule."}
+          Select a pet above to view their schedule.
         </p>
       )}
     </div>

@@ -8,6 +8,7 @@ import { MODULES } from "@/config/modules";
 import { cn } from "@/lib/utils";
 import { PetsRow } from "@/components/dashboard/pets-row";
 import { OwnerAccessButton } from "@/components/dashboard/owner-access";
+import { ViewModeToggle } from "@/components/dashboard/view-mode-toggle";
 import { useHousehold } from "@/context/household-context";
 
 const SUB_NAV = [
@@ -18,7 +19,7 @@ const SUB_NAV = [
 
 export function TopNav() {
   const pathname = usePathname();
-  const { userRole } = useHousehold();
+  const { userRole, viewMode } = useHousehold();
   const isOwner = userRole === "owner";
 
   return (
@@ -42,7 +43,9 @@ export function TopNav() {
         <ModuleTab icon={Users} label="Staff" active={false} enabled={MODULES.staff} />
       </div>
 
-      <PetsRow />
+      <ViewModeToggle />
+
+      {viewMode === "single" && <PetsRow />}
 
       {/* Staff only ever has the Daily Feed tab — a single-item tab row is
           pure clutter, so skip it entirely rather than rendering it. */}

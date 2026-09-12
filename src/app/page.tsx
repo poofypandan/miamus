@@ -22,10 +22,9 @@ export default function Home() {
     <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-16 text-center">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold">Banyuwangi 11</h1>
-        <p className="text-muted-foreground">Household management, starting with pet care.</p>
       </div>
 
-      <div className="flex flex-col gap-0.5 text-sm text-gray-500">
+      <div className="mx-auto flex w-fit flex-col items-start text-left text-sm text-gray-500">
         {RUMAH.map((r) => (
           <p key={r.letter}>
             <span className="font-semibold text-gray-700">{r.letter}</span> — {r.text}

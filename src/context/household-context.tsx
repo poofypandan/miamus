@@ -20,10 +20,11 @@ import type {
 } from "@/types/database";
 
 export type UserRole = "staff" | "owner";
+export type ViewMode = "single" | "all";
 
 // Hardcoded for now — there's no auth backend yet, this is a lightweight UI
 // gate so staff devices don't casually stumble into owner-only controls.
-const OWNER_PIN = "2205";
+const OWNER_PIN = "6033";
 
 interface HouseholdContextValue {
   entities: TaskEntity[];
@@ -36,6 +37,8 @@ interface HouseholdContextValue {
   isMockMode: boolean;
   activePetId: string | null;
   setActivePetId: (id: string) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
   userRole: UserRole;
   unlockOwner: (pin: string) => boolean;
   lockOwner: () => void;
@@ -103,6 +106,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setActivePetId(pets[0].id);
     }
   }, [pets, activePetId]);
+
+  const [viewMode, setViewMode] = useState<ViewMode>("single");
 
   const [userRole, setUserRole] = useState<UserRole>("staff");
 
@@ -219,6 +224,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       isMockMode,
       activePetId,
       setActivePetId,
+      viewMode,
+      setViewMode,
       userRole,
       unlockOwner,
       lockOwner,
@@ -247,6 +254,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       inventoryAlerts,
       loading,
       activePetId,
+      viewMode,
       userRole,
       unlockOwner,
       lockOwner,
