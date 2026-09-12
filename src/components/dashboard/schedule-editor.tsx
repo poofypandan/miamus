@@ -138,11 +138,12 @@ function MealTimesCard({
   deleteSchedule: DeleteScheduleFn;
 }) {
   const existingTimes = new Set(meals.map((m) => m.fixed_times?.[0]?.slice(0, 5)));
-  const [busyTime, setBusyTime] = useState<string | null>(null);
+  const [time, setTime] = useState("12:00");
+  const [pendingTime, setPendingTime] = useState<string | null>(null);
 
   async function addTime(time: string) {
-    if (existingTimes.has(time)) return;
-    setBusyTime(time);
+    if (!time || existingTimes.has(time)) return;
+    setPendingTime(time);
     try {
       await createSchedule({
         entity_id: entity.id,
@@ -155,7 +156,7 @@ function MealTimesCard({
       console.error(err);
       toast.error("Failed to add meal time");
     } finally {
-      setBusyTime(null);
+      setPendingTime(null);
     }
   }
 
@@ -191,21 +192,45 @@ function MealTimesCard({
             <p className="text-sm text-muted-foreground">No meal times yet.</p>
           )}
         </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs">Pick a time</Label>
+          <div className="flex items-center gap-2">
+            <input
+              type="time"
+              step={60}
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="min-h-[52px] flex-1 rounded-xl border border-input bg-transparent px-3 text-xl font-semibold tabular-nums outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+            <Button
+              type="button"
+              size="lg"
+              className="min-h-[52px]"
+              disabled={!time || existingTimes.has(time) || pendingTime === time}
+              onClick={() => addTime(time)}
+            >
+              {pendingTime === time ? <Loader2 className="animate-spin" /> : <Plus />}
+              Add
+            </Button>
+          </div>
+        </div>
+
         <div className="flex flex-wrap gap-1.5">
-          {QUICK_TIMES.map((time) => {
-            const exists = existingTimes.has(time);
+          {QUICK_TIMES.map((quickTime) => {
+            const exists = existingTimes.has(quickTime);
             return (
               <Button
-                key={time}
+                key={quickTime}
                 type="button"
                 size="sm"
                 className="min-h-[48px]"
                 variant={exists ? "ghost" : "outline"}
-                disabled={exists || busyTime === time}
-                onClick={() => addTime(time)}
+                disabled={exists || pendingTime === quickTime}
+                onClick={() => addTime(quickTime)}
               >
-                {busyTime === time ? <Loader2 className="animate-spin" /> : <Plus />}
-                {formatTime12h(time)}
+                {pendingTime === quickTime ? <Loader2 className="animate-spin" /> : <Plus />}
+                {formatTime12h(quickTime)}
               </Button>
             );
           })}
@@ -304,7 +329,13 @@ function TemporaryTasksCard({
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">Time</Label>
-            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <input
+              type="time"
+              step={60}
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="min-h-[48px] rounded-lg border border-input bg-transparent px-2.5 text-base font-medium tabular-nums outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">Expires on</Label>
