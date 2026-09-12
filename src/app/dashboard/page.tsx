@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { SummaryCard } from "@/components/dashboard/summary-card";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
+import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
@@ -12,6 +13,12 @@ import type { TaskEntity, MasterSchedule, TaskLog } from "@/types/database";
 export default function DashboardHomePage() {
   const { pets, entities, schedules, logs, activePetId, viewMode, loading } = useHousehold();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
+  const today = formatDateLocal(new Date());
+
+  const allTodaysLogs = useMemo(
+    () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === today),
+    [logs, today]
+  );
 
   if (loading) {
     return (
@@ -33,13 +40,19 @@ export default function DashboardHomePage() {
 
   if (viewMode === "all") {
     return (
-      <div className="flex flex-col">
-        {pets.map((pet) => (
-          <div key={pet.id}>
-            <h3 className="mt-6 mb-2 text-lg font-bold first:mt-0">{pet.name}</h3>
-            <PetDailyFeed pet={pet} entities={entities} schedules={schedules} logs={logs} />
-          </div>
-        ))}
+      <div className="flex flex-col gap-6">
+        <section>
+          <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+            Today&apos;s Overview
+          </h2>
+          <UnifiedSummaryCard />
+        </section>
+        <section>
+          <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+            Today&apos;s Photos
+          </h2>
+          <PhotoStream logs={allTodaysLogs} entities={entities} showAvatar />
+        </section>
         <LowStockFlagButton />
       </div>
     );

@@ -1,0 +1,74 @@
+"use client";
+
+import { useMemo } from "react";
+import { CheckCircle2, Clock, Droplets, Utensils, XCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
+import { useHousehold } from "@/context/household-context";
+import { POTTY_TITLE } from "@/lib/schedule-categories";
+import { buildAgenda, formatDateLocal, type AgendaItem } from "@/lib/scheduleEngine";
+import type { MasterSchedule, TaskEntity, TaskLog } from "@/types/database";
+
+export function UnifiedSummaryCard() {
+  const { pets, schedules, logs } = useHousehold();
+
+  return (
+    <Card className="gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">Today&apos;s Overview</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col divide-y px-4">
+        {pets.map((pet) => (
+          <PetOverviewRow key={pet.id} pet={pet} schedules={schedules} logs={logs} />
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MiniStatusIcon({ status }: { status: AgendaItem["status"] | undefined }) {
+  if (!status) return <span className="text-muted-foreground">—</span>;
+  if (status === "completed") return <CheckCircle2 className="size-4 text-emerald-500" />;
+  if (status === "overdue") return <XCircle className="size-4 text-red-500" />;
+  return <Clock className="size-4 text-amber-500" />;
+}
+
+function PetOverviewRow({
+  pet,
+  schedules,
+  logs,
+}: {
+  pet: TaskEntity;
+  schedules: MasterSchedule[];
+  logs: TaskLog[];
+}) {
+  const today = formatDateLocal(new Date());
+  const items = useMemo(() => {
+    const groups = buildAgenda({ date: today, entities: [pet], schedules, logs });
+    return groups.flatMap((g) => g.items);
+  }, [today, pet, schedules, logs]);
+
+  const potty = items.filter((i) => i.title === POTTY_TITLE);
+  const pottyDone = potty.filter((i) => i.status === "completed").length;
+  const lunch = items.find((i) => i.title === "Makan Siang");
+  const dinner = items.find((i) => i.title === "Makan Malam");
+
+  return (
+    <div className="flex items-center gap-3 py-2.5 text-sm first:pt-0 last:pb-0">
+      <MiniPetAvatar pet={pet} className="size-8" />
+      <span className="flex-1 truncate font-medium">{pet.name}</span>
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Droplets className="size-3.5" />
+        {pottyDone}/{potty.length}
+      </span>
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Utensils className="size-3.5" />
+        <MiniStatusIcon status={lunch?.status} />
+      </span>
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Utensils className="size-3.5" />
+        <MiniStatusIcon status={dinner?.status} />
+      </span>
+    </div>
+  );
+}

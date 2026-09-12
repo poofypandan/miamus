@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { MedicalRecord } from "@/types/database";
+import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
+import type { MedicalRecord, TaskEntity } from "@/types/database";
 
 const TYPE_LABEL: Record<MedicalRecord["record_type"], string> = {
   vaccine: "Vaccine",
@@ -18,9 +19,13 @@ function daysUntil(dateStr: string): number {
 export function HealthRecordCard({
   record,
   dogName,
+  pet,
 }: {
   record: MedicalRecord;
   dogName: string;
+  // Only passed in the unified (all-pets) view — single-pet views already
+  // make it obvious whose record this is, so no avatar is shown there.
+  pet?: TaskEntity;
 }) {
   const due = record.next_due_date ? daysUntil(record.next_due_date) : null;
 
@@ -34,7 +39,10 @@ export function HealthRecordCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-2 px-4 text-sm">
         <div className="flex items-center justify-between text-muted-foreground">
-          <span>{dogName}</span>
+          <span className="flex items-center gap-1.5">
+            {pet && <MiniPetAvatar pet={pet} className="size-5" />}
+            {dogName}
+          </span>
           {record.administered_at && <span>Given {record.administered_at}</span>}
         </div>
         {due !== null && (

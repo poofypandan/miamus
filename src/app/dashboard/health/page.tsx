@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HealthRecordCard } from "@/components/dashboard/health-record-card";
 import { HealthUploadDialog } from "@/components/dashboard/health-upload-dialog";
+import { UnifiedHealthList } from "@/components/dashboard/unified-health-list";
+import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import type { MedicalRecord, TaskEntity } from "@/types/database";
@@ -37,17 +39,23 @@ export default function HealthPage() {
 
   if (viewMode === "all") {
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold">Health Passport</h1>
-        {pets.map((pet) => (
-          <div key={pet.id}>
-            <div className="mt-6 mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-lg font-bold">{pet.name}</h3>
+        <div className="flex flex-col gap-2">
+          {pets.map((pet) => (
+            <div
+              key={pet.id}
+              className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <MiniPetAvatar pet={pet} className="size-6" />
+                {pet.name}
+              </span>
               <HealthUploadDialog entityId={pet.id} />
             </div>
-            <PetHealthRecords pet={pet} medicalRecords={medicalRecords} />
-          </div>
-        ))}
+          ))}
+        </div>
+        <UnifiedHealthList />
       </div>
     );
   }

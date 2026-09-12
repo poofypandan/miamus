@@ -2,6 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleEditor } from "@/components/dashboard/schedule-editor";
+import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
 import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 
@@ -34,14 +35,9 @@ export default function SchedulesPage() {
 
   if (viewMode === "all") {
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold">Schedules</h1>
-        {pets.map((pet) => (
-          <div key={pet.id}>
-            <h3 className="mt-6 mb-2 text-lg font-bold">{pet.name}</h3>
-            <ScheduleEditor entity={pet} />
-          </div>
-        ))}
+        <UnifiedTimeline />
       </div>
     );
   }
