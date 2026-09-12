@@ -36,6 +36,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const pendingItems = group.items.filter((i) => i.status !== "completed");
   const allDone = pendingItems.length === 0;
   const anyOverdue = pendingItems.some((i) => i.status === "overdue");
+  const completedPhotoUrl = group.items.find((i) => i.log?.photo_url)?.log?.photo_url ?? null;
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -145,8 +146,16 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             {busy ? (
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
             ) : allDone ? (
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="size-5" /> Semua Selesai
+              <span className="flex items-center gap-2">
+                {completedPhotoUrl && (
+                  <span className="size-8 shrink-0 overflow-hidden rounded-md ring-1 ring-emerald-500/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={completedPhotoUrl} alt="" className="h-full w-full object-cover" />
+                  </span>
+                )}
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="size-5" /> Semua Selesai
+                </span>
               </span>
             ) : (
               <span className="flex items-center gap-1.5">

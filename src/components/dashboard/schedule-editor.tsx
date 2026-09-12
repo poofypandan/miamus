@@ -138,6 +138,8 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <LivePreviewCard entity={entity} schedules={dogSchedules} />
+
       <Button
         onClick={() => setManageOpen(true)}
         size="lg"
@@ -145,8 +147,6 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
       >
         <Settings2 /> Manage Routines
       </Button>
-
-      <LivePreviewCard entity={entity} schedules={dogSchedules} />
 
       <Sheet open={manageOpen} onOpenChange={setManageOpen}>
         <SheetContent
@@ -1060,10 +1060,15 @@ function LivePreviewCard({
 }) {
   const { logs, userRole, deleteLogWithPhoto } = useHousehold();
   const today = formatDateLocal(new Date());
-  const groups = useMemo(
-    () => buildAgenda({ date: today, entities: [entity], schedules, logs }),
-    [today, entity, schedules, logs]
-  );
+  // Flattened one-row-per-schedule-item, not one-row-per-group — grouping by
+  // time+title (as buildAgenda's groups do, for the Staff View's multi-dog
+  // batching) would silently cram two distinct schedule rows that happen to
+  // share a title+time into a single visual row with two status icons.
+  // Flattening guarantees exactly one status indicator per row.
+  const items = useMemo(() => {
+    const groups = buildAgenda({ date: today, entities: [entity], schedules, logs });
+    return groups.flatMap((g) => g.items);
+  }, [today, entity, schedules, logs]);
 
   function canDelete(log: TaskLog) {
     if (userRole === "owner") return true;
@@ -1086,40 +1091,33 @@ function LivePreviewCard({
         <CardTitle className="text-base">Today&apos;s Timeline</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2 px-4">
-        {groups.length === 0 ? (
+        {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No tasks scheduled.</p>
         ) : (
-          groups.map((g) => (
-            <div key={`${g.time}-${g.title}`} className="flex items-center gap-2 text-sm">
+          items.map((item) => (
+            <div key={item.key} className="flex items-center gap-2 text-sm">
               <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
-                {formatTime12h(g.time)}
+                {formatTime12h(item.time)}
               </span>
-              <span>{getTaskIcon(g.title)}</span>
-              <span className="flex-1 font-medium">{g.title}</span>
-              {g.items.map((item) =>
-                item.log?.photo_url ? (
-                  <div
-                    key={item.key}
-                    className="relative size-9 shrink-0 overflow-hidden rounded-md ring-1 ring-border"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.log.photo_url} alt="" className="h-full w-full object-cover" />
-                    {canDelete(item.log) && (
-                      <button
-                        type="button"
-                        onClick={() => handleUndo(item.log!)}
-                        className="absolute inset-0 flex items-center justify-center bg-black/45 text-white"
-                        aria-label={`Undo ${g.title}`}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <span key={item.key} className="shrink-0 text-xs">
-                    {statusIcon(item.status)}
-                  </span>
-                )
+              <span>{getTaskIcon(item.title)}</span>
+              <span className="flex-1 font-medium">{item.title}</span>
+              {item.log?.photo_url ? (
+                <div className="relative size-9 shrink-0 overflow-hidden rounded-md ring-1 ring-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={item.log.photo_url} alt="" className="h-full w-full object-cover" />
+                  {canDelete(item.log) && (
+                    <button
+                      type="button"
+                      onClick={() => handleUndo(item.log!)}
+                      className="absolute inset-0 flex items-center justify-center bg-black/45 text-white"
+                      aria-label={`Undo ${item.title}`}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <span className="shrink-0 text-xs">{statusIcon(item.status)}</span>
               )}
             </div>
           ))

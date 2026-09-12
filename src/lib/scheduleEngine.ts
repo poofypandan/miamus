@@ -118,12 +118,21 @@ export function buildAgenda(params: {
       .sort((a, b) => a.minutes - b.minutes);
 
     const claimed = new Set<number>();
-    // Interval schedules only claim a log within half the interval window so
-    // adjacent slots (e.g. 06:00 / 08:00) never both match the same log.
+    // `dayLogs` is already scoped to this exact schedule_id, so a single-slot
+    // schedule (every fixed_time row created by the app today — meals,
+    // potty, medication, grooming each get their own row) has no ambiguity
+    // to resolve: any same-day log for it completes it, no matter how far
+    // its timestamp drifts from the nominal slot (staff logging a morning
+    // walk that evening is normal, not a non-match). The time window only
+    // still matters for a schedule that expands to *multiple* slots (an
+    // interval-frequency row), where it disambiguates which slot a given
+    // log fulfills.
     const window =
-      schedule.frequency_type === "interval" && schedule.interval_hours
-        ? (schedule.interval_hours * 60) / 2
-        : 180;
+      slots.length <= 1
+        ? Infinity
+        : schedule.frequency_type === "interval" && schedule.interval_hours
+          ? (schedule.interval_hours * 60) / 2
+          : 180;
 
     for (const slotMinutes of slots) {
       let bestIdx = -1;
