@@ -53,12 +53,16 @@ export function OwnerAccessButton() {
   );
 }
 
-function PinModal({
+export function PinModal({
   open,
   onOpenChange,
+  onUnlocked,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // Fires after a correct PIN, in addition to the modal's own close/reset —
+  // e.g. the landing page uses this to navigate to /dashboard.
+  onUnlocked?: () => void;
 }) {
   const { unlockOwner } = useHousehold();
   const [pin, setPin] = useState("");
@@ -74,6 +78,7 @@ function PinModal({
       toast.success("Owner mode unlocked");
       onOpenChange(false);
       setPin("");
+      onUnlocked?.();
     } else {
       toast.error("Incorrect PIN");
       setShake(true);

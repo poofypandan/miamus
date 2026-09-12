@@ -1,11 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Named "--font-sans" (not the font's own "--font-plus-jakarta-sans") to
+// match the `--font-sans: var(--font-sans)` theme token in globals.css —
+// that token had nothing actually providing `--font-sans` before, so
+// `font-sans` was silently falling back to the browser default.
+const fontSans = Plus_Jakarta_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
@@ -15,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Maimus",
+  title: "Banyuwangi 11",
   description: "Household management app",
   manifest: "/manifest.json",
   icons: {
@@ -25,7 +29,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Maimus",
+    title: "Banyuwangi 11",
   },
 };
 
@@ -40,7 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${fontSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>

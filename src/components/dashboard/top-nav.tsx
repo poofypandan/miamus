@@ -24,7 +24,7 @@ export function TopNav() {
   return (
     <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
       <div className="flex items-center justify-between px-4 py-3">
-        <span className="text-lg font-semibold">Maimus</span>
+        <span className="text-lg font-semibold">Banyuwangi 11</span>
         <div className="flex items-center gap-1">
           <Link
             href="/staff"
