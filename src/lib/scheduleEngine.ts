@@ -76,6 +76,11 @@ function scheduleSlotMinutes(schedule: MasterSchedule): number[] {
 
 function isScheduleActiveOn(schedule: MasterSchedule, dateStr: string): boolean {
   if (!schedule.is_active) return false;
+  // Lower bound: lets a single-occurrence row (e.g. a generated grooming
+  // visit, anchored via an explicit future `created_at`) stay invisible
+  // until its day arrives instead of showing as due from the moment it's
+  // inserted. A no-op for ordinary rows, whose created_at is "now".
+  if (formatDateLocal(new Date(schedule.created_at)) > dateStr) return false;
   if (schedule.expires_at && schedule.expires_at < dateStr) return false;
   return true;
 }

@@ -130,7 +130,7 @@ export const mockProvider: DataProvider = {
       end_time: input.end_time ?? null,
       is_active: input.is_active ?? true,
       expires_at: input.expires_at ?? null,
-      created_at: new Date().toISOString(),
+      created_at: input.created_at ?? new Date().toISOString(),
     };
     db.schedules.push(newSchedule);
     saveDB(db);
@@ -150,7 +150,7 @@ export const mockProvider: DataProvider = {
       end_time: input.end_time ?? null,
       is_active: input.is_active ?? true,
       expires_at: input.expires_at ?? null,
-      created_at: new Date().toISOString(),
+      created_at: input.created_at ?? new Date().toISOString(),
     }));
     db.schedules.push(...created);
     saveDB(db);

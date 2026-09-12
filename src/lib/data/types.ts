@@ -44,6 +44,10 @@ export interface CreateScheduleInput {
   end_time?: string | null;
   is_active?: boolean;
   expires_at?: string | null;
+  // Overrides the default-to-now creation timestamp — used to anchor a
+  // single future occurrence (see scheduleEngine's isScheduleActiveOn lower
+  // bound) so it doesn't show as due before its actual date.
+  created_at?: string;
 }
 
 export interface CreateMedicalRecordInput {

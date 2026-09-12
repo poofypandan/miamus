@@ -24,6 +24,7 @@ import {
   categorizeSchedule,
   displayTitle,
   groomingTitle,
+  medicationTitle,
 } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { getTaskIcon } from "@/lib/task-icons";
@@ -31,6 +32,16 @@ import { formatTime12h } from "@/lib/time";
 import type { TaskEntity, MasterSchedule } from "@/types/database";
 
 const INTERVAL_HOUR_OPTIONS = [1, 2, 3, 4];
+const DOSE_COUNT_OPTIONS = [1, 2, 3, 4];
+const DEFAULT_DOSE_TIMES = ["09:00", "21:00", "13:00", "17:00"];
+const INTERVAL_UNIT_OPTIONS = [
+  { value: "days", label: "Days" },
+  { value: "weeks", label: "Weeks" },
+] as const;
+type IntervalUnit = (typeof INTERVAL_UNIT_OPTIONS)[number]["value"];
+// Defensive ceiling on how many occurrences one "generate" click can create —
+// keeps a fat-fingered "every 1 day for 10 years" from hammering the DB.
+const MAX_GENERATED_OCCURRENCES = 500;
 
 const TIME_INPUT_CLASS =
   "min-h-[48px] rounded-xl border border-input bg-transparent px-3 text-base font-medium tabular-nums outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -66,6 +77,49 @@ function generateSlots(start: string, end: string, intervalHours: number): strin
   return slots;
 }
 
+// Parses a "YYYY-MM-DD" input-date value as browser-LOCAL midnight (not
+// UTC) so day-level arithmetic never drifts a day off in negative-UTC-offset
+// timezones — the classic `new Date("2026-03-20")` pitfall.
+function parseLocalDate(dateStr: string): Date {
+  return new Date(`${dateStr}T00:00:00`);
+}
+
+function daysBetweenInclusive(startStr: string, endStr: string): number {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const diff = parseLocalDate(endStr).getTime() - parseLocalDate(startStr).getTime();
+  return Math.round(diff / msPerDay) + 1;
+}
+
+function formatDateShort(dateStr: string): string {
+  return parseLocalDate(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Walks start -> end in `intervalValue` day/week steps using Date's native
+// setDate/getDate, which correctly rolls over month boundaries and leap
+// years (Date normalizes out-of-range day numbers for you).
+function generateGroomingOccurrences(
+  startDateStr: string,
+  time: string,
+  intervalValue: number,
+  intervalUnit: IntervalUnit,
+  endDateStr: string
+): { date: string; time: string }[] {
+  const stepDays = intervalUnit === "weeks" ? intervalValue * 7 : intervalValue;
+  if (stepDays <= 0 || !startDateStr || !endDateStr) return [];
+  const end = parseLocalDate(endDateStr);
+  let current = parseLocalDate(startDateStr);
+  if (current.getTime() > end.getTime()) return [];
+
+  const occurrences: { date: string; time: string }[] = [];
+  while (current.getTime() <= end.getTime() && occurrences.length < MAX_GENERATED_OCCURRENCES) {
+    occurrences.push({ date: formatDateLocal(current), time });
+    const next = new Date(current);
+    next.setDate(next.getDate() + stepDays);
+    current = next;
+  }
+  return occurrences;
+}
+
 type CreateScheduleFn = (input: CreateScheduleInput) => Promise<MasterSchedule>;
 type CreateSchedulesBatchFn = (entries: CreateScheduleInput[]) => Promise<MasterSchedule[]>;
 type DeleteScheduleFn = (id: string) => Promise<void>;
@@ -76,8 +130,9 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
   const dogSchedules = schedules.filter((s) => s.entity_id === entity.id);
   const mealSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "meal");
   const pottySchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "potty");
+  const medicationSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "medication");
   const groomingSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "grooming");
-  const tempSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "temporary");
+  const otherSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "temporary");
 
   return (
     <div className="flex flex-col gap-4">
@@ -93,15 +148,21 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
         createSchedulesBatch={createSchedulesBatch}
         deleteSchedule={deleteSchedule}
       />
+      <MedicationsCard
+        entity={entity}
+        items={medicationSchedules}
+        createSchedulesBatch={createSchedulesBatch}
+        deleteSchedule={deleteSchedule}
+      />
       <GroomingCareCard
         entity={entity}
         items={groomingSchedules}
-        createSchedule={createSchedule}
+        createSchedulesBatch={createSchedulesBatch}
         deleteSchedule={deleteSchedule}
       />
-      <TemporaryTasksCard
+      <OthersCard
         entity={entity}
-        tasks={tempSchedules}
+        tasks={otherSchedules}
         createSchedule={createSchedule}
         deleteSchedule={deleteSchedule}
       />
@@ -360,41 +421,244 @@ function PottyRoutineCard({
   );
 }
 
-function GroomingCareCard({
+function MedicationsCard({
   entity,
   items,
-  createSchedule,
+  createSchedulesBatch,
   deleteSchedule,
 }: {
   entity: TaskEntity;
   items: MasterSchedule[];
-  createSchedule: CreateScheduleFn;
+  createSchedulesBatch: CreateSchedulesBatchFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
-  const [time, setTime] = useState("09:00");
+  const today = formatDateLocal(new Date());
   const [label, setLabel] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [timesPerDay, setTimesPerDay] = useState(1);
+  const [doseTimes, setDoseTimes] = useState<string[]>(["09:00"]);
+  const [endDate, setEndDate] = useState("");
+  const [generating, setGenerating] = useState(false);
 
-  async function handleAdd() {
+  function changeFrequency(count: number) {
+    setTimesPerDay(count);
+    setDoseTimes((prev) => {
+      const next = prev.slice(0, count);
+      while (next.length < count) next.push(DEFAULT_DOSE_TIMES[next.length] ?? "09:00");
+      return next;
+    });
+  }
+
+  function updateDoseTime(index: number, value: string) {
+    setDoseTimes((prev) => prev.map((t, i) => (i === index ? value : t)));
+  }
+
+  const totalDays = endDate ? Math.max(0, daysBetweenInclusive(today, endDate)) : 0;
+  const totalDoses = totalDays * timesPerDay;
+
+  async function handleGenerate() {
+    if (!label.trim()) {
+      toast.error("Give the medication a label");
+      return;
+    }
+    if (!endDate || endDate < today) {
+      toast.error("Pick an end date today or later");
+      return;
+    }
+    setGenerating(true);
+    try {
+      await createSchedulesBatch(
+        doseTimes.map((time) => ({
+          entity_id: entity.id,
+          title: medicationTitle(label.trim()),
+          module: "pet",
+          frequency_type: "fixed_time",
+          fixed_times: [time],
+          expires_at: endDate,
+        }))
+      );
+      toast.success(
+        `${label.trim()} scheduled ${timesPerDay}x/day through ${formatDateShort(endDate)} (${totalDoses} doses)`
+      );
+      setLabel("");
+      setEndDate("");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate medication schedule");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function remove(id: string) {
+    try {
+      await deleteSchedule(id);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to remove medication");
+    }
+  }
+
+  const sortedItems = [...items].sort((a, b) => {
+    const titleCompare = displayTitle(a).localeCompare(displayTitle(b));
+    if (titleCompare !== 0) return titleCompare;
+    return (a.fixed_times?.[0] ?? "").localeCompare(b.fixed_times?.[0] ?? "");
+  });
+
+  return (
+    <Card className="gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">💊 Medicines & Vitamins</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 px-4">
+        <div className="flex flex-wrap gap-2">
+          {sortedItems.map((m) => (
+            <Badge key={m.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
+              {m.fixed_times?.[0] ? formatTime12h(m.fixed_times[0]) : "—"} · {displayTitle(m)}
+              {m.expires_at && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  · until {formatDateShort(m.expires_at)}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => remove(m.id)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-background/60"
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          ))}
+          {items.length === 0 && (
+            <p className="text-sm text-muted-foreground">No medications scheduled yet.</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">Label</Label>
+          <Input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. Heartworm Pill, Antibiotics"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs">Times per day</Label>
+          <div className="flex gap-1.5">
+            {DOSE_COUNT_OPTIONS.map((n) => (
+              <Button
+                key={n}
+                type="button"
+                size="sm"
+                variant={timesPerDay === n ? "default" : "outline"}
+                className="min-h-[48px] flex-1"
+                onClick={() => changeFrequency(n)}
+              >
+                {n}x
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs">Dose times</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {doseTimes.map((t, i) => (
+              <input
+                key={i}
+                type="time"
+                step={60}
+                value={t}
+                onChange={(e) => updateDoseTime(i, e.target.value)}
+                className={TIME_INPUT_CLASS}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">End date</Label>
+          <Input
+            type="date"
+            min={today}
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {totalDoses > 0
+            ? `${totalDays} day${totalDays === 1 ? "" : "s"} · ${totalDoses} total doses`
+            : "Pick an end date to preview the course length."}
+        </p>
+
+        <Button onClick={handleGenerate} disabled={generating} className="min-h-[48px] w-fit">
+          {generating ? <Loader2 className="animate-spin" /> : <Plus />}
+          Generate Medication Schedule
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GroomingCareCard({
+  entity,
+  items,
+  createSchedulesBatch,
+  deleteSchedule,
+}: {
+  entity: TaskEntity;
+  items: MasterSchedule[];
+  createSchedulesBatch: CreateSchedulesBatchFn;
+  deleteSchedule: DeleteScheduleFn;
+}) {
+  const today = formatDateLocal(new Date());
+  const [label, setLabel] = useState("");
+  const [startDate, setStartDate] = useState(today);
+  const [time, setTime] = useState("09:00");
+  const [intervalValue, setIntervalValue] = useState(2);
+  const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>("weeks");
+  const [endDate, setEndDate] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  const occurrences = useMemo(
+    () => generateGroomingOccurrences(startDate, time, intervalValue, intervalUnit, endDate),
+    [startDate, time, intervalValue, intervalUnit, endDate]
+  );
+
+  async function handleGenerate() {
     if (!label.trim()) {
       toast.error("Give the task a label");
       return;
     }
-    setSubmitting(true);
+    if (occurrences.length === 0) {
+      toast.error("Pick a start date, interval, and end date that produce at least one visit");
+      return;
+    }
+    setGenerating(true);
     try {
-      await createSchedule({
-        entity_id: entity.id,
-        title: groomingTitle(label.trim()),
-        module: "pet",
-        frequency_type: "fixed_time",
-        fixed_times: [time],
-      });
+      await createSchedulesBatch(
+        occurrences.map(({ date, time: occTime }) => ({
+          entity_id: entity.id,
+          title: groomingTitle(label.trim()),
+          module: "pet",
+          frequency_type: "fixed_time",
+          fixed_times: [occTime],
+          created_at: parseLocalDate(date).toISOString(),
+          expires_at: date,
+        }))
+      );
+      toast.success(
+        `Scheduled ${occurrences.length} ${label.trim()} visit${occurrences.length === 1 ? "" : "s"}`
+      );
       setLabel("");
+      setEndDate("");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add grooming task");
+      toast.error("Failed to generate grooming schedule");
     } finally {
-      setSubmitting(false);
+      setGenerating(false);
     }
   }
 
@@ -407,6 +671,10 @@ function GroomingCareCard({
     }
   }
 
+  const sortedItems = [...items].sort((a, b) =>
+    (a.expires_at ?? "").localeCompare(b.expires_at ?? "")
+  );
+
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
@@ -414,9 +682,11 @@ function GroomingCareCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-wrap gap-2">
-          {items.map((g) => (
+          {sortedItems.map((g) => (
             <Badge key={g.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
-              {g.fixed_times?.[0] ? formatTime12h(g.fixed_times[0]) : "—"} · {displayTitle(g)}
+              {g.expires_at ? formatDateShort(g.expires_at) : "—"}
+              {g.fixed_times?.[0] ? `, ${formatTime12h(g.fixed_times[0])}` : ""} ·{" "}
+              {displayTitle(g)}
               <button
                 type="button"
                 onClick={() => remove(g.id)}
@@ -427,11 +697,29 @@ function GroomingCareCard({
             </Badge>
           ))}
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground">No grooming tasks yet.</p>
+            <p className="text-sm text-muted-foreground">No grooming visits scheduled yet.</p>
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">Label</Label>
+          <Input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. Bath, Nail Clipping"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Start date</Label>
+            <Input
+              type="date"
+              min={today}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">Time</Label>
             <input
@@ -442,26 +730,69 @@ function GroomingCareCard({
               className={TIME_INPUT_CLASS}
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">Label</Label>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs">Repeat every</Label>
+          <div className="flex gap-2">
             <Input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Ear Cleaning"
+              type="number"
+              min={1}
+              max={52}
+              value={intervalValue}
+              onChange={(e) => setIntervalValue(Math.max(1, Number(e.target.value) || 1))}
+              className="w-20"
             />
+            <div className="flex flex-1 gap-1.5">
+              {INTERVAL_UNIT_OPTIONS.map((opt) => (
+                <Button
+                  key={opt.value}
+                  type="button"
+                  size="sm"
+                  variant={intervalUnit === opt.value ? "default" : "outline"}
+                  className="min-h-[48px] flex-1"
+                  onClick={() => setIntervalUnit(opt.value)}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <Button onClick={handleAdd} disabled={submitting} className="min-h-[48px] w-fit">
-          {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-          Add task
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">End date</Label>
+          <Input
+            type="date"
+            min={startDate || today}
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {occurrences.length > 0
+            ? `Will schedule ${occurrences.length} visit${occurrences.length === 1 ? "" : "s"}: ${occurrences
+                .slice(0, 4)
+                .map((o) => formatDateShort(o.date))
+                .join(", ")}${occurrences.length > 4 ? "…" : ""}`
+            : "Pick a start date, interval, and end date to preview visits."}
+        </p>
+
+        <Button
+          onClick={handleGenerate}
+          disabled={generating || occurrences.length === 0}
+          className="min-h-[48px] w-fit"
+        >
+          {generating ? <Loader2 className="animate-spin" /> : <Plus />}
+          Generate Grooming Schedule
         </Button>
       </CardContent>
     </Card>
   );
 }
 
-function TemporaryTasksCard({
+function OthersCard({
   entity,
   tasks,
   createSchedule,
@@ -494,10 +825,10 @@ function TemporaryTasksCard({
       });
       setTitle("");
       setExpiresAt("");
-      toast.success("Temporary task added");
+      toast.success("Task added");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add temporary task");
+      toast.error("Failed to add task");
     } finally {
       setSubmitting(false);
     }
@@ -515,7 +846,7 @@ function TemporaryTasksCard({
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">🩺 Temporary / One-Off Tasks</CardTitle>
+        <CardTitle className="text-base">📌 Others</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-col gap-2">
@@ -535,9 +866,7 @@ function TemporaryTasksCard({
               </Button>
             </div>
           ))}
-          {tasks.length === 0 && (
-            <p className="text-sm text-muted-foreground">No temporary tasks.</p>
-          )}
+          {tasks.length === 0 && <p className="text-sm text-muted-foreground">No other tasks.</p>}
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <div className="flex flex-col gap-1">
@@ -545,7 +874,7 @@ function TemporaryTasksCard({
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Give medication"
+              placeholder="e.g. Farm visit reminder"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -569,7 +898,7 @@ function TemporaryTasksCard({
         </div>
         <Button onClick={handleAdd} disabled={submitting} className="min-h-[48px] w-fit">
           {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-          Add temporary task
+          Add task
         </Button>
       </CardContent>
     </Card>
