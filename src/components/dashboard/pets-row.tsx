@@ -42,28 +42,31 @@ export function PetsRow() {
       <h2 className="mb-1 px-4 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
         Your pets
       </h2>
-      <div className="no-scrollbar flex flex-row gap-4 overflow-x-auto px-4 py-2">
+      <div className="no-scrollbar flex flex-row gap-2 overflow-x-auto px-2 py-2">
         {pets.map((pet) => (
-          <PetAvatar
-            key={pet.id}
-            pet={pet}
-            active={pet.id === activePetId}
-            onTap={() => setActivePetId(pet.id)}
-            onLongPress={() => openEdit(pet)}
-          />
+          <div key={pet.id} className="shrink-0 p-2">
+            <PetAvatar
+              pet={pet}
+              active={pet.id === activePetId}
+              onTap={() => setActivePetId(pet.id)}
+              onLongPress={() => openEdit(pet)}
+            />
+          </div>
         ))}
-        <button
-          type="button"
-          onClick={openCreate}
-          className="flex min-h-[48px] shrink-0 flex-col items-center gap-1"
-        >
-          <span className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-primary/50 bg-primary/5 text-primary shadow-sm">
-            <Plus className="size-6" />
-          </span>
-          <span className="max-w-16 truncate text-center text-xs text-muted-foreground">
-            Add pet
-          </span>
-        </button>
+        <div className="shrink-0 p-2">
+          <button
+            type="button"
+            onClick={openCreate}
+            className="flex min-h-[48px] flex-col items-center gap-1"
+          >
+            <span className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-primary/50 bg-primary/5 text-primary shadow-sm">
+              <Plus className="size-6" />
+            </span>
+            <span className="max-w-16 truncate text-center text-xs text-muted-foreground">
+              Add pet
+            </span>
+          </button>
+        </div>
       </div>
 
       <PetFormDialog
@@ -124,7 +127,7 @@ function PetAvatar({
       onMouseDown={startPress}
       onMouseUp={endPress}
       onMouseLeave={cancelPress}
-      className="flex min-h-[48px] shrink-0 touch-none flex-col items-center gap-1 select-none [-webkit-touch-callout:none]"
+      className="flex min-h-[48px] touch-none flex-col items-center gap-1 select-none [-webkit-touch-callout:none]"
     >
       {meta.avatar_url ? (
         // eslint-disable-next-line @next/next/no-img-element
