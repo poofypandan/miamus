@@ -32,10 +32,9 @@ const RECORD_TYPES: { value: RecordType; label: string }[] = [
   { value: "medication", label: "Medication" },
 ];
 
-export function HealthUploadDialog({ defaultEntityId }: { defaultEntityId?: string }) {
-  const { pets, createMedicalRecord } = useHousehold();
+export function HealthUploadDialog({ entityId }: { entityId: string }) {
+  const { createMedicalRecord } = useHousehold();
   const [open, setOpen] = useState(false);
-  const [entityId, setEntityId] = useState(defaultEntityId ?? "");
   const [recordType, setRecordType] = useState<RecordType | "">("");
   const [title, setTitle] = useState("");
   const [administeredAt, setAdministeredAt] = useState("");
@@ -45,7 +44,6 @@ export function HealthUploadDialog({ defaultEntityId }: { defaultEntityId?: stri
   const [submitting, setSubmitting] = useState(false);
 
   function reset() {
-    setEntityId(defaultEntityId ?? "");
     setRecordType("");
     setTitle("");
     setAdministeredAt("");
@@ -55,8 +53,8 @@ export function HealthUploadDialog({ defaultEntityId }: { defaultEntityId?: stri
   }
 
   async function handleSubmit() {
-    if (!entityId || !recordType || !title) {
-      toast.error("Fill in dog, record type, and title");
+    if (!recordType || !title) {
+      toast.error("Fill in record type and title");
       return;
     }
     setSubmitting(true);
@@ -99,21 +97,6 @@ export function HealthUploadDialog({ defaultEntityId }: { defaultEntityId?: stri
           <DialogTitle>Add Health Record</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label>Dog</Label>
-            <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger className="min-h-[48px] w-full">
-                <SelectValue placeholder="Select dog" />
-              </SelectTrigger>
-              <SelectContent>
-                {pets.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <div className="flex flex-col gap-1.5">
             <Label>Record type</Label>
             <Select value={recordType} onValueChange={(v) => setRecordType(v as RecordType)}>
@@ -166,7 +149,7 @@ export function HealthUploadDialog({ defaultEntityId }: { defaultEntityId?: stri
           <div className="flex flex-col gap-1.5">
             <Label>Certificate / invoice photo</Label>
             <PhotoPicker
-              pathPrefix={`medical/${entityId || "unknown"}`}
+              pathPrefix={`medical/${entityId}`}
               value={photoUrl}
               onChange={setPhotoUrl}
               label="Upload photo"

@@ -1,23 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HealthRecordCard } from "@/components/dashboard/health-record-card";
 import { HealthUploadDialog } from "@/components/dashboard/health-upload-dialog";
 import { useHousehold } from "@/context/household-context";
-import { cn } from "@/lib/utils";
 
 export default function HealthPage() {
-  const { entities, pets, medicalRecords, loading } = useHousehold();
-  const [filter, setFilter] = useState<string>("all");
+  const { pets, medicalRecords, activePetId, loading } = useHousehold();
+  const activePet = pets.find((p) => p.id === activePetId) ?? null;
 
   const filtered = useMemo(() => {
-    const records =
-      filter === "all" ? medicalRecords : medicalRecords.filter((r) => r.entity_id === filter);
-    return [...records].sort((a, b) => b.created_at.localeCompare(a.created_at));
-  }, [medicalRecords, filter]);
-
-  const entityById = new Map(entities.map((e) => [e.id, e]));
+    if (!activePet) return [];
+    return [...medicalRecords]
+      .filter((r) => r.entity_id === activePet.id)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }, [medicalRecords, activePet]);
 
   if (loading) {
     return (
@@ -28,23 +26,24 @@ export default function HealthPage() {
     );
   }
 
+  if (!activePet) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold">Health Passport</h1>
+        <p className="pt-8 text-center text-sm text-muted-foreground">
+          {pets.length === 0
+            ? "No pets yet. Add a pet above to start their health passport."
+            : "Select a pet above to view their health passport."}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Health Passport</h1>
-        <HealthUploadDialog defaultEntityId={filter !== "all" ? filter : undefined} />
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <FilterChip label="All" active={filter === "all"} onClick={() => setFilter("all")} />
-        {pets.map((p) => (
-          <FilterChip
-            key={p.id}
-            label={p.name}
-            active={filter === p.id}
-            onClick={() => setFilter(p.id)}
-          />
-        ))}
+        <HealthUploadDialog entityId={activePet.id} />
       </div>
 
       {filtered.length === 0 ? (
@@ -52,39 +51,10 @@ export default function HealthPage() {
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {filtered.map((record) => (
-            <HealthRecordCard
-              key={record.id}
-              record={record}
-              dogName={entityById.get(record.entity_id)?.name ?? "Unknown"}
-            />
+            <HealthRecordCard key={record.id} record={record} dogName={activePet.name} />
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-function FilterChip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex min-h-[48px] items-center rounded-full border px-3 py-1 text-sm font-medium transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border text-foreground hover:bg-muted"
-      )}
-    >
-      {label}
-    </button>
   );
 }

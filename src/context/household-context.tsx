@@ -20,6 +20,8 @@ interface HouseholdContextValue {
   medicalRecords: MedicalRecord[];
   loading: boolean;
   isMockMode: boolean;
+  activePetId: string | null;
+  setActivePetId: (id: string) => void;
   refresh: () => Promise<void>;
   createEntity: (input: CreateEntityInput) => Promise<TaskEntity>;
   updateEntity: (id: string, patch: Partial<TaskEntity>) => Promise<TaskEntity>;
@@ -62,6 +64,21 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const pets = useMemo(() => entities.filter(isActivePet), [entities]);
+
+  const [activePetId, setActivePetId] = useState<string | null>(null);
+
+  // Default to the first pet whenever there is no valid active selection —
+  // covers initial load, the active pet being archived/deleted, and pets
+  // loading in after the first render.
+  useEffect(() => {
+    if (pets.length === 0) {
+      if (activePetId !== null) setActivePetId(null);
+      return;
+    }
+    if (!activePetId || !pets.some((p) => p.id === activePetId)) {
+      setActivePetId(pets[0].id);
+    }
+  }, [pets, activePetId]);
 
   const createEntity = useCallback(async (input: CreateEntityInput) => {
     const entity = await dataProvider.createEntity(input);
@@ -131,6 +148,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       medicalRecords,
       loading,
       isMockMode,
+      activePetId,
+      setActivePetId,
       refresh,
       createEntity,
       updateEntity,
@@ -150,6 +169,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       logs,
       medicalRecords,
       loading,
+      activePetId,
       refresh,
       createEntity,
       updateEntity,

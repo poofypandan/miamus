@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Archive, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,14 @@ import {
 import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
 import { getPetMeta } from "@/lib/pets";
+import { cn } from "@/lib/utils";
 import type { TaskEntity } from "@/types/database";
 
+const LONG_PRESS_MS = 500;
+
 export function PetsRow() {
-  const { pets, createEntity, updateEntity, deleteEntity } = useHousehold();
+  const { pets, activePetId, setActivePetId, createEntity, updateEntity, deleteEntity } =
+    useHousehold();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<TaskEntity | null>(null);
 
@@ -40,7 +44,13 @@ export function PetsRow() {
       </h2>
       <div className="no-scrollbar flex flex-row gap-4 overflow-x-auto py-2">
         {pets.map((pet) => (
-          <PetAvatar key={pet.id} pet={pet} onClick={() => openEdit(pet)} />
+          <PetAvatar
+            key={pet.id}
+            pet={pet}
+            active={pet.id === activePetId}
+            onTap={() => setActivePetId(pet.id)}
+            onLongPress={() => openEdit(pet)}
+          />
         ))}
         <button
           type="button"
@@ -68,27 +78,82 @@ export function PetsRow() {
   );
 }
 
-function PetAvatar({ pet, onClick }: { pet: TaskEntity; onClick: () => void }) {
+function PetAvatar({
+  pet,
+  active,
+  onTap,
+  onLongPress,
+}: {
+  pet: TaskEntity;
+  active: boolean;
+  onTap: () => void;
+  onLongPress: () => void;
+}) {
   const meta = getPetMeta(pet);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+
+  function startPress() {
+    longPressed.current = false;
+    timerRef.current = setTimeout(() => {
+      longPressed.current = true;
+      onLongPress();
+    }, LONG_PRESS_MS);
+  }
+
+  function cancelPress() {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  function endPress() {
+    cancelPress();
+    if (!longPressed.current) {
+      onTap();
+    }
+  }
+
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="flex min-h-[48px] shrink-0 flex-col items-center gap-1"
+      onContextMenu={(e) => e.preventDefault()}
+      onTouchStart={startPress}
+      onTouchEnd={endPress}
+      onMouseDown={startPress}
+      onMouseUp={endPress}
+      onMouseLeave={cancelPress}
+      className="flex min-h-[48px] shrink-0 touch-none flex-col items-center gap-1 select-none [-webkit-touch-callout:none]"
     >
       {meta.avatar_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={meta.avatar_url}
           alt=""
-          className="h-16 w-16 rounded-full border border-gray-200 object-cover shadow-sm"
+          className={cn(
+            "h-16 w-16 rounded-full border border-gray-200 object-cover shadow-sm transition-all",
+            active ? "scale-105 ring-2 ring-emerald-500 ring-offset-2" : "opacity-60 grayscale"
+          )}
         />
       ) : (
-        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-muted text-2xl shadow-sm">
+        <div
+          className={cn(
+            "flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-muted text-2xl shadow-sm transition-all",
+            active ? "scale-105 ring-2 ring-emerald-500 ring-offset-2" : "opacity-60 grayscale"
+          )}
+        >
           🐶
         </div>
       )}
-      <span className="max-w-16 truncate text-center text-xs font-medium">{pet.name}</span>
+      <span
+        className={cn(
+          "max-w-16 truncate text-center text-xs font-medium",
+          !active && "text-muted-foreground"
+        )}
+      >
+        {pet.name}
+      </span>
     </button>
   );
 }
