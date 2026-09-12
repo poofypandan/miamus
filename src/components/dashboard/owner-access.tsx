@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Delete, Lock, LockOpen } from "lucide-react";
+import { Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,42 +17,9 @@ import { cn } from "@/lib/utils";
 const PIN_LENGTH = 4;
 const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"] as const;
 
-export function OwnerAccessButton() {
-  const { userRole, lockOwner } = useHousehold();
-  const [open, setOpen] = useState(false);
-
-  if (userRole === "owner") {
-    return (
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="Exit Owner Mode"
-        className="min-h-[48px] min-w-[48px] text-emerald-600"
-        onClick={lockOwner}
-      >
-        <LockOpen className="size-4" />
-      </Button>
-    );
-  }
-
-  return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="Owner Access"
-        className="min-h-[48px] min-w-[48px] text-muted-foreground"
-        onClick={() => setOpen(true)}
-      >
-        <Lock className="size-4" />
-      </Button>
-      <PinModal open={open} onOpenChange={setOpen} />
-    </>
-  );
-}
-
+// Owner access is now a hidden gesture on the landing page (see src/app/
+// page.tsx) rather than a visible header control, so this modal is the only
+// export left here — no more OwnerAccessButton.
 export function PinModal({
   open,
   onOpenChange,

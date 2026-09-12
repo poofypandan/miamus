@@ -107,7 +107,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     }
   }, [pets, activePetId]);
 
-  const [viewMode, setViewMode] = useState<ViewMode>("single");
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
 
   const [userRole, setUserRole] = useState<UserRole>("staff");
 

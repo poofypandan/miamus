@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { PinModal } from "@/components/dashboard/owner-access";
 
 const RUMAH = [
-  { letter: "R", text: "Respek & Sopan" },
-  { letter: "U", text: "Utamakan Komunikasi" },
-  { letter: "M", text: "Menjaga Kebersihan" },
-  { letter: "A", text: "Aman & Selamat" },
-  { letter: "H", text: "Hormati Privasi" },
+  { letter: "R", rest: "espek & Sopan" },
+  { letter: "U", rest: "tamakan Komunikasi" },
+  { letter: "M", rest: "enjaga Kebersihan" },
+  { letter: "A", rest: "man & Selamat" },
+  { letter: "H", rest: "ormati Privasi" },
 ];
 
 export default function Home() {
@@ -24,11 +24,12 @@ export default function Home() {
         <h1 className="text-3xl font-semibold">Banyuwangi 11</h1>
       </div>
 
-      <div className="mx-auto flex w-fit flex-col items-start text-left text-sm text-gray-500">
+      <div className="mx-auto flex w-fit flex-col items-start text-left text-sm">
         {RUMAH.map((r) => (
-          <p key={r.letter}>
-            <span className="font-semibold text-gray-700">{r.letter}</span> — {r.text}
-          </p>
+          <div key={r.letter}>
+            <span className="font-bold text-black">{r.letter}</span>
+            <span className="text-gray-500">{r.rest}</span>
+          </div>
         ))}
       </div>
 
@@ -36,10 +37,15 @@ export default function Home() {
         <Button asChild size="lg">
           <Link href="/staff">Jadwal</Link>
         </Button>
-        <Button size="lg" variant="outline" onClick={() => setPinOpen(true)}>
-          Owner Dashboard
-        </Button>
       </div>
+
+      {/* Deliberately invisible — owner access is a hidden gesture, not a
+          visible button. Double-click (not single) so staff can't trigger
+          it by accidentally tapping the corner of the screen. */}
+      <div
+        className="fixed right-0 bottom-0 z-50 h-32 w-32 opacity-0"
+        onDoubleClick={() => setPinOpen(true)}
+      />
 
       <PinModal
         open={pinOpen}
