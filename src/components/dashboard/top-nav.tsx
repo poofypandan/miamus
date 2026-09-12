@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { MODULES } from "@/config/modules";
 import { cn } from "@/lib/utils";
+import { PetsRow } from "@/components/dashboard/pets-row";
 
 const SUB_NAV = [
   { href: "/dashboard", label: "Daily Feed" },
   { href: "/dashboard/schedules", label: "Schedules" },
-  { href: "/dashboard/pets", label: "Pets" },
   { href: "/dashboard/health", label: "Health Passport" },
 ];
 
@@ -33,6 +33,8 @@ export function TopNav() {
         <ModuleTab label="🏠 Household" active={false} enabled={MODULES.household} />
         <ModuleTab label="👥 Staff" active={false} enabled={MODULES.staff} />
       </div>
+
+      <PetsRow />
 
       <nav className="flex gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {SUB_NAV.map((item) => {
