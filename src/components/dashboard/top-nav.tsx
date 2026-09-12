@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Home, PawPrint, Users, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MODULES } from "@/config/modules";
 import { cn } from "@/lib/utils";
@@ -18,8 +19,7 @@ const SUB_NAV = [
 export function TopNav() {
   const pathname = usePathname();
   const { userRole } = useHousehold();
-  const visibleSubNav =
-    userRole === "owner" ? SUB_NAV : SUB_NAV.filter((item) => item.href === "/dashboard");
+  const isOwner = userRole === "owner";
 
   return (
     <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
@@ -37,41 +37,47 @@ export function TopNav() {
       </div>
 
       <div className="flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <ModuleTab label="🐶 Pets" active enabled />
-        <ModuleTab label="🏠 Household" active={false} enabled={MODULES.household} />
-        <ModuleTab label="👥 Staff" active={false} enabled={MODULES.staff} />
+        <ModuleTab icon={PawPrint} label="Pets" active enabled />
+        <ModuleTab icon={Home} label="Household" active={false} enabled={MODULES.household} />
+        <ModuleTab icon={Users} label="Staff" active={false} enabled={MODULES.staff} />
       </div>
 
       <PetsRow />
 
-      <nav className="flex gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {visibleSubNav.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex min-h-[48px] shrink-0 items-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Staff only ever has the Daily Feed tab — a single-item tab row is
+          pure clutter, so skip it entirely rather than rendering it. */}
+      {isOwner && (
+        <nav className="flex gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {SUB_NAV.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex min-h-[48px] shrink-0 items-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }
 
 function ModuleTab({
+  icon: Icon,
   label,
   active,
   enabled,
 }: {
+  icon: LucideIcon;
   label: string;
   active: boolean;
   enabled: boolean;
@@ -87,6 +93,7 @@ function ModuleTab({
             : "border-border/60 text-muted-foreground opacity-60"
       )}
     >
+      <Icon className="size-4" />
       {label}
       {!enabled && (
         <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">

@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Droplets, Loader2, Utensils, type LucideIcon } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Droplets,
+  Loader2,
+  Utensils,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHousehold } from "@/context/household-context";
 import { compressPhoto } from "@/lib/image";
@@ -10,10 +18,10 @@ import { POTTY_TITLE } from "@/lib/schedule-categories";
 import type { AgendaItem } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 
-function statusIcon(status: AgendaItem["status"]) {
-  if (status === "completed") return "✅";
-  if (status === "overdue") return "❌";
-  return "⏳";
+function StatusIcon({ status }: { status: AgendaItem["status"] }) {
+  if (status === "completed") return <CheckCircle2 className="size-4 text-emerald-500" />;
+  if (status === "overdue") return <XCircle className="size-4 text-red-500" />;
+  return <Clock className="size-4 text-amber-500" />;
 }
 
 export function SummaryCard({ dogName, items }: { dogName: string; items: AgendaItem[] }) {
@@ -95,7 +103,7 @@ function TaskRow({
       </span>
       <span className="flex items-center gap-1.5 font-medium">
         {busy && <Loader2 className="size-3.5 animate-spin" />}
-        {statusText ?? (item ? statusIcon(item.status) : "—")}
+        {statusText ?? (item ? <StatusIcon status={item.status} /> : "—")}
       </span>
       {loggable && (
         <input

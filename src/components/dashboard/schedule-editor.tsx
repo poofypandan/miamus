@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  CheckCircle2,
+  Clock,
   Copy,
   Droplets,
   List,
@@ -13,6 +15,7 @@ import {
   Settings2,
   Utensils,
   X,
+  XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1067,10 +1070,10 @@ function CopyScheduleDrawer({
   );
 }
 
-function statusIcon(status: AgendaItem["status"]) {
-  if (status === "completed") return "✅";
-  if (status === "overdue") return "❌";
-  return "⏳";
+function StatusIcon({ status }: { status: AgendaItem["status"] }) {
+  if (status === "completed") return <CheckCircle2 className="size-4 text-emerald-500" />;
+  if (status === "overdue") return <XCircle className="size-4 text-red-500" />;
+  return <Clock className="size-4 text-amber-500" />;
 }
 
 function LivePreviewCard({
@@ -1117,7 +1120,9 @@ function LivePreviewCard({
                     className="size-9 shrink-0 rounded-md ring-1 ring-border"
                   />
                 ) : (
-                  <span className="shrink-0 text-xs">{statusIcon(item.status)}</span>
+                  <span className="shrink-0">
+                    <StatusIcon status={item.status} />
+                  </span>
                 )}
               </div>
             );

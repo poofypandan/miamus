@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Archive, Loader2, Plus, Trash2 } from "lucide-react";
+import { Archive, Dog, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -158,11 +158,11 @@ function PetAvatar({
       ) : (
         <div
           className={cn(
-            "flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-muted text-2xl shadow-sm transition-all duration-200 ease-out",
+            "flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-gray-100 text-gray-400 shadow-sm transition-all duration-200 ease-out",
             active ? "scale-105 ring-2 ring-emerald-500 ring-offset-2" : "opacity-60 grayscale"
           )}
         >
-          🐶
+          <Dog className="size-7" />
         </div>
       )}
       <span
