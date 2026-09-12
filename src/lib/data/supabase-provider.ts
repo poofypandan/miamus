@@ -81,6 +81,11 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
+  async createSchedulesBatch(entries) {
+    const { data, error } = await client().from("master_schedules").insert(entries).select();
+    if (error) throw error;
+    return data;
+  },
   async updateSchedule(id, patch) {
     const { data, error } = await client()
       .from("master_schedules")

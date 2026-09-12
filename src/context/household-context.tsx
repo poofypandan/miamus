@@ -29,6 +29,7 @@ interface HouseholdContextValue {
   logTask: (input: CreateLogInput) => Promise<TaskLog>;
   logTasksBatch: (input: CreateBatchLogInput) => Promise<TaskLog[]>;
   createSchedule: (input: CreateScheduleInput) => Promise<MasterSchedule>;
+  createSchedulesBatch: (entries: CreateScheduleInput[]) => Promise<MasterSchedule[]>;
   updateSchedule: (id: string, patch: Partial<MasterSchedule>) => Promise<MasterSchedule>;
   deleteSchedule: (id: string) => Promise<void>;
   createMedicalRecord: (input: CreateMedicalRecordInput) => Promise<MedicalRecord>;
@@ -118,6 +119,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     return newSchedule;
   }, []);
 
+  const createSchedulesBatch = useCallback(async (entries: CreateScheduleInput[]) => {
+    const created = await dataProvider.createSchedulesBatch(entries);
+    setSchedules((prev) => [...prev, ...created]);
+    return created;
+  }, []);
+
   const updateSchedule = useCallback(async (id: string, patch: Partial<MasterSchedule>) => {
     const updated = await dataProvider.updateSchedule(id, patch);
     setSchedules((prev) => prev.map((s) => (s.id === id ? updated : s)));
@@ -157,6 +164,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       logTask,
       logTasksBatch,
       createSchedule,
+      createSchedulesBatch,
       updateSchedule,
       deleteSchedule,
       createMedicalRecord,
@@ -177,6 +185,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       logTask,
       logTasksBatch,
       createSchedule,
+      createSchedulesBatch,
       updateSchedule,
       deleteSchedule,
       createMedicalRecord,

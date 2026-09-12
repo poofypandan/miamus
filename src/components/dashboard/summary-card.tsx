@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { POTTY_TITLE } from "@/lib/schedule-categories";
 import type { AgendaItem } from "@/lib/scheduleEngine";
 
 function statusIcon(status: AgendaItem["status"]) {
@@ -8,7 +9,7 @@ function statusIcon(status: AgendaItem["status"]) {
 }
 
 export function SummaryCard({ dogName, items }: { dogName: string; items: AgendaItem[] }) {
-  const potty = items.filter((i) => i.title === "Pipis & Pup");
+  const potty = items.filter((i) => i.title === POTTY_TITLE);
   const pottyDone = potty.filter((i) => i.status === "completed").length;
   const lunch = items.find((i) => i.title === "Makan Siang");
   const dinner = items.find((i) => i.title === "Makan Malam");

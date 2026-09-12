@@ -1,3 +1,4 @@
+import { displayTitle } from "@/lib/schedule-categories";
 import type { MasterSchedule, TaskEntity, TaskLog, Module } from "@/types/database";
 
 export type AgendaStatus = "pending" | "completed" | "overdue";
@@ -152,7 +153,7 @@ export function buildAgenda(params: {
         entityName: entity.name,
         entityIcon: entity.icon,
         time: toHHMM(slotMinutes),
-        title: schedule.title,
+        title: displayTitle(schedule),
         module: schedule.module,
         status,
         log: matchedLog,

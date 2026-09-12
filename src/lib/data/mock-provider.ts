@@ -136,6 +136,26 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(newSchedule);
   },
+  async createSchedulesBatch(entries) {
+    const db = loadDB();
+    const created: MasterSchedule[] = entries.map((input) => ({
+      id: uid("sched"),
+      entity_id: input.entity_id,
+      title: input.title,
+      module: input.module,
+      frequency_type: input.frequency_type,
+      interval_hours: input.interval_hours ?? null,
+      fixed_times: input.fixed_times ?? null,
+      start_time: input.start_time ?? null,
+      end_time: input.end_time ?? null,
+      is_active: input.is_active ?? true,
+      expires_at: input.expires_at ?? null,
+      created_at: new Date().toISOString(),
+    }));
+    db.schedules.push(...created);
+    saveDB(db);
+    return delay(created);
+  },
   async updateSchedule(id, patch) {
     const db = loadDB();
     const idx = db.schedules.findIndex((s) => s.id === id);

@@ -67,6 +67,7 @@ export interface DataProvider {
   createLog(input: CreateLogInput): Promise<TaskLog>;
   createLogsBatch(input: CreateBatchLogInput): Promise<TaskLog[]>;
   createSchedule(input: CreateScheduleInput): Promise<MasterSchedule>;
+  createSchedulesBatch(entries: CreateScheduleInput[]): Promise<MasterSchedule[]>;
   updateSchedule(id: string, patch: Partial<MasterSchedule>): Promise<MasterSchedule>;
   deleteSchedule(id: string): Promise<void>;
   createMedicalRecord(input: CreateMedicalRecordInput): Promise<MedicalRecord>;

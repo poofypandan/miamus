@@ -2,28 +2,38 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, X, Copy, Loader2 } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
+import { Copy, Loader2, Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
 import type { CreateScheduleInput } from "@/lib/data";
+import {
+  POTTY_TITLE,
+  categorizeSchedule,
+  displayTitle,
+  groomingTitle,
+} from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { getTaskIcon } from "@/lib/task-icons";
 import { formatTime12h } from "@/lib/time";
 import type { TaskEntity, MasterSchedule } from "@/types/database";
 
-const QUICK_TIMES = ["07:00", "12:00", "18:00", "20:00"];
+const INTERVAL_HOUR_OPTIONS = [1, 2, 3, 4];
+
+const TIME_INPUT_CLASS =
+  "min-h-[48px] rounded-xl border border-input bg-transparent px-3 text-base font-medium tabular-nums outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function mealLabelForTime(time: string): string {
   const hour = Number(time.slice(0, 2));
@@ -33,25 +43,59 @@ function mealLabelForTime(time: string): string {
   return "Snack Malam";
 }
 
+function toMinutes(time: string): number {
+  const [h, m] = time.slice(0, 5).split(":").map(Number);
+  return h * 60 + m;
+}
+
+function toHHMM(minutes: number): string {
+  const h = String(Math.floor(minutes / 60) % 24).padStart(2, "0");
+  const m = String(minutes % 60).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+function generateSlots(start: string, end: string, intervalHours: number): string[] {
+  const startM = toMinutes(start);
+  const endM = toMinutes(end);
+  if (endM <= startM || intervalHours <= 0) return [];
+  const step = intervalHours * 60;
+  const slots: string[] = [];
+  for (let m = startM; m <= endM; m += step) {
+    slots.push(toHHMM(m));
+  }
+  return slots;
+}
+
 type CreateScheduleFn = (input: CreateScheduleInput) => Promise<MasterSchedule>;
-type UpdateScheduleFn = (id: string, patch: Partial<MasterSchedule>) => Promise<MasterSchedule>;
+type CreateSchedulesBatchFn = (entries: CreateScheduleInput[]) => Promise<MasterSchedule[]>;
 type DeleteScheduleFn = (id: string) => Promise<void>;
 
 export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
-  const { pets, schedules, createSchedule, updateSchedule, deleteSchedule } = useHousehold();
+  const { pets, schedules, createSchedule, createSchedulesBatch, deleteSchedule } =
+    useHousehold();
   const dogSchedules = schedules.filter((s) => s.entity_id === entity.id);
-  const pottySchedule = dogSchedules.find((s) => s.frequency_type === "interval");
-  const mealSchedules = dogSchedules.filter(
-    (s) => s.frequency_type === "fixed_time" && !s.expires_at
-  );
-  const tempSchedules = dogSchedules.filter((s) => !!s.expires_at);
+  const mealSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "meal");
+  const pottySchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "potty");
+  const groomingSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "grooming");
+  const tempSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "temporary");
 
   return (
     <div className="flex flex-col gap-4">
-      <PottyIntervalCard schedule={pottySchedule} onUpdate={updateSchedule} />
       <MealTimesCard
         entity={entity}
         meals={mealSchedules}
+        createSchedule={createSchedule}
+        deleteSchedule={deleteSchedule}
+      />
+      <PottyRoutineCard
+        entity={entity}
+        items={pottySchedules}
+        createSchedulesBatch={createSchedulesBatch}
+        deleteSchedule={deleteSchedule}
+      />
+      <GroomingCareCard
+        entity={entity}
+        items={groomingSchedules}
         createSchedule={createSchedule}
         deleteSchedule={deleteSchedule}
       />
@@ -61,68 +105,14 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
         createSchedule={createSchedule}
         deleteSchedule={deleteSchedule}
       />
-      <CopyScheduleCard
-        entity={entity}
-        entities={pets}
-        sourceSchedules={dogSchedules}
-        allSchedules={schedules}
-        createSchedule={createSchedule}
-        deleteSchedule={deleteSchedule}
-      />
       <LivePreviewCard entity={entity} schedules={dogSchedules} />
+      <CopyScheduleDrawer
+        entity={entity}
+        pets={pets}
+        sourceSchedules={dogSchedules}
+        createSchedulesBatch={createSchedulesBatch}
+      />
     </div>
-  );
-}
-
-function PottyIntervalCard({
-  schedule,
-  onUpdate,
-}: {
-  schedule?: MasterSchedule;
-  onUpdate: UpdateScheduleFn;
-}) {
-  const [value, setValue] = useState(schedule?.interval_hours ?? 2);
-  const [saving, setSaving] = useState(false);
-
-  if (!schedule) return null;
-
-  async function commit(next: number) {
-    if (next === schedule!.interval_hours) return;
-    setSaving(true);
-    try {
-      await onUpdate(schedule!.id, { interval_hours: next });
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update potty interval");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="text-base">💧 Potty Interval</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 px-4">
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>Every {value}h</span>
-          <span>
-            {schedule.start_time ? formatTime12h(schedule.start_time) : "—"} –{" "}
-            {schedule.end_time ? formatTime12h(schedule.end_time) : "—"}
-          </span>
-        </div>
-        <Slider
-          min={1}
-          max={4}
-          step={1}
-          value={[value]}
-          disabled={saving}
-          onValueChange={([v]) => setValue(v)}
-          onValueCommit={([v]) => commit(v)}
-        />
-      </CardContent>
-    </Card>
   );
 }
 
@@ -137,26 +127,26 @@ function MealTimesCard({
   createSchedule: CreateScheduleFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
-  const existingTimes = new Set(meals.map((m) => m.fixed_times?.[0]?.slice(0, 5)));
   const [time, setTime] = useState("12:00");
-  const [pendingTime, setPendingTime] = useState<string | null>(null);
+  const [label, setLabel] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  async function addTime(time: string) {
-    if (!time || existingTimes.has(time)) return;
-    setPendingTime(time);
+  async function handleAdd() {
+    setSubmitting(true);
     try {
       await createSchedule({
         entity_id: entity.id,
-        title: mealLabelForTime(time),
+        title: label.trim() || mealLabelForTime(time),
         module: "pet",
         frequency_type: "fixed_time",
         fixed_times: [time],
       });
+      setLabel("");
     } catch (err) {
       console.error(err);
       toast.error("Failed to add meal time");
     } finally {
-      setPendingTime(null);
+      setSubmitting(false);
     }
   }
 
@@ -193,48 +183,275 @@ function MealTimesCard({
           )}
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Pick a time</Label>
-          <div className="flex items-center gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Time</Label>
             <input
               type="time"
               step={60}
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="min-h-[52px] flex-1 rounded-xl border border-input bg-transparent px-3 text-xl font-semibold tabular-nums outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className={TIME_INPUT_CLASS}
             />
-            <Button
-              type="button"
-              size="lg"
-              className="min-h-[52px]"
-              disabled={!time || existingTimes.has(time) || pendingTime === time}
-              onClick={() => addTime(time)}
-            >
-              {pendingTime === time ? <Loader2 className="animate-spin" /> : <Plus />}
-              Add
-            </Button>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Label (optional)</Label>
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={`e.g. Kibble + Salmon Oil (defaults to "${mealLabelForTime(time)}")`}
+            />
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {QUICK_TIMES.map((quickTime) => {
-            const exists = existingTimes.has(quickTime);
-            return (
+        <Button onClick={handleAdd} disabled={submitting} className="min-h-[48px] w-fit">
+          {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
+          Add meal
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PottyRoutineCard({
+  entity,
+  items,
+  createSchedulesBatch,
+  deleteSchedule,
+}: {
+  entity: TaskEntity;
+  items: MasterSchedule[];
+  createSchedulesBatch: CreateSchedulesBatchFn;
+  deleteSchedule: DeleteScheduleFn;
+}) {
+  const [start, setStart] = useState("06:00");
+  const [end, setEnd] = useState("22:00");
+  const [intervalHours, setIntervalHours] = useState(2);
+  const [generating, setGenerating] = useState(false);
+
+  const newSlots = useMemo(() => {
+    const existingTimes = new Set(items.map((i) => i.fixed_times?.[0]?.slice(0, 5)));
+    return generateSlots(start, end, intervalHours).filter((t) => !existingTimes.has(t));
+  }, [start, end, intervalHours, items]);
+
+  async function handleGenerate() {
+    if (newSlots.length === 0) {
+      toast.error("No new times to add in that range");
+      return;
+    }
+    setGenerating(true);
+    try {
+      await createSchedulesBatch(
+        newSlots.map((time) => ({
+          entity_id: entity.id,
+          title: POTTY_TITLE,
+          module: "pet",
+          frequency_type: "fixed_time",
+          fixed_times: [time],
+        }))
+      );
+      toast.success(`Added ${newSlots.length} potty ${newSlots.length === 1 ? "time" : "times"}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate potty routine");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function removeSlot(id: string) {
+    try {
+      await deleteSchedule(id);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to remove potty time");
+    }
+  }
+
+  const sortedItems = [...items].sort((a, b) =>
+    (a.fixed_times?.[0] ?? "").localeCompare(b.fixed_times?.[0] ?? "")
+  );
+
+  return (
+    <Card className="gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">💧 Potty Routine</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 px-4">
+        <div className="flex flex-wrap gap-2">
+          {sortedItems.map((i) => (
+            <Badge key={i.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
+              {i.fixed_times?.[0] ? formatTime12h(i.fixed_times[0]) : "—"}
+              <button
+                type="button"
+                onClick={() => removeSlot(i.id)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-background/60"
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          ))}
+          {items.length === 0 && (
+            <p className="text-sm text-muted-foreground">No potty times yet.</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Start time</Label>
+            <input
+              type="time"
+              step={60}
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              className={TIME_INPUT_CLASS}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">End time</Label>
+            <input
+              type="time"
+              step={60}
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              className={TIME_INPUT_CLASS}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs">Every</Label>
+          <div className="flex gap-1.5">
+            {INTERVAL_HOUR_OPTIONS.map((h) => (
               <Button
-                key={quickTime}
+                key={h}
                 type="button"
                 size="sm"
-                className="min-h-[48px]"
-                variant={exists ? "ghost" : "outline"}
-                disabled={exists || pendingTime === quickTime}
-                onClick={() => addTime(quickTime)}
+                variant={intervalHours === h ? "default" : "outline"}
+                className="min-h-[48px] flex-1"
+                onClick={() => setIntervalHours(h)}
               >
-                {pendingTime === quickTime ? <Loader2 className="animate-spin" /> : <Plus />}
-                {formatTime12h(quickTime)}
+                {h}h
               </Button>
-            );
-          })}
+            ))}
+          </div>
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          {newSlots.length > 0
+            ? `Will add ${newSlots.length}: ${newSlots.map(formatTime12h).join(", ")}`
+            : "No new times to add in this range."}
+        </p>
+
+        <Button
+          onClick={handleGenerate}
+          disabled={generating || newSlots.length === 0}
+          className="min-h-[48px] w-fit"
+        >
+          {generating ? <Loader2 className="animate-spin" /> : <Plus />}
+          Generate Routine
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GroomingCareCard({
+  entity,
+  items,
+  createSchedule,
+  deleteSchedule,
+}: {
+  entity: TaskEntity;
+  items: MasterSchedule[];
+  createSchedule: CreateScheduleFn;
+  deleteSchedule: DeleteScheduleFn;
+}) {
+  const [time, setTime] = useState("09:00");
+  const [label, setLabel] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleAdd() {
+    if (!label.trim()) {
+      toast.error("Give the task a label");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await createSchedule({
+        entity_id: entity.id,
+        title: groomingTitle(label.trim()),
+        module: "pet",
+        frequency_type: "fixed_time",
+        fixed_times: [time],
+      });
+      setLabel("");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to add grooming task");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function remove(id: string) {
+    try {
+      await deleteSchedule(id);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to remove task");
+    }
+  }
+
+  return (
+    <Card className="gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">🪥 Grooming & Care</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 px-4">
+        <div className="flex flex-wrap gap-2">
+          {items.map((g) => (
+            <Badge key={g.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
+              {g.fixed_times?.[0] ? formatTime12h(g.fixed_times[0]) : "—"} · {displayTitle(g)}
+              <button
+                type="button"
+                onClick={() => remove(g.id)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-background/60"
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          ))}
+          {items.length === 0 && (
+            <p className="text-sm text-muted-foreground">No grooming tasks yet.</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Time</Label>
+            <input
+              type="time"
+              step={60}
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className={TIME_INPUT_CLASS}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Label</Label>
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. Ear Cleaning"
+            />
+          </div>
+        </div>
+
+        <Button onClick={handleAdd} disabled={submitting} className="min-h-[48px] w-fit">
+          {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
+          Add task
+        </Button>
       </CardContent>
     </Card>
   );
@@ -294,7 +511,7 @@ function TemporaryTasksCard({
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">🩺 Temporary Tasks</CardTitle>
+        <CardTitle className="text-base">🩺 Temporary / One-Off Tasks</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-col gap-2">
@@ -355,38 +572,45 @@ function TemporaryTasksCard({
   );
 }
 
-function CopyScheduleCard({
+function CopyScheduleDrawer({
   entity,
-  entities,
+  pets,
   sourceSchedules,
-  allSchedules,
-  createSchedule,
-  deleteSchedule,
+  createSchedulesBatch,
 }: {
   entity: TaskEntity;
-  entities: TaskEntity[];
+  pets: TaskEntity[];
   sourceSchedules: MasterSchedule[];
-  allSchedules: MasterSchedule[];
-  createSchedule: CreateScheduleFn;
-  deleteSchedule: DeleteScheduleFn;
+  createSchedulesBatch: CreateSchedulesBatchFn;
 }) {
-  const targets = entities.filter((e) => e.id !== entity.id);
-  const [target, setTarget] = useState("");
+  const targets = pets.filter((p) => p.id !== entity.id);
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copying, setCopying] = useState(false);
 
+  if (targets.length === 0) return null;
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function handleCopy() {
-    if (!target) {
-      toast.error("Choose a dog to copy to");
+    if (selected.size === 0) {
+      toast.error("Choose at least one pet");
       return;
     }
     setCopying(true);
     try {
-      const targetSchedules = allSchedules.filter((s) => s.entity_id === target);
-      await Promise.all(targetSchedules.map((s) => deleteSchedule(s.id)));
-      await Promise.all(
-        sourceSchedules.map((s) =>
-          createSchedule({
-            entity_id: target,
+      const entries: CreateScheduleInput[] = [];
+      for (const targetId of selected) {
+        for (const s of sourceSchedules) {
+          entries.push({
+            entity_id: targetId,
             title: s.title,
             module: s.module,
             frequency_type: s.frequency_type,
@@ -395,11 +619,17 @@ function CopyScheduleCard({
             start_time: s.start_time,
             end_time: s.end_time,
             expires_at: s.expires_at,
-          })
-        )
-      );
-      toast.success(`Schedule copied to ${entities.find((e) => e.id === target)?.name}`);
-      setTarget("");
+          });
+        }
+      }
+      await createSchedulesBatch(entries);
+      const names = targets
+        .filter((t) => selected.has(t.id))
+        .map((t) => t.name)
+        .join(", ");
+      toast.success(`Schedule copied to ${names}`);
+      setSelected(new Set());
+      setOpen(false);
     } catch (err) {
       console.error(err);
       toast.error("Failed to copy schedule");
@@ -409,29 +639,48 @@ function CopyScheduleCard({
   }
 
   return (
-    <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="text-base">Copy Schedule</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-wrap items-center gap-2 px-4">
-        <Select value={target} onValueChange={setTarget}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Copy to..." />
-          </SelectTrigger>
-          <SelectContent>
-            {targets.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                {t.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={handleCopy} disabled={copying || !target} variant="outline">
-          {copying ? <Loader2 className="animate-spin" /> : <Copy />}
-          Copy schedule to this dog
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button
+          variant="outline"
+          className="min-h-[48px] w-full"
+          disabled={sourceSchedules.length === 0}
+        >
+          <Copy /> Copy schedule to...
         </Button>
-      </CardContent>
-    </Card>
+      </SheetTrigger>
+      <SheetContent side="bottom">
+        <SheetHeader>
+          <SheetTitle>Copy {entity.name}&apos;s schedule</SheetTitle>
+          <SheetDescription>
+            Choose which pets should get a copy of {entity.name}&apos;s{" "}
+            {sourceSchedules.length} schedule{sourceSchedules.length === 1 ? "" : "s"}.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="flex flex-col gap-2 px-4">
+          {targets.map((t) => (
+            <label
+              key={t.id}
+              className="flex min-h-[48px] items-center gap-3 rounded-lg border px-3"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(t.id)}
+                onChange={() => toggle(t.id)}
+                className="size-4"
+              />
+              <span className="font-medium">{t.name}</span>
+            </label>
+          ))}
+        </div>
+        <SheetFooter>
+          <Button onClick={handleCopy} disabled={copying || selected.size === 0}>
+            {copying ? <Loader2 className="animate-spin" /> : <Copy />}
+            Copy to {selected.size || ""} pet{selected.size === 1 ? "" : "s"}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
