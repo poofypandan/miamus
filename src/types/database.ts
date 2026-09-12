@@ -1,0 +1,101 @@
+export type EntityType = "pet" | "room" | "general";
+export type Module = "pet" | "cleaning" | "laundry";
+export type FrequencyType = "interval" | "fixed_time" | "weekly";
+export type RecordType = "vaccine" | "vet" | "medication";
+
+// Plain `type` aliases, not `interface` — interfaces don't structurally
+// satisfy `Record<string, unknown>`, which postgrest-js's GenericTable
+// requires for Row/Insert/Update.
+export type TaskEntity = {
+  id: string;
+  entity_type: EntityType;
+  name: string;
+  icon: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type MasterSchedule = {
+  id: string;
+  entity_id: string;
+  title: string;
+  module: Module;
+  frequency_type: FrequencyType;
+  interval_hours: number | null;
+  fixed_times: string[] | null;
+  start_time: string | null;
+  end_time: string | null;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export type TaskLog = {
+  id: string;
+  schedule_id: string | null;
+  entity_id: string;
+  module: Module;
+  photo_url: string | null;
+  notes: string | null;
+  completed_at: string;
+};
+
+export type MedicalRecord = {
+  id: string;
+  entity_id: string;
+  record_type: RecordType;
+  title: string;
+  administered_at: string | null;
+  next_due_date: string | null;
+  document_photo_url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type StaffProfile = {
+  id: string;
+  created_at: string;
+};
+
+export interface Database {
+  public: {
+    Tables: {
+      task_entities: {
+        Row: TaskEntity;
+        Insert: Partial<TaskEntity> & Pick<TaskEntity, "entity_type" | "name">;
+        Update: Partial<TaskEntity>;
+        Relationships: [];
+      };
+      master_schedules: {
+        Row: MasterSchedule;
+        Insert: Partial<MasterSchedule> &
+          Pick<MasterSchedule, "entity_id" | "title" | "module" | "frequency_type">;
+        Update: Partial<MasterSchedule>;
+        Relationships: [];
+      };
+      task_logs: {
+        Row: TaskLog;
+        Insert: Partial<TaskLog> & Pick<TaskLog, "entity_id" | "module">;
+        Update: Partial<TaskLog>;
+        Relationships: [];
+      };
+      medical_records: {
+        Row: MedicalRecord;
+        Insert: Partial<MedicalRecord> &
+          Pick<MedicalRecord, "entity_id" | "record_type" | "title">;
+        Update: Partial<MedicalRecord>;
+        Relationships: [];
+      };
+      staff_profiles: {
+        Row: StaffProfile;
+        Insert: Partial<StaffProfile>;
+        Update: Partial<StaffProfile>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+}
