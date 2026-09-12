@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { SummaryCard } from "@/components/dashboard/summary-card";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
+import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -63,6 +64,7 @@ export default function DashboardHomePage() {
         </h2>
         <PhotoStream logs={todaysLogs} entities={entities} />
       </section>
+      <LowStockFlagButton />
     </div>
   );
 }

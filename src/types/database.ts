@@ -2,6 +2,7 @@ export type EntityType = "pet" | "room" | "general";
 export type Module = "pet" | "cleaning" | "laundry";
 export type FrequencyType = "interval" | "fixed_time" | "weekly";
 export type RecordType = "vaccine" | "vet" | "medication";
+export type ItemType = "food" | "medicine" | "treats" | "shampoo";
 
 // Plain `type` aliases, not `interface` — interfaces don't structurally
 // satisfy `Record<string, unknown>`, which postgrest-js's GenericTable
@@ -57,6 +58,19 @@ export type StaffProfile = {
   created_at: string;
 };
 
+// Note: unlike every other table here, this one's foreign key column is
+// literally named `pet_id` (not `entity_id`) in the live database — it
+// predates this app's polymorphic entity_id convention, so match it as-is
+// rather than "fixing" it to entity_id (which 400s against the real table).
+export type InventoryAlert = {
+  id: string;
+  pet_id: string;
+  item_type: ItemType;
+  note: string | null;
+  resolved: boolean;
+  created_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -90,6 +104,12 @@ export interface Database {
         Row: StaffProfile;
         Insert: Partial<StaffProfile>;
         Update: Partial<StaffProfile>;
+        Relationships: [];
+      };
+      inventory_alerts: {
+        Row: InventoryAlert;
+        Insert: Partial<InventoryAlert> & Pick<InventoryAlert, "pet_id" | "item_type">;
+        Update: Partial<InventoryAlert>;
         Relationships: [];
       };
     };

@@ -1,4 +1,10 @@
-import type { TaskEntity, MasterSchedule, TaskLog, MedicalRecord } from "@/types/database";
+import type {
+  TaskEntity,
+  MasterSchedule,
+  TaskLog,
+  MedicalRecord,
+  InventoryAlert,
+} from "@/types/database";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
 
@@ -9,17 +15,28 @@ interface MockDB {
   schedules: MasterSchedule[];
   logs: TaskLog[];
   medicalRecords: MedicalRecord[];
+  inventoryAlerts: InventoryAlert[];
 }
 
 function freshDB(): MockDB {
-  return { entities: MOCK_ENTITIES, schedules: MOCK_SCHEDULES, logs: [], medicalRecords: [] };
+  return {
+    entities: MOCK_ENTITIES,
+    schedules: MOCK_SCHEDULES,
+    logs: [],
+    medicalRecords: [],
+    inventoryAlerts: [],
+  };
 }
 
 function loadDB(): MockDB {
   if (typeof window === "undefined") return freshDB();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as MockDB;
+    if (raw) {
+      const parsed = JSON.parse(raw) as MockDB;
+      // Guards against a DB saved before inventoryAlerts existed.
+      return { ...parsed, inventoryAlerts: parsed.inventoryAlerts ?? [] };
+    }
   } catch {
     // corrupt storage — fall through to a fresh seed below
   }
@@ -202,6 +219,31 @@ export const mockProvider: DataProvider = {
     // Mirrors uploadPhoto: nothing persisted server-side in mock mode, but
     // release the blob: URL so the browser can free the memory.
     if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+    return delay(undefined);
+  },
+  async listInventoryAlerts() {
+    return delay(loadDB().inventoryAlerts);
+  },
+  async createInventoryAlert(input) {
+    const db = loadDB();
+    const alert: InventoryAlert = {
+      id: uid("alert"),
+      pet_id: input.pet_id,
+      item_type: input.item_type,
+      note: input.note ?? null,
+      resolved: false,
+      created_at: new Date().toISOString(),
+    };
+    db.inventoryAlerts.push(alert);
+    saveDB(db);
+    return delay(alert);
+  },
+  async resolveInventoryAlert(id) {
+    const db = loadDB();
+    const idx = db.inventoryAlerts.findIndex((a) => a.id === id);
+    if (idx === -1) throw new Error(`Inventory alert ${id} not found`);
+    db.inventoryAlerts[idx] = { ...db.inventoryAlerts[idx], resolved: true };
+    saveDB(db);
     return delay(undefined);
   },
 };

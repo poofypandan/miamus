@@ -14,4 +14,5 @@ export type {
   CreateBatchLogInput,
   CreateScheduleInput,
   CreateMedicalRecordInput,
+  CreateInventoryAlertInput,
 } from "./types";

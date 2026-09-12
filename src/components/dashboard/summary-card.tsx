@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Droplets, Loader2, Utensils, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHousehold } from "@/context/household-context";
 import { compressPhoto } from "@/lib/image";
@@ -29,9 +29,14 @@ export function SummaryCard({ dogName, items }: { dogName: string; items: Agenda
         <CardTitle className="text-base">{dogName}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-1.5 px-4 text-sm">
-        <TaskRow icon="💧" label="Potty" item={nextPotty} statusText={`${pottyDone}/${potty.length}`} />
-        <TaskRow icon="🍖" label="Lunch" item={lunch} />
-        <TaskRow icon="🍖" label="Dinner" item={dinner} />
+        <TaskRow
+          icon={Droplets}
+          label="Potty"
+          item={nextPotty}
+          statusText={`${pottyDone}/${potty.length}`}
+        />
+        <TaskRow icon={Utensils} label="Lunch" item={lunch} />
+        <TaskRow icon={Utensils} label="Dinner" item={dinner} />
       </CardContent>
     </Card>
   );
@@ -41,12 +46,12 @@ export function SummaryCard({ dogName, items }: { dogName: string; items: Agenda
 // mirrors the Staff View's AgendaGroupCard pattern (hidden capture input +
 // compress + upload + log), just scoped to one item instead of a whole group.
 function TaskRow({
-  icon,
+  icon: Icon,
   label,
   item,
   statusText,
 }: {
-  icon: string;
+  icon: LucideIcon;
   label: string;
   item: AgendaItem | undefined;
   statusText?: string;
@@ -85,8 +90,8 @@ function TaskRow({
         loggable && !busy && "cursor-pointer hover:bg-muted active:bg-muted"
       )}
     >
-      <span className="text-muted-foreground">
-        {icon} {label}
+      <span className="flex items-center gap-1.5 text-muted-foreground">
+        <Icon className="size-3.5" /> {label}
       </span>
       <span className="flex items-center gap-1.5 font-medium">
         {busy && <Loader2 className="size-3.5 animate-spin" />}

@@ -3,10 +3,12 @@ import type {
   MasterSchedule,
   TaskLog,
   MedicalRecord,
+  InventoryAlert,
   Module,
   EntityType,
   FrequencyType,
   RecordType,
+  ItemType,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -60,6 +62,12 @@ export interface CreateMedicalRecordInput {
   notes?: string | null;
 }
 
+export interface CreateInventoryAlertInput {
+  pet_id: string;
+  item_type: ItemType;
+  note?: string | null;
+}
+
 export interface DataProvider {
   listEntities(): Promise<TaskEntity[]>;
   listSchedules(): Promise<MasterSchedule[]>;
@@ -78,4 +86,7 @@ export interface DataProvider {
   createMedicalRecord(input: CreateMedicalRecordInput): Promise<MedicalRecord>;
   uploadPhoto(file: File, pathPrefix: string): Promise<string>;
   deletePhoto(url: string): Promise<void>;
+  listInventoryAlerts(): Promise<InventoryAlert[]>;
+  createInventoryAlert(input: CreateInventoryAlertInput): Promise<InventoryAlert>;
+  resolveInventoryAlert(id: string): Promise<void>;
 }

@@ -1,4 +1,4 @@
-import { displayTitle } from "@/lib/schedule-categories";
+import { categorizeSchedule, displayTitle, type ScheduleCategory } from "@/lib/schedule-categories";
 import type { MasterSchedule, TaskEntity, TaskLog, Module } from "@/types/database";
 
 export type AgendaStatus = "pending" | "completed" | "overdue";
@@ -11,6 +11,7 @@ export interface AgendaItem {
   entityIcon: string | null;
   time: string; // "HH:mm"
   title: string;
+  category: ScheduleCategory;
   module: Module;
   status: AgendaStatus;
   log: TaskLog | null;
@@ -19,6 +20,7 @@ export interface AgendaItem {
 export interface AgendaGroup {
   time: string;
   title: string;
+  category: ScheduleCategory;
   module: Module;
   items: AgendaItem[];
 }
@@ -168,6 +170,7 @@ export function buildAgenda(params: {
         entityIcon: entity.icon,
         time: toHHMM(slotMinutes),
         title: displayTitle(schedule),
+        category: categorizeSchedule(schedule),
         module: schedule.module,
         status,
         log: matchedLog,
@@ -184,7 +187,13 @@ export function buildAgenda(params: {
     const groupKey = `${item.time}|${item.title}`;
     let group = groups.get(groupKey);
     if (!group) {
-      group = { time: item.time, title: item.title, module: item.module, items: [] };
+      group = {
+        time: item.time,
+        title: item.title,
+        category: item.category,
+        module: item.module,
+        items: [],
+      };
       groups.set(groupKey, group);
     }
     group.items.push(item);

@@ -8,9 +8,16 @@ import type {
   CreateBatchLogInput,
   CreateScheduleInput,
   CreateMedicalRecordInput,
+  CreateInventoryAlertInput,
 } from "@/lib/data";
 import { isActivePet } from "@/lib/pets";
-import type { TaskEntity, MasterSchedule, TaskLog, MedicalRecord } from "@/types/database";
+import type {
+  TaskEntity,
+  MasterSchedule,
+  TaskLog,
+  MedicalRecord,
+  InventoryAlert,
+} from "@/types/database";
 
 export type UserRole = "staff" | "owner";
 
@@ -24,6 +31,7 @@ interface HouseholdContextValue {
   schedules: MasterSchedule[];
   logs: TaskLog[];
   medicalRecords: MedicalRecord[];
+  inventoryAlerts: InventoryAlert[];
   loading: boolean;
   isMockMode: boolean;
   activePetId: string | null;
@@ -44,6 +52,8 @@ interface HouseholdContextValue {
   deleteSchedule: (id: string) => Promise<void>;
   createMedicalRecord: (input: CreateMedicalRecordInput) => Promise<MedicalRecord>;
   uploadPhoto: (file: File, pathPrefix: string) => Promise<string>;
+  flagLowStock: (input: CreateInventoryAlertInput) => Promise<InventoryAlert>;
+  resolveInventoryAlert: (id: string) => Promise<void>;
 }
 
 const HouseholdContext = createContext<HouseholdContextValue | null>(null);
@@ -53,20 +63,23 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [schedules, setSchedules] = useState<MasterSchedule[]>([]);
   const [logs, setLogs] = useState<TaskLog[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
+  const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [e, s, l, m] = await Promise.all([
+    const [e, s, l, m, ia] = await Promise.all([
       dataProvider.listEntities(),
       dataProvider.listSchedules(),
       dataProvider.listLogs(),
       dataProvider.listMedicalRecords(),
+      dataProvider.listInventoryAlerts(),
     ]);
     setEntities(e);
     setSchedules(s);
     setLogs(l);
     setMedicalRecords(m);
+    setInventoryAlerts(ia);
     setLoading(false);
   }, []);
 
@@ -183,6 +196,17 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     return dataProvider.uploadPhoto(file, pathPrefix);
   }, []);
 
+  const flagLowStock = useCallback(async (input: CreateInventoryAlertInput) => {
+    const alert = await dataProvider.createInventoryAlert(input);
+    setInventoryAlerts((prev) => [alert, ...prev]);
+    return alert;
+  }, []);
+
+  const resolveInventoryAlert = useCallback(async (id: string) => {
+    await dataProvider.resolveInventoryAlert(id);
+    setInventoryAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, resolved: true } : a)));
+  }, []);
+
   const value = useMemo<HouseholdContextValue>(
     () => ({
       entities,
@@ -190,6 +214,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       schedules,
       logs,
       medicalRecords,
+      inventoryAlerts,
       loading,
       isMockMode,
       activePetId,
@@ -210,6 +235,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteSchedule,
       createMedicalRecord,
       uploadPhoto,
+      flagLowStock,
+      resolveInventoryAlert,
     }),
     [
       entities,
@@ -217,6 +244,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       schedules,
       logs,
       medicalRecords,
+      inventoryAlerts,
       loading,
       activePetId,
       userRole,
@@ -235,6 +263,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteSchedule,
       createMedicalRecord,
       uploadPhoto,
+      flagLowStock,
+      resolveInventoryAlert,
     ]
   );
 

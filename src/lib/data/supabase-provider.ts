@@ -141,4 +141,28 @@ export const supabaseProvider: DataProvider = {
     const { error } = await client().storage.from(STORAGE_BUCKET).remove([path]);
     if (error) throw error;
   },
+  async listInventoryAlerts() {
+    const { data, error } = await client()
+      .from("inventory_alerts")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  async createInventoryAlert(input) {
+    const { data, error } = await client()
+      .from("inventory_alerts")
+      .insert(input)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async resolveInventoryAlert(id) {
+    const { error } = await client()
+      .from("inventory_alerts")
+      .update({ resolved: true })
+      .eq("id", id);
+    if (error) throw error;
+  },
 };

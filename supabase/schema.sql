@@ -81,6 +81,28 @@ create table if not exists medical_records (
 create index if not exists medical_records_entity_id_idx on medical_records(entity_id);
 
 -- ============================================================================
+-- inventory_alerts
+-- Staff-raised "we're running low on X" flags. Owners see them as a banner
+-- and mark them resolved once restocked.
+--
+-- Uses `pet_id` rather than this file's usual `entity_id` convention — this
+-- table already existed in the live database with that column name before
+-- this migration was written, so the app code matches it as-is instead of
+-- the other way around.
+-- ============================================================================
+create table if not exists inventory_alerts (
+  id uuid primary key default gen_random_uuid(),
+  pet_id uuid not null references task_entities(id) on delete cascade,
+  item_type text not null check (item_type in ('food', 'medicine', 'treats', 'shampoo')),
+  note text,
+  resolved boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists inventory_alerts_pet_id_idx on inventory_alerts(pet_id);
+create index if not exists inventory_alerts_resolved_idx on inventory_alerts(resolved);
+
+-- ============================================================================
 -- staff_profiles
 -- Placeholder for Phase 3 (staff attendance/tasks). Intentionally empty
 -- beyond an id/timestamp until that phase is built.

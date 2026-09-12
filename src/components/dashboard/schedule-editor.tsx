@@ -2,7 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Loader2, Plus, Settings2, Trash2, X } from "lucide-react";
+import {
+  Copy,
+  Droplets,
+  List,
+  Loader2,
+  Pill,
+  Plus,
+  Scissors,
+  Settings2,
+  Utensils,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,15 +33,16 @@ import type { CreateScheduleInput } from "@/lib/data";
 import {
   POTTY_TITLE,
   categorizeSchedule,
+  categoryIcon,
   displayTitle,
   groomingTitle,
   medicationTitle,
 } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import type { AgendaItem } from "@/lib/scheduleEngine";
-import { getTaskIcon } from "@/lib/task-icons";
 import { formatTime12h } from "@/lib/time";
-import type { TaskEntity, MasterSchedule, TaskLog } from "@/types/database";
+import type { TaskEntity, MasterSchedule } from "@/types/database";
+import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
 
 const INTERVAL_HOUR_OPTIONS = [1, 2, 3, 4];
 const DOSE_COUNT_OPTIONS = [1, 2, 3, 4];
@@ -251,7 +263,9 @@ function MealTimesCard({
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">🍖 Meal Times</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-base">
+          <Utensils className="size-4" /> Meal Times
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-wrap gap-2">
@@ -368,7 +382,9 @@ function PottyRoutineCard({
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">💧 Potty Routine</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-base">
+          <Droplets className="size-4" /> Potty Routine
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-wrap gap-2">
@@ -535,7 +551,9 @@ function MedicationsCard({
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">💊 Medicines & Vitamins</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-base">
+          <Pill className="size-4" /> Medicines & Vitamins
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-wrap gap-2">
@@ -706,7 +724,9 @@ function GroomingCareCard({
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">🪥 Grooming & Care</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-base">
+          <Scissors className="size-4" /> Grooming & Care
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-wrap gap-2">
@@ -874,7 +894,9 @@ function OthersCard({
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">📌 Others</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-base">
+          <List className="size-4" /> Others
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-col gap-2">
@@ -1058,7 +1080,7 @@ function LivePreviewCard({
   entity: TaskEntity;
   schedules: MasterSchedule[];
 }) {
-  const { logs, userRole, deleteLogWithPhoto } = useHousehold();
+  const { logs } = useHousehold();
   const today = formatDateLocal(new Date());
   // Flattened one-row-per-schedule-item, not one-row-per-group — grouping by
   // time+title (as buildAgenda's groups do, for the Staff View's multi-dog
@@ -1070,21 +1092,6 @@ function LivePreviewCard({
     return groups.flatMap((g) => g.items);
   }, [today, entity, schedules, logs]);
 
-  function canDelete(log: TaskLog) {
-    if (userRole === "owner") return true;
-    return formatDateLocal(new Date(log.completed_at)) === today;
-  }
-
-  async function handleUndo(log: TaskLog) {
-    try {
-      await deleteLogWithPhoto(log);
-      toast.success("Task undone");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to undo task");
-    }
-  }
-
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
@@ -1094,33 +1101,27 @@ function LivePreviewCard({
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No tasks scheduled.</p>
         ) : (
-          items.map((item) => (
-            <div key={item.key} className="flex items-center gap-2 text-sm">
-              <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
-                {formatTime12h(item.time)}
-              </span>
-              <span>{getTaskIcon(item.title)}</span>
-              <span className="flex-1 font-medium">{item.title}</span>
-              {item.log?.photo_url ? (
-                <div className="relative size-9 shrink-0 overflow-hidden rounded-md ring-1 ring-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={item.log.photo_url} alt="" className="h-full w-full object-cover" />
-                  {canDelete(item.log) && (
-                    <button
-                      type="button"
-                      onClick={() => handleUndo(item.log!)}
-                      className="absolute inset-0 flex items-center justify-center bg-black/45 text-white"
-                      aria-label={`Undo ${item.title}`}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <span className="shrink-0 text-xs">{statusIcon(item.status)}</span>
-              )}
-            </div>
-          ))
+          items.map((item) => {
+            const Icon = categoryIcon(item.category);
+            return (
+              <div key={item.key} className="flex items-center gap-2 text-sm">
+                <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
+                  {formatTime12h(item.time)}
+                </span>
+                <Icon className="size-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1 font-medium">{item.title}</span>
+                {item.log?.photo_url ? (
+                  <LogPhotoThumbnail
+                    log={item.log}
+                    title={item.title}
+                    className="size-9 shrink-0 rounded-md ring-1 ring-border"
+                  />
+                ) : (
+                  <span className="shrink-0 text-xs">{statusIcon(item.status)}</span>
+                )}
+              </div>
+            );
+          })
         )}
       </CardContent>
     </Card>

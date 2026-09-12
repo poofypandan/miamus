@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
 import { compressPhoto } from "@/lib/image";
-import { getTaskIcon } from "@/lib/task-icons";
+import { categoryIcon } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
@@ -98,12 +98,14 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     }
   }
 
+  const CategoryIcon = categoryIcon(group.category);
+
   return (
     <>
       <Card className="gap-3 py-4">
         <CardHeader className="px-4">
           <CardTitle className="flex items-center gap-2 text-base">
-            <span className="text-lg">{getTaskIcon(group.title)}</span>
+            <CategoryIcon className="size-4" />
             <span>{formatTime12h(group.time)}</span>
             <span className="font-normal text-muted-foreground">· {group.title}</span>
           </CardTitle>

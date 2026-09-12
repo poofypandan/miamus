@@ -1,3 +1,4 @@
+import { Droplets, List, Pill, Scissors, Utensils, type LucideIcon } from "lucide-react";
 import type { MasterSchedule } from "@/types/database";
 
 // master_schedules has no dedicated "category" column, so potty/grooming/
@@ -41,4 +42,16 @@ export function displayTitle(schedule: MasterSchedule): string {
     return schedule.title.slice(MEDICATION_PREFIX.length);
   }
   return schedule.title;
+}
+
+const CATEGORY_ICONS: Record<ScheduleCategory, LucideIcon> = {
+  potty: Droplets,
+  meal: Utensils,
+  medication: Pill,
+  grooming: Scissors,
+  temporary: List,
+};
+
+export function categoryIcon(category: ScheduleCategory): LucideIcon {
+  return CATEGORY_ICONS[category];
 }
