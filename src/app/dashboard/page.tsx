@@ -8,12 +8,12 @@ import { useHousehold } from "@/context/household-context";
 import { buildAgenda, formatDateLocal, type AgendaItem } from "@/lib/scheduleEngine";
 
 export default function DashboardHomePage() {
-  const { entities, schedules, logs, loading } = useHousehold();
+  const { pets, entities, schedules, logs, loading } = useHousehold();
   const today = formatDateLocal(new Date());
 
   const groups = useMemo(
-    () => buildAgenda({ date: today, entities, schedules, logs }),
-    [today, entities, schedules, logs]
+    () => buildAgenda({ date: today, entities: pets, schedules, logs }),
+    [today, pets, schedules, logs]
   );
 
   const itemsByEntity = useMemo(() => {
@@ -50,11 +50,11 @@ export default function DashboardHomePage() {
           Today&apos;s Overview
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {entities.map((entity) => (
+          {pets.map((pet) => (
             <SummaryCard
-              key={entity.id}
-              dogName={entity.name}
-              items={itemsByEntity.get(entity.id) ?? []}
+              key={pet.id}
+              dogName={pet.name}
+              items={itemsByEntity.get(pet.id) ?? []}
             />
           ))}
         </div>

@@ -8,7 +8,7 @@ import { useHousehold } from "@/context/household-context";
 import { cn } from "@/lib/utils";
 
 export default function HealthPage() {
-  const { entities, medicalRecords, loading } = useHousehold();
+  const { entities, pets, medicalRecords, loading } = useHousehold();
   const [filter, setFilter] = useState<string>("all");
 
   const filtered = useMemo(() => {
@@ -37,12 +37,12 @@ export default function HealthPage() {
 
       <div className="flex flex-wrap gap-2">
         <FilterChip label="All" active={filter === "all"} onClick={() => setFilter("all")} />
-        {entities.map((e) => (
+        {pets.map((p) => (
           <FilterChip
-            key={e.id}
-            label={e.name}
-            active={filter === e.id}
-            onClick={() => setFilter(e.id)}
+            key={p.id}
+            label={p.name}
+            active={filter === p.id}
+            onClick={() => setFilter(p.id)}
           />
         ))}
       </div>
@@ -78,7 +78,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1 text-sm font-medium transition-colors",
+        "flex min-h-[48px] items-center rounded-full border px-3 py-1 text-sm font-medium transition-colors",
         active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border text-foreground hover:bg-muted"

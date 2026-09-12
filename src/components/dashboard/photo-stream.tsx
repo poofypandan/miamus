@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { formatTime12h } from "@/lib/time";
 import type { TaskLog, TaskEntity } from "@/types/database";
 
 interface PhotoStreamProps {
@@ -53,9 +54,9 @@ export function PhotoStream({ logs, entities }: PhotoStreamProps) {
         <DialogContent className="sm:max-w-md">
           <DialogTitle>
             {preview
-              ? `${entityById.get(preview.entity_id)?.name ?? "Log"} · ${new Date(
-                  preview.completed_at
-                ).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`
+              ? `${entityById.get(preview.entity_id)?.name ?? "Log"} · ${formatTime12h(
+                  new Date(preview.completed_at)
+                )}`
               : ""}
           </DialogTitle>
           {preview && (

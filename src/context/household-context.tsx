@@ -3,21 +3,29 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { dataProvider, isMockMode } from "@/lib/data";
 import type {
+  CreateEntityInput,
   CreateLogInput,
+  CreateBatchLogInput,
   CreateScheduleInput,
   CreateMedicalRecordInput,
 } from "@/lib/data";
+import { isActivePet } from "@/lib/pets";
 import type { TaskEntity, MasterSchedule, TaskLog, MedicalRecord } from "@/types/database";
 
 interface HouseholdContextValue {
   entities: TaskEntity[];
+  pets: TaskEntity[];
   schedules: MasterSchedule[];
   logs: TaskLog[];
   medicalRecords: MedicalRecord[];
   loading: boolean;
   isMockMode: boolean;
   refresh: () => Promise<void>;
+  createEntity: (input: CreateEntityInput) => Promise<TaskEntity>;
+  updateEntity: (id: string, patch: Partial<TaskEntity>) => Promise<TaskEntity>;
+  deleteEntity: (id: string) => Promise<void>;
   logTask: (input: CreateLogInput) => Promise<TaskLog>;
+  logTasksBatch: (input: CreateBatchLogInput) => Promise<TaskLog[]>;
   createSchedule: (input: CreateScheduleInput) => Promise<MasterSchedule>;
   updateSchedule: (id: string, patch: Partial<MasterSchedule>) => Promise<MasterSchedule>;
   deleteSchedule: (id: string) => Promise<void>;
@@ -53,10 +61,38 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     refresh();
   }, [refresh]);
 
+  const pets = useMemo(() => entities.filter(isActivePet), [entities]);
+
+  const createEntity = useCallback(async (input: CreateEntityInput) => {
+    const entity = await dataProvider.createEntity(input);
+    setEntities((prev) => [...prev, entity]);
+    return entity;
+  }, []);
+
+  const updateEntity = useCallback(async (id: string, patch: Partial<TaskEntity>) => {
+    const updated = await dataProvider.updateEntity(id, patch);
+    setEntities((prev) => prev.map((e) => (e.id === id ? updated : e)));
+    return updated;
+  }, []);
+
+  const deleteEntity = useCallback(async (id: string) => {
+    await dataProvider.deleteEntity(id);
+    setEntities((prev) => prev.filter((e) => e.id !== id));
+    setSchedules((prev) => prev.filter((s) => s.entity_id !== id));
+    setLogs((prev) => prev.filter((l) => l.entity_id !== id));
+    setMedicalRecords((prev) => prev.filter((m) => m.entity_id !== id));
+  }, []);
+
   const logTask = useCallback(async (input: CreateLogInput) => {
     const log = await dataProvider.createLog(input);
     setLogs((prev) => [log, ...prev]);
     return log;
+  }, []);
+
+  const logTasksBatch = useCallback(async (input: CreateBatchLogInput) => {
+    const newLogs = await dataProvider.createLogsBatch(input);
+    setLogs((prev) => [...newLogs, ...prev]);
+    return newLogs;
   }, []);
 
   const createSchedule = useCallback(async (input: CreateScheduleInput) => {
@@ -89,13 +125,18 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<HouseholdContextValue>(
     () => ({
       entities,
+      pets,
       schedules,
       logs,
       medicalRecords,
       loading,
       isMockMode,
       refresh,
+      createEntity,
+      updateEntity,
+      deleteEntity,
       logTask,
+      logTasksBatch,
       createSchedule,
       updateSchedule,
       deleteSchedule,
@@ -104,12 +145,17 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       entities,
+      pets,
       schedules,
       logs,
       medicalRecords,
       loading,
       refresh,
+      createEntity,
+      updateEntity,
+      deleteEntity,
       logTask,
+      logTasksBatch,
       createSchedule,
       updateSchedule,
       deleteSchedule,

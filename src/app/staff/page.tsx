@@ -9,16 +9,16 @@ import { useHousehold } from "@/context/household-context";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
 export default function StaffPage() {
-  const { entities, schedules, logs, loading } = useHousehold();
+  const { pets, schedules, logs, loading } = useHousehold();
   const [selectedDate, setSelectedDate] = useState(() => formatDateLocal(new Date()));
 
   const groups = useMemo(
-    () => buildAgenda({ date: selectedDate, entities, schedules, logs }),
-    [selectedDate, entities, schedules, logs]
+    () => buildAgenda({ date: selectedDate, entities: pets, schedules, logs }),
+    [selectedDate, pets, schedules, logs]
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pt-4 pb-28">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col gap-4 bg-slate-50 px-4 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <header className="flex flex-col gap-3">
         <h1 className="text-xl font-semibold">Tugas Hari Ini</h1>
         <DateStrip value={selectedDate} onChange={setSelectedDate} />

@@ -54,6 +54,37 @@ export const mockProvider: DataProvider = {
   async listMedicalRecords() {
     return delay(loadDB().medicalRecords);
   },
+  async createEntity(input) {
+    const db = loadDB();
+    const entity: TaskEntity = {
+      id: uid("entity"),
+      entity_type: input.entity_type,
+      name: input.name,
+      icon: input.icon ?? null,
+      metadata: input.metadata ?? {},
+      created_at: new Date().toISOString(),
+    };
+    db.entities.push(entity);
+    saveDB(db);
+    return delay(entity);
+  },
+  async updateEntity(id, patch) {
+    const db = loadDB();
+    const idx = db.entities.findIndex((e) => e.id === id);
+    if (idx === -1) throw new Error(`Entity ${id} not found`);
+    db.entities[idx] = { ...db.entities[idx], ...patch };
+    saveDB(db);
+    return delay(db.entities[idx]);
+  },
+  async deleteEntity(id) {
+    const db = loadDB();
+    db.entities = db.entities.filter((e) => e.id !== id);
+    db.schedules = db.schedules.filter((s) => s.entity_id !== id);
+    db.logs = db.logs.filter((l) => l.entity_id !== id);
+    db.medicalRecords = db.medicalRecords.filter((m) => m.entity_id !== id);
+    saveDB(db);
+    return delay(undefined);
+  },
   async createLog(input) {
     const db = loadDB();
     const log: TaskLog = {
@@ -68,6 +99,22 @@ export const mockProvider: DataProvider = {
     db.logs.push(log);
     saveDB(db);
     return delay(log);
+  },
+  async createLogsBatch(input) {
+    const db = loadDB();
+    const completedAt = input.completed_at ?? new Date().toISOString();
+    const logs: TaskLog[] = input.entries.map((entry) => ({
+      id: uid("log"),
+      schedule_id: entry.schedule_id ?? null,
+      entity_id: entry.entity_id,
+      module: input.module,
+      photo_url: input.photo_url ?? null,
+      notes: input.notes ?? null,
+      completed_at: completedAt,
+    }));
+    db.logs.push(...logs);
+    saveDB(db);
+    return delay(logs);
   },
   async createSchedule(input) {
     const db = loadDB();

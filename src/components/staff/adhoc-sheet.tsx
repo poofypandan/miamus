@@ -31,7 +31,7 @@ const ADHOC_TYPES = [
 ] as const;
 
 export function AdHocSheet() {
-  const { entities, logTask } = useHousehold();
+  const { pets, logTask } = useHousehold();
   const [open, setOpen] = useState(false);
   const [entityId, setEntityId] = useState<string>("");
   const [type, setType] = useState<string>("");
@@ -82,7 +82,7 @@ export function AdHocSheet() {
       <SheetTrigger asChild>
         <Button
           size="lg"
-          className="fixed bottom-5 left-1/2 z-40 -translate-x-1/2 gap-1.5 rounded-full px-5 shadow-lg"
+          className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-40 min-h-[48px] -translate-x-1/2 gap-1.5 rounded-full px-5 shadow-lg"
         >
           <Plus /> Catat Ekstra
         </Button>
@@ -95,13 +95,13 @@ export function AdHocSheet() {
           <div className="flex flex-col gap-1.5">
             <Label>Anjing</Label>
             <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="min-h-[48px] w-full">
                 <SelectValue placeholder="Pilih anjing" />
               </SelectTrigger>
               <SelectContent>
-                {entities.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.name}
+                {pets.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -110,7 +110,7 @@ export function AdHocSheet() {
           <div className="flex flex-col gap-1.5">
             <Label>Jenis</Label>
             <Select value={type} onValueChange={setType}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="min-h-[48px] w-full">
                 <SelectValue placeholder="Pilih jenis catatan" />
               </SelectTrigger>
               <SelectContent>
@@ -141,8 +141,8 @@ export function AdHocSheet() {
             />
           </div>
         </div>
-        <SheetFooter>
-          <Button onClick={handleSubmit} disabled={submitting}>
+        <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <Button onClick={handleSubmit} disabled={submitting} className="min-h-[48px]">
             {submitting ? <Loader2 className="animate-spin" /> : null}
             Simpan
           </Button>

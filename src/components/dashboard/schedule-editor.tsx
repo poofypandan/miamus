@@ -20,6 +20,7 @@ import { useHousehold } from "@/context/household-context";
 import type { CreateScheduleInput } from "@/lib/data";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { getTaskIcon } from "@/lib/task-icons";
+import { formatTime12h } from "@/lib/time";
 import type { TaskEntity, MasterSchedule } from "@/types/database";
 
 const QUICK_TIMES = ["07:00", "12:00", "18:00", "20:00"];
@@ -37,7 +38,7 @@ type UpdateScheduleFn = (id: string, patch: Partial<MasterSchedule>) => Promise<
 type DeleteScheduleFn = (id: string) => Promise<void>;
 
 export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
-  const { entities, schedules, createSchedule, updateSchedule, deleteSchedule } = useHousehold();
+  const { pets, schedules, createSchedule, updateSchedule, deleteSchedule } = useHousehold();
   const dogSchedules = schedules.filter((s) => s.entity_id === entity.id);
   const pottySchedule = dogSchedules.find((s) => s.frequency_type === "interval");
   const mealSchedules = dogSchedules.filter(
@@ -62,7 +63,7 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
       />
       <CopyScheduleCard
         entity={entity}
-        entities={entities}
+        entities={pets}
         sourceSchedules={dogSchedules}
         allSchedules={schedules}
         createSchedule={createSchedule}
@@ -107,7 +108,8 @@ function PottyIntervalCard({
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>Every {value}h</span>
           <span>
-            {schedule.start_time?.slice(0, 5)} – {schedule.end_time?.slice(0, 5)}
+            {schedule.start_time ? formatTime12h(schedule.start_time) : "—"} –{" "}
+            {schedule.end_time ? formatTime12h(schedule.end_time) : "—"}
           </span>
         </div>
         <Slider
@@ -175,7 +177,7 @@ function MealTimesCard({
         <div className="flex flex-wrap gap-2">
           {meals.map((m) => (
             <Badge key={m.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
-              {m.fixed_times?.[0]?.slice(0, 5)} · {m.title}
+              {m.fixed_times?.[0] ? formatTime12h(m.fixed_times[0]) : "—"} · {m.title}
               <button
                 type="button"
                 onClick={() => removeMeal(m.id)}
@@ -197,12 +199,13 @@ function MealTimesCard({
                 key={time}
                 type="button"
                 size="sm"
+                className="min-h-[48px]"
                 variant={exists ? "ghost" : "outline"}
                 disabled={exists || busyTime === time}
                 onClick={() => addTime(time)}
               >
                 {busyTime === time ? <Loader2 className="animate-spin" /> : <Plus />}
-                {time}
+                {formatTime12h(time)}
               </Button>
             );
           })}
@@ -277,7 +280,7 @@ function TemporaryTasksCard({
             >
               <div>
                 <p className="font-medium">
-                  {t.fixed_times?.[0]?.slice(0, 5)} · {t.title}
+                  {t.fixed_times?.[0] ? formatTime12h(t.fixed_times[0]) : "—"} · {t.title}
                 </p>
                 <p className="text-xs text-muted-foreground">Expires {t.expires_at}</p>
               </div>
@@ -312,7 +315,7 @@ function TemporaryTasksCard({
             />
           </div>
         </div>
-        <Button onClick={handleAdd} disabled={submitting} className="w-fit">
+        <Button onClick={handleAdd} disabled={submitting} className="min-h-[48px] w-fit">
           {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
           Add temporary task
         </Button>
@@ -425,8 +428,8 @@ function LivePreviewCard({
         ) : (
           groups.map((g) => (
             <div key={`${g.time}-${g.title}`} className="flex items-center gap-2 text-sm">
-              <span className="w-12 shrink-0 font-mono text-xs text-muted-foreground">
-                {g.time}
+              <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
+                {formatTime12h(g.time)}
               </span>
               <span>{getTaskIcon(g.title)}</span>
               <span className="font-medium">{g.title}</span>

@@ -31,7 +31,7 @@ export function DateStrip({ value, onChange }: DateStripProps) {
             type="button"
             onClick={() => onChange(iso)}
             className={cn(
-              "flex min-w-14 shrink-0 flex-col items-center gap-0.5 rounded-xl border px-3 py-2 text-xs transition-colors",
+              "flex min-h-[48px] min-w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-3 py-2 text-xs transition-colors",
               isSelected
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border bg-card text-foreground hover:bg-muted"

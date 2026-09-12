@@ -4,13 +4,29 @@ import type {
   TaskLog,
   MedicalRecord,
   Module,
+  EntityType,
   FrequencyType,
   RecordType,
 } from "@/types/database";
 
+export interface CreateEntityInput {
+  entity_type: EntityType;
+  name: string;
+  icon?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
 export interface CreateLogInput {
   schedule_id?: string | null;
   entity_id: string;
+  module: Module;
+  photo_url?: string | null;
+  notes?: string | null;
+  completed_at?: string;
+}
+
+export interface CreateBatchLogInput {
+  entries: { schedule_id?: string | null; entity_id: string }[];
   module: Module;
   photo_url?: string | null;
   notes?: string | null;
@@ -45,7 +61,11 @@ export interface DataProvider {
   listSchedules(): Promise<MasterSchedule[]>;
   listLogs(): Promise<TaskLog[]>;
   listMedicalRecords(): Promise<MedicalRecord[]>;
+  createEntity(input: CreateEntityInput): Promise<TaskEntity>;
+  updateEntity(id: string, patch: Partial<TaskEntity>): Promise<TaskEntity>;
+  deleteEntity(id: string): Promise<void>;
   createLog(input: CreateLogInput): Promise<TaskLog>;
+  createLogsBatch(input: CreateBatchLogInput): Promise<TaskLog[]>;
   createSchedule(input: CreateScheduleInput): Promise<MasterSchedule>;
   updateSchedule(id: string, patch: Partial<MasterSchedule>): Promise<MasterSchedule>;
   deleteSchedule(id: string): Promise<void>;

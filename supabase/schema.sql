@@ -110,35 +110,8 @@ on storage.objects for insert
 with check (bucket_id = 'household-logs');
 
 -- ============================================================================
--- Seed data
+-- No seed data: pets are added, edited, and archived/deleted at runtime
+-- through the /dashboard/pets management screen. A pet's `metadata` jsonb
+-- column holds optional attributes (breed, avatar_url, archived) without
+-- requiring schema changes.
 -- ============================================================================
-
-insert into task_entities (name, entity_type, icon)
-values
-  ('Mocha', 'pet', 'dog'),
-  ('Matcha', 'pet', 'dog'),
-  ('ZZ', 'pet', 'dog'),
-  ('Millo', 'pet', 'dog')
-on conflict do nothing;
-
--- Potty schedule: Mocha & Matcha every 2h, ZZ & Millo every 3h, 06:00-21:00.
-insert into master_schedules (entity_id, title, module, frequency_type, interval_hours, start_time, end_time)
-select id, 'Pipis & Pup', 'pet', 'interval', 2, '06:00', '21:00'
-from task_entities
-where name in ('Mocha', 'Matcha');
-
-insert into master_schedules (entity_id, title, module, frequency_type, interval_hours, start_time, end_time)
-select id, 'Pipis & Pup', 'pet', 'interval', 3, '06:00', '21:00'
-from task_entities
-where name in ('ZZ', 'Millo');
-
--- Meals: all 4 dogs, fixed times at lunch (12:00) and dinner (18:00).
-insert into master_schedules (entity_id, title, module, frequency_type, fixed_times)
-select id, 'Makan Siang', 'pet', 'fixed_time', array['12:00'::time]
-from task_entities
-where name in ('Mocha', 'Matcha', 'ZZ', 'Millo');
-
-insert into master_schedules (entity_id, title, module, frequency_type, fixed_times)
-select id, 'Makan Malam', 'pet', 'fixed_time', array['18:00'::time]
-from task_entities
-where name in ('Mocha', 'Matcha', 'ZZ', 'Millo');

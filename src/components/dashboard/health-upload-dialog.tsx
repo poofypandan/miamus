@@ -33,7 +33,7 @@ const RECORD_TYPES: { value: RecordType; label: string }[] = [
 ];
 
 export function HealthUploadDialog({ defaultEntityId }: { defaultEntityId?: string }) {
-  const { entities, createMedicalRecord } = useHousehold();
+  const { pets, createMedicalRecord } = useHousehold();
   const [open, setOpen] = useState(false);
   const [entityId, setEntityId] = useState(defaultEntityId ?? "");
   const [recordType, setRecordType] = useState<RecordType | "">("");
@@ -102,13 +102,13 @@ export function HealthUploadDialog({ defaultEntityId }: { defaultEntityId?: stri
           <div className="flex flex-col gap-1.5">
             <Label>Dog</Label>
             <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="min-h-[48px] w-full">
                 <SelectValue placeholder="Select dog" />
               </SelectTrigger>
               <SelectContent>
-                {entities.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.name}
+                {pets.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -117,7 +117,7 @@ export function HealthUploadDialog({ defaultEntityId }: { defaultEntityId?: stri
           <div className="flex flex-col gap-1.5">
             <Label>Record type</Label>
             <Select value={recordType} onValueChange={(v) => setRecordType(v as RecordType)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="min-h-[48px] w-full">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>

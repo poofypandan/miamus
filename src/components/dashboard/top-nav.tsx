@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 const SUB_NAV = [
   { href: "/dashboard", label: "Daily Feed" },
   { href: "/dashboard/schedules", label: "Schedules" },
+  { href: "/dashboard/pets", label: "Pets" },
   { href: "/dashboard/health", label: "Health Passport" },
 ];
 
@@ -17,23 +18,23 @@ export function TopNav() {
 
   return (
     <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between px-4 py-3">
         <span className="text-lg font-semibold">Maimus</span>
         <Link
           href="/staff"
-          className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline"
+          className="flex min-h-[48px] items-center text-xs font-medium text-muted-foreground underline-offset-4 hover:underline"
         >
           Open Staff View →
         </Link>
       </div>
 
-      <div className="mx-auto flex max-w-3xl gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <ModuleTab label="🐶 Pets" active enabled />
         <ModuleTab label="🏠 Household" active={false} enabled={MODULES.household} />
         <ModuleTab label="👥 Staff" active={false} enabled={MODULES.staff} />
       </div>
 
-      <nav className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="flex gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {SUB_NAV.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -41,7 +42,7 @@ export function TopNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                "flex min-h-[48px] shrink-0 items-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"

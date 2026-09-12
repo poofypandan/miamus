@@ -9,7 +9,9 @@ export const dataProvider: DataProvider = isMockMode ? mockProvider : supabasePr
 
 export type {
   DataProvider,
+  CreateEntityInput,
   CreateLogInput,
+  CreateBatchLogInput,
   CreateScheduleInput,
   CreateMedicalRecordInput,
 } from "./types";
