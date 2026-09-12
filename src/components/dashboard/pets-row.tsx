@@ -38,11 +38,11 @@ export function PetsRow() {
   }
 
   return (
-    <div className="border-b px-4 py-3">
-      <h2 className="mb-1 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+    <div className="border-b py-3">
+      <h2 className="mb-1 px-4 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
         Your pets
       </h2>
-      <div className="no-scrollbar flex flex-row gap-4 overflow-x-auto py-2">
+      <div className="no-scrollbar flex flex-row gap-4 overflow-x-auto px-4 py-2">
         {pets.map((pet) => (
           <PetAvatar
             key={pet.id}
@@ -132,14 +132,14 @@ function PetAvatar({
           src={meta.avatar_url}
           alt=""
           className={cn(
-            "h-16 w-16 rounded-full border border-gray-200 object-cover shadow-sm transition-all",
+            "h-16 w-16 rounded-full border border-gray-200 object-cover shadow-sm transition-all duration-200 ease-out",
             active ? "scale-105 ring-2 ring-emerald-500 ring-offset-2" : "opacity-60 grayscale"
           )}
         />
       ) : (
         <div
           className={cn(
-            "flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-muted text-2xl shadow-sm transition-all",
+            "flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-muted text-2xl shadow-sm transition-all duration-200 ease-out",
             active ? "scale-105 ring-2 ring-emerald-500 ring-offset-2" : "opacity-60 grayscale"
           )}
         >
@@ -148,7 +148,7 @@ function PetAvatar({
       )}
       <span
         className={cn(
-          "max-w-16 truncate text-center text-xs font-medium",
+          "max-w-16 truncate text-center text-xs font-medium transition-colors duration-200 ease-out",
           !active && "text-muted-foreground"
         )}
       >

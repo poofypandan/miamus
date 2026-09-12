@@ -199,10 +199,14 @@ function MealTimesCard({
             <Input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder={`e.g. Kibble + Salmon Oil (defaults to "${mealLabelForTime(time)}")`}
+              placeholder="e.g. Kibble + Salmon Oil"
             />
           </div>
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          Defaults to &quot;{mealLabelForTime(time)}&quot; if left blank.
+        </p>
 
         <Button onClick={handleAdd} disabled={submitting} className="min-h-[48px] w-fit">
           {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
