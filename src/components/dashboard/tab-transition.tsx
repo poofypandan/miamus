@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 
 // Same left-to-right order as the swipe gesture in dashboard/layout.tsx —
@@ -21,6 +21,7 @@ const variants: Variants = {
 
 export function TabTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const prevPathname = useRef(pathname);
   const direction = useRef(0);
 
@@ -40,6 +41,18 @@ export function TabTransition({ children }: { children: ReactNode }) {
         initial="initial"
         animate="animate"
         exit="exit"
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={1}
+        onDragEnd={(e, { offset }) => {
+          const swipeThreshold = 50;
+          const currentIndex = TABS.indexOf(pathname);
+          if (offset.x < -swipeThreshold && currentIndex < TABS.length - 1) {
+            router.push(TABS[currentIndex + 1]);
+          } else if (offset.x > swipeThreshold && currentIndex > 0) {
+            router.push(TABS[currentIndex - 1]);
+          }
+        }}
       >
         {children}
       </motion.div>
