@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { DailyFeedTab } from "@/components/dashboard/tabs/daily-feed-tab";
 import { SchedulesTab } from "@/components/dashboard/tabs/schedules-tab";
 import { HealthTab } from "@/components/dashboard/tabs/health-tab";
+import { PetProfileSheet } from "@/components/dashboard/pet-profile-sheet";
 import { DASHBOARD_TABS, tabIndex } from "@/lib/dashboard-tabs";
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
@@ -100,25 +101,28 @@ function DashboardCanvas() {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full overflow-x-hidden">
-      <motion.div
-        className="flex w-[300%] touch-pan-y select-none"
-        style={{ x }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-      >
-        <div className="w-1/3 px-4">
-          <DailyFeedTab />
-        </div>
-        <div className="w-1/3 px-4">
-          <SchedulesTab />
-        </div>
-        <div className="w-1/3 px-4">
-          <HealthTab />
-        </div>
-      </motion.div>
-    </div>
+    <>
+      <div ref={containerRef} className="relative w-full overflow-x-hidden">
+        <motion.div
+          className="flex w-[300%] touch-pan-y select-none"
+          style={{ x }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
+          <div className="w-1/3 px-4">
+            <DailyFeedTab />
+          </div>
+          <div className="w-1/3 px-4">
+            <SchedulesTab />
+          </div>
+          <div className="w-1/3 px-4">
+            <HealthTab />
+          </div>
+        </motion.div>
+      </div>
+      <PetProfileSheet />
+    </>
   );
 }

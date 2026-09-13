@@ -2,16 +2,13 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
-import { PetDetailHeader } from "@/components/dashboard/pet-detail-header";
-import { ScheduleEditor } from "@/components/dashboard/schedule-editor";
 import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
 import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 
 export function SchedulesTab() {
-  const { pets, activePetId, loading, selectedDate, setSelectedDate } = useHousehold();
+  const { pets, loading, selectedDate, setSelectedDate } = useHousehold();
   const isOwner = useRequireOwner();
-  const activePet = pets.find((p) => p.id === activePetId) ?? null;
 
   if (!isOwner) return null;
 
@@ -34,20 +31,10 @@ export function SchedulesTab() {
     );
   }
 
-  if (!activePet) {
-    return (
-      <div className="-mt-2 flex flex-col gap-4">
-        <DateRibbon value={selectedDate} onChange={setSelectedDate} />
-        <UnifiedTimeline />
-      </div>
-    );
-  }
-
   return (
     <div className="-mt-2 flex flex-col gap-4">
-      <PetDetailHeader pet={activePet} />
       <DateRibbon value={selectedDate} onChange={setSelectedDate} />
-      <ScheduleEditor entity={activePet} />
+      <UnifiedTimeline />
     </div>
   );
 }
