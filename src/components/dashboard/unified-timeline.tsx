@@ -58,9 +58,15 @@ export function UnifiedTimeline() {
 }
 
 function TimelineAvatarStatus({ item, pets }: { item: AgendaItem; pets: TaskEntity[] }) {
+  const { setActivePetId } = useHousehold();
   const pet = pets.find((p) => p.id === item.entityId);
   if (!pet) return null;
 
+  // A completed slot's proof photo keeps its own tap-for-lightbox /
+  // long-press-to-delete gestures (LogPhotoThumbnail is already a button) —
+  // nesting another interactive drill-down trigger around it would both be
+  // invalid HTML and shadow those gestures, so only the plain status avatar
+  // (nothing else to tap) becomes a drill-down trigger.
   if (item.log?.photo_url) {
     return (
       <LogPhotoThumbnail
@@ -73,7 +79,11 @@ function TimelineAvatarStatus({ item, pets }: { item: AgendaItem; pets: TaskEnti
   }
 
   return (
-    <div className="relative">
+    <button
+      type="button"
+      onClick={() => setActivePetId(pet.id)}
+      className="relative transition-transform active:scale-90"
+    >
       <MiniPetAvatar
         pet={pet}
         className={cn("ring-2 ring-background", item.status === "pending" && "opacity-50 grayscale")}
@@ -84,6 +94,6 @@ function TimelineAvatarStatus({ item, pets }: { item: AgendaItem; pets: TaskEnti
       {item.status === "overdue" && (
         <XCircle className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-red-500" />
       )}
-    </div>
+    </button>
   );
 }

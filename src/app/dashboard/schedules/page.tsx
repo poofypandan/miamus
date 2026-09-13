@@ -2,13 +2,14 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
+import { PetDetailHeader } from "@/components/dashboard/pet-detail-header";
 import { ScheduleEditor } from "@/components/dashboard/schedule-editor";
 import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
 import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 
 export default function SchedulesPage() {
-  const { pets, activePetId, viewMode, loading, selectedDate, setSelectedDate } = useHousehold();
+  const { pets, activePetId, loading, selectedDate, setSelectedDate } = useHousehold();
   const isOwner = useRequireOwner();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
 
@@ -34,7 +35,7 @@ export default function SchedulesPage() {
     );
   }
 
-  if (viewMode === "all") {
+  if (!activePet) {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold">Schedules</h1>
@@ -47,14 +48,9 @@ export default function SchedulesPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Schedules</h1>
+      <PetDetailHeader pet={activePet} />
       <DateRibbon value={selectedDate} onChange={setSelectedDate} />
-      {activePet ? (
-        <ScheduleEditor entity={activePet} />
-      ) : (
-        <p className="pt-8 text-center text-sm text-muted-foreground">
-          Select a pet above to view their schedule.
-        </p>
-      )}
+      <ScheduleEditor entity={activePet} />
     </div>
   );
 }

@@ -20,7 +20,6 @@ import type {
 } from "@/types/database";
 
 export type UserRole = "staff" | "owner";
-export type ViewMode = "single" | "all";
 
 // Hardcoded for now — there's no auth backend yet, this is a lightweight UI
 // gate so staff devices don't casually stumble into owner-only controls.
@@ -35,10 +34,10 @@ interface HouseholdContextValue {
   inventoryAlerts: InventoryAlert[];
   loading: boolean;
   isMockMode: boolean;
+  // null = Unified Overview; a pet id = that pet's detail view. This is the
+  // sole source of truth for master-detail navigation across the dashboard.
   activePetId: string | null;
-  setActivePetId: (id: string) => void;
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
+  setActivePetId: (id: string | null) => void;
   // The day the Owner Dashboard and Staff "Jadwal" are currently browsing —
   // shared globally so picking a date in one place (e.g. the schedules tab)
   // keeps the Daily Feed and Staff view in sync with it too.
@@ -99,20 +98,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
   const [activePetId, setActivePetId] = useState<string | null>(null);
 
-  // Default to the first pet whenever there is no valid active selection —
-  // covers initial load, the active pet being archived/deleted, and pets
-  // loading in after the first render.
+  // Fall back to the Overview if the pet currently being viewed stops being
+  // valid (archived/deleted out from under the viewer) — but otherwise never
+  // auto-select a pet. Overview (null) is the dashboard's resting state.
   useEffect(() => {
-    if (pets.length === 0) {
-      if (activePetId !== null) setActivePetId(null);
-      return;
-    }
-    if (!activePetId || !pets.some((p) => p.id === activePetId)) {
-      setActivePetId(pets[0].id);
+    if (activePetId && !pets.some((p) => p.id === activePetId)) {
+      setActivePetId(null);
     }
   }, [pets, activePetId]);
-
-  const [viewMode, setViewMode] = useState<ViewMode>("all");
 
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
 
@@ -231,8 +224,6 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       isMockMode,
       activePetId,
       setActivePetId,
-      viewMode,
-      setViewMode,
       selectedDate,
       setSelectedDate,
       userRole,
@@ -263,7 +254,6 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       inventoryAlerts,
       loading,
       activePetId,
-      viewMode,
       selectedDate,
       userRole,
       unlockOwner,

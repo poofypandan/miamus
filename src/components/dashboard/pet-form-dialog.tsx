@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Archive, Dog, Loader2, Plus, Trash2 } from "lucide-react";
+import { Archive, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,168 +16,11 @@ import {
 import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
 import { getPetMeta } from "@/lib/pets";
-import { cn } from "@/lib/utils";
 import type { TaskEntity } from "@/types/database";
 
-const LONG_PRESS_MS = 500;
-
-export function PetsRow() {
-  const {
-    pets,
-    activePetId,
-    setActivePetId,
-    userRole,
-    createEntity,
-    updateEntity,
-    deleteEntity,
-  } = useHousehold();
-  const canManagePets = userRole === "owner";
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<TaskEntity | null>(null);
-
-  function openCreate() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(pet: TaskEntity) {
-    setEditing(pet);
-    setFormOpen(true);
-  }
-
-  return (
-    <div className="border-b py-3">
-      <h2 className="mb-1 px-4 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-        Your pets
-      </h2>
-      <div className="no-scrollbar flex flex-row gap-2 overflow-x-auto px-2 py-2">
-        {pets.map((pet) => (
-          <div key={pet.id} className="shrink-0 p-2">
-            <PetAvatar
-              pet={pet}
-              active={pet.id === activePetId}
-              canEdit={canManagePets}
-              onTap={() => setActivePetId(pet.id)}
-              onLongPress={() => openEdit(pet)}
-            />
-          </div>
-        ))}
-        {canManagePets && (
-          <div className="shrink-0 p-2">
-            <button
-              type="button"
-              onClick={openCreate}
-              className="flex min-h-[48px] flex-col items-center gap-1"
-            >
-              <span className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-primary/50 bg-primary/5 text-primary shadow-sm">
-                <Plus className="size-6" />
-              </span>
-              <span className="max-w-16 truncate text-center text-xs text-muted-foreground">
-                Add pet
-              </span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {canManagePets && (
-        <PetFormDialog
-          open={formOpen}
-          onOpenChange={setFormOpen}
-          pet={editing}
-          createEntity={createEntity}
-          updateEntity={updateEntity}
-          deleteEntity={deleteEntity}
-        />
-      )}
-    </div>
-  );
-}
-
-function PetAvatar({
-  pet,
-  active,
-  canEdit,
-  onTap,
-  onLongPress,
-}: {
-  pet: TaskEntity;
-  active: boolean;
-  canEdit: boolean;
-  onTap: () => void;
-  onLongPress: () => void;
-}) {
-  const meta = getPetMeta(pet);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressed = useRef(false);
-
-  function startPress() {
-    longPressed.current = false;
-    if (!canEdit) return;
-    timerRef.current = setTimeout(() => {
-      longPressed.current = true;
-      onLongPress();
-    }, LONG_PRESS_MS);
-  }
-
-  function cancelPress() {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  }
-
-  function endPress() {
-    cancelPress();
-    if (!longPressed.current) {
-      onTap();
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onContextMenu={(e) => e.preventDefault()}
-      onTouchStart={startPress}
-      onTouchEnd={endPress}
-      onMouseDown={startPress}
-      onMouseUp={endPress}
-      onMouseLeave={cancelPress}
-      className="flex min-h-[48px] touch-none flex-col items-center gap-1 select-none [-webkit-touch-callout:none]"
-    >
-      {meta.avatar_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={meta.avatar_url}
-          alt=""
-          className={cn(
-            "h-16 w-16 rounded-full border border-gray-200 object-cover shadow-sm transition-all duration-200 ease-out",
-            active ? "scale-105 ring-2 ring-emerald-500 ring-offset-2" : "opacity-60 grayscale"
-          )}
-        />
-      ) : (
-        <div
-          className={cn(
-            "flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-gray-100 text-gray-400 shadow-sm transition-all duration-200 ease-out",
-            active ? "scale-105 ring-2 ring-emerald-500 ring-offset-2" : "opacity-60 grayscale"
-          )}
-        >
-          <Dog className="size-7" />
-        </div>
-      )}
-      <span
-        className={cn(
-          "max-w-16 truncate text-center text-xs font-medium transition-colors duration-200 ease-out",
-          !active && "text-muted-foreground"
-        )}
-      >
-        {pet.name}
-      </span>
-    </button>
-  );
-}
-
-function PetFormDialog({
+// Shared by the "Add / Manage Pets" entry point on the Overview (pet: null)
+// and the "Edit Pet" button on each pet's detail header (pet: that pet).
+export function PetFormDialog({
   open,
   onOpenChange,
   pet,

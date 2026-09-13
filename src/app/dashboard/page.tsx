@@ -5,6 +5,7 @@ import { SummaryCard } from "@/components/dashboard/summary-card";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
+import { PetDetailHeader } from "@/components/dashboard/pet-detail-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { dayLabel } from "@/lib/date-label";
@@ -12,8 +13,7 @@ import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import type { TaskEntity, MasterSchedule, TaskLog } from "@/types/database";
 
 export default function DashboardHomePage() {
-  const { pets, entities, schedules, logs, activePetId, viewMode, loading, selectedDate } =
-    useHousehold();
+  const { pets, entities, schedules, logs, activePetId, loading, selectedDate } = useHousehold();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
   const dateStr = formatDateLocal(selectedDate);
   const label = dayLabel(selectedDate);
@@ -41,7 +41,7 @@ export default function DashboardHomePage() {
     );
   }
 
-  if (viewMode === "all") {
+  if (!activePet) {
     return (
       <div className="flex flex-col gap-6">
         <section>
@@ -61,16 +61,9 @@ export default function DashboardHomePage() {
     );
   }
 
-  if (!activePet) {
-    return (
-      <p className="pt-8 text-center text-sm text-muted-foreground">
-        Select a pet above to view their daily feed.
-      </p>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-6">
+      <PetDetailHeader pet={activePet} />
       <PetDailyFeed
         pet={activePet}
         entities={entities}

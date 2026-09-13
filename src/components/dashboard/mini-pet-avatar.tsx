@@ -3,8 +3,7 @@ import { cn } from "@/lib/utils";
 import { getPetMeta } from "@/lib/pets";
 import type { TaskEntity } from "@/types/database";
 
-// Small, non-interactive avatar for unified/all-pets views — distinct from
-// PetsRow's avatar, which carries its own gesture/active-ring concerns.
+// Small avatar used throughout the Unified Overview and drill-down triggers.
 // NOTE: To revert avatar scaling, change w-12 h-12 back to the original size
 // (e.g., w-8 h-8) and remove negative margins in clusters.
 export function MiniPetAvatar({ pet, className }: { pet: TaskEntity; className?: string }) {

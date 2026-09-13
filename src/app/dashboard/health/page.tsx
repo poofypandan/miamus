@@ -1,17 +1,19 @@
 "use client";
 
 import { useMemo } from "react";
+import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HealthRecordCard } from "@/components/dashboard/health-record-card";
 import { HealthUploadDialog } from "@/components/dashboard/health-upload-dialog";
 import { UnifiedHealthList } from "@/components/dashboard/unified-health-list";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
+import { PetDetailHeader } from "@/components/dashboard/pet-detail-header";
 import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import type { MedicalRecord, TaskEntity } from "@/types/database";
 
 export default function HealthPage() {
-  const { pets, medicalRecords, activePetId, viewMode, loading } = useHousehold();
+  const { pets, medicalRecords, activePetId, setActivePetId, loading } = useHousehold();
   const isOwner = useRequireOwner();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
 
@@ -37,22 +39,24 @@ export default function HealthPage() {
     );
   }
 
-  if (viewMode === "all") {
+  if (!activePet) {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold">Health Passport</h1>
         <div className="flex flex-col gap-2">
           {pets.map((pet) => (
-            <div
+            <button
               key={pet.id}
-              className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
+              type="button"
+              onClick={() => setActivePetId(pet.id)}
+              className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left active:bg-gray-50"
             >
               <span className="flex items-center gap-2 text-lg font-medium">
                 <MiniPetAvatar pet={pet} className="size-12" />
                 {pet.name}
               </span>
-              <HealthUploadDialog entityId={pet.id} />
-            </div>
+              <ChevronRight className="ml-auto size-5 shrink-0 text-gray-400" />
+            </button>
           ))}
         </div>
         <UnifiedHealthList />
@@ -60,21 +64,14 @@ export default function HealthPage() {
     );
   }
 
-  if (!activePet) {
-    return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold">Health Passport</h1>
-        <p className="pt-8 text-center text-sm text-muted-foreground">
-          Select a pet above to view their health passport.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-4">
+      <h1 className="text-xl font-semibold">Health Passport</h1>
+      <PetDetailHeader pet={activePet} />
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">Health Passport</h1>
+        <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+          Records
+        </h2>
         <HealthUploadDialog entityId={activePet.id} />
       </div>
       <PetHealthRecords pet={activePet} medicalRecords={medicalRecords} />
