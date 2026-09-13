@@ -8,7 +8,6 @@ import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { PetDetailHeader } from "@/components/dashboard/pet-detail-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
-import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import type { TaskEntity, MasterSchedule, TaskLog } from "@/types/database";
 
@@ -16,7 +15,6 @@ export default function DashboardHomePage() {
   const { pets, entities, schedules, logs, activePetId, loading, selectedDate } = useHousehold();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
   const dateStr = formatDateLocal(selectedDate);
-  const label = dayLabel(selectedDate);
 
   const allTodaysLogs = useMemo(
     () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === dateStr),
@@ -43,20 +41,13 @@ export default function DashboardHomePage() {
 
   if (!activePet) {
     return (
-      <div className="flex flex-col gap-6">
-        <section>
-          <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-            {label}&apos;s Overview
-          </h2>
-          <UnifiedSummaryCard />
-        </section>
-        <section>
-          <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-            {label}&apos;s Photos
-          </h2>
-          <PhotoStream logs={allTodaysLogs} entities={entities} showAvatar />
-        </section>
-        <LowStockFlagButton />
+      <div className="flex flex-col">
+        <UnifiedSummaryCard />
+        <h3 className="mt-8 mb-3 text-sm font-medium text-gray-500">Photos</h3>
+        <PhotoStream logs={allTodaysLogs} entities={entities} showAvatar />
+        <div className="mt-8">
+          <LowStockFlagButton />
+        </div>
       </div>
     );
   }
@@ -90,7 +81,6 @@ function PetDailyFeed({
   date: Date;
 }) {
   const dateStr = formatDateLocal(date);
-  const label = dayLabel(date);
 
   const items = useMemo(() => {
     const groups = buildAgenda({ date: dateStr, entities: [pet], schedules, logs });
@@ -106,19 +96,10 @@ function PetDailyFeed({
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <section>
-        <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-          {label}&apos;s Overview
-        </h2>
-        <SummaryCard dogName={pet.name} items={items} />
-      </section>
-      <section>
-        <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-          {label}&apos;s Photos
-        </h2>
-        <PhotoStream logs={todaysLogs} entities={entities} />
-      </section>
+    <div className="flex flex-col">
+      <SummaryCard dogName={pet.name} items={items} />
+      <h3 className="mt-8 mb-3 text-sm font-medium text-gray-500">Photos</h3>
+      <PhotoStream logs={todaysLogs} entities={entities} />
     </div>
   );
 }

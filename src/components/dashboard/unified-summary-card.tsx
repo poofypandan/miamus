@@ -2,11 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle2, ChevronRight, Clock, Droplets, Plus, Utensils, XCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { useHousehold } from "@/context/household-context";
-import { dayLabel } from "@/lib/date-label";
 import { POTTY_TITLE } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaItem } from "@/lib/scheduleEngine";
 import type { MasterSchedule, TaskEntity, TaskLog } from "@/types/database";
@@ -27,9 +26,6 @@ export function UnifiedSummaryCard() {
 
   return (
     <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="text-base">{dayLabel(selectedDate)}&apos;s Overview</CardTitle>
-      </CardHeader>
       <CardContent className="flex flex-col px-4">
         <div className="flex flex-col divide-y">
           {pets.map((pet) => (

@@ -27,7 +27,6 @@ export default function SchedulesPage() {
   if (pets.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold">Schedules</h1>
         <p className="pt-8 text-center text-sm text-muted-foreground">
           No pets yet. Add a pet above to start building schedules.
         </p>
@@ -38,7 +37,6 @@ export default function SchedulesPage() {
   if (!activePet) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold">Schedules</h1>
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
         <UnifiedTimeline />
       </div>
@@ -47,7 +45,6 @@ export default function SchedulesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Schedules</h1>
       <PetDetailHeader pet={activePet} />
       <DateRibbon value={selectedDate} onChange={setSelectedDate} />
       <ScheduleEditor entity={activePet} />

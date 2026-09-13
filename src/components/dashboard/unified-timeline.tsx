@@ -2,11 +2,10 @@
 
 import { useMemo } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
-import { dayLabel } from "@/lib/date-label";
 import { categoryIcon } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
@@ -27,9 +26,6 @@ export function UnifiedTimeline() {
 
   return (
     <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="text-base">{dayLabel(selectedDate)}&apos;s Timeline</CardTitle>
-      </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         {groups.length === 0 ? (
           <p className="text-sm text-muted-foreground">No tasks scheduled.</p>
