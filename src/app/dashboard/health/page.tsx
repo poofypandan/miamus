@@ -47,8 +47,8 @@ export default function HealthPage() {
               key={pet.id}
               className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
             >
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <MiniPetAvatar pet={pet} className="size-6" />
+              <span className="flex items-center gap-2 text-lg font-medium">
+                <MiniPetAvatar pet={pet} className="size-12" />
                 {pet.name}
               </span>
               <HealthUploadDialog entityId={pet.id} />

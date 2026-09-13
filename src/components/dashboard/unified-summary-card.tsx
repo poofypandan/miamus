@@ -58,8 +58,8 @@ function PetOverviewRow({
 
   return (
     <div className="flex items-center gap-3 py-2.5 text-sm first:pt-0 last:pb-0">
-      <MiniPetAvatar pet={pet} className="size-8" />
-      <span className="flex-1 truncate font-medium">{pet.name}</span>
+      <MiniPetAvatar pet={pet} className="size-12" />
+      <span className="flex-1 truncate text-lg font-medium">{pet.name}</span>
       <span className="flex items-center gap-1 text-xs text-muted-foreground">
         <Droplets className="size-3.5" />
         {pottyDone}/{potty.length}

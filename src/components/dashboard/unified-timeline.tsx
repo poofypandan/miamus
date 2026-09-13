@@ -43,7 +43,7 @@ export function UnifiedTimeline() {
                 </span>
                 <Icon className="size-4 shrink-0 text-muted-foreground" />
                 <span className="flex-1 truncate font-medium">{g.title}</span>
-                <div className="flex shrink-0 -space-x-2">
+                <div className="flex shrink-0 -space-x-4">
                   {g.items.map((item) => (
                     <TimelineAvatarStatus key={item.key} item={item} pets={pets} />
                   ))}
@@ -67,7 +67,7 @@ function TimelineAvatarStatus({ item, pets }: { item: AgendaItem; pets: TaskEnti
         log={item.log}
         title={item.title}
         entityName={pet.name}
-        className="size-8 rounded-full ring-2 ring-background"
+        className="size-12 rounded-full ring-2 ring-background"
       />
     );
   }
