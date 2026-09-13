@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { TopNav } from "@/components/dashboard/top-nav";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { SecureExitButton } from "@/components/dashboard/secure-exit-button";
+import { useOfflineSync } from "@/hooks/use-offline-sync";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   // Runs once on mount only — the mobile virtual keyboard (from the PIN
@@ -17,6 +18,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }, 100);
     return () => clearTimeout(timer);
   }, []);
+
+  useOfflineSync();
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-50 pb-safe">

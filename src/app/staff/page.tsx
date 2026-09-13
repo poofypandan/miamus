@@ -6,11 +6,14 @@ import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { AdHocSheet } from "@/components/staff/adhoc-sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
+import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
 export default function StaffPage() {
   const { pets, schedules, logs, loading, selectedDate, setSelectedDate } = useHousehold();
   const dateStr = formatDateLocal(selectedDate);
+
+  useOfflineSync();
 
   const groups = useMemo(
     () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),

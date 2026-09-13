@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
 import type {
   CreateEntityInput,
@@ -11,6 +12,7 @@ import type {
   CreateInventoryAlertInput,
 } from "@/lib/data";
 import { isActivePet } from "@/lib/pets";
+import { addToOfflineQueue } from "@/lib/offline-queue";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -165,13 +167,59 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setMedicalRecords((prev) => prev.filter((m) => m.entity_id !== id));
   }, []);
 
+  // Staff logging potty breaks / meals in the field is exactly the case with
+  // the flakiest connectivity, so both logging paths below check
+  // navigator.onLine before touching Supabase: offline, the write goes to
+  // an IndexedDB queue instead, and a locally-built log is applied to state
+  // immediately so the checkmark appears right away regardless of
+  // connectivity. The reconnect listener in dashboard/layout.tsx drains
+  // that queue and then calls `refresh()`, which replaces these optimistic,
+  // client-generated ids with the real synced rows.
   const logTask = useCallback(async (input: CreateLogInput) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      const completedAt = input.completed_at ?? new Date().toISOString();
+      await addToOfflineQueue("task_logs", {
+        entries: [{ schedule_id: input.schedule_id ?? null, entity_id: input.entity_id }],
+        module: input.module,
+        photo_url: input.photo_url ?? null,
+        notes: input.notes ?? null,
+        completed_at: completedAt,
+      });
+      const optimisticLog: TaskLog = {
+        id: `offline-${crypto.randomUUID()}`,
+        schedule_id: input.schedule_id ?? null,
+        entity_id: input.entity_id,
+        module: input.module,
+        photo_url: input.photo_url ?? null,
+        notes: input.notes ?? null,
+        completed_at: completedAt,
+      };
+      setLogs((prev) => [optimisticLog, ...prev]);
+      toast.warning("Saved offline. Will sync when reconnected.");
+      return optimisticLog;
+    }
     const log = await dataProvider.createLog(input);
     setLogs((prev) => [log, ...prev]);
     return log;
   }, []);
 
   const logTasksBatch = useCallback(async (input: CreateBatchLogInput) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      const completedAt = input.completed_at ?? new Date().toISOString();
+      await addToOfflineQueue("task_logs", { ...input, completed_at: completedAt });
+      const optimisticLogs: TaskLog[] = input.entries.map((entry) => ({
+        id: `offline-${crypto.randomUUID()}`,
+        schedule_id: entry.schedule_id ?? null,
+        entity_id: entry.entity_id,
+        module: input.module,
+        photo_url: input.photo_url ?? null,
+        notes: input.notes ?? null,
+        completed_at: completedAt,
+      }));
+      setLogs((prev) => [...optimisticLogs, ...prev]);
+      toast.warning("Saved offline. Will sync when reconnected.");
+      return optimisticLogs;
+    }
     const newLogs = await dataProvider.createLogsBatch(input);
     setLogs((prev) => [...newLogs, ...prev]);
     return newLogs;

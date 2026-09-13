@@ -1,7 +1,7 @@
 {
   "name": "Banyuwangi 11",
-  "short_name": "Banyuwangi 11",
-  "description": "Household management app",
+  "short_name": "B11",
+  "description": "Household Pet Management",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -11,6 +11,12 @@
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
