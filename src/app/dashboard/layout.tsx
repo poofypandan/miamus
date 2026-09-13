@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { TopNav } from "@/components/dashboard/top-nav";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { SecureExitButton } from "@/components/dashboard/secure-exit-button";
+import { TabTransition } from "@/components/dashboard/tab-transition";
 
 // Left-to-right tab order the swipe gesture moves through.
 const TAB_ORDER = ["/dashboard", "/dashboard/schedules", "/dashboard/health"];
@@ -58,11 +59,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <TopNav />
       <InventoryAlertBanner />
       <main
-        className="flex-1 px-4 py-6"
+        className="relative flex-1 overflow-x-hidden px-4 py-6"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {children}
+        <TabTransition>{children}</TabTransition>
       </main>
       <SecureExitButton />
     </div>
