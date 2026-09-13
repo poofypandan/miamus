@@ -21,7 +21,7 @@ export default function HealthPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="mt-6 flex flex-col gap-4">
         <Skeleton className="h-8 w-64 rounded-lg" />
         <Skeleton className="h-32 w-full rounded-xl" />
       </div>
@@ -30,7 +30,7 @@ export default function HealthPage() {
 
   if (pets.length === 0) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="mt-6 flex flex-col gap-4">
         <p className="pt-8 text-center text-sm text-muted-foreground">
           No pets yet. Add a pet above to start their health passport.
         </p>
@@ -40,7 +40,7 @@ export default function HealthPage() {
 
   if (!activePet) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="mt-6 flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           {pets.map((pet) => (
             <button
@@ -63,7 +63,7 @@ export default function HealthPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mt-6 flex flex-col gap-4">
       <PetDetailHeader pet={activePet} />
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
