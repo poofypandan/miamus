@@ -143,6 +143,20 @@ create policy "Public insert access for household-logs"
 on storage.objects for insert
 with check (bucket_id = 'household-logs');
 
+-- Without this, deletePhoto() in supabase-provider.ts 403s and every photo
+-- the owner "deletes" stays in the bucket forever (the caller swallows the
+-- error by design). Added by the Phase 32 audit — see rls-policies.sql.
+drop policy if exists "Public delete access for household-logs" on storage.objects;
+create policy "Public delete access for household-logs"
+on storage.objects for delete
+using (bucket_id = 'household-logs');
+
+-- ============================================================================
+-- Row Level Security
+-- Table policies live in supabase/rls-policies.sql — audited and rewritten in
+-- Phase 32. Apply that file after this one.
+-- ============================================================================
+
 -- ============================================================================
 -- No seed data: pets are added, edited, and archived/deleted at runtime
 -- through the /dashboard/pets management screen. A pet's `metadata` jsonb

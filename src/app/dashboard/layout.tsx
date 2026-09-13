@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { TopNav } from "@/components/dashboard/top-nav";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { SecureExitButton } from "@/components/dashboard/secure-exit-button";
+import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -29,6 +30,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <TopNav />
       </Suspense>
       <InventoryAlertBanner />
+      {/* Sits outside <main> so the one-time hint stays put above the
+          swipeable carousel rather than scrolling with a single tab. */}
+      <StaffOnboardingBanner />
       <main className="relative flex-1 overflow-x-hidden py-6">{children}</main>
       <SecureExitButton />
     </div>
