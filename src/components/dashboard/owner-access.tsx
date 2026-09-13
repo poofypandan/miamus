@@ -68,7 +68,12 @@ export function PinModal({
         if (!next) setPin("");
       }}
     >
-      <DialogContent className="sm:max-w-xs">
+      {/* Overrides the shared Dialog's default vertical centering (fixed
+          top-1/2 -translate-y-1/2) with a bottom anchor — the PIN pad
+          should sit in the lower third of the screen, right where a
+          thumb naturally rests, not floating mid-screen. Horizontal
+          centering is left untouched. */}
+      <DialogContent className="top-auto bottom-32 translate-y-0 sm:max-w-xs">
         <DialogHeader>
           <DialogTitle>Owner Access</DialogTitle>
           <DialogDescription>Enter the 4-digit PIN to unlock owner mode.</DialogDescription>

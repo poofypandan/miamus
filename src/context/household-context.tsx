@@ -24,6 +24,7 @@ export type UserRole = "staff" | "owner";
 // Hardcoded for now — there's no auth backend yet, this is a lightweight UI
 // gate so staff devices don't casually stumble into owner-only controls.
 const OWNER_PIN = "6033";
+const OWNER_STORAGE_KEY = "banyuwangi11:isOwner";
 
 interface HouseholdContextValue {
   entities: TaskEntity[];
@@ -44,6 +45,10 @@ interface HouseholdContextValue {
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   userRole: UserRole;
+  // False only during the brief window between mount and the localStorage
+  // hydration effect below — lets owner-only route guards avoid bouncing a
+  // returning owner to the Daily Feed before their session is restored.
+  roleHydrated: boolean;
   unlockOwner: (pin: string) => boolean;
   lockOwner: () => void;
   refresh: () => Promise<void>;
@@ -110,15 +115,34 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
 
   const [userRole, setUserRole] = useState<UserRole>("staff");
+  const [roleHydrated, setRoleHydrated] = useState(false);
+
+  // Restores owner mode after a page refresh so the owner-only tabs don't
+  // momentarily vanish. Deliberately a mount effect (not a lazy useState
+  // initializer) so the client's first render still matches the
+  // server-rendered "staff" HTML — reading localStorage during render would
+  // produce a hydration mismatch instead.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.localStorage.getItem(OWNER_STORAGE_KEY) === "true") {
+      setUserRole("owner");
+    }
+    setRoleHydrated(true);
+  }, []);
 
   const unlockOwner = useCallback((pin: string) => {
     if (pin !== OWNER_PIN) return false;
     setUserRole("owner");
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(OWNER_STORAGE_KEY, "true");
+    }
     return true;
   }, []);
 
   const lockOwner = useCallback(() => {
     setUserRole("staff");
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(OWNER_STORAGE_KEY);
+    }
   }, []);
 
   const createEntity = useCallback(async (input: CreateEntityInput) => {
@@ -227,6 +251,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       selectedDate,
       setSelectedDate,
       userRole,
+      roleHydrated,
       unlockOwner,
       lockOwner,
       refresh,
@@ -256,6 +281,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       activePetId,
       selectedDate,
       userRole,
+      roleHydrated,
       unlockOwner,
       lockOwner,
       refresh,
