@@ -33,7 +33,7 @@ export default function Home() {
       <div className="mx-auto flex w-fit flex-col items-start space-y-3 text-left text-base">
         {RUMAH.map((r) => (
           <div key={r.letter}>
-            <span className="inline-block w-4 font-bold text-gray-900">{r.letter}</span>
+            <span className="font-bold text-gray-900">{r.letter}</span>
             <span className="font-normal text-gray-500">{r.rest}</span>
           </div>
         ))}
