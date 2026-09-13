@@ -30,7 +30,7 @@ export default function Home() {
         Banyuwangi 11
       </h1>
 
-      <div className="mx-auto flex w-fit flex-col items-start space-y-3 text-left text-base">
+      <div className="font-mono-manifesto mx-auto flex w-fit flex-col items-start space-y-3 text-left text-base">
         {RUMAH.map((r) => (
           <div key={r.letter}>
             <span className="font-bold text-gray-900">{r.letter}</span>
