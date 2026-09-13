@@ -19,17 +19,31 @@ interface DateRibbonProps {
 // `selectedDate` in HouseholdContext.
 export function DateRibbon({ value, onChange }: DateRibbonProps) {
   const today = useMemo(() => new Date(), []);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
 
   const days = useMemo(() => Array.from({ length: 15 }, (_, i) => addDays(value, i - 7)), [value]);
 
   useEffect(() => {
-    selectedRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    // Deliberately not Element.scrollIntoView() — on the Owner Dashboard,
+    // this ribbon sits inside the swipeable tab canvas, which keeps the
+    // whole page positioned via a CSS transform on an overflow-x:hidden
+    // ancestor. Calling scrollIntoView() on a descendant of that ancestor
+    // corrupts its hit-testing (confirmed live: dragging the canvas stops
+    // registering pointer events afterward), in every `behavior` mode, not
+    // just "smooth". Setting scrollLeft directly gets the same "center the
+    // selected day" result without going through that API.
+    const btn = selectedRef.current;
+    const container = scrollRef.current;
+    if (btn && container) {
+      container.scrollLeft = btn.offsetLeft - container.clientWidth / 2 + btn.offsetWidth / 2;
+    }
   }, [value]);
 
   return (
     <div className="flex items-center gap-2">
       <div
+        ref={scrollRef}
         data-no-swipe="true"
         onPointerDownCapture={(e) => e.stopPropagation()}
         className="flex flex-1 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

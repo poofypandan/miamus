@@ -1,105 +1,124 @@
 "use client";
 
-import { useMemo } from "react";
-import { SummaryCard } from "@/components/dashboard/summary-card";
-import { PhotoStream } from "@/components/dashboard/photo-stream";
-import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
-import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
-import { PetDetailHeader } from "@/components/dashboard/pet-detail-header";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useHousehold } from "@/context/household-context";
-import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
-import type { TaskEntity, MasterSchedule, TaskLog } from "@/types/database";
+import { Suspense, useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { motion, useMotionValue, animate } from "framer-motion";
+import { useRouter, useSearchParams } from "next/navigation";
+import { DailyFeedTab } from "@/components/dashboard/tabs/daily-feed-tab";
+import { SchedulesTab } from "@/components/dashboard/tabs/schedules-tab";
+import { HealthTab } from "@/components/dashboard/tabs/health-tab";
+import { DASHBOARD_TABS, tabIndex } from "@/lib/dashboard-tabs";
 
-export default function DashboardHomePage() {
-  const { pets, entities, schedules, logs, activePetId, loading, selectedDate } = useHousehold();
-  const activePet = pets.find((p) => p.id === activePetId) ?? null;
-  const dateStr = formatDateLocal(selectedDate);
+const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
+// How far the pointer must move before a press is treated as a drag rather
+// than a tap — below this, buttons nested in the carousel (pet rows, etc.)
+// get a normal click instead of having it hijacked by pointer capture.
+const DRAG_ENGAGE_PX = 10;
 
-  const allTodaysLogs = useMemo(
-    () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === dateStr),
-    [logs, dateStr]
-  );
-
-  if (loading) {
-    return (
-      <div className="-mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-xl" />
-        ))}
-      </div>
-    );
-  }
-
-  if (pets.length === 0) {
-    return (
-      <p className="-mt-2 pt-8 text-center text-sm text-muted-foreground">
-        No pets yet. Add a pet above to get started.
-      </p>
-    );
-  }
-
-  if (!activePet) {
-    return (
-      <div className="-mt-2 flex flex-col">
-        <UnifiedSummaryCard />
-        <h3 className="mt-8 mb-3 text-sm font-medium text-gray-500">Photos</h3>
-        <PhotoStream logs={allTodaysLogs} entities={entities} showAvatar />
-        <div className="mt-8">
-          <LowStockFlagButton />
-        </div>
-      </div>
-    );
-  }
-
+export default function DashboardPage() {
+  // useSearchParams() opts this subtree out of static rendering unless it's
+  // behind a Suspense boundary — the rest of the page has no static content
+  // to show in the meantime anyway, so a null fallback is fine.
   return (
-    <div className="-mt-2 flex flex-col gap-6">
-      <PetDetailHeader pet={activePet} />
-      <PetDailyFeed
-        pet={activePet}
-        entities={entities}
-        schedules={schedules}
-        logs={logs}
-        date={selectedDate}
-      />
-      <LowStockFlagButton />
-    </div>
+    <Suspense fallback={null}>
+      <DashboardCanvas />
+    </Suspense>
   );
 }
 
-function PetDailyFeed({
-  pet,
-  entities,
-  schedules,
-  logs,
-  date,
-}: {
-  pet: TaskEntity;
-  entities: TaskEntity[];
-  schedules: MasterSchedule[];
-  logs: TaskLog[];
-  date: Date;
-}) {
-  const dateStr = formatDateLocal(date);
+function DashboardCanvas() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeIndex = tabIndex(searchParams.get("tab"));
+  const containerRef = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
 
-  const items = useMemo(() => {
-    const groups = buildAgenda({ date: dateStr, entities: [pet], schedules, logs });
-    return groups.flatMap((g) => g.items);
-  }, [dateStr, pet, schedules, logs]);
-
-  const todaysLogs = useMemo(
-    () =>
-      logs.filter(
-        (l) => l.entity_id === pet.id && formatDateLocal(new Date(l.completed_at)) === dateStr
-      ),
-    [logs, dateStr, pet]
+  // Framer Motion's declarative `drag` prop (combined with an `animate` x
+  // target driven by percentage strings, per the original spec) turned out
+  // to be unreliable here: after a couple of tab changes it silently stops
+  // responding to further pointer gestures. Root-caused to DateRibbon's
+  // scrollIntoView() (see date-ribbon.tsx) corrupting hit-testing on this
+  // ancestor — fixed there — but `drag` itself still broke even after that
+  // fix, in both dev and a production build. Tracking the drag ourselves
+  // with plain pointer events (same proven approach as the swipe gesture
+  // from Phase 23), driving a raw-pixel `useMotionValue`, reliably works
+  // instead; Framer Motion is still used for the spring-snap animation via
+  // `animate()`.
+  const drag = useRef<{ pointerId: number; startX: number; baseX: number; engaged: boolean } | null>(
+    null
   );
 
+  function changeTab(index: number) {
+    router.push(`/dashboard?tab=${DASHBOARD_TABS[index]}`, { scroll: false });
+  }
+
+  function snapToActiveTab() {
+    const width = containerRef.current?.offsetWidth ?? 0;
+    animate(x, -activeIndex * width, SPRING);
+  }
+
+  useEffect(snapToActiveTab, [activeIndex, x]);
+
+  function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    // A drag that starts inside a horizontally-scrollable widget (the
+    // DateRibbon) should scroll that widget, not the carousel — it already
+    // stops this event at the capture phase via onPointerDownCapture.
+    // Deliberately NOT capturing the pointer yet: capturing immediately
+    // would hijack every tap on a nested button (pet rows, chevron rows,
+    // etc.) before its own click had a chance to fire. Capture is deferred
+    // to handlePointerMove, once the gesture has proven itself a drag.
+    drag.current = { pointerId: e.pointerId, startX: e.clientX, baseX: x.get(), engaged: false };
+  }
+
+  function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!drag.current || e.pointerId !== drag.current.pointerId) return;
+    const offsetX = e.clientX - drag.current.startX;
+    if (!drag.current.engaged) {
+      if (Math.abs(offsetX) < DRAG_ENGAGE_PX) return;
+      drag.current.engaged = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    x.set(drag.current.baseX + offsetX);
+  }
+
+  function handlePointerUp(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!drag.current || e.pointerId !== drag.current.pointerId) return;
+    const { engaged, startX } = drag.current;
+    const offsetX = e.clientX - startX;
+    drag.current = null;
+    // Never engaged (moved less than the threshold) — this was a tap, not a
+    // drag. Leave it alone so the underlying element's own click still
+    // fires normally; don't even re-snap (x is already at baseX).
+    if (!engaged) return;
+
+    if (offsetX < -50 && activeIndex < DASHBOARD_TABS.length - 1) {
+      changeTab(activeIndex + 1);
+    } else if (offsetX > 50 && activeIndex > 0) {
+      changeTab(activeIndex - 1);
+    } else {
+      snapToActiveTab();
+    }
+  }
+
   return (
-    <div className="flex flex-col">
-      <SummaryCard dogName={pet.name} items={items} />
-      <h3 className="mt-8 mb-3 text-sm font-medium text-gray-500">Photos</h3>
-      <PhotoStream logs={todaysLogs} entities={entities} />
+    <div ref={containerRef} className="relative w-full overflow-x-hidden">
+      <motion.div
+        className="flex w-[300%] touch-pan-y select-none"
+        style={{ x }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        <div className="w-1/3 px-4">
+          <DailyFeedTab />
+        </div>
+        <div className="w-1/3 px-4">
+          <SchedulesTab />
+        </div>
+        <div className="w-1/3 px-4">
+          <HealthTab />
+        </div>
+      </motion.div>
     </div>
   );
 }

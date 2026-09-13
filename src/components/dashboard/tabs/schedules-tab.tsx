@@ -8,7 +8,7 @@ import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
 import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 
-export default function SchedulesPage() {
+export function SchedulesTab() {
   const { pets, activePetId, loading, selectedDate, setSelectedDate } = useHousehold();
   const isOwner = useRequireOwner();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;

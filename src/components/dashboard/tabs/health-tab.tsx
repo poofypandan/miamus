@@ -12,7 +12,7 @@ import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import type { MedicalRecord, TaskEntity } from "@/types/database";
 
-export default function HealthPage() {
+export function HealthTab() {
   const { pets, medicalRecords, activePetId, setActivePetId, loading } = useHousehold();
   const isOwner = useRequireOwner();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;

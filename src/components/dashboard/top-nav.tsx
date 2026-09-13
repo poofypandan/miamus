@@ -1,21 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Home, PawPrint, Users, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MODULES } from "@/config/modules";
 import { cn } from "@/lib/utils";
+import { tabIndex, type DashboardTab } from "@/lib/dashboard-tabs";
 import { useHousehold } from "@/context/household-context";
 
-const SUB_NAV = [
-  { href: "/dashboard", label: "Daily Feed" },
-  { href: "/dashboard/schedules", label: "Schedules" },
-  { href: "/dashboard/health", label: "Health Passport" },
+const SUB_NAV: { tab: DashboardTab; label: string }[] = [
+  { tab: "feed", label: "Daily Feed" },
+  { tab: "schedules", label: "Schedules" },
+  { tab: "health", label: "Health Passport" },
 ];
 
 export function TopNav() {
-  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeIndex = tabIndex(searchParams.get("tab"));
   const { userRole } = useHousehold();
   const isOwner = userRole === "owner";
 
@@ -41,12 +43,13 @@ export function TopNav() {
           pure clutter, so skip it entirely rather than rendering it. */}
       {isOwner && (
         <nav className="flex gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {SUB_NAV.map((item) => {
-            const isActive = pathname === item.href;
+          {SUB_NAV.map((item, index) => {
+            const isActive = index === activeIndex;
             return (
               <Link
-                key={item.href}
-                href={item.href}
+                key={item.tab}
+                href={`/dashboard?tab=${item.tab}`}
+                scroll={false}
                 className={cn(
                   "flex min-h-[48px] shrink-0 items-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                   isActive
