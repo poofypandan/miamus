@@ -39,6 +39,11 @@ interface HouseholdContextValue {
   setActivePetId: (id: string) => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+  // The day the Owner Dashboard and Staff "Jadwal" are currently browsing —
+  // shared globally so picking a date in one place (e.g. the schedules tab)
+  // keeps the Daily Feed and Staff view in sync with it too.
+  selectedDate: Date;
+  setSelectedDate: (date: Date) => void;
   userRole: UserRole;
   unlockOwner: (pin: string) => boolean;
   lockOwner: () => void;
@@ -108,6 +113,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, [pets, activePetId]);
 
   const [viewMode, setViewMode] = useState<ViewMode>("all");
+
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
 
   const [userRole, setUserRole] = useState<UserRole>("staff");
 
@@ -226,6 +233,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setActivePetId,
       viewMode,
       setViewMode,
+      selectedDate,
+      setSelectedDate,
       userRole,
       unlockOwner,
       lockOwner,
@@ -255,6 +264,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       loading,
       activePetId,
       viewMode,
+      selectedDate,
       userRole,
       unlockOwner,
       lockOwner,

@@ -1,13 +1,14 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateRibbon } from "@/components/date-ribbon";
 import { ScheduleEditor } from "@/components/dashboard/schedule-editor";
 import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
 import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 
 export default function SchedulesPage() {
-  const { pets, activePetId, viewMode, loading } = useHousehold();
+  const { pets, activePetId, viewMode, loading, selectedDate, setSelectedDate } = useHousehold();
   const isOwner = useRequireOwner();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
 
@@ -37,6 +38,7 @@ export default function SchedulesPage() {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold">Schedules</h1>
+        <DateRibbon value={selectedDate} onChange={setSelectedDate} />
         <UnifiedTimeline />
       </div>
     );
@@ -45,6 +47,7 @@ export default function SchedulesPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Schedules</h1>
+      <DateRibbon value={selectedDate} onChange={setSelectedDate} />
       {activePet ? (
         <ScheduleEditor entity={activePet} />
       ) : (

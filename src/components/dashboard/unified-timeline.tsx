@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
+import { dayLabel } from "@/lib/date-label";
 import { categoryIcon } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
@@ -17,17 +18,17 @@ import type { TaskEntity } from "@/types/database";
 // AgendaGroupCard works) — passing every pet as `entities` here gets the
 // cross-pet merge for free, no separate grouping logic needed.
 export function UnifiedTimeline() {
-  const { pets, schedules, logs } = useHousehold();
-  const today = formatDateLocal(new Date());
+  const { pets, schedules, logs, selectedDate } = useHousehold();
+  const dateStr = formatDateLocal(selectedDate);
   const groups = useMemo(
-    () => buildAgenda({ date: today, entities: pets, schedules, logs }),
-    [today, pets, schedules, logs]
+    () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
+    [dateStr, pets, schedules, logs]
   );
 
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">Today&apos;s Timeline</CardTitle>
+        <CardTitle className="text-base">{dayLabel(selectedDate)}&apos;s Timeline</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         {groups.length === 0 ? (

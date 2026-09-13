@@ -5,21 +5,22 @@ import { CheckCircle2, Clock, Droplets, Utensils, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
+import { dayLabel } from "@/lib/date-label";
 import { POTTY_TITLE } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaItem } from "@/lib/scheduleEngine";
 import type { MasterSchedule, TaskEntity, TaskLog } from "@/types/database";
 
 export function UnifiedSummaryCard() {
-  const { pets, schedules, logs } = useHousehold();
+  const { pets, schedules, logs, selectedDate } = useHousehold();
 
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">Today&apos;s Overview</CardTitle>
+        <CardTitle className="text-base">{dayLabel(selectedDate)}&apos;s Overview</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col divide-y px-4">
         {pets.map((pet) => (
-          <PetOverviewRow key={pet.id} pet={pet} schedules={schedules} logs={logs} />
+          <PetOverviewRow key={pet.id} pet={pet} schedules={schedules} logs={logs} date={selectedDate} />
         ))}
       </CardContent>
     </Card>
@@ -37,16 +38,18 @@ function PetOverviewRow({
   pet,
   schedules,
   logs,
+  date,
 }: {
   pet: TaskEntity;
   schedules: MasterSchedule[];
   logs: TaskLog[];
+  date: Date;
 }) {
-  const today = formatDateLocal(new Date());
+  const dateStr = formatDateLocal(date);
   const items = useMemo(() => {
-    const groups = buildAgenda({ date: today, entities: [pet], schedules, logs });
+    const groups = buildAgenda({ date: dateStr, entities: [pet], schedules, logs });
     return groups.flatMap((g) => g.items);
-  }, [today, pet, schedules, logs]);
+  }, [dateStr, pet, schedules, logs]);
 
   const potty = items.filter((i) => i.title === POTTY_TITLE);
   const pottyDone = potty.filter((i) => i.status === "completed").length;

@@ -7,17 +7,20 @@ import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card"
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
+import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import type { TaskEntity, MasterSchedule, TaskLog } from "@/types/database";
 
 export default function DashboardHomePage() {
-  const { pets, entities, schedules, logs, activePetId, viewMode, loading } = useHousehold();
+  const { pets, entities, schedules, logs, activePetId, viewMode, loading, selectedDate } =
+    useHousehold();
   const activePet = pets.find((p) => p.id === activePetId) ?? null;
-  const today = formatDateLocal(new Date());
+  const dateStr = formatDateLocal(selectedDate);
+  const label = dayLabel(selectedDate);
 
   const allTodaysLogs = useMemo(
-    () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === today),
-    [logs, today]
+    () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === dateStr),
+    [logs, dateStr]
   );
 
   if (loading) {
@@ -43,13 +46,13 @@ export default function DashboardHomePage() {
       <div className="flex flex-col gap-6">
         <section>
           <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-            Today&apos;s Overview
+            {label}&apos;s Overview
           </h2>
           <UnifiedSummaryCard />
         </section>
         <section>
           <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-            Today&apos;s Photos
+            {label}&apos;s Photos
           </h2>
           <PhotoStream logs={allTodaysLogs} entities={entities} showAvatar />
         </section>
@@ -68,7 +71,13 @@ export default function DashboardHomePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PetDailyFeed pet={activePet} entities={entities} schedules={schedules} logs={logs} />
+      <PetDailyFeed
+        pet={activePet}
+        entities={entities}
+        schedules={schedules}
+        logs={logs}
+        date={selectedDate}
+      />
       <LowStockFlagButton />
     </div>
   );
@@ -79,38 +88,41 @@ function PetDailyFeed({
   entities,
   schedules,
   logs,
+  date,
 }: {
   pet: TaskEntity;
   entities: TaskEntity[];
   schedules: MasterSchedule[];
   logs: TaskLog[];
+  date: Date;
 }) {
-  const today = formatDateLocal(new Date());
+  const dateStr = formatDateLocal(date);
+  const label = dayLabel(date);
 
   const items = useMemo(() => {
-    const groups = buildAgenda({ date: today, entities: [pet], schedules, logs });
+    const groups = buildAgenda({ date: dateStr, entities: [pet], schedules, logs });
     return groups.flatMap((g) => g.items);
-  }, [today, pet, schedules, logs]);
+  }, [dateStr, pet, schedules, logs]);
 
   const todaysLogs = useMemo(
     () =>
       logs.filter(
-        (l) => l.entity_id === pet.id && formatDateLocal(new Date(l.completed_at)) === today
+        (l) => l.entity_id === pet.id && formatDateLocal(new Date(l.completed_at)) === dateStr
       ),
-    [logs, today, pet]
+    [logs, dateStr, pet]
   );
 
   return (
     <div className="flex flex-col gap-6">
       <section>
         <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-          Today&apos;s Overview
+          {label}&apos;s Overview
         </h2>
         <SummaryCard dogName={pet.name} items={items} />
       </section>
       <section>
         <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-          Today&apos;s Photos
+          {label}&apos;s Photos
         </h2>
         <PhotoStream logs={todaysLogs} entities={entities} />
       </section>

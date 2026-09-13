@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { DateStrip } from "@/components/staff/date-strip";
+import { useMemo } from "react";
+import { DateRibbon } from "@/components/date-ribbon";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { AdHocSheet } from "@/components/staff/adhoc-sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,19 +9,19 @@ import { useHousehold } from "@/context/household-context";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
 export default function StaffPage() {
-  const { pets, schedules, logs, loading } = useHousehold();
-  const [selectedDate, setSelectedDate] = useState(() => formatDateLocal(new Date()));
+  const { pets, schedules, logs, loading, selectedDate, setSelectedDate } = useHousehold();
+  const dateStr = formatDateLocal(selectedDate);
 
   const groups = useMemo(
-    () => buildAgenda({ date: selectedDate, entities: pets, schedules, logs }),
-    [selectedDate, pets, schedules, logs]
+    () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
+    [dateStr, pets, schedules, logs]
   );
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col gap-4 bg-slate-50 px-4 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <header className="flex flex-col gap-3">
         <h1 className="text-xl font-semibold">Tugas Hari Ini</h1>
-        <DateStrip value={selectedDate} onChange={setSelectedDate} />
+        <DateRibbon value={selectedDate} onChange={setSelectedDate} />
       </header>
 
       <main className="flex flex-1 flex-col gap-3">

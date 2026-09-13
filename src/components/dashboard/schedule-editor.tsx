@@ -32,6 +32,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { dayLabel } from "@/lib/date-label";
 import type { CreateScheduleInput } from "@/lib/data";
 import {
   POTTY_TITLE,
@@ -1083,22 +1084,22 @@ function LivePreviewCard({
   entity: TaskEntity;
   schedules: MasterSchedule[];
 }) {
-  const { logs } = useHousehold();
-  const today = formatDateLocal(new Date());
+  const { logs, selectedDate } = useHousehold();
+  const dateStr = formatDateLocal(selectedDate);
   // Flattened one-row-per-schedule-item, not one-row-per-group — grouping by
   // time+title (as buildAgenda's groups do, for the Staff View's multi-dog
   // batching) would silently cram two distinct schedule rows that happen to
   // share a title+time into a single visual row with two status icons.
   // Flattening guarantees exactly one status indicator per row.
   const items = useMemo(() => {
-    const groups = buildAgenda({ date: today, entities: [entity], schedules, logs });
+    const groups = buildAgenda({ date: dateStr, entities: [entity], schedules, logs });
     return groups.flatMap((g) => g.items);
-  }, [today, entity, schedules, logs]);
+  }, [dateStr, entity, schedules, logs]);
 
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">Today&apos;s Timeline</CardTitle>
+        <CardTitle className="text-base">{dayLabel(selectedDate)}&apos;s Timeline</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2 px-4">
         {items.length === 0 ? (
