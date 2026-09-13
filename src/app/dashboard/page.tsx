@@ -1,6 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DailyFeedTab } from "@/components/dashboard/tabs/daily-feed-tab";
@@ -29,9 +35,26 @@ export default function DashboardPage() {
 function DashboardCanvas() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeIndex = tabIndex(searchParams.get("tab"));
+  const routeIndex = tabIndex(searchParams.get("tab"));
   const containerRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
+
+  // The carousel's visual position is driven by this LOCAL state, not
+  // directly by the router's searchParams. Deriving `activeIndex` straight
+  // from useSearchParams() meant the spring-snap animation couldn't start
+  // until Next.js's router finished processing the navigation (App Router
+  // still does real reconciliation work for a same-route query change) —
+  // on a physically-driven gesture like a swipe, that round-trip reads as a
+  // stutter/freeze right as the release should feel instant. `visualIndex`
+  // updates synchronously on gesture end; the URL is synced separately
+  // (see changeTab) without gating the animation on it.
+  const [visualIndex, setVisualIndex] = useState(routeIndex);
+
+  // Keeps the carousel in sync when the tab changes from outside a swipe —
+  // a TopNav tap, browser back/forward, or a direct link.
+  useEffect(() => {
+    setVisualIndex(routeIndex);
+  }, [routeIndex]);
 
   // Framer Motion's declarative `drag` prop (combined with an `animate` x
   // target driven by percentage strings, per the original spec) turned out
@@ -48,16 +71,28 @@ function DashboardCanvas() {
     null
   );
 
-  function changeTab(index: number) {
-    router.push(`/dashboard?tab=${DASHBOARD_TABS[index]}`, { scroll: false });
-  }
-
-  function snapToActiveTab() {
+  function snapTo(index: number) {
     const width = containerRef.current?.offsetWidth ?? 0;
-    animate(x, -activeIndex * width, SPRING);
+    animate(x, -index * width, SPRING);
   }
 
-  useEffect(snapToActiveTab, [activeIndex, x]);
+  // Updates the visual carousel instantly, independent of router timing —
+  // that's what actually fixes the stutter (see the visualIndex comment
+  // above). The URL still needs to end up correct for TopNav's active-tab
+  // highlight (it reads the same ?tab= via useSearchParams()) and for
+  // deep-linking/refresh, so this still goes through the router — but as
+  // a `.replace()` (not `.push()`, so swiping through tabs doesn't pile up
+  // browser-history entries) fired *after* the visual update, which no
+  // longer blocks or delays anything the user perceives.
+  function changeTab(index: number) {
+    setVisualIndex(index); // triggers the animation via the effect below
+    router.replace(`/dashboard?tab=${DASHBOARD_TABS[index]}`, { scroll: false });
+  }
+
+  useEffect(() => {
+    snapTo(visualIndex);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapTo reads containerRef/x, both stable; re-running on their change would be a no-op
+  }, [visualIndex]);
 
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     // A drag that starts inside a horizontally-scrollable widget (the
@@ -91,18 +126,18 @@ function DashboardCanvas() {
     // fires normally; don't even re-snap (x is already at baseX).
     if (!engaged) return;
 
-    if (offsetX < -50 && activeIndex < DASHBOARD_TABS.length - 1) {
-      changeTab(activeIndex + 1);
-    } else if (offsetX > 50 && activeIndex > 0) {
-      changeTab(activeIndex - 1);
+    if (offsetX < -50 && visualIndex < DASHBOARD_TABS.length - 1) {
+      changeTab(visualIndex + 1);
+    } else if (offsetX > 50 && visualIndex > 0) {
+      changeTab(visualIndex - 1);
     } else {
-      snapToActiveTab();
+      snapTo(visualIndex);
     }
   }
 
   return (
     <>
-      <div ref={containerRef} className="relative w-full overflow-x-hidden">
+      <div ref={containerRef} className="relative w-full overflow-x-hidden py-4">
         <motion.div
           className="flex w-[300%] touch-pan-y select-none"
           style={{ x }}

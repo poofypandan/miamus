@@ -15,7 +15,7 @@ export function HealthTab() {
 
   if (loading) {
     return (
-      <div className="-mt-2 flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-64 rounded-lg" />
         <Skeleton className="h-32 w-full rounded-xl" />
       </div>
@@ -24,7 +24,7 @@ export function HealthTab() {
 
   if (pets.length === 0) {
     return (
-      <div className="-mt-2 flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <p className="pt-8 text-center text-sm text-muted-foreground">
           No pets yet. Add a pet above to start their health passport.
         </p>
@@ -33,7 +33,7 @@ export function HealthTab() {
   }
 
   return (
-    <div className="-mt-2 flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         {pets.map((pet) => (
           <button
