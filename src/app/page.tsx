@@ -25,26 +25,28 @@ export default function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between px-6 py-20 text-center">
-      <h1 className="mt-8 text-4xl font-semibold tracking-tight text-gray-900">Banyuwangi 11</h1>
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-12 text-center select-none">
+      <h1 className="mb-12 text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
+        Banyuwangi 11
+      </h1>
 
-      <div className="flex flex-1 items-center justify-center">
-        <div className="mx-auto flex w-fit flex-col items-start space-y-5 text-left text-base">
-          {RUMAH.map((r) => (
-            <div key={r.letter}>
-              <span className="font-bold text-black">{r.letter}</span>
-              <span className="text-gray-500">{r.rest}</span>
-            </div>
-          ))}
-        </div>
+      <div className="mx-auto flex w-fit flex-col items-start space-y-3 text-left text-base">
+        {RUMAH.map((r) => (
+          <div key={r.letter}>
+            <span className="inline-block w-4 font-bold text-gray-900">{r.letter}</span>
+            <span className="font-normal text-gray-500">{r.rest}</span>
+          </div>
+        ))}
       </div>
 
-      <Link
-        href="/staff"
-        className="mb-8 w-full max-w-[240px] rounded-full bg-black py-4 text-lg font-medium text-white shadow-sm transition-transform active:scale-95"
-      >
-        Jadwal
-      </Link>
+      <div className="mt-12 flex w-full justify-center">
+        <Link
+          href="/staff"
+          className="w-full max-w-[220px] rounded-full bg-black py-3.5 text-base font-medium text-white shadow-sm transition-transform active:scale-95"
+        >
+          Jadwal
+        </Link>
+      </div>
 
       {/* Deliberately invisible — owner access is a hidden gesture, not a
           visible button. Double-click (not single) so staff can't trigger
