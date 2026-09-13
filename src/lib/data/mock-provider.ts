@@ -204,6 +204,7 @@ export const mockProvider: DataProvider = {
       next_due_date: input.next_due_date ?? null,
       document_photo_url: input.document_photo_url ?? null,
       notes: input.notes ?? null,
+      value: input.value ?? null,
       created_at: new Date().toISOString(),
     };
     db.medicalRecords.push(record);

@@ -64,19 +64,31 @@ create index if not exists task_logs_completed_at_idx on task_logs(completed_at)
 
 -- ============================================================================
 -- medical_records
--- Vaccine / vet visit / medication history per entity (pets for now).
+-- Vaccine / vet visit / medication / weight history per entity (pets for
+-- now). `value` (kg) is set only for record_type = 'weight' — every other
+-- type leaves it null. Added by the Phase 30 migration below; a fresh
+-- database gets it inline instead of needing a separate ALTER.
 -- ============================================================================
 create table if not exists medical_records (
   id uuid primary key default gen_random_uuid(),
   entity_id uuid not null references task_entities(id) on delete cascade,
-  record_type text not null check (record_type in ('vaccine', 'vet', 'medication')),
+  record_type text not null check (record_type in ('vaccine', 'vet', 'medication', 'weight')),
   title text not null,
   administered_at date,
   next_due_date date,
   document_photo_url text,
   notes text,
+  value numeric,
   created_at timestamptz not null default now()
 );
+
+-- Phase 30 migration — run this against a database created before this
+-- column/constraint existed (a fresh `create table` above already has it):
+--   alter table medical_records add column value numeric;
+--   alter table medical_records
+--     drop constraint medical_records_record_type_check,
+--     add constraint medical_records_record_type_check
+--       check (record_type in ('vaccine', 'vet', 'medication', 'weight'));
 
 create index if not exists medical_records_entity_id_idx on medical_records(entity_id);
 

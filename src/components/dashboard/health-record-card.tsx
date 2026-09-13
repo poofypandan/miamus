@@ -7,6 +7,7 @@ const TYPE_LABEL: Record<MedicalRecord["record_type"], string> = {
   vaccine: "Vaccine",
   vet: "Vet Visit",
   medication: "Medication",
+  weight: "Weight",
 };
 
 function daysUntil(dateStr: string): number {
@@ -43,8 +44,15 @@ export function HealthRecordCard({
             {pet && <MiniPetAvatar pet={pet} className="size-5" />}
             {dogName}
           </span>
-          {record.administered_at && <span>Given {record.administered_at}</span>}
+          {record.administered_at && (
+            <span>{record.record_type === "weight" ? "Measured" : "Given"} {record.administered_at}</span>
+          )}
         </div>
+        {record.record_type === "weight" && record.value != null && (
+          <Badge variant="outline" className="w-fit">
+            {record.value} kg
+          </Badge>
+        )}
         {due !== null && (
           <Badge
             variant={due < 0 ? "destructive" : due <= 7 ? "default" : "outline"}

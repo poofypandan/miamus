@@ -60,6 +60,7 @@ export interface CreateMedicalRecordInput {
   next_due_date?: string | null;
   document_photo_url?: string | null;
   notes?: string | null;
+  value?: number | null;
 }
 
 export interface CreateInventoryAlertInput {

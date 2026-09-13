@@ -1,15 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Edit2 } from "lucide-react";
+import { Edit2, Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { SummaryCard } from "@/components/dashboard/summary-card";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { ScheduleEditor } from "@/components/dashboard/schedule-editor";
 import { HealthRecordCard } from "@/components/dashboard/health-record-card";
-import { HealthUploadDialog } from "@/components/dashboard/health-upload-dialog";
+import { HealthRecordForm } from "@/components/dashboard/health-record-form";
 import { useHousehold } from "@/context/household-context";
 import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -34,6 +42,7 @@ export function PetProfileSheet() {
     deleteEntity,
   } = useHousehold();
   const [editOpen, setEditOpen] = useState(false);
+  const [addRecordOpen, setAddRecordOpen] = useState(false);
   const pet = pets.find((p) => p.id === activePetId) ?? null;
   const canManagePets = userRole === "owner";
 
@@ -57,7 +66,7 @@ export function PetProfileSheet() {
     if (!pet) return [];
     return [...medicalRecords]
       .filter((r) => r.entity_id === pet.id)
-      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+      .sort((a, b) => (b.administered_at ?? b.created_at).localeCompare(a.administered_at ?? a.created_at));
   }, [pet, medicalRecords]);
 
   return (
@@ -120,7 +129,21 @@ export function PetProfileSheet() {
             <section className="mt-8">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <h3 className="text-sm font-medium text-gray-500">Health Passport</h3>
-                {canManagePets && <HealthUploadDialog entityId={pet.id} />}
+                {canManagePets && (
+                  <Dialog open={addRecordOpen} onOpenChange={setAddRecordOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm">
+                        <Plus /> Add record
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Add Health Record</DialogTitle>
+                      </DialogHeader>
+                      <HealthRecordForm petId={pet.id} onSaved={() => setAddRecordOpen(false)} />
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
               {healthRecords.length === 0 ? (
                 <p className="pt-4 text-center text-sm text-muted-foreground">No health records yet.</p>

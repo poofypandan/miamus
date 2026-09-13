@@ -1,7 +1,7 @@
 export type EntityType = "pet" | "room" | "general";
 export type Module = "pet" | "cleaning" | "laundry";
 export type FrequencyType = "interval" | "fixed_time" | "weekly";
-export type RecordType = "vaccine" | "vet" | "medication";
+export type RecordType = "vaccine" | "vet" | "medication" | "weight";
 export type ItemType = "food" | "medicine" | "treats" | "shampoo";
 
 // Plain `type` aliases, not `interface` — interfaces don't structurally
@@ -50,6 +50,8 @@ export type MedicalRecord = {
   next_due_date: string | null;
   document_photo_url: string | null;
   notes: string | null;
+  // Weight logs only, in kg — null for every other record_type.
+  value: number | null;
   created_at: string;
 };
 
