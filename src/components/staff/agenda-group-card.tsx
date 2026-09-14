@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Camera, CheckCircle2, Loader2 } from "lucide-react";
+import { Camera, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { compressPhoto } from "@/lib/image";
 import { categoryIcon } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
+import type { TaskLog } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 interface PendingCapture {
@@ -28,11 +29,31 @@ interface PendingCapture {
   selected: Set<string>; // entityId
 }
 
+// How long after logging a photo staff can still remove it themselves.
+const DELETE_WINDOW_MS = 15 * 60 * 1000;
+
+// NOTE: the window is measured from completed_at, not created_at — task_logs
+// has no created_at column (see supabase/schema.sql), so reading one would
+// yield NaN and quietly disable deletion everywhere. For a photo taken in the
+// app the two are the same moment anyway; for a log replayed from the Phase 29
+// offline queue, completed_at is when the task actually happened, which is the
+// timestamp staff would expect this window to run from.
+function deletableUntil(completedAt: string): number {
+  return new Date(completedAt).getTime() + DELETE_WINDOW_MS;
+}
+
 export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
-  const { logTasksBatch, uploadPhoto, pets } = useHousehold();
+  const { logTasksBatch, uploadPhoto, pets, deleteLogWithPhoto } = useHousehold();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [capture, setCapture] = useState<PendingCapture | null>(null);
+  // Only the URL is held, not the tile itself — the tile is re-derived from
+  // photoGroups below, so a delete (or any refresh) flows straight through and
+  // closes the lightbox instead of leaving a stale copy on screen.
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   const pendingItems = group.items.filter((i) => i.status !== "completed");
   const allDone = pendingItems.length === 0;
@@ -49,28 +70,49 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const photoGroups = useMemo(() => {
     const byUrl = new Map<
       string,
-      { url: string; entityIds: string[]; names: string[]; at: string }
+      { url: string; entityIds: string[]; names: string[]; at: string; logs: TaskLog[] }
     >();
     for (const item of group.items) {
       const url = item.log?.photo_url;
-      if (!url) continue;
+      if (!url || !item.log) continue;
       const existing = byUrl.get(url);
       if (existing) {
         if (!existing.entityIds.includes(item.entityId)) {
           existing.entityIds.push(item.entityId);
           existing.names.push(item.entityName);
+          // Every row behind this photo is kept: removing the photo has to
+          // remove all of them, or the dogs it doesn't cover stay marked done
+          // with nothing to show for it.
+          existing.logs.push(item.log);
         }
       } else {
         byUrl.set(url, {
           url,
           entityIds: [item.entityId],
           names: [item.entityName],
-          at: item.log?.completed_at ?? "",
+          at: item.log.completed_at,
+          logs: [item.log],
         });
       }
     }
     return [...byUrl.values()].sort((a, b) => a.at.localeCompare(b.at));
   }, [group.items]);
+
+  const lightbox = photoGroups.find((p) => p.url === lightboxUrl) ?? null;
+  const deleteDeadline = lightbox ? deletableUntil(lightbox.at) : 0;
+  // NaN-safe: an unparseable timestamp makes this false rather than throwing
+  // the window wide open.
+  const isDeletable = now < deleteDeadline;
+  const minutesLeft = Math.max(0, Math.ceil((deleteDeadline - now) / 60_000));
+
+  // Ticks only while the lightbox is open, so a photo that ages out of its
+  // window while staff are looking at it loses the button there and then.
+  useEffect(() => {
+    if (!lightboxUrl) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(timer);
+  }, [lightboxUrl]);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -135,6 +177,37 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     }
   }
 
+  async function handleDeletePhoto() {
+    if (!lightbox) return;
+    // Re-checked at the moment of the tap, not just at render: a phone left
+    // open on this screen must not be able to delete past the window.
+    if (Date.now() >= deletableUntil(lightbox.at)) {
+      toast.error("Batas waktu 15 menit sudah lewat");
+      setConfirmDelete(false);
+      setNow(Date.now());
+      return;
+    }
+    setDeleting(true);
+    try {
+      // deleteLogWithPhoto drops the row and then best-effort removes the
+      // storage object. Only the last call carries photo_url so a batch shared
+      // by four dogs deletes the file once instead of four times.
+      const logs = lightbox.logs;
+      for (let i = 0; i < logs.length; i++) {
+        const isLast = i === logs.length - 1;
+        await deleteLogWithPhoto(isLast ? logs[i] : { ...logs[i], photo_url: null });
+      }
+      toast.success("Foto berhasil dihapus");
+      setConfirmDelete(false);
+      setLightboxUrl(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal menghapus foto");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const CategoryIcon = categoryIcon(group.category);
 
   return (
@@ -172,7 +245,12 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {photoGroups.map((photo) => (
                 <figure key={photo.url} className="flex w-24 shrink-0 flex-col gap-1">
-                  <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setLightboxUrl(photo.url)}
+                    aria-label={`Lihat foto ${photo.names.join(", ")}`}
+                    className="relative block rounded-lg active:scale-[0.98]"
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={photo.url}
@@ -193,7 +271,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                         );
                       })}
                     </div>
-                  </div>
+                  </button>
                   <figcaption className="truncate text-[11px] text-muted-foreground">
                     {photo.names.join(", ")}
                   </figcaption>
@@ -301,6 +379,106 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               {capture && capture.selected.size > 0
                 ? `Simpan (${capture.selected.size})`
                 : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lightbox. `lightbox` is derived from photoGroups, so deleting the
+          photo empties it and closes this on its own. */}
+      <Dialog
+        open={!!lightbox}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLightboxUrl(null);
+            setConfirmDelete(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{group.title}</DialogTitle>
+            <DialogDescription>
+              {lightbox ? formatTime12h(new Date(lightbox.at)) : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {lightbox && (
+            <>
+              {/* object-contain, not cover: a portrait photo shot on a phone
+                  has to be readable in full here, not cropped to a square. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightbox.url}
+                alt={lightbox.names.join(", ")}
+                className="max-h-[55vh] w-full rounded-lg bg-black/5 object-contain"
+              />
+
+              <div className="flex flex-wrap gap-1.5">
+                {lightbox.entityIds.map((id, i) => {
+                  const pet = petById.get(id);
+                  return (
+                    <Badge
+                      key={id}
+                      className="h-8 gap-1.5 bg-emerald-600 py-0 pr-3 pl-1 text-sm text-white"
+                    >
+                      {pet ? (
+                        <MiniPetAvatar pet={pet} className="size-6 border-0" />
+                      ) : (
+                        <CheckCircle2 className="size-4" />
+                      )}
+                      {lightbox.names[i]}
+                    </Badge>
+                  );
+                })}
+              </div>
+
+              {isDeletable ? (
+                <Button
+                  variant="destructive"
+                  onClick={() => setConfirmDelete(true)}
+                  className="min-h-[48px] w-full"
+                >
+                  <Trash2 /> Hapus Foto ({minutesLeft} menit lagi)
+                </Button>
+              ) : (
+                <p className="text-center text-xs text-muted-foreground">
+                  Foto hanya bisa dihapus dalam 15 menit setelah dicatat. Hubungi pemilik untuk
+                  menghapus foto lama.
+                </p>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(false)}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Hapus foto ini?</DialogTitle>
+            <DialogDescription>
+              Tindakan ini tidak dapat dibatalkan.
+              {lightbox && lightbox.logs.length > 1
+                ? ` ${lightbox.names.join(", ")} akan kembali menjadi belum selesai.`
+                : " Tugas ini akan kembali menjadi belum selesai."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-2">
+            <Button
+              variant="outline"
+              className="min-h-[48px] flex-1"
+              onClick={() => setConfirmDelete(false)}
+              disabled={deleting}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              className="min-h-[48px] flex-1"
+              onClick={handleDeletePhoto}
+              disabled={deleting}
+            >
+              {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+              Hapus
             </Button>
           </DialogFooter>
         </DialogContent>
