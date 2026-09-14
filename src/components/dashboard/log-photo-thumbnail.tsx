@@ -1,6 +1,11 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  type ReactNode,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
+import { useTapGuard } from "@/hooks/use-tap-guard";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { categoryIcon, describeLog } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
@@ -43,6 +49,7 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
   const [deleting, setDeleting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
+  const tap = useTapGuard();
 
   const today = formatDateLocal(new Date());
   const canDelete = userRole === "owner" || formatDateLocal(new Date(log.completed_at)) === today;
@@ -70,7 +77,32 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
 
   function endPress() {
     cancelPress();
+    // The finger travelled — this was a scroll that happened to start on a
+    // photo, not a tap on it.
+    if (tap.moved.current) return;
     if (!longPressed.current) setLightboxOpen(true);
+  }
+
+  function handleTouchStart(e: ReactTouchEvent<HTMLButtonElement>) {
+    tap.touchProps.onTouchStart(e);
+    startPress();
+  }
+
+  function handleTouchMove(e: ReactTouchEvent<HTMLButtonElement>) {
+    tap.touchProps.onTouchMove(e);
+    // Scrolling past a photo must never raise the delete confirmation either,
+    // so the pending long-press dies the moment this becomes a scroll.
+    if (tap.moved.current) cancelPress();
+  }
+
+  function handleTouchCancel() {
+    tap.touchProps.onTouchCancel();
+    cancelPress();
+  }
+
+  function handleMouseDown() {
+    tap.reset();
+    startPress();
   }
 
   async function handleDelete() {
@@ -93,16 +125,28 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
       <button
         type="button"
         onContextMenu={(e) => e.preventDefault()}
-        onTouchStart={startPress}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={endPress}
-        onMouseDown={startPress}
+        onTouchCancel={handleTouchCancel}
+        onMouseDown={handleMouseDown}
         onMouseUp={endPress}
         onMouseLeave={cancelPress}
+        // Belt and braces: the lightbox opens from touchend, which runs before
+        // click, but this also stops a suppressed tap bubbling to the carousel.
+        onClick={(e) => tap.cancelled(e)}
         aria-label={
           entityName ? `View photo for ${entityName} · ${eventTitle}` : `View photo for ${eventTitle}`
         }
         className={cn(
-          "relative touch-none select-none overflow-hidden [-webkit-touch-callout:none]",
+          // touch-pan-y, not touch-none. touch-none told the browser to hand
+          // this element every gesture, so a drag starting on a thumbnail
+          // scrolled nothing at all — and since the grid is almost entirely
+          // thumbnails, most of the page simply refused to scroll, then opened
+          // a lightbox on release. Vertical panning now belongs to the page;
+          // horizontal still reaches the carousel, and the long-press gesture
+          // is unaffected because it needs a stationary finger anyway.
+          "relative touch-pan-y select-none overflow-hidden [-webkit-touch-callout:none]",
           className
         )}
       >

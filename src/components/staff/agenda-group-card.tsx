@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
+import { useTapGuard } from "@/hooks/use-tap-guard";
 import { compressPhoto } from "@/lib/image";
 import { categoryIcon } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
@@ -54,6 +55,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // One guard per card is enough — only one finger is ever mid-gesture, and
+  // touchstart re-arms it for whichever tile that gesture began on.
+  const tap = useTapGuard();
 
   const pendingItems = group.items.filter((i) => i.status !== "completed");
   const allDone = pendingItems.length === 0;
@@ -247,7 +251,13 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 <figure key={photo.url} className="flex w-24 shrink-0 flex-col gap-1">
                   <button
                     type="button"
-                    onClick={() => setLightboxUrl(photo.url)}
+                    {...tap.touchProps}
+                    // The strip scrolls horizontally, so a drag across it ends
+                    // in a touchend over whichever tile is under the finger.
+                    onClick={(e) => {
+                      if (tap.cancelled(e)) return;
+                      setLightboxUrl(photo.url);
+                    }}
                     aria-label={`Lihat foto ${photo.names.join(", ")}`}
                     className="relative block rounded-lg active:scale-[0.98]"
                   >
