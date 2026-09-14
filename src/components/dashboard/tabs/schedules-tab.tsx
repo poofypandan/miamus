@@ -14,10 +14,12 @@ import {
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { ManageRoutinesSheet } from "@/components/dashboard/schedule-editor";
 import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
+import { ViewModeToggle } from "@/components/view-mode-toggle";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { dayLabel } from "@/lib/date-label";
+import type { ViewMode } from "@/lib/week-agenda";
 import type { TaskEntity } from "@/types/database";
 
 // The date ribbon used to live here; it now sits above the carousel in
@@ -26,6 +28,7 @@ export function SchedulesTab() {
   const { pets, loading, selectedDate } = useHousehold();
   const isOwner = useRequireOwner();
   const label = dayLabel(selectedDate);
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
 
   if (!isOwner) return null;
 
@@ -50,8 +53,13 @@ export function SchedulesTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Timeline</h2>
-      <UnifiedTimeline />
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-gray-900">
+          {viewMode === "week" ? "This Week" : `${label}'s Timeline`}
+        </h2>
+        <ViewModeToggle value={viewMode} onChange={setViewMode} locale="en" />
+      </div>
+      <UnifiedTimeline viewMode={viewMode} />
       <ManageRoutinesButton />
     </div>
   );
