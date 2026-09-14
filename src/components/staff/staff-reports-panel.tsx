@@ -62,6 +62,7 @@ const ITEM_LABELS: Record<ItemType, string> = {
   medicine: "Obat",
   treats: "Camilan",
   shampoo: "Sampo",
+  pee_pad: "Pee Pad",
   other: "Lainnya",
 };
 

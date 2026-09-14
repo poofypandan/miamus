@@ -25,10 +25,16 @@ import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 
+// `label` is what actually reaches the database: an ad-hoc entry is a task_log
+// with no schedule, and its type lives in the free-text `notes` column
+// ("Pipis Ekstra — muntah sedikit"). That string is shown verbatim in the
+// staff's Catatan Ekstra list and in the owner's photo lightbox, so these stay
+// human Indonesian rather than machine slugs like `vomit_sick`. The read side
+// maps them back to a category in lib/schedule-categories.
 const ADHOC_TYPES = [
   { value: "potty", label: "Pipis Ekstra" },
-  { value: "snack", label: "Snack Ekstra" },
-  { value: "medication", label: "Obat Ekstra" },
+  { value: "vomit_sick", label: "Muntah / Sakit" },
+  { value: "other", label: "Lainnya" },
 ] as const;
 
 export function AdHocSheet() {

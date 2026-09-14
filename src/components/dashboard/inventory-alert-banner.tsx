@@ -13,6 +13,7 @@ const ITEM_TYPE_LABELS: Record<ItemType, string> = {
   medicine: "Medicine",
   treats: "Treats",
   shampoo: "Shampoo",
+  pee_pad: "Pee Pad",
   other: "Other",
 };
 

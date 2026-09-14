@@ -2,7 +2,11 @@ export type EntityType = "pet" | "room" | "general";
 export type Module = "pet" | "cleaning" | "laundry";
 export type FrequencyType = "interval" | "fixed_time" | "weekly";
 export type RecordType = "vaccine" | "vet" | "medication" | "weight";
-export type ItemType = "food" | "medicine" | "treats" | "shampoo" | "other";
+// `medicine` and `treats` were retired from the picker in Phase 57 but stay in
+// the union: the column has no CHECK constraint, so any historical or
+// hand-entered row carrying them must still resolve to a label rather than
+// rendering blank.
+export type ItemType = "food" | "medicine" | "treats" | "shampoo" | "pee_pad" | "other";
 export type ProposalStatus = "pending" | "approved" | "rejected";
 export type AlertStatus = "pending" | "resolved";
 

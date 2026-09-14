@@ -48,6 +48,7 @@ const COPY = {
       medicine: "Medicine",
       treats: "Treats",
       shampoo: "Shampoo",
+      pee_pad: "Pee Pad",
       other: "Other",
     },
     petOptional: "Pet (optional)",
@@ -70,6 +71,7 @@ const COPY = {
       medicine: "Obat",
       treats: "Camilan",
       shampoo: "Sampo",
+      pee_pad: "Pee Pad",
       other: "Lainnya",
     },
     petOptional: "Anjing (opsional)",
@@ -77,7 +79,11 @@ const COPY = {
   },
 } as const;
 
-const ITEM_ORDER: ItemType[] = ["food", "medicine", "treats", "shampoo", "other"];
+// What the picker offers, in order — a clean 2x2. `medicine` and `treats` are
+// deliberately absent: medicines are tracked as routines rather than stock,
+// and treats were never reported. Both remain in ItemType so older rows still
+// show a label.
+const ITEM_ORDER: ItemType[] = ["food", "shampoo", "pee_pad", "other"];
 
 // Sentinel for the "no particular dog" choice. Radix Select treats "" as
 // "nothing selected" and won't render an item for it, so the empty case needs

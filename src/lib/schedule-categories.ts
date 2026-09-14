@@ -60,8 +60,14 @@ export function categoryIcon(category: ScheduleCategory): LucideIcon {
 // entry. Kept in sync by hand with ADHOC_TYPES in components/staff/adhoc-sheet
 // — the labels are user-visible copy there, and this is the only place that
 // needs to read them back out.
+// Old labels are kept alongside the current ones on purpose: this map reads
+// what is already stored, and logs filed before Phase 57 still carry "Snack
+// Ekstra" / "Obat Ekstra" in their notes.
 const ADHOC_CATEGORIES: Record<string, ScheduleCategory> = {
   "Pipis Ekstra": "potty",
+  "Muntah / Sakit": "medication",
+  Lainnya: "temporary",
+  // retired from the picker, still present in historical rows
   "Snack Ekstra": "meal",
   "Obat Ekstra": "medication",
 };
