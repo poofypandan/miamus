@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { DateRibbon } from "@/components/date-ribbon";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
@@ -10,11 +12,17 @@ import { dayLabel } from "@/lib/date-label";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 
 export function DailyFeedTab() {
-  const { pets, entities, logs, loading, selectedDate } = useHousehold();
+  const { pets, entities, logs, loading, selectedDate, setSelectedDate } = useHousehold();
   const dateStr = formatDateLocal(selectedDate);
   const label = dayLabel(selectedDate);
+  // Safe without its own Suspense boundary — only ever rendered inside the
+  // dashboard canvas, which is already wrapped in one.
+  const searchParams = useSearchParams();
 
-  const allTodaysLogs = useMemo(
+  // Named for the browsed day, not literally today: this follows the shared
+  // selectedDate, so picking an earlier day in the ribbon re-filters the photo
+  // stream along with the summary counts.
+  const logsForDate = useMemo(
     () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === dateStr),
     [logs, dateStr]
   );
@@ -39,10 +47,17 @@ export function DailyFeedTab() {
 
   return (
     <div className="flex flex-col">
-      <h2 className="mb-3 text-sm font-medium text-gray-500">{label}&apos;s Overview</h2>
+      {/* Ribbon sits above the section header in both tabs: it scopes
+          everything below it, including the header's own "<day>'s" prefix. */}
+      <DateRibbon
+        value={selectedDate}
+        onChange={setSelectedDate}
+        recenterKey={searchParams.get("tab") ?? "feed"}
+      />
+      <h2 className="mt-4 mb-3 text-sm font-medium text-gray-500">{label}&apos;s Overview</h2>
       <UnifiedSummaryCard />
       <h3 className="mt-8 mb-3 text-sm font-medium text-gray-500">Photos</h3>
-      <PhotoStream logs={allTodaysLogs} entities={entities} showAvatar />
+      <PhotoStream logs={logsForDate} entities={entities} showAvatar />
       <div className="mt-8">
         <LowStockFlagButton />
       </div>

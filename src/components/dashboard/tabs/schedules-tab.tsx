@@ -39,12 +39,13 @@ export function SchedulesTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-medium text-gray-500">{label}&apos;s Timeline</h2>
+      {/* Ribbon first, then the header it scopes — same order as Daily Feed. */}
       <DateRibbon
         value={selectedDate}
         onChange={setSelectedDate}
         recenterKey={searchParams.get("tab") ?? "feed"}
       />
+      <h2 className="text-sm font-medium text-gray-500">{label}&apos;s Timeline</h2>
       <UnifiedTimeline />
     </div>
   );
