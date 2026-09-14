@@ -141,83 +141,105 @@ type CreateScheduleFn = (input: CreateScheduleInput) => Promise<MasterSchedule>;
 type CreateSchedulesBatchFn = (entries: CreateScheduleInput[]) => Promise<MasterSchedule[]>;
 type DeleteScheduleFn = (id: string) => Promise<void>;
 
+/**
+ * The routine editor itself, as a standalone slide-out.
+ *
+ * `entity` doubles as the open state — a non-null pet means "show this pet's
+ * routines" — which keeps callers from having to hold a boolean and a pet in
+ * step with each other. The dashboard's routine picker opens it straight from
+ * a pet row; ScheduleEditor below opens it from the pet profile sheet.
+ */
+export function ManageRoutinesSheet({
+  entity,
+  onClose,
+}: {
+  entity: TaskEntity | null;
+  onClose: () => void;
+}) {
+  const { pets, schedules, createSchedule, createSchedulesBatch, deleteSchedule } = useHousehold();
+
+  // Claims its own history entry, so Back closes this sheet and leaves
+  // whatever opened it (the picker, the profile sheet) standing.
+  useBackToClose(!!entity, onClose);
+
+  const dogSchedules = entity ? schedules.filter((s) => s.entity_id === entity.id) : [];
+
+  return (
+    <Sheet open={!!entity} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="w-full max-w-none gap-0 p-0 sm:max-w-none">
+        {entity && (
+          <>
+            <SheetHeader className="border-b px-4 py-3">
+              <SheetTitle>Manage {entity.name}&apos;s Routines</SheetTitle>
+              <SheetDescription className="sr-only">
+                Meals, potty routine, medications, grooming, and other one-off tasks.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <div className="flex flex-col gap-4">
+                <MealTimesCard
+                  entity={entity}
+                  meals={dogSchedules.filter((s) => categorizeSchedule(s) === "meal")}
+                  createSchedule={createSchedule}
+                  deleteSchedule={deleteSchedule}
+                />
+                <PottyRoutineCard
+                  entity={entity}
+                  items={dogSchedules.filter((s) => categorizeSchedule(s) === "potty")}
+                  createSchedulesBatch={createSchedulesBatch}
+                  deleteSchedule={deleteSchedule}
+                />
+                <MedicationsCard
+                  entity={entity}
+                  items={dogSchedules.filter((s) => categorizeSchedule(s) === "medication")}
+                  createSchedulesBatch={createSchedulesBatch}
+                  deleteSchedule={deleteSchedule}
+                />
+                <GroomingCareCard
+                  entity={entity}
+                  items={dogSchedules.filter((s) => categorizeSchedule(s) === "grooming")}
+                  createSchedulesBatch={createSchedulesBatch}
+                  deleteSchedule={deleteSchedule}
+                />
+                <OthersCard
+                  entity={entity}
+                  tasks={dogSchedules.filter((s) => categorizeSchedule(s) === "temporary")}
+                  createSchedule={createSchedule}
+                  deleteSchedule={deleteSchedule}
+                />
+                <CopyScheduleDrawer
+                  entity={entity}
+                  pets={pets}
+                  sourceSchedules={dogSchedules}
+                  createSchedulesBatch={createSchedulesBatch}
+                />
+              </div>
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
-  const { pets, schedules, createSchedule, createSchedulesBatch, deleteSchedule } =
-    useHousehold();
-  const [manageOpen, setManageOpen] = useState(false);
-  useBackToClose(manageOpen, () => setManageOpen(false));
+  const { schedules } = useHousehold();
+  const [manageEntity, setManageEntity] = useState<TaskEntity | null>(null);
   const dogSchedules = schedules.filter((s) => s.entity_id === entity.id);
-  const mealSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "meal");
-  const pottySchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "potty");
-  const medicationSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "medication");
-  const groomingSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "grooming");
-  const otherSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "temporary");
 
   return (
     <div className="flex flex-col gap-4">
       <LivePreviewCard entity={entity} schedules={dogSchedules} />
 
       <Button
-        onClick={() => setManageOpen(true)}
+        onClick={() => setManageEntity(entity)}
         size="lg"
         className="min-h-[52px] w-full bg-zinc-900 text-base text-white hover:bg-zinc-800"
       >
         <Settings2 /> Manage Routines
       </Button>
 
-      <Sheet open={manageOpen} onOpenChange={setManageOpen}>
-        <SheetContent
-          side="right"
-          className="w-full max-w-none gap-0 p-0 sm:max-w-none"
-        >
-          <SheetHeader className="border-b px-4 py-3">
-            <SheetTitle>Manage {entity.name}&apos;s Routines</SheetTitle>
-            <SheetDescription className="sr-only">
-              Meals, potty routine, medications, grooming, and other one-off tasks.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-4 py-4">
-            <div className="flex flex-col gap-4">
-              <MealTimesCard
-                entity={entity}
-                meals={mealSchedules}
-                createSchedule={createSchedule}
-                deleteSchedule={deleteSchedule}
-              />
-              <PottyRoutineCard
-                entity={entity}
-                items={pottySchedules}
-                createSchedulesBatch={createSchedulesBatch}
-                deleteSchedule={deleteSchedule}
-              />
-              <MedicationsCard
-                entity={entity}
-                items={medicationSchedules}
-                createSchedulesBatch={createSchedulesBatch}
-                deleteSchedule={deleteSchedule}
-              />
-              <GroomingCareCard
-                entity={entity}
-                items={groomingSchedules}
-                createSchedulesBatch={createSchedulesBatch}
-                deleteSchedule={deleteSchedule}
-              />
-              <OthersCard
-                entity={entity}
-                tasks={otherSchedules}
-                createSchedule={createSchedule}
-                deleteSchedule={deleteSchedule}
-              />
-              <CopyScheduleDrawer
-                entity={entity}
-                pets={pets}
-                sourceSchedules={dogSchedules}
-                createSchedulesBatch={createSchedulesBatch}
-              />
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <ManageRoutinesSheet entity={manageEntity} onClose={() => setManageEntity(null)} />
     </div>
   );
 }

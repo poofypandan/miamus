@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ChevronRight, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,11 +12,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
+import { ManageRoutinesSheet } from "@/components/dashboard/schedule-editor";
 import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { dayLabel } from "@/lib/date-label";
+import type { TaskEntity } from "@/types/database";
 
 // The date ribbon used to live here; it now sits above the carousel in
 // dashboard/page.tsx so it stays put while the panels swipe underneath it.
@@ -59,27 +61,15 @@ export function SchedulesTab() {
 // so this opens a picker and hands off to that pet's profile sheet, which is
 // where the full ScheduleEditor (and its own "Manage Routines" sheet) lives.
 function ManageRoutinesButton() {
-  const { pets, setActivePetId } = useHousehold();
+  const { pets } = useHousehold();
   const [open, setOpen] = useState(false);
-  const pendingPet = useRef<string | null>(null);
+  // Picking a pet now opens its routine editor straight over the picker,
+  // rather than routing through the whole pet profile sheet to reach the same
+  // editor. The picker deliberately stays open underneath: Back then unwinds
+  // editor first, picker second, which is the order the user arrived in.
+  const [editingPet, setEditingPet] = useState<TaskEntity | null>(null);
 
-  useBackToClose(open, () => {
-    setOpen(false);
-    // Handing off to the profile sheet happens here, after the pop has landed,
-    // so the sheet pushes its history entry onto a settled stack. Closing the
-    // picker directly instead would leave an async history.back() in flight
-    // that pops the sheet's brand-new entry and shuts it again immediately.
-    if (pendingPet.current) {
-      setActivePetId(pendingPet.current);
-      pendingPet.current = null;
-    }
-  });
-
-  function choosePet(petId: string) {
-    pendingPet.current = petId;
-    // Routed through Back on purpose — see the comment above.
-    window.history.back();
-  }
+  useBackToClose(open, () => setOpen(false));
 
   return (
     <>
@@ -106,7 +96,7 @@ function ManageRoutinesButton() {
               <button
                 key={pet.id}
                 type="button"
-                onClick={() => choosePet(pet.id)}
+                onClick={() => setEditingPet(pet)}
                 className="flex min-h-[56px] w-full items-center gap-3 rounded-xl border px-3 text-left active:bg-gray-50"
               >
                 <MiniPetAvatar pet={pet} className="size-10" />
@@ -117,6 +107,8 @@ function ManageRoutinesButton() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <ManageRoutinesSheet entity={editingPet} onClose={() => setEditingPet(null)} />
     </>
   );
 }
