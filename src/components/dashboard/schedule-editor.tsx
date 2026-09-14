@@ -32,7 +32,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
-import { dayLabel } from "@/lib/date-label";
 import type { CreateScheduleInput } from "@/lib/data";
 import {
   POTTY_TITLE,
@@ -1097,10 +1096,10 @@ function LivePreviewCard({
   }, [dateStr, entity, schedules, logs]);
 
   return (
-    <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="text-base">{dayLabel(selectedDate)}&apos;s Timeline</CardTitle>
-      </CardHeader>
+    // No CardHeader: the only thing that renders this card is the Pet Profile
+    // Sheet, whose section heading directly above already says
+    // "<label>'s Timeline". Repeating it inside the card just restated it.
+    <Card className="py-4">
       <CardContent className="flex flex-col gap-2 px-4">
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No tasks scheduled.</p>

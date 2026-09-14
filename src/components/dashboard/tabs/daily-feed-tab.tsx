@@ -6,11 +6,13 @@ import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card"
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
+import { dayLabel } from "@/lib/date-label";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 
 export function DailyFeedTab() {
   const { pets, entities, logs, loading, selectedDate } = useHousehold();
   const dateStr = formatDateLocal(selectedDate);
+  const label = dayLabel(selectedDate);
 
   const allTodaysLogs = useMemo(
     () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === dateStr),
@@ -37,6 +39,7 @@ export function DailyFeedTab() {
 
   return (
     <div className="flex flex-col">
+      <h2 className="mb-3 text-sm font-medium text-gray-500">{label}&apos;s Overview</h2>
       <UnifiedSummaryCard />
       <h3 className="mt-8 mb-3 text-sm font-medium text-gray-500">Photos</h3>
       <PhotoStream logs={allTodaysLogs} entities={entities} showAvatar />

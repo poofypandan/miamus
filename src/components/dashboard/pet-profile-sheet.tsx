@@ -122,7 +122,12 @@ export function PetProfileSheet() {
 
             {canManagePets && (
               <section className="mt-8">
-                <h3 className="mb-3 text-sm font-medium text-gray-500">Schedule</h3>
+                {/* Carries the same {label}'s prefix as the Overview heading
+                    above, so browsing to another date via the ribbon renames
+                    both rather than leaving one claiming "Today's". */}
+                <h3 className="mb-3 text-sm font-medium text-gray-500">
+                  {label}&apos;s Timeline
+                </h3>
                 <ScheduleEditor entity={pet} />
               </section>
             )}
