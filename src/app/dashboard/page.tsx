@@ -9,9 +9,11 @@ import {
 } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
+import { DateRibbon } from "@/components/date-ribbon";
 import { DailyFeedTab } from "@/components/dashboard/tabs/daily-feed-tab";
 import { SchedulesTab } from "@/components/dashboard/tabs/schedules-tab";
 import { PetProfileSheet } from "@/components/dashboard/pet-profile-sheet";
+import { useHousehold } from "@/context/household-context";
 import { DASHBOARD_TABS, tabIndex } from "@/lib/dashboard-tabs";
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
@@ -33,6 +35,7 @@ export default function DashboardPage() {
 
 function DashboardCanvas() {
   const router = useRouter();
+  const { selectedDate, setSelectedDate } = useHousehold();
   const searchParams = useSearchParams();
   const routeIndex = tabIndex(searchParams.get("tab"));
   const containerRef = useRef<HTMLDivElement>(null);
@@ -161,6 +164,14 @@ function DashboardCanvas() {
           makes it an implicit vertical clipping context, so it still needs a
           little headroom or the first card's shadow gets sheared off. 8px is
           enough for that while pulling the headers up toward the tabs. */}
+      {/* Outside the carousel on purpose: the ribbon is shared by both tabs, so
+          letting it ride the swipeable track meant two copies sliding past each
+          other mid-swipe. Anchored here it stays perfectly still while the
+          panels move beneath it, and there is only ever one of it. */}
+      <div className="px-4">
+        <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+      </div>
+
       {/* overflow-hidden, not just overflow-x-hidden: the track below is pinned
           to the *active* panel's height, so the other panel — which may be far
           taller — overflows it. Left to the implicit overflow-y:auto that

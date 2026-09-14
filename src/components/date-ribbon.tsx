@@ -10,11 +10,6 @@ const DAY_LABELS_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 interface DateRibbonProps {
   value: Date;
   onChange: (date: Date) => void;
-  // Any change to this re-runs the centering. The owner dashboard keeps both
-  // tab panels mounted at once, so arriving on the Schedule tab neither
-  // remounts this component nor changes `value` — without a nudge, a ribbon
-  // the user had scrolled sideways stays exactly where they left it.
-  recenterKey?: string | number;
 }
 
 // Google Calendar-style day picker: a 2-week horizontal ribbon centered on
@@ -22,7 +17,7 @@ interface DateRibbonProps {
 // jumping months or years away instantly. Shared by the Owner Timeline
 // (schedules page) and the Staff "Jadwal", both driven by the same global
 // `selectedDate` in HouseholdContext.
-export function DateRibbon({ value, onChange, recenterKey }: DateRibbonProps) {
+export function DateRibbon({ value, onChange }: DateRibbonProps) {
   const today = useMemo(() => new Date(), []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
@@ -54,7 +49,10 @@ export function DateRibbon({ value, onChange, recenterKey }: DateRibbonProps) {
     const boxRect = container.getBoundingClientRect();
     const delta = btnRect.left + btnRect.width / 2 - (boxRect.left + boxRect.width / 2);
     container.scrollLeft += delta;
-  }, [value, recenterKey]);
+    // `value` alone is enough now: the ribbon is mounted once, permanently
+    // visible above the carousel, so there is no longer a "tab became active"
+    // moment that needs its own re-centre nudge.
+  }, [value]);
 
   return (
     <div className="flex items-center gap-2">

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle2, ChevronRight, Clock, Droplets, Utensils, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
@@ -33,14 +34,16 @@ export function UnifiedSummaryCard() {
           ))}
         </div>
 
+        {/* Solid dark, matching Manage Routines on the Schedule tab and the
+            action buttons inside the pet profile sheet. */}
         {canManagePets && (
-          <button
-            type="button"
+          <Button
             onClick={() => setAddOpen(true)}
-            className="mt-4 flex w-full items-center justify-center rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-600 active:bg-gray-50"
+            size="lg"
+            className="mt-4 min-h-[52px] w-full text-base"
           >
             Manage Pets
-          </button>
+          </Button>
         )}
       </CardContent>
 

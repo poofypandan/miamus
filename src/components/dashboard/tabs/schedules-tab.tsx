@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
@@ -11,7 +11,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { DateRibbon } from "@/components/date-ribbon";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
 import { useHousehold } from "@/context/household-context";
@@ -19,13 +18,12 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { dayLabel } from "@/lib/date-label";
 
+// The date ribbon used to live here; it now sits above the carousel in
+// dashboard/page.tsx so it stays put while the panels swipe underneath it.
 export function SchedulesTab() {
-  const { pets, loading, selectedDate, setSelectedDate } = useHousehold();
+  const { pets, loading, selectedDate } = useHousehold();
   const isOwner = useRequireOwner();
   const label = dayLabel(selectedDate);
-  // Safe without its own Suspense boundary: this only ever renders inside the
-  // dashboard canvas, which is already wrapped in one.
-  const searchParams = useSearchParams();
 
   if (!isOwner) return null;
 
@@ -50,15 +48,9 @@ export function SchedulesTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Ribbon first, then the header it scopes — same order as Daily Feed. */}
-      <DateRibbon
-        value={selectedDate}
-        onChange={setSelectedDate}
-        recenterKey={searchParams.get("tab") ?? "feed"}
-      />
       <h2 className="text-sm font-medium text-gray-500">{label}&apos;s Timeline</h2>
-      <ManageRoutinesButton />
       <UnifiedTimeline />
+      <ManageRoutinesButton />
     </div>
   );
 }
@@ -91,13 +83,11 @@ function ManageRoutinesButton() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-center rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-600 active:bg-gray-50"
-      >
+      {/* Same solid-dark treatment as the profile sheet's own action buttons,
+          and as Manage Pets on the Daily Feed tab. */}
+      <Button onClick={() => setOpen(true)} size="lg" className="min-h-[52px] w-full text-base">
         Manage Routines
-      </button>
+      </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="gap-0 rounded-t-2xl px-4 pb-10">
