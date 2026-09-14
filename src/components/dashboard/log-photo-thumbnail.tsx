@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { categoryIcon, describeLog } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { TaskLog } from "@/types/database";
@@ -22,7 +23,11 @@ const LONG_PRESS_MS = 500;
 
 interface LogPhotoThumbnailProps {
   log: TaskLog;
-  title: string;
+  // Optional: callers rendering an agenda row already hold the display title
+  // and pass it. Anything else (the owner photo grid) leaves it out and gets
+  // the real task name resolved from the log's schedule instead — that slot
+  // used to be filled with the literal string "Photo".
+  title?: string;
   entityName?: string;
   className: string;
   badge?: ReactNode;
@@ -32,7 +37,7 @@ interface LogPhotoThumbnailProps {
 // undoes the task completion). Mirrors the pet-avatar gesture pattern —
 // same timer approach, same touch-callout/select-none guards.
 export function LogPhotoThumbnail({ log, title, entityName, className, badge }: LogPhotoThumbnailProps) {
-  const { userRole, deleteLogWithPhoto } = useHousehold();
+  const { userRole, deleteLogWithPhoto, schedules } = useHousehold();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -41,6 +46,11 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
 
   const today = formatDateLocal(new Date());
   const canDelete = userRole === "owner" || formatDateLocal(new Date(log.completed_at)) === today;
+
+  const described = describeLog(log, schedules);
+  const eventTitle = title ?? described.title;
+  const EventIcon = categoryIcon(described.category);
+  const takenAt = formatTime12h(new Date(log.completed_at));
 
   function startPress() {
     longPressed.current = false;
@@ -88,7 +98,9 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
         onMouseDown={startPress}
         onMouseUp={endPress}
         onMouseLeave={cancelPress}
-        aria-label={`View photo for ${title}`}
+        aria-label={
+          entityName ? `View photo for ${entityName} · ${eventTitle}` : `View photo for ${eventTitle}`
+        }
         className={cn(
           "relative touch-none select-none overflow-hidden [-webkit-touch-callout:none]",
           className
@@ -101,10 +113,23 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
 
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogTitle>
-            {entityName ? `${entityName} · ` : ""}
-            {title} · {formatTime12h(new Date(log.completed_at))}
-          </DialogTitle>
+          {/* Pet name leads, then the actual task with its category icon and
+              the time it was taken. Falls back to the task name as the title
+              where there's no pet in context (the schedule editor's rows), so
+              the dialog always has a non-empty accessible name. */}
+          <DialogHeader className="gap-1 text-left">
+            <DialogTitle className="text-base">{entityName ?? eventTitle}</DialogTitle>
+            <DialogDescription className="flex items-center gap-1.5">
+              <EventIcon className="size-4 shrink-0" />
+              {entityName ? (
+                <span>
+                  {eventTitle} · {takenAt}
+                </span>
+              ) : (
+                <span>{takenAt}</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={log.photo_url ?? undefined} alt="" className="w-full rounded-lg" />
           {log.notes && <p className="text-sm text-muted-foreground">{log.notes}</p>}

@@ -1,5 +1,5 @@
 import { Droplets, List, Pill, Scissors, Utensils, type LucideIcon } from "lucide-react";
-import type { MasterSchedule } from "@/types/database";
+import type { MasterSchedule, TaskLog } from "@/types/database";
 
 // master_schedules has no dedicated "category" column, so potty/grooming/
 // medication entries are tagged through `title` itself: potty always uses
@@ -54,4 +54,35 @@ const CATEGORY_ICONS: Record<ScheduleCategory, LucideIcon> = {
 
 export function categoryIcon(category: ScheduleCategory): LucideIcon {
   return CATEGORY_ICONS[category];
+}
+
+// The Indonesian labels AdHocSheet writes into `notes` for a "Catat Ekstra"
+// entry. Kept in sync by hand with ADHOC_TYPES in components/staff/adhoc-sheet
+// — the labels are user-visible copy there, and this is the only place that
+// needs to read them back out.
+const ADHOC_CATEGORIES: Record<string, ScheduleCategory> = {
+  "Pipis Ekstra": "potty",
+  "Snack Ekstra": "meal",
+  "Obat Ekstra": "medication",
+};
+
+// A task_log has no category column of its own. A scheduled log inherits one
+// from its master_schedule; an ad-hoc log (schedule_id null, either because it
+// came from Catat Ekstra or because its schedule was later deleted — the FK is
+// `on delete set null`) can only be read back out of the label staff left in
+// `notes`, which looks like "Pipis Ekstra — muntah sedikit".
+export function describeLog(
+  log: Pick<TaskLog, "schedule_id" | "notes">,
+  schedules: MasterSchedule[]
+): { title: string; category: ScheduleCategory } {
+  const schedule = log.schedule_id ? schedules.find((s) => s.id === log.schedule_id) : undefined;
+  if (schedule) {
+    return { title: displayTitle(schedule), category: categorizeSchedule(schedule) };
+  }
+
+  const label = (log.notes ?? "").split("—")[0].trim();
+  return {
+    title: label || "Catatan Ekstra",
+    category: ADHOC_CATEGORIES[label] ?? "temporary",
+  };
 }
