@@ -18,8 +18,10 @@ import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { ScheduleEditor } from "@/components/dashboard/schedule-editor";
 import { HealthRecordCard } from "@/components/dashboard/health-record-card";
 import { HealthRecordForm } from "@/components/dashboard/health-record-form";
+import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { getPetMeta } from "@/lib/pets";
 import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
@@ -45,8 +47,10 @@ export function PetProfileSheet() {
   } = useHousehold();
   const [editOpen, setEditOpen] = useState(false);
   const [addRecordOpen, setAddRecordOpen] = useState(false);
+  const [viewingAvatar, setViewingAvatar] = useState(false);
   const pet = pets.find((p) => p.id === activePetId) ?? null;
   const canManagePets = userRole === "owner";
+  const avatarUrl = pet ? getPetMeta(pet).avatar_url : null;
 
   // Back closes the sheet rather than leaving the dashboard behind it. The
   // nested Add Health Record dialog registers separately so Back unwinds one
@@ -103,7 +107,23 @@ export function PetProfileSheet() {
             <SheetHeader className="gap-0 px-0 pt-2">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <MiniPetAvatar pet={pet} className="size-20" />
+                  {/* rounded-2xl overrides MiniPetAvatar's own rounded-full via
+                      tailwind-merge — deliberately only here, since the circle
+                      is still right for the avatar clusters in the timeline and
+                      on photo tiles. Tappable only when there is a real photo
+                      to open; the fallback Dog glyph has nothing to expand. */}
+                  {avatarUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewingAvatar(true)}
+                      aria-label={`Lihat foto ${pet.name}`}
+                      className="shrink-0 rounded-2xl transition-transform active:scale-95"
+                    >
+                      <MiniPetAvatar pet={pet} className="size-20 rounded-2xl" />
+                    </button>
+                  ) : (
+                    <MiniPetAvatar pet={pet} className="size-20 rounded-2xl" />
+                  )}
                   <SheetTitle className="text-2xl">{pet.name}</SheetTitle>
                 </div>
                 {canManagePets && (
@@ -169,6 +189,14 @@ export function PetProfileSheet() {
                 </div>
               )}
             </section>
+
+            <PhotoLightbox
+              open={viewingAvatar && !!avatarUrl}
+              onClose={() => setViewingAvatar(false)}
+              src={avatarUrl ?? undefined}
+              alt={pet.name}
+              title={pet.name}
+            />
 
             {canManagePets && (
               <PetFormDialog

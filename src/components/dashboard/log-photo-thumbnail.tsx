@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
+import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
 import { formatDateLocal } from "@/lib/scheduleEngine";
@@ -52,8 +53,8 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
   const longPressed = useRef(false);
   const tap = useTapGuard();
 
-  // Back dismisses the lightbox instead of navigating off the dashboard.
-  useBackToClose(lightboxOpen, () => setLightboxOpen(false));
+  // The lightbox registers its own history entry inside PhotoLightbox; only
+  // the delete confirmation needs one here.
   useBackToClose(confirmOpen, () => setConfirmOpen(false));
 
   const today = formatDateLocal(new Date());
@@ -160,30 +161,30 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
         {badge}
       </button>
 
-      <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="sm:max-w-md">
-          {/* Pet name leads, then the actual task with its category icon and
-              the time it was taken. Falls back to the task name as the title
-              where there's no pet in context (the schedule editor's rows), so
-              the dialog always has a non-empty accessible name. */}
-          <DialogHeader className="gap-1 text-left">
-            <DialogTitle className="text-base">{entityName ?? eventTitle}</DialogTitle>
-            <DialogDescription className="flex items-center gap-1.5">
-              <EventIcon className="size-4 shrink-0" />
-              {entityName ? (
-                <span>
-                  {eventTitle} · {takenAt}
-                </span>
-              ) : (
-                <span>{takenAt}</span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={log.photo_url ?? undefined} alt="" className="w-full rounded-lg" />
-          {log.notes && <p className="text-sm text-muted-foreground">{log.notes}</p>}
-        </DialogContent>
-      </Dialog>
+      {/* Pet name leads, then the actual task with its category icon and the
+          time it was taken. Falls back to the task name where there's no pet in
+          context (the schedule editor's rows), so the dialog always has a
+          non-empty accessible name. */}
+      <PhotoLightbox
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        src={log.photo_url ?? undefined}
+        alt={entityName ? `${entityName} · ${eventTitle}` : eventTitle}
+        title={entityName ?? eventTitle}
+        description={
+          <>
+            <EventIcon className="size-4 shrink-0" />
+            {entityName ? (
+              <span>
+                {eventTitle} · {takenAt}
+              </span>
+            ) : (
+              <span>{takenAt}</span>
+            )}
+          </>
+        }
+        footer={log.notes ? <p className="text-sm text-muted-foreground">{log.notes}</p> : null}
+      />
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-xs">
