@@ -32,6 +32,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import type { CreateScheduleInput } from "@/lib/data";
 import {
   POTTY_TITLE,
@@ -144,6 +145,7 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
   const { pets, schedules, createSchedule, createSchedulesBatch, deleteSchedule } =
     useHousehold();
   const [manageOpen, setManageOpen] = useState(false);
+  useBackToClose(manageOpen, () => setManageOpen(false));
   const dogSchedules = schedules.filter((s) => s.entity_id === entity.id);
   const mealSchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "meal");
   const pottySchedules = dogSchedules.filter((s) => categorizeSchedule(s) === "potty");
@@ -158,7 +160,7 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
       <Button
         onClick={() => setManageOpen(true)}
         size="lg"
-        className="min-h-[52px] w-full text-base"
+        className="min-h-[52px] w-full bg-zinc-900 text-base text-white hover:bg-zinc-800"
       >
         <Settings2 /> Manage Routines
       </Button>
@@ -973,6 +975,8 @@ function CopyScheduleDrawer({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copying, setCopying] = useState(false);
+  // Above the early return below — hooks can't run conditionally.
+  useBackToClose(open, () => setOpen(false));
 
   if (targets.length === 0) return null;
 

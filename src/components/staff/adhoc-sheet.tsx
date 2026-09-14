@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 
 const ADHOC_TYPES = [
   { value: "potty", label: "Pipis Ekstra" },
@@ -38,6 +39,7 @@ export function AdHocSheet() {
   const [notes, setNotes] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  useBackToClose(open, () => setOpen(false));
 
   function reset() {
     setEntityId("");

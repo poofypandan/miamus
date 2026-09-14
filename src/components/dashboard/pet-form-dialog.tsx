@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import { getPetMeta } from "@/lib/pets";
 import type { TaskEntity } from "@/types/database";
 
@@ -35,6 +36,10 @@ export function PetFormDialog({
   updateEntity: ReturnType<typeof useHousehold>["updateEntity"];
   deleteEntity: ReturnType<typeof useHousehold>["deleteEntity"];
 }) {
+  // Covers both entry points (Manage Pets and Edit Pet) in one place, since
+  // `open` is owned by whichever parent rendered this dialog.
+  useBackToClose(open, () => onOpenChange(false));
+
   const meta = pet ? getPetMeta(pet) : {};
   const [name, setName] = useState(pet?.name ?? "");
   const [breed, setBreed] = useState(meta.breed ?? "");

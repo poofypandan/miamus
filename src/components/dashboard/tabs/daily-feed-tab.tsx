@@ -44,9 +44,9 @@ export function DailyFeedTab() {
 
   return (
     <div className="flex flex-col">
-      <h2 className="mb-3 text-sm font-medium text-gray-500">{label}&apos;s Overview</h2>
+      <h2 className="mb-3 text-sm font-semibold text-gray-900">{label}&apos;s Overview</h2>
       <UnifiedSummaryCard />
-      <h3 className="mt-8 mb-3 text-sm font-medium text-gray-500">Photos</h3>
+      <h3 className="mt-8 mb-3 text-sm font-semibold text-gray-900">Photos</h3>
       <PhotoStream logs={logsForDate} entities={entities} showAvatar />
       <div className="mt-8">
         <LowStockFlagButton />

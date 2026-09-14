@@ -48,8 +48,12 @@ export function PetProfileSheet() {
   const pet = pets.find((p) => p.id === activePetId) ?? null;
   const canManagePets = userRole === "owner";
 
-  // Back closes the sheet rather than leaving the dashboard behind it.
+  // Back closes the sheet rather than leaving the dashboard behind it. The
+  // nested Add Health Record dialog registers separately so Back unwinds one
+  // layer at a time; it's gated on `pet` too, so closing the sheet out from
+  // under it can't strand a history entry for an unmounted dialog.
   useBackToClose(!!pet, () => setActivePetId(null));
+  useBackToClose(!!pet && addRecordOpen, () => setAddRecordOpen(false));
 
   const dateStr = formatDateLocal(selectedDate);
   const label = dayLabel(selectedDate);
@@ -118,9 +122,9 @@ export function PetProfileSheet() {
             </SheetHeader>
 
             <section className="mt-6">
-              <h3 className="mb-3 text-sm font-medium text-gray-500">{label}&apos;s Overview</h3>
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">{label}&apos;s Overview</h3>
               <SummaryCard items={items} />
-              <h3 className="mt-8 mb-3 text-sm font-medium text-gray-500">Photos</h3>
+              <h3 className="mt-8 mb-3 text-sm font-semibold text-gray-900">Photos</h3>
               <PhotoStream logs={todaysLogs} entities={entities} />
             </section>
 
@@ -129,7 +133,7 @@ export function PetProfileSheet() {
                 {/* Carries the same {label}'s prefix as the Overview heading
                     above, so browsing to another date via the ribbon renames
                     both rather than leaving one claiming "Today's". */}
-                <h3 className="mb-3 text-sm font-medium text-gray-500">
+                <h3 className="mb-3 text-sm font-semibold text-gray-900">
                   {label}&apos;s Timeline
                 </h3>
                 <ScheduleEditor entity={pet} />
@@ -138,7 +142,7 @@ export function PetProfileSheet() {
 
             <section className="mt-8">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-sm font-medium text-gray-500">Health Passport</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Health Passport</h3>
                 {canManagePets && (
                   <Dialog open={addRecordOpen} onOpenChange={setAddRecordOpen}>
                     <DialogTrigger asChild>

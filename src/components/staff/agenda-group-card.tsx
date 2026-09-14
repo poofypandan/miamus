@@ -60,9 +60,11 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // touchstart re-arms it for whichever tile that gesture began on.
   const tap = useTapGuard();
 
-  // Back dismisses the photo lightbox rather than leaving the staff view.
-  // Clears the nested delete confirmation too, so Back can't leave that
-  // stranded on screen with its lightbox gone.
+  // Every overlay in this card claims its own history entry, so Back unwinds
+  // one layer at a time instead of collapsing the lot. The lightbox still
+  // clears the confirmation as a backstop for the non-Back close paths.
+  useBackToClose(!!capture, () => setCapture(null));
+  useBackToClose(confirmDelete, () => setConfirmDelete(false));
   useBackToClose(!!lightboxUrl, () => {
     setConfirmDelete(false);
     setLightboxUrl(null);

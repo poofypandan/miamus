@@ -54,6 +54,7 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
 
   // Back dismisses the lightbox instead of navigating off the dashboard.
   useBackToClose(lightboxOpen, () => setLightboxOpen(false));
+  useBackToClose(confirmOpen, () => setConfirmOpen(false));
 
   const today = formatDateLocal(new Date());
   const canDelete = userRole === "owner" || formatDateLocal(new Date(log.completed_at)) === today;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -48,7 +48,7 @@ export function SchedulesTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-medium text-gray-500">{label}&apos;s Timeline</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Timeline</h2>
       <UnifiedTimeline />
       <ManageRoutinesButton />
     </div>
@@ -83,10 +83,14 @@ function ManageRoutinesButton() {
 
   return (
     <>
-      {/* Same solid-dark treatment as the profile sheet's own action buttons,
-          and as Manage Pets on the Daily Feed tab. */}
-      <Button onClick={() => setOpen(true)} size="lg" className="min-h-[52px] w-full text-base">
-        Manage Routines
+      {/* Primary action for this tab, so it keeps the solid dark fill — the
+          same treatment as the profile sheet's own Manage Routines button. */}
+      <Button
+        onClick={() => setOpen(true)}
+        size="lg"
+        className="min-h-[52px] w-full bg-zinc-900 text-base text-white hover:bg-zinc-800"
+      >
+        <Settings2 /> Manage Routines
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>

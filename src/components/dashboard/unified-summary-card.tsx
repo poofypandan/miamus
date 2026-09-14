@@ -34,13 +34,15 @@ export function UnifiedSummaryCard() {
           ))}
         </div>
 
-        {/* Solid dark, matching Manage Routines on the Schedule tab and the
-            action buttons inside the pet profile sheet. */}
+        {/* Deliberately the quiet one: adding or editing pets is a rare setup
+            task, so it stays a light outline and leaves the solid dark fill to
+            Manage Routines, which is the frequent action. */}
         {canManagePets && (
           <Button
             onClick={() => setAddOpen(true)}
+            variant="outline"
             size="lg"
-            className="mt-4 min-h-[52px] w-full text-base"
+            className="mt-4 min-h-[52px] w-full border-gray-200 bg-white text-base text-gray-900 hover:bg-gray-50"
           >
             Manage Pets
           </Button>

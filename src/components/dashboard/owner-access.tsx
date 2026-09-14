@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import { cn } from "@/lib/utils";
 
 const PIN_LENGTH = 4;
@@ -34,6 +35,17 @@ export function PinModal({
   const { unlockOwner } = useHousehold();
   const [pin, setPin] = useState("");
   const [shake, setShake] = useState(false);
+  // Set when a correct PIN is closing the modal, so the unlock callback runs
+  // only once the modal's history entry has actually been popped.
+  const pendingUnlock = useRef(false);
+
+  useBackToClose(open, () => {
+    onOpenChange(false);
+    if (pendingUnlock.current) {
+      pendingUnlock.current = false;
+      onUnlocked?.();
+    }
+  });
 
   function pressDigit(digit: string) {
     if (shake || pin.length >= PIN_LENGTH) return;
@@ -43,9 +55,19 @@ export function PinModal({
 
     if (unlockOwner(next)) {
       toast.success("Owner mode unlocked");
-      onOpenChange(false);
       setPin("");
-      onUnlocked?.();
+      // Unwinding via Back rather than closing directly. onUnlocked navigates
+      // (the landing page does router.replace("/dashboard")), and closing the
+      // modal the direct way leaves the hook's own history.back() in flight —
+      // it lands after the navigation and bounces straight back to the landing
+      // screen. Popping first, then navigating, keeps the two in order.
+      if (window.history.state?.overlay) {
+        pendingUnlock.current = true;
+        window.history.back();
+      } else {
+        onOpenChange(false);
+        onUnlocked?.();
+      }
     } else {
       toast.error("Incorrect PIN");
       setShake(true);

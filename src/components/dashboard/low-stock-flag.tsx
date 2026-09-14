@@ -23,6 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import type { ItemType } from "@/types/database";
 
 const ITEM_TYPES: { value: ItemType; label: string }[] = [
@@ -35,6 +36,7 @@ const ITEM_TYPES: { value: ItemType; label: string }[] = [
 export function LowStockFlagButton() {
   const { pets, activePetId, flagLowStock } = useHousehold();
   const [open, setOpen] = useState(false);
+  useBackToClose(open, () => setOpen(false));
   const [petId, setPetId] = useState("");
   const [itemType, setItemType] = useState<ItemType | "">("");
   const [note, setNote] = useState("");
