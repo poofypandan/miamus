@@ -10,6 +10,11 @@ const DAY_LABELS_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 interface DateRibbonProps {
   value: Date;
   onChange: (date: Date) => void;
+  // Any change to this re-runs the centering. The owner dashboard keeps both
+  // tab panels mounted at once, so arriving on the Schedule tab neither
+  // remounts this component nor changes `value` — without a nudge, a ribbon
+  // the user had scrolled sideways stays exactly where they left it.
+  recenterKey?: string | number;
 }
 
 // Google Calendar-style day picker: a 2-week horizontal ribbon centered on
@@ -17,7 +22,7 @@ interface DateRibbonProps {
 // jumping months or years away instantly. Shared by the Owner Timeline
 // (schedules page) and the Staff "Jadwal", both driven by the same global
 // `selectedDate` in HouseholdContext.
-export function DateRibbon({ value, onChange }: DateRibbonProps) {
+export function DateRibbon({ value, onChange, recenterKey }: DateRibbonProps) {
   const today = useMemo(() => new Date(), []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
@@ -35,10 +40,21 @@ export function DateRibbon({ value, onChange }: DateRibbonProps) {
     // selected day" result without going through that API.
     const btn = selectedRef.current;
     const container = scrollRef.current;
-    if (btn && container) {
-      container.scrollLeft = btn.offsetLeft - container.clientWidth / 2 + btn.offsetWidth / 2;
-    }
-  }, [value]);
+    if (!btn || !container) return;
+
+    // Measured with rects rather than offsetLeft. offsetLeft is relative to
+    // the nearest *positioned* ancestor, which here is the carousel wrapper,
+    // not this scroll box — so on the Schedule tab it silently included the
+    // 420px that the second panel sits into the w-[200%] track, overshooting
+    // by a whole panel width and pinning the ribbon at its maximum scroll.
+    // The delta between two rects inside the same transformed subtree is
+    // unaffected by that transform, so this stays correct while the canvas is
+    // mid-swipe or parked off-screen.
+    const btnRect = btn.getBoundingClientRect();
+    const boxRect = container.getBoundingClientRect();
+    const delta = btnRect.left + btnRect.width / 2 - (boxRect.left + boxRect.width / 2);
+    container.scrollLeft += delta;
+  }, [value, recenterKey]);
 
   return (
     <div className="flex items-center gap-2">

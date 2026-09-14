@@ -32,7 +32,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Sits outside <main> so the one-time hint stays put above the
           swipeable carousel rather than scrolling with a single tab. */}
       <StaffOnboardingBanner />
-      <main className="relative flex-1 overflow-x-hidden py-6">{children}</main>
+      {/* pt-3/pb-6, not py-6 — this padding sits outside the carousel's
+          clipping box, so trimming the top is free of shadow-clipping risk and
+          is where most of the old 40px gap under the tabs came from. */}
+      <main className="relative flex-1 overflow-x-hidden pt-3 pb-6">{children}</main>
     </div>
   );
 }

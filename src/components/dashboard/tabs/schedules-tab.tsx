@@ -3,6 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
 import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
+import { useSearchParams } from "next/navigation";
 import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { dayLabel } from "@/lib/date-label";
@@ -11,6 +12,9 @@ export function SchedulesTab() {
   const { pets, loading, selectedDate, setSelectedDate } = useHousehold();
   const isOwner = useRequireOwner();
   const label = dayLabel(selectedDate);
+  // Safe without its own Suspense boundary: this only ever renders inside the
+  // dashboard canvas, which is already wrapped in one.
+  const searchParams = useSearchParams();
 
   if (!isOwner) return null;
 
@@ -36,7 +40,11 @@ export function SchedulesTab() {
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-sm font-medium text-gray-500">{label}&apos;s Timeline</h2>
-      <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+      <DateRibbon
+        value={selectedDate}
+        onChange={setSelectedDate}
+        recenterKey={searchParams.get("tab") ?? "feed"}
+      />
       <UnifiedTimeline />
     </div>
   );

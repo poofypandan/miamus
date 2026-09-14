@@ -136,7 +136,11 @@ function DashboardCanvas() {
 
   return (
     <>
-      <div ref={containerRef} className="relative w-full overflow-x-hidden py-4">
+      {/* pt-2 rather than pt-4: this container is overflow-x-hidden, which
+          makes it an implicit vertical clipping context, so it still needs a
+          little headroom or the first card's shadow gets sheared off. 8px is
+          enough for that while pulling the headers up toward the tabs. */}
+      <div ref={containerRef} className="relative w-full overflow-x-hidden pt-2 pb-4">
         {/* Track width and panel widths are the inverse of DASHBOARD_TABS.length
             (2 tabs -> 200% / w-1/2), so each panel is exactly one viewport. */}
         <motion.div
