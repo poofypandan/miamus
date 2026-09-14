@@ -104,8 +104,13 @@ create index if not exists medical_records_entity_id_idx on medical_records(enti
 -- ============================================================================
 create table if not exists inventory_alerts (
   id uuid primary key default gen_random_uuid(),
-  pet_id uuid not null references task_entities(id) on delete cascade,
-  item_type text not null check (item_type in ('food', 'medicine', 'treats', 'shampoo')),
+  -- Nullable since Phase 49: a shared household item belongs to no one dog.
+  pet_id uuid references task_entities(id) on delete cascade,
+  -- Deliberately unconstrained. The live table never had a CHECK here (probed
+  -- 2026-09-14), and declaring one in this file only would mean a fresh
+  -- database rejected values production accepts. ItemType in
+  -- src/types/database.ts is the source of truth for the allowed values.
+  item_type text not null,
   note text,
   resolved boolean not null default false,
   created_at timestamptz not null default now()

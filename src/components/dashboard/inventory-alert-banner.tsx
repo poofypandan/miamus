@@ -12,6 +12,7 @@ const ITEM_TYPE_LABELS: Record<ItemType, string> = {
   medicine: "Medicine",
   treats: "Treats",
   shampoo: "Shampoo",
+  other: "Other",
 };
 
 // Owner-only: surfaces low-stock flags staff raised from the Daily Feed so
@@ -31,7 +32,7 @@ export function InventoryAlertBanner() {
       {active.map((alert) => (
         <AlertRow
           key={alert.id}
-          petName={entityById.get(alert.pet_id)?.name ?? "Unknown pet"}
+          petName={alert.pet_id ? (entityById.get(alert.pet_id)?.name ?? "Unknown pet") : null}
           itemLabel={ITEM_TYPE_LABELS[alert.item_type]}
           note={alert.note}
           onResolve={() => resolveInventoryAlert(alert.id)}
@@ -47,7 +48,8 @@ function AlertRow({
   note,
   onResolve,
 }: {
-  petName: string;
+  // Null for a shared household item that isn't tied to any one dog.
+  petName: string | null;
   itemLabel: string;
   note: string | null;
   onResolve: () => Promise<void>;
@@ -73,7 +75,7 @@ function AlertRow({
         <TriangleAlert className="size-4 shrink-0 translate-y-0.5" />
         <span className="min-w-0">
           <span className="font-medium">
-            Low Stock: {petName}&apos;s {itemLabel}
+            {petName ? `Low Stock: ${petName}'s ${itemLabel}` : `Low Stock: ${itemLabel} (Household)`}
           </span>
           {note && <span className="text-amber-800"> — {note}</span>}
         </span>

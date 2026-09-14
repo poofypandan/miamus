@@ -67,7 +67,7 @@ export interface CreateMedicalRecordInput {
 }
 
 export interface CreateInventoryAlertInput {
-  pet_id: string;
+  pet_id?: string | null;
   item_type: ItemType;
   note?: string | null;
 }

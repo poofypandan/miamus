@@ -40,10 +40,18 @@ const COPY = {
     item: "Item",
     note: "Note (optional)",
     notePlaceholder: "e.g. Down to the last cup",
-    validation: "Choose a pet and item type",
+    validation: "Choose an item type",
     success: "Low stock flagged for the owner",
     failure: "Failed to flag low stock",
-    items: { food: "Food", medicine: "Medicine", treats: "Treats", shampoo: "Shampoo" },
+    items: {
+      food: "Food",
+      medicine: "Medicine",
+      treats: "Treats",
+      shampoo: "Shampoo",
+      other: "Other",
+    },
+    petOptional: "Pet (optional)",
+    noPet: "General / household item",
   },
   id: {
     trigger: "Laporkan Stok Menipis",
@@ -54,14 +62,27 @@ const COPY = {
     item: "Barang",
     note: "Catatan (opsional)",
     notePlaceholder: "mis. Tinggal sisa sedikit",
-    validation: "Pilih anjing dan jenis barang dulu",
+    validation: "Pilih jenis barang dulu",
     success: "Laporan stok menipis terkirim ke pemilik",
     failure: "Gagal mengirim laporan",
-    items: { food: "Makanan", medicine: "Obat", treats: "Camilan", shampoo: "Sampo" },
+    items: {
+      food: "Makanan",
+      medicine: "Obat",
+      treats: "Camilan",
+      shampoo: "Sampo",
+      other: "Lainnya",
+    },
+    petOptional: "Anjing (opsional)",
+    noPet: "Barang umum rumah",
   },
 } as const;
 
-const ITEM_ORDER: ItemType[] = ["food", "medicine", "treats", "shampoo"];
+const ITEM_ORDER: ItemType[] = ["food", "medicine", "treats", "shampoo", "other"];
+
+// Sentinel for the "no particular dog" choice. Radix Select treats "" as
+// "nothing selected" and won't render an item for it, so the empty case needs
+// a real value that is mapped back to null on submit.
+const NO_PET = "__none__";
 
 export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) {
   const t = COPY[locale];
@@ -78,20 +99,26 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setPetId(activePetId ?? "");
+      setPetId(activePetId ?? NO_PET);
       setItemType("");
       setNote("");
     }
   }
 
   async function handleSubmit() {
-    if (!petId || !itemType) {
+    // Pet is optional since Phase 49 — a shared household item belongs to no
+    // one dog, and forcing a choice put restock requests on arbitrary pets.
+    if (!itemType) {
       toast.error(t.validation);
       return;
     }
     setSubmitting(true);
     try {
-      await flagLowStock({ pet_id: petId, item_type: itemType, note: note.trim() || null });
+      await flagLowStock({
+        pet_id: petId === NO_PET || !petId ? null : petId,
+        item_type: itemType,
+        note: note.trim() || null,
+      });
       toast.success(t.success);
       setOpen(false);
     } catch (err) {
@@ -118,12 +145,13 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
         </SheetHeader>
         <div className="flex flex-col gap-3 px-4">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t.pet}</Label>
+            <Label className="text-xs">{t.petOptional}</Label>
             <Select value={petId} onValueChange={setPetId}>
               <SelectTrigger className="min-h-[48px] w-full">
                 <SelectValue placeholder={t.petPlaceholder} />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={NO_PET}>{t.noPet}</SelectItem>
                 {pets.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}

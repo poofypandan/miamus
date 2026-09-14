@@ -18,6 +18,7 @@ const ITEM_LABELS: Record<ItemType, string> = {
   medicine: "Obat",
   treats: "Camilan",
   shampoo: "Sampo",
+  other: "Lainnya",
 };
 
 const STATUS_LABELS: Record<ProposalStatus, string> = {
@@ -80,7 +81,10 @@ export function StaffReportsPanel() {
         {openAlerts.map((alert) => (
           <ReportRow
             key={alert.id}
-            label={`${ITEM_LABELS[alert.item_type]} · ${petName(alert.pet_id)}`}
+            // A shared household item has no dog to name.
+            label={`${ITEM_LABELS[alert.item_type]} · ${
+              alert.pet_id ? petName(alert.pet_id) : "Umum"
+            }`}
             detail={alert.note}
             badge={<Badge className="shrink-0 bg-amber-100 text-amber-900">Dilaporkan</Badge>}
             undoable={isWithinUndoWindow(alert.created_at, now)}

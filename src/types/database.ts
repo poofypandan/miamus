@@ -2,7 +2,7 @@ export type EntityType = "pet" | "room" | "general";
 export type Module = "pet" | "cleaning" | "laundry";
 export type FrequencyType = "interval" | "fixed_time" | "weekly";
 export type RecordType = "vaccine" | "vet" | "medication" | "weight";
-export type ItemType = "food" | "medicine" | "treats" | "shampoo";
+export type ItemType = "food" | "medicine" | "treats" | "shampoo" | "other";
 export type ProposalStatus = "pending" | "approved" | "rejected";
 
 // Plain `type` aliases, not `interface` — interfaces don't structurally
@@ -67,7 +67,9 @@ export type StaffProfile = {
 // rather than "fixing" it to entity_id (which 400s against the real table).
 export type InventoryAlert = {
   id: string;
-  pet_id: string;
+  // Null for a shared household item (floor cleaner, communal shampoo) that
+  // isn't any one dog's. See migrations/049.
+  pet_id: string | null;
   item_type: ItemType;
   note: string | null;
   resolved: boolean;
@@ -131,7 +133,7 @@ export interface Database {
       };
       inventory_alerts: {
         Row: InventoryAlert;
-        Insert: Partial<InventoryAlert> & Pick<InventoryAlert, "pet_id" | "item_type">;
+        Insert: Partial<InventoryAlert> & Pick<InventoryAlert, "item_type">;
         Update: Partial<InventoryAlert>;
         Relationships: [];
       };
