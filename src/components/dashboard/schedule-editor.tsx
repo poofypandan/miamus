@@ -49,18 +49,18 @@ import type { TaskEntity, MasterSchedule } from "@/types/database";
 import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
 
 const INTERVAL_HOUR_OPTIONS = [1, 2, 3, 4];
-const DOSE_COUNT_OPTIONS = [1, 2, 3, 4];
-const DEFAULT_DOSE_TIMES = ["09:00", "21:00", "13:00", "17:00"];
-const INTERVAL_UNIT_OPTIONS = [
+export const DOSE_COUNT_OPTIONS = [1, 2, 3, 4];
+export const DEFAULT_DOSE_TIMES = ["09:00", "21:00", "13:00", "17:00"];
+export const INTERVAL_UNIT_OPTIONS = [
   { value: "days", label: "Days" },
   { value: "weeks", label: "Weeks" },
 ] as const;
-type IntervalUnit = (typeof INTERVAL_UNIT_OPTIONS)[number]["value"];
+export type IntervalUnit = (typeof INTERVAL_UNIT_OPTIONS)[number]["value"];
 // Defensive ceiling on how many occurrences one "generate" click can create —
 // keeps a fat-fingered "every 1 day for 10 years" from hammering the DB.
 const MAX_GENERATED_OCCURRENCES = 500;
 
-const TIME_INPUT_CLASS =
+export const TIME_INPUT_CLASS =
   "min-h-[48px] rounded-xl border border-input bg-transparent px-3 text-base font-medium tabular-nums outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function mealLabelForTime(time: string): string {
@@ -97,24 +97,24 @@ function generateSlots(start: string, end: string, intervalHours: number): strin
 // Parses a "YYYY-MM-DD" input-date value as browser-LOCAL midnight (not
 // UTC) so day-level arithmetic never drifts a day off in negative-UTC-offset
 // timezones — the classic `new Date("2026-03-20")` pitfall.
-function parseLocalDate(dateStr: string): Date {
+export function parseLocalDate(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00`);
 }
 
-function daysBetweenInclusive(startStr: string, endStr: string): number {
+export function daysBetweenInclusive(startStr: string, endStr: string): number {
   const msPerDay = 24 * 60 * 60 * 1000;
   const diff = parseLocalDate(endStr).getTime() - parseLocalDate(startStr).getTime();
   return Math.round(diff / msPerDay) + 1;
 }
 
-function formatDateShort(dateStr: string): string {
+export function formatDateShort(dateStr: string): string {
   return parseLocalDate(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 // Walks start -> end in `intervalValue` day/week steps using Date's native
 // setDate/getDate, which correctly rolls over month boundaries and leap
 // years (Date normalizes out-of-range day numbers for you).
-function generateGroomingOccurrences(
+export function generateGroomingOccurrences(
   startDateStr: string,
   time: string,
   intervalValue: number,

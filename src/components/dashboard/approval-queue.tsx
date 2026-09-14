@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,58 +11,98 @@ import { formatTime12h } from "@/lib/time";
 import type { RoutineProposal, ScheduleCategoryName } from "@/types/database";
 
 // Rebuilds the title the way ScheduleEditor writes it, so an approved proposal
-// lands in the same category the staff member picked. categorizeSchedule reads
-// these prefixes back out of `title` — there is no category column on
-// master_schedules — so skipping this would file every approved medication or
-// grooming routine as an ordinary meal.
+// lands in the category the staff member picked. categorizeSchedule reads these
+// prefixes back out of `title` — master_schedules has no category column — so
+// skipping this would file every approved medication or grooming routine as an
+// ordinary meal.
 function scheduleTitleFor(category: ScheduleCategoryName, title: string): string {
   if (category === "medication") return medicationTitle(title);
   if (category === "grooming") return groomingTitle(title);
   return title;
 }
 
+interface ProposalBatch {
+  key: string;
+  proposals: RoutineProposal[];
+}
+
+/**
+ * One card per submission rather than per row.
+ *
+ * `batch_id` groups the rows of a single multi-dose submission. Proposals
+ * filed before Phase 52 have none, so they fall back to pet + title + the
+ * minute they were created — near enough to reunite a batch that predates the
+ * column, and precise enough that two unrelated proposals don't merge.
+ */
+function groupProposals(proposals: RoutineProposal[]): ProposalBatch[] {
+  const batches = new Map<string, RoutineProposal[]>();
+  for (const proposal of proposals) {
+    const key =
+      proposal.batch_id ??
+      `${proposal.pet_id}|${proposal.title}|${proposal.created_at.slice(0, 16)}`;
+    const existing = batches.get(key);
+    if (existing) existing.push(proposal);
+    else batches.set(key, [proposal]);
+  }
+  return [...batches.entries()].map(([key, rows]) => ({
+    key,
+    proposals: [...rows].sort((a, b) => a.time.localeCompare(b.time)),
+  }));
+}
+
 // Owner-facing, so entirely English per the Phase 46 language boundary.
 export function ApprovalQueue() {
   const { routineProposals } = useHousehold();
-  const pending = routineProposals.filter((p) => p.status === "pending");
+  const batches = useMemo(
+    () => groupProposals(routineProposals.filter((p) => p.status === "pending")),
+    [routineProposals]
+  );
 
-  if (pending.length === 0) return null;
+  if (batches.length === 0) return null;
 
   return (
     <section className="mt-8 flex flex-col gap-3">
       <h3 className="text-sm font-semibold text-gray-900">
-        Approval Queue <span className="text-gray-400">({pending.length})</span>
+        Approval Queue <span className="text-gray-400">({batches.length})</span>
       </h3>
       <div className="flex flex-col gap-2">
-        {pending.map((proposal) => (
-          <ProposalRow key={proposal.id} proposal={proposal} />
+        {batches.map((batch) => (
+          <BatchRow key={batch.key} batch={batch} />
         ))}
       </div>
     </section>
   );
 }
 
-function ProposalRow({ proposal }: { proposal: RoutineProposal }) {
-  const { pets, createSchedule, decideRoutineProposal } = useHousehold();
+function BatchRow({ batch }: { batch: ProposalBatch }) {
+  const { pets, createSchedulesBatch, decideRoutineProposals } = useHousehold();
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
-  const pet = pets.find((p) => p.id === proposal.pet_id) ?? null;
-  const Icon = categoryIcon(proposal.category);
+
+  const head = batch.proposals[0];
+  const pet = pets.find((p) => p.id === head.pet_id) ?? null;
+  const Icon = categoryIcon(head.category);
+  const ids = batch.proposals.map((p) => p.id);
+  const times = batch.proposals.map((p) => formatTime12h(p.time));
 
   async function approve() {
     setBusy("approve");
     try {
-      // Schedule first, status second: if the insert fails the proposal stays
-      // pending and can be retried, rather than being marked approved with no
-      // routine to show for it.
-      await createSchedule({
-        entity_id: proposal.pet_id,
-        title: scheduleTitleFor(proposal.category, proposal.title),
-        module: "pet",
-        frequency_type: "fixed_time",
-        fixed_times: [proposal.time.slice(0, 5)],
-      });
-      await decideRoutineProposal(proposal.id, "approved");
-      toast.success(`Approved — ${proposal.title} added to ${pet?.name ?? "the pet"}`);
+      // Schedules first, statuses second: if the insert fails the whole batch
+      // stays pending and can be retried, rather than being marked approved
+      // with no routines to show for it.
+      await createSchedulesBatch(
+        batch.proposals.map((proposal) => ({
+          entity_id: proposal.pet_id,
+          title: scheduleTitleFor(proposal.category, proposal.title),
+          module: "pet" as const,
+          frequency_type: "fixed_time" as const,
+          fixed_times: [proposal.time.slice(0, 5)],
+        }))
+      );
+      await decideRoutineProposals(ids, "approved");
+      toast.success(
+        `Approved — ${head.title} (${ids.length} time${ids.length === 1 ? "" : "s"}) added to ${pet?.name ?? "the pet"}`
+      );
     } catch (err) {
       console.error(err);
       toast.error("Failed to approve proposal");
@@ -74,8 +114,8 @@ function ProposalRow({ proposal }: { proposal: RoutineProposal }) {
   async function reject() {
     setBusy("reject");
     try {
-      await decideRoutineProposal(proposal.id, "rejected");
-      toast.success("Proposal rejected");
+      await decideRoutineProposals(ids, "rejected");
+      toast.success(`Rejected — ${head.title}`);
     } catch (err) {
       console.error(err);
       toast.error("Failed to reject proposal");
@@ -91,15 +131,18 @@ function ProposalRow({ proposal }: { proposal: RoutineProposal }) {
         <span className="flex min-w-0 flex-col">
           <span className="flex items-center gap-1.5 text-sm font-medium">
             <Icon className="size-4 shrink-0 text-muted-foreground" />
-            {proposal.title}
+            {head.title}
+            {ids.length > 1 && (
+              <span className="text-muted-foreground">({ids.length} scheduled times)</span>
+            )}
           </span>
           <span className="text-xs text-muted-foreground">
-            {pet?.name ?? "Unknown pet"} · {formatTime12h(proposal.time)}
+            {pet?.name ?? "Unknown pet"} · {times.join(", ")}
           </span>
         </span>
       </div>
 
-      {proposal.notes && <p className="text-xs text-muted-foreground">{proposal.notes}</p>}
+      {head.notes && <p className="text-xs text-muted-foreground">{head.notes}</p>}
 
       <div className="flex gap-2">
         <Button

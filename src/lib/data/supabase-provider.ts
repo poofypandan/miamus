@@ -183,8 +183,20 @@ export const supabaseProvider: DataProvider = {
     if (legacyError) throw legacyError;
   },
   async deleteInventoryAlert(id) {
-    const { error } = await client().from("inventory_alerts").delete().eq("id", id);
+    // Same reasoning as deleteRoutineProposal: an RLS-filtered delete succeeds
+    // with zero rows, so check what actually went rather than trusting the
+    // status code.
+    const { data, error } = await client()
+      .from("inventory_alerts")
+      .delete()
+      .eq("id", id)
+      .select();
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error(
+        "Alert was not deleted — the inventory_alerts delete policy is missing or the 5-minute window has passed."
+      );
+    }
   },
   async listRoutineProposals() {
     const { data, error } = await client()
@@ -204,8 +216,55 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async deleteRoutineProposal(id) {
-    const { error } = await client().from("routine_proposals").delete().eq("id", id);
+    // .select() so the affected rows come back. RLS *filters* a forbidden
+    // delete rather than rejecting it, so without this the call returns a
+    // cheerful 200 having removed nothing, and the staff member is told
+    // "Berhasil dibatalkan" for a row that is still there and reappears on the
+    // next refresh. Verified live before the Phase 47 delete policy was
+    // applied. Treating zero affected rows as a failure surfaces it honestly.
+    const { data, error } = await client()
+      .from("routine_proposals")
+      .delete()
+      .eq("id", id)
+      .select();
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error(
+        "Proposal was not deleted — the routine_proposals delete policy is missing or the 5-minute window has passed."
+      );
+    }
+  },
+  async createRoutineProposalsBatch(inputs) {
+    const c = client();
+    const { data, error } = await c.from("routine_proposals").insert(inputs).select();
+    if (!error) return data;
+
+    // PGRST204 means PostgREST has no `batch_id` column — the Phase 52
+    // migration hasn't been applied. Filing proposals worked before this phase
+    // and must keep working, so retry without it. The Approval Queue's
+    // grouping falls back to pet + title + created-minute for exactly these
+    // rows, so a multi-dose submission still shows as one card.
+    if (error.code !== "PGRST204") throw error;
+    const withoutBatch = inputs.map((input) => {
+      const rest = { ...input };
+      delete rest.batch_id;
+      return rest;
+    });
+    const { data: legacyData, error: legacyError } = await c
+      .from("routine_proposals")
+      .insert(withoutBatch)
+      .select();
+    if (legacyError) throw legacyError;
+    return legacyData;
+  },
+  async setRoutineProposalsStatus(ids, status) {
+    const { data, error } = await client()
+      .from("routine_proposals")
+      .update({ status })
+      .in("id", ids)
+      .select();
+    if (error) throw error;
+    return data;
   },
   async setRoutineProposalStatus(id, status) {
     const { data, error } = await client()

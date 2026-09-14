@@ -79,6 +79,7 @@ export interface CreateRoutineProposalInput {
   time: string;
   notes?: string | null;
   created_by?: string | null;
+  batch_id?: string | null;
 }
 
 export interface DataProvider {
@@ -105,6 +106,8 @@ export interface DataProvider {
   deleteInventoryAlert(id: string): Promise<void>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
+  createRoutineProposalsBatch(inputs: CreateRoutineProposalInput[]): Promise<RoutineProposal[]>;
+  setRoutineProposalsStatus(ids: string[], status: ProposalStatus): Promise<RoutineProposal[]>;
   setRoutineProposalStatus(id: string, status: ProposalStatus): Promise<RoutineProposal>;
   deleteRoutineProposal(id: string): Promise<void>;
 }

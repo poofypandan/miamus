@@ -293,6 +293,36 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(undefined);
   },
+  async createRoutineProposalsBatch(inputs) {
+    const db = loadDB();
+    const created: RoutineProposal[] = inputs.map((input) => ({
+      id: uid("proposal"),
+      pet_id: input.pet_id,
+      title: input.title,
+      category: input.category,
+      time: input.time,
+      notes: input.notes ?? null,
+      status: "pending",
+      created_by: input.created_by ?? null,
+      batch_id: input.batch_id ?? null,
+      created_at: new Date().toISOString(),
+    }));
+    db.routineProposals.unshift(...created);
+    saveDB(db);
+    return delay(created);
+  },
+  async setRoutineProposalsStatus(ids, status) {
+    const db = loadDB();
+    const updated: RoutineProposal[] = [];
+    db.routineProposals = db.routineProposals.map((r) => {
+      if (!ids.includes(r.id)) return r;
+      const next = { ...r, status };
+      updated.push(next);
+      return next;
+    });
+    saveDB(db);
+    return delay(updated);
+  },
   async setRoutineProposalStatus(id, status) {
     const db = loadDB();
     const idx = db.routineProposals.findIndex((r) => r.id === id);

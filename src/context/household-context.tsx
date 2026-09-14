@@ -73,6 +73,11 @@ interface HouseholdContextValue {
   flagLowStock: (input: CreateInventoryAlertInput) => Promise<InventoryAlert>;
   resolveInventoryAlert: (id: string) => Promise<void>;
   submitRoutineProposal: (input: CreateRoutineProposalInput) => Promise<RoutineProposal>;
+  submitRoutineProposalsBatch: (inputs: CreateRoutineProposalInput[]) => Promise<RoutineProposal[]>;
+  decideRoutineProposals: (
+    ids: string[],
+    status: Exclude<ProposalStatus, "pending">
+  ) => Promise<void>;
   undoInventoryAlert: (id: string) => Promise<void>;
   undoRoutineProposal: (id: string) => Promise<void>;
   decideRoutineProposal: (id: string, status: Exclude<ProposalStatus, "pending">) => Promise<void>;
@@ -297,6 +302,21 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     return alert;
   }, []);
 
+  const submitRoutineProposalsBatch = useCallback(async (inputs: CreateRoutineProposalInput[]) => {
+    const created = await dataProvider.createRoutineProposalsBatch(inputs);
+    setRoutineProposals((prev) => [...created, ...prev]);
+    return created;
+  }, []);
+
+  const decideRoutineProposals = useCallback(
+    async (ids: string[], status: Exclude<ProposalStatus, "pending">) => {
+      await dataProvider.setRoutineProposalsStatus(ids, status);
+      const decided = new Set(ids);
+      setRoutineProposals((prev) => prev.map((r) => (decided.has(r.id) ? { ...r, status } : r)));
+    },
+    []
+  );
+
   const undoInventoryAlert = useCallback(async (id: string) => {
     await dataProvider.deleteInventoryAlert(id);
     setInventoryAlerts((prev) => prev.filter((a) => a.id !== id));
@@ -367,6 +387,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       flagLowStock,
       resolveInventoryAlert,
       submitRoutineProposal,
+      submitRoutineProposalsBatch,
+      decideRoutineProposals,
       undoInventoryAlert,
       undoRoutineProposal,
       decideRoutineProposal,
@@ -402,6 +424,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       flagLowStock,
       resolveInventoryAlert,
       submitRoutineProposal,
+      submitRoutineProposalsBatch,
+      decideRoutineProposals,
       undoInventoryAlert,
       undoRoutineProposal,
       decideRoutineProposal,

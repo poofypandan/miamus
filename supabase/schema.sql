@@ -126,6 +126,31 @@ create index if not exists inventory_alerts_status_idx on inventory_alerts(statu
 create index if not exists inventory_alerts_resolved_idx on inventory_alerts(resolved);
 
 -- ============================================================================
+-- routine_proposals
+-- Staff-submitted requests for a new routine, awaiting the owner's decision.
+-- Approving one is what creates the real master_schedules row; this table is
+-- never read by the agenda. Created in migrations/046, batch_id added in 052.
+-- ============================================================================
+create table if not exists routine_proposals (
+  id uuid primary key default gen_random_uuid(),
+  pet_id uuid not null references task_entities(id) on delete cascade,
+  title text not null,
+  category text not null check (category in ('meal', 'potty', 'medication', 'grooming', 'temporary')),
+  time time not null,
+  notes text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  created_by text,
+  -- Ties the rows of one multi-dose submission together so the owner approves
+  -- the course as a unit. Null for anything filed before Phase 52.
+  batch_id text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists routine_proposals_status_idx on routine_proposals(status);
+create index if not exists routine_proposals_pet_id_idx on routine_proposals(pet_id);
+create index if not exists routine_proposals_batch_id_idx on routine_proposals(batch_id);
+
+-- ============================================================================
 -- staff_profiles
 -- Placeholder for Phase 3 (staff attendance/tasks). Intentionally empty
 -- beyond an id/timestamp until that phase is built.

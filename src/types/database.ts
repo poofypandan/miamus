@@ -97,6 +97,10 @@ export type RoutineProposal = {
   notes: string | null;
   status: ProposalStatus;
   created_by: string | null;
+  // Groups the rows of one multi-dose submission. Optional because PostgREST
+  // omits it until the Phase 52 migration is applied, and null for proposals
+  // filed before it existed.
+  batch_id?: string | null;
   created_at: string;
 };
 

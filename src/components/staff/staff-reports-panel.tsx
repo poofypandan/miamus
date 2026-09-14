@@ -6,7 +6,7 @@ import { Loader2, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { AdHocSheet } from "@/components/staff/adhoc-sheet";
-import { RoutineProposalSheet } from "@/components/staff/routine-proposal-sheet";
+import { StaffRoutinePicker } from "@/components/staff/staff-routine-picker";
 import { useHousehold } from "@/context/household-context";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
@@ -74,7 +74,7 @@ export function StaffReportsPanel() {
 
       <div className="flex flex-col gap-2">
         <LowStockFlagButton locale="id" />
-        <RoutineProposalSheet />
+        <StaffRoutinePicker />
         <AdHocSheet />
       </div>
 
