@@ -23,9 +23,10 @@ import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
 // The single detail view for a pet, replacing the old per-tab drill-downs —
-// opens as a bottom sheet whenever `activePetId` is set, from anywhere
-// (Daily Feed, Schedules, or Health Passport all set the same global id),
-// and closing it (X, backdrop, or Escape) is exactly `setActivePetId(null)`.
+// opens as a bottom sheet whenever `activePetId` is set, from anywhere (both
+// Daily Feed and Schedule set the same global id), and closing it (X,
+// backdrop, or Escape) is exactly `setActivePetId(null)`. Since Phase 36 this
+// is also the only route to a pet's health passport.
 export function PetProfileSheet() {
   const {
     pets,
@@ -114,14 +115,14 @@ export function PetProfileSheet() {
 
             <section className="mt-6">
               <h3 className="mb-3 text-sm font-medium text-gray-500">{label}&apos;s Overview</h3>
-              <SummaryCard dogName={pet.name} items={items} />
+              <SummaryCard items={items} />
               <h3 className="mt-8 mb-3 text-sm font-medium text-gray-500">Photos</h3>
               <PhotoStream logs={todaysLogs} entities={entities} />
             </section>
 
             {canManagePets && (
               <section className="mt-8">
-                <h3 className="mb-3 text-sm font-medium text-gray-500">Schedules</h3>
+                <h3 className="mb-3 text-sm font-medium text-gray-500">Schedule</h3>
                 <ScheduleEditor entity={pet} />
               </section>
             )}

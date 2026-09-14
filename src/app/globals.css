@@ -127,16 +127,29 @@
   html {
     @apply font-sans;
   }
-  /* Kills the mobile browser's swipe-down-to-reload. Set on both elements
-     on purpose: the browser reads this off whichever element propagates to
-     the viewport, and which one that is differs between engines.
-     Deliberately app-wide rather than only the landing page — an accidental
-     reload is worse deeper in, where staff may be holding logs in the
-     Phase 29 offline queue. Normal scrolling is unaffected; only overscroll
-     chaining and pull-to-refresh are. */
   html,
   body {
+    /* Kills the mobile browser's swipe-down-to-reload. Set on both elements
+       on purpose: the browser reads this off whichever element propagates to
+       the viewport, and which one that is differs between engines.
+       Deliberately app-wide rather than only the landing page — an accidental
+       reload is worse deeper in, where staff may be holding logs in the
+       Phase 29 offline queue. Normal scrolling is unaffected; only overscroll
+       chaining and pull-to-refresh are. */
     overscroll-behavior-y: none;
+
+    /* The dark bar along the bottom on mobile is the browser painting its own
+       canvas — the strip past the document, plus the area behind the home
+       indicator. Two things are needed to stop it:
+       1. color-scheme: light pins the UA canvas to light. Without it a phone
+          in system dark mode paints that strip near-black no matter what the
+          page's own background is. The app has light-only tokens and nothing
+          ever sets the .dark class, so this just states what was already true.
+       2. An explicit background on html as well as body. A background set only
+          on body propagates to the canvas, but that propagation stops being
+          reliable once html itself is the scroll container. */
+    color-scheme: light;
+    background-color: var(--background);
   }
 }
 

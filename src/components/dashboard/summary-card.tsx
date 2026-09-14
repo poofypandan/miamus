@@ -11,7 +11,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useHousehold } from "@/context/household-context";
 import { compressPhoto } from "@/lib/image";
 import { POTTY_TITLE } from "@/lib/schedule-categories";
@@ -24,7 +24,10 @@ function StatusIcon({ status }: { status: AgendaItem["status"] }) {
   return <Clock className="size-4 text-amber-500" />;
 }
 
-export function SummaryCard({ dogName, items }: { dogName: string; items: AgendaItem[] }) {
+// Renders the task rows only. The pet's name deliberately isn't repeated here:
+// this card's one call site is the Pet Profile Sheet, which already shows the
+// name at 2xl next to the avatar a few pixels above it.
+export function SummaryCard({ items }: { items: AgendaItem[] }) {
   const potty = items.filter((i) => i.title === POTTY_TITLE);
   const pottyDone = potty.filter((i) => i.status === "completed").length;
   const nextPotty = potty.find((i) => i.status !== "completed");
@@ -32,10 +35,7 @@ export function SummaryCard({ dogName, items }: { dogName: string; items: Agenda
   const dinner = items.find((i) => i.title === "Makan Malam");
 
   return (
-    <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="text-base">{dogName}</CardTitle>
-      </CardHeader>
+    <Card className="py-4">
       <CardContent className="flex flex-col gap-1.5 px-4 text-sm">
         <TaskRow
           icon={Droplets}
