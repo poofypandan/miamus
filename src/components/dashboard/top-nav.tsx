@@ -39,9 +39,12 @@ export function TopNav() {
       </div>
 
       {/* Staff only ever has the Daily Feed tab — a single-item tab row is
-          pure clutter, so skip it entirely rather than rendering it. */}
+          pure clutter, so skip it entirely rather than rendering it.
+          Each tab takes an equal share of the row via flex-1; there's no
+          horizontal scroll to hide any more, since the tabs now always fit
+          by construction however many there are. */}
       {isOwner && (
-        <nav className="flex gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav className="flex w-full gap-1 px-4 pb-2">
           {SUB_NAV.map((item, index) => {
             const isActive = index === activeIndex;
             return (
@@ -50,7 +53,7 @@ export function TopNav() {
                 href={`/dashboard?tab=${item.tab}`}
                 scroll={false}
                 className={cn(
-                  "flex min-h-[48px] shrink-0 items-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  "flex min-h-[48px] flex-1 items-center justify-center rounded-lg px-3 py-1.5 text-center text-sm font-medium transition-colors",
                   isActive
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
