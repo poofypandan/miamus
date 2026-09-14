@@ -147,7 +147,11 @@ function MedicineProposalCard({ entity }: { entity: TaskEntity }) {
     });
   }
 
-  const totalDays = endDate ? Math.max(0, daysBetweenInclusive(today, endDate)) : 0;
+  // A date input's `min` is advisory — a typed or pasted value can still land
+  // before it — so the range is checked here too, and surfaced inline rather
+  // than only as a toast after a wasted tap.
+  const endBeforeToday = !!endDate && endDate < today;
+  const totalDays = endDate && !endBeforeToday ? Math.max(0, daysBetweenInclusive(today, endDate)) : 0;
   const totalDoses = totalDays * timesPerDay;
 
   function submit() {
@@ -234,14 +238,20 @@ function MedicineProposalCard({ entity }: { entity: TaskEntity }) {
           onChange={(e) => setEndDate(e.target.value)}
           className={TIME_INPUT_CLASS}
         />
-        {totalDoses > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Total {totalDoses} dosis dalam {totalDays} hari.
+        {endBeforeToday ? (
+          <p className="text-xs font-medium text-destructive">
+            Tanggal selesai tidak boleh sebelum hari ini.
           </p>
+        ) : (
+          totalDoses > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Total {totalDoses} dosis dalam {totalDays} hari.
+            </p>
+          )
         )}
       </div>
 
-      <Button onClick={submit} disabled={sending} className="min-h-[48px]">
+      <Button onClick={submit} disabled={sending || endBeforeToday} className="min-h-[48px]">
         {sending ? <Loader2 className="animate-spin" /> : <Send />} Kirim Usulan
       </Button>
     </ProposalCard>
@@ -258,9 +268,14 @@ function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
   const [endDate, setEndDate] = useState("");
   const { sending, send } = useProposalBatch();
 
+  const endBeforeStart = !!endDate && !!startDate && endDate < startDate;
+
   const occurrences = useMemo(
-    () => generateGroomingOccurrences(startDate, time, intervalValue, intervalUnit, endDate),
-    [startDate, time, intervalValue, intervalUnit, endDate]
+    () =>
+      endBeforeStart
+        ? []
+        : generateGroomingOccurrences(startDate, time, intervalValue, intervalUnit, endDate),
+    [endBeforeStart, startDate, time, intervalValue, intervalUnit, endDate]
   );
 
   function submit() {
@@ -352,12 +367,22 @@ function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
           onChange={(e) => setEndDate(e.target.value)}
           className={TIME_INPUT_CLASS}
         />
-        {occurrences.length > 0 && (
-          <p className="text-xs text-muted-foreground">Total {occurrences.length} kali.</p>
+        {endBeforeStart ? (
+          <p className="text-xs font-medium text-destructive">
+            Tanggal selesai tidak boleh sebelum tanggal mulai.
+          </p>
+        ) : (
+          occurrences.length > 0 && (
+            <p className="text-xs text-muted-foreground">Total {occurrences.length} kali.</p>
+          )
         )}
       </div>
 
-      <Button onClick={submit} disabled={sending} className="min-h-[48px]">
+      <Button
+        onClick={submit}
+        disabled={sending || endBeforeStart}
+        className="min-h-[48px]"
+      >
         {sending ? <Loader2 className="animate-spin" /> : <Send />} Kirim Usulan
       </Button>
     </ProposalCard>

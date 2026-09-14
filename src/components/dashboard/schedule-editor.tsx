@@ -528,7 +528,9 @@ function MedicationsCard({
     setDoseTimes((prev) => prev.map((t, i) => (i === index ? value : t)));
   }
 
-  const totalDays = endDate ? Math.max(0, daysBetweenInclusive(today, endDate)) : 0;
+  // `min` on a date input is advisory, so the range is re-checked here.
+  const endBeforeToday = !!endDate && endDate < today;
+  const totalDays = endDate && !endBeforeToday ? Math.max(0, daysBetweenInclusive(today, endDate)) : 0;
   const totalDoses = totalDays * timesPerDay;
 
   async function handleGenerate() {
@@ -671,7 +673,11 @@ function MedicationsCard({
             : "Pick an end date to preview the course length."}
         </p>
 
-        <Button onClick={handleGenerate} disabled={generating} className="min-h-[48px] w-fit">
+        <Button
+          onClick={handleGenerate}
+          disabled={generating || endBeforeToday}
+          className="min-h-[48px] w-fit"
+        >
           {generating ? <Loader2 className="animate-spin" /> : <Plus />}
           Generate Medication Schedule
         </Button>
