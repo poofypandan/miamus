@@ -60,8 +60,13 @@ export type IntervalUnit = (typeof INTERVAL_UNIT_OPTIONS)[number]["value"];
 // keeps a fat-fingered "every 1 day for 10 years" from hammering the DB.
 const MAX_GENERATED_OCCURRENCES = 500;
 
+// w-full + min-w-0 so the control fills its column and can shrink inside a
+// flex/grid parent instead of forcing overflow; px-2 rather than px-3 because
+// a native date/time input spends part of its width on the picker indicator,
+// and on a 320px phone the extra padding was enough to clip the value itself
+// ("09." instead of "09.00", "14/0" instead of the date).
 export const TIME_INPUT_CLASS =
-  "min-h-[48px] rounded-xl border border-input bg-transparent px-3 text-base font-medium tabular-nums outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+  "min-h-[48px] w-full min-w-0 rounded-xl border border-input bg-transparent px-2 text-base font-medium tabular-nums outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function mealLabelForTime(time: string): string {
   const hour = Number(time.slice(0, 2));

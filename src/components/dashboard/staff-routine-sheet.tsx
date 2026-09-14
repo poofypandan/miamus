@@ -206,7 +206,11 @@ function MedicineProposalCard({ entity }: { entity: TaskEntity }) {
 
       <div className="flex flex-col gap-1.5">
         <Label className="text-xs">Jam minum</Label>
-        <div className="grid grid-cols-2 gap-2">
+        {/* auto-fit rather than a hard 2 columns: below ~7rem a time control
+            has no room left for its value once the picker indicator is drawn,
+            so on a narrow phone the row collapses to one per line instead of
+            clipping both. */}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-3">
           {doseTimes.map((time, index) => (
             <input
               key={index}
@@ -294,8 +298,8 @@ function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex flex-col gap-1.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label className="text-xs">Mulai</Label>
           <input
             type="date"
@@ -304,7 +308,7 @@ function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
             className={TIME_INPUT_CLASS}
           />
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label className="text-xs">Jam</Label>
           <input
             type="time"
@@ -317,13 +321,13 @@ function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
 
       <div className="flex flex-col gap-1.5">
         <Label className="text-xs">Diulang setiap</Label>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Input
             type="number"
             min={1}
             value={intervalValue}
             onChange={(e) => setIntervalValue(Math.max(1, Number(e.target.value) || 1))}
-            className="min-h-[48px] w-20"
+            className="min-h-[48px] w-20 shrink-0"
           />
           {INTERVAL_UNIT_OPTIONS.map((unit) => (
             <Button
