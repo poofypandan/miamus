@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { AdHocSheet } from "@/components/staff/adhoc-sheet";
+import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
@@ -42,6 +43,8 @@ export default function StaffPage() {
           groups.map((group) => <AgendaGroupCard key={`${group.time}-${group.title}`} group={group} />)
         )}
       </main>
+
+      <StaffReportsPanel />
 
       <AdHocSheet />
     </div>

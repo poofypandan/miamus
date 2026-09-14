@@ -165,4 +165,31 @@ export const supabaseProvider: DataProvider = {
       .eq("id", id);
     if (error) throw error;
   },
+  async listRoutineProposals() {
+    const { data, error } = await client()
+      .from("routine_proposals")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  async createRoutineProposal(input) {
+    const { data, error } = await client()
+      .from("routine_proposals")
+      .insert(input)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async setRoutineProposalStatus(id, status) {
+    const { data, error } = await client()
+      .from("routine_proposals")
+      .update({ status })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
 };

@@ -9,6 +9,9 @@ import type {
   FrequencyType,
   RecordType,
   ItemType,
+  RoutineProposal,
+  ProposalStatus,
+  ScheduleCategoryName,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -69,6 +72,15 @@ export interface CreateInventoryAlertInput {
   note?: string | null;
 }
 
+export interface CreateRoutineProposalInput {
+  pet_id: string;
+  title: string;
+  category: ScheduleCategoryName;
+  time: string;
+  notes?: string | null;
+  created_by?: string | null;
+}
+
 export interface DataProvider {
   listEntities(): Promise<TaskEntity[]>;
   listSchedules(): Promise<MasterSchedule[]>;
@@ -90,4 +102,7 @@ export interface DataProvider {
   listInventoryAlerts(): Promise<InventoryAlert[]>;
   createInventoryAlert(input: CreateInventoryAlertInput): Promise<InventoryAlert>;
   resolveInventoryAlert(id: string): Promise<void>;
+  listRoutineProposals(): Promise<RoutineProposal[]>;
+  createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
+  setRoutineProposalStatus(id: string, status: ProposalStatus): Promise<RoutineProposal>;
 }

@@ -15,4 +15,5 @@ export type {
   CreateScheduleInput,
   CreateMedicalRecordInput,
   CreateInventoryAlertInput,
+  CreateRoutineProposalInput,
 } from "./types";

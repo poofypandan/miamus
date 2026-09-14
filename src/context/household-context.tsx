@@ -10,6 +10,7 @@ import type {
   CreateScheduleInput,
   CreateMedicalRecordInput,
   CreateInventoryAlertInput,
+  CreateRoutineProposalInput,
 } from "@/lib/data";
 import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
@@ -19,6 +20,8 @@ import type {
   TaskLog,
   MedicalRecord,
   InventoryAlert,
+  RoutineProposal,
+  ProposalStatus,
 } from "@/types/database";
 
 export type UserRole = "staff" | "owner";
@@ -35,6 +38,7 @@ interface HouseholdContextValue {
   logs: TaskLog[];
   medicalRecords: MedicalRecord[];
   inventoryAlerts: InventoryAlert[];
+  routineProposals: RoutineProposal[];
   loading: boolean;
   isMockMode: boolean;
   // null = Unified Overview; a pet id = that pet's detail view. This is the
@@ -68,6 +72,8 @@ interface HouseholdContextValue {
   uploadPhoto: (file: File, pathPrefix: string) => Promise<string>;
   flagLowStock: (input: CreateInventoryAlertInput) => Promise<InventoryAlert>;
   resolveInventoryAlert: (id: string) => Promise<void>;
+  submitRoutineProposal: (input: CreateRoutineProposalInput) => Promise<RoutineProposal>;
+  decideRoutineProposal: (id: string, status: Exclude<ProposalStatus, "pending">) => Promise<void>;
 }
 
 const HouseholdContext = createContext<HouseholdContextValue | null>(null);
@@ -78,22 +84,32 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [logs, setLogs] = useState<TaskLog[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([]);
+  const [routineProposals, setRoutineProposals] = useState<RoutineProposal[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [e, s, l, m, ia] = await Promise.all([
+    const [e, s, l, m, ia, rp] = await Promise.all([
       dataProvider.listEntities(),
       dataProvider.listSchedules(),
       dataProvider.listLogs(),
       dataProvider.listMedicalRecords(),
       dataProvider.listInventoryAlerts(),
+      // Deliberately not allowed to reject the whole load. routine_proposals
+      // arrived in Phase 46 and needs a migration run by hand; until then the
+      // request 404s, and letting that bubble would take pets, schedules and
+      // logs down with it. An empty queue is the correct degraded state.
+      dataProvider.listRoutineProposals().catch((err) => {
+        console.warn("routine_proposals unavailable — run the Phase 46 migration", err);
+        return [] as RoutineProposal[];
+      }),
     ]);
     setEntities(e);
     setSchedules(s);
     setLogs(l);
     setMedicalRecords(m);
     setInventoryAlerts(ia);
+    setRoutineProposals(rp);
     setLoading(false);
   }, []);
 
@@ -279,6 +295,20 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     return alert;
   }, []);
 
+  const submitRoutineProposal = useCallback(async (input: CreateRoutineProposalInput) => {
+    const proposal = await dataProvider.createRoutineProposal(input);
+    setRoutineProposals((prev) => [proposal, ...prev]);
+    return proposal;
+  }, []);
+
+  const decideRoutineProposal = useCallback(
+    async (id: string, status: Exclude<ProposalStatus, "pending">) => {
+      const updated = await dataProvider.setRoutineProposalStatus(id, status);
+      setRoutineProposals((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    },
+    []
+  );
+
   const resolveInventoryAlert = useCallback(async (id: string) => {
     await dataProvider.resolveInventoryAlert(id);
     setInventoryAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, resolved: true } : a)));
@@ -292,6 +322,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       logs,
       medicalRecords,
       inventoryAlerts,
+      routineProposals,
       loading,
       isMockMode,
       activePetId,
@@ -317,6 +348,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       uploadPhoto,
       flagLowStock,
       resolveInventoryAlert,
+      submitRoutineProposal,
+      decideRoutineProposal,
     }),
     [
       entities,
@@ -325,6 +358,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       logs,
       medicalRecords,
       inventoryAlerts,
+      routineProposals,
       loading,
       activePetId,
       selectedDate,
@@ -347,6 +381,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       uploadPhoto,
       flagLowStock,
       resolveInventoryAlert,
+      submitRoutineProposal,
+      decideRoutineProposal,
     ]
   );
 

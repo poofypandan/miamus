@@ -3,6 +3,7 @@ export type Module = "pet" | "cleaning" | "laundry";
 export type FrequencyType = "interval" | "fixed_time" | "weekly";
 export type RecordType = "vaccine" | "vet" | "medication" | "weight";
 export type ItemType = "food" | "medicine" | "treats" | "shampoo";
+export type ProposalStatus = "pending" | "approved" | "rejected";
 
 // Plain `type` aliases, not `interface` — interfaces don't structurally
 // satisfy `Record<string, unknown>`, which postgrest-js's GenericTable
@@ -73,6 +74,26 @@ export type InventoryAlert = {
   created_at: string;
 };
 
+// A staff-submitted request for a new routine, awaiting the owner's decision.
+// Approving one is what creates the real master_schedules row — this table
+// never drives the agenda itself.
+export type RoutineProposal = {
+  id: string;
+  pet_id: string;
+  title: string;
+  category: ScheduleCategoryName;
+  // "HH:mm:ss" as Postgres returns a `time` column.
+  time: string;
+  notes: string | null;
+  status: ProposalStatus;
+  created_by: string | null;
+  created_at: string;
+};
+
+// Mirrors ScheduleCategory in lib/schedule-categories, kept here as a plain
+// union so types/database.ts stays free of app-layer imports.
+export type ScheduleCategoryName = "meal" | "potty" | "medication" | "grooming" | "temporary";
+
 export interface Database {
   public: {
     Tables: {
@@ -112,6 +133,13 @@ export interface Database {
         Row: InventoryAlert;
         Insert: Partial<InventoryAlert> & Pick<InventoryAlert, "pet_id" | "item_type">;
         Update: Partial<InventoryAlert>;
+        Relationships: [];
+      };
+      routine_proposals: {
+        Row: RoutineProposal;
+        Insert: Partial<RoutineProposal> &
+          Pick<RoutineProposal, "pet_id" | "title" | "category" | "time">;
+        Update: Partial<RoutineProposal>;
         Relationships: [];
       };
     };

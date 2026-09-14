@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { ApprovalQueue } from "@/components/dashboard/approval-queue";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
@@ -46,6 +47,7 @@ export function DailyFeedTab() {
     <div className="flex flex-col">
       <h2 className="mb-3 text-sm font-semibold text-gray-900">{label}&apos;s Overview</h2>
       <UnifiedSummaryCard />
+      <ApprovalQueue />
       <h3 className="mt-8 mb-3 text-sm font-semibold text-gray-900">Photos</h3>
       <PhotoStream logs={logsForDate} entities={entities} showAvatar />
       <div className="mt-8">

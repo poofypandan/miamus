@@ -4,6 +4,7 @@ import type {
   TaskLog,
   MedicalRecord,
   InventoryAlert,
+  RoutineProposal,
 } from "@/types/database";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
@@ -16,6 +17,7 @@ interface MockDB {
   logs: TaskLog[];
   medicalRecords: MedicalRecord[];
   inventoryAlerts: InventoryAlert[];
+  routineProposals: RoutineProposal[];
 }
 
 function freshDB(): MockDB {
@@ -25,6 +27,7 @@ function freshDB(): MockDB {
     logs: [],
     medicalRecords: [],
     inventoryAlerts: [],
+    routineProposals: [],
   };
 }
 
@@ -34,8 +37,12 @@ function loadDB(): MockDB {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as MockDB;
-      // Guards against a DB saved before inventoryAlerts existed.
-      return { ...parsed, inventoryAlerts: parsed.inventoryAlerts ?? [] };
+      // Guards against a DB saved before these collections existed.
+      return {
+        ...parsed,
+        inventoryAlerts: parsed.inventoryAlerts ?? [],
+        routineProposals: parsed.routineProposals ?? [],
+      };
     }
   } catch {
     // corrupt storage — fall through to a fresh seed below
@@ -246,5 +253,34 @@ export const mockProvider: DataProvider = {
     db.inventoryAlerts[idx] = { ...db.inventoryAlerts[idx], resolved: true };
     saveDB(db);
     return delay(undefined);
+  },
+  async listRoutineProposals() {
+    return delay(loadDB().routineProposals);
+  },
+  async createRoutineProposal(input) {
+    const db = loadDB();
+    const proposal: RoutineProposal = {
+      id: uid("proposal"),
+      pet_id: input.pet_id,
+      title: input.title,
+      category: input.category,
+      time: input.time,
+      notes: input.notes ?? null,
+      status: "pending",
+      created_by: input.created_by ?? null,
+      created_at: new Date().toISOString(),
+    };
+    db.routineProposals.unshift(proposal);
+    saveDB(db);
+    return delay(proposal);
+  },
+  async setRoutineProposalStatus(id, status) {
+    const db = loadDB();
+    const idx = db.routineProposals.findIndex((r) => r.id === id);
+    if (idx === -1) throw new Error(`Routine proposal ${id} not found`);
+    const updated = { ...db.routineProposals[idx], status };
+    db.routineProposals[idx] = updated;
+    saveDB(db);
+    return delay(updated);
   },
 };

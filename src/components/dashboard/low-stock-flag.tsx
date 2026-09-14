@@ -26,14 +26,45 @@ import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import type { ItemType } from "@/types/database";
 
-const ITEM_TYPES: { value: ItemType; label: string }[] = [
-  { value: "food", label: "Food" },
-  { value: "medicine", label: "Medicine" },
-  { value: "treats", label: "Treats" },
-  { value: "shampoo", label: "Shampoo" },
-];
+// Phase 46 language boundary: the owner dashboard is English, the staff view
+// is Bahasa Indonesia. Same form, same table — only the copy differs, so it
+// lives in one component with two dictionaries rather than two near-identical
+// files that would drift apart.
+const COPY = {
+  en: {
+    trigger: "Flag Low Stock",
+    title: "Flag Low Stock",
+    description: "Let the owner know something needs restocking.",
+    pet: "Pet",
+    petPlaceholder: "Select pet",
+    item: "Item",
+    note: "Note (optional)",
+    notePlaceholder: "e.g. Down to the last cup",
+    validation: "Choose a pet and item type",
+    success: "Low stock flagged for the owner",
+    failure: "Failed to flag low stock",
+    items: { food: "Food", medicine: "Medicine", treats: "Treats", shampoo: "Shampoo" },
+  },
+  id: {
+    trigger: "Laporkan Stok Menipis",
+    title: "Laporkan Stok Menipis",
+    description: "Beri tahu pemilik kalau ada yang perlu dibeli lagi.",
+    pet: "Anjing",
+    petPlaceholder: "Pilih anjing",
+    item: "Barang",
+    note: "Catatan (opsional)",
+    notePlaceholder: "mis. Tinggal sisa sedikit",
+    validation: "Pilih anjing dan jenis barang dulu",
+    success: "Laporan stok menipis terkirim ke pemilik",
+    failure: "Gagal mengirim laporan",
+    items: { food: "Makanan", medicine: "Obat", treats: "Camilan", shampoo: "Sampo" },
+  },
+} as const;
 
-export function LowStockFlagButton() {
+const ITEM_ORDER: ItemType[] = ["food", "medicine", "treats", "shampoo"];
+
+export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) {
+  const t = COPY[locale];
   const { pets, activePetId, flagLowStock } = useHousehold();
   const [open, setOpen] = useState(false);
   useBackToClose(open, () => setOpen(false));
@@ -55,17 +86,17 @@ export function LowStockFlagButton() {
 
   async function handleSubmit() {
     if (!petId || !itemType) {
-      toast.error("Choose a pet and item type");
+      toast.error(t.validation);
       return;
     }
     setSubmitting(true);
     try {
       await flagLowStock({ pet_id: petId, item_type: itemType, note: note.trim() || null });
-      toast.success("Low stock flagged for the owner");
+      toast.success(t.success);
       setOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to flag low stock");
+      toast.error(t.failure);
     } finally {
       setSubmitting(false);
     }
@@ -77,20 +108,20 @@ export function LowStockFlagButton() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="outline" className="min-h-[48px] w-full">
-          <PackageX /> Flag Low Stock
+          <PackageX /> {t.trigger}
         </Button>
       </SheetTrigger>
       <SheetContent side="bottom">
         <SheetHeader>
-          <SheetTitle>Flag Low Stock</SheetTitle>
-          <SheetDescription>Let the owner know something needs restocking.</SheetDescription>
+          <SheetTitle>{t.title}</SheetTitle>
+          <SheetDescription>{t.description}</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-3 px-4">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Pet</Label>
+            <Label className="text-xs">{t.pet}</Label>
             <Select value={petId} onValueChange={setPetId}>
               <SelectTrigger className="min-h-[48px] w-full">
-                <SelectValue placeholder="Select pet" />
+                <SelectValue placeholder={t.petPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 {pets.map((p) => (
@@ -103,35 +134,35 @@ export function LowStockFlagButton() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Item</Label>
+            <Label className="text-xs">{t.item}</Label>
             <div className="grid grid-cols-2 gap-2">
-              {ITEM_TYPES.map((it) => (
+              {ITEM_ORDER.map((value) => (
                 <Button
-                  key={it.value}
+                  key={value}
                   type="button"
-                  variant={itemType === it.value ? "default" : "outline"}
+                  variant={itemType === value ? "default" : "outline"}
                   className="min-h-[48px]"
-                  onClick={() => setItemType(it.value)}
+                  onClick={() => setItemType(value)}
                 >
-                  {it.label}
+                  {t.items[value]}
                 </Button>
               ))}
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Note (optional)</Label>
+            <Label className="text-xs">{t.note}</Label>
             <Input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. Down to the last cup"
+              placeholder={t.notePlaceholder}
             />
           </div>
         </div>
         <SheetFooter>
           <Button onClick={handleSubmit} disabled={submitting} className="min-h-[48px]">
             {submitting ? <Loader2 className="animate-spin" /> : <PackageX />}
-            Flag Low Stock
+            {t.trigger}
           </Button>
         </SheetFooter>
       </SheetContent>
