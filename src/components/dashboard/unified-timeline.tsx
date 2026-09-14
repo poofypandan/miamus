@@ -7,8 +7,7 @@ import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
 import { categoryIcon } from "@/lib/schedule-categories";
-import { type AgendaGroup, type AgendaItem } from "@/lib/scheduleEngine";
-import { buildRollingAgenda, formatDayHeader, type ViewMode } from "@/lib/week-agenda";
+import { buildAgenda, formatDateLocal, type AgendaGroup, type AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { TaskEntity } from "@/types/database";
@@ -17,52 +16,21 @@ import type { TaskEntity } from "@/types/database";
 // which entity they belong to (that's how the Staff View's multi-dog
 // AgendaGroupCard works) — passing every pet as `entities` here gets the
 // cross-pet merge for free, no separate grouping logic needed.
-export function UnifiedTimeline({ viewMode = "day" }: { viewMode?: ViewMode }) {
+export function UnifiedTimeline() {
   const { pets, schedules, logs, selectedDate } = useHousehold();
-
-  const days = useMemo(
-    () =>
-      buildRollingAgenda({ start: selectedDate, mode: viewMode, entities: pets, schedules, logs }),
-    [selectedDate, viewMode, pets, schedules, logs]
+  const dateStr = formatDateLocal(selectedDate);
+  const groups = useMemo(
+    () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
+    [dateStr, pets, schedules, logs]
   );
-
-  const isEmpty = days.every((d) => d.groups.length === 0);
 
   return (
     <Card className="gap-3 py-4">
       <CardContent className="flex flex-col gap-3 px-4">
-        {isEmpty ? (
-          <p className="text-sm text-muted-foreground">
-            {viewMode === "week" ? "Nothing scheduled this week." : "No tasks scheduled."}
-          </p>
-        ) : viewMode === "day" ? (
-          days[0].groups.map((g) => <TimelineRow key={`${g.time}|${g.title}`} group={g} pets={pets} />)
+        {groups.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No tasks scheduled.</p>
         ) : (
-          days.map((day, index) => (
-            <div key={day.date} className="flex flex-col gap-3">
-              {/* top-0, not an offset that clears the TopNav: the carousel
-                  wrapper is overflow-hidden (Phase 43's dead-space fix), which
-                  makes it this element's nearest scrolling ancestor, so the
-                  offset resolves against that box rather than the viewport and
-                  shoves the header 120px down into its own list — measured at
-                  443px when the first row sits at 363px. Anchored at 0 it
-                  renders where it belongs. It won't actually pin while the page
-                  scrolls for the same reason (that ancestor never scrolls), so
-                  it reads as a plain day divider here; the staff view, which
-                  has no such clipping ancestor, does pin. */}
-              <h4
-                className={cn(
-                  "sticky top-0 z-10 -mx-4 bg-card/95 px-4 py-1.5 text-xs font-semibold text-gray-900 backdrop-blur",
-                  index > 0 && "border-t pt-3"
-                )}
-              >
-                {formatDayHeader(day.dateObj, "en")}
-              </h4>
-              {day.groups.map((g) => (
-                <TimelineRow key={`${day.date}|${g.time}|${g.title}`} group={g} pets={pets} />
-              ))}
-            </div>
-          ))
+          groups.map((g) => <TimelineRow key={`${g.time}|${g.title}`} group={g} pets={pets} />)
         )}
       </CardContent>
     </Card>

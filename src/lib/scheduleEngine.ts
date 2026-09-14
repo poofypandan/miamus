@@ -76,7 +76,7 @@ function scheduleSlotMinutes(schedule: MasterSchedule): number[] {
   return [];
 }
 
-function isScheduleActiveOn(schedule: MasterSchedule, dateStr: string): boolean {
+export function isScheduleActiveOn(schedule: MasterSchedule, dateStr: string): boolean {
   if (!schedule.is_active) return false;
   // Lower bound: lets a single-occurrence row (e.g. a generated grooming
   // visit, anchored via an explicit future `created_at`) stay invisible

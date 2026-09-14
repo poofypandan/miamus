@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { addDays, format, isSameDay } from "date-fns";
 import { CalendarDays } from "lucide-react";
+import { useSpecialEventDates } from "@/hooks/use-special-event-dates";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 
 const DAY_LABELS_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -23,6 +25,12 @@ export function DateRibbon({ value, onChange }: DateRibbonProps) {
   const selectedRef = useRef<HTMLButtonElement>(null);
 
   const days = useMemo(() => Array.from({ length: 15 }, (_, i) => addDays(value, i - 7)), [value]);
+
+  // Computed here rather than passed in: the ribbon is the only thing that
+  // knows its own window (value-7 .. value+7), so a caller supplying the set
+  // would have to duplicate that range to get it right. Anchored at the first
+  // visible day so the days behind `value` are badged too.
+  const eventDates = useSpecialEventDates(days[0]);
 
   useEffect(() => {
     // Deliberately not Element.scrollIntoView() — on the Owner Dashboard,
@@ -82,6 +90,20 @@ export function DateRibbon({ value, onChange }: DateRibbonProps) {
             >
               <span className="font-medium">{DAY_LABELS_ID[d.getDay()]}</span>
               <span className="text-lg font-semibold">{format(d, "d")}</span>
+              {/* Fixed-height row whether or not a dot is shown, so badged and
+                  unbadged days keep identical heights and the ribbon doesn't
+                  jog as the selection moves. */}
+              <span className="flex h-1 items-center">
+                {eventDates.has(formatDateLocal(d)) && (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "size-1 rounded-full",
+                      isSelected ? "bg-white" : "bg-zinc-900"
+                    )}
+                  />
+                )}
+              </span>
             </button>
           );
         })}
