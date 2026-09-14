@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Camera, CheckCircle2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -28,7 +29,7 @@ interface PendingCapture {
 }
 
 export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
-  const { logTasksBatch, uploadPhoto } = useHousehold();
+  const { logTasksBatch, uploadPhoto, pets } = useHousehold();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [capture, setCapture] = useState<PendingCapture | null>(null);
@@ -36,7 +37,40 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const pendingItems = group.items.filter((i) => i.status !== "completed");
   const allDone = pendingItems.length === 0;
   const anyOverdue = pendingItems.some((i) => i.status === "overdue");
-  const completedPhotoUrl = group.items.find((i) => i.log?.photo_url)?.log?.photo_url ?? null;
+
+  const petById = useMemo(() => new Map(pets.map((p) => [p.id, p])), [pets]);
+
+  // One card can hold several photos: a batch logs every tagged dog against a
+  // single upload, but a staff member who photographs the dogs separately
+  // produces one log (and one URL) each. Collapsing by photo_url rebuilds
+  // "who was in this shot" — the batch's rows merge back into one tile, while
+  // separate shots stay separate. Logs with no photo (offline-queued, ad-hoc)
+  // are skipped; they have nothing to show.
+  const photoGroups = useMemo(() => {
+    const byUrl = new Map<
+      string,
+      { url: string; entityIds: string[]; names: string[]; at: string }
+    >();
+    for (const item of group.items) {
+      const url = item.log?.photo_url;
+      if (!url) continue;
+      const existing = byUrl.get(url);
+      if (existing) {
+        if (!existing.entityIds.includes(item.entityId)) {
+          existing.entityIds.push(item.entityId);
+          existing.names.push(item.entityName);
+        }
+      } else {
+        byUrl.set(url, {
+          url,
+          entityIds: [item.entityId],
+          names: [item.entityName],
+          at: item.log?.completed_at ?? "",
+        });
+      }
+    }
+    return [...byUrl.values()].sort((a, b) => a.at.localeCompare(b.at));
+  }, [group.items]);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -48,10 +82,13 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       const url = await uploadPhoto(compressed, `pet/batch-${group.time.replace(":", "")}`);
       // Upload first, confirm who's in frame second — the photo is what
       // needs the camera round-trip, tagging is a quick local decision.
+      // Starts empty on purpose: pre-ticking every pending dog meant a
+      // distracted tap on Simpan silently marked dogs done that were never in
+      // the frame. Staff now have to say who they actually photographed.
       setCapture({
         photoUrl: url,
         items: pendingItems,
-        selected: new Set(pendingItems.map((i) => i.entityId)),
+        selected: new Set(),
       });
     } catch (err) {
       console.error(err);
@@ -127,6 +164,44 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             ))}
           </div>
 
+          {/* Every photo logged against this slot, not just the first — and
+              each one carries the dogs it was tagged with, so a card with
+              four separate shots reads at a glance. Sits outside the capture
+              <label> so scrolling the strip can't trip the file input. */}
+          {photoGroups.length > 0 && (
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {photoGroups.map((photo) => (
+                <figure key={photo.url} className="flex w-24 shrink-0 flex-col gap-1">
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.url}
+                      alt={photo.names.join(", ")}
+                      title={photo.names.join(", ")}
+                      className="size-24 rounded-lg object-cover ring-1 ring-emerald-500/40"
+                    />
+                    <div className="absolute -bottom-1.5 left-1 flex">
+                      {photo.entityIds.map((id, i) => {
+                        const pet = petById.get(id);
+                        if (!pet) return null;
+                        return (
+                          <MiniPetAvatar
+                            key={id}
+                            pet={pet}
+                            className={cn("size-7 border-2 border-white", i > 0 && "-ml-2.5")}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <figcaption className="truncate text-[11px] text-muted-foreground">
+                    {photo.names.join(", ")}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+
           <label
             className={cn(
               "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors active:scale-[0.99]",
@@ -148,16 +223,10 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             {busy ? (
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
             ) : allDone ? (
-              <span className="flex items-center gap-2">
-                {completedPhotoUrl && (
-                  <span className="size-8 shrink-0 overflow-hidden rounded-md ring-1 ring-emerald-500/40">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={completedPhotoUrl} alt="" className="h-full w-full object-cover" />
-                  </span>
-                )}
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="size-5" /> Semua Selesai
-                </span>
+              // The thumbnail that used to live here is now the full strip
+              // above, so this stays a plain confirmation line.
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="size-5" /> Semua Selesai
               </span>
             ) : (
               <span className="flex items-center gap-1.5">
@@ -174,9 +243,13 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       <Dialog open={!!capture} onOpenChange={(open) => !open && setCapture(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Who is in this photo?</DialogTitle>
+            <DialogTitle>Pilih anjing yang ada di foto</DialogTitle>
+            {/* Reworded, not just translated: with nothing pre-ticked the old
+                "untick anyone who isn't here" instruction told staff to do
+                the opposite of what the dialog now needs. */}
             <DialogDescription>
-              Uncheck any dog that isn&apos;t actually in the frame — they&apos;ll stay pending.
+              Centang anjing yang benar-benar terlihat di foto ini. Yang tidak dicentang tetap
+              belum selesai.
             </DialogDescription>
           </DialogHeader>
           {capture && (
@@ -188,20 +261,31 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 className="max-h-56 w-full rounded-lg object-cover"
               />
               <div className="flex flex-col gap-2">
-                {capture.items.map((item) => (
-                  <label
-                    key={item.entityId}
-                    className="flex min-h-[48px] items-center gap-3 rounded-lg border px-3"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={capture.selected.has(item.entityId)}
-                      onChange={() => toggleDog(item.entityId)}
-                      className="size-4"
-                    />
-                    <span className="font-medium">{item.entityName}</span>
-                  </label>
-                ))}
+                {capture.items.map((item) => {
+                  const checked = capture.selected.has(item.entityId);
+                  const pet = petById.get(item.entityId);
+                  return (
+                    <label
+                      key={item.entityId}
+                      className={cn(
+                        // Ticking is now a required step rather than a
+                        // correction, so a selected row is made obvious
+                        // instead of relying on a small checkbox alone.
+                        "flex min-h-[48px] items-center gap-3 rounded-lg border px-3 transition-colors",
+                        checked ? "border-emerald-500 bg-emerald-500/5" : "border-border"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleDog(item.entityId)}
+                        className="size-5 accent-emerald-600"
+                      />
+                      {pet && <MiniPetAvatar pet={pet} className="size-8" />}
+                      <span className="font-medium">{item.entityName}</span>
+                    </label>
+                  );
+                })}
               </div>
             </>
           )}
@@ -212,7 +296,11 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               className="min-h-[48px] w-full"
             >
               {confirming ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-              Confirm
+              {/* Nothing is pre-ticked, so the count doubles as feedback that
+                  a tap registered before Simpan becomes enabled. */}
+              {capture && capture.selected.size > 0
+                ? `Simpan (${capture.selected.size})`
+                : "Simpan"}
             </Button>
           </DialogFooter>
         </DialogContent>

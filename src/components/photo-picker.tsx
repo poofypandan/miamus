@@ -13,6 +13,10 @@ interface PhotoPickerProps {
   value?: string | null;
   onChange: (url: string | null) => void;
   label?: string;
+  // Shared between the English owner dashboard and the Indonesian staff view,
+  // so every piece of visible copy has to be overridable — the busy state
+  // included, or the staff flow flashes "Uploading..." mid-upload.
+  busyLabel?: string;
   errorMessage?: string;
   className?: string;
 }
@@ -22,6 +26,7 @@ export function PhotoPicker({
   value,
   onChange,
   label = "Add photo",
+  busyLabel = "Uploading...",
   errorMessage = "Failed to upload photo",
   className,
 }: PhotoPickerProps) {
@@ -80,7 +85,7 @@ export function PhotoPicker({
         onClick={() => inputRef.current?.click()}
       >
         {busy ? <Loader2 className="animate-spin" /> : <Camera />}
-        {busy ? "Uploading..." : label}
+        {busy ? busyLabel : label}
       </Button>
     </>
   );
