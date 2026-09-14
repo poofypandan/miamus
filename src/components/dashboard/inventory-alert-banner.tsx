@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
+import { isActiveAlert } from "@/lib/inventory-status";
 import type { ItemType } from "@/types/database";
 
 const ITEM_TYPE_LABELS: Record<ItemType, string> = {
@@ -22,7 +23,7 @@ export function InventoryAlertBanner() {
 
   if (userRole !== "owner") return null;
 
-  const active = inventoryAlerts.filter((a) => !a.resolved);
+  const active = inventoryAlerts.filter(isActiveAlert);
   if (active.length === 0) return null;
 
   const entityById = new Map(entities.map((e) => [e.id, e]));

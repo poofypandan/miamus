@@ -159,11 +159,28 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async resolveInventoryAlert(id) {
-    const { error } = await client()
+    // `resolved` is written alongside `status` on purpose: the boolean is what
+    // pre-Phase-50 rows and any not-yet-migrated database rely on, so letting
+    // the two drift would strand a restock in whichever view reads the other.
+    const c = client();
+    const { error } = await c
+      .from("inventory_alerts")
+      .update({ resolved: true, status: "resolved", resolved_at: new Date().toISOString() })
+      .eq("id", id);
+    if (!error) return;
+
+    // PGRST204 means PostgREST has no such column — the Phase 50 migration
+    // hasn't been applied yet. Resolving an alert worked before this phase and
+    // must keep working, so fall back to the boolean this table has always
+    // had. isRestocked() reads that same boolean, so the History tab still
+    // shows the restock; only the exact date is missing until the migration
+    // lands. Verified live: without this the whole update 400s.
+    if (error.code !== "PGRST204") throw error;
+    const { error: legacyError } = await c
       .from("inventory_alerts")
       .update({ resolved: true })
       .eq("id", id);
-    if (error) throw error;
+    if (legacyError) throw legacyError;
   },
   async deleteInventoryAlert(id) {
     const { error } = await client().from("inventory_alerts").delete().eq("id", id);

@@ -240,6 +240,8 @@ export const mockProvider: DataProvider = {
       item_type: input.item_type,
       note: input.note ?? null,
       resolved: false,
+      status: "pending",
+      resolved_at: null,
       created_at: new Date().toISOString(),
     };
     db.inventoryAlerts.push(alert);
@@ -250,7 +252,12 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const idx = db.inventoryAlerts.findIndex((a) => a.id === id);
     if (idx === -1) throw new Error(`Inventory alert ${id} not found`);
-    db.inventoryAlerts[idx] = { ...db.inventoryAlerts[idx], resolved: true };
+    db.inventoryAlerts[idx] = {
+      ...db.inventoryAlerts[idx],
+      resolved: true,
+      status: "resolved",
+      resolved_at: new Date().toISOString(),
+    };
     saveDB(db);
     return delay(undefined);
   },

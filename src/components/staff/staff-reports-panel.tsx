@@ -10,6 +10,7 @@ import { RoutineProposalSheet } from "@/components/staff/routine-proposal-sheet"
 import { useHousehold } from "@/context/household-context";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
+import { isActiveAlert } from "@/lib/inventory-status";
 import { isWithinUndoWindow } from "@/lib/undo-window";
 import type { ItemType, ProposalStatus } from "@/types/database";
 
@@ -56,7 +57,7 @@ export function StaffReportsPanel() {
   }, []);
 
   const petName = (id: string) => pets.find((p) => p.id === id)?.name ?? "—";
-  const openAlerts = inventoryAlerts.filter((a) => !a.resolved);
+  const openAlerts = inventoryAlerts.filter(isActiveAlert);
 
   // Ad-hoc entries are the ones with no schedule behind them — Catat Ekstra
   // writes exactly that. Scoped to today so the list stays short.

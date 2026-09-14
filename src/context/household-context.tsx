@@ -323,7 +323,13 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
   const resolveInventoryAlert = useCallback(async (id: string) => {
     await dataProvider.resolveInventoryAlert(id);
-    setInventoryAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, resolved: true } : a)));
+    setInventoryAlerts((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? { ...a, resolved: true, status: "resolved" as const, resolved_at: new Date().toISOString() }
+          : a
+      )
+    );
   }, []);
 
   const value = useMemo<HouseholdContextValue>(

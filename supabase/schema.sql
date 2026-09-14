@@ -112,11 +112,17 @@ create table if not exists inventory_alerts (
   -- src/types/database.ts is the source of truth for the allowed values.
   item_type text not null,
   note text,
+  -- `resolved` predates `status` (Phase 50) and is kept in sync with it rather
+  -- than dropped, so rows written by either generation of the app read back
+  -- correctly. See src/lib/inventory-status.ts.
   resolved boolean not null default false,
+  status text not null default 'pending',
+  resolved_at timestamptz,
   created_at timestamptz not null default now()
 );
 
 create index if not exists inventory_alerts_pet_id_idx on inventory_alerts(pet_id);
+create index if not exists inventory_alerts_status_idx on inventory_alerts(status);
 create index if not exists inventory_alerts_resolved_idx on inventory_alerts(resolved);
 
 -- ============================================================================

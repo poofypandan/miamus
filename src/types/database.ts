@@ -4,6 +4,7 @@ export type FrequencyType = "interval" | "fixed_time" | "weekly";
 export type RecordType = "vaccine" | "vet" | "medication" | "weight";
 export type ItemType = "food" | "medicine" | "treats" | "shampoo" | "other";
 export type ProposalStatus = "pending" | "approved" | "rejected";
+export type AlertStatus = "pending" | "resolved";
 
 // Plain `type` aliases, not `interface` — interfaces don't structurally
 // satisfy `Record<string, unknown>`, which postgrest-js's GenericTable
@@ -72,7 +73,14 @@ export type InventoryAlert = {
   pet_id: string | null;
   item_type: ItemType;
   note: string | null;
+  // Predates `status`. Kept in sync by resolveInventoryAlert so older code
+  // paths and any row written before Phase 50 still read correctly — see
+  // lib/inventory-status.ts for how the two are reconciled.
   resolved: boolean;
+  // Optional because PostgREST simply omits both fields until the Phase 50
+  // migration has been applied.
+  status?: AlertStatus | null;
+  resolved_at?: string | null;
   created_at: string;
 };
 
