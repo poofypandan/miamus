@@ -71,7 +71,9 @@ function TimelineAvatarStatus({ item, pets }: { item: AgendaItem; pets: TaskEnti
         log={item.log}
         title={item.title}
         entityName={pet.name}
-        className="size-12 rounded-full ring-2 ring-background"
+        // Sits shoulder-to-shoulder with MiniPetAvatar in the same cluster, so
+        // it has to take the same corner or the row reads as mixed shapes.
+        className="size-12 rounded-xl ring-2 ring-background"
       />
     );
   }

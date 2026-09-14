@@ -18,7 +18,12 @@ export function MiniPetAvatar({ pet, className }: { pet: TaskEntity; className?:
       <img
         src={meta.avatar_url}
         alt={pet.name}
-        className={cn("size-12 shrink-0 rounded-full border border-gray-200 object-cover", className)}
+        // Squircle by default since Phase 59. aspect-square + object-cover stay
+        // so a portrait photo is cropped to the box rather than distorted.
+        className={cn(
+          "size-12 aspect-square shrink-0 rounded-xl border border-gray-200 object-cover",
+          className
+        )}
       />
     );
   }
@@ -26,7 +31,7 @@ export function MiniPetAvatar({ pet, className }: { pet: TaskEntity; className?:
   return (
     <div
       className={cn(
-        "flex size-12 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-gray-100 text-gray-400",
+        "flex size-12 aspect-square shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-gray-100 text-gray-400",
         className
       )}
     >

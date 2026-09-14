@@ -107,11 +107,11 @@ export function PetProfileSheet() {
             <SheetHeader className="gap-0 px-0 pt-2">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  {/* rounded-2xl overrides MiniPetAvatar's own rounded-full via
-                      tailwind-merge — deliberately only here, since the circle
-                      is still right for the avatar clusters in the timeline and
-                      on photo tiles. Tappable only when there is a real photo
-                      to open; the fallback Dog glyph has nothing to expand. */}
+                  {/* MiniPetAvatar is a squircle natively since Phase 59, so no
+                      shape override here — only the larger corner that suits an
+                      80px header portrait. Tappable only when there is a real
+                      photo to open; the fallback Dog glyph has nothing to
+                      expand. */}
                   {avatarUrl ? (
                     <button
                       type="button"
