@@ -9,10 +9,17 @@ import { formatDateLocal, isScheduleActiveOn } from "@/lib/scheduleEngine";
 /** How far ahead the ribbon badges look. */
 export const SPECIAL_EVENT_HORIZON_DAYS = 30;
 
+// Grooming visits and one-offs only.
+//
 // Meals and the potty routine run every day for every dog, so badging them
-// would mark every square and say nothing. What earns a dot is the exceptional
-// stuff — a course of medicine, a grooming visit, a one-off.
-const SPECIAL_CATEGORIES = new Set(["medication", "grooming", "temporary"]);
+// would mark every square and say nothing. Medication was dropped for the same
+// reason in practice: a course runs daily for its whole duration, so a week of
+// antibiotics badged the entire week and drowned out the occasional visit the
+// dot is meant to flag.
+//
+// "temporary" is this codebase's id for the "Others" category (see
+// ScheduleCategory in lib/schedule-categories) — there is no "other".
+const SPECIAL_CATEGORIES = new Set(["grooming", "temporary"]);
 
 /**
  * Dates within the horizon that carry at least one non-routine event, as

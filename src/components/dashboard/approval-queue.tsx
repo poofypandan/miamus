@@ -8,7 +8,8 @@ import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
 import { categoryIcon, groomingTitle, medicationTitle } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
-import type { RoutineProposal, ScheduleCategoryName } from "@/types/database";
+import { groupProposals, type ProposalBatch } from "@/lib/proposal-batches";
+import type { ScheduleCategoryName } from "@/types/database";
 
 // Rebuilds the title the way ScheduleEditor writes it, so an approved proposal
 // lands in the category the staff member picked. categorizeSchedule reads these
@@ -19,35 +20,6 @@ function scheduleTitleFor(category: ScheduleCategoryName, title: string): string
   if (category === "medication") return medicationTitle(title);
   if (category === "grooming") return groomingTitle(title);
   return title;
-}
-
-interface ProposalBatch {
-  key: string;
-  proposals: RoutineProposal[];
-}
-
-/**
- * One card per submission rather than per row.
- *
- * `batch_id` groups the rows of a single multi-dose submission. Proposals
- * filed before Phase 52 have none, so they fall back to pet + title + the
- * minute they were created — near enough to reunite a batch that predates the
- * column, and precise enough that two unrelated proposals don't merge.
- */
-function groupProposals(proposals: RoutineProposal[]): ProposalBatch[] {
-  const batches = new Map<string, RoutineProposal[]>();
-  for (const proposal of proposals) {
-    const key =
-      proposal.batch_id ??
-      `${proposal.pet_id}|${proposal.title}|${proposal.created_at.slice(0, 16)}`;
-    const existing = batches.get(key);
-    if (existing) existing.push(proposal);
-    else batches.set(key, [proposal]);
-  }
-  return [...batches.entries()].map(([key, rows]) => ({
-    key,
-    proposals: [...rows].sort((a, b) => a.time.localeCompare(b.time)),
-  }));
 }
 
 // Owner-facing, so entirely English per the Phase 46 language boundary.
