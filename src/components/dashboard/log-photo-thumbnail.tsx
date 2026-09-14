@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { categoryIcon, describeLog } from "@/lib/schedule-categories";
@@ -50,6 +51,9 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
   const tap = useTapGuard();
+
+  // Back dismisses the lightbox instead of navigating off the dashboard.
+  useBackToClose(lightboxOpen, () => setLightboxOpen(false));
 
   const today = formatDateLocal(new Date());
   const canDelete = userRole === "owner" || formatDateLocal(new Date(log.completed_at)) === today;

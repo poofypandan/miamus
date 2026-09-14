@@ -64,7 +64,9 @@ export default function Home() {
       <PinModal
         open={pinOpen}
         onOpenChange={setPinOpen}
-        onUnlocked={() => router.push("/dashboard")}
+        // replace, not push: the landing screen must not sit behind the
+        // dashboard in history, or Back drops an owner straight back out to it.
+        onUnlocked={() => router.replace("/dashboard")}
       />
     </main>
   );

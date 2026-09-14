@@ -1,10 +1,21 @@
 "use client";
 
-import { Skeleton } from "@/components/ui/skeleton";
-import { DateRibbon } from "@/components/date-ribbon";
-import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
+import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { DateRibbon } from "@/components/date-ribbon";
+import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
+import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { dayLabel } from "@/lib/date-label";
 
@@ -46,7 +57,72 @@ export function SchedulesTab() {
         recenterKey={searchParams.get("tab") ?? "feed"}
       />
       <h2 className="text-sm font-medium text-gray-500">{label}&apos;s Timeline</h2>
+      <ManageRoutinesButton />
       <UnifiedTimeline />
     </div>
+  );
+}
+
+// Routines are defined per pet — there is no household-wide routine editor —
+// so this opens a picker and hands off to that pet's profile sheet, which is
+// where the full ScheduleEditor (and its own "Manage Routines" sheet) lives.
+function ManageRoutinesButton() {
+  const { pets, setActivePetId } = useHousehold();
+  const [open, setOpen] = useState(false);
+  const pendingPet = useRef<string | null>(null);
+
+  useBackToClose(open, () => {
+    setOpen(false);
+    // Handing off to the profile sheet happens here, after the pop has landed,
+    // so the sheet pushes its history entry onto a settled stack. Closing the
+    // picker directly instead would leave an async history.back() in flight
+    // that pops the sheet's brand-new entry and shuts it again immediately.
+    if (pendingPet.current) {
+      setActivePetId(pendingPet.current);
+      pendingPet.current = null;
+    }
+  });
+
+  function choosePet(petId: string) {
+    pendingPet.current = petId;
+    // Routed through Back on purpose — see the comment above.
+    window.history.back();
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-center rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-600 active:bg-gray-50"
+      >
+        Manage Routines
+      </button>
+
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="bottom" className="gap-0 rounded-t-2xl px-4 pb-10">
+          <SheetHeader className="px-0">
+            <SheetTitle>Manage Routines</SheetTitle>
+            <SheetDescription>
+              Pick a pet to edit their meals, potty routine, medication and grooming.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-col gap-2">
+            {pets.map((pet) => (
+              <button
+                key={pet.id}
+                type="button"
+                onClick={() => choosePet(pet.id)}
+                className="flex min-h-[56px] w-full items-center gap-3 rounded-xl border px-3 text-left active:bg-gray-50"
+              >
+                <MiniPetAvatar pet={pet} className="size-10" />
+                <span className="flex-1 font-medium">{pet.name}</span>
+                <ChevronRight className="size-5 shrink-0 text-gray-400" />
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

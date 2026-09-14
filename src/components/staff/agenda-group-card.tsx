@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
 import { compressPhoto } from "@/lib/image";
 import { categoryIcon } from "@/lib/schedule-categories";
@@ -58,6 +59,14 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // One guard per card is enough — only one finger is ever mid-gesture, and
   // touchstart re-arms it for whichever tile that gesture began on.
   const tap = useTapGuard();
+
+  // Back dismisses the photo lightbox rather than leaving the staff view.
+  // Clears the nested delete confirmation too, so Back can't leave that
+  // stranded on screen with its lightbox gone.
+  useBackToClose(!!lightboxUrl, () => {
+    setConfirmDelete(false);
+    setLightboxUrl(null);
+  });
 
   const pendingItems = group.items.filter((i) => i.status !== "completed");
   const allDone = pendingItems.length === 0;

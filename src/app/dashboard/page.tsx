@@ -70,6 +70,27 @@ function DashboardCanvas() {
     null
   );
 
+  // Each panel's natural content height, watched live so the track resizes when
+  // a tab's own content changes (browsing to another date, photos loading in).
+  const panelEls = useRef<(HTMLDivElement | null)[]>([]);
+  const [panelHeights, setPanelHeights] = useState<number[]>([]);
+  const activeHeight = panelHeights[visualIndex] ?? 0;
+
+  function setPanelRef(index: number) {
+    return (el: HTMLDivElement | null) => {
+      panelEls.current[index] = el;
+    };
+  }
+
+  useEffect(() => {
+    const measure = () =>
+      setPanelHeights(panelEls.current.map((el) => el?.getBoundingClientRect().height ?? 0));
+    const observer = new ResizeObserver(measure);
+    panelEls.current.forEach((el) => el && observer.observe(el));
+    measure();
+    return () => observer.disconnect();
+  }, []);
+
   function snapTo(index: number) {
     const width = containerRef.current?.offsetWidth ?? 0;
     animate(x, -index * width, SPRING);
@@ -140,21 +161,33 @@ function DashboardCanvas() {
           makes it an implicit vertical clipping context, so it still needs a
           little headroom or the first card's shadow gets sheared off. 8px is
           enough for that while pulling the headers up toward the tabs. */}
-      <div ref={containerRef} className="relative w-full overflow-x-hidden pt-2 pb-4">
+      {/* overflow-hidden, not just overflow-x-hidden: the track below is pinned
+          to the *active* panel's height, so the other panel — which may be far
+          taller — overflows it. Left to the implicit overflow-y:auto that
+          overflow-x:hidden brings with it, that overflow would turn this box
+          into its own scroller and simply move the dead space rather than
+          remove it. */}
+      <div ref={containerRef} className="relative w-full overflow-hidden pt-2 pb-4">
         {/* Track width and panel widths are the inverse of DASHBOARD_TABS.length
-            (2 tabs -> 200% / w-1/2), so each panel is exactly one viewport. */}
+            (2 tabs -> 200% / w-1/2), so each panel is exactly one viewport.
+            items-start stops the shorter panel being stretched to match the
+            taller one, and the explicit height keeps the page itself only as
+            long as whatever tab is actually on screen — without it the Schedule
+            tab inherited Daily Feed's height and trailed ~700px of white space.
+            Height is the panel's own full content height, never a viewport
+            cap, so the page keeps scrolling normally. */}
         <motion.div
-          className="flex w-[200%] touch-pan-y select-none"
-          style={{ x }}
+          className="flex w-[200%] touch-pan-y items-start select-none"
+          style={{ x, height: activeHeight || undefined }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         >
-          <div className="w-1/2 px-4">
+          <div ref={setPanelRef(0)} className="w-1/2 px-4">
             <DailyFeedTab />
           </div>
-          <div className="w-1/2 px-4">
+          <div ref={setPanelRef(1)} className="w-1/2 px-4">
             <SchedulesTab />
           </div>
         </motion.div>

@@ -19,6 +19,7 @@ import { ScheduleEditor } from "@/components/dashboard/schedule-editor";
 import { HealthRecordCard } from "@/components/dashboard/health-record-card";
 import { HealthRecordForm } from "@/components/dashboard/health-record-form";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
@@ -46,6 +47,9 @@ export function PetProfileSheet() {
   const [addRecordOpen, setAddRecordOpen] = useState(false);
   const pet = pets.find((p) => p.id === activePetId) ?? null;
   const canManagePets = userRole === "owner";
+
+  // Back closes the sheet rather than leaving the dashboard behind it.
+  useBackToClose(!!pet, () => setActivePetId(null));
 
   const dateStr = formatDateLocal(selectedDate);
   const label = dayLabel(selectedDate);
