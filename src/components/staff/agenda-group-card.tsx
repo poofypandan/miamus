@@ -21,6 +21,7 @@ import { useTapGuard } from "@/hooks/use-tap-guard";
 import { compressPhoto } from "@/lib/image";
 import { categoryIcon } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
+import { UNDO_WINDOW_MS } from "@/lib/undo-window";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { TaskLog } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -31,9 +32,6 @@ interface PendingCapture {
   selected: Set<string>; // entityId
 }
 
-// How long after logging a photo staff can still remove it themselves.
-const DELETE_WINDOW_MS = 15 * 60 * 1000;
-
 // NOTE: the window is measured from completed_at, not created_at — task_logs
 // has no created_at column (see supabase/schema.sql), so reading one would
 // yield NaN and quietly disable deletion everywhere. For a photo taken in the
@@ -41,7 +39,7 @@ const DELETE_WINDOW_MS = 15 * 60 * 1000;
 // offline queue, completed_at is when the task actually happened, which is the
 // timestamp staff would expect this window to run from.
 function deletableUntil(completedAt: string): number {
-  return new Date(completedAt).getTime() + DELETE_WINDOW_MS;
+  return new Date(completedAt).getTime() + UNDO_WINDOW_MS;
 }
 
 export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
@@ -56,6 +54,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // Lets a completed group be re-opened from its compact row (see below).
+  const [expanded, setExpanded] = useState(false);
   // One guard per card is enough — only one finger is ever mid-gesture, and
   // touchstart re-arms it for whichever tile that gesture began on.
   const tap = useTapGuard();
@@ -197,7 +197,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     // Re-checked at the moment of the tap, not just at render: a phone left
     // open on this screen must not be able to delete past the window.
     if (Date.now() >= deletableUntil(lightbox.at)) {
-      toast.error("Batas waktu 15 menit sudah lewat");
+      toast.error("Batas waktu 5 menit sudah lewat");
       setConfirmDelete(false);
       setNow(Date.now());
       return;
@@ -224,6 +224,36 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   }
 
   const CategoryIcon = categoryIcon(group.category);
+
+  // A finished slot collapses to a single line. A staff member's day is mostly
+  // finished slots by the afternoon, and at full height they pushed the two or
+  // three rows that still need doing off the bottom of the screen.
+  //
+  // Tappable to expand rather than permanently collapsed: the photos live in
+  // the full layout, and with them the 5-minute undo. Hiding them outright
+  // would put the undo out of reach exactly when a group has just completed,
+  // which is when a mistake gets noticed. Safe to return before the dialogs
+  // below — none of them can be open while this row is collapsed, and every
+  // hook has already run above.
+  if (allDone && !expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        aria-label={`Buka ${group.title} ${formatTime12h(group.time)}`}
+        className="flex w-full items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5 text-left active:bg-emerald-500/10"
+      >
+        <CategoryIcon className="size-4 shrink-0 text-emerald-700" />
+        <span className="shrink-0 text-sm font-medium tabular-nums">
+          {formatTime12h(group.time)}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{group.title}</span>
+        <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-700">
+          <CheckCircle2 className="size-4" /> Semua Selesai
+        </span>
+      </button>
+    );
+  }
 
   return (
     <>
@@ -463,7 +493,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 </Button>
               ) : (
                 <p className="text-center text-xs text-muted-foreground">
-                  Foto hanya bisa dihapus dalam 15 menit setelah dicatat. Hubungi pemilik untuk
+                  Foto hanya bisa dihapus dalam 5 menit setelah dicatat. Hubungi pemilik untuk
                   menghapus foto lama.
                 </p>
               )}

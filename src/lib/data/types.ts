@@ -102,7 +102,9 @@ export interface DataProvider {
   listInventoryAlerts(): Promise<InventoryAlert[]>;
   createInventoryAlert(input: CreateInventoryAlertInput): Promise<InventoryAlert>;
   resolveInventoryAlert(id: string): Promise<void>;
+  deleteInventoryAlert(id: string): Promise<void>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
   setRoutineProposalStatus(id: string, status: ProposalStatus): Promise<RoutineProposal>;
+  deleteRoutineProposal(id: string): Promise<void>;
 }

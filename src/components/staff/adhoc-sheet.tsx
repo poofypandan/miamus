@@ -81,11 +81,12 @@ export function AdHocSheet() {
         if (!next) reset();
       }}
     >
+      {/* Was a floating action button. It now sits in the Laporan & Usulan
+          stack with the other two manual actions, styled to match them, so all
+          three inputs read as one group instead of one of them hovering over
+          the agenda and covering the last task of the day. */}
       <SheetTrigger asChild>
-        <Button
-          size="lg"
-          className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-40 min-h-[48px] -translate-x-1/2 gap-1.5 rounded-full px-5 shadow-lg"
-        >
+        <Button variant="outline" className="min-h-[48px] w-full">
           <Plus /> Catat Ekstra
         </Button>
       </SheetTrigger>

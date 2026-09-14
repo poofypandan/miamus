@@ -165,6 +165,10 @@ export const supabaseProvider: DataProvider = {
       .eq("id", id);
     if (error) throw error;
   },
+  async deleteInventoryAlert(id) {
+    const { error } = await client().from("inventory_alerts").delete().eq("id", id);
+    if (error) throw error;
+  },
   async listRoutineProposals() {
     const { data, error } = await client()
       .from("routine_proposals")
@@ -181,6 +185,10 @@ export const supabaseProvider: DataProvider = {
       .single();
     if (error) throw error;
     return data;
+  },
+  async deleteRoutineProposal(id) {
+    const { error } = await client().from("routine_proposals").delete().eq("id", id);
+    if (error) throw error;
   },
   async setRoutineProposalStatus(id, status) {
     const { data, error } = await client()

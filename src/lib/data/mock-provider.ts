@@ -254,6 +254,12 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(undefined);
   },
+  async deleteInventoryAlert(id) {
+    const db = loadDB();
+    db.inventoryAlerts = db.inventoryAlerts.filter((a) => a.id !== id);
+    saveDB(db);
+    return delay(undefined);
+  },
   async listRoutineProposals() {
     return delay(loadDB().routineProposals);
   },
@@ -273,6 +279,12 @@ export const mockProvider: DataProvider = {
     db.routineProposals.unshift(proposal);
     saveDB(db);
     return delay(proposal);
+  },
+  async deleteRoutineProposal(id) {
+    const db = loadDB();
+    db.routineProposals = db.routineProposals.filter((r) => r.id !== id);
+    saveDB(db);
+    return delay(undefined);
   },
   async setRoutineProposalStatus(id, status) {
     const db = loadDB();

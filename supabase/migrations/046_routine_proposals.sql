@@ -33,8 +33,9 @@ create index if not exists routine_proposals_pet_id_idx on routine_proposals(pet
 -- ============================================================================
 -- RLS — same posture as the Phase 32 policies on the other operational tables.
 -- SELECT/INSERT stay open so staff can file proposals and everyone can read
--- the queue. UPDATE is needed for approve/reject. No DELETE policy: a decided
--- proposal is an audit trail, and nothing in the app ever deletes one.
+-- the queue. UPDATE is needed for approve/reject. DELETE is scoped to the
+-- first five minutes and to proposals still pending — that is the Phase 47
+-- undo window. Once the owner has decided, the row is an audit trail.
 -- ============================================================================
 alter table routine_proposals enable row level security;
 
@@ -49,3 +50,8 @@ create policy "anon_insert_routine_proposals" on routine_proposals
 drop policy if exists "anon_update_routine_proposals" on routine_proposals;
 create policy "anon_update_routine_proposals" on routine_proposals
   for update to anon using (true) with check (true);
+
+drop policy if exists "anon_delete_recent_routine_proposals" on routine_proposals;
+create policy "anon_delete_recent_routine_proposals" on routine_proposals
+  for delete to anon
+  using (status = 'pending' and created_at > now() - interval '5 minutes');

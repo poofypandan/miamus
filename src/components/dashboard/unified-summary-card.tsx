@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, ChevronRight, Clock, Droplets, Utensils, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, Droplets, Plus, Utensils, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
@@ -35,16 +35,16 @@ export function UnifiedSummaryCard() {
         </div>
 
         {/* Deliberately the quiet one: adding or editing pets is a rare setup
-            task, so it stays a light outline and leaves the solid dark fill to
+            task, so it sits back in grey and leaves the solid dark fill to
             Manage Routines, which is the frequent action. */}
         {canManagePets && (
           <Button
             onClick={() => setAddOpen(true)}
             variant="outline"
             size="lg"
-            className="mt-4 min-h-[52px] w-full border-gray-200 bg-white text-base text-gray-900 hover:bg-gray-50"
+            className="mt-4 min-h-[52px] w-full border-gray-200 bg-gray-50 text-base text-gray-500 hover:bg-gray-100 hover:text-gray-700"
           >
-            Manage Pets
+            <Plus /> Manage Pets
           </Button>
         )}
       </CardContent>

@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
-import { AdHocSheet } from "@/components/staff/adhoc-sheet";
 import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
@@ -22,7 +21,7 @@ export default function StaffPage() {
   );
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col gap-4 bg-slate-50 px-4 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col gap-4 bg-slate-50 px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       <header className="flex flex-col gap-3">
         <h1 className="text-xl font-semibold">Tugas Hari Ini</h1>
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
@@ -45,8 +44,6 @@ export default function StaffPage() {
       </main>
 
       <StaffReportsPanel />
-
-      <AdHocSheet />
     </div>
   );
 }

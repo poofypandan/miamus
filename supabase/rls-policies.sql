@@ -49,7 +49,8 @@
 --   master_schedules  select, insert, update, delete
 --   task_logs         select, insert, delete          -- never updates
 --   medical_records   select, insert                  -- never updates/deletes
---   inventory_alerts  select, insert, update          -- never deletes
+--   inventory_alerts  select, insert, update, delete (5-minute undo window)
+--   routine_proposals select, insert, update, delete (5-minute undo window)
 --   staff_profiles    (untouched — Phase 3 placeholder)
 --
 -- Everything in part B is derived from that list, so applying it cannot break
@@ -148,14 +149,18 @@ create policy "anon_insert_medical_records" on public.medical_records
   for insert to anon with check (true);
 
 -- --- inventory_alerts -------------------------------------------------------
--- Staff raise alerts, owners mark them resolved. Nothing ever deletes one, so
--- there is no DELETE policy: an alert can be resolved but not disappeared.
+-- Staff raise alerts, owners mark them resolved. DELETE is scoped to the first
+-- five minutes: Phase 47 lets a staff member take back a report they filed by
+-- mistake, and that window is the whole feature. Anything older is a record
+-- the owner may already have acted on, so it can be resolved but not erased.
 create policy "anon_select_inventory_alerts" on public.inventory_alerts
   for select to anon using (true);
 create policy "anon_insert_inventory_alerts" on public.inventory_alerts
   for insert to anon with check (true);
 create policy "anon_update_inventory_alerts" on public.inventory_alerts
   for update to anon using (true) with check (true);
+create policy "anon_delete_recent_inventory_alerts" on public.inventory_alerts
+  for delete to anon using (created_at > now() - interval '5 minutes');
 
 -- --- staff_profiles ---------------------------------------------------------
 -- Phase 3 placeholder the client never touches. Read-only until that phase

@@ -73,6 +73,8 @@ interface HouseholdContextValue {
   flagLowStock: (input: CreateInventoryAlertInput) => Promise<InventoryAlert>;
   resolveInventoryAlert: (id: string) => Promise<void>;
   submitRoutineProposal: (input: CreateRoutineProposalInput) => Promise<RoutineProposal>;
+  undoInventoryAlert: (id: string) => Promise<void>;
+  undoRoutineProposal: (id: string) => Promise<void>;
   decideRoutineProposal: (id: string, status: Exclude<ProposalStatus, "pending">) => Promise<void>;
 }
 
@@ -295,6 +297,16 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     return alert;
   }, []);
 
+  const undoInventoryAlert = useCallback(async (id: string) => {
+    await dataProvider.deleteInventoryAlert(id);
+    setInventoryAlerts((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  const undoRoutineProposal = useCallback(async (id: string) => {
+    await dataProvider.deleteRoutineProposal(id);
+    setRoutineProposals((prev) => prev.filter((r) => r.id !== id));
+  }, []);
+
   const submitRoutineProposal = useCallback(async (input: CreateRoutineProposalInput) => {
     const proposal = await dataProvider.createRoutineProposal(input);
     setRoutineProposals((prev) => [proposal, ...prev]);
@@ -349,6 +361,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       flagLowStock,
       resolveInventoryAlert,
       submitRoutineProposal,
+      undoInventoryAlert,
+      undoRoutineProposal,
       decideRoutineProposal,
     }),
     [
@@ -382,6 +396,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       flagLowStock,
       resolveInventoryAlert,
       submitRoutineProposal,
+      undoInventoryAlert,
+      undoRoutineProposal,
       decideRoutineProposal,
     ]
   );
