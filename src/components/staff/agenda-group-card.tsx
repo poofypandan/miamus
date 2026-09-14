@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Camera, CheckCircle2, Loader2, Trash2 } from "lucide-react";
+import { Camera, CheckCircle2, ChevronDown, ChevronUp, Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { Button } from "@/components/ui/button";
@@ -240,7 +240,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        aria-label={`Buka ${group.title} ${formatTime12h(group.time)}`}
+        aria-expanded={false}
+        aria-label={`Tampilkan detail ${group.title} ${formatTime12h(group.time)}`}
         className="flex w-full items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5 text-left active:bg-emerald-500/10"
       >
         <CategoryIcon className="size-4 shrink-0 text-emerald-700" />
@@ -251,6 +252,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-700">
           <CheckCircle2 className="size-4" /> Semua Selesai
         </span>
+        {/* The row gives no other hint that it opens — without this it reads as
+            a static status line and the photos (and their undo) stay hidden. */}
+        <ChevronDown className="size-4 shrink-0 text-emerald-700" />
       </button>
     );
   }
@@ -259,10 +263,32 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     <>
       <Card className="gap-3 py-4">
         <CardHeader className="px-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CategoryIcon className="size-4" />
-            <span>{formatTime12h(group.time)}</span>
-            <span className="font-normal text-muted-foreground">· {group.title}</span>
+          {/* Only a completed group has something to collapse back to, so the
+              header is a button there and plain text everywhere else — a
+              pending card has no compact form to return to. */}
+          <CardTitle className="text-base">
+            {allDone ? (
+              <button
+                type="button"
+                onClick={() => setExpanded(false)}
+                aria-expanded
+                aria-label={`Sembunyikan detail ${group.title} ${formatTime12h(group.time)}`}
+                className="flex w-full items-center gap-2 text-left"
+              >
+                <CategoryIcon className="size-4 shrink-0" />
+                <span>{formatTime12h(group.time)}</span>
+                <span className="min-w-0 flex-1 truncate font-normal text-muted-foreground">
+                  · {group.title}
+                </span>
+                <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
+              </button>
+            ) : (
+              <span className="flex items-center gap-2">
+                <CategoryIcon className="size-4" />
+                <span>{formatTime12h(group.time)}</span>
+                <span className="font-normal text-muted-foreground">· {group.title}</span>
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 px-4">
@@ -331,41 +357,51 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             </div>
           )}
 
-          <label
-            className={cn(
-              "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors active:scale-[0.99]",
-              allDone
-                ? "cursor-default border-emerald-500/40 bg-emerald-500/5 text-emerald-600"
-                : anyOverdue
+          {/* A completed group's footer is a real button that collapses the
+              card — the second way back, alongside the header. It stops being
+              a <label> here on purpose: the file input it used to wrap is
+              disabled once everything is done, so a label would have been an
+              inert strip of text sitting exactly where staff expect to tap. */}
+          {allDone ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              aria-expanded
+              aria-label={`Sembunyikan detail ${group.title} ${formatTime12h(group.time)}`}
+              className="flex min-h-[48px] cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/5 text-sm font-medium text-emerald-600 transition-colors active:scale-[0.99]"
+            >
+              <CheckCircle2 className="size-5" /> Semua Selesai
+              <ChevronUp className="size-4" />
+            </button>
+          ) : (
+            <label
+              className={cn(
+                "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors active:scale-[0.99]",
+                anyOverdue
                   ? "cursor-pointer border-destructive/40 bg-destructive/5"
                   : "cursor-pointer border-border bg-card"
-            )}
-          >
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              disabled={allDone || busy}
-              onChange={handleFile}
-            />
-            {busy ? (
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            ) : allDone ? (
-              // The thumbnail that used to live here is now the full strip
-              // above, so this stays a plain confirmation line.
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="size-5" /> Semua Selesai
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5">
-                <Camera className="size-5" />
-                {pendingItems.length > 1
-                  ? `Ambil Foto untuk ${pendingItems.length} Anjing`
-                  : "Ambil Foto untuk Selesai"}
-              </span>
-            )}
-          </label>
+              )}
+            >
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                disabled={busy}
+                onChange={handleFile}
+              />
+              {busy ? (
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <Camera className="size-5" />
+                  {pendingItems.length > 1
+                    ? `Ambil Foto untuk ${pendingItems.length} Anjing`
+                    : "Ambil Foto untuk Selesai"}
+                </span>
+              )}
+            </label>
+          )}
         </CardContent>
       </Card>
 
