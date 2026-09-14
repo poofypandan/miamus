@@ -5,8 +5,8 @@
  */
 export const MODULES = {
   pets: true,
-  household: false, // Hides cleaning/laundry UI until Phase 2
-  staff: false, // Hides attendance UI until Phase 3
+  household: true, // Master Inventory, Phase 60C
+  staff: true, // Operational audit log, Phase 60D
 } as const;
 
 export type ModuleKey = keyof typeof MODULES;

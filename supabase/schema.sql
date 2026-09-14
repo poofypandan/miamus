@@ -151,6 +151,20 @@ create index if not exists routine_proposals_pet_id_idx on routine_proposals(pet
 create index if not exists routine_proposals_batch_id_idx on routine_proposals(batch_id);
 
 -- ============================================================================
+-- inventory_items
+-- The household's catalogue of products it buys, curated by the owner and
+-- read by staff when filing a low-stock report. Added in migrations/060.
+-- ============================================================================
+create table if not exists inventory_items (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category text not null default 'other',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists inventory_items_category_idx on inventory_items(category);
+
+-- ============================================================================
 -- staff_profiles
 -- Placeholder for Phase 3 (staff attendance/tasks). Intentionally empty
 -- beyond an id/timestamp until that phase is built.

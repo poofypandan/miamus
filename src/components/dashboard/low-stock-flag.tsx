@@ -53,6 +53,8 @@ const COPY = {
     },
     petOptional: "Pet (optional)",
     noPet: "General / household item",
+    knownItem: "Known item (optional)",
+    knownPlaceholder: "Pick from the household list",
   },
   id: {
     trigger: "Laporkan Stok Menipis",
@@ -76,6 +78,8 @@ const COPY = {
     },
     petOptional: "Anjing (opsional)",
     noPet: "Barang umum rumah",
+    knownItem: "Barang yang sudah terdaftar (opsional)",
+    knownPlaceholder: "Pilih dari daftar rumah",
   },
 } as const;
 
@@ -92,7 +96,7 @@ const NO_PET = "__none__";
 
 export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) {
   const t = COPY[locale];
-  const { pets, activePetId, flagLowStock } = useHousehold();
+  const { pets, activePetId, flagLowStock, inventoryItems } = useHousehold();
   const [open, setOpen] = useState(false);
   useBackToClose(open, () => setOpen(false));
   const [petId, setPetId] = useState("");
@@ -183,6 +187,37 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
               ))}
             </div>
           </div>
+
+          {/* Only appears once the owner has built a catalogue — before the
+              Phase 60 migration, or on a fresh household, the form is exactly
+              what it was. Picking an item prefills the note and its category,
+              both still editable, so this is a shortcut rather than a new
+              required step. */}
+          {inventoryItems.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">{t.knownItem}</Label>
+              <Select
+                value=""
+                onValueChange={(id) => {
+                  const item = inventoryItems.find((i) => i.id === id);
+                  if (!item) return;
+                  setItemType(item.category);
+                  setNote(item.name);
+                }}
+              >
+                <SelectTrigger className="min-h-[48px] w-full">
+                  <SelectValue placeholder={t.knownPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {inventoryItems.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">{t.note}</Label>

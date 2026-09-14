@@ -198,6 +198,34 @@ export const supabaseProvider: DataProvider = {
       );
     }
   },
+  async listInventoryItems() {
+    const { data, error } = await client()
+      .from("inventory_items")
+      .select("*")
+      .order("name");
+    if (error) throw error;
+    return data;
+  },
+  async createInventoryItem(input) {
+    const { data, error } = await client()
+      .from("inventory_items")
+      .insert(input)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteInventoryItem(id) {
+    // .select() so an RLS-filtered delete (200 with zero rows) surfaces as a
+    // failure instead of a silent no-op — same reasoning as Phase 52.
+    const { data, error } = await client()
+      .from("inventory_items")
+      .delete()
+      .eq("id", id)
+      .select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Item was not deleted.");
+  },
   async listRoutineProposals() {
     const { data, error } = await client()
       .from("routine_proposals")

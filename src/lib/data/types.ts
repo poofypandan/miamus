@@ -10,6 +10,7 @@ import type {
   RecordType,
   ItemType,
   RoutineProposal,
+  InventoryItem,
   ProposalStatus,
   ScheduleCategoryName,
 } from "@/types/database";
@@ -104,6 +105,9 @@ export interface DataProvider {
   createInventoryAlert(input: CreateInventoryAlertInput): Promise<InventoryAlert>;
   resolveInventoryAlert(id: string): Promise<void>;
   deleteInventoryAlert(id: string): Promise<void>;
+  listInventoryItems(): Promise<InventoryItem[]>;
+  createInventoryItem(input: { name: string; category: ItemType }): Promise<InventoryItem>;
+  deleteInventoryItem(id: string): Promise<void>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
   createRoutineProposalsBatch(inputs: CreateRoutineProposalInput[]): Promise<RoutineProposal[]>;

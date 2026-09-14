@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { MODULES } from "@/config/modules";
 import { cn } from "@/lib/utils";
 import { tabIndex, type DashboardTab } from "@/lib/dashboard-tabs";
+import { moduleFromParam, type DashboardModule } from "@/lib/dashboard-modules";
 import { useHousehold } from "@/context/household-context";
 
 const SUB_NAV: { tab: DashboardTab; label: string }[] = [
@@ -17,6 +18,7 @@ const SUB_NAV: { tab: DashboardTab; label: string }[] = [
 export function TopNav() {
   const searchParams = useSearchParams();
   const activeIndex = tabIndex(searchParams.get("tab"));
+  const activeModule = moduleFromParam(searchParams.get("module"));
   const { userRole } = useHousehold();
   const isOwner = userRole === "owner";
 
@@ -33,9 +35,27 @@ export function TopNav() {
       </div>
 
       <div className="flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <ModuleTab icon={PawPrint} label="Pets" active enabled />
-        <ModuleTab icon={Home} label="Household" active={false} enabled={MODULES.household} />
-        <ModuleTab icon={Users} label="Staff" active={false} enabled={MODULES.staff} />
+        <ModuleTab
+          icon={PawPrint}
+          label="Pets"
+          module="pets"
+          active={activeModule === "pets"}
+          enabled={MODULES.pets}
+        />
+        <ModuleTab
+          icon={Home}
+          label="Household"
+          module="household"
+          active={activeModule === "household"}
+          enabled={MODULES.household}
+        />
+        <ModuleTab
+          icon={Users}
+          label="Staff"
+          module="staff"
+          active={activeModule === "staff"}
+          enabled={MODULES.staff}
+        />
       </div>
 
       {/* Staff only ever has the Daily Feed tab — a single-item tab row is
@@ -43,7 +63,7 @@ export function TopNav() {
           Each tab takes an equal share of the row via flex-1; there's no
           horizontal scroll to hide any more, since the tabs now always fit
           by construction however many there are. */}
-      {isOwner && (
+      {isOwner && activeModule === "pets" && (
         <nav className="flex w-full gap-1 px-4 pb-2">
           {SUB_NAV.map((item, index) => {
             const isActive = index === activeIndex;
@@ -72,32 +92,46 @@ export function TopNav() {
 function ModuleTab({
   icon: Icon,
   label,
+  module,
   active,
   enabled,
 }: {
   icon: LucideIcon;
   label: string;
+  module: DashboardModule;
   active: boolean;
   enabled: boolean;
 }) {
-  return (
-    <span
-      className={cn(
-        "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : enabled
-            ? "border-border text-foreground"
-            : "border-border/60 text-muted-foreground opacity-60"
-      )}
-    >
-      <Icon className="size-4" />
-      {label}
-      {!enabled && (
+  const className = cn(
+    "flex min-h-[32px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
+    active
+      ? "border-primary bg-primary text-primary-foreground"
+      : enabled
+        ? "border-border text-foreground"
+        : "border-border/60 text-muted-foreground opacity-60"
+  );
+
+  // A module that isn't built yet stays an inert span — nothing to navigate to.
+  if (!enabled) {
+    return (
+      <span className={className}>
+        <Icon className="size-4" />
+        {label}
         <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
           Soon
         </Badge>
-      )}
-    </span>
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={module === "pets" ? "/dashboard?tab=feed" : `/dashboard?module=${module}`}
+      scroll={false}
+      className={className}
+    >
+      <Icon className="size-4" />
+      {label}
+    </Link>
   );
 }

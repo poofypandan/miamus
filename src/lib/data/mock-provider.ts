@@ -5,6 +5,7 @@ import type {
   MedicalRecord,
   InventoryAlert,
   RoutineProposal,
+  InventoryItem,
 } from "@/types/database";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
@@ -18,6 +19,7 @@ interface MockDB {
   medicalRecords: MedicalRecord[];
   inventoryAlerts: InventoryAlert[];
   routineProposals: RoutineProposal[];
+  inventoryItems: InventoryItem[];
 }
 
 function freshDB(): MockDB {
@@ -28,6 +30,7 @@ function freshDB(): MockDB {
     medicalRecords: [],
     inventoryAlerts: [],
     routineProposals: [],
+    inventoryItems: [],
   };
 }
 
@@ -42,6 +45,7 @@ function loadDB(): MockDB {
         ...parsed,
         inventoryAlerts: parsed.inventoryAlerts ?? [],
         routineProposals: parsed.routineProposals ?? [],
+        inventoryItems: parsed.inventoryItems ?? [],
       };
     }
   } catch {
@@ -264,6 +268,27 @@ export const mockProvider: DataProvider = {
   async deleteInventoryAlert(id) {
     const db = loadDB();
     db.inventoryAlerts = db.inventoryAlerts.filter((a) => a.id !== id);
+    saveDB(db);
+    return delay(undefined);
+  },
+  async listInventoryItems() {
+    return delay(loadDB().inventoryItems);
+  },
+  async createInventoryItem(input) {
+    const db = loadDB();
+    const item: InventoryItem = {
+      id: uid("item"),
+      name: input.name,
+      category: input.category,
+      created_at: new Date().toISOString(),
+    };
+    db.inventoryItems.push(item);
+    saveDB(db);
+    return delay(item);
+  },
+  async deleteInventoryItem(id) {
+    const db = loadDB();
+    db.inventoryItems = db.inventoryItems.filter((i) => i.id !== id);
     saveDB(db);
     return delay(undefined);
   },

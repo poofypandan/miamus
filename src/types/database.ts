@@ -88,6 +88,16 @@ export type InventoryAlert = {
   created_at: string;
 };
 
+// One product the household stocks. inventory_alerts reference these by name
+// rather than by id — a report is a note about a thing running low, and must
+// survive the catalogue entry being removed.
+export type InventoryItem = {
+  id: string;
+  name: string;
+  category: ItemType;
+  created_at: string;
+};
+
 // A staff-submitted request for a new routine, awaiting the owner's decision.
 // Approving one is what creates the real master_schedules row — this table
 // never drives the agenda itself.
@@ -151,6 +161,12 @@ export interface Database {
         Row: InventoryAlert;
         Insert: Partial<InventoryAlert> & Pick<InventoryAlert, "item_type">;
         Update: Partial<InventoryAlert>;
+        Relationships: [];
+      };
+      inventory_items: {
+        Row: InventoryItem;
+        Insert: Partial<InventoryItem> & Pick<InventoryItem, "name">;
+        Update: Partial<InventoryItem>;
         Relationships: [];
       };
       routine_proposals: {

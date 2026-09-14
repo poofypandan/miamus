@@ -21,6 +21,8 @@ import type {
   MedicalRecord,
   InventoryAlert,
   RoutineProposal,
+  InventoryItem,
+  ItemType,
   ProposalStatus,
 } from "@/types/database";
 
@@ -39,6 +41,7 @@ interface HouseholdContextValue {
   medicalRecords: MedicalRecord[];
   inventoryAlerts: InventoryAlert[];
   routineProposals: RoutineProposal[];
+  inventoryItems: InventoryItem[];
   loading: boolean;
   isMockMode: boolean;
   // null = Unified Overview; a pet id = that pet's detail view. This is the
@@ -72,6 +75,8 @@ interface HouseholdContextValue {
   uploadPhoto: (file: File, pathPrefix: string) => Promise<string>;
   flagLowStock: (input: CreateInventoryAlertInput) => Promise<InventoryAlert>;
   resolveInventoryAlert: (id: string) => Promise<void>;
+  addInventoryItem: (input: { name: string; category: ItemType }) => Promise<InventoryItem>;
+  removeInventoryItem: (id: string) => Promise<void>;
   submitRoutineProposal: (input: CreateRoutineProposalInput) => Promise<RoutineProposal>;
   submitRoutineProposalsBatch: (inputs: CreateRoutineProposalInput[]) => Promise<RoutineProposal[]>;
   decideRoutineProposals: (
@@ -92,11 +97,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([]);
   const [routineProposals, setRoutineProposals] = useState<RoutineProposal[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [e, s, l, m, ia, rp] = await Promise.all([
+    const [e, s, l, m, ia, rp, ii] = await Promise.all([
       dataProvider.listEntities(),
       dataProvider.listSchedules(),
       dataProvider.listLogs(),
@@ -110,6 +116,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         console.warn("routine_proposals unavailable — run the Phase 46 migration", err);
         return [] as RoutineProposal[];
       }),
+      // Same treatment: inventory_items arrives with the Phase 60 migration,
+      // and a missing table must not take the whole dashboard down with it.
+      dataProvider.listInventoryItems().catch((err) => {
+        console.warn("inventory_items unavailable — run the Phase 60 migration", err);
+        return [] as InventoryItem[];
+      }),
     ]);
     setEntities(e);
     setSchedules(s);
@@ -117,6 +129,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setMedicalRecords(m);
     setInventoryAlerts(ia);
     setRoutineProposals(rp);
+    setInventoryItems(ii);
     setLoading(false);
   }, []);
 
@@ -302,6 +315,17 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     return alert;
   }, []);
 
+  const addInventoryItem = useCallback(async (input: { name: string; category: ItemType }) => {
+    const item = await dataProvider.createInventoryItem(input);
+    setInventoryItems((prev) => [...prev, item].sort((a, b) => a.name.localeCompare(b.name)));
+    return item;
+  }, []);
+
+  const removeInventoryItem = useCallback(async (id: string) => {
+    await dataProvider.deleteInventoryItem(id);
+    setInventoryItems((prev) => prev.filter((i) => i.id !== id));
+  }, []);
+
   const submitRoutineProposalsBatch = useCallback(async (inputs: CreateRoutineProposalInput[]) => {
     const created = await dataProvider.createRoutineProposalsBatch(inputs);
     setRoutineProposals((prev) => [...created, ...prev]);
@@ -361,6 +385,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       medicalRecords,
       inventoryAlerts,
       routineProposals,
+      inventoryItems,
       loading,
       isMockMode,
       activePetId,
@@ -386,6 +411,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       uploadPhoto,
       flagLowStock,
       resolveInventoryAlert,
+      addInventoryItem,
+      removeInventoryItem,
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,
@@ -401,6 +428,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       medicalRecords,
       inventoryAlerts,
       routineProposals,
+      inventoryItems,
       loading,
       activePetId,
       selectedDate,
@@ -423,6 +451,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       uploadPhoto,
       flagLowStock,
       resolveInventoryAlert,
+      addInventoryItem,
+      removeInventoryItem,
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,

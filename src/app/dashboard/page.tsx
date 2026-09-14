@@ -12,9 +12,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { DateRibbon } from "@/components/date-ribbon";
 import { DailyFeedTab } from "@/components/dashboard/tabs/daily-feed-tab";
 import { SchedulesTab } from "@/components/dashboard/tabs/schedules-tab";
+import { HouseholdTab } from "@/components/dashboard/tabs/household-tab";
+import { StaffTab } from "@/components/dashboard/tabs/staff-tab";
 import { PetProfileSheet } from "@/components/dashboard/pet-profile-sheet";
 import { useHousehold } from "@/context/household-context";
 import { DASHBOARD_TABS, tabIndex } from "@/lib/dashboard-tabs";
+import { moduleFromParam } from "@/lib/dashboard-modules";
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
 // How far the pointer must move before a press is treated as a drag rather
@@ -37,6 +40,7 @@ function DashboardCanvas() {
   const router = useRouter();
   const { selectedDate, setSelectedDate } = useHousehold();
   const searchParams = useSearchParams();
+  const activeModule = moduleFromParam(searchParams.get("module"));
   const routeIndex = tabIndex(searchParams.get("tab"));
   const containerRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
@@ -156,6 +160,25 @@ function DashboardCanvas() {
     } else {
       snapTo(visualIndex);
     }
+  }
+
+  // Household and Staff are single screens with no date dimension and nothing
+  // to swipe between, so they replace the whole pets canvas — ribbon included —
+  // rather than becoming extra carousel panels. Placed after every hook so the
+  // early return can't change hook order between modules.
+  if (activeModule === "household") {
+    return (
+      <div className="px-4">
+        <HouseholdTab />
+      </div>
+    );
+  }
+  if (activeModule === "staff") {
+    return (
+      <div className="px-4">
+        <StaffTab />
+      </div>
+    );
   }
 
   return (
