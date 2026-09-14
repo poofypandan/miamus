@@ -11,7 +11,6 @@ import { motion, useMotionValue, animate } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DailyFeedTab } from "@/components/dashboard/tabs/daily-feed-tab";
 import { SchedulesTab } from "@/components/dashboard/tabs/schedules-tab";
-import { HealthTab } from "@/components/dashboard/tabs/health-tab";
 import { PetProfileSheet } from "@/components/dashboard/pet-profile-sheet";
 import { DASHBOARD_TABS, tabIndex } from "@/lib/dashboard-tabs";
 
@@ -138,22 +137,21 @@ function DashboardCanvas() {
   return (
     <>
       <div ref={containerRef} className="relative w-full overflow-x-hidden py-4">
+        {/* Track width and panel widths are the inverse of DASHBOARD_TABS.length
+            (2 tabs -> 200% / w-1/2), so each panel is exactly one viewport. */}
         <motion.div
-          className="flex w-[300%] touch-pan-y select-none"
+          className="flex w-[200%] touch-pan-y select-none"
           style={{ x }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         >
-          <div className="w-1/3 px-4">
+          <div className="w-1/2 px-4">
             <DailyFeedTab />
           </div>
-          <div className="w-1/3 px-4">
+          <div className="w-1/2 px-4">
             <SchedulesTab />
-          </div>
-          <div className="w-1/3 px-4">
-            <HealthTab />
           </div>
         </motion.div>
       </div>

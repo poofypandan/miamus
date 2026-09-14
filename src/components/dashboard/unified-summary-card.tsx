@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, ChevronRight, Clock, Droplets, Plus, Utensils, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, Droplets, Utensils, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
@@ -39,7 +39,7 @@ export function UnifiedSummaryCard() {
             onClick={() => setAddOpen(true)}
             className="mt-4 flex w-full items-center justify-center rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-600 active:bg-gray-50"
           >
-            <Plus className="mr-2 size-4" /> Add / Manage Pets
+            Manage Pets
           </button>
         )}
       </CardContent>

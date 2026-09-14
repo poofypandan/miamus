@@ -11,8 +11,7 @@ import { useHousehold } from "@/context/household-context";
 
 const SUB_NAV: { tab: DashboardTab; label: string }[] = [
   { tab: "feed", label: "Daily Feed" },
-  { tab: "schedules", label: "Schedules" },
-  { tab: "health", label: "Health Passport" },
+  { tab: "schedules", label: "Schedule" },
 ];
 
 export function TopNav() {

@@ -127,6 +127,17 @@
   html {
     @apply font-sans;
   }
+  /* Kills the mobile browser's swipe-down-to-reload. Set on both elements
+     on purpose: the browser reads this off whichever element propagates to
+     the viewport, and which one that is differs between engines.
+     Deliberately app-wide rather than only the landing page — an accidental
+     reload is worse deeper in, where staff may be holding logs in the
+     Phase 29 offline queue. Normal scrolling is unaffected; only overscroll
+     chaining and pull-to-refresh are. */
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
 }
 
 @layer utilities {
