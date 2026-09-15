@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
@@ -25,6 +26,10 @@ const FILTER_LABELS: Record<ScheduleCategory, string> = {
 
 type PhotoFilter = ScheduleCategory | "all";
 
+// Three full rows of the three-column grid. Only the unfiltered view is capped:
+// picking a category is already the owner asking for all of that kind.
+const COLLAPSED_LIMIT = 9;
+
 interface PhotoStreamProps {
   logs: TaskLog[];
   entities: TaskEntity[];
@@ -36,6 +41,7 @@ interface PhotoStreamProps {
 export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
   const { schedules } = useHousehold();
   const [filter, setFilter] = useState<PhotoFilter>("all");
+  const [isExpanded, setIsExpanded] = useState(false);
   const entityById = new Map(entities.map((e) => [e.id, e]));
 
   // Category resolved once per photo: it drives the pills, the filtering and
@@ -60,7 +66,9 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
   // the chosen category falls back to All instead of showing an empty grid
   // whose only way out is a pill that is no longer there.
   const activeFilter: PhotoFilter = filter !== "all" && counts.has(filter) ? filter : "all";
-  const visible = activeFilter === "all" ? photos : photos.filter((p) => p.category === activeFilter);
+  const matching = activeFilter === "all" ? photos : photos.filter((p) => p.category === activeFilter);
+  const capped = activeFilter === "all" && matching.length > COLLAPSED_LIMIT;
+  const visible = capped && !isExpanded ? matching.slice(0, COLLAPSED_LIMIT) : matching;
 
   if (photos.length === 0) {
     return <p className="text-sm text-muted-foreground">No photos logged yet today.</p>;
@@ -134,6 +142,18 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
           );
         })}
       </div>
+
+      {capped && (
+        <button
+          type="button"
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+          aria-expanded={isExpanded}
+          className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg text-sm font-medium text-zinc-600 transition-colors active:bg-zinc-100"
+        >
+          {isExpanded ? "Show Fewer" : `View All Photos (${matching.length})`}
+          <ChevronDown className={cn("size-4 transition-transform", isExpanded && "rotate-180")} />
+        </button>
+      )}
     </div>
   );
 }
