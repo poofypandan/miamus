@@ -10,27 +10,28 @@ interface OverlayEntry {
 // Overlays currently claiming a history entry, outermost first.
 const overlayStack: OverlayEntry[] = [];
 
-// How many pops we caused ourselves while unwinding a closed overlay's entry.
-// Closing an overlay any other way (X, backdrop, Escape) has to remove the
-// entry it pushed, and the only way to do that is history.back() — which is
-// asynchronous and indistinguishable from a real Back press by the time it
-// lands. Without this counter that pop was read as "the user pressed Back",
-// and since the closing overlay had already left the stack, the layer beneath
-// it closed too: dismissing a photo lightbox took the Pet Profile Sheet with
-// it. Verified live before this guard existed.
-let selfUnwinds = 0;
-
 // One listener for the whole stack rather than one per overlay. popstate is a
 // window-level event, so per-instance listeners all fired for the same press
 // and every open layer closed at once; routing through the stack means only
-// the top-most overlay reacts, and the guard above has a single place to live.
+// the top-most overlay reacts.
+//
+// Whether a pop was a real Back press is read from where history landed, not
+// counted. Closing an overlay by X, backdrop or Escape removes its entry with
+// history.back(), which arrives asynchronously and looks like any other pop.
+// If history is still sitting on the top overlay's own entry afterwards, the
+// entry that went away belonged to something already closed — so nothing
+// should close now. That's what stops dismissing a photo lightbox from taking
+// the Pet Profile Sheet beneath it (Phase 59).
+//
+// This replaced a counter of self-caused pops, which went stale: the listener
+// was released in the same cleanup that queued the pop, so the pop landed with
+// nobody listening and was never counted off. The next genuine Back was then
+// swallowed — dismissing the PIN pad once left a later correct PIN showing
+// "Owner mode unlocked" with the pad stuck open and no redirect.
 function handlePop() {
-  if (selfUnwinds > 0) {
-    selfUnwinds -= 1;
-    return;
-  }
   const top = overlayStack[overlayStack.length - 1];
   if (!top) return;
+  if (window.history.state?.overlay === top.id) return;
   overlayStack.pop();
   top.close();
 }
@@ -77,7 +78,6 @@ export function useBackToClose(open: boolean, onClose: () => void) {
       // would navigate the user off the page — the precise thing this hook
       // exists to prevent.
       if (window.history.state?.overlay === id) {
-        selfUnwinds += 1;
         window.history.back();
       }
     };
