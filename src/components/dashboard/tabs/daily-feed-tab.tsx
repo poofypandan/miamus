@@ -46,9 +46,12 @@ export function DailyFeedTab() {
 
   return (
     <div className="flex flex-col">
+      {/* First thing on the page: a pending proposal is the only item here
+          that is blocking someone else's work, so it outranks the day's
+          status summary. Renders nothing when the queue is empty. */}
+      <ApprovalQueue />
       <h2 className="mb-3 text-sm font-semibold text-gray-900">{label}&apos;s Overview</h2>
       <UnifiedSummaryCard />
-      <ApprovalQueue />
       <InventoryAlertsPanel />
       <h3 className="mt-8 mb-3 text-sm font-semibold text-gray-900">Photos</h3>
       <PhotoStream logs={logsForDate} entities={entities} showAvatar />

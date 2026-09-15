@@ -65,7 +65,9 @@ export function ApprovalQueue() {
   if (batches.length === 0) return null;
 
   return (
-    <section className="mt-8 flex flex-col gap-3">
+    // mb-6 rather than mt-8: this sits directly under the date ribbon now, so
+    // the spacing belongs below it instead of above.
+    <section className="mb-6 flex flex-col gap-3">
       <h3 className="text-sm font-semibold text-gray-900">
         Approval Queue <span className="text-gray-400">({batches.length})</span>
       </h3>
