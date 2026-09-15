@@ -31,6 +31,12 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Banyuwangi 11",
   },
+  // Next 15 renders `appleWebApp.capable` as the standardised
+  // `mobile-web-app-capable` only. Older iOS Safari still keys standalone
+  // launch off the Apple-prefixed name, so it's emitted explicitly too.
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {

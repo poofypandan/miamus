@@ -1,9 +1,12 @@
 {
+  "id": "/",
   "name": "Banyuwangi 11",
   "short_name": "B11",
   "description": "Household Pet Management",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "icons": [
@@ -20,7 +23,7 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
