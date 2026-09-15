@@ -171,6 +171,8 @@ function MedicineProposalCard({ entity }: { entity: TaskEntity }) {
         title: label.trim(),
         category: "medication" as ScheduleCategoryName,
         time,
+        // Last day of the course — becomes expires_at on approval.
+        scheduled_date: endDate,
         notes: `Sampai ${formatDateShort(endDate)} · ${timesPerDay}x/hari`,
       })),
       () => {
@@ -293,6 +295,8 @@ function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
         title: label.trim(),
         category: "grooming" as ScheduleCategoryName,
         time: occTime,
+        // This visit's single day — pins the approved schedule to it.
+        scheduled_date: date,
         notes: `Tanggal ${formatDateShort(date)}`,
       })),
       () => {
@@ -390,16 +394,27 @@ function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
 }
 
 function OtherProposalCard({ entity }: { entity: TaskEntity }) {
+  const today = formatDateLocal(new Date());
   const [label, setLabel] = useState("");
+  const [date, setDate] = useState(today);
   const [time, setTime] = useState("12:00");
   const [notes, setNotes] = useState("");
   const { sending, send } = useProposalBatch();
+
+  const dateInPast = !!date && date < today;
 
   function submit() {
     if (!label.trim()) {
       toast.error("Isi nama tugas dulu");
       return;
     }
+    if (!date) {
+      toast.error("Pilih tanggal dulu");
+      return;
+    }
+    // One row, one date. The approval pins created_at and expires_at to this
+    // same day, which is what keeps a one-off from becoming a daily task that
+    // never ends.
     send(
       [
         {
@@ -407,12 +422,14 @@ function OtherProposalCard({ entity }: { entity: TaskEntity }) {
           title: label.trim(),
           category: "temporary" as ScheduleCategoryName,
           time,
+          scheduled_date: date,
           notes: notes.trim() || null,
         },
       ],
       () => {
         setLabel("");
         setNotes("");
+        setDate(today);
       }
     );
   }
@@ -428,15 +445,32 @@ function OtherProposalCard({ entity }: { entity: TaskEntity }) {
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs">Jam</Label>
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          className={TIME_INPUT_CLASS}
-        />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label className="text-xs">Tanggal</Label>
+          <input
+            type="date"
+            value={date}
+            min={today}
+            onChange={(e) => setDate(e.target.value)}
+            className={TIME_INPUT_CLASS}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label className="text-xs">Jam</Label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className={TIME_INPUT_CLASS}
+          />
+        </div>
       </div>
+      {dateInPast && (
+        <p className="text-xs font-medium text-destructive">
+          Tanggal tidak boleh sebelum hari ini.
+        </p>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <Label className="text-xs">Catatan (opsional)</Label>
@@ -447,7 +481,7 @@ function OtherProposalCard({ entity }: { entity: TaskEntity }) {
         />
       </div>
 
-      <Button onClick={submit} disabled={sending} className="min-h-[48px]">
+      <Button onClick={submit} disabled={sending || dateInPast} className="min-h-[48px]">
         {sending ? <Loader2 className="animate-spin" /> : <Send />} Kirim Usulan
       </Button>
     </ProposalCard>

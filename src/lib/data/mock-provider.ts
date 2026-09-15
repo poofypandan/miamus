@@ -330,6 +330,7 @@ export const mockProvider: DataProvider = {
       status: "pending",
       created_by: input.created_by ?? null,
       batch_id: input.batch_id ?? null,
+      scheduled_date: input.scheduled_date ?? null,
       created_at: new Date().toISOString(),
     }));
     db.routineProposals.unshift(...created);

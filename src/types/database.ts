@@ -115,6 +115,10 @@ export type RoutineProposal = {
   // omits it until the Phase 52 migration is applied, and null for proposals
   // filed before it existed.
   batch_id?: string | null;
+  // The day this proposal is for. Its meaning varies by category — see
+  // migrations/062. Optional because PostgREST omits it until that migration
+  // is applied, and null for proposals filed before it existed.
+  scheduled_date?: string | null;
   created_at: string;
 };
 

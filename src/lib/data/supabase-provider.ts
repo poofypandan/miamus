@@ -267,20 +267,22 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await c.from("routine_proposals").insert(inputs).select();
     if (!error) return data;
 
-    // PGRST204 means PostgREST has no `batch_id` column — the Phase 52
-    // migration hasn't been applied. Filing proposals worked before this phase
-    // and must keep working, so retry without it. The Approval Queue's
-    // grouping falls back to pet + title + created-minute for exactly these
-    // rows, so a multi-dose submission still shows as one card.
+    // PGRST204 means PostgREST has no such column — the Phase 52 (batch_id) or
+    // Phase 62 (scheduled_date) migration hasn't been applied. Filing proposals
+    // worked before those phases and must keep working, so retry without the
+    // optional columns. The Approval Queue falls back to grouping by
+    // pet + title + created-minute, and to open-ended scheduling, for exactly
+    // these rows.
     if (error.code !== "PGRST204") throw error;
-    const withoutBatch = inputs.map((input) => {
+    const withoutOptional = inputs.map((input) => {
       const rest = { ...input };
       delete rest.batch_id;
+      delete rest.scheduled_date;
       return rest;
     });
     const { data: legacyData, error: legacyError } = await c
       .from("routine_proposals")
-      .insert(withoutBatch)
+      .insert(withoutOptional)
       .select();
     if (legacyError) throw legacyError;
     return legacyData;

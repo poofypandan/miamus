@@ -6,10 +6,12 @@ import { Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
+import { parseLocalDate } from "@/components/dashboard/schedule-editor";
+import type { CreateScheduleInput } from "@/lib/data";
 import { categoryIcon, groomingTitle, medicationTitle } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { groupProposals, type ProposalBatch } from "@/lib/proposal-batches";
-import type { ScheduleCategoryName } from "@/types/database";
+import type { RoutineProposal, ScheduleCategoryName } from "@/types/database";
 
 // Rebuilds the title the way ScheduleEditor writes it, so an approved proposal
 // lands in the category the staff member picked. categorizeSchedule reads these
@@ -20,6 +22,36 @@ function scheduleTitleFor(category: ScheduleCategoryName, title: string): string
   if (category === "medication") return medicationTitle(title);
   if (category === "grooming") return groomingTitle(title);
   return title;
+}
+
+/**
+ * Turns an approved proposal into the schedule row it describes.
+ *
+ * Before Phase 62 this wrote only a title and a time, so *every* approved
+ * proposal became a task that recurred daily for ever — a one-off vet visit
+ * approved on Monday was still asking for a photo a month later. The date
+ * bounds below mirror exactly what the owner's own builders in
+ * schedule-editor.tsx write for the same categories.
+ *
+ * A proposal filed before the migration has no scheduled_date; those stay
+ * open-ended rather than being pinned to a date nobody chose.
+ */
+function scheduleFromProposal(proposal: RoutineProposal): CreateScheduleInput {
+  const base: CreateScheduleInput = {
+    entity_id: proposal.pet_id,
+    title: scheduleTitleFor(proposal.category, proposal.title),
+    module: "pet",
+    frequency_type: "fixed_time",
+    fixed_times: [proposal.time.slice(0, 5)],
+  };
+  const date = proposal.scheduled_date;
+  if (!date) return base;
+
+  // A medication course runs daily up to its last day; a grooming visit or a
+  // one-off happens on exactly one day, so it is also pinned at the front via
+  // created_at (which is what keeps it invisible until its day arrives).
+  if (proposal.category === "medication") return { ...base, expires_at: date };
+  return { ...base, created_at: parseLocalDate(date).toISOString(), expires_at: date };
 }
 
 // Owner-facing, so entirely English per the Phase 46 language boundary.
@@ -62,15 +94,7 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
       // Schedules first, statuses second: if the insert fails the whole batch
       // stays pending and can be retried, rather than being marked approved
       // with no routines to show for it.
-      await createSchedulesBatch(
-        batch.proposals.map((proposal) => ({
-          entity_id: proposal.pet_id,
-          title: scheduleTitleFor(proposal.category, proposal.title),
-          module: "pet" as const,
-          frequency_type: "fixed_time" as const,
-          fixed_times: [proposal.time.slice(0, 5)],
-        }))
-      );
+      await createSchedulesBatch(batch.proposals.map(scheduleFromProposal));
       await decideRoutineProposals(ids, "approved");
       toast.success(
         `Approved — ${head.title} (${ids.length} time${ids.length === 1 ? "" : "s"}) added to ${pet?.name ?? "the pet"}`

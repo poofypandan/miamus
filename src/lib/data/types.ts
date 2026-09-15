@@ -81,6 +81,7 @@ export interface CreateRoutineProposalInput {
   notes?: string | null;
   created_by?: string | null;
   batch_id?: string | null;
+  scheduled_date?: string | null;
 }
 
 export interface DataProvider {

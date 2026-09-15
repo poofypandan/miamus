@@ -47,6 +47,7 @@ import type { AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import type { TaskEntity, MasterSchedule } from "@/types/database";
 import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
+import { CancelRoutineButton } from "@/components/dashboard/cancel-routine-button";
 
 const INTERVAL_HOUR_OPTIONS = [1, 2, 3, 4];
 export const DOSE_COUNT_OPTIONS = [1, 2, 3, 4];
@@ -1150,6 +1151,19 @@ function LivePreviewCard({
                 </span>
                 <Icon className="size-4 shrink-0 text-muted-foreground" />
                 <span className="flex-1 font-medium">{item.title}</span>
+                {/* Group-level kill switch. The per-chip X buttons in the cards
+                    below remove a single row; this wipes every future
+                    occurrence of the routine, which is what an owner means by
+                    "cancel the vet visit". Only offered for the generated
+                    categories — meals and the potty routine are the standing
+                    shape of the day and are edited, not cancelled. */}
+                {item.category !== "meal" && item.category !== "potty" && (
+                  <CancelRoutineButton
+                    entity={entity}
+                    title={item.title}
+                    category={item.category}
+                  />
+                )}
                 {item.log?.photo_url ? (
                   <LogPhotoThumbnail
                     log={item.log}

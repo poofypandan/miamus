@@ -1,0 +1,22 @@
+-- ============================================================================
+-- Phase 62 — routine_proposals.scheduled_date
+-- ============================================================================
+-- A proposal carried a time but never a date, so approving one produced a
+-- master_schedules row with no created_at pin and no expires_at — i.e. a task
+-- that repeats every day forever. A one-off vet visit approved on Monday was
+-- still demanding a photo the following month.
+--
+-- What the column means depends on the category, mirroring exactly what the
+-- owner-side builders in schedule-editor.tsx already write:
+--   medication -> the last day of the course      (expires_at)
+--   grooming   -> the single day of that visit    (created_at + expires_at)
+--   temporary  -> the single day of the one-off   (created_at + expires_at)
+-- Null for anything filed before this column existed; those keep the old
+-- open-ended behaviour rather than being retro-dated to something invented.
+--
+-- RUN THIS BEFORE USING THE FEATURE. Until it is applied, submitting a
+-- proposal falls back to omitting the column (see createRoutineProposalsBatch)
+-- and approvals stay open-ended as they are today.
+-- ============================================================================
+
+alter table routine_proposals add column if not exists scheduled_date date;
