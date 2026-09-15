@@ -155,7 +155,7 @@ export function StaffReportsPanel() {
         ))}
       </ReportList>
 
-      <ReportList title="Usulan Rutinitas" empty="Belum ada usulan rutinitas.">
+      <ReportList title="Usulan Jadwal" empty="Belum ada usulan jadwal.">
         {proposalBatches.map((batch) => (
           <ProposalBatchRow
             key={batch.key}

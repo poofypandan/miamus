@@ -31,7 +31,7 @@ export function StaffRoutinePicker() {
   return (
     <>
       <Button variant="outline" className="min-h-[48px] w-full" onClick={() => setPickerOpen(true)}>
-        <Send /> Usulkan Rutinitas
+        <Send /> Usulkan Jadwal
       </Button>
 
       <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
@@ -39,7 +39,7 @@ export function StaffRoutinePicker() {
           <SheetHeader className="px-0">
             <SheetTitle>Pilih Anjing</SheetTitle>
             <SheetDescription>
-              Pilih anjing yang mau diusulkan rutinitas barunya.
+              Pilih anjing yang mau diusulkan jadwal barunya.
             </SheetDescription>
           </SheetHeader>
           <div className="flex flex-col gap-2">

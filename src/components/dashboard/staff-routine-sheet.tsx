@@ -59,9 +59,9 @@ export function StaffRoutineSheet({
         {entity && (
           <>
             <SheetHeader className="border-b px-4 py-3">
-              <SheetTitle>Usulan Rutinitas {entity.name}</SheetTitle>
+              <SheetTitle>Usulan Jadwal {entity.name}</SheetTitle>
               <SheetDescription>
-                Usulan dikirim ke pemilik dulu. Rutinitas baru aktif setelah disetujui.
+                Usulan dikirim ke pemilik dulu. Jadwal baru aktif setelah disetujui.
               </SheetDescription>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto px-4 py-4">
