@@ -5,7 +5,6 @@ import { ApprovalQueue } from "@/components/dashboard/approval-queue";
 import { InventoryAlertsPanel } from "@/components/dashboard/inventory-alerts-panel";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
-import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { dayLabel } from "@/lib/date-label";
@@ -54,10 +53,9 @@ export function DailyFeedTab() {
       <UnifiedSummaryCard />
       <InventoryAlertsPanel />
       <h3 className="mt-8 mb-3 text-sm font-semibold text-gray-900">Photos</h3>
+      {/* No "Flag Low Stock" here: reporting is staff data entry and lives in
+          the staff view. The owner reads reports above and restocks. */}
       <PhotoStream logs={logsForDate} entities={entities} showAvatar />
-      <div className="mt-8">
-        <LowStockFlagButton />
-      </div>
     </div>
   );
 }
