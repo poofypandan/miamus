@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { List, Loader2, Pill, Scissors, Send } from "lucide-react";
+import { List, Loader2, Pill, Scissors, Send, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +66,7 @@ export function StaffRoutineSheet({
             </SheetHeader>
             <div className="flex-1 overflow-y-auto px-4 py-4">
               <div className="flex flex-col gap-4">
+                <VetProposalCard entity={entity} />
                 <MedicineProposalCard entity={entity} />
                 <GroomingProposalCard entity={entity} />
                 <OtherProposalCard entity={entity} />
@@ -127,6 +128,106 @@ function ProposalCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">{children}</CardContent>
     </Card>
+  );
+}
+
+/**
+ * Staff counterpart to the owner's Vet & Doctor card: one visit, one day.
+ *
+ * No interval or end-date field, so the proposal can only ever describe a
+ * single occurrence. The approval path pins created_at and expires_at to
+ * scheduled_date for this category, which is what turns that into exactly one
+ * task rather than a daily repeat.
+ */
+function VetProposalCard({ entity }: { entity: TaskEntity }) {
+  const today = formatDateLocal(new Date());
+  const [label, setLabel] = useState("");
+  const [date, setDate] = useState(today);
+  const [time, setTime] = useState("09:00");
+  const [notes, setNotes] = useState("");
+  const { sending, send } = useProposalBatch();
+
+  const dateInPast = !!date && date < today;
+
+  function submit() {
+    if (!label.trim()) {
+      toast.error("Isi nama kunjungan dulu");
+      return;
+    }
+    if (!date) {
+      toast.error("Pilih tanggal dulu");
+      return;
+    }
+    send(
+      [
+        {
+          pet_id: entity.id,
+          title: label.trim(),
+          category: "vet" as ScheduleCategoryName,
+          time,
+          scheduled_date: date,
+          notes: notes.trim() || null,
+        },
+      ],
+      () => {
+        setLabel("");
+        setNotes("");
+        setDate(today);
+      }
+    );
+  }
+
+  return (
+    <ProposalCard icon={Stethoscope} title="Dokter & Klinik">
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs">Nama kunjungan</Label>
+        <Input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="mis. Kontrol bulanan"
+        />
+      </div>
+
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label className="text-xs">Tanggal</Label>
+          <input
+            type="date"
+            value={date}
+            min={today}
+            onChange={(e) => setDate(e.target.value)}
+            className={TIME_INPUT_CLASS}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label className="text-xs">Jam</Label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className={TIME_INPUT_CLASS}
+          />
+        </div>
+      </div>
+      {dateInPast && (
+        <p className="text-xs font-medium text-destructive">
+          Tanggal tidak boleh sebelum hari ini.
+        </p>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs">Catatan (opsional)</Label>
+        <Input
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="mis. Bawa hasil lab"
+        />
+      </div>
+
+      <Button onClick={submit} disabled={sending || dateInPast} className="min-h-[48px]">
+        {sending ? <Loader2 className="animate-spin" /> : <Send />} Kirim Usulan
+      </Button>
+    </ProposalCard>
   );
 }
 

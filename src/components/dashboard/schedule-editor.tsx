@@ -13,6 +13,7 @@ import {
   Plus,
   Scissors,
   Settings2,
+  Stethoscope,
   Utensils,
   X,
   XCircle,
@@ -41,6 +42,7 @@ import {
   displayTitle,
   groomingTitle,
   medicationTitle,
+  vetTitle,
 } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import type { AgendaItem } from "@/lib/scheduleEngine";
@@ -193,6 +195,15 @@ export function ManageRoutinesSheet({
                   entity={entity}
                   items={dogSchedules.filter((s) => categorizeSchedule(s) === "potty")}
                   createSchedulesBatch={createSchedulesBatch}
+                  deleteSchedule={deleteSchedule}
+                />
+                {/* Order: meals -> potty -> vet -> medicines -> grooming ->
+                    others. The two standing daily routines lead; appointments
+                    and courses follow. */}
+                <VetVisitsCard
+                  entity={entity}
+                  items={dogSchedules.filter((s) => categorizeSchedule(s) === "vet")}
+                  createSchedule={createSchedule}
                   deleteSchedule={deleteSchedule}
                 />
                 <MedicationsCard
@@ -873,6 +884,149 @@ function GroomingCareCard({
         >
           {generating ? <Loader2 className="animate-spin" /> : <Plus />}
           Generate Grooming Schedule
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * A vet or doctor appointment: one label, one day, one time.
+ *
+ * Deliberately has no interval or end-date field. Every other generated
+ * category can repeat, and that generality is what let a single appointment
+ * become a task recurring for ever (Phase 62). Pinning created_at and
+ * expires_at to the same chosen day makes exactly one occurrence structurally
+ * impossible to get wrong — created_at also keeps it invisible until the day
+ * arrives, so a booking made now doesn't read as overdue all week.
+ */
+function VetVisitsCard({
+  entity,
+  items,
+  createSchedule,
+  deleteSchedule,
+}: {
+  entity: TaskEntity;
+  items: MasterSchedule[];
+  createSchedule: CreateScheduleFn;
+  deleteSchedule: DeleteScheduleFn;
+}) {
+  const today = formatDateLocal(new Date());
+  const [label, setLabel] = useState("");
+  const [date, setDate] = useState(today);
+  const [time, setTime] = useState("09:00");
+  const [submitting, setSubmitting] = useState(false);
+
+  const dateInPast = !!date && date < today;
+
+  async function handleAdd() {
+    if (!label.trim()) {
+      toast.error("Give the visit a label");
+      return;
+    }
+    if (!date) {
+      toast.error("Pick a date");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await createSchedule({
+        entity_id: entity.id,
+        title: vetTitle(label.trim()),
+        module: "pet",
+        frequency_type: "fixed_time",
+        fixed_times: [time],
+        created_at: parseLocalDate(date).toISOString(),
+        expires_at: date,
+      });
+      toast.success(`${label.trim()} booked for ${formatDateShort(date)}`);
+      setLabel("");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to add visit");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function remove(id: string) {
+    try {
+      await deleteSchedule(id);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to remove visit");
+    }
+  }
+
+  const sorted = [...items].sort((a, b) => (a.expires_at ?? "").localeCompare(b.expires_at ?? ""));
+
+  return (
+    <Card className="gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="flex items-center gap-1.5 text-base">
+          <Stethoscope className="size-4" /> Vet &amp; Doctor
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 px-4">
+        <div className="flex flex-wrap gap-2">
+          {sorted.map((v) => (
+            <Badge key={v.id} variant="secondary" className="h-8 gap-1 px-2.5 text-sm">
+              {v.expires_at ? formatDateShort(v.expires_at) : "—"} · {displayTitle(v)}
+              <button
+                type="button"
+                onClick={() => remove(v.id)}
+                aria-label={`Remove ${displayTitle(v)}`}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-background/60"
+              >
+                <X className="size-3.5" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs">Label</Label>
+          <Input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. Annual checkup"
+          />
+        </div>
+
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label className="text-xs">Date</Label>
+            <input
+              type="date"
+              value={date}
+              min={today}
+              onChange={(e) => setDate(e.target.value)}
+              className={TIME_INPUT_CLASS}
+            />
+          </div>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label className="text-xs">Time</Label>
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className={TIME_INPUT_CLASS}
+            />
+          </div>
+        </div>
+        {dateInPast && (
+          <p className="text-xs font-medium text-destructive">
+            The date can&apos;t be before today.
+          </p>
+        )}
+
+        <Button
+          onClick={handleAdd}
+          disabled={submitting || dateInPast}
+          className="min-h-[48px] w-fit"
+        >
+          {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
+          Add Visit
         </Button>
       </CardContent>
     </Card>
