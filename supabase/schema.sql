@@ -135,7 +135,7 @@ create table if not exists routine_proposals (
   id uuid primary key default gen_random_uuid(),
   pet_id uuid not null references task_entities(id) on delete cascade,
   title text not null,
-  category text not null check (category in ('meal', 'potty', 'medication', 'grooming', 'temporary')),
+  category text not null check (category in ('meal', 'potty', 'medication', 'grooming', 'temporary', 'vet')),
   time time not null,
   notes text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),

@@ -1,4 +1,12 @@
-import { Droplets, List, Pill, Scissors, Utensils, type LucideIcon } from "lucide-react";
+import {
+  Droplets,
+  List,
+  Pill,
+  Scissors,
+  Stethoscope,
+  Utensils,
+  type LucideIcon,
+} from "lucide-react";
 import type { MasterSchedule, TaskLog } from "@/types/database";
 
 // master_schedules has no dedicated "category" column, so potty/grooming/
@@ -15,13 +23,24 @@ import type { MasterSchedule, TaskLog } from "@/types/database";
 export const POTTY_TITLE = "Pipis & Pup";
 const GROOMING_PREFIX = "Grooming: ";
 const MEDICATION_PREFIX = "Medication: ";
+const VET_PREFIX = "Vet: ";
 
-export type ScheduleCategory = "potty" | "meal" | "grooming" | "medication" | "temporary";
+export type ScheduleCategory =
+  | "potty"
+  | "meal"
+  | "grooming"
+  | "medication"
+  | "temporary"
+  | "vet";
 
 export function categorizeSchedule(schedule: MasterSchedule): ScheduleCategory {
   if (schedule.title === POTTY_TITLE) return "potty";
   if (schedule.title.startsWith(MEDICATION_PREFIX)) return "medication";
   if (schedule.title.startsWith(GROOMING_PREFIX)) return "grooming";
+  // Ahead of the expires_at fallback, like the other prefixes: a vet visit
+  // always sets expires_at (it is a single day), so checking it later would
+  // file every appointment as "temporary".
+  if (schedule.title.startsWith(VET_PREFIX)) return "vet";
   if (schedule.expires_at) return "temporary";
   return "meal";
 }
@@ -34,12 +53,19 @@ export function medicationTitle(label: string): string {
   return `${MEDICATION_PREFIX}${label}`;
 }
 
+export function vetTitle(label: string): string {
+  return `${VET_PREFIX}${label}`;
+}
+
 export function displayTitle(schedule: MasterSchedule): string {
   if (schedule.title.startsWith(GROOMING_PREFIX)) {
     return schedule.title.slice(GROOMING_PREFIX.length);
   }
   if (schedule.title.startsWith(MEDICATION_PREFIX)) {
     return schedule.title.slice(MEDICATION_PREFIX.length);
+  }
+  if (schedule.title.startsWith(VET_PREFIX)) {
+    return schedule.title.slice(VET_PREFIX.length);
   }
   return schedule.title;
 }
@@ -50,6 +76,7 @@ const CATEGORY_ICONS: Record<ScheduleCategory, LucideIcon> = {
   medication: Pill,
   grooming: Scissors,
   temporary: List,
+  vet: Stethoscope,
 };
 
 export function categoryIcon(category: ScheduleCategory): LucideIcon {

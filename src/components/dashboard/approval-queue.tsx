@@ -8,7 +8,7 @@ import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
 import { parseLocalDate } from "@/components/dashboard/schedule-editor";
 import type { CreateScheduleInput } from "@/lib/data";
-import { categoryIcon, groomingTitle, medicationTitle } from "@/lib/schedule-categories";
+import { categoryIcon, groomingTitle, medicationTitle, vetTitle } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { groupProposals, type ProposalBatch } from "@/lib/proposal-batches";
 import type { RoutineProposal, ScheduleCategoryName } from "@/types/database";
@@ -21,6 +21,7 @@ import type { RoutineProposal, ScheduleCategoryName } from "@/types/database";
 function scheduleTitleFor(category: ScheduleCategoryName, title: string): string {
   if (category === "medication") return medicationTitle(title);
   if (category === "grooming") return groomingTitle(title);
+  if (category === "vet") return vetTitle(title);
   return title;
 }
 

@@ -124,7 +124,13 @@ export type RoutineProposal = {
 
 // Mirrors ScheduleCategory in lib/schedule-categories, kept here as a plain
 // union so types/database.ts stays free of app-layer imports.
-export type ScheduleCategoryName = "meal" | "potty" | "medication" | "grooming" | "temporary";
+export type ScheduleCategoryName =
+  | "meal"
+  | "potty"
+  | "medication"
+  | "grooming"
+  | "temporary"
+  | "vet";
 
 export interface Database {
   public: {

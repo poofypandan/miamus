@@ -19,7 +19,7 @@ export const SPECIAL_EVENT_HORIZON_DAYS = 30;
 //
 // "temporary" is this codebase's id for the "Others" category (see
 // ScheduleCategory in lib/schedule-categories) — there is no "other".
-const SPECIAL_CATEGORIES = new Set(["grooming", "temporary"]);
+const SPECIAL_CATEGORIES = new Set(["grooming", "temporary", "vet"]);
 
 /**
  * Dates within the horizon that carry at least one non-routine event, as
