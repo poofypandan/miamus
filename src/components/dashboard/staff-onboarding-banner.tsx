@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Share, X } from "lucide-react";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 const DISMISSED_KEY = "b11_onboarding_dismissed";
 
@@ -16,6 +17,7 @@ export function StaffOnboardingBanner() {
   // household-context. Hidden-first also means someone who already dismissed
   // this never sees it flash back in on every load.
   const [visible, setVisible] = useState(false);
+  const { isStandalone } = usePwaInstall();
 
   useEffect(() => {
     try {
@@ -37,10 +39,13 @@ export function StaffOnboardingBanner() {
     }
   }
 
-  if (!visible) return null;
+  // Already installed: the tip has done its job, so it never shows inside the
+  // home-screen app regardless of whether it was ever dismissed.
+  if (!visible || isStandalone) return null;
 
   return (
-    <div className="px-4 pt-4">
+    // standalone:hidden backs up the JS check with a pure CSS guard.
+    <div className="px-4 pt-4 standalone:hidden">
       <div className="relative rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 shadow-sm">
         <button
           type="button"
