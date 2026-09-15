@@ -23,6 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { WhatsAppNotifyPanel } from "@/components/staff/whatsapp-notify-panel";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import type { ItemType } from "@/types/database";
 
@@ -103,6 +104,9 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
   const [itemType, setItemType] = useState<ItemType | "">("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // What was just reported, for the staff WhatsApp follow-up. Null while the
+  // form is showing.
+  const [reported, setReported] = useState<string | null>(null);
 
   // Reset the form to the current active pet each time the drawer (re)opens.
   const [wasOpen, setWasOpen] = useState(false);
@@ -112,6 +116,7 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
       setPetId(activePetId ?? NO_PET);
       setItemType("");
       setNote("");
+      setReported(null);
     }
   }
 
@@ -129,8 +134,16 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
         item_type: itemType,
         note: note.trim() || null,
       });
-      toast.success(t.success);
-      setOpen(false);
+      if (locale === "id") {
+        // Staff swap the form for a success view offering to message the
+        // owner. The owner's own English form keeps the toast-and-close: there
+        // is nobody for an owner to notify.
+        const trimmed = note.trim();
+        setReported(trimmed ? `${t.items[itemType]} – ${trimmed}` : t.items[itemType]);
+      } else {
+        toast.success(t.success);
+        setOpen(false);
+      }
     } catch (err) {
       console.error(err);
       toast.error(t.failure);
@@ -141,13 +154,41 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
 
   if (pets.length === 0) return null;
 
+  const trigger = (
+    <SheetTrigger asChild>
+      <Button variant="outline" className="min-h-[48px] w-full">
+        <PackageX /> {t.trigger}
+      </Button>
+    </SheetTrigger>
+  );
+
+  // Same Sheet > SheetContent shape as the form below, so React keeps the open
+  // sheet mounted and only its contents change.
+  if (reported) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        {trigger}
+        <SheetContent side="bottom">
+          {/* Visually hidden, but Radix requires every sheet to have a title. */}
+          <SheetHeader className="sr-only">
+            <SheetTitle>{t.title}</SheetTitle>
+            <SheetDescription>{t.success}</SheetDescription>
+          </SheetHeader>
+          <div className="px-4">
+            <WhatsAppNotifyPanel
+              title={t.success}
+              message={`Halo! Ada laporan stok menipis (${reported}). Cek di sini:`}
+              onDone={() => setOpen(false)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" className="min-h-[48px] w-full">
-          <PackageX /> {t.trigger}
-        </Button>
-      </SheetTrigger>
+      {trigger}
       <SheetContent side="bottom">
         <SheetHeader>
           <SheetTitle>{t.title}</SheetTitle>

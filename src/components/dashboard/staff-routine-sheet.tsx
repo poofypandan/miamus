@@ -15,6 +15,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { WhatsAppNotifyPanel } from "@/components/staff/whatsapp-notify-panel";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import {
   DEFAULT_DOSE_TIMES,
@@ -52,9 +53,20 @@ export function StaffRoutineSheet({
   onClose: () => void;
 }) {
   useBackToClose(!!entity, onClose);
+  // Which dog the success view belongs to. Keyed by id rather than a boolean so
+  // reopening the sheet — for another dog, or the same one later — starts on
+  // the form without needing a reset effect.
+  const [sentFor, setSentFor] = useState<string | null>(null);
+  const sent = !!entity && sentFor === entity.id;
+  const markSent = () => entity && setSentFor(entity.id);
+
+  function close() {
+    setSentFor(null);
+    onClose();
+  }
 
   return (
-    <Sheet open={!!entity} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={!!entity} onOpenChange={(open) => !open && close()}>
       <SheetContent side="right" className="w-full max-w-none gap-0 p-0 sm:max-w-none">
         {entity && (
           <>
@@ -65,12 +77,22 @@ export function StaffRoutineSheet({
               </SheetDescription>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto px-4 py-4">
-              <div className="flex flex-col gap-4">
-                <VetProposalCard entity={entity} />
-                <MedicineProposalCard entity={entity} />
-                <GroomingProposalCard entity={entity} />
-                <OtherProposalCard entity={entity} />
-              </div>
+              {sent ? (
+                <WhatsAppNotifyPanel
+                  title="Usulan berhasil dikirim"
+                  message={`Halo! Ada usulan jadwal baru untuk ${entity.name}. Cek di sini:`}
+                  onDone={close}
+                  secondaryLabel="Usulkan Jadwal Lain"
+                  onSecondary={() => setSentFor(null)}
+                />
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <VetProposalCard entity={entity} onSent={markSent} />
+                  <MedicineProposalCard entity={entity} onSent={markSent} />
+                  <GroomingProposalCard entity={entity} onSent={markSent} />
+                  <OtherProposalCard entity={entity} onSent={markSent} />
+                </div>
+              )}
             </div>
           </>
         )}
@@ -83,7 +105,7 @@ export function StaffRoutineSheet({
  * Submits one batch of proposals under a shared batch_id, so the owner decides
  * on the whole course at once instead of ten separate doses.
  */
-function useProposalBatch() {
+function useProposalBatch(onSent: () => void) {
   const { submitRoutineProposalsBatch } = useHousehold();
   const [sending, setSending] = useState(false);
 
@@ -97,8 +119,9 @@ function useProposalBatch() {
       await submitRoutineProposalsBatch(
         rows.map((row) => ({ ...row, batch_id: batchId, created_by: "staff" }))
       );
-      toast.success("Usulan berhasil dikirim");
       onDone();
+      // The sheet swaps to its success view, which says so itself — no toast.
+      onSent();
     } catch (err) {
       console.error(err);
       toast.error("Gagal mengirim usulan");
@@ -139,13 +162,13 @@ function ProposalCard({
  * scheduled_date for this category, which is what turns that into exactly one
  * task rather than a daily repeat.
  */
-function VetProposalCard({ entity }: { entity: TaskEntity }) {
+function VetProposalCard({ entity, onSent }: { entity: TaskEntity; onSent: () => void }) {
   const today = formatDateLocal(new Date());
   const [label, setLabel] = useState("");
   const [date, setDate] = useState(today);
   const [time, setTime] = useState("09:00");
   const [notes, setNotes] = useState("");
-  const { sending, send } = useProposalBatch();
+  const { sending, send } = useProposalBatch(onSent);
 
   const dateInPast = !!date && date < today;
 
@@ -231,13 +254,13 @@ function VetProposalCard({ entity }: { entity: TaskEntity }) {
   );
 }
 
-function MedicineProposalCard({ entity }: { entity: TaskEntity }) {
+function MedicineProposalCard({ entity, onSent }: { entity: TaskEntity; onSent: () => void }) {
   const today = formatDateLocal(new Date());
   const [label, setLabel] = useState("");
   const [timesPerDay, setTimesPerDay] = useState(1);
   const [doseTimes, setDoseTimes] = useState<string[]>(["09:00"]);
   const [endDate, setEndDate] = useState("");
-  const { sending, send } = useProposalBatch();
+  const { sending, send } = useProposalBatch(onSent);
 
   function changeFrequency(count: number) {
     setTimesPerDay(count);
@@ -361,7 +384,7 @@ function MedicineProposalCard({ entity }: { entity: TaskEntity }) {
   );
 }
 
-function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
+function GroomingProposalCard({ entity, onSent }: { entity: TaskEntity; onSent: () => void }) {
   const today = formatDateLocal(new Date());
   const [label, setLabel] = useState("");
   const [startDate, setStartDate] = useState(today);
@@ -369,7 +392,7 @@ function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
   const [intervalValue, setIntervalValue] = useState(1);
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>("weeks");
   const [endDate, setEndDate] = useState("");
-  const { sending, send } = useProposalBatch();
+  const { sending, send } = useProposalBatch(onSent);
 
   const endBeforeStart = !!endDate && !!startDate && endDate < startDate;
 
@@ -494,13 +517,13 @@ function GroomingProposalCard({ entity }: { entity: TaskEntity }) {
   );
 }
 
-function OtherProposalCard({ entity }: { entity: TaskEntity }) {
+function OtherProposalCard({ entity, onSent }: { entity: TaskEntity; onSent: () => void }) {
   const today = formatDateLocal(new Date());
   const [label, setLabel] = useState("");
   const [date, setDate] = useState(today);
   const [time, setTime] = useState("12:00");
   const [notes, setNotes] = useState("");
-  const { sending, send } = useProposalBatch();
+  const { sending, send } = useProposalBatch(onSent);
 
   const dateInPast = !!date && date < today;
 
