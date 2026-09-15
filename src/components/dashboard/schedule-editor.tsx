@@ -122,6 +122,13 @@ export function formatDateShort(dateStr: string): string {
 // Walks start -> end in `intervalValue` day/week steps using Date's native
 // setDate/getDate, which correctly rolls over month boundaries and leap
 // years (Date normalizes out-of-range day numbers for you).
+//
+// A blank end date falls back to the start date, so "no end" means one visit
+// on the day chosen rather than nothing at all. Previously it returned an
+// empty list, which left the Generate button disabled with no explanation of
+// what was missing — the failure was silent rather than runaway, but a
+// single occurrence is what the owner meant either way. The walk is still
+// bounded twice over: by `end`, and by MAX_GENERATED_OCCURRENCES.
 export function generateGroomingOccurrences(
   startDateStr: string,
   time: string,
@@ -130,8 +137,9 @@ export function generateGroomingOccurrences(
   endDateStr: string
 ): { date: string; time: string }[] {
   const stepDays = intervalUnit === "weeks" ? intervalValue * 7 : intervalValue;
-  if (stepDays <= 0 || !startDateStr || !endDateStr) return [];
-  const end = parseLocalDate(endDateStr);
+  if (stepDays <= 0 || !startDateStr) return [];
+  const finalEndDate = endDateStr || startDateStr;
+  const end = parseLocalDate(finalEndDate);
   let current = parseLocalDate(startDateStr);
   if (current.getTime() > end.getTime()) return [];
 
