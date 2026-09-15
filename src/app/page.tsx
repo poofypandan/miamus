@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Download, Loader2, Share, SquarePlus } from "lucide-react";
 import { PinModal } from "@/components/dashboard/owner-access";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 const RUMAH = [
   { letter: "R", rest: "espek & Sopan" },
@@ -48,6 +50,8 @@ export default function Home() {
         </Link>
       </div>
 
+      <InstallPrompt />
+
       {/* Deliberately invisible — owner access is a hidden gesture, not a
           visible button. Double-click (not single) so staff can't trigger
           it by accidentally tapping the corner of the screen. Mirrored on
@@ -69,5 +73,56 @@ export default function Home() {
         onUnlocked={() => router.replace("/dashboard")}
       />
     </main>
+  );
+}
+
+// Staff-facing, so entirely Bahasa Indonesia per the Phase 46 language boundary.
+function InstallPrompt() {
+  const { isInstallable, isIOS, isStandalone, promptInstall } = usePwaInstall();
+  const [prompting, setPrompting] = useState(false);
+
+  // Already running as the installed app, or a browser that offers no install
+  // path at all (desktop Firefox/Safari): nothing to say.
+  if (isStandalone || (!isInstallable && !isIOS)) return null;
+
+  async function install() {
+    setPrompting(true);
+    try {
+      await promptInstall();
+    } finally {
+      setPrompting(false);
+    }
+  }
+
+  return (
+    // standalone:hidden is the CSS half of the guard — it holds even if the JS
+    // detection above ever disagrees with the browser's actual display mode.
+    <div className="mt-6 flex w-full justify-center standalone:hidden">
+      {isInstallable ? (
+        <button
+          type="button"
+          onClick={install}
+          disabled={prompting}
+          className="flex w-full max-w-[220px] items-center justify-center gap-2 rounded-full border border-gray-300 bg-white py-3 text-sm font-medium text-gray-900 transition-transform active:scale-95 disabled:opacity-60"
+        >
+          {prompting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+          Pasang Aplikasi
+        </button>
+      ) : (
+        // iOS has no install prompt API, so the best available is showing the
+        // way through Safari's own menu. The icons carry the instruction for
+        // phones set to English, where the menu labels won't match this text.
+        <p className="max-w-[260px] text-xs leading-relaxed text-gray-500">
+          Untuk memasang aplikasi, ketuk{" "}
+          <Share className="inline size-3.5 -translate-y-px text-gray-700" aria-label="Bagikan" />{" "}
+          <span className="font-medium text-gray-700">Bagikan</span>, lalu pilih{" "}
+          <SquarePlus
+            className="inline size-3.5 -translate-y-px text-gray-700"
+            aria-label="Tambahkan ke Layar Utama"
+          />{" "}
+          <span className="font-medium text-gray-700">Tambahkan ke Layar Utama</span>.
+        </p>
+      )}
+    </div>
   );
 }

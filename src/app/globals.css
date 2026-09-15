@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* Matches only inside the installed PWA, so install prompts can hide
+   themselves with a pure CSS guard that holds even before hydration. */
+@custom-variant standalone (@media (display-mode: standalone));
 
 @theme inline {
   --color-background: var(--background);
