@@ -57,11 +57,16 @@ export function PhotoLightbox({
   onClose,
   items,
   initialIndex = 0,
+  onIndexChange,
 }: {
   open: boolean;
   onClose: () => void;
   items: LightboxItem[];
   initialIndex?: number;
+  // Told which frame is showing, for a caller whose own UI follows the photo —
+  // the staff card's delete window belongs to the picture on screen, not the
+  // one that was tapped.
+  onIndexChange?: (index: number) => void;
 }) {
   const [index, setIndex] = useState(initialIndex);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -95,11 +100,23 @@ export function PhotoLightbox({
   // us, and a stale index would otherwise read past the end.
   const current = items[Math.min(index, items.length - 1)];
 
-  const handlePrev = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
-  const handleNext = useCallback(
-    () => setIndex((i) => Math.min(items.length - 1, i + 1)),
+  const step = useCallback(
+    (delta: number) => setIndex((i) => Math.min(items.length - 1, Math.max(0, i + delta))),
     [items.length]
   );
+  const handlePrev = useCallback(() => step(-1), [step]);
+  const handleNext = useCallback(() => step(1), [step]);
+
+  // Reported from an effect, never from inside the setIndex updater: an
+  // updater must be free of side effects — React may run it more than once —
+  // and calling a parent's setState from one drops updates. Measured: the
+  // first swipe after opening did nothing at all.
+  const notify = useRef(onIndexChange);
+  notify.current = onIndexChange;
+  useEffect(() => {
+    if (!open) return;
+    notify.current?.(Math.min(index, items.length - 1));
+  }, [index, items.length, open]);
 
   // The dialog renders through a portal, so none of this is a DOM descendant
   // of the swipeable carousel — but React propagates events along the
@@ -173,8 +190,15 @@ export function PhotoLightbox({
           onTouchMove={stopBubbling}
           onTouchEnd={handleTouchEnd}
         >
+          {/* Capped and contained rather than free-height: a tall portrait
+              otherwise ran past the top and bottom of a centred dialog with no
+              way to scroll to the rest of it. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={current.src} alt={current.alt} className="w-full rounded-lg" />
+          <img
+            src={current.src}
+            alt={current.alt}
+            className="max-h-[70vh] w-full rounded-lg bg-black/5 object-contain"
+          />
           {items.length > 1 && (
             <>
               {/* Tap targets over the edges of the photo, for anyone who taps

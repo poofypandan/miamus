@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Camera, CheckCircle2, ChevronDown, ChevronUp, Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
+import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -47,10 +48,11 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [capture, setCapture] = useState<PendingCapture | null>(null);
-  // Only the URL is held, not the tile itself — the tile is re-derived from
-  // photoGroups below, so a delete (or any refresh) flows straight through and
-  // closes the lightbox instead of leaving a stale copy on screen.
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  // The position in the strip, not the tile itself — the tile is re-derived
+  // from photoGroups below, so a delete (or any refresh) flows straight through
+  // instead of leaving a stale copy on screen. It follows the gallery as staff
+  // swipe, which is what keeps the delete window tied to the photo on screen.
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -65,10 +67,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // clears the confirmation as a backstop for the non-Back close paths.
   useBackToClose(!!capture, () => setCapture(null));
   useBackToClose(confirmDelete, () => setConfirmDelete(false));
-  useBackToClose(!!lightboxUrl, () => {
-    setConfirmDelete(false);
-    setLightboxUrl(null);
-  });
+  // No useBackToClose for the lightbox: PhotoLightbox claims its own history
+  // entry, and a second one here would need two Back presses to leave a photo.
 
   const pendingItems = group.items.filter((i) => i.status !== "completed");
   const allDone = pendingItems.length === 0;
@@ -113,21 +113,19 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     return [...byUrl.values()].sort((a, b) => a.at.localeCompare(b.at));
   }, [group.items]);
 
-  const lightbox = photoGroups.find((p) => p.url === lightboxUrl) ?? null;
-  const deleteDeadline = lightbox ? deletableUntil(lightbox.at) : 0;
-  // NaN-safe: an unparseable timestamp makes this false rather than throwing
-  // the window wide open.
-  const isDeletable = now < deleteDeadline;
-  const minutesLeft = Math.max(0, Math.ceil((deleteDeadline - now) / 60_000));
+  // Clamped, so deleting the last photo in the strip lands on the new last one
+  // rather than reading past the end.
+  const lightbox =
+    lightboxIndex === null ? null : (photoGroups[Math.min(lightboxIndex, photoGroups.length - 1)] ?? null);
 
   // Ticks only while the lightbox is open, so a photo that ages out of its
   // window while staff are looking at it loses the button there and then.
   useEffect(() => {
-    if (!lightboxUrl) return;
+    if (lightboxIndex === null) return;
     setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(timer);
-  }, [lightboxUrl]);
+  }, [lightboxIndex]);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -214,7 +212,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       }
       toast.success("Foto berhasil dihapus");
       setConfirmDelete(false);
-      setLightboxUrl(null);
+      setLightboxIndex(null);
     } catch (err) {
       console.error(err);
       toast.error("Gagal menghapus foto");
@@ -314,7 +312,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               <label> so scrolling the strip can't trip the file input. */}
           {photoGroups.length > 0 && (
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {photoGroups.map((photo) => (
+              {photoGroups.map((photo, index) => (
                 <figure key={photo.url} className="flex w-24 shrink-0 flex-col gap-1">
                   <button
                     type="button"
@@ -323,7 +321,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                     // in a touchend over whichever tile is under the finger.
                     onClick={(e) => {
                       if (tap.cancelled(e)) return;
-                      setLightboxUrl(photo.url);
+                      setLightboxIndex(index);
                     }}
                     aria-label={`Lihat foto ${photo.names.join(", ")}`}
                     className="relative block rounded-lg active:scale-[0.98]"
@@ -471,37 +469,27 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         </DialogContent>
       </Dialog>
 
-      {/* Lightbox. `lightbox` is derived from photoGroups, so deleting the
-          photo empties it and closes this on its own. */}
-      <Dialog
-        open={!!lightbox}
-        onOpenChange={(open) => {
-          if (!open) {
-            setLightboxUrl(null);
-            setConfirmDelete(false);
-          }
+      {/* Lightbox. Every photo on this card is one gallery, so staff can swipe
+          between the day's shots for this slot instead of closing and reopening.
+          `lightbox` is derived from photoGroups, so deleting a photo flows
+          through here on its own. */}
+      <PhotoLightbox
+        open={photoGroups.length > 0 && lightboxIndex !== null}
+        onClose={() => {
+          setLightboxIndex(null);
+          setConfirmDelete(false);
         }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{group.title}</DialogTitle>
-            <DialogDescription>
-              {lightbox ? formatTime12h(new Date(lightbox.at)) : ""}
-            </DialogDescription>
-          </DialogHeader>
-          {lightbox && (
+        initialIndex={lightboxIndex ?? 0}
+        onIndexChange={setLightboxIndex}
+        items={photoGroups.map((photo) => ({
+          src: photo.url,
+          alt: photo.names.join(", "),
+          title: group.title,
+          description: formatTime12h(new Date(photo.at)),
+          footer: (
             <>
-              {/* object-contain, not cover: a portrait photo shot on a phone
-                  has to be readable in full here, not cropped to a square. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={lightbox.url}
-                alt={lightbox.names.join(", ")}
-                className="max-h-[55vh] w-full rounded-lg bg-black/5 object-contain"
-              />
-
               <div className="flex flex-wrap gap-1.5">
-                {lightbox.entityIds.map((id, i) => {
+                {photo.entityIds.map((id, i) => {
                   const pet = petById.get(id);
                   return (
                     <Badge
@@ -513,30 +501,35 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                       ) : (
                         <CheckCircle2 className="size-4" />
                       )}
-                      {lightbox.names[i]}
+                      {photo.names[i]}
                     </Badge>
                   );
                 })}
               </div>
 
-              {isDeletable ? (
+              {/* Read from this frame's own timestamp, not the tile that was
+                  tapped: swiping to an older photo has to drop the button.
+                  NaN-safe too — an unparseable timestamp fails this comparison
+                  rather than throwing the window wide open. */}
+              {now < deletableUntil(photo.at) ? (
                 <Button
                   variant="destructive"
                   onClick={() => setConfirmDelete(true)}
-                  className="min-h-[48px] w-full"
+                  className="mt-3 min-h-[48px] w-full"
                 >
-                  <Trash2 /> Hapus Foto ({minutesLeft} menit lagi)
+                  <Trash2 /> Hapus Foto (
+                  {Math.max(0, Math.ceil((deletableUntil(photo.at) - now) / 60_000))} menit lagi)
                 </Button>
               ) : (
-                <p className="text-center text-xs text-muted-foreground">
+                <p className="mt-3 text-center text-xs text-muted-foreground">
                   Foto hanya bisa dihapus dalam 5 menit setelah dicatat. Hubungi pemilik untuk
                   menghapus foto lama.
                 </p>
               )}
             </>
-          )}
-        </DialogContent>
-      </Dialog>
+          ),
+        }))}
+      />
 
       <Dialog open={confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(false)}>
         <DialogContent className="sm:max-w-xs">
