@@ -18,14 +18,57 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
-import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
+import { PhotoLightbox, type LightboxItem } from "@/components/dashboard/photo-lightbox";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { categoryIcon, describeLog } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import type { TaskLog } from "@/types/database";
+import type { MasterSchedule, TaskLog } from "@/types/database";
+
+/**
+ * One photo's lightbox frame: the pet leads, then the task with its category
+ * icon and the time it was taken, with any note underneath.
+ *
+ * Exported because a gallery's frames are built by whoever owns the array —
+ * the photo grid, a timeline row — and every frame has to read identically to
+ * the one a single tap produces.
+ */
+export function logLightboxItem({
+  log,
+  title,
+  entityName,
+  schedules,
+}: {
+  log: TaskLog;
+  title?: string;
+  entityName?: string;
+  schedules: MasterSchedule[];
+}): LightboxItem {
+  const described = describeLog(log, schedules);
+  const eventTitle = title ?? described.title;
+  const EventIcon = categoryIcon(described.category);
+  const takenAt = formatTime12h(new Date(log.completed_at));
+  return {
+    src: log.photo_url ?? undefined,
+    alt: entityName ? `${entityName} · ${eventTitle}` : eventTitle,
+    title: entityName ?? eventTitle,
+    description: (
+      <>
+        <EventIcon className="size-4 shrink-0" />
+        {entityName ? (
+          <span>
+            {eventTitle} · {takenAt}
+          </span>
+        ) : (
+          <span>{takenAt}</span>
+        )}
+      </>
+    ),
+    footer: log.notes ? <p className="text-sm text-muted-foreground">{log.notes}</p> : null,
+  };
+}
 
 const LONG_PRESS_MS = 500;
 
@@ -39,12 +82,24 @@ interface LogPhotoThumbnailProps {
   entityName?: string;
   className: string;
   badge?: ReactNode;
+  // Opens as a gallery rather than a lone photo: the caller passes every frame
+  // it holds (a day's filtered grid, one timeline row's dogs) plus this
+  // thumbnail's place in it, and the lightbox opens there with the rest
+  // swipeable. Left out, the thumbnail opens just its own photo.
+  gallery?: { items: LightboxItem[]; index: number };
 }
 
 // Tap opens a full-res lightbox; long-press asks to delete (which also
 // undoes the task completion). Mirrors the pet-avatar gesture pattern —
 // same timer approach, same touch-callout/select-none guards.
-export function LogPhotoThumbnail({ log, title, entityName, className, badge }: LogPhotoThumbnailProps) {
+export function LogPhotoThumbnail({
+  log,
+  title,
+  entityName,
+  className,
+  badge,
+  gallery,
+}: LogPhotoThumbnailProps) {
   const { userRole, deleteLogWithPhoto, schedules } = useHousehold();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -60,10 +115,9 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
   const today = formatDateLocal(new Date());
   const canDelete = userRole === "owner" || formatDateLocal(new Date(log.completed_at)) === today;
 
-  const described = describeLog(log, schedules);
-  const eventTitle = title ?? described.title;
-  const EventIcon = categoryIcon(described.category);
-  const takenAt = formatTime12h(new Date(log.completed_at));
+  // Only the aria-label needs these now; the lightbox's own copy comes from
+  // logLightboxItem so a gallery frame and a single tap read the same.
+  const eventTitle = title ?? describeLog(log, schedules).title;
 
   function startPress() {
     longPressed.current = false;
@@ -161,33 +215,11 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
         {badge}
       </button>
 
-      {/* Pet name leads, then the actual task with its category icon and the
-          time it was taken. Falls back to the task name where there's no pet in
-          context (the schedule editor's rows), so the dialog always has a
-          non-empty accessible name. */}
       <PhotoLightbox
         open={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
-        items={[
-          {
-            src: log.photo_url ?? undefined,
-            alt: entityName ? `${entityName} · ${eventTitle}` : eventTitle,
-            title: entityName ?? eventTitle,
-            description: (
-              <>
-                <EventIcon className="size-4 shrink-0" />
-                {entityName ? (
-                  <span>
-                    {eventTitle} · {takenAt}
-                  </span>
-                ) : (
-                  <span>{takenAt}</span>
-                )}
-              </>
-            ),
-            footer: log.notes ? <p className="text-sm text-muted-foreground">{log.notes}</p> : null,
-          },
-        ]}
+        items={gallery ? gallery.items : [logLightboxItem({ log, title, entityName, schedules })]}
+        initialIndex={gallery ? gallery.index : 0}
       />
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

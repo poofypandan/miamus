@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
+import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
 import { categoryIcon, describeLog, type ScheduleCategory } from "@/lib/schedule-categories";
@@ -78,6 +78,22 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
     setIsExpanded(false);
   }
 
+  // Built from the whole filtered list, not the nine on screen: opening the
+  // last visible tile and swiping on keeps going through the rest of the
+  // category rather than stopping at the cap.
+  const galleryItems = useMemo(
+    () =>
+      matching.map(({ log }) =>
+        logLightboxItem({
+          log,
+          entityName: entityById.get(log.entity_id)?.name,
+          schedules,
+        })
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- entityById is rebuilt every render from `entities`, which is the real input
+    [matching, entities, schedules]
+  );
+
   if (photos.length === 0) {
     return <p className="text-sm text-muted-foreground">No photos logged yet today.</p>;
   }
@@ -114,7 +130,7 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
       )}
 
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {visible.map(({ log, category }) => {
+        {visible.map(({ log, category }, index) => {
           const entity = entityById.get(log.entity_id);
           const EventIcon = categoryIcon(category);
           return (
@@ -122,6 +138,7 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
               key={log.id}
               log={log}
               entityName={entity?.name}
+              gallery={{ items: galleryItems, index }}
               className="aspect-square w-full rounded-lg ring-1 ring-border"
               badge={
                 // Three corners, one job each: which dog (bottom-left, as
