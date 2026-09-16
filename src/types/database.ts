@@ -45,6 +45,10 @@ export type TaskLog = {
   photo_url: string | null;
   notes: string | null;
   completed_at: string;
+  // Who filed this, as selected on their device (migrations/071). Null for
+  // everything logged before staff had identities, and self-declared rather
+  // than proven — see the note on StaffProfile.pin.
+  staff_id?: string | null;
 };
 
 export type MedicalRecord = {
@@ -63,6 +67,12 @@ export type MedicalRecord = {
 
 export type StaffProfile = {
   id: string;
+  name: string;
+  // Null until the person picks one on first sign-in, and null again after the
+  // owner resets it — see migrations/071. Stored as typed and readable by
+  // anyone with the public anon key, so it separates household members from
+  // each other rather than keeping outsiders out.
+  pin: string | null;
   created_at: string;
 };
 
@@ -85,6 +95,10 @@ export type InventoryAlert = {
   // migration has been applied.
   status?: AlertStatus | null;
   resolved_at?: string | null;
+  // Who filed this, as selected on their device (migrations/071). Null for
+  // everything logged before staff had identities, and self-declared rather
+  // than proven — see the note on StaffProfile.pin.
+  staff_id?: string | null;
   created_at: string;
 };
 
@@ -119,6 +133,10 @@ export type RoutineProposal = {
   // migrations/062. Optional because PostgREST omits it until that migration
   // is applied, and null for proposals filed before it existed.
   scheduled_date?: string | null;
+  // Who filed this, as selected on their device (migrations/071). Null for
+  // everything proposed before staff had identities, and self-declared rather
+  // than proven — see the note on StaffProfile.pin.
+  staff_id?: string | null;
   created_at: string;
 };
 
@@ -163,7 +181,7 @@ export interface Database {
       };
       staff_profiles: {
         Row: StaffProfile;
-        Insert: Partial<StaffProfile>;
+        Insert: Partial<StaffProfile> & Pick<StaffProfile, "name">;
         Update: Partial<StaffProfile>;
         Relationships: [];
       };
