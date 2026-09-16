@@ -13,6 +13,7 @@ import type {
   InventoryItem,
   ProposalStatus,
   ScheduleCategoryName,
+  StaffProfile,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -115,4 +116,8 @@ export interface DataProvider {
   setRoutineProposalsStatus(ids: string[], status: ProposalStatus): Promise<RoutineProposal[]>;
   setRoutineProposalStatus(id: string, status: ProposalStatus): Promise<RoutineProposal>;
   deleteRoutineProposal(id: string): Promise<void>;
+  listStaffProfiles(): Promise<StaffProfile[]>;
+  createStaffProfile(name: string): Promise<StaffProfile>;
+  /** Sets a staff member's PIN, or clears it (null) so they choose a new one. */
+  setStaffPin(id: string, pin: string | null): Promise<StaffProfile>;
 }

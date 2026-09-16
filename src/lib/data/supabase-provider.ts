@@ -306,4 +306,37 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
+  async listStaffProfiles() {
+    // By name, not created_at: the seeded rows were inserted in one statement
+    // and share a timestamp to the microsecond, so ordering by it put the list
+    // in a different order on different loads.
+    const { data, error } = await client()
+      .from("staff_profiles")
+      .select("*")
+      .order("name");
+    if (error) throw error;
+    return data;
+  },
+  async createStaffProfile(name) {
+    const { data, error } = await client()
+      .from("staff_profiles")
+      .insert({ name })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async setStaffPin(id, pin) {
+    // .select() so an RLS-filtered update (200 with zero rows) surfaces as a
+    // failure rather than a PIN that silently never saved — the staff member
+    // would be locked into the setup screen with no idea why.
+    const { data, error } = await client()
+      .from("staff_profiles")
+      .update({ pin })
+      .eq("id", id)
+      .select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Staff profile not updated");
+    return data[0];
+  },
 };

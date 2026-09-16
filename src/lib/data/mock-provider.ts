@@ -6,6 +6,7 @@ import type {
   InventoryAlert,
   RoutineProposal,
   InventoryItem,
+  StaffProfile,
 } from "@/types/database";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
@@ -20,6 +21,7 @@ interface MockDB {
   inventoryAlerts: InventoryAlert[];
   routineProposals: RoutineProposal[];
   inventoryItems: InventoryItem[];
+  staffProfiles: StaffProfile[];
 }
 
 function freshDB(): MockDB {
@@ -31,6 +33,7 @@ function freshDB(): MockDB {
     inventoryAlerts: [],
     routineProposals: [],
     inventoryItems: [],
+    staffProfiles: [],
   };
 }
 
@@ -46,6 +49,7 @@ function loadDB(): MockDB {
         inventoryAlerts: parsed.inventoryAlerts ?? [],
         routineProposals: parsed.routineProposals ?? [],
         inventoryItems: parsed.inventoryItems ?? [],
+        staffProfiles: parsed.staffProfiles ?? [],
       };
     }
   } catch {
@@ -357,5 +361,28 @@ export const mockProvider: DataProvider = {
     db.routineProposals[idx] = updated;
     saveDB(db);
     return delay(updated);
+  },
+  async listStaffProfiles() {
+    return delay(loadDB().staffProfiles);
+  },
+  async createStaffProfile(name) {
+    const db = loadDB();
+    const profile: StaffProfile = {
+      id: uid("staff"),
+      name,
+      pin: null,
+      created_at: new Date().toISOString(),
+    };
+    db.staffProfiles.push(profile);
+    saveDB(db);
+    return delay(profile);
+  },
+  async setStaffPin(id, pin) {
+    const db = loadDB();
+    const profile = db.staffProfiles.find((s) => s.id === id);
+    if (!profile) throw new Error("Staff profile not found");
+    profile.pin = pin;
+    saveDB(db);
+    return delay(profile);
   },
 };
