@@ -2,12 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, PackageX } from "lucide-react";
+import { Check, ChevronDown, Loader2, PackageX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
 import { isActiveAlert, isRestocked, restockedAt } from "@/lib/inventory-status";
+import { formatDateLocal } from "@/lib/scheduleEngine";
+import { cn } from "@/lib/utils";
 import type { InventoryAlert, ItemType } from "@/types/database";
+
+// Three rows, matching the photo grid's cap: the history is a record, not the
+// day's work, so it stays a glance rather than a list to scroll past.
+const COLLAPSED_LIMIT = 3;
 
 const ITEM_LABELS: Record<ItemType, string> = {
   food: "Food",
@@ -20,8 +26,10 @@ const ITEM_LABELS: Record<ItemType, string> = {
 
 // Owner-facing, so entirely English per the Phase 46 language boundary.
 export function InventoryAlertsPanel() {
-  const { inventoryAlerts, entities, userRole } = useHousehold();
+  const { inventoryAlerts, entities, userRole, selectedDate } = useHousehold();
   const [tab, setTab] = useState<"active" | "history">("active");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const dateStr = formatDateLocal(selectedDate);
 
   const entityById = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities]);
 
@@ -33,18 +41,31 @@ export function InventoryAlertsPanel() {
     [inventoryAlerts]
   );
 
+  // Restocks belong to the day they happened, so this follows the same
+  // selectedDate as the feed and the photo grid rather than showing every
+  // restock ever. Active alerts stay unfiltered: something still running low
+  // is a problem today whichever day is being browsed.
   const history = useMemo(
     () =>
       inventoryAlerts
-        .filter(isRestocked)
+        .filter((alert) => isRestocked(alert) && formatDateLocal(new Date(restockedAt(alert))) === dateStr)
         .sort((a, b) => restockedAt(b).localeCompare(restockedAt(a))),
-    [inventoryAlerts]
+    [inventoryAlerts, dateStr]
   );
+
+  // Browsing to another day, or switching tabs, starts collapsed again.
+  const [lastKey, setLastKey] = useState(`${tab}|${dateStr}`);
+  if (lastKey !== `${tab}|${dateStr}`) {
+    setLastKey(`${tab}|${dateStr}`);
+    setIsExpanded(false);
+  }
 
   if (userRole !== "owner") return null;
   if (inventoryAlerts.length === 0) return null;
 
-  const rows = tab === "active" ? active : history;
+  const matching = tab === "active" ? active : history;
+  const capped = tab === "history" && matching.length > COLLAPSED_LIMIT;
+  const rows = capped && !isExpanded ? matching.slice(0, COLLAPSED_LIMIT) : matching;
 
   return (
     <section className="mt-8 flex flex-col gap-3">
@@ -61,7 +82,7 @@ export function InventoryAlertsPanel() {
 
       {rows.length === 0 ? (
         <p className="py-2 text-sm text-muted-foreground">
-          {tab === "active" ? "Nothing is running low." : "No restocks recorded yet."}
+          {tab === "active" ? "Nothing is running low." : "No restocks on this day."}
         </p>
       ) : (
         <div className="flex flex-col gap-2">
@@ -72,6 +93,18 @@ export function InventoryAlertsPanel() {
               petName={alert.pet_id ? (entityById.get(alert.pet_id)?.name ?? null) : null}
             />
           ))}
+
+          {capped && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded((expanded) => !expanded)}
+              aria-expanded={isExpanded}
+              className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg text-sm font-medium text-zinc-600 transition-colors active:bg-zinc-100"
+            >
+              {isExpanded ? "Show Fewer" : `View All Restocked (${matching.length})`}
+              <ChevronDown className={cn("size-4 transition-transform", isExpanded && "rotate-180")} />
+            </button>
+          )}
         </div>
       )}
     </section>
