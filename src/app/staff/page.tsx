@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-gate";
+import { SyncButton } from "@/components/shared/sync-button";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +36,11 @@ function StaffTasks() {
       <header className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold">Tugas Hari Ini</h1>
-          <OnDutyBadge />
+          <div className="flex items-center gap-1">
+            <OnDutyBadge />
+            {/* Staff-facing, so Bahasa Indonesia per the Phase 46 boundary. */}
+            <SyncButton label="Muat ulang data" errorMessage="Gagal memuat ulang — cek koneksi" />
+          </div>
         </div>
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
       </header>

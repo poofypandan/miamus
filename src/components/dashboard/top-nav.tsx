@@ -8,6 +8,7 @@ import { MODULES } from "@/config/modules";
 import { cn } from "@/lib/utils";
 import { tabIndex, type DashboardTab } from "@/lib/dashboard-tabs";
 import { moduleFromParam, type DashboardModule } from "@/lib/dashboard-modules";
+import { SyncButton } from "@/components/shared/sync-button";
 import { useHousehold } from "@/context/household-context";
 
 const SUB_NAV: { tab: DashboardTab; label: string }[] = [
@@ -26,12 +27,15 @@ export function TopNav() {
     <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
       <div className="flex items-center justify-between px-4 py-3">
         <span className="text-lg font-semibold">Banyuwangi 11</span>
-        <Link
-          href="/staff"
-          className="flex min-h-[48px] items-center text-xs font-medium text-muted-foreground underline-offset-4 hover:underline"
-        >
-          Open Staff View →
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/staff"
+            className="flex min-h-[48px] items-center text-xs font-medium text-muted-foreground underline-offset-4 hover:underline"
+          >
+            Open Staff View →
+          </Link>
+          <SyncButton />
+        </div>
       </div>
 
       <div className="flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
