@@ -61,20 +61,16 @@ function StaffTasks() {
   );
 }
 
-// Who the app thinks is holding the phone, and the way to hand it over. Quiet
-// on purpose: it is a label most of the day, and only becomes a control at
-// shift change.
+// Who the app thinks is holding the phone — a label, not a control. Each
+// person works from their own device, so switching mid-shift is not a thing
+// that happens, and a tappable badge only invited someone to sign themselves
+// out by accident.
 function OnDutyBadge() {
-  const { staffName, requestSwitch } = useStaffIdentity();
+  const { staffName } = useStaffIdentity();
   return (
-    <button
-      type="button"
-      onClick={requestSwitch}
-      className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-xs font-medium text-gray-500 active:bg-gray-50"
-    >
+    <span className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-xs font-medium text-gray-500">
       <UserRound className="size-3.5" />
       {staffName ?? "Pemilik"}
-      <span className="text-gray-400">· Ganti</span>
-    </button>
+    </span>
   );
 }
