@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +17,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { cn } from "@/lib/utils";
+
+// How far a finger must travel horizontally before the gesture counts as a
+// swipe rather than a tap or a scroll that began on the photo.
+const SWIPE_PX = 50;
 
 /** One frame of the gallery, with the metadata shown alongside it. */
 export interface LightboxItem {
@@ -49,6 +62,7 @@ export function PhotoLightbox({
   initialIndex?: number;
 }) {
   const [index, setIndex] = useState(initialIndex);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
   useBackToClose(open, onClose);
 
   // Adjust-during-render rather than an effect, the same pattern as the reset
@@ -69,6 +83,25 @@ export function PhotoLightbox({
     () => setIndex((i) => Math.min(items.length - 1, i + 1)),
     [items.length]
   );
+
+  function handleTouchStart(event: ReactTouchEvent<HTMLDivElement>) {
+    const touch = event.changedTouches[0];
+    touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+  }
+
+  function handleTouchEnd(event: ReactTouchEvent<HTMLDivElement>) {
+    const start = touchStart.current;
+    const touch = event.changedTouches[0];
+    touchStart.current = null;
+    if (!start || !touch || items.length < 2) return;
+    const dx = touch.clientX - start.x;
+    // Compared against the vertical travel as well as the threshold: a tall
+    // photo can be scrolled past, and a mostly-vertical drag must stay a
+    // scroll rather than flicking to the next picture.
+    if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) <= Math.abs(touch.clientY - start.y)) return;
+    if (dx < 0) handleNext();
+    else handlePrev();
+  }
 
   function handleKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
     if (items.length < 2) return;
@@ -91,9 +124,21 @@ export function PhotoLightbox({
             <DialogDescription className="sr-only">{current.alt}</DialogDescription>
           )}
         </DialogHeader>
-        <div className="relative">
+        <div className="relative" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={current.src} alt={current.alt} className="w-full rounded-lg" />
+          {items.length > 1 && (
+            <>
+              {/* Tap targets over the edges of the photo, for anyone who taps
+                  rather than swipes and for desktop, where there is no swipe at
+                  all. Transparent, so the picture is never covered by chrome;
+                  the chevrons surface on hover, which touch never fires. */}
+              {index > 0 && <NavZone side="left" label="Previous photo" onClick={handlePrev} />}
+              {index < items.length - 1 && (
+                <NavZone side="right" label="Next photo" onClick={handleNext} />
+              )}
+            </>
+          )}
           {items.length > 1 && (
             <span className="absolute top-2 right-2 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white tabular-nums backdrop-blur-[2px]">
               {Math.min(index, items.length - 1) + 1} / {items.length}
@@ -103,5 +148,34 @@ export function PhotoLightbox({
         {current.footer}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function NavZone({
+  side,
+  label,
+  onClick,
+}: {
+  side: "left" | "right";
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "absolute inset-y-0 z-10 flex w-[30%] items-center",
+        side === "left" ? "left-0 justify-start pl-2" : "right-0 justify-end pr-2"
+      )}
+    >
+      <span className="sr-only">{label}</span>
+      <span
+        aria-hidden
+        className="flex size-8 items-center justify-center rounded-full bg-black/45 text-white opacity-0 backdrop-blur-[2px] transition-opacity hover:opacity-100"
+      >
+        {side === "left" ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
+      </span>
+    </button>
   );
 }
