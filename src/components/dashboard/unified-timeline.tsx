@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
-import { categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
+import { categoryCardTint, categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaGroup, type AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -58,9 +58,25 @@ function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- photoItems is derived from group.items each render
     [group.items, pets, schedules]
   );
+  const tint = categoryCardTint(group.category);
+
+  // Padding and a border on every row, transparent where there is no tint, so
+  // a tinted row lines up with its neighbours instead of jogging 8px sideways.
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm",
+        tint
+      )}
+    >
+      {/* A shade darker on a tinted row: the ordinary muted grey measured
+          4.24:1 against indigo-50, just under the 4.5:1 small text needs. */}
+      <span
+        className={cn(
+          "w-16 shrink-0 font-mono text-xs",
+          tint ? "text-zinc-600" : "text-muted-foreground"
+        )}
+      >
         {formatTime12h(group.time)}
       </span>
       <Icon className={cn("size-4 shrink-0", categoryIconColor(group.category))} />

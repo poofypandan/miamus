@@ -104,6 +104,24 @@ export function categoryIconColor(category: ScheduleCategory): string {
   return CATEGORY_ICON_COLORS[category] ?? "text-muted-foreground";
 }
 
+// A tinted card face for the three things that are not the ordinary shape of
+// the day: a course of medicine, a vet appointment, a grooming visit. Meals and
+// potty breaks stay neutral precisely because they are most of the list —
+// tinting those too would leave nothing standing out.
+//
+// No dark-mode variants: the app pins itself to a light scheme (see the
+// color-scheme rule from Phase 37), so a dark override would never render.
+const CATEGORY_CARD_TINTS: Partial<Record<ScheduleCategory, string>> = {
+  medication: "border-rose-200 bg-rose-50",
+  vet: "border-indigo-200 bg-indigo-50",
+  grooming: "border-cyan-200 bg-cyan-50",
+};
+
+/** Tint classes for a category's card, or "" for the neutral default. */
+export function categoryCardTint(category: ScheduleCategory): string {
+  return CATEGORY_CARD_TINTS[category] ?? "";
+}
+
 // The Indonesian labels AdHocSheet writes into `notes` for a "Catat Ekstra"
 // entry. Kept in sync by hand with ADHOC_TYPES in components/staff/adhoc-sheet
 // — the labels are user-visible copy there, and this is the only place that

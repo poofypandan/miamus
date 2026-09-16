@@ -20,7 +20,7 @@ import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
 import { compressPhoto } from "@/lib/image";
-import { categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
+import { categoryCardTint, categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { UNDO_WINDOW_MS } from "@/lib/undo-window";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
@@ -259,7 +259,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
 
   return (
     <>
-      <Card className="gap-3 py-4">
+      {/* Tinted for medicine, vet and grooming; neutral for the meals and
+          potty breaks that make up most of a day. */}
+      <Card className={cn("gap-3 py-4", categoryCardTint(group.category))}>
         <CardHeader className="px-4">
           {/* Only a completed group has something to collapse back to, so the
               header is a button there and plain text everywhere else — a
