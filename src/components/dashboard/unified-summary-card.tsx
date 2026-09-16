@@ -38,16 +38,16 @@ export function UnifiedSummaryCard() {
         </div>
 
         {/* Deliberately the quiet one: adding or editing pets is a rare setup
-            task, so it sits back in grey and leaves the solid dark fill to
-            Manage Routines, which is the frequent action. */}
+            task, so it sits back on a plain white card face and leaves the
+            solid dark fill to Manage Routines, which is the frequent action.
+            The touch target stays at 48px even though the type is small. */}
         {canManagePets && (
           <Button
             onClick={() => setAddOpen(true)}
             variant="outline"
-            size="lg"
-            className="mt-4 min-h-[52px] w-full border-gray-200 bg-gray-50 text-base text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            className="mt-4 min-h-[48px] w-full rounded-xl border-zinc-200 bg-white text-sm font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
           >
-            <Plus /> Manage Pets
+            <Plus /> Add Pets
           </Button>
         )}
       </CardContent>
