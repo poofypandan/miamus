@@ -26,8 +26,11 @@ export default function Home() {
     setPinOpen(true);
   }
 
+  // The bottom padding keeps its 3rem and adds the gesture-bar inset on top, so
+  // the install prompt at the bottom of this screen stays clear of it once
+  // viewport-fit=cover makes that inset real.
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-12 text-center select-none">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pt-12 pb-[calc(3rem+env(safe-area-inset-bottom))] text-center select-none">
       <h1 className="mb-12 text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
         Banyuwangi 11
       </h1>

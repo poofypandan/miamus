@@ -159,7 +159,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 px-6 py-10">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 px-6 pt-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
       <div className="flex flex-col gap-1 text-center">
         <h1 className="text-2xl font-semibold text-gray-900">Siapa yang bertugas?</h1>
         <p className="text-sm text-muted-foreground">Pilih nama kamu untuk mulai mencatat.</p>
@@ -288,7 +288,7 @@ function PinStep({
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 px-6 py-10">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 px-6 pt-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
       <div className="flex flex-col gap-1 text-center">
         <h1 className="text-2xl font-semibold text-gray-900">{step.profile.name}</h1>
         <p className="text-sm text-muted-foreground">

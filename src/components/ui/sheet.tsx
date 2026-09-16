@@ -68,6 +68,14 @@ function SheetContent({
         {...props}
       >
         {children}
+        {/* Clears the phone's home indicator / gesture bar. A spacer rather
+            than padding on the content itself: viewport-fit=cover (layout.tsx)
+            makes this inset real, and several callers set their own pb-*, which
+            tailwind-merge would let win over a padding class added here. It
+            collapses to nothing in a browser, where the inset is 0. */}
+        {side === "bottom" && (
+          <div aria-hidden className="h-[env(safe-area-inset-bottom)] shrink-0" />
+        )}
         {showCloseButton && (
           <SheetPrimitive.Close data-slot="sheet-close" asChild>
             <Button
