@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,24 @@ import {
 } from "@/components/ui/dialog";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 
+/** One frame of the gallery, with the metadata shown alongside it. */
+export interface LightboxItem {
+  src: string | undefined;
+  alt: string;
+  title: ReactNode;
+  description?: ReactNode;
+  footer?: ReactNode;
+}
+
 /**
  * Full-size photo viewer, shared by the task-photo thumbnails and the pet
  * profile avatar so both behave identically.
+ *
+ * Takes an array and an opening index rather than one image: the owner's grid
+ * is a gallery, and stepping through the day's photos should not mean closing
+ * one and hunting for the next tile. A single image is simply a one-item
+ * array, which is how the avatar callers use it — the counter and the
+ * navigation controls hide themselves at that length.
  *
  * The image is deliberately width-constrained only — no object-cover, no fixed
  * aspect box — so it renders at its true proportions. A pet portrait is
@@ -25,36 +40,67 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 export function PhotoLightbox({
   open,
   onClose,
-  src,
-  alt,
-  title,
-  description,
-  footer,
+  items,
+  initialIndex = 0,
 }: {
   open: boolean;
   onClose: () => void;
-  src: string | undefined;
-  alt: string;
-  title: ReactNode;
-  description?: ReactNode;
-  footer?: ReactNode;
+  items: LightboxItem[];
+  initialIndex?: number;
 }) {
+  const [index, setIndex] = useState(initialIndex);
   useBackToClose(open, onClose);
+
+  // Adjust-during-render rather than an effect, the same pattern as the reset
+  // in low-stock-flag: opening on a different tile has to show that tile on the
+  // very first paint, and an effect would paint the previous one first.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setIndex(initialIndex);
+  }
+
+  // Clamped on read: deleting the photo being viewed shortens the array under
+  // us, and a stale index would otherwise read past the end.
+  const current = items[Math.min(index, items.length - 1)];
+
+  const handlePrev = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
+  const handleNext = useCallback(
+    () => setIndex((i) => Math.min(items.length - 1, i + 1)),
+    [items.length]
+  );
+
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (items.length < 2) return;
+    if (event.key === "ArrowLeft") handlePrev();
+    if (event.key === "ArrowRight") handleNext();
+  }
+
+  if (!current) return null;
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onKeyDown={handleKeyDown}>
         <DialogHeader className="gap-1 text-left">
-          <DialogTitle className="text-base">{title}</DialogTitle>
-          {description ? (
-            <DialogDescription className="flex items-center gap-1.5">{description}</DialogDescription>
+          <DialogTitle className="text-base">{current.title}</DialogTitle>
+          {current.description ? (
+            <DialogDescription className="flex items-center gap-1.5">
+              {current.description}
+            </DialogDescription>
           ) : (
-            <DialogDescription className="sr-only">{alt}</DialogDescription>
+            <DialogDescription className="sr-only">{current.alt}</DialogDescription>
           )}
         </DialogHeader>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={alt} className="w-full rounded-lg" />
-        {footer}
+        <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={current.src} alt={current.alt} className="w-full rounded-lg" />
+          {items.length > 1 && (
+            <span className="absolute top-2 right-2 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white tabular-nums backdrop-blur-[2px]">
+              {Math.min(index, items.length - 1) + 1} / {items.length}
+            </span>
+          )}
+        </div>
+        {current.footer}
       </DialogContent>
     </Dialog>
   );

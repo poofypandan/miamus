@@ -168,22 +168,26 @@ export function LogPhotoThumbnail({ log, title, entityName, className, badge }: 
       <PhotoLightbox
         open={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
-        src={log.photo_url ?? undefined}
-        alt={entityName ? `${entityName} · ${eventTitle}` : eventTitle}
-        title={entityName ?? eventTitle}
-        description={
-          <>
-            <EventIcon className="size-4 shrink-0" />
-            {entityName ? (
-              <span>
-                {eventTitle} · {takenAt}
-              </span>
-            ) : (
-              <span>{takenAt}</span>
-            )}
-          </>
-        }
-        footer={log.notes ? <p className="text-sm text-muted-foreground">{log.notes}</p> : null}
+        items={[
+          {
+            src: log.photo_url ?? undefined,
+            alt: entityName ? `${entityName} · ${eventTitle}` : eventTitle,
+            title: entityName ?? eventTitle,
+            description: (
+              <>
+                <EventIcon className="size-4 shrink-0" />
+                {entityName ? (
+                  <span>
+                    {eventTitle} · {takenAt}
+                  </span>
+                ) : (
+                  <span>{takenAt}</span>
+                )}
+              </>
+            ),
+            footer: log.notes ? <p className="text-sm text-muted-foreground">{log.notes}</p> : null,
+          },
+        ]}
       />
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

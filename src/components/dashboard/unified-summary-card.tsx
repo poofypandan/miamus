@@ -108,9 +108,7 @@ function PetOverviewRow({
       <PhotoLightbox
         open={viewingAvatar && !!avatarUrl}
         onClose={() => setViewingAvatar(false)}
-        src={avatarUrl ?? undefined}
-        alt={pet.name}
-        title={pet.name}
+        items={[{ src: avatarUrl ?? undefined, alt: pet.name, title: pet.name }]}
       />
       <button
         type="button"
