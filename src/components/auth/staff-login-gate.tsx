@@ -25,14 +25,11 @@ const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"] 
 interface StaffIdentity {
   staffId: string | null;
   staffName: string | null;
-  /** Re-opens the gate so a different person can take over the phone. */
-  requestSwitch: () => void;
 }
 
 const StaffIdentityContext = createContext<StaffIdentity>({
   staffId: null,
   staffName: null,
-  requestSwitch: () => {},
 });
 
 /** Who is currently on duty on this device. Null before anyone has chosen. */
@@ -77,7 +74,6 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
   // stored identity is read in the effect below, the same pattern as the
   // owner-role restore in household-context.
   const [hydrated, setHydrated] = useState(false);
-  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     try {
@@ -92,7 +88,6 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
   const identify = useCallback((profile: StaffProfile) => {
     setStaffId(profile.id);
     setStaffName(profile.name);
-    setSwitching(false);
     try {
       window.localStorage.setItem(STAFF_ID_KEY, profile.id);
       window.localStorage.setItem(STAFF_NAME_KEY, profile.name);
@@ -101,33 +96,28 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const requestSwitch = useCallback(() => {
-    setSwitching(true);
-    try {
-      window.localStorage.removeItem(STAFF_ID_KEY);
-      window.localStorage.removeItem(STAFF_NAME_KEY);
-    } catch {
-      // Nothing to clear.
-    }
-    setStaffId(null);
-    setStaffName(null);
-  }, []);
-
   // The owner opens this view to look, not to work. Making them borrow a staff
   // member's name would both annoy them and file their taps under someone
   // else, so they pass straight through — their rows carry no staff_id, which
-  // is the truthful answer. "Ganti" in the header still lets them step into the
-  // gate deliberately.
-  const ownerBypass = roleHydrated && userRole === "owner" && !switching;
+  // is the truthful answer.
+  const ownerBypass = userRole === "owner";
 
-  if (!hydrated) return null;
+  // Nothing is rendered until both the stored identity and the owner role have
+  // been read back. Deciding earlier would flash the sign-in screen at an owner
+  // for the moment before their role restores — and this screen is meant to be
+  // seen exactly once per device, on the very first visit.
+  if (!hydrated || !roleHydrated) return null;
 
   if (!staffId && !ownerBypass) {
-    return <StaffGateScreen onIdentified={identify} onCancel={switching ? () => setSwitching(false) : undefined} />;
+    return <StaffGateScreen onIdentified={identify} />;
   }
 
+  // There is deliberately no way back out from here: each person works from
+  // their own phone, so once the identity is stored the gate never appears
+  // again. Correcting a wrong choice means clearing the browser's site data
+  // for this app.
   return (
-    <StaffIdentityContext.Provider value={{ staffId, staffName, requestSwitch }}>
+    <StaffIdentityContext.Provider value={{ staffId, staffName }}>
       {children}
     </StaffIdentityContext.Provider>
   );
@@ -138,13 +128,7 @@ type GateStep =
   | { kind: "create"; profile: StaffProfile; confirming: string | null }
   | { kind: "enter"; profile: StaffProfile };
 
-function StaffGateScreen({
-  onIdentified,
-  onCancel,
-}: {
-  onIdentified: (profile: StaffProfile) => void;
-  onCancel?: () => void;
-}) {
+function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfile) => void }) {
   const [profiles, setProfiles] = useState<StaffProfile[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [step, setStep] = useState<GateStep>({ kind: "choose" });
@@ -222,11 +206,6 @@ function StaffGateScreen({
         </div>
       )}
 
-      {onCancel && (
-        <Button variant="ghost" className="min-h-[48px]" onClick={onCancel}>
-          Batal
-        </Button>
-      )}
     </div>
   );
 }
