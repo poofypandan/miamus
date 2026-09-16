@@ -1,15 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
-import { Camera, Info, PackageX, Send } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Camera, Info, KeyRound, Loader2, PackageX, Plus, Send, UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
+import { dataProvider } from "@/lib/data";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { describeLog } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
-import type { ItemType } from "@/types/database";
+import type { ItemType, StaffProfile } from "@/types/database";
 
 const AUDIT_LIMIT = 20;
 
@@ -33,6 +38,32 @@ interface AuditEntry {
   actor: string;
 }
 
+/**
+ * The staff roster, loaded here rather than in HouseholdContext: it is read by
+ * this tab and by the staff login gate, and nothing else in the app needs it
+ * on every page.
+ */
+function useStaffProfiles() {
+  const [profiles, setProfiles] = useState<StaffProfile[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  const reload = useCallback(async () => {
+    try {
+      setProfiles(await dataProvider.listStaffProfiles());
+      setFailed(false);
+    } catch (err) {
+      console.error(err);
+      setFailed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  return { profiles, failed, reload };
+}
+
 const KIND_META: Record<AuditKind, { icon: typeof Camera; label: string; className: string }> = {
   log: { icon: Camera, label: "Task", className: "bg-emerald-100 text-emerald-900" },
   proposal: { icon: Send, label: "Proposal", className: "bg-amber-100 text-amber-900" },
@@ -43,6 +74,14 @@ const KIND_META: Record<AuditKind, { icon: typeof Camera; label: string; classNa
 export function StaffTab() {
   const { logs, routineProposals, inventoryAlerts, pets, schedules, loading } = useHousehold();
   const isOwner = useRequireOwner();
+  const { profiles, failed, reload } = useStaffProfiles();
+
+  // Rows filed before Phase 71, and anything the owner did themselves, carry no
+  // staff_id — those stay "Staff" rather than being attributed to a guess.
+  const staffName = useMemo(() => {
+    const byId = new Map((profiles ?? []).map((p) => [p.id, p.name]));
+    return (id: string | null | undefined) => (id ? (byId.get(id) ?? "Staff") : "Staff");
+  }, [profiles]);
 
   const petName = useMemo(() => {
     const byId = new Map(pets.map((p) => [p.id, p.name]));
@@ -60,7 +99,7 @@ export function StaffTab() {
         at: log.completed_at,
         action: log.photo_url ? "Logged with photo" : "Logged",
         subject: `${describeLog(log, schedules).title} · ${petName(log.entity_id)}`,
-        actor: "Staff",
+        actor: staffName(log.staff_id),
       })),
       ...routineProposals.map((proposal) => ({
         id: `proposal-${proposal.id}`,
@@ -68,8 +107,13 @@ export function StaffTab() {
         at: proposal.created_at,
         action: `Proposed routine · ${proposal.status}`,
         subject: `${proposal.title} · ${petName(proposal.pet_id)}`,
-        // The only column in the schema that records an author at all.
-        actor: proposal.created_by ? titleCase(proposal.created_by) : "Staff",
+        // staff_id when the proposal was filed by someone who had signed in;
+        // created_by ("staff"/"owner") is all the older rows carry.
+        actor: proposal.staff_id
+          ? staffName(proposal.staff_id)
+          : proposal.created_by
+            ? titleCase(proposal.created_by)
+            : "Staff",
       })),
       ...inventoryAlerts.map((alert) => ({
         id: `alert-${alert.id}`,
@@ -77,11 +121,11 @@ export function StaffTab() {
         at: alert.created_at,
         action: "Reported low stock",
         subject: `${ITEM_LABELS[alert.item_type]} · ${petName(alert.pet_id)}`,
-        actor: "Staff",
+        actor: staffName(alert.staff_id),
       })),
     ];
     return rows.sort((a, b) => b.at.localeCompare(a.at)).slice(0, AUDIT_LIMIT);
-  }, [logs, routineProposals, inventoryAlerts, schedules, petName]);
+  }, [logs, routineProposals, inventoryAlerts, schedules, petName, staffName]);
 
   if (!isOwner) return null;
 
@@ -96,18 +140,21 @@ export function StaffTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold text-gray-900">Audit Log</h2>
+      <StaffRoster profiles={profiles} failed={failed} reload={reload} />
 
-      {/* Stated rather than implied. Everyone signs in with one shared
-          household PIN and has no database identity (see
-          supabase/rls-policies.sql), so the app can show what was done and
-          when, but not which person did it. Labelling every row with an
-          invented name would be worse than saying so. */}
+      <h2 className="mt-2 text-sm font-semibold text-gray-900">Audit Log</h2>
+
+      {/* Stated rather than implied. Since Phase 71 each person signs in under
+          their own name, so most rows can name someone — but that name is
+          whoever was selected on the device, not a proven identity, and
+          anything filed before Phase 71 has no author at all. Both limits are
+          worth saying out loud rather than letting the list imply more
+          certainty than it has. */}
       <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
         <Info className="mt-0.5 size-3.5 shrink-0" />
         <span>
-          Staff share one household PIN, so actions are attributed to the staff role rather than
-          to an individual. Per-person attribution needs individual sign-ins.
+          Names come from who was signed in on the phone, so they show who was on duty rather than
+          proving who tapped. Entries from before staff sign-ins simply read &ldquo;Staff&rdquo;.
         </span>
       </div>
 
@@ -155,4 +202,125 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
 
 function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+// Owner-facing, so entirely English per the Phase 46 language boundary.
+function StaffRoster({
+  profiles,
+  failed,
+  reload,
+}: {
+  profiles: StaffProfile[] | null;
+  failed: boolean;
+  reload: () => Promise<void>;
+}) {
+  const [newName, setNewName] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [resetting, setResetting] = useState<string | null>(null);
+
+  async function addStaff() {
+    const name = newName.trim();
+    if (!name) {
+      toast.error("Enter a name first");
+      return;
+    }
+    setAdding(true);
+    try {
+      await dataProvider.createStaffProfile(name);
+      await reload();
+      setNewName("");
+      toast.success(`${name} added — they choose their own PIN on first sign-in`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to add staff member");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  // No confirmation step: clearing a PIN costs the person one setup screen on
+  // their next sign-in and nothing else, so a dialog would be more friction
+  // than the action deserves.
+  async function resetPin(profile: StaffProfile) {
+    setResetting(profile.id);
+    try {
+      await dataProvider.setStaffPin(profile.id, null);
+      await reload();
+      toast.success(`${profile.name} will set a new PIN next time they sign in`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to reset PIN");
+    } finally {
+      setResetting(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-sm font-semibold text-gray-900">Staff &amp; PINs</h2>
+
+      {failed ? (
+        <p className="text-sm text-destructive">Couldn&apos;t load the staff list.</p>
+      ) : profiles === null ? (
+        <Skeleton className="h-24 w-full rounded-xl" />
+      ) : (
+        <Card className="py-2">
+          <CardContent className="flex flex-col divide-y px-0">
+            {profiles.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-muted-foreground">No staff yet.</p>
+            ) : (
+              profiles.map((profile) => (
+                <div key={profile.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+                    <UserRound className="size-4" />
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-medium">{profile.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      PIN:{" "}
+                      {profile.pin ? (
+                        <span className="font-mono tracking-widest text-gray-900">{profile.pin}</span>
+                      ) : (
+                        "Not set"
+                      )}
+                    </span>
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-[40px] shrink-0"
+                    onClick={() => resetPin(profile)}
+                    disabled={!profile.pin || resetting === profile.id}
+                  >
+                    {resetting === profile.id ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <KeyRound />
+                    )}
+                    Reset PIN
+                  </Button>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="py-4">
+        <CardContent className="flex flex-col gap-3 px-4">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">New staff name</Label>
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="e.g. Budi"
+            />
+          </div>
+          <Button onClick={addStaff} disabled={adding} className="min-h-[48px]">
+            {adding ? <Loader2 className="animate-spin" /> : <Plus />} Add New Staff
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
