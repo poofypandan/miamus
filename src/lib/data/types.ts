@@ -30,6 +30,11 @@ export interface CreateLogInput {
   photo_url?: string | null;
   notes?: string | null;
   completed_at?: string;
+  /**
+   * Who filed this, stamped from the staff identity on the device (Phase 71).
+   * Set centrally in HouseholdContext, so callers rarely pass it themselves.
+   */
+  staff_id?: string | null;
 }
 
 export interface CreateBatchLogInput {
@@ -38,6 +43,11 @@ export interface CreateBatchLogInput {
   photo_url?: string | null;
   notes?: string | null;
   completed_at?: string;
+  /**
+   * Who filed this, stamped from the staff identity on the device (Phase 71).
+   * Set centrally in HouseholdContext, so callers rarely pass it themselves.
+   */
+  staff_id?: string | null;
 }
 
 export interface CreateScheduleInput {
@@ -72,6 +82,11 @@ export interface CreateInventoryAlertInput {
   pet_id?: string | null;
   item_type: ItemType;
   note?: string | null;
+  /**
+   * Who filed this, stamped from the staff identity on the device (Phase 71).
+   * Set centrally in HouseholdContext, so callers rarely pass it themselves.
+   */
+  staff_id?: string | null;
 }
 
 export interface CreateRoutineProposalInput {
@@ -83,6 +98,11 @@ export interface CreateRoutineProposalInput {
   created_by?: string | null;
   batch_id?: string | null;
   scheduled_date?: string | null;
+  /**
+   * Who filed this, stamped from the staff identity on the device (Phase 71).
+   * Set centrally in HouseholdContext, so callers rarely pass it themselves.
+   */
+  staff_id?: string | null;
 }
 
 export interface DataProvider {

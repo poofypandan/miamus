@@ -78,6 +78,9 @@ export const supabaseProvider: DataProvider = {
       photo_url: input.photo_url ?? null,
       notes: input.notes ?? null,
       completed_at: completedAt,
+      // Stamped once for the whole batch: one photo of four dogs is one
+      // person's work, however many rows it becomes.
+      staff_id: input.staff_id ?? null,
     }));
     const { data, error } = await client().from("task_logs").insert(rows).select();
     if (error) throw error;
@@ -268,7 +271,8 @@ export const supabaseProvider: DataProvider = {
     if (!error) return data;
 
     // PGRST204 means PostgREST has no such column — the Phase 52 (batch_id) or
-    // Phase 62 (scheduled_date) migration hasn't been applied. Filing proposals
+    // Phase 62 (scheduled_date) or Phase 71 (staff_id) migration hasn't been
+    // applied. Filing proposals
     // worked before those phases and must keep working, so retry without the
     // optional columns. The Approval Queue falls back to grouping by
     // pet + title + created-minute, and to open-ended scheduling, for exactly
@@ -278,6 +282,7 @@ export const supabaseProvider: DataProvider = {
       const rest = { ...input };
       delete rest.batch_id;
       delete rest.scheduled_date;
+      delete rest.staff_id;
       return rest;
     });
     const { data: legacyData, error: legacyError } = await c

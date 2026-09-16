@@ -12,6 +12,7 @@ import type {
   CreateInventoryAlertInput,
   CreateRoutineProposalInput,
 } from "@/lib/data";
+import { readActiveStaffId } from "@/components/auth/staff-login-gate";
 import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
 import type {
@@ -25,6 +26,20 @@ import type {
   ItemType,
   ProposalStatus,
 } from "@/types/database";
+
+/**
+ * Attaches whoever is signed in on this device to something being filed.
+ *
+ * One place rather than per call site: every staff action goes through this
+ * context, and a payload that skipped the stamp would quietly lose its author.
+ * Null when nobody has identified — the owner's own actions, or a device that
+ * has never been through the staff gate — which is the honest answer rather
+ * than a guess.
+ */
+function withStaffId<T extends { staff_id?: string | null }>(input: T): T {
+  return { ...input, staff_id: input.staff_id ?? readActiveStaffId() };
+}
+
 
 export type UserRole = "staff" | "owner";
 
@@ -234,12 +249,16 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       toast.warning("Saved offline. Will sync when reconnected.");
       return optimisticLog;
     }
-    const log = await dataProvider.createLog(input);
+    const log = await dataProvider.createLog(withStaffId(input));
     setLogs((prev) => [log, ...prev]);
     return log;
   }, []);
 
-  const logTasksBatch = useCallback(async (input: CreateBatchLogInput) => {
+  const logTasksBatch = useCallback(async (rawInput: CreateBatchLogInput) => {
+    // Stamped here rather than at insert time, so a batch queued offline keeps
+    // the author who actually took the photo instead of whoever happens to be
+    // on duty when the signal comes back.
+    const input = withStaffId(rawInput);
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       const completedAt = input.completed_at ?? new Date().toISOString();
       await addToOfflineQueue("task_logs", { ...input, completed_at: completedAt });
@@ -310,7 +329,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const flagLowStock = useCallback(async (input: CreateInventoryAlertInput) => {
-    const alert = await dataProvider.createInventoryAlert(input);
+    const alert = await dataProvider.createInventoryAlert(withStaffId(input));
     setInventoryAlerts((prev) => [alert, ...prev]);
     return alert;
   }, []);
@@ -327,7 +346,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const submitRoutineProposalsBatch = useCallback(async (inputs: CreateRoutineProposalInput[]) => {
-    const created = await dataProvider.createRoutineProposalsBatch(inputs);
+    const created = await dataProvider.createRoutineProposalsBatch(inputs.map(withStaffId));
     setRoutineProposals((prev) => [...created, ...prev]);
     return created;
   }, []);
@@ -352,7 +371,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const submitRoutineProposal = useCallback(async (input: CreateRoutineProposalInput) => {
-    const proposal = await dataProvider.createRoutineProposal(input);
+    const proposal = await dataProvider.createRoutineProposal(withStaffId(input));
     setRoutineProposals((prev) => [proposal, ...prev]);
     return proposal;
   }, []);
