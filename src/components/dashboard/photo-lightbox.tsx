@@ -2,9 +2,11 @@
 
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type TouchEvent as ReactTouchEvent,
 } from "react";
@@ -65,6 +67,21 @@ export function PhotoLightbox({
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   useBackToClose(open, onClose);
 
+  // Radix already pins <body> while a dialog is open, but this page scrolls on
+  // <html> — so a drag starting on the backdrop still ran the feed underneath
+  // (measured: 849px to 709px with the photo open). Locking the element that
+  // actually scrolls is what stops that, and the previous inline value is put
+  // back rather than blanked, so a caller that had its own lock keeps it.
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => {
+      root.style.overflow = previous;
+    };
+  }, [open]);
+
   // Adjust-during-render rather than an effect, the same pattern as the reset
   // in low-stock-flag: opening on a different tile has to show that tile on the
   // very first paint, and an effect would paint the previous one first.
@@ -84,12 +101,26 @@ export function PhotoLightbox({
     [items.length]
   );
 
+  // The dialog renders through a portal, so none of this is a DOM descendant
+  // of the swipeable carousel — but React propagates events along the
+  // component tree, not the DOM, and this lightbox is rendered from a
+  // thumbnail inside that carousel. Without stopping them here, swiping to the
+  // next photo also swiped the tab underneath from Daily Feed to Schedule
+  // (measured before this guard). The carousel tracks pointer events, so those
+  // are the ones that matter; touch is stopped alongside them for anything
+  // else listening further up.
+  function stopBubbling(event: ReactPointerEvent<HTMLElement> | ReactTouchEvent<HTMLElement>) {
+    event.stopPropagation();
+  }
+
   function handleTouchStart(event: ReactTouchEvent<HTMLDivElement>) {
+    event.stopPropagation();
     const touch = event.changedTouches[0];
     touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
   }
 
   function handleTouchEnd(event: ReactTouchEvent<HTMLDivElement>) {
+    event.stopPropagation();
     const start = touchStart.current;
     const touch = event.changedTouches[0];
     touchStart.current = null;
@@ -113,7 +144,15 @@ export function PhotoLightbox({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="sm:max-w-md" onKeyDown={handleKeyDown}>
+      <DialogContent
+        className="sm:max-w-md"
+        onKeyDown={handleKeyDown}
+        // Bubble phase, not capture: anything inside the dialog still gets its
+        // own handlers first, and only the trip onward is cut.
+        onPointerDown={stopBubbling}
+        onPointerMove={stopBubbling}
+        onPointerUp={stopBubbling}
+      >
         <DialogHeader className="gap-1 text-left">
           <DialogTitle className="text-base">{current.title}</DialogTitle>
           {current.description ? (
@@ -124,7 +163,16 @@ export function PhotoLightbox({
             <DialogDescription className="sr-only">{current.alt}</DialogDescription>
           )}
         </DialogHeader>
-        <div className="relative" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        {/* touch-none: the swipe is handled here, so the browser's own gestures
+            over the photo (back/forward navigation, pull-to-refresh) are turned
+            off rather than competing with it. Safe because the page behind is
+            locked while this is open — there is nothing to pan to. */}
+        <div
+          className="relative touch-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={stopBubbling}
+          onTouchEnd={handleTouchEnd}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={current.src} alt={current.alt} className="w-full rounded-lg" />
           {items.length > 1 && (
