@@ -83,6 +83,27 @@ export function categoryIcon(category: ScheduleCategory): LucideIcon {
   return CATEGORY_ICONS[category];
 }
 
+// Tailwind text colours for the category icon, so a day of near-identical rows
+// can be scanned by colour before it is read. Deliberately the icon only: a
+// timeline of tinted rows reads as noise, and the title still says what the
+// task is, so colour is a shortcut rather than the only carrier of meaning.
+//
+// The three "significant" categories share the hue of the card tint they get
+// in the timeline (see CATEGORY_CARD_TINTS), so icon and card agree.
+const CATEGORY_ICON_COLORS: Record<ScheduleCategory, string> = {
+  potty: "text-emerald-500",
+  meal: "text-amber-500",
+  medication: "text-rose-500",
+  vet: "text-indigo-500",
+  grooming: "text-cyan-600",
+  // Everything that is simply a task keeps the timeline's own muted grey.
+  temporary: "text-muted-foreground",
+};
+
+export function categoryIconColor(category: ScheduleCategory): string {
+  return CATEGORY_ICON_COLORS[category] ?? "text-muted-foreground";
+}
+
 // The Indonesian labels AdHocSheet writes into `notes` for a "Catat Ekstra"
 // entry. Kept in sync by hand with ADHOC_TYPES in components/staff/adhoc-sheet
 // — the labels are user-visible copy there, and this is the only place that

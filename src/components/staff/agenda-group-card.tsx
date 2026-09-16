@@ -20,7 +20,7 @@ import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
 import { compressPhoto } from "@/lib/image";
-import { categoryIcon } from "@/lib/schedule-categories";
+import { categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { UNDO_WINDOW_MS } from "@/lib/undo-window";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
@@ -273,7 +273,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 aria-label={`Sembunyikan detail ${group.title} ${formatTime12h(group.time)}`}
                 className="flex w-full items-center gap-2 text-left"
               >
-                <CategoryIcon className="size-4 shrink-0" />
+                <CategoryIcon className={cn("size-4 shrink-0", categoryIconColor(group.category))} />
                 <span>{formatTime12h(group.time)}</span>
                 <span className="min-w-0 flex-1 truncate font-normal text-muted-foreground">
                   · {group.title}
@@ -282,7 +282,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               </button>
             ) : (
               <span className="flex items-center gap-2">
-                <CategoryIcon className="size-4" />
+                <CategoryIcon className={cn("size-4", categoryIconColor(group.category))} />
                 <span>{formatTime12h(group.time)}</span>
                 <span className="font-normal text-muted-foreground">· {group.title}</span>
               </span>

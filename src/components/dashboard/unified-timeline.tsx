@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
-import { categoryIcon } from "@/lib/schedule-categories";
+import { categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaGroup, type AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -63,7 +63,7 @@ function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }
       <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
         {formatTime12h(group.time)}
       </span>
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <Icon className={cn("size-4 shrink-0", categoryIconColor(group.category))} />
       <span className="flex-1 truncate font-medium">{group.title}</span>
       <div className="flex shrink-0 -space-x-4">
         {group.items.map((item) => (
