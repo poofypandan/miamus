@@ -26,8 +26,9 @@ const FILTER_LABELS: Record<ScheduleCategory, string> = {
 
 type PhotoFilter = ScheduleCategory | "all";
 
-// Three full rows of the three-column grid. Only the unfiltered view is capped:
-// picking a category is already the owner asking for all of that kind.
+// Three full rows of the three-column grid, applied to whichever pill is
+// active: a busy day's Potty tally runs to thirty on its own, so capping only
+// the unfiltered view left the longest lists uncapped.
 const COLLAPSED_LIMIT = 9;
 
 interface PhotoStreamProps {
@@ -67,8 +68,15 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
   // whose only way out is a pill that is no longer there.
   const activeFilter: PhotoFilter = filter !== "all" && counts.has(filter) ? filter : "all";
   const matching = activeFilter === "all" ? photos : photos.filter((p) => p.category === activeFilter);
-  const capped = activeFilter === "all" && matching.length > COLLAPSED_LIMIT;
+  const capped = matching.length > COLLAPSED_LIMIT;
   const visible = capped && !isExpanded ? matching.slice(0, COLLAPSED_LIMIT) : matching;
+
+  // Every pill now has its own cap, so an expanded view belongs to the pill it
+  // was opened on — switching pills starts the new list collapsed.
+  function selectFilter(next: PhotoFilter) {
+    setFilter(next);
+    setIsExpanded(false);
+  }
 
   if (photos.length === 0) {
     return <p className="text-sm text-muted-foreground">No photos logged yet today.</p>;
@@ -91,7 +99,7 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
             label="All"
             count={photos.length}
             active={activeFilter === "all"}
-            onClick={() => setFilter("all")}
+            onClick={() => selectFilter("all")}
           />
           {categories.map((category) => (
             <FilterPill
@@ -99,7 +107,7 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
               label={FILTER_LABELS[category]}
               count={counts.get(category) ?? 0}
               active={activeFilter === category}
-              onClick={() => setFilter(category)}
+              onClick={() => selectFilter(category)}
             />
           ))}
         </div>
