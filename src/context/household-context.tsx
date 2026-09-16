@@ -75,7 +75,12 @@ interface HouseholdContextValue {
   roleHydrated: boolean;
   unlockOwner: (pin: string) => boolean;
   lockOwner: () => void;
-  refresh: () => Promise<void>;
+  /**
+   * Refetches every collection from the server. `silent` skips the global
+   * loading flag, so a background sync doesn't replace the screen with
+   * skeletons under someone's hands.
+   */
+  refresh: (options?: { silent?: boolean }) => Promise<void>;
   createEntity: (input: CreateEntityInput) => Promise<TaskEntity>;
   updateEntity: (id: string, patch: Partial<TaskEntity>) => Promise<TaskEntity>;
   deleteEntity: (id: string) => Promise<void>;
@@ -115,8 +120,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    // A silent pass leaves `loading` alone. It matters more than it looks:
+    // flipping it re-renders the staff list as skeletons, which unmounts the
+    // card holding an open photo-tagging dialog — exactly what a refresh
+    // triggered by returning from the camera would do.
+    if (!silent) setLoading(true);
     const [e, s, l, m, ia, rp, ii] = await Promise.all([
       dataProvider.listEntities(),
       dataProvider.listSchedules(),
@@ -145,7 +154,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setInventoryAlerts(ia);
     setRoutineProposals(rp);
     setInventoryItems(ii);
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, []);
 
   useEffect(() => {
