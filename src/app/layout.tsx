@@ -43,7 +43,19 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // Matches the html/body background exactly (globals.css paints
+  // var(--background), which is pure white) and the manifest's theme_color, so
+  // the phone's status bar is the same colour as the page beneath it rather
+  // than a grey band above it.
   themeColor: "#ffffff",
+  // Lets the page reach the physical edges of the screen instead of being
+  // letterboxed inside the safe areas — which is what makes the system bars
+  // blend in the installed app. The cost is that env(safe-area-inset-*) stops
+  // being zero, so anything anchored to the bottom needs that padding (see the
+  // wrappers in dashboard/layout.tsx, staff/page.tsx and page.tsx). iOS keeps
+  // reserving the status bar because appleWebApp.statusBarStyle is "default",
+  // not "black-translucent", so nothing slides under the clock.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
