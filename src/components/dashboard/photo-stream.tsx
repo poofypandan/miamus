@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
+import type { LucideIcon } from "lucide-react";
 import { categoryIcon, describeLog, type ScheduleCategory } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,16 @@ const FILTER_LABELS: Record<ScheduleCategory, string> = {
   grooming: "Grooming",
   temporary: "Others",
 };
+
+/**
+ * The pill's wording. ScheduleCategory is a closed union, so the fallback only
+ * fires if a category reaches the UI that this map has not been taught yet —
+ * a stored row from a newer build, say. Showing the raw name capitalised is a
+ * readable "Physio" rather than an empty pill.
+ */
+function filterLabel(category: ScheduleCategory): string {
+  return FILTER_LABELS[category] ?? category.charAt(0).toUpperCase() + category.slice(1);
+}
 
 type PhotoFilter = ScheduleCategory | "all";
 
@@ -120,7 +131,10 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
           {categories.map((category) => (
             <FilterPill
               key={category}
-              label={FILTER_LABELS[category]}
+              label={filterLabel(category)}
+              // The same icon the photo's own corner badge carries, so the
+              // pill and the tiles it filters to are recognisably one thing.
+              icon={categoryIcon(category)}
               count={counts.get(category) ?? 0}
               active={activeFilter === category}
               onClick={() => selectFilter(category)}
@@ -185,11 +199,13 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
 
 function FilterPill({
   label,
+  icon: Icon,
   count,
   active,
   onClick,
 }: {
   label: string;
+  icon?: LucideIcon;
   count: number;
   active: boolean;
   onClick: () => void;
@@ -206,6 +222,7 @@ function FilterPill({
           : "border-zinc-200 bg-zinc-100 text-zinc-600 active:bg-zinc-200"
       )}
     >
+      {Icon && <Icon className="size-3.5 shrink-0" />}
       {label}
       <span className={cn("text-xs tabular-nums", active ? "text-white/70" : "text-zinc-400")}>
         {count}
