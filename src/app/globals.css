@@ -138,7 +138,13 @@
        Deliberately app-wide rather than only the landing page — an accidental
        reload is worse deeper in, where staff may be holding logs in the
        Phase 29 offline queue. Normal scrolling is unaffected; only overscroll
-       chaining and pull-to-refresh are. */
+       chaining and pull-to-refresh are.
+
+       Since Phase 76 this is also what frees the downward pull for the app's
+       own pull-to-refresh (components/shared/pull-to-refresh.tsx), which
+       resyncs the data in place instead of reloading the whole PWA. Removing
+       this line would hand the gesture back to the browser and put that hard
+       reload — and the offline queue with it — back in play. */
     overscroll-behavior-y: none;
 
     /* The dark bar along the bottom on mobile is the browser painting its own
