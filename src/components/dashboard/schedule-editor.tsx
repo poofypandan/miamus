@@ -1273,10 +1273,26 @@ function CopyScheduleDrawer({
   );
 }
 
-function StatusIcon({ status }: { status: AgendaItem["status"] }) {
-  if (status === "completed") return <CheckCircle2 className="size-4 text-emerald-500" />;
-  if (status === "overdue") return <XCircle className="size-4 text-red-500" />;
-  return <Clock className="size-4 text-amber-500" />;
+// `tinted` darkens each state by two steps for the deeper medicine/vet/
+// grooming rows. Measured on those backgrounds, the ordinary 500-weights fall
+// to 2.0:1 (completed) and 1.8:1 (pending) — under the 3:1 a meaningful icon
+// needs, and these are the two states a medicine row spends all day in.
+function StatusIcon({
+  status,
+  tinted = false,
+}: {
+  status: AgendaItem["status"];
+  tinted?: boolean;
+}) {
+  if (status === "completed") {
+    return (
+      <CheckCircle2 className={cn("size-4", tinted ? "text-emerald-700" : "text-emerald-500")} />
+    );
+  }
+  if (status === "overdue") {
+    return <XCircle className={cn("size-4", tinted ? "text-red-700" : "text-red-500")} />;
+  }
+  return <Clock className={cn("size-4", tinted ? "text-amber-700" : "text-amber-500")} />;
 }
 
 function LivePreviewCard({
@@ -1358,7 +1374,7 @@ function LivePreviewCard({
                   />
                 ) : (
                   <span className="shrink-0">
-                    <StatusIcon status={item.status} />
+                    <StatusIcon status={item.status} tinted={!!tint} />
                   </span>
                 )}
               </div>
