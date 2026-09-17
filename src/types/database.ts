@@ -13,12 +13,18 @@ export type AlertStatus = "pending" | "resolved";
 // Plain `type` aliases, not `interface` — interfaces don't structurally
 // satisfy `Record<string, unknown>`, which postgrest-js's GenericTable
 // requires for Row/Insert/Update.
+/** Where a dog physically is. Anything that is not a dog stays "home". */
+export type EntityStatus = "home" | "admitted";
+
 export type TaskEntity = {
   id: string;
   entity_type: EntityType;
   name: string;
   icon: string | null;
   metadata: Record<string, unknown>;
+  // Optional because PostgREST omits it until the Phase 79 migration is
+  // applied; absent reads as "home" everywhere (see lib/pets.ts).
+  status?: EntityStatus | null;
   created_at: string;
 };
 
@@ -37,6 +43,14 @@ export type MasterSchedule = {
   created_at: string;
 };
 
+/**
+ * Which part of a task a log records.
+ *
+ * Every ordinary task writes "complete". A vet visit is the exception: it is
+ * logged in two halves, so the dog's whereabouts are known between them.
+ */
+export type LogSubType = "complete" | "check_in" | "check_out" | "admitted";
+
 export type TaskLog = {
   id: string;
   schedule_id: string | null;
@@ -49,6 +63,9 @@ export type TaskLog = {
   // everything logged before staff had identities, and self-declared rather
   // than proven — see the note on StaffProfile.pin.
   staff_id?: string | null;
+  // Optional because PostgREST omits it until the Phase 79 migration is
+  // applied; absent reads as "complete".
+  sub_type?: LogSubType | null;
 };
 
 export type MedicalRecord = {

@@ -17,3 +17,14 @@ export function isPet(entity: TaskEntity): boolean {
 export function isActivePet(entity: TaskEntity): boolean {
   return isPet(entity) && !getPetMeta(entity).archived;
 }
+
+/**
+ * Whether the dog is currently staying at the clinic.
+ *
+ * Reads a missing column as "home" on purpose: until the Phase 79 migration is
+ * applied PostgREST omits `status` entirely, and the honest default is that
+ * nobody is admitted — which leaves every routine working exactly as before.
+ */
+export function isAdmitted(entity: TaskEntity | undefined | null): boolean {
+  return entity?.status === "admitted";
+}
