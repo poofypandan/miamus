@@ -1,12 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, Stethoscope, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
-import { categoryCardTint, categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
+import { isAdmitted } from "@/lib/pets";
+import {
+  categoryCardTint,
+  categoryIcon,
+  categoryIconColor,
+  type ScheduleCategory,
+} from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaGroup, type AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -89,6 +95,7 @@ function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }
             pets={pets}
             gallery={gallery}
             galleryIndex={photoItems.indexOf(item)}
+            category={group.category}
           />
         ))}
       </div>
@@ -101,15 +108,22 @@ function TimelineAvatarStatus({
   pets,
   gallery,
   galleryIndex,
+  category,
 }: {
   item: AgendaItem;
   pets: TaskEntity[];
   gallery: LightboxItem[];
   galleryIndex: number;
+  category: ScheduleCategory;
 }) {
   const { setActivePetId } = useHousehold();
   const pet = pets.find((p) => p.id === item.entityId);
   if (!pet) return null;
+
+  // Suspended for the stay, so the row reads as "not expected" rather than
+  // "not done". Vet rows are left alone — that is where the admission itself
+  // is recorded.
+  const suspended = isAdmitted(pet) && category !== "vet";
 
   // A completed slot's proof photo keeps its own tap-for-lightbox /
   // long-press-to-delete gestures (LogPhotoThumbnail is already a button) —
@@ -138,13 +152,25 @@ function TimelineAvatarStatus({
     >
       <MiniPetAvatar
         pet={pet}
-        className={cn("ring-2 ring-background", item.status === "pending" && "opacity-50 grayscale")}
+        className={cn(
+          "ring-2 ring-background",
+          (item.status === "pending" || suspended) && "opacity-50 grayscale"
+        )}
       />
-      {item.status === "completed" && (
-        <CheckCircle2 className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-emerald-500" />
-      )}
-      {item.status === "overdue" && (
-        <XCircle className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-red-500" />
+      {suspended ? (
+        <Stethoscope
+          aria-label="Hospitalized"
+          className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-indigo-600"
+        />
+      ) : (
+        <>
+          {item.status === "completed" && (
+            <CheckCircle2 className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-emerald-500" />
+          )}
+          {item.status === "overdue" && (
+            <XCircle className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-red-500" />
+          )}
+        </>
       )}
     </button>
   );

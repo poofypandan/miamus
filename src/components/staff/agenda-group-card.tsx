@@ -29,6 +29,7 @@ import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
 import { compressPhoto } from "@/lib/image";
+import { isAdmitted } from "@/lib/pets";
 import { categoryCardTint, categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { UNDO_WINDOW_MS } from "@/lib/undo-window";
@@ -92,7 +93,24 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // No useBackToClose for the lightbox: PhotoLightbox claims its own history
   // entry, and a second one here would need two Back presses to leave a photo.
 
-  const pendingItems = group.items.filter((i) => i.status !== "completed");
+  const isVet = group.category === "vet";
+
+  // A dog staying at the clinic is somebody else's responsibility until it is
+  // collected, so its meals and potty breaks are suspended rather than left
+  // sitting there overdue. Per dog, not per card: one admitted dog must not
+  // suspend the potty round for the three that are home. Vet tasks are exempt —
+  // the admission itself is a vet task, and greying it out would hide the
+  // record of what happened.
+  const suspendedIds = useMemo(() => {
+    if (isVet) return new Set<string>();
+    return new Set(pets.filter(isAdmitted).map((p) => p.id));
+  }, [isVet, pets]);
+  const isSuspended = (item: AgendaItem) => suspendedIds.has(item.entityId);
+  const activeItems = group.items.filter((i) => !isSuspended(i));
+  // Every dog on this card is at the clinic: nothing here is actionable.
+  const wholeCardSuspended = activeItems.length === 0 && group.items.length > 0;
+
+  const pendingItems = activeItems.filter((i) => i.status !== "completed");
   const allDone = pendingItems.length === 0;
   const anyOverdue = pendingItems.some((i) => i.status === "overdue");
 
@@ -138,7 +156,6 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // A vet visit is two logs against the same schedule: the check-in, then
   // either a check-out or an admission. buildAgenda hands back one log per
   // item, so the pair is read straight from the day's logs instead.
-  const isVet = group.category === "vet";
   const visit = useMemo(() => {
     if (!isVet) return { checkedIn: false, closed: false, admitted: false };
     const scheduleIds = new Set(group.items.map((i) => i.scheduleId).filter(Boolean));
@@ -308,7 +325,10 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // which is when a mistake gets noticed. Safe to return before the dialogs
   // below — none of them can be open while this row is collapsed, and every
   // hook has already run above.
-  if (allDone && !expanded && !visitOpen) {
+  // Not for a suspended card: with every dog at the clinic there is nothing
+  // pending, but "Semua Selesai" would claim the round was done when it was
+  // actually called off.
+  if (allDone && !expanded && !visitOpen && !wholeCardSuspended) {
     return (
       <button
         type="button"
@@ -336,7 +356,13 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     <>
       {/* Tinted for medicine, vet and grooming; neutral for the meals and
           potty breaks that make up most of a day. */}
-      <Card className={cn("gap-3 py-4", categoryCardTint(group.category))}>
+      <Card
+        className={cn(
+          "gap-3 py-4",
+          categoryCardTint(group.category),
+          wholeCardSuspended && "opacity-50"
+        )}
+      >
         <CardHeader className="px-4">
           {/* Only a completed group has something to collapse back to, so the
               header is a button there and plain text everywhere else — a
@@ -367,17 +393,28 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 px-4">
+          {wholeCardSuspended && (
+            <p className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-900">
+              <Stethoscope className="size-3.5 shrink-0" /> Sedang Rawat Inap — jadwal dijeda
+            </p>
+          )}
           <div className="flex flex-wrap gap-1.5">
             {group.items.map((item) => (
               <Badge
                 key={item.entityId}
-                variant={item.status === "completed" ? "default" : "secondary"}
+                variant={
+                  isSuspended(item) ? "secondary" : item.status === "completed" ? "default" : "secondary"
+                }
                 className={cn(
                   "h-7 gap-1 px-2.5 text-sm",
-                  item.status === "completed" && "bg-emerald-600 text-white"
+                  item.status === "completed" && !isSuspended(item) && "bg-emerald-600 text-white",
+                  isSuspended(item) && "opacity-50"
                 )}
               >
-                {item.status === "completed" && <CheckCircle2 className="size-3.5" />}
+                {item.status === "completed" && !isSuspended(item) && (
+                  <CheckCircle2 className="size-3.5" />
+                )}
+                {isSuspended(item) && <Stethoscope className="size-3.5" />}
                 {item.entityName}
               </Badge>
             ))}
@@ -437,10 +474,14 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               a <label> here on purpose: the file input it used to wrap is
               disabled once everything is done, so a label would have been an
               inert strip of text sitting exactly where staff expect to tap. */}
-          {/* An open visit outranks "all done": the check-in marks the task
+          {/* Nothing to photograph when every dog on this card is at the
+              clinic, so the capture control is gone rather than merely
+              disabled — a greyed button still invites the tap.
+
+              An open visit outranks "all done": the check-in marks the task
               complete, but the dog is still at the clinic and the only useful
               control is the one that closes the visit. */}
-          {visitOpen ? (
+          {wholeCardSuspended ? null : visitOpen ? (
             // Checked in and still there. The only thing left to record is how
             // the visit ended, which is a question before it is a photo.
             <Button

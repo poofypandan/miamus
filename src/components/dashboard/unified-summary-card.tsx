@@ -1,7 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, ChevronRight, Clock, Droplets, Plus, Utensils, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Droplets,
+  Plus,
+  Stethoscope,
+  Utensils,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
@@ -9,7 +18,7 @@ import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { useHousehold } from "@/context/household-context";
 import { useLongPress } from "@/hooks/use-long-press";
-import { getPetMeta } from "@/lib/pets";
+import { getPetMeta, isAdmitted } from "@/lib/pets";
 import { POTTY_TITLE } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaItem } from "@/lib/scheduleEngine";
 import type { MasterSchedule, TaskEntity, TaskLog } from "@/types/database";
@@ -98,6 +107,7 @@ function PetOverviewRow({
     return groups.flatMap((g) => g.items);
   }, [dateStr, pet, schedules, logs]);
 
+  const admitted = isAdmitted(pet);
   const potty = items.filter((i) => i.title === POTTY_TITLE);
   const pottyDone = potty.filter((i) => i.status === "completed").length;
   const lunch = items.find((i) => i.title === "Makan Siang");
@@ -133,18 +143,28 @@ function PetOverviewRow({
         <MiniPetAvatar pet={pet} className="size-12" />
       </div>
       <span className="flex-1 truncate text-lg font-medium">{pet.name}</span>
-      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Droplets className="size-3.5" />
-        {pottyDone}/{potty.length}
-      </span>
-      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Utensils className="size-3.5" />
-        <MiniStatusIcon status={lunch?.status} />
-      </span>
-      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Utensils className="size-3.5" />
-        <MiniStatusIcon status={dinner?.status} />
-      </span>
+      {/* A dog at the clinic has no meals or potty breaks to count here, so the
+          tallies give way to where it actually is. Owner-facing, so English. */}
+      {admitted ? (
+        <span className="flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-900">
+          <Stethoscope className="size-3.5" /> Hospitalized
+        </span>
+      ) : (
+        <>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Droplets className="size-3.5" />
+            {pottyDone}/{potty.length}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Utensils className="size-3.5" />
+            <MiniStatusIcon status={lunch?.status} />
+          </span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Utensils className="size-3.5" />
+            <MiniStatusIcon status={dinner?.status} />
+          </span>
+        </>
+      )}
         <ChevronRight className="ml-auto size-5 shrink-0 text-gray-400" />
       </button>
     </>
