@@ -148,7 +148,13 @@ export function PetProfileSheet() {
                 day too, rather than the two disagreeing once the sheet closes.
                 Sits directly under the name: everything below it — the
                 overview, the photos, the timeline — is about the day it
-                selects. */}
+                selects.
+
+                Deliberately no -mx-4 bleed. The dashboard's own ribbon sits in
+                a px-4 box (dashboard/page.tsx), so inheriting this sheet's px-4
+                puts the two at an identical inset — measured 16px on both, and
+                the days scroll under the same edge. Letting it run to the
+                screen edge here would make the sheet the odd one out. */}
             <div className="mt-4">
               <DateRibbon value={selectedDate} onChange={setSelectedDate} />
             </div>
