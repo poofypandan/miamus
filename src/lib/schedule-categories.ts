@@ -122,6 +122,22 @@ export function categoryCardTint(category: ScheduleCategory): string {
   return CATEGORY_CARD_TINTS[category] ?? "";
 }
 
+// A deeper pass of the same three hues, for the pet profile sheet's timeline.
+// That list is one dog's whole day read close up, where the point is to pick
+// the medicine and the vet visit out of it — the dashboard keeps the lighter
+// set above, because tinting this hard across every pet at once turns the feed
+// into noise.
+const CATEGORY_CARD_TINTS_STRONG: Partial<Record<ScheduleCategory, string>> = {
+  medication: "border-rose-300 bg-rose-100",
+  vet: "border-indigo-300 bg-indigo-100",
+  grooming: "border-cyan-300 bg-cyan-100",
+};
+
+/** The deeper tint used inside the pet profile sheet, or "" for the default. */
+export function categoryCardTintStrong(category: ScheduleCategory): string {
+  return CATEGORY_CARD_TINTS_STRONG[category] ?? "";
+}
+
 // The Indonesian labels AdHocSheet writes into `notes` for a "Catat Ekstra"
 // entry. Kept in sync by hand with ADHOC_TYPES in components/staff/adhoc-sheet
 // — the labels are user-visible copy there, and this is the only place that

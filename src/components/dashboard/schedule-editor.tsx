@@ -38,7 +38,9 @@ import type { CreateScheduleInput } from "@/lib/data";
 import {
   POTTY_TITLE,
   categorizeSchedule,
+  categoryCardTintStrong,
   categoryIcon,
+  categoryIconColor,
   displayTitle,
   groomingTitle,
   medicationTitle,
@@ -47,6 +49,7 @@ import {
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import type { AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
+import { cn } from "@/lib/utils";
 import type { TaskEntity, MasterSchedule } from "@/types/database";
 import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
 import { CancelRoutineButton } from "@/components/dashboard/cancel-routine-button";
@@ -1306,12 +1309,33 @@ function LivePreviewCard({
         ) : (
           items.map((item) => {
             const Icon = categoryIcon(item.category);
+            // Deeper than the dashboard's tint on purpose — see
+            // categoryCardTintStrong. Padding and a transparent border on every
+            // row so a tinted one lines up with its neighbours instead of
+            // jogging sideways.
+            const tint = categoryCardTintStrong(item.category);
             return (
-              <div key={item.key} className="flex items-center gap-2 text-sm">
-                <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
+              <div
+                key={item.key}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm",
+                  tint
+                )}
+              >
+                <span
+                  className={cn(
+                    "w-16 shrink-0 font-mono text-xs",
+                    tint ? "text-zinc-700" : "text-muted-foreground"
+                  )}
+                >
                   {formatTime12h(item.time)}
                 </span>
-                <Icon className="size-4 shrink-0 text-muted-foreground" />
+                <Icon
+                  className={cn(
+                    "size-4 shrink-0",
+                    tint ? categoryIconColor(item.category) : "text-muted-foreground"
+                  )}
+                />
                 <span className="flex-1 font-medium">{item.title}</span>
                 {/* Group-level kill switch. The per-chip X buttons in the cards
                     below remove a single row; this wipes every future
