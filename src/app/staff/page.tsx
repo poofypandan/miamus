@@ -1,15 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
-import { UserRound } from "lucide-react";
+import { Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-gate";
+import { DischargeButton } from "@/components/dashboard/discharge-button";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
+import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
 export default function StaffPage() {
@@ -25,6 +27,8 @@ function StaffTasks() {
   const dateStr = formatDateLocal(selectedDate);
 
   useOfflineSync();
+
+  const admittedPets = useMemo(() => pets.filter(isAdmitted), [pets]);
 
   const groups = useMemo(
     () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
@@ -44,6 +48,33 @@ function StaffTasks() {
         </div>
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
       </header>
+
+      {/* Whoever is holding this phone is the one who will fetch the dog, so
+          the discharge lives here as well as on the owner's profile sheet.
+          Staff-facing, so Bahasa Indonesia. */}
+      {admittedPets.length > 0 && (
+        <section className="flex flex-col gap-2">
+          {admittedPets.map((pet) => (
+            <div
+              key={pet.id}
+              className="flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3"
+            >
+              <p className="flex items-center gap-1.5 text-sm font-medium text-indigo-900">
+                <Stethoscope className="size-4 shrink-0" /> {pet.name} sedang rawat inap
+              </p>
+              <p className="text-xs text-indigo-900/80">
+                Jadwal makan dan pipisnya dijeda sampai dijemput.
+              </p>
+              <DischargeButton
+                pet={pet}
+                label="Jemput dari Klinik"
+                successMessage={`${pet.name} sudah pulang — jadwal aktif lagi`}
+                errorMessage="Gagal memperbarui status"
+              />
+            </div>
+          ))}
+        </section>
+      )}
 
       <main className="flex flex-1 flex-col gap-3">
         {loading ? (

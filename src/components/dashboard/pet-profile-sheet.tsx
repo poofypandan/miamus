@@ -11,7 +11,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Stethoscope } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
+import { DischargeButton } from "@/components/dashboard/discharge-button";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { SummaryCard } from "@/components/dashboard/summary-card";
@@ -22,7 +24,7 @@ import { HealthRecordForm } from "@/components/dashboard/health-record-form";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
-import { getPetMeta } from "@/lib/pets";
+import { getPetMeta, isAdmitted } from "@/lib/pets";
 import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
@@ -142,6 +144,26 @@ export function PetProfileSheet() {
                 {pet.name}&apos;s daily feed, schedule, and health passport.
               </SheetDescription>
             </SheetHeader>
+
+            {/* Above everything else, because while it is true nothing below
+                it is actionable: the dog's routines are suspended until it is
+                collected. Owner-facing, so English. */}
+            {isAdmitted(pet) && (
+              <div className="mt-4 flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-indigo-900">
+                  <Stethoscope className="size-4 shrink-0" /> {pet.name} is at the clinic
+                </p>
+                <p className="text-xs text-indigo-900/80">
+                  Daily meals and potty breaks are paused until {pet.name} is collected.
+                </p>
+                <DischargeButton
+                  pet={pet}
+                  label="Bring Home from Clinic"
+                  successMessage={`${pet.name} is home — routines resumed`}
+                  errorMessage="Couldn't update status"
+                />
+              </div>
+            )}
 
             {/* The same ribbon and the same global date as the dashboard, so
                 stepping back a day here leaves the feed underneath showing that
