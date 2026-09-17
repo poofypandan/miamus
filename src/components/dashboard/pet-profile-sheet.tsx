@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { DateRibbon } from "@/components/date-ribbon";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { SummaryCard } from "@/components/dashboard/summary-card";
@@ -40,6 +41,7 @@ export function PetProfileSheet() {
     activePetId,
     setActivePetId,
     selectedDate,
+    setSelectedDate,
     userRole,
     createEntity,
     updateEntity,
@@ -140,6 +142,16 @@ export function PetProfileSheet() {
                 {pet.name}&apos;s daily feed, schedule, and health passport.
               </SheetDescription>
             </SheetHeader>
+
+            {/* The same ribbon and the same global date as the dashboard, so
+                stepping back a day here leaves the feed underneath showing that
+                day too, rather than the two disagreeing once the sheet closes.
+                Sits directly under the name: everything below it — the
+                overview, the photos, the timeline — is about the day it
+                selects. */}
+            <div className="mt-4">
+              <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+            </div>
 
             <section className="mt-6">
               <h3 className="mb-3 text-sm font-semibold text-gray-900">{label}&apos;s Overview</h3>
