@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Camera, CheckCircle2, ChevronDown, ChevronUp, Loader2, Trash2 } from "lucide-react";
+import {
+  Camera,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Home,
+  Loader2,
+  Stethoscope,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
@@ -23,8 +32,9 @@ import { compressPhoto } from "@/lib/image";
 import { categoryCardTint, categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { UNDO_WINDOW_MS } from "@/lib/undo-window";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
-import type { TaskLog } from "@/types/database";
+import type { LogSubType, TaskLog } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 interface PendingCapture {
@@ -44,7 +54,8 @@ function deletableUntil(completedAt: string): number {
 }
 
 export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
-  const { logTasksBatch, uploadPhoto, pets, deleteLogWithPhoto } = useHousehold();
+  const { logTasksBatch, uploadPhoto, pets, deleteLogWithPhoto, logs, updateEntity } =
+    useHousehold();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [capture, setCapture] = useState<PendingCapture | null>(null);
@@ -58,6 +69,17 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const [now, setNow] = useState(() => Date.now());
   // Lets a completed group be re-opened from its compact row (see below).
   const [expanded, setExpanded] = useState(false);
+  // Only how an *open* visit is being closed — "Bawa Pulang" or "Rawat Inap".
+  // Which half of the visit a photo records is derived from the card's own
+  // state below, never from a click handler: the camera can be opened from a
+  // label, from the finish dialog, or by the browser restoring a file input,
+  // and a mode set on the way in is a mode that can be wrong on the way out.
+  const [finishChoice, setFinishChoice] = useState<LogSubType>("check_out");
+  const [finishOpen, setFinishOpen] = useState(false);
+  // The capture input lives inside a <label> for ordinary tasks; finishing a
+  // vet visit has to ask what happened first, so that path opens the camera
+  // from code instead.
+  const fileRef = useRef<HTMLInputElement>(null);
   // One guard per card is enough — only one finger is ever mid-gesture, and
   // touchstart re-arms it for whichever tile that gesture began on.
   const tap = useTapGuard();
@@ -113,6 +135,31 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     return [...byUrl.values()].sort((a, b) => a.at.localeCompare(b.at));
   }, [group.items]);
 
+  // A vet visit is two logs against the same schedule: the check-in, then
+  // either a check-out or an admission. buildAgenda hands back one log per
+  // item, so the pair is read straight from the day's logs instead.
+  const isVet = group.category === "vet";
+  const visit = useMemo(() => {
+    if (!isVet) return { checkedIn: false, closed: false, admitted: false };
+    const scheduleIds = new Set(group.items.map((i) => i.scheduleId).filter(Boolean));
+    const day = group.items[0]?.log?.completed_at;
+    const today = day ? formatDateLocal(new Date(day)) : formatDateLocal(new Date());
+    const mine = logs.filter(
+      (l) =>
+        l.schedule_id &&
+        scheduleIds.has(l.schedule_id) &&
+        formatDateLocal(new Date(l.completed_at)) === today
+    );
+    return {
+      checkedIn: mine.some((l) => l.sub_type === "check_in"),
+      closed: mine.some((l) => l.sub_type === "check_out" || l.sub_type === "admitted"),
+      admitted: mine.some((l) => l.sub_type === "admitted"),
+    };
+  }, [isVet, group.items, logs]);
+  // Open visit: checked in, not yet resolved. The card stays expanded through
+  // this, or a dog would be marked "done" while still at the clinic.
+  const visitOpen = isVet && visit.checkedIn && !visit.closed;
+
   // Clamped, so deleting the last photo in the strip lands on the new last one
   // rather than reading past the end.
   const lightbox =
@@ -130,7 +177,10 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || allDone || busy) return;
+    // allDone blocks a stray capture on a finished group — except while a vet
+    // visit is open, where the group counts as done from the check-in onward
+    // and the closing photo is the whole point.
+    if (!file || busy || (allDone && !visitOpen)) return;
     setBusy(true);
     try {
       const compressed = await compressPhoto(file);
@@ -142,7 +192,10 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       // the frame. Staff now have to say who they actually photographed.
       setCapture({
         photoUrl: url,
-        items: pendingItems,
+        // Closing a vet visit offers the dogs that went in, not the pending
+        // ones: the check-in already marked them done, so pendingItems is
+        // empty by then and the dialog would have nobody to tick.
+        items: visitOpen ? group.items : pendingItems,
         selected: new Set(),
       });
     } catch (err) {
@@ -171,6 +224,10 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     setConfirming(true);
     try {
       const chosen = capture.items.filter((i) => capture.selected.has(i.entityId));
+      // Derived at the moment of saving: a first vet photo is the check-in, a
+      // second closes the visit the way the dialog was answered, and anything
+      // that is not a vet task is simply complete.
+      const subType: LogSubType = isVet ? (visitOpen ? finishChoice : "check_in") : "complete";
       await logTasksBatch({
         entries: chosen.map((item) => ({
           schedule_id: item.scheduleId,
@@ -178,9 +235,27 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         })),
         module: group.module,
         photo_url: capture.photoUrl,
+        sub_type: subType,
       });
+      // The admission is what suspends the dog's meals and potty breaks, so it
+      // is written after the log rather than before: a failed photo must not
+      // leave a dog marked as living at the clinic.
+      if (subType === "admitted") {
+        for (const item of chosen) {
+          await updateEntity(item.entityId, { status: "admitted" });
+        }
+      }
       const names = chosen.map((i) => i.entityName).join(", ");
-      toast.success(`${names} · ${group.title} selesai ✅`);
+      toast.success(
+        subType === "check_in"
+          ? `${names} · sudah di klinik 🏥`
+          : subType === "admitted"
+            ? `${names} · rawat inap — jadwal harian dihentikan sementara`
+            : subType === "check_out"
+              ? `${names} · sudah pulang 🏠`
+              : `${names} · ${group.title} selesai ✅`
+      );
+      setFinishChoice("check_out");
       setCapture(null);
     } catch (err) {
       console.error(err);
@@ -233,7 +308,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // which is when a mistake gets noticed. Safe to return before the dialogs
   // below — none of them can be open while this row is collapsed, and every
   // hook has already run above.
-  if (allDone && !expanded) {
+  if (allDone && !expanded && !visitOpen) {
     return (
       <button
         type="button"
@@ -362,7 +437,21 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               a <label> here on purpose: the file input it used to wrap is
               disabled once everything is done, so a label would have been an
               inert strip of text sitting exactly where staff expect to tap. */}
-          {allDone ? (
+          {/* An open visit outranks "all done": the check-in marks the task
+              complete, but the dog is still at the clinic and the only useful
+              control is the one that closes the visit. */}
+          {visitOpen ? (
+            // Checked in and still there. The only thing left to record is how
+            // the visit ended, which is a question before it is a photo.
+            <Button
+              onClick={() => setFinishOpen(true)}
+              disabled={busy}
+              className="min-h-[48px] w-full bg-indigo-600 text-sm hover:bg-indigo-700"
+            >
+              {busy ? <Loader2 className="animate-spin" /> : <Stethoscope className="size-5" />}
+              Selesaikan Visit
+            </Button>
+          ) : allDone ? (
             <button
               type="button"
               onClick={() => setExpanded(false)}
@@ -383,6 +472,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               )}
             >
               <input
+                ref={fileRef}
                 type="file"
                 accept="image/*"
                 capture="environment"
@@ -395,15 +485,72 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               ) : (
                 <span className="flex items-center gap-1.5">
                   <Camera className="size-5" />
-                  {pendingItems.length > 1
-                    ? `Ambil Foto untuk ${pendingItems.length} Anjing`
-                    : "Ambil Foto untuk Selesai"}
+                  {isVet
+                    ? "Check-In Klinik"
+                    : pendingItems.length > 1
+                      ? `Ambil Foto untuk ${pendingItems.length} Anjing`
+                      : "Ambil Foto untuk Selesai"}
                 </span>
               )}
             </label>
           )}
         </CardContent>
       </Card>
+
+      {/* How the visit ended. Both answers still take a photo — the difference
+          is what the photo is filed as, and whether the dog's daily routine is
+          suspended afterwards. */}
+      <Dialog open={finishOpen} onOpenChange={(open) => !open && setFinishOpen(false)}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Selesaikan visit</DialogTitle>
+            <DialogDescription>
+              Anjingnya pulang hari ini, atau menginap di klinik?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <Button
+              className="min-h-[52px] w-full"
+              onClick={() => {
+                setFinishChoice("check_out");
+                setFinishOpen(false);
+                fileRef.current?.click();
+              }}
+            >
+              <Home className="size-5" /> Bawa Pulang
+            </Button>
+            <Button
+              variant="outline"
+              className="min-h-[52px] w-full border-indigo-300 bg-indigo-50 hover:bg-indigo-100"
+              onClick={() => {
+                setFinishChoice("admitted");
+                setFinishOpen(false);
+                fileRef.current?.click();
+              }}
+            >
+              <Stethoscope className="size-5" /> Rawat Inap
+            </Button>
+            <p className="px-1 text-xs text-muted-foreground">
+              Rawat inap menghentikan sementara jadwal makan dan pipisnya sampai dijemput.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Kept mounted for the vet flow: finishing a visit opens the camera from
+          the dialog above, which needs this input to exist even though the
+          capture label is hidden while the visit is open. */}
+      {visitOpen && (
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          disabled={busy}
+          onChange={handleFile}
+        />
+      )}
 
       <Dialog open={!!capture} onOpenChange={(open) => !open && setCapture(null)}>
         <DialogContent className="sm:max-w-md">

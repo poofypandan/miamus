@@ -81,6 +81,9 @@ export const supabaseProvider: DataProvider = {
       // Stamped once for the whole batch: one photo of four dogs is one
       // person's work, however many rows it becomes.
       staff_id: input.staff_id ?? null,
+      // Vet visits log twice — a check-in and then a check-out or an
+      // admission. Everything else is a plain "complete".
+      sub_type: input.sub_type ?? "complete",
     }));
     const { data, error } = await client().from("task_logs").insert(rows).select();
     if (error) throw error;

@@ -14,6 +14,7 @@ import type {
   ProposalStatus,
   ScheduleCategoryName,
   StaffProfile,
+  LogSubType,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -35,6 +36,11 @@ export interface CreateLogInput {
    * Set centrally in HouseholdContext, so callers rarely pass it themselves.
    */
   staff_id?: string | null;
+  /**
+   * Which half of a vet visit this records (Phase 79). Omitted for ordinary
+   * tasks, which the column defaults to "complete".
+   */
+  sub_type?: LogSubType;
 }
 
 export interface CreateBatchLogInput {
@@ -48,6 +54,11 @@ export interface CreateBatchLogInput {
    * Set centrally in HouseholdContext, so callers rarely pass it themselves.
    */
   staff_id?: string | null;
+  /**
+   * Which half of a vet visit this records (Phase 79). Omitted for ordinary
+   * tasks, which the column defaults to "complete".
+   */
+  sub_type?: LogSubType;
 }
 
 export interface CreateScheduleInput {
