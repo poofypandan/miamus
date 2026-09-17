@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-gate";
-import { SyncButton } from "@/components/shared/sync-button";
+import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,7 +21,7 @@ export default function StaffPage() {
 }
 
 function StaffTasks() {
-  const { pets, schedules, logs, loading, selectedDate, setSelectedDate } = useHousehold();
+  const { pets, schedules, logs, loading, selectedDate, setSelectedDate, refresh } = useHousehold();
   const dateStr = formatDateLocal(selectedDate);
 
   useOfflineSync();
@@ -32,15 +32,15 @@ function StaffTasks() {
   );
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col gap-4 bg-slate-50 px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+    <div className="mx-auto min-h-screen w-full max-w-md flex-1 bg-slate-50 px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      {/* Silent, because the pull's own spinner is the feedback — swapping the
+          list for skeletons mid-gesture would be worse than no feedback. */}
+      <PullToRefresh onRefresh={() => refresh({ silent: true })}>
+        <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold">Tugas Hari Ini</h1>
-          <div className="flex items-center gap-1">
-            <OnDutyBadge />
-            {/* Staff-facing, so Bahasa Indonesia per the Phase 46 boundary. */}
-            <SyncButton label="Muat ulang data" errorMessage="Gagal memuat ulang — cek koneksi" />
-          </div>
+          <OnDutyBadge />
         </div>
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
       </header>
@@ -62,6 +62,8 @@ function StaffTasks() {
       </main>
 
       <StaffReportsPanel />
+        </div>
+      </PullToRefresh>
     </div>
   );
 }
