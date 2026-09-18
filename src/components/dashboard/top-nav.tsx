@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   DASHBOARD_TABS,
@@ -44,42 +44,33 @@ export function TopNav() {
   const { userRole } = useHousehold();
   const isOwner = userRole === "owner";
 
-  return (
-    <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
-      <div className="flex items-center justify-between px-4 py-3">
-        <span className="text-lg font-semibold">Banyuwangi 11</span>
-        <Link
-          href="/staff"
-          className="flex min-h-[48px] items-center text-xs font-medium text-muted-foreground underline-offset-4 hover:underline"
-        >
-          Open Staff View →
-        </Link>
-      </div>
+  // Staff only ever has the Daily Feed tab — a single-item tab row is pure
+  // clutter, so no sub-nav at all for them. A tap is a .push() so Back returns
+  // to the previous panel; swipes use .replace() (see SwipeCarousel callers).
+  let subNav = null;
+  if (isOwner && activeModule === "pets") {
+    subNav = (
+      <SegmentedControl
+        ariaLabel="Pets view"
+        segments={PETS_SEGMENTS}
+        value={activeTab}
+        onChange={(tab) => router.push(tabHref(tab), { scroll: false })}
+      />
+    );
+  } else if (isOwner && activeModule === "household") {
+    subNav = (
+      <SegmentedControl
+        ariaLabel="Household view"
+        segments={HOUSEHOLD_SEGMENTS}
+        value={activeHouseholdView}
+        onChange={(view) => router.push(householdViewHref(view), { scroll: false })}
+      />
+    );
+  }
 
-      {/* Staff only ever has the Daily Feed tab — a single-item tab row is
-          pure clutter, so skip it entirely rather than rendering it. A tap is
-          a .push() so Back returns to the previous panel, as the links these
-          replaced did; swipes use .replace() (see SwipeCarousel callers). */}
-      {isOwner && activeModule === "pets" && (
-        <div className="px-4 pb-3">
-          <SegmentedControl
-            ariaLabel="Pets view"
-            segments={PETS_SEGMENTS}
-            value={activeTab}
-            onChange={(tab) => router.push(tabHref(tab), { scroll: false })}
-          />
-        </div>
-      )}
-      {isOwner && activeModule === "household" && (
-        <div className="px-4 pb-3">
-          <SegmentedControl
-            ariaLabel="Household view"
-            segments={HOUSEHOLD_SEGMENTS}
-            value={activeHouseholdView}
-            onChange={(view) => router.push(householdViewHref(view), { scroll: false })}
-          />
-        </div>
-      )}
-    </div>
+  return (
+    <AppHeader action={<HeaderNavLink href="/staff">Open Staff View →</HeaderNavLink>}>
+      {subNav}
+    </AppHeader>
   );
 }

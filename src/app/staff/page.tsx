@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useMemo } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
@@ -12,8 +11,8 @@ import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { HouseholdTasksPanel } from "@/components/staff/household-tasks-panel";
 import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
 import { StockCheckPanel } from "@/components/staff/stock-check-panel";
+import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
@@ -62,30 +61,28 @@ function StaffTasks() {
   // staff spend most of the day.
   const dueCount = useMemo(() => dueStockItems(inventoryItems).length, [inventoryItems]);
 
+  // The same shell as dashboard/layout.tsx — column, shared AppHeader outside
+  // the pull, content starting pt-3 below it — so switching between the two
+  // views moves nothing but the words (Phase 84C). The bottom padding differs
+  // only because there is no tab bar here to clear.
   return (
-    <div className="mx-auto min-h-screen w-full max-w-md flex-1 bg-slate-50 px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-50 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      <AppHeader action={<HeaderIdentity />}>
+        <SegmentedControl
+          ariaLabel="Tampilan"
+          segments={[
+            { value: "tugas", label: "Tugas Hari Ini" },
+            { value: "stok", label: "Cek Stok", badge: dueCount > 0 ? dueCount : undefined },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+      </AppHeader>
+
       {/* Silent, because the pull's own spinner is the feedback — swapping the
           list for skeletons mid-gesture would be worse than no feedback. */}
       <PullToRefresh onRefresh={() => refresh({ silent: true })}>
-        <div className="flex flex-col gap-4">
-          <header className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <h1 className="text-xl font-semibold">
-                {view === "tugas" ? "Tugas Hari Ini" : "Cek Stok"}
-              </h1>
-              <HeaderIdentity />
-            </div>
-            <SegmentedControl
-              ariaLabel="Tampilan"
-              segments={[
-                { value: "tugas", label: "Tugas Hari Ini" },
-                { value: "stok", label: "Cek Stok", badge: dueCount > 0 ? dueCount : undefined },
-              ]}
-              value={view}
-              onChange={setView}
-            />
-          </header>
-
+        <div className="flex flex-col gap-4 px-4 pt-3">
           {view === "tugas" ? <TasksView /> : <StockCheckPanel />}
         </div>
       </PullToRefresh>
@@ -177,11 +174,7 @@ function HeaderIdentity() {
   // This hides a button; it is not access control. The dashboard's own
   // owner-only screens stay guarded by useRequireOwner.
   if (userRole === "owner" && !staffId) {
-    return (
-      <Button variant="outline" asChild className="min-h-[40px] shrink-0 bg-white">
-        <Link href="/dashboard">← Owner Dashboard</Link>
-      </Button>
-    );
+    return <HeaderNavLink href="/dashboard">← Owner Dashboard</HeaderNavLink>;
   }
   return <OnDutyBadge />;
 }
