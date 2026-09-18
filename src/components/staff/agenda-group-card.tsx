@@ -93,6 +93,21 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // No useBackToClose for the lightbox: PhotoLightbox claims its own history
   // entry, and a second one here would need two Back presses to leave a photo.
 
+  // One entry per dog, not per task. A consolidated medicine group holds
+  // several tasks for the same dog, and both the chips and the tagging dialog
+  // are about dogs — left as-is they rendered "Mocha Mocha" and handed React
+  // duplicate keys. A dog counts as done only when all of its tasks in the
+  // group are.
+  const dogsIn = (items: AgendaItem[]) => {
+    const byEntity = new Map<string, { entityId: string; entityName: string; items: AgendaItem[] }>();
+    for (const item of items) {
+      const entry = byEntity.get(item.entityId);
+      if (entry) entry.items.push(item);
+      else byEntity.set(item.entityId, { entityId: item.entityId, entityName: item.entityName, items: [item] });
+    }
+    return [...byEntity.values()];
+  };
+
   const isVet = group.category === "vet";
   // Several medicines at the same time for the same dog, rolled into one block
   // by buildAgenda. The card then names the errand rather than one of its
@@ -267,7 +282,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           await updateEntity(item.entityId, { status: "admitted" });
         }
       }
-      const names = chosen.map((i) => i.entityName).join(", ");
+      // Deduped: a consolidated medicine group holds several tasks per dog, and
+      // "Mocha, Mocha selesai" reads like a bug.
+      const names = [...new Set(chosen.map((i) => i.entityName))].join(", ");
       toast.success(
         subType === "check_in"
           ? `${names} · sudah di klinik 🏥`
@@ -275,7 +292,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             ? `${names} · rawat inap — jadwal harian dihentikan sementara`
             : subType === "check_out"
               ? `${names} · sudah pulang 🏠`
-              : `${names} · ${group.title} selesai ✅`
+              : `${names} · ${cardTitle} selesai ✅`
       );
       setFinishChoice("check_out");
       setCapture(null);
@@ -419,25 +436,25 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           )}
 
           <div className="flex flex-wrap gap-1.5">
-            {group.items.map((item) => (
-              <Badge
-                key={item.entityId}
-                variant={
-                  isSuspended(item) ? "secondary" : item.status === "completed" ? "default" : "secondary"
-                }
-                className={cn(
-                  "h-7 gap-1 px-2.5 text-sm",
-                  item.status === "completed" && !isSuspended(item) && "bg-emerald-600 text-white",
-                  isSuspended(item) && "opacity-50"
-                )}
-              >
-                {item.status === "completed" && !isSuspended(item) && (
-                  <CheckCircle2 className="size-3.5" />
-                )}
-                {isSuspended(item) && <Stethoscope className="size-3.5" />}
-                {item.entityName}
-              </Badge>
-            ))}
+            {dogsIn(group.items).map((dog) => {
+              const suspended = isSuspended(dog.items[0]);
+              const done = dog.items.every((i) => i.status === "completed");
+              return (
+                <Badge
+                  key={dog.entityId}
+                  variant={!suspended && done ? "default" : "secondary"}
+                  className={cn(
+                    "h-7 gap-1 px-2.5 text-sm",
+                    done && !suspended && "bg-emerald-600 text-white",
+                    suspended && "opacity-50"
+                  )}
+                >
+                  {done && !suspended && <CheckCircle2 className="size-3.5" />}
+                  {suspended && <Stethoscope className="size-3.5" />}
+                  {dog.entityName}
+                </Badge>
+              );
+            })}
           </div>
 
           {/* Every photo logged against this slot, not just the first — and
@@ -634,7 +651,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 className="max-h-56 w-full rounded-lg object-cover"
               />
               <div className="flex flex-col gap-2">
-                {capture.items.map((item) => {
+                {dogsIn(capture.items).map((item) => {
                   const checked = capture.selected.has(item.entityId);
                   const pet = petById.get(item.entityId);
                   return (
