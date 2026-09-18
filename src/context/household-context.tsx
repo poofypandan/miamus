@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
 import type {
@@ -11,10 +11,12 @@ import type {
   CreateMedicalRecordInput,
   CreateInventoryAlertInput,
   CreateRoutineProposalInput,
+  CreateHouseholdTaskInput,
 } from "@/lib/data";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
 import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -25,6 +27,8 @@ import type {
   InventoryItem,
   ItemType,
   ProposalStatus,
+  HouseholdTask,
+  HouseholdTaskStatus,
 } from "@/types/database";
 
 /**
@@ -57,6 +61,12 @@ interface HouseholdContextValue {
   inventoryAlerts: InventoryAlert[];
   routineProposals: RoutineProposal[];
   inventoryItems: InventoryItem[];
+  /**
+   * The chores filed for whichever day `selectedDate` is on — never the whole
+   * table. Fetched per day rather than in bulk (see migrations/082), so this
+   * array changes when the browsed date does.
+   */
+  householdTasks: HouseholdTask[];
   loading: boolean;
   isMockMode: boolean;
   // null = Unified Overview; a pet id = that pet's detail view. This is the
@@ -103,6 +113,19 @@ interface HouseholdContextValue {
     ids: string[],
     status: Exclude<ProposalStatus, "pending">
   ) => Promise<void>;
+  createHouseholdTask: (input: CreateHouseholdTaskInput) => Promise<HouseholdTask>;
+  /**
+   * Flips a chore's status. Completing one stamps the clock and the staff
+   * member on the device, and carries the proof photo in the same write — a
+   * chore is closed by producing proof, so the two cannot come apart.
+   */
+  updateHouseholdTaskStatus: (
+    id: string,
+    status: HouseholdTaskStatus,
+    patch?: { photo_url?: string | null }
+  ) => Promise<HouseholdTask>;
+  /** Takes an unassigned chore for whoever is signed in on this device. */
+  claimHouseholdTask: (id: string) => Promise<HouseholdTask>;
   undoInventoryAlert: (id: string) => Promise<void>;
   undoRoutineProposal: (id: string) => Promise<void>;
   decideRoutineProposal: (id: string, status: Exclude<ProposalStatus, "pending">) => Promise<void>;
@@ -118,7 +141,35 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([]);
   const [routineProposals, setRoutineProposals] = useState<RoutineProposal[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [householdTasks, setHouseholdTasks] = useState<HouseholdTask[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Declared up here, ahead of `refresh`, because the chore fetch is scoped to
+  // the day being browsed and `refresh` has to know which day that is.
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const selectedDateStr = formatDateLocal(selectedDate);
+
+  // Read through a ref rather than taken as a dependency: making `refresh`
+  // depend on the date would give it a new identity on every date tap, which
+  // re-fires the mount effect below and turns picking a day into a full reload
+  // with skeletons — exactly what the silent-sync design exists to avoid.
+  const selectedDateRef = useRef(selectedDateStr);
+  useEffect(() => {
+    selectedDateRef.current = selectedDateStr;
+  }, [selectedDateStr]);
+
+  const loadHouseholdTasks = useCallback(async (dueDate: string) => {
+    try {
+      setHouseholdTasks(await dataProvider.listHouseholdTasks(dueDate));
+    } catch (err) {
+      // Same degraded state as routine_proposals and inventory_items below:
+      // household_tasks arrives with the Phase 82 migration, and until it is
+      // applied the request 404s. An empty chore list is the correct answer —
+      // letting it bubble would take the whole dashboard down with it.
+      console.warn("household_tasks unavailable — run the Phase 82 migration", err);
+      setHouseholdTasks([]);
+    }
+  }, []);
 
   const refresh = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     // A silent pass leaves `loading` alone. It matters more than it looks:
@@ -146,6 +197,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         console.warn("inventory_items unavailable — run the Phase 60 migration", err);
         return [] as InventoryItem[];
       }),
+      // Chores for the day on screen, so a pull-to-refresh or a reconnect sync
+      // picks up anything the owner delegated from their own phone. Swallows
+      // its own failure inside loadHouseholdTasks.
+      loadHouseholdTasks(selectedDateRef.current),
     ]);
     setEntities(e);
     setSchedules(s);
@@ -155,7 +210,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setRoutineProposals(rp);
     setInventoryItems(ii);
     if (!silent) setLoading(false);
-  }, []);
+  }, [loadHouseholdTasks]);
 
   useEffect(() => {
     refresh();
@@ -174,7 +229,17 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     }
   }, [pets, activePetId]);
 
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  // Reloads the chore list when the browsed day changes. Skips its own first
+  // run because the mount pass of `refresh()` above already loaded today —
+  // without the guard every page load would issue the same query twice.
+  const choresLoadedOnce = useRef(false);
+  useEffect(() => {
+    if (!choresLoadedOnce.current) {
+      choresLoadedOnce.current = true;
+      return;
+    }
+    void loadHouseholdTasks(selectedDateStr);
+  }, [selectedDateStr, loadHouseholdTasks]);
 
   const [userRole, setUserRole] = useState<UserRole>("staff");
   const [roleHydrated, setRoleHydrated] = useState(false);
@@ -369,6 +434,51 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  // Applied to local state only when the new chore belongs to the day on
+  // screen. The owner can file a chore for tomorrow from today's panel, and
+  // pushing it into this array would show it on the wrong date until the next
+  // fetch dropped it again.
+  const createHouseholdTask = useCallback(
+    async (input: CreateHouseholdTaskInput) => {
+      const task = await dataProvider.createHouseholdTask(input);
+      if (task.due_date === selectedDateRef.current) {
+        setHouseholdTasks((prev) => [...prev, task]);
+      }
+      return task;
+    },
+    []
+  );
+
+  const updateHouseholdTaskStatus = useCallback(
+    async (
+      id: string,
+      status: HouseholdTaskStatus,
+      patch?: { photo_url?: string | null }
+    ) => {
+      // Stamped here rather than at the call site, for the same reason every
+      // other write in this file is: the component knows it took a photo, not
+      // who is holding the phone.
+      const updated = await dataProvider.updateHouseholdTaskStatus(id, status, {
+        ...patch,
+        completed_by: status === "completed" ? readActiveStaffId() : null,
+      });
+      setHouseholdTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
+      return updated;
+    },
+    []
+  );
+
+  const claimHouseholdTask = useCallback(async (id: string) => {
+    const staffId = readActiveStaffId();
+    // Nobody has been through the staff gate on this device, so there is no
+    // name to claim it under. Refused rather than written as null, which is
+    // the value that already means "unassigned".
+    if (!staffId) throw new Error("No staff member is signed in on this device");
+    const updated = await dataProvider.claimHouseholdTask(id, staffId);
+    setHouseholdTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
+    return updated;
+  }, []);
+
   const undoInventoryAlert = useCallback(async (id: string) => {
     await dataProvider.deleteInventoryAlert(id);
     setInventoryAlerts((prev) => prev.filter((a) => a.id !== id));
@@ -414,6 +524,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       inventoryAlerts,
       routineProposals,
       inventoryItems,
+      householdTasks,
       loading,
       isMockMode,
       activePetId,
@@ -444,6 +555,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,
+      createHouseholdTask,
+      updateHouseholdTaskStatus,
+      claimHouseholdTask,
       undoInventoryAlert,
       undoRoutineProposal,
       decideRoutineProposal,
@@ -457,6 +571,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       inventoryAlerts,
       routineProposals,
       inventoryItems,
+      householdTasks,
       loading,
       activePetId,
       selectedDate,
@@ -484,6 +599,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,
+      createHouseholdTask,
+      updateHouseholdTaskStatus,
+      claimHouseholdTask,
       undoInventoryAlert,
       undoRoutineProposal,
       decideRoutineProposal,

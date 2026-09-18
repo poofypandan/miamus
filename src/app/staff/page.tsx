@@ -7,6 +7,7 @@ import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-
 import { DischargeButton } from "@/components/dashboard/discharge-button";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
+import { HouseholdTasksPanel } from "@/components/staff/household-tasks-panel";
 import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
@@ -91,6 +92,8 @@ function StaffTasks() {
           groups.map((group) => <AgendaGroupCard key={`${group.time}-${group.title}`} group={group} />)
         )}
       </main>
+
+      <HouseholdTasksPanel />
 
       <StaffReportsPanel />
         </div>

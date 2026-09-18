@@ -314,6 +314,84 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
+  async listHouseholdTasks(dueDate) {
+    // Scoped to one day rather than paged like task_logs: this table grows
+    // without bound over months and no view ever wants more than the day it is
+    // showing, so the date is the query, not a client-side filter.
+    const { data, error } = await client()
+      .from("household_tasks")
+      .select("*")
+      .eq("due_date", dueDate)
+      // Timed chores first in clock order, then the "sometime today" ones —
+      // nullsFirst: false is what puts a null due_time at the end rather than
+      // at the top of the owner's list.
+      .order("due_time", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data;
+  },
+  async createHouseholdTask(input) {
+    const { data, error } = await client()
+      .from("household_tasks")
+      .insert({
+        title: input.title,
+        category: input.category,
+        assigned_to: input.assigned_to ?? null,
+        due_date: input.due_date,
+        due_time: input.due_time ?? null,
+        notes: input.notes ?? null,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async updateHouseholdTaskStatus(id, status, patch) {
+    // completed_at is written here rather than left to a default: a chore can
+    // only be completed, and stamping the clock in the same statement as the
+    // flip means there is no window where a chore is done at no time. Moving
+    // back to pending clears the whole completion — author, clock and proof —
+    // because a half-cleared chore would show as open while still crediting
+    // someone for it.
+    const completing = status === "completed";
+    const { data, error } = await client()
+      .from("household_tasks")
+      .update({
+        status,
+        completed_at: completing ? new Date().toISOString() : null,
+        completed_by: completing ? (patch?.completed_by ?? null) : null,
+        photo_url: completing ? (patch?.photo_url ?? null) : null,
+      })
+      .eq("id", id)
+      .select();
+    if (error) throw error;
+    // .select() so an RLS-filtered update (200 with zero rows) surfaces as a
+    // failure instead of a chore that silently never closed — same reasoning
+    // as setStaffPin.
+    if (!data || data.length === 0) {
+      throw new Error(
+        "Chore was not updated — the household_tasks update policy is missing."
+      );
+    }
+    return data[0];
+  },
+  async claimHouseholdTask(id, staffId) {
+    // `is("assigned_to", null)` is the whole point of this being its own call
+    // rather than a generic update: two people tapping "Ambil Tugas" on the
+    // same chore within a second of each other both send a claim, and this
+    // makes the second one affect zero rows instead of quietly stealing it.
+    const { data, error } = await client()
+      .from("household_tasks")
+      .update({ assigned_to: staffId })
+      .eq("id", id)
+      .is("assigned_to", null)
+      .select();
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("Chore was already claimed by someone else.");
+    }
+    return data[0];
+  },
   async listStaffProfiles() {
     // By name, not created_at: the seeded rows were inserted in one statement
     // and share a timestamp to the microsecond, so ordering by it put the list

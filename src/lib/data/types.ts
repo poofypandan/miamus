@@ -15,6 +15,9 @@ import type {
   ScheduleCategoryName,
   StaffProfile,
   LogSubType,
+  HouseholdTask,
+  HouseholdTaskCategory,
+  HouseholdTaskStatus,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -116,6 +119,34 @@ export interface CreateRoutineProposalInput {
   staff_id?: string | null;
 }
 
+export interface CreateHouseholdTaskInput {
+  title: string;
+  category: HouseholdTaskCategory;
+  /** Omitted or null means "anyone" — see HouseholdTask.assigned_to. */
+  assigned_to?: string | null;
+  /** "YYYY-MM-DD". The day the chore belongs to. */
+  due_date: string;
+  /** "HH:mm", or null for "sometime today". */
+  due_time?: string | null;
+  notes?: string | null;
+}
+
+/**
+ * What a status change carries with it.
+ *
+ * Completion is never just a status: a chore is closed by producing proof, so
+ * the photo and the author travel with the flip rather than in a second write
+ * that could fail on its own and leave a chore done by nobody.
+ */
+export interface HouseholdTaskStatusPatch {
+  photo_url?: string | null;
+  /**
+   * Who did it, stamped from the staff identity on the device (Phase 71).
+   * Set centrally in HouseholdContext, so callers rarely pass it themselves.
+   */
+  completed_by?: string | null;
+}
+
 export interface DataProvider {
   listEntities(): Promise<TaskEntity[]>;
   listSchedules(): Promise<MasterSchedule[]>;
@@ -147,6 +178,16 @@ export interface DataProvider {
   setRoutineProposalsStatus(ids: string[], status: ProposalStatus): Promise<RoutineProposal[]>;
   setRoutineProposalStatus(id: string, status: ProposalStatus): Promise<RoutineProposal>;
   deleteRoutineProposal(id: string): Promise<void>;
+  /** This one day's chores. Never fetched in bulk — see migrations/082. */
+  listHouseholdTasks(dueDate: string): Promise<HouseholdTask[]>;
+  createHouseholdTask(input: CreateHouseholdTaskInput): Promise<HouseholdTask>;
+  updateHouseholdTaskStatus(
+    id: string,
+    status: HouseholdTaskStatus,
+    patch?: HouseholdTaskStatusPatch
+  ): Promise<HouseholdTask>;
+  /** Assigns an unassigned chore to a staff member. */
+  claimHouseholdTask(id: string, staffId: string): Promise<HouseholdTask>;
   listStaffProfiles(): Promise<StaffProfile[]>;
   createStaffProfile(name: string): Promise<StaffProfile>;
   /** Sets a staff member's PIN, or clears it (null) so they choose a new one. */

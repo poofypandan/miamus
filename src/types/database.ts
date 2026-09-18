@@ -8,6 +8,14 @@ export type RecordType = "vaccine" | "vet" | "medication" | "weight";
 // rendering blank.
 export type ItemType = "food" | "medicine" | "treats" | "shampoo" | "pee_pad" | "other";
 export type ProposalStatus = "pending" | "approved" | "rejected";
+// What a household chore is about (migrations/082). Distinct from Module and
+// from ScheduleCategoryName: those describe work on a dog, these describe work
+// on the house.
+export type HouseholdTaskCategory = "cleaning" | "maintenance" | "errand" | "groceries";
+// "cancelled" is in the vocabulary but written by nothing yet — it is here so
+// retiring a chore later needs no migration. Every read path must still handle
+// it rather than assuming pending-or-completed.
+export type HouseholdTaskStatus = "pending" | "completed" | "cancelled";
 export type AlertStatus = "pending" | "resolved";
 
 // Plain `type` aliases, not `interface` — interfaces don't structurally
@@ -129,6 +137,33 @@ export type InventoryItem = {
   created_at: string;
 };
 
+// One chore the house needs doing on one day — cleaning, a repair, an errand,
+// the shopping. Deliberately not a master_schedules row: that table requires an
+// entity_id and the agenda engine renders per-pet, and "mop the terrace"
+// belongs to the house rather than to any dog. There is no recurrence; a repeat
+// is filed again.
+export type HouseholdTask = {
+  id: string;
+  title: string;
+  notes: string | null;
+  category: HouseholdTaskCategory;
+  // Null means "anyone" — shown to every staff member as "Semua Petugas" until
+  // one of them claims it. Nullable rather than cascading so a chore outlives
+  // the person it was given to (see migrations/082).
+  assigned_to: string | null;
+  // "YYYY-MM-DD" as Postgres returns a `date` column. The day this chore
+  // belongs to, and what both views filter on.
+  due_date: string;
+  // "HH:mm", or null for "sometime today".
+  due_time: string | null;
+  status: HouseholdTaskStatus;
+  // Who actually did it, which is not necessarily who it was assigned to.
+  completed_by: string | null;
+  completed_at: string | null;
+  photo_url: string | null;
+  created_at: string;
+};
+
 // A staff-submitted request for a new routine, awaiting the owner's decision.
 // Approving one is what creates the real master_schedules row — this table
 // never drives the agenda itself.
@@ -212,6 +247,12 @@ export interface Database {
         Row: InventoryItem;
         Insert: Partial<InventoryItem> & Pick<InventoryItem, "name">;
         Update: Partial<InventoryItem>;
+        Relationships: [];
+      };
+      household_tasks: {
+        Row: HouseholdTask;
+        Insert: Partial<HouseholdTask> & Pick<HouseholdTask, "title">;
+        Update: Partial<HouseholdTask>;
         Relationships: [];
       };
       routine_proposals: {

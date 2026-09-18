@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Camera, Info, KeyRound, Loader2, PackageX, Plus, Send, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { dataProvider } from "@/lib/data";
 import { useRequireOwner } from "@/hooks/use-require-owner";
+import { useStaffProfiles, useStaffNameLookup } from "@/hooks/use-staff-profiles";
 import { describeLog } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import type { ItemType, StaffProfile } from "@/types/database";
@@ -38,32 +39,6 @@ interface AuditEntry {
   actor: string;
 }
 
-/**
- * The staff roster, loaded here rather than in HouseholdContext: it is read by
- * this tab and by the staff login gate, and nothing else in the app needs it
- * on every page.
- */
-function useStaffProfiles() {
-  const [profiles, setProfiles] = useState<StaffProfile[] | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  const reload = useCallback(async () => {
-    try {
-      setProfiles(await dataProvider.listStaffProfiles());
-      setFailed(false);
-    } catch (err) {
-      console.error(err);
-      setFailed(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  return { profiles, failed, reload };
-}
-
 const KIND_META: Record<AuditKind, { icon: typeof Camera; label: string; className: string }> = {
   log: { icon: Camera, label: "Task", className: "bg-emerald-100 text-emerald-900" },
   proposal: { icon: Send, label: "Proposal", className: "bg-amber-100 text-amber-900" },
@@ -76,12 +51,7 @@ export function StaffTab() {
   const isOwner = useRequireOwner();
   const { profiles, failed, reload } = useStaffProfiles();
 
-  // Rows filed before Phase 71, and anything the owner did themselves, carry no
-  // staff_id — those stay "Staff" rather than being attributed to a guess.
-  const staffName = useMemo(() => {
-    const byId = new Map((profiles ?? []).map((p) => [p.id, p.name]));
-    return (id: string | null | undefined) => (id ? (byId.get(id) ?? "Staff") : "Staff");
-  }, [profiles]);
+  const staffName = useStaffNameLookup(profiles);
 
   const petName = useMemo(() => {
     const byId = new Map(pets.map((p) => [p.id, p.name]));

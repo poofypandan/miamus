@@ -7,6 +7,7 @@ import type {
   RoutineProposal,
   InventoryItem,
   StaffProfile,
+  HouseholdTask,
 } from "@/types/database";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
@@ -22,6 +23,7 @@ interface MockDB {
   routineProposals: RoutineProposal[];
   inventoryItems: InventoryItem[];
   staffProfiles: StaffProfile[];
+  householdTasks: HouseholdTask[];
 }
 
 function freshDB(): MockDB {
@@ -34,6 +36,7 @@ function freshDB(): MockDB {
     routineProposals: [],
     inventoryItems: [],
     staffProfiles: [],
+    householdTasks: [],
   };
 }
 
@@ -50,6 +53,7 @@ function loadDB(): MockDB {
         routineProposals: parsed.routineProposals ?? [],
         inventoryItems: parsed.inventoryItems ?? [],
         staffProfiles: parsed.staffProfiles ?? [],
+        householdTasks: parsed.householdTasks ?? [],
       };
     }
   } catch {
@@ -359,6 +363,71 @@ export const mockProvider: DataProvider = {
     if (idx === -1) throw new Error(`Routine proposal ${id} not found`);
     const updated = { ...db.routineProposals[idx], status };
     db.routineProposals[idx] = updated;
+    saveDB(db);
+    return delay(updated);
+  },
+  async listHouseholdTasks(dueDate) {
+    // Same one-day scope and same ordering as the Supabase provider, so mock
+    // mode and the real thing put a "sometime today" chore in the same place.
+    const tasks = loadDB()
+      .householdTasks.filter((task) => task.due_date === dueDate)
+      .sort((a, b) => {
+        if (a.due_time !== b.due_time) {
+          if (!a.due_time) return 1;
+          if (!b.due_time) return -1;
+          return a.due_time.localeCompare(b.due_time);
+        }
+        return a.created_at.localeCompare(b.created_at);
+      });
+    return delay(tasks);
+  },
+  async createHouseholdTask(input) {
+    const db = loadDB();
+    const task: HouseholdTask = {
+      id: uid("chore"),
+      title: input.title,
+      notes: input.notes ?? null,
+      category: input.category,
+      assigned_to: input.assigned_to ?? null,
+      due_date: input.due_date,
+      due_time: input.due_time ?? null,
+      status: "pending",
+      completed_by: null,
+      completed_at: null,
+      photo_url: null,
+      created_at: new Date().toISOString(),
+    };
+    db.householdTasks.push(task);
+    saveDB(db);
+    return delay(task);
+  },
+  async updateHouseholdTaskStatus(id, status, patch) {
+    const db = loadDB();
+    const idx = db.householdTasks.findIndex((t) => t.id === id);
+    if (idx === -1) throw new Error(`Household task ${id} not found`);
+    const completing = status === "completed";
+    const updated: HouseholdTask = {
+      ...db.householdTasks[idx],
+      status,
+      completed_at: completing ? new Date().toISOString() : null,
+      completed_by: completing ? (patch?.completed_by ?? null) : null,
+      photo_url: completing ? (patch?.photo_url ?? null) : null,
+    };
+    db.householdTasks[idx] = updated;
+    saveDB(db);
+    return delay(updated);
+  },
+  async claimHouseholdTask(id, staffId) {
+    const db = loadDB();
+    const idx = db.householdTasks.findIndex((t) => t.id === id);
+    if (idx === -1) throw new Error(`Household task ${id} not found`);
+    // Mirrors the `is("assigned_to", null)` guard in the Supabase provider so
+    // the losing half of a double-claim fails the same way in mock mode.
+    if (db.householdTasks[idx].assigned_to) {
+      throw new Error("Chore was already claimed by someone else.");
+    }
+    const updated: HouseholdTask = { ...db.householdTasks[idx], assigned_to: staffId };
+    db.householdTasks[idx] = updated;
     saveDB(db);
     return delay(updated);
   },

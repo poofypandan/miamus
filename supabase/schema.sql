@@ -175,6 +175,36 @@ create table if not exists staff_profiles (
 );
 
 -- ============================================================================
+-- household_tasks
+-- Chores that belong to the house rather than to a dog — cleaning, repairs,
+-- errands, groceries. One row is one chore on one day; there is no recurrence.
+-- The owner delegates (optionally to a named staff member, optionally at a
+-- time), staff claim what is unassigned and close it with a proof photo.
+-- Added in migrations/082; see docs/household_prd_01.md.
+-- ============================================================================
+create table if not exists household_tasks (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  notes text,
+  category text not null default 'cleaning',
+  -- Null means "anyone", until a staff member claims it. Set null rather than
+  -- cascade on both staff references: a chore outlives the person who did it.
+  assigned_to uuid references staff_profiles(id) on delete set null,
+  due_date date not null default current_date,
+  -- "HH:mm", or null for "sometime today".
+  due_time text,
+  status text not null default 'pending',
+  completed_by uuid references staff_profiles(id) on delete set null,
+  completed_at timestamptz,
+  photo_url text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists household_tasks_due_date_idx on household_tasks(due_date);
+create index if not exists household_tasks_assigned_to_idx on household_tasks(assigned_to);
+create index if not exists household_tasks_status_idx on household_tasks(status);
+
+-- ============================================================================
 -- Storage
 -- Bucket for task/health photo uploads. Public + open policies match the
 -- no-auth state of Phase 1; tighten these once staff accounts exist.
