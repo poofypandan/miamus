@@ -35,7 +35,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           banners as well as the feed. TopNav stays put and the content slides
           under it. Silent, because the pull's own spinner is the feedback —
           skeletons mid-gesture would be worse than none. */}
-      <PullToRefresh onRefresh={() => refresh({ silent: true })} className="flex flex-1 flex-col">
+      <PullToRefresh
+        onRefresh={() => refresh({ silent: true })}
+        className="flex flex-1 flex-col"
+        contentClassName="flex flex-1 flex-col"
+      >
         <InventoryAlertBanner />
         {/* Sits outside <main> so the one-time hint stays put above the
             swipeable carousel rather than scrolling with a single tab. */}
@@ -43,7 +47,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* pt-3/pb-6, not py-6 — this padding sits outside the carousel's
             clipping box, so trimming the top is free of shadow-clipping risk and
             is where most of the old 40px gap under the tabs came from. */}
-        <main className="relative flex-1 overflow-x-hidden pt-3 pb-6">{children}</main>
+        {/* A flex column all the way down, so the swipe carousel can grow to
+            the bottom of the screen: the empty space under a short panel is
+            still somewhere a swipe can start (Phase 83E). */}
+        <main className="relative flex flex-1 flex-col overflow-x-hidden pt-3 pb-6">
+          {children}
+        </main>
       </PullToRefresh>
     </div>
   );

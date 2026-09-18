@@ -18,7 +18,8 @@
 - High visual hierarchy: subtle background tints for special/urgent items, neutral for base items.
 - Support safe-area insets (`env(safe-area-inset-bottom)`) and pull-to-refresh gestures.
 - **Component Reusability:** Never invent new UI patterns for navigation. All sub-navigation toggles must use a single, shared `<SegmentedControl />` component.
-- **Aesthetic Continuity:** All buttons and navigation pills must follow the `rounded-full` circular pill aesthetic to match the primary top navigation. Do not use boxy `rounded-lg` or `rounded-xl` tabs.
+- **Aesthetic Continuity:** Navigation Tabs/Segmented Controls must use the `rounded-full` pill aesthetic, matching the primary top navigation. Do not use boxy `rounded-lg` or `rounded-xl` tabs.
+- **Button Hierarchy:** Standard Action Buttons (Submit, Save, Add, Copy) must use `rounded-lg` or `rounded-xl` to maintain visual hierarchy and differentiate them from navigation pills.
 - **State Persistence:** UI toggle states (active tabs) must always derive their truth from the same state manager as the rendered content (e.g., URL search params or Context) to prevent UI de-syncs on unmount/remount.
 
 ## Operational Discipline

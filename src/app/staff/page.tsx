@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-gate";
@@ -14,7 +15,6 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
-import { useSessionSegment } from "@/hooks/use-session-segment";
 import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -22,20 +22,37 @@ import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 export default function StaffPage() {
   return (
     <StaffLoginGate>
-      <StaffTasks />
+      {/* useSearchParams() needs a Suspense boundary to keep the page static;
+          nothing here is worth a fallback while it resolves. */}
+      <Suspense fallback={null}>
+        <StaffTasks />
+      </Suspense>
     </StaffLoginGate>
   );
 }
 
-// The two jobs on a staff member's phone. Kept apart rather than stacked:
-// with the stock checklist under the agenda, the day's pet tasks and a
-// 29-item count competed for the same scroll.
-const VIEWS = ["tasks", "stock"] as const;
+// The two jobs on a staff member's phone, as ?view= values. Kept apart rather
+// than stacked: with the stock checklist under the agenda, the day's pet tasks
+// and a 29-item count competed for the same scroll.
+//
+// In the URL, like the owner's ?tab= and ?view=, so the pill and the screen
+// read one value (CLAUDE.md, State Persistence). It also survives the page
+// reload a low-memory phone can do on the way back from the camera, which is
+// exactly when a staff member is mid-stock-check.
+const VIEWS = ["tugas", "stok"] as const;
 type StaffView = (typeof VIEWS)[number];
 
 function StaffTasks() {
   const { inventoryItems, refresh } = useHousehold();
-  const [view, setView] = useSessionSegment<StaffView>("banyuwangi11:staffView", VIEWS, "tasks");
+  const router = useRouter();
+  const param = useSearchParams().get("view");
+  const view: StaffView = VIEWS.includes(param as StaffView) ? (param as StaffView) : "tugas";
+
+  // A .push(), so the phone's Back button returns to the other view, as it
+  // does for the owner's pills.
+  function setView(next: StaffView) {
+    router.push(`/staff?view=${next}`, { scroll: false });
+  }
 
   useOfflineSync();
 
@@ -52,22 +69,22 @@ function StaffTasks() {
           <header className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
               <h1 className="text-xl font-semibold">
-                {view === "tasks" ? "Tugas Hari Ini" : "Cek Stok"}
+                {view === "tugas" ? "Tugas Hari Ini" : "Cek Stok"}
               </h1>
               <OnDutyBadge />
             </div>
             <SegmentedControl
               ariaLabel="Tampilan"
               segments={[
-                { value: "tasks", label: "Tugas Hari Ini" },
-                { value: "stock", label: "Cek Stok", badge: dueCount > 0 ? dueCount : undefined },
+                { value: "tugas", label: "Tugas Hari Ini" },
+                { value: "stok", label: "Cek Stok", badge: dueCount > 0 ? dueCount : undefined },
               ]}
               value={view}
               onChange={setView}
             />
           </header>
 
-          {view === "tasks" ? <TasksView /> : <StockCheckPanel />}
+          {view === "tugas" ? <TasksView /> : <StockCheckPanel />}
         </div>
       </PullToRefresh>
     </div>

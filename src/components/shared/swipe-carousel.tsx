@@ -154,21 +154,40 @@ export function SwipeCarousel({
   }
 
   return (
-    // overflow-hidden, not just overflow-x-hidden: the track is pinned to the
-    // *active* panel's height, so a taller neighbour overflows it, and the
-    // implicit overflow-y:auto of overflow-x:hidden would turn this box into
-    // its own scroller. pt-2 leaves headroom for the first card's shadow.
-    <div ref={containerRef} className="relative w-full overflow-hidden pt-2 pb-4">
-      {/* Each panel is exactly one viewport wide. items-start stops a short
-          panel being stretched to a tall one's height, and the explicit
-          height keeps the page only as long as the panel on screen. */}
+    // overflow-hidden, not just overflow-x-hidden: a taller neighbour panel
+    // overflows the track, and the implicit overflow-y:auto of
+    // overflow-x:hidden would turn this box into its own scroller. pt-2 leaves
+    // headroom for the first card's shadow.
+    //
+    // flex-1 so it reaches the bottom of the screen — the caller's parent must
+    // be a flex column for that. A short panel otherwise left dead space below
+    // the track where a swipe did nothing.
+    //
+    // The gesture handlers live here rather than on the track so the padding
+    // below the last card is swipeable too.
+    <div
+      ref={containerRef}
+      className="relative flex w-full flex-1 touch-pan-y flex-col overflow-hidden pt-2 pb-4 select-none"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      {/* Each panel is exactly one viewport wide. The track starts at the
+          height of the panel on screen (flexBasis) and only grows from there
+          to fill the screen (grow). Both the basis and the minHeight have to
+          be explicit: left to flexbox, the track's content size — and its
+          automatic minimum — is the *tallest* panel's, so a short Chores
+          trailed thousands of pixels of blank page under Inventory's height.
+          items-start stops a short panel stretching to a tall one. */}
       <motion.div
-        className="flex touch-pan-y items-start select-none"
-        style={{ x, width: `${count * 100}%`, height: activeHeight || undefined }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        className="flex shrink-0 grow items-start"
+        style={{
+          x,
+          width: `${count * 100}%`,
+          flexBasis: activeHeight,
+          minHeight: activeHeight,
+        }}
       >
         {panels.map((panel, i) => (
           <div

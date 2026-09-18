@@ -31,10 +31,17 @@ export function PullToRefresh({
   onRefresh,
   children,
   className,
+  contentClassName,
 }: {
   onRefresh: () => Promise<void>;
   children: ReactNode;
   className?: string;
+  /**
+   * For the inner wrapper that moves with the pull. A caller whose children
+   * must stretch to fill the page (the dashboard's swipe area) makes it a flex
+   * column here — otherwise this wrapper breaks the flex chain.
+   */
+  contentClassName?: string;
 }) {
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -146,7 +153,7 @@ export function PullToRefresh({
           // it exactly; the spring is only for the release.
           transition: gesture.current ? "none" : "transform 300ms ease",
         }}
-        className={cn(active && "select-none")}
+        className={cn(active && "select-none", contentClassName)}
       >
         {children}
       </div>
