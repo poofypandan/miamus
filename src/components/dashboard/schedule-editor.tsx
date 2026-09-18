@@ -47,7 +47,7 @@ import {
   vetTitle,
 } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
-import type { AgendaItem } from "@/lib/scheduleEngine";
+import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { TaskEntity, MasterSchedule } from "@/types/database";
@@ -1295,6 +1295,11 @@ function StatusIcon({
   return <Clock className={cn("size-4", tinted ? "text-amber-700" : "text-amber-500")} />;
 }
 
+/** One line of the profile sheet's timeline: a single task, or a medicine batch. */
+type TimelineRow =
+  | { kind: "item"; key: string; item: AgendaItem }
+  | { kind: "group"; key: string; group: AgendaGroup };
+
 function LivePreviewCard({
   entity,
   schedules,
@@ -1309,9 +1314,18 @@ function LivePreviewCard({
   // batching) would silently cram two distinct schedule rows that happen to
   // share a title+time into a single visual row with two status icons.
   // Flattening guarantees exactly one status indicator per row.
-  const items = useMemo(() => {
+  //
+  // The one exception is a dog's medicines at the same time (Phase 81). Those
+  // really are one errand settled by one photo, so they stay as a group and
+  // render as a checklist — with a delete beside each medicine, since the
+  // whole point of listing them is being able to act on one.
+  const rows = useMemo<TimelineRow[]>(() => {
     const groups = buildAgenda({ date: dateStr, entities: [entity], schedules, logs });
-    return groups.flatMap((g) => g.items);
+    return groups.flatMap((g): TimelineRow[] =>
+      g.category === "medication" && g.titles.length > 1
+        ? [{ kind: "group" as const, key: `${g.time}|medication`, group: g }]
+        : g.items.map((item) => ({ kind: "item" as const, key: item.key, item }))
+    );
   }, [dateStr, entity, schedules, logs]);
 
   return (
@@ -1320,10 +1334,14 @@ function LivePreviewCard({
     // "<label>'s Timeline". Repeating it inside the card just restated it.
     <Card className="py-4">
       <CardContent className="flex flex-col gap-2 px-4">
-        {items.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">No tasks scheduled.</p>
         ) : (
-          items.map((item) => {
+          rows.map((row) => {
+            if (row.kind === "group") {
+              return <MedicineGroupRow key={row.key} group={row.group} entity={entity} />;
+            }
+            const item = row.item;
             const Icon = categoryIcon(item.category);
             // Deeper than the dashboard's tint on purpose — see
             // categoryCardTintStrong. Padding and a transparent border on every
@@ -1383,5 +1401,62 @@ function LivePreviewCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * A dog's medicines for one time slot, as a single row with a checklist.
+ *
+ * Owner-facing, so English. The row carries one status and one photo because
+ * that is the truth of it — the staff member took one photo for the lot — while
+ * each medicine keeps its own delete, since cancelling a course of Albumin
+ * should not cancel the Postbiotik alongside it.
+ */
+function MedicineGroupRow({ group, entity }: { group: AgendaGroup; entity: TaskEntity }) {
+  const Icon = categoryIcon("medication");
+  const tint = categoryCardTintStrong("medication");
+  // Every medicine has to be logged before the slot counts as done; the worst
+  // status wins so a half-finished round never reads as complete.
+  const done = group.items.every((i) => i.status === "completed");
+  const status = done
+    ? "completed"
+    : group.items.some((i) => i.status === "overdue")
+      ? "overdue"
+      : "pending";
+  const photoLog = group.items.find((i) => i.log?.photo_url)?.log;
+
+  return (
+    <div className={cn("flex flex-col gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-sm", tint)}>
+      <div className="flex items-center gap-2">
+        <span className="w-16 shrink-0 font-mono text-xs text-zinc-700">
+          {formatTime12h(group.time)}
+        </span>
+        <Icon className={cn("size-4 shrink-0", categoryIconColor("medication"))} />
+        <span className="flex-1 font-medium">Medicines ({group.titles.length})</span>
+        {photoLog?.photo_url ? (
+          <LogPhotoThumbnail
+            log={photoLog}
+            title={`Medicines · ${group.titles.join(", ")}`}
+            className="size-9 shrink-0 rounded-md ring-1 ring-border"
+          />
+        ) : (
+          <span className="shrink-0">
+            <StatusIcon status={status} tinted />
+          </span>
+        )}
+      </div>
+
+      <ul className="flex flex-col gap-0.5 pl-[4.5rem]">
+        {group.titles.map((title) => (
+          <li key={title} className="flex items-center gap-1.5 text-sm">
+            <span aria-hidden className="text-rose-400">
+              •
+            </span>
+            <span className="min-w-0 flex-1 truncate">{title}</span>
+            <CancelRoutineButton entity={entity} title={title} category="medication" />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
