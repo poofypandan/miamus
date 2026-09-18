@@ -65,6 +65,7 @@ function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }
     [group.items, pets, schedules]
   );
   const tint = categoryCardTint(group.category);
+  const consolidated = group.category === "medication" && group.titles.length > 1;
 
   // Padding and a border on every row, transparent where there is no tint, so
   // a tinted row lines up with its neighbours instead of jogging 8px sideways.
@@ -86,7 +87,20 @@ function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }
         {formatTime12h(group.time)}
       </span>
       <Icon className={cn("size-4 shrink-0", categoryIconColor(group.category))} />
-      <span className="flex-1 truncate font-medium">{group.title}</span>
+      {/* A dog's medicines at one time arrive as a single group (Phase 81), so
+          the row names the errand and lists what is in it underneath rather
+          than repeating a near-identical row three times. Owner-facing, so
+          English. */}
+      {consolidated ? (
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate font-medium">Medicines ({group.titles.length})</span>
+          <span className="truncate text-xs text-muted-foreground">
+            {group.titles.join(" · ")}
+          </span>
+        </span>
+      ) : (
+        <span className="flex-1 truncate font-medium">{group.title}</span>
+      )}
       <div className="flex shrink-0 -space-x-4">
         {group.items.map((item) => (
           <TimelineAvatarStatus

@@ -94,6 +94,11 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // entry, and a second one here would need two Back presses to leave a photo.
 
   const isVet = group.category === "vet";
+  // Several medicines at the same time for the same dog, rolled into one block
+  // by buildAgenda. The card then names the errand rather than one of its
+  // items, and lists what the errand actually consists of.
+  const consolidated = group.category === "medication" && group.titles.length > 1;
+  const cardTitle = consolidated ? "Obat & Vitamin" : group.title;
 
   // A dog staying at the clinic is somebody else's responsibility until it is
   // collected, so its meals and potty breaks are suspended rather than left
@@ -341,7 +346,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         <span className="shrink-0 text-sm font-medium tabular-nums">
           {formatTime12h(group.time)}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{group.title}</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+          {consolidated ? `${cardTitle} (${group.titles.length})` : group.title}
+        </span>
         <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-700">
           <CheckCircle2 className="size-4" /> Semua Selesai
         </span>
@@ -379,7 +386,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 <CategoryIcon className={cn("size-4 shrink-0", categoryIconColor(group.category))} />
                 <span>{formatTime12h(group.time)}</span>
                 <span className="min-w-0 flex-1 truncate font-normal text-muted-foreground">
-                  · {group.title}
+                  · {cardTitle}
                 </span>
                 <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
               </button>
@@ -387,7 +394,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               <span className="flex items-center gap-2">
                 <CategoryIcon className={cn("size-4", categoryIconColor(group.category))} />
                 <span>{formatTime12h(group.time)}</span>
-                <span className="font-normal text-muted-foreground">· {group.title}</span>
+                <span className="font-normal text-muted-foreground">· {cardTitle}</span>
               </span>
             )}
           </CardTitle>
@@ -398,6 +405,19 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               <Stethoscope className="size-3.5 shrink-0" /> Sedang Rawat Inap — jadwal dijeda
             </p>
           )}
+          {consolidated && (
+            <ul className="flex flex-col gap-1 text-sm text-rose-950">
+              {group.titles.map((title) => (
+                <li key={title} className="flex gap-1.5">
+                  <span aria-hidden className="text-rose-400">
+                    •
+                  </span>
+                  <span className="min-w-0 flex-1">{title}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
           <div className="flex flex-wrap gap-1.5">
             {group.items.map((item) => (
               <Badge
