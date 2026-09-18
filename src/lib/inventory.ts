@@ -59,9 +59,12 @@ export function totalUnits(item: InventoryItem): number {
   return item.boxes_count * item.units_per_box + item.loose_units_count;
 }
 
-/** At or below threshold: at the threshold is already the moment to reorder. */
+/**
+ * Strictly below the minimum. Holding exactly the minimum is fine — the
+ * minimum is the amount the house should keep, not the point to reorder at.
+ */
 export function needsRestock(item: InventoryItem): boolean {
-  return totalUnits(item) <= item.min_threshold;
+  return totalUnits(item) < item.min_threshold;
 }
 
 /**
@@ -108,12 +111,12 @@ export function alertTypeForItem(item: InventoryItem): ItemType {
 }
 
 /**
- * How much to buy to clear the Restock flag. The flag is "total <= threshold",
- * so the target is one past the threshold — buying only up to it would bring
- * the groceries home and leave the item still red.
+ * How much to buy to get back to the minimum: exactly the shortfall, which is
+ * also exactly what clears the Restock flag (see needsRestock). Rounded up so
+ * a fractional count never asks for part of a carton.
  */
 export function unitsNeeded(item: InventoryItem): number {
-  return Math.max(1, Math.floor(item.min_threshold - totalUnits(item)) + 1);
+  return Math.ceil(item.min_threshold - totalUnits(item));
 }
 
 /**

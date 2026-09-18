@@ -1,23 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Home, PawPrint, Users, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { MODULES } from "@/config/modules";
 import { cn } from "@/lib/utils";
-import { tabIndex, type DashboardTab } from "@/lib/dashboard-tabs";
+import {
+  DASHBOARD_TABS,
+  HOUSEHOLD_VIEWS,
+  householdViewHref,
+  householdViewIndex,
+  tabHref,
+  tabIndex,
+  type DashboardTab,
+  type HouseholdView,
+} from "@/lib/dashboard-tabs";
 import { moduleFromParam, type DashboardModule } from "@/lib/dashboard-modules";
 import { useHousehold } from "@/context/household-context";
 
-const SUB_NAV: { tab: DashboardTab; label: string }[] = [
-  { tab: "feed", label: "Daily Feed" },
-  { tab: "schedules", label: "Schedule" },
+const PETS_SEGMENTS: { value: DashboardTab; label: string }[] = [
+  { value: "feed", label: "Daily Feed" },
+  { value: "schedules", label: "Schedule" },
+];
+
+const HOUSEHOLD_SEGMENTS: { value: HouseholdView; label: string }[] = [
+  { value: "chores", label: "Chores" },
+  { value: "inventory", label: "Inventory" },
 ];
 
 export function TopNav() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const activeIndex = tabIndex(searchParams.get("tab"));
+  // Both sub-navs read the same URL params the page renders its carousel
+  // from, so the highlighted pill and the panel on screen are one value.
+  const activeTab = DASHBOARD_TABS[tabIndex(searchParams.get("tab"))];
+  const activeHouseholdView = HOUSEHOLD_VIEWS[householdViewIndex(searchParams.get("view"))];
   const activeModule = moduleFromParam(searchParams.get("module"));
   const { userRole } = useHousehold();
   const isOwner = userRole === "owner";
@@ -59,31 +78,28 @@ export function TopNav() {
       </div>
 
       {/* Staff only ever has the Daily Feed tab — a single-item tab row is
-          pure clutter, so skip it entirely rather than rendering it.
-          Each tab takes an equal share of the row via flex-1; there's no
-          horizontal scroll to hide any more, since the tabs now always fit
-          by construction however many there are. */}
+          pure clutter, so skip it entirely rather than rendering it. A tap is
+          a .push() so Back returns to the previous panel, as the links these
+          replaced did; swipes use .replace() (see SwipeCarousel callers). */}
       {isOwner && activeModule === "pets" && (
-        <nav className="flex w-full gap-1 px-4 pb-2">
-          {SUB_NAV.map((item, index) => {
-            const isActive = index === activeIndex;
-            return (
-              <Link
-                key={item.tab}
-                href={`/dashboard?tab=${item.tab}`}
-                scroll={false}
-                className={cn(
-                  "flex min-h-[48px] flex-1 items-center justify-center rounded-lg px-3 py-1.5 text-center text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="px-4 pb-3">
+          <SegmentedControl
+            ariaLabel="Pets view"
+            segments={PETS_SEGMENTS}
+            value={activeTab}
+            onChange={(tab) => router.push(tabHref(tab), { scroll: false })}
+          />
+        </div>
+      )}
+      {isOwner && activeModule === "household" && (
+        <div className="px-4 pb-3">
+          <SegmentedControl
+            ariaLabel="Household view"
+            segments={HOUSEHOLD_SEGMENTS}
+            value={activeHouseholdView}
+            onChange={(view) => router.push(householdViewHref(view), { scroll: false })}
+          />
+        </div>
       )}
     </div>
   );

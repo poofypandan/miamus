@@ -11,3 +11,22 @@ export function tabIndex(tab: string | null): number {
   const index = DASHBOARD_TABS.indexOf((tab ?? "feed") as DashboardTab);
   return index === -1 ? 0 : index;
 }
+
+// The Household module's two swipeable panels, keyed by ?view= alongside
+// ?module=household. In the URL rather than component state so the sub-nav
+// pill and the panel on screen read one value and cannot disagree (Phase 83D).
+export const HOUSEHOLD_VIEWS = ["chores", "inventory"] as const;
+export type HouseholdView = (typeof HOUSEHOLD_VIEWS)[number];
+
+export function householdViewIndex(view: string | null): number {
+  const index = HOUSEHOLD_VIEWS.indexOf((view ?? "chores") as HouseholdView);
+  return index === -1 ? 0 : index;
+}
+
+export function tabHref(tab: DashboardTab): string {
+  return `/dashboard?tab=${tab}`;
+}
+
+export function householdViewHref(view: HouseholdView): string {
+  return `/dashboard?module=household&view=${view}`;
+}
