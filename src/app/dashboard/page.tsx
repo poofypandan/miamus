@@ -59,7 +59,7 @@ function DashboardCanvas() {
   // Staff is a single screen with nothing to swipe between.
   if (activeModule === "staff") {
     return (
-      <div className="px-4">
+      <div className="px-4 pb-6">
         <StaffTab />
       </div>
     );

@@ -2,11 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Home, PawPrint, Users, type LucideIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { MODULES } from "@/config/modules";
-import { cn } from "@/lib/utils";
 import {
   DASHBOARD_TABS,
   HOUSEHOLD_VIEWS,
@@ -17,7 +13,7 @@ import {
   type DashboardTab,
   type HouseholdView,
 } from "@/lib/dashboard-tabs";
-import { moduleFromParam, type DashboardModule } from "@/lib/dashboard-modules";
+import { moduleFromParam } from "@/lib/dashboard-modules";
 import { useHousehold } from "@/context/household-context";
 
 const PETS_SEGMENTS: { value: DashboardTab; label: string }[] = [
@@ -30,6 +26,13 @@ const HOUSEHOLD_SEGMENTS: { value: HouseholdView; label: string }[] = [
   { value: "inventory", label: "Inventory" },
 ];
 
+/**
+ * The dashboard header: the property name, the way into the staff view, and —
+ * for modules with two panels — the sub-view pills. Switching between modules
+ * moved to the BottomTabBar in Phase 84, where a thumb can reach it; the
+ * sub-view pills stay up here because they belong to the content directly
+ * beneath them.
+ */
 export function TopNav() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,30 +54,6 @@ export function TopNav() {
         >
           Open Staff View →
         </Link>
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <ModuleTab
-          icon={PawPrint}
-          label="Pets"
-          module="pets"
-          active={activeModule === "pets"}
-          enabled={MODULES.pets}
-        />
-        <ModuleTab
-          icon={Home}
-          label="Household"
-          module="household"
-          active={activeModule === "household"}
-          enabled={MODULES.household}
-        />
-        <ModuleTab
-          icon={Users}
-          label="Staff"
-          module="staff"
-          active={activeModule === "staff"}
-          enabled={MODULES.staff}
-        />
       </div>
 
       {/* Staff only ever has the Daily Feed tab — a single-item tab row is
@@ -102,52 +81,5 @@ export function TopNav() {
         </div>
       )}
     </div>
-  );
-}
-
-function ModuleTab({
-  icon: Icon,
-  label,
-  module,
-  active,
-  enabled,
-}: {
-  icon: LucideIcon;
-  label: string;
-  module: DashboardModule;
-  active: boolean;
-  enabled: boolean;
-}) {
-  const className = cn(
-    "flex min-h-[32px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
-    active
-      ? "border-primary bg-primary text-primary-foreground"
-      : enabled
-        ? "border-border text-foreground"
-        : "border-border/60 text-muted-foreground opacity-60"
-  );
-
-  // A module that isn't built yet stays an inert span — nothing to navigate to.
-  if (!enabled) {
-    return (
-      <span className={className}>
-        <Icon className="size-4" />
-        {label}
-        <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
-          Soon
-        </Badge>
-      </span>
-    );
-  }
-
-  return (
-    <Link
-      href={module === "pets" ? "/dashboard?tab=feed" : `/dashboard?module=${module}`}
-      scroll={false}
-      className={className}
-    >
-      <Icon className="size-4" />
-      {label}
-    </Link>
   );
 }
