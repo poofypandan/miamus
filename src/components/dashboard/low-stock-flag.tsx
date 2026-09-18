@@ -25,6 +25,7 @@ import {
 import { useHousehold } from "@/context/household-context";
 import { WhatsAppNotifyPanel } from "@/components/staff/whatsapp-notify-panel";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { alertTypeForItem } from "@/lib/inventory";
 import type { ItemType } from "@/types/database";
 
 // Phase 46 language boundary: the owner dashboard is English, the staff view
@@ -242,7 +243,7 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
                 onValueChange={(id) => {
                   const item = inventoryItems.find((i) => i.id === id);
                   if (!item) return;
-                  setItemType(item.category);
+                  setItemType(alertTypeForItem(item));
                   setNote(item.name);
                 }}
               >

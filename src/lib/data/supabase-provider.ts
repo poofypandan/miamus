@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import type { InventoryAuditLog, InventoryAuditWithStaff } from "@/types/database";
 import type { DataProvider } from "./types";
 
 function client() {
@@ -15,6 +16,16 @@ function extractStoragePath(url: string): string | null {
   const idx = url.indexOf(marker);
   if (idx === -1) return null;
   return decodeURIComponent(url.slice(idx + marker.length));
+}
+
+const INVENTORY_BUCKET = "inventory_audits";
+
+// An audit plus its author's name, embedded through audited_by.
+const AUDIT_COLUMNS = "*, staff_profiles(name)";
+type AuditRow = InventoryAuditLog & { staff_profiles: { name: string } | null };
+
+function flattenAudit({ staff_profiles, ...audit }: AuditRow): InventoryAuditWithStaff {
+  return { ...audit, staff_name: staff_profiles?.name ?? null };
 }
 
 export const supabaseProvider: DataProvider = {
@@ -231,6 +242,62 @@ export const supabaseProvider: DataProvider = {
       .select();
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Item was not deleted.");
+  },
+  async listLatestInventoryAudits() {
+    // One row per item with only its newest audit embedded: the limit applies
+    // per parent, so this stays 29-ish rows however long the history grows,
+    // where fetching the log table and reducing client-side would not.
+    // The embeds resolve through the FKs in migrations/083; Database declares
+    // no Relationships, so the typed parser can't follow them — hence the cast.
+    const { data, error } = await client()
+      .from("inventory_items")
+      .select(`id, inventory_audit_logs(${AUDIT_COLUMNS})`)
+      .order("created_at", { referencedTable: "inventory_audit_logs", ascending: false })
+      .limit(1, { referencedTable: "inventory_audit_logs" });
+    if (error) throw error;
+    const rows = data as unknown as { id: string; inventory_audit_logs: AuditRow[] }[];
+    const latest: Record<string, InventoryAuditWithStaff> = {};
+    for (const row of rows) {
+      const audit = row.inventory_audit_logs[0];
+      if (audit) latest[row.id] = flattenAudit(audit);
+    }
+    return latest;
+  },
+  async uploadInventoryPhoto(file, itemId) {
+    const c = client();
+    const ext = file.type === "image/webp" ? "webp" : (file.name.split(".").pop() ?? "jpg");
+    const path = `${itemId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error } = await c.storage
+      .from(INVENTORY_BUCKET)
+      .upload(path, file, { contentType: file.type });
+    if (error) throw error;
+    return c.storage.from(INVENTORY_BUCKET).getPublicUrl(path).data.publicUrl;
+  },
+  async createInventoryAudit(input) {
+    const c = client();
+    const { data: auditData, error: auditError } = await c
+      .from("inventory_audit_logs")
+      .insert(input)
+      .select(AUDIT_COLUMNS)
+      .single();
+    if (auditError) throw auditError;
+    const audit = flattenAudit(auditData as unknown as AuditRow);
+
+    // Second write, after the log exists: the audit is the record of truth,
+    // and the item row is a cache of its latest numbers. If this one fails the
+    // item simply stays due and the next check overwrites it.
+    const { data: item, error: itemError } = await c
+      .from("inventory_items")
+      .update({
+        boxes_count: input.boxes_counted,
+        loose_units_count: input.loose_units_counted,
+        last_audited_at: audit.created_at,
+      })
+      .eq("id", input.item_id)
+      .select()
+      .single();
+    if (itemError) throw itemError;
+    return { audit, item };
   },
   async listRoutineProposals() {
     const { data, error } = await client()

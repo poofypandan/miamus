@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ChorePanel } from "@/components/dashboard/chore-panel";
+import { InventoryTab } from "@/components/dashboard/inventory-tab";
 import { useHousehold } from "@/context/household-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import type { InventoryItem, ItemType } from "@/types/database";
@@ -42,7 +43,7 @@ export function HouseholdTab() {
   // Grouped so a long catalogue stays scannable by aisle rather than being one
   // flat alphabetical run.
   const grouped = useMemo(() => {
-    const byCategory = new Map<ItemType, InventoryItem[]>();
+    const byCategory = new Map<InventoryItem["category"], InventoryItem[]>();
     for (const item of inventoryItems) {
       const list = byCategory.get(item.category) ?? [];
       list.push(item);
@@ -94,6 +95,8 @@ export function HouseholdTab() {
 
       <ChorePanel />
 
+      <InventoryTab />
+
       <div className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold text-gray-900">Master Inventory</h2>
 
@@ -131,7 +134,7 @@ export function HouseholdTab() {
           </CardContent>
         </Card>
 
-        {inventoryItems.length === 0 ? (
+        {grouped.length === 0 ? (
           <p className="pt-4 text-center text-sm text-muted-foreground">
             No items yet. Add what this household buys so staff can pick from the list when
             reporting low stock.

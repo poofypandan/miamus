@@ -11,6 +11,7 @@ import type {
   ItemType,
   RoutineProposal,
   InventoryItem,
+  InventoryAuditWithStaff,
   ProposalStatus,
   ScheduleCategoryName,
   StaffProfile,
@@ -147,6 +148,16 @@ export interface HouseholdTaskStatusPatch {
   completed_by?: string | null;
 }
 
+/** One stock check as the staff member recorded it (migrations/083). */
+export interface CreateInventoryAuditInput {
+  item_id: string;
+  boxes_counted: number;
+  loose_units_counted: number;
+  photo_url: string | null;
+  /** Stamped from the staff identity on the device, like every other write. */
+  audited_by: string | null;
+}
+
 export interface DataProvider {
   listEntities(): Promise<TaskEntity[]>;
   listSchedules(): Promise<MasterSchedule[]>;
@@ -172,6 +183,17 @@ export interface DataProvider {
   listInventoryItems(): Promise<InventoryItem[]>;
   createInventoryItem(input: { name: string; category: ItemType }): Promise<InventoryItem>;
   deleteInventoryItem(id: string): Promise<void>;
+  /** The most recent stock check per item, keyed by item id. */
+  listLatestInventoryAudits(): Promise<Record<string, InventoryAuditWithStaff>>;
+  /** Stock photos go to their own bucket, not household-logs. */
+  uploadInventoryPhoto(file: File, itemId: string): Promise<string>;
+  /**
+   * Records a stock check and writes the counted totals back onto the item,
+   * so the item row always holds the latest known stock.
+   */
+  createInventoryAudit(
+    input: CreateInventoryAuditInput
+  ): Promise<{ audit: InventoryAuditWithStaff; item: InventoryItem }>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
   createRoutineProposalsBatch(inputs: CreateRoutineProposalInput[]): Promise<RoutineProposal[]>;

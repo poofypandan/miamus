@@ -18,4 +18,5 @@ export type {
   CreateRoutineProposalInput,
   CreateHouseholdTaskInput,
   HouseholdTaskStatusPatch,
+  CreateInventoryAuditInput,
 } from "./types";

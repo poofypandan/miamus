@@ -6,6 +6,7 @@ import type {
   InventoryAlert,
   RoutineProposal,
   InventoryItem,
+  InventoryAuditWithStaff,
   StaffProfile,
   HouseholdTask,
 } from "@/types/database";
@@ -22,6 +23,7 @@ interface MockDB {
   inventoryAlerts: InventoryAlert[];
   routineProposals: RoutineProposal[];
   inventoryItems: InventoryItem[];
+  inventoryAudits: InventoryAuditWithStaff[];
   staffProfiles: StaffProfile[];
   householdTasks: HouseholdTask[];
 }
@@ -35,6 +37,7 @@ function freshDB(): MockDB {
     inventoryAlerts: [],
     routineProposals: [],
     inventoryItems: [],
+    inventoryAudits: [],
     staffProfiles: [],
     householdTasks: [],
   };
@@ -52,6 +55,7 @@ function loadDB(): MockDB {
         inventoryAlerts: parsed.inventoryAlerts ?? [],
         routineProposals: parsed.routineProposals ?? [],
         inventoryItems: parsed.inventoryItems ?? [],
+        inventoryAudits: parsed.inventoryAudits ?? [],
         staffProfiles: parsed.staffProfiles ?? [],
         householdTasks: parsed.householdTasks ?? [],
       };
@@ -289,6 +293,16 @@ export const mockProvider: DataProvider = {
       name: input.name,
       category: input.category,
       created_at: new Date().toISOString(),
+      // The column defaults from migrations/083.
+      variant: null,
+      unit_type: "unit",
+      boxes_count: 0,
+      loose_units_count: 0,
+      units_per_box: 1,
+      min_threshold: 2,
+      audit_frequency_days: 30,
+      last_audited_at: null,
+      notes: null,
     };
     db.inventoryItems.push(item);
     saveDB(db);
@@ -299,6 +313,37 @@ export const mockProvider: DataProvider = {
     db.inventoryItems = db.inventoryItems.filter((i) => i.id !== id);
     saveDB(db);
     return delay(undefined);
+  },
+  async listLatestInventoryAudits() {
+    const latest: Record<string, InventoryAuditWithStaff> = {};
+    // Stored oldest-first, so the last write per item wins.
+    for (const audit of loadDB().inventoryAudits) latest[audit.item_id] = audit;
+    return delay(latest);
+  },
+  async uploadInventoryPhoto(file) {
+    return delay(URL.createObjectURL(file), 300);
+  },
+  async createInventoryAudit(input) {
+    const db = loadDB();
+    const staffName = db.staffProfiles.find((p) => p.id === input.audited_by)?.name ?? null;
+    const audit: InventoryAuditWithStaff = {
+      id: uid("audit"),
+      ...input,
+      created_at: new Date().toISOString(),
+      staff_name: staffName,
+    };
+    db.inventoryAudits.push(audit);
+    const index = db.inventoryItems.findIndex((i) => i.id === input.item_id);
+    if (index === -1) throw new Error("Item not found");
+    const item: InventoryItem = {
+      ...db.inventoryItems[index],
+      boxes_count: input.boxes_counted,
+      loose_units_count: input.loose_units_counted,
+      last_audited_at: audit.created_at,
+    };
+    db.inventoryItems[index] = item;
+    saveDB(db);
+    return delay({ audit, item });
   },
   async listRoutineProposals() {
     return delay(loadDB().routineProposals);

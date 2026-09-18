@@ -130,12 +130,44 @@ export type InventoryAlert = {
 // One product the household stocks. inventory_alerts reference these by name
 // rather than by id — a report is a note about a thing running low, and must
 // survive the catalogue entry being removed.
+// The four shelves a stock check walks (PRD 02, migrations/083). Distinct from
+// ItemType, which is what a staff low-stock *report* is about.
+export type StockCategory = "fresh_food" | "pantry" | "household_supplies" | "dog_supplies";
+
 export type InventoryItem = {
   id: string;
   name: string;
-  category: ItemType;
+  // ItemType for the Phase 60 catalogue rows, StockCategory for the Phase 83
+  // stock ledger. The column is unconstrained, so both live in one table.
+  category: ItemType | StockCategory;
+  created_at: string;
+  // Everything below arrived with migrations/083; every column has a default,
+  // so a Phase 60 row reads back with them filled in.
+  variant: string | null;
+  unit_type: string;
+  boxes_count: number;
+  loose_units_count: number;
+  units_per_box: number;
+  min_threshold: number;
+  audit_frequency_days: number;
+  last_audited_at: string | null;
+  notes: string | null;
+};
+
+// One physical stock check (migrations/083). Append-only: a recount is a new
+// row, never an edit.
+export type InventoryAuditLog = {
+  id: string;
+  item_id: string;
+  audited_by: string | null;
+  boxes_counted: number;
+  loose_units_counted: number;
+  photo_url: string | null;
   created_at: string;
 };
+
+/** An audit with its author's name resolved, as the owner's view shows it. */
+export type InventoryAuditWithStaff = InventoryAuditLog & { staff_name: string | null };
 
 // One chore the house needs doing on one day — cleaning, a repair, an errand,
 // the shopping. Deliberately not a master_schedules row: that table requires an
@@ -247,6 +279,12 @@ export interface Database {
         Row: InventoryItem;
         Insert: Partial<InventoryItem> & Pick<InventoryItem, "name">;
         Update: Partial<InventoryItem>;
+        Relationships: [];
+      };
+      inventory_audit_logs: {
+        Row: InventoryAuditLog;
+        Insert: Partial<InventoryAuditLog> & Pick<InventoryAuditLog, "item_id">;
+        Update: Partial<InventoryAuditLog>;
         Relationships: [];
       };
       household_tasks: {

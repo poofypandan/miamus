@@ -9,6 +9,7 @@ import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { HouseholdTasksPanel } from "@/components/staff/household-tasks-panel";
 import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
+import { StockCheckPanel } from "@/components/staff/stock-check-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
@@ -94,6 +95,8 @@ function StaffTasks() {
       </main>
 
       <HouseholdTasksPanel />
+
+      <StockCheckPanel />
 
       <StaffReportsPanel />
         </div>

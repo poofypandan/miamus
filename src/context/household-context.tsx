@@ -17,6 +17,7 @@ import { readActiveStaffId } from "@/components/auth/staff-login-gate";
 import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { compressPhoto } from "@/lib/image";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -25,6 +26,7 @@ import type {
   InventoryAlert,
   RoutineProposal,
   InventoryItem,
+  InventoryAuditWithStaff,
   ItemType,
   ProposalStatus,
   HouseholdTask,
@@ -61,6 +63,8 @@ interface HouseholdContextValue {
   inventoryAlerts: InventoryAlert[];
   routineProposals: RoutineProposal[];
   inventoryItems: InventoryItem[];
+  /** The newest stock check per inventory item, keyed by item id. */
+  latestInventoryAudits: Record<string, InventoryAuditWithStaff>;
   /**
    * The chores filed for whichever day `selectedDate` is on — never the whole
    * table. Fetched per day rather than in bulk (see migrations/082), so this
@@ -107,6 +111,17 @@ interface HouseholdContextValue {
   resolveInventoryAlert: (id: string) => Promise<void>;
   addInventoryItem: (input: { name: string; category: ItemType }) => Promise<InventoryItem>;
   removeInventoryItem: (id: string) => Promise<void>;
+  /**
+   * Records a stock check: uploads the shelf photo, files the audit under
+   * whoever is signed in on this device, and writes the counts back onto the
+   * item — which is what takes it off today's checklist.
+   */
+  submitInventoryAudit: (
+    itemId: string,
+    boxes: number,
+    looseUnits: number,
+    photoFile: File
+  ) => Promise<void>;
   submitRoutineProposal: (input: CreateRoutineProposalInput) => Promise<RoutineProposal>;
   submitRoutineProposalsBatch: (inputs: CreateRoutineProposalInput[]) => Promise<RoutineProposal[]>;
   decideRoutineProposals: (
@@ -141,6 +156,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([]);
   const [routineProposals, setRoutineProposals] = useState<RoutineProposal[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [latestInventoryAudits, setLatestInventoryAudits] = useState<
+    Record<string, InventoryAuditWithStaff>
+  >({});
   const [householdTasks, setHouseholdTasks] = useState<HouseholdTask[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -177,7 +195,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     // card holding an open photo-tagging dialog — exactly what a refresh
     // triggered by returning from the camera would do.
     if (!silent) setLoading(true);
-    const [e, s, l, m, ia, rp, ii] = await Promise.all([
+    const [e, s, l, m, ia, rp, ii, audits] = await Promise.all([
       dataProvider.listEntities(),
       dataProvider.listSchedules(),
       dataProvider.listLogs(),
@@ -197,6 +215,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         console.warn("inventory_items unavailable — run the Phase 60 migration", err);
         return [] as InventoryItem[];
       }),
+      // And again for the Phase 83 audit log: no history just means every
+      // item reads "never checked", which is true of a fresh ledger anyway.
+      dataProvider.listLatestInventoryAudits().catch((err) => {
+        console.warn("inventory_audit_logs unavailable — run the Phase 83 migration", err);
+        return {} as Record<string, InventoryAuditWithStaff>;
+      }),
       // Chores for the day on screen, so a pull-to-refresh or a reconnect sync
       // picks up anything the owner delegated from their own phone. Swallows
       // its own failure inside loadHouseholdTasks.
@@ -209,6 +233,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setInventoryAlerts(ia);
     setRoutineProposals(rp);
     setInventoryItems(ii);
+    setLatestInventoryAudits(audits);
     if (!silent) setLoading(false);
   }, [loadHouseholdTasks]);
 
@@ -419,6 +444,32 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setInventoryItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
+  // Online only, unlike task logging: the photo is the audit, and the offline
+  // queue carries URLs rather than files — queueing it would mean holding the
+  // image in IndexedDB until reconnect. A failure surfaces to the card, which
+  // keeps the counts and the photo so the retry is one tap.
+  const submitInventoryAudit = useCallback(
+    async (itemId: string, boxes: number, looseUnits: number, photoFile: File) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw new Error("Offline — stock checks need a connection to upload the photo");
+      }
+      const photoUrl = await dataProvider.uploadInventoryPhoto(
+        await compressPhoto(photoFile),
+        itemId
+      );
+      const { audit, item } = await dataProvider.createInventoryAudit({
+        item_id: itemId,
+        boxes_counted: boxes,
+        loose_units_counted: looseUnits,
+        photo_url: photoUrl,
+        audited_by: readActiveStaffId(),
+      });
+      setInventoryItems((prev) => prev.map((i) => (i.id === itemId ? item : i)));
+      setLatestInventoryAudits((prev) => ({ ...prev, [itemId]: audit }));
+    },
+    []
+  );
+
   const submitRoutineProposalsBatch = useCallback(async (inputs: CreateRoutineProposalInput[]) => {
     const created = await dataProvider.createRoutineProposalsBatch(inputs.map(withStaffId));
     setRoutineProposals((prev) => [...created, ...prev]);
@@ -524,6 +575,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       inventoryAlerts,
       routineProposals,
       inventoryItems,
+      latestInventoryAudits,
       householdTasks,
       loading,
       isMockMode,
@@ -552,6 +604,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       resolveInventoryAlert,
       addInventoryItem,
       removeInventoryItem,
+      submitInventoryAudit,
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,
@@ -571,6 +624,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       inventoryAlerts,
       routineProposals,
       inventoryItems,
+      latestInventoryAudits,
       householdTasks,
       loading,
       activePetId,
@@ -596,6 +650,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       resolveInventoryAlert,
       addInventoryItem,
       removeInventoryItem,
+      submitInventoryAudit,
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,
