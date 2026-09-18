@@ -194,6 +194,8 @@ export interface DataProvider {
   createInventoryAudit(
     input: CreateInventoryAuditInput
   ): Promise<{ audit: InventoryAuditWithStaff; item: InventoryItem }>;
+  /** Adds a delivery on top of the item's current counts. */
+  addInventoryStock(itemId: string, addedBoxes: number, addedLoose: number): Promise<InventoryItem>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
   createRoutineProposalsBatch(inputs: CreateRoutineProposalInput[]): Promise<RoutineProposal[]>;

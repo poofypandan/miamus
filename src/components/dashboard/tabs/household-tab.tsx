@@ -13,7 +13,9 @@ import { DateRibbon } from "@/components/date-ribbon";
 import { ChorePanel } from "@/components/dashboard/chore-panel";
 import { InventoryTab } from "@/components/dashboard/inventory-tab";
 import { useHousehold } from "@/context/household-context";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useRequireOwner } from "@/hooks/use-require-owner";
+import { useSessionSegment } from "@/hooks/use-session-segment";
 import type { InventoryItem, ItemType } from "@/types/database";
 
 // Owner-facing, so entirely English per the Phase 46 language boundary.
@@ -31,10 +33,20 @@ const CATEGORY_LABELS: Record<ItemType, string> = {
 // a routine rather than as inventory.
 const CATEGORY_ORDER: ItemType[] = ["food", "medicine", "shampoo", "pee_pad", "other"];
 
+// Chores and inventory are two separate jobs that happened to share a module;
+// stacked on one scroll, the stock list buried the day's chores below it.
+const VIEWS = ["chores", "inventory"] as const;
+type HouseholdView = (typeof VIEWS)[number];
+
 export function HouseholdTab() {
   const { inventoryItems, loading, addInventoryItem, selectedDate, setSelectedDate } =
     useHousehold();
   const isOwner = useRequireOwner();
+  const [view, setView] = useSessionSegment<HouseholdView>(
+    "banyuwangi11:householdView",
+    VIEWS,
+    "chores"
+  );
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState<ItemType>("food");
@@ -75,25 +87,48 @@ export function HouseholdTab() {
     }
   }
 
+  const segmented = (
+    <SegmentedControl
+      ariaLabel="Household view"
+      segments={[
+        { value: "chores", label: "Chores" },
+        { value: "inventory", label: "Inventory" },
+      ]}
+      value={view}
+      onChange={setView}
+    />
+  );
+
   if (loading) {
     return (
       <div className="flex flex-col gap-4">
+        {segmented}
         <Skeleton className="h-8 w-48 rounded-lg" />
         <Skeleton className="h-40 w-full rounded-xl" />
       </div>
     );
   }
 
+  if (view === "chores") {
+    return (
+      <div className="flex flex-col gap-6">
+        {segmented}
+        {/* The Household module replaces the whole pets canvas — ribbon included
+            (see dashboard/page.tsx) — so chores need their own copy to be
+            browsable by day at all. It drives the same global `selectedDate`, so
+            picking a date here and then switching back to Pets lands on the same
+            day. */}
+        <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+
+        <ChorePanel />
+      </div>
+    );
+  }
+
+  // No date ribbon here: stock is a count of right now, not of a day.
   return (
     <div className="flex flex-col gap-6">
-      {/* The Household module replaces the whole pets canvas — ribbon included
-          (see dashboard/page.tsx) — so chores need their own copy to be
-          browsable by day at all. It drives the same global `selectedDate`, so
-          picking a date here and then switching back to Pets lands on the same
-          day. */}
-      <DateRibbon value={selectedDate} onChange={setSelectedDate} />
-
-      <ChorePanel />
+      {segmented}
 
       <InventoryTab />
 

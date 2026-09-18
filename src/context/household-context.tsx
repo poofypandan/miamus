@@ -122,6 +122,12 @@ interface HouseholdContextValue {
     looseUnits: number,
     photoFile: File
   ) => Promise<void>;
+  /**
+   * The owner's side of the procurement loop: adds a delivery to the item's
+   * current stock. Leaves last_audited_at alone — receiving groceries is not a
+   * count, so it must not push the next stock check back.
+   */
+  addIncomingStock: (itemId: string, addedBoxes: number, addedLoose: number) => Promise<void>;
   submitRoutineProposal: (input: CreateRoutineProposalInput) => Promise<RoutineProposal>;
   submitRoutineProposalsBatch: (inputs: CreateRoutineProposalInput[]) => Promise<RoutineProposal[]>;
   decideRoutineProposals: (
@@ -470,6 +476,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const addIncomingStock = useCallback(
+    async (itemId: string, addedBoxes: number, addedLoose: number) => {
+      const item = await dataProvider.addInventoryStock(itemId, addedBoxes, addedLoose);
+      setInventoryItems((prev) => prev.map((i) => (i.id === itemId ? item : i)));
+    },
+    []
+  );
+
   const submitRoutineProposalsBatch = useCallback(async (inputs: CreateRoutineProposalInput[]) => {
     const created = await dataProvider.createRoutineProposalsBatch(inputs.map(withStaffId));
     setRoutineProposals((prev) => [...created, ...prev]);
@@ -605,6 +619,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       addInventoryItem,
       removeInventoryItem,
       submitInventoryAudit,
+      addIncomingStock,
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,
@@ -651,6 +666,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       addInventoryItem,
       removeInventoryItem,
       submitInventoryAudit,
+      addIncomingStock,
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,

@@ -2,13 +2,27 @@
 
 import { useMemo, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
+import { ClipboardCopy, Loader2, PackagePlus } from "lucide-react";
+import { NumberStepper } from "@/components/number-stepper";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import {
   STOCK_CATEGORIES,
   STOCK_CATEGORY_ICONS,
   STOCK_CATEGORY_LABELS_EN,
+  buildShoppingList,
   isStockItem,
   needsRestock,
   stockItemName,
@@ -53,6 +67,23 @@ export function InventoryTab() {
     [groups]
   );
 
+  async function handleCopyList() {
+    const list = buildShoppingList(inventoryItems);
+    if (!list) {
+      toast.success("Nothing needs restocking");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(list);
+      toast.success(`Shopping list copied — ${restockCount} item${restockCount === 1 ? "" : "s"}`);
+    } catch (err) {
+      // Clipboard access needs a secure context and, on some browsers, a
+      // permission — neither is guaranteed inside an installed PWA.
+      console.error(err);
+      toast.error("Couldn't copy to the clipboard");
+    }
+  }
+
   if (groups.length === 0) return null;
 
   return (
@@ -65,6 +96,15 @@ export function InventoryTab() {
           </Badge>
         )}
       </div>
+
+      <Button
+        onClick={handleCopyList}
+        disabled={restockCount === 0}
+        className="min-h-[48px] w-full"
+      >
+        <ClipboardCopy />
+        {restockCount === 0 ? "Nothing to buy" : "Copy Shopping List"}
+      </Button>
 
       {groups.map(({ category, items }) => {
         const Icon = STOCK_CATEGORY_ICONS[category];
@@ -89,6 +129,7 @@ export function InventoryTab() {
 
 function StockRow({ item, audit }: { item: InventoryItem; audit?: InventoryAuditWithStaff }) {
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [receiveOpen, setReceiveOpen] = useState(false);
   const total = totalUnits(item);
   const restock = needsRestock(item);
   const name = stockItemName(item);
@@ -139,16 +180,30 @@ function StockRow({ item, audit }: { item: InventoryItem; audit?: InventoryAudit
         <p className="truncate text-[11px] text-muted-foreground">Last checked: {lastChecked}</p>
       </div>
 
-      {restock ? (
-        <Badge className="h-6 shrink-0 bg-red-600 px-2 text-[11px] text-white">Restock</Badge>
-      ) : (
-        <span
-          className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-emerald-700"
-          aria-label="In stock"
+      <div className="flex shrink-0 flex-col items-end gap-1.5">
+        {restock ? (
+          <Badge className="h-6 bg-red-600 px-2 text-[11px] text-white">Restock</Badge>
+        ) : (
+          <span
+            className="flex h-6 items-center gap-1 text-[11px] font-medium text-emerald-700"
+            aria-label="In stock"
+          >
+            <span className="size-2.5 rounded-full bg-emerald-500" /> OK
+          </span>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-h-[36px] bg-white"
+          onClick={() => setReceiveOpen(true)}
+          aria-label={`Receive stock for ${name}`}
         >
-          <span className="size-2.5 rounded-full bg-emerald-500" /> OK
-        </span>
-      )}
+          <PackagePlus /> Receive
+        </Button>
+      </div>
+
+      <ReceiveStockDialog item={item} open={receiveOpen} onOpenChange={setReceiveOpen} />
 
       {audit?.photo_url && (
         <PhotoLightbox
@@ -165,5 +220,97 @@ function StockRow({ item, audit }: { item: InventoryItem; audit?: InventoryAudit
         />
       )}
     </div>
+  );
+}
+
+/**
+ * The owner's half of the procurement loop: groceries came home, add them to
+ * the shelf. Counts are added on top of the stored stock, never replacing it —
+ * replacing is what a staff stock check does.
+ */
+function ReceiveStockDialog({
+  item,
+  open,
+  onOpenChange,
+}: {
+  item: InventoryItem;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { addIncomingStock } = useHousehold();
+  const [boxes, setBoxes] = useState(0);
+  const [looseUnits, setLooseUnits] = useState(0);
+  const [saving, setSaving] = useState(false);
+  useBackToClose(open, () => onOpenChange(false));
+
+  const name = stockItemName(item);
+  const addedUnits = boxes * item.units_per_box + looseUnits;
+
+  function reset() {
+    setBoxes(0);
+    setLooseUnits(0);
+    setSaving(false);
+  }
+
+  async function handleSubmit() {
+    setSaving(true);
+    try {
+      await addIncomingStock(item.id, boxes, looseUnits);
+      toast.success(`Added ${addedUnits} ${item.unit_type} of ${name}`);
+      onOpenChange(false);
+      reset();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update stock");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) reset();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Receive {name}</DialogTitle>
+          <DialogDescription>
+            Currently {totalUnits(item)} {item.unit_type} in stock.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 gap-3">
+          <NumberStepper
+            label="Boxes Added"
+            value={boxes}
+            onChange={setBoxes}
+            disabled={saving}
+            decrementLabel="Fewer boxes"
+            incrementLabel="More boxes"
+          />
+          <NumberStepper
+            label="Loose Units Added"
+            value={looseUnits}
+            onChange={setLooseUnits}
+            disabled={saving}
+            decrementLabel="Fewer loose units"
+            incrementLabel="More loose units"
+          />
+        </div>
+
+        <DialogFooter>
+          <Button
+            onClick={handleSubmit}
+            disabled={saving || addedUnits === 0}
+            className="min-h-[48px] w-full"
+          >
+            {saving ? <Loader2 className="animate-spin" /> : <PackagePlus />} Add to Inventory
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

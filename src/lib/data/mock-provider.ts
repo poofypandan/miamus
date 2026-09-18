@@ -345,6 +345,20 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay({ audit, item });
   },
+  async addInventoryStock(itemId, addedBoxes, addedLoose) {
+    const db = loadDB();
+    const index = db.inventoryItems.findIndex((i) => i.id === itemId);
+    if (index === -1) throw new Error("Item not found");
+    const current = db.inventoryItems[index];
+    const item: InventoryItem = {
+      ...current,
+      boxes_count: current.boxes_count + addedBoxes,
+      loose_units_count: current.loose_units_count + addedLoose,
+    };
+    db.inventoryItems[index] = item;
+    saveDB(db);
+    return delay(item);
+  },
   async listRoutineProposals() {
     return delay(loadDB().routineProposals);
   },

@@ -299,6 +299,31 @@ export const supabaseProvider: DataProvider = {
     if (itemError) throw itemError;
     return { audit, item };
   },
+  async addInventoryStock(itemId, addedBoxes, addedLoose) {
+    // Read-then-write from the server's copy, not the client's: the client may
+    // be holding counts from before a staff member's audit landed, and adding
+    // a delivery to those would silently undo the count. Not atomic — a
+    // concurrent write between the two requests is lost — which is acceptable
+    // for one owner receiving groceries; an RPC is the fix if that changes.
+    const c = client();
+    const { data: current, error: readError } = await c
+      .from("inventory_items")
+      .select("boxes_count, loose_units_count")
+      .eq("id", itemId)
+      .single();
+    if (readError) throw readError;
+    const { data, error } = await c
+      .from("inventory_items")
+      .update({
+        boxes_count: current.boxes_count + addedBoxes,
+        loose_units_count: current.loose_units_count + addedLoose,
+      })
+      .eq("id", itemId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
   async listRoutineProposals() {
     const { data, error } = await client()
       .from("routine_proposals")

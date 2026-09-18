@@ -10,9 +10,12 @@ import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { HouseholdTasksPanel } from "@/components/staff/household-tasks-panel";
 import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
 import { StockCheckPanel } from "@/components/staff/stock-check-panel";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
+import { useSessionSegment } from "@/hooks/use-session-segment";
+import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
@@ -24,11 +27,56 @@ export default function StaffPage() {
   );
 }
 
+// The two jobs on a staff member's phone. Kept apart rather than stacked:
+// with the stock checklist under the agenda, the day's pet tasks and a
+// 29-item count competed for the same scroll.
+const VIEWS = ["tasks", "stock"] as const;
+type StaffView = (typeof VIEWS)[number];
+
 function StaffTasks() {
-  const { pets, schedules, logs, loading, selectedDate, setSelectedDate, refresh } = useHousehold();
-  const dateStr = formatDateLocal(selectedDate);
+  const { inventoryItems, refresh } = useHousehold();
+  const [view, setView] = useSessionSegment<StaffView>("banyuwangi11:staffView", VIEWS, "tasks");
 
   useOfflineSync();
+
+  // Shown on the pill so a due count is visible from the task list, where
+  // staff spend most of the day.
+  const dueCount = useMemo(() => dueStockItems(inventoryItems).length, [inventoryItems]);
+
+  return (
+    <div className="mx-auto min-h-screen w-full max-w-md flex-1 bg-slate-50 px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      {/* Silent, because the pull's own spinner is the feedback — swapping the
+          list for skeletons mid-gesture would be worse than no feedback. */}
+      <PullToRefresh onRefresh={() => refresh({ silent: true })}>
+        <div className="flex flex-col gap-4">
+          <header className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <h1 className="text-xl font-semibold">
+                {view === "tasks" ? "Tugas Hari Ini" : "Cek Stok"}
+              </h1>
+              <OnDutyBadge />
+            </div>
+            <SegmentedControl
+              ariaLabel="Tampilan"
+              segments={[
+                { value: "tasks", label: "Tugas Hari Ini" },
+                { value: "stock", label: "Cek Stok", badge: dueCount > 0 ? dueCount : undefined },
+              ]}
+              value={view}
+              onChange={setView}
+            />
+          </header>
+
+          {view === "tasks" ? <TasksView /> : <StockCheckPanel />}
+        </div>
+      </PullToRefresh>
+    </div>
+  );
+}
+
+function TasksView() {
+  const { pets, schedules, logs, loading, selectedDate, setSelectedDate } = useHousehold();
+  const dateStr = formatDateLocal(selectedDate);
 
   const admittedPets = useMemo(() => pets.filter(isAdmitted), [pets]);
 
@@ -38,18 +86,8 @@ function StaffTasks() {
   );
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-md flex-1 bg-slate-50 px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-      {/* Silent, because the pull's own spinner is the feedback — swapping the
-          list for skeletons mid-gesture would be worse than no feedback. */}
-      <PullToRefresh onRefresh={() => refresh({ silent: true })}>
-        <div className="flex flex-col gap-4">
-      <header className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-xl font-semibold">Tugas Hari Ini</h1>
-          <OnDutyBadge />
-        </div>
-        <DateRibbon value={selectedDate} onChange={setSelectedDate} />
-      </header>
+    <>
+      <DateRibbon value={selectedDate} onChange={setSelectedDate} />
 
       {/* Whoever is holding this phone is the one who will fetch the dog, so
           the discharge lives here as well as on the owner's profile sheet.
@@ -96,12 +134,8 @@ function StaffTasks() {
 
       <HouseholdTasksPanel />
 
-      <StockCheckPanel />
-
       <StaffReportsPanel />
-        </div>
-      </PullToRefresh>
-    </div>
+    </>
   );
 }
 
