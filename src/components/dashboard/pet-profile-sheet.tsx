@@ -178,7 +178,7 @@ export function PetProfileSheet() {
                 the days scroll under the same edge. Letting it run to the
                 screen edge here would make the sheet the odd one out. */}
             <div className="mt-4">
-              <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+              <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
             </div>
 
             <section className="mt-6">

@@ -105,7 +105,7 @@ export function HouseholdTab({
             browsable by day at all. It drives the same global `selectedDate`, so
             picking a date here and then switching back to Pets lands on the same
             day. */}
-        <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+        <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
 
         <ChorePanel />
       </div>

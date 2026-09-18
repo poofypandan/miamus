@@ -7,11 +7,24 @@ import { useSpecialEventDates } from "@/hooks/use-special-event-dates";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 
-const DAY_LABELS_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+// Indexed by Date.getDay(), so both start on Sunday.
+const DAY_LABELS = {
+  id: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"],
+  en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+} as const;
+
+const JUMP_LABEL = { id: "Pilih tanggal", en: "Jump to date" } as const;
+
+export type RibbonLocale = keyof typeof DAY_LABELS;
 
 interface DateRibbonProps {
   value: Date;
   onChange: (date: Date) => void;
+  /**
+   * Language of the day names. Defaults to Indonesian for the staff view;
+   * every owner surface passes "en" (the Phase 46 language boundary).
+   */
+  locale?: RibbonLocale;
 }
 
 // Google Calendar-style day picker: a 2-week horizontal ribbon centered on
@@ -19,7 +32,7 @@ interface DateRibbonProps {
 // jumping months or years away instantly. Shared by the Owner Timeline
 // (schedules page) and the Staff "Jadwal", both driven by the same global
 // `selectedDate` in HouseholdContext.
-export function DateRibbon({ value, onChange }: DateRibbonProps) {
+export function DateRibbon({ value, onChange, locale = "id" }: DateRibbonProps) {
   const today = useMemo(() => new Date(), []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
@@ -88,7 +101,7 @@ export function DateRibbon({ value, onChange }: DateRibbonProps) {
                     : "border-border bg-card text-foreground hover:bg-muted"
               )}
             >
-              <span className="font-medium">{DAY_LABELS_ID[d.getDay()]}</span>
+              <span className="font-medium">{DAY_LABELS[locale][d.getDay()]}</span>
               <span className="text-lg font-semibold">{format(d, "d")}</span>
               {/* Fixed-height row whether or not a dot is shown, so badged and
                   unbadged days keep identical heights and the ribbon doesn't
@@ -111,7 +124,7 @@ export function DateRibbon({ value, onChange }: DateRibbonProps) {
 
       <label
         className="relative flex min-h-[48px] w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground"
-        aria-label="Jump to date"
+        aria-label={JUMP_LABEL[locale]}
       >
         <CalendarDays className="size-5" />
         <input

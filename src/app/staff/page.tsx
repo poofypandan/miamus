@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useMemo } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
@@ -12,6 +13,7 @@ import { HouseholdTasksPanel } from "@/components/staff/household-tasks-panel";
 import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
 import { StockCheckPanel } from "@/components/staff/stock-check-panel";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
@@ -71,7 +73,7 @@ function StaffTasks() {
               <h1 className="text-xl font-semibold">
                 {view === "tugas" ? "Tugas Hari Ini" : "Cek Stok"}
               </h1>
-              <OnDutyBadge />
+              <HeaderIdentity />
             </div>
             <SegmentedControl
               ariaLabel="Tampilan"
@@ -160,6 +162,30 @@ function TasksView() {
 // person works from their own device, so switching mid-shift is not a thing
 // that happens, and a tappable badge only invited someone to sign themselves
 // out by accident.
+function HeaderIdentity() {
+  const { userRole } = useHousehold();
+  const { staffId } = useStaffIdentity();
+
+  // The owner's way back out, shown only when both signals agree: the owner
+  // role from HouseholdContext (set by the owner PIN) AND no staff profile
+  // signed in on this phone. A staff member's device never renders it — even
+  // one where owner mode was once unlocked — so nobody on shift is handed a
+  // door to the dashboard. Rendered after StaffLoginGate, which only lets
+  // anyone through once the role has been read back from storage, so there is
+  // no flash of the button before the role is known.
+  //
+  // This hides a button; it is not access control. The dashboard's own
+  // owner-only screens stay guarded by useRequireOwner.
+  if (userRole === "owner" && !staffId) {
+    return (
+      <Button variant="outline" asChild className="min-h-[40px] shrink-0 bg-white">
+        <Link href="/dashboard">← Owner Dashboard</Link>
+      </Button>
+    );
+  }
+  return <OnDutyBadge />;
+}
+
 function OnDutyBadge() {
   const { staffName } = useStaffIdentity();
   return (

@@ -72,7 +72,7 @@ function DashboardCanvas() {
           other mid-swipe. Anchored here it stays perfectly still while the
           panels move beneath it, and there is only ever one of it. */}
       <div className="px-4">
-        <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+        <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
       </div>
 
       <SwipeCarousel index={tabIndex(searchParams.get("tab"))} onIndexChange={changeTab}>

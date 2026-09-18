@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
-import { Toaster } from "@/components/ui/sonner";
+import { AppToaster } from "@/components/shared/app-toaster";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -66,7 +66,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <Providers>{children}</Providers>
-        <Toaster />
+        <AppToaster />
       </body>
     </html>
   );
