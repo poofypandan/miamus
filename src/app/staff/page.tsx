@@ -9,7 +9,7 @@ import { DischargeButton } from "@/components/dashboard/discharge-button";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { HouseholdTasksPanel } from "@/components/staff/household-tasks-panel";
-import { StaffReportsPanel } from "@/components/staff/staff-reports-panel";
+import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { StockCheckPanel } from "@/components/staff/stock-check-panel";
 import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -19,6 +19,7 @@ import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
+import { cn } from "@/lib/utils";
 
 export default function StaffPage() {
   return (
@@ -63,10 +64,19 @@ function StaffTasks() {
 
   // The same shell as dashboard/layout.tsx — column, shared AppHeader outside
   // the pull, content starting pt-3 below it — so switching between the two
-  // views moves nothing but the words (Phase 84C). The bottom padding differs
-  // only because there is no tab bar here to clear.
+  // views moves nothing but the words (Phase 84C). The bottom padding differs:
+  // there is no tab bar here to clear, but Tugas has the FAB.
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-50 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+    <div
+      className={cn(
+        "mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-50",
+        // Tugas also has the "+ Lapor" FAB floating bottom-right (h-14 at
+        // bottom-6): clear it so the last card can scroll out from under it.
+        view === "tugas"
+          ? "pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
+          : "pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+      )}
+    >
       <AppHeader action={<HeaderIdentity />}>
         <SegmentedControl
           ariaLabel="Tampilan"
@@ -86,6 +96,12 @@ function StaffTasks() {
           {view === "tugas" ? <TasksView /> : <StockCheckPanel />}
         </div>
       </PullToRefresh>
+
+      {/* The reports that used to end the task feed live behind this FAB now.
+          Outside PullToRefresh on purpose: its content wrapper carries a CSS
+          transform, which would make a `position: fixed` child scroll with
+          the page instead of floating over it. */}
+      {view === "tugas" && <StaffActionsFab />}
     </div>
   );
 }
@@ -149,8 +165,6 @@ function TasksView() {
       </main>
 
       <HouseholdTasksPanel />
-
-      <StaffReportsPanel />
     </>
   );
 }

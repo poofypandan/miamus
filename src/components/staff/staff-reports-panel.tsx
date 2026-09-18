@@ -13,7 +13,7 @@ import { formatTime12h } from "@/lib/time";
 import { isActiveAlert } from "@/lib/inventory-status";
 import { groupProposals, batchCreatedAt, type ProposalBatch } from "@/lib/proposal-batches";
 import { isWithinUndoWindow } from "@/lib/undo-window";
-import type { ItemType, ProposalStatus } from "@/types/database";
+import type { ItemType, ProposalStatus, RoutineProposal } from "@/types/database";
 
 const DISMISSED_KEY = "dismissed_proposals";
 const RECENT_DECISION_MS = 24 * 60 * 60 * 1000;
@@ -26,7 +26,7 @@ const RECENT_DECISION_MS = 24 * 60 * 60 * 1000;
  * the proposal. Writing it to the row would clear the notice for everyone the
  * moment one person dismissed it.
  */
-function useDismissedBatches() {
+export function useDismissedBatches() {
   // Starts empty and fills after mount — localStorage doesn't exist during
   // SSR, and reading it while rendering would make the first client paint
   // disagree with the server HTML.
@@ -78,10 +78,57 @@ const STATUS_CLASSES: Record<ProposalStatus, string> = {
   rejected: "bg-gray-200 text-gray-700",
 };
 
+/**
+ * The proposal batches the staff list shows. Pending submissions stay until
+ * decided; decided ones linger a day so the staff member sees the answer, then
+ * drop off on their own. Anything they tap "Oke" on goes immediately.
+ *
+ * Measured from created_at because routine_proposals has no updated_at — a
+ * proposal decided long after it was filed ages out on its filing date.
+ *
+ * Exported so the FAB can badge the same answers the drawer lists.
+ */
+export function visibleProposalBatches(
+  routineProposals: RoutineProposal[],
+  dismissed: string[],
+  now: number
+): ProposalBatch[] {
+  return groupProposals(routineProposals)
+    .filter((batch) => {
+      if (dismissed.includes(batch.key)) return false;
+      if (batch.status === "pending") return true;
+      return now - new Date(batchCreatedAt(batch)).getTime() < RECENT_DECISION_MS;
+    })
+    .sort((a, b) => batchCreatedAt(b).localeCompare(batchCreatedAt(a)));
+}
+
+/**
+ * Re-renders on a timer so an entry's Batal button disappears when its window
+ * lapses, rather than lingering until something else causes a render.
+ */
+export function useNow(intervalMs = 30_000): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(timer);
+  }, [intervalMs]);
+  return now;
+}
+
 // Staff-facing, so entirely Bahasa Indonesia. Collects the three manual input
 // actions into one stack and lists what this household has filed, each entry
-// undoable for five minutes after it was created.
-export function StaffReportsPanel() {
+// undoable for five minutes after it was created. Rendered inside the staff
+// FAB's drawer (Phase 85), which owns the heading and the dismissed-answers
+// state — the FAB badges the same answers, so both must read one copy.
+export function StaffReportsPanel({
+  dismissed,
+  dismiss,
+  now,
+}: {
+  dismissed: string[];
+  dismiss: (key: string) => void;
+  now: number;
+}) {
   const {
     pets,
     inventoryAlerts,
@@ -92,32 +139,12 @@ export function StaffReportsPanel() {
     deleteLogWithPhoto,
   } = useHousehold();
 
-  // Re-renders on a timer so an entry's Batal button disappears when its
-  // window lapses, rather than lingering until something else causes a render.
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
-
   const petName = (id: string) => pets.find((p) => p.id === id)?.name ?? "—";
-  const { dismissed, dismiss } = useDismissedBatches();
 
-  // Pending submissions stay until decided; decided ones linger a day so the
-  // staff member sees the answer, then drop off on their own. Anything they
-  // tap "Oke" on goes immediately.
-  //
-  // Measured from created_at because routine_proposals has no updated_at — a
-  // proposal decided long after it was filed ages out on its filing date.
-  const proposalBatches = useMemo(() => {
-    return groupProposals(routineProposals)
-      .filter((batch) => {
-        if (dismissed.includes(batch.key)) return false;
-        if (batch.status === "pending") return true;
-        return now - new Date(batchCreatedAt(batch)).getTime() < RECENT_DECISION_MS;
-      })
-      .sort((a, b) => batchCreatedAt(b).localeCompare(batchCreatedAt(a)));
-  }, [routineProposals, dismissed, now]);
+  const proposalBatches = useMemo(
+    () => visibleProposalBatches(routineProposals, dismissed, now),
+    [routineProposals, dismissed, now]
+  );
   const openAlerts = inventoryAlerts.filter(isActiveAlert);
 
   // Ad-hoc entries are the ones with no schedule behind them — Catat Ekstra
@@ -131,8 +158,6 @@ export function StaffReportsPanel() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">Laporan & Usulan</h2>
-
       <div className="flex flex-col gap-2">
         <LowStockFlagButton locale="id" />
         <StaffRoutinePicker />
