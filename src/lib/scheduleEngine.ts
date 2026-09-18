@@ -23,6 +23,16 @@ export interface AgendaGroup {
   category: ScheduleCategory;
   module: Module;
   items: AgendaItem[];
+  /**
+   * Every distinct task title in this group, in the order they were scheduled.
+   * One entry for an ordinary group; several when a dog takes three medicines
+   * at noon and they have been rolled into one block.
+   *
+   * Deliberately a list rather than a joined string: the staff view renders it
+   * in Bahasa Indonesia and the owner's in English, so the wording around it
+   * belongs to them, not to the engine.
+   */
+  titles: string[];
 }
 
 export function formatDateLocal(d: Date): string {
@@ -184,7 +194,19 @@ export function buildAgenda(params: {
 
   const groups = new Map<string, AgendaGroup>();
   for (const item of items) {
-    const groupKey = `${item.time}|${item.title}`;
+    // Medicines roll up per dog: three supplements at noon are one trip to the
+    // cupboard and one photo, so they read as one block instead of three
+    // near-identical cards. Everything else groups by time + title across dogs,
+    // which is what lets one photo of four dogs settle the whole potty round.
+    //
+    // The two keys are deliberately different shapes: medicines drop the title
+    // (that is the thing being merged) and add the entity (Mocha's noon
+    // medicines are not Matcha's), while the rest keep the title and ignore the
+    // entity.
+    const groupKey =
+      item.category === "medication"
+        ? `${item.time}|medication|${item.entityId}`
+        : `${item.time}|${item.title}`;
     let group = groups.get(groupKey);
     if (!group) {
       group = {
@@ -193,10 +215,12 @@ export function buildAgenda(params: {
         category: item.category,
         module: item.module,
         items: [],
+        titles: [],
       };
       groups.set(groupKey, group);
     }
     group.items.push(item);
+    if (!group.titles.includes(item.title)) group.titles.push(item.title);
   }
 
   return Array.from(groups.values()).sort((a, b) => a.time.localeCompare(b.time));
