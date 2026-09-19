@@ -10,6 +10,7 @@ import type {
   StaffProfile,
   HouseholdTask,
 } from "@/types/database";
+import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
 
@@ -98,6 +99,7 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const entity: TaskEntity = {
       id: uid("entity"),
+      household_id: getActiveHouseholdId(),
       entity_type: input.entity_type,
       name: input.name,
       icon: input.icon ?? null,
@@ -252,6 +254,7 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const alert: InventoryAlert = {
       id: uid("alert"),
+      household_id: getActiveHouseholdId(),
       pet_id: input.pet_id ?? null,
       item_type: input.item_type,
       note: input.note ?? null,
@@ -290,6 +293,7 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const item: InventoryItem = {
       id: uid("item"),
+      household_id: getActiveHouseholdId(),
       name: input.name,
       category: input.category,
       created_at: new Date().toISOString(),
@@ -444,6 +448,7 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const task: HouseholdTask = {
       id: uid("chore"),
+      household_id: getActiveHouseholdId(),
       title: input.title,
       notes: input.notes ?? null,
       category: input.category,
@@ -497,6 +502,7 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const profile: StaffProfile = {
       id: uid("staff"),
+      household_id: getActiveHouseholdId(),
       name,
       pin: null,
       created_at: new Date().toISOString(),

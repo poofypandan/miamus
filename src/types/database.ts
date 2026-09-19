@@ -26,6 +26,8 @@ export type EntityStatus = "home" | "admitted";
 
 export type TaskEntity = {
   id: string;
+  // The tenant (migrations/086). Always Banyuwangi 11 until Phase 86B.
+  household_id: string;
   entity_type: EntityType;
   name: string;
   icon: string | null;
@@ -92,6 +94,8 @@ export type MedicalRecord = {
 
 export type StaffProfile = {
   id: string;
+  // The tenant (migrations/086). Always Banyuwangi 11 until Phase 86B.
+  household_id: string;
   name: string;
   // Null until the person picks one on first sign-in, and null again after the
   // owner resets it — see migrations/071. Stored as typed and readable by
@@ -107,6 +111,8 @@ export type StaffProfile = {
 // rather than "fixing" it to entity_id (which 400s against the real table).
 export type InventoryAlert = {
   id: string;
+  // The tenant (migrations/086). Always Banyuwangi 11 until Phase 86B.
+  household_id: string;
   // Null for a shared household item (floor cleaner, communal shampoo) that
   // isn't any one dog's. See migrations/049.
   pet_id: string | null;
@@ -136,6 +142,8 @@ export type StockCategory = "fresh_food" | "pantry" | "household_supplies" | "do
 
 export type InventoryItem = {
   id: string;
+  // The tenant (migrations/086). Always Banyuwangi 11 until Phase 86B.
+  household_id: string;
   name: string;
   // ItemType for the Phase 60 catalogue rows, StockCategory for the Phase 83
   // stock ledger. The column is unconstrained, so both live in one table.
@@ -176,6 +184,8 @@ export type InventoryAuditWithStaff = InventoryAuditLog & { staff_name: string |
 // is filed again.
 export type HouseholdTask = {
   id: string;
+  // The tenant (migrations/086). Always Banyuwangi 11 until Phase 86B.
+  household_id: string;
   title: string;
   notes: string | null;
   category: HouseholdTaskCategory;

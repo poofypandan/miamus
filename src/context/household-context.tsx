@@ -18,6 +18,7 @@ import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { compressPhoto } from "@/lib/image";
+import { getActiveHouseholdId } from "@/lib/tenant";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -55,6 +56,12 @@ const OWNER_PIN = "6033";
 const OWNER_STORAGE_KEY = "banyuwangi11:isOwner";
 
 interface HouseholdContextValue {
+  /**
+   * The tenant every query is scoped to (migrations/086). Fixed to Banyuwangi
+   * 11 until Phase 86B resolves it from the signed-in account — see
+   * lib/tenant.ts, which the data provider reads directly.
+   */
+  activeHouseholdId: string;
   entities: TaskEntity[];
   pets: TaskEntity[];
   schedules: MasterSchedule[];
@@ -579,8 +586,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  // Constant for now; becomes state once 86B resolves it from sign-in.
+  const activeHouseholdId = getActiveHouseholdId();
+
   const value = useMemo<HouseholdContextValue>(
     () => ({
+      activeHouseholdId,
       entities,
       pets,
       schedules,
@@ -631,6 +642,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       decideRoutineProposal,
     }),
     [
+      activeHouseholdId,
       entities,
       pets,
       schedules,

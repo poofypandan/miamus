@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import { getActiveHouseholdId } from "@/lib/tenant";
 import type { InventoryAuditLog, InventoryAuditWithStaff } from "@/types/database";
 import type { DataProvider } from "./types";
 
@@ -30,7 +31,11 @@ function flattenAudit({ staff_profiles, ...audit }: AuditRow): InventoryAuditWit
 
 export const supabaseProvider: DataProvider = {
   async listEntities() {
-    const { data, error } = await client().from("task_entities").select("*").order("created_at");
+    const { data, error } = await client()
+      .from("task_entities")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .order("created_at");
     if (error) throw error;
     return data;
   },
@@ -57,7 +62,11 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async createEntity(input) {
-    const { data, error } = await client().from("task_entities").insert(input).select().single();
+    const { data, error } = await client()
+      .from("task_entities")
+      .insert({ ...input, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
     if (error) throw error;
     return data;
   },
@@ -162,6 +171,7 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("inventory_alerts")
       .select("*")
+      .eq("household_id", getActiveHouseholdId())
       .order("created_at", { ascending: false });
     if (error) throw error;
     return data;
@@ -169,7 +179,7 @@ export const supabaseProvider: DataProvider = {
   async createInventoryAlert(input) {
     const { data, error } = await client()
       .from("inventory_alerts")
-      .insert(input)
+      .insert({ ...input, household_id: getActiveHouseholdId() })
       .select()
       .single();
     if (error) throw error;
@@ -219,6 +229,7 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("inventory_items")
       .select("*")
+      .eq("household_id", getActiveHouseholdId())
       .order("name");
     if (error) throw error;
     return data;
@@ -226,7 +237,7 @@ export const supabaseProvider: DataProvider = {
   async createInventoryItem(input) {
     const { data, error } = await client()
       .from("inventory_items")
-      .insert(input)
+      .insert({ ...input, household_id: getActiveHouseholdId() })
       .select()
       .single();
     if (error) throw error;
@@ -252,6 +263,7 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("inventory_items")
       .select(`id, inventory_audit_logs(${AUDIT_COLUMNS})`)
+      .eq("household_id", getActiveHouseholdId())
       .order("created_at", { referencedTable: "inventory_audit_logs", ascending: false })
       .limit(1, { referencedTable: "inventory_audit_logs" });
     if (error) throw error;
@@ -413,6 +425,7 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("household_tasks")
       .select("*")
+      .eq("household_id", getActiveHouseholdId())
       .eq("due_date", dueDate)
       // Timed chores first in clock order, then the "sometime today" ones —
       // nullsFirst: false is what puts a null due_time at the end rather than
@@ -426,6 +439,7 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("household_tasks")
       .insert({
+        household_id: getActiveHouseholdId(),
         title: input.title,
         category: input.category,
         assigned_to: input.assigned_to ?? null,
@@ -491,6 +505,7 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("staff_profiles")
       .select("*")
+      .eq("household_id", getActiveHouseholdId())
       .order("name");
     if (error) throw error;
     return data;
@@ -498,7 +513,7 @@ export const supabaseProvider: DataProvider = {
   async createStaffProfile(name) {
     const { data, error } = await client()
       .from("staff_profiles")
-      .insert({ name })
+      .insert({ name, household_id: getActiveHouseholdId() })
       .select()
       .single();
     if (error) throw error;
