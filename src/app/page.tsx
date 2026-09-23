@@ -1,131 +1,168 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Download, Loader2, Share, SquarePlus } from "lucide-react";
-import { PinModal } from "@/components/dashboard/owner-access";
-import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase/client";
+import { readStoredTenantId } from "@/lib/tenant";
 
-const RUMAH = [
-  { letter: "R", rest: "espek & Sopan" },
-  { letter: "U", rest: "tamakan Komunikasi" },
-  { letter: "M", rest: "enjaga Kebersihan" },
-  { letter: "A", rest: "man & Selamat" },
-  { letter: "H", rest: "ormati Privasi" },
-];
+const ERRORS: Record<string, string> = {
+  missing_code: "Sign-in was cancelled. Try again.",
+  exchange_failed: "Google sign-in didn't complete. Try again.",
+};
 
+// Written by the staff gate once someone picks their name on this device. Read
+// here (rather than through the gate's own module) because this page must
+// decide where to send people before any staff component mounts.
+const STAFF_ID_KEY = "banyuwangi11:staffId";
+
+/**
+ * The front door (Phase 87).
+ *
+ * This used to be the household's own staff splash; it is now the commercial
+ * landing page, and it routes rather than greets:
+ *
+ *   Google session        -> /dashboard   (the owner)
+ *   staff marker on phone -> /staff       (a phone already in service, or one
+ *                                          that has opened an invite link)
+ *   neither               -> sign-in UI
+ *
+ * The staff check is what keeps the grandfather promise: a phone that has been
+ * logging tasks for months carries a staff id and no Google account, and must
+ * never be shown a sign-in screen.
+ */
 export default function Home() {
-  const router = useRouter();
-  const [pinOpen, setPinOpen] = useState(false);
+  return (
+    <Suspense fallback={<Splash />}>
+      <FrontDoor />
+    </Suspense>
+  );
+}
 
-  function handleHiddenLogin() {
-    if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
-      window.navigator.vibrate(50);
+function FrontDoor() {
+  const router = useRouter();
+  const error = ERRORS[useSearchParams().get("error") ?? ""];
+  // "deciding" until we know: rendering the sign-in UI first and redirecting
+  // after would flash a Google button at every staff member on every launch.
+  const [deciding, setDeciding] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function decide() {
+      let staffDevice = !!readStoredTenantId();
+      try {
+        staffDevice = staffDevice || !!window.localStorage.getItem(STAFF_ID_KEY);
+      } catch {
+        // Blocked storage: fall through to the sign-in screen, which still
+        // offers the staff link.
+      }
+
+      // getSession reads the cookie without a network round trip; the owner's
+      // own device answers immediately and staff phones skip it entirely.
+      const session = supabase ? (await supabase.auth.getSession()).data.session : null;
+      if (cancelled) return;
+
+      if (session) {
+        router.replace("/dashboard");
+        return;
+      }
+      if (staffDevice) {
+        router.replace("/staff");
+        return;
+      }
+      setDeciding(false);
     }
-    setPinOpen(true);
+
+    void decide();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  async function handleGoogle() {
+    if (!supabase) {
+      setFailed("Supabase isn't configured on this deployment.");
+      return;
+    }
+    setBusy(true);
+    const { error: signInError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      // Absolute, and built from the live origin so the same code works on
+      // localhost and on the deployed domain. Both must be listed as redirect
+      // URLs in the Supabase dashboard.
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (signInError) {
+      console.error(signInError);
+      setFailed("Couldn't reach Google sign-in. Try again.");
+      setBusy(false);
+    }
+    // On success the browser leaves for Google; no need to clear `busy`.
   }
 
-  // The bottom padding keeps its 3rem and adds the gesture-bar inset on top, so
-  // the install prompt at the bottom of this screen stays clear of it once
-  // viewport-fit=cover makes that inset real.
+  if (deciding) return <Splash />;
+
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pt-12 pb-[calc(3rem+env(safe-area-inset-bottom))] text-center select-none">
-      <h1 className="mb-12 text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
-        Banyuwangi 11
-      </h1>
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] text-center">
+      <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Welcome to Miamus</h1>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Run your household from one place — pets, chores, staff and stock.
+      </p>
 
-      <div className="mx-auto flex w-fit flex-col items-start space-y-3 text-left text-base">
-        {RUMAH.map((r) => (
-          <div key={r.letter}>
-            <span className="font-bold text-gray-900">{r.letter}</span>
-            <span className="font-normal text-gray-500">{r.rest}</span>
-          </div>
-        ))}
-      </div>
+      <Button onClick={handleGoogle} disabled={busy} className="mt-10 min-h-[52px] w-full">
+        {busy ? <Loader2 className="animate-spin" /> : <GoogleMark />}
+        Continue with Google
+      </Button>
 
-      <div className="mt-12 flex w-full justify-center">
-        <Link
-          href="/staff"
-          className="w-full max-w-[220px] rounded-full bg-black py-3.5 text-base font-medium text-white shadow-sm transition-transform active:scale-95"
-        >
-          Jadwal
+      {(failed || error) && <p className="mt-4 text-sm text-destructive">{failed ?? error}</p>}
+
+      <p className="mt-8 text-xs text-muted-foreground">
+        Staff don&apos;t sign in here —{" "}
+        <Link href="/staff" className="underline underline-offset-4">
+          buka tampilan staf
         </Link>
-      </div>
-
-      <InstallPrompt />
-
-      {/* Deliberately invisible — owner access is a hidden gesture, not a
-          visible button. Double-click (not single) so staff can't trigger
-          it by accidentally tapping the corner of the screen. Mirrored on
-          both corners so it works regardless of which hand holds the phone. */}
-      <div
-        className="fixed right-0 bottom-0 z-50 h-32 w-32 opacity-0"
-        onDoubleClick={handleHiddenLogin}
-      />
-      <div
-        className="fixed bottom-0 left-0 z-50 h-32 w-32 opacity-0"
-        onDoubleClick={handleHiddenLogin}
-      />
-
-      <PinModal
-        open={pinOpen}
-        onOpenChange={setPinOpen}
-        // replace, not push: the landing screen must not sit behind the
-        // dashboard in history, or Back drops an owner straight back out to it.
-        onUnlocked={() => router.replace("/dashboard")}
-      />
+        .
+      </p>
     </main>
   );
 }
 
-// Staff-facing, so entirely Bahasa Indonesia per the Phase 46 language boundary.
-function InstallPrompt() {
-  const { isInstallable, isIOS, isStandalone, promptInstall } = usePwaInstall();
-  const [prompting, setPrompting] = useState(false);
-
-  // Already running as the installed app, or a browser that offers no install
-  // path at all (desktop Firefox/Safari): nothing to say.
-  if (isStandalone || (!isInstallable && !isIOS)) return null;
-
-  async function install() {
-    setPrompting(true);
-    try {
-      await promptInstall();
-    } finally {
-      setPrompting(false);
-    }
-  }
-
+// Deliberately wordless: it shows for a moment on every launch, and whatever
+// it said would be wrong for one of the two audiences about to be routed.
+function Splash() {
   return (
-    // standalone:hidden is the CSS half of the guard — it holds even if the JS
-    // detection above ever disagrees with the browser's actual display mode.
-    <div className="mt-6 flex w-full justify-center standalone:hidden">
-      {isInstallable ? (
-        <button
-          type="button"
-          onClick={install}
-          disabled={prompting}
-          className="flex w-full max-w-[220px] items-center justify-center gap-2 rounded-full border border-gray-300 bg-white py-3 text-sm font-medium text-gray-900 transition-transform active:scale-95 disabled:opacity-60"
-        >
-          {prompting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-          Pasang Aplikasi
-        </button>
-      ) : (
-        // iOS has no install prompt API, so the best available is showing the
-        // way through Safari's own menu. The icons carry the instruction for
-        // phones set to English, where the menu labels won't match this text.
-        <p className="max-w-[260px] text-xs leading-relaxed text-gray-500">
-          Untuk memasang aplikasi, ketuk{" "}
-          <Share className="inline size-3.5 -translate-y-px text-gray-700" aria-label="Bagikan" />{" "}
-          <span className="font-medium text-gray-700">Bagikan</span>, lalu pilih{" "}
-          <SquarePlus
-            className="inline size-3.5 -translate-y-px text-gray-700"
-            aria-label="Tambahkan ke Layar Utama"
-          />{" "}
-          <span className="font-medium text-gray-700">Tambahkan ke Layar Utama</span>.
-        </p>
-      )}
-    </div>
+    <main className="flex min-h-screen items-center justify-center">
+      <Loader2 className="size-6 animate-spin text-muted-foreground" />
+    </main>
+  );
+}
+
+// Google's mark, inline: a remote image would be one more thing to fail on a
+// slow connection at the one moment the button has to look trustworthy.
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 18 18" aria-hidden className="size-5">
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z"
+      />
+    </svg>
   );
 }

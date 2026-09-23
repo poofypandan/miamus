@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { ChevronLeft, Delete, Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
+import { StaffSplash } from "@/components/staff/staff-splash";
 import { dataProvider } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import type { StaffProfile } from "@/types/database";
@@ -160,6 +161,11 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 px-6 pt-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
+      {/* The house rules and the install prompt, which used to be the landing
+          page at "/" (Phase 87). A phone sees them on the day it is set up,
+          and goes straight to the tasks every day after. */}
+      <StaffSplash />
+
       <div className="flex flex-col gap-1 text-center">
         <h1 className="text-2xl font-semibold text-gray-900">Siapa yang bertugas?</h1>
         <p className="text-sm text-muted-foreground">Pilih nama kamu untuk mulai mencatat.</p>

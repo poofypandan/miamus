@@ -3,20 +3,23 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * The owner-side auth guard, and the session refresh every Supabase SSR app
- * needs (Phase 86C).
+ * needs (Phase 86C; the sign-in screen moved to "/" in Phase 87).
  *
  * WHAT IS GUARDED, AND WHAT DELIBERATELY IS NOT
- * Only /dashboard and /onboarding. The landing page "/" is the staff screen —
- * the house rules, the "Jadwal" button, and the PWA's start_url — so putting
- * Google behind it would lock every staff phone out of the app on next open.
- * /staff and /join are likewise public by design: staff have no Google
- * account, they have an invite link (see lib/tenant.ts).
+ * Only /dashboard and /onboarding. "/" is the PWA's start_url and the screen
+ * every staff phone opens into, so guarding it server-side would bounce them
+ * to a Google prompt they can never satisfy. /staff and /join are likewise
+ * public by design: staff have no Google account, they have an invite link
+ * (see lib/tenant.ts).
  *
  * The rules:
- *   no session          -> /login
+ *   no session          -> "/", which renders the sign-in screen
  *   session, no house   -> /onboarding
  *   session, has house  -> through
- *   signed in on /login -> /dashboard
+ *
+ * "/" itself is never redirected here: it decides on the client, where it can
+ * see the localStorage markers that tell a staff phone apart from a brand-new
+ * visitor (see app/page.tsx).
  */
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -52,11 +55,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   };
 
-  if (path.startsWith("/login")) {
-    return user ? redirect("/dashboard") : response;
-  }
-
-  if (!user) return redirect("/login");
+  if (!user) return redirect("/");
 
   // Signed in: they need a household before the dashboard means anything.
   const { data: membership } = await supabase
@@ -74,5 +73,5 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Everything else — "/", /staff, /join, /auth/callback — stays public.
-  matcher: ["/dashboard/:path*", "/onboarding", "/login"],
+  matcher: ["/dashboard/:path*", "/onboarding"],
 };
