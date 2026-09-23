@@ -50,9 +50,17 @@ export function storeTenantId(id: string): void {
 }
 
 /**
- * Works out which household this device belongs to, in the documented order:
- * membership of the signed-in account, then a stored invite, then the
- * grandfather default.
+ * Works out which household this device belongs to, and makes sure it has an
+ * identity the database will accept (Phase 88).
+ *
+ *   1. an owner's Google session      -> their household_members row
+ *   2. a device already bound         -> its device_sessions row
+ *   3. a legacy staff phone           -> signs in anonymously and binds itself
+ *   4. nothing to go on               -> the stored id, then the default
+ *
+ * Steps 1-3 all end with a real auth.uid(), which is what the RLS policies in
+ * migrations/090 require. Step 4 is the honest last resort: it keeps the app
+ * rendering, but once the lockdown is applied those queries come back empty.
  *
  * Called once by HouseholdProvider before the first fetch — every query is
  * scoped to whatever this returns, so fetching ahead of it would load the
@@ -60,31 +68,53 @@ export function storeTenantId(id: string): void {
  */
 export async function resolveActiveHouseholdId(): Promise<string> {
   const stored = readStoredTenantId();
+  const fallback = stored ?? DEFAULT_HOUSEHOLD_ID;
 
-  // getSession, not getUser: it reads the cookie without a network round
-  // trip, and the membership query below is verified by RLS regardless. A
-  // staff phone has no session at all and skips straight past this.
   const { supabase } = await import("@/lib/supabase/client");
-  if (supabase) {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data } = await supabase
-          .from("household_members")
-          .select("household_id")
-          .eq("user_id", session.user.id)
-          .limit(1)
-          .maybeSingle();
-        if (data?.household_id) return data.household_id;
+  if (!supabase) return fallback;
+
+  try {
+    // getSession reads the cookie without a network round trip.
+    let userId = (await supabase.auth.getSession()).data.session?.user?.id ?? null;
+
+    if (!userId) {
+      // No identity yet: a phone that has been in service since before any of
+      // this existed. Upgrade it in place — anonymous sign-in, then bind.
+      const { upgradeLegacyDevice } = await import("@/lib/auth/device-session");
+      const bound = await upgradeLegacyDevice();
+      if (bound) {
+        storeTenantId(bound);
+        return bound;
       }
-    } catch (err) {
-      // A failed lookup must not strand the app on a blank screen; the
-      // fallbacks below are both better answers than nothing.
-      console.error("Household resolution failed", err);
+      userId = (await supabase.auth.getSession()).data.session?.user?.id ?? null;
+      if (!userId) return fallback;
     }
+
+    // An owner may manage several households later; today the first row is
+    // the answer for both lookups.
+    const { data: member } = await supabase
+      .from("household_members")
+      .select("household_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+    if (member?.household_id) return member.household_id;
+
+    const { data: device } = await supabase
+      .from("device_sessions")
+      .select("household_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+    if (device?.household_id) {
+      storeTenantId(device.household_id);
+      return device.household_id;
+    }
+  } catch (err) {
+    // A failed lookup must not strand the app on a blank screen; the
+    // fallbacks are both better answers than nothing.
+    console.error("Household resolution failed", err);
   }
 
-  return stored ?? DEFAULT_HOUSEHOLD_ID;
+  return fallback;
 }

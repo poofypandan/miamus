@@ -5,15 +5,17 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { ensureAnonymousSession } from "@/lib/auth/device-session";
 import { storeTenantId } from "@/lib/tenant";
 
 /**
  * Where a staff member lands from the WhatsApp invite link (Phase 86C).
  *
- * Public: a staff phone has no Google account, and this page is how it learns
- * which household it belongs to. The token is redeemed through the
- * use_staff_invite_token RPC — `anon` cannot read staff_invites at all, so a
- * stolen key can't enumerate other households' links (migrations/088).
+ * Public: a staff phone has no Google account, and this page is how it gets
+ * one. It signs the device in anonymously, then redeems the token through
+ * redeem_staff_invite, which spends the invite and binds this device's uid to
+ * the household in one statement (migrations/089). From then on the database
+ * itself knows which tenant this phone belongs to.
  *
  * Staff-facing, so Bahasa Indonesia.
  */
@@ -41,8 +43,15 @@ function JoinScreen() {
       return;
     }
 
-    supabase
-      .rpc("use_staff_invite_token", { p_token: token })
+    // The identity has to exist before the token is spent: redeem_staff_invite
+    // binds auth.uid() to the household, and raises if there is none.
+    // Captured so TypeScript keeps the narrowing through the callbacks below.
+    const client = supabase;
+    ensureAnonymousSession()
+      .then((userId) => {
+        if (!userId) throw new Error("anonymous sign-in unavailable");
+        return client.rpc("redeem_staff_invite", { p_token: token });
+      })
       .then(({ data, error }) => {
         if (error || !data) {
           console.error("Invite redemption failed", error);
@@ -56,6 +65,10 @@ function JoinScreen() {
         // household. location.replace also keeps the spent link out of
         // history, where Back would retry it and show the error screen.
         window.location.replace("/staff");
+      })
+      .catch((err) => {
+        console.error("Invite redemption failed", err);
+        setFailed(true);
       });
   }, [token]);
 

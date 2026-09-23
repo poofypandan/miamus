@@ -37,6 +37,17 @@ export type HouseholdMember = {
   created_at: string;
 };
 
+// A staff phone's own identity (migrations/089): an anonymous auth user bound
+// to exactly one household. This is what makes RLS possible for devices that
+// have no Google account.
+export type DeviceSession = {
+  id: string;
+  user_id: string;
+  household_id: string;
+  created_at: string;
+  last_seen_at: string;
+};
+
 export type StaffInvite = {
   id: string;
   household_id: string;
@@ -343,6 +354,12 @@ export interface Database {
         Update: Partial<HouseholdMember>;
         Relationships: [];
       };
+      device_sessions: {
+        Row: DeviceSession;
+        Insert: Partial<DeviceSession> & Pick<DeviceSession, "user_id" | "household_id">;
+        Update: Partial<DeviceSession>;
+        Relationships: [];
+      };
       staff_invites: {
         Row: StaffInvite;
         Insert: Partial<StaffInvite> & Pick<StaffInvite, "household_id" | "token" | "expires_at">;
@@ -359,11 +376,22 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      // The staff magic link's only door (migrations/088). Returns the
-      // household the token belongs to, or raises.
-      use_staff_invite_token: {
+      // The staff magic link's only door (migrations/089): redeems the token
+      // AND binds this device to the household, or raises.
+      redeem_staff_invite: {
         Args: { p_token: string };
         Returns: string;
+      };
+      // The grandfather path for phones that predate invites — binds on a
+      // staff id, and only while the household's window is open.
+      bind_legacy_device: {
+        Args: { p_staff_id: string };
+        Returns: string;
+      };
+      // Every RLS policy's question: which households may auth.uid() touch.
+      get_user_household_ids: {
+        Args: Record<string, never>;
+        Returns: string[];
       };
     };
     Enums: Record<string, never>;
