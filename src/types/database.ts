@@ -18,6 +18,34 @@ export type HouseholdTaskCategory = "cleaning" | "maintenance" | "errand" | "gro
 export type HouseholdTaskStatus = "pending" | "completed" | "cancelled";
 export type AlertStatus = "pending" | "resolved";
 
+// The tenant (migrations/086). One paying household; its people are
+// household_members, its staff arrive through staff_invites.
+export type Household = {
+  id: string;
+  name: string;
+  // The Google account that created it. Null for Banyuwangi 11, which predates
+  // sign-in entirely.
+  owner_auth_id: string | null;
+  created_at: string;
+};
+
+export type HouseholdMember = {
+  id: string;
+  household_id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+};
+
+export type StaffInvite = {
+  id: string;
+  household_id: string;
+  token: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+};
+
 // Plain `type` aliases, not `interface` — interfaces don't structurally
 // satisfy `Record<string, unknown>`, which postgrest-js's GenericTable
 // requires for Row/Insert/Update.
@@ -303,6 +331,24 @@ export interface Database {
         Update: Partial<HouseholdTask>;
         Relationships: [];
       };
+      households: {
+        Row: Household;
+        Insert: Partial<Household> & Pick<Household, "name">;
+        Update: Partial<Household>;
+        Relationships: [];
+      };
+      household_members: {
+        Row: HouseholdMember;
+        Insert: Partial<HouseholdMember> & Pick<HouseholdMember, "household_id" | "user_id">;
+        Update: Partial<HouseholdMember>;
+        Relationships: [];
+      };
+      staff_invites: {
+        Row: StaffInvite;
+        Insert: Partial<StaffInvite> & Pick<StaffInvite, "household_id" | "token" | "expires_at">;
+        Update: Partial<StaffInvite>;
+        Relationships: [];
+      };
       routine_proposals: {
         Row: RoutineProposal;
         Insert: Partial<RoutineProposal> &
@@ -312,7 +358,14 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      // The staff magic link's only door (migrations/088). Returns the
+      // household the token belongs to, or raises.
+      use_staff_invite_token: {
+        Args: { p_token: string };
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

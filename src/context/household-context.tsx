@@ -18,7 +18,7 @@ import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { compressPhoto } from "@/lib/image";
-import { getActiveHouseholdId } from "@/lib/tenant";
+import { resolveActiveHouseholdId, setActiveHouseholdId, DEFAULT_HOUSEHOLD_ID } from "@/lib/tenant";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -57,9 +57,10 @@ const OWNER_STORAGE_KEY = "banyuwangi11:isOwner";
 
 interface HouseholdContextValue {
   /**
-   * The tenant every query is scoped to (migrations/086). Fixed to Banyuwangi
-   * 11 until Phase 86B resolves it from the signed-in account — see
-   * lib/tenant.ts, which the data provider reads directly.
+   * The tenant every query is scoped to (migrations/086): the signed-in
+   * owner's household, the one a staff phone was invited to, or Banyuwangi 11.
+   * Resolved once at startup — see lib/tenant.ts, which the data provider
+   * reads directly.
    */
   activeHouseholdId: string;
   entities: TaskEntity[];
@@ -175,6 +176,26 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [householdTasks, setHouseholdTasks] = useState<HouseholdTask[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Resolved before anything is fetched (Phase 86C). Every query is scoped to
+  // this, so loading first would show one household's data and then swap it.
+  const [activeHouseholdId, setActiveHouseholdIdState] = useState(DEFAULT_HOUSEHOLD_ID);
+  const [tenantReady, setTenantReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void resolveActiveHouseholdId().then((id) => {
+      if (cancelled) return;
+      // The module-level copy is what the data provider reads; the state copy
+      // is for components. Set together so they can never disagree.
+      setActiveHouseholdId(id);
+      setActiveHouseholdIdState(id);
+      setTenantReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Declared up here, ahead of `refresh`, because the chore fetch is scoped to
   // the day being browsed and `refresh` has to know which day that is.
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
@@ -251,8 +272,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, [loadHouseholdTasks]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    // Gated on the tenant: `loading` starts true, so the app shows skeletons
+    // through this window rather than an empty household.
+    if (tenantReady) void refresh();
+  }, [refresh, tenantReady]);
 
   const pets = useMemo(() => entities.filter(isActivePet), [entities]);
 
@@ -585,9 +608,6 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       )
     );
   }, []);
-
-  // Constant for now; becomes state once 86B resolves it from sign-in.
-  const activeHouseholdId = getActiveHouseholdId();
 
   const value = useMemo<HouseholdContextValue>(
     () => ({
