@@ -1,4 +1,20 @@
 -- ============================================================================
+-- SUPERSEDED BY migrations/090 (Phase 88) — KEPT FOR THE REASONING ONLY
+-- ============================================================================
+-- Everything below describes the pre-SaaS posture: one household, no
+-- identities, and `anon` allowed to do anything the app does. That is no
+-- longer true. Since migrations/090 every operational table is readable and
+-- writable only by an identity bound to its household — an owner through
+-- household_members, a staff phone through device_sessions (migrations/089) —
+-- and `anon` has no policy at all on any of them.
+--
+-- The threat model below is worth reading as history: it explains why the app
+-- ran this way for so long, and what changed (staff devices got real
+-- identities via anonymous auth, so RLS finally had something to check).
+-- Do not apply this file. Applying it would restore anon access.
+-- ============================================================================
+
+-- ============================================================================
 -- Phase 32 — Row Level Security audit & hardening
 -- ============================================================================
 --
