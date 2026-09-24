@@ -25,6 +25,7 @@ const STAFF_ID_KEY = "banyuwangi11:staffId";
  * landing page, and it routes rather than greets:
  *
  *   Google session        -> /dashboard   (the owner)
+ *   anonymous session     -> /staff       (a bound staff device, Phase 88)
  *   staff marker on phone -> /staff       (a phone already in service, or one
  *                                          that has opened an invite link)
  *   neither               -> sign-in UI
@@ -67,11 +68,13 @@ function FrontDoor() {
       const session = supabase ? (await supabase.auth.getSession()).data.session : null;
       if (cancelled) return;
 
-      if (session) {
+      // An anonymous session means a bound staff device (Phase 88), not an
+      // owner — it must land in the staff view, never on the dashboard.
+      if (session && !session.user.is_anonymous) {
         router.replace("/dashboard");
         return;
       }
-      if (staffDevice) {
+      if (session?.user.is_anonymous || staffDevice) {
         router.replace("/staff");
         return;
       }

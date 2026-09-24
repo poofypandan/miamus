@@ -183,13 +183,20 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    void resolveActiveHouseholdId().then((id) => {
+    void resolveActiveHouseholdId().then(({ householdId, isMember }) => {
       if (cancelled) return;
       // The module-level copy is what the data provider reads; the state copy
       // is for components. Set together so they can never disagree.
-      setActiveHouseholdId(id);
-      setActiveHouseholdIdState(id);
+      setActiveHouseholdId(householdId);
+      setActiveHouseholdIdState(householdId);
+      // A signed-in member of this household IS the owner: the dashboard sits
+      // behind Google auth (middleware), and since Phase 87 the PIN only
+      // blurs the screen. Without this, owner-only tabs bounced to the feed
+      // while the app lock was still up, because nothing had set the role yet.
+      if (isMember) setUserRole("owner");
       setTenantReady(true);
+      // Both sources have now been read: localStorage above, membership here.
+      setRoleHydrated(true);
     });
     return () => {
       cancelled = true;
@@ -314,7 +321,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined" && window.localStorage.getItem(OWNER_STORAGE_KEY) === "true") {
       setUserRole("owner");
     }
-    setRoleHydrated(true);
+    // Deliberately NOT setting roleHydrated here. Since Phase 89 the role can
+    // also come from household membership, which is resolved asynchronously
+    // above — flipping the flag now would let useRequireOwner bounce a real
+    // owner off an owner-only tab in the moment before that lands.
   }, []);
 
   const unlockOwner = useCallback((pin: string) => {

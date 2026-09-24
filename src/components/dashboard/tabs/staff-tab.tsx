@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InvitePanel } from "@/components/dashboard/invite-panel";
 import { useHousehold } from "@/context/household-context";
 import { dataProvider } from "@/lib/data";
 import { useRequireOwner } from "@/hooks/use-require-owner";
@@ -111,6 +112,8 @@ export function StaffTab() {
   return (
     <div className="flex flex-col gap-4">
       <StaffRoster profiles={profiles} failed={failed} reload={reload} />
+
+      <InvitePanel />
 
       <h2 className="mt-2 text-sm font-semibold text-gray-900">Audit Log</h2>
 

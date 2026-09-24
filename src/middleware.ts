@@ -57,6 +57,13 @@ export async function middleware(request: NextRequest) {
 
   if (!user) return redirect("/");
 
+  // An anonymous session is a staff phone, not an owner (Phase 88 gave every
+  // device one). Without this it looks exactly like a signed-in account with
+  // no household, and the rules below march it into owner onboarding — which
+  // is precisely what happened in production: a staff phone created a stray
+  // household named after its owner before Phase 89 caught it.
+  if (user.is_anonymous) return redirect("/staff");
+
   // Signed in: they need a household before the dashboard means anything.
   const { data: membership } = await supabase
     .from("household_members")

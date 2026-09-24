@@ -66,12 +66,23 @@ export function storeTenantId(id: string): void {
  * scoped to whatever this returns, so fetching ahead of it would load the
  * wrong household's data and then swap it under the user.
  */
-export async function resolveActiveHouseholdId(): Promise<string> {
+export interface ResolvedTenant {
+  householdId: string;
+  /**
+   * True when this identity is a member of the household (a Google account in
+   * household_members) rather than a bound staff device. The dashboard is
+   * already behind Google sign-in, so membership is what makes someone an
+   * owner — the PIN is a screen lock, not an identity check (Phase 87).
+   */
+  isMember: boolean;
+}
+
+export async function resolveActiveHouseholdId(): Promise<ResolvedTenant> {
   const stored = readStoredTenantId();
   const fallback = stored ?? DEFAULT_HOUSEHOLD_ID;
 
   const { supabase } = await import("@/lib/supabase/client");
-  if (!supabase) return fallback;
+  if (!supabase) return { householdId: fallback, isMember: false };
 
   try {
     // getSession reads the cookie without a network round trip.
@@ -84,10 +95,10 @@ export async function resolveActiveHouseholdId(): Promise<string> {
       const bound = await upgradeLegacyDevice();
       if (bound) {
         storeTenantId(bound);
-        return bound;
+        return { householdId: bound, isMember: false };
       }
       userId = (await supabase.auth.getSession()).data.session?.user?.id ?? null;
-      if (!userId) return fallback;
+      if (!userId) return { householdId: fallback, isMember: false };
     }
 
     // An owner may manage several households later; today the first row is
@@ -98,7 +109,7 @@ export async function resolveActiveHouseholdId(): Promise<string> {
       .eq("user_id", userId)
       .limit(1)
       .maybeSingle();
-    if (member?.household_id) return member.household_id;
+    if (member?.household_id) return { householdId: member.household_id, isMember: true };
 
     const { data: device } = await supabase
       .from("device_sessions")
@@ -108,7 +119,7 @@ export async function resolveActiveHouseholdId(): Promise<string> {
       .maybeSingle();
     if (device?.household_id) {
       storeTenantId(device.household_id);
-      return device.household_id;
+      return { householdId: device.household_id, isMember: false };
     }
   } catch (err) {
     // A failed lookup must not strand the app on a blank screen; the
@@ -116,5 +127,5 @@ export async function resolveActiveHouseholdId(): Promise<string> {
     console.error("Household resolution failed", err);
   }
 
-  return fallback;
+  return { householdId: fallback, isMember: false };
 }

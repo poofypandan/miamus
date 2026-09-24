@@ -48,6 +48,19 @@ export type DeviceSession = {
   last_seen_at: string;
 };
 
+// A co-owner's way in (migrations/091): redeems into household_members, so
+// the person arrives with their own Google identity. StaffInvite is the same
+// shape but redeems into device_sessions — a phone, not a person.
+export type OwnerInvite = {
+  id: string;
+  household_id: string;
+  token: string;
+  expires_at: string;
+  used_at: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
 export type StaffInvite = {
   id: string;
   household_id: string;
@@ -360,6 +373,12 @@ export interface Database {
         Update: Partial<DeviceSession>;
         Relationships: [];
       };
+      owner_invites: {
+        Row: OwnerInvite;
+        Insert: Partial<OwnerInvite> & Pick<OwnerInvite, "household_id" | "token" | "expires_at">;
+        Update: Partial<OwnerInvite>;
+        Relationships: [];
+      };
       staff_invites: {
         Row: StaffInvite;
         Insert: Partial<StaffInvite> & Pick<StaffInvite, "household_id" | "token" | "expires_at">;
@@ -386,6 +405,11 @@ export interface Database {
       // staff id, and only while the household's window is open.
       bind_legacy_device: {
         Args: { p_staff_id: string };
+        Returns: string;
+      };
+      // Admits a signed-in Google account to the household as a co-owner.
+      use_owner_invite_token: {
+        Args: { p_token: string };
         Returns: string;
       };
       // Every RLS policy's question: which households may auth.uid() touch.
