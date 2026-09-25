@@ -480,7 +480,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={photoSrc(photo.url)}
+                      src={photoSrc(photo.url, 320)}
+                      loading="lazy"
+                      decoding="async"
                       alt={photo.names.join(", ")}
                       title={photo.names.join(", ")}
                       className="size-24 rounded-lg object-cover ring-1 ring-emerald-500/40"
@@ -647,7 +649,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={photoSrc(capture.photoUrl)}
+                src={photoSrc(capture.photoUrl, 320)}
                 alt=""
                 className="max-h-56 w-full rounded-lg object-cover"
               />

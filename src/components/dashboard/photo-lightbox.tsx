@@ -196,7 +196,7 @@ export function PhotoLightbox({
               way to scroll to the rest of it. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={photoSrc(current.src)}
+            src={photoSrc(current.src, 1280)}
             alt={current.alt}
             className="max-h-[70vh] w-full rounded-lg bg-black/5 object-contain"
           />

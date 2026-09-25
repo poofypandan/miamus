@@ -212,7 +212,7 @@ export function LogPhotoThumbnail({
         )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photoSrc(log.photo_url)} alt="" className="h-full w-full object-cover" />
+        <img src={photoSrc(log.photo_url, 320)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
         {badge}
       </button>
 

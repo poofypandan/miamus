@@ -18,7 +18,13 @@ import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { compressPhoto } from "@/lib/image";
-import { resolveActiveHouseholdId, setActiveHouseholdId, DEFAULT_HOUSEHOLD_ID } from "@/lib/tenant";
+import { readSnapshot, writeSnapshot } from "@/lib/snapshot-cache";
+import {
+  resolveActiveHouseholdId,
+  setActiveHouseholdId,
+  getActiveHouseholdId,
+  DEFAULT_HOUSEHOLD_ID,
+} from "@/lib/tenant";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -193,6 +199,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // Starts false and is set after resolution, never read during render from
   // storage — the server HTML and the first client render must agree.
   const [isHouseholdMember, setIsHouseholdMember] = useState(false);
+  // Whether this mount painted from the cache; decides if the first fetch is
+  // allowed to put skeletons back over data the user can already see.
+  const [hydratedFromCache, setHydratedFromCache] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,6 +217,23 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       // while the app lock was still up, because nothing had set the role yet.
       setIsHouseholdMember(isMember);
       if (isMember) setUserRole("owner");
+      // Paint whatever this device last saw for this household before the
+      // network is consulted at all. `loading` goes false with it, so the
+      // screen shows real cards rather than skeletons while the refresh below
+      // runs silently (Phase 92).
+      const cached = readSnapshot(householdId);
+      if (cached) {
+        setEntities(cached.entities);
+        setSchedules(cached.schedules);
+        setLogs(cached.logs);
+        setMedicalRecords(cached.medicalRecords);
+        setInventoryAlerts(cached.inventoryAlerts);
+        setRoutineProposals(cached.routineProposals);
+        setInventoryItems(cached.inventoryItems);
+        setLatestInventoryAudits(cached.latestInventoryAudits);
+        setHydratedFromCache(true);
+        setLoading(false);
+      }
       setTenantReady(true);
       // Both sources have now been read: localStorage above, membership here.
       setRoleHydrated(true);
@@ -289,13 +315,29 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setRoutineProposals(rp);
     setInventoryItems(ii);
     setLatestInventoryAudits(audits);
+    // Kept for the next mount, so the following page load paints immediately
+    // (Phase 92). Written after the state, never before: a snapshot is only
+    // worth keeping once it is what the user is actually looking at.
+    writeSnapshot(getActiveHouseholdId(), {
+      entities: e,
+      schedules: s,
+      logs: l,
+      medicalRecords: m,
+      inventoryAlerts: ia,
+      routineProposals: rp,
+      inventoryItems: ii,
+      latestInventoryAudits: audits,
+    });
     if (!silent) setLoading(false);
   }, [loadHouseholdTasks]);
 
   useEffect(() => {
     // Gated on the tenant: `loading` starts true, so the app shows skeletons
-    // through this window rather than an empty household.
-    if (tenantReady) void refresh();
+    // through this window rather than an empty household. Silent when the
+    // cache already painted — the revalidation must not replace cards the
+    // user is reading with skeletons.
+    if (tenantReady) void refresh({ silent: hydratedFromCache });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydratedFromCache decides how this fetch renders, not whether to run it again
   }, [refresh, tenantReady]);
 
   const pets = useMemo(() => entities.filter(isActivePet), [entities]);

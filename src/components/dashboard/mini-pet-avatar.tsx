@@ -17,7 +17,9 @@ export function MiniPetAvatar({ pet, className }: { pet: TaskEntity; className?:
       // through it, not a colored circle.
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={photoSrc(meta.avatar_url)}
+        src={photoSrc(meta.avatar_url, 160)}
+        loading="lazy"
+        decoding="async"
         alt={pet.name}
         // Squircle by default since Phase 59. aspect-square + object-cover stay
         // so a portrait photo is cropped to the box rather than distorted.

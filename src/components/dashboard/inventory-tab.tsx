@@ -160,7 +160,7 @@ function StockRow({ item, audit }: { item: InventoryItem; audit?: InventoryAudit
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={photoSrc(audit.photo_url)}
+            src={photoSrc(audit.photo_url, 160)}
             alt=""
             loading="lazy"
             className="size-12 rounded-lg object-cover ring-1 ring-border"

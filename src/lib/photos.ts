@@ -39,9 +39,18 @@ export function parseStorageRef(url: string): { bucket: PhotoBucket; path: strin
  * previews a local blob: URL before upload, and mock mode hands out object
  * URLs too.
  */
-export function photoSrc(url: string | null | undefined): string | undefined {
+export function photoSrc(
+  url: string | null | undefined,
+  /**
+   * Render width. A thumbnail should always pass one — the originals are
+   * ~185KB each and a feed shows dozens. Omit it only where the full image is
+   * the point (the lightbox). Must be one of the widths /api/photo allows.
+   */
+  width?: 160 | 320 | 640 | 1280
+): string | undefined {
   if (!url) return undefined;
   const ref = parseStorageRef(url);
   if (!ref) return url;
-  return `/api/photo?b=${ref.bucket}&p=${encodeURIComponent(ref.path)}`;
+  const w = width ? `&w=${width}` : "";
+  return `/api/photo?b=${ref.bucket}&p=${encodeURIComponent(ref.path)}${w}`;
 }

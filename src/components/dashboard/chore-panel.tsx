@@ -217,7 +217,7 @@ function ProofThumbnail({ task }: { task: HouseholdTask }) {
         className="size-14 shrink-0 overflow-hidden rounded-lg ring-1 ring-border"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photoSrc(task.photo_url)} alt="" className="h-full w-full object-cover" />
+        <img src={photoSrc(task.photo_url, 320)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
       </button>
 
       <PhotoLightbox

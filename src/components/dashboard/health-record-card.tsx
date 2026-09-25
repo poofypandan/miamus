@@ -66,7 +66,9 @@ export function HealthRecordCard({
         {record.document_photo_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={photoSrc(record.document_photo_url)}
+            src={photoSrc(record.document_photo_url, 320)}
+            loading="lazy"
+            decoding="async"
             alt=""
             className="h-20 w-20 rounded-lg object-cover ring-1 ring-border"
           />
