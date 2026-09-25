@@ -2,6 +2,7 @@ import { Dog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPetMeta } from "@/lib/pets";
 import type { TaskEntity } from "@/types/database";
+import { photoSrc } from "@/lib/photos";
 
 // Small avatar used throughout the Unified Overview and drill-down triggers.
 // NOTE: To revert avatar scaling, change w-12 h-12 back to the original size
@@ -16,7 +17,7 @@ export function MiniPetAvatar({ pet, className }: { pet: TaskEntity; className?:
       // through it, not a colored circle.
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={meta.avatar_url}
+        src={photoSrc(meta.avatar_url)}
         alt={pet.name}
         // Squircle by default since Phase 59. aspect-square + object-cover stay
         // so a portrait photo is cropped to the box rather than distorted.

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
 import { compressPhoto } from "@/lib/image";
 import { cn } from "@/lib/utils";
+import { photoSrc } from "@/lib/photos";
 
 interface PhotoPickerProps {
   pathPrefix: string;
@@ -55,7 +56,7 @@ export function PhotoPicker({
     return (
       <div className={cn("relative w-fit", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={value} alt="" className="h-24 w-24 rounded-lg object-cover ring-1 ring-border" />
+        <img src={photoSrc(value)} alt="" className="h-24 w-24 rounded-lg object-cover ring-1 ring-border" />
         <button
           type="button"
           onClick={() => onChange(null)}

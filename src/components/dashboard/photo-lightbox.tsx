@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { cn } from "@/lib/utils";
+import { photoSrc } from "@/lib/photos";
 
 // How far a finger must travel horizontally before the gesture counts as a
 // swipe rather than a tap or a scroll that began on the photo.
@@ -195,7 +196,7 @@ export function PhotoLightbox({
               way to scroll to the rest of it. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={current.src}
+            src={photoSrc(current.src)}
             alt={current.alt}
             className="max-h-[70vh] w-full rounded-lg bg-black/5 object-contain"
           />

@@ -26,6 +26,7 @@ import { categoryIcon, describeLog } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { MasterSchedule, TaskLog } from "@/types/database";
+import { photoSrc } from "@/lib/photos";
 
 /**
  * One photo's lightbox frame: the pet leads, then the task with its category
@@ -211,7 +212,7 @@ export function LogPhotoThumbnail({
         )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={log.photo_url ?? undefined} alt="" className="h-full w-full object-cover" />
+        <img src={photoSrc(log.photo_url)} alt="" className="h-full w-full object-cover" />
         {badge}
       </button>
 

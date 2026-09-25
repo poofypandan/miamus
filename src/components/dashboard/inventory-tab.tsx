@@ -30,6 +30,7 @@ import {
 } from "@/lib/inventory";
 import { cn } from "@/lib/utils";
 import type { InventoryAuditWithStaff, InventoryItem, StockCategory } from "@/types/database";
+import { photoSrc } from "@/lib/photos";
 
 /**
  * Stock levels — what the staff's "Cek Stok" counts add up to (PRD 02).
@@ -159,7 +160,7 @@ function StockRow({ item, audit }: { item: InventoryItem; audit?: InventoryAudit
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={audit.photo_url}
+            src={photoSrc(audit.photo_url)}
             alt=""
             loading="lazy"
             className="size-12 rounded-lg object-cover ring-1 ring-border"

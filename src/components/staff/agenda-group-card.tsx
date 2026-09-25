@@ -37,6 +37,7 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { LogSubType, TaskLog } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { photoSrc } from "@/lib/photos";
 
 interface PendingCapture {
   photoUrl: string;
@@ -479,7 +480,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={photo.url}
+                      src={photoSrc(photo.url)}
                       alt={photo.names.join(", ")}
                       title={photo.names.join(", ")}
                       className="size-24 rounded-lg object-cover ring-1 ring-emerald-500/40"
@@ -646,7 +647,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={capture.photoUrl}
+                src={photoSrc(capture.photoUrl)}
                 alt=""
                 className="max-h-56 w-full rounded-lg object-cover"
               />

@@ -36,6 +36,7 @@ import {
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import type { HouseholdTask, HouseholdTaskCategory } from "@/types/database";
+import { photoSrc } from "@/lib/photos";
 
 // Radix rejects an empty SelectItem value, so "nobody in particular" needs a
 // real sentinel rather than "". It never reaches the database — handleCreate
@@ -216,7 +217,7 @@ function ProofThumbnail({ task }: { task: HouseholdTask }) {
         className="size-14 shrink-0 overflow-hidden rounded-lg ring-1 ring-border"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={task.photo_url ?? undefined} alt="" className="h-full w-full object-cover" />
+        <img src={photoSrc(task.photo_url)} alt="" className="h-full w-full object-cover" />
       </button>
 
       <PhotoLightbox

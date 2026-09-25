@@ -10,8 +10,11 @@ function client() {
 
 const STORAGE_BUCKET = "household-logs";
 
-// getPublicUrl() returns ".../storage/v1/object/public/<bucket>/<path>" — the
-// storage API needs just <path> back to delete the object.
+// getPublicUrl() returns ".../storage/v1/object/public/<bucket>/<path>". Since
+// Phase 90 the buckets are private, so that URL no longer serves anything — it
+// is kept as the stored identifier (every row already holds one, and rewriting
+// them all would be a migration for no gain). lib/photos.ts turns it into a
+// loadable /api/photo link, and this pulls <path> back out to delete.
 function extractStoragePath(url: string): string | null {
   const marker = `/object/public/${STORAGE_BUCKET}/`;
   const idx = url.indexOf(marker);
@@ -153,7 +156,9 @@ export const supabaseProvider: DataProvider = {
   async uploadPhoto(file, pathPrefix) {
     const c = client();
     const ext = file.type === "image/webp" ? "webp" : (file.name.split(".").pop() ?? "jpg");
-    const path = `${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    // Household first (Phase 90): the storage policies read the tenant out of
+    // the object key, so an upload that skipped the prefix would be refused.
+    const path = `${getActiveHouseholdId()}/${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await c.storage
       .from(STORAGE_BUCKET)
       .upload(path, file, { contentType: file.type });
@@ -278,7 +283,7 @@ export const supabaseProvider: DataProvider = {
   async uploadInventoryPhoto(file, itemId) {
     const c = client();
     const ext = file.type === "image/webp" ? "webp" : (file.name.split(".").pop() ?? "jpg");
-    const path = `${itemId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const path = `${getActiveHouseholdId()}/${itemId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await c.storage
       .from(INVENTORY_BUCKET)
       .upload(path, file, { contentType: file.type });

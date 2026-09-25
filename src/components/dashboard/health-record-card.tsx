@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import type { MedicalRecord, TaskEntity } from "@/types/database";
+import { photoSrc } from "@/lib/photos";
 
 const TYPE_LABEL: Record<MedicalRecord["record_type"], string> = {
   vaccine: "Vaccine",
@@ -65,7 +66,7 @@ export function HealthRecordCard({
         {record.document_photo_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={record.document_photo_url}
+            src={photoSrc(record.document_photo_url)}
             alt=""
             className="h-20 w-20 rounded-lg object-cover ring-1 ring-border"
           />
