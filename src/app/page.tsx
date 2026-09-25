@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase/client";
@@ -124,12 +123,14 @@ function FrontDoor() {
 
       {(failed || error) && <p className="mt-4 text-sm text-destructive">{failed ?? error}</p>}
 
-      <p className="mt-8 text-xs text-muted-foreground">
-        Staff don&apos;t sign in here —{" "}
-        <Link href="/staff" className="underline underline-offset-4">
-          buka tampilan staf
-        </Link>
-        .
+      {/* Deliberately not a link. Staff who lost their session were tapping
+          "Continue with Google", which signs them in as a brand-new owner and
+          starts an empty household — it has happened twice in production. The
+          way back for a staff phone is its invite link, so that is what this
+          says, in Bahasa Indonesia because it is staff who need to read it. */}
+      <p className="mt-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-xs leading-relaxed text-amber-900">
+        <span className="font-semibold">Untuk Staf:</span> Jangan masuk dengan Google. Silakan
+        klik link undangan Miamus di WhatsApp Anda untuk membuka jadwal.
       </p>
     </main>
   );

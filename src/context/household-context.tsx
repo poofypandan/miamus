@@ -63,6 +63,16 @@ interface HouseholdContextValue {
    * reads directly.
    */
   activeHouseholdId: string;
+  /**
+   * True when this session belongs to a household_members row — an owner or
+   * co-owner signed in with Google. False for a bound staff device, which has
+   * an anonymous session and no membership.
+   *
+   * Separate from `userRole`, which the PIN also sets: owner-only *navigation*
+   * keys off membership, so a phone where the PIN was once entered still
+   * never shows staff a door into the dashboard (Phase 91).
+   */
+  isHouseholdMember: boolean;
   entities: TaskEntity[];
   pets: TaskEntity[];
   schedules: MasterSchedule[];
@@ -180,6 +190,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // this, so loading first would show one household's data and then swap it.
   const [activeHouseholdId, setActiveHouseholdIdState] = useState(DEFAULT_HOUSEHOLD_ID);
   const [tenantReady, setTenantReady] = useState(false);
+  // Starts false and is set after resolution, never read during render from
+  // storage — the server HTML and the first client render must agree.
+  const [isHouseholdMember, setIsHouseholdMember] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -193,6 +206,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       // behind Google auth (middleware), and since Phase 87 the PIN only
       // blurs the screen. Without this, owner-only tabs bounced to the feed
       // while the app lock was still up, because nothing had set the role yet.
+      setIsHouseholdMember(isMember);
       if (isMember) setUserRole("owner");
       setTenantReady(true);
       // Both sources have now been read: localStorage above, membership here.
@@ -622,6 +636,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<HouseholdContextValue>(
     () => ({
       activeHouseholdId,
+      isHouseholdMember,
       entities,
       pets,
       schedules,
@@ -673,6 +688,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       activeHouseholdId,
+      isHouseholdMember,
       entities,
       pets,
       schedules,

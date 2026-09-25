@@ -174,20 +174,19 @@ function TasksView() {
 // that happens, and a tappable badge only invited someone to sign themselves
 // out by accident.
 function HeaderIdentity() {
-  const { userRole } = useHousehold();
+  const { isHouseholdMember } = useHousehold();
   const { staffId } = useStaffIdentity();
 
-  // The owner's way back out, shown only when both signals agree: the owner
-  // role from HouseholdContext (set by the owner PIN) AND no staff profile
-  // signed in on this phone. A staff member's device never renders it — even
-  // one where owner mode was once unlocked — so nobody on shift is handed a
-  // door to the dashboard. Rendered after StaffLoginGate, which only lets
-  // anyone through once the role has been read back from storage, so there is
-  // no flash of the button before the role is known.
+  // The owner's way back out, shown only to a real household member: a row in
+  // household_members, which only a Google account can have. A bound staff
+  // device has an anonymous session and no membership, so it never renders
+  // this — not even on a phone where the owner once entered the PIN, which
+  // used to be enough to show it (Phase 91). The staffId check stays for the
+  // owner who also signed in as staff on their own phone.
   //
-  // This hides a button; it is not access control. The dashboard's own
-  // owner-only screens stay guarded by useRequireOwner.
-  if (userRole === "owner" && !staffId) {
+  // Still not access control: it hides a button. The dashboard itself is held
+  // by the middleware, which sends anonymous sessions back to /staff.
+  if (isHouseholdMember && !staffId) {
     return <HeaderNavLink href="/dashboard">← Owner Dashboard</HeaderNavLink>;
   }
   return <OnDutyBadge />;
