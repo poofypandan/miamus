@@ -38,6 +38,7 @@ import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { LogSubType, TaskLog } from "@/types/database";
 import { cn } from "@/lib/utils";
 import { photoSrc } from "@/lib/photos";
+import { usePrefetchHighRes } from "@/hooks/use-prefetch-high-res";
 
 interface PendingCapture {
   photoUrl: string;
@@ -478,15 +479,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                     aria-label={`Lihat foto ${photo.names.join(", ")}`}
                     className="relative block rounded-lg active:scale-[0.98]"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photoSrc(photo.url, 320)}
-                      loading="lazy"
-                      decoding="async"
-                      alt={photo.names.join(", ")}
-                      title={photo.names.join(", ")}
-                      className="size-24 rounded-lg object-cover ring-1 ring-emerald-500/40"
-                    />
+                    <StripThumbnail url={photo.url} label={photo.names.join(", ")} />
                     <div className="absolute -bottom-1.5 left-1 flex">
                       {photo.entityIds.map((id, i) => {
                         const pet = petById.get(id);
@@ -794,5 +787,28 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+
+/**
+ * One tile in a group's photo strip.
+ *
+ * Its own component so each tile gets its own IntersectionObserver — the
+ * prefetch hook returns a ref, and a strip of them cannot share one (Phase 94).
+ */
+function StripThumbnail({ url, label }: { url: string; label: string }) {
+  const prefetchRef = usePrefetchHighRes(url);
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      ref={prefetchRef}
+      src={photoSrc(url, 320)}
+      loading="lazy"
+      decoding="async"
+      alt={label}
+      title={label}
+      className="size-24 rounded-lg object-cover ring-1 ring-emerald-500/40"
+    />
   );
 }

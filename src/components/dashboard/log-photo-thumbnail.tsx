@@ -27,6 +27,7 @@ import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { MasterSchedule, TaskLog } from "@/types/database";
 import { photoSrc } from "@/lib/photos";
+import { usePrefetchHighRes } from "@/hooks/use-prefetch-high-res";
 
 /**
  * One photo's lightbox frame: the pet leads, then the task with its category
@@ -108,6 +109,9 @@ export function LogPhotoThumbnail({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
   const tap = useTapGuard();
+  // Warms the full-size copy while this thumbnail is on screen, so tapping it
+  // opens on an image the browser already has (Phase 94).
+  const prefetchRef = usePrefetchHighRes(log.photo_url);
 
   // The lightbox registers its own history entry inside PhotoLightbox; only
   // the delete confirmation needs one here.
@@ -212,7 +216,12 @@ export function LogPhotoThumbnail({
         )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photoSrc(log.photo_url, 320)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+        <img
+        ref={prefetchRef}
+        src={photoSrc(log.photo_url, 320)}
+        alt=""
+        loading="lazy"
+        decoding="async" className="h-full w-full object-cover" />
         {badge}
       </button>
 

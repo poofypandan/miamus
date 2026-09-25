@@ -37,6 +37,7 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import type { HouseholdTask, HouseholdTaskCategory } from "@/types/database";
 import { photoSrc } from "@/lib/photos";
+import { usePrefetchHighRes } from "@/hooks/use-prefetch-high-res";
 
 // Radix rejects an empty SelectItem value, so "nobody in particular" needs a
 // real sentinel rather than "". It never reaches the database — handleCreate
@@ -206,6 +207,7 @@ function ChoreRow({
 // LogPhotoThumbnail: that one is built around a TaskLog and its long-press
 // deletes the log, which would be the wrong gesture on a chore.
 function ProofThumbnail({ task }: { task: HouseholdTask }) {
+  const prefetchRef = usePrefetchHighRes(task.photo_url);
   const [open, setOpen] = useState(false);
 
   return (
@@ -217,7 +219,12 @@ function ProofThumbnail({ task }: { task: HouseholdTask }) {
         className="size-14 shrink-0 overflow-hidden rounded-lg ring-1 ring-border"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photoSrc(task.photo_url, 320)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+        <img
+        ref={prefetchRef}
+        src={photoSrc(task.photo_url, 320)}
+        alt=""
+        loading="lazy"
+        decoding="async" className="h-full w-full object-cover" />
       </button>
 
       <PhotoLightbox

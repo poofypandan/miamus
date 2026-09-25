@@ -49,6 +49,10 @@ export function SwipeCarousel({
   // Next.js's router has finished processing the matching URL change — on a
   // physically-driven swipe, waiting for that round-trip reads as a stutter.
   const [visualIndex, setVisualIndex] = useState(index);
+  // Only true while a finger is actually moving the track. will-change is a
+  // standing instruction to keep a layer around, so it is switched on for the
+  // gesture and off again afterwards rather than left on forever (Phase 94).
+  const [dragging, setDragging] = useState(false);
 
   // Follows the caller's index when it changes from outside a swipe — a pill
   // tap, browser back/forward, or a direct link.
@@ -130,6 +134,7 @@ export function SwipeCarousel({
     if (!drag.current.engaged) {
       if (Math.abs(offsetX) < DRAG_ENGAGE_PX) return;
       drag.current.engaged = true;
+      setDragging(true);
       e.currentTarget.setPointerCapture(e.pointerId);
     }
     x.set(drag.current.baseX + offsetX);
@@ -140,6 +145,7 @@ export function SwipeCarousel({
     const { engaged, startX } = drag.current;
     const offsetX = e.clientX - startX;
     drag.current = null;
+    setDragging(false);
     // Never engaged: a tap, not a drag. Leave it alone so the element's own
     // click still fires, and don't re-snap (x never moved).
     if (!engaged) return;
@@ -183,7 +189,10 @@ export function SwipeCarousel({
       <motion.div
         className="flex shrink-0 grow items-start"
         style={{
+          // The track moves on `x` (a transform) and nothing else, so the
+          // compositor can carry the whole gesture without a layout pass.
           x,
+          willChange: dragging ? "transform" : undefined,
           width: `${count * 100}%`,
           flexBasis: activeHeight,
           minHeight: activeHeight,

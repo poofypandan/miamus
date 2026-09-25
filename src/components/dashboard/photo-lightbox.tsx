@@ -194,12 +194,7 @@ export function PhotoLightbox({
           {/* Capped and contained rather than free-height: a tall portrait
               otherwise ran past the top and bottom of a centred dialog with no
               way to scroll to the rest of it. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={photoSrc(current.src, 1280)}
-            alt={current.alt}
-            className="max-h-[70vh] w-full rounded-lg bg-black/5 object-contain"
-          />
+          <LightboxImage src={current.src} alt={current.alt} />
           {items.length > 1 && (
             <>
               {/* Tap targets over the edges of the photo, for anyone who taps
@@ -250,5 +245,59 @@ function NavZone({
         {side === "left" ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
       </span>
     </button>
+  );
+}
+
+
+/**
+ * The photo itself, opened without a loading gap (Phase 94).
+ *
+ * Starts on the same 320px thumbnail the feed just rendered — which is
+ * already in the browser's cache, so it paints on the first frame — and swaps
+ * to the 1280px copy the moment that has decoded. Usually there is nothing to
+ * wait for: the prefetch warmed it while the thumbnail was on screen.
+ *
+ * The swap is a cross-fade of two stacked images rather than a src change on
+ * one, so the picture never blanks between the two. Only opacity animates,
+ * which the compositor can do without touching layout.
+ */
+function LightboxImage({ src, alt }: { src: string | undefined; alt: string }) {
+  const thumb = photoSrc(src, 320);
+  const full = photoSrc(src, 1280);
+  const [fullLoaded, setFullLoaded] = useState(false);
+
+  // Reset whenever the photo changes — stepping through a gallery must not
+  // show the previous frame's high-res state.
+  useEffect(() => {
+    setFullLoaded(false);
+  }, [src]);
+
+  return (
+    <div className="relative max-h-[70vh] w-full">
+      {/* The placeholder is hidden from assistive tech: it and the real image
+          are the same picture, and announcing it twice is noise. */}
+      {!fullLoaded && thumb && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thumb}
+          alt=""
+          aria-hidden
+          className="max-h-[70vh] w-full rounded-lg bg-black/5 object-contain"
+        />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={full}
+        alt={alt}
+        decoding="async"
+        onLoad={() => setFullLoaded(true)}
+        className={cn(
+          "max-h-[70vh] w-full rounded-lg bg-black/5 object-contain transition-opacity duration-150",
+          // Stacked exactly over the placeholder until it is ready, so the
+          // swap costs no layout shift.
+          fullLoaded ? "opacity-100" : "absolute inset-0 opacity-0"
+        )}
+      />
+    </div>
   );
 }
