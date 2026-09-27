@@ -70,7 +70,7 @@ export function HealthRecordCard({
             loading="lazy"
             decoding="async"
             alt=""
-            className="h-20 w-20 rounded-lg bg-muted object-contain ring-1 ring-border"
+            className="h-20 w-20 rounded-lg object-cover ring-1 ring-border"
           />
         )}
       </CardContent>

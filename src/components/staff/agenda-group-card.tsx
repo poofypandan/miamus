@@ -644,7 +644,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               <img
                 src={photoSrc(capture.photoUrl, 320)}
                 alt=""
-                className="max-h-56 w-full rounded-lg bg-muted object-contain"
+                className="max-h-56 w-full rounded-lg object-cover"
               />
               <div className="flex flex-col gap-2">
                 {dogsIn(capture.items).map((item) => {
@@ -808,7 +808,7 @@ function StripThumbnail({ url, label }: { url: string; label: string }) {
       decoding="async"
       alt={label}
       title={label}
-      className="size-24 rounded-lg bg-muted object-contain ring-1 ring-emerald-500/40"
+      className="size-24 rounded-lg object-cover ring-1 ring-emerald-500/40"
     />
   );
 }

@@ -163,7 +163,7 @@ function StockRow({ item, audit }: { item: InventoryItem; audit?: InventoryAudit
             src={photoSrc(audit.photo_url, 160)}
             alt=""
             loading="lazy"
-            className="size-12 rounded-lg bg-muted object-contain ring-1 ring-border"
+            className="size-12 rounded-lg object-cover ring-1 ring-border"
           />
         </button>
       ) : (

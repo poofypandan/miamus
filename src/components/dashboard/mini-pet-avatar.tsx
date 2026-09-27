@@ -21,15 +21,10 @@ export function MiniPetAvatar({ pet, className }: { pet: TaskEntity; className?:
         loading="lazy"
         decoding="async"
         alt={pet.name}
-        // Squircle by default since Phase 59. Square so rows of pets line up.
-        //
-        // Contained, not cropped (Phase 95): the whole photo shows, which is
-        // what was asked for after avatars appeared zoomed into a patch of
-        // fur. The cost is visible — a portrait inside a 48px square is a
-        // narrow strip between two bars — and the real fix is either a taller
-        // avatar box (3:4) or avatar photos framed as square portraits.
+        // Squircle by default since Phase 59. aspect-square + object-cover stay
+        // so a portrait photo is cropped to the box rather than distorted.
         className={cn(
-          "size-12 aspect-square shrink-0 rounded-xl border border-gray-200 bg-muted object-contain",
+          "size-12 aspect-square shrink-0 rounded-xl border border-gray-200 object-cover",
           className
         )}
       />

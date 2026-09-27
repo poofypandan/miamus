@@ -10,7 +10,10 @@ import { cn } from "@/lib/utils";
 const TABS: { module: DashboardModule; label: string; icon: LucideIcon; href: string }[] = [
   { module: "pets", label: "Pets", icon: PawPrint, href: "/dashboard?tab=feed" },
   { module: "household", label: "Household", icon: Home, href: "/dashboard?module=household" },
-  { module: "staff", label: "Staff", icon: Users, href: "/dashboard?module=staff" },
+  // Labelled "Access" since Phase 96: the tab holds household members, staff
+  // profiles, invite links and the app lock. The query param stays "staff" so
+  // existing links and history entries keep working.
+  { module: "staff", label: "Access", icon: Users, href: "/dashboard?module=staff" },
 ];
 
 /**

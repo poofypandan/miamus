@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InvitePanel } from "@/components/dashboard/invite-panel";
+import { HouseholdMembersPanel } from "@/components/dashboard/household-members-panel";
 import { SecuritySettings } from "@/components/dashboard/security-settings";
 import { useHousehold } from "@/context/household-context";
 import { dataProvider } from "@/lib/data";
@@ -112,6 +113,8 @@ export function StaffTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <HouseholdMembersPanel />
+
       <StaffRoster profiles={profiles} failed={failed} reload={reload} />
 
       <InvitePanel />

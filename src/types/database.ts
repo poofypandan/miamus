@@ -407,6 +407,24 @@ export interface Database {
         Args: { p_staff_id: string };
         Returns: string;
       };
+      // Who has co-owner access, with emails — the table itself only ever
+      // shows you your own row (migrations/094).
+      list_household_members: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          email: string;
+          role: string;
+          joined_at: string;
+          is_founder: boolean;
+          is_self: boolean;
+        }[];
+      };
+      // Takes a co-owner's access back. Refuses yourself and the founder.
+      remove_household_member: {
+        Args: { p_user_id: string };
+        Returns: undefined;
+      };
       // Admits a signed-in Google account to the household as a co-owner.
       use_owner_invite_token: {
         Args: { p_token: string };

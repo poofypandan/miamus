@@ -224,9 +224,7 @@ function ProofThumbnail({ task }: { task: HouseholdTask }) {
         src={photoSrc(task.photo_url, 320)}
         alt=""
         loading="lazy"
-        decoding="async"
-        className="h-full w-full bg-muted object-contain"
-      />
+        decoding="async" className="h-full w-full object-cover" />
       </button>
 
       <PhotoLightbox
