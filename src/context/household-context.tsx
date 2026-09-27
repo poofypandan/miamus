@@ -19,6 +19,7 @@ import { addToOfflineQueue } from "@/lib/offline-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { compressPhoto } from "@/lib/image";
 import { readSnapshot, writeSnapshot } from "@/lib/snapshot-cache";
+import { warmImagesWhenIdle } from "@/lib/image-warm";
 import {
   resolveActiveHouseholdId,
   setActiveHouseholdId,
@@ -339,6 +340,26 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     if (tenantReady) void refresh({ silent: hydratedFromCache });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hydratedFromCache decides how this fetch renders, not whether to run it again
   }, [refresh, tenantReady]);
+
+  // Pulls the recent feed's photos into the browser cache once the screen has
+  // settled (Phase 95). Driven by state rather than by the fetch, so a mount
+  // that painted from the snapshot warms its images immediately — before the
+  // network has answered — and a later refresh tops up whatever is new. The
+  // warm itself dedupes, so re-running on each change is cheap.
+  useEffect(() => {
+    if (!tenantReady) return;
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const recentLogPhotos = logs
+      .filter((log) => log.photo_url && new Date(log.completed_at).getTime() > cutoff)
+      .map((log) => log.photo_url);
+    warmImagesWhenIdle([
+      // Newest first: logs arrive sorted descending, and the cap should spend
+      // itself on what the feed shows today.
+      ...recentLogPhotos,
+      ...householdTasks.map((task) => task.photo_url),
+      ...Object.values(latestInventoryAudits).map((audit) => audit.photo_url),
+    ]);
+  }, [tenantReady, logs, householdTasks, latestInventoryAudits]);
 
   const pets = useMemo(() => entities.filter(isActivePet), [entities]);
 

@@ -173,7 +173,7 @@ function AuditCard({ item, category }: { item: InventoryItem; category: StockCat
           <img
             src={previewUrl}
             alt=""
-            className="size-16 shrink-0 rounded-lg object-cover ring-1 ring-border"
+            className="size-16 shrink-0 rounded-lg bg-muted object-contain ring-1 ring-border"
           />
           <Button
             type="button"

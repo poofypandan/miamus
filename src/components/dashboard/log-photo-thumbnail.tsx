@@ -221,7 +221,9 @@ export function LogPhotoThumbnail({
         src={photoSrc(log.photo_url, 320)}
         alt=""
         loading="lazy"
-        decoding="async" className="h-full w-full object-cover" />
+        decoding="async"
+        className="h-full w-full bg-muted object-contain"
+      />
         {badge}
       </button>
 

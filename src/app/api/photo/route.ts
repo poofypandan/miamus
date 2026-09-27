@@ -58,9 +58,14 @@ export async function GET(request: NextRequest) {
       // it to the next person who asks for that URL. The browser cache — the
       // one that matters for this feed — behaves identically either way.
       "Cache-Control": "private, max-age=31536000, immutable",
-      // The response depends on who is asking, so a cache must not reuse it
-      // across sessions.
-      Vary: "Cookie",
+      // No `Vary: Cookie`, deliberately (it was here briefly in Phase 92).
+      // Supabase rotates its auth cookie on every token refresh, and varying
+      // on it invalidated every cached photo each time — measured at roughly
+      // half the feed re-downloading on each visit. `private` already keeps
+      // these out of shared caches, and the browser cache it leaves them in
+      // is per-profile. The residual is narrow: a device rebound to another
+      // household could still hold the previous one's images on disk, but it
+      // has no row pointing at them, so nothing in the app can render them.
     },
   });
 }
