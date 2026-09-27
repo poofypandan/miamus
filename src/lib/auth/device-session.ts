@@ -2,20 +2,6 @@
 
 import { supabase } from "@/lib/supabase/client";
 
-// Written by the staff gate the first time someone picks their name on this
-// phone. On a device that predates invites it is the only evidence we have of
-// which household it belongs to (see bind_legacy_device in migrations/089).
-const STAFF_ID_KEY = "banyuwangi11:staffId";
-
-function readLegacyStaffId(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage.getItem(STAFF_ID_KEY);
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Gives this device an identity of its own, signing in anonymously if it has
  * none (Phase 88).
@@ -27,6 +13,10 @@ function readLegacyStaffId(): string | null {
  *
  * Returns the user id, or null if anonymous sign-ins are switched off on the
  * project, in which case the caller falls back to whatever it knew before.
+ *
+ * Signing in is not the same as being let in: a fresh anonymous session can
+ * see nothing until it is bound to a household, and since Phase 97 the only
+ * thing that binds it is redeeming an invite token (/join/staff).
  */
 export async function ensureAnonymousSession(): Promise<string | null> {
   if (!supabase) return null;
@@ -43,27 +33,4 @@ export async function ensureAnonymousSession(): Promise<string | null> {
     return null;
   }
   return data.user.id;
-}
-
-/**
- * The grandfather upgrade: a phone that has been logging tasks for months
- * gets an anonymous identity and is bound to the household whose staff member
- * it belongs to — without anyone seeing a sign-in screen.
- *
- * Returns the household id it bound to, or null when there is nothing to go
- * on (no staff marker) or the household's legacy window has closed.
- */
-export async function upgradeLegacyDevice(): Promise<string | null> {
-  const staffId = readLegacyStaffId();
-  if (!staffId || !supabase) return null;
-
-  const userId = await ensureAnonymousSession();
-  if (!userId) return null;
-
-  const { data, error } = await supabase.rpc("bind_legacy_device", { p_staff_id: staffId });
-  if (error || !data) {
-    console.error("Legacy device binding failed", error);
-    return null;
-  }
-  return data;
 }

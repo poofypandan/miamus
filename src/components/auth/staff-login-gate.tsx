@@ -191,7 +191,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
               type="button"
               onClick={() =>
                 setStep(
-                  profile.pin
+                  profile.has_pin
                     ? { kind: "enter", profile }
                     : { kind: "create", profile, confirming: null }
                 )
@@ -202,7 +202,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
                 <UserRound className="size-5" />
               </span>
               <span className="flex-1 truncate">{profile.name}</span>
-              {!profile.pin && (
+              {!profile.has_pin && (
                 <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-900">
                   Buat PIN
                 </span>
@@ -251,11 +251,24 @@ function PinStep({
     if (busy.current || step.kind === "choose") return;
 
     if (step.kind === "enter") {
-      if (value !== step.profile.pin) {
-        reject("PIN salah");
-        return;
+      // Checked by the database, not here: the PIN is a bcrypt hash in a
+      // column this app cannot read (migrations/095). A wrong PIN and an
+      // unreachable server are told apart so the second one doesn't read as
+      // "you typed it wrong".
+      busy.current = true;
+      try {
+        const ok = await dataProvider.verifyStaffPin(step.profile.id, value);
+        busy.current = false;
+        if (!ok) {
+          reject("PIN salah");
+          return;
+        }
+        onDone(step.profile);
+      } catch (err) {
+        console.error(err);
+        busy.current = false;
+        reject("Gagal memeriksa PIN. Periksa koneksi.");
       }
-      onDone(step.profile);
       return;
     }
 
@@ -276,8 +289,9 @@ function PinStep({
     busy.current = true;
     setSaving(true);
     try {
-      const saved = await dataProvider.setStaffPin(step.profile.id, value);
-      onDone(saved);
+      await dataProvider.setStaffPin(step.profile.id, value);
+      // The stored row now has a PIN; the gate only ever needed that flag.
+      onDone({ ...step.profile, has_pin: true });
     } catch (err) {
       console.error(err);
       busy.current = false;

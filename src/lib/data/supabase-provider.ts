@@ -24,6 +24,9 @@ function extractStoragePath(url: string): string | null {
 
 const INVENTORY_BUCKET = "inventory_audits";
 
+// Everything on staff_profiles except `pin`, which no client role may select.
+const STAFF_COLUMNS = "id, household_id, name, created_at, has_pin";
+
 // An audit plus its author's name, embedded through audited_by.
 const AUDIT_COLUMNS = "*, staff_profiles(name)";
 type AuditRow = InventoryAuditLog & { staff_profiles: { name: string } | null };
@@ -509,7 +512,9 @@ export const supabaseProvider: DataProvider = {
     // in a different order on different loads.
     const { data, error } = await client()
       .from("staff_profiles")
-      .select("*")
+      // Named columns, not `*`: the pin column is revoked from every client
+      // role (migrations/096), and a star select would be refused outright.
+      .select(STAFF_COLUMNS)
       .eq("household_id", getActiveHouseholdId())
       .order("name");
     if (error) throw error;
@@ -519,22 +524,25 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("staff_profiles")
       .insert({ name, household_id: getActiveHouseholdId() })
-      .select()
+      .select(STAFF_COLUMNS)
       .single();
     if (error) throw error;
     return data;
   },
   async setStaffPin(id, pin) {
-    // .select() so an RLS-filtered update (200 with zero rows) surfaces as a
-    // failure rather than a PIN that silently never saved — the staff member
-    // would be locked into the setup screen with no idea why.
-    const { data, error } = await client()
-      .from("staff_profiles")
-      .update({ pin })
-      .eq("id", id)
-      .select();
+    // Through the function, not the table: `pin` is write-protected as well as
+    // read-protected, and the hashing happens inside (migrations/095). It
+    // raises rather than quietly updating nothing when the staff member is not
+    // in this household.
+    const { error } = await client().rpc("set_staff_pin", { p_staff_id: id, p_pin: pin });
     if (error) throw error;
-    if (!data || data.length === 0) throw new Error("Staff profile not updated");
-    return data[0];
+  },
+  async verifyStaffPin(id, pin) {
+    const { data, error } = await client().rpc("verify_staff_pin", {
+      p_staff_id: id,
+      p_pin: pin,
+    });
+    if (error) throw error;
+    return data === true;
   },
 };

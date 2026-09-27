@@ -214,6 +214,11 @@ export interface DataProvider {
   claimHouseholdTask(id: string, staffId: string): Promise<HouseholdTask>;
   listStaffProfiles(): Promise<StaffProfile[]>;
   createStaffProfile(name: string): Promise<StaffProfile>;
-  /** Sets a staff member's PIN, or clears it (null) so they choose a new one. */
-  setStaffPin(id: string, pin: string | null): Promise<StaffProfile>;
+  /**
+   * Sets a staff member's PIN, or clears it (null) so they choose a new one.
+   * The value is hashed server-side; nothing here ever holds a stored PIN.
+   */
+  setStaffPin(id: string, pin: string | null): Promise<void>;
+  /** Checks a PIN against its hash (migrations/095). */
+  verifyStaffPin(id: string, pin: string): Promise<boolean>;
 }

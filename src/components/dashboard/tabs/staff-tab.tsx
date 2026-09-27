@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Camera, Info, KeyRound, Loader2, PackageX, Plus, Send, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PinPad, PIN_LENGTH } from "@/components/auth/pin-pad";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InvitePanel } from "@/components/dashboard/invite-panel";
 import { HouseholdMembersPanel } from "@/components/dashboard/household-members-panel";
@@ -196,6 +205,7 @@ function StaffRoster({
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
   const [resetting, setResetting] = useState<string | null>(null);
+  const [pinTarget, setPinTarget] = useState<StaffProfile | null>(null);
 
   async function addStaff() {
     const name = newName.trim();
@@ -217,18 +227,20 @@ function StaffRoster({
     }
   }
 
-  // No confirmation step: clearing a PIN costs the person one setup screen on
-  // their next sign-in and nothing else, so a dialog would be more friction
-  // than the action deserves.
-  async function resetPin(profile: StaffProfile) {
+  async function applyPin(profile: StaffProfile, pin: string | null) {
     setResetting(profile.id);
     try {
-      await dataProvider.setStaffPin(profile.id, null);
+      await dataProvider.setStaffPin(profile.id, pin);
       await reload();
-      toast.success(`${profile.name} will set a new PIN next time they sign in`);
+      toast.success(
+        pin
+          ? `${profile.name}'s PIN updated`
+          : `${profile.name} will choose a new PIN next time they sign in`
+      );
+      setPinTarget(null);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to reset PIN");
+      toast.error("Failed to update PIN");
     } finally {
       setResetting(null);
     }
@@ -237,6 +249,13 @@ function StaffRoster({
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-gray-900">Staff &amp; PINs</h2>
+
+      <SetPinDialog
+        profile={pinTarget}
+        busy={!!pinTarget && resetting === pinTarget.id}
+        onClose={() => setPinTarget(null)}
+        onSubmit={(pin) => pinTarget && applyPin(pinTarget, pin)}
+      />
 
       {failed ? (
         <p className="text-sm text-destructive">Couldn&apos;t load the staff list.</p>
@@ -255,28 +274,26 @@ function StaffRoster({
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate font-medium">{profile.name}</span>
+                    {/* The PIN itself is never shown, and cannot be: it is a
+                        bcrypt hash in a column no client may read
+                        (migrations/095-096). Only whether one exists. */}
                     <span className="text-xs text-muted-foreground">
-                      PIN:{" "}
-                      {profile.pin ? (
-                        <span className="font-mono tracking-widest text-gray-900">{profile.pin}</span>
-                      ) : (
-                        "Not set"
-                      )}
+                      {profile.has_pin ? "PIN set" : "No PIN yet"}
                     </span>
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
                     className="min-h-[40px] shrink-0"
-                    onClick={() => resetPin(profile)}
-                    disabled={!profile.pin || resetting === profile.id}
+                    onClick={() => setPinTarget(profile)}
+                    disabled={resetting === profile.id}
                   >
                     {resetting === profile.id ? (
                       <Loader2 className="animate-spin" />
                     ) : (
                       <KeyRound />
                     )}
-                    Reset PIN
+                    {profile.has_pin ? "Change PIN" : "Set PIN"}
                   </Button>
                 </div>
               ))
@@ -301,5 +318,72 @@ function StaffRoster({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+
+/**
+ * Setting a staff member's PIN, or handing the choice back to them.
+ *
+ * The owner types the new PIN here and it is hashed before it is stored
+ * (migrations/095) — this app never holds a stored PIN, and the old screen
+ * that printed everyone's in plain text is gone with it.
+ *
+ * Owner-facing, so entirely English per the Phase 46 language boundary.
+ */
+function SetPinDialog({
+  profile,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  profile: StaffProfile | null;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (pin: string | null) => void;
+}) {
+  const [pin, setPin] = useState("");
+
+  // Cleared whenever the dialog opens on someone else, so a half-typed PIN
+  // can never be submitted against the wrong person.
+  useEffect(() => {
+    setPin("");
+  }, [profile?.id]);
+
+  return (
+    <Dialog open={!!profile} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{profile?.name}&apos;s PIN</DialogTitle>
+          <DialogDescription>
+            Type a new 4-digit PIN, or let them choose their own next time they sign in.
+          </DialogDescription>
+        </DialogHeader>
+
+        <PinPad
+          pin={pin}
+          onDigit={(digit) => setPin((p) => (p.length >= PIN_LENGTH ? p : p + digit))}
+          onBackspace={() => setPin((p) => p.slice(0, -1))}
+        />
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            className="min-h-[44px]"
+            disabled={busy}
+            onClick={() => onSubmit(null)}
+          >
+            Let them choose
+          </Button>
+          <Button
+            className="min-h-[44px]"
+            disabled={busy || pin.length !== PIN_LENGTH}
+            onClick={() => onSubmit(pin)}
+          >
+            {busy ? <Loader2 className="animate-spin" /> : <KeyRound />} Save PIN
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

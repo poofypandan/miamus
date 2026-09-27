@@ -149,11 +149,11 @@ export type StaffProfile = {
   // The tenant (migrations/086). Always Banyuwangi 11 until Phase 86B.
   household_id: string;
   name: string;
-  // Null until the person picks one on first sign-in, and null again after the
-  // owner resets it — see migrations/071. Stored as typed and readable by
-  // anyone with the public anon key, so it separates household members from
-  // each other rather than keeping outsiders out.
-  pin: string | null;
+  // Whether a PIN has been chosen yet — the gate needs to tell "enter yours"
+  // from "pick one". The PIN itself is a bcrypt hash in a column no client
+  // role may read (migrations/095-096); it is reachable only through
+  // verify_staff_pin and set_staff_pin.
+  has_pin: boolean;
   created_at: string;
 };
 
@@ -401,11 +401,16 @@ export interface Database {
         Args: { p_token: string };
         Returns: string;
       };
-      // The grandfather path for phones that predate invites — binds on a
-      // staff id, and only while the household's window is open.
-      bind_legacy_device: {
-        Args: { p_staff_id: string };
-        Returns: string;
+      // The staff gate's login check. True only for the right PIN, on a staff
+      // member this caller's household actually has.
+      verify_staff_pin: {
+        Args: { p_staff_id: string; p_pin: string };
+        Returns: boolean;
+      };
+      // Hashes and stores a PIN, or clears it when given null.
+      set_staff_pin: {
+        Args: { p_staff_id: string; p_pin: string | null };
+        Returns: undefined;
       };
       // Who has co-owner access, with emails — the table itself only ever
       // shows you your own row (migrations/094).

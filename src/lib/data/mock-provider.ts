@@ -26,6 +26,8 @@ interface MockDB {
   inventoryItems: InventoryItem[];
   inventoryAudits: InventoryAuditWithStaff[];
   staffProfiles: StaffProfile[];
+  /** Mock-only: PINs are hashed in the real database (migrations/095). */
+  staffPins?: Record<string, string | null>;
   householdTasks: HouseholdTask[];
 }
 
@@ -504,7 +506,7 @@ export const mockProvider: DataProvider = {
       id: uid("staff"),
       household_id: getActiveHouseholdId(),
       name,
-      pin: null,
+      has_pin: false,
       created_at: new Date().toISOString(),
     };
     db.staffProfiles.push(profile);
@@ -515,8 +517,15 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const profile = db.staffProfiles.find((s) => s.id === id);
     if (!profile) throw new Error("Staff profile not found");
-    profile.pin = pin;
+    profile.has_pin = pin !== null;
+    // Mock mode has no database and no crypt(); the PIN lives beside the
+    // profile purely so the gate can be walked through offline.
+    db.staffPins = { ...(db.staffPins ?? {}), [id]: pin };
     saveDB(db);
-    return delay(profile);
+    return delay(undefined);
+  },
+  async verifyStaffPin(id, pin) {
+    const db = loadDB();
+    return delay((db.staffPins ?? {})[id] === pin);
   },
 };
