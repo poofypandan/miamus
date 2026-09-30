@@ -4,6 +4,10 @@ import { CheckCircle2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateWhatsAppLink } from "@/lib/utils";
 
+const DEFAULT_DESCRIPTION =
+  "Pemilik belum tentu langsung melihatnya. Kirim pesan supaya cepat ditanggapi.";
+const DEFAULT_CTA = "Beri tahu Pemilik via WhatsApp";
+
 /**
  * The success state staff land on after sending something the owner has to act
  * on. The app has no push channel to the owner, so a report that only sits in
@@ -18,6 +22,8 @@ export function WhatsAppNotifyPanel({
   onDone,
   secondaryLabel,
   onSecondary,
+  description = DEFAULT_DESCRIPTION,
+  ctaLabel = DEFAULT_CTA,
 }: {
   title: string;
   /** Message body; the dashboard link is appended by generateWhatsAppLink. */
@@ -25,6 +31,14 @@ export function WhatsAppNotifyPanel({
   onDone: () => void;
   secondaryLabel?: string;
   onSecondary?: () => void;
+  /**
+   * Why it is worth sending. Defaults to the routine wording; a sick-dog
+   * report overrides it, because "the owner might not see it right away"
+   * badly undersells a health emergency (Phase 99).
+   */
+  description?: string;
+  /** Defaults to the routine wording; overridden for an urgent report. */
+  ctaLabel?: string;
 }) {
   return (
     <div className="flex flex-col items-center gap-4 py-6 text-center">
@@ -33,9 +47,7 @@ export function WhatsAppNotifyPanel({
       </span>
       <div className="flex flex-col gap-1">
         <p className="text-base font-semibold text-gray-900">{title}</p>
-        <p className="text-sm text-muted-foreground">
-          Pemilik belum tentu langsung melihatnya. Kirim pesan supaya cepat ditanggapi.
-        </p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
       <div className="flex w-full flex-col gap-2">
@@ -49,7 +61,7 @@ export function WhatsAppNotifyPanel({
           className="h-auto min-h-[52px] w-full bg-emerald-700 py-3 text-base leading-snug whitespace-normal text-white hover:bg-emerald-800"
         >
           <a href={generateWhatsAppLink(message)} target="_blank" rel="noopener noreferrer">
-            <MessageCircle className="size-5" /> Beri tahu Pemilik via WhatsApp
+            <MessageCircle className="size-5" /> {ctaLabel}
           </a>
         </Button>
         {secondaryLabel && onSecondary && (
