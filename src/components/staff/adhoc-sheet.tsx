@@ -154,6 +154,7 @@ export function AdHocSheet() {
             </SheetHeader>
             <div className="px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               <WhatsAppNotifyPanel
+                tone="urgent"
                 title={`Laporan sakit ${urgentReport.petName} tersimpan`}
                 description="Ini laporan darurat. Pemilik tidak menerima notifikasi otomatis — kirim pesan WhatsApp sekarang juga."
                 ctaLabel="Kirim Peringatan ke Pemilik"

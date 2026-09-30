@@ -1,12 +1,31 @@
 "use client";
 
-import { CheckCircle2, MessageCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { generateWhatsAppLink } from "@/lib/utils";
+import { cn, generateWhatsAppLink } from "@/lib/utils";
 
 const DEFAULT_DESCRIPTION =
   "Pemilik belum tentu langsung melihatnya. Kirim pesan supaya cepat ditanggapi.";
 const DEFAULT_CTA = "Beri tahu Pemilik via WhatsApp";
+
+/**
+ * How the panel's badge reads at a glance.
+ *
+ * "success" is the routine confirmation: a proposal or a restock request was
+ * filed and nothing is wrong. "urgent" is a sick dog — the report saved fine,
+ * but a green tick is the wrong first thing to see, because it says "done"
+ * about a situation whose whole point is that it isn't.
+ *
+ * Amber rather than red, matching the warning tint the rest of the app already
+ * uses (the lapsed-approval notice, the low-stock badges); red is reserved for
+ * destructive actions like deleting a photo.
+ */
+const TONES = {
+  success: { icon: CheckCircle2, className: "bg-emerald-100 text-emerald-700" },
+  urgent: { icon: AlertTriangle, className: "bg-amber-100 text-amber-700" },
+} as const;
+
+export type NotifyTone = keyof typeof TONES;
 
 /**
  * The success state staff land on after sending something the owner has to act
@@ -24,6 +43,7 @@ export function WhatsAppNotifyPanel({
   onSecondary,
   description = DEFAULT_DESCRIPTION,
   ctaLabel = DEFAULT_CTA,
+  tone = "success",
 }: {
   title: string;
   /** Message body; the dashboard link is appended by generateWhatsAppLink. */
@@ -39,11 +59,20 @@ export function WhatsAppNotifyPanel({
   description?: string;
   /** Defaults to the routine wording; overridden for an urgent report. */
   ctaLabel?: string;
+  /** Defaults to the routine green tick; "urgent" swaps it for an amber warning. */
+  tone?: NotifyTone;
 }) {
+  const { icon: ToneIcon, className: toneClass } = TONES[tone];
+
   return (
     <div className="flex flex-col items-center gap-4 py-6 text-center">
-      <span className="flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-        <CheckCircle2 className="size-7" />
+      <span
+        className={cn(
+          "flex size-14 items-center justify-center rounded-full",
+          toneClass
+        )}
+      >
+        <ToneIcon className="size-7" />
       </span>
       <div className="flex flex-col gap-1">
         <p className="text-base font-semibold text-gray-900">{title}</p>
