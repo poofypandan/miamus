@@ -57,3 +57,25 @@ export function batchCreatedAt(batch: ProposalBatch): string {
     batch.proposals[0].created_at
   );
 }
+
+/**
+ * The distinct days a batch is asking for, sorted, as `YYYY-MM-DD` keys.
+ *
+ * What a `scheduled_date` *means* varies by category — for a medication course
+ * it is the last day of the course, for a vet or grooming visit it is the day
+ * of the visit — so this deliberately returns the raw days and leaves the
+ * reading of them to the caller. A grooming batch carries one row per
+ * occurrence and so several days; a medication batch carries one row per dose
+ * time and so repeats a single day, which is why these are deduplicated.
+ *
+ * Proposals filed before the Phase 62 migration have no scheduled_date at all
+ * and contribute nothing, leaving an empty array rather than a bogus day.
+ */
+export function batchDates(batch: ProposalBatch): string[] {
+  const days = new Set<string>();
+  for (const proposal of batch.proposals) {
+    if (proposal.scheduled_date) days.add(proposal.scheduled_date);
+  }
+  // Plain string sort: ISO day keys are lexicographically ordered by date.
+  return [...days].sort();
+}

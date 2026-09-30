@@ -7,6 +7,7 @@ import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
+import { useToday } from "@/hooks/use-today";
 import { dayLabel } from "@/lib/date-label";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 
@@ -15,7 +16,9 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 export function DailyFeedTab() {
   const { pets, entities, logs, loading, selectedDate } = useHousehold();
   const dateStr = formatDateLocal(selectedDate);
-  const label = dayLabel(selectedDate);
+  // useToday rather than dayLabel's own `new Date()` default, so a day that
+  // rolls over under an open app relabels itself instead of going stale.
+  const label = dayLabel(selectedDate, useToday());
 
   // Named for the browsed day, not literally today: this follows the shared
   // selectedDate, so picking an earlier day in the ribbon re-filters the photo

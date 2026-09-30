@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { addDays, format, isSameDay } from "date-fns";
 import { CalendarDays } from "lucide-react";
 import { useSpecialEventDates } from "@/hooks/use-special-event-dates";
+import { useToday } from "@/hooks/use-today";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +34,11 @@ interface DateRibbonProps {
 // (schedules page) and the Staff "Jadwal", both driven by the same global
 // `selectedDate` in HouseholdContext.
 export function DateRibbon({ value, onChange, locale = "id" }: DateRibbonProps) {
-  const today = useMemo(() => new Date(), []);
+  // Was `useMemo(() => new Date(), [])`, which pinned the highlight to the day
+  // the ribbon mounted: on a phone left open overnight the ring stayed on
+  // yesterday. The hook re-evaluates on midnight and on foreground, and keeps
+  // the same object identity in between so nothing re-renders needlessly.
+  const today = useToday();
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
 

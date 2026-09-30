@@ -2,15 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, X } from "lucide-react";
+import { CalendarDays, Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
 import { parseLocalDate } from "@/components/dashboard/schedule-editor";
 import type { CreateScheduleInput } from "@/lib/data";
+import { useToday } from "@/hooks/use-today";
+import { approvalDateSummary } from "@/lib/approval-dates";
 import { categoryIcon, groomingTitle, medicationTitle, vetTitle } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { groupProposals, type ProposalBatch } from "@/lib/proposal-batches";
+import { cn } from "@/lib/utils";
 import type { RoutineProposal, ScheduleCategoryName } from "@/types/database";
 
 // Rebuilds the title the way ScheduleEditor writes it, so an approved proposal
@@ -89,7 +92,16 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
   const pet = pets.find((p) => p.id === head.pet_id) ?? null;
   const Icon = categoryIcon(head.category);
   const ids = batch.proposals.map((p) => p.id);
-  const times = batch.proposals.map((p) => formatTime12h(p.time));
+  // Deduplicated: a medication batch carries one row per dose time and so
+  // several distinct times, but a grooming series carries one row per visit at
+  // the same time of day, which listed "10:00 AM" once per occurrence.
+  const times = [...new Set(batch.proposals.map((p) => formatTime12h(p.time)))];
+
+  // Read from the hook rather than `new Date()` so the label is re-evaluated
+  // when the day rolls over or the app returns to the foreground — a card that
+  // said "Tomorrow" last night must not still say it this morning.
+  const today = useToday();
+  const schedule = approvalDateSummary(batch, today);
 
   async function approve() {
     setBusy("approve");
@@ -132,16 +144,48 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
             <Icon className="size-4 shrink-0 text-muted-foreground" />
             {head.title}
             {ids.length > 1 && (
-              <span className="text-muted-foreground">({ids.length} scheduled times)</span>
+              // A grooming series is N visits on N different days; a medication
+              // course is N dose times on each of its days. Calling both
+              // "scheduled times" read as a contradiction next to the single
+              // deduplicated time a grooming batch now shows.
+              <span className="text-muted-foreground">
+                ({ids.length} {head.category === "grooming" ? "visits" : "scheduled times"})
+              </span>
             )}
           </span>
-          <span className="text-xs text-muted-foreground">
-            {pet?.name ?? "Unknown pet"} · {times.join(", ")}
+          {/* Wraps rather than truncates: on a narrow phone the day is the
+              part the owner came for, so it must never be the part that is
+              clipped off the end of the line. */}
+          <span className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+            {schedule && (
+              <>
+                <CalendarDays className="size-3.5 shrink-0" />
+                <span
+                  className={cn(
+                    "font-medium",
+                    schedule.past ? "text-amber-700" : "text-foreground"
+                  )}
+                >
+                  {schedule.text}
+                </span>
+                <span aria-hidden>·</span>
+              </>
+            )}
+            <span>
+              {pet?.name ?? "Unknown pet"} · {times.join(", ")}
+            </span>
           </span>
         </span>
       </div>
 
       {head.notes && <p className="text-xs text-muted-foreground">{head.notes}</p>}
+
+      {schedule?.past && (
+        <p className="text-xs font-medium text-amber-700">
+          This date has already passed — approving it now adds a routine that has
+          already expired, so no staff phone will show it.
+        </p>
+      )}
 
       <div className="flex gap-2">
         <Button

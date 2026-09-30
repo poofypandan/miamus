@@ -14,6 +14,7 @@ import type {
   CreateHouseholdTaskInput,
 } from "@/lib/data";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
+import { useToday } from "@/hooks/use-today";
 import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
@@ -257,6 +258,28 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     selectedDateRef.current = selectedDateStr;
   }, [selectedDateStr]);
+
+  // Follow the calendar over midnight (Phase 98).
+  //
+  // selectedDate was seeded once from `new Date()` and then never moved, so a
+  // phone left open overnight was still browsing yesterday in the morning —
+  // yesterday's agenda, yesterday's chores, the ribbon parked a day behind.
+  // Relabelling that "Yesterday" is accurate and still wrong: nobody left the
+  // app open in order to keep reading the previous day.
+  //
+  // Only the view that *was* on today follows the clock. Someone who
+  // deliberately browsed back to last Tuesday is left where they put
+  // themselves, because having the app yank the date out from under them would
+  // be the more annoying bug of the two.
+  const today = useToday();
+  const todayStr = formatDateLocal(today);
+  const lastTodayRef = useRef(todayStr);
+  useEffect(() => {
+    const previous = lastTodayRef.current;
+    if (previous === todayStr) return;
+    lastTodayRef.current = todayStr;
+    setSelectedDate((current) => (formatDateLocal(current) === previous ? today : current));
+  }, [today, todayStr]);
 
   const loadHouseholdTasks = useCallback(async (dueDate: string) => {
     try {

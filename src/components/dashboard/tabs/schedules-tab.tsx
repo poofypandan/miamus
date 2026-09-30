@@ -17,6 +17,7 @@ import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRequireOwner } from "@/hooks/use-require-owner";
+import { useToday } from "@/hooks/use-today";
 import { dayLabel } from "@/lib/date-label";
 import type { TaskEntity } from "@/types/database";
 
@@ -25,7 +26,7 @@ import type { TaskEntity } from "@/types/database";
 export function SchedulesTab() {
   const { pets, loading, selectedDate } = useHousehold();
   const isOwner = useRequireOwner();
-  const label = dayLabel(selectedDate);
+  const label = dayLabel(selectedDate, useToday());
 
   if (!isOwner) return null;
 

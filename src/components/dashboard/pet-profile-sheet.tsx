@@ -24,6 +24,7 @@ import { HealthRecordForm } from "@/components/dashboard/health-record-form";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useToday } from "@/hooks/use-today";
 import { getPetMeta, isAdmitted } from "@/lib/pets";
 import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -64,7 +65,7 @@ export function PetProfileSheet() {
   useBackToClose(!!pet && addRecordOpen, () => setAddRecordOpen(false));
 
   const dateStr = formatDateLocal(selectedDate);
-  const label = dayLabel(selectedDate);
+  const label = dayLabel(selectedDate, useToday());
 
   const items = useMemo(() => {
     if (!pet) return [];
