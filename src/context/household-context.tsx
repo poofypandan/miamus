@@ -12,6 +12,7 @@ import type {
   CreateInventoryAlertInput,
   CreateRoutineProposalInput,
   CreateHouseholdTaskInput,
+  UpdateHouseholdTaskInput,
 } from "@/lib/data";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
 import { useToday } from "@/hooks/use-today";
@@ -169,8 +170,22 @@ interface HouseholdContextValue {
   updateHouseholdTaskStatus: (
     id: string,
     status: HouseholdTaskStatus,
-    patch?: { photo_url?: string | null }
+    patch?: {
+      photo_url?: string | null;
+      before_photo_url?: string | null;
+      after_photo_url?: string | null;
+    }
   ) => Promise<HouseholdTask>;
+  /** Owner-only. Edits a chore's own fields; never its completion state. */
+  updateHouseholdTask: (id: string, patch: UpdateHouseholdTaskInput) => Promise<HouseholdTask>;
+  /** Owner-only. Deleting a repeat takes its materialised occurrences with it. */
+  deleteHouseholdTask: (id: string) => Promise<void>;
+  /**
+   * Gives a virtual occurrence of a repeat a real row for `date`, so it can be
+   * claimed or completed. Returns the row that owns that day — this call's, or
+   * the one another phone wrote first.
+   */
+  materialiseChoreOccurrence: (templateId: string, date: string) => Promise<HouseholdTask>;
   /** Takes an unassigned chore for whoever is signed in on this device. */
   claimHouseholdTask: (id: string) => Promise<HouseholdTask>;
   undoInventoryAlert: (id: string) => Promise<void>;
@@ -281,9 +296,19 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setSelectedDate((current) => (formatDateLocal(current) === previous ? today : current));
   }, [today, todayStr]);
 
+  // `today` as well as the browsed day since Phase 100: rendering one day now
+  // needs the repeats that reach it and, on today, whatever is still pending
+  // from earlier. Read from a ref so the callback keeps a stable identity —
+  // taking it as a dependency would re-fire the mount effect at every
+  // midnight. See the same reasoning on selectedDateRef.
+  const todayRef = useRef(todayStr);
+  useEffect(() => {
+    todayRef.current = todayStr;
+  }, [todayStr]);
+
   const loadHouseholdTasks = useCallback(async (dueDate: string) => {
     try {
-      setHouseholdTasks(await dataProvider.listHouseholdTasks(dueDate));
+      setHouseholdTasks(await dataProvider.listHouseholdTasks(dueDate, todayRef.current));
     } catch (err) {
       // Same degraded state as routine_proposals and inventory_items below:
       // household_tasks arrives with the Phase 82 migration, and until it is
@@ -646,9 +671,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const createHouseholdTask = useCallback(
     async (input: CreateHouseholdTaskInput) => {
       const task = await dataProvider.createHouseholdTask(input);
-      if (task.due_date === selectedDateRef.current) {
-        setHouseholdTasks((prev) => [...prev, task]);
-      }
+      // Added whatever its date (Phase 100). The old guard — only keep it if
+      // it is dated the day on screen — predates repeats and carry-over: a
+      // weekly chore filed to start next Monday, or a one-off backdated to
+      // yesterday, would both be dropped here and not reappear until a
+      // refetch. expandChores decides what belongs on the day being browsed,
+      // so a row that does not is simply not rendered, which is cheaper than
+      // being wrong about it.
+      setHouseholdTasks((prev) => [...prev, task]);
       return task;
     },
     []
@@ -658,7 +688,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     async (
       id: string,
       status: HouseholdTaskStatus,
-      patch?: { photo_url?: string | null }
+      patch?: {
+        photo_url?: string | null;
+        before_photo_url?: string | null;
+        after_photo_url?: string | null;
+      }
     ) => {
       // Stamped here rather than at the call site, for the same reason every
       // other write in this file is: the component knows it took a photo, not
@@ -672,6 +706,38 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     },
     []
   );
+
+  const updateHouseholdTask = useCallback(
+    async (id: string, patch: UpdateHouseholdTaskInput) => {
+      const updated = await dataProvider.updateHouseholdTask(id, patch);
+      // Replaced in place rather than refetched: editing a repeat's cadence or
+      // moving a one-off to another day changes which occurrences this row
+      // generates, and expandChores recomputes that from the row itself.
+      setHouseholdTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
+      return updated;
+    },
+    []
+  );
+
+  const deleteHouseholdTask = useCallback(async (id: string) => {
+    await dataProvider.deleteHouseholdTask(id);
+    // Drops the row and anything that hung off it, matching the cascade on
+    // parent_task_id so the list does not keep showing occurrences of a repeat
+    // that no longer exists.
+    setHouseholdTasks((prev) =>
+      prev.filter((task) => task.id !== id && task.parent_task_id !== id)
+    );
+  }, []);
+
+  const materialiseChoreOccurrence = useCallback(async (templateId: string, date: string) => {
+    const row = await dataProvider.materialiseChoreOccurrence(templateId, date);
+    setHouseholdTasks((prev) =>
+      prev.some((task) => task.id === row.id)
+        ? prev.map((task) => (task.id === row.id ? row : task))
+        : [...prev, row]
+    );
+    return row;
+  }, []);
 
   const claimHouseholdTask = useCallback(async (id: string) => {
     const staffId = readActiveStaffId();
@@ -766,6 +832,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       submitRoutineProposalsBatch,
       decideRoutineProposals,
       createHouseholdTask,
+      updateHouseholdTask,
+      deleteHouseholdTask,
+      materialiseChoreOccurrence,
       updateHouseholdTaskStatus,
       claimHouseholdTask,
       undoInventoryAlert,
@@ -815,6 +884,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       submitRoutineProposalsBatch,
       decideRoutineProposals,
       createHouseholdTask,
+      updateHouseholdTask,
+      deleteHouseholdTask,
+      materialiseChoreOccurrence,
       updateHouseholdTaskStatus,
       claimHouseholdTask,
       undoInventoryAlert,

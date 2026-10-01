@@ -16,6 +16,10 @@ export type HouseholdTaskCategory = "cleaning" | "maintenance" | "errand" | "gro
 // retiring a chore later needs no migration. Every read path must still handle
 // it rather than assuming pending-or-completed.
 export type HouseholdTaskStatus = "pending" | "completed" | "cancelled";
+// How often a chore comes back (migrations/097). "none" is a one-off, which is
+// every chore filed before Phase 100. A repeating chore stays a single row and
+// is expanded for the date on screen — see lib/chore-recurrence.ts.
+export type ChoreRecurrence = "none" | "daily" | "weekly" | "monthly";
 export type AlertStatus = "pending" | "resolved";
 
 // The tenant (migrations/086). One paying household; its people are
@@ -254,8 +258,26 @@ export type HouseholdTask = {
   // Who actually did it, which is not necessarily who it was assigned to.
   completed_by: string | null;
   completed_at: string | null;
+  // The single proof photo every chore completed before Phase 100 carries.
+  // Kept rather than migrated: the UI falls back to it when after_photo_url is
+  // null, so old completions keep showing their evidence.
   photo_url: string | null;
   created_at: string;
+  // --- Phase 100 (migrations/097). All optional because PostgREST omits them
+  // until that migration is applied, and the app degrades to one-off chores
+  // with a single photo rather than breaking.
+  //
+  // A row with recurrence other than "none" is a template: its own due_date is
+  // its first occurrence, and every later one is generated on the fly.
+  recurrence?: ChoreRecurrence | null;
+  // Last day of the repeat, or null for "keep going".
+  recurrence_until?: string | null;
+  // Set on a materialised occurrence, naming the template it came from.
+  parent_task_id?: string | null;
+  // The owner has to be present for this one.
+  requires_supervision?: boolean | null;
+  before_photo_url?: string | null;
+  after_photo_url?: string | null;
 };
 
 // A staff-submitted request for a new routine, awaiting the owner's decision.

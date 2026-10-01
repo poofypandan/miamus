@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
-import type { InventoryAuditLog, InventoryAuditWithStaff } from "@/types/database";
+import { CARRY_OVER_DAYS } from "@/lib/chore-recurrence";
+import { formatDateLocal } from "@/lib/scheduleEngine";
+import type { HouseholdTask, InventoryAuditLog, InventoryAuditWithStaff } from "@/types/database";
 import type { DataProvider } from "./types";
 
 function client() {
@@ -426,21 +428,138 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
-  async listHouseholdTasks(dueDate) {
-    // Scoped to one day rather than paged like task_logs: this table grows
-    // without bound over months and no view ever wants more than the day it is
-    // showing, so the date is the query, not a client-side filter.
+  async listHouseholdTasks(dueDate, today) {
+    // Still never the whole table — but one day is no longer enough to render
+    // one day (Phase 100). Three narrow reads, deliberately separate rather
+    // than one clever .or(): each is individually obvious and individually
+    // indexed, and the two extra round trips are parallel.
+    const household = getActiveHouseholdId();
+    const base = () =>
+      client().from("household_tasks").select("*").eq("household_id", household);
+
+    const carryFloor = formatDateLocal(
+      new Date(new Date(`${today}T00:00:00`).getTime() - CARRY_OVER_DAYS * 86_400_000)
+    );
+
+    const [onDay, templates, carriedOver] = await Promise.all([
+      // 1. Rows that belong to this day outright: one-offs, a template's own
+      //    first occurrence, and any occurrence already claimed or finished.
+      base()
+        .eq("due_date", dueDate)
+        // Timed chores first in clock order, then the "sometime today" ones —
+        // nullsFirst: false is what puts a null due_time at the end rather
+        // than at the top of the owner's list.
+        .order("due_time", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true }),
+
+      // 2. Repeats that could reach this day. Started on or before it, and
+      //    either open-ended or not yet finished. Whether one actually lands
+      //    on it is a question for occursOn, not for Postgres.
+      base()
+        .neq("recurrence", "none")
+        .lte("due_date", dueDate)
+        .or(`recurrence_until.is.null,recurrence_until.gte.${dueDate}`),
+
+      // 3. Unfinished business, and only when looking at today — browsing an
+      //    earlier day should show that day, not everything since.
+      dueDate === today
+        ? base()
+            .eq("status", "pending")
+            .lt("due_date", dueDate)
+            .gte("due_date", carryFloor)
+        : Promise.resolve({ data: [] as HouseholdTask[], error: null }),
+    ]);
+
+    for (const result of [onDay, templates, carriedOver]) {
+      if (result.error) throw result.error;
+    }
+
+    // Deduplicated by id: a template that started today is returned by the
+    // first two queries, and a pending one-off from last week by the first and
+    // third. expandChores decides what each row means for the date on screen.
+    const byId = new Map<string, HouseholdTask>();
+    for (const row of [
+      ...(onDay.data ?? []),
+      ...(templates.data ?? []),
+      ...(carriedOver.data ?? []),
+    ]) {
+      byId.set(row.id, row);
+    }
+    return [...byId.values()];
+  },
+  async updateHouseholdTask(id, patch) {
     const { data, error } = await client()
       .from("household_tasks")
-      .select("*")
-      .eq("household_id", getActiveHouseholdId())
-      .eq("due_date", dueDate)
-      // Timed chores first in clock order, then the "sometime today" ones —
-      // nullsFirst: false is what puts a null due_time at the end rather than
-      // at the top of the owner's list.
-      .order("due_time", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: true });
+      .update(patch)
+      .eq("id", id)
+      .select();
     if (error) throw error;
+    // Same reasoning as updateHouseholdTaskStatus: an RLS-filtered update is a
+    // 200 with no rows, which would otherwise read as success.
+    if (!data || data.length === 0) {
+      throw new Error("Chore was not updated — it may belong to another household.");
+    }
+    return data[0];
+  },
+  async deleteHouseholdTask(id) {
+    // .select() for the same reason: without a DELETE policy this returns 200
+    // and zero rows, which is exactly how this failed silently before
+    // migrations/097 added one.
+    const { data, error } = await client()
+      .from("household_tasks")
+      .delete()
+      .eq("id", id)
+      .select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("Chore was not deleted — the delete policy may be missing.");
+    }
+  },
+  async materialiseChoreOccurrence(templateId, date) {
+    const { data: template, error: readError } = await client()
+      .from("household_tasks")
+      .select("*")
+      .eq("id", templateId)
+      .single();
+    if (readError) throw readError;
+
+    const { data, error } = await client()
+      .from("household_tasks")
+      .insert({
+        household_id: template.household_id,
+        parent_task_id: template.id,
+        title: template.title,
+        notes: template.notes,
+        category: template.category,
+        assigned_to: template.assigned_to,
+        due_date: date,
+        due_time: template.due_time,
+        requires_supervision: template.requires_supervision ?? false,
+        // The occurrence is a one-off: the repeat belongs to the template, and
+        // copying it here would make every completed Tuesday a template of its
+        // own, each generating its own infinite series.
+        recurrence: "none",
+        status: "pending",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      // 23505 is the (parent_task_id, due_date) unique index from
+      // migrations/097: another phone materialised this same occurrence first.
+      // That is a race resolved, not a failure — read back what they wrote.
+      if (error.code === "23505") {
+        const { data: existing, error: raceError } = await client()
+          .from("household_tasks")
+          .select("*")
+          .eq("parent_task_id", templateId)
+          .eq("due_date", date)
+          .single();
+        if (raceError) throw raceError;
+        return existing;
+      }
+      throw error;
+    }
     return data;
   },
   async createHouseholdTask(input) {
@@ -454,6 +573,9 @@ export const supabaseProvider: DataProvider = {
         due_date: input.due_date,
         due_time: input.due_time ?? null,
         notes: input.notes ?? null,
+        recurrence: input.recurrence ?? "none",
+        recurrence_until: input.recurrence_until ?? null,
+        requires_supervision: input.requires_supervision ?? false,
       })
       .select()
       .single();
@@ -475,6 +597,8 @@ export const supabaseProvider: DataProvider = {
         completed_at: completing ? new Date().toISOString() : null,
         completed_by: completing ? (patch?.completed_by ?? null) : null,
         photo_url: completing ? (patch?.photo_url ?? null) : null,
+        before_photo_url: completing ? (patch?.before_photo_url ?? null) : null,
+        after_photo_url: completing ? (patch?.after_photo_url ?? null) : null,
       })
       .eq("id", id)
       .select();

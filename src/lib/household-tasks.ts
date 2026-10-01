@@ -5,7 +5,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import type { HouseholdTask, HouseholdTaskCategory } from "@/types/database";
+import type { HouseholdTaskCategory } from "@/types/database";
 
 // The order the owner's category picker offers, and the order the two views
 // group by. Unlike ScheduleCategory this is a real column, so there is nothing
@@ -73,37 +73,4 @@ export function categoryLabel(
 ): string {
   const labels = locale === "en" ? CATEGORY_LABELS_EN : CATEGORY_LABELS_ID;
   return labels[category] ?? category;
-}
-
-/**
- * Splits a day's chores into what is still open and what is done.
- *
- * "Cancelled" falls out of both lists on purpose: it is neither waiting for
- * anyone nor an achievement to show. Nothing writes it yet, but every read
- * path has to handle it rather than assuming pending-or-completed.
- */
-export function splitByStatus(tasks: HouseholdTask[]): {
-  pending: HouseholdTask[];
-  completed: HouseholdTask[];
-} {
-  return {
-    pending: tasks.filter((task) => task.status === "pending"),
-    // Most recently finished first, so the last thing done is at the top —
-    // the list is read to check on progress, not as a chronology.
-    completed: tasks
-      .filter((task) => task.status === "completed")
-      .sort((a, b) => (b.completed_at ?? "").localeCompare(a.completed_at ?? "")),
-  };
-}
-
-/**
- * The chores one staff member should see: their own, plus everything nobody
- * has taken yet.
- *
- * A chore someone else has claimed disappears from this feed — it is no longer
- * this person's business, and leaving it visible invites two people doing the
- * same job.
- */
-export function tasksForStaff(tasks: HouseholdTask[], staffId: string | null): HouseholdTask[] {
-  return tasks.filter((task) => !task.assigned_to || task.assigned_to === staffId);
 }

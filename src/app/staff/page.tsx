@@ -1,14 +1,19 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-gate";
+import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
+import { useToday } from "@/hooks/use-today";
+import { occurrencesForStaff } from "@/lib/chore-recurrence";
+import { buildUnifiedAgenda } from "@/lib/unified-agenda";
 import { DischargeButton } from "@/components/dashboard/discharge-button";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
-import { HouseholdTasksPanel } from "@/components/staff/household-tasks-panel";
+import { ChoreCard } from "@/components/chores/chore-card";
+import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { StockCheckPanel } from "@/components/staff/stock-check-panel";
 import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
@@ -108,13 +113,35 @@ function StaffTasks() {
 
 function TasksView() {
   const { pets, schedules, logs, loading, selectedDate, setSelectedDate } = useHousehold();
+  const { staffId } = useStaffIdentity();
   const dateStr = formatDateLocal(selectedDate);
+  const today = useToday();
 
   const admittedPets = useMemo(() => pets.filter(isAdmitted), [pets]);
 
   const groups = useMemo(
     () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
     [dateStr, pets, schedules, logs]
+  );
+
+  // The house, alongside the dogs, in one list (Phase 100). Chores used to sit
+  // in their own panel below the whole agenda, which made "what is left?" a
+  // question of scrolling to the bottom and comparing two lists by eye.
+  const allChores = useChoreOccurrences();
+  const chores = useMemo(() => occurrencesForStaff(allChores, staffId), [allChores, staffId]);
+  const entries = useMemo(() => buildUnifiedAgenda({ groups, chores }), [groups, chores]);
+
+  // Which chore the detail sheet is showing, held as a KEY rather than as the
+  // occurrence itself. Occurrences are derived fresh whenever the chore rows
+  // change, so a captured one goes stale the moment anything writes: claiming
+  // a chore from inside the sheet updated the list underneath it while the
+  // sheet still rendered the pre-claim snapshot, and so kept offering "Ambil
+  // Tugas" for a chore the staff member had just taken. The key survives
+  // materialising too — it is (template, day), not the row id.
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const openChore = useMemo(
+    () => chores.find((c) => c.key === openKey) ?? null,
+    [chores, openKey]
   );
 
   return (
@@ -155,16 +182,34 @@ function TasksView() {
             <Skeleton className="h-28 w-full rounded-xl" />
             <Skeleton className="h-28 w-full rounded-xl" />
           </>
-        ) : groups.length === 0 ? (
+        ) : entries.length === 0 ? (
           <p className="pt-10 text-center text-sm text-muted-foreground">
             Tidak ada jadwal untuk tanggal ini.
           </p>
         ) : (
-          groups.map((group) => <AgendaGroupCard key={`${group.time}-${group.title}`} group={group} />)
+          entries.map((entry) =>
+            entry.kind === "routine" ? (
+              <AgendaGroupCard key={entry.key} group={entry.group} />
+            ) : (
+              <ChoreCard
+                key={entry.key}
+                occurrence={entry.occurrence}
+                locale="id"
+                today={today}
+                onPress={() => setOpenKey(entry.occurrence.key)}
+              />
+            )
+          )
         )}
       </main>
 
-      <HouseholdTasksPanel />
+      {/* Read, claim, prove, close — and nothing else. There is no add, edit
+          or delete anywhere in the staff view (Phase 100). */}
+      <FinishChoreSheet
+        occurrence={openChore}
+        open={!!openChore}
+        onOpenChange={(next) => !next && setOpenKey(null)}
+      />
     </>
   );
 }

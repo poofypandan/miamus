@@ -11,6 +11,8 @@ import type {
   HouseholdTask,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
+import { CARRY_OVER_DAYS } from "@/lib/chore-recurrence";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
 
@@ -431,20 +433,87 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(updated);
   },
-  async listHouseholdTasks(dueDate) {
-    // Same one-day scope and same ordering as the Supabase provider, so mock
-    // mode and the real thing put a "sometime today" chore in the same place.
-    const tasks = loadDB()
-      .householdTasks.filter((task) => task.due_date === dueDate)
-      .sort((a, b) => {
+  async listHouseholdTasks(dueDate, today) {
+    // Mirrors the three reads the Supabase provider issues (Phase 100), so
+    // mock mode expands the same rows into the same occurrences: this day's
+    // rows, every repeat that could reach it, and — on today only — whatever
+    // is still pending from the last CARRY_OVER_DAYS.
+    const carryFloor = formatDateLocal(
+      new Date(new Date(`${today}T00:00:00`).getTime() - CARRY_OVER_DAYS * 86_400_000)
+    );
+    const tasks = loadDB().householdTasks.filter((task) => {
+      if (task.due_date === dueDate) return true;
+      const repeats = !!task.recurrence && task.recurrence !== "none";
+      if (
+        repeats &&
+        task.due_date <= dueDate &&
+        (!task.recurrence_until || task.recurrence_until >= dueDate)
+      ) {
+        return true;
+      }
+      return (
+        dueDate === today &&
+        task.status === "pending" &&
+        task.due_date < dueDate &&
+        task.due_date >= carryFloor
+      );
+    });
+    return delay(
+      [...tasks].sort((a, b) => {
         if (a.due_time !== b.due_time) {
           if (!a.due_time) return 1;
           if (!b.due_time) return -1;
           return a.due_time.localeCompare(b.due_time);
         }
         return a.created_at.localeCompare(b.created_at);
-      });
-    return delay(tasks);
+      })
+    );
+  },
+  async updateHouseholdTask(id, patch) {
+    const db = loadDB();
+    const idx = db.householdTasks.findIndex((t) => t.id === id);
+    if (idx === -1) throw new Error(`Household task ${id} not found`);
+    const updated: HouseholdTask = { ...db.householdTasks[idx], ...patch };
+    db.householdTasks[idx] = updated;
+    saveDB(db);
+    return delay(updated);
+  },
+  async deleteHouseholdTask(id) {
+    const db = loadDB();
+    // Mirrors `on delete cascade` on parent_task_id (migrations/097): removing
+    // a repeat takes its materialised occurrences with it.
+    db.householdTasks = db.householdTasks.filter(
+      (t) => t.id !== id && t.parent_task_id !== id
+    );
+    saveDB(db);
+    return delay(undefined);
+  },
+  async materialiseChoreOccurrence(templateId, date) {
+    const db = loadDB();
+    const existing = db.householdTasks.find(
+      (t) => t.parent_task_id === templateId && t.due_date === date
+    );
+    if (existing) return delay(existing);
+    const template = db.householdTasks.find((t) => t.id === templateId);
+    if (!template) throw new Error(`Household task ${templateId} not found`);
+    const occurrence: HouseholdTask = {
+      ...template,
+      id: uid("chore"),
+      parent_task_id: template.id,
+      due_date: date,
+      recurrence: "none",
+      recurrence_until: null,
+      status: "pending",
+      completed_by: null,
+      completed_at: null,
+      photo_url: null,
+      before_photo_url: null,
+      after_photo_url: null,
+      created_at: new Date().toISOString(),
+    };
+    db.householdTasks.push(occurrence);
+    saveDB(db);
+    return delay(occurrence);
   },
   async createHouseholdTask(input) {
     const db = loadDB();
@@ -462,6 +531,12 @@ export const mockProvider: DataProvider = {
       completed_at: null,
       photo_url: null,
       created_at: new Date().toISOString(),
+      recurrence: input.recurrence ?? "none",
+      recurrence_until: input.recurrence_until ?? null,
+      parent_task_id: null,
+      requires_supervision: input.requires_supervision ?? false,
+      before_photo_url: null,
+      after_photo_url: null,
     };
     db.householdTasks.push(task);
     saveDB(db);
@@ -478,6 +553,8 @@ export const mockProvider: DataProvider = {
       completed_at: completing ? new Date().toISOString() : null,
       completed_by: completing ? (patch?.completed_by ?? null) : null,
       photo_url: completing ? (patch?.photo_url ?? null) : null,
+      before_photo_url: completing ? (patch?.before_photo_url ?? null) : null,
+      after_photo_url: completing ? (patch?.after_photo_url ?? null) : null,
     };
     db.householdTasks[idx] = updated;
     saveDB(db);

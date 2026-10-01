@@ -44,7 +44,14 @@ export function UnifiedTimeline() {
   );
 }
 
-function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }) {
+/**
+ * One minute of the day's pet routines, across every dog.
+ *
+ * Exported since Phase 100: the unified Agenda interleaves these with chore
+ * rows in one chronological list, and a second implementation of the same row
+ * would be the obvious place for the two to start looking different.
+ */
+export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }) {
   const { schedules } = useHousehold();
   const Icon = categoryIcon(group.category);
 

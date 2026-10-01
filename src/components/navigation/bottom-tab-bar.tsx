@@ -2,24 +2,34 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Home, PawPrint, Users, type LucideIcon } from "lucide-react";
-import { MODULES } from "@/config/modules";
-import { moduleFromParam, type DashboardModule } from "@/lib/dashboard-modules";
+import {
+  CalendarDays,
+  ClipboardList,
+  PawPrint,
+  Package,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  DASHBOARD_MODULES,
+  moduleFromParam,
+  moduleHref,
+  type DashboardModule,
+} from "@/lib/dashboard-modules";
 import { cn } from "@/lib/utils";
 
-const TABS: { module: DashboardModule; label: string; icon: LucideIcon; href: string }[] = [
-  { module: "pets", label: "Pets", icon: PawPrint, href: "/dashboard?tab=feed" },
-  { module: "household", label: "Household", icon: Home, href: "/dashboard?module=household" },
-  // Labelled "Access" since Phase 96: the tab holds household members, staff
-  // profiles, invite links and the app lock. The query param stays "staff" so
-  // existing links and history entries keep working.
-  { module: "staff", label: "Access", icon: Users, href: "/dashboard?module=staff" },
-];
+const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
+  pets: { label: "Pets", icon: PawPrint },
+  chores: { label: "Chores", icon: ClipboardList },
+  agenda: { label: "Agenda", icon: CalendarDays },
+  inventory: { label: "Inventory", icon: Package },
+  // Holds household members, staff profiles, invite links and the app lock.
+  access: { label: "Access", icon: Users },
+};
 
 /**
- * The owner dashboard's module switcher, in the thumb zone (Phase 84). It used
- * to be a row of pills in the header — the hardest place on a phone to reach
- * one-handed.
+ * The owner dashboard's tab bar, in the thumb zone (Phase 84), now five tabs
+ * wide (Phase 100).
  *
  * Must be rendered outside PullToRefresh: that wrapper moves its content with
  * a CSS transform, and a transformed ancestor becomes the containing block of
@@ -34,7 +44,7 @@ export function BottomTabBar() {
 
   return (
     <nav
-      aria-label="Modules"
+      aria-label="Sections"
       // pb-safe keeps the tabs clear of the iOS home indicator and Android's
       // gesture bar; the solid background fills that inset rather than
       // leaving page content showing through beneath the tabs.
@@ -43,33 +53,24 @@ export function BottomTabBar() {
       {/* Capped to the app's column, so on a tablet or desktop the tabs sit
           under the content they switch rather than at the screen's edges. */}
       <div className="mx-auto flex h-16 max-w-md">
-        {TABS.map(({ module, label, icon: Icon, href }) => {
+        {DASHBOARD_MODULES.map((module) => {
+          const { label, icon: Icon } = TABS[module];
           const active = module === activeModule;
-          const className = cn(
-            "flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
-            active ? "text-primary" : "text-muted-foreground"
-          );
-
-          // A module that isn't built yet stays visible but inert.
-          if (!MODULES[module]) {
-            return (
-              <span key={module} className={cn(className, "opacity-40")} aria-disabled>
-                <Icon className="size-6" />
-                {label}
-              </span>
-            );
-          }
-
           return (
             <Link
               key={module}
-              href={href}
+              href={moduleHref(module)}
               scroll={false}
               aria-current={active ? "page" : undefined}
-              className={cn(className, "active:bg-muted/60")}
+              className={cn(
+                // px-0.5 and a tighter label: five tabs on a 360px phone leaves
+                // about 70px each, which "Inventory" overruns at the old size.
+                "flex flex-1 flex-col items-center justify-center gap-1 px-0.5 text-[10px] font-medium transition-colors active:bg-muted/60",
+                active ? "text-primary" : "text-muted-foreground"
+              )}
             >
-              <Icon className="size-6" strokeWidth={active ? 2.25 : 1.75} />
-              {label}
+              <Icon className="size-6 shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+              <span className="w-full truncate text-center">{label}</span>
             </Link>
           );
         })}

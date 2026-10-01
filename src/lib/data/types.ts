@@ -16,6 +16,7 @@ import type {
   ScheduleCategoryName,
   StaffProfile,
   LogSubType,
+  ChoreRecurrence,
   HouseholdTask,
   HouseholdTaskCategory,
   HouseholdTaskStatus,
@@ -130,6 +131,32 @@ export interface CreateHouseholdTaskInput {
   /** "HH:mm", or null for "sometime today". */
   due_time?: string | null;
   notes?: string | null;
+  /** How often it comes back. Omitted is a one-off (migrations/097). */
+  recurrence?: ChoreRecurrence | null;
+  /** Last day of the repeat, or null for "keep going". */
+  recurrence_until?: string | null;
+  /** The owner has to be there for this one. */
+  requires_supervision?: boolean | null;
+}
+
+/**
+ * The editable half of a chore.
+ *
+ * Deliberately not Partial<HouseholdTask>: completion state, tenancy and the
+ * parent link are not the owner's to edit from a form, and allowing them
+ * through would make the editor able to silently re-home or un-complete a
+ * chore.
+ */
+export interface UpdateHouseholdTaskInput {
+  title?: string;
+  category?: HouseholdTaskCategory;
+  assigned_to?: string | null;
+  due_date?: string;
+  due_time?: string | null;
+  notes?: string | null;
+  recurrence?: ChoreRecurrence | null;
+  recurrence_until?: string | null;
+  requires_supervision?: boolean | null;
 }
 
 /**
@@ -141,6 +168,9 @@ export interface CreateHouseholdTaskInput {
  */
 export interface HouseholdTaskStatusPatch {
   photo_url?: string | null;
+  /** Proof, in two halves since Phase 100. Both optional. */
+  before_photo_url?: string | null;
+  after_photo_url?: string | null;
   /**
    * Who did it, stamped from the staff identity on the device (Phase 71).
    * Set centrally in HouseholdContext, so callers rarely pass it themselves.
@@ -202,14 +232,29 @@ export interface DataProvider {
   setRoutineProposalsStatus(ids: string[], status: ProposalStatus): Promise<RoutineProposal[]>;
   setRoutineProposalStatus(id: string, status: ProposalStatus): Promise<RoutineProposal>;
   deleteRoutineProposal(id: string): Promise<void>;
-  /** This one day's chores. Never fetched in bulk — see migrations/082. */
-  listHouseholdTasks(dueDate: string): Promise<HouseholdTask[]>;
+  /**
+   * Everything needed to render one day's chores: the rows dated that day, the
+   * repeating templates that reach it, and — when the day is today — whatever
+   * is still pending from the recent past. Never the whole table.
+   */
+  listHouseholdTasks(dueDate: string, today: string): Promise<HouseholdTask[]>;
   createHouseholdTask(input: CreateHouseholdTaskInput): Promise<HouseholdTask>;
+  /** Owner-only edit of a chore's own fields. */
+  updateHouseholdTask(id: string, patch: UpdateHouseholdTaskInput): Promise<HouseholdTask>;
+  /** Owner-only. Deleting a template takes its materialised occurrences with it. */
+  deleteHouseholdTask(id: string): Promise<void>;
   updateHouseholdTaskStatus(
     id: string,
     status: HouseholdTaskStatus,
     patch?: HouseholdTaskStatusPatch
   ): Promise<HouseholdTask>;
+  /**
+   * Writes the row a virtual occurrence of `templateId` on `date` would have
+   * had, so it can be claimed or completed like any other. Returns the row
+   * that now owns that day, whether this call created it or lost the race to
+   * another phone.
+   */
+  materialiseChoreOccurrence(templateId: string, date: string): Promise<HouseholdTask>;
   /** Assigns an unassigned chore to a staff member. */
   claimHouseholdTask(id: string, staffId: string): Promise<HouseholdTask>;
   listStaffProfiles(): Promise<StaffProfile[]>;

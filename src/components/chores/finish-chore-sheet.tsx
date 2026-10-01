@@ -1,0 +1,233 @@
+"use client";
+
+import { useState } from "react";
+import { toast } from "sonner";
+import { CheckCircle2, Eye, Hand, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { PhotoPicker } from "@/components/photo-picker";
+import { useStaffIdentity } from "@/components/auth/staff-login-gate";
+import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
+import { categoryLabel } from "@/lib/household-tasks";
+import { formatTime12h } from "@/lib/time";
+import type { ChoreOccurrence } from "@/lib/chore-recurrence";
+
+/**
+ * A staff member's whole relationship with a chore: read it, take it, prove
+ * it, close it (Phase 100).
+ *
+ * Staff-facing, so entirely Bahasa Indonesia per the Phase 46 language
+ * boundary. There is deliberately no way to edit or delete anything here —
+ * the only writes it can make are claiming the chore and completing it.
+ *
+ * MATERIALISING. A repeat has no row for most of the days it lands on (see
+ * migrations/097), so the first write against one has to create it. That
+ * happens here, at the moment someone actually acts, rather than anywhere
+ * earlier: a chore nobody touches never costs a row.
+ */
+export function FinishChoreSheet({
+  occurrence,
+  open,
+  onOpenChange,
+}: {
+  occurrence: ChoreOccurrence | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  useBackToClose(open, () => onOpenChange(false));
+  if (!occurrence) return null;
+  // Keyed on the occurrence, so opening a second chore remounts the body with
+  // empty photo state rather than inheriting the first one's proof — which
+  // would attach the wrong evidence to the wrong job.
+  return (
+    <FinishChoreBody
+      key={occurrence.key}
+      occurrence={occurrence}
+      open={open}
+      onOpenChange={onOpenChange}
+    />
+  );
+}
+
+function FinishChoreBody({
+  occurrence,
+  open,
+  onOpenChange,
+}: {
+  occurrence: ChoreOccurrence;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { updateHouseholdTaskStatus, materialiseChoreOccurrence, claimHouseholdTask } =
+    useHousehold();
+  const { staffId } = useStaffIdentity();
+  const [beforeUrl, setBeforeUrl] = useState<string | null>(null);
+  const [afterUrl, setAfterUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const { task } = occurrence;
+  const supervised = !!task.requires_supervision;
+  const unassigned = !task.assigned_to;
+  const done = occurrence.status === "completed";
+
+  /**
+   * The row this day's work belongs to, creating it if the occurrence is
+   * still virtual. Everything that writes goes through here.
+   */
+  async function rowId(): Promise<string> {
+    if (occurrence.row) return occurrence.row.id;
+    // The template's id: this writes the row that a day of the repeat is
+    // missing, and parent_task_id has to point at the repeat itself.
+    const created = await materialiseChoreOccurrence(occurrence.template.id, occurrence.date);
+    return created.id;
+  }
+
+  async function handleClaim() {
+    setBusy(true);
+    try {
+      await claimHouseholdTask(await rowId());
+      toast.success(`"${task.title}" jadi tugas kamu`);
+    } catch (err) {
+      console.error(err);
+      // The provider's `is("assigned_to", null)` guard is what makes the
+      // losing half of a double-claim land here rather than silently taking a
+      // chore someone else already has.
+      toast.error("Tugas ini sudah diambil orang lain");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleFinish() {
+    if (!afterUrl) {
+      toast.error("Ambil foto sesudah dulu sebagai bukti");
+      return;
+    }
+    setBusy(true);
+    try {
+      const id = await rowId();
+      await updateHouseholdTaskStatus(id, "completed", {
+        before_photo_url: beforeUrl,
+        after_photo_url: afterUrl,
+        // Kept in step with after_photo_url so anything still reading the
+        // original single-photo column — an older phone that has not reloaded
+        // the bundle — still finds the proof where it expects it.
+        photo_url: afterUrl,
+      });
+      toast.success(`"${task.title}" selesai ✅`);
+      onOpenChange(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal menyimpan. Coba lagi.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Photos are filed under the template's id, not the occurrence's: a repeat's
+  // proof then collects in one folder per chore rather than scattering across
+  // a folder per day. The storage path stays household-prefixed either way
+  // (Phase 90), so tenancy is unaffected.
+  const pathPrefix = `household/${occurrence.template.id}`;
+  const mine = !!staffId && task.assigned_to === staffId;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{task.title}</SheetTitle>
+          <SheetDescription>
+            {categoryLabel(task.category, "id")} ·{" "}
+            {task.due_time ? formatTime12h(task.due_time) : "Kapan saja hari ini"}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex flex-col gap-4 px-4">
+          {task.notes && (
+            <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
+              {task.notes}
+            </p>
+          )}
+
+          {supervised && (
+            <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <Eye className="mt-0.5 size-4 shrink-0" />
+              <span>
+                Tugas ini harus dikerjakan bersama Pemilik. Tunggu Pemilik datang dulu,
+                jangan dikerjakan sendiri.
+              </span>
+            </p>
+          )}
+
+          {done ? (
+            <p className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+              <CheckCircle2 className="size-4 shrink-0" /> Tugas ini sudah selesai.
+            </p>
+          ) : unassigned ? (
+            <Button className="min-h-[52px] w-full" disabled={busy} onClick={handleClaim}>
+              {busy ? <Loader2 className="animate-spin" /> : <Hand />} Ambil Tugas
+            </Button>
+          ) : (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <Label>Foto Sebelum (opsional)</Label>
+                <PhotoPicker
+                  pathPrefix={pathPrefix}
+                  value={beforeUrl}
+                  onChange={setBeforeUrl}
+                  label="Ambil Foto Sebelum"
+                  busyLabel="Mengunggah..."
+                  errorMessage="Gagal mengunggah foto"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label>Foto Sesudah</Label>
+                <PhotoPicker
+                  pathPrefix={pathPrefix}
+                  value={afterUrl}
+                  onChange={setAfterUrl}
+                  label="Ambil Foto Sesudah"
+                  busyLabel="Mengunggah..."
+                  errorMessage="Gagal mengunggah foto"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Foto sesudah wajib — itu bukti tugas sudah dikerjakan. Foto sebelum
+                  membantu Pemilik melihat perbedaannya.
+                </p>
+              </div>
+
+              {!mine && (
+                <p className="text-[11px] text-muted-foreground">
+                  Tugas ini untuk petugas lain, tapi kamu tetap bisa menyelesaikannya kalau
+                  sudah dikerjakan.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        {!done && !unassigned && (
+          <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <Button
+              onClick={handleFinish}
+              disabled={busy || !afterUrl}
+              className="min-h-[52px]"
+            >
+              {busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Selesaikan
+            </Button>
+          </SheetFooter>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
