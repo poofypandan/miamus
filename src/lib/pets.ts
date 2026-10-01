@@ -3,8 +3,40 @@ import type { TaskEntity, TaskLog } from "@/types/database";
 
 export interface PetMeta {
   breed?: string;
+  /**
+   * The square the owner framed (Phase 103), shown in every small avatar.
+   */
   avatar_url?: string | null;
+  /**
+   * The photo that square was cut from (Phase 104), shown full screen.
+   *
+   * Lives in metadata rather than in a column of its own because
+   * task_entities.metadata is jsonb — a new key needs no migration, no
+   * backfill and no deploy ordering. Absent on every pet photographed before
+   * this phase, and on any upload whose master failed while its thumbnail
+   * succeeded, which is why nothing reads it without a fallback.
+   */
+  full_image_url?: string | null;
   archived?: boolean;
+}
+
+/** The framed square, for small avatars. */
+export function petAvatarUrl(entity: TaskEntity): string | null {
+  return getPetMeta(entity).avatar_url ?? null;
+}
+
+/**
+ * The photo to open full screen.
+ *
+ * Falls back to the cropped square, which is the right answer in two
+ * different situations: a pet photographed before Phase 104 has no master at
+ * all, and one whose master upload failed still has a usable picture. Either
+ * way the lightbox opens something rather than nothing — and for the four pets
+ * that predate the cropper the "square" is itself the untouched original.
+ */
+export function petMasterUrl(entity: TaskEntity): string | null {
+  const meta = getPetMeta(entity);
+  return meta.full_image_url ?? meta.avatar_url ?? null;
 }
 
 export function getPetMeta(entity: TaskEntity): PetMeta {

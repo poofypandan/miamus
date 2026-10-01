@@ -25,7 +25,7 @@ import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useToday } from "@/hooks/use-today";
-import { getPetMeta, isAdmitted } from "@/lib/pets";
+import { isAdmitted, petMasterUrl } from "@/lib/pets";
 import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
@@ -55,7 +55,8 @@ export function PetProfileSheet() {
   const [viewingAvatar, setViewingAvatar] = useState(false);
   const pet = pets.find((p) => p.id === activePetId) ?? null;
   const canManagePets = userRole === "owner";
-  const avatarUrl = pet ? getPetMeta(pet).avatar_url : null;
+  // The uncropped original where one exists; the square otherwise.
+  const avatarUrl = pet ? petMasterUrl(pet) : null;
 
   // Back closes the sheet rather than leaving the dashboard behind it. The
   // nested Add Health Record dialog registers separately so Back unwinds one

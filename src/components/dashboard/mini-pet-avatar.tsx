@@ -1,6 +1,6 @@
 import { Dog } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getPetMeta } from "@/lib/pets";
+import { petAvatarUrl } from "@/lib/pets";
 import type { TaskEntity } from "@/types/database";
 import { photoSrc } from "@/lib/photos";
 
@@ -8,16 +8,18 @@ import { photoSrc } from "@/lib/photos";
 // NOTE: To revert avatar scaling, change w-12 h-12 back to the original size
 // (e.g., w-8 h-8) and remove negative margins in clusters.
 export function MiniPetAvatar({ pet, className }: { pet: TaskEntity; className?: string }) {
-  const meta = getPetMeta(pet);
+  // Explicitly the cropped square, never the master (Phase 104): this is the
+  // one place where the owner's framing is the whole point.
+  const avatar = petAvatarUrl(pet);
 
-  if (meta.avatar_url) {
+  if (avatar) {
     return (
       // No background behind the image — a transparent PNG (a cutout logo,
       // a pet photo with no fill) should show the page's own background
       // through it, not a colored circle.
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={photoSrc(meta.avatar_url, 160)}
+        src={photoSrc(avatar, 160)}
         loading="lazy"
         decoding="async"
         alt={pet.name}

@@ -44,7 +44,15 @@ export function PetFormDialog({
   const [name, setName] = useState(pet?.name ?? "");
   const [breed, setBreed] = useState(meta.breed ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(meta.avatar_url ?? null);
+  // The uncropped original behind that square (Phase 104). Null for every pet
+  // photographed before this phase — petMasterUrl falls back to the square.
+  const [fullImageUrl, setFullImageUrl] = useState<string | null>(
+    meta.full_image_url ?? null
+  );
   const [submitting, setSubmitting] = useState(false);
+  // True while a photo is being cropped or uploaded. Saving during that window
+  // used to write the pet with no photo at all (Phase 104).
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Reset local form state on every open — including two consecutive "Add
@@ -57,6 +65,8 @@ export function PetFormDialog({
       setName(pet?.name ?? "");
       setBreed(meta.breed ?? "");
       setAvatarUrl(meta.avatar_url ?? null);
+      setFullImageUrl(meta.full_image_url ?? null);
+      setPhotoBusy(false);
       setConfirmingDelete(false);
     }
   }
@@ -72,6 +82,7 @@ export function PetFormDialog({
         ...(pet?.metadata ?? {}),
         breed: breed.trim() || undefined,
         avatar_url: avatarUrl,
+        full_image_url: fullImageUrl,
       };
       if (pet) {
         await updateEntity(pet.id, { name: name.trim(), metadata });
@@ -153,15 +164,21 @@ export function PetFormDialog({
               pathPrefix={`pet-avatars/${pet?.id ?? "new"}`}
               value={avatarUrl}
               onChange={setAvatarUrl}
+              onMaster={setFullImageUrl}
+              onBusyChange={setPhotoBusy}
               label="Add photo"
               square
             />
           </div>
         </div>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
-          <Button onClick={handleSubmit} disabled={submitting} className="min-h-[48px] w-full">
-            {submitting ? <Loader2 className="animate-spin" /> : null}
-            Save pet
+          <Button
+            onClick={handleSubmit}
+            disabled={submitting || photoBusy}
+            className="min-h-[48px] w-full"
+          >
+            {submitting || photoBusy ? <Loader2 className="animate-spin" /> : null}
+            {photoBusy ? "Waiting for photo..." : "Save pet"}
           </Button>
           {pet && (
             <div className="flex w-full gap-2">

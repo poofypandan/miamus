@@ -15,7 +15,7 @@ import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
 import { useLongPress } from "@/hooks/use-long-press";
-import { getPetMeta, isAdmitted } from "@/lib/pets";
+import { isAdmitted, petMasterUrl } from "@/lib/pets";
 import { POTTY_TITLE } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaItem } from "@/lib/scheduleEngine";
 import type { MasterSchedule, TaskEntity, TaskLog } from "@/types/database";
@@ -70,7 +70,10 @@ function PetOverviewRow({
 }) {
   const { setActivePetId } = useHousehold();
   const [viewingAvatar, setViewingAvatar] = useState(false);
-  const avatarUrl = getPetMeta(pet).avatar_url;
+  // The uncropped original, falling back to the square for pets that have
+  // no master (Phase 104). Holding an avatar is a request to see the photo,
+  // not the thumbnail of it.
+  const avatarUrl = petMasterUrl(pet);
   // Hold the avatar to see the uncropped photo without opening the whole
   // profile sheet. Only armed when there is a photo to show.
   const longPress = useLongPress(() => {
