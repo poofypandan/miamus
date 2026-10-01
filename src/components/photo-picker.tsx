@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Loader2, X } from "lucide-react";
+import { Camera, Crop, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
 import { useHousehold } from "@/context/household-context";
@@ -69,6 +69,24 @@ interface PhotoPickerProps {
    * silently, because the picker's state had not come back yet.
    */
   onBusyChange?: (busy: boolean) => void;
+  /**
+   * The uncropped original behind `value`, enabling Re-crop (Phase 105).
+   *
+   * Pass the already-renderable src (what photoSrc returns), not the stored
+   * reference — this goes straight into an <img>.
+   */
+  masterSrc?: string | null;
+  /**
+   * Let the OS offer the photo library as well as the camera (Phase 105).
+   *
+   * Off by default, and that default is load-bearing. Every other picker in
+   * this app collects proof: a chore's before and after, a stock count, a sick
+   * dog. `capture="environment"` is what makes the OS open the live camera for
+   * those, and dropping it would let an old photo be filed as today's work.
+   * Only the owner's pet avatar opts in, where picking the nicest existing
+   * photo of the dog is the whole point.
+   */
+  allowGallery?: boolean;
 }
 
 export function PhotoPicker({
@@ -82,6 +100,8 @@ export function PhotoPicker({
   square = false,
   onMaster,
   onBusyChange,
+  masterSrc,
+  allowGallery = false,
 }: PhotoPickerProps) {
   const { uploadPhoto } = useHousehold();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,9 +112,17 @@ export function PhotoPicker({
     setBusyState(next);
     onBusyChange?.(next);
   }
-  // The chosen file, held while the crop dialog is open. Null the rest of the
-  // time, which is also what closes that dialog.
-  const [pendingCrop, setPendingCrop] = useState<File | null>(null);
+  // What the cropper is working on: a file just chosen, or an already-stored
+  // master being re-framed. Null the rest of the time.
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const cropping = !!pendingFile || !!pendingUrl;
+
+  function cancelCrop() {
+    setPendingFile(null);
+    setPendingUrl(null);
+    setBusy(false);
+  }
 
   async function upload(file: File) {
     setBusy(true);
@@ -155,27 +183,49 @@ export function PhotoPicker({
       // Busy from here, not from the upload: the owner is mid-crop, and a pet
       // saved now would be saved without the photo they just chose.
       setBusy(true);
-      setPendingCrop(file);
+      setPendingFile(file);
       return;
     }
     void upload(file);
   }
 
+  /**
+   * A new square for an original that is already stored (Phase 105).
+   *
+   * Only the thumbnail is written: the master is the thing being re-cropped,
+   * so re-uploading it would churn storage for an identical file and leave the
+   * old one orphaned.
+   */
+  async function uploadSquareOnly(cropped: File) {
+    setBusy(true);
+    try {
+      const compressed = await compressPhoto(cropped);
+      onChange(await uploadPhoto(compressed, pathPrefix));
+    } catch (err) {
+      console.error(err);
+      toast.error(errorMessage);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   // Takes over the picker entirely while a crop is pending — which is also
   // what triggers the lazy chunk to load.
-  if (square && pendingCrop) {
+  if (square && cropping) {
+    const file = pendingFile;
     return (
       <ImageCropper
-        file={pendingCrop}
-        onCancel={() => {
-          setPendingCrop(null);
-          setBusy(false);
-        }}
+        file={file}
+        url={pendingUrl}
+        onCancel={cancelCrop}
         onCropped={(cropped) => {
-          // The pending file is the untouched original; `cropped` is the
-          // square cut from it. Both are wanted.
-          void uploadPair(pendingCrop, cropped);
-          setPendingCrop(null);
+          setPendingFile(null);
+          setPendingUrl(null);
+          // A freshly chosen file brings its original with it, so both halves
+          // are stored. A re-crop already has its master and only needs a new
+          // square.
+          if (file) void uploadPair(file, cropped);
+          else void uploadSquareOnly(cropped);
         }}
       />
     );
@@ -183,20 +233,40 @@ export function PhotoPicker({
 
   if (value) {
     return (
-      <div className={cn("relative w-fit", className)}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photoSrc(value, 320)} alt="" className="h-24 w-24 rounded-lg object-cover ring-1 ring-border" />
-        <button
-          type="button"
-          onClick={() => {
-            onChange(null);
-            // Clearing the picture clears both halves of it.
-            onMaster?.(null);
-          }}
-          className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
-        >
-          <X className="size-3" />
-        </button>
+      <div className={cn("flex flex-col items-start gap-2", className)}>
+        <div className="relative w-fit">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photoSrc(value, 320)} alt="" className="h-24 w-24 rounded-lg object-cover ring-1 ring-border" />
+          <button
+            type="button"
+            onClick={() => {
+              onChange(null);
+              // Clearing the picture clears both halves of it.
+              onMaster?.(null);
+            }}
+            className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+          >
+            <X className="size-3" />
+          </button>
+        </div>
+
+        {/* Re-frame what is already stored, without a trip back to the camera
+            roll. Also the only way to fix an avatar uploaded before the
+            cropper existed, which is a whole portrait in a square box. */}
+        {square && masterSrc && (
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-[40px] px-3 text-xs"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              setPendingUrl(masterSrc);
+            }}
+          >
+            <Crop className="size-3.5" /> Re-crop
+          </Button>
+        )}
       </div>
     );
   }
@@ -207,7 +277,10 @@ export function PhotoPicker({
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
+        // Absent for the owner's avatar, which is chosen from the library;
+        // present everywhere else, where the photo is evidence and has to be
+        // taken now. See `allowGallery`.
+        capture={allowGallery ? undefined : "environment"}
         className="hidden"
         onChange={handleChange}
       />

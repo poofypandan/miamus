@@ -17,6 +17,7 @@ import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { getPetMeta } from "@/lib/pets";
+import { photoSrc } from "@/lib/photos";
 import type { TaskEntity } from "@/types/database";
 
 // Shared by the "Add / Manage Pets" entry point on the Overview (pet: null)
@@ -160,14 +161,22 @@ export function PetFormDialog({
             {/* square: an avatar is the one photo in this app that has to
                 live inside a fixed box forever, so the owner picks the square
                 rather than letting object-cover centre on a dog's chest. */}
+            {/* allowGallery: picking the nicest existing photo of the dog is
+                the whole point here. Every other picker in the app stays on
+                the live camera, because those photos are evidence. */}
             <PhotoPicker
               pathPrefix={`pet-avatars/${pet?.id ?? "new"}`}
               value={avatarUrl}
               onChange={setAvatarUrl}
               onMaster={setFullImageUrl}
               onBusyChange={setPhotoBusy}
+              // Falls back to the square so the four avatars uploaded before
+              // the cropper existed can be re-framed too — for those, the
+              // "master" is the untouched portrait they already are.
+              masterSrc={photoSrc(fullImageUrl ?? avatarUrl)}
               label="Add photo"
               square
+              allowGallery
             />
           </div>
         </div>

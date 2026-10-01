@@ -55,8 +55,12 @@ export function PetProfileSheet() {
   const [viewingAvatar, setViewingAvatar] = useState(false);
   const pet = pets.find((p) => p.id === activePetId) ?? null;
   const canManagePets = userRole === "owner";
-  // The uncropped original where one exists; the square otherwise.
-  const avatarUrl = pet ? petMasterUrl(pet) : null;
+  // The LIGHTBOX's image, and nothing else: the uncropped original where one
+  // exists, the square otherwise. Named for what it is — it was called
+  // `avatarUrl` and sat one line from the header avatar, which read as though
+  // the header rendered it. The header renders MiniPetAvatar, which sources
+  // the 1:1 crop and only that (Phase 105).
+  const masterUrl = pet ? petMasterUrl(pet) : null;
 
   // Back closes the sheet rather than leaving the dashboard behind it. The
   // nested Add Health Record dialog registers separately so Back unwinds one
@@ -118,7 +122,7 @@ export function PetProfileSheet() {
                       80px header portrait. Tappable only when there is a real
                       photo to open; the fallback Dog glyph has nothing to
                       expand. */}
-                  {avatarUrl ? (
+                  {masterUrl ? (
                     <button
                       type="button"
                       onClick={() => setViewingAvatar(true)}
@@ -233,9 +237,9 @@ export function PetProfileSheet() {
             </section>
 
             <PhotoLightbox
-              open={viewingAvatar && !!avatarUrl}
+              open={viewingAvatar && !!masterUrl}
               onClose={() => setViewingAvatar(false)}
-              items={[{ src: avatarUrl ?? undefined, alt: pet.name, title: pet.name }]}
+              items={[{ src: masterUrl ?? undefined, alt: pet.name, title: pet.name }]}
             />
 
             {canManagePets && (

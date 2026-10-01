@@ -70,14 +70,14 @@ function PetOverviewRow({
 }) {
   const { setActivePetId } = useHousehold();
   const [viewingAvatar, setViewingAvatar] = useState(false);
-  // The uncropped original, falling back to the square for pets that have
-  // no master (Phase 104). Holding an avatar is a request to see the photo,
-  // not the thumbnail of it.
-  const avatarUrl = petMasterUrl(pet);
+  // The LIGHTBOX's image only. The row itself renders MiniPetAvatar, which
+  // sources the 1:1 crop; holding an avatar is a request to see the photo
+  // rather than the thumbnail of it (Phase 104/105).
+  const masterUrl = petMasterUrl(pet);
   // Hold the avatar to see the uncropped photo without opening the whole
   // profile sheet. Only armed when there is a photo to show.
   const longPress = useLongPress(() => {
-    if (avatarUrl) setViewingAvatar(true);
+    if (masterUrl) setViewingAvatar(true);
   });
   const dateStr = formatDateLocal(date);
   const items = useMemo(() => {
@@ -94,9 +94,9 @@ function PetOverviewRow({
   return (
     <>
       <PhotoLightbox
-        open={viewingAvatar && !!avatarUrl}
+        open={viewingAvatar && !!masterUrl}
         onClose={() => setViewingAvatar(false)}
-        items={[{ src: avatarUrl ?? undefined, alt: pet.name, title: pet.name }]}
+        items={[{ src: masterUrl ?? undefined, alt: pet.name, title: pet.name }]}
       />
       <button
         type="button"

@@ -29,11 +29,21 @@ import { cropToSquareFile, type CropArea } from "@/lib/image-crop";
  */
 export function ImageCropper({
   file,
+  url,
   onCancel,
   onCropped,
 }: {
-  /** The file the user just chose. */
-  file: File;
+  /** A file the user just chose. Exactly one of `file` or `url`. */
+  file?: File | null;
+  /**
+   * An already-stored image to re-crop (Phase 105), as a src an <img> can
+   * load — so `/api/photo?...`, not a raw storage reference.
+   *
+   * This is what makes a bad crop fixable without going back to the camera
+   * roll, and it is the only way to improve the four avatars uploaded before
+   * the cropper existed, which are whole portraits squeezed into a square box.
+   */
+  url?: string | null;
   onCancel: () => void;
   onCropped: (cropped: File) => void;
 }) {
@@ -43,19 +53,22 @@ export function ImageCropper({
   const [area, setArea] = useState<CropArea | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Revoked when the file changes or this unmounts: these are multi-megabyte
-  // camera photos, and leaking one per attempt is how a long session on a
-  // cheap phone runs out of memory.
+  // A new photo starts centred and unzoomed rather than inheriting the last
+  // one's framing. A local file gets an object URL, revoked on the way out:
+  // these are multi-megabyte camera photos, and leaking one per attempt is how
+  // a long session on a cheap phone runs out of memory. A stored image is
+  // already a URL and is not ours to revoke.
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setSrc(url);
-    // A new photo starts centred and unzoomed rather than inheriting the last
-    // one's framing.
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setArea(null);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    if (file) {
+      const objectUrl = URL.createObjectURL(file);
+      setSrc(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+    setSrc(url ?? null);
+  }, [file, url]);
 
   const handleCropComplete = useCallback((_: unknown, areaPixels: CropArea) => {
     setArea(areaPixels);
@@ -65,7 +78,7 @@ export function ImageCropper({
     if (!src || !area) return;
     setBusy(true);
     try {
-      onCropped(await cropToSquareFile(src, area, file.name));
+      onCropped(await cropToSquareFile(src, area, file?.name ?? "avatar.jpg"));
     } catch (err) {
       console.error(err);
       toast.error("Could not crop that photo");
