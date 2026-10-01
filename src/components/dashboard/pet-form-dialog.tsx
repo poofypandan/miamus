@@ -146,11 +146,15 @@ export function PetFormDialog({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Avatar photo (optional)</Label>
+            {/* square: an avatar is the one photo in this app that has to
+                live inside a fixed box forever, so the owner picks the square
+                rather than letting object-cover centre on a dog's chest. */}
             <PhotoPicker
               pathPrefix={`pet-avatars/${pet?.id ?? "new"}`}
               value={avatarUrl}
               onChange={setAvatarUrl}
               label="Add photo"
+              square
             />
           </div>
         </div>

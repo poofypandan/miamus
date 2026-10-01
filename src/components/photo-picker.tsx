@@ -4,10 +4,26 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Camera, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import dynamic from "next/dynamic";
 import { useHousehold } from "@/context/household-context";
 import { compressPhoto } from "@/lib/image";
 import { cn } from "@/lib/utils";
 import { photoSrc } from "@/lib/photos";
+
+/**
+ * Loaded only when someone actually crops something.
+ *
+ * react-easy-crop is ~8kB on the wire, and a static import put it in the
+ * shared chunk — which meant every staff phone downloaded a cropper it can
+ * never reach, since nothing in the staff view passes `square`. Fetched on the
+ * first photo pick instead, by which point the owner has just come back from a
+ * file dialog. ssr:false because it measures a DOM node to lay out the crop
+ * surface and has nothing to render on the server.
+ */
+const ImageCropper = dynamic(
+  () => import("@/components/shared/image-cropper").then((m) => m.ImageCropper),
+  { ssr: false }
+);
 
 interface PhotoPickerProps {
   pathPrefix: string;
@@ -20,6 +36,17 @@ interface PhotoPickerProps {
   busyLabel?: string;
   errorMessage?: string;
   className?: string;
+  /**
+   * Opt in to a square crop step between choosing a photo and uploading it
+   * (Phase 103).
+   *
+   * Off everywhere else on purpose. A proof shot of a mopped terrace or a
+   * half-empty sack of food is evidence, and making someone frame it is a tap
+   * they have no reason to care about. An avatar is the one photo here that
+   * has to live inside a fixed square forever, which is the only case where
+   * the crop is worth asking for.
+   */
+  square?: boolean;
 }
 
 export function PhotoPicker({
@@ -30,17 +57,21 @@ export function PhotoPicker({
   busyLabel = "Uploading...",
   errorMessage = "Failed to upload photo",
   className,
+  square = false,
 }: PhotoPickerProps) {
   const { uploadPhoto } = useHousehold();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  // The chosen file, held while the crop dialog is open. Null the rest of the
+  // time, which is also what closes that dialog.
+  const [pendingCrop, setPendingCrop] = useState<File | null>(null);
 
-  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  async function upload(file: File) {
     setBusy(true);
     try {
+      // Crop first, then compress: compressPhoto caps the long edge at 1080,
+      // so compressing first would throw away the very pixels a tight crop is
+      // about to zoom into.
       const compressed = await compressPhoto(file);
       const url = await uploadPhoto(compressed, pathPrefix);
       onChange(url);
@@ -50,6 +81,34 @@ export function PhotoPicker({
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Cleared immediately so picking the same file twice still fires a change
+    // event — otherwise a cancelled crop could not be retried with that photo.
+    e.target.value = "";
+    if (!file) return;
+    if (square) {
+      setPendingCrop(file);
+      return;
+    }
+    void upload(file);
+  }
+
+  // Takes over the picker entirely while a crop is pending — which is also
+  // what triggers the lazy chunk to load.
+  if (square && pendingCrop) {
+    return (
+      <ImageCropper
+        file={pendingCrop}
+        onCancel={() => setPendingCrop(null)}
+        onCropped={(cropped) => {
+          setPendingCrop(null);
+          void upload(cropped);
+        }}
+      />
+    );
   }
 
   if (value) {
