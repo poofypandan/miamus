@@ -21,18 +21,32 @@ export function SegmentedControl<T extends string>({
   onChange,
   ariaLabel,
   className,
+  scrollable = false,
 }: {
   segments: Segment<T>[];
   value: T;
   onChange: (value: T) => void;
   ariaLabel: string;
   className?: string;
+  /**
+   * Lets the track scroll sideways instead of dividing the width evenly.
+   *
+   * The default suits a fixed two or three options. A list driven by data —
+   * the staff roster, say — has no upper bound, and at five or six names
+   * equal thirds become unreadable stubs on a phone. Scrolling keeps every
+   * pill legible and the aesthetic identical.
+   */
+  scrollable?: boolean;
 }) {
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={cn("flex w-full gap-1 rounded-full bg-muted p-1", className)}
+      className={cn(
+        "flex w-full gap-1 rounded-full bg-muted p-1",
+        scrollable && "overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        className
+      )}
     >
       {segments.map((segment) => {
         const active = segment.value === value;
@@ -44,7 +58,8 @@ export function SegmentedControl<T extends string>({
             aria-selected={active}
             onClick={() => onChange(segment.value)}
             className={cn(
-              "flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors",
+              "flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors",
+              scrollable ? "shrink-0" : "flex-1",
               active
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground active:bg-background/60"

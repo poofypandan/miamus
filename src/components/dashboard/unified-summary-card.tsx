@@ -6,16 +6,13 @@ import {
   ChevronRight,
   Clock,
   Droplets,
-  Plus,
   Stethoscope,
   Utensils,
   XCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
-import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { useHousehold } from "@/context/household-context";
 import { useLongPress } from "@/hooks/use-long-press";
 import { getPetMeta, isAdmitted } from "@/lib/pets";
@@ -23,19 +20,15 @@ import { POTTY_TITLE } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal, type AgendaItem } from "@/lib/scheduleEngine";
 import type { MasterSchedule, TaskEntity, TaskLog } from "@/types/database";
 
+/**
+ * How far each dog has got through the day.
+ *
+ * Purely a progress tracker since Phase 101 — the "Add Pets" button it used to
+ * carry moved to the Pets tab, where the rest of the directory work lives.
+ * This card is about today; adding a pet is not.
+ */
 export function UnifiedSummaryCard() {
-  const {
-    pets,
-    schedules,
-    logs,
-    selectedDate,
-    userRole,
-    createEntity,
-    updateEntity,
-    deleteEntity,
-  } = useHousehold();
-  const canManagePets = userRole === "owner";
-  const [addOpen, setAddOpen] = useState(false);
+  const { pets, schedules, logs, selectedDate } = useHousehold();
 
   return (
     <Card className="gap-3 py-4">
@@ -45,32 +38,7 @@ export function UnifiedSummaryCard() {
             <PetOverviewRow key={pet.id} pet={pet} schedules={schedules} logs={logs} date={selectedDate} />
           ))}
         </div>
-
-        {/* Deliberately the quiet one: adding or editing pets is a rare setup
-            task, so it sits back on a plain white card face and leaves the
-            solid dark fill to Manage Routines, which is the frequent action.
-            The touch target stays at 48px even though the type is small. */}
-        {canManagePets && (
-          <Button
-            onClick={() => setAddOpen(true)}
-            variant="outline"
-            className="mt-4 min-h-[48px] w-full rounded-xl border-zinc-200 bg-white text-sm font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
-          >
-            <Plus /> Add Pets
-          </Button>
-        )}
       </CardContent>
-
-      {canManagePets && (
-        <PetFormDialog
-          open={addOpen}
-          onOpenChange={setAddOpen}
-          pet={null}
-          createEntity={createEntity}
-          updateEntity={updateEntity}
-          deleteEntity={deleteEntity}
-        />
-      )}
     </Card>
   );
 }

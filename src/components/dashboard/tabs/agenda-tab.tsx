@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue } from "@/components/dashboard/approval-queue";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
-import { TimelineRow } from "@/components/dashboard/unified-timeline";
+import { TimelineRow } from "@/components/dashboard/timeline-row";
+import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
@@ -31,7 +33,8 @@ import type { HouseholdTask } from "@/types/database";
  * chore is staff work and lives on their phones.
  */
 export function AgendaTab() {
-  const { pets, schedules, logs, loading, selectedDate } = useHousehold();
+  const { pets, entities, schedules, logs, loading, selectedDate, setSelectedDate } =
+    useHousehold();
   const { profiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(profiles);
   const chores = useChoreOccurrences();
@@ -41,6 +44,14 @@ export function AgendaTab() {
 
   const [editing, setEditing] = useState<HouseholdTask | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+
+  // The proof that came back today. Moved here from the Pets tab in Phase
+  // 101: a photo of this morning's walk is daily tracking, and the Agenda is
+  // where the date ribbon that scopes it lives.
+  const logsForDate = useMemo(
+    () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === dateStr),
+    [logs, dateStr]
+  );
 
   const groups = useMemo(
     () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
@@ -63,9 +74,15 @@ export function AgendaTab() {
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
-      {/* First on the page: a pending proposal is the only thing here blocking
-          someone else's work, so it outranks the day itself. Renders nothing
-          when the queue is empty. */}
+      {/* The Agenda is a view of one day, so it owns the control that picks
+          which. It had none until Phase 101: before the five-tab refactor the
+          dashboard rendered a single ribbon above the whole canvas, and when
+          that went the Agenda was left following a date it could not change. */}
+      <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
+
+      {/* A pending proposal is the only thing here blocking someone else's
+          work, so it outranks the day itself. Renders nothing when the queue
+          is empty. */}
       <ApprovalQueue />
 
       <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
@@ -107,6 +124,11 @@ export function AgendaTab() {
         <>
           <h2 className="text-sm font-semibold text-gray-900">Pet Progress</h2>
           <UnifiedSummaryCard />
+
+          <h2 className="mt-2 text-sm font-semibold text-gray-900">Photos</h2>
+          {/* No "Flag Low Stock" here: reporting is staff data entry and lives
+              in the staff view. The owner reads reports and restocks. */}
+          <PhotoStream logs={logsForDate} entities={entities} showAvatar />
         </>
       )}
 

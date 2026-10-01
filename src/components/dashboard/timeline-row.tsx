@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { CheckCircle2, Stethoscope, XCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
@@ -13,36 +12,11 @@ import {
   categoryIconColor,
   type ScheduleCategory,
 } from "@/lib/schedule-categories";
-import { buildAgenda, formatDateLocal, type AgendaGroup, type AgendaItem } from "@/lib/scheduleEngine";
+import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { LightboxItem } from "@/components/dashboard/photo-lightbox";
 import type { TaskEntity } from "@/types/database";
-
-// buildAgenda already groups AgendaItems by `${time}|${title}` regardless of
-// which entity they belong to (that's how the Staff View's multi-dog
-// AgendaGroupCard works) — passing every pet as `entities` here gets the
-// cross-pet merge for free, no separate grouping logic needed.
-export function UnifiedTimeline() {
-  const { pets, schedules, logs, selectedDate } = useHousehold();
-  const dateStr = formatDateLocal(selectedDate);
-  const groups = useMemo(
-    () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
-    [dateStr, pets, schedules, logs]
-  );
-
-  return (
-    <Card className="gap-3 py-4">
-      <CardContent className="flex flex-col gap-3 px-4">
-        {groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No tasks scheduled.</p>
-        ) : (
-          groups.map((g) => <TimelineRow key={`${g.time}|${g.title}`} group={g} pets={pets} />)
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 /**
  * One minute of the day's pet routines, across every dog.

@@ -1,134 +1,137 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronRight, Settings2 } from "lucide-react";
+import { ChevronRight, Plus, Stethoscope } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { DateRibbon } from "@/components/date-ribbon";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
-import { ManageRoutinesSheet } from "@/components/dashboard/schedule-editor";
-import { PhotoStream } from "@/components/dashboard/photo-stream";
-import { UnifiedTimeline } from "@/components/dashboard/unified-timeline";
+import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { useHousehold } from "@/context/household-context";
-import { useBackToClose } from "@/hooks/use-back-to-close";
-import { useToday } from "@/hooks/use-today";
-import { dayLabel } from "@/lib/date-label";
-import { formatDateLocal } from "@/lib/scheduleEngine";
-import type { TaskEntity } from "@/types/database";
+import { getPetMeta, isAdmitted } from "@/lib/pets";
 
 /**
- * The dogs: their day's routines, the photos that came back, and the way into
- * each pet's schedule.
+ * The pet directory: who lives here, and the way into each one's profile.
  *
- * Phase 100 merged the old Daily Feed and Schedule sub-tabs into this one
- * screen. Those two were split when the dashboard had no Agenda — the feed was
- * "what happened" and the schedule "what is planned", and both were really
- * about pets. The unified Agenda now answers "what is due" for the whole
- * household, which leaves this tab free to be about the animals themselves.
+ * Deliberately not a daily view (Phase 101). Until now this tab also carried a
+ * date ribbon, the day's timeline and the day's photo feed — all of which the
+ * Agenda tab had already become the home for, so the same information was in
+ * two places and the two could disagree about what "today" meant. Daily
+ * tracking lives on the Agenda; this is the static side: who they are, their
+ * medical history, their routines, their settings.
  *
- * Owner-facing, so entirely English per the Phase 46 language boundary.
+ * Owner-facing, so entirely English per the Phase 46 language boundary. The
+ * rows open PetProfileSheet, which is where every pet mutation already lives.
  */
 export function PetsTab() {
-  const { pets, entities, logs, loading, selectedDate, setSelectedDate } = useHousehold();
-  const today = useToday();
-  const dateStr = formatDateLocal(selectedDate);
-  const label = dayLabel(selectedDate, today);
+  const {
+    pets,
+    medicalRecords,
+    loading,
+    setActivePetId,
+    userRole,
+    createEntity,
+    updateEntity,
+    deleteEntity,
+  } = useHousehold();
+  const [addOpen, setAddOpen] = useState(false);
+  const canManagePets = userRole === "owner";
 
-  const logsForDate = useMemo(
-    () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === dateStr),
-    [logs, dateStr]
-  );
+  // How much history each pet has, so a profile with records to read is
+  // distinguishable from an empty one before it is opened.
+  const recordCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const record of medicalRecords) {
+      counts.set(record.entity_id, (counts.get(record.entity_id) ?? 0) + 1);
+    }
+    return counts;
+  }, [medicalRecords]);
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 px-4">
-        <Skeleton className="h-8 w-64 rounded-lg" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+      <div className="flex flex-col gap-3 px-4">
+        <Skeleton className="h-8 w-32 rounded-lg" />
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-20 w-full rounded-xl" />
       </div>
     );
   }
 
-  if (pets.length === 0) {
-    return (
-      <p className="px-4 pt-8 text-center text-sm text-muted-foreground">
-        No pets yet. Add a pet to start building schedules.
-      </p>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-4 px-4 pb-6">
-      <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
+    <div className="flex flex-col gap-3 px-4 pb-6">
+      <h2 className="text-sm font-semibold text-gray-900">Pets</h2>
 
-      <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Timeline</h2>
-      <UnifiedTimeline />
-
-      <ManageRoutinesButton />
-
-      <h3 className="mt-2 text-sm font-semibold text-gray-900">Photos</h3>
-      {/* No "Flag Low Stock" here: reporting is staff data entry and lives in
-          the staff view. The owner reads reports and restocks. */}
-      <PhotoStream logs={logsForDate} entities={entities} showAvatar />
-    </div>
-  );
-}
-
-// Routines are defined per pet — there is no household-wide routine editor —
-// so this opens a picker and hands off to that pet's routine editor.
-function ManageRoutinesButton() {
-  const { pets } = useHousehold();
-  const [open, setOpen] = useState(false);
-  // The picker deliberately stays open underneath: Back then unwinds editor
-  // first, picker second, which is the order the user arrived in.
-  const [editingPet, setEditingPet] = useState<TaskEntity | null>(null);
-
-  useBackToClose(open, () => setOpen(false));
-
-  return (
-    <>
-      {/* Primary action for this tab, so it keeps the solid dark fill — the
-          same treatment as the profile sheet's own Manage Routines button. */}
-      <Button
-        onClick={() => setOpen(true)}
-        size="lg"
-        className="min-h-[52px] w-full bg-zinc-900 text-base text-white hover:bg-zinc-800"
-      >
-        <Settings2 /> Manage Routines
-      </Button>
-
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="gap-0 rounded-t-2xl px-4 pb-10">
-          <SheetHeader className="px-0">
-            <SheetTitle>Manage Routines</SheetTitle>
-            <SheetDescription>
-              Pick a pet to edit their meals, potty routine, medication and grooming.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex flex-col gap-2">
-            {pets.map((pet) => (
+      {pets.length === 0 ? (
+        <p className="rounded-xl border border-dashed bg-card px-3 py-6 text-center text-sm text-muted-foreground">
+          No pets yet. Add one to start building their profile and routines.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {pets.map((pet) => {
+            const meta = getPetMeta(pet);
+            const records = recordCounts.get(pet.id) ?? 0;
+            return (
               <button
                 key={pet.id}
                 type="button"
-                onClick={() => setEditingPet(pet)}
-                className="flex min-h-[56px] w-full items-center gap-3 rounded-xl border px-3 text-left active:bg-gray-50"
+                onClick={() => setActivePetId(pet.id)}
+                className="flex min-h-[72px] w-full items-center gap-3 rounded-xl border bg-card px-3 py-2.5 text-left active:bg-muted/60"
               >
-                <MiniPetAvatar pet={pet} className="size-10" />
-                <span className="flex-1 font-medium">{pet.name}</span>
+                <MiniPetAvatar pet={pet} className="size-12" />
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="truncate text-sm font-medium">{pet.name}</span>
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    {meta.breed && (
+                      <span className="truncate text-xs text-muted-foreground">{meta.breed}</span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {records === 0
+                        ? "No medical records"
+                        : `${records} medical record${records === 1 ? "" : "s"}`}
+                    </span>
+                    {/* The one status worth seeing before opening a profile:
+                        an admitted dog's routines are paused. */}
+                    {isAdmitted(pet) && (
+                      <Badge className="h-5 gap-1 bg-indigo-100 px-1.5 text-[10px] text-indigo-900">
+                        <Stethoscope className="size-3" /> At the clinic
+                      </Badge>
+                    )}
+                  </span>
+                </span>
                 <ChevronRight className="size-5 shrink-0 text-gray-400" />
               </button>
-            ))}
-          </div>
-        </SheetContent>
-      </Sheet>
+            );
+          })}
+        </div>
+      )}
 
-      <ManageRoutinesSheet entity={editingPet} onClose={() => setEditingPet(null)} />
-    </>
+      {canManagePets && (
+        <>
+          {/* Moved here from the summary card on the Agenda (Phase 101):
+              adding a pet is directory work, and the Agenda is for the day. */}
+          <Button
+            onClick={() => setAddOpen(true)}
+            variant="outline"
+            className="min-h-[48px] w-full rounded-xl border-zinc-200 bg-white text-sm font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
+          >
+            <Plus /> Add Pet
+          </Button>
+
+          <PetFormDialog
+            open={addOpen}
+            onOpenChange={setAddOpen}
+            pet={null}
+            createEntity={createEntity}
+            updateEntity={updateEntity}
+            deleteEntity={deleteEntity}
+          />
+        </>
+      )}
+
+      <p className="px-1 text-[11px] text-muted-foreground">
+        Open a pet to edit their details, routines and medical records. Today&apos;s tasks and
+        photos live on the Agenda.
+      </p>
+    </div>
   );
 }
