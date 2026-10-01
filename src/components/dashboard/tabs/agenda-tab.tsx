@@ -7,8 +7,6 @@ import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue } from "@/components/dashboard/approval-queue";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
-import { PhotoStream } from "@/components/dashboard/photo-stream";
-import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
@@ -28,13 +26,17 @@ import type { HouseholdTask } from "@/types/database";
  * Pets > Daily Feed and Household > Chores — and no screen showed both, so
  * "what is left today?" was a question the app could not answer.
  *
+ * Text-forward on purpose (Phase 102). It briefly also carried the pet
+ * progress card and the day's photo grid, which pushed the actual timeline —
+ * the thing this tab exists for — below two screens of pictures. Those are
+ * about the dogs rather than about the day, and they live on the Pets tab.
+ *
  * Owner-facing, so entirely English per the Phase 46 language boundary. Every
  * row here is tappable only as far as reading and editing goes: completing a
  * chore is staff work and lives on their phones.
  */
 export function AgendaTab() {
-  const { pets, entities, schedules, logs, loading, selectedDate, setSelectedDate } =
-    useHousehold();
+  const { pets, schedules, logs, loading, selectedDate, setSelectedDate } = useHousehold();
   const { profiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(profiles);
   const chores = useChoreOccurrences();
@@ -44,14 +46,6 @@ export function AgendaTab() {
 
   const [editing, setEditing] = useState<HouseholdTask | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
-
-  // The proof that came back today. Moved here from the Pets tab in Phase
-  // 101: a photo of this morning's walk is daily tracking, and the Agenda is
-  // where the date ribbon that scopes it lives.
-  const logsForDate = useMemo(
-    () => logs.filter((l) => formatDateLocal(new Date(l.completed_at)) === dateStr),
-    [logs, dateStr]
-  );
 
   const groups = useMemo(
     () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
@@ -119,18 +113,6 @@ export function AgendaTab() {
           )}
         </CardContent>
       </Card>
-
-      {pets.length > 0 && (
-        <>
-          <h2 className="text-sm font-semibold text-gray-900">Pet Progress</h2>
-          <UnifiedSummaryCard />
-
-          <h2 className="mt-2 text-sm font-semibold text-gray-900">Photos</h2>
-          {/* No "Flag Low Stock" here: reporting is staff data entry and lives
-              in the staff view. The owner reads reports and restocks. */}
-          <PhotoStream logs={logsForDate} entities={entities} showAvatar />
-        </>
-      )}
 
       <ChoreEditorDialog
         open={editorOpen}

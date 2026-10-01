@@ -25,17 +25,24 @@ import type { MasterSchedule, TaskEntity, TaskLog } from "@/types/database";
  *
  * Purely a progress tracker since Phase 101 — the "Add Pets" button it used to
  * carry moved to the Pets tab, where the rest of the directory work lives.
- * This card is about today; adding a pet is not.
+ * This card is about a day; adding a pet is not.
+ *
+ * `date` is a prop rather than read from context (Phase 102): the Pets tab
+ * browses time on its own ribbon, independently of the Agenda's, so the card
+ * has to be told which day it is showing instead of assuming there is only
+ * one. Omitted, it falls back to the shared date, which is what every other
+ * surface still uses.
  */
-export function UnifiedSummaryCard() {
+export function UnifiedSummaryCard({ date }: { date?: Date }) {
   const { pets, schedules, logs, selectedDate } = useHousehold();
+  const shownDate = date ?? selectedDate;
 
   return (
     <Card className="gap-3 py-4">
       <CardContent className="flex flex-col px-4">
         <div className="flex flex-col divide-y">
           {pets.map((pet) => (
-            <PetOverviewRow key={pet.id} pet={pet} schedules={schedules} logs={logs} date={selectedDate} />
+            <PetOverviewRow key={pet.id} pet={pet} schedules={schedules} logs={logs} date={shownDate} />
           ))}
         </div>
       </CardContent>

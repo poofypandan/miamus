@@ -5,20 +5,32 @@ import { ChevronRight, Plus, Stethoscope } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateRibbon } from "@/components/date-ribbon";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
+import { PhotoStream } from "@/components/dashboard/photo-stream";
+import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { useHousehold } from "@/context/household-context";
-import { getPetMeta, isAdmitted } from "@/lib/pets";
+import { useToday } from "@/hooks/use-today";
+import { dayLabel } from "@/lib/date-label";
+import { getPetMeta, isAdmitted, petPhotoLogs } from "@/lib/pets";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 
 /**
- * The pet directory: who lives here, and the way into each one's profile.
+ * The pets dashboard: who lives here, how their day is going, and what came
+ * back on camera.
  *
- * Deliberately not a daily view (Phase 101). Until now this tab also carried a
- * date ribbon, the day's timeline and the day's photo feed — all of which the
- * Agenda tab had already become the home for, so the same information was in
- * two places and the two could disagree about what "today" meant. Daily
- * tracking lives on the Agenda; this is the static side: who they are, their
- * medical history, their routines, their settings.
+ * Phase 101 stripped this tab back to a bare directory and moved the visual
+ * half onto the Agenda. That overcorrected: the Agenda became a chronological
+ * list with a progress card and a photo grid stacked on top of it, which is
+ * two different jobs on one screen. The split that actually works is by
+ * subject rather than by time — the Agenda answers "what is due across the
+ * household", this answers "how are the dogs".
+ *
+ * ITS OWN DATE (Phase 102). The ribbon here drives local state, not the shared
+ * selectedDate the Agenda and chores use, so browsing back through last week's
+ * photos does not drag the Agenda along with it. The two are meant to be
+ * looked at independently and now can be.
  *
  * Owner-facing, so entirely English per the Phase 46 language boundary. The
  * rows open PetProfileSheet, which is where every pet mutation already lives.
@@ -26,6 +38,8 @@ import { getPetMeta, isAdmitted } from "@/lib/pets";
 export function PetsTab() {
   const {
     pets,
+    entities,
+    logs,
     medicalRecords,
     loading,
     setActivePetId,
@@ -37,8 +51,24 @@ export function PetsTab() {
   const [addOpen, setAddOpen] = useState(false);
   const canManagePets = userRole === "owner";
 
+  // Null until the owner picks a day, so the view follows the clock over
+  // midnight rather than sitting on the date it mounted — the same shape as
+  // the staff agenda's assignee filter, and the reason this is not seeded
+  // with `new Date()`.
+  const today = useToday();
+  const [chosenDate, setChosenDate] = useState<Date | null>(null);
+  const date = chosenDate ?? today;
+  const dateStr = formatDateLocal(date);
+
   // How much history each pet has, so a profile with records to read is
   // distinguishable from an empty one before it is opened.
+  // Pet routines only — never a chore's before/after shot. See petPhotoLogs
+  // for why that is a filter rather than something to take on trust.
+  const photoLogs = useMemo(
+    () => petPhotoLogs({ logs, entities, date: dateStr }),
+    [logs, entities, dateStr]
+  );
+
   const recordCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const record of medicalRecords) {
@@ -59,6 +89,9 @@ export function PetsTab() {
 
   return (
     <div className="flex flex-col gap-3 px-4 pb-6">
+      {/* Local to this tab: moving it does not move the Agenda. */}
+      <DateRibbon value={date} onChange={setChosenDate} locale="en" />
+
       <h2 className="text-sm font-semibold text-gray-900">Pets</h2>
 
       {pets.length === 0 ? (
@@ -128,9 +161,23 @@ export function PetsTab() {
         </>
       )}
 
+      {pets.length > 0 && (
+        <>
+          <h2 className="mt-2 text-sm font-semibold text-gray-900">
+            {dayLabel(date, today)}&apos;s Progress
+          </h2>
+          <UnifiedSummaryCard date={date} />
+
+          <h2 className="mt-2 text-sm font-semibold text-gray-900">Photos</h2>
+          {/* No "Flag Low Stock" here: reporting is staff data entry and lives
+              in the staff view. The owner reads reports and restocks. */}
+          <PhotoStream logs={photoLogs} entities={entities} showAvatar />
+        </>
+      )}
+
       <p className="px-1 text-[11px] text-muted-foreground">
-        Open a pet to edit their details, routines and medical records. Today&apos;s tasks and
-        photos live on the Agenda.
+        Open a pet to edit their details, routines and medical records. The day&apos;s full
+        task list — dogs and household — lives on the Agenda.
       </p>
     </div>
   );
