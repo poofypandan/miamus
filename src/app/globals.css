@@ -256,3 +256,20 @@
     }
   }
 }
+
+/*
+ * The Agenda's view change (Phase 115): Day ⇄ Week, a new week, a tap on
+ * Today. Opacity and nothing else — no slide, no resize — so it runs on the
+ * compositor and cannot drop a frame however tall the incoming view is. The
+ * outgoing view is simply replaced; fading the new one in over 180ms is what
+ * makes the swap read as a transition rather than a jump.
+ */
+@theme inline {
+  --animate-view-fade: view-fade 180ms ease-out;
+
+  @keyframes view-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}

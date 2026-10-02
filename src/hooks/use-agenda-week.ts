@@ -9,6 +9,7 @@ import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import {
   AGENDA_WEEK_DAYS,
   buildUnifiedAgenda,
+  weekStartOf,
   type UnifiedAgendaEntry,
 } from "@/lib/unified-agenda";
 
@@ -20,8 +21,8 @@ export interface AgendaDay {
 }
 
 /**
- * The Agenda's Week view (Phase 112): the selected day and the six after it,
- * each built exactly as the Day view builds one day — pet routines from the
+ * The Agenda's Week view (Phase 112): the Sunday-to-Saturday week `date` is
+ * in (Phase 115 — it was the selected day and the six after it), each built exactly as the Day view builds one day — pet routines from the
  * schedules, chores expanded from the rows, merged and sorted with anytime
  * chores on top.
  *
@@ -30,10 +31,10 @@ export interface AgendaDay {
  * rows for all seven days are already loaded: the context fetches the week
  * whichever view is showing.
  */
-export function useAgendaWeek(start: Date, staffId?: string | null): AgendaDay[] {
+export function useAgendaWeek(date: Date, staffId?: string | null): AgendaDay[] {
   const { pets, schedules, logs, householdTasks } = useHousehold();
   const todayStr = formatDateLocal(useToday());
-  const startStr = formatDateLocal(start);
+  const startStr = formatDateLocal(weekStartOf(date));
 
   return useMemo(() => {
     const first = new Date(`${startStr}T00:00:00`);

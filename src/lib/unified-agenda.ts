@@ -1,8 +1,19 @@
+import { startOfWeek } from "date-fns";
 import { compareOccurrences, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { AgendaGroup } from "@/lib/scheduleEngine";
 
-/** How many days the Agenda's Week view shows, starting at the selected day. */
+/** How many days the Agenda's Week view shows. */
 export const AGENDA_WEEK_DAYS = 7;
+
+/**
+ * The Sunday that starts the calendar week `date` is in (Phase 115). The
+ * Week view shows Sunday to Saturday, the way a wall calendar does, rather
+ * than Phase 112's rolling "selected day and the six after it" — a week that
+ * started wherever the reader last tapped never looked the same twice.
+ */
+export function weekStartOf(date: Date): Date {
+  return startOfWeek(date, { weekStartsOn: 0 });
+}
 
 /**
  * One row of the unified Agenda: either a pet routine block or a household

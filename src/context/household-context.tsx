@@ -21,7 +21,7 @@ import { useToday } from "@/hooks/use-today";
 import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
-import { AGENDA_WEEK_DAYS } from "@/lib/unified-agenda";
+import { AGENDA_WEEK_DAYS, weekStartOf } from "@/lib/unified-agenda";
 import { compressPhoto } from "@/lib/image";
 import { readSnapshot, writeSnapshot } from "@/lib/snapshot-cache";
 import { warmImagesWhenIdle } from "@/lib/image-warm";
@@ -100,9 +100,9 @@ interface HouseholdContextValue {
   /** The newest stock check per inventory item, keyed by item id. */
   latestInventoryAudits: Record<string, InventoryAuditWithStaff>;
   /**
-   * The chores filed for whichever day `selectedDate` is on — never the whole
-   * table. Fetched per day rather than in bulk (see migrations/082), so this
-   * array changes when the browsed date does.
+   * The chores filed for the week `selectedDate` is in — never the whole
+   * table. Fetched per week rather than in bulk (see migrations/082), so this
+   * array changes when the browsed week does.
    */
   householdTasks: HouseholdTask[];
   loading: boolean;
@@ -116,6 +116,14 @@ interface HouseholdContextValue {
   // keeps the Daily Feed and Staff view in sync with it too.
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
+  /**
+   * The header's Today button (Phase 115): back to today, and a fresh view of
+   * it — `todayJumps` counts the taps, and the Agenda keys its view on it, so
+   * a tap re-centres the date strip and the week grid even when today was
+   * already the selected day.
+   */
+  jumpToToday: () => void;
+  todayJumps: number;
   /** "owner" exactly when isHouseholdMember — a Google-authenticated member. */
   userRole: UserRole;
   // False until household membership has been resolved — lets owner-only
@@ -316,13 +324,16 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     todayRef.current = todayStr;
   }, [todayStr]);
 
-  // The selected day and the six after it — the Agenda's week (Phase 112).
-  // Always the whole window, in Day view too: it is one request either way,
-  // and it means flipping Day ⇄ Week never has to wait for a fetch.
+  // The Sunday-to-Saturday week the selected day is in — the Agenda's week
+  // (Phase 112, calendar-aligned since 115). Always the whole week, in Day
+  // view too: it is one request either way, and it means flipping Day ⇄ Week
+  // never has to wait for a fetch.
   const loadHouseholdTasks = useCallback(async (dueDate: string) => {
-    const to = formatDateLocal(addDays(new Date(`${dueDate}T00:00:00`), AGENDA_WEEK_DAYS - 1));
+    const start = weekStartOf(new Date(`${dueDate}T00:00:00`));
+    const from = formatDateLocal(start);
+    const to = formatDateLocal(addDays(start, AGENDA_WEEK_DAYS - 1));
     try {
-      setHouseholdTasks(await dataProvider.listHouseholdTasks(dueDate, to, todayRef.current));
+      setHouseholdTasks(await dataProvider.listHouseholdTasks(from, to, todayRef.current));
     } catch (err) {
       // Same degraded state as routine_proposals and inventory_items below:
       // household_tasks arrives with the Phase 82 migration, and until it is
@@ -439,14 +450,24 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // Reloads the chore list when the browsed day changes. Skips its own first
   // run because the mount pass of `refresh()` above already loaded today —
   // without the guard every page load would issue the same query twice.
+  //
+  // Keyed on the week rather than the day: every day of a week shares one
+  // window, so moving between them needs no request.
   const choresLoadedOnce = useRef(false);
+  const selectedWeekStr = formatDateLocal(weekStartOf(selectedDate));
   useEffect(() => {
     if (!choresLoadedOnce.current) {
       choresLoadedOnce.current = true;
       return;
     }
-    void loadHouseholdTasks(selectedDateStr);
-  }, [selectedDateStr, loadHouseholdTasks]);
+    void loadHouseholdTasks(selectedWeekStr);
+  }, [selectedWeekStr, loadHouseholdTasks]);
+
+  const [todayJumps, setTodayJumps] = useState(0);
+  const jumpToToday = useCallback(() => {
+    setSelectedDate(new Date());
+    setTodayJumps((n) => n + 1);
+  }, []);
 
   const [userRole, setUserRole] = useState<UserRole>("staff");
   const [roleHydrated, setRoleHydrated] = useState(false);
@@ -895,6 +916,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setActivePetId,
       selectedDate,
       setSelectedDate,
+      jumpToToday,
+      todayJumps,
       userRole,
       roleHydrated,
       refresh,
@@ -948,6 +971,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       loading,
       activePetId,
       selectedDate,
+      jumpToToday,
+      todayJumps,
       userRole,
       roleHydrated,
       refresh,

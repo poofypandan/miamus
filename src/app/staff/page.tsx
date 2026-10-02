@@ -1,11 +1,14 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
+import { addDays } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { AgendaWeekGrid } from "@/components/agenda/agenda-week-grid";
 import { OverdueSection } from "@/components/agenda/overdue-section";
+import { TodayButton } from "@/components/agenda/today-button";
+import { WeekPager } from "@/components/agenda/week-pager";
 import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-gate";
 import { useAgendaRange } from "@/hooks/use-agenda-range";
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
@@ -15,6 +18,7 @@ import { occurrencesForStaff } from "@/lib/chore-recurrence";
 import {
   buildUnifiedAgenda,
   splitOverdue,
+  weekStartOf,
   type UnifiedAgendaEntry,
 } from "@/lib/unified-agenda";
 import { DischargeButton } from "@/components/dashboard/discharge-button";
@@ -91,7 +95,16 @@ function StaffTasks() {
           : "pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
       )}
     >
-      <AppHeader action={<HeaderIdentity />}>
+      <AppHeader
+        action={
+          <div className="flex min-w-0 items-center gap-1.5">
+            {/* Back to today (Phase 115) — on the task list, which is the
+                only view here with dates to get lost in. */}
+            {view === "tugas" && <TodayButton locale="id" />}
+            <HeaderIdentity />
+          </div>
+        }
+      >
         <SegmentedControl
           ariaLabel="Tampilan"
           segments={[
@@ -121,8 +134,16 @@ function StaffTasks() {
 }
 
 function TasksView() {
-  const { pets, schedules, logs, loading, selectedDate, setSelectedDate, isHouseholdMember } =
-    useHousehold();
+  const {
+    pets,
+    schedules,
+    logs,
+    loading,
+    selectedDate,
+    setSelectedDate,
+    isHouseholdMember,
+    todayJumps,
+  } = useHousehold();
   const { staffId } = useStaffIdentity();
   const dateStr = formatDateLocal(selectedDate);
   const today = useToday();
@@ -187,6 +208,11 @@ function TasksView() {
   const { profiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(profiles, "Petugas");
 
+  // A week at a time, from the selected day (Phase 115).
+  function shiftWeek(weeks: -1 | 1) {
+    setSelectedDate(addDays(selectedDate, weeks * 7));
+  }
+
   function renderEntry(entry: UnifiedAgendaEntry) {
     return entry.kind === "routine" ? (
       <AgendaGroupCard key={entry.key} group={entry.group} />
@@ -222,67 +248,84 @@ function TasksView() {
         onChange={setRange}
       />
 
-      <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+      {/* Fades in afresh on Hari ⇄ Minggu and on Hari ini (Phase 115), the
+          same as the owner's Agenda. */}
+      <div
+        key={`${range}|${todayJumps}`}
+        className="flex flex-1 animate-view-fade flex-col gap-4 motion-reduce:animate-none"
+      >
+        {/* Hari only: in Minggu the grid's own headers are the days. */}
+        {range === "day" && <DateRibbon value={selectedDate} onChange={setSelectedDate} />}
 
-      {/* Whoever is holding this phone is the one who will fetch the dog, so
-          the discharge lives here as well as on the owner's profile sheet.
-          Staff-facing, so Bahasa Indonesia. */}
-      {admittedPets.length > 0 && (
-        <section className="flex flex-col gap-2">
-          {admittedPets.map((pet) => (
-            <div
-              key={pet.id}
-              className="flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3"
-            >
-              <p className="flex items-center gap-1.5 text-sm font-medium text-indigo-900">
-                <Stethoscope className="size-4 shrink-0" /> {pet.name} sedang rawat inap
-              </p>
-              <p className="text-xs text-indigo-900/80">
-                Jadwal makan dan pipisnya dijeda sampai dijemput.
-              </p>
-              <DischargeButton
-                pet={pet}
-                label="Jemput dari Klinik"
-                successMessage={`${pet.name} sudah pulang — jadwal aktif lagi`}
-                errorMessage="Gagal memperbarui status"
-              />
-            </div>
-          ))}
-        </section>
-      )}
-
-      <main className="flex flex-1 flex-col gap-3">
-        {range === "week" && !loading ? (
-          <AgendaWeekGrid
-            days={week}
-            locale="id"
-            onOpenDay={(day) => {
-              setSelectedDate(day);
-              setRange("day");
-            }}
-          />
-        ) : loading ? (
-          <>
-            <Skeleton className="h-28 w-full rounded-xl" />
-            <Skeleton className="h-28 w-full rounded-xl" />
-            <Skeleton className="h-28 w-full rounded-xl" />
-          </>
-        ) : entries.length === 0 ? (
-          <p className="pt-10 text-center text-sm text-muted-foreground">
-            Tidak ada jadwal untuk tanggal ini.
-          </p>
-        ) : (
-          <>
-            {/* Undone chores from earlier days lead today (Phase 113). */}
-            {overdue.length > 0 && (
-              <OverdueSection count={overdue.length} locale="id">
-                {overdue.map(renderEntry)}
-              </OverdueSection>
-            )}
-            {rest.map(renderEntry)}
-          </>
+        {/* Whoever is holding this phone is the one who will fetch the dog, so
+            the discharge lives here as well as on the owner's profile sheet.
+            Staff-facing, so Bahasa Indonesia. */}
+        {admittedPets.length > 0 && (
+          <section className="flex flex-col gap-2">
+            {admittedPets.map((pet) => (
+              <div
+                key={pet.id}
+                className="flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3"
+              >
+                <p className="flex items-center gap-1.5 text-sm font-medium text-indigo-900">
+                  <Stethoscope className="size-4 shrink-0" /> {pet.name} sedang rawat inap
+                </p>
+                <p className="text-xs text-indigo-900/80">
+                  Jadwal makan dan pipisnya dijeda sampai dijemput.
+                </p>
+                <DischargeButton
+                  pet={pet}
+                  label="Jemput dari Klinik"
+                  successMessage={`${pet.name} sudah pulang — jadwal aktif lagi`}
+                  errorMessage="Gagal memperbarui status"
+                />
+              </div>
+            ))}
+          </section>
         )}
-      </main>
+
+        <main className="flex flex-1 flex-col gap-3">
+          {range === "week" && !loading ? (
+            <>
+              <WeekPager date={selectedDate} locale="id" onShift={shiftWeek} />
+              <div
+                key={formatDateLocal(weekStartOf(selectedDate))}
+                className="animate-view-fade motion-reduce:animate-none"
+              >
+                <AgendaWeekGrid
+                  days={week}
+                  locale="id"
+                  onOpenDay={(day) => {
+                    setSelectedDate(day);
+                    setRange("day");
+                  }}
+                  onShiftWeek={shiftWeek}
+                />
+              </div>
+            </>
+          ) : loading ? (
+            <>
+              <Skeleton className="h-28 w-full rounded-xl" />
+              <Skeleton className="h-28 w-full rounded-xl" />
+              <Skeleton className="h-28 w-full rounded-xl" />
+            </>
+          ) : entries.length === 0 ? (
+            <p className="pt-10 text-center text-sm text-muted-foreground">
+              Tidak ada jadwal untuk tanggal ini.
+            </p>
+          ) : (
+            <>
+              {/* Undone chores from earlier days lead today (Phase 113). */}
+              {overdue.length > 0 && (
+                <OverdueSection count={overdue.length} locale="id">
+                  {overdue.map(renderEntry)}
+                </OverdueSection>
+              )}
+              {rest.map(renderEntry)}
+            </>
+          )}
+        </main>
+      </div>
 
       {/* Read, claim, prove, close — and nothing else. There is no add, edit
           or delete anywhere in the staff view (Phase 100). */}

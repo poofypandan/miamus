@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { addDays } from "date-fns";
 import Link from "next/link";
 import { CalendarDays, PawPrint, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { AgendaWeekGrid } from "@/components/agenda/agenda-week-grid";
 import { OverdueSection } from "@/components/agenda/overdue-section";
+import { WeekPager } from "@/components/agenda/week-pager";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue } from "@/components/dashboard/approval-queue";
@@ -27,6 +29,7 @@ import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import {
   buildUnifiedAgenda,
   splitOverdue,
+  weekStartOf,
   type UnifiedAgendaEntry,
 } from "@/lib/unified-agenda";
 import type { HouseholdTask } from "@/types/database";
@@ -50,7 +53,8 @@ import type { HouseholdTask } from "@/types/database";
  * chore is staff work and lives on their phones.
  */
 export function AgendaTab() {
-  const { pets, schedules, logs, loading, selectedDate, setSelectedDate } = useHousehold();
+  const { pets, schedules, logs, loading, selectedDate, setSelectedDate, todayJumps } =
+    useHousehold();
   const { profiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(profiles);
   const chores = useChoreOccurrences();
@@ -74,6 +78,12 @@ export function AgendaTab() {
     [groups, chores]
   );
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
+
+  // A week at a time from whichever day is selected, so Day view lands on
+  // the same weekday of the new week.
+  function shiftWeek(weeks: -1 | 1) {
+    setSelectedDate(addDays(selectedDate, weeks * 7));
+  }
 
   function renderEntry(entry: UnifiedAgendaEntry) {
     return entry.kind === "routine" ? (
@@ -107,12 +117,7 @@ export function AgendaTab() {
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
-      {/* The Agenda is a view of one day, so it owns the control that picks
-          which. It had none until Phase 101: before the five-tab refactor the
-          dashboard rendered a single ribbon above the whole canvas, and when
-          that went the Agenda was left following a date it could not change. */}
-      {/* Day | Week (Phase 112). In Week the ribbon still picks the day the
-          seven start from, so planning next week is one tap. */}
+      {/* Day | Week (Phase 112). */}
       <SegmentedControl
         ariaLabel="Agenda range"
         segments={[
@@ -123,84 +128,106 @@ export function AgendaTab() {
         onChange={setRange}
       />
 
-      <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
+      {/* Everything under the toggle fades in afresh when the range changes
+          or Today is tapped (Phase 115) — keyed, so it remounts: the ribbon
+          re-centres and the grid scrolls back to today. */}
+      <div
+        key={`${range}|${todayJumps}`}
+        className="flex animate-view-fade flex-col gap-4 motion-reduce:animate-none"
+      >
+        {/* The Agenda is a view of one day, so it owns the control that picks
+            which. It had none until Phase 101: before the five-tab refactor the
+            dashboard rendered a single ribbon above the whole canvas, and when
+            that went the Agenda was left following a date it could not change.
+            Day view only since Phase 115: the Week grid's own headers are the
+            days, and a strip of the same dates above them said it twice. */}
+        {range === "day" && (
+          <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
+        )}
 
-      {/* A pending proposal is the only thing here blocking someone else's
-          work, so it outranks the day itself. Renders nothing when the queue
-          is empty. */}
-      <ApprovalQueue />
+        {/* A pending proposal is the only thing here blocking someone else's
+            work, so it outranks the day itself. Renders nothing when the queue
+            is empty. */}
+        <ApprovalQueue />
 
-      {range === "day" ? (
-        <>
-          <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
+        {range === "day" ? (
+          <>
+            <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
 
-          {entries.length === 0 ? (
-            // The first screen a new household sees, so it says how to fill it:
-            // a chore from here, and — while there are no pets to have routines —
-            // the way to the tab that adds them.
-            <EmptyState
-              icon={CalendarDays}
-              title="Nothing scheduled"
-              description={
-                pets.length === 0
-                  ? "Tap + to add a chore, or add a pet to plan their daily routines."
-                  : "No pet routines or chores on this day. Tap + to add a chore."
-              }
+            {entries.length === 0 ? (
+              // The first screen a new household sees, so it says how to fill it:
+              // a chore from here, and — while there are no pets to have routines —
+              // the way to the tab that adds them.
+              <EmptyState
+                icon={CalendarDays}
+                title="Nothing scheduled"
+                description={
+                  pets.length === 0
+                    ? "Tap + to add a chore, or add a pet to plan their daily routines."
+                    : "No pet routines or chores on this day. Tap + to add a chore."
+                }
+              >
+                <Button
+                  className="min-h-[44px]"
+                  onClick={() => {
+                    setEditing(null);
+                    setEditorOpen(true);
+                  }}
+                >
+                  <Plus /> Add chore
+                </Button>
+                {pets.length === 0 && (
+                  <Button variant="outline" className="min-h-[44px]" asChild>
+                    <Link href={moduleHref("pets")} scroll={false}>
+                      <PawPrint /> Add a pet
+                    </Link>
+                  </Button>
+                )}
+              </EmptyState>
+            ) : (
+              <>
+                {/* Undone chores from earlier days lead today (Phase 113). */}
+                {overdue.length > 0 && (
+                  <OverdueSection count={overdue.length} locale="en">
+                    {overdue.map(renderEntry)}
+                  </OverdueSection>
+                )}
+                {rest.length > 0 && (
+                  <Card className="gap-3 py-4">
+                    <CardContent className="flex flex-col gap-1.5 px-4">
+                      {rest.map(renderEntry)}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Sunday to Saturday, a week at a time, endlessly (Phase 115). */}
+            <WeekPager date={selectedDate} locale="en" onShift={shiftWeek} />
+            {/* Keyed on the week, so a new one fades in rather than snapping. */}
+            <div
+              key={formatDateLocal(weekStartOf(selectedDate))}
+              className="animate-view-fade motion-reduce:animate-none"
             >
-              <Button
-                className="min-h-[44px]"
-                onClick={() => {
-                  setEditing(null);
+              <AgendaWeekGrid
+                days={week}
+                locale="en"
+                onOpenDay={(day) => {
+                  setSelectedDate(day);
+                  setRange("day");
+                }}
+                onChorePress={(occurrence) => {
+                  setEditing(occurrence.row ?? occurrence.template);
                   setEditorOpen(true);
                 }}
-              >
-                <Plus /> Add chore
-              </Button>
-              {pets.length === 0 && (
-                <Button variant="outline" className="min-h-[44px]" asChild>
-                  <Link href={moduleHref("pets")} scroll={false}>
-                    <PawPrint /> Add a pet
-                  </Link>
-                </Button>
-              )}
-            </EmptyState>
-          ) : (
-            <>
-              {/* Undone chores from earlier days lead today (Phase 113). */}
-              {overdue.length > 0 && (
-                <OverdueSection count={overdue.length} locale="en">
-                  {overdue.map(renderEntry)}
-                </OverdueSection>
-              )}
-              {rest.length > 0 && (
-                <Card className="gap-3 py-4">
-                  <CardContent className="flex flex-col gap-1.5 px-4">
-                    {rest.map(renderEntry)}
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
-        </>
-      ) : (
-        <>
-          <h2 className="text-sm font-semibold text-gray-900">
-            {label === "Today" ? "The next 7 days" : `7 days from ${label}`}
-          </h2>
-          <AgendaWeekGrid
-            days={week}
-            locale="en"
-            onOpenDay={(day) => {
-              setSelectedDate(day);
-              setRange("day");
-            }}
-            onChorePress={(occurrence) => {
-              setEditing(occurrence.row ?? occurrence.template);
-              setEditorOpen(true);
-            }}
-          />
-        </>
-      )}
+                onShiftWeek={shiftWeek}
+              />
+            </div>
+          </>
+        )}
+      </div>
 
       <ChoreEditorDialog
         open={editorOpen}

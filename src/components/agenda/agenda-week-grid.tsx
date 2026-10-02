@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import type { AgendaDay } from "@/hooks/use-agenda-week";
+import { useHorizontalSwipe } from "@/hooks/use-horizontal-swipe";
 import { useToday } from "@/hooks/use-today";
 import { AGENDA_TONES, routineTone, type AgendaTone } from "@/lib/agenda-tones";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
@@ -129,6 +130,7 @@ export function AgendaWeekGrid({
   locale,
   onOpenDay,
   onChorePress,
+  onShiftWeek,
 }: {
   days: AgendaDay[];
   locale: "en" | "id";
@@ -136,6 +138,11 @@ export function AgendaWeekGrid({
   onOpenDay: (day: Date) => void;
   /** The owner's way into the chore editor. Omitted on staff phones. */
   onChorePress?: (occurrence: ChoreOccurrence) => void;
+  /**
+   * Turns the week (Phase 115): a swipe past the grid's own sideways scroll —
+   * rightwards once Sunday is in view, leftwards once Saturday is.
+   */
+  onShiftWeek?: (weeks: -1 | 1) => void;
 }) {
   const t = COPY[locale];
   const todayStr = formatDateLocal(useToday());
@@ -213,26 +220,55 @@ export function AgendaWeekGrid({
 
   // Open on the morning's first block (an hour before it, for context), or
   // at 7 AM on an empty week — not at midnight, which is never where anyone
-  // wants to start reading. Once, on mount: after that the scroll is theirs.
+  // wants to start reading.
+  //
+  // Until the reader first touches the grid, not just once on mount: a new
+  // week can mount before its chores have arrived (Today, or the arrows, ask
+  // for a week that is not loaded yet), and when they land the pinned
+  // All-day row grows over the hours it had just scrolled to. So it re-aims
+  // whenever the days change — and stops for good at the first touch, wheel
+  // or click, after which the scroll is theirs.
   const firstHour = useMemo(() => {
     const starts = columns.flatMap((c) => c.timed.map((e) => hourOf(e.time)));
     return starts.length > 0 ? Math.min(...starts) : 7;
   }, [columns]);
-  const firstHourRef = useRef(firstHour);
   const pinned = useRef<HTMLDivElement>(null);
+  const touched = useRef(false);
   useLayoutEffect(() => {
+    const el = scroller.current;
+    if (touched.current) return;
+    // Sideways, to today's column when today is in this week — on a phone
+    // the grid shows about three days, and they should be today's. Measured
+    // against the gutter, which stays pinned over the left edge.
+    const todayHeader = el?.querySelector<HTMLElement>(`[data-date="${todayStr}"]`);
+    if (el && todayHeader) {
+      el.scrollLeft += todayHeader.getBoundingClientRect().left - el.getBoundingClientRect().left - GUTTER_PX;
+    }
+
     // Rows are no longer a fixed height, so the target is measured, not
     // multiplied: the hour's row, scrolled to just under the pinned rows.
-    const el = scroller.current;
     const row = el?.querySelector<HTMLElement>(
-      `[data-hour="${Math.max(0, firstHourRef.current - 1)}"]`
+      `[data-hour="${Math.max(0, firstHour - 1)}"]`
     );
     if (!el || !row || !pinned.current) return;
     const under = pinned.current.getBoundingClientRect().bottom;
     // Less a few pixels, so the hour's label — centred on its line — clears
     // the pinned rows.
     el.scrollTop += row.getBoundingClientRect().top - under - 8;
-  }, []);
+  }, [columns, firstHour, todayStr]);
+
+  const swipe = useHorizontalSwipe({
+    onPrev: () => onShiftWeek?.(-1),
+    onNext: () => onShiftWeek?.(1),
+    allow: () => {
+      const el = scroller.current;
+      if (!el || !onShiftWeek) return { prev: false, next: false };
+      return {
+        prev: el.scrollLeft <= 1,
+        next: el.scrollLeft + el.clientWidth >= el.scrollWidth - 1,
+      };
+    },
+  });
 
   const template = {
     gridTemplateColumns: `${GUTTER_PX}px repeat(${days.length}, minmax(${COLUMN_MIN_PX}px, 1fr))`,
@@ -242,6 +278,13 @@ export function AgendaWeekGrid({
     <div className="overflow-hidden rounded-xl border bg-card">
       <div
         ref={scroller}
+        {...swipe}
+        onTouchStart={(e) => {
+          touched.current = true;
+          swipe.onTouchStart(e);
+        }}
+        onWheel={() => (touched.current = true)}
+        onPointerDown={() => (touched.current = true)}
         className="max-h-[68vh] overflow-auto overscroll-contain [scrollbar-width:thin]"
       >
         <div style={{ minWidth: GUTTER_PX + days.length * COLUMN_MIN_PX }}>
@@ -257,6 +300,7 @@ export function AgendaWeekGrid({
                 <button
                   key={date}
                   type="button"
+                  data-date={date}
                   onClick={() => onOpenDay(day)}
                   className="flex flex-col items-center justify-center gap-0.5 border-l"
                 >
