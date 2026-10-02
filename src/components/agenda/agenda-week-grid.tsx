@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import type { AgendaDay } from "@/hooks/use-agenda-week";
 import { useToday } from "@/hooks/use-today";
 import { AGENDA_TONES, routineTone, type AgendaTone } from "@/lib/agenda-tones";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
+import type { ScheduleCategory } from "@/lib/schedule-categories";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { layoutLanes, spanAt, type LanePlacement } from "@/lib/week-grid";
+import { hourOf, minutesOf } from "@/lib/week-grid";
+import type { HouseholdTaskCategory } from "@/types/database";
 
-// Geometry. An hour is 48px — tall enough for a two-line block at the default
-// one-hour length, short enough that a working morning fits on a phone.
+// Geometry. An hour is at least 48px — room for one two-line block — and
+// grows, across the whole week, when some day stacks more into it.
 const HOUR_PX = 48;
 const GUTTER_PX = 44;
 // Seven columns this wide do not fit a phone, by design: the grid scrolls
@@ -42,9 +44,31 @@ const COPY = {
   },
 } as const;
 
+// A glyph ahead of every title (Phase 114), so a block too narrow for its
+// whole name still says what kind of job it is. Emoji rather than icons: they
+// keep their meaning at 10px and on any of the three tones.
+const ROUTINE_GLYPHS: Record<ScheduleCategory, string> = {
+  medication: "💊",
+  vet: "🩺",
+  meal: "🍖",
+  potty: "🐕",
+  grooming: "🛁",
+  temporary: "🐾",
+};
+const CHORE_GLYPHS: Record<HouseholdTaskCategory, string> = {
+  cleaning: "🧹",
+  maintenance: "🔧",
+  errand: "📋",
+  groceries: "🛒",
+};
+// Same tolerance as categoryIcon: a category this build has never seen still
+// gets a mark.
+const choreGlyph = (category: HouseholdTaskCategory) => CHORE_GLYPHS[category] ?? "📌";
+
 interface GridEvent {
   key: string;
   time: string;
+  glyph: string;
   title: string;
   tone: AgendaTone;
   done: boolean;
@@ -54,6 +78,7 @@ interface GridEvent {
 interface AllDayItem {
   key: string;
   title: string;
+  glyph: string;
   overdue: boolean;
   done: boolean;
   onPress: () => void;
@@ -88,9 +113,13 @@ function useMinuteOfDay(): number {
  * All-day is where anytime chores live — they have no hour to sit in — and,
  * on today, the overdue ones, which have an hour that has already passed.
  *
- * Blocks run an hour unless something says otherwise; nothing in the data
- * does yet, so every block is an hour. Blocks that overlap share the column
- * side by side (lib/week-grid).
+ * A block sits in the hour it starts in and fills it; nothing in the data
+ * gives a duration, so an hour is what every task is drawn as. Several in one
+ * hour stack top to bottom at full column width (Phase 114) instead of
+ * splitting it side by side, which on a phone left each a sliver too narrow
+ * for its title — and the hour grows, across all seven days, to fit them, so
+ * the rows stay aligned with the gutter. No clock time inside a block: the
+ * gutter already says it.
  *
  * Colours are the Agenda's three tones: red for a dog's health, grey for its
  * routine, amber for the house.
@@ -128,6 +157,7 @@ export function AgendaWeekGrid({
             timed.push({
               key: entry.key,
               time: group.time,
+              glyph: ROUTINE_GLYPHS[group.category] ?? "🐾",
               title: consolidated ? t.medicines(group.titles.length) : group.title,
               tone: routineTone(group.category),
               done: group.items.length > 0 && group.items.every((i) => i.status === "completed"),
@@ -143,6 +173,7 @@ export function AgendaWeekGrid({
             allDay.push({
               key: entry.key,
               title: occurrence.task.title,
+              glyph: choreGlyph(occurrence.task.category),
               overdue: true,
               done,
               onPress: pressChore(occurrence),
@@ -151,6 +182,7 @@ export function AgendaWeekGrid({
             allDay.push({
               key: entry.key,
               title: occurrence.task.title,
+              glyph: choreGlyph(occurrence.task.category),
               overdue: false,
               done,
               onPress: pressChore(occurrence),
@@ -159,6 +191,7 @@ export function AgendaWeekGrid({
             timed.push({
               key: entry.key,
               time: occurrence.task.due_time,
+              glyph: choreGlyph(occurrence.task.category),
               title: occurrence.task.title,
               tone: "chore",
               done,
@@ -169,8 +202,11 @@ export function AgendaWeekGrid({
 
         // Overdue first, then open, then done: the order they need attention.
         allDay.sort((a, b) => Number(b.overdue) - Number(a.overdue) || Number(a.done) - Number(b.done));
-        const lanes = layoutLanes(timed.map((e) => spanAt(e.key, e.time)));
-        return { date, day, timed, allDay, lanes };
+        // Bucketed by the hour each starts in, in clock order within it.
+        const byHour: GridEvent[][] = HOURS.map(() => []);
+        timed.sort((a, b) => minutesOf(a.time) - minutesOf(b.time));
+        for (const event of timed) byHour[hourOf(event.time)].push(event);
+        return { date, day, timed, allDay, byHour };
       }),
     [days, onChorePress, onOpenDay, t]
   );
@@ -178,14 +214,24 @@ export function AgendaWeekGrid({
   // Open on the morning's first block (an hour before it, for context), or
   // at 7 AM on an empty week — not at midnight, which is never where anyone
   // wants to start reading. Once, on mount: after that the scroll is theirs.
-  const firstMinute = useMemo(() => {
-    const starts = columns.flatMap((c) => c.timed.map((e) => spanAt(e.key, e.time).start));
-    return starts.length > 0 ? Math.min(...starts) : 7 * 60;
+  const firstHour = useMemo(() => {
+    const starts = columns.flatMap((c) => c.timed.map((e) => hourOf(e.time)));
+    return starts.length > 0 ? Math.min(...starts) : 7;
   }, [columns]);
-  const firstMinuteRef = useRef(firstMinute);
+  const firstHourRef = useRef(firstHour);
+  const pinned = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
+    // Rows are no longer a fixed height, so the target is measured, not
+    // multiplied: the hour's row, scrolled to just under the pinned rows.
     const el = scroller.current;
-    if (el) el.scrollTop = Math.max(0, (firstMinuteRef.current / 60 - 1) * HOUR_PX);
+    const row = el?.querySelector<HTMLElement>(
+      `[data-hour="${Math.max(0, firstHourRef.current - 1)}"]`
+    );
+    if (!el || !row || !pinned.current) return;
+    const under = pinned.current.getBoundingClientRect().bottom;
+    // Less a few pixels, so the hour's label — centred on its line — clears
+    // the pinned rows.
+    el.scrollTop += row.getBoundingClientRect().top - under - 8;
   }, []);
 
   const template = {
@@ -233,6 +279,7 @@ export function AgendaWeekGrid({
           {/* All-day: anytime chores, and today's overdue — pinned under the
               headers. */}
           <div
+            ref={pinned}
             className="sticky z-20 grid border-b bg-card"
             style={{ ...template, top: HEADER_PX }}
           >
@@ -253,8 +300,10 @@ export function AgendaWeekGrid({
                       item.done && "opacity-60"
                     )}
                   >
-                    {item.overdue && (
+                    {item.overdue ? (
                       <AlertTriangle className="size-3 shrink-0" aria-label={t.overdue} />
+                    ) : (
+                      <span aria-hidden>{item.glyph}</span>
                     )}
                     <span className={cn("truncate", item.done && "line-through")}>{item.title}</span>
                   </button>
@@ -272,48 +321,51 @@ export function AgendaWeekGrid({
             ))}
           </div>
 
-          {/* The hours. */}
-          <div className="grid" style={template}>
-            <div className="sticky left-0 z-10 bg-card" style={{ height: 24 * HOUR_PX }}>
-              {HOURS.map((hour) =>
-                hour === 0 ? null : (
-                  <span
-                    key={hour}
-                    className="absolute right-1 -translate-y-1/2 text-[9px] text-muted-foreground tabular-nums"
-                    style={{ top: hour * HOUR_PX }}
-                  >
-                    {hourLabel(hour)}
-                  </span>
-                )
-              )}
-            </div>
+          {/* The hours: one grid row per hour, each at least HOUR_PX and as
+              tall as the busiest day needs. */}
+          <div
+            className="grid"
+            style={{ ...template, gridAutoRows: `minmax(${HOUR_PX}px, auto)` }}
+          >
+            {HOURS.map((hour) => (
+              <Fragment key={hour}>
+                <div data-hour={hour} className="sticky left-0 z-10 bg-card">
+                  {hour > 0 && (
+                    <span className="absolute right-1 -translate-y-1/2 text-[9px] text-muted-foreground tabular-nums">
+                      {hourLabel(hour)}
+                    </span>
+                  )}
+                </div>
+                {columns.map(({ date, byHour }) => {
+                  const isToday = date === todayStr;
+                  const showNow = isToday && Math.floor(nowMinute / 60) === hour;
+                  return (
+                    <div
+                      key={date}
+                      className={cn(
+                        "relative flex min-w-0 flex-col gap-0.5 border-l p-0.5",
+                        hour > 0 && "border-t",
+                        isToday && "bg-muted/30"
+                      )}
+                    >
+                      {byHour[hour].map((event) => (
+                        <Block key={event.key} event={event} alone={byHour[hour].length === 1} />
+                      ))}
 
-            {columns.map(({ date, timed, lanes }) => (
-              <div
-                key={date}
-                className={cn("relative border-l", date === todayStr && "bg-muted/30")}
-                style={{
-                  height: 24 * HOUR_PX,
-                  // Hour rules as one painted background rather than 24
-                  // elements per column.
-                  backgroundImage: `repeating-linear-gradient(to bottom, var(--color-border) 0 1px, transparent 1px ${HOUR_PX}px)`,
-                }}
-              >
-                {timed.map((event) => (
-                  <Block key={event.key} event={event} placement={lanes.get(event.key)} />
-                ))}
-
-                {date === todayStr && (
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-0 z-10 flex items-center"
-                    style={{ top: (nowMinute / 60) * HOUR_PX }}
-                  >
-                    <span className="-ml-1 size-2 rounded-full bg-gray-900" />
-                    <span className="h-px flex-1 bg-gray-900" />
-                  </div>
-                )}
-              </div>
+                      {showNow && (
+                        <div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-x-0 z-10 flex items-center"
+                          style={{ top: `${((nowMinute % 60) / 60) * 100}%` }}
+                        >
+                          <span className="-ml-1 size-2 rounded-full bg-gray-900" />
+                          <span className="h-px flex-1 bg-gray-900" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </Fragment>
             ))}
           </div>
         </div>
@@ -322,33 +374,29 @@ export function AgendaWeekGrid({
   );
 }
 
-function Block({ event, placement }: { event: GridEvent; placement?: LanePlacement }) {
-  const span = spanAt(event.key, event.time);
-  const lane = placement?.lane ?? 0;
-  const lanes = placement?.lanes ?? 1;
-  const time = formatTime12h(event.time);
+function Block({ event, alone }: { event: GridEvent; alone: boolean }) {
   return (
     <button
       type="button"
       onClick={event.onPress}
-      aria-label={`${time} ${event.title}`}
+      // The clock time stays for screen readers: they have no gutter to read.
+      aria-label={`${formatTime12h(event.time)} ${event.title}`}
       className={cn(
-        "absolute flex flex-col overflow-hidden rounded-md border-l-[3px] px-1 py-0.5 text-left text-[10px] leading-tight",
+        // Alone, a block fills its hour, as an hour-long event would. Stacked,
+        // each takes its own height. Never stretched further: an hour made
+        // taller by a busier day must not make a quiet day's block look long.
+        "flex w-full items-start gap-0.5 overflow-hidden rounded-md border-l-[3px] px-1 py-0.5 text-left text-[10px] leading-tight",
+        alone ? "min-h-[43px]" : "min-h-[22px]",
         AGENDA_TONES[event.tone].block,
         event.done && "opacity-60"
       )}
-      style={{
-        top: (span.start / 60) * HOUR_PX + 1,
-        height: Math.max(((span.end - span.start) / 60) * HOUR_PX - 2, 18),
-        left: `calc(${(lane / lanes) * 100}% + 2px)`,
-        width: `calc(${100 / lanes}% - 4px)`,
-      }}
     >
-      <span className="flex items-center gap-0.5 font-semibold tabular-nums opacity-80">
-        {time}
-        {event.done && <CheckCircle2 className="size-2.5 shrink-0" />}
+      <span aria-hidden className="shrink-0">
+        {event.done ? <CheckCircle2 className="mt-px size-2.5" /> : event.glyph}
       </span>
-      <span className={cn("line-clamp-2 font-medium break-words", event.done && "line-through")}>
+      <span
+        className={cn("line-clamp-2 min-w-0 font-medium break-words", event.done && "line-through")}
+      >
         {event.title}
       </span>
     </button>

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, Clock, Eye, Repeat, UserRound, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ChoreProofPhotos } from "@/components/chores/chore-proof-photos";
-import { AGENDA_TONES } from "@/lib/agenda-tones";
+import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
 import {
   categoryClass,
   categoryIcon,
@@ -93,7 +93,7 @@ export function ChoreCard({
             <span className="mt-0.5 block text-xs text-muted-foreground">{task.notes}</span>
           )}
         </span>
-        {done && <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />}
+        {done && <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", DONE_TONE.check)} />}
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -160,9 +160,10 @@ export function ChoreCard({
   const className = cn(
     "flex w-full flex-col gap-2 rounded-xl border p-3 text-left",
     // Amber for every open chore — the third of the Agenda's three tones
-    // (Phase 112). Done drops to neutral; supervision and carry-over are said
-    // by their own badge and line rather than by a second shade of amber.
-    done ? "border-border bg-muted/40" : AGENDA_TONES.chore.tint
+    // (Phase 112). Done turns green, like a finished routine (Phase 114);
+    // supervision and carry-over are said by their own badge and line rather
+    // than by a second shade of amber.
+    done ? DONE_TONE.tint : AGENDA_TONES.chore.tint
   );
 
   if (!onPress) return <div className={className}>{body}</div>;

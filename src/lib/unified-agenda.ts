@@ -30,6 +30,12 @@ export type UnifiedAgendaEntry =
  * Within the same minute a pet routine comes first. Dogs before housework is
  * the house rule everywhere else in this app (the staff view has always
  * stacked chores under the agenda), and a tie has to break somewhere.
+ *
+ * Finished entries sink below everything still open (Phase 114), in the same
+ * anytime-then-clock order among themselves. Left in their slot, a morning's
+ * done work sat between the reader and what was left; at the bottom it is
+ * still there to check, just no longer in the way. (Overdue chores are lifted
+ * out above all of this by splitOverdue.)
  */
 export function buildUnifiedAgenda(params: {
   groups: AgendaGroup[];
@@ -54,6 +60,8 @@ export function buildUnifiedAgenda(params: {
   ];
 
   return entries.sort((a, b) => {
+    const doneA = isEntryDone(a);
+    if (doneA !== isEntryDone(b)) return doneA ? 1 : -1;
     if (a.time && b.time && a.time !== b.time) return a.time.localeCompare(b.time);
     if (!a.time && b.time) return -1;
     if (a.time && !b.time) return 1;
@@ -63,6 +71,16 @@ export function buildUnifiedAgenda(params: {
     }
     return 0;
   });
+}
+
+/**
+ * Whether an entry needs nobody any more: a chore marked done, or a routine
+ * every dog in it has been through.
+ */
+export function isEntryDone(entry: UnifiedAgendaEntry): boolean {
+  if (entry.kind === "chore") return entry.occurrence.status === "completed";
+  const { items } = entry.group;
+  return items.length > 0 && items.every((item) => item.status === "completed");
 }
 
 /**

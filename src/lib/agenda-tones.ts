@@ -65,6 +65,19 @@ export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
   },
 };
 
+/**
+ * The finished state (Phase 114): the staff view's green, now on every row
+ * that is done — the owner's Agenda, and chore cards on both sides. A status,
+ * like the overdue red, so it replaces the category tone rather than mixing
+ * with it: once something is done, what kind of task it was matters less than
+ * that nobody needs to look at it.
+ */
+export const DONE_TONE = {
+  tint: "border-emerald-500/30 bg-emerald-500/5",
+  icon: "text-emerald-700",
+  check: "text-emerald-600",
+} as const;
+
 /** Which colour a pet routine wears. Sick reports file as medication, so they are red too. */
 export function routineTone(category: ScheduleCategory): AgendaTone {
   return category === "medication" || category === "vet" ? "critical" : "routine";

@@ -5,6 +5,7 @@ import { CheckCircle2, Stethoscope, XCircle } from "lucide-react";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
+import { DONE_TONE } from "@/lib/agenda-tones";
 import { isAdmitted } from "@/lib/pets";
 import {
   categoryCardTint,
@@ -45,7 +46,10 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
     // eslint-disable-next-line react-hooks/exhaustive-deps -- photoItems is derived from group.items each render
     [group.items, pets, schedules]
   );
-  const tint = categoryCardTint(group.category);
+  // Every dog done: the staff view's green (Phase 114), in place of the
+  // category tint.
+  const done = group.items.length > 0 && group.items.every((i) => i.status === "completed");
+  const tint = done ? DONE_TONE.tint : categoryCardTint(group.category);
   const consolidated = group.category === "medication" && group.titles.length > 1;
 
   // Padding and a border on every row, transparent where there is no tint, so
@@ -67,7 +71,9 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
       >
         {formatTime12h(group.time)}
       </span>
-      <Icon className={cn("size-4 shrink-0", categoryIconColor(group.category))} />
+      <Icon
+        className={cn("size-4 shrink-0", done ? DONE_TONE.icon : categoryIconColor(group.category))}
+      />
       {/* A dog's medicines at one time arrive as a single group (Phase 81), so
           the row names the errand and lists what is in it underneath rather
           than repeating a near-identical row three times. Owner-facing, so

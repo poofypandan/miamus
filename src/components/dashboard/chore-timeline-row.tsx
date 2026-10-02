@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, Eye, Repeat } from "lucide-react";
-import { AGENDA_TONES } from "@/lib/agenda-tones";
+import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
 import { categoryIcon } from "@/lib/household-tasks";
 import { recurrenceOf, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { formatTime12h } from "@/lib/time";
@@ -40,16 +40,16 @@ export function ChoreTimelineRow({
       className={cn(
         "flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-left text-sm active:bg-muted/60",
         // Amber marks every open chore (Phase 112's three tones), so the house
-        // reads apart from the dogs at a glance. A finished one drops back to
-        // neutral: it no longer needs anyone's eye.
-        !done && AGENDA_TONES.chore.tint
+        // reads apart from the dogs at a glance. A finished one turns the
+        // staff view's green (Phase 114) and sinks to the bottom of the day.
+        done ? DONE_TONE.tint : AGENDA_TONES.chore.tint
       )}
     >
       <span
         className={cn(
           "w-16 shrink-0 font-mono text-xs",
-          // A shade darker on the tint: muted grey falls under 4.5:1 there.
-          !done ? "text-zinc-600" : "text-muted-foreground"
+          // A shade darker on a tint: muted grey falls under 4.5:1 there.
+          "text-zinc-600"
         )}
       >
         {/* Untimed chores say so rather than borrowing a clock they do not
@@ -58,7 +58,7 @@ export function ChoreTimelineRow({
       </span>
 
       <Icon
-        className={cn("size-4 shrink-0", done ? "text-muted-foreground" : AGENDA_TONES.chore.icon)}
+        className={cn("size-4 shrink-0", done ? DONE_TONE.icon : AGENDA_TONES.chore.icon)}
       />
 
       <span className="flex min-w-0 flex-1 flex-col">
@@ -78,7 +78,11 @@ export function ChoreTimelineRow({
         </span>
       </span>
 
-      {done && <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />}
+      {done && (
+        <span className={cn("flex shrink-0 items-center gap-1 text-xs font-medium", DONE_TONE.icon)}>
+          <CheckCircle2 className="size-4" /> Done
+        </span>
+      )}
     </button>
   );
 }
