@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { AgendaWeekList } from "@/components/agenda/agenda-week-list";
+import { AgendaWeekGrid } from "@/components/agenda/agenda-week-grid";
+import { OverdueSection } from "@/components/agenda/overdue-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue } from "@/components/dashboard/approval-queue";
@@ -23,7 +24,11 @@ import { useToday } from "@/hooks/use-today";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
-import { buildUnifiedAgenda } from "@/lib/unified-agenda";
+import {
+  buildUnifiedAgenda,
+  splitOverdue,
+  type UnifiedAgendaEntry,
+} from "@/lib/unified-agenda";
 import type { HouseholdTask } from "@/types/database";
 
 /**
@@ -68,6 +73,28 @@ export function AgendaTab() {
     () => buildUnifiedAgenda({ groups, chores }),
     [groups, chores]
   );
+  const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
+
+  function renderEntry(entry: UnifiedAgendaEntry) {
+    return entry.kind === "routine" ? (
+      <TimelineRow key={entry.key} group={entry.group} pets={pets} />
+    ) : (
+      <ChoreTimelineRow
+        key={entry.key}
+        occurrence={entry.occurrence}
+        assigneeName={
+          entry.occurrence.task.assigned_to ? staffName(entry.occurrence.task.assigned_to) : null
+        }
+        onPress={() => {
+          // The template, not the occurrence: editing a repeat from any of its
+          // days edits the repeat. A materialised occurrence has its own row
+          // and edits that.
+          setEditing(entry.occurrence.row ?? entry.occurrence.template);
+          setEditorOpen(true);
+        }}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -138,32 +165,21 @@ export function AgendaTab() {
               )}
             </EmptyState>
           ) : (
-            <Card className="gap-3 py-4">
-              <CardContent className="flex flex-col gap-1.5 px-4">
-                {entries.map((entry) =>
-                  entry.kind === "routine" ? (
-                    <TimelineRow key={entry.key} group={entry.group} pets={pets} />
-                  ) : (
-                    <ChoreTimelineRow
-                      key={entry.key}
-                      occurrence={entry.occurrence}
-                      assigneeName={
-                        entry.occurrence.task.assigned_to
-                          ? staffName(entry.occurrence.task.assigned_to)
-                          : null
-                      }
-                      onPress={() => {
-                        // The template, not the occurrence: editing a repeat from
-                        // any of its days edits the repeat. A materialised
-                        // occurrence has its own row and edits that.
-                        setEditing(entry.occurrence.row ?? entry.occurrence.template);
-                        setEditorOpen(true);
-                      }}
-                    />
-                  )
-                )}
-              </CardContent>
-            </Card>
+            <>
+              {/* Undone chores from earlier days lead today (Phase 113). */}
+              {overdue.length > 0 && (
+                <OverdueSection count={overdue.length} locale="en">
+                  {overdue.map(renderEntry)}
+                </OverdueSection>
+              )}
+              {rest.length > 0 && (
+                <Card className="gap-3 py-4">
+                  <CardContent className="flex flex-col gap-1.5 px-4">
+                    {rest.map(renderEntry)}
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </>
       ) : (
@@ -171,7 +187,7 @@ export function AgendaTab() {
           <h2 className="text-sm font-semibold text-gray-900">
             {label === "Today" ? "The next 7 days" : `7 days from ${label}`}
           </h2>
-          <AgendaWeekList
+          <AgendaWeekGrid
             days={week}
             locale="en"
             onOpenDay={(day) => {
@@ -182,9 +198,6 @@ export function AgendaTab() {
               setEditing(occurrence.row ?? occurrence.template);
               setEditorOpen(true);
             }}
-            assigneeName={(occurrence) =>
-              occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
-            }
           />
         </>
       )}

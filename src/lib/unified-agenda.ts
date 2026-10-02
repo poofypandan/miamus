@@ -64,3 +64,29 @@ export function buildUnifiedAgenda(params: {
     return 0;
   });
 }
+
+/**
+ * Today's rolled-over chores, lifted out of the timeline (Phase 113).
+ *
+ * They used to sit in it at their old time, marked "carried over" — which put
+ * a chore three days late anywhere from the top to the bottom of today's list
+ * depending on when it was first due. They now lead the day under their own
+ * Overdue header, oldest first; `rest` keeps the usual order. Only ever
+ * non-empty on today: expandChores rolls nothing onto any other day.
+ */
+export function splitOverdue<T extends UnifiedAgendaEntry>(
+  entries: T[]
+): { overdue: T[]; rest: T[] } {
+  const isOverdue = (entry: T) =>
+    entry.kind === "chore" && entry.occurrence.overdue && entry.occurrence.status !== "completed";
+  return {
+    overdue: entries
+      .filter(isOverdue)
+      .sort((a, b) =>
+        a.kind === "chore" && b.kind === "chore"
+          ? a.occurrence.date.localeCompare(b.occurrence.date)
+          : 0
+      ),
+    rest: entries.filter((entry) => !isOverdue(entry)),
+  };
+}

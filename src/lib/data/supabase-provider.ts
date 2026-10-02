@@ -1,7 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
-import { CARRY_OVER_DAYS } from "@/lib/chore-recurrence";
-import { formatDateLocal } from "@/lib/scheduleEngine";
 import type {
   HouseholdTask,
   InventoryAuditLog,
@@ -436,10 +434,6 @@ export const supabaseProvider: DataProvider = {
     const base = () =>
       client().from("household_tasks").select("*").eq("household_id", household);
 
-    const carryFloor = formatDateLocal(
-      new Date(new Date(`${today}T00:00:00`).getTime() - CARRY_OVER_DAYS * 86_400_000)
-    );
-
     const [onDay, templates, carriedOver] = await Promise.all([
       // 1. Rows that belong to these days outright: one-offs, a template's own
       //    first occurrence, and any occurrence already claimed or finished.
@@ -461,13 +455,17 @@ export const supabaseProvider: DataProvider = {
         .lte("due_date", to)
         .or(`recurrence_until.is.null,recurrence_until.gte.${from}`),
 
-      // 3. Unfinished business, and only when today is on screen — browsing
-      //    an earlier day should show that day, not everything since.
+      // 3. The rollover: anything still pending from before today, however
+      //    old (Phase 113 removed the 30-day floor), and only when today is
+      //    on screen — browsing an earlier day should show that day, not
+      //    everything since. The cap is a backstop against a household that
+      //    has stopped closing chores, not a cut-off anyone should meet.
       from <= today && today <= to
         ? base()
             .eq("status", "pending")
             .lt("due_date", today)
-            .gte("due_date", carryFloor)
+            .order("due_date", { ascending: true })
+            .limit(200)
         : Promise.resolve({ data: [] as HouseholdTask[], error: null }),
     ]);
 

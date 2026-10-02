@@ -22,6 +22,13 @@ import { NextResponse, type NextRequest } from "next/server";
  * visitor (see app/page.tsx).
  */
 export async function middleware(request: NextRequest) {
+  // Mock mode (no Supabase configured — local development only) has no
+  // accounts to check, and createServerClient throws without a URL and key,
+  // which used to take /dashboard down with it. Production always has both.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

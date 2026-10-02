@@ -32,12 +32,17 @@ const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
  * (Phase 100): Agenda anchored left, Access right, the household's modules
  * between (Phase 111). Which middles appear is enabledModules' decision.
  *
- * Must be rendered outside PullToRefresh: that wrapper moves its content with
- * a CSS transform, and a transformed ancestor becomes the containing block of
- * a `position: fixed` child, so the bar would scroll away with the page.
+ * Sticky to the bottom of the dashboard's column (Phase 113), not fixed to
+ * the window. Fixed, it had `w-full` but no `left`, so the browser placed it
+ * at its static position — the left edge of the centred column — and then made
+ * it a whole window wide: on a desktop the tabs sat off to the right of the
+ * app, detached from it. Sticky, it is part of the column and cannot leave it;
+ * the column is at least a screen tall, so the bar still rests on the bottom
+ * edge when a tab's content is short.
  *
- * The bar is h-16 (4rem) plus the safe-area inset; dashboard/layout.tsx
- * reserves exactly that much space below the content, so change both together.
+ * It occupies its own space now, so the column no longer reserves padding for
+ * it. Still rendered outside PullToRefresh, whose content moves with a
+ * transform the bar should not follow.
  */
 export function BottomTabBar() {
   const searchParams = useSearchParams();
@@ -49,11 +54,9 @@ export function BottomTabBar() {
       // pb-safe keeps the tabs clear of the iOS home indicator and Android's
       // gesture bar; the solid background fills that inset rather than
       // leaving page content showing through beneath the tabs.
-      className="fixed bottom-0 z-50 w-full border-t bg-background pb-safe shadow-[0_-1px_8px_rgba(0,0,0,0.04)]"
+      className="sticky bottom-0 z-40 w-full border-t bg-background pb-safe shadow-[0_-1px_8px_rgba(0,0,0,0.04)]"
     >
-      {/* Capped to the app's column, so on a tablet or desktop the tabs sit
-          under the content they switch rather than at the screen's edges. */}
-      <div className="mx-auto flex h-16 max-w-md">
+      <div className="flex h-16">
         {enabledModules().map((module) => {
           const { label, icon: Icon } = TABS[module];
           const active = module === activeModule;

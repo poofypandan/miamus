@@ -11,8 +11,6 @@ import type {
   HouseholdTask,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
-import { CARRY_OVER_DAYS } from "@/lib/chore-recurrence";
-import { formatDateLocal } from "@/lib/scheduleEngine";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
 
@@ -439,10 +437,7 @@ export const mockProvider: DataProvider = {
     // Mirrors the three reads the Supabase provider issues (Phase 100), so
     // mock mode expands the same rows into the same occurrences: this day's
     // rows, every repeat that could reach it, and — on today only — whatever
-    // is still pending from the last CARRY_OVER_DAYS.
-    const carryFloor = formatDateLocal(
-      new Date(new Date(`${today}T00:00:00`).getTime() - CARRY_OVER_DAYS * 86_400_000)
-    );
+    // is still pending from before it (the rollover).
     const tasks = loadDB().householdTasks.filter((task) => {
       if (task.due_date >= from && task.due_date <= to) return true;
       const repeats = !!task.recurrence && task.recurrence !== "none";
@@ -457,8 +452,7 @@ export const mockProvider: DataProvider = {
         from <= today &&
         today <= to &&
         task.status === "pending" &&
-        task.due_date < today &&
-        task.due_date >= carryFloor
+        task.due_date < today
       );
     });
     return delay(

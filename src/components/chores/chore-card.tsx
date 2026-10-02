@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, Clock, Eye, Repeat, UserRound, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ChoreProofPhotos } from "@/components/chores/chore-proof-photos";
 import { AGENDA_TONES } from "@/lib/agenda-tones";
 import {
   categoryClass,
@@ -144,6 +145,12 @@ export function ChoreCard({
           <AlertTriangle className="size-3 shrink-0" />
           {t.overdue(dayKeyLabel(occurrence.date, today, locale))}
         </p>
+      )}
+
+      {/* The proof, on the card itself: one side-by-side picture rather
+          than thumbnails tucked into a footer (Phase 113). */}
+      {done && occurrence.row && (
+        <ChoreProofPhotos row={occurrence.row} locale={locale} interactive={!onPress} />
       )}
 
       {footer}

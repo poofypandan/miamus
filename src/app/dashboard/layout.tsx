@@ -31,10 +31,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     // optional biometric lock keeps the household off the screen when the
     // phone is in someone else's hands (Phase 87, PIN-free since Phase 108).
     <OwnerAppLock>
-      {/* The bottom padding is the fixed tab bar's footprint — its h-16 plus
-          the safe-area inset it pads itself with — so the last card of any
-          feed scrolls clear of it. Keep in step with bottom-tab-bar.tsx. */}
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-50 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+      {/* No bottom padding for the tab bar any more: it is sticky inside this
+          column (Phase 113) and takes up its own space, so the last card of a
+          feed already ends above it. min-h-screen is what keeps the bar on the
+          bottom edge when a tab is short. */}
+      <div className="flex min-h-screen w-full flex-col bg-slate-50">
         {/* TopNav reads the active tab via useSearchParams(), which requires a
           Suspense boundary. */}
         <Suspense fallback={null}>

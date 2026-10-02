@@ -166,6 +166,16 @@
        the landing, dashboard and staff screens. */
     background-color: var(--background);
   }
+
+  /* The desktop backdrop behind the mobile frame (Phase 113, layout.tsx).
+     Phones keep the white above: there the frame is the whole screen, and the
+     system bars are matched to white (see the note above). */
+  @media (min-width: 768px) {
+    html,
+    body {
+      background-color: var(--color-zinc-100);
+    }
+  }
 }
 
 @layer utilities {

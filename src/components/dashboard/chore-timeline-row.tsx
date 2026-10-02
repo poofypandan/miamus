@@ -18,24 +18,15 @@ import { cn } from "@/lib/utils";
  *
  * Owner-facing, so English, and tappable: the owner's way into the editor.
  */
-const COPY = {
-  en: { anytime: "Anytime", anyone: "Anyone", carried: "carried over" },
-  // The staff Week view (Phase 112).
-  id: { anytime: "Kapan saja", anyone: "Semua Petugas", carried: "belum selesai" },
-} as const;
-
 export function ChoreTimelineRow({
   occurrence,
   assigneeName,
   onPress,
-  locale = "en",
 }: {
   occurrence: ChoreOccurrence;
   assigneeName?: string | null;
   onPress: () => void;
-  locale?: "en" | "id";
 }) {
-  const t = COPY[locale];
   const { task, status, overdue } = occurrence;
   const Icon = categoryIcon(task.category);
   const done = status === "completed";
@@ -63,7 +54,7 @@ export function ChoreTimelineRow({
       >
         {/* Untimed chores say so rather than borrowing a clock they do not
             have; they sort to the top of the day (see buildUnifiedAgenda). */}
-        {task.due_time ? formatTime12h(task.due_time) : t.anytime}
+        {task.due_time ? formatTime12h(task.due_time) : "Anytime"}
       </span>
 
       <Icon
@@ -75,13 +66,13 @@ export function ChoreTimelineRow({
           {task.title}
         </span>
         <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
-          {assigneeName ?? t.anyone}
+          {assigneeName ?? "Anyone"}
           {repeats && <Repeat className="size-3 shrink-0" />}
           {supervised && <Eye className="size-3 shrink-0 text-amber-700" />}
           {overdue && !done && (
             <>
               <AlertTriangle className="size-3 shrink-0 text-amber-700" />
-              <span className="text-amber-700">{t.carried}</span>
+              <span className="text-amber-700">carried over</span>
             </>
           )}
         </span>

@@ -4,14 +4,19 @@ import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
-import { AgendaWeekList } from "@/components/agenda/agenda-week-list";
+import { AgendaWeekGrid } from "@/components/agenda/agenda-week-grid";
+import { OverdueSection } from "@/components/agenda/overdue-section";
 import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-gate";
 import { useAgendaRange } from "@/hooks/use-agenda-range";
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useToday } from "@/hooks/use-today";
 import { occurrencesForStaff } from "@/lib/chore-recurrence";
-import { buildUnifiedAgenda } from "@/lib/unified-agenda";
+import {
+  buildUnifiedAgenda,
+  splitOverdue,
+  type UnifiedAgendaEntry,
+} from "@/lib/unified-agenda";
 import { DischargeButton } from "@/components/dashboard/discharge-button";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
@@ -116,7 +121,8 @@ function StaffTasks() {
 }
 
 function TasksView() {
-  const { pets, schedules, logs, loading, selectedDate, setSelectedDate } = useHousehold();
+  const { pets, schedules, logs, loading, selectedDate, setSelectedDate, isHouseholdMember } =
+    useHousehold();
   const { staffId } = useStaffIdentity();
   const dateStr = formatDateLocal(selectedDate);
   const today = useToday();
@@ -145,15 +151,21 @@ function TasksView() {
   // arrive. This keeps each person's list to their own work; it does not
   // stop a determined colleague reading the network traffic.
   //
-  // The owner looking through the staff view has no staffId and sees all.
+  // Owners see everything (Phase 113). Decided by membership — a Google
+  // account in household_members — not by "no staff name on this phone":
+  // an owner who once picked a staff name on their own phone still had one
+  // stored, and Phase 112's filter then hid every colleague's chore from them.
+  // A staff phone has no membership, so it can never take this branch.
+  const isolatedTo = isHouseholdMember ? null : staffId;
   const chores = useMemo(
-    () => (staffId ? occurrencesForStaff(allChores, staffId) : allChores),
-    [allChores, staffId]
+    () => (isolatedTo ? occurrencesForStaff(allChores, isolatedTo) : allChores),
+    [allChores, isolatedTo]
   );
 
   // Pet routines are never filtered: they belong to the household rather than
   // to a person, and whoever is holding a phone may have to feed a dog.
   const entries = useMemo(() => buildUnifiedAgenda({ groups, chores }), [groups, chores]);
+  const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
 
   // Which chore the detail sheet is showing, held as a KEY rather than as the
   // occurrence itself. Occurrences are derived fresh whenever the chore rows
@@ -169,11 +181,33 @@ function TasksView() {
   );
 
   const [range, setRange] = useAgendaRange();
-  const week = useAgendaWeek(selectedDate, staffId);
+  const week = useAgendaWeek(selectedDate, isolatedTo);
   // Only ever needed for the owner browsing this view: a staff phone sees no
   // chore assigned to anyone but itself.
   const { profiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(profiles);
+  const staffName = useStaffNameLookup(profiles, "Petugas");
+
+  function renderEntry(entry: UnifiedAgendaEntry) {
+    return entry.kind === "routine" ? (
+      <AgendaGroupCard key={entry.key} group={entry.group} />
+    ) : (
+      <ChoreCard
+        key={entry.key}
+        occurrence={entry.occurrence}
+        // Someone else's name only when it is someone else's chore — which a
+        // staff phone never sees, but an owner here does. Left out, the card
+        // says "Untuk Kamu".
+        assigneeName={
+          entry.occurrence.task.assigned_to && entry.occurrence.task.assigned_to !== isolatedTo
+            ? staffName(entry.occurrence.task.assigned_to)
+            : undefined
+        }
+        locale="id"
+        today={today}
+        onPress={() => setOpenKey(entry.occurrence.key)}
+      />
+    );
+  }
 
   return (
     <>
@@ -219,21 +253,13 @@ function TasksView() {
 
       <main className="flex flex-1 flex-col gap-3">
         {range === "week" && !loading ? (
-          <AgendaWeekList
+          <AgendaWeekGrid
             days={week}
             locale="id"
-            readOnly
             onOpenDay={(day) => {
               setSelectedDate(day);
               setRange("day");
             }}
-            assigneeName={(occurrence) =>
-              occurrence.task.assigned_to === staffId
-                ? "Untuk Kamu"
-                : occurrence.task.assigned_to
-                  ? staffName(occurrence.task.assigned_to)
-                  : null
-            }
           />
         ) : loading ? (
           <>
@@ -246,19 +272,15 @@ function TasksView() {
             Tidak ada jadwal untuk tanggal ini.
           </p>
         ) : (
-          entries.map((entry) =>
-            entry.kind === "routine" ? (
-              <AgendaGroupCard key={entry.key} group={entry.group} />
-            ) : (
-              <ChoreCard
-                key={entry.key}
-                occurrence={entry.occurrence}
-                locale="id"
-                today={today}
-                onPress={() => setOpenKey(entry.occurrence.key)}
-              />
-            )
-          )
+          <>
+            {/* Undone chores from earlier days lead today (Phase 113). */}
+            {overdue.length > 0 && (
+              <OverdueSection count={overdue.length} locale="id">
+                {overdue.map(renderEntry)}
+              </OverdueSection>
+            )}
+            {rest.map(renderEntry)}
+          </>
         )}
       </main>
 

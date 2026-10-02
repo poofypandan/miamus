@@ -13,7 +13,10 @@
  * health", so it is never spent on anything less.
  *
  * Status colours are separate and unchanged: emerald for done and a red mark
- * for overdue describe progress, not what kind of task it is.
+ * for overdue describe progress, not what kind of task it is. The Overdue
+ * section's red frame (Phase 113) is the same kind of signal — "this should
+ * already have happened" — and frames amber chores rather than recolouring
+ * them.
  *
  * No dark-mode variants: the app pins itself to a light scheme (Phase 37).
  */
@@ -30,6 +33,12 @@ interface ToneStyle {
   icon: string;
   /** A small pill (category badge) in the same family. */
   badge: string;
+  /**
+   * An event block in the Week grid (Phase 113): a pale face with a strong
+   * left edge, so a block is identifiable by colour even when it is too
+   * narrow for its title.
+   */
+  block: string;
 }
 
 export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
@@ -38,18 +47,21 @@ export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
     tintStrong: "border-red-300 bg-red-100",
     icon: "text-red-600",
     badge: "bg-red-100 text-red-800",
+    block: "border-l-red-500 bg-red-50 text-red-950",
   },
   routine: {
     tint: "",
     tintStrong: "",
     icon: "text-zinc-500",
     badge: "bg-zinc-100 text-zinc-700",
+    block: "border-l-zinc-400 bg-zinc-100 text-zinc-900",
   },
   chore: {
     tint: "border-amber-200 bg-amber-50",
     tintStrong: "border-amber-300 bg-amber-100",
     icon: "text-amber-600",
     badge: "bg-amber-100 text-amber-900",
+    block: "border-l-amber-500 bg-amber-50 text-amber-950",
   },
 };
 

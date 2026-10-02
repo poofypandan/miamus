@@ -1,8 +1,5 @@
-import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { ChoreRecurrence, HouseholdTask, HouseholdTaskStatus } from "@/types/database";
 
-/** How far back a still-pending one-off chore keeps following the household. */
-export const CARRY_OVER_DAYS = 30;
 
 export const CHORE_RECURRENCES: ChoreRecurrence[] = ["none", "daily", "weekly", "monthly"];
 
@@ -155,11 +152,15 @@ function toOccurrence(
  *   3. a template that lands on `dateStr` with nothing written for it yet,
  *      which becomes a virtual occurrence.
  *
- * Plus, when looking at today, anything still pending from the last
- * CARRY_OVER_DAYS. That last part is the fix for the bug this phase exists
- * for: a chore filed for the 29th used to vanish on the 30th with nobody
- * having done it. It applies only to one-offs — a repeating chore comes back
- * on its own and would otherwise appear twice.
+ * Plus, when looking at today, anything still pending from any earlier day —
+ * the rollover. A chore filed for the 29th used to vanish on the 30th with
+ * nobody having done it (Phase 100); it now follows the household until it is
+ * done, however long that takes (Phase 113 dropped the 30-day cut-off). Its
+ * due_date is never touched: the row keeps the day it was owed, which is what
+ * the "carried over from" label reads and what keeps repeats generating from
+ * the right day. Only one-offs and claimed occurrences roll over — an
+ * unclaimed repeating chore comes back on its own and would otherwise appear
+ * twice.
  */
 export function expandChores(params: {
   rows: HouseholdTask[];
@@ -223,16 +224,17 @@ export function expandChores(params: {
   // Unfinished business, shown only on today so browsing an earlier day stays
   // a faithful record of that day rather than a pile of everything since.
   if (date === today) {
-    const floor = formatDateLocal(
-      new Date(parseDayKey(today).getTime() - CARRY_OVER_DAYS * 86_400_000)
-    );
     for (const row of rows) {
+      // Pending only: completed is done, and cancelled was called off.
       if (row.status !== "pending") continue;
-      if (row.due_date >= date || row.due_date < floor) continue;
+      if (row.due_date >= date) continue;
       // A repeating chore reappears today under its own cadence; carrying its
       // first occurrence over as well would show it twice.
       if (isTemplate(row)) continue;
-      push(toOccurrence(row, row, row.due_date, today));
+      // A claimed occurrence of a repeat rolls over as itself, but keyed and
+      // edited through its template, exactly as on its own day.
+      const template = (row.parent_task_id && byId.get(row.parent_task_id)) || row;
+      push(toOccurrence(row, template, row.due_date, today));
     }
   }
 

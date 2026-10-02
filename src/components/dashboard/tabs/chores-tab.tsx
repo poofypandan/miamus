@@ -4,17 +4,18 @@ import { useMemo, useState } from "react";
 import { ClipboardList, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
+import { OverdueSection } from "@/components/agenda/overdue-section";
+import { StaffCompletionStrip } from "@/components/dashboard/staff-completion-strip";
+import { dayLabel } from "@/lib/date-label";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ChoreCard } from "@/components/chores/chore-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
-import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
-import { photoSrc } from "@/lib/photos";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { HouseholdTask } from "@/types/database";
 
@@ -40,9 +41,14 @@ export function ChoresTab() {
   const [editing, setEditing] = useState<HouseholdTask | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
-  const { open, done } = useMemo(
+  // Rolled-over chores lead the open list under their own header (Phase 113),
+  // oldest first; only ever non-empty when browsing today.
+  const { overdue, open, done } = useMemo(
     () => ({
-      open: occurrences.filter((o) => o.status !== "completed"),
+      overdue: occurrences
+        .filter((o) => o.overdue && o.status !== "completed")
+        .sort((a, b) => a.date.localeCompare(b.date)),
+      open: occurrences.filter((o) => o.status !== "completed" && !o.overdue),
       done: occurrences.filter((o) => o.status === "completed"),
     }),
     [occurrences]
@@ -58,6 +64,12 @@ export function ChoresTab() {
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
       <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
+
+      <StaffCompletionStrip
+        occurrences={occurrences}
+        date={dateStr}
+        dayLabel={dayLabel(selectedDate, today)}
+      />
 
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-gray-900">Chores</h2>
@@ -91,6 +103,23 @@ export function ChoresTab() {
         </EmptyState>
       ) : (
         <>
+          {overdue.length > 0 && (
+            <OverdueSection count={overdue.length} locale="en">
+              {overdue.map((occurrence) => (
+                <ChoreCard
+                  key={occurrence.key}
+                  occurrence={occurrence}
+                  locale="en"
+                  today={today}
+                  assigneeName={
+                    occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
+                  }
+                  onPress={() => edit(occurrence)}
+                />
+              ))}
+            </OverdueSection>
+          )}
+
           <div className="flex flex-col gap-2">
             {open.map((occurrence) => (
               <ChoreCard
@@ -104,7 +133,7 @@ export function ChoresTab() {
                 onPress={() => edit(occurrence)}
               />
             ))}
-            {open.length === 0 && (
+            {open.length === 0 && overdue.length === 0 && (
               <p className="text-sm text-muted-foreground">Everything on this day is done.</p>
             )}
           </div>
@@ -150,13 +179,10 @@ export function ChoresTab() {
 }
 
 /**
- * What came back from a finished chore: who did it, when, and the before/after
- * pair (Phase 100).
+ * Who finished a chore and when, plus the owner's way into editing it.
  *
- * Falls back to `photo_url` when there is no after shot, which is every chore
- * completed before this phase — those rows carry a single proof photo and it
- * is still the evidence, so it shows in the "after" slot rather than being
- * quietly dropped from the record.
+ * The before/after photos used to live here as two small thumbnails; they are
+ * part of the card itself now (ChoreProofPhotos, Phase 113).
  */
 function ChoreProof({
   occurrence,
@@ -168,16 +194,9 @@ function ChoreProof({
   onEdit: () => void;
 }) {
   const row = occurrence.row;
-  const [lightbox, setLightbox] = useState<number | null>(null);
   // A completed occurrence always has a row — it is what records the
   // completion — so this is a type guard rather than a real case.
   if (!row) return null;
-
-  const after = row.after_photo_url ?? row.photo_url;
-  const shots = [
-    { url: row.before_photo_url, label: "Before" },
-    { url: after, label: "After" },
-  ].filter((s): s is { url: string; label: string } => !!s.url);
 
   return (
     <div className="flex flex-col gap-2 border-t pt-2">
@@ -187,28 +206,6 @@ function ChoreProof({
           {row.completed_at && ` · ${formatTime12h(new Date(row.completed_at))}`}
         </p>
       )}
-      {shots.length > 0 && (
-        <div className="flex gap-2">
-          {shots.map((shot, index) => (
-            <button
-              key={shot.label}
-              type="button"
-              onClick={() => setLightbox(index)}
-              className="flex flex-col gap-1"
-            >
-              <span className="text-[10px] font-medium text-muted-foreground">{shot.label}</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photoSrc(shot.url, 160)}
-                alt={`${shot.label}: ${occurrence.task.title}`}
-                loading="lazy"
-                decoding="async"
-                className="size-20 rounded-lg object-cover"
-              />
-            </button>
-          ))}
-        </div>
-      )}
 
       <button
         type="button"
@@ -217,18 +214,6 @@ function ChoreProof({
       >
         Edit chore
       </button>
-
-      <PhotoLightbox
-        open={lightbox !== null}
-        onClose={() => setLightbox(null)}
-        initialIndex={lightbox ?? 0}
-        items={shots.map((shot) => ({
-          src: shot.url,
-          alt: `${shot.label}: ${occurrence.task.title}`,
-          title: occurrence.task.title,
-          description: <span>{shot.label}</span>,
-        }))}
-      />
     </div>
   );
 }

@@ -41,7 +41,6 @@ import type {
   RoutineProposal,
   InventoryItem,
   InventoryAuditWithStaff,
-  ItemType,
   ProposalStatus,
   HouseholdTask,
   HouseholdTaskStatus,

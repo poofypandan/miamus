@@ -63,7 +63,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${fontSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <Providers>{children}</Providers>
+        {/* The mobile frame (Phase 113). Every screen in this app is a phone
+            screen, so on a desktop it is drawn as one: a single centred column
+            the width of a large phone, lifted off a grey backdrop. Anything
+            that has to sit at the bottom of the app — the tab bar — is pinned
+            to this frame rather than to the browser window, which is how it
+            ended up stranded off to the right on a wide screen.
+
+            overflow-x: clip, not hidden: `hidden` makes this a scroll
+            container, and position: sticky inside one sticks to it instead of
+            the viewport — which would silently unstick the header and the tab
+            bar. clip trims sideways overflow without that side effect. */}
+        <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col overflow-x-clip bg-background md:shadow-xl">
+          <Providers>{children}</Providers>
+        </div>
         <AppToaster />
       </body>
     </html>
