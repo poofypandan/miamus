@@ -310,8 +310,8 @@ function HeaderIdentity() {
   // The owner's way back out, shown only to a real household member: a row in
   // household_members, which only a Google account can have. A bound staff
   // device has an anonymous session and no membership, so it never renders
-  // this — not even on a phone where the owner once entered the PIN, which
-  // used to be enough to show it (Phase 91). The staffId check stays for the
+  // this. (Entering the owner PIN on a phone used to be enough to show it,
+  // until Phase 91; the owner PIN itself is gone since Phase 108.) The staffId check stays for the
   // owner who also signed in as staff on their own phone.
   //
   // Still not access control: it hides a button. The dashboard itself is held

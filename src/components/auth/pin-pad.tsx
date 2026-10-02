@@ -11,9 +11,9 @@ const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"] 
 /**
  * The four-dot display and number pad, shared by every PIN prompt in the app.
  *
- * Extracted in Phase 87, when the owner PIN stopped being a way *in* (Google
- * is that now) and became the dashboard's screen lock — two callers, one pad.
- * Holds no PIN state of its own: the caller owns the value and decides what a
+ * Staff-only since Phase 108, which removed the owner PIN: the staff sign-in
+ * gate and the owner's "set a staff member's PIN" dialog. Holds no PIN state
+ * of its own: the caller owns the value and decides what a
  * complete entry means.
  */
 export function PinPad({

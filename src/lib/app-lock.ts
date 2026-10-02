@@ -23,10 +23,18 @@ const CREDENTIAL_KEY = "miamus_app_lock_credential";
 /** How long the app may sit in the background before it locks again. */
 export const RELOCK_AFTER_MS = 5 * 60 * 1000;
 
+/**
+ * Whether the lock is on for this device.
+ *
+ * Requires an enrolled fingerprint or face as well as the setting (Phase 108).
+ * The owner PIN that used to stand behind the sensor is gone, and a lock with
+ * nothing to unlock it is not a lock — so a device that turned it on as
+ * "PIN only" before this phase simply comes back unlocked.
+ */
 export function isAppLockEnabled(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return window.localStorage.getItem(ENABLED_KEY) === "true";
+    return window.localStorage.getItem(ENABLED_KEY) === "true" && !!readCredentialId();
   } catch {
     return false;
   }
@@ -50,10 +58,6 @@ function readCredentialId(): string | null {
   } catch {
     return null;
   }
-}
-
-export function hasBiometricCredential(): boolean {
-  return typeof window !== "undefined" && !!readCredentialId();
 }
 
 /** Whether this device has a fingerprint/face sensor the browser will use. */
@@ -133,7 +137,7 @@ export async function registerBiometric(label: string): Promise<boolean> {
     window.localStorage.setItem(CREDENTIAL_KEY, toBase64Url(credential.rawId));
     return true;
   } catch (err) {
-    // Cancelled, unsupported, or refused. The PIN still guards the app.
+    // Cancelled, unsupported, or refused: the caller leaves the lock off.
     console.error("Biometric enrolment failed", err);
     return false;
   }
@@ -143,7 +147,7 @@ export async function registerBiometric(label: string): Promise<boolean> {
  * Asks the platform to verify whoever is holding the phone.
  *
  * Resolves true only when the OS prompt succeeded. A cancelled prompt is a
- * false, not an error — the caller offers the PIN instead.
+ * false, not an error — the caller offers to try again or sign out.
  */
 export async function verifyBiometric(): Promise<boolean> {
   const credentialId = readCredentialId();
@@ -155,9 +159,8 @@ export async function verifyBiometric(): Promise<boolean> {
         allowCredentials: [{ id: fromBase64Url(credentialId), type: "public-key" }],
         userVerification: "required",
         // Shorter than the enrolment timeout on purpose: this fires on every
-        // unlock, and a phone whose sensor never answers should fall through
-        // to the pad in a few seconds rather than a minute. The "Use PIN
-        // instead" button is on screen throughout either way.
+        // unlock, and a phone whose sensor never answers should hand back the
+        // lock screen's choices in seconds rather than a minute.
         timeout: 20_000,
       },
     });

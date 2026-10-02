@@ -76,7 +76,7 @@ export interface ResolvedTenant {
    * True when this identity is a member of the household (a Google account in
    * household_members) rather than a bound staff device. The dashboard is
    * already behind Google sign-in, so membership is what makes someone an
-   * owner — the PIN is a screen lock, not an identity check (Phase 87).
+   * owner. There is no owner PIN (removed in Phase 108).
    */
   isMember: boolean;
 }
@@ -86,7 +86,11 @@ export async function resolveActiveHouseholdId(): Promise<ResolvedTenant> {
   const fallback = stored ?? DEFAULT_HOUSEHOLD_ID;
 
   const { supabase } = await import("@/lib/supabase/client");
-  if (!supabase) return { householdId: fallback, isMember: false };
+  // Mock mode (no Supabase configured) is a local sandbox with no accounts to
+  // check, so whoever runs it is the owner. It used to get there by typing the
+  // owner PIN, which Phase 108 removed. The staff view still works here — the
+  // gate lets an owner through, as it does for a real one.
+  if (!supabase) return { householdId: fallback, isMember: true };
 
   try {
     // getSession reads the cookie without a network round trip.

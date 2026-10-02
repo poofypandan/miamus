@@ -12,8 +12,8 @@ import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  // Runs once on mount only — the mobile virtual keyboard (from the PIN
-  // entry that got the owner here) can still be collapsing when this layout
+  // Runs once on mount only — the mobile virtual keyboard (from whatever
+  // input the owner left to get here) can still be collapsing when this layout
   // first mounts, leaving the page scrolled from its perspective. The delay
   // lets that collapse finish before we measure/reset scroll position.
   useEffect(() => {
@@ -27,9 +27,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { refresh } = useHousehold();
 
   return (
-    // Google sign-in is what got them to this route (see middleware); the PIN
-    // keeps the household off the screen when the phone is in someone else's
-    // hands (Phase 87).
+    // Google sign-in is what got them to this route (see middleware); the
+    // optional biometric lock keeps the household off the screen when the
+    // phone is in someone else's hands (Phase 87, PIN-free since Phase 108).
     <OwnerAppLock>
       {/* The bottom padding is the fixed tab bar's footprint — its h-16 plus
           the safe-area inset it pads itself with — so the last card of any

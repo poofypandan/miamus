@@ -59,10 +59,9 @@ function withStaffId<T extends { staff_id?: string | null }>(input: T): T {
 
 export type UserRole = "staff" | "owner";
 
-// Hardcoded for now — there's no auth backend yet, this is a lightweight UI
-// gate so staff devices don't casually stumble into owner-only controls.
-const OWNER_PIN = "6033";
-const OWNER_STORAGE_KEY = "banyuwangi11:isOwner";
+// Where the retired owner PIN used to leave its mark (Phase 108). Read only to
+// be deleted: see the role effect below.
+const LEGACY_OWNER_FLAG_KEY = "banyuwangi11:isOwner";
 
 interface HouseholdContextValue {
   /**
@@ -84,9 +83,7 @@ interface HouseholdContextValue {
    * co-owner signed in with Google. False for a bound staff device, which has
    * an anonymous session and no membership.
    *
-   * Separate from `userRole`, which the PIN also sets: owner-only *navigation*
-   * keys off membership, so a phone where the PIN was once entered still
-   * never shows staff a door into the dashboard (Phase 91).
+   * Since Phase 108 this is also the only thing that makes `userRole` "owner".
    */
   isHouseholdMember: boolean;
   entities: TaskEntity[];
@@ -116,13 +113,12 @@ interface HouseholdContextValue {
   // keeps the Daily Feed and Staff view in sync with it too.
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
+  /** "owner" exactly when isHouseholdMember — a Google-authenticated member. */
   userRole: UserRole;
-  // False only during the brief window between mount and the localStorage
-  // hydration effect below — lets owner-only route guards avoid bouncing a
-  // returning owner to the Daily Feed before their session is restored.
+  // False until household membership has been resolved — lets owner-only
+  // route guards avoid bouncing a returning owner to the Daily Feed before
+  // their session is read back.
   roleHydrated: boolean;
-  unlockOwner: (pin: string) => boolean;
-  lockOwner: () => void;
   /**
    * Refetches every collection from the server. `silent` skips the global
    * loading flag, so a background sync doesn't replace the screen with
@@ -444,34 +440,21 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole>("staff");
   const [roleHydrated, setRoleHydrated] = useState(false);
 
-  // Restores owner mode after a page refresh so the owner-only tabs don't
-  // momentarily vanish. Deliberately a mount effect (not a lazy useState
-  // initializer) so the client's first render still matches the
-  // server-rendered "staff" HTML — reading localStorage during render would
-  // produce a hydration mismatch instead.
+  // The owner PIN is gone (Phase 108). It was a constant shipped in this
+  // bundle — readable by anyone who opened devtools — and typing it set a
+  // localStorage flag that made ANY device, a staff phone included, "owner"
+  // for every check that reads userRole: the staff gate's bypass, pet
+  // editing, deleting other people's photo logs. Owners now prove who they
+  // are with Google, and the role follows membership alone (set in the
+  // tenant effect above).
+  //
+  // The flag is removed from devices that still carry it rather than merely
+  // ignored, so nothing later can mistake it for meaning something again.
   useEffect(() => {
-    if (typeof window !== "undefined" && window.localStorage.getItem(OWNER_STORAGE_KEY) === "true") {
-      setUserRole("owner");
-    }
-    // Deliberately NOT setting roleHydrated here. Since Phase 89 the role can
-    // also come from household membership, which is resolved asynchronously
-    // above — flipping the flag now would let useRequireOwner bounce a real
-    // owner off an owner-only tab in the moment before that lands.
-  }, []);
-
-  const unlockOwner = useCallback((pin: string) => {
-    if (pin !== OWNER_PIN) return false;
-    setUserRole("owner");
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(OWNER_STORAGE_KEY, "true");
-    }
-    return true;
-  }, []);
-
-  const lockOwner = useCallback(() => {
-    setUserRole("staff");
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(OWNER_STORAGE_KEY);
+    try {
+      window.localStorage.removeItem(LEGACY_OWNER_FLAG_KEY);
+    } catch {
+      // Blocked storage holds nothing to clean up.
     }
   }, []);
 
@@ -815,8 +798,6 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setSelectedDate,
       userRole,
       roleHydrated,
-      unlockOwner,
-      lockOwner,
       refresh,
       createEntity,
       updateEntity,
@@ -868,8 +849,6 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       selectedDate,
       userRole,
       roleHydrated,
-      unlockOwner,
-      lockOwner,
       refresh,
       createEntity,
       updateEntity,

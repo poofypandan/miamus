@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Fingerprint, Lock } from "lucide-react";
-import { PinPad, PIN_LENGTH } from "@/components/auth/pin-pad";
+import { useRouter } from "next/navigation";
+import { Fingerprint, Loader2, Lock, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useHousehold } from "@/context/household-context";
 import {
   RELOCK_AFTER_MS,
-  hasBiometricCredential,
   isAppLockEnabled,
+  setAppLockEnabled,
   verifyBiometric,
 } from "@/lib/app-lock";
 import { cn } from "@/lib/utils";
@@ -28,38 +27,35 @@ function readUnlockedAt(): number {
 
 /**
  * The owner's optional screen lock over the dashboard (Phase 87, made opt-in
- * in Phase 93).
+ * in Phase 93, biometric-only since Phase 108).
  *
- * It used to demand a PIN on every single visit, which is friction for almost
- * no gain: Google sign-in decides who gets in and the middleware enforces it
- * before this renders. So it is off unless the owner turns it on, and what it
- * guards against is the specific thing a lock can guard — someone else
- * picking up an unlocked phone.
+ * Off unless the owner turns it on: Google sign-in decides who gets in and the
+ * middleware enforces it before this renders. What the lock guards against is
+ * the one thing it can — someone else picking up an unlocked phone.
  *
- * When on, the device's own biometric prompt is tried first and the PIN is
- * always there behind it, because a sensor can be wet, cold, or simply absent.
+ * There is no PIN behind the sensor any more. The owner PIN was a constant in
+ * the bundle, and doubled as a way to make any device "owner". The fallback
+ * for a sensor that will not cooperate is now the owner's real credential:
+ * sign out, and sign back in with Google. That turns the lock off on this
+ * device, which is right — whoever completes the Google sign-in is the owner.
  *
  * The content stays mounted and blurred behind the prompt rather than being
  * unmounted: the dashboard is expensive to build, and re-mounting it on every
  * unlock would re-fetch the whole household.
  */
 export function OwnerAppLock({ children }: { children: ReactNode }) {
-  const { unlockOwner } = useHousehold();
+  const router = useRouter();
   // Starts unlocked and stays that way through the first paint: the lock is
   // off for most people, and reading localStorage during render would make
   // the server HTML and the client's first render disagree.
   const [locked, setLocked] = useState(false);
   const [enabled, setEnabled] = useState(false);
-  const [pin, setPin] = useState("");
-  const [shake, setShake] = useState(false);
   const [biometricBusy, setBiometricBusy] = useState(false);
-  const [showPin, setShowPin] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const hiddenAt = useRef<number | null>(null);
 
   const unlock = useCallback(() => {
     setLocked(false);
-    setPin("");
-    setShowPin(false);
     try {
       window.sessionStorage.setItem(UNLOCKED_KEY, String(Date.now()));
     } catch {
@@ -68,18 +64,27 @@ export function OwnerAppLock({ children }: { children: ReactNode }) {
   }, []);
 
   const tryBiometric = useCallback(async () => {
-    if (!hasBiometricCredential()) {
-      setShowPin(true);
-      return;
-    }
     setBiometricBusy(true);
     const ok = await verifyBiometric();
     setBiometricBusy(false);
+    // A refused or cancelled prompt leaves the lock screen up with its two
+    // choices rather than re-prompting in a loop.
     if (ok) unlock();
-    // A refused or cancelled prompt falls through to the pad rather than
-    // nagging: the person may simply prefer typing.
-    else setShowPin(true);
   }, [unlock]);
+
+  async function signOut() {
+    setSigningOut(true);
+    // Off first: the next person through is whoever passes Google sign-in,
+    // which is a stronger check than this lock ever was.
+    setAppLockEnabled(false);
+    try {
+      const { supabase } = await import("@/lib/supabase/client");
+      await supabase?.auth.signOut();
+    } finally {
+      // "/" is the sign-in page; the middleware keeps /dashboard behind it.
+      router.replace("/");
+    }
+  }
 
   useEffect(() => {
     const on = isAppLockEnabled();
@@ -118,25 +123,6 @@ export function OwnerAppLock({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [enabled, tryBiometric]);
 
-  function pressDigit(digit: string) {
-    if (shake || pin.length >= PIN_LENGTH) return;
-    const next = pin + digit;
-    setPin(next);
-    if (next.length < PIN_LENGTH) return;
-
-    // unlockOwner also flips the app into owner mode, which some owner-only
-    // screens still read — one gesture, not two.
-    if (unlockOwner(next)) {
-      unlock();
-    } else {
-      setShake(true);
-      setTimeout(() => {
-        setPin("");
-        setShake(false);
-      }, 400);
-    }
-  }
-
   return (
     <div className="relative">
       {/* aria-hidden and inert while locked, so a screen reader or a stray
@@ -157,48 +143,27 @@ export function OwnerAppLock({ children }: { children: ReactNode }) {
             </span>
             <h2 className="mt-4 text-lg font-semibold text-gray-900">Locked</h2>
             <p className="mt-1 text-center text-sm text-muted-foreground">
-              {showPin
-                ? "Enter your 4-digit PIN to unlock the dashboard."
-                : "Unlock with Face ID or your fingerprint."}
+              Unlock with Face ID or your fingerprint.
             </p>
 
-            {showPin ? (
-              <div className="mt-6 w-full">
-                <PinPad
-                  pin={pin}
-                  shake={shake}
-                  onDigit={pressDigit}
-                  onBackspace={() => setPin((p) => p.slice(0, -1))}
-                />
-                {hasBiometricCredential() && (
-                  <Button
-                    variant="ghost"
-                    className="mt-2 min-h-[44px] w-full text-muted-foreground"
-                    disabled={biometricBusy}
-                    onClick={() => void tryBiometric()}
-                  >
-                    <Fingerprint /> Try Face ID instead
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="mt-6 flex w-full flex-col gap-2">
-                <Button
-                  className="min-h-[48px] w-full"
-                  disabled={biometricBusy}
-                  onClick={() => void tryBiometric()}
-                >
-                  <Fingerprint /> {biometricBusy ? "Waiting…" : "Unlock"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="min-h-[44px] w-full text-muted-foreground"
-                  onClick={() => setShowPin(true)}
-                >
-                  Use PIN instead
-                </Button>
-              </div>
-            )}
+            <div className="mt-6 flex w-full flex-col gap-2">
+              <Button
+                className="min-h-[48px] w-full"
+                disabled={biometricBusy || signingOut}
+                onClick={() => void tryBiometric()}
+              >
+                <Fingerprint /> {biometricBusy ? "Waiting…" : "Unlock"}
+              </Button>
+              <Button
+                variant="ghost"
+                className="min-h-[44px] w-full text-muted-foreground"
+                disabled={signingOut}
+                onClick={() => void signOut()}
+              >
+                {signingOut ? <Loader2 className="animate-spin" /> : <LogOut />} Sign out and
+                sign in with Google
+              </Button>
+            </div>
           </div>
         </div>
       )}

@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Fingerprint, Loader2, ShieldCheck } from "lucide-react";
+import { Fingerprint, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  hasBiometricCredential,
   isAppLockEnabled,
   isBiometricAvailable,
   registerBiometric,
@@ -19,19 +18,21 @@ import {
  * Off by default, and local to this device: it is about who can pick up *this
  * phone*, not about the household. A second owner's phone decides for itself.
  *
+ * Biometric-only since Phase 108, when the owner PIN that stood behind the
+ * sensor was removed. A device without Face ID or a fingerprint reader cannot
+ * turn the lock on, rather than getting a lock nothing can open.
+ *
  * Owner-facing, so entirely English per the Phase 46 language boundary.
  */
 export function SecuritySettings() {
   // Read after mount, never during render: the server has no localStorage and
   // a mismatch would be a hydration error.
   const [enabled, setEnabled] = useState(false);
-  const [biometricReady, setBiometricReady] = useState(false);
   const [available, setAvailable] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setEnabled(isAppLockEnabled());
-    setBiometricReady(hasBiometricCredential());
     void isBiometricAvailable().then(setAvailable);
   }, []);
 
@@ -40,23 +41,22 @@ export function SecuritySettings() {
     if (enabled) {
       setAppLockEnabled(false);
       setEnabled(false);
-      setBiometricReady(false);
       toast.success("App lock turned off");
       return;
     }
 
     setBusy(true);
     try {
-      // Enrol first, then turn the setting on: the PIN is always a fallback,
-      // so a device without a sensor (or an owner who cancels the prompt)
-      // still gets a working lock rather than a failed one.
-      const enrolled = available ? await registerBiometric("Miamus owner") : false;
+      // Enrol first, and turn the setting on only if that worked: with no PIN
+      // behind it, a lock without an enrolled sensor could never be opened.
+      const enrolled = await registerBiometric("Miamus owner");
+      if (!enrolled) {
+        toast.error("Face ID or fingerprint wasn't set up, so the lock stays off");
+        return;
+      }
       setAppLockEnabled(true);
       setEnabled(true);
-      setBiometricReady(enrolled);
-      toast.success(
-        enrolled ? "App lock on — Face ID or PIN" : "App lock on — PIN only on this device"
-      );
+      toast.success("App lock on");
     } finally {
       setBusy(false);
     }
@@ -72,7 +72,7 @@ export function SecuritySettings() {
               <p className="text-sm font-medium">Require authentication to open app</p>
               <p className="text-xs text-muted-foreground">
                 Locks the dashboard on this phone after 5 minutes away. Unlocks with Face ID or
-                your fingerprint, and always accepts your 4-digit PIN.
+                your fingerprint, or by signing in with Google again.
               </p>
             </div>
 
@@ -81,10 +81,11 @@ export function SecuritySettings() {
               role="switch"
               aria-checked={enabled}
               aria-label="Require authentication to open app"
-              disabled={busy}
+              // Turning it off is always allowed; turning it on needs a sensor.
+              disabled={busy || (!enabled && !available)}
               onClick={toggle}
               className={cn(
-                "relative mt-0.5 flex h-7 w-12 shrink-0 items-center rounded-full transition-colors",
+                "relative mt-0.5 flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50",
                 enabled ? "bg-primary" : "bg-muted"
               )}
             >
@@ -101,16 +102,14 @@ export function SecuritySettings() {
 
           {enabled && (
             <p className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-              {biometricReady ? (
-                <>
-                  <Fingerprint className="size-3.5 shrink-0" /> Face ID or fingerprint is set up on
-                  this device.
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="size-3.5 shrink-0" /> This device will ask for your PIN.
-                </>
-              )}
+              <Fingerprint className="size-3.5 shrink-0" /> Face ID or fingerprint is set up on this
+              device.
+            </p>
+          )}
+          {!enabled && !available && (
+            <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+              This device has no Face ID or fingerprint reader the browser can use, so the lock
+              isn&apos;t available here.
             </p>
           )}
 
