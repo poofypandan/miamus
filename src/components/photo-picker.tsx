@@ -141,11 +141,12 @@ export function PhotoPicker({
   /**
    * The square and the photo it came from, both stored (Phase 104).
    *
-   * `cropped` is derived from the *uncompressed* original so a tight crop has
-   * full resolution to draw from — compressPhoto caps the long edge at 1080,
-   * and compressing first would throw away the very pixels the crop zooms
-   * into. The master is that same original, compressed, so what is kept is a
-   * reasonable photo rather than a 4MB camera file.
+   * `cropped` is cut from the *uncompressed* original so a tight crop has full
+   * resolution to draw from — compressPhoto caps the long edge at 1080, and
+   * compressing first would throw away the very pixels the crop zooms into.
+   * The square is then stored exactly as cut. The master is that same
+   * original, compressed, so what is kept is a reasonable photo rather than a
+   * 4MB camera file.
    *
    * The two run in parallel, but only the thumbnail is allowed to fail the
    * operation: it is the one every list needs. A master that does not make it
@@ -155,7 +156,11 @@ export function PhotoPicker({
     setBusy(true);
     try {
       const [thumbUrl, masterUrl] = await Promise.all([
-        compressPhoto(cropped).then((f) => uploadPhoto(f, pathPrefix)),
+        // Uploaded exactly as cropToSquareFile made it (Phase 106). Running it
+        // through compressPhoto as well re-encoded it a second time and shrank
+        // it by 5% — harmless to the framing, but a lossy pass and a resize
+        // that bought nothing for a file already capped at 512px.
+        uploadPhoto(cropped, pathPrefix),
         compressPhoto(original)
           .then((f) => uploadPhoto(f, pathPrefix))
           .catch((err) => {
@@ -199,8 +204,8 @@ export function PhotoPicker({
   async function uploadSquareOnly(cropped: File) {
     setBusy(true);
     try {
-      const compressed = await compressPhoto(cropped);
-      onChange(await uploadPhoto(compressed, pathPrefix));
+      // As-is, for the same reason as uploadPair: the crop is already final.
+      onChange(await uploadPhoto(cropped, pathPrefix));
     } catch (err) {
       console.error(err);
       toast.error(errorMessage);

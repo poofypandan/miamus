@@ -34,9 +34,25 @@ export async function GET(request: NextRequest) {
   // Resized by the storage layer, not by us: a feed thumbnail asking for 320px
   // pulls ~24KB instead of the ~185KB original (Phase 92). Without `w` the
   // untouched object is served, which is what the lightbox wants.
+  //
+  // `resize: "contain"` is not optional (Phase 106). Supabase defaults to
+  // "cover", and "cover" with only a width keeps the ORIGINAL HEIGHT: a 486px
+  // square asked for at w=160 came back as a 160x486 strip cut from its
+  // middle. Every <img> then used object-cover to fill a square box from that
+  // strip, so every thumbnail in the app has been a centre-zoom since Phase 92
+  // — ~3x at w=160, ~1.5x at w=320. Measured against live storage, not
+  // inferred. It is also what the Phase 95 "slivers" were: object-contain on
+  // the same strip, misread at the time as a CSS problem.
+  //
+  // "contain" with a width scales to fit and keeps the aspect ratio, and never
+  // upscales: 486x486 -> 160x160, 733x974 -> 160x213, and a w=1280 request for
+  // a 733px image returns the image untouched.
   const { data, error } = await supabase.storage
     .from(bucket)
-    .download(path, width ? { transform: { width, quality: 70 } } : undefined);
+    .download(
+      path,
+      width ? { transform: { width, quality: 70, resize: "contain" } } : undefined
+    );
 
   if (error || !data) {
     // RLS denial and a missing object are deliberately the same answer: a

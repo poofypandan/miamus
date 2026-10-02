@@ -52,5 +52,19 @@ export function photoSrc(
   const ref = parseStorageRef(url);
   if (!ref) return url;
   const w = width ? `&w=${width}` : "";
-  return `/api/photo?b=${ref.bucket}&p=${encodeURIComponent(ref.path)}${w}`;
+  return `/api/photo?b=${ref.bucket}&p=${encodeURIComponent(ref.path)}${w}&v=${TRANSFORM_VERSION}`;
 }
+
+/**
+ * Bumped whenever what /api/photo returns for the same object changes.
+ *
+ * The proxy answers with `immutable` and a one-year max-age, which is right —
+ * an object key never changes — but it means a phone that fetched a thumbnail
+ * once keeps that copy for a year, whatever the server would say now. When the
+ * transform itself is fixed, the old bytes are wrong under the old URL, so the
+ * URL has to change too. The handler ignores `v`; only caches read it.
+ *
+ *   2 — Phase 106: resize "contain" instead of the default "cover", which had
+ *       been returning every thumbnail as a centre-cut strip.
+ */
+const TRANSFORM_VERSION = 2;
