@@ -571,6 +571,42 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(updated);
   },
+  async getStaffWorkload(from, to) {
+    // The same counting as migrations/100: by completer, pet logs per dog,
+    // a vet check-in not counted, unattributed work as one null row.
+    const db = loadDB();
+    const inSpan = (iso: string | null) => {
+      if (!iso) return false;
+      const t = new Date(iso).getTime();
+      return t >= from.getTime() && t < to.getTime();
+    };
+    const tally = new Map<string | null, { pets: number; chores: number }>();
+    const bump = (who: string | null, key: "pets" | "chores") => {
+      const row = tally.get(who) ?? { pets: 0, chores: 0 };
+      row[key] += 1;
+      tally.set(who, row);
+    };
+    for (const log of db.logs) {
+      if (log.module !== "pet" || !inSpan(log.completed_at) || log.sub_type === "check_in") continue;
+      bump(log.staff_id ?? null, "pets");
+    }
+    for (const task of db.householdTasks) {
+      if (task.status !== "completed" || !inSpan(task.completed_at)) continue;
+      bump(task.completed_by, "chores");
+    }
+    const rows = db.staffProfiles.map((s) => ({ staffId: s.id as string | null, name: s.name as string | null }));
+    if (tally.has(null)) rows.push({ staffId: null, name: null });
+    const result = rows.map(({ staffId, name }) => {
+      const { pets, chores } = tally.get(staffId) ?? { pets: 0, chores: 0 };
+      return { staffId, name, totalCompleted: pets + chores, petsCompleted: pets, choresCompleted: chores };
+    });
+    result.sort(
+      (a, b) =>
+        b.totalCompleted - a.totalCompleted ||
+        (a.name === null ? 1 : b.name === null ? -1 : a.name.localeCompare(b.name))
+    );
+    return delay(result);
+  },
   async listStaffProfiles() {
     return delay(loadDB().staffProfiles);
   },

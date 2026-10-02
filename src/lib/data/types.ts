@@ -203,6 +203,19 @@ export interface CreateInventoryAuditInput {
   audited_by: string | null;
 }
 
+/**
+ * One person's finished work over a span (Phase 116), counted by who
+ * completed it — see migrations/100. `staffId` null is the work nobody's
+ * name is on.
+ */
+export interface StaffWorkload {
+  staffId: string | null;
+  name: string | null;
+  totalCompleted: number;
+  petsCompleted: number;
+  choresCompleted: number;
+}
+
 export interface DataProvider {
   listEntities(): Promise<TaskEntity[]>;
   listSchedules(): Promise<MasterSchedule[]>;
@@ -280,6 +293,12 @@ export interface DataProvider {
   /** Assigns an unassigned chore to a staff member. */
   claimHouseholdTask(id: string, staffId: string): Promise<HouseholdTask>;
   listStaffProfiles(): Promise<StaffProfile[]>;
+  /**
+   * Owner-only: finished pet routines and chores per staff member between
+   * two instants (`from` inclusive, `to` exclusive), most first. The server
+   * refuses a caller who is not a household member.
+   */
+  getStaffWorkload(from: Date, to: Date): Promise<StaffWorkload[]>;
   createStaffProfile(name: string): Promise<StaffProfile>;
   /**
    * Sets a staff member's PIN, or clears it (null) so they choose a new one.

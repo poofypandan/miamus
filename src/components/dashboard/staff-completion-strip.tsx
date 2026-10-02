@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { Users } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { useWorkloadParam } from "@/hooks/use-staff-workload";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,10 @@ interface StaffStat {
  * finished it, so an unclaimed chore that someone just did lands on them. One
  * nobody has taken or done sits on its own "Unclaimed" card.
  *
+ * Tapping any card, or "Workload", opens the Staff Workload sheet (Phase
+ * 116): this strip says who has today's chores left; the sheet says who has
+ * actually been doing the work, dogs included, over days or weeks.
+ *
  * Owner-facing, so English.
  */
 export function StaffCompletionStrip({
@@ -42,6 +47,7 @@ export function StaffCompletionStrip({
   dayLabel: string;
 }) {
   const { profiles } = useStaffProfiles();
+  const workload = useWorkloadParam();
 
   const stats = useMemo<StaffStat[]>(() => {
     const ownerOf = (o: ChoreOccurrence) => o.task.assigned_to ?? o.task.completed_by ?? null;
@@ -68,19 +74,28 @@ export function StaffCompletionStrip({
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-gray-900">{dayLabel}&apos;s progress</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-gray-900">{dayLabel}&apos;s progress</h2>
+        <button
+          type="button"
+          onClick={() => workload.open()}
+          className="-mr-2 flex min-h-9 items-center gap-0.5 rounded-lg px-2 text-xs font-medium text-muted-foreground active:bg-muted"
+        >
+          Workload <ChevronRight className="size-3.5" />
+        </button>
+      </div>
       {/* Bleeds to the screen edges so the cards scroll under the gutter
           rather than being clipped inside it. */}
       <div className="-mx-4 flex snap-x scroll-px-4 gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {stats.map((stat) => (
-          <StatCard key={stat.id} stat={stat} />
+          <StatCard key={stat.id} stat={stat} onPress={() => workload.open()} />
         ))}
       </div>
     </section>
   );
 }
 
-function StatCard({ stat }: { stat: StaffStat }) {
+function StatCard({ stat, onPress }: { stat: StaffStat; onPress: () => void }) {
   const unclaimed = stat.id === "unclaimed";
   const pct = stat.total > 0 ? stat.done / stat.total : 0;
   const complete = stat.total > 0 && stat.done === stat.total;
@@ -92,7 +107,12 @@ function StatCard({ stat }: { stat: StaffStat }) {
     .toUpperCase();
 
   return (
-    <div className="flex w-36 shrink-0 snap-start flex-col gap-2 rounded-xl border bg-card p-3">
+    <button
+      type="button"
+      onClick={onPress}
+      aria-label={`${stat.name}: ${stat.done} of ${stat.total} done. Open staff workload`}
+      className="flex w-36 shrink-0 snap-start flex-col gap-2 rounded-xl border bg-card p-3 text-left active:bg-muted/60"
+    >
       <div className="flex items-center gap-2">
         <span
           className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-gray-700"
@@ -118,7 +138,7 @@ function StatCard({ stat }: { stat: StaffStat }) {
       {stat.overdue > 0 && (
         <span className="text-[11px] font-medium text-red-700">+{stat.overdue} overdue</span>
       )}
-    </div>
+    </button>
   );
 }
 

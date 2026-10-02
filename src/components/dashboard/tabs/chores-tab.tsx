@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { StaffCompletionStrip } from "@/components/dashboard/staff-completion-strip";
+import { StaffWorkloadSheet } from "@/components/dashboard/staff-workload-sheet";
 import { dayLabel } from "@/lib/date-label";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ChoreCard } from "@/components/chores/chore-card";
@@ -167,6 +168,9 @@ export function ChoresTab() {
           )}
         </>
       )}
+
+      {/* Opened from the progress strip; open while ?workload= is set. */}
+      <StaffWorkloadSheet />
 
       <ChoreEditorDialog
         open={editorOpen}

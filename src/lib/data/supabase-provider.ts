@@ -629,6 +629,21 @@ export const supabaseProvider: DataProvider = {
     }
     return data[0];
   },
+  async getStaffWorkload(from, to) {
+    const { data, error } = await client().rpc("staff_workload", {
+      p_household_id: getActiveHouseholdId(),
+      p_from: from.toISOString(),
+      p_to: to.toISOString(),
+    });
+    if (error) throw error;
+    return (data ?? []).map((row) => ({
+      staffId: row.staff_id,
+      name: row.name,
+      totalCompleted: row.total_completed,
+      petsCompleted: row.pets_completed,
+      choresCompleted: row.chores_completed,
+    }));
+  },
   async listStaffProfiles() {
     // By name, not created_at: the seeded rows were inserted in one statement
     // and share a timestamp to the microsecond, so ordering by it put the list

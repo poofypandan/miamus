@@ -463,6 +463,18 @@ export interface Database {
         Args: { p_item_id: string; p_delta: number };
         Returns: InventoryItem[];
       };
+      // Finished work per staff member over a span, by completer
+      // (migrations/100). Owner-only: refuses non-members.
+      staff_workload: {
+        Args: { p_household_id: string; p_from: string; p_to: string };
+        Returns: {
+          staff_id: string | null;
+          name: string | null;
+          total_completed: number;
+          pets_completed: number;
+          chores_completed: number;
+        }[];
+      };
       // Hashes and stores a PIN, or clears it when given null.
       set_staff_pin: {
         Args: { p_staff_id: string; p_pin: string | null };
