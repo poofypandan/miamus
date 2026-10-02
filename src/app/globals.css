@@ -159,7 +159,7 @@
           reliable once html itself is the scroll container. */
     color-scheme: light;
     /* This is the colour the system bars are told to match: --background is
-       pure white, and layout.tsx's viewport.themeColor and manifest.json's
+       pure white, and layout.tsx's viewport.themeColor and manifest.ts's
        theme_color/background_color are all #ffffff to agree with it. Change one
        and the other three have to change with it, or a grey band reappears
        above the status bar. Verified by reading the painted html/body colour on

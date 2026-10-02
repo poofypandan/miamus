@@ -19,17 +19,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Banyuwangi 11",
-  description: "Household management app",
-  manifest: "/manifest.json",
-  icons: {
-    icon: "/icon.svg",
-    apple: "/apple-touch-icon.png",
-  },
+  title: "Miamus - Household Management",
+  description: "Household management for owners and their staff",
+  // No `manifest` or `icons` here: app/manifest.ts and app/icon.tsx /
+  // apple-icon.tsx are file conventions, and Next links them itself (Phase 107).
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Banyuwangi 11",
+    // The label under the home-screen icon, so the short name.
+    title: "Miamus",
   },
   // Next 15 renders `appleWebApp.capable` as the standardised
   // `mobile-web-app-capable` only. Older iOS Safari still keys standalone

@@ -3,15 +3,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
-export const PROPERTY_NAME = "Banyuwangi 11";
+import { useHouseholdName } from "@/hooks/use-household-name";
 
 /**
  * The one header both views wear, so moving between the owner dashboard and
  * the staff view changes what is in it, never where anything sits (Phase 84C).
  *
  *   ┌───────────────────────────────────────┐
- *   │ Banyuwangi 11              [action]   │  fixed-height row
+ *   │ Household name             [action]   │  fixed-height row
  *   │ [ segmented control               ]   │  optional
  *   └───────────────────────────────────────┘
  *
@@ -20,15 +19,19 @@ export const PROPERTY_NAME = "Banyuwangi 11";
  * and those are different heights — left to size itself, the row (and
  * everything under it) would shift by a few pixels between the two views.
  *
+ * The name is the active household's own (Phase 107). It was a constant —
+ * one residence's name, shown to every tenant who signed up.
+ *
  * Sticky, so the segmented control stays in reach while a long feed scrolls.
  * Callers render it outside PullToRefresh, so the pull moves the content
  * beneath it rather than the header itself.
  */
 export function AppHeader({ action, children }: { action?: ReactNode; children?: ReactNode }) {
+  const householdName = useHouseholdName();
   return (
     <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
       <div className="flex h-17 items-center justify-between gap-2 px-4">
-        <h1 className="truncate text-lg font-semibold">{PROPERTY_NAME}</h1>
+        <h1 className="truncate text-lg font-semibold">{householdName}</h1>
         {action}
       </div>
       {children && <div className="px-4 pb-3">{children}</div>}

@@ -67,11 +67,18 @@ const OWNER_STORAGE_KEY = "banyuwangi11:isOwner";
 interface HouseholdContextValue {
   /**
    * The tenant every query is scoped to (migrations/086): the signed-in
-   * owner's household, the one a staff phone was invited to, or Banyuwangi 11.
+   * owner's household, the one a staff phone was invited to, or the default.
    * Resolved once at startup — see lib/tenant.ts, which the data provider
    * reads directly.
    */
   activeHouseholdId: string;
+  /**
+   * False until activeHouseholdId has actually been resolved. Before that it
+   * holds DEFAULT_HOUSEHOLD_ID as a placeholder, so anything that shows the
+   * household to a person — its name in the header — waits for this rather
+   * than briefly naming someone else's household (Phase 107).
+   */
+  tenantReady: boolean;
   /**
    * True when this session belongs to a household_members row — an owner or
    * co-owner signed in with Google. False for a bound staff device, which has
@@ -788,6 +795,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<HouseholdContextValue>(
     () => ({
       activeHouseholdId,
+      tenantReady,
       isHouseholdMember,
       entities,
       pets,
@@ -843,6 +851,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       activeHouseholdId,
+      tenantReady,
       isHouseholdMember,
       entities,
       pets,

@@ -80,7 +80,7 @@ export default function OnboardingPage() {
           id="residence"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Banyuwangi 11"
+          placeholder="e.g. The Smith Residence"
           autoFocus
           className="min-h-[48px]"
         />
