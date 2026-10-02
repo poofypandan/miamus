@@ -253,11 +253,13 @@ export interface DataProvider {
   setRoutineProposalStatus(id: string, status: ProposalStatus): Promise<RoutineProposal>;
   deleteRoutineProposal(id: string): Promise<void>;
   /**
-   * Everything needed to render one day's chores: the rows dated that day, the
-   * repeating templates that reach it, and — when the day is today — whatever
-   * is still pending from the recent past. Never the whole table.
+   * Everything needed to render the chores of the days from `from` to `to`
+   * inclusive (one day, or the Agenda's week): the rows dated in that span,
+   * the repeating templates that reach it, and — when the span includes
+   * today — whatever is still pending from the recent past. Never the whole
+   * table.
    */
-  listHouseholdTasks(dueDate: string, today: string): Promise<HouseholdTask[]>;
+  listHouseholdTasks(from: string, to: string, today: string): Promise<HouseholdTask[]>;
   createHouseholdTask(input: CreateHouseholdTaskInput): Promise<HouseholdTask>;
   /** Owner-only edit of a chore's own fields. */
   updateHouseholdTask(id: string, patch: UpdateHouseholdTaskInput): Promise<HouseholdTask>;

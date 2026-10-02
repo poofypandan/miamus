@@ -1,6 +1,9 @@
 import { compareOccurrences, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { AgendaGroup } from "@/lib/scheduleEngine";
 
+/** How many days the Agenda's Week view shows, starting at the selected day. */
+export const AGENDA_WEEK_DAYS = 7;
+
 /**
  * One row of the unified Agenda: either a pet routine block or a household
  * chore (Phase 100).
@@ -16,11 +19,13 @@ export type UnifiedAgendaEntry =
   | { kind: "chore"; key: string; time: string | null; occurrence: ChoreOccurrence };
 
 /**
- * Both halves of the day, in the order they happen.
+ * Both halves of the day, in the order they happen — after the anytime chores.
  *
- * Untimed chores sink to the bottom: "sometime today" is genuinely less urgent
- * than anything with a clock against it, and sorting it as 00:00 would put the
- * vaguest item of the day above the 6am feed.
+ * Anytime chores (no due_time) lead the day (Phase 112). They used to sink to
+ * the bottom on the theory that "sometime today" is less urgent than anything
+ * with a clock against it, but the bottom of a long day is below the fold, and
+ * a job that can be done whenever is exactly the one people pick up in a free
+ * moment — if they can see it. Timed entries then follow in clock order.
  *
  * Within the same minute a pet routine comes first. Dogs before housework is
  * the house rule everywhere else in this app (the staff view has always
@@ -50,8 +55,8 @@ export function buildUnifiedAgenda(params: {
 
   return entries.sort((a, b) => {
     if (a.time && b.time && a.time !== b.time) return a.time.localeCompare(b.time);
-    if (a.time && !b.time) return -1;
-    if (!a.time && b.time) return 1;
+    if (!a.time && b.time) return -1;
+    if (a.time && !b.time) return 1;
     if (a.kind !== b.kind) return a.kind === "routine" ? -1 : 1;
     if (a.kind === "chore" && b.kind === "chore") {
       return compareOccurrences(a.occurrence, b.occurrence);

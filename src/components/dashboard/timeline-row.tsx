@@ -25,7 +25,22 @@ import type { TaskEntity } from "@/types/database";
  * rows in one chronological list, and a second implementation of the same row
  * would be the obvious place for the two to start looking different.
  */
-export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }) {
+export function TimelineRow({
+  group,
+  pets,
+  locale = "en",
+  readOnly = false,
+}: {
+  group: AgendaGroup;
+  pets: TaskEntity[];
+  /** "id" for the staff Week view (Phase 112). */
+  locale?: "en" | "id";
+  /**
+   * Avatars as plain pictures rather than buttons into the pet's profile —
+   * for the staff Week view, where no profile sheet is mounted to open.
+   */
+  readOnly?: boolean;
+}) {
   const { schedules } = useHousehold();
   const Icon = categoryIcon(group.category);
 
@@ -74,7 +89,9 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
           English. */}
       {consolidated ? (
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-medium">Medicines ({group.titles.length})</span>
+          <span className="truncate font-medium">
+            {locale === "id" ? "Obat & Vitamin" : "Medicines"} ({group.titles.length})
+          </span>
           <span className="truncate text-xs text-muted-foreground">
             {group.titles.join(" · ")}
           </span>
@@ -91,6 +108,8 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
             gallery={gallery}
             galleryIndex={photoItems.indexOf(item)}
             category={group.category}
+            locale={locale}
+            readOnly={readOnly}
           />
         ))}
       </div>
@@ -104,12 +123,16 @@ function TimelineAvatarStatus({
   gallery,
   galleryIndex,
   category,
+  locale,
+  readOnly,
 }: {
   item: AgendaItem;
   pets: TaskEntity[];
   gallery: LightboxItem[];
   galleryIndex: number;
   category: ScheduleCategory;
+  locale: "en" | "id";
+  readOnly: boolean;
 }) {
   const { setActivePetId } = useHousehold();
   const pet = pets.find((p) => p.id === item.entityId);
@@ -139,11 +162,16 @@ function TimelineAvatarStatus({
     );
   }
 
+  const Wrapper = readOnly ? "span" : "button";
   return (
-    <button
-      type="button"
-      onClick={() => setActivePetId(pet.id)}
-      className="relative transition-transform active:scale-90"
+    <Wrapper
+      {...(readOnly
+        ? { className: "relative block" }
+        : {
+            type: "button" as const,
+            onClick: () => setActivePetId(pet.id),
+            className: "relative transition-transform active:scale-90",
+          })}
     >
       <MiniPetAvatar
         pet={pet}
@@ -154,7 +182,7 @@ function TimelineAvatarStatus({
       />
       {suspended ? (
         <Stethoscope
-          aria-label="Hospitalized"
+          aria-label={locale === "id" ? "Rawat inap" : "Hospitalized"}
           className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-indigo-600"
         />
       ) : (
@@ -167,6 +195,6 @@ function TimelineAvatarStatus({
           )}
         </>
       )}
-    </button>
+    </Wrapper>
   );
 }

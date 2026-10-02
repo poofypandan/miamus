@@ -1,3 +1,4 @@
+import { AGENDA_TONES } from "@/lib/agenda-tones";
 import {
   ClipboardList,
   ShoppingBag,
@@ -40,16 +41,6 @@ const CATEGORY_ICONS: Record<HouseholdTaskCategory, LucideIcon> = {
   groceries: ShoppingBag,
 };
 
-// Badge tints, one per category, so a list is scannable before it is read.
-// Kept deliberately pale — the strong colours in this app mean urgency (see
-// the admitted-pet cards), and a chore's category is not urgency.
-const CATEGORY_CLASSES: Record<HouseholdTaskCategory, string> = {
-  cleaning: "bg-sky-100 text-sky-900",
-  maintenance: "bg-amber-100 text-amber-900",
-  errand: "bg-violet-100 text-violet-900",
-  groceries: "bg-emerald-100 text-emerald-900",
-};
-
 /**
  * Resolves a category to its icon, tolerating a value this build has never
  * heard of.
@@ -62,8 +53,14 @@ export function categoryIcon(category: HouseholdTaskCategory): LucideIcon {
   return CATEGORY_ICONS[category] ?? ClipboardList;
 }
 
-export function categoryClass(category: HouseholdTaskCategory): string {
-  return CATEGORY_CLASSES[category] ?? "bg-gray-100 text-gray-700";
+/**
+ * The category badge's colour: the same amber for every chore category
+ * (Phase 112). Amber is what marks a row as housework at all, so a hue per
+ * category — sky cleaning, violet errands — would only compete with it. The
+ * icon and the label carry which kind of chore it is.
+ */
+export function categoryClass(): string {
+  return AGENDA_TONES.chore.badge;
 }
 
 /** Same tolerance as categoryIcon: an unknown value shows itself, verbatim. */

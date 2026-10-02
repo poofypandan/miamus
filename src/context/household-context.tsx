@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { addDays } from "date-fns";
 import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
 import type {
@@ -20,6 +21,7 @@ import { useToday } from "@/hooks/use-today";
 import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { AGENDA_WEEK_DAYS } from "@/lib/unified-agenda";
 import { compressPhoto } from "@/lib/image";
 import { readSnapshot, writeSnapshot } from "@/lib/snapshot-cache";
 import { warmImagesWhenIdle } from "@/lib/image-warm";
@@ -315,9 +317,13 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     todayRef.current = todayStr;
   }, [todayStr]);
 
+  // The selected day and the six after it — the Agenda's week (Phase 112).
+  // Always the whole window, in Day view too: it is one request either way,
+  // and it means flipping Day ⇄ Week never has to wait for a fetch.
   const loadHouseholdTasks = useCallback(async (dueDate: string) => {
+    const to = formatDateLocal(addDays(new Date(`${dueDate}T00:00:00`), AGENDA_WEEK_DAYS - 1));
     try {
-      setHouseholdTasks(await dataProvider.listHouseholdTasks(dueDate, todayRef.current));
+      setHouseholdTasks(await dataProvider.listHouseholdTasks(dueDate, to, todayRef.current));
     } catch (err) {
       // Same degraded state as routine_proposals and inventory_items below:
       // household_tasks arrives with the Phase 82 migration, and until it is

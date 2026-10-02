@@ -435,7 +435,7 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(updated);
   },
-  async listHouseholdTasks(dueDate, today) {
+  async listHouseholdTasks(from, to, today) {
     // Mirrors the three reads the Supabase provider issues (Phase 100), so
     // mock mode expands the same rows into the same occurrences: this day's
     // rows, every repeat that could reach it, and — on today only — whatever
@@ -444,27 +444,28 @@ export const mockProvider: DataProvider = {
       new Date(new Date(`${today}T00:00:00`).getTime() - CARRY_OVER_DAYS * 86_400_000)
     );
     const tasks = loadDB().householdTasks.filter((task) => {
-      if (task.due_date === dueDate) return true;
+      if (task.due_date >= from && task.due_date <= to) return true;
       const repeats = !!task.recurrence && task.recurrence !== "none";
       if (
         repeats &&
-        task.due_date <= dueDate &&
-        (!task.recurrence_until || task.recurrence_until >= dueDate)
+        task.due_date <= to &&
+        (!task.recurrence_until || task.recurrence_until >= from)
       ) {
         return true;
       }
       return (
-        dueDate === today &&
+        from <= today &&
+        today <= to &&
         task.status === "pending" &&
-        task.due_date < dueDate &&
+        task.due_date < today &&
         task.due_date >= carryFloor
       );
     });
     return delay(
       [...tasks].sort((a, b) => {
         if (a.due_time !== b.due_time) {
-          if (!a.due_time) return 1;
-          if (!b.due_time) return -1;
+          if (!a.due_time) return -1;
+          if (!b.due_time) return 1;
           return a.due_time.localeCompare(b.due_time);
         }
         return a.created_at.localeCompare(b.created_at);

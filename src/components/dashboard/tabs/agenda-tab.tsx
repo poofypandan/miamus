@@ -6,6 +6,8 @@ import { CalendarDays, PawPrint, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { AgendaWeekList } from "@/components/agenda/agenda-week-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue } from "@/components/dashboard/approval-queue";
@@ -13,6 +15,8 @@ import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
+import { useAgendaRange } from "@/hooks/use-agenda-range";
+import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
@@ -49,6 +53,9 @@ export function AgendaTab() {
   const dateStr = formatDateLocal(selectedDate);
   const label = dayLabel(selectedDate, today);
 
+  const [range, setRange] = useAgendaRange();
+  const week = useAgendaWeek(selectedDate);
+
   const [editing, setEditing] = useState<HouseholdTask | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
@@ -77,6 +84,18 @@ export function AgendaTab() {
           which. It had none until Phase 101: before the five-tab refactor the
           dashboard rendered a single ribbon above the whole canvas, and when
           that went the Agenda was left following a date it could not change. */}
+      {/* Day | Week (Phase 112). In Week the ribbon still picks the day the
+          seven start from, so planning next week is one tap. */}
+      <SegmentedControl
+        ariaLabel="Agenda range"
+        segments={[
+          { value: "day", label: "Day" },
+          { value: "week", label: "Week" },
+        ]}
+        value={range}
+        onChange={setRange}
+      />
+
       <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
 
       {/* A pending proposal is the only thing here blocking someone else's
@@ -84,65 +103,90 @@ export function AgendaTab() {
           is empty. */}
       <ApprovalQueue />
 
-      <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
+      {range === "day" ? (
+        <>
+          <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
 
-      {entries.length === 0 ? (
-        // The first screen a new household sees, so it says how to fill it:
-        // a chore from here, and — while there are no pets to have routines —
-        // the way to the tab that adds them.
-        <EmptyState
-          icon={CalendarDays}
-          title="Nothing scheduled"
-          description={
-            pets.length === 0
-              ? "Tap + to add a chore, or add a pet to plan their daily routines."
-              : "No pet routines or chores on this day. Tap + to add a chore."
-          }
-        >
-          <Button
-            className="min-h-[44px]"
-            onClick={() => {
-              setEditing(null);
+          {entries.length === 0 ? (
+            // The first screen a new household sees, so it says how to fill it:
+            // a chore from here, and — while there are no pets to have routines —
+            // the way to the tab that adds them.
+            <EmptyState
+              icon={CalendarDays}
+              title="Nothing scheduled"
+              description={
+                pets.length === 0
+                  ? "Tap + to add a chore, or add a pet to plan their daily routines."
+                  : "No pet routines or chores on this day. Tap + to add a chore."
+              }
+            >
+              <Button
+                className="min-h-[44px]"
+                onClick={() => {
+                  setEditing(null);
+                  setEditorOpen(true);
+                }}
+              >
+                <Plus /> Add chore
+              </Button>
+              {pets.length === 0 && (
+                <Button variant="outline" className="min-h-[44px]" asChild>
+                  <Link href={moduleHref("pets")} scroll={false}>
+                    <PawPrint /> Add a pet
+                  </Link>
+                </Button>
+              )}
+            </EmptyState>
+          ) : (
+            <Card className="gap-3 py-4">
+              <CardContent className="flex flex-col gap-1.5 px-4">
+                {entries.map((entry) =>
+                  entry.kind === "routine" ? (
+                    <TimelineRow key={entry.key} group={entry.group} pets={pets} />
+                  ) : (
+                    <ChoreTimelineRow
+                      key={entry.key}
+                      occurrence={entry.occurrence}
+                      assigneeName={
+                        entry.occurrence.task.assigned_to
+                          ? staffName(entry.occurrence.task.assigned_to)
+                          : null
+                      }
+                      onPress={() => {
+                        // The template, not the occurrence: editing a repeat from
+                        // any of its days edits the repeat. A materialised
+                        // occurrence has its own row and edits that.
+                        setEditing(entry.occurrence.row ?? entry.occurrence.template);
+                        setEditorOpen(true);
+                      }}
+                    />
+                  )
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
+        <>
+          <h2 className="text-sm font-semibold text-gray-900">
+            {label === "Today" ? "The next 7 days" : `7 days from ${label}`}
+          </h2>
+          <AgendaWeekList
+            days={week}
+            locale="en"
+            onOpenDay={(day) => {
+              setSelectedDate(day);
+              setRange("day");
+            }}
+            onChorePress={(occurrence) => {
+              setEditing(occurrence.row ?? occurrence.template);
               setEditorOpen(true);
             }}
-          >
-            <Plus /> Add chore
-          </Button>
-          {pets.length === 0 && (
-            <Button variant="outline" className="min-h-[44px]" asChild>
-              <Link href={moduleHref("pets")} scroll={false}>
-                <PawPrint /> Add a pet
-              </Link>
-            </Button>
-          )}
-        </EmptyState>
-      ) : (
-        <Card className="gap-3 py-4">
-          <CardContent className="flex flex-col gap-1.5 px-4">
-            {entries.map((entry) =>
-              entry.kind === "routine" ? (
-                <TimelineRow key={entry.key} group={entry.group} pets={pets} />
-              ) : (
-                <ChoreTimelineRow
-                  key={entry.key}
-                  occurrence={entry.occurrence}
-                  assigneeName={
-                    entry.occurrence.task.assigned_to
-                      ? staffName(entry.occurrence.task.assigned_to)
-                      : null
-                  }
-                  onPress={() => {
-                    // The template, not the occurrence: editing a repeat from
-                    // any of its days edits the repeat. A materialised
-                    // occurrence has its own row and edits that.
-                    setEditing(entry.occurrence.row ?? entry.occurrence.template);
-                    setEditorOpen(true);
-                  }}
-                />
-              )
-            )}
-          </CardContent>
-        </Card>
+            assigneeName={(occurrence) =>
+              occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
+            }
+          />
+        </>
       )}
 
       <ChoreEditorDialog

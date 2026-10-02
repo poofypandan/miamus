@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, Clock, Eye, Repeat, UserRound, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AGENDA_TONES } from "@/lib/agenda-tones";
 import {
   categoryClass,
   categoryIcon,
@@ -95,7 +96,7 @@ export function ChoreCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        <Badge className={cn("h-5 gap-1 px-1.5 text-[10px]", categoryClass(task.category))}>
+        <Badge className={cn("h-5 gap-1 px-1.5 text-[10px]", categoryClass())}>
           <CategoryIcon className="size-3" />
           {categoryLabel(task.category, locale)}
         </Badge>
@@ -124,10 +125,12 @@ export function ChoreCard({
           </Badge>
         )}
 
-        {/* Amber, the app's warning tint — this is the one badge that changes
-            what a staff member should do: wait, rather than start. */}
+        {/* Solid, not pale: every chore card is amber now (Phase 112), so a
+            pale amber badge would vanish into it — and this is the one badge
+            that changes what a staff member should do: wait, rather than
+            start. */}
         {supervised && (
-          <Badge className="h-5 gap-1 bg-amber-100 px-1.5 text-[10px] text-amber-900">
+          <Badge className="h-5 gap-1 bg-amber-700 px-1.5 text-[10px] text-white">
             <Eye className="size-3" />
             {t.supervision}
           </Badge>
@@ -139,7 +142,7 @@ export function ChoreCard({
       {overdue && !done && (
         <p className="flex items-center gap-1 text-[11px] font-medium text-amber-700">
           <AlertTriangle className="size-3 shrink-0" />
-          {t.overdue(dayKeyLabel(occurrence.date, today))}
+          {t.overdue(dayKeyLabel(occurrence.date, today, locale))}
         </p>
       )}
 
@@ -149,13 +152,10 @@ export function ChoreCard({
 
   const className = cn(
     "flex w-full flex-col gap-2 rounded-xl border p-3 text-left",
-    done
-      ? "border-border bg-muted/40"
-      : supervised
-        ? "border-amber-200 bg-amber-50"
-        : overdue
-          ? "border-amber-200 bg-white"
-          : "border-border bg-card"
+    // Amber for every open chore — the third of the Agenda's three tones
+    // (Phase 112). Done drops to neutral; supervision and carry-over are said
+    // by their own badge and line rather than by a second shade of amber.
+    done ? "border-border bg-muted/40" : AGENDA_TONES.chore.tint
   );
 
   if (!onPress) return <div className={className}>{body}</div>;

@@ -427,7 +427,7 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
-  async listHouseholdTasks(dueDate, today) {
+  async listHouseholdTasks(from, to, today) {
     // Still never the whole table — but one day is no longer enough to render
     // one day (Phase 100). Three narrow reads, deliberately separate rather
     // than one clever .or(): each is individually obvious and individually
@@ -441,30 +441,32 @@ export const supabaseProvider: DataProvider = {
     );
 
     const [onDay, templates, carriedOver] = await Promise.all([
-      // 1. Rows that belong to this day outright: one-offs, a template's own
+      // 1. Rows that belong to these days outright: one-offs, a template's own
       //    first occurrence, and any occurrence already claimed or finished.
       base()
-        .eq("due_date", dueDate)
-        // Timed chores first in clock order, then the "sometime today" ones —
-        // nullsFirst: false is what puts a null due_time at the end rather
-        // than at the top of the owner's list.
-        .order("due_time", { ascending: true, nullsFirst: false })
+        .gte("due_date", from)
+        .lte("due_date", to)
+        // Anytime (null due_time) first, then clock order — the order every
+        // list sorts into anyway (compareOccurrences, Phase 112); matching it
+        // here just means a row is never briefly out of place.
+        .order("due_time", { ascending: true, nullsFirst: true })
         .order("created_at", { ascending: true }),
 
-      // 2. Repeats that could reach this day. Started on or before it, and
-      //    either open-ended or not yet finished. Whether one actually lands
-      //    on it is a question for occursOn, not for Postgres.
+      // 2. Repeats that could reach these days. Started by the last of them,
+      //    and either open-ended or still running on the first. Whether one
+      //    actually lands on a given day is a question for occursOn, not for
+      //    Postgres.
       base()
         .neq("recurrence", "none")
-        .lte("due_date", dueDate)
-        .or(`recurrence_until.is.null,recurrence_until.gte.${dueDate}`),
+        .lte("due_date", to)
+        .or(`recurrence_until.is.null,recurrence_until.gte.${from}`),
 
-      // 3. Unfinished business, and only when looking at today — browsing an
-      //    earlier day should show that day, not everything since.
-      dueDate === today
+      // 3. Unfinished business, and only when today is on screen — browsing
+      //    an earlier day should show that day, not everything since.
+      from <= today && today <= to
         ? base()
             .eq("status", "pending")
-            .lt("due_date", dueDate)
+            .lt("due_date", today)
             .gte("due_date", carryFloor)
         : Promise.resolve({ data: [] as HouseholdTask[], error: null }),
     ]);

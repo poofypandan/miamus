@@ -7,6 +7,7 @@ import {
   Utensils,
   type LucideIcon,
 } from "lucide-react";
+import { AGENDA_TONES, routineTone } from "@/lib/agenda-tones";
 import type { MasterSchedule, TaskLog } from "@/types/database";
 
 // master_schedules has no dedicated "category" column, so potty/grooming/
@@ -83,59 +84,23 @@ export function categoryIcon(category: ScheduleCategory): LucideIcon {
   return CATEGORY_ICONS[category];
 }
 
-// Tailwind text colours for the category icon, so a day of near-identical rows
-// can be scanned by colour before it is read. Deliberately the icon only: a
-// timeline of tinted rows reads as noise, and the title still says what the
-// task is, so colour is a shortcut rather than the only carrier of meaning.
-//
-// The three "significant" categories share the hue of the card tint they get
-// in the timeline (see CATEGORY_CARD_TINTS), so icon and card agree.
-const CATEGORY_ICON_COLORS: Record<ScheduleCategory, string> = {
-  potty: "text-emerald-500",
-  meal: "text-amber-500",
-  medication: "text-rose-500",
-  vet: "text-indigo-500",
-  grooming: "text-cyan-600",
-  // Everything that is simply a task keeps the timeline's own muted grey.
-  temporary: "text-muted-foreground",
-};
+// The colours below are the Agenda's three-tone system (Phase 112), read from
+// lib/agenda-tones so the owner timeline, the staff cards and the pet profile
+// sheet cannot disagree: red for medicine and the vet, neutral grey for the
+// rest of a dog's routine. Chores are the third tone, amber.
 
 export function categoryIconColor(category: ScheduleCategory): string {
-  return CATEGORY_ICON_COLORS[category] ?? "text-muted-foreground";
+  return AGENDA_TONES[routineTone(category)].icon;
 }
-
-// A tinted card face for the three things that are not the ordinary shape of
-// the day: a course of medicine, a vet appointment, a grooming visit. Meals and
-// potty breaks stay neutral precisely because they are most of the list —
-// tinting those too would leave nothing standing out.
-//
-// No dark-mode variants: the app pins itself to a light scheme (see the
-// color-scheme rule from Phase 37), so a dark override would never render.
-const CATEGORY_CARD_TINTS: Partial<Record<ScheduleCategory, string>> = {
-  medication: "border-rose-200 bg-rose-50",
-  vet: "border-indigo-200 bg-indigo-50",
-  grooming: "border-cyan-200 bg-cyan-50",
-};
 
 /** Tint classes for a category's card, or "" for the neutral default. */
 export function categoryCardTint(category: ScheduleCategory): string {
-  return CATEGORY_CARD_TINTS[category] ?? "";
+  return AGENDA_TONES[routineTone(category)].tint;
 }
-
-// A deeper pass of the same three hues, for the pet profile sheet's timeline.
-// That list is one dog's whole day read close up, where the point is to pick
-// the medicine and the vet visit out of it — the dashboard keeps the lighter
-// set above, because tinting this hard across every pet at once turns the feed
-// into noise.
-const CATEGORY_CARD_TINTS_STRONG: Partial<Record<ScheduleCategory, string>> = {
-  medication: "border-rose-300 bg-rose-100",
-  vet: "border-indigo-300 bg-indigo-100",
-  grooming: "border-cyan-300 bg-cyan-100",
-};
 
 /** The deeper tint used inside the pet profile sheet, or "" for the default. */
 export function categoryCardTintStrong(category: ScheduleCategory): string {
-  return CATEGORY_CARD_TINTS_STRONG[category] ?? "";
+  return AGENDA_TONES[routineTone(category)].tintStrong;
 }
 
 // The Indonesian labels AdHocSheet writes into `notes` for a "Catat Ekstra"

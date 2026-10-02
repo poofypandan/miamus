@@ -4,10 +4,13 @@ import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
+import { AgendaWeekList } from "@/components/agenda/agenda-week-list";
 import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-gate";
+import { useAgendaRange } from "@/hooks/use-agenda-range";
+import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useToday } from "@/hooks/use-today";
-import { occurrencesForStaff, type ChoreOccurrence } from "@/lib/chore-recurrence";
+import { occurrencesForStaff } from "@/lib/chore-recurrence";
 import { buildUnifiedAgenda } from "@/lib/unified-agenda";
 import { DischargeButton } from "@/components/dashboard/discharge-button";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
@@ -21,7 +24,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
-import { useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -49,9 +52,6 @@ export default function StaffPage() {
 // exactly when a staff member is mid-stock-check.
 const VIEWS = ["tugas", "stok"] as const;
 type StaffView = (typeof VIEWS)[number];
-
-// Not a staff id, and it cannot collide with one: ids are uuids.
-const ALL_ASSIGNEES = "all";
 
 function StaffTasks() {
   const { inventoryItems, refresh } = useHousehold();
@@ -133,27 +133,22 @@ function TasksView() {
   // question of scrolling to the bottom and comparing two lists by eye.
   const allChores = useChoreOccurrences();
 
-  // Who the chore list is narrowed to (Phase 101). ALL_ASSIGNEES shows the
-  // whole board; a name shows that person's chores plus everything still
-  // unclaimed, because a filter that hid unclaimed work would leave nobody
-  // able to pick anything up.
+  // A staff phone sees its own chores and the unclaimed ones — never a
+  // chore assigned to somebody else (Phase 112). Phase 101 added a "Semua"
+  // pill and one per colleague, which put everyone's assignments a tap away;
+  // they are gone. Unclaimed chores stay, because a list that hid them would
+  // leave nobody able to pick one up.
   //
-  // Defaults to this device's own staff member, which is exactly what the
-  // feed showed before the filter existed — the pills add a way to look
-  // wider, they do not change what you see on opening the app.
-  // Null until the staff member picks one, rather than seeded from staffId:
-  // useStaffIdentity hydrates from localStorage *after* mount, so a seeded
-  // initial value would be captured as "all" and stay there. Derived instead,
-  // so the default follows the identity the moment it arrives and is
-  // overridden for good the first time anyone taps a pill.
-  const [chosenAssignee, setChosenAssignee] = useState<string | null>(null);
-  const assignee = chosenAssignee ?? staffId ?? ALL_ASSIGNEES;
+  // What this is not: access control. A staff phone is bound to the
+  // household, not to a person — the name on it is chosen on the device — so
+  // the database cannot tell Ari's phone from Syam's, and the rows still
+  // arrive. This keeps each person's list to their own work; it does not
+  // stop a determined colleague reading the network traffic.
+  //
+  // The owner looking through the staff view has no staffId and sees all.
   const chores = useMemo(
-    () =>
-      assignee === ALL_ASSIGNEES
-        ? allChores
-        : occurrencesForStaff(allChores, assignee),
-    [allChores, assignee]
+    () => (staffId ? occurrencesForStaff(allChores, staffId) : allChores),
+    [allChores, staffId]
   );
 
   // Pet routines are never filtered: they belong to the household rather than
@@ -168,18 +163,32 @@ function TasksView() {
   // Tugas" for a chore the staff member had just taken. The key survives
   // materialising too — it is (template, day), not the row id.
   const [openKey, setOpenKey] = useState<string | null>(null);
-  // Looked up in the unfiltered list on purpose: switching the filter while a
-  // chore sheet is open should not yank it shut mid-upload.
   const openChore = useMemo(
-    () => allChores.find((c) => c.key === openKey) ?? null,
-    [allChores, openKey]
+    () => chores.find((c) => c.key === openKey) ?? null,
+    [chores, openKey]
   );
+
+  const [range, setRange] = useAgendaRange();
+  const week = useAgendaWeek(selectedDate, staffId);
+  // Only ever needed for the owner browsing this view: a staff phone sees no
+  // chore assigned to anyone but itself.
+  const { profiles } = useStaffProfiles();
+  const staffName = useStaffNameLookup(profiles);
 
   return (
     <>
-      <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+      {/* Hari | Minggu (Phase 112), the same toggle as the owner's Agenda. */}
+      <SegmentedControl
+        ariaLabel="Rentang jadwal"
+        segments={[
+          { value: "day", label: "Hari" },
+          { value: "week", label: "Minggu" },
+        ]}
+        value={range}
+        onChange={setRange}
+      />
 
-      <AssigneeFilter value={assignee} onChange={setChosenAssignee} chores={allChores} />
+      <DateRibbon value={selectedDate} onChange={setSelectedDate} />
 
       {/* Whoever is holding this phone is the one who will fetch the dog, so
           the discharge lives here as well as on the owner's profile sheet.
@@ -209,7 +218,24 @@ function TasksView() {
       )}
 
       <main className="flex flex-1 flex-col gap-3">
-        {loading ? (
+        {range === "week" && !loading ? (
+          <AgendaWeekList
+            days={week}
+            locale="id"
+            readOnly
+            onOpenDay={(day) => {
+              setSelectedDate(day);
+              setRange("day");
+            }}
+            assigneeName={(occurrence) =>
+              occurrence.task.assigned_to === staffId
+                ? "Untuk Kamu"
+                : occurrence.task.assigned_to
+                  ? staffName(occurrence.task.assigned_to)
+                  : null
+            }
+          />
+        ) : loading ? (
           <>
             <Skeleton className="h-28 w-full rounded-xl" />
             <Skeleton className="h-28 w-full rounded-xl" />
@@ -244,58 +270,6 @@ function TasksView() {
         onOpenChange={(next) => !next && setOpenKey(null)}
       />
     </>
-  );
-}
-
-/**
- * The chore filter: everyone, or one person (Phase 101).
- *
- * Staff-facing, so Bahasa Indonesia. The shared SegmentedControl rather than a
- * bespoke pill row, per CLAUDE.md — and in its scrollable mode, because the
- * roster is data: three names fit a phone, six would not.
- *
- * Only ever filters chores. It is deliberately not a people picker either:
- * tapping a name does not change who you are, only which chores you are
- * looking at, which is why it sits above the list rather than in the header
- * next to the on-duty badge.
- */
-function AssigneeFilter({
-  value,
-  onChange,
-  chores,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  chores: ChoreOccurrence[];
-}) {
-  const { profiles } = useStaffProfiles();
-
-  const segments = useMemo(() => {
-    const open = (predicate: (o: ChoreOccurrence) => boolean) =>
-      chores.filter((o) => o.status !== "completed" && predicate(o)).length;
-    return [
-      { value: ALL_ASSIGNEES, label: "Semua", badge: open(() => true) || undefined },
-      ...(profiles ?? []).map((p) => ({
-        value: p.id,
-        label: p.name,
-        // Counts what tapping would show: their own, plus the unclaimed ones
-        // anyone can take.
-        badge: open((o) => !o.task.assigned_to || o.task.assigned_to === p.id) || undefined,
-      })),
-    ];
-  }, [profiles, chores]);
-
-  // One name and nothing to choose between is just clutter.
-  if (segments.length < 2) return null;
-
-  return (
-    <SegmentedControl
-      ariaLabel="Saring tugas"
-      segments={segments}
-      value={value}
-      onChange={onChange}
-      scrollable
-    />
   );
 }
 

@@ -240,18 +240,18 @@ export function expandChores(params: {
 }
 
 /**
- * Chronological, with the untimed ones last.
- *
- * A chore with no due_time is "sometime today", which is genuinely less urgent
- * than anything with a clock against it, so it sinks below the timed run
- * rather than sorting to midnight at the top.
+ * Anytime chores first, then chronological (Phase 112; untimed sorted last
+ * before that). A chore with no due_time can be picked up in any free moment,
+ * which only happens if it is in view — not below a day's worth of timed
+ * rows. See buildUnifiedAgenda.
  */
 export function compareOccurrences(a: ChoreOccurrence, b: ChoreOccurrence): number {
   const at = a.task.due_time;
   const bt = b.task.due_time;
   if (at && bt && at !== bt) return at.localeCompare(bt);
-  if (at && !bt) return -1;
-  if (!at && bt) return 1;
+  // Anytime chores first (Phase 112) — see buildUnifiedAgenda for why.
+  if (!at && bt) return -1;
+  if (at && !bt) return 1;
   // Overdue carry-overs first within a tie: they have been waiting longest.
   if (a.date !== b.date) return a.date.localeCompare(b.date);
   return a.task.title.localeCompare(b.task.title);
