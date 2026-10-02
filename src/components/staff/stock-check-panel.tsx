@@ -9,21 +9,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
+import { InventoryBoard } from "@/components/inventory/inventory-board";
 import {
-  STOCK_CATEGORY_ICONS,
-  STOCK_CATEGORY_LABELS_ID,
+  CATEGORY_ICONS,
+  CATEGORY_LABELS_ID,
   dueStockItems,
-  isStockItem,
+  stepFor,
   stockItemName,
 } from "@/lib/inventory";
-import type { InventoryItem, StockCategory } from "@/types/database";
+import { photoSrc } from "@/lib/photos";
+import type { InventoryItem } from "@/types/database";
 
 /**
- * "Cek Stok" — the shelves due for a count today (PRD 02).
+ * "Stok" — the counts due today (PRD 02), then the whole inventory with its
+ * +/- steppers (Phase 110).
  *
  * Staff-facing, so entirely Bahasa Indonesia per the Phase 46 language
- * boundary. An item leaves this list the moment its count is saved, and comes
- * back on its own once its cadence (3/7/14 days) has passed.
+ * boundary. An item leaves the due list the moment its count is saved, and
+ * comes back on its own once its cadence (3/7/14/30 days) has passed.
  *
  * Always measured against the real today: it is its own segment of the staff
  * view, with no date ribbon, because a stock check is a count of what is on
@@ -37,8 +40,7 @@ export function StockCheckPanel() {
   const checkedToday = useMemo(
     () =>
       inventoryItems.filter(
-        (item) =>
-          isStockItem(item) && item.last_audited_at && isToday(new Date(item.last_audited_at))
+        (item) => item.last_audited_at && isToday(new Date(item.last_audited_at))
       ).length,
     [inventoryItems]
   );
@@ -52,38 +54,45 @@ export function StockCheckPanel() {
     );
   }
 
-  if (due.length === 0) {
-    return (
-      <p className="pt-10 text-center text-sm text-muted-foreground">
-        {checkedToday > 0
-          ? "Semua stok sudah dicek hari ini. 🎉"
-          : "Tidak ada stok yang perlu dicek hari ini."}
-      </p>
-    );
-  }
-
   return (
-    <section className="flex flex-col gap-2">
-      <p className="text-xs text-muted-foreground">
-        {due.length} barang perlu dicek. Hitung, foto raknya, lalu simpan.
-      </p>
-      {due.map((item) => (
-        <AuditCard key={item.id} item={item} category={item.category} />
-      ))}
-    </section>
+    <div className="flex flex-col gap-6">
+      {due.length === 0 ? (
+        <p className="pt-2 text-center text-sm text-muted-foreground">
+          {checkedToday > 0
+            ? "Semua stok sudah dicek hari ini. 🎉"
+            : "Tidak ada stok yang perlu dicek hari ini."}
+        </p>
+      ) : (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-gray-900">Perlu Dicek</h2>
+          <p className="text-xs text-muted-foreground">
+            {due.length} barang perlu dicek. Hitung, foto raknya, lalu simpan.
+          </p>
+          {due.map((item) => (
+            <AuditCard key={item.id} item={item} />
+          ))}
+        </section>
+      )}
+
+      {/* Everything, for the moment between checks: a bottle used up, a
+          delivery unpacked. One tap on the card, no form. */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-gray-900">Semua Stok</h2>
+        <InventoryBoard lang="id" canManage={false} />
+      </section>
+    </div>
   );
 }
 
-function AuditCard({ item, category }: { item: InventoryItem; category: StockCategory }) {
+function AuditCard({ item }: { item: InventoryItem }) {
   const { submitInventoryAudit } = useHousehold();
-  const CategoryIcon = STOCK_CATEGORY_ICONS[category];
+  const CategoryIcon = CATEGORY_ICONS[item.category];
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Blank counts rather than last time's numbers: a prefilled stepper can be
   // saved without looking at the shelf, and a wrong-but-plausible count is
   // worse than a zero that shows up red on the owner's dashboard.
-  const [boxes, setBoxes] = useState(0);
-  const [looseUnits, setLooseUnits] = useState(0);
+  const [count, setCount] = useState(0);
   const [photo, setPhoto] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -110,7 +119,7 @@ function AuditCard({ item, category }: { item: InventoryItem; category: StockCat
     }
     setSaving(true);
     try {
-      await submitInventoryAudit(item.id, boxes, looseUnits, photo);
+      await submitInventoryAudit(item.id, count, photo);
       // No state reset: saving takes the item off the list, which unmounts
       // this card.
       toast.success(`Stok ${stockItemName(item)} tersimpan ✅`);
@@ -127,37 +136,43 @@ function AuditCard({ item, category }: { item: InventoryItem; category: StockCat
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-3">
-      <div className="flex flex-col gap-1.5">
-        <p className="text-sm font-medium break-words">{stockItemName(item)}</p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="secondary" className="h-5 gap-1 px-1.5 text-[10px]">
-            <CategoryIcon className="size-3" />
-            {STOCK_CATEGORY_LABELS_ID[category]}
-          </Badge>
-          <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-normal">
-            Satuan: {item.unit_type}
-          </Badge>
+      <div className="flex items-start gap-3">
+        {/* The owner's reference photo, so the count is of the right product. */}
+        {item.photo_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photoSrc(item.photo_url, 160)}
+            alt=""
+            loading="lazy"
+            className="size-12 shrink-0 rounded-lg object-cover ring-1 ring-border"
+          />
+        )}
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <p className="text-sm font-medium break-words">{stockItemName(item)}</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="secondary" className="h-5 gap-1 px-1.5 text-[10px]">
+              <CategoryIcon className="size-3" />
+              {CATEGORY_LABELS_ID[item.category]}
+            </Badge>
+            {/* The unit, never the recorded count: a count that starts from
+                the last number can be saved without looking at the shelf. */}
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-normal">
+              Satuan: {item.unit}
+            </Badge>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <NumberStepper
-          label="Dus"
-          value={boxes}
-          onChange={setBoxes}
-          disabled={saving}
-          decrementLabel="Kurangi Dus"
-          incrementLabel="Tambah Dus"
-        />
-        <NumberStepper
-          label="Satuan Lepas"
-          value={looseUnits}
-          onChange={setLooseUnits}
-          disabled={saving}
-          decrementLabel="Kurangi Satuan Lepas"
-          incrementLabel="Tambah Satuan Lepas"
-        />
-      </div>
+      <NumberStepper
+        label={`Jumlah di rak (${item.unit})`}
+        value={count}
+        onChange={setCount}
+        disabled={saving}
+        decrementLabel="Kurangi"
+        incrementLabel="Tambah"
+        step={stepFor(item.unit)}
+        decimal={item.unit === "kg" || item.unit === "L"}
+      />
 
       <input
         ref={inputRef}

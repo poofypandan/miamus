@@ -10,6 +10,7 @@ import type {
   CreateScheduleInput,
   CreateMedicalRecordInput,
   CreateInventoryAlertInput,
+  InventoryItemInput,
   CreateRoutineProposalInput,
   CreateHouseholdTaskInput,
   UpdateHouseholdTaskInput,
@@ -139,25 +140,21 @@ interface HouseholdContextValue {
   uploadPhoto: (file: File, pathPrefix: string) => Promise<string>;
   flagLowStock: (input: CreateInventoryAlertInput) => Promise<InventoryAlert>;
   resolveInventoryAlert: (id: string) => Promise<void>;
-  addInventoryItem: (input: { name: string; category: ItemType }) => Promise<InventoryItem>;
+  /** Owner only — the database refuses item edits from staff devices (migrations/099). */
+  addInventoryItem: (input: InventoryItemInput) => Promise<InventoryItem>;
+  updateInventoryItem: (id: string, patch: Partial<InventoryItemInput>) => Promise<InventoryItem>;
   removeInventoryItem: (id: string) => Promise<void>;
   /**
-   * Records a stock check: uploads the shelf photo, files the audit under
-   * whoever is signed in on this device, and writes the counts back onto the
-   * item — which is what takes it off today's checklist.
+   * One tap of an item's +/- stepper (Phase 110). Applied to the screen at
+   * once; sent to the server in a batch — see the implementation.
    */
-  submitInventoryAudit: (
-    itemId: string,
-    boxes: number,
-    looseUnits: number,
-    photoFile: File
-  ) => Promise<void>;
+  adjustInventoryQuantity: (id: string, delta: number) => void;
   /**
-   * The owner's side of the procurement loop: adds a delivery to the item's
-   * current stock. Leaves last_audited_at alone — receiving groceries is not a
-   * count, so it must not push the next stock check back.
+   * Records a stock check: uploads the shelf photo, files the audit under
+   * whoever is signed in on this device, and writes the count back onto the
+   * item as its quantity — which is what takes it off today's checklist.
    */
-  addIncomingStock: (itemId: string, addedBoxes: number, addedLoose: number) => Promise<void>;
+  submitInventoryAudit: (itemId: string, quantity: number, photoFile: File) => Promise<void>;
   submitRoutineProposal: (input: CreateRoutineProposalInput) => Promise<RoutineProposal>;
   submitRoutineProposalsBatch: (inputs: CreateRoutineProposalInput[]) => Promise<RoutineProposal[]>;
   decideRoutineProposals: (
@@ -594,15 +591,99 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     return alert;
   }, []);
 
-  const addInventoryItem = useCallback(async (input: { name: string; category: ItemType }) => {
+  const addInventoryItem = useCallback(async (input: InventoryItemInput) => {
     const item = await dataProvider.createInventoryItem(input);
     setInventoryItems((prev) => [...prev, item].sort((a, b) => a.name.localeCompare(b.name)));
     return item;
   }, []);
 
+  const updateInventoryItem = useCallback(
+    async (id: string, patch: Partial<InventoryItemInput>) => {
+      const item = await dataProvider.updateInventoryItem(id, patch);
+      setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
+      return item;
+    },
+    []
+  );
+
   const removeInventoryItem = useCallback(async (id: string) => {
     await dataProvider.deleteInventoryItem(id);
     setInventoryItems((prev) => prev.filter((i) => i.id !== id));
+  }, []);
+
+  // What the stepper reads its starting point from; see adjustInventoryQuantity.
+  const inventoryItemsRef = useRef(inventoryItems);
+  useEffect(() => {
+    inventoryItemsRef.current = inventoryItems;
+  }, [inventoryItems]);
+  // Read by the stepper's failure path, which runs from a timer long after
+  // the render that created it.
+  const refreshRef = useRef(refresh);
+  const userRoleRef = useRef(userRole);
+  useEffect(() => {
+    refreshRef.current = refresh;
+    userRoleRef.current = userRole;
+  }, [refresh, userRole]);
+
+  // The stepper's taps not yet sent, per item, and the timer that will send
+  // them. Refs, not state: nothing renders from them.
+  const pendingStock = useRef(new Map<string, { delta: number; timer: ReturnType<typeof setTimeout> }>());
+
+  /**
+   * A stepper tap (Phase 110).
+   *
+   * The screen moves on the tap; the network does not. Taps on one item are
+   * summed and sent as a single increment once they stop for a moment, so
+   * counting in ten packs of food is one request rather than ten racing ones.
+   * The server adds the sum to whatever it holds — not a total computed here —
+   * so another phone's taps in the same moment are kept, not overwritten.
+   *
+   * What is summed is the change the screen actually showed, not the taps:
+   * "-" on an empty shelf shows no change and sends none. Summing raw taps
+   * would let 1 → "-", "-", "+" (shown as 0, 0, 1) reach the server as -1,
+   * which floors at 0 — a different answer from the one on screen.
+   *
+   * Fire-and-forget for the caller: a failure is reported here, and the list
+   * is refetched so the screen goes back to what the server really holds.
+   */
+  const adjustInventoryQuantity = useCallback((id: string, delta: number) => {
+    // Read from the ref, not from a setState updater: React runs updaters
+    // during the next render, not here, so a value computed inside one is not
+    // available to the batching below. The ref is also written here, at once,
+    // so a second tap before that render starts from the first tap's result.
+    const current = inventoryItemsRef.current.find((item) => item.id === id);
+    if (!current) return;
+    const quantity = Math.max(0, current.quantity + delta);
+    const applied = quantity - current.quantity;
+    if (applied === 0) return;
+    inventoryItemsRef.current = inventoryItemsRef.current.map((item) =>
+      item.id === id ? { ...item, quantity } : item
+    );
+    setInventoryItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
+
+    const pending = pendingStock.current;
+    const entry = pending.get(id);
+    if (entry) clearTimeout(entry.timer);
+    const total = (entry?.delta ?? 0) + applied;
+    const timer = setTimeout(async () => {
+      pending.delete(id);
+      if (total === 0) return;
+      try {
+        const item = await dataProvider.adjustInventoryQuantity(id, total);
+        // Only if no newer taps landed while this was in flight: those are
+        // already on screen and on their way, and this answer predates them.
+        if (!pending.has(id)) {
+          setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error(
+          userRoleRef.current === "owner" ? "Couldn't update the stock" : "Gagal memperbarui stok"
+        );
+        void refreshRef.current({ silent: true });
+      }
+    }, 600);
+    pending.set(id, { delta: total, timer });
   }, []);
 
   // Online only, unlike task logging: the photo is the audit, and the offline
@@ -610,7 +691,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // image in IndexedDB until reconnect. A failure surfaces to the card, which
   // keeps the counts and the photo so the retry is one tap.
   const submitInventoryAudit = useCallback(
-    async (itemId: string, boxes: number, looseUnits: number, photoFile: File) => {
+    async (itemId: string, quantity: number, photoFile: File) => {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         throw new Error("Offline — stock checks need a connection to upload the photo");
       }
@@ -620,21 +701,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       );
       const { audit, item } = await dataProvider.createInventoryAudit({
         item_id: itemId,
-        boxes_counted: boxes,
-        loose_units_counted: looseUnits,
+        quantity_counted: quantity,
         photo_url: photoUrl,
         audited_by: readActiveStaffId(),
       });
       setInventoryItems((prev) => prev.map((i) => (i.id === itemId ? item : i)));
       setLatestInventoryAudits((prev) => ({ ...prev, [itemId]: audit }));
-    },
-    []
-  );
-
-  const addIncomingStock = useCallback(
-    async (itemId: string, addedBoxes: number, addedLoose: number) => {
-      const item = await dataProvider.addInventoryStock(itemId, addedBoxes, addedLoose);
-      setInventoryItems((prev) => prev.map((i) => (i.id === itemId ? item : i)));
     },
     []
   );
@@ -814,9 +886,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       flagLowStock,
       resolveInventoryAlert,
       addInventoryItem,
+      updateInventoryItem,
       removeInventoryItem,
+      adjustInventoryQuantity,
       submitInventoryAudit,
-      addIncomingStock,
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,
@@ -865,9 +938,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       flagLowStock,
       resolveInventoryAlert,
       addInventoryItem,
+      updateInventoryItem,
       removeInventoryItem,
+      adjustInventoryQuantity,
       submitInventoryAudit,
-      addIncomingStock,
       submitRoutineProposal,
       submitRoutineProposalsBatch,
       decideRoutineProposals,

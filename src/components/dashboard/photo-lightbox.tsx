@@ -208,7 +208,7 @@ export function PhotoLightbox({
             </>
           )}
           {items.length > 1 && (
-            <span className="absolute top-2 right-2 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white tabular-nums backdrop-blur-[2px]">
+            <span className="absolute top-2 right-2 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white tabular-nums">
               {Math.min(index, items.length - 1) + 1} / {items.length}
             </span>
           )}
@@ -240,7 +240,7 @@ function NavZone({
       <span className="sr-only">{label}</span>
       <span
         aria-hidden
-        className="flex size-8 items-center justify-center rounded-full bg-black/45 text-white opacity-0 backdrop-blur-[2px] transition-opacity hover:opacity-100"
+        className="flex size-8 items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity hover:opacity-100"
       >
         {side === "left" ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
       </span>

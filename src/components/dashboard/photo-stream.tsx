@@ -160,10 +160,10 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
                 // right). Kept as separate small marks rather than one wide pill
                 // so they still fit a ~120px tile in the 3-column grid.
                 <span className="pointer-events-none">
-                  <span className="absolute top-1 right-1 flex items-center justify-center rounded-full bg-black/55 p-1 text-white backdrop-blur-[2px]">
+                  <span className="absolute top-1 right-1 flex items-center justify-center rounded-full bg-black/55 p-1 text-white">
                     <EventIcon className="size-3" />
                   </span>
-                  <span className="absolute right-1 bottom-1 rounded-md bg-black/55 px-1 py-0.5 text-[9px] leading-none font-medium text-white tabular-nums backdrop-blur-[2px]">
+                  <span className="absolute right-1 bottom-1 rounded-md bg-black/55 px-1 py-0.5 text-[9px] leading-none font-medium text-white tabular-nums">
                     {formatTime12h(new Date(log.completed_at))}
                   </span>
                   <span className="absolute bottom-1 left-1">
@@ -187,7 +187,7 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
           type="button"
           onClick={() => setIsExpanded((expanded) => !expanded)}
           aria-expanded={isExpanded}
-          className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg text-sm font-medium text-zinc-600 transition-colors active:bg-zinc-100"
+          className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg text-sm font-medium text-zinc-600 active:bg-zinc-100"
         >
           {isExpanded ? "Show Fewer" : `View All Photos (${matching.length})`}
           <ChevronDown className={cn("size-4 transition-transform", isExpanded && "rotate-180")} />
@@ -216,7 +216,7 @@ function FilterPill({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors",
+        "flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium",
         active
           ? "border-zinc-900 bg-zinc-900 text-white"
           : "border-zinc-200 bg-zinc-100 text-zinc-600 active:bg-zinc-200"

@@ -85,7 +85,7 @@ export function SecuritySettings() {
               disabled={busy || (!enabled && !available)}
               onClick={toggle}
               className={cn(
-                "relative mt-0.5 flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50",
+                "relative mt-0.5 flex h-7 w-12 shrink-0 items-center rounded-full disabled:opacity-50",
                 enabled ? "bg-primary" : "bg-muted"
               )}
             >

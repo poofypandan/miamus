@@ -2,7 +2,12 @@ import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { CARRY_OVER_DAYS } from "@/lib/chore-recurrence";
 import { formatDateLocal } from "@/lib/scheduleEngine";
-import type { HouseholdTask, InventoryAuditLog, InventoryAuditWithStaff } from "@/types/database";
+import type {
+  HouseholdTask,
+  InventoryAuditLog,
+  InventoryAuditWithStaff,
+  InventoryItem,
+} from "@/types/database";
 import type { DataProvider } from "./types";
 
 function client() {
@@ -253,6 +258,26 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
+  async updateInventoryItem(id, patch) {
+    const { data, error } = await client()
+      .from("inventory_items")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async adjustInventoryQuantity(id, delta) {
+    // migrations/099. Returns the updated row; none at all means RLS hid it
+    // (another household's id, or a row deleted under us).
+    const { data, error } = await client()
+      .rpc("adjust_inventory_quantity", { p_item_id: id, p_delta: delta })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as InventoryItem;
+  },
   async deleteInventoryItem(id) {
     // .select() so an RLS-filtered delete (200 with zero rows) surfaces as a
     // failure instead of a silent no-op — same reasoning as Phase 52.
@@ -311,8 +336,7 @@ export const supabaseProvider: DataProvider = {
     const { data: item, error: itemError } = await c
       .from("inventory_items")
       .update({
-        boxes_count: input.boxes_counted,
-        loose_units_count: input.loose_units_counted,
+        quantity: input.quantity_counted,
         last_audited_at: audit.created_at,
       })
       .eq("id", input.item_id)
@@ -320,31 +344,6 @@ export const supabaseProvider: DataProvider = {
       .single();
     if (itemError) throw itemError;
     return { audit, item };
-  },
-  async addInventoryStock(itemId, addedBoxes, addedLoose) {
-    // Read-then-write from the server's copy, not the client's: the client may
-    // be holding counts from before a staff member's audit landed, and adding
-    // a delivery to those would silently undo the count. Not atomic — a
-    // concurrent write between the two requests is lost — which is acceptable
-    // for one owner receiving groceries; an RPC is the fix if that changes.
-    const c = client();
-    const { data: current, error: readError } = await c
-      .from("inventory_items")
-      .select("boxes_count, loose_units_count")
-      .eq("id", itemId)
-      .single();
-    if (readError) throw readError;
-    const { data, error } = await c
-      .from("inventory_items")
-      .update({
-        boxes_count: current.boxes_count + addedBoxes,
-        loose_units_count: current.loose_units_count + addedLoose,
-      })
-      .eq("id", itemId)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
   },
   async listRoutineProposals() {
     const { data, error } = await client()

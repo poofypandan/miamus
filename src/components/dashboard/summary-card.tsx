@@ -94,7 +94,7 @@ function TaskRow({
   return (
     <label
       className={cn(
-        "-mx-1 flex items-center justify-between rounded-lg px-1 py-1 transition-colors",
+        "-mx-1 flex items-center justify-between rounded-lg px-1 py-1",
         loggable && !busy && "cursor-pointer hover:bg-muted active:bg-muted"
       )}
     >

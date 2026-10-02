@@ -189,33 +189,57 @@ export type InventoryAlert = {
   created_at: string;
 };
 
-// One product the household stocks. inventory_alerts reference these by name
-// rather than by id — a report is a note about a thing running low, and must
-// survive the catalogue entry being removed.
-// The four shelves a stock check walks (PRD 02, migrations/083). Distinct from
-// ItemType, which is what a staff low-stock *report* is about.
-export type StockCategory = "fresh_food" | "pantry" | "household_supplies" | "dog_supplies";
+// One product the household stocks (migrations/099, Phase 110). Low-stock
+// reports (inventory_alerts) reference items by name rather than by id — a
+// report is a note about a thing running low, and must survive the item being
+// removed.
+
+/** Which half of the inventory an item lives in. */
+export type InventoryScope = "pet" | "home";
+
+/** A shelf. Each scope has its own; the database pairs them (migrations/099). */
+export type PetInventoryCategory = "food" | "treats" | "medicine" | "grooming" | "supplies";
+export type HomeInventoryCategory = "cleaning" | "toiletries" | "groceries" | "maintenance";
+export type InventoryCategory = PetInventoryCategory | HomeInventoryCategory;
+
+export type InventoryUnit =
+  | "pcs"
+  | "pack"
+  | "box"
+  | "bottle"
+  | "roll"
+  | "tube"
+  | "kg"
+  | "g"
+  | "L"
+  | "ml";
 
 export type InventoryItem = {
   id: string;
-  // The tenant (migrations/086). Always Banyuwangi 11 until Phase 86B.
+  // The tenant (migrations/086).
   household_id: string;
+  scope: InventoryScope;
   name: string;
-  // ItemType for the Phase 60 catalogue rows, StockCategory for the Phase 83
-  // stock ledger. The column is unconstrained, so both live in one table.
-  category: ItemType | StockCategory;
-  created_at: string;
-  // Everything below arrived with migrations/083; every column has a default,
-  // so a Phase 60 row reads back with them filled in.
-  variant: string | null;
-  unit_type: string;
-  boxes_count: number;
-  loose_units_count: number;
-  units_per_box: number;
+  category: InventoryCategory;
+  /** On the shelf now, in `unit`. Fractional for kg, L and the like. */
+  quantity: number;
+  unit: InventoryUnit;
+  /** At or below this, the item is low (see isLowStock). */
   min_threshold: number;
+  /** Optional reference photo of the exact product, so the right brand is bought. */
+  photo_url: string | null;
+  created_at: string;
+  variant: string | null;
+  /** How often staff are asked to count it on the staff view's "Stok". */
   audit_frequency_days: number;
   last_audited_at: string | null;
   notes: string | null;
+  // The Phase 83 box/loose ledger. Still in the table so a phone on the
+  // previous build keeps working through the deploy; nothing reads them now.
+  unit_type?: string;
+  boxes_count?: number;
+  loose_units_count?: number;
+  units_per_box?: number;
 };
 
 // One physical stock check (migrations/083). Append-only: a recount is a new
@@ -224,6 +248,9 @@ export type InventoryAuditLog = {
   id: string;
   item_id: string;
   audited_by: string | null;
+  /** The count, in the item's unit (migrations/099). Null on pre-Phase-110 rows. */
+  quantity_counted: number | null;
+  // The Phase 83 split, kept for the rows written before quantity_counted.
   boxes_counted: number;
   loose_units_counted: number;
   photo_url: string | null;
@@ -428,6 +455,11 @@ export interface Database {
       verify_staff_pin: {
         Args: { p_staff_id: string; p_pin: string };
         Returns: boolean;
+      };
+      // The +/- stepper (migrations/099): an atomic increment, floored at 0.
+      adjust_inventory_quantity: {
+        Args: { p_item_id: string; p_delta: number };
+        Returns: InventoryItem[];
       };
       // Hashes and stores a PIN, or clears it when given null.
       set_staff_pin: {

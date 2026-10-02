@@ -99,7 +99,7 @@ export function InventoryAlertsPanel() {
               type="button"
               onClick={() => setIsExpanded((expanded) => !expanded)}
               aria-expanded={isExpanded}
-              className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg text-sm font-medium text-zinc-600 transition-colors active:bg-zinc-100"
+              className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg text-sm font-medium text-zinc-600 active:bg-zinc-100"
             >
               {isExpanded ? "Show Fewer" : `View All Restocked (${matching.length})`}
               <ChevronDown className={cn("size-4 transition-transform", isExpanded && "rotate-180")} />

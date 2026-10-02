@@ -51,7 +51,7 @@ export function StaffOnboardingBanner() {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss tip"
-          className="absolute top-1 right-1 flex size-11 items-center justify-center rounded-full text-slate-400 transition-colors hover:text-slate-600 active:bg-slate-100"
+          className="absolute top-1 right-1 flex size-11 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 active:bg-slate-100"
         >
           <X className="size-4" />
         </button>

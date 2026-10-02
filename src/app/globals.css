@@ -203,3 +203,46 @@
     transform: translateX(4px);
   }
 }
+/*
+ * Compositor-only enter/exit (Phase 110 performance pass).
+ *
+ * tw-animate-css's own `enter`/`exit` — behind every dialog, sheet and select
+ * opening here — animate `filter: blur()` alongside transform and opacity,
+ * even at blur(0), and this app never uses blur-in/blur-out. A filter in the
+ * keyframes is a third property the browser has to run per frame on a
+ * full-screen layer.
+ *
+ * Redefining `enter`/`exit` under the same names does not work: the CSS
+ * minifier merges duplicate @keyframes and keeps the first, which is the
+ * library's. So these have their own names, and the `animate-in` /
+ * `animate-out` utilities are pointed at them through the theme variables
+ * they read. Same timing variables and the same custom properties the
+ * fade-in/zoom-in/slide-in utilities set — every existing class keeps
+ * working, minus the filter.
+ */
+@theme inline {
+  --animate-in: gpu-enter var(--tw-animation-duration, var(--tw-duration, 0.15s))
+    var(--tw-ease, ease) var(--tw-animation-delay, 0s) var(--tw-animation-iteration-count, 1)
+    var(--tw-animation-direction, normal) var(--tw-animation-fill-mode, none);
+  --animate-out: gpu-exit var(--tw-animation-duration, var(--tw-duration, 0.15s))
+    var(--tw-ease, ease) var(--tw-animation-delay, 0s) var(--tw-animation-iteration-count, 1)
+    var(--tw-animation-direction, normal) var(--tw-animation-fill-mode, none);
+
+  @keyframes gpu-enter {
+    from {
+      opacity: var(--tw-enter-opacity, 1);
+      transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+        scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1))
+        rotate(var(--tw-enter-rotate, 0));
+    }
+  }
+
+  @keyframes gpu-exit {
+    to {
+      opacity: var(--tw-exit-opacity, 1);
+      transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+        scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1))
+        rotate(var(--tw-exit-rotate, 0));
+    }
+  }
+}

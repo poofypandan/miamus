@@ -102,7 +102,7 @@ export function CancelRoutineButton({
         type="button"
         onClick={() => setConfirmOpen(true)}
         aria-label={`Cancel ${title}`}
-        className="flex min-h-[32px] shrink-0 items-center rounded-lg px-1.5 text-muted-foreground transition-colors hover:text-destructive"
+        className="flex min-h-[32px] shrink-0 items-center rounded-lg px-1.5 text-muted-foreground hover:text-destructive"
       >
         <Trash2 className="size-4" />
       </button>

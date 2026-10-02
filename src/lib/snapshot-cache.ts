@@ -27,7 +27,10 @@ import type {
  * cache layer to solve a problem that is really just "paint what we had".
  */
 
-const VERSION = 1;
+// 2 — Phase 110: inventory items gained scope/quantity/unit. A version-1
+// snapshot would paint every item without them for the moment before the
+// fetch lands, so it is simply not read.
+const VERSION = 2;
 // Older than this and the wait for fresh data is better than the lie.
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 // Logs are by far the biggest list and the tail is never on screen — the feed

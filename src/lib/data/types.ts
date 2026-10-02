@@ -11,6 +11,9 @@ import type {
   ItemType,
   RoutineProposal,
   InventoryItem,
+  InventoryCategory,
+  InventoryScope,
+  InventoryUnit,
   InventoryAuditWithStaff,
   ProposalStatus,
   ScheduleCategoryName,
@@ -178,11 +181,23 @@ export interface HouseholdTaskStatusPatch {
   completed_by?: string | null;
 }
 
-/** One stock check as the staff member recorded it (migrations/083). */
+/** Everything the owner's item form sets (Phase 110). */
+export interface InventoryItemInput {
+  scope: InventoryScope;
+  name: string;
+  category: InventoryCategory;
+  quantity: number;
+  unit: InventoryUnit;
+  min_threshold: number;
+  photo_url: string | null;
+  audit_frequency_days: number;
+}
+
+/** One stock check as the staff member recorded it (migrations/083, 099). */
 export interface CreateInventoryAuditInput {
   item_id: string;
-  boxes_counted: number;
-  loose_units_counted: number;
+  /** The count, in the item's unit. */
+  quantity_counted: number;
   photo_url: string | null;
   /** Stamped from the staff identity on the device, like every other write. */
   audited_by: string | null;
@@ -211,21 +226,26 @@ export interface DataProvider {
   resolveInventoryAlert(id: string): Promise<void>;
   deleteInventoryAlert(id: string): Promise<void>;
   listInventoryItems(): Promise<InventoryItem[]>;
-  createInventoryItem(input: { name: string; category: ItemType }): Promise<InventoryItem>;
+  createInventoryItem(input: InventoryItemInput): Promise<InventoryItem>;
+  updateInventoryItem(id: string, patch: Partial<InventoryItemInput>): Promise<InventoryItem>;
   deleteInventoryItem(id: string): Promise<void>;
+  /**
+   * The +/- stepper: adds `delta` (negative to consume) on the server, floored
+   * at zero, and returns the item as it now stands. An increment rather than a
+   * write of the total, so two phones tapping at once both count.
+   */
+  adjustInventoryQuantity(id: string, delta: number): Promise<InventoryItem>;
   /** The most recent stock check per item, keyed by item id. */
   listLatestInventoryAudits(): Promise<Record<string, InventoryAuditWithStaff>>;
   /** Stock photos go to their own bucket, not household-logs. */
   uploadInventoryPhoto(file: File, itemId: string): Promise<string>;
   /**
-   * Records a stock check and writes the counted totals back onto the item,
-   * so the item row always holds the latest known stock.
+   * Records a stock check and writes the count back onto the item as its
+   * quantity, so the item row always holds the latest known stock.
    */
   createInventoryAudit(
     input: CreateInventoryAuditInput
   ): Promise<{ audit: InventoryAuditWithStaff; item: InventoryItem }>;
-  /** Adds a delivery on top of the item's current counts. */
-  addInventoryStock(itemId: string, addedBoxes: number, addedLoose: number): Promise<InventoryItem>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
   createRoutineProposalsBatch(inputs: CreateRoutineProposalInput[]): Promise<RoutineProposal[]>;

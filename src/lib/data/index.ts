@@ -20,4 +20,5 @@ export type {
   UpdateHouseholdTaskInput,
   HouseholdTaskStatusPatch,
   CreateInventoryAuditInput,
+  InventoryItemInput,
 } from "./types";

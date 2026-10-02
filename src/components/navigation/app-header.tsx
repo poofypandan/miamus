@@ -29,7 +29,7 @@ import { useHouseholdName } from "@/hooks/use-household-name";
 export function AppHeader({ action, children }: { action?: ReactNode; children?: ReactNode }) {
   const householdName = useHouseholdName();
   return (
-    <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+    <div className="sticky top-0 z-30 border-b bg-background">
       <div className="flex h-17 items-center justify-between gap-2 px-4">
         <h1 className="truncate text-lg font-semibold">{householdName}</h1>
         {action}

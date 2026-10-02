@@ -65,7 +65,7 @@ export function BottomTabBar() {
               className={cn(
                 // px-0.5 and a tighter label: five tabs on a 360px phone leaves
                 // about 70px each, which "Inventory" overruns at the old size.
-                "flex flex-1 flex-col items-center justify-center gap-1 px-0.5 text-[10px] font-medium transition-colors active:bg-muted/60",
+                "flex flex-1 flex-col items-center justify-center gap-1 px-0.5 text-[10px] font-medium active:bg-muted/60",
                 active ? "text-primary" : "text-muted-foreground"
               )}
             >

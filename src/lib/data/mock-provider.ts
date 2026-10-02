@@ -59,7 +59,9 @@ function loadDB(): MockDB {
         ...parsed,
         inventoryAlerts: parsed.inventoryAlerts ?? [],
         routineProposals: parsed.routineProposals ?? [],
-        inventoryItems: parsed.inventoryItems ?? [],
+        // Items from before Phase 110 have no scope or quantity; dropped
+        // rather than half-rendered.
+        inventoryItems: (parsed.inventoryItems ?? []).filter((item) => item.scope),
         inventoryAudits: parsed.inventoryAudits ?? [],
         staffProfiles: parsed.staffProfiles ?? [],
         householdTasks: parsed.householdTasks ?? [],
@@ -298,21 +300,33 @@ export const mockProvider: DataProvider = {
     const item: InventoryItem = {
       id: uid("item"),
       household_id: getActiveHouseholdId(),
-      name: input.name,
-      category: input.category,
+      ...input,
       created_at: new Date().toISOString(),
-      // The column defaults from migrations/083.
       variant: null,
-      unit_type: "unit",
-      boxes_count: 0,
-      loose_units_count: 0,
-      units_per_box: 1,
-      min_threshold: 2,
-      audit_frequency_days: 30,
       last_audited_at: null,
       notes: null,
     };
     db.inventoryItems.push(item);
+    saveDB(db);
+    return delay(item);
+  },
+  async updateInventoryItem(id, patch) {
+    const db = loadDB();
+    const index = db.inventoryItems.findIndex((i) => i.id === id);
+    if (index === -1) throw new Error("Item not found");
+    const item: InventoryItem = { ...db.inventoryItems[index], ...patch };
+    db.inventoryItems[index] = item;
+    saveDB(db);
+    return delay(item);
+  },
+  async adjustInventoryQuantity(id, delta) {
+    const db = loadDB();
+    const index = db.inventoryItems.findIndex((i) => i.id === id);
+    if (index === -1) throw new Error("Item not found");
+    // Floored at zero, like the RPC in migrations/099.
+    const current = db.inventoryItems[index];
+    const item: InventoryItem = { ...current, quantity: Math.max(0, current.quantity + delta) };
+    db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);
   },
@@ -337,6 +351,9 @@ export const mockProvider: DataProvider = {
     const audit: InventoryAuditWithStaff = {
       id: uid("audit"),
       ...input,
+      // The column defaults for the Phase 83 split.
+      boxes_counted: 0,
+      loose_units_counted: 0,
       created_at: new Date().toISOString(),
       staff_name: staffName,
     };
@@ -345,27 +362,12 @@ export const mockProvider: DataProvider = {
     if (index === -1) throw new Error("Item not found");
     const item: InventoryItem = {
       ...db.inventoryItems[index],
-      boxes_count: input.boxes_counted,
-      loose_units_count: input.loose_units_counted,
+      quantity: input.quantity_counted,
       last_audited_at: audit.created_at,
     };
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay({ audit, item });
-  },
-  async addInventoryStock(itemId, addedBoxes, addedLoose) {
-    const db = loadDB();
-    const index = db.inventoryItems.findIndex((i) => i.id === itemId);
-    if (index === -1) throw new Error("Item not found");
-    const current = db.inventoryItems[index];
-    const item: InventoryItem = {
-      ...current,
-      boxes_count: current.boxes_count + addedBoxes,
-      loose_units_count: current.loose_units_count + addedLoose,
-    };
-    db.inventoryItems[index] = item;
-    saveDB(db);
-    return delay(item);
   },
   async listRoutineProposals() {
     return delay(loadDB().routineProposals);

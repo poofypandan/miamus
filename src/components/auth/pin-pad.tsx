@@ -34,7 +34,7 @@ export function PinPad({
           <span
             key={i}
             className={cn(
-              "size-3.5 rounded-full border-2 transition-colors",
+              "size-3.5 rounded-full border-2",
               shake
                 ? "border-destructive bg-destructive"
                 : i < pin.length

@@ -140,7 +140,7 @@ export function PetProfileSheet() {
                   <button
                     type="button"
                     onClick={() => setEditOpen(true)}
-                    className="flex items-center text-sm font-medium text-gray-500 transition-colors hover:text-black"
+                    className="flex items-center text-sm font-medium text-gray-500 hover:text-black"
                   >
                     <Edit2 className="mr-1 size-4" /> Edit Pet
                   </button>

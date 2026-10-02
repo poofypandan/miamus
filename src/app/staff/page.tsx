@@ -91,7 +91,7 @@ function StaffTasks() {
           ariaLabel="Tampilan"
           segments={[
             { value: "tugas", label: "Tugas Hari Ini" },
-            { value: "stok", label: "Cek Stok", badge: dueCount > 0 ? dueCount : undefined },
+            { value: "stok", label: "Stok", badge: dueCount > 0 ? dueCount : undefined },
           ]}
           value={view}
           onChange={setView}

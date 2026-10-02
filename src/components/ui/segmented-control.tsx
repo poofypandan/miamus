@@ -58,7 +58,7 @@ export function SegmentedControl<T extends string>({
             aria-selected={active}
             onClick={() => onChange(segment.value)}
             className={cn(
-              "flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors",
+              "flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
               scrollable ? "shrink-0" : "flex-1",
               active
                 ? "bg-primary text-primary-foreground shadow-sm"

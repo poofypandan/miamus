@@ -227,9 +227,11 @@ export function PhotoPicker({
           setPendingFile(null);
           setPendingUrl(null);
           // A freshly chosen file brings its original with it, so both halves
-          // are stored. A re-crop already has its master and only needs a new
-          // square.
-          if (file) void uploadPair(file, cropped);
+          // are stored — when the caller keeps a master at all. A re-crop
+          // already has its master, and a caller with no `onMaster` (an
+          // inventory reference photo, Phase 110) never wanted one, so both of
+          // those only need the square.
+          if (file && onMaster) void uploadPair(file, cropped);
           else void uploadSquareOnly(cropped);
         }}
       />

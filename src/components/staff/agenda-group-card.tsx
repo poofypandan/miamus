@@ -531,7 +531,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               onClick={() => setExpanded(false)}
               aria-expanded
               aria-label={`Sembunyikan detail ${group.title} ${formatTime12h(group.time)}`}
-              className="flex min-h-[48px] cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/5 text-sm font-medium text-emerald-600 transition-colors active:scale-[0.99]"
+              className="flex min-h-[48px] cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/5 text-sm font-medium text-emerald-600 transition-transform active:scale-[0.99]"
             >
               <CheckCircle2 className="size-5" /> Semua Selesai
               <ChevronUp className="size-4" />
@@ -539,7 +539,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           ) : (
             <label
               className={cn(
-                "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors active:scale-[0.99]",
+                "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-transform active:scale-[0.99]",
                 anyOverdue
                   ? "cursor-pointer border-destructive/40 bg-destructive/5"
                   : "cursor-pointer border-border bg-card"
@@ -657,7 +657,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                         // Ticking is now a required step rather than a
                         // correction, so a selected row is made obvious
                         // instead of relying on a small checkbox alone.
-                        "flex min-h-[48px] items-center gap-3 rounded-lg border px-3 transition-colors",
+                        "flex min-h-[48px] items-center gap-3 rounded-lg border px-3",
                         checked ? "border-emerald-500 bg-emerald-500/5" : "border-border"
                       )}
                     >
