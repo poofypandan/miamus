@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { PawPrint, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
 import { DateRibbon } from "@/components/date-ribbon";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
@@ -95,12 +96,13 @@ export function PetsTab() {
       <DateRibbon value={date} onChange={setChosenDate} locale="en" />
 
       {pets.length === 0 ? (
-        <>
-          <p className="rounded-xl border border-dashed bg-card px-3 py-6 text-center text-sm text-muted-foreground">
-            No pets yet. Add one to start building their profile and routines.
-          </p>
+        <EmptyState
+          icon={PawPrint}
+          title="No pets yet"
+          description="Add one to start building their profile, routines and photo log."
+        >
           {addButton}
-        </>
+        </EmptyState>
       ) : (
         <>
           <h2 className="text-sm font-semibold text-gray-900">

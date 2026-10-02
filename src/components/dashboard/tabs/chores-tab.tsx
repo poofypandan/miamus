@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { ClipboardList, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ChoreCard } from "@/components/chores/chore-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
@@ -73,9 +74,21 @@ export function ChoresTab() {
       </div>
 
       {occurrences.length === 0 ? (
-        <p className="rounded-xl border border-dashed bg-card px-3 py-6 text-center text-sm text-muted-foreground">
-          No chores for this day. Add one and it appears on every staff phone straight away.
-        </p>
+        <EmptyState
+          icon={ClipboardList}
+          title="No chores on this day"
+          description="Add one and it appears on every staff phone straight away."
+        >
+          <Button
+            className="min-h-[44px]"
+            onClick={() => {
+              setEditing(null);
+              setEditorOpen(true);
+            }}
+          >
+            <Plus /> Add chore
+          </Button>
+        </EmptyState>
       ) : (
         <>
           <div className="flex flex-col gap-2">

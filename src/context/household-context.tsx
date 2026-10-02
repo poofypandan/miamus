@@ -28,6 +28,7 @@ import {
   setActiveHouseholdId,
   getActiveHouseholdId,
   DEFAULT_HOUSEHOLD_ID,
+  type ResolvedTenant,
 } from "@/lib/tenant";
 import type {
   TaskEntity,
@@ -126,6 +127,8 @@ interface HouseholdContextValue {
    * skeletons under someone's hands.
    */
   refresh: (options?: { silent?: boolean }) => Promise<void>;
+  /** Re-resolves which household this device belongs to; see the implementation. */
+  reloadTenant: () => Promise<void>;
   createEntity: (input: CreateEntityInput) => Promise<TaskEntity>;
   updateEntity: (id: string, patch: Partial<TaskEntity>) => Promise<TaskEntity>;
   deleteEntity: (id: string) => Promise<void>;
@@ -220,45 +223,51 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // allowed to put skeletons back over data the user can already see.
   const [hydratedFromCache, setHydratedFromCache] = useState(false);
 
+  // Puts a resolved tenant into effect: the data provider's copy, the state
+  // components read, the role, and the cached snapshot for that household.
+  // Shared by the first resolution on mount and by reloadTenant.
+  const applyTenant = useCallback(({ householdId, isMember }: ResolvedTenant) => {
+    // The module-level copy is what the data provider reads; the state copy
+    // is for components. Set together so they can never disagree.
+    setActiveHouseholdId(householdId);
+    setActiveHouseholdIdState(householdId);
+    // A signed-in member of this household IS the owner: the dashboard sits
+    // behind Google auth (middleware), and since Phase 87 the PIN only
+    // blurs the screen. Without this, owner-only tabs bounced to the feed
+    // while the app lock was still up, because nothing had set the role yet.
+    setIsHouseholdMember(isMember);
+    if (isMember) setUserRole("owner");
+    // Paint whatever this device last saw for this household before the
+    // network is consulted at all. `loading` goes false with it, so the
+    // screen shows real cards rather than skeletons while the refresh below
+    // runs silently (Phase 92).
+    const cached = readSnapshot(householdId);
+    if (cached) {
+      setEntities(cached.entities);
+      setSchedules(cached.schedules);
+      setLogs(cached.logs);
+      setMedicalRecords(cached.medicalRecords);
+      setInventoryAlerts(cached.inventoryAlerts);
+      setRoutineProposals(cached.routineProposals);
+      setInventoryItems(cached.inventoryItems);
+      setLatestInventoryAudits(cached.latestInventoryAudits);
+      setHydratedFromCache(true);
+      setLoading(false);
+    }
+    setTenantReady(true);
+    // Both sources have now been read: localStorage above, membership here.
+    setRoleHydrated(true);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    void resolveActiveHouseholdId().then(({ householdId, isMember }) => {
-      if (cancelled) return;
-      // The module-level copy is what the data provider reads; the state copy
-      // is for components. Set together so they can never disagree.
-      setActiveHouseholdId(householdId);
-      setActiveHouseholdIdState(householdId);
-      // A signed-in member of this household IS the owner: the dashboard sits
-      // behind Google auth (middleware), and since Phase 87 the PIN only
-      // blurs the screen. Without this, owner-only tabs bounced to the feed
-      // while the app lock was still up, because nothing had set the role yet.
-      setIsHouseholdMember(isMember);
-      if (isMember) setUserRole("owner");
-      // Paint whatever this device last saw for this household before the
-      // network is consulted at all. `loading` goes false with it, so the
-      // screen shows real cards rather than skeletons while the refresh below
-      // runs silently (Phase 92).
-      const cached = readSnapshot(householdId);
-      if (cached) {
-        setEntities(cached.entities);
-        setSchedules(cached.schedules);
-        setLogs(cached.logs);
-        setMedicalRecords(cached.medicalRecords);
-        setInventoryAlerts(cached.inventoryAlerts);
-        setRoutineProposals(cached.routineProposals);
-        setInventoryItems(cached.inventoryItems);
-        setLatestInventoryAudits(cached.latestInventoryAudits);
-        setHydratedFromCache(true);
-        setLoading(false);
-      }
-      setTenantReady(true);
-      // Both sources have now been read: localStorage above, membership here.
-      setRoleHydrated(true);
+    void resolveActiveHouseholdId().then((resolved) => {
+      if (!cancelled) applyTenant(resolved);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyTenant]);
 
   // Declared up here, ahead of `refresh`, because the chore fetch is scoped to
   // the day being browsed and `refresh` has to know which day that is.
@@ -611,6 +620,19 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setInventoryItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
+  /**
+   * Works the tenant out again, for the one moment it changes under a mounted
+   * app: onboarding (Phase 111). The provider lives in the root layout, so it
+   * resolved once — as "no household" — when the new owner landed on
+   * /onboarding, and a client-side hop to /dashboard keeps that answer. The
+   * owner guard then saw a non-member and rendered nothing: a brand-new
+   * household's first screen was blank until a manual reload.
+   */
+  const reloadTenant = useCallback(async () => {
+    applyTenant(await resolveActiveHouseholdId());
+    await refresh({ silent: true });
+  }, [applyTenant, refresh]);
+
   // What the stepper reads its starting point from; see adjustInventoryQuantity.
   const inventoryItemsRef = useRef(inventoryItems);
   useEffect(() => {
@@ -889,6 +911,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       updateInventoryItem,
       removeInventoryItem,
       adjustInventoryQuantity,
+      reloadTenant,
       submitInventoryAudit,
       submitRoutineProposal,
       submitRoutineProposalsBatch,
@@ -941,6 +964,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       updateInventoryItem,
       removeInventoryItem,
       adjustInventoryQuantity,
+      reloadTenant,
       submitInventoryAudit,
       submitRoutineProposal,
       submitRoutineProposalsBatch,

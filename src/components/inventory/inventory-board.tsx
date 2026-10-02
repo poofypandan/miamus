@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ClipboardCopy, Plus } from "lucide-react";
+import { ClipboardCopy, Package, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { InventoryItemCard } from "@/components/inventory/inventory-item-card";
 import { InventoryItemForm } from "@/components/inventory/inventory-item-form";
@@ -28,10 +29,12 @@ const COPY = {
     copy: "Copy shopping list",
     copied: (n: number) => `Shopping list copied — ${n} item${n === 1 ? "" : "s"}`,
     copyFailed: "Couldn't copy to the clipboard",
+    emptyTitle: (scope: InventoryScope) =>
+      scope === "pet" ? "No pet supplies yet" : "No home supplies yet",
     empty: (scope: InventoryScope) =>
       scope === "pet"
-        ? "No pet supplies yet. Add the food, medicine and grooming things this household keeps."
-        : "No home supplies yet. Add the cleaning products, groceries and toiletries this household keeps.",
+        ? "Tap Add item for the dog food, supplies and medicine this household keeps."
+        : "Tap Add item for the fresh food, pantry staples and household supplies you keep.",
   },
   id: {
     scopes: SCOPE_LABELS_ID,
@@ -40,7 +43,8 @@ const COPY = {
     copy: "",
     copied: () => "",
     copyFailed: "",
-    empty: () => "Belum ada barang di sini.",
+    emptyTitle: () => "Belum ada barang",
+    empty: () => "Pemilik belum menambahkan barang di sini.",
   },
 } as const;
 
@@ -135,7 +139,7 @@ export function InventoryBoard({ lang, canManage }: { lang: "en" | "id"; canMana
           <Skeleton className="h-28 w-full rounded-xl" />
         </div>
       ) : visible.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">{t.empty(scope)}</p>
+        <EmptyState icon={Package} title={t.emptyTitle(scope)} description={t.empty(scope)} />
       ) : (
         <div className="flex flex-col gap-2">
           {visible.map((item) => (

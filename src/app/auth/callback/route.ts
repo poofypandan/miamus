@@ -21,15 +21,18 @@ export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin;
   const next = safeNext(request.nextUrl.searchParams.get("next"));
 
+  // "/" is the sign-in page and has a message for each of these (app/page.tsx).
+  // They pointed at /login until Phase 111 — a route that does not exist, so a
+  // cancelled Google sign-in ended on a 404 instead of a retry button.
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+    return NextResponse.redirect(`${origin}/?error=missing_code`);
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
     console.error("OAuth code exchange failed", error);
-    return NextResponse.redirect(`${origin}/login?error=exchange_failed`);
+    return NextResponse.redirect(`${origin}/?error=exchange_failed`);
   }
 
   return NextResponse.redirect(`${origin}${next}`);

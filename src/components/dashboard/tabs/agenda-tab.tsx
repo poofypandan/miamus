@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { CalendarDays, PawPrint, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue } from "@/components/dashboard/approval-queue";
@@ -13,6 +17,7 @@ import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
 import { dayLabel } from "@/lib/date-label";
+import { moduleHref } from "@/lib/dashboard-modules";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { buildUnifiedAgenda } from "@/lib/unified-agenda";
 import type { HouseholdTask } from "@/types/database";
@@ -81,14 +86,40 @@ export function AgendaTab() {
 
       <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
 
-      <Card className="gap-3 py-4">
-        <CardContent className="flex flex-col gap-1.5 px-4">
-          {entries.length === 0 ? (
-            <p className="py-2 text-sm text-muted-foreground">
-              Nothing scheduled for this day — no pet routines and no chores.
-            </p>
-          ) : (
-            entries.map((entry) =>
+      {entries.length === 0 ? (
+        // The first screen a new household sees, so it says how to fill it:
+        // a chore from here, and — while there are no pets to have routines —
+        // the way to the tab that adds them.
+        <EmptyState
+          icon={CalendarDays}
+          title="Nothing scheduled"
+          description={
+            pets.length === 0
+              ? "Tap + to add a chore, or add a pet to plan their daily routines."
+              : "No pet routines or chores on this day. Tap + to add a chore."
+          }
+        >
+          <Button
+            className="min-h-[44px]"
+            onClick={() => {
+              setEditing(null);
+              setEditorOpen(true);
+            }}
+          >
+            <Plus /> Add chore
+          </Button>
+          {pets.length === 0 && (
+            <Button variant="outline" className="min-h-[44px]" asChild>
+              <Link href={moduleHref("pets")} scroll={false}>
+                <PawPrint /> Add a pet
+              </Link>
+            </Button>
+          )}
+        </EmptyState>
+      ) : (
+        <Card className="gap-3 py-4">
+          <CardContent className="flex flex-col gap-1.5 px-4">
+            {entries.map((entry) =>
               entry.kind === "routine" ? (
                 <TimelineRow key={entry.key} group={entry.group} pets={pets} />
               ) : (
@@ -109,10 +140,10 @@ export function AgendaTab() {
                   }}
                 />
               )
-            )
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <ChoreEditorDialog
         open={editorOpen}

@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
-  DASHBOARD_MODULES,
+  enabledModules,
   moduleFromParam,
   moduleHref,
   type DashboardModule,
@@ -28,8 +28,9 @@ const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
 };
 
 /**
- * The owner dashboard's tab bar, in the thumb zone (Phase 84), now five tabs
- * wide (Phase 100).
+ * The owner dashboard's tab bar, in the thumb zone (Phase 84), five tabs wide
+ * (Phase 100): Agenda anchored left, Access right, the household's modules
+ * between (Phase 111). Which middles appear is enabledModules' decision.
  *
  * Must be rendered outside PullToRefresh: that wrapper moves its content with
  * a CSS transform, and a transformed ancestor becomes the containing block of
@@ -53,7 +54,7 @@ export function BottomTabBar() {
       {/* Capped to the app's column, so on a tablet or desktop the tabs sit
           under the content they switch rather than at the screen's edges. */}
       <div className="mx-auto flex h-16 max-w-md">
-        {DASHBOARD_MODULES.map((module) => {
+        {enabledModules().map((module) => {
           const { label, icon: Icon } = TABS[module];
           const active = module === activeModule;
           return (
