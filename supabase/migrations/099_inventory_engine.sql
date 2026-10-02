@@ -3,10 +3,15 @@
 -- ============================================================================
 -- Inventory moves from the Phase 83 box/loose-unit ledger to one number per
 -- item: `quantity`, in a named `unit`, flagged low when it reaches
--- `min_threshold`. Items split into two scopes, each with its own shelves:
+-- `min_threshold`. Items split into two scopes, each with its own shelves —
+-- named for where things are kept, as the household already thinks of them
+-- (Phase 110.1):
 --
---   pet   food · treats · medicine · grooming · supplies
---   home  cleaning · toiletries · groceries · maintenance
+--   pet   dog_food · dog_supplies · medicine
+--   home  fresh_food · pantry · household_supplies
+--
+-- Four of the six are the Phase 83 shelf keys unchanged, so most rows keep the
+-- category they already have; dog food is split out of dog_supplies.
 --
 -- Additive only. boxes_count / loose_units_count / units_per_box / unit_type
 -- stay where they are, unused, rather than being dropped from under any phone
@@ -24,23 +29,26 @@ alter table inventory_items
 update inventory_items
    set quantity = boxes_count * units_per_box + loose_units_count;
 
--- Scope and shelf from the Phase 83 categories (and the Phase 60 catalogue's,
--- for any household that still has those rows).
+-- Scope from the Phase 83 shelves (and the Phase 60 catalogue's ItemType
+-- values, for any household that still has those rows). Computed from the
+-- old categories, so it runs before they are rewritten below.
 update inventory_items set scope = case
   when category in ('dog_supplies', 'food', 'treats', 'medicine', 'shampoo', 'pee_pad') then 'pet'
   else 'home'
 end;
 
 update inventory_items set category = case
-  when category = 'dog_supplies' and name ~* 'food'                         then 'food'
-  when category = 'dog_supplies' and name ~* 'tooth|shampoo|brush|wipe|comb' then 'grooming'
-  when category = 'dog_supplies'                                             then 'supplies'
-  when category = 'shampoo'                                                  then 'grooming'
-  when category = 'pee_pad'                                                  then 'supplies'
-  when category in ('food', 'treats', 'medicine')                            then category
-  when category in ('fresh_food', 'pantry')                                  then 'groceries'
-  when category = 'household_supplies'                                       then 'cleaning'
-  else 'maintenance'
+  -- Pet side: food split out of dog supplies by name; everything else that
+  -- was a dog supply (toothpaste, pee pads) stays one.
+  when category = 'dog_supplies' and name ~* 'food'               then 'dog_food'
+  when category = 'dog_supplies'                                   then 'dog_supplies'
+  when category in ('food', 'treats')                              then 'dog_food'
+  when category = 'medicine'                                       then 'medicine'
+  when category in ('shampoo', 'pee_pad')                          then 'dog_supplies'
+  -- Home side: the Phase 83 shelves are already the final names.
+  when category in ('fresh_food', 'pantry', 'household_supplies')  then category
+  -- The Phase 60 catalogue's 'other' was scoped to home above.
+  else 'household_supplies'
 end;
 
 -- Units onto the fixed list; anything without a close match is counted in
@@ -57,7 +65,7 @@ alter table inventory_items
   alter column scope set not null,
   alter column unit set default 'pcs',
   alter column unit set not null,
-  -- 'other' is not a shelf any more; every insert names its category.
+  -- 'other' is not a shelf; every insert names its category.
   alter column category drop default;
 
 alter table inventory_items drop constraint if exists inventory_items_scope_check;
@@ -66,8 +74,8 @@ alter table inventory_items add constraint inventory_items_scope_check
 
 alter table inventory_items drop constraint if exists inventory_items_category_check;
 alter table inventory_items add constraint inventory_items_category_check check (
-  (scope = 'pet'  and category in ('food', 'treats', 'medicine', 'grooming', 'supplies'))
-  or (scope = 'home' and category in ('cleaning', 'toiletries', 'groceries', 'maintenance'))
+  (scope = 'pet'  and category in ('dog_food', 'dog_supplies', 'medicine'))
+  or (scope = 'home' and category in ('fresh_food', 'pantry', 'household_supplies'))
 );
 
 alter table inventory_items drop constraint if exists inventory_items_unit_check;

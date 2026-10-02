@@ -1,14 +1,11 @@
 import { addDays, startOfDay } from "date-fns";
 import {
+  Apple,
   Bone,
-  Brush,
-  Cookie,
-  Package,
+  Dog,
   Pill,
-  ShoppingBasket,
   SprayCan,
-  Toilet,
-  Wrench,
+  Wheat,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -31,13 +28,15 @@ import type {
 export const INVENTORY_SCOPES: InventoryScope[] = ["pet", "home"];
 
 /**
- * Each scope's shelves, in the order lists walk them. Food leads the pet side
- * because running out of a renal diet is a vet problem; running out of a
- * toy is not.
+ * Each scope's shelves, in the order lists walk them. Named for where things
+ * are kept, the way the household already thinks about them (Phase 110.1) —
+ * the Phase 83 shelves, with dog food split out of dog supplies because
+ * running out of a renal diet is a vet problem and running out of pee pads
+ * is not.
  */
 export const SCOPE_CATEGORIES: Record<InventoryScope, InventoryCategory[]> = {
-  pet: ["food", "medicine", "treats", "grooming", "supplies"],
-  home: ["groceries", "cleaning", "toiletries", "maintenance"],
+  pet: ["dog_food", "dog_supplies", "medicine"],
+  home: ["fresh_food", "pantry", "household_supplies"],
 };
 
 export const INVENTORY_UNITS: InventoryUnit[] = [
@@ -59,39 +58,32 @@ export const SCOPE_LABELS_EN: Record<InventoryScope, string> = { pet: "Pets", ho
 export const SCOPE_LABELS_ID: Record<InventoryScope, string> = { pet: "Hewan", home: "Rumah" };
 
 export const CATEGORY_LABELS_EN: Record<InventoryCategory, string> = {
-  food: "Food",
-  treats: "Treats",
+  dog_food: "Dog Food",
+  dog_supplies: "Dog Supplies",
   medicine: "Medicine",
-  grooming: "Grooming",
-  supplies: "Supplies",
-  cleaning: "Cleaning",
-  toiletries: "Toiletries",
-  groceries: "Groceries",
-  maintenance: "Maintenance",
+  fresh_food: "Fresh Food",
+  pantry: "Pantry",
+  household_supplies: "Household Supplies",
 };
 
+// The Indonesian names the Phase 83 shelves already had, so staff see the
+// words they are used to.
 export const CATEGORY_LABELS_ID: Record<InventoryCategory, string> = {
-  food: "Makanan",
-  treats: "Camilan",
+  dog_food: "Makanan Anjing",
+  dog_supplies: "Perlengkapan Anjing",
   medicine: "Obat",
-  grooming: "Perawatan",
-  supplies: "Perlengkapan",
-  cleaning: "Kebersihan",
-  toiletries: "Toiletries",
-  groceries: "Bahan Dapur",
-  maintenance: "Perbaikan",
+  fresh_food: "Makanan Segar",
+  pantry: "Bahan Pokok",
+  household_supplies: "Perlengkapan Rumah",
 };
 
 export const CATEGORY_ICONS: Record<InventoryCategory, LucideIcon> = {
-  food: Bone,
-  treats: Cookie,
+  dog_food: Bone,
+  dog_supplies: Dog,
   medicine: Pill,
-  grooming: Brush,
-  supplies: Package,
-  cleaning: SprayCan,
-  toiletries: Toilet,
-  groceries: ShoppingBasket,
-  maintenance: Wrench,
+  fresh_food: Apple,
+  pantry: Wheat,
+  household_supplies: SprayCan,
 };
 
 export function categoryScope(category: InventoryCategory): InventoryScope {
@@ -178,16 +170,17 @@ export function dueStockItems(items: InventoryItem[], now: Date = new Date()): I
  * has to land on the nearest one rather than an unknown value.
  */
 export function alertTypeForItem(item: InventoryItem): ItemType {
-  if (item.scope !== "pet") return "other";
   switch (item.category) {
-    case "food":
-    case "treats":
+    case "dog_food":
+      return "food";
     case "medicine":
-      return item.category;
-    case "grooming":
-      return "shampoo";
+      return "medicine";
+    case "dog_supplies":
+      if (/pee ?pad/i.test(item.name)) return "pee_pad";
+      if (/shampoo/i.test(item.name)) return "shampoo";
+      return "other";
     default:
-      return /pee ?pad/i.test(item.name) ? "pee_pad" : "other";
+      return "other";
   }
 }
 

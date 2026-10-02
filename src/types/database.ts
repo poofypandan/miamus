@@ -198,8 +198,10 @@ export type InventoryAlert = {
 export type InventoryScope = "pet" | "home";
 
 /** A shelf. Each scope has its own; the database pairs them (migrations/099). */
-export type PetInventoryCategory = "food" | "treats" | "medicine" | "grooming" | "supplies";
-export type HomeInventoryCategory = "cleaning" | "toiletries" | "groceries" | "maintenance";
+// Where things live in the house rather than an ERP taxonomy (Phase 110.1):
+// the keys of the Phase 83 shelves, plus dog food split out of dog supplies.
+export type PetInventoryCategory = "dog_food" | "dog_supplies" | "medicine";
+export type HomeInventoryCategory = "fresh_food" | "pantry" | "household_supplies";
 export type InventoryCategory = PetInventoryCategory | HomeInventoryCategory;
 
 export type InventoryUnit =

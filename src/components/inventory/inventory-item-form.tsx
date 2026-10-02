@@ -188,13 +188,15 @@ export function InventoryItemForm({
 
           <div className="flex flex-col gap-1.5">
             <Label>Category</Label>
-            <div className="grid grid-cols-2 gap-2">
+            {/* Three per scope, so one row of three. Allowed to wrap: "Household
+                Supplies" does not fit a third of a phone on one line. */}
+            <div className="grid grid-cols-3 gap-2">
               {SCOPE_CATEGORIES[scope].map((c) => (
                 <Button
                   key={c}
                   type="button"
                   variant={category === c ? "default" : "outline"}
-                  className="min-h-[44px]"
+                  className="h-auto min-h-[44px] px-2 text-xs leading-tight whitespace-normal"
                   onClick={() => setCategory(c)}
                 >
                   {CATEGORY_LABELS_EN[c]}
