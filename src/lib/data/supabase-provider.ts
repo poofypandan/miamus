@@ -29,6 +29,16 @@ function extractStoragePath(url: string): string | null {
 
 const INVENTORY_BUCKET = "inventory_audits";
 
+// From the type, not the name: compressPhoto keeps the original file name, so
+// an iPhone photo re-encoded as JPEG would otherwise be stored as ".heic".
+// Cosmetic — Content-Type is what storage and /api/photo go by.
+function extensionFor(file: File): string {
+  if (file.type === "image/webp") return "webp";
+  if (file.type === "image/jpeg") return "jpg";
+  if (file.type === "image/png") return "png";
+  return file.name.split(".").pop() ?? "jpg";
+}
+
 // Everything on staff_profiles except `pin`, which no client role may select.
 const STAFF_COLUMNS = "id, household_id, name, created_at, has_pin";
 
@@ -163,7 +173,7 @@ export const supabaseProvider: DataProvider = {
   },
   async uploadPhoto(file, pathPrefix) {
     const c = client();
-    const ext = file.type === "image/webp" ? "webp" : (file.name.split(".").pop() ?? "jpg");
+    const ext = extensionFor(file);
     // Household first (Phase 90): the storage policies read the tenant out of
     // the object key, so an upload that skipped the prefix would be refused.
     const path = `${getActiveHouseholdId()}/${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -310,7 +320,7 @@ export const supabaseProvider: DataProvider = {
   },
   async uploadInventoryPhoto(file, itemId) {
     const c = client();
-    const ext = file.type === "image/webp" ? "webp" : (file.name.split(".").pop() ?? "jpg");
+    const ext = extensionFor(file);
     const path = `${getActiveHouseholdId()}/${itemId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await c.storage
       .from(INVENTORY_BUCKET)

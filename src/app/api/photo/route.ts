@@ -18,6 +18,10 @@ import { isPhotoBucket } from "@/lib/photos";
 // variants (each one is a transform the storage layer has to perform).
 const ALLOWED_WIDTHS = [160, 320, 640, 1280];
 
+// What the buckets accept, plus AVIF in case the storage transformer ever
+// re-encodes a thumbnail into it.
+const SERVABLE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+
 export async function GET(request: NextRequest) {
   const bucket = request.nextUrl.searchParams.get("b");
   const path = request.nextUrl.searchParams.get("p");
@@ -60,9 +64,21 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Not found", { status: 404 });
   }
 
+  // Raster images only (Phase 117). This response comes from the app's own
+  // origin, so an object stored as text/html or image/svg+xml would run
+  // script against the viewer's session — one household member could plant
+  // it for another to open. The buckets refuse those types on upload now
+  // (migrations/101); this is the same rule at the other end.
+  const contentType = data.type || "image/webp";
+  if (!SERVABLE_TYPES.includes(contentType.split(";")[0].trim().toLowerCase())) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+
   return new NextResponse(data, {
     headers: {
-      "Content-Type": data.type || "image/webp",
+      "Content-Type": contentType,
+      // The type was just checked; this stops a browser second-guessing it.
+      "X-Content-Type-Options": "nosniff",
       "Content-Length": String(data.size),
       // Object keys carry a timestamp and a random suffix and are never
       // rewritten, so a hit can be cached hard — a year, immutable, which is
