@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { pushInPlace } from "@/lib/in-place-navigation";
 
 export type AgendaRange = "day" | "week";
 
@@ -13,7 +14,6 @@ export type AgendaRange = "day" | "week";
  * Day is the absence of the param, so every existing link still opens on Day.
  */
 export function useAgendaRange(): [AgendaRange, (next: AgendaRange) => void] {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const range: AgendaRange = searchParams.get("range") === "week" ? "week" : "day";
@@ -24,7 +24,8 @@ export function useAgendaRange(): [AgendaRange, (next: AgendaRange) => void] {
     if (next === "week") params.set("range", "week");
     else params.delete("range");
     const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    // In place: the Day/Week switch is the same page (Phase 121).
+    pushInPlace(query ? `${pathname}?${query}` : pathname);
   }
 
   return [range, setRange];

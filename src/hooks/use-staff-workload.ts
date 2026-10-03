@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { addDays, startOfDay } from "date-fns";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { pushInPlace, replaceInPlace } from "@/lib/in-place-navigation";
 import { useHousehold } from "@/context/household-context";
 import { useToday } from "@/hooks/use-today";
 import { dataProvider } from "@/lib/data";
@@ -25,7 +26,6 @@ export function useWorkloadParam(): {
   setHorizon: (horizon: WorkloadHorizon) => void;
   close: () => void;
 } {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const raw = searchParams.get("workload");
@@ -44,11 +44,13 @@ export function useWorkloadParam(): {
   return {
     horizon,
     // A push to open, so Back closes it…
-    open: (value = "today") => router.push(hrefWith(value), { scroll: false }),
+    // All three in place, with no server round trip: the sheet is the same
+    // page (Phase 121).
+    open: (value = "today") => pushInPlace(hrefWith(value)),
     // …and a replace to change the span, so Back does not step through every
     // span that was looked at on the way.
-    setHorizon: (value) => router.replace(hrefWith(value), { scroll: false }),
-    close: () => router.replace(hrefWith(null), { scroll: false }),
+    setHorizon: (value) => replaceInPlace(hrefWith(value)),
+    close: () => replaceInPlace(hrefWith(null)),
   };
 }
 

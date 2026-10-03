@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { pushInPlace } from "@/lib/in-place-navigation";
 import { toast } from "sonner";
 import { ClipboardCopy, Package, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,6 @@ export function InventoryBoard({ lang, canManage }: { lang: "en" | "id"; canMana
   const { inventoryItems, loading } = useHousehold();
   const t = COPY[lang];
 
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const param = searchParams.get("scope");
@@ -74,7 +74,8 @@ export function InventoryBoard({ lang, canManage }: { lang: "en" | "id"; canMana
   function setScope(next: InventoryScope) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("scope", next);
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    // In place: the scope pill is the same page (Phase 121).
+    pushInPlace(`${pathname}?${params.toString()}`);
   }
 
   // null = closed; "new" = adding; an item = editing it.

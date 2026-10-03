@@ -8,6 +8,7 @@ import { InventoryMasterTab } from "@/components/dashboard/tabs/inventory-master
 import { PetsTab } from "@/components/dashboard/tabs/pets-tab";
 import { StaffTab } from "@/components/dashboard/tabs/staff-tab";
 import { PetProfileSheet } from "@/components/dashboard/pet-profile-sheet";
+import { OwnerLoadingScreen } from "@/components/brand/loading-screens";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { moduleFromParam, type DashboardModule } from "@/lib/dashboard-modules";
 
@@ -38,7 +39,10 @@ function DashboardCanvas() {
   // is the second line that stops a half-resolved role rendering owner
   // controls for a moment.
   const isOwner = useRequireOwner();
-  if (!isOwner) return null;
+  // The branded loader, not a blank page, while the role resolves on a cold
+  // start (Phase 121) — the same screen loading.tsx shows, so the two waits
+  // read as one.
+  if (!isOwner) return <OwnerLoadingScreen />;
 
   return (
     <>

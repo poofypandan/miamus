@@ -14,6 +14,7 @@ import { ChevronLeft, Delete, Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
 import { StaffSplash } from "@/components/staff/staff-splash";
+import { StaffLoadingScreen } from "@/components/brand/loading-screens";
 import { dataProvider } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import type { StaffProfile } from "@/types/database";
@@ -107,7 +108,11 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
   // been read back. Deciding earlier would flash the sign-in screen at an owner
   // for the moment before their role restores — and this screen is meant to be
   // seen exactly once per device, on the very first visit.
-  if (!hydrated || !roleHydrated) return null;
+  //
+  // The RUMAH screen rather than nothing while that happens (Phase 121): the
+  // same one app/staff/loading.tsx shows, so a cold start is one calm screen
+  // instead of white, then rules, then the list.
+  if (!hydrated || !roleHydrated) return <StaffLoadingScreen />;
 
   if (!staffId && !ownerBypass) {
     return <StaffGateScreen onIdentified={identify} />;

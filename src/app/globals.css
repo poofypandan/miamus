@@ -273,3 +273,30 @@
     }
   }
 }
+
+/*
+ * The branded loading screens (Phase 121). Opacity only, like view-fade.
+ *
+ * loader-in holds the screen invisible for its first 150ms: most route
+ * transitions finish inside that, and a logo that flashes up and vanishes
+ * reads as a glitch, not as speed. Anything slower fades in from there.
+ *
+ * loader-pulse is the staff screen's breathing — the RUMAH text dims and
+ * returns, so the page reads as "working" without anything moving.
+ */
+@theme inline {
+  --animate-loader-in: loader-in 200ms ease-out 150ms both;
+  --animate-loader-pulse: loader-pulse 1.6s ease-in-out infinite;
+
+  @keyframes loader-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes loader-pulse {
+    50% {
+      opacity: 0.45;
+    }
+  }
+}

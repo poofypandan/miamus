@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { addDays } from "date-fns";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { AgendaWeekGrid } from "@/components/agenda/agenda-week-grid";
@@ -37,6 +37,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
+import { pushInPlace } from "@/lib/in-place-navigation";
 import { cn } from "@/lib/utils";
 
 export default function StaffPage() {
@@ -64,14 +65,15 @@ type StaffView = (typeof VIEWS)[number];
 
 function StaffTasks() {
   const { inventoryItems, refresh } = useHousehold();
-  const router = useRouter();
   const param = useSearchParams().get("view");
   const view: StaffView = VIEWS.includes(param as StaffView) ? (param as StaffView) : "tugas";
 
-  // A .push(), so the phone's Back button returns to the other view, as it
-  // does for the owner's pills.
+  // A history push, so the phone's Back button returns to the other view, as
+  // it does for the owner's tabs — but in place rather than through the
+  // router, so the pill and the list switch on the tap with no server round
+  // trip (Phase 121).
   function setView(next: StaffView) {
-    router.push(`/staff?view=${next}`, { scroll: false });
+    if (next !== view) pushInPlace(`/staff?view=${next}`);
   }
 
   useOfflineSync();

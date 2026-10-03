@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -16,6 +17,7 @@ import {
   moduleHref,
   type DashboardModule,
 } from "@/lib/dashboard-modules";
+import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
 import { cn } from "@/lib/utils";
 
 const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
@@ -46,7 +48,16 @@ const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
  */
 export function BottomTabBar() {
   const searchParams = useSearchParams();
-  const activeModule = moduleFromParam(searchParams.get("module"));
+  const routeModule = moduleFromParam(searchParams.get("module"));
+
+  // The tab just tapped, highlighted in the same frame as the tap (Phase 121).
+  // The URL is still the truth — this only covers the moment between the tap
+  // and React committing the new ?module=, which a heavy tab can stretch past
+  // a frame or two. It hands back the moment the URL agrees (or changes for
+  // any other reason, such as Back), so it cannot outlive the gap.
+  const [tapped, setTapped] = useState<DashboardModule | null>(null);
+  useEffect(() => setTapped(null), [routeModule]);
+  const activeModule = tapped ?? routeModule;
 
   return (
     <nav
@@ -65,6 +76,16 @@ export function BottomTabBar() {
               key={module}
               href={moduleHref(module)}
               scroll={false}
+              // A real link for its href (long-press, open in new tab), but a
+              // plain tap switches in place: no server round trip, so the tab
+              // and its content change on the tap itself (Phase 121).
+              onClick={(event) => {
+                if (!isPlainClick(event)) return;
+                event.preventDefault();
+                if (module === routeModule) return;
+                setTapped(module);
+                pushInPlace(moduleHref(module));
+              }}
               aria-current={active ? "page" : undefined}
               className={cn(
                 // px-0.5 and a tighter label: five tabs on a 360px phone leaves

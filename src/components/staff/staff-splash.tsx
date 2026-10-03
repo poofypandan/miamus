@@ -5,7 +5,8 @@ import { Download, Loader2, Share, SquarePlus } from "lucide-react";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { useHouseholdName } from "@/hooks/use-household-name";
 
-const RUMAH = [
+// Exported for the staff loading screen (Phase 121), which shows the same rules.
+export const RUMAH = [
   { letter: "R", rest: "espek & Sopan" },
   { letter: "U", rest: "tamakan Komunikasi" },
   { letter: "M", rest: "enjaga Kebersihan" },

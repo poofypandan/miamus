@@ -26,6 +26,7 @@ import { useToday } from "@/hooks/use-today";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
+import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import {
   buildUnifiedAgenda,
@@ -91,6 +92,13 @@ export function AgendaTab() {
     [groups, chores]
   );
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
+
+  // Same page, so in place — the Pets tab opens on the tap (Phase 121).
+  function switchToPets(event: React.MouseEvent) {
+    if (!isPlainClick(event)) return;
+    event.preventDefault();
+    pushInPlace(moduleHref("pets"));
+  }
 
   // A week at a time from whichever day is selected, so Day view lands on
   // the same weekday of the new week.
@@ -185,7 +193,7 @@ export function AgendaTab() {
                 description="Let's start by adding a pet or a chore. Everything you add shows up here, day by day, for you and your staff."
               >
                 <Button className="min-h-[44px]" asChild>
-                  <Link href={moduleHref("pets")} scroll={false}>
+                  <Link href={moduleHref("pets")} scroll={false} onClick={switchToPets}>
                     <PawPrint /> Add Pet
                   </Link>
                 </Button>
@@ -221,7 +229,7 @@ export function AgendaTab() {
                 </Button>
                 {pets.length === 0 && (
                   <Button variant="outline" className="min-h-[44px]" asChild>
-                    <Link href={moduleHref("pets")} scroll={false}>
+                    <Link href={moduleHref("pets")} scroll={false} onClick={switchToPets}>
                       <PawPrint /> Add Pet
                     </Link>
                   </Button>
