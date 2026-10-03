@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import { useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
@@ -38,6 +38,8 @@ import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { pushInPlace } from "@/lib/in-place-navigation";
+import { startTabTransition } from "@/lib/tab-transition";
+import { TabTransitionOverlay } from "@/components/brand/tab-transition-overlay";
 import { cn } from "@/lib/utils";
 
 export default function StaffPage() {
@@ -68,12 +70,20 @@ function StaffTasks() {
   const param = useSearchParams().get("view");
   const view: StaffView = VIEWS.includes(param as StaffView) ? (param as StaffView) : "tugas";
 
+  // The pill just tapped, lit in the same frame (Phase 122) — the list
+  // itself changes behind the cover a couple of frames later. Hands back to
+  // the URL as soon as it agrees, as the owner's tab bar does.
+  const [tappedView, setTappedView] = useState<StaffView | null>(null);
+  useEffect(() => setTappedView(null), [view]);
+
   // A history push, so the phone's Back button returns to the other view, as
   // it does for the owner's tabs — but in place rather than through the
   // router, so the pill and the list switch on the tap with no server round
   // trip (Phase 121).
   function setView(next: StaffView) {
-    if (next !== view) pushInPlace(`/staff?view=${next}`);
+    if (next === view) return;
+    setTappedView(next);
+    startTabTransition(() => pushInPlace(`/staff?view=${next}`));
   }
 
   useOfflineSync();
@@ -113,7 +123,7 @@ function StaffTasks() {
             { value: "tugas", label: "Tugas Hari Ini" },
             { value: "stok", label: "Stok", badge: dueCount > 0 ? dueCount : undefined },
           ]}
-          value={view}
+          value={tappedView ?? view}
           onChange={setView}
         />
       </AppHeader>
@@ -131,6 +141,10 @@ function StaffTasks() {
           transform, which would make a `position: fixed` child scroll with
           the page instead of floating over it. */}
       {view === "tugas" && <StaffActionsFab />}
+
+      {/* The RUMAH cover over a Tugas ↔ Stok switch (Phase 122). Outside
+          PullToRefresh for the same reason as the FAB. */}
+      <TabTransitionOverlay variant="staff" />
     </div>
   );
 }

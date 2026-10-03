@@ -27,6 +27,7 @@ import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
 import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
+import { startTabTransition } from "@/lib/tab-transition";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import {
   buildUnifiedAgenda,
@@ -93,11 +94,12 @@ export function AgendaTab() {
   );
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
 
-  // Same page, so in place — the Pets tab opens on the tap (Phase 121).
+  // Same page, so in place — and a tab switch like any other, so behind the
+  // same cover as the tab bar's (Phases 121–122).
   function switchToPets(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;
     event.preventDefault();
-    pushInPlace(moduleHref("pets"));
+    startTabTransition(() => pushInPlace(moduleHref("pets")));
   }
 
   // A week at a time from whichever day is selected, so Day view lands on

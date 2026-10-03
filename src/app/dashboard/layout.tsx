@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { Suspense } from "react";
 import { TopNav } from "@/components/dashboard/top-nav";
 import { BottomTabBar } from "@/components/navigation/bottom-tab-bar";
+import { TabTransitionOverlay } from "@/components/brand/tab-transition-overlay";
 import { OwnerAppLock } from "@/components/auth/owner-app-lock";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
@@ -68,6 +69,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             a swipe can start (Phase 83E). */}
           <main className="relative flex flex-1 flex-col overflow-x-hidden pt-3">{children}</main>
         </PullToRefresh>
+
+        {/* The cover over a tab switch (Phase 122). Outside PullToRefresh,
+          whose transform would trap a fixed overlay inside it. */}
+        <TabTransitionOverlay variant="owner" />
 
         {/* Outside PullToRefresh on purpose — see BottomTabBar. It reads the
           active module via useSearchParams(), so it needs Suspense too. */}

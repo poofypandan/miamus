@@ -18,6 +18,7 @@ import {
   type DashboardModule,
 } from "@/lib/dashboard-modules";
 import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
+import { startTabTransition } from "@/lib/tab-transition";
 import { cn } from "@/lib/utils";
 
 const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
@@ -84,7 +85,9 @@ export function BottomTabBar() {
                 event.preventDefault();
                 if (module === routeModule) return;
                 setTapped(module);
-                pushInPlace(moduleHref(module));
+                // Behind the branded cover (Phase 122): the highlight above
+                // changes now, the content once the cover has painted.
+                startTabTransition(() => pushInPlace(moduleHref(module)));
               }}
               aria-current={active ? "page" : undefined}
               className={cn(
