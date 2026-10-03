@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { CalendarDays, PawPrint, Plus } from "lucide-react";
+import { CalendarDays, PawPrint, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -23,6 +23,7 @@ import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
+import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -53,8 +54,20 @@ import type { HouseholdTask } from "@/types/database";
  * chore is staff work and lives on their phones.
  */
 export function AgendaTab() {
-  const { pets, schedules, logs, loading, selectedDate, setSelectedDate, todayJumps } =
-    useHousehold();
+  const {
+    pets,
+    schedules,
+    logs,
+    householdTasks,
+    loading,
+    selectedDate,
+    setSelectedDate,
+    todayJumps,
+  } = useHousehold();
+  const householdName = useHouseholdName();
+  // Nothing anywhere yet, not just nothing today: the first screen after
+  // onboarding, which greets rather than reports (Phase 120).
+  const brandNew = pets.length === 0 && householdTasks.length === 0;
   const { profiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(profiles);
   const chores = useChoreOccurrences();
@@ -154,17 +167,47 @@ export function AgendaTab() {
           <>
             <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
 
-            {entries.length === 0 ? (
-              // The first screen a new household sees, so it says how to fill it:
-              // a chore from here, and — while there are no pets to have routines —
-              // the way to the tab that adds them.
+            {entries.length === 0 && brandNew ? (
+              // The first screen a new household sees (Phase 120). A pet first:
+              // its routines are what fill most of an Agenda, and a chore is
+              // one tap from here either way.
+              <EmptyState
+                icon={Sparkles}
+                // useHouseholdName falls back to the app's name until the
+                // household's own arrives; greeting "Miamus" and then
+                // swapping the title a beat later would be the first thing
+                // a new owner sees jump.
+                title={
+                  householdName === APP_NAME
+                    ? "Welcome to your new household!"
+                    : `Welcome to ${householdName}!`
+                }
+                description="Let's start by adding a pet or a chore. Everything you add shows up here, day by day, for you and your staff."
+              >
+                <Button className="min-h-[44px]" asChild>
+                  <Link href={moduleHref("pets")} scroll={false}>
+                    <PawPrint /> Add Pet
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="min-h-[44px]"
+                  onClick={() => {
+                    setEditing(null);
+                    setEditorOpen(true);
+                  }}
+                >
+                  <Plus /> Add Chore
+                </Button>
+              </EmptyState>
+            ) : entries.length === 0 ? (
               <EmptyState
                 icon={CalendarDays}
                 title="Nothing scheduled"
                 description={
                   pets.length === 0
-                    ? "Tap + to add a chore, or add a pet to plan their daily routines."
-                    : "No pet routines or chores on this day. Tap + to add a chore."
+                    ? "No chores on this day. Add one, or add a pet to plan their daily routines."
+                    : "No pet routines or chores on this day."
                 }
               >
                 <Button
@@ -174,12 +217,12 @@ export function AgendaTab() {
                     setEditorOpen(true);
                   }}
                 >
-                  <Plus /> Add chore
+                  <Plus /> Add Chore
                 </Button>
                 {pets.length === 0 && (
                   <Button variant="outline" className="min-h-[44px]" asChild>
                     <Link href={moduleHref("pets")} scroll={false}>
-                      <PawPrint /> Add a pet
+                      <PawPrint /> Add Pet
                     </Link>
                   </Button>
                 )}

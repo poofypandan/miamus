@@ -70,8 +70,8 @@ export function StaffOnboardingBanner() {
               full screen, and logging keeps working when the signal drops.
             </p>
             <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
-              Tip: tap any pet to open their records, or use the camera in Staff View to log meals
-              and potty breaks.
+              Tip: tap any pet to open their records. Staff log meals and potty breaks with the
+              camera on their own phones.
             </p>
           </div>
         </div>

@@ -27,13 +27,13 @@ export function InvitePanel() {
         kind="owner"
         icon={UserPlus}
         title="Invite Co-Owner"
-        description="They sign in with Google and get full access to this dashboard."
+        description="For a partner or family member. They sign in with Google and get full access to this dashboard, the same as you."
       />
       <InviteCard
         kind="staff"
         icon={Smartphone}
         title="Invite Staff Device"
-        description="Opens the staff view on their phone. No account needed — the link is what binds the phone to this household."
+        description="Send this to the phone your staff use. Opening it connects that phone to this household — no account or email needed — and each person then signs in with their name and PIN."
       />
     </div>
   );
@@ -125,8 +125,9 @@ function InviteCard({
 
         {link && (
           <p className="text-[11px] text-muted-foreground">
-            Single use, expires in {INVITE_TTL_DAYS} days. Anyone with this link can join until
-            it is used.
+            Paste it into WhatsApp or a message. Single use, expires in{" "}
+            {INVITE_TTL_DAYS} days, and anyone with it can join until it is used, so send it
+            only to the person or phone it is for.
           </p>
         )}
       </CardContent>

@@ -25,11 +25,18 @@ export default function OnboardingPage() {
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
+  // The household this attempt already created, if the membership insert
+  // after it failed (Phase 120). A retry must finish that one, not create a
+  // second: the first would be left with no members — unreachable by anyone,
+  // and still counted against the account.
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const residence = name.trim();
-    if (!residence || !supabase) return;
+    // `saving` too: the button is disabled while saving, but Enter in the
+    // field submits the form regardless.
+    if (!residence || !supabase || saving) return;
 
     setSaving(true);
     setFailed(null);
@@ -42,12 +49,17 @@ export default function OnboardingPage() {
       // owner_auth_id is what the households insert policy checks, and what
       // lets this insert read its own row back before any membership exists
       // (migrations/088, 098) — so it is stamped here, not left to a default.
-      const { data: household, error: householdError } = await supabase
-        .from("households")
-        .insert({ name: residence, owner_auth_id: user.id })
-        .select()
-        .single();
-      if (householdError) throw householdError;
+      let householdId = createdId;
+      if (!householdId) {
+        const { data: household, error: householdError } = await supabase
+          .from("households")
+          .insert({ name: residence, owner_auth_id: user.id })
+          .select()
+          .single();
+        if (householdError) throw householdError;
+        householdId = household.id;
+        setCreatedId(householdId);
+      }
 
       // Second write, and the one that actually grants access: the middleware
       // looks for a membership, not for owner_auth_id. If this fails the
@@ -55,7 +67,7 @@ export default function OnboardingPage() {
       // rather than swallowed.
       const { error: memberError } = await supabase
         .from("household_members")
-        .insert({ household_id: household.id, user_id: user.id, role: "owner" });
+        .insert({ household_id: householdId, user_id: user.id, role: "owner" });
       if (memberError) throw memberError;
 
       // Before navigating, not after: the household context resolved this
@@ -82,14 +94,13 @@ export default function OnboardingPage() {
         Welcome to Miamus
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Let&apos;s set up your household. You can add pets, chores, stock and your staff once
-        it exists.
+        Let&apos;s set up your household. It takes one step — then you can add your pets,
+        chores and staff from the dashboard.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-3">
-        <p className="text-xs font-medium text-muted-foreground">Step 1 · Name your household</p>
-        <Label htmlFor="residence" className="sr-only">
-          Household name
+        <Label htmlFor="residence" className="text-sm font-medium text-gray-900">
+          Name your household
         </Label>
         <Input
           id="residence"
@@ -98,6 +109,7 @@ export default function OnboardingPage() {
           placeholder="e.g. The Smith Residence"
           autoFocus
           autoComplete="off"
+          maxLength={60}
           className="min-h-[48px]"
         />
         <p className="text-xs text-muted-foreground">

@@ -28,7 +28,11 @@ import type { HouseholdTask } from "@/types/database";
  * owner-only in capability: the staff view imports none of this.
  */
 export function ChoresTab() {
-  const { selectedDate, setSelectedDate } = useHousehold();
+  const { selectedDate, setSelectedDate, householdTasks } = useHousehold();
+  // No chore exists at all, as opposed to none falling on this day: a new
+  // household should be told to make its first, not that today is free
+  // (Phase 120).
+  const noChoresYet = householdTasks.length === 0;
   const { profiles } = useStaffProfiles();
   // Default fallback ("Staff"), not "Unassigned": the two null cases mean
   // different things. An absent assigned_to is genuinely unassigned and is
@@ -89,8 +93,12 @@ export function ChoresTab() {
       {occurrences.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="No chores on this day"
-          description="Add one and it appears on every staff phone straight away."
+          title={noChoresYet ? "No chores yet" : "No chores on this day"}
+          description={
+            noChoresYet
+              ? "Add your first chore — one-off or repeating — and it appears on every staff phone straight away."
+              : "Add one and it appears on every staff phone straight away."
+          }
         >
           <Button
             className="min-h-[44px]"
@@ -99,7 +107,7 @@ export function ChoresTab() {
               setEditorOpen(true);
             }}
           >
-            <Plus /> Add chore
+            <Plus /> Add Chore
           </Button>
         </EmptyState>
       ) : (

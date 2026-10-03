@@ -253,6 +253,24 @@ function StaffRoster({
     <div className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-gray-900">Staff &amp; PINs</h2>
 
+      {/* How the pieces fit (Phase 120). A new owner meets a roster, an
+          invite card further down and the word "PIN" with nothing saying they
+          are one flow — and which half the staff member does themselves. */}
+      <ol className="flex flex-col gap-1.5 rounded-xl border bg-card px-4 py-3 text-xs text-muted-foreground">
+        <li>
+          <span className="font-medium text-gray-900">1. Add each person</span> who works in the
+          house, by name, below.
+        </li>
+        <li>
+          <span className="font-medium text-gray-900">2. Invite their phone</span> with a Staff
+          Device link (under Invites). A shared house phone works too.
+        </li>
+        <li>
+          <span className="font-medium text-gray-900">3. They sign in</span> on that phone by
+          tapping their name and choosing a {PIN_LENGTH}-digit PIN. You never need to know it.
+        </li>
+      </ol>
+
       <SetPinDialog
         profile={pinTarget}
         busy={!!pinTarget && resetting === pinTarget.id}
@@ -268,7 +286,9 @@ function StaffRoster({
         <Card className="py-2">
           <CardContent className="flex flex-col divide-y px-0">
             {profiles.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-muted-foreground">No staff yet.</p>
+              <p className="px-4 py-3 text-sm text-muted-foreground">
+                No staff yet. Add the first name below — their PIN can wait until they sign in.
+              </p>
             ) : (
               profiles.map((profile) => (
                 <div key={profile.id} className="flex items-center gap-3 px-4 py-3 text-sm">
@@ -306,19 +326,34 @@ function StaffRoster({
       )}
 
       <Card className="py-4">
-        <CardContent className="flex flex-col gap-3 px-4">
+        {/* A form, so the keyboard's Go / Enter adds the name too (Phase 120). */}
+        <form
+          className="flex flex-col gap-3 px-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!adding) void addStaff();
+          }}
+        >
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">New staff name</Label>
+            <Label htmlFor="new-staff-name" className="text-xs">
+              New staff name
+            </Label>
             <Input
+              id="new-staff-name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="e.g. Budi"
+              maxLength={40}
+              autoComplete="off"
             />
+            <p className="text-[11px] text-muted-foreground">
+              The name they&apos;ll tap on the staff phone, so use what they go by.
+            </p>
           </div>
-          <Button onClick={addStaff} disabled={adding} className="min-h-[48px]">
+          <Button type="submit" disabled={adding} className="min-h-[48px]">
             {adding ? <Loader2 className="animate-spin" /> : <Plus />} Add New Staff
           </Button>
-        </CardContent>
+        </form>
       </Card>
     </div>
   );

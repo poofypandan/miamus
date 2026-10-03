@@ -69,42 +69,54 @@ export function PetsTab() {
     );
   }
 
-  const addButton = canManagePets ? (
-    <>
-      <Button
-        onClick={() => setAddOpen(true)}
-        variant="outline"
-        className="min-h-[48px] w-full rounded-xl border-zinc-200 bg-white text-sm font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
-      >
-        <Plus /> Add Pet
-      </Button>
+  // One dialog, two triggers: the empty state's primary button and the quiet
+  // full-width one under the list.
+  const addDialog = canManagePets ? (
+    <PetFormDialog
+      open={addOpen}
+      onOpenChange={setAddOpen}
+      pet={null}
+      createEntity={createEntity}
+      updateEntity={updateEntity}
+      deleteEntity={deleteEntity}
+    />
+  ) : null;
 
-      <PetFormDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        pet={null}
-        createEntity={createEntity}
-        updateEntity={updateEntity}
-        deleteEntity={deleteEntity}
-      />
-    </>
+  const addButton = canManagePets ? (
+    <Button
+      onClick={() => setAddOpen(true)}
+      variant="outline"
+      className="min-h-[48px] w-full rounded-xl border-zinc-200 bg-white text-sm font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
+    >
+      <Plus /> Add Pet
+    </Button>
   ) : null;
 
   return (
     <div className="flex flex-col gap-3 px-4 pb-6">
-      {/* Local to this tab: moving it does not move the Agenda. */}
-      <DateRibbon value={date} onChange={setChosenDate} locale="en" />
+      {addDialog}
 
       {pets.length === 0 ? (
+        // No date ribbon until there is a pet: it would pick a day for a
+        // summary that cannot exist yet (Phase 120). And the empty state gets
+        // the primary button the Agenda and Chores ones have — the quiet
+        // list-footer style read as disabled on a page with nothing else on it.
         <EmptyState
           icon={PawPrint}
           title="No pets yet"
-          description="Add one to start building their profile, routines and photo log."
+          description="Add your first pet to start their profile, daily routines and photo log. Staff see them on their phones straight away."
         >
-          {addButton}
+          {canManagePets && (
+            <Button className="min-h-[44px]" onClick={() => setAddOpen(true)}>
+              <Plus /> Add Pet
+            </Button>
+          )}
         </EmptyState>
       ) : (
         <>
+          {/* Local to this tab: moving it does not move the Agenda. */}
+          <DateRibbon value={date} onChange={setChosenDate} locale="en" />
+
           <h2 className="text-sm font-semibold text-gray-900">
             {dayLabel(date, today)}&apos;s Progress
           </h2>
