@@ -32,6 +32,11 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 // staff's Catatan Ekstra list and in the owner's photo lightbox, so these stay
 // human Indonesian rather than machine slugs like `vomit_sick`. The read side
 // maps them back to a category in lib/schedule-categories.
+//
+// "Muntah / Sakit" is also a database contract (Phase 119): the
+// notify_sick_report trigger in migrations/103 recognises a sick report by
+// notes beginning with exactly that label, and pushes the owners an alert.
+// Renaming it here silently turns those alerts off.
 const ADHOC_TYPES = [
   { value: "potty", label: "Pipis Ekstra" },
   { value: "vomit_sick", label: "Muntah / Sakit" },

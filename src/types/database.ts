@@ -337,6 +337,23 @@ export type RoutineProposal = {
   created_at: string;
 };
 
+// One device that agreed to push notifications (migrations/103). Stored as
+// the browser's PushSubscription.toJSON(), trimmed to endpoint + keys; the
+// endpoint is pulled out as its own unique column so a device has one row.
+export type PushSubscriptionJSON = {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+};
+
+export type PushSubscriptionRow = {
+  id: string;
+  user_id: string;
+  household_id: string;
+  subscription: PushSubscriptionJSON;
+  endpoint: string;
+  created_at: string;
+};
+
 // Mirrors ScheduleCategory in lib/schedule-categories, kept here as a plain
 // union so types/database.ts stays free of app-layer imports.
 export type ScheduleCategoryName =
@@ -436,6 +453,14 @@ export interface Database {
         Update: Partial<StaffInvite>;
         Relationships: [];
       };
+      push_subscriptions: {
+        Row: PushSubscriptionRow;
+        // Registering goes through save_push_subscription; the table itself
+        // is read and deleted directly, under own-device RLS.
+        Insert: Pick<PushSubscriptionRow, "household_id" | "subscription">;
+        Update: never;
+        Relationships: [];
+      };
       routine_proposals: {
         Row: RoutineProposal;
         Insert: Partial<RoutineProposal> &
@@ -502,6 +527,22 @@ export interface Database {
       use_owner_invite_token: {
         Args: { p_token: string };
         Returns: string;
+      };
+      // Registers this device for push, or moves an existing endpoint to the
+      // caller (migrations/103). Refuses non-push-service endpoints.
+      save_push_subscription: {
+        Args: { p_household_id: string; p_subscription: PushSubscriptionJSON };
+        Returns: undefined;
+      };
+      // The VAPID public key from Vault; null until push is configured.
+      get_push_public_key: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      // Queues a test push to every device of the caller's; returns how many.
+      send_test_push: {
+        Args: Record<string, never>;
+        Returns: number;
       };
       // Every RLS policy's question: which households may auth.uid() touch.
       get_user_household_ids: {

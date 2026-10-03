@@ -10,6 +10,7 @@ import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-b
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
+import { usePushResync } from "@/hooks/use-push-resync";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   // Runs once on mount only — the mobile virtual keyboard (from whatever
@@ -24,6 +25,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, []);
 
   useOfflineSync();
+  usePushResync();
   const { refresh } = useHousehold();
 
   return (

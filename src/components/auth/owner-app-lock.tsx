@@ -78,6 +78,11 @@ export function OwnerAppLock({ children }: { children: ReactNode }) {
     // which is a stronger check than this lock ever was.
     setAppLockEnabled(false);
     try {
+      // This phone stops receiving the household's alerts (Phase 119). Done
+      // while still signed in — the row is only deletable by its owner — and
+      // best-effort: a failure here must not keep anyone signed in.
+      const { disablePush } = await import("@/lib/push");
+      await disablePush().catch((err) => console.error("Push clean-up on sign-out failed", err));
       const { supabase } = await import("@/lib/supabase/client");
       await supabase?.auth.signOut();
     } finally {

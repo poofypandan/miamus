@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { InvitePanel } from "@/components/dashboard/invite-panel";
 import { HouseholdMembersPanel } from "@/components/dashboard/household-members-panel";
 import { SecuritySettings } from "@/components/dashboard/security-settings";
+import { PushNotificationSettings } from "@/components/dashboard/push-notification-settings";
 import { useHousehold } from "@/context/household-context";
 import { dataProvider } from "@/lib/data";
 import { useRequireOwner } from "@/hooks/use-require-owner";
@@ -127,6 +128,8 @@ export function StaffTab() {
       <StaffRoster profiles={profiles} failed={failed} reload={reload} />
 
       <InvitePanel />
+
+      <PushNotificationSettings />
 
       <SecuritySettings />
 
