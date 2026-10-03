@@ -1,15 +1,28 @@
 -- ============================================================================
--- 102 — Arm the 14-day task-photo retention (Phase 117)
+-- 102 — Arm the 30-day task-photo retention (Phase 117, window widened in 118)
 -- ============================================================================
 -- migrations/101 built the pruning machinery and left it inert: its RPCs
--- refuse every caller until the Vault secret below exists. This creates the
--- secret and schedules the nightly call, so running it is the moment photos
--- older than 14 days start being deleted.
+-- refuse every caller until the Vault secret below exists. This sets the
+-- retention window, creates the secret and schedules the nightly call, so
+-- running it is the moment photos older than 30 days start being deleted.
+--
+-- The window is 30 days, not 101's 14 (Phase 118). It lives in exactly one
+-- place — task_photo_retention_cutoff(), which both RPCs read — so widening it
+-- is a redefinition of that function and nothing else.
 --
 -- Kept separate from 101 on purpose: it writes to Vault, and it is the step
 -- that turns an irreversible deletion on. Run it in the SQL editor once the
 -- prune-task-photos Edge Function is deployed. Safe to re-run.
 -- ============================================================================
+
+create or replace function public.task_photo_retention_cutoff()
+returns timestamptz
+language sql
+stable
+set search_path = ''
+as $$
+  select now() - interval '30 days';
+$$;
 
 -- Generated here and never written down anywhere else: pg_cron reads it out
 -- of Vault at call time and the RPCs compare against the same row.
@@ -33,7 +46,7 @@ end;
 $$;
 
 -- 20:00 UTC is 03:00 in Indonesia: nobody is finishing a chore, and a
--- photo crossing the 14-day line goes at the start of its day, not mid-shift.
+-- photo crossing the 30-day line goes at the start of its day, not mid-shift.
 select cron.unschedule('prune-task-photos')
 where exists (select 1 from cron.job where jobname = 'prune-task-photos');
 

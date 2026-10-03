@@ -147,7 +147,14 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const photoGroups = useMemo(() => {
     const byUrl = new Map<
       string,
-      { url: string; entityIds: string[]; names: string[]; at: string; logs: TaskLog[] }
+      {
+        url: string;
+        entityIds: string[];
+        names: string[];
+        titles: string[];
+        at: string;
+        logs: TaskLog[];
+      }
     >();
     for (const item of group.items) {
       const url = item.log?.photo_url;
@@ -157,16 +164,19 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         if (!existing.entityIds.includes(item.entityId)) {
           existing.entityIds.push(item.entityId);
           existing.names.push(item.entityName);
-          // Every row behind this photo is kept: removing the photo has to
-          // remove all of them, or the dogs it doesn't cover stay marked done
-          // with nothing to show for it.
-          existing.logs.push(item.log);
         }
+        if (!existing.titles.includes(item.title)) existing.titles.push(item.title);
+        // Every row behind this photo is kept — including a second medicine
+        // for a dog already listed (Phase 118: this used to sit inside the
+        // new-dog check, so one photo of three medicines carried one log, and
+        // removing it left the other two marked done with nothing to show).
+        existing.logs.push(item.log);
       } else {
         byUrl.set(url, {
           url,
           entityIds: [item.entityId],
           names: [item.entityName],
+          titles: [item.title],
           at: item.log.completed_at,
           logs: [item.log],
         });
@@ -707,7 +717,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         items={photoGroups.map((photo) => ({
           src: photo.url,
           alt: photo.names.join(", "),
-          title: group.title,
+          // A medicine block's photo names every medicine it covers;
+          // group.title alone is just the first of them.
+          title: consolidated ? photo.titles.join(" · ") : group.title,
           description: formatTime12h(new Date(photo.at)),
           footer: (
             <>

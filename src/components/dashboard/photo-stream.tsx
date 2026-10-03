@@ -10,7 +10,8 @@ import type { LucideIcon } from "lucide-react";
 import { categoryIcon, describeLog, type ScheduleCategory } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import type { TaskLog, TaskEntity } from "@/types/database";
+import { distinct, groupByPhoto } from "@/lib/photos";
+import type { TaskEntity, TaskLog } from "@/types/database";
 
 // Owner-facing, so English. Pills follow this order — the same order as the
 // routine editor's cards — rather than whichever category logged first today,
@@ -55,15 +56,33 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
   const [filter, setFilter] = useState<PhotoFilter>("all");
   const [isExpanded, setIsExpanded] = useState(false);
   const entityById = new Map(entities.map((e) => [e.id, e]));
+  const namesOf = (ids: string[]) =>
+    ids.map((id) => entityById.get(id)?.name).filter(Boolean).join(", ") || undefined;
 
-  // Category resolved once per photo: it drives the pills, the filtering and
-  // each tile's corner icon, and describeLog has to search schedules for it.
+  // One tile per stored photo, not per log (Phase 118): three medicines given
+  // together, or a batch potty round, are one upload behind several logs, and
+  // used to fill the grid — and the gallery, and the pill counts — with copies
+  // of the same picture. Category resolved once per photo: it drives the
+  // pills, the filtering and each tile's corner icon, and describeLog has to
+  // search schedules for it.
   const photos = useMemo(
     () =>
-      logs
-        .filter((l): l is TaskLog & { photo_url: string } => !!l.photo_url)
-        .sort((a, b) => b.completed_at.localeCompare(a.completed_at))
-        .map((log) => ({ log, category: describeLog(log, schedules).category })),
+      groupByPhoto(
+        [...logs].sort((a, b) => b.completed_at.localeCompare(a.completed_at)),
+        (log) => log.photo_url
+      ).map(({ url, rows }) => {
+        const described = rows.map((log) => describeLog(log, schedules));
+        return {
+          url,
+          log: rows[0],
+          logs: rows,
+          category: described[0].category,
+          // Only spelled out when the photo covers several tasks; a single one
+          // leaves logLightboxItem to resolve the title as it always has.
+          title: rows.length > 1 ? distinct(described.map((d) => d.title)).join(" · ") : undefined,
+          entityIds: distinct(rows.map((log) => log.entity_id)),
+        };
+      }),
     [logs, schedules]
   );
 
@@ -94,10 +113,11 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
   // category rather than stopping at the cap.
   const galleryItems = useMemo(
     () =>
-      matching.map(({ log }) =>
+      matching.map(({ log, title, entityIds }) =>
         logLightboxItem({
           log,
-          entityName: entityById.get(log.entity_id)?.name,
+          title,
+          entityName: namesOf(entityIds),
           schedules,
         })
       ),
@@ -144,14 +164,16 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
       )}
 
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {visible.map(({ log, category }, index) => {
-          const entity = entityById.get(log.entity_id);
+        {visible.map(({ url, log, logs: photoLogs, category, title, entityIds }, index) => {
+          const pets = entityIds.flatMap((id) => entityById.get(id) ?? []);
           const EventIcon = categoryIcon(category);
           return (
             <LogPhotoThumbnail
-              key={log.id}
+              key={url}
               log={log}
-              entityName={entity?.name}
+              logs={photoLogs}
+              title={title}
+              entityName={namesOf(entityIds)}
               gallery={{ items: galleryItems, index }}
               className="aspect-square w-full rounded-lg ring-1 ring-border"
               badge={
@@ -166,12 +188,20 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
                   <span className="absolute right-1 bottom-1 rounded-md bg-black/55 px-1 py-0.5 text-[9px] leading-none font-medium text-white tabular-nums">
                     {formatTime12h(new Date(log.completed_at))}
                   </span>
-                  <span className="absolute bottom-1 left-1">
-                    {showAvatar && entity ? (
-                      <MiniPetAvatar pet={entity} className="size-6 ring-2 ring-background" />
+                  <span className="absolute bottom-1 left-1 flex">
+                    {showAvatar && pets.length > 0 ? (
+                      // Overlapped, as on the staff card's photo strip, so a
+                      // batch shot of four dogs still fits a small tile.
+                      pets.map((pet, i) => (
+                        <MiniPetAvatar
+                          key={pet.id}
+                          pet={pet}
+                          className={cn("size-6 ring-2 ring-background", i > 0 && "-ml-2")}
+                        />
+                      ))
                     ) : (
-                      <Badge variant="secondary" className="text-[10px]">
-                        {entity?.name ?? "?"}
+                      <Badge variant="secondary" className="max-w-[5.5rem] truncate text-[10px]">
+                        {namesOf(entityIds) ?? "?"}
                       </Badge>
                     )}
                   </span>

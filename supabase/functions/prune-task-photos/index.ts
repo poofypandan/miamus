@@ -1,5 +1,6 @@
 /**
- * Deletes chore and routine proof photos older than 14 days (Phase 117).
+ * Deletes chore and routine proof photos older than 30 days (Phase 117;
+ * window set by task_photo_retention_cutoff, widened from 14 in Phase 118).
  *
  * Called nightly by pg_cron (scheduled in migrations/102). The database
  * decides what is due — task_photos_due_for_pruning holds the rule and its

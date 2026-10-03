@@ -89,6 +89,11 @@ interface LogPhotoThumbnailProps {
   // thumbnail's place in it, and the lightbox opens there with the rest
   // swipeable. Left out, the thumbnail opens just its own photo.
   gallery?: { items: LightboxItem[]; index: number };
+  // Every log this one photo stands for (Phase 118), when the caller merged
+  // several — a dog's three noon medicines, a batch potty round. Undoing the
+  // photo reverts all of them; otherwise the file would go and the rest would
+  // stay "done" pointing at nothing. Defaults to just `log`.
+  logs?: TaskLog[];
 }
 
 // Tap opens a full-res lightbox; long-press asks to delete (which also
@@ -101,6 +106,7 @@ export function LogPhotoThumbnail({
   className,
   badge,
   gallery,
+  logs,
 }: LogPhotoThumbnailProps) {
   const { userRole, deleteLogWithPhoto, schedules } = useHousehold();
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -173,7 +179,14 @@ export function LogPhotoThumbnail({
   async function handleDelete() {
     setDeleting(true);
     try {
-      await deleteLogWithPhoto(log);
+      // Only the last call carries photo_url, so a shared file is removed
+      // once, after every row pointing at it is gone — the same order the
+      // staff card uses.
+      const rows = logs && logs.length > 0 ? logs : [log];
+      for (let i = 0; i < rows.length; i++) {
+        const isLast = i === rows.length - 1;
+        await deleteLogWithPhoto(isLast ? rows[i] : { ...rows[i], photo_url: null });
+      }
       toast.success("Task undone");
       setConfirmOpen(false);
       setLightboxOpen(false);
@@ -237,7 +250,9 @@ export function LogPhotoThumbnail({
           <DialogHeader>
             <DialogTitle>Delete this photo?</DialogTitle>
             <DialogDescription>
-              This removes the photo and marks the task pending again.
+              {logs && logs.length > 1
+                ? `This removes the photo and marks all ${logs.length} tasks pending again.`
+                : "This removes the photo and marks the task pending again."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-2">

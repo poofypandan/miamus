@@ -68,3 +68,36 @@ export function photoSrc(
  *       been returning every thumbnail as a centre-cut strip.
  */
 const TRANSFORM_VERSION = 2;
+
+/**
+ * Rows that share one stored photo, merged (Phase 118).
+ *
+ * One upload often stands behind several logs: three medicines given at noon,
+ * four dogs on one potty round. Each log carries the same URL, so rendering a
+ * tile per log drew the same picture three or four times over — and put it in
+ * the gallery as that many identical slides. Grouped here, a photo is one tile
+ * and one slide, and every row behind it stays reachable (its titles, its
+ * dogs, and every log an undo has to revert).
+ *
+ * First-seen order is kept, so callers that sorted their rows keep that sort.
+ * Rows with no photo are dropped — they have nothing to show.
+ */
+export function groupByPhoto<T>(
+  rows: T[],
+  urlOf: (row: T) => string | null | undefined
+): { url: string; rows: T[] }[] {
+  const byUrl = new Map<string, { url: string; rows: T[] }>();
+  for (const row of rows) {
+    const url = urlOf(row);
+    if (!url) continue;
+    const existing = byUrl.get(url);
+    if (existing) existing.rows.push(row);
+    else byUrl.set(url, { url, rows: [row] });
+  }
+  return [...byUrl.values()];
+}
+
+/** The distinct values, in first-seen order — for joining titles and names. */
+export function distinct<T>(values: T[]): T[] {
+  return [...new Set(values)];
+}
