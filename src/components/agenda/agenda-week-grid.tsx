@@ -349,7 +349,7 @@ export function AgendaWeekGrid({
                     ) : (
                       <span aria-hidden>{item.glyph}</span>
                     )}
-                    <span className={cn("truncate", item.done && "line-through")}>{item.title}</span>
+                    <span className={cn("truncate", item.done && "opacity-70")}>{item.title}</span>
                   </button>
                 ))}
                 {allDay.length > ALL_DAY_VISIBLE && (
@@ -439,7 +439,7 @@ function Block({ event, alone }: { event: GridEvent; alone: boolean }) {
         {event.done ? <CheckCircle2 className="mt-px size-2.5" /> : event.glyph}
       </span>
       <span
-        className={cn("line-clamp-2 min-w-0 font-medium break-words", event.done && "line-through")}
+        className={cn("line-clamp-2 min-w-0 font-medium break-words", event.done && "opacity-70")}
       >
         {event.title}
       </span>

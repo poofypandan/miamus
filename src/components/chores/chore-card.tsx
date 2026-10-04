@@ -1,9 +1,18 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, Clock, Eye, Repeat, UserRound, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Eye,
+  Repeat,
+  UserRound,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ChoreProofPhotos } from "@/components/chores/chore-proof-photos";
+import { ChoreProofPhotos, hasChoreProof } from "@/components/chores/chore-proof-photos";
 import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
 import {
   categoryClass,
@@ -59,6 +68,7 @@ export function ChoreCard({
   onPress,
   footer,
   action,
+  compact = false,
   today,
 }: {
   occurrence: ChoreOccurrence;
@@ -74,6 +84,12 @@ export function ChoreCard({
    * height; shown only while the chore is still open.
    */
   action?: ReactNode;
+  /**
+   * A finished chore as small as it gets (Phase 131), for the staff list's
+   * Selesai section: no notes, no inline before/after pair — a "Lihat foto"
+   * cue instead, and the photos one tap away in the sheet.
+   */
+  compact?: boolean;
   /** For the "carried over from …" label; defaults to the real today. */
   today?: Date;
 }) {
@@ -91,12 +107,14 @@ export function ChoreCard({
           <span
             className={cn(
               "block text-sm font-medium break-words",
-              done && "text-muted-foreground line-through"
+              // No strikethrough (Phase 131): it made a finished title hard to
+              // read, and the green face and the tick already say "done".
+              done && "text-muted-foreground"
             )}
           >
             {task.title}
           </span>
-          {task.notes && (
+          {task.notes && !(compact && done) && (
             <span className="mt-0.5 block text-xs text-muted-foreground">{task.notes}</span>
           )}
         </span>
@@ -145,6 +163,11 @@ export function ChoreCard({
         )}
 
         {action && !done && <span className="ml-auto">{action}</span>}
+        {compact && done && occurrence.row && hasChoreProof(occurrence.row) && (
+          <span className="ml-auto flex items-center gap-0.5 text-[10px] font-medium text-emerald-700">
+            Lihat foto <ChevronRight className="size-3.5" />
+          </span>
+        )}
       </div>
 
       {/* Only ever shown on today's list, where it is the explanation for a
@@ -158,7 +181,7 @@ export function ChoreCard({
 
       {/* The proof, on the card itself: one side-by-side picture rather
           than thumbnails tucked into a footer (Phase 113). */}
-      {done && occurrence.row && (
+      {done && !compact && occurrence.row && (
         <ChoreProofPhotos row={occurrence.row} locale={locale} interactive={!onPress} />
       )}
 

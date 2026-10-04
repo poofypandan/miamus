@@ -13,6 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { PhotoPicker } from "@/components/photo-picker";
+import { ChoreProofPhotos } from "@/components/chores/chore-proof-photos";
 import { useStaffIdentity } from "@/components/auth/staff-login-gate";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
@@ -186,9 +187,16 @@ function FinishChoreBody({
           )}
 
           {done ? (
-            <p className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
-              <CheckCircle2 className="size-4 shrink-0" /> Tugas ini sudah selesai.
-            </p>
+            <>
+              <p className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                <CheckCircle2 className="size-4 shrink-0" /> Tugas ini sudah selesai.
+              </p>
+              {/* Where "Lihat foto" on a finished card leads (Phase 131): the
+                  before/after pair with their times, each opening full screen. */}
+              {occurrence.row && (
+                <ChoreProofPhotos row={occurrence.row} locale="id" interactive />
+              )}
+            </>
           ) : unassigned ? (
             <Button className="min-h-[52px] w-full" disabled={busy} onClick={handleClaim}>
               {busy ? <Loader2 className="animate-spin" /> : <Hand />} Ambil Tugas

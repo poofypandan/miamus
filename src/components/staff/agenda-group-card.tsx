@@ -40,7 +40,7 @@ import { isAdmitted } from "@/lib/pets";
 import { categoryCardTint, categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { UNDO_WINDOW_MS } from "@/lib/undo-window";
-import { formatDateLocal } from "@/lib/scheduleEngine";
+import { vetVisitState } from "@/lib/staff-agenda";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { LogSubType, TaskLog } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -194,26 +194,14 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     return [...byUrl.values()].sort((a, b) => a.at.localeCompare(b.at));
   }, [group.items]);
 
-  // A vet visit is two logs against the same schedule: the check-in, then
-  // either a check-out or an admission. buildAgenda hands back one log per
-  // item, so the pair is read straight from the day's logs instead.
-  const visit = useMemo(() => {
-    if (!isVet) return { checkedIn: false, closed: false, admitted: false };
-    const scheduleIds = new Set(group.items.map((i) => i.scheduleId).filter(Boolean));
-    const day = group.items[0]?.log?.completed_at;
-    const today = day ? formatDateLocal(new Date(day)) : formatDateLocal(new Date());
-    const mine = logs.filter(
-      (l) =>
-        l.schedule_id &&
-        scheduleIds.has(l.schedule_id) &&
-        formatDateLocal(new Date(l.completed_at)) === today
-    );
-    return {
-      checkedIn: mine.some((l) => l.sub_type === "check_in"),
-      closed: mine.some((l) => l.sub_type === "check_out" || l.sub_type === "admitted"),
-      admitted: mine.some((l) => l.sub_type === "admitted"),
-    };
-  }, [isVet, group.items, logs]);
+  // Check-in, then check-out or admission — see vetVisitState (lib).
+  const visit = useMemo(
+    () =>
+      isVet
+        ? vetVisitState(group.items, logs)
+        : { checkedIn: false, closed: false, admitted: false },
+    [isVet, group.items, logs]
+  );
   // Open visit: checked in, not yet resolved. The row keeps asking for a tap
   // through this, or a dog would read as "done" while still at the clinic.
   const visitOpen = isVet && visit.checkedIn && !visit.closed;

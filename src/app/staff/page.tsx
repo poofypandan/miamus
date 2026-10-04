@@ -39,6 +39,8 @@ import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { LaunchCover } from "@/components/brand/brand-cover";
 import { TapHint } from "@/components/staff/tap-hint";
+import { CompletedSection } from "@/components/agenda/completed-section";
+import { isEntrySettled } from "@/lib/staff-agenda";
 import { useHouseholdNameState } from "@/hooks/use-household-name";
 import { PendingBar } from "@/components/shared/pending-bar";
 import { useScrollTopOnChange, useTabNavigation } from "@/hooks/use-tab-navigation";
@@ -212,6 +214,19 @@ function TasksView() {
   // to a person, and whoever is holding a phone may have to feed a dog.
   const entries = useMemo(() => buildUnifiedAgenda({ groups, chores }), [groups, chores]);
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
+  // What is left, and what is finished (Phase 131). Finished work folds into
+  // the collapsed Selesai section at the bottom, so the list is only ever as
+  // long as what remains. isEntrySettled, not isEntryDone: a vet visit that
+  // is checked in but not closed is still today's business.
+  const { open: openEntries, settled } = useMemo(() => {
+    const admittedIds = new Set(admittedPets.map((p) => p.id));
+    const open: UnifiedAgendaEntry[] = [];
+    const settled: UnifiedAgendaEntry[] = [];
+    for (const entry of rest) {
+      (isEntrySettled(entry, { logs, admittedIds }) ? settled : open).push(entry);
+    }
+    return { open, settled };
+  }, [rest, logs, admittedPets]);
 
   // Which chore the detail sheet is showing, held as a KEY rather than as the
   // occurrence itself. Occurrences are derived fresh whenever the chore rows
@@ -238,7 +253,9 @@ function TasksView() {
     setSelectedDate(addDays(selectedDate, weeks * 7));
   }
 
-  function renderEntry(entry: UnifiedAgendaEntry) {
+  // `compact` inside Selesai: a finished chore loses its inline photo pair
+  // and says "Lihat foto" instead (Phase 131); routines are compact already.
+  function renderEntry(entry: UnifiedAgendaEntry, compact = false) {
     return entry.kind === "routine" ? (
       <AgendaGroupCard key={entry.key} group={entry.group} />
     ) : (
@@ -256,6 +273,7 @@ function TasksView() {
         locale="id"
         today={today}
         onPress={() => setOpenKey(entry.occurrence.key)}
+        compact={compact}
         // What the tap leads to (Phase 130): an unclaimed chore is claimed
         // before anything is photographed.
         action={
@@ -352,10 +370,22 @@ function TasksView() {
               {/* Undone chores from earlier days lead today (Phase 113). */}
               {overdue.length > 0 && (
                 <OverdueSection count={overdue.length} locale="id">
-                  {overdue.map(renderEntry)}
+                  {overdue.map((entry) => renderEntry(entry))}
                 </OverdueSection>
               )}
-              {rest.map(renderEntry)}
+              {openEntries.map((entry) => renderEntry(entry))}
+              {/* Said plainly when the open list is empty, rather than leaving
+                  a lone collapsed section to imply it. */}
+              {overdue.length === 0 && openEntries.length === 0 && settled.length > 0 && (
+                <p className="py-4 text-center text-sm font-medium text-emerald-700">
+                  Semua tugas hari ini sudah selesai 🎉
+                </p>
+              )}
+              {settled.length > 0 && (
+                <CompletedSection count={settled.length} locale="id">
+                  {settled.map((entry) => renderEntry(entry, true))}
+                </CompletedSection>
+              )}
             </>
           )}
         </main>

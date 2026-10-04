@@ -95,7 +95,8 @@ export function ChoreTimelineRow({
       />
 
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className={cn("truncate font-medium", done && "text-muted-foreground line-through")}>
+        {/* No strikethrough (Phase 131) — the green row and photos say done. */}
+        <span className={cn("truncate font-medium", done && "text-muted-foreground")}>
           {task.title}
         </span>
         <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
