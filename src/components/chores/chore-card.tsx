@@ -58,6 +58,7 @@ export function ChoreCard({
   assigneeName,
   onPress,
   footer,
+  action,
   today,
 }: {
   occurrence: ChoreOccurrence;
@@ -67,6 +68,12 @@ export function ChoreCard({
   /** Makes the whole card tappable — the owner's way into the editor. */
   onPress?: () => void;
   footer?: ReactNode;
+  /**
+   * What tapping does, said on the card (Phase 130) — the staff list's
+   * "Ketuk untuk foto". Sits at the end of the badge row, so it costs no
+   * height; shown only while the chore is still open.
+   */
+  action?: ReactNode;
   /** For the "carried over from …" label; defaults to the real today. */
   today?: Date;
 }) {
@@ -136,6 +143,8 @@ export function ChoreCard({
             {t.supervision}
           </Badge>
         )}
+
+        {action && !done && <span className="ml-auto">{action}</span>}
       </div>
 
       {/* Only ever shown on today's list, where it is the explanation for a

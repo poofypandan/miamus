@@ -5,8 +5,7 @@ import { toast } from "sonner";
 import {
   Camera,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
+  ChevronRight,
   Home,
   Loader2,
   Stethoscope,
@@ -16,7 +15,15 @@ import { Badge } from "@/components/ui/badge";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { TapHint } from "@/components/staff/tap-hint";
+import { DONE_TONE } from "@/lib/agenda-tones";
 import {
   Dialog,
   DialogContent,
@@ -70,8 +77,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  // Lets a completed group be re-opened from its compact row (see below).
-  const [expanded, setExpanded] = useState(false);
+  // The card is a compact row on the list (Phase 130); everything it does —
+  // photos, tagging, the vet flow, the 5-minute undo — happens in this sheet.
+  const [sheetOpen, setSheetOpen] = useState(false);
   // Only how an *open* visit is being closed — "Bawa Pulang" or "Rawat Inap".
   // Which half of the visit a photo records is derived from the card's own
   // state below, never from a click handler: the camera can be opened from a
@@ -90,6 +98,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // Every overlay in this card claims its own history entry, so Back unwinds
   // one layer at a time instead of collapsing the lot. The lightbox still
   // clears the confirmation as a backstop for the non-Back close paths.
+  useBackToClose(sheetOpen, () => setSheetOpen(false));
   useBackToClose(!!capture, () => setCapture(null));
   useBackToClose(confirmDelete, () => setConfirmDelete(false));
   // No useBackToClose for the lightbox: PhotoLightbox claims its own history
@@ -205,8 +214,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       admitted: mine.some((l) => l.sub_type === "admitted"),
     };
   }, [isVet, group.items, logs]);
-  // Open visit: checked in, not yet resolved. The card stays expanded through
-  // this, or a dog would be marked "done" while still at the clinic.
+  // Open visit: checked in, not yet resolved. The row keeps asking for a tap
+  // through this, or a dog would read as "done" while still at the clinic.
   const visitOpen = isVet && visit.checkedIn && !visit.closed;
 
   // Clamped, so deleting the last photo in the strip lands on the new last one
@@ -307,6 +316,12 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               : `${names} · ${cardTitle} selesai ✅`
       );
       setFinishChoice("check_out");
+      // Back to the list once nothing is left on this card: every dog done,
+      // or a vet step recorded (the visit's next step is hours away). With
+      // dogs still to photograph — one shot per dog is common — the sheet
+      // stays, ready for the next.
+      const remaining = pendingItems.filter((i) => !capture.selected.has(i.entityId));
+      if (isVet || remaining.length === 0) setSheetOpen(false);
       setCapture(null);
     } catch (err) {
       console.error(err);
@@ -349,86 +364,120 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
 
   const CategoryIcon = categoryIcon(group.category);
 
-  // A finished slot collapses to a single line. A staff member's day is mostly
-  // finished slots by the afternoon, and at full height they pushed the two or
-  // three rows that still need doing off the bottom of the screen.
+  // --- The row (Phase 130) ------------------------------------------------
   //
-  // Tappable to expand rather than permanently collapsed: the photos live in
-  // the full layout, and with them the 5-minute undo. Hiding them outright
-  // would put the undo out of reach exactly when a group has just completed,
-  // which is when a mistake gets noticed. Safe to return before the dialogs
-  // below — none of them can be open while this row is collapsed, and every
-  // hook has already run above.
-  // Not for a suspended card: with every dog at the clinic there is nothing
-  // pending, but "Semua Selesai" would claim the round was done when it was
-  // actually called off.
-  if (allDone && !expanded && !visitOpen && !wholeCardSuspended) {
-    return (
-      <button
-        type="button"
-        onClick={() => setExpanded(true)}
-        aria-expanded={false}
-        aria-label={`Tampilkan detail ${group.title} ${formatTime12h(group.time)}`}
-        className="flex w-full items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5 text-left active:bg-emerald-500/10"
-      >
-        <CategoryIcon className="size-4 shrink-0 text-emerald-700" />
-        <span className="shrink-0 text-sm font-medium tabular-nums">
-          {formatTime12h(group.time)}
+  // Every state of the card is one compact row now, the height of a chore
+  // card. It used to carry a full-width "Ambil Foto untuk 3 Anjing" button,
+  // which made a day of meals and potty breaks a long scroll of buttons; the
+  // capture lives in the sheet the row opens, as a chore's does. The row says
+  // what a tap will do in a pill at the end of its badges (TapHint), so the
+  // affordance costs width, never height.
+  const finished = allDone && !visitOpen && !wholeCardSuspended;
+  const dogs = dogsIn(group.items);
+  const rowHint = wholeCardSuspended ? (
+    <span className="flex items-center gap-1 text-[10px] font-medium text-indigo-900">
+      <Stethoscope className="size-3" /> Rawat inap · dijeda
+    </span>
+  ) : visitOpen ? (
+    <TapHint label="Ketuk untuk selesaikan visit" icon={Stethoscope} />
+  ) : finished ? (
+    <span className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-700">
+      {photoGroups.length > 0 ? "Lihat foto" : "Selesai"}
+      <ChevronRight className="size-3.5" />
+    </span>
+  ) : isVet ? (
+    <TapHint label="Ketuk untuk check-in" icon={Stethoscope} urgent={anyOverdue} />
+  ) : (
+    <TapHint urgent={anyOverdue} />
+  );
+
+  const row = (
+    <button
+      type="button"
+      onClick={() => setSheetOpen(true)}
+      // Nothing to do while every dog is at the clinic.
+      disabled={wholeCardSuspended}
+      aria-haspopup="dialog"
+      aria-label={`${formatTime12h(group.time)} ${cardTitle}`}
+      className={cn(
+        "flex w-full flex-col gap-2 rounded-xl border p-3 text-left active:bg-muted/60",
+        finished ? DONE_TONE.tint : cn("bg-card", categoryCardTint(group.category)),
+        wholeCardSuspended && "opacity-50"
+      )}
+    >
+      <span className="flex items-center gap-2">
+        <CategoryIcon
+          className={cn(
+            "size-4 shrink-0",
+            finished ? DONE_TONE.icon : categoryIconColor(group.category)
+          )}
+        />
+        <span className="shrink-0 text-sm font-medium tabular-nums">{formatTime12h(group.time)}</span>
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate text-sm font-medium",
+            finished && "text-muted-foreground"
+          )}
+        >
+          {consolidated ? `${cardTitle} (${group.titles.length})` : cardTitle}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-          {consolidated ? `${cardTitle} (${group.titles.length})` : group.title}
-        </span>
-        <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-700">
-          <CheckCircle2 className="size-4" /> Semua Selesai
-        </span>
-        {/* The row gives no other hint that it opens — without this it reads as
-            a static status line and the photos (and their undo) stay hidden. */}
-        <ChevronDown className="size-4 shrink-0 text-emerald-700" />
-      </button>
-    );
-  }
+        {finished && <CheckCircle2 className={cn("size-4 shrink-0", DONE_TONE.check)} />}
+      </span>
+      <span className="flex flex-wrap items-center gap-1.5">
+        {dogs.map((dog) => {
+          const suspended = isSuspended(dog.items[0]);
+          const done = dog.items.every((i) => i.status === "completed");
+          return (
+            <Badge
+              key={dog.entityId}
+              variant={!suspended && done ? "default" : "secondary"}
+              className={cn(
+                "h-5 gap-1 px-1.5 text-[10px]",
+                done && !suspended && "bg-emerald-600 text-white",
+                suspended && "opacity-60"
+              )}
+            >
+              {done && !suspended && <CheckCircle2 className="size-3" />}
+              {dog.entityName}
+            </Badge>
+          );
+        })}
+        <span className="ml-auto">{rowHint}</span>
+      </span>
+    </button>
+  );
 
   return (
     <>
-      {/* Tinted for medicine, vet and grooming; neutral for the meals and
-          potty breaks that make up most of a day. */}
-      <Card
-        className={cn(
-          "gap-3 py-4",
-          categoryCardTint(group.category),
-          wholeCardSuspended && "opacity-50"
-        )}
-      >
-        <CardHeader className="px-4">
-          {/* Only a completed group has something to collapse back to, so the
-              header is a button there and plain text everywhere else — a
-              pending card has no compact form to return to. */}
-          <CardTitle className="text-base">
-            {allDone ? (
-              <button
-                type="button"
-                onClick={() => setExpanded(false)}
-                aria-expanded
-                aria-label={`Sembunyikan detail ${group.title} ${formatTime12h(group.time)}`}
-                className="flex w-full items-center gap-2 text-left"
-              >
-                <CategoryIcon className={cn("size-4 shrink-0", categoryIconColor(group.category))} />
-                <span>{formatTime12h(group.time)}</span>
-                <span className="min-w-0 flex-1 truncate font-normal text-muted-foreground">
-                  · {cardTitle}
-                </span>
-                <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
-              </button>
-            ) : (
-              <span className="flex items-center gap-2">
-                <CategoryIcon className={cn("size-4", categoryIconColor(group.category))} />
-                <span>{formatTime12h(group.time)}</span>
-                <span className="font-normal text-muted-foreground">· {cardTitle}</span>
+      {row}
+
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent
+          side="bottom"
+          className="mx-auto max-h-[90dvh] max-w-md gap-0 overflow-y-auto rounded-t-2xl"
+        >
+          <SheetHeader className="border-b">
+            <SheetTitle className="flex items-center gap-2">
+              <CategoryIcon className={cn("size-4 shrink-0", categoryIconColor(group.category))} />
+              <span className="tabular-nums">{formatTime12h(group.time)}</span>
+              <span className="min-w-0 truncate font-normal text-muted-foreground">
+                · {cardTitle}
               </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 px-4">
+            </SheetTitle>
+            <SheetDescription>
+              {finished
+                ? "Semua selesai. Foto bisa dihapus dalam 5 menit setelah dicatat."
+                : visitOpen
+                  ? "Anjing sedang di klinik. Selesaikan visit saat dia pulang atau menginap."
+                  : "Ambil foto, lalu centang anjing yang ada di foto."}
+            </SheetDescription>
+          </SheetHeader>
+        <div
+          className={cn(
+            "flex flex-col gap-3 px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]",
+            categoryCardTint(group.category)
+          )}
+        >
           {wholeCardSuspended && (
             <p className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-900">
               <Stethoscope className="size-3.5 shrink-0" /> Sedang Rawat Inap — jadwal dijeda
@@ -512,11 +561,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             </div>
           )}
 
-          {/* A completed group's footer is a real button that collapses the
-              card — the second way back, alongside the header. It stops being
-              a <label> here on purpose: the file input it used to wrap is
-              disabled once everything is done, so a label would have been an
-              inert strip of text sitting exactly where staff expect to tap. */}
+          {/* A completed group's footer is a status line — the sheet closes
+              by swipe or Back, so it has nothing to collapse (Phase 130). */}
           {/* Nothing to photograph when every dog on this card is at the
               clinic, so the capture control is gone rather than merely
               disabled — a greyed button still invites the tap.
@@ -536,16 +582,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               Selesaikan Visit
             </Button>
           ) : allDone ? (
-            <button
-              type="button"
-              onClick={() => setExpanded(false)}
-              aria-expanded
-              aria-label={`Sembunyikan detail ${group.title} ${formatTime12h(group.time)}`}
-              className="flex min-h-[48px] cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/5 text-sm font-medium text-emerald-600 transition-transform active:scale-[0.99]"
-            >
+            <p className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/5 text-sm font-medium text-emerald-600">
               <CheckCircle2 className="size-5" /> Semua Selesai
-              <ChevronUp className="size-4" />
-            </button>
+            </p>
           ) : (
             <label
               className={cn(
@@ -578,8 +617,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               )}
             </label>
           )}
-        </CardContent>
-      </Card>
+        </div>
+        </SheetContent>
+      </Sheet>
 
       {/* How the visit ended. Both answers still take a photo — the difference
           is what the photo is filed as, and whether the dog's daily routine is

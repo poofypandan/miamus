@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import { useSearchParams } from "next/navigation";
-import { Stethoscope, UserRound } from "lucide-react";
+import { Hand, Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { AgendaWeekGrid } from "@/components/agenda/agenda-week-grid";
 import { OverdueSection } from "@/components/agenda/overdue-section";
@@ -38,6 +38,7 @@ import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { LaunchCover } from "@/components/brand/brand-cover";
+import { TapHint } from "@/components/staff/tap-hint";
 import { useHouseholdNameState } from "@/hooks/use-household-name";
 import { PendingBar } from "@/components/shared/pending-bar";
 import { useScrollTopOnChange, useTabNavigation } from "@/hooks/use-tab-navigation";
@@ -255,6 +256,15 @@ function TasksView() {
         locale="id"
         today={today}
         onPress={() => setOpenKey(entry.occurrence.key)}
+        // What the tap leads to (Phase 130): an unclaimed chore is claimed
+        // before anything is photographed.
+        action={
+          entry.occurrence.task.assigned_to ? (
+            <TapHint urgent={entry.occurrence.overdue} />
+          ) : (
+            <TapHint label="Ketuk untuk ambil" icon={Hand} urgent={entry.occurrence.overdue} />
+          )
+        }
       />
     );
   }
