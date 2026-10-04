@@ -3,6 +3,7 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
+import { toast } from "sonner";
 import { CalendarDays, PawPrint, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { ApprovalQueue } from "@/components/dashboard/approval-queue";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
+import { ChoreReviewLightbox, hasChoreProof } from "@/components/chores/chore-proof-photos";
 import { useHousehold } from "@/context/household-context";
 import { useAgendaRange } from "@/hooks/use-agenda-range";
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
@@ -83,6 +85,8 @@ export function AgendaTab() {
   // The day the editor was opened from (Phase 128): what "skip this day" and
   // "end the repeat here" act on. Null when adding.
   const [editingDate, setEditingDate] = useState<string | null>(null);
+  // A finished chore opened from the Week grid, for review (Phase 129).
+  const [reviewing, setReviewing] = useState<HouseholdTask | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
   const groups = useMemo(
@@ -277,6 +281,13 @@ export function AgendaTab() {
                   setRange("day");
                 }}
                 onChorePress={(occurrence) => {
+                  // Same split as the Day rows (Phase 129): a finished chore
+                  // is reviewed, never edited, from the Agenda.
+                  if (occurrence.status === "completed") {
+                    if (hasChoreProof(occurrence.row)) setReviewing(occurrence.row);
+                    else toast("No photos were saved for this chore");
+                    return;
+                  }
                   setEditing(occurrence.row ?? occurrence.template);
                   setEditingDate(occurrence.date);
                   setEditorOpen(true);
@@ -287,6 +298,12 @@ export function AgendaTab() {
           </>
         )}
       </div>
+
+      <ChoreReviewLightbox
+        row={reviewing}
+        open={!!reviewing}
+        onClose={() => setReviewing(null)}
+      />
 
       <ChoreEditorDialog
         open={editorOpen}

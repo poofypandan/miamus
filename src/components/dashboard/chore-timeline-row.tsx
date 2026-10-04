@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, Eye, Repeat } from "lucide-react";
+import { ChoreReviewLightbox, choreProofShots } from "@/components/chores/chore-proof-photos";
+import { photoSrc } from "@/lib/photos";
 import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
 import { categoryIcon } from "@/lib/household-tasks";
 import { recurrenceOf, type ChoreOccurrence } from "@/lib/chore-recurrence";
@@ -16,7 +20,14 @@ import { cn } from "@/lib/utils";
  * same list. A chore rendered as a bordered card between timeline rows would
  * announce the seam this phase exists to remove.
  *
- * Owner-facing, so English, and tappable: the owner's way into the editor.
+ * Owner-facing, so English, and tappable — with an intent that depends on
+ * the chore's state (Phase 129):
+ *   open      → the editor: the owner is managing the schedule;
+ *   completed → the proof gallery: the owner is reviewing the work. The
+ *               before/after shots sit on the row itself, as a finished pet
+ *               routine's photo does on its row, and a tap opens them full
+ *               screen with their times and the span between (Phase 126).
+ * Editing a chore that is finished today is done from the Chores tab.
  */
 export function ChoreTimelineRow({
   occurrence,
@@ -32,11 +43,33 @@ export function ChoreTimelineRow({
   const done = status === "completed";
   const supervised = !!task.requires_supervision;
   const repeats = recurrenceOf(occurrence.template) !== "none";
+  const [reviewing, setReviewing] = useState(false);
+
+  // The proof, when this day's row carries any: only a completed occurrence
+  // can, and only it is reviewed rather than edited.
+  const proof = done && occurrence.row ? choreProofShots(occurrence.row, "en") : null;
+  const shots = proof?.shots ?? [];
+
+  function handlePress() {
+    if (!done) {
+      onPress();
+      return;
+    }
+    // Never the editor for a finished chore, even one with nothing to show:
+    // completions from before photos existed simply have none.
+    if (shots.length === 0) {
+      toast("No photos were saved for this chore");
+      return;
+    }
+    setReviewing(true);
+  }
 
   return (
+    <>
     <button
       type="button"
-      onClick={onPress}
+      onClick={handlePress}
+      aria-label={done && shots.length > 0 ? `Review photos: ${task.title}` : undefined}
       className={cn(
         "flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-left text-sm active:bg-muted/60",
         // Amber marks every open chore (Phase 112's three tones), so the house
@@ -78,11 +111,44 @@ export function ChoreTimelineRow({
         </span>
       </span>
 
-      {done && (
-        <span className={cn("flex shrink-0 items-center gap-1 text-xs font-medium", DONE_TONE.icon)}>
-          <CheckCircle2 className="size-4" /> Done
-        </span>
-      )}
+      {done &&
+        (shots.length > 0 ? (
+          // The pet rows' thumbnail, before then after: same 48px rounded
+          // square, same ring, so a finished chore and a finished routine
+          // read as the same kind of thing. Plain images, not buttons — the
+          // whole row is the button.
+          <span className="flex shrink-0 gap-1">
+            {shots.map((shot) => (
+              <span
+                key={shot.label}
+                className="relative size-12 overflow-hidden rounded-xl ring-2 ring-background"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoSrc(shot.url, 160)}
+                  alt={shot.label}
+                  loading="lazy"
+                  decoding="async"
+                  // Pinned and centred, as on the Chores tab (Phase 128).
+                  className="absolute inset-0 size-full object-cover object-center"
+                />
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className={cn("flex shrink-0 items-center gap-1 text-xs font-medium", DONE_TONE.icon)}>
+            <CheckCircle2 className="size-4" /> Done
+          </span>
+        ))}
     </button>
+
+    {done && (
+      <ChoreReviewLightbox
+        row={occurrence.row}
+        open={reviewing}
+        onClose={() => setReviewing(false)}
+      />
+    )}
+    </>
   );
 }

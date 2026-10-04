@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
+import { PhotoLightbox, type LightboxItem } from "@/components/dashboard/photo-lightbox";
 import { photoSrc, photoTakenAt } from "@/lib/photos";
 import { formatDuration, formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,75 @@ function stamp(at: Date, withDay: boolean, locale: "en" | "id"): string {
   if (!withDay) return time;
   const day = at.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", { weekday: "short" });
   return `${day} ${time}`;
+}
+
+export interface ProofShot {
+  url: string;
+  label: string;
+  /** When it was taken, formatted; null if the key carries no time. */
+  time: string | null;
+}
+
+/**
+ * A finished chore's proof photos, before then after, each with its capture
+ * time — and the span between them (Phase 126). Shared by this component and
+ * the Agenda's chore row (Phase 129), so both show the same evidence.
+ */
+export function choreProofShots(
+  row: HouseholdTask,
+  locale: "en" | "id"
+): { shots: ProofShot[]; span: string | null } {
+  const t = COPY[locale];
+  const candidates: { url: string | null | undefined; label: string }[] = [
+    { url: row.before_photo_url, label: t.before },
+    { url: row.after_photo_url ?? row.photo_url, label: t.after },
+  ];
+  const present = candidates.filter((shot): shot is { url: string; label: string } => !!shot.url);
+
+  // When each was taken, from the photo's own storage key (photoTakenAt):
+  // the before shot marks the start of the work, the after shot its end, and
+  // the gap between them is what a chore actually took (Phase 126).
+  const times = present.map((shot) => photoTakenAt(shot.url));
+  const crossesDays =
+    times.length === 2 && !!times[0] && !!times[1] && times[0].toDateString() !== times[1].toDateString();
+  const shots = present.map((shot, i) => ({
+    ...shot,
+    time: times[i] ? stamp(times[i], crossesDays, locale) : null,
+  }));
+  const span =
+    times.length === 2 && times[0] && times[1]
+      ? formatDuration(times[1].getTime() - times[0].getTime(), locale)
+      : null;
+  return { shots, span };
+}
+
+/**
+ * The lightbox frames for those shots: each with its label and time, and the
+ * whole job — start → end · duration — on every slide.
+ */
+export function choreProofGallery(
+  row: HouseholdTask,
+  { shots, span }: { shots: ProofShot[]; span: string | null },
+  locale: "en" | "id"
+): LightboxItem[] {
+  const t = COPY[locale];
+  return shots.map((shot) => ({
+    src: shot.url,
+    alt: `${shot.label}: ${row.title}`,
+    title: row.title,
+    description: (
+      <span className="tabular-nums">
+        {shot.label}
+        {shot.time && ` · ${shot.time}`}
+      </span>
+    ),
+    footer:
+      span && shots.length === 2 ? (
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {shots[0].time} → {shots[1].time} · {t.span(span)}
+        </p>
+      ) : null,
+  }));
 }
 
 /**
@@ -65,27 +134,9 @@ export function ChoreProofPhotos({
   const t = COPY[locale];
   const [lightbox, setLightbox] = useState<number | null>(null);
 
-  const candidates: { url: string | null | undefined; label: string }[] = [
-    { url: row.before_photo_url, label: t.before },
-    { url: row.after_photo_url ?? row.photo_url, label: t.after },
-  ];
-  const present = candidates.filter((shot): shot is { url: string; label: string } => !!shot.url);
-  if (present.length === 0) return null;
-
-  // When each was taken, from the photo's own storage key (photoTakenAt):
-  // the before shot marks the start of the work, the after shot its end, and
-  // the gap between them is what a chore actually took (Phase 126).
-  const times = present.map((shot) => photoTakenAt(shot.url));
-  const crossesDays =
-    times.length === 2 && !!times[0] && !!times[1] && times[0].toDateString() !== times[1].toDateString();
-  const shots = present.map((shot, i) => ({
-    ...shot,
-    time: times[i] ? stamp(times[i], crossesDays, locale) : null,
-  }));
-  const span =
-    times.length === 2 && times[0] && times[1]
-      ? formatDuration(times[1].getTime() - times[0].getTime(), locale)
-      : null;
+  const proof = choreProofShots(row, locale);
+  const { shots } = proof;
+  if (shots.length === 0) return null;
 
   return (
     <>
@@ -143,27 +194,41 @@ export function ChoreProofPhotos({
           open={lightbox !== null}
           onClose={() => setLightbox(null)}
           initialIndex={lightbox ?? 0}
-          items={shots.map((shot) => ({
-            src: shot.url,
-            alt: `${shot.label}: ${row.title}`,
-            title: row.title,
-            description: (
-              <span className="tabular-nums">
-                {shot.label}
-                {shot.time && ` · ${shot.time}`}
-              </span>
-            ),
-            // The whole job in one line, on both slides: when it started,
-            // when it ended, how long that was.
-            footer:
-              span && shots.length === 2 ? (
-                <p className="text-sm text-muted-foreground tabular-nums">
-                  {shots[0].time} → {shots[1].time} · {t.span(span)}
-                </p>
-              ) : null,
-          }))}
+          items={choreProofGallery(row, proof, locale)}
         />
       )}
     </>
   );
+}
+
+/**
+ * A finished chore's proof, full screen (Phase 129) — the Agenda's review
+ * view, opened from a Day row or a Week grid block. Renders nothing for a
+ * chore with no photos.
+ */
+export function ChoreReviewLightbox({
+  row,
+  open,
+  onClose,
+}: {
+  row: HouseholdTask | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!row) return null;
+  const proof = choreProofShots(row, "en");
+  if (proof.shots.length === 0) return null;
+  return (
+    <PhotoLightbox
+      open={open}
+      onClose={onClose}
+      initialIndex={0}
+      items={choreProofGallery(row, proof, "en")}
+    />
+  );
+}
+
+/** Whether a finished chore has anything to review. */
+export function hasChoreProof(row: HouseholdTask | null): boolean {
+  return !!row && choreProofShots(row, "en").shots.length > 0;
 }
