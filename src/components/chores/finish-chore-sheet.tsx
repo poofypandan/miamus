@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Eye, Hand, Loader2 } from "lucide-react";
+import { Camera, Check, CheckCircle2, Eye, Hand, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetContent,
@@ -19,6 +18,8 @@ import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { categoryLabel } from "@/lib/household-tasks";
 import { formatTime12h } from "@/lib/time";
+import { photoTakenAt } from "@/lib/photos";
+import { cn } from "@/lib/utils";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 
 /**
@@ -72,6 +73,10 @@ function FinishChoreBody({
   const { staffId } = useStaffIdentity();
   const [beforeUrl, setBeforeUrl] = useState<string | null>(null);
   const [afterUrl, setAfterUrl] = useState<string | null>(null);
+  // An upload in flight has no URL yet; finishing then would race it.
+  const [uploadingBefore, setUploadingBefore] = useState(false);
+  const [uploadingAfter, setUploadingAfter] = useState(false);
+  const uploading = uploadingBefore || uploadingAfter;
   const [busy, setBusy] = useState(false);
 
   const { task } = occurrence;
@@ -190,33 +195,46 @@ function FinishChoreBody({
             </Button>
           ) : (
             <>
-              <div className="flex flex-col gap-1.5">
-                <Label>Foto Sebelum</Label>
+              {/* Two separate, numbered places for two separate photos
+                  (Phase 128). One generic upload area is how a chore ended up
+                  with a single photo: nothing on screen said a second one was
+                  owed. Each card now names its moment, and turns green with
+                  the time once its photo is in. */}
+              <ProofStep
+                step={1}
+                title="Foto Sebelum"
+                hint="Saat mulai bekerja, sebelum apa pun dibersihkan."
+                url={beforeUrl}
+              >
                 <PhotoPicker
                   pathPrefix={pathPrefix}
                   value={beforeUrl}
                   onChange={setBeforeUrl}
+                  onBusyChange={setUploadingBefore}
                   label="Ambil Foto Sebelum"
                   busyLabel="Mengunggah..."
                   errorMessage="Gagal mengunggah foto"
+                  className="min-h-[52px] w-full"
                 />
-              </div>
+              </ProofStep>
 
-              <div className="flex flex-col gap-1.5">
-                <Label>Foto Sesudah</Label>
+              <ProofStep
+                step={2}
+                title="Foto Sesudah"
+                hint="Saat selesai, dari sudut yang sama dengan foto sebelum."
+                url={afterUrl}
+              >
                 <PhotoPicker
                   pathPrefix={pathPrefix}
                   value={afterUrl}
                   onChange={setAfterUrl}
+                  onBusyChange={setUploadingAfter}
                   label="Ambil Foto Sesudah"
                   busyLabel="Mengunggah..."
                   errorMessage="Gagal mengunggah foto"
+                  className="min-h-[52px] w-full"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Kedua foto wajib. Ambil foto sebelum saat mulai bekerja, dan foto sesudah
-                  saat selesai — jamnya tercatat sebagai bukti.
-                </p>
-              </div>
+              </ProofStep>
 
               {!mine && (
                 <p className="text-[11px] text-muted-foreground">
@@ -230,16 +248,81 @@ function FinishChoreBody({
 
         {!done && !unassigned && (
           <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            {/* Says what is still missing rather than just greying out:
+                a disabled button with no reason reads as broken. */}
             <Button
               onClick={handleFinish}
-              disabled={busy || !bothPhotos}
+              disabled={busy || uploading || !bothPhotos}
               className="min-h-[52px]"
             >
-              {busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Selesaikan
+              {busy || uploading ? (
+                <Loader2 className="animate-spin" />
+              ) : bothPhotos ? (
+                <CheckCircle2 />
+              ) : (
+                <Camera />
+              )}
+              {uploading
+                ? "Menunggu foto terunggah…"
+                : !beforeUrl && !afterUrl
+                  ? "Ambil 2 foto dulu"
+                  : !beforeUrl
+                    ? "Ambil foto sebelum dulu"
+                    : !afterUrl
+                      ? "Ambil foto sesudah dulu"
+                      : "Selesaikan"}
             </Button>
           </SheetFooter>
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+/**
+ * One of the two proof photos, as its own numbered card (Phase 128).
+ * Neutral until its photo is in, then green with the time it was taken.
+ */
+function ProofStep({
+  step,
+  title,
+  hint,
+  url,
+  children,
+}: {
+  step: 1 | 2;
+  title: string;
+  hint: string;
+  url: string | null;
+  children: React.ReactNode;
+}) {
+  const takenAt = photoTakenAt(url);
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-2.5 rounded-xl border p-3",
+        url ? "border-emerald-200 bg-emerald-50/60" : "bg-card"
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+            url ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
+          )}
+        >
+          {url ? <Check className="size-4" /> : step}
+        </span>
+        <div className="flex min-w-0 flex-col">
+          <p className="text-sm font-semibold">
+            {title} <span className="font-normal text-red-600">· wajib</span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {url && takenAt ? `Diambil ${formatTime12h(takenAt)}` : hint}
+          </p>
+        </div>
+      </div>
+      {children}
+    </div>
   );
 }

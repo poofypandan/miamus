@@ -25,6 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { dayKeyLabel } from "@/lib/date-label";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import {
   CHORE_RECURRENCES,
   RECURRENCE_LABELS_EN,
@@ -63,6 +65,7 @@ export function ChoreEditorDialog({
   onOpenChange,
   task,
   defaultDate,
+  occurrenceDate = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,8 +73,20 @@ export function ChoreEditorDialog({
   task: HouseholdTask | null;
   /** The day being browsed, used as the due date for a new chore. */
   defaultDate: string;
+  /**
+   * The day this chore was opened from (Phase 128) — what "skip this day" and
+   * "end the repeat here" act on. Null when adding.
+   */
+  occurrenceDate?: string | null;
 }) {
-  const { createHouseholdTask, updateHouseholdTask, deleteHouseholdTask } = useHousehold();
+  const {
+    createHouseholdTask,
+    updateHouseholdTask,
+    deleteHouseholdTask,
+    householdTasks,
+    materialiseChoreOccurrence,
+    updateHouseholdTaskStatus,
+  } = useHousehold();
   const { profiles } = useStaffProfiles();
   const editing = !!task;
 
@@ -162,19 +177,83 @@ export function ChoreEditorDialog({
     }
   }
 
-  async function remove() {
-    if (!task) return;
+  // --- Removing (Phase 128) -----------------------------------------------
+  //
+  // Opening any day of a repeat hands this dialog either the repeat itself (a
+  // day nothing is written for) or that day's own row. "Delete chore" used to
+  // delete whichever it was given: the repeat, taking every completed day
+  // with it through the parent_task_id cascade — the Phase 127 data loss —
+  // or one written day, which then simply came back as a fresh pending chore.
+  //
+  // So removing is now a choice about scope, made against the series:
+  //   skip    this day only: its row is written as cancelled, a tombstone that
+  //           expandChores hides while the repeat goes on;
+  //   end     the repeat stops before this day; every past record stays;
+  //   delete  the chore and every record of it, said in exactly those words.
+  // A one-off is just deleted, as before.
+
+  /** The repeat this chore belongs to — itself, or its parent. */
+  const series = task?.parent_task_id
+    ? (householdTasks.find((t) => t.id === task.parent_task_id) ?? null)
+    : task;
+  const isSeries = !!series && recurrenceOf(series) !== "none";
+  const day = isSeries ? occurrenceDate : null;
+  /** This day's own row, when one is written. */
+  const dayRow = task?.parent_task_id ? task : null;
+  const isFirstDay = !!series && day === series.due_date;
+  const dayDone =
+    dayRow?.status === "completed" || (isFirstDay && series?.status === "completed");
+  // A repeat's first day is the template row itself, which cannot be
+  // cancelled without cancelling the whole series — change its start instead.
+  const canSkip = isSeries && !!day && !dayDone && !isFirstDay;
+  const canEnd = isSeries && !!day && !!series && day > series.due_date;
+  const dayName = day ? dayKeyLabel(day, new Date(), "en") : "";
+
+  async function run(action: () => Promise<void>, failure: string) {
     setSaving(true);
     try {
-      await deleteHouseholdTask(task.id);
-      toast.success(`Deleted "${task.title}"`);
+      await action();
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to delete the chore");
+      toast.error(failure);
     } finally {
       setSaving(false);
     }
+  }
+
+  function skipDay() {
+    if (!series || !day) return;
+    return run(async () => {
+      // A day nothing is written for gets its row first; another phone may
+      // have written it meanwhile, and a finished day is never cancelled.
+      const row = dayRow ?? (await materialiseChoreOccurrence(series.id, day));
+      if (row.status === "completed") {
+        toast.error("That day was already completed, so it was left as it is");
+        return;
+      }
+      await updateHouseholdTaskStatus(row.id, "cancelled");
+      toast.success(`Skipped "${series.title}" for ${dayName}`);
+    }, "Failed to skip that day");
+  }
+
+  function endRepeat() {
+    if (!series || !day) return;
+    const lastDay = new Date(`${day}T00:00:00`);
+    lastDay.setDate(lastDay.getDate() - 1);
+    return run(async () => {
+      await updateHouseholdTask(series.id, { recurrence_until: formatDateLocal(lastDay) });
+      toast.success(`"${series.title}" no longer repeats from ${dayName}`);
+    }, "Failed to end the repeat");
+  }
+
+  function deleteAll() {
+    const target = series ?? task;
+    if (!target) return;
+    return run(async () => {
+      await deleteHouseholdTask(target.id);
+      toast.success(`Deleted "${target.title}"`);
+    }, "Failed to delete the chore");
   }
 
   const repeats = recurrence !== "none";
@@ -342,12 +421,51 @@ export function ChoreEditorDialog({
           {editing && (
             <div className="flex flex-col gap-2 border-t pt-4">
               {confirmDelete ? (
+                isSeries ? (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-medium">This chore repeats. Remove what?</p>
+                    {canSkip && (
+                      <RemoveOption
+                        label={`Skip ${dayName} only`}
+                        detail="Just this day is removed. The repeat carries on as before."
+                        disabled={saving}
+                        onClick={skipDay}
+                      />
+                    )}
+                    {canEnd && (
+                      <RemoveOption
+                        label={`Stop repeating from ${dayName}`}
+                        detail="Nothing new from this day on. Every past day and its photos are kept."
+                        disabled={saving}
+                        onClick={endRepeat}
+                      />
+                    )}
+                    <div className="flex flex-col gap-1.5 rounded-lg border border-red-200 bg-red-50 p-3">
+                      <p className="text-xs text-red-900">
+                        This will delete this chore and all its past completed records.
+                      </p>
+                      <Button
+                        variant="destructive"
+                        className="min-h-[44px]"
+                        disabled={saving}
+                        onClick={deleteAll}
+                      >
+                        {saving ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete
+                        everything
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="min-h-[44px]"
+                      disabled={saving}
+                      onClick={() => setConfirmDelete(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
                 <>
-                  <p className="text-xs text-muted-foreground">
-                    {repeats
-                      ? "Deleting this removes the repeat and every occurrence of it, including completed ones."
-                      : "This cannot be undone."}
-                  </p>
+                  <p className="text-xs text-muted-foreground">This cannot be undone.</p>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -361,12 +479,13 @@ export function ChoreEditorDialog({
                       variant="destructive"
                       className="min-h-[44px] flex-1"
                       disabled={saving}
-                      onClick={remove}
+                      onClick={deleteAll}
                     >
                       {saving ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete
                     </Button>
                   </div>
                 </>
+                )
               ) : (
                 <Button
                   variant="ghost"
@@ -374,7 +493,7 @@ export function ChoreEditorDialog({
                   disabled={saving}
                   onClick={() => setConfirmDelete(true)}
                 >
-                  <Trash2 /> Delete chore
+                  <Trash2 /> {isSeries ? "Remove…" : "Delete chore"}
                 </Button>
               )}
             </div>
@@ -389,5 +508,30 @@ export function ChoreEditorDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** One way of removing part of a repeat: what it does, then the button. */
+function RemoveOption({
+  label,
+  detail,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  detail: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant="outline"
+      className="h-auto min-h-[52px] flex-col items-start gap-0.5 px-3 py-2 text-left whitespace-normal"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-xs font-normal text-muted-foreground">{detail}</span>
+    </Button>
   );
 }

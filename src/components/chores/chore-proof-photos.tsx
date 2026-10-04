@@ -91,7 +91,7 @@ export function ChoreProofPhotos({
     <>
       <div
         className={cn(
-          "grid aspect-[2/1] w-full gap-px overflow-hidden rounded-lg bg-border ring-1 ring-border",
+          "grid aspect-[2/1] w-full grid-rows-1 gap-px overflow-hidden rounded-lg bg-border ring-1 ring-border",
           shots.length === 2 ? "grid-cols-2" : "grid-cols-1"
         )}
       >
@@ -104,7 +104,15 @@ export function ChoreProofPhotos({
                 alt={`${shot.label}: ${row.title}`}
                 loading="lazy"
                 decoding="async"
-                className="size-full object-cover"
+                // Pinned to the cell, cropped from the centre (Phase 128). As
+                // `size-full` alone, the image's height was a percentage of a
+                // grid cell's stretched height, which Safari does not always
+                // resolve — the photo then laid out at its natural portrait
+                // height and the frame's overflow-hidden cut off the bottom,
+                // leaving the ceiling where the work should be. Absolutely
+                // positioned, its box is the cell whatever the engine, and
+                // object-center makes the crop's anchor explicit.
+                className="absolute inset-0 size-full object-cover object-center"
               />
               <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white tabular-nums">
                 {shot.label}

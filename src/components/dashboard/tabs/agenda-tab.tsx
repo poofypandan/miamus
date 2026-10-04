@@ -80,6 +80,9 @@ export function AgendaTab() {
   const week = useAgendaWeek(selectedDate);
 
   const [editing, setEditing] = useState<HouseholdTask | null>(null);
+  // The day the editor was opened from (Phase 128): what "skip this day" and
+  // "end the repeat here" act on. Null when adding.
+  const [editingDate, setEditingDate] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
   const groups = useMemo(
@@ -122,6 +125,7 @@ export function AgendaTab() {
           // days edits the repeat. A materialised occurrence has its own row
           // and edits that.
           setEditing(entry.occurrence.row ?? entry.occurrence.template);
+          setEditingDate(entry.occurrence.date);
           setEditorOpen(true);
         }}
       />
@@ -203,6 +207,7 @@ export function AgendaTab() {
                   className="min-h-[44px]"
                   onClick={() => {
                     setEditing(null);
+                    setEditingDate(null);
                     setEditorOpen(true);
                   }}
                 >
@@ -223,6 +228,7 @@ export function AgendaTab() {
                   className="min-h-[44px]"
                   onClick={() => {
                     setEditing(null);
+                    setEditingDate(null);
                     setEditorOpen(true);
                   }}
                 >
@@ -272,6 +278,7 @@ export function AgendaTab() {
                 }}
                 onChorePress={(occurrence) => {
                   setEditing(occurrence.row ?? occurrence.template);
+                  setEditingDate(occurrence.date);
                   setEditorOpen(true);
                 }}
                 onShiftWeek={shiftWeek}
@@ -285,6 +292,7 @@ export function AgendaTab() {
         open={editorOpen}
         onOpenChange={setEditorOpen}
         task={editing}
+        occurrenceDate={editingDate}
         defaultDate={dateStr}
       />
     </div>

@@ -44,6 +44,9 @@ export function ChoresTab() {
   const dateStr = formatDateLocal(selectedDate);
 
   const [editing, setEditing] = useState<HouseholdTask | null>(null);
+  // The day the editor was opened from (Phase 128): what "skip this day" and
+  // "end the repeat here" act on. Null when adding.
+  const [editingDate, setEditingDate] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
   // Rolled-over chores lead the open list under their own header (Phase 113),
@@ -63,6 +66,7 @@ export function ChoresTab() {
     // A repeat is edited through its template from whichever day you tapped;
     // an occurrence that already has its own row edits that row.
     setEditing(occurrence.row ?? occurrence.template);
+    setEditingDate(occurrence.date);
     setEditorOpen(true);
   }
 
@@ -83,6 +87,7 @@ export function ChoresTab() {
           className="min-h-[36px] shrink-0 px-3 text-xs"
           onClick={() => {
             setEditing(null);
+            setEditingDate(null);
             setEditorOpen(true);
           }}
         >
@@ -104,6 +109,7 @@ export function ChoresTab() {
             className="min-h-[44px]"
             onClick={() => {
               setEditing(null);
+              setEditingDate(null);
               setEditorOpen(true);
             }}
           >
@@ -184,6 +190,7 @@ export function ChoresTab() {
         open={editorOpen}
         onOpenChange={setEditorOpen}
         task={editing}
+        occurrenceDate={editingDate}
         defaultDate={dateStr}
       />
     </div>
