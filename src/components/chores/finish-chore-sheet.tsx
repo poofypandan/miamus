@@ -107,9 +107,21 @@ function FinishChoreBody({
     }
   }
 
+  // Both photos, always (Phase 127). The before shot was optional, and a
+  // chore finished with only an after photo — or, from a phone still running
+  // an older version of the app, with neither — showed the owner no
+  // comparison and no start time. The button stays disabled until both are
+  // uploaded; this check is for the keyboard path, and the database refuses
+  // a completion without both in any case (migrations/104).
+  const bothPhotos = !!beforeUrl && !!afterUrl;
+
   async function handleFinish() {
-    if (!afterUrl) {
-      toast.error("Ambil foto sesudah dulu sebagai bukti");
+    if (!beforeUrl || !afterUrl) {
+      toast.error(
+        !beforeUrl
+          ? "Ambil foto sebelum dulu, sebelum mulai bekerja"
+          : "Ambil foto sesudah dulu sebagai bukti"
+      );
       return;
     }
     setBusy(true);
@@ -179,7 +191,7 @@ function FinishChoreBody({
           ) : (
             <>
               <div className="flex flex-col gap-1.5">
-                <Label>Foto Sebelum (opsional)</Label>
+                <Label>Foto Sebelum</Label>
                 <PhotoPicker
                   pathPrefix={pathPrefix}
                   value={beforeUrl}
@@ -201,8 +213,8 @@ function FinishChoreBody({
                   errorMessage="Gagal mengunggah foto"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Foto sesudah wajib — itu bukti tugas sudah dikerjakan. Foto sebelum
-                  membantu Pemilik melihat perbedaannya.
+                  Kedua foto wajib. Ambil foto sebelum saat mulai bekerja, dan foto sesudah
+                  saat selesai — jamnya tercatat sebagai bukti.
                 </p>
               </div>
 
@@ -220,7 +232,7 @@ function FinishChoreBody({
           <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <Button
               onClick={handleFinish}
-              disabled={busy || !afterUrl}
+              disabled={busy || !bothPhotos}
               className="min-h-[52px]"
             >
               {busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Selesaikan
