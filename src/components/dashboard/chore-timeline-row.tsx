@@ -74,7 +74,7 @@ export function ChoreTimelineRow({
       onClick={handlePress}
       aria-label={done && shots.length > 0 ? `Review photos: ${task.title}` : undefined}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-left text-sm active:bg-muted/60",
+        "flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-left text-sm active:bg-muted/60",
         // Amber marks every open chore (Phase 112's three tones), so the house
         // reads apart from the dogs at a glance. A finished one turns the
         // staff view's green (Phase 114) and sinks to the bottom of the day.

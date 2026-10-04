@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Clock,
   Eye,
+  Pencil,
   Repeat,
   UserRound,
   Users,
@@ -71,6 +72,7 @@ export function ChoreCard({
   footer,
   action,
   compact = false,
+  editable = false,
   today,
 }: {
   occurrence: ChoreOccurrence;
@@ -94,6 +96,12 @@ export function ChoreCard({
    * cue instead, and the photos one tap away in the sheet.
    */
   compact?: boolean;
+  /**
+   * Says on the card that tapping it edits the chore (Phase 136) — the
+   * owner's Chores list, where the whole card opens the editor and nothing
+   * said so.
+   */
+  editable?: boolean;
   /** For the "carried over from …" label; defaults to the real today. */
   today?: Date;
 }) {
@@ -126,6 +134,13 @@ export function ChoreCard({
           )}
         </span>
         {done && <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", DONE_TONE.check)} />}
+        {/* A span, not a button: the card is already the button. */}
+        {editable && !done && (
+          <span className="-mt-0.5 -mr-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full bg-background/80 px-2.5 text-xs font-medium text-amber-900 ring-1 ring-amber-300">
+            <Pencil className="size-3" />
+            {locale === "en" ? "Edit" : "Ubah"}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">

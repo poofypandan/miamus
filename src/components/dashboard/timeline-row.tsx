@@ -103,12 +103,14 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
     : categoryCardTint(group.category);
   const consolidated = group.category === "medication" && group.titles.length > 1;
 
-  // Padding and a border on every row, transparent where there is no tint, so
-  // a tinted row lines up with its neighbours instead of jogging 8px sideways.
+  // Padding and a border on every row, so a tinted row lines up with its
+  // neighbours instead of jogging 8px sideways. An untinted routine draws that
+  // border (Phase 136): with no card around the list any more, it is what
+  // makes the row a row rather than a line of text on the page.
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm",
+        "flex items-center gap-2 rounded-lg border border-border px-2 py-2 text-sm",
         tint
       )}
     >

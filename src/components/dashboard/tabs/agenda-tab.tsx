@@ -6,7 +6,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { CalendarDays, PawPrint, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterPill } from "@/components/shared/filter-pill";
@@ -289,12 +288,13 @@ export function AgendaTab() {
                     {overdue.map((entry) => renderEntry(entry))}
                   </OverdueSection>
                 )}
+                {/* Straight onto the page, no card around them (Phase 136): the
+                    frame's border and padding cost every row 34px of width,
+                    and each row is its own surface now, as on the staff list. */}
                 {rest.length > 0 && (
-                  <Card className="gap-3 py-4">
-                    <CardContent className="flex flex-col gap-1.5 px-4">
-                      {rest.map((entry) => renderEntry(entry))}
-                    </CardContent>
-                  </Card>
+                  <div className="flex flex-col gap-2">
+                    {rest.map((entry) => renderEntry(entry))}
+                  </div>
                 )}
               </>
             )}

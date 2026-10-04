@@ -133,6 +133,7 @@ export function ChoresTab() {
                     occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
                   }
                   onPress={() => edit(occurrence)}
+                  editable
                 />
               ))}
             </OverdueSection>
@@ -150,6 +151,7 @@ export function ChoresTab() {
                   occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
                 }
                 onPress={() => edit(occurrence)}
+                editable
               />
             ))}
             {open.length === 0 && overdue.length === 0 && (
