@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Camera, Check, CheckCircle2, Eye, Hand, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import { categoryLabel } from "@/lib/household-tasks";
 import { formatTime12h } from "@/lib/time";
 import { photoTakenAt } from "@/lib/photos";
 import { cn } from "@/lib/utils";
+import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
+import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 
 /**
@@ -69,11 +71,23 @@ function FinishChoreBody({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { updateHouseholdTaskStatus, materialiseChoreOccurrence, claimHouseholdTask } =
-    useHousehold();
+  const {
+    activeHouseholdId,
+    updateHouseholdTaskStatus,
+    materialiseChoreOccurrence,
+    claimHouseholdTask,
+  } = useHousehold();
   const { staffId } = useStaffIdentity();
-  const [beforeUrl, setBeforeUrl] = useState<string | null>(null);
-  const [afterUrl, setAfterUrl] = useState<string | null>(null);
+  // Photos already uploaded for this day's chore, restored from the device
+  // (Phase 133): the tab may have been killed between the before shot and
+  // the after shot. Read synchronously, so the steps open already filled.
+  const draftKey = choreDraftKey(activeHouseholdId, occurrence.template.id, occurrence.date);
+  const [beforeUrl, setBeforeUrl] = useState<string | null>(
+    () => readChoreDraft(draftKey)?.before ?? null
+  );
+  const [afterUrl, setAfterUrl] = useState<string | null>(
+    () => readChoreDraft(draftKey)?.after ?? null
+  );
   // An upload in flight has no URL yet; finishing then would race it.
   const [uploadingBefore, setUploadingBefore] = useState(false);
   const [uploadingAfter, setUploadingAfter] = useState(false);
@@ -84,6 +98,45 @@ function FinishChoreBody({
   const supervised = !!task.requires_supervision;
   const unassigned = !task.assigned_to;
   const done = occurrence.status === "completed";
+
+  // Every change to the photos is saved as it happens — an upload landing, or
+  // a photo removed to retake it. Removing both drops the draft.
+  useEffect(() => {
+    if (done) return;
+    writeChoreDraft(draftKey, { before: beforeUrl, after: afterUrl });
+  }, [draftKey, beforeUrl, afterUrl, done]);
+
+  // Finished, here or on another phone: nothing is owed any more.
+  useEffect(() => {
+    if (done) clearChoreDraft(draftKey);
+  }, [draftKey, done]);
+
+  /**
+   * Explains a failed save (Phase 133). Nothing here touches the photos: they
+   * stay on screen and in the draft whatever went wrong, so trying again — or
+   * reopening after a reload — needs no retake.
+   *
+   * "reloading": the app is about to reload onto a new version; stay busy so
+   * the button cannot be tapped into the same stale code again. "explained":
+   * a message is up. null: the server refused, and the caller says how.
+   */
+  function explainFailure(err: unknown): "reloading" | "explained" | null {
+    console.error(err);
+    const failure = classifySubmitError(err);
+    if (failure === "update" && reloadForUpdate()) {
+      // The draft is already written, so the reloaded app reopens this chore
+      // with both photos in place.
+      toast.info("Aplikasi telah diperbarui. Memuat ulang...");
+      return "reloading";
+    }
+    // An update that a reload already failed to fix is, as far as anyone
+    // holding the phone can tell, a connection that is not working.
+    if (failure !== "other") {
+      toast.error("Koneksi terputus. Data aman, silakan coba lagi.");
+      return "explained";
+    }
+    return null;
+  }
 
   /**
    * The row this day's work belongs to, creating it if the occurrence is
@@ -99,17 +152,21 @@ function FinishChoreBody({
 
   async function handleClaim() {
     setBusy(true);
+    let reloading = false;
     try {
       await claimHouseholdTask(await rowId());
       toast.success(`"${task.title}" jadi tugas kamu`);
     } catch (err) {
-      console.error(err);
+      // A dropped connection is not a lost race; say which it was.
+      const handled = explainFailure(err);
+      reloading = handled === "reloading";
+      if (handled) return;
       // The provider's `is("assigned_to", null)` guard is what makes the
       // losing half of a double-claim land here rather than silently taking a
       // chore someone else already has.
       toast.error("Tugas ini sudah diambil orang lain");
     } finally {
-      setBusy(false);
+      if (!reloading) setBusy(false);
     }
   }
 
@@ -131,6 +188,7 @@ function FinishChoreBody({
       return;
     }
     setBusy(true);
+    let reloading = false;
     try {
       const id = await rowId();
       await updateHouseholdTaskStatus(id, "completed", {
@@ -141,13 +199,15 @@ function FinishChoreBody({
         // the bundle — still finds the proof where it expects it.
         photo_url: afterUrl,
       });
+      clearChoreDraft(draftKey);
       toast.success(`"${task.title}" selesai ✅`);
       onOpenChange(false);
     } catch (err) {
-      console.error(err);
-      toast.error("Gagal menyimpan. Coba lagi.");
+      const handled = explainFailure(err);
+      reloading = handled === "reloading";
+      if (!handled) toast.error("Gagal menyimpan. Foto tetap tersimpan, coba lagi.");
     } finally {
-      setBusy(false);
+      if (!reloading) setBusy(false);
     }
   }
 
