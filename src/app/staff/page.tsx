@@ -39,18 +39,24 @@ import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { pushInPlace } from "@/lib/in-place-navigation";
 import { startTabTransition } from "@/lib/tab-transition";
-import { TabTransitionOverlay } from "@/components/brand/tab-transition-overlay";
+import { LaunchCover, TabTransitionOverlay } from "@/components/brand/brand-cover";
 import { cn } from "@/lib/utils";
 
 export default function StaffPage() {
+  const { loading, tenantReady, roleHydrated } = useHousehold();
   return (
-    <StaffLoginGate>
-      {/* useSearchParams() needs a Suspense boundary to keep the page static;
-          nothing here is worth a fallback while it resolves. */}
-      <Suspense fallback={null}>
-        <StaffTasks />
-      </Suspense>
-    </StaffLoginGate>
+    <>
+      <StaffLoginGate>
+        {/* useSearchParams() needs a Suspense boundary to keep the page static;
+            nothing here is worth a fallback while it resolves. */}
+        <Suspense fallback={null}>
+          <StaffTasks />
+        </Suspense>
+      </StaffLoginGate>
+      {/* The RUMAH cover over a cold start (Phase 123). Outside the gate, so
+          it covers the gate's own first moments as well as the task list. */}
+      <LaunchCover variant="staff" ready={tenantReady && roleHydrated && !loading} />
+    </>
   );
 }
 

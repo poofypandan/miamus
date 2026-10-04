@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MiamusMark } from "@/components/brand/loading-screens";
 import { supabase } from "@/lib/supabase/client";
 import { readStoredTenantId } from "@/lib/tenant";
 
@@ -138,10 +139,13 @@ function FrontDoor() {
 
 // Deliberately wordless: it shows for a moment on every launch, and whatever
 // it said would be wrong for one of the two audiences about to be routed.
+// The circular mark (Phase 123) is the brand rather than either audience's
+// screen, and the same picture /dashboard's launch cover opens on — so an
+// owner's cold start is one unbroken screen from tap to Agenda.
 function Splash() {
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <Loader2 className="size-6 animate-spin text-muted-foreground" />
+    <main className="flex min-h-screen items-center justify-center bg-slate-50">
+      <MiamusMark />
     </main>
   );
 }

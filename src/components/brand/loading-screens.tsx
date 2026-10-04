@@ -17,22 +17,25 @@ import { cn } from "@/lib/utils";
  * underneath is busy rendering — which, during a load, it is.
  */
 
-/** The Miamus mark, optionally inside a spinning ring. */
-export function MiamusMark({ spinning = false }: { spinning?: boolean }) {
+/**
+ * The Miamus mark as a circle, inside a spinning ring (Phase 123).
+ *
+ * The tile BrandMark draws is clipped round rather than redrawn: its glyph
+ * sits well inside the inscribed circle, so the clip takes only empty ink.
+ * The ring is two layers — a faint full track, and a darker quarter that
+ * rotates. Rotation is a transform on its own layer; the mark never moves.
+ */
+export function MiamusMark() {
   return (
     <div className="relative flex size-24 items-center justify-center">
-      {spinning && (
-        <>
-          {/* A full faint track, and a quarter of it darker that spins: the
-              rotation is a transform on its own layer, the mark never moves. */}
-          <span aria-hidden className="absolute inset-0 rounded-full border-2 border-zinc-200" />
-          <span
-            aria-hidden
-            className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-zinc-900 will-change-transform motion-reduce:animate-none"
-          />
-        </>
-      )}
-      <BrandMark size={56} rounded />
+      <span aria-hidden className="absolute inset-0 rounded-full border-2 border-zinc-200" />
+      <span
+        aria-hidden
+        className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-zinc-900 will-change-transform motion-reduce:animate-none"
+      />
+      <div className="size-[72px] overflow-hidden rounded-full">
+        <BrandMark size={72} rounded={false} />
+      </div>
     </div>
   );
 }
@@ -64,7 +67,7 @@ export function OwnerLoadingScreen() {
       aria-label="Loading"
       className="flex min-h-[60vh] flex-1 animate-loader-in items-center justify-center motion-reduce:animate-none"
     >
-      <MiamusMark spinning />
+      <MiamusMark />
     </div>
   );
 }

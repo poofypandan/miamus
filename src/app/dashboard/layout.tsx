@@ -4,7 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { Suspense } from "react";
 import { TopNav } from "@/components/dashboard/top-nav";
 import { BottomTabBar } from "@/components/navigation/bottom-tab-bar";
-import { TabTransitionOverlay } from "@/components/brand/tab-transition-overlay";
+import { LaunchCover, TabTransitionOverlay } from "@/components/brand/brand-cover";
 import { OwnerAppLock } from "@/components/auth/owner-app-lock";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useOfflineSync();
   usePushResync();
-  const { refresh } = useHousehold();
+  const { refresh, loading, tenantReady, roleHydrated } = useHousehold();
 
   return (
     // Google sign-in is what got them to this route (see middleware); the
@@ -73,6 +73,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* The cover over a tab switch (Phase 122). Outside PullToRefresh,
           whose transform would trap a fixed overlay inside it. */}
         <TabTransitionOverlay variant="owner" />
+        {/* Over a cold start, until the household's data is in and the page
+            has settled (Phase 123). */}
+        <LaunchCover variant="owner" ready={tenantReady && roleHydrated && !loading} />
 
         {/* Outside PullToRefresh on purpose — see BottomTabBar. It reads the
           active module via useSearchParams(), so it needs Suspense too. */}

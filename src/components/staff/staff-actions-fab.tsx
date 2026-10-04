@@ -52,8 +52,11 @@ export function StaffActionsFab() {
     <>
       {/* Pinned to the app's column, not the viewport's edge, so on a tablet
           it sits by the content it belongs to. pointer-events-none on the
-          full-width strip, so only the button itself blocks taps beneath. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-md justify-end px-6">
+          full-width strip, so only the button itself blocks taps beneath.
+          z-20, under the tab and launch covers (Phase 123 — at z-50 it
+          floated over them); see the ladder in brand/brand-cover.tsx. Its
+          sheet portals to z-50 on its own. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-md justify-end px-6">
         <button
           type="button"
           onClick={() => setOpen(true)}
