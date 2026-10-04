@@ -14,6 +14,7 @@ import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
@@ -39,6 +40,7 @@ export function ChoresTab() {
   // spelled out on the badge; an id this roster cannot resolve — a profile
   // still loading — is a name we don't have, not an empty chore.
   const staffName = useStaffNameLookup(profiles);
+  const roomName = useLocationName();
   const occurrences = useChoreOccurrences();
   const today = useToday();
   const dateStr = formatDateLocal(selectedDate);
@@ -124,6 +126,7 @@ export function ChoresTab() {
                 <ChoreCard
                   key={occurrence.key}
                   occurrence={occurrence}
+                  locationName={roomName(occurrence.task.location_id)}
                   locale="en"
                   today={today}
                   assigneeName={
@@ -140,6 +143,7 @@ export function ChoresTab() {
               <ChoreCard
                 key={occurrence.key}
                 occurrence={occurrence}
+                locationName={roomName(occurrence.task.location_id)}
                 locale="en"
                 today={today}
                 assigneeName={
@@ -164,6 +168,7 @@ export function ChoresTab() {
                 <ChoreCard
                   key={occurrence.key}
                   occurrence={occurrence}
+                  locationName={roomName(occurrence.task.location_id)}
                   locale="en"
                   today={today}
                   assigneeName={

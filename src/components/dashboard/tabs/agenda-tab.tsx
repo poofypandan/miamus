@@ -26,6 +26,7 @@ import { applyAgendaFilter, useAgendaFilter, type AgendaFilter } from "@/hooks/u
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { dayLabel } from "@/lib/date-label";
@@ -75,6 +76,7 @@ export function AgendaTab() {
   const brandNew = pets.length === 0 && householdTasks.length === 0;
   const { profiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(profiles);
+  const roomName = useLocationName();
   const chores = useChoreOccurrences();
   const today = useToday();
   const dateStr = formatDateLocal(selectedDate);
@@ -136,6 +138,7 @@ export function AgendaTab() {
       <ChoreTimelineRow
         key={entry.key}
         occurrence={entry.occurrence}
+        locationName={roomName(entry.occurrence.task.location_id)}
         assigneeName={
           entry.occurrence.task.assigned_to ? staffName(entry.occurrence.task.assigned_to) : null
         }

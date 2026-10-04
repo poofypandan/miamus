@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ChoreProofPhotos, hasChoreProof } from "@/components/chores/chore-proof-photos";
+import { LocationTag } from "@/components/chores/location-tag";
 import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
 import {
   categoryClass,
@@ -65,6 +66,7 @@ export function ChoreCard({
   occurrence,
   locale,
   assigneeName,
+  locationName,
   onPress,
   footer,
   action,
@@ -75,6 +77,8 @@ export function ChoreCard({
   locale: "en" | "id";
   /** Resolved by the caller, which owns the staff roster. */
   assigneeName?: string | null;
+  /** The chore's room (Phase 135), resolved by the caller likewise. */
+  locationName?: string | null;
   /** Makes the whole card tappable — the owner's way into the editor. */
   onPress?: () => void;
   footer?: ReactNode;
@@ -114,6 +118,9 @@ export function ChoreCard({
           >
             {task.title}
           </span>
+          {/* Where, straight under what (Phase 135) — kept on a finished
+              compact card too: it is how one chore is told from another. */}
+          {locationName && <LocationTag name={locationName} muted={done} className="mt-0.5" />}
           {task.notes && !(compact && done) && (
             <span className="mt-0.5 block text-xs text-muted-foreground">{task.notes}</span>
           )}

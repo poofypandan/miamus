@@ -21,6 +21,7 @@ import type {
   LogSubType,
   ChoreRecurrence,
   HouseholdTask,
+  HouseholdLocation,
   HouseholdTaskCategory,
   HouseholdTaskStatus,
 } from "@/types/database";
@@ -140,6 +141,8 @@ export interface CreateHouseholdTaskInput {
   recurrence_until?: string | null;
   /** The owner has to be there for this one. */
   requires_supervision?: boolean | null;
+  /** The room it is in (Phase 135), or null for none. */
+  location_id?: string | null;
 }
 
 /**
@@ -160,6 +163,7 @@ export interface UpdateHouseholdTaskInput {
   recurrence?: ChoreRecurrence | null;
   recurrence_until?: string | null;
   requires_supervision?: boolean | null;
+  location_id?: string | null;
 }
 
 /**
@@ -293,6 +297,13 @@ export interface DataProvider {
   /** Assigns an unassigned chore to a staff member. */
   claimHouseholdTask(id: string, staffId: string): Promise<HouseholdTask>;
   listStaffProfiles(): Promise<StaffProfile[]>;
+  /** The household's rooms, by name (Phase 135). */
+  listHouseholdLocations(): Promise<HouseholdLocation[]>;
+  /**
+   * Owner-only: adds a room. A name the household already has (in any case)
+   * returns that room instead of failing, so "Create" never makes a twin.
+   */
+  createHouseholdLocation(name: string): Promise<HouseholdLocation>;
   /**
    * Owner-only: finished pet routines and chores per staff member between
    * two instants (`from` inclusive, `to` exclusive), most first. The server

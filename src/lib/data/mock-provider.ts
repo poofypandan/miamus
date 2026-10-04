@@ -9,6 +9,7 @@ import type {
   InventoryAuditWithStaff,
   StaffProfile,
   HouseholdTask,
+  HouseholdLocation,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
@@ -30,6 +31,7 @@ interface MockDB {
   /** Mock-only: PINs are hashed in the real database (migrations/095). */
   staffPins?: Record<string, string | null>;
   householdTasks: HouseholdTask[];
+  householdLocations: HouseholdLocation[];
 }
 
 function freshDB(): MockDB {
@@ -44,6 +46,7 @@ function freshDB(): MockDB {
     inventoryAudits: [],
     staffProfiles: [],
     householdTasks: [],
+    householdLocations: [],
   };
 }
 
@@ -64,6 +67,7 @@ function loadDB(): MockDB {
         inventoryAudits: parsed.inventoryAudits ?? [],
         staffProfiles: parsed.staffProfiles ?? [],
         householdTasks: parsed.householdTasks ?? [],
+        householdLocations: parsed.householdLocations ?? [],
       };
     }
   } catch {
@@ -541,6 +545,7 @@ export const mockProvider: DataProvider = {
       recurrence_until: input.recurrence_until ?? null,
       parent_task_id: null,
       requires_supervision: input.requires_supervision ?? false,
+      location_id: input.location_id ?? null,
       before_photo_url: null,
       after_photo_url: null,
     };
@@ -618,6 +623,32 @@ export const mockProvider: DataProvider = {
   },
   async listStaffProfiles() {
     return delay(loadDB().staffProfiles);
+  },
+  async listHouseholdLocations() {
+    const household = getActiveHouseholdId();
+    return delay(
+      loadDB()
+        .householdLocations.filter((room) => room.household_id === household)
+        .sort((a, b) => a.name.localeCompare(b.name))
+    );
+  },
+  async createHouseholdLocation(name) {
+    const db = loadDB();
+    const household = getActiveHouseholdId();
+    const key = name.trim().toLowerCase();
+    const existing = db.householdLocations.find(
+      (room) => room.household_id === household && room.name.trim().toLowerCase() === key
+    );
+    if (existing) return delay(existing);
+    const room: HouseholdLocation = {
+      id: uid("room"),
+      household_id: household,
+      name: name.trim(),
+      created_at: new Date().toISOString(),
+    };
+    db.householdLocations.push(room);
+    saveDB(db);
+    return delay(room);
   },
   async createStaffProfile(name) {
     const db = loadDB();

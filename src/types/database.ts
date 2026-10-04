@@ -307,6 +307,18 @@ export type HouseholdTask = {
   requires_supervision?: boolean | null;
   before_photo_url?: string | null;
   after_photo_url?: string | null;
+  // --- Phase 135 (migrations/105). The room this chore is in, or null. A
+  // materialised occurrence carries its template's.
+  location_id?: string | null;
+};
+
+// A room or area of the house a chore can be tagged with (Phase 135,
+// migrations/105). Per household; owners add them, everyone reads them.
+export type HouseholdLocation = {
+  id: string;
+  household_id: string;
+  name: string;
+  created_at: string;
 };
 
 // A staff-submitted request for a new routine, awaiting the owner's decision.
@@ -421,6 +433,12 @@ export interface Database {
         Row: HouseholdTask;
         Insert: Partial<HouseholdTask> & Pick<HouseholdTask, "title">;
         Update: Partial<HouseholdTask>;
+        Relationships: [];
+      };
+      household_locations: {
+        Row: HouseholdLocation;
+        Insert: Partial<HouseholdLocation> & Pick<HouseholdLocation, "household_id" | "name">;
+        Update: Partial<HouseholdLocation>;
         Relationships: [];
       };
       households: {

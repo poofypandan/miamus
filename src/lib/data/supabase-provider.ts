@@ -566,6 +566,7 @@ export const supabaseProvider: DataProvider = {
         due_date: date,
         due_time: template.due_time,
         requires_supervision: template.requires_supervision ?? false,
+        location_id: template.location_id ?? null,
         // The occurrence is a one-off: the repeat belongs to the template, and
         // copying it here would make every completed Tuesday a template of its
         // own, each generating its own infinite series.
@@ -607,6 +608,7 @@ export const supabaseProvider: DataProvider = {
         recurrence: input.recurrence ?? "none",
         recurrence_until: input.recurrence_until ?? null,
         requires_supervision: input.requires_supervision ?? false,
+        location_id: input.location_id ?? null,
       })
       .select()
       .single();
@@ -689,6 +691,37 @@ export const supabaseProvider: DataProvider = {
       .order("name");
     if (error) throw error;
     return data;
+  },
+  async listHouseholdLocations() {
+    const { data, error } = await client()
+      .from("household_locations")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .order("name");
+    if (error) throw error;
+    return data;
+  },
+  async createHouseholdLocation(name) {
+    const household_id = getActiveHouseholdId();
+    const { data, error } = await client()
+      .from("household_locations")
+      .insert({ household_id, name })
+      .select()
+      .single();
+    if (!error) return data;
+    // 23505: the case-insensitive name index (migrations/105) — the room
+    // exists already, perhaps added from another phone. Use it.
+    if (error.code === "23505") {
+      const { data: rooms, error: readError } = await client()
+        .from("household_locations")
+        .select("*")
+        .eq("household_id", household_id);
+      if (readError) throw readError;
+      const key = name.trim().toLowerCase();
+      const existing = rooms.find((room) => room.name.trim().toLowerCase() === key);
+      if (existing) return existing;
+    }
+    throw error;
   },
   async createStaffProfile(name) {
     const { data, error } = await client()

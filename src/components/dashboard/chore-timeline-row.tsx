@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, Eye, Repeat } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, MapPin, Repeat } from "lucide-react";
 import { ChoreReviewLightbox, choreProofShots } from "@/components/chores/chore-proof-photos";
 import { photoSrc } from "@/lib/photos";
 import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
@@ -32,10 +32,13 @@ import { cn } from "@/lib/utils";
 export function ChoreTimelineRow({
   occurrence,
   assigneeName,
+  locationName,
   onPress,
 }: {
   occurrence: ChoreOccurrence;
   assigneeName?: string | null;
+  /** The chore's room (Phase 135), or none. */
+  locationName?: string | null;
   onPress: () => void;
 }) {
   const { task, status, overdue } = occurrence;
@@ -103,6 +106,17 @@ export function ChoreTimelineRow({
           {task.title}
         </span>
         <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+          {/* The room leads the line (Phase 135): on a row this tight it is
+              the one detail the title no longer carries. */}
+          {locationName && (
+            <>
+              <MapPin className={cn("size-3 shrink-0", !done && "text-amber-700")} />
+              <span className={cn("truncate font-medium", !done && "text-amber-800")}>
+                {locationName}
+              </span>
+              <span aria-hidden>·</span>
+            </>
+          )}
           {assigneeName ?? "Anyone"}
           {repeats && <Repeat className="size-3 shrink-0" />}
           {supervised && <Eye className="size-3 shrink-0 text-amber-700" />}

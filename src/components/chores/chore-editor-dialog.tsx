@@ -25,6 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { useHouseholdLocations } from "@/hooks/use-household-locations";
+import { LocationCombobox } from "@/components/chores/location-combobox";
 import { dayKeyLabel } from "@/lib/date-label";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import {
@@ -37,7 +39,12 @@ import {
   categoryIcon,
   categoryLabel,
 } from "@/lib/household-tasks";
-import type { ChoreRecurrence, HouseholdTask, HouseholdTaskCategory } from "@/types/database";
+import type {
+  ChoreRecurrence,
+  HouseholdLocation,
+  HouseholdTask,
+  HouseholdTaskCategory,
+} from "@/types/database";
 
 // Radix rejects an empty SelectItem value, so "nobody in particular" needs a
 // real sentinel. It never reaches the database — save() maps it back to the
@@ -88,9 +95,11 @@ export function ChoreEditorDialog({
     updateHouseholdTaskStatus,
   } = useHousehold();
   const { profiles } = useStaffProfiles();
+  const { locations } = useHouseholdLocations();
   const editing = !!task;
 
   const [title, setTitle] = useState("");
+  const [location, setLocation] = useState<HouseholdLocation | null>(null);
   const [category, setCategory] = useState<HouseholdTaskCategory>("cleaning");
   const [assignee, setAssignee] = useState<string>(UNASSIGNED);
   const [date, setDate] = useState(defaultDate);
@@ -112,6 +121,8 @@ export function ChoreEditorDialog({
     setConfirmDelete(false);
     if (task) {
       setTitle(task.title);
+      // A room that has since been deleted reads as none, and saves as none.
+      setLocation(locations?.find((room) => room.id === task.location_id) ?? null);
       setCategory(task.category);
       setAssignee(task.assigned_to ?? UNASSIGNED);
       setDate(task.due_date);
@@ -122,6 +133,7 @@ export function ChoreEditorDialog({
       setSupervision(!!task.requires_supervision);
     } else {
       setTitle("");
+      setLocation(null);
       setCategory("cleaning");
       setAssignee(UNASSIGNED);
       setDate(defaultDate);
@@ -131,6 +143,9 @@ export function ChoreEditorDialog({
       setUntil("");
       setSupervision(false);
     }
+    // `locations` deliberately not a dependency: a background refresh of the
+    // room list must not reset a form the owner is halfway through.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task, defaultDate]);
 
   const untilBeforeStart = !!until && until < date;
@@ -160,6 +175,7 @@ export function ChoreEditorDialog({
         // quietly cap the repeat if it were ever turned back on.
         recurrence_until: recurrence === "none" ? null : until || null,
         requires_supervision: supervision,
+        location_id: location?.id ?? null,
       };
       if (task) {
         await updateHouseholdTask(task.id, fields);
@@ -278,6 +294,12 @@ export function ChoreEditorDialog({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Mop the terrace"
             />
+          </div>
+
+          {/* Right under the title, which it used to be typed into (Phase 135). */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Location (optional)</Label>
+            <LocationCombobox value={location} onChange={setLocation} />
           </div>
 
           <div className="flex flex-col gap-1.5">

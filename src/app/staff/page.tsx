@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { useLocationName } from "@/hooks/use-household-locations";
 import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -247,6 +248,7 @@ function TasksView() {
   // chore assigned to anyone but itself.
   const { profiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(profiles, "Petugas");
+  const roomName = useLocationName();
 
   // A week at a time, from the selected day (Phase 115).
   function shiftWeek(weeks: -1 | 1) {
@@ -262,6 +264,7 @@ function TasksView() {
       <ChoreCard
         key={entry.key}
         occurrence={entry.occurrence}
+        locationName={roomName(entry.occurrence.task.location_id)}
         // Someone else's name only when it is someone else's chore — which a
         // staff phone never sees, but an owner here does. Left out, the card
         // says "Untuk Kamu".
