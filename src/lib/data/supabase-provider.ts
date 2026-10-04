@@ -7,6 +7,7 @@ import type {
   InventoryItem,
 } from "@/types/database";
 import type { DataProvider } from "./types";
+import { rolloverFloorFor } from "@/lib/chore-recurrence";
 
 function client() {
   if (!supabase) throw new Error("Supabase client is not configured");
@@ -443,8 +444,14 @@ export const supabaseProvider: DataProvider = {
     const household = getActiveHouseholdId();
     const base = () =>
       client().from("household_tasks").select("*").eq("household_id", household);
+    // Today on screen means the rollover applies — and a repeat's missed day
+    // (Phase 126) can be up to a month back, so that is how far the repeat
+    // reads below have to reach.
+    const showsToday = from <= today && today <= to;
+    const rolloverFloor = rolloverFloorFor(today);
+    const repeatsFrom = showsToday && rolloverFloor < from ? rolloverFloor : from;
 
-    const [onDay, templates, carriedOver] = await Promise.all([
+    const [onDay, templates, carriedOver, recentOccurrences] = await Promise.all([
       // 1. Rows that belong to these days outright: one-offs, a template's own
       //    first occurrence, and any occurrence already claimed or finished.
       base()
@@ -460,26 +467,40 @@ export const supabaseProvider: DataProvider = {
       //    and either open-ended or still running on the first. Whether one
       //    actually lands on a given day is a question for occursOn, not for
       //    Postgres.
+      //    With today on screen this also takes repeats that ended within the
+      //    last month: one may still owe its final, missed day.
       base()
         .neq("recurrence", "none")
         .lte("due_date", to)
-        .or(`recurrence_until.is.null,recurrence_until.gte.${from}`),
+        .or(`recurrence_until.is.null,recurrence_until.gte.${repeatsFrom}`),
 
       // 3. The rollover: anything still pending from before today, however
       //    old (Phase 113 removed the 30-day floor), and only when today is
       //    on screen — browsing an earlier day should show that day, not
       //    everything since. The cap is a backstop against a household that
       //    has stopped closing chores, not a cut-off anyone should meet.
-      from <= today && today <= to
+      showsToday
         ? base()
             .eq("status", "pending")
             .lt("due_date", today)
             .order("due_date", { ascending: true })
             .limit(200)
         : Promise.resolve({ data: [] as HouseholdTask[], error: null }),
+
+      // 4. The last month's written occurrences of repeats, whatever their
+      //    status (Phase 126). Not shown for themselves: they are how
+      //    expandChores knows a repeat's previous day was done or called off,
+      //    rather than missed — without them every repeat finished last
+      //    Saturday would come back on Sunday as overdue.
+      showsToday
+        ? base()
+            .not("parent_task_id", "is", null)
+            .gte("due_date", rolloverFloor)
+            .lt("due_date", today)
+        : Promise.resolve({ data: [] as HouseholdTask[], error: null }),
     ]);
 
-    for (const result of [onDay, templates, carriedOver]) {
+    for (const result of [onDay, templates, carriedOver, recentOccurrences]) {
       if (result.error) throw result.error;
     }
 
@@ -491,6 +512,7 @@ export const supabaseProvider: DataProvider = {
       ...(onDay.data ?? []),
       ...(templates.data ?? []),
       ...(carriedOver.data ?? []),
+      ...(recentOccurrences.data ?? []),
     ]) {
       byId.set(row.id, row);
     }

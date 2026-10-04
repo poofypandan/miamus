@@ -80,6 +80,43 @@ export function occursOn(task: HouseholdTask, dateStr: string): boolean {
   return target.getDate() === Math.min(anchorDay, lastDayOfTargetMonth);
 }
 
+/** The longest gap a repeat can leave between two of its days (monthly). */
+export const LONGEST_REPEAT_GAP_DAYS = 31;
+
+/**
+ * How far back a repeat's missed day can be: what the providers must read
+ * for expandChores to tell a missed day from a finished one.
+ */
+export function rolloverFloorFor(today: string): string {
+  const floor = parseDayKey(today);
+  floor.setDate(floor.getDate() - LONGEST_REPEAT_GAP_DAYS);
+  return dayKey(floor);
+}
+
+function dayKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * The last day before `beforeDate` on which a repeat falls, within its run —
+ * or null if it had not started yet (Phase 126). Looks back at most
+ * LONGEST_REPEAT_GAP_DAYS, which always reaches the previous occurrence of a
+ * daily, weekly or monthly chore.
+ */
+export function previousOccurrence(task: HouseholdTask, beforeDate: string): string | null {
+  const cursor = parseDayKey(beforeDate);
+  for (let i = 0; i < LONGEST_REPEAT_GAP_DAYS; i++) {
+    cursor.setDate(cursor.getDate() - 1);
+    const key = dayKey(cursor);
+    if (key < task.due_date) return null;
+    if (occursOn(task, key)) return key;
+  }
+  return null;
+}
+
 /**
  * One chore on one day — the unit both views render.
  *
@@ -160,7 +197,8 @@ function toOccurrence(
  * the "carried over from" label reads and what keeps repeats generating from
  * the right day. Only one-offs and claimed occurrences roll over — an
  * unclaimed repeating chore comes back on its own and would otherwise appear
- * twice.
+ * twice — except a repeat's most recent missed day, which is carried over
+ * until its next occurrence falls due (Phase 126; see below).
  */
 export function expandChores(params: {
   rows: HouseholdTask[];
@@ -235,6 +273,45 @@ export function expandChores(params: {
       // edited through its template, exactly as on its own day.
       const template = (row.parent_task_id && byId.get(row.parent_task_id)) || row;
       push(toOccurrence(row, template, row.due_date, today));
+    }
+
+    // A repeat's missed day (Phase 126). Nothing above catches it when nobody
+    // ever claimed it: it has no row, so nothing is "pending" to roll over —
+    // and the old reasoning, that a repeat simply comes back on its own, only
+    // holds for a daily one. A weekly chore missed on Saturday vanished until
+    // the next Saturday.
+    //
+    // The rule: a missed occurrence stays owed until the repeat's next one
+    // falls due. So it carries over only while today is not itself one of
+    // the repeat's days — a daily chore is never shown twice, a weekly one
+    // is owed from Sunday to Friday — and only the most recent miss counts:
+    // an older one was superseded by the occurrence after it.
+    for (const row of rows) {
+      if (!isTemplate(row) || row.status === "cancelled") continue;
+      if (occursOn(row, today)) continue;
+      const missed = previousOccurrence(row, today);
+      if (!missed) continue;
+
+      // That day's state: the template itself on its first day, otherwise a
+      // materialised row, if anyone ever touched it.
+      if (missed === row.due_date) {
+        if (row.status === "pending") push(toOccurrence(row, row, missed, today));
+        continue;
+      }
+      const written = rows.find((r) => r.parent_task_id === row.id && r.due_date === missed);
+      // Done or called off; or pending, and already carried over as itself by
+      // the loop above.
+      if (written) continue;
+      push({
+        key: `${row.id}|${missed}`,
+        task: row,
+        template: row,
+        row: null,
+        date: missed,
+        virtual: true,
+        status: "pending",
+        overdue: true,
+      });
     }
   }
 

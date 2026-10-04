@@ -101,3 +101,27 @@ export function groupByPhoto<T>(
 export function distinct<T>(values: T[]): T[] {
   return [...new Set(values)];
 }
+
+/**
+ * When a photo was taken, read from its storage key (Phase 126).
+ *
+ * Every upload is keyed `<household>/<folder>/<Date.now()>-<random>.<ext>`
+ * (supabase-provider's uploadPhoto), and PhotoPicker uploads the moment a
+ * photo is chosen — so that number is the capture time, to within the
+ * second or two compression takes, on the clock of the phone that took it.
+ * Nothing in the database records it separately, and nothing needs to: it is
+ * already part of every photo ever stored, back to the first one.
+ *
+ * Null for anything not shaped like that (a mock-mode blob URL, a key from
+ * some future scheme), and for numbers outside any plausible date.
+ */
+export function photoTakenAt(url: string | null | undefined): Date | null {
+  if (!url) return null;
+  const path = parseStorageRef(url)?.path ?? url;
+  const match = /(?:^|\/)(\d{13})-[a-z0-9]+\.[a-z0-9]+$/i.exec(path);
+  if (!match) return null;
+  const ms = Number(match[1]);
+  // 2020-01-01 .. 2100-01-01: a 13-digit number outside that is not a time.
+  if (ms < 1577836800000 || ms > 4102444800000) return null;
+  return new Date(ms);
+}

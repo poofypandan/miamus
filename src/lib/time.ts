@@ -15,3 +15,21 @@ export function formatTime12h(value: string | Date): string {
   d.setHours(h, m || 0, 0, 0);
   return TIME_FORMATTER.format(d);
 }
+
+/**
+ * A span of work as people say it (Phase 126): "under a minute", "25 min",
+ * "1 h 5 min" — or in Bahasa Indonesia, "kurang dari 1 mnt", "25 mnt",
+ * "1 j 5 mnt". Null for a negative span (clocks disagreeing), which would
+ * only mislead.
+ */
+export function formatDuration(ms: number, lang: "en" | "id" = "en"): string | null {
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 1) return lang === "id" ? "kurang dari 1 mnt" : "under a minute";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const min = lang === "id" ? "mnt" : "min";
+  const hr = lang === "id" ? "j" : "h";
+  if (h === 0) return `${m} ${min}`;
+  return m === 0 ? `${h} ${hr}` : `${h} ${hr} ${m} ${min}`;
+}

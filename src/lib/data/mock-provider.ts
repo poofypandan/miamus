@@ -13,6 +13,7 @@ import type {
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
+import { rolloverFloorFor } from "@/lib/chore-recurrence";
 
 const STORAGE_KEY = "maimus_mock_db_v1";
 
@@ -438,22 +439,30 @@ export const mockProvider: DataProvider = {
     // mock mode expands the same rows into the same occurrences: this day's
     // rows, every repeat that could reach it, and — on today only — whatever
     // is still pending from before it (the rollover).
+    // Plus, on today, the reads Phase 126 added: repeats that ended within
+    // the last month, and the last month's written occurrences of repeats.
+    const showsToday = from <= today && today <= to;
+    const rolloverFloor = rolloverFloorFor(today);
+    const repeatsFrom = showsToday && rolloverFloor < from ? rolloverFloor : from;
     const tasks = loadDB().householdTasks.filter((task) => {
       if (task.due_date >= from && task.due_date <= to) return true;
       const repeats = !!task.recurrence && task.recurrence !== "none";
       if (
         repeats &&
         task.due_date <= to &&
-        (!task.recurrence_until || task.recurrence_until >= from)
+        (!task.recurrence_until || task.recurrence_until >= repeatsFrom)
       ) {
         return true;
       }
-      return (
-        from <= today &&
-        today <= to &&
-        task.status === "pending" &&
+      if (
+        showsToday &&
+        task.parent_task_id &&
+        task.due_date >= rolloverFloor &&
         task.due_date < today
-      );
+      ) {
+        return true;
+      }
+      return showsToday && task.status === "pending" && task.due_date < today;
     });
     return delay(
       [...tasks].sort((a, b) => {
