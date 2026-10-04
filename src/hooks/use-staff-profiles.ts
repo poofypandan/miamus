@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { dataProvider } from "@/lib/data";
+import { useTransitionHold } from "@/lib/tab-transition";
+import { getActiveHouseholdId } from "@/lib/tenant";
 import type { StaffProfile } from "@/types/database";
+
+/**
+ * The last roster loaded, per household — keyed so a device that changes
+ * household can never seed one household's names into another's screens.
+ * Memory only: it lasts the page session, and a launch starts empty.
+ */
+const rosterCache = new Map<string, StaffProfile[]>();
 
 /**
  * The staff roster, loaded on demand rather than in HouseholdContext: it is
@@ -14,12 +23,24 @@ import type { StaffProfile } from "@/types/database";
  * from "nobody".
  */
 export function useStaffProfiles() {
-  const [profiles, setProfiles] = useState<StaffProfile[] | null>(null);
+  // Seeded from the last roster this household loaded (Phase 124), so a tab
+  // that mounts again — the Chores tab, every switch — shows names on its
+  // first render instead of "Staff" for a network round trip. Still fetched
+  // fresh on every mount; the cache only fills the wait.
+  const [profiles, setProfiles] = useState<StaffProfile[] | null>(
+    () => rosterCache.get(getActiveHouseholdId()) ?? null
+  );
   const [failed, setFailed] = useState(false);
+
+  // With nothing cached, names resolve when the fetch lands; a tab cover
+  // stays up for it rather than lifting onto "Staff" and swapping to "Ari".
+  useTransitionHold(profiles === null && !failed);
 
   const reload = useCallback(async () => {
     try {
-      setProfiles(await dataProvider.listStaffProfiles());
+      const fresh = await dataProvider.listStaffProfiles();
+      rosterCache.set(getActiveHouseholdId(), fresh);
+      setProfiles(fresh);
       setFailed(false);
     } catch (err) {
       console.error(err);

@@ -67,7 +67,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             A flex column all the way down, so the swipe carousel can grow to
             the tab bar: the empty space under a short panel is still somewhere
             a swipe can start (Phase 83E). */}
-          <main className="relative flex flex-1 flex-col overflow-x-hidden pt-3">{children}</main>
+          {/* data-transition-root: what a tab cover watches for late changes
+            (Phase 124) — the tab, and none of the chrome around it. */}
+          <main
+            data-transition-root
+            className="relative flex flex-1 flex-col overflow-x-hidden pt-3"
+          >
+            {children}
+          </main>
         </PullToRefresh>
 
         {/* The cover over a tab switch (Phase 122). Outside PullToRefresh,

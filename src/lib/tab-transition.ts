@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 /**
  * The cover drawn over a tab switch (Phase 122; timing rebuilt in 123).
@@ -6,13 +6,13 @@ import { useSyncExternalStore } from "react";
  *   tap      → "covering": the overlay appears at full opacity, no fade in.
  *   2 frames → the overlay has painted; only now does the URL change, so the
  *              new tab renders behind it, and the page goes back to the top.
- *   stable   → "revealing": the overlay fades out (opacity, 200ms).
- *   +200ms   → "idle": the overlay unmounts.
+ *   settled  → "idle" at once when nothing changed after the tab rendered,
+ *              or "revealing" (opacity, 200ms) then "idle" when something
+ *              did — see the Phase 124 notes below.
  *
- * "Stable" replaced Phase 122's fixed 260ms, which lifted the cover while a
- * busy tab was still settling — rows replacing skeletons, sections arriving
- * a render later. See waitForStableLayout: the cover now stays until the
- * page has actually stopped moving.
+ * Phase 122 lifted on a fixed 260ms; Phase 123 on a stable page height
+ * (waitForStableLayout, still what the launch cover uses); Phase 124 on DOM
+ * silence, which also sees text that changes in place.
  *
  * A module-level store rather than a context: the trigger lives in the tab
  * bar, the overlay in the layout, and neither needs a provider between them.
@@ -24,12 +24,11 @@ export type TabTransitionPhase = "idle" | "covering" | "revealing";
 /** Matches the overlay's duration-200. */
 export const COVER_FADE_MS = 200;
 
-/** Never lift a tab cover sooner than this, however quickly the tab settles. */
-const TAB_MIN_HOLD_MS = 450;
-/** Never hold one longer than this, whatever is still moving underneath. */
-const TAB_MAX_HOLD_MS = 1500;
 
 /**
+ * The launch cover's settle check (Phase 123). Tab switches use the
+ * MutationObserver below instead.
+ *
  * Resolves once the page has stopped changing shape — or at `maxMs`, so a
  * page that never settles (a live clock, an endless animation) cannot hold a
  * cover up forever.
@@ -84,9 +83,68 @@ function setPhase(next: TabTransitionPhase) {
   listeners.forEach((listener) => listener());
 }
 
+// --- Phase 124: lifting on DOM silence, not on height --------------------------
+//
+// Phase 123 watched the page's height, which cannot see a change that keeps
+// it: an assignee badge going from "Staff" to "Ari" is the same size, and it
+// happened after the cover had lifted. Now a MutationObserver watches the
+// tab's content for any added, removed or rewritten node:
+//
+//   commit  → the tab has rendered (the page reports it, see
+//             notifyTabCommitted); the swap's own mutations are discarded.
+//   fast path → nothing changes for FAST_PATH_FRAMES frames: a tab drawn
+//             entirely from data already held. The cover goes at once, no
+//             fade — anything slower would only be a delay.
+//   debounce  → something did change: wait for SILENCE_MS without a single
+//             mutation, then fade.
+//   either way, never while a skeleton is on screen or a component holds the
+//             cover (useTransitionHold), and never past MAX_HOLD_MS.
+
+/** Mutation-free frames after the commit that count as "nothing to wait for". */
+const FAST_PATH_FRAMES = 2;
+/** Quiet needed after the last mutation before the cover starts to fade. */
+const SILENCE_MS = 100;
+/** The cover is never held longer than this, whatever is still happening. */
+const MAX_HOLD_MS = 1500;
+
+/** Components with a load in flight that would change the tab when it lands. */
+let holds = 0;
+
+/**
+ * Keeps a tab cover up while `active` — for a load whose result changes what
+ * is on screen without a skeleton in the meantime (useStaffProfiles: names
+ * resolving from a fallback). Releases on false or unmount.
+ */
+export function useTransitionHold(active: boolean): void {
+  useEffect(() => {
+    if (!active) return;
+    holds++;
+    return () => {
+      holds--;
+    };
+  }, [active]);
+}
+
+function busy(): boolean {
+  return holds > 0 || !!document.querySelector('[data-slot="skeleton"]');
+}
+
+let onCommit: (() => void) | null = null;
+
+/**
+ * Called by a page from a layout effect keyed on its tab (?module=, ?view=).
+ * Layout effects run inside React's commit, after the DOM is updated and
+ * before the MutationObserver's records are delivered — which is what lets
+ * the swap itself be told apart from whatever arrives after it.
+ */
+export function notifyTabCommitted(): void {
+  onCommit?.();
+}
+
 export function startTabTransition(navigate: () => void): void {
   const run = ++generation;
   const isCurrent = () => run === generation;
+  const startedAt = performance.now();
   setPhase("covering");
 
   // Two frames: the first is the one the overlay paints in, so the second
@@ -94,19 +152,68 @@ export function startTabTransition(navigate: () => void): void {
   // tab in the same frame as the cover, and the old view would hang on
   // screen, frozen, until that render finished.
   requestAnimationFrame(() =>
-    requestAnimationFrame(async () => {
+    requestAnimationFrame(() => {
       if (!isCurrent()) return;
+
+      // The tab's content: the layouts mark it. The header and the tab bar
+      // sit outside, so their own instant highlight changes are not counted.
+      const root = document.querySelector("[data-transition-root]") ?? document.body;
+      let committed = false;
+      let framesSinceCommit = 0;
+      let lastMutationAt: number | null = null;
+      const observer = new MutationObserver(() => {
+        if (committed) lastMutationAt = performance.now();
+      });
+      observer.observe(root, { childList: true, characterData: true, subtree: true });
+
+      onCommit = () => {
+        if (!isCurrent()) return;
+        // The swap from the old tab to the new one: expected, and discarded.
+        observer.takeRecords();
+        committed = true;
+        onCommit = null;
+      };
+
+      const finish = (fade: boolean) => {
+        observer.disconnect();
+        if (!isCurrent()) return;
+        onCommit = null;
+        if (!fade) {
+          setPhase("idle");
+          return;
+        }
+        setPhase("revealing");
+        setTimeout(() => {
+          if (isCurrent()) setPhase("idle");
+        }, COVER_FADE_MS);
+      };
+
       navigate();
       // Under the cover, so nobody sees it: the last tab's scroll position
       // means nothing on this one.
       window.scrollTo({ top: 0, behavior: "instant" });
 
-      await waitForStableLayout({ minMs: TAB_MIN_HOLD_MS, maxMs: TAB_MAX_HOLD_MS, isCurrent });
-      if (!isCurrent()) return;
-      setPhase("revealing");
-      setTimeout(() => {
-        if (isCurrent()) setPhase("idle");
-      }, COVER_FADE_MS);
+      const tick = () => {
+        if (!isCurrent()) {
+          observer.disconnect();
+          return;
+        }
+        const now = performance.now();
+        if (now - startedAt >= MAX_HOLD_MS) return finish(true);
+        if (committed) {
+          framesSinceCommit++;
+          if (!busy()) {
+            if (lastMutationAt === null && framesSinceCommit >= FAST_PATH_FRAMES) {
+              return finish(false);
+            }
+            if (lastMutationAt !== null && now - lastMutationAt >= SILENCE_MS) {
+              return finish(true);
+            }
+          }
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
     })
   );
 }

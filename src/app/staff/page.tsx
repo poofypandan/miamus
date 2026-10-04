@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import { useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
@@ -38,7 +38,7 @@ import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { pushInPlace } from "@/lib/in-place-navigation";
-import { startTabTransition } from "@/lib/tab-transition";
+import { notifyTabCommitted, startTabTransition } from "@/lib/tab-transition";
 import { LaunchCover, TabTransitionOverlay } from "@/components/brand/brand-cover";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +81,10 @@ function StaffTasks() {
   // the URL as soon as it agrees, as the owner's tab bar does.
   const [tappedView, setTappedView] = useState<StaffView | null>(null);
   useEffect(() => setTappedView(null), [view]);
+  // The new view is on the page — see notifyTabCommitted (Phase 124).
+  useLayoutEffect(() => {
+    notifyTabCommitted();
+  }, [view]);
 
   // A history push, so the phone's Back button returns to the other view, as
   // it does for the owner's tabs — but in place rather than through the
@@ -137,7 +141,8 @@ function StaffTasks() {
       {/* Silent, because the pull's own spinner is the feedback — swapping the
           list for skeletons mid-gesture would be worse than no feedback. */}
       <PullToRefresh onRefresh={() => refresh({ silent: true })}>
-        <div className="flex flex-col gap-4 px-4 pt-3">
+        {/* What a tab cover watches for late changes (Phase 124). */}
+        <div data-transition-root className="flex flex-col gap-4 px-4 pt-3">
           {view === "tugas" ? <TasksView /> : <StockCheckPanel />}
         </div>
       </PullToRefresh>

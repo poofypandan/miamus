@@ -2,7 +2,6 @@
 
 import { BrandMark } from "@/components/brand/brand-mark";
 import { RUMAH } from "@/components/staff/staff-splash";
-import { useHouseholdName } from "@/hooks/use-household-name";
 import { cn } from "@/lib/utils";
 
 /**
@@ -40,13 +39,17 @@ export function MiamusMark() {
   );
 }
 
-/** The household's name over the RUMAH house rules — the old landing page. */
+/**
+ * The RUMAH house rules, and nothing else (Phase 124).
+ *
+ * The household's name used to sit above them. It is in the app header
+ * already, and fetching it made this the one cover that changed while it was
+ * up ("Miamus", then the real name). Static now: the same pixels every time,
+ * from the first server-rendered frame.
+ */
 export function RumahRules({ className }: { className?: string }) {
-  // The household this phone was invited to, or "Miamus" before it is bound.
-  const householdName = useHouseholdName();
   return (
-    <div className={cn("flex flex-col items-center gap-8 text-center select-none", className)}>
-      <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{householdName}</h1>
+    <div className={cn("flex flex-col items-center text-center select-none", className)}>
       <div className="flex w-fit flex-col items-start space-y-2 text-left text-base">
         {RUMAH.map((r) => (
           <div key={r.letter}>

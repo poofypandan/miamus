@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useLayoutEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { AgendaTab } from "@/components/dashboard/tabs/agenda-tab";
 import { ChoresTab } from "@/components/dashboard/tabs/chores-tab";
@@ -10,6 +10,7 @@ import { StaffTab } from "@/components/dashboard/tabs/staff-tab";
 import { PetProfileSheet } from "@/components/dashboard/pet-profile-sheet";
 import { OwnerLoadingScreen } from "@/components/brand/loading-screens";
 import { useRequireOwner } from "@/hooks/use-require-owner";
+import { notifyTabCommitted } from "@/lib/tab-transition";
 import { moduleFromParam, type DashboardModule } from "@/lib/dashboard-modules";
 
 export default function DashboardPage() {
@@ -39,6 +40,12 @@ function DashboardCanvas() {
   // is the second line that stops a half-resolved role rendering owner
   // controls for a moment.
   const isOwner = useRequireOwner();
+  // Tells a tab cover the new tab is on the page (Phase 124) — a layout
+  // effect, so it runs inside the commit, before the observer's records of
+  // the swap are delivered and can be mistaken for late changes.
+  useLayoutEffect(() => {
+    notifyTabCommitted();
+  }, [activeModule]);
   // The branded loader, not a blank page, while the role resolves on a cold
   // start (Phase 121) — the same screen loading.tsx shows, so the two waits
   // read as one.
