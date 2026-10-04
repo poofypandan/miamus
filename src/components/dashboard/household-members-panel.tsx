@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Crown, Loader2, Mail, UserMinus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { createResource } from "@/lib/resource";
 import { supabase } from "@/lib/supabase/client";
 
 interface Member {
@@ -38,27 +39,20 @@ interface Member {
  *
  * Owner-facing, so entirely English per the Phase 46 language boundary.
  */
+// A Suspense resource (Phase 125, lib/resource): the Access tab switches in
+// with its member list already drawn, rather than a skeleton that becomes a
+// list a moment later.
+const useMembers = createResource(async () => {
+  if (!supabase) return [] as Member[];
+  const { data, error } = await supabase.rpc("list_household_members");
+  if (error) throw error;
+  return (data ?? []) as Member[];
+});
+
 export function HouseholdMembersPanel() {
-  const [members, setMembers] = useState<Member[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const { data: members, failed, reload: load } = useMembers();
   const [pending, setPending] = useState<Member | null>(null);
   const [removing, setRemoving] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!supabase) return;
-    const { data, error } = await supabase.rpc("list_household_members");
-    if (error) {
-      console.error("Could not load household members", error);
-      setFailed(true);
-      return;
-    }
-    setFailed(false);
-    setMembers((data ?? []) as Member[]);
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   async function confirmRemove() {
     if (!pending || !supabase) return;

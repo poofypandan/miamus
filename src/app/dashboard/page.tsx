@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useLayoutEffect } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AgendaTab } from "@/components/dashboard/tabs/agenda-tab";
 import { ChoresTab } from "@/components/dashboard/tabs/chores-tab";
@@ -10,7 +10,8 @@ import { StaffTab } from "@/components/dashboard/tabs/staff-tab";
 import { PetProfileSheet } from "@/components/dashboard/pet-profile-sheet";
 import { OwnerLoadingScreen } from "@/components/brand/loading-screens";
 import { useRequireOwner } from "@/hooks/use-require-owner";
-import { notifyTabCommitted } from "@/lib/tab-transition";
+import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
+import { Skeleton } from "@/components/ui/skeleton";
 import { moduleFromParam, type DashboardModule } from "@/lib/dashboard-modules";
 
 export default function DashboardPage() {
@@ -40,12 +41,7 @@ function DashboardCanvas() {
   // is the second line that stops a half-resolved role rendering owner
   // controls for a moment.
   const isOwner = useRequireOwner();
-  // Tells a tab cover the new tab is on the page (Phase 124) — a layout
-  // effect, so it runs inside the commit, before the observer's records of
-  // the swap are delivered and can be mistaken for late changes.
-  useLayoutEffect(() => {
-    notifyTabCommitted();
-  }, [activeModule]);
+  useScrollTopOnChange(activeModule);
   // The branded loader, not a blank page, while the role resolves on a cold
   // start (Phase 121) — the same screen loading.tsx shows, so the two waits
   // read as one.
@@ -53,12 +49,25 @@ function DashboardCanvas() {
 
   return (
     <>
-      {TABS[activeModule]}
+      {/* One boundary for every tab, never remounted: a tab that suspends on
+          its first read (lib/resource) during a switch leaves the previous
+          tab showing until it is complete (Phase 125). The fallback only
+          ever appears on a cold start, under the launch cover. */}
+      <Suspense fallback={<TabFallback />}>{TABS[activeModule]}</Suspense>
       {/* Mounted once, outside the tabs: a pet profile can be opened from the
           Agenda's summary card and from the Pets tab, and it should survive
           switching between them. */}
       <PetProfileSheet />
     </>
+  );
+}
+
+function TabFallback() {
+  return (
+    <div className="flex flex-col gap-3 px-4">
+      <Skeleton className="h-8 w-40 rounded-lg" />
+      <Skeleton className="h-40 w-full rounded-xl" />
+    </div>
   );
 }
 

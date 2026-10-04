@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
 import { CalendarDays, PawPrint, Plus, Sparkles } from "lucide-react";
@@ -27,7 +27,6 @@ import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
 import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
-import { startTabTransition } from "@/lib/tab-transition";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import {
   buildUnifiedAgenda,
@@ -94,12 +93,12 @@ export function AgendaTab() {
   );
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
 
-  // Same page, so in place — and a tab switch like any other, so behind the
-  // same cover as the tab bar's (Phases 121–122).
+  // Same page, so in place — and in a transition like the tab bar's, so
+  // Agenda stays up until Pets is ready to replace it (Phase 125).
   function switchToPets(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;
     event.preventDefault();
-    startTabTransition(() => pushInPlace(moduleHref("pets")));
+    startTransition(() => pushInPlace(moduleHref("pets")));
   }
 
   // A week at a time from whichever day is selected, so Day view lands on

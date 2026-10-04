@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import { useSearchParams } from "next/navigation";
 import { Stethoscope, UserRound } from "lucide-react";
@@ -37,13 +37,15 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
-import { pushInPlace } from "@/lib/in-place-navigation";
-import { notifyTabCommitted, startTabTransition } from "@/lib/tab-transition";
-import { LaunchCover, TabTransitionOverlay } from "@/components/brand/brand-cover";
+import { LaunchCover } from "@/components/brand/brand-cover";
+import { useHouseholdNameState } from "@/hooks/use-household-name";
+import { PendingBar } from "@/components/shared/pending-bar";
+import { useScrollTopOnChange, useTabNavigation } from "@/hooks/use-tab-navigation";
 import { cn } from "@/lib/utils";
 
 export default function StaffPage() {
   const { loading, tenantReady, roleHydrated } = useHousehold();
+  const { ready: nameReady } = useHouseholdNameState();
   return (
     <>
       <StaffLoginGate>
@@ -55,7 +57,10 @@ export default function StaffPage() {
       </StaffLoginGate>
       {/* The RUMAH cover over a cold start (Phase 123). Outside the gate, so
           it covers the gate's own first moments as well as the task list. */}
-      <LaunchCover variant="staff" ready={tenantReady && roleHydrated && !loading} />
+      <LaunchCover
+        variant="staff"
+        ready={tenantReady && roleHydrated && !loading && nameReady}
+      />
     </>
   );
 }
@@ -76,25 +81,15 @@ function StaffTasks() {
   const param = useSearchParams().get("view");
   const view: StaffView = VIEWS.includes(param as StaffView) ? (param as StaffView) : "tugas";
 
-  // The pill just tapped, lit in the same frame (Phase 122) — the list
-  // itself changes behind the cover a couple of frames later. Hands back to
-  // the URL as soon as it agrees, as the owner's tab bar does.
-  const [tappedView, setTappedView] = useState<StaffView | null>(null);
-  useEffect(() => setTappedView(null), [view]);
-  // The new view is on the page — see notifyTabCommitted (Phase 124).
-  useLayoutEffect(() => {
-    notifyTabCommitted();
-  }, [view]);
+  // The pill lights on the tap, the list follows when ready, the page
+  // returns to the top in that same commit — useTabNavigation (Phase 125).
+  const {
+    active: activeView,
+    navigate: setView,
+    isPending,
+  } = useTabNavigation<StaffView>(view, (next) => `/staff?view=${next}`);
+  useScrollTopOnChange(view);
 
-  // A history push, so the phone's Back button returns to the other view, as
-  // it does for the owner's tabs — but in place rather than through the
-  // router, so the pill and the list switch on the tap with no server round
-  // trip (Phase 121).
-  function setView(next: StaffView) {
-    if (next === view) return;
-    setTappedView(next);
-    startTabTransition(() => pushInPlace(`/staff?view=${next}`));
-  }
 
   useOfflineSync();
 
@@ -133,7 +128,7 @@ function StaffTasks() {
             { value: "tugas", label: "Tugas Hari Ini" },
             { value: "stok", label: "Stok", badge: dueCount > 0 ? dueCount : undefined },
           ]}
-          value={tappedView ?? view}
+          value={activeView}
           onChange={setView}
         />
       </AppHeader>
@@ -141,9 +136,12 @@ function StaffTasks() {
       {/* Silent, because the pull's own spinner is the feedback — swapping the
           list for skeletons mid-gesture would be worse than no feedback. */}
       <PullToRefresh onRefresh={() => refresh({ silent: true })}>
-        {/* What a tab cover watches for late changes (Phase 124). */}
-        <div data-transition-root className="flex flex-col gap-4 px-4 pt-3">
-          {view === "tugas" ? <TasksView /> : <StockCheckPanel />}
+        <div className="flex flex-col gap-4 px-4 pt-3">
+          {/* Never remounted, so a view that suspends on first read keeps the
+              other one on screen until it is complete (Phase 125). */}
+          <Suspense fallback={null}>
+            {view === "tugas" ? <TasksView /> : <StockCheckPanel />}
+          </Suspense>
         </div>
       </PullToRefresh>
 
@@ -153,9 +151,8 @@ function StaffTasks() {
           the page instead of floating over it. */}
       {view === "tugas" && <StaffActionsFab />}
 
-      {/* The RUMAH cover over a Tugas ↔ Stok switch (Phase 122). Outside
-          PullToRefresh for the same reason as the FAB. */}
-      <TabTransitionOverlay variant="staff" />
+      {/* A slow Tugas ↔ Stok switch's only sign (Phase 125). */}
+      <PendingBar active={isPending} />
     </div>
   );
 }

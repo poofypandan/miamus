@@ -300,3 +300,20 @@
     }
   }
 }
+
+/*
+ * The pending bar's travelling segment (Phase 125): a transform from off the
+ * left edge to off the right, on repeat.
+ */
+@theme inline {
+  --animate-pending-slide: pending-slide 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+
+  @keyframes pending-slide {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
+}

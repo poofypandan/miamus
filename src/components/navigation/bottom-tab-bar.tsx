@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -17,8 +16,9 @@ import {
   moduleHref,
   type DashboardModule,
 } from "@/lib/dashboard-modules";
-import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
-import { startTabTransition } from "@/lib/tab-transition";
+import { PendingBar } from "@/components/shared/pending-bar";
+import { useTabNavigation } from "@/hooks/use-tab-navigation";
+import { isPlainClick } from "@/lib/in-place-navigation";
 import { cn } from "@/lib/utils";
 
 const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
@@ -50,17 +50,18 @@ const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
 export function BottomTabBar() {
   const searchParams = useSearchParams();
   const routeModule = moduleFromParam(searchParams.get("module"));
-
-  // The tab just tapped, highlighted in the same frame as the tap (Phase 121).
-  // The URL is still the truth — this only covers the moment between the tap
-  // and React committing the new ?module=, which a heavy tab can stretch past
-  // a frame or two. It hands back the moment the URL agrees (or changes for
-  // any other reason, such as Back), so it cannot outlive the gap.
-  const [tapped, setTapped] = useState<DashboardModule | null>(null);
-  useEffect(() => setTapped(null), [routeModule]);
-  const activeModule = tapped ?? routeModule;
+  // The tapped tab lights at once; the content follows when it is ready —
+  // see useTabNavigation (Phase 125).
+  const {
+    active: activeModule,
+    navigate,
+    isPending,
+  } = useTabNavigation<DashboardModule>(routeModule, moduleHref);
 
   return (
+    <>
+    {/* A slow switch's only sign: the current tab stays on screen meanwhile. */}
+    <PendingBar active={isPending} />
     <nav
       aria-label="Sections"
       // pb-safe keeps the tabs clear of the iOS home indicator and Android's
@@ -78,16 +79,11 @@ export function BottomTabBar() {
               href={moduleHref(module)}
               scroll={false}
               // A real link for its href (long-press, open in new tab), but a
-              // plain tap switches in place: no server round trip, so the tab
-              // and its content change on the tap itself (Phase 121).
+              // plain tap switches in place, in a transition (Phase 125).
               onClick={(event) => {
                 if (!isPlainClick(event)) return;
                 event.preventDefault();
-                if (module === routeModule) return;
-                setTapped(module);
-                // Behind the branded cover (Phase 122): the highlight above
-                // changes now, the content once the cover has painted.
-                startTabTransition(() => pushInPlace(moduleHref(module)));
+                navigate(module);
               }}
               aria-current={active ? "page" : undefined}
               className={cn(
@@ -104,5 +100,6 @@ export function BottomTabBar() {
         })}
       </div>
     </nav>
+    </>
   );
 }

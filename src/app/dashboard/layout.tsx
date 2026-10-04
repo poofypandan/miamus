@@ -4,13 +4,14 @@ import { useEffect, type ReactNode } from "react";
 import { Suspense } from "react";
 import { TopNav } from "@/components/dashboard/top-nav";
 import { BottomTabBar } from "@/components/navigation/bottom-tab-bar";
-import { LaunchCover, TabTransitionOverlay } from "@/components/brand/brand-cover";
+import { LaunchCover } from "@/components/brand/brand-cover";
 import { OwnerAppLock } from "@/components/auth/owner-app-lock";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
+import { useHouseholdNameState } from "@/hooks/use-household-name";
 import { usePushResync } from "@/hooks/use-push-resync";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -28,6 +29,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useOfflineSync();
   usePushResync();
   const { refresh, loading, tenantReady, roleHydrated } = useHousehold();
+  const { ready: nameReady } = useHouseholdNameState();
 
   return (
     // Google sign-in is what got them to this route (see middleware); the
@@ -67,22 +69,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             A flex column all the way down, so the swipe carousel can grow to
             the tab bar: the empty space under a short panel is still somewhere
             a swipe can start (Phase 83E). */}
-          {/* data-transition-root: what a tab cover watches for late changes
-            (Phase 124) — the tab, and none of the chrome around it. */}
-          <main
-            data-transition-root
-            className="relative flex flex-1 flex-col overflow-x-hidden pt-3"
-          >
-            {children}
-          </main>
+          <main className="relative flex flex-1 flex-col overflow-x-hidden pt-3">{children}</main>
         </PullToRefresh>
 
-        {/* The cover over a tab switch (Phase 122). Outside PullToRefresh,
-          whose transform would trap a fixed overlay inside it. */}
-        <TabTransitionOverlay variant="owner" />
-        {/* Over a cold start, until the household's data is in and the page
-            has settled (Phase 123). */}
-        <LaunchCover variant="owner" ready={tenantReady && roleHydrated && !loading} />
+        {/* Over a cold start, until the household's data and its name are in
+            and the page has settled (Phases 123, 125) — so the header is never
+            seen swapping "Miamus" for the real name. */}
+        <LaunchCover
+          variant="owner"
+          ready={tenantReady && roleHydrated && !loading && nameReady}
+        />
 
         {/* Outside PullToRefresh on purpose — see BottomTabBar. It reads the
           active module via useSearchParams(), so it needs Suspense too. */}

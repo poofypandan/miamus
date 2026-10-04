@@ -1,15 +1,20 @@
 "use client";
 
 import { BrandMark } from "@/components/brand/brand-mark";
+import { hasLaunched } from "@/lib/launch-state";
 import { RUMAH } from "@/components/staff/staff-splash";
 import { cn } from "@/lib/utils";
 
 /**
- * What a screen shows while its route or its session is still resolving
- * (Phase 121): app/dashboard/loading.tsx and app/staff/loading.tsx, and the
- * gates that used to render nothing at all in the same moment. The same two
- * pictures cover a tab switch (TabTransitionOverlay, Phase 122), so every
- * wait in the app looks like the same one.
+ * The branded pictures (Phases 121–125): the circular Miamus mark and the
+ * RUMAH rules. Drawn by the launch cover (brand-cover.tsx), the "/" splash,
+ * and the two loaders below, which fill the gates' first moment while a
+ * session resolves.
+ *
+ * Launch only (Phase 125): once the launch cover has lifted, the loaders
+ * render nothing for the rest of the session. A gate that remounts later —
+ * an owner opening the staff view — resolves within a frame, and a logo
+ * there would be a flash of the splash in the middle of using the app.
  *
  * Animations are transform (the ring) and opacity (the fade-in, the pulse)
  * only, so they run on the compositor and cannot drop frames while the page
@@ -64,6 +69,7 @@ export function RumahRules({ className }: { className?: string }) {
 
 /** Owner-facing: the Miamus mark inside a spinning ring. */
 export function OwnerLoadingScreen() {
+  if (hasLaunched()) return null;
   return (
     <div
       role="status"
@@ -77,6 +83,7 @@ export function OwnerLoadingScreen() {
 
 /** Staff-facing: the RUMAH rules, breathing gently while the list loads. */
 export function StaffLoadingScreen() {
+  if (hasLaunched()) return null;
   return (
     <div
       role="status"
