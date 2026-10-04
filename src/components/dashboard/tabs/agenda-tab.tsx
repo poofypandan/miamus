@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { FilterPill } from "@/components/shared/filter-pill";
 import { AgendaWeekGrid } from "@/components/agenda/agenda-week-grid";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { WeekPager } from "@/components/agenda/week-pager";
@@ -21,7 +22,7 @@ import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { ChoreReviewLightbox, hasChoreProof } from "@/components/chores/chore-proof-photos";
 import { useHousehold } from "@/context/household-context";
 import { useAgendaRange } from "@/hooks/use-agenda-range";
-import { applyAgendaFilter, useAgendaFilter } from "@/hooks/use-agenda-filter";
+import { applyAgendaFilter, useAgendaFilter, type AgendaFilter } from "@/hooks/use-agenda-filter";
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
@@ -105,6 +106,7 @@ export function AgendaTab() {
   );
   const entries = useMemo(() => applyAgendaFilter(allEntries, filter), [allEntries, filter]);
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
+  const weekEntries = useMemo(() => week.flatMap((day) => day.entries), [week]);
   const filteredWeek = useMemo(
     () =>
       filter === "all"
@@ -160,31 +162,17 @@ export function AgendaTab() {
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
-      {/* Day | Week (Phase 112), and beside it what to show (Phase 132) —
-          one row, so filtering costs no height. */}
-      <div className="flex gap-2">
-        <SegmentedControl
-          ariaLabel="Agenda range"
-          className="w-2/5 shrink-0"
-          segments={[
-            { value: "day", label: "Day" },
-            { value: "week", label: "Week" },
-          ]}
-          value={range}
-          onChange={setRange}
-        />
-        <SegmentedControl
-          ariaLabel="Show"
-          className="min-w-0 flex-1"
-          segments={[
-            { value: "all", label: "All" },
-            { value: "pets", label: "Pets" },
-            { value: "chores", label: "Chores" },
-          ]}
-          value={filter}
-          onChange={setFilter}
-        />
-      </div>
+      {/* Day | Week (Phase 112): which view. What the view shows is the
+          filter row further down, with the list it narrows (Phase 134). */}
+      <SegmentedControl
+        ariaLabel="Agenda range"
+        segments={[
+          { value: "day", label: "Day" },
+          { value: "week", label: "Week" },
+        ]}
+        value={range}
+        onChange={setRange}
+      />
 
       {/* Everything under the toggle fades in afresh when the range changes
           or Today is tapped (Phase 115) — keyed, so it remounts: the ribbon
@@ -211,6 +199,16 @@ export function AgendaTab() {
         {range === "day" ? (
           <>
             <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
+            {/* Under the heading, as the Pets tab's photo filters sit under
+                theirs (Phase 134). Not on an empty day — unless a filter is
+                on, which must stay reachable to be turned off. */}
+            {(allEntries.length > 0 || filter !== "all") && (
+              <AgendaFilterPills
+                value={filter}
+                onChange={setFilter}
+                entries={allEntries}
+              />
+            )}
 
             {allEntries.length === 0 && brandNew ? (
               // The first screen a new household sees (Phase 120). A pet first:
@@ -302,6 +300,11 @@ export function AgendaTab() {
           <>
             {/* Sunday to Saturday, a week at a time, endlessly (Phase 115). */}
             <WeekPager date={selectedDate} locale="en" onShift={shiftWeek} />
+            <AgendaFilterPills
+              value={filter}
+              onChange={setFilter}
+              entries={weekEntries}
+            />
             {/* Keyed on the week, so a new one fades in rather than snapping. */}
             <div
               key={formatDateLocal(weekStartOf(selectedDate))}
@@ -345,6 +348,56 @@ export function AgendaTab() {
         task={editing}
         occurrenceDate={editingDate}
         defaultDate={dateStr}
+      />
+    </div>
+  );
+}
+
+/**
+ * All | Pets | Chores (Phases 132, 134) as filter pills with counts — the
+ * same control the Pets tab filters its photos with, in the same place: on
+ * the list, under its heading, rather than in the controls row at the top.
+ * Counts are of what the view holds unfiltered, so each pill says what
+ * tapping it will show.
+ */
+function AgendaFilterPills({
+  value,
+  onChange,
+  entries,
+}: {
+  value: AgendaFilter;
+  onChange: (next: AgendaFilter) => void;
+  entries: UnifiedAgendaEntry[];
+}) {
+  const pets = entries.filter((entry) => entry.kind === "routine").length;
+  return (
+    <div
+      role="group"
+      aria-label="Filter the agenda"
+      // As in PhotoStream: a sideways scroll of the pills must not drag the
+      // swipeable tab carousel underneath.
+      onPointerDownCapture={(e) => e.stopPropagation()}
+      className="-mt-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      <FilterPill
+        label="All"
+        count={entries.length}
+        active={value === "all"}
+        onClick={() => onChange("all")}
+      />
+      <FilterPill
+        label="Pets"
+        icon={PawPrint}
+        count={pets}
+        active={value === "pets"}
+        onClick={() => onChange("pets")}
+      />
+      <FilterPill
+        label="Chores"
+        icon={Sparkles}
+        count={entries.length - pets}
+        active={value === "chores"}
+        onClick={() => onChange("chores")}
       />
     </div>
   );

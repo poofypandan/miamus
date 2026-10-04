@@ -3,32 +3,40 @@
 import { useEffect, useState } from "react";
 import { MiamusMark, RumahRules } from "@/components/brand/loading-screens";
 import {
-  endRoleSwitch,
+  endNavigation,
   hasLaunched,
   markLaunched,
-  pendingRoleSwitch,
-  useRoleSwitch,
+  pendingNavigation,
+  usePendingNavigation,
   type CoverVariant,
 } from "@/lib/launch-state";
+import { waitForStableLayout } from "@/lib/stable-layout";
 import { cn } from "@/lib/utils";
 
 /**
- * The branded covers (Phases 122–132): the circular Miamus mark for owners,
- * the RUMAH rules for staff — over a cold start, and over a switch between
- * the owner and staff views (Phase 132), and nothing else.
+ * The branded covers: the circular Miamus mark for owners, the RUMAH rules
+ * for staff. Two of them:
  *
- * Phases 122–124 also drew these over every tab switch. Phase 125 took that
- * out: tab switches now run as React transitions that keep the current view
- * on screen until the next one is ready (hooks/use-tab-navigation), so there
- * is nothing left to hide. Once the launch cover has lifted, no branded
- * screen appears again in that page session — see hasLaunched().
+ *   LaunchCover      Over a cold start, at once, until the page is ready
+ *                    (Phases 123, 125).
+ *   NavigationCover  Over a navigation — a tab, or a switch between the
+ *                    owner and staff views — but only one that is genuinely
+ *                    slow (Phase 134). See SHOW_AFTER_MS.
+ *
+ * Phases 122–124 drew a cover over every tab switch, and a switch from cached
+ * data flashed a logo for a tenth of a second; Phase 125 took them out, and
+ * Phase 132 drew one over every role switch, fast or not. Phase 134's rule is
+ * the one in between: the current screen stays put while the next one loads
+ * (a React transition — hooks/use-tab-navigation — or Next's own for a route
+ * change), and the cover appears only if that is still going on after a
+ * beat. Whichever side the navigation is heading for picks the picture.
  *
  * THE LAYERS (keep this ladder in step):
  *   z-20  the staff "Lapor" button
  *   z-30  sticky header
- *   z-35  pending bar                     a slow tab switch's only sign
+ *   z-35  pending bar                     a switch's first sign
  *   z-40  bottom tab bar
- *   z-45  launch cover                    over everything, bars included
+ *   z-45  launch / navigation cover       over everything, bars included
  *   z-50  sheets, dialogs, toasts         opened deliberately, always on top
  */
 
@@ -42,34 +50,23 @@ const COVER_FADE_MS = 200;
  */
 const LAUNCH_MAX_WAIT_MS = 6000;
 
-/** Quiet frames in a row that count as "the page has settled". */
-const STABLE_FRAMES = 4;
+/**
+ * How long a navigation runs before it is covered (Phase 134). A cached tab
+ * commits and settles in a few frames, well inside this, and never shows a
+ * cover; React itself waits about as long before revealing a suspended
+ * boundary, for the same reason. The pending bar (from 150ms) is the sign in
+ * between.
+ */
+const SHOW_AFTER_MS = 400;
 
 /**
- * Resolves once the page has stopped changing shape — the document's height
- * unchanged for STABLE_FRAMES frames with no skeleton on screen — or at
- * `maxMs`, so a page that never settles cannot hold the cover up forever.
+ * Once up, the cover stays at least this long. A cover that appears and is
+ * gone 50ms later is exactly the flash this is here to prevent.
  */
-function waitForStableLayout(maxMs: number, isCurrent: () => boolean): Promise<void> {
-  const startedAt = performance.now();
-  return new Promise((resolve) => {
-    let lastHeight = -1;
-    let stableFrames = 0;
-    const tick = () => {
-      if (!isCurrent()) return resolve();
-      const height = document.documentElement.scrollHeight;
-      const settled = height === lastHeight && !document.querySelector('[data-slot="skeleton"]');
-      stableFrames = settled ? stableFrames + 1 : 0;
-      lastHeight = height;
-      if (stableFrames >= STABLE_FRAMES || performance.now() - startedAt >= maxMs) {
-        resolve();
-        return;
-      }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
-}
+const MIN_VISIBLE_MS = 500;
+
+/** A navigation that never lands — a failed request — is abandoned here. */
+const NAVIGATION_GIVE_UP_MS = 6000;
 
 /**
  * Over a cold start, bars and all.
@@ -80,22 +77,32 @@ function waitForStableLayout(maxMs: number, isCurrent: () => boolean): Promise<v
  * (Phase 125), so the header is never seen changing from "Miamus" to the
  * real name: by the time the cover goes, the name is already there.
  *
- * Fixed to the app column; appears at full opacity and fades out over 200ms,
- * opacity only, letting taps through while it does.
+ * Also where a role switch ends (Phases 132, 134): mounted by the
+ * destination view, it knows when that view is ready, and only then lets
+ * the switch go. Whether a cover is up meanwhile is NavigationCover's call.
  */
 export function LaunchCover({ variant, ready }: { variant: CoverVariant; ready: boolean }) {
-  // Covering on a cold start — and on arrival from a role switch into this
-  // view (Phase 132), taking over the cover the tap put up so the two are
-  // one unbroken screen. Any other mount after launch opens straight on the
-  // page.
   const [phase, setPhase] = useState<"covering" | "revealing" | "done">(() =>
-    !hasLaunched() || pendingRoleSwitch() === variant ? "covering" : "done"
+    hasLaunched() ? "done" : "covering"
   );
 
-  // The handoff: this cover is up now, so the switch's own can come down.
+  // The role switch this view is the destination of, if it was mounted by one.
+  const [arrival] = useState(() => {
+    const nav = pendingNavigation();
+    return nav?.kind === "switch" && nav.variant === variant ? nav.id : null;
+  });
+
   useEffect(() => {
-    if (pendingRoleSwitch() === variant) endRoleSwitch();
-  }, [variant]);
+    if (arrival === null || !ready) return;
+    let current = true;
+    void waitForStableLayout(1500, () => current).then(() => {
+      if (current) endNavigation(arrival);
+    });
+    return () => {
+      current = false;
+    };
+  }, [arrival, ready]);
+
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
@@ -129,10 +136,19 @@ export function LaunchCover({ variant, ready }: { variant: CoverVariant; ready: 
 
 /**
  * The cover itself: fixed to the app column above everything but sheets and
- * dialogs, appearing at full opacity and fading out over 200ms, opacity only,
- * letting taps through while it does.
+ * dialogs. Fades out over 200ms, opacity only, letting taps through while it
+ * does. `fadeIn` for a cover that appears over a screen already in use, where
+ * popping in at full opacity would itself be the jolt.
  */
-function CoverFace({ variant, revealing }: { variant: CoverVariant; revealing: boolean }) {
+function CoverFace({
+  variant,
+  revealing,
+  fadeIn = false,
+}: {
+  variant: CoverVariant;
+  revealing: boolean;
+  fadeIn?: boolean;
+}) {
   return (
     <div
       aria-hidden
@@ -140,7 +156,8 @@ function CoverFace({ variant, revealing }: { variant: CoverVariant; revealing: b
         "fixed inset-y-0 left-1/2 z-[45] flex w-full max-w-md -translate-x-1/2 items-center justify-center bg-slate-50 px-6",
         revealing
           ? "pointer-events-none opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none"
-          : "opacity-100"
+          : "opacity-100",
+        fadeIn && !revealing && "animate-view-fade motion-reduce:animate-none"
       )}
     >
       {variant === "owner" ? <MiamusMark /> : <RumahRules />}
@@ -149,21 +166,61 @@ function CoverFace({ variant, revealing }: { variant: CoverVariant; revealing: b
 }
 
 /**
- * The cover from the tap of a role switch until the destination's own
- * LaunchCover takes it over (Phase 132). Mounted once, in the root layout.
- * If the navigation never lands — a failed request, a tap that went nowhere —
- * it gives up after SWITCH_GIVE_UP_MS rather than trapping the app behind a
- * logo.
+ * The cover over a slow navigation (Phase 134). Mounted once, in the root
+ * layout, so it lives through a role switch's route change.
+ *
+ *   - Nothing for the first SHOW_AFTER_MS of a navigation. Most end in that
+ *     window and are never covered.
+ *   - Still running then: the destination's picture fades in, and stays until
+ *     the navigation ends — and for at least MIN_VISIBLE_MS.
+ *   - Then it fades out, the new screen already settled beneath it.
  */
-const SWITCH_GIVE_UP_MS = 5000;
+export function NavigationCover() {
+  const nav = usePendingNavigation();
+  const [shown, setShown] = useState<{ variant: CoverVariant; at: number } | null>(null);
+  const [revealing, setRevealing] = useState(false);
 
-export function RoleSwitchCover() {
-  const target = useRoleSwitch();
   useEffect(() => {
-    if (!target) return;
-    const timer = setTimeout(endRoleSwitch, SWITCH_GIVE_UP_MS);
+    if (!nav) return;
+    const timer = setTimeout(() => endNavigation(nav.id), NAVIGATION_GIVE_UP_MS);
     return () => clearTimeout(timer);
-  }, [target]);
-  if (!target) return null;
-  return <CoverFace variant={target} revealing={false} />;
+  }, [nav]);
+
+  // Up once the navigation has run SHOW_AFTER_MS — counted from the tap, so
+  // a tap that supersedes another does not restart a wait already served.
+  useEffect(() => {
+    if (!nav || shown) return;
+    const wait = Math.max(0, SHOW_AFTER_MS - (performance.now() - nav.startedAt));
+    const timer = setTimeout(() => {
+      setRevealing(false);
+      setShown({ variant: nav.variant, at: performance.now() });
+    }, wait);
+    return () => clearTimeout(timer);
+  }, [nav, shown]);
+
+  // Down once it has ended, no sooner than MIN_VISIBLE_MS after it went up.
+  useEffect(() => {
+    if (nav || !shown) return;
+    const wait = Math.max(0, MIN_VISIBLE_MS - (performance.now() - shown.at));
+    const fade = setTimeout(() => setRevealing(true), wait);
+    const gone = setTimeout(() => {
+      setShown(null);
+      setRevealing(false);
+    }, wait + COVER_FADE_MS);
+    return () => {
+      clearTimeout(fade);
+      clearTimeout(gone);
+    };
+  }, [nav, shown]);
+
+  if (!shown) return null;
+  return (
+    <CoverFace
+      // A new navigation while it is up shows where that one is going.
+      variant={nav?.variant ?? shown.variant}
+      // ...and catches a cover that had begun to fade.
+      revealing={revealing && !nav}
+      fadeIn
+    />
+  );
 }

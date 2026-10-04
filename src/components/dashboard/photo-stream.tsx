@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
-import type { LucideIcon } from "lucide-react";
+import { FilterPill } from "@/components/shared/filter-pill";
 import { categoryIcon, describeLog, type ScheduleCategory } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -224,39 +224,5 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
         </button>
       )}
     </div>
-  );
-}
-
-function FilterPill({
-  label,
-  icon: Icon,
-  count,
-  active,
-  onClick,
-}: {
-  label: string;
-  icon?: LucideIcon;
-  count: number;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium",
-        active
-          ? "border-zinc-900 bg-zinc-900 text-white"
-          : "border-zinc-200 bg-zinc-100 text-zinc-600 active:bg-zinc-200"
-      )}
-    >
-      {Icon && <Icon className="size-3.5 shrink-0" />}
-      {label}
-      <span className={cn("text-xs tabular-nums", active ? "text-white/70" : "text-zinc-400")}>
-        {count}
-      </span>
-    </button>
   );
 }

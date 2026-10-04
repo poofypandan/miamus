@@ -90,7 +90,7 @@ function StaffTasks() {
     active: activeView,
     navigate: setView,
     isPending,
-  } = useTabNavigation<StaffView>(view, (next) => `/staff?view=${next}`);
+  } = useTabNavigation<StaffView>(view, (next) => `/staff?view=${next}`, "staff");
   useScrollTopOnChange(view);
 
 

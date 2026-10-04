@@ -56,7 +56,7 @@ export function BottomTabBar() {
     active: activeModule,
     navigate,
     isPending,
-  } = useTabNavigation<DashboardModule>(routeModule, moduleHref);
+  } = useTabNavigation<DashboardModule>(routeModule, moduleHref, "owner");
 
   return (
     <>

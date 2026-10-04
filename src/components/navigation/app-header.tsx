@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useHouseholdName } from "@/hooks/use-household-name";
 import { isPlainClick } from "@/lib/in-place-navigation";
-import { startRoleSwitch, type CoverVariant } from "@/lib/launch-state";
+import { beginNavigation, type CoverVariant } from "@/lib/launch-state";
 
 /**
  * The one header both views wear, so moving between the owner dashboard and
@@ -55,9 +55,10 @@ export function HeaderNavLink({
 }: {
   href: string;
   /**
-   * The view this link switches into (Phase 132). Its branded cover — the
-   * Miamus mark for the owner, RUMAH for staff — goes up on the tap and
-   * stays until that view has loaded and settled, hiding the route change.
+   * The view this link switches into (Phase 132). If the switch is slow, that
+   * view's branded cover — the Miamus mark for the owner, RUMAH for staff —
+   * hides the route change until it has loaded and settled (Phase 134); a
+   * fast one shows none.
    */
   switchTo?: CoverVariant;
   children: ReactNode;
@@ -68,7 +69,7 @@ export function HeaderNavLink({
         href={href}
         onClick={(event) => {
           // Only a plain tap navigates here; a new tab needs no cover.
-          if (switchTo && isPlainClick(event)) startRoleSwitch(switchTo);
+          if (switchTo && isPlainClick(event)) beginNavigation("switch", switchTo);
         }}
       >
         {children}

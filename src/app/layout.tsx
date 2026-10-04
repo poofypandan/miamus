@@ -3,7 +3,7 @@ import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import { AppToaster } from "@/components/shared/app-toaster";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegistrar } from "@/components/shared/service-worker-registrar";
-import { RoleSwitchCover } from "@/components/brand/brand-cover";
+import { NavigationCover } from "@/components/brand/brand-cover";
 import "./globals.css";
 
 // Named "--font-sans" (not the font's own "--font-plus-jakarta-sans") to
@@ -83,9 +83,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Push notifications (Phase 119): registers public/sw.js and routes
             a tapped notification. Renders nothing. */}
         <ServiceWorkerRegistrar />
-        {/* The cover over an owner ↔ staff switch, from the tap until the
-            destination view takes it over (Phase 132). */}
-        <RoleSwitchCover />
+        {/* The branded cover over a slow navigation — a tab, or an owner ↔
+            staff switch — and only a slow one (Phases 132, 134). Here, above
+            both views, so it survives a switch's route change. */}
+        <NavigationCover />
       </body>
     </html>
   );
