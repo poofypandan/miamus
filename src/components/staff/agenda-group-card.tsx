@@ -411,6 +411,21 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         </span>
         {finished && <CheckCircle2 className={cn("size-4 shrink-0", DONE_TONE.check)} />}
       </span>
+      {/* What the block actually is, on the card itself (Phase 132): a
+          consolidated medicine round lists its medicines, so staff can see
+          what to prepare without opening the sheet. Two lines at most; the
+          sheet still has the full list. Routines carry no other notes — a
+          schedule has no instructions field — so this is the detail there is. */}
+      {consolidated && (
+        <span
+          className={cn(
+            "line-clamp-2 text-xs",
+            finished ? "text-muted-foreground" : "text-red-900/80"
+          )}
+        >
+          {group.titles.join(" · ")}
+        </span>
+      )}
       <span className="flex flex-wrap items-center gap-1.5">
         {dogs.map((dog) => {
           const suspended = isSuspended(dog.items[0]);

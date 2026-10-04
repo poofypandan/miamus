@@ -5,7 +5,7 @@ import { CheckCircle2, Stethoscope, XCircle } from "lucide-react";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
-import { DONE_TONE } from "@/lib/agenda-tones";
+import { AGENDA_TONES, DONE_TONE, routineTone } from "@/lib/agenda-tones";
 import { isAdmitted } from "@/lib/pets";
 import {
   categoryCardTint,
@@ -94,7 +94,13 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
   // Every dog done: the staff view's green (Phase 114), in place of the
   // category tint.
   const done = group.items.length > 0 && group.items.every((i) => i.status === "completed");
-  const tint = done ? DONE_TONE.tint : categoryCardTint(group.category);
+  // Done keeps its kind (Phase 132): the green face, but the category's own
+  // icon colour and a thin edge in it, so a finished dose of medicine still
+  // reads as the dogs' health rather than as one more green row.
+  const tint = done
+    ? // pl-1.5: the 3px edge less the usual 1px, so text stays in line.
+      cn(DONE_TONE.tint, AGENDA_TONES[routineTone(group.category)].doneEdge, "pl-1.5")
+    : categoryCardTint(group.category);
   const consolidated = group.category === "medication" && group.titles.length > 1;
 
   // Padding and a border on every row, transparent where there is no tint, so
@@ -117,7 +123,7 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
         {formatTime12h(group.time)}
       </span>
       <Icon
-        className={cn("size-4 shrink-0", done ? DONE_TONE.icon : categoryIconColor(group.category))}
+        className={cn("size-4 shrink-0", categoryIconColor(group.category))}
       />
       {/* A dog's medicines at one time arrive as a single group (Phase 81), so
           the row names the errand and lists what is in it underneath rather

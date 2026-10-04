@@ -55,7 +55,10 @@ export function MiamusMark() {
 export function RumahRules({ className }: { className?: string }) {
   return (
     <div className={cn("flex flex-col items-center text-center select-none", className)}>
-      <div className="flex w-fit flex-col items-start space-y-2 text-left text-base">
+      {/* Opened up for a screen of its own (Phase 132): larger, wider-set and
+          more air between the lines, so the five rules read as a calm list
+          rather than a block squeezed into the middle of the page. */}
+      <div className="flex w-fit flex-col items-start space-y-3.5 text-left text-lg leading-snug tracking-wide">
         {RUMAH.map((r) => (
           <div key={r.letter}>
             <span className="font-bold text-gray-900">{r.letter}</span>

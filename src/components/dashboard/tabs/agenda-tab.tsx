@@ -21,6 +21,7 @@ import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { ChoreReviewLightbox, hasChoreProof } from "@/components/chores/chore-proof-photos";
 import { useHousehold } from "@/context/household-context";
 import { useAgendaRange } from "@/hooks/use-agenda-range";
+import { applyAgendaFilter, useAgendaFilter } from "@/hooks/use-agenda-filter";
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
@@ -94,11 +95,23 @@ export function AgendaTab() {
     [dateStr, pets, schedules, logs]
   );
 
-  const entries = useMemo(
+  // All | Pets | Chores (Phase 132): narrows what is drawn, never what is
+  // loaded. `allEntries` still decides the welcome screen, so filtering a
+  // brand-new household to Pets does not greet it twice.
+  const [filter, setFilter] = useAgendaFilter();
+  const allEntries = useMemo(
     () => buildUnifiedAgenda({ groups, chores }),
     [groups, chores]
   );
+  const entries = useMemo(() => applyAgendaFilter(allEntries, filter), [allEntries, filter]);
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
+  const filteredWeek = useMemo(
+    () =>
+      filter === "all"
+        ? week
+        : week.map((day) => ({ ...day, entries: applyAgendaFilter(day.entries, filter) })),
+    [week, filter]
+  );
 
   // Same page, so in place — and in a transition like the tab bar's, so
   // Agenda stays up until Pets is ready to replace it (Phase 125).
@@ -147,16 +160,31 @@ export function AgendaTab() {
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
-      {/* Day | Week (Phase 112). */}
-      <SegmentedControl
-        ariaLabel="Agenda range"
-        segments={[
-          { value: "day", label: "Day" },
-          { value: "week", label: "Week" },
-        ]}
-        value={range}
-        onChange={setRange}
-      />
+      {/* Day | Week (Phase 112), and beside it what to show (Phase 132) —
+          one row, so filtering costs no height. */}
+      <div className="flex gap-2">
+        <SegmentedControl
+          ariaLabel="Agenda range"
+          className="w-2/5 shrink-0"
+          segments={[
+            { value: "day", label: "Day" },
+            { value: "week", label: "Week" },
+          ]}
+          value={range}
+          onChange={setRange}
+        />
+        <SegmentedControl
+          ariaLabel="Show"
+          className="min-w-0 flex-1"
+          segments={[
+            { value: "all", label: "All" },
+            { value: "pets", label: "Pets" },
+            { value: "chores", label: "Chores" },
+          ]}
+          value={filter}
+          onChange={setFilter}
+        />
+      </div>
 
       {/* Everything under the toggle fades in afresh when the range changes
           or Today is tapped (Phase 115) — keyed, so it remounts: the ribbon
@@ -184,7 +212,7 @@ export function AgendaTab() {
           <>
             <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
 
-            {entries.length === 0 && brandNew ? (
+            {allEntries.length === 0 && brandNew ? (
               // The first screen a new household sees (Phase 120). A pet first:
               // its routines are what fill most of an Agenda, and a chore is
               // one tap from here either way.
@@ -218,6 +246,12 @@ export function AgendaTab() {
                   <Plus /> Add Chore
                 </Button>
               </EmptyState>
+            ) : entries.length === 0 && filter !== "all" ? (
+              // Filtered to nothing, on a day that has other things: say what
+              // the filter hid, rather than "Nothing scheduled".
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                {filter === "pets" ? "No pet routines on this day." : "No chores on this day."}
+              </p>
             ) : entries.length === 0 ? (
               <EmptyState
                 icon={CalendarDays}
@@ -251,13 +285,13 @@ export function AgendaTab() {
                 {/* Undone chores from earlier days lead today (Phase 113). */}
                 {overdue.length > 0 && (
                   <OverdueSection count={overdue.length} locale="en">
-                    {overdue.map(renderEntry)}
+                    {overdue.map((entry) => renderEntry(entry))}
                   </OverdueSection>
                 )}
                 {rest.length > 0 && (
                   <Card className="gap-3 py-4">
                     <CardContent className="flex flex-col gap-1.5 px-4">
-                      {rest.map(renderEntry)}
+                      {rest.map((entry) => renderEntry(entry))}
                     </CardContent>
                   </Card>
                 )}
@@ -274,7 +308,7 @@ export function AgendaTab() {
               className="animate-view-fade motion-reduce:animate-none"
             >
               <AgendaWeekGrid
-                days={week}
+                days={filteredWeek}
                 locale="en"
                 onOpenDay={(day) => {
                   setSelectedDate(day);

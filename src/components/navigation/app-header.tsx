@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useHouseholdName } from "@/hooks/use-household-name";
+import { isPlainClick } from "@/lib/in-place-navigation";
+import { startRoleSwitch, type CoverVariant } from "@/lib/launch-state";
 
 /**
  * The one header both views wear, so moving between the owner dashboard and
@@ -46,10 +48,31 @@ export function AppHeader({ action, children }: { action?: ReactNode; children?:
  * the page. The 44px minimum is the touch target; ghost has no fill, so it
  * adds reach without adding visual weight.
  */
-export function HeaderNavLink({ href, children }: { href: string; children: ReactNode }) {
+export function HeaderNavLink({
+  href,
+  switchTo,
+  children,
+}: {
+  href: string;
+  /**
+   * The view this link switches into (Phase 132). Its branded cover — the
+   * Miamus mark for the owner, RUMAH for staff — goes up on the tap and
+   * stays until that view has loaded and settled, hiding the route change.
+   */
+  switchTo?: CoverVariant;
+  children: ReactNode;
+}) {
   return (
     <Button variant="ghost" size="sm" asChild className="min-h-11 shrink-0 text-muted-foreground">
-      <Link href={href}>{children}</Link>
+      <Link
+        href={href}
+        onClick={(event) => {
+          // Only a plain tap navigates here; a new tab needs no cover.
+          if (switchTo && isPlainClick(event)) startRoleSwitch(switchTo);
+        }}
+      >
+        {children}
+      </Link>
     </Button>
   );
 }

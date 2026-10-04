@@ -39,6 +39,12 @@ interface ToneStyle {
    * narrow for its title.
    */
   block: string;
+  /**
+   * A finished row's left edge (Phase 132). Done turns every row the same
+   * green, which lost what kind of task it was; this thin edge in the
+   * category's own colour keeps that, without competing with the green.
+   */
+  doneEdge: string;
 }
 
 export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
@@ -48,6 +54,7 @@ export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
     icon: "text-red-600",
     badge: "bg-red-100 text-red-800",
     block: "border-l-red-500 bg-red-50 text-red-950",
+    doneEdge: "border-l-[3px] border-l-red-400",
   },
   routine: {
     tint: "",
@@ -55,6 +62,7 @@ export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
     icon: "text-zinc-500",
     badge: "bg-zinc-100 text-zinc-700",
     block: "border-l-zinc-400 bg-zinc-100 text-zinc-900",
+    doneEdge: "border-l-[3px] border-l-zinc-400",
   },
   chore: {
     tint: "border-amber-200 bg-amber-50",
@@ -62,6 +70,7 @@ export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
     icon: "text-amber-600",
     badge: "bg-amber-100 text-amber-900",
     block: "border-l-amber-500 bg-amber-50 text-amber-950",
+    doneEdge: "border-l-[3px] border-l-amber-400",
   },
 };
 

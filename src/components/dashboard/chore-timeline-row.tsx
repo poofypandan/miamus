@@ -75,7 +75,8 @@ export function ChoreTimelineRow({
         // Amber marks every open chore (Phase 112's three tones), so the house
         // reads apart from the dogs at a glance. A finished one turns the
         // staff view's green (Phase 114) and sinks to the bottom of the day.
-        done ? DONE_TONE.tint : AGENDA_TONES.chore.tint
+        // pl-1.5: the 3px edge less the usual 1px, so text stays in line.
+        done ? cn(DONE_TONE.tint, AGENDA_TONES.chore.doneEdge, "pl-1.5") : AGENDA_TONES.chore.tint
       )}
     >
       <span
@@ -91,7 +92,9 @@ export function ChoreTimelineRow({
       </span>
 
       <Icon
-        className={cn("size-4 shrink-0", done ? DONE_TONE.icon : AGENDA_TONES.chore.icon)}
+        // Amber even when done (Phase 132), with the row's amber edge: the
+        // house stays recognisable as the house among finished dog routines.
+        className={cn("size-4 shrink-0", AGENDA_TONES.chore.icon)}
       />
 
       <span className="flex min-w-0 flex-1 flex-col">

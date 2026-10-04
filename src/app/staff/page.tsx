@@ -420,7 +420,9 @@ function HeaderIdentity() {
   // Still not access control: it hides a button. The dashboard itself is held
   // by the middleware, which sends anonymous sessions back to /staff.
   if (isHouseholdMember && !staffId) {
-    return <HeaderNavLink href="/dashboard">← Owner Dashboard</HeaderNavLink>;
+    return <HeaderNavLink href="/dashboard" switchTo="owner">
+        ← Owner Dashboard
+      </HeaderNavLink>;
   }
   return <OnDutyBadge />;
 }

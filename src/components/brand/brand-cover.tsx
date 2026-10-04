@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { MiamusMark, RumahRules } from "@/components/brand/loading-screens";
-import { hasLaunched, markLaunched } from "@/lib/launch-state";
+import {
+  endRoleSwitch,
+  hasLaunched,
+  markLaunched,
+  pendingRoleSwitch,
+  useRoleSwitch,
+  type CoverVariant,
+} from "@/lib/launch-state";
 import { cn } from "@/lib/utils";
 
 /**
- * The branded launch cover (Phases 122–125): the circular Miamus mark for
- * owners, the RUMAH rules for staff, over a cold start and nothing else.
+ * The branded covers (Phases 122–132): the circular Miamus mark for owners,
+ * the RUMAH rules for staff — over a cold start, and over a switch between
+ * the owner and staff views (Phase 132), and nothing else.
  *
  * Phases 122–124 also drew these over every tab switch. Phase 125 took that
  * out: tab switches now run as React transitions that keep the current view
@@ -75,10 +83,19 @@ function waitForStableLayout(maxMs: number, isCurrent: () => boolean): Promise<v
  * Fixed to the app column; appears at full opacity and fades out over 200ms,
  * opacity only, letting taps through while it does.
  */
-export function LaunchCover({ variant, ready }: { variant: "owner" | "staff"; ready: boolean }) {
+export function LaunchCover({ variant, ready }: { variant: CoverVariant; ready: boolean }) {
+  // Covering on a cold start — and on arrival from a role switch into this
+  // view (Phase 132), taking over the cover the tap put up so the two are
+  // one unbroken screen. Any other mount after launch opens straight on the
+  // page.
   const [phase, setPhase] = useState<"covering" | "revealing" | "done">(() =>
-    hasLaunched() ? "done" : "covering"
+    !hasLaunched() || pendingRoleSwitch() === variant ? "covering" : "done"
   );
+
+  // The handoff: this cover is up now, so the switch's own can come down.
+  useEffect(() => {
+    if (pendingRoleSwitch() === variant) endRoleSwitch();
+  }, [variant]);
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
@@ -107,12 +124,21 @@ export function LaunchCover({ variant, ready }: { variant: "owner" | "staff"; re
   }, [phase]);
 
   if (phase === "done") return null;
+  return <CoverFace variant={variant} revealing={phase === "revealing"} />;
+}
+
+/**
+ * The cover itself: fixed to the app column above everything but sheets and
+ * dialogs, appearing at full opacity and fading out over 200ms, opacity only,
+ * letting taps through while it does.
+ */
+function CoverFace({ variant, revealing }: { variant: CoverVariant; revealing: boolean }) {
   return (
     <div
       aria-hidden
       className={cn(
         "fixed inset-y-0 left-1/2 z-[45] flex w-full max-w-md -translate-x-1/2 items-center justify-center bg-slate-50 px-6",
-        phase === "revealing"
+        revealing
           ? "pointer-events-none opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none"
           : "opacity-100"
       )}
@@ -120,4 +146,24 @@ export function LaunchCover({ variant, ready }: { variant: "owner" | "staff"; re
       {variant === "owner" ? <MiamusMark /> : <RumahRules />}
     </div>
   );
+}
+
+/**
+ * The cover from the tap of a role switch until the destination's own
+ * LaunchCover takes it over (Phase 132). Mounted once, in the root layout.
+ * If the navigation never lands — a failed request, a tap that went nowhere —
+ * it gives up after SWITCH_GIVE_UP_MS rather than trapping the app behind a
+ * logo.
+ */
+const SWITCH_GIVE_UP_MS = 5000;
+
+export function RoleSwitchCover() {
+  const target = useRoleSwitch();
+  useEffect(() => {
+    if (!target) return;
+    const timer = setTimeout(endRoleSwitch, SWITCH_GIVE_UP_MS);
+    return () => clearTimeout(timer);
+  }, [target]);
+  if (!target) return null;
+  return <CoverFace variant={target} revealing={false} />;
 }
