@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Miamus - Household Management",
     short_name: "Miamus",
-    description: "Household management for owners and their staff",
+    description: "Shared household management for everyone under one roof",
     start_url: "/",
     scope: "/",
     display: "standalone",

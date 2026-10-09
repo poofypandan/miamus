@@ -227,7 +227,7 @@ export function AgendaTab() {
                     ? "Welcome to your new household!"
                     : `Welcome to ${householdName}!`
                 }
-                description="Let's start by adding a pet or a chore. Everything you add shows up here, day by day, for you and your staff."
+                description="Let's start by adding a pet or a chore. Everything you add shows up here, day by day, for everyone in the house."
               >
                 <Button className="min-h-[44px]" asChild>
                   <Link href={moduleHref("pets")} scroll={false} onClick={switchToPets}>

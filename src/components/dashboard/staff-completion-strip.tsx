@@ -110,7 +110,7 @@ function StatCard({ stat, onPress }: { stat: StaffStat; onPress: () => void }) {
     <button
       type="button"
       onClick={onPress}
-      aria-label={`${stat.name}: ${stat.done} of ${stat.total} done. Open staff workload`}
+      aria-label={`${stat.name}: ${stat.done} of ${stat.total} done. Open workload`}
       className="flex w-36 shrink-0 snap-start flex-col gap-2 rounded-xl border bg-card p-3 text-left active:bg-muted/60"
     >
       <div className="flex items-center gap-2">

@@ -22,7 +22,7 @@ export function TopNav() {
         <div className="flex shrink-0 items-center gap-1">
           {onAgenda && <TodayButton locale="en" />}
           <HeaderNavLink href="/staff" switchTo="staff">
-            Open Staff View →
+            Action Mode →
           </HeaderNavLink>
         </div>
       }

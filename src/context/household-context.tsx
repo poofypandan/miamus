@@ -17,6 +17,12 @@ import type {
   UpdateHouseholdTaskInput,
 } from "@/lib/data";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
+import {
+  readCachedMemberProfile,
+  setActiveMemberProfile,
+  writeCachedMemberProfile,
+  type MemberProfile,
+} from "@/lib/member-identity";
 import { useToday } from "@/hooks/use-today";
 import { isActivePet } from "@/lib/pets";
 import { addToOfflineQueue } from "@/lib/offline-queue";
@@ -126,6 +132,19 @@ interface HouseholdContextValue {
   todayJumps: number;
   /** "owner" exactly when isHouseholdMember — a Google-authenticated member. */
   userRole: UserRole;
+  /**
+   * An admin's own row on the roster (Phase 139): who they are when a chore
+   * is assigned to them, and in Action Mode. Null for a staff phone, and for
+   * an admin whose row could not be had (offline on first launch; a database
+   * without migrations/106).
+   */
+  memberProfile: MemberProfile | null;
+  /**
+   * False while an admin's row is still being looked up for the first time on
+   * this device. Action Mode waits for it rather than showing every chore and
+   * then narrowing to theirs. Always true for a staff phone.
+   */
+  memberProfileReady: boolean;
   // False until household membership has been resolved — lets owner-only
   // route guards avoid bouncing a returning owner to the Daily Feed before
   // their session is read back.
@@ -228,6 +247,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // Starts false and is set after resolution, never read during render from
   // storage — the server HTML and the first client render must agree.
   const [isHouseholdMember, setIsHouseholdMember] = useState(false);
+  const [memberProfile, setMemberProfile] = useState<MemberProfile | null>(null);
+  const [memberProfileReady, setMemberProfileReady] = useState(false);
   // Whether this mount painted from the cache; decides if the first fetch is
   // allowed to put skeletons back over data the user can already see.
   const [hydratedFromCache, setHydratedFromCache] = useState(false);
@@ -246,6 +267,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     // while the app lock was still up, because nothing had set the role yet.
     setIsHouseholdMember(isMember);
     if (isMember) setUserRole("owner");
+    // The admin's roster row, from this device's last lookup (Phase 139). The
+    // effect below confirms it with the server; a first launch waits for that.
+    const cachedMember = isMember ? readCachedMemberProfile(householdId) : null;
+    setActiveMemberProfile(isMember ? cachedMember : undefined);
+    setMemberProfile(cachedMember);
+    setMemberProfileReady(!isMember || !!cachedMember);
     // Paint whatever this device last saw for this household before the
     // network is consulted at all. `loading` goes false with it, so the
     // screen shows real cards rather than skeletons while the refresh below
@@ -277,6 +304,30 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, [applyTenant]);
+
+  // Confirms (or, on a first launch, finds) the admin's own roster row
+  // (Phase 139). Failure keeps whatever the device had: offline, the cached
+  // row is still right; with no cache, the admin is simply nobody on the
+  // roster until next launch, which is how every admin was before 106.
+  useEffect(() => {
+    if (!tenantReady || !isHouseholdMember) return;
+    let cancelled = false;
+    dataProvider
+      .ensureMyMemberProfile(activeHouseholdId)
+      .then((profile) => {
+        if (cancelled) return;
+        setActiveMemberProfile(profile);
+        setMemberProfile(profile);
+        writeCachedMemberProfile(activeHouseholdId, profile);
+      })
+      .catch((err) => console.error("Could not resolve the admin's roster row", err))
+      .finally(() => {
+        if (!cancelled) setMemberProfileReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantReady, isHouseholdMember, activeHouseholdId]);
 
   // Declared up here, ahead of `refresh`, because the chore fetch is scoped to
   // the day being browsed and `refresh` has to know which day that is.
@@ -920,6 +971,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       todayJumps,
       userRole,
       roleHydrated,
+      memberProfile,
+      memberProfileReady,
       refresh,
       createEntity,
       updateEntity,
@@ -975,6 +1028,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       todayJumps,
       userRole,
       roleHydrated,
+      memberProfile,
+      memberProfileReady,
       refresh,
       createEntity,
       updateEntity,

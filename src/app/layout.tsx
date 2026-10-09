@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Miamus - Household Management",
-  description: "Household management for owners and their staff",
+  description: "Shared household management for everyone under one roof",
   // No `manifest` or `icons` here: app/manifest.ts and app/icon.tsx /
   // apple-icon.tsx are file conventions, and Next links them itself (Phase 107).
   appleWebApp: {

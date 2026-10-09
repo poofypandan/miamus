@@ -49,7 +49,7 @@ export function SecuritySettings() {
     try {
       // Enrol first, and turn the setting on only if that worked: with no PIN
       // behind it, a lock without an enrolled sensor could never be opened.
-      const enrolled = await registerBiometric("Miamus owner");
+      const enrolled = await registerBiometric("Miamus admin");
       if (!enrolled) {
         toast.error("Face ID or fingerprint wasn't set up, so the lock stays off");
         return;

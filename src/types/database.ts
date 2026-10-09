@@ -159,6 +159,13 @@ export type StaffProfile = {
   // verify_staff_pin and set_staff_pin.
   has_pin: boolean;
   created_at: string;
+  /**
+   * Set when this person is an admin — a Google account in household_members
+   * — rather than someone who signs in by name and PIN (migrations/106,
+   * Phase 139). Admins are on the roster so chores can be assigned to them.
+   * Optional: absent until that migration is applied.
+   */
+  user_id?: string | null;
 };
 
 // Note: unlike every other table here, this one's foreign key column is
@@ -519,6 +526,11 @@ export interface Database {
         }[];
       };
       // Hashes and stores a PIN, or clears it when given null.
+      // The signed-in admin's own roster row, created if missing (migrations/106).
+      ensure_my_member_profile: {
+        Args: { p_household_id: string };
+        Returns: { id: string; name: string }[];
+      };
       set_staff_pin: {
         Args: { p_staff_id: string; p_pin: string | null };
         Returns: undefined;

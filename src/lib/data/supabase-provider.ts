@@ -5,6 +5,7 @@ import type {
   InventoryAuditLog,
   InventoryAuditWithStaff,
   InventoryItem,
+  StaffProfile,
 } from "@/types/database";
 import type { DataProvider } from "./types";
 import { rolloverFloorFor } from "@/lib/chore-recurrence";
@@ -42,6 +43,9 @@ function extensionFor(file: File): string {
 
 // Everything on staff_profiles except `pin`, which no client role may select.
 const STAFF_COLUMNS = "id, household_id, name, created_at, has_pin";
+// With the admin link (migrations/106). Tried first; a database that has not
+// had 106 refuses the column, and the roster falls back to the list above.
+const STAFF_COLUMNS_WITH_MEMBER = `${STAFF_COLUMNS}, user_id`;
 
 // An audit plus its author's name, embedded through audited_by.
 const AUDIT_COLUMNS = "*, staff_profiles(name)";
@@ -692,15 +696,34 @@ export const supabaseProvider: DataProvider = {
     // By name, not created_at: the seeded rows were inserted in one statement
     // and share a timestamp to the microsecond, so ordering by it put the list
     // in a different order on different loads.
-    const { data, error } = await client()
-      .from("staff_profiles")
-      // Named columns, not `*`: the pin column is revoked from every client
-      // role (migrations/096), and a star select would be refused outright.
-      .select(STAFF_COLUMNS)
-      .eq("household_id", getActiveHouseholdId())
-      .order("name");
-    if (error) throw error;
-    return data;
+    const list = (columns: string) =>
+      client()
+        .from("staff_profiles")
+        // Named columns, not `*`: the pin column is revoked from every client
+        // role (migrations/096), and a star select would be refused outright.
+        .select(columns)
+        .eq("household_id", getActiveHouseholdId())
+        .order("name")
+        .returns<StaffProfile[]>();
+    const { data, error } = await list(STAFF_COLUMNS_WITH_MEMBER);
+    if (!error) return data;
+    // 42703 no such column, 42501 not granted: migrations/106 is not in.
+    if (error.code !== "42703" && error.code !== "42501") throw error;
+    const fallback = await list(STAFF_COLUMNS);
+    if (fallback.error) throw fallback.error;
+    return fallback.data;
+  },
+  async ensureMyMemberProfile(householdId) {
+    const { data, error } = await client().rpc("ensure_my_member_profile", {
+      p_household_id: householdId,
+    });
+    if (error) {
+      // PGRST202: the function does not exist yet (migrations/106 not
+      // applied). Nobody to be, which leaves admins as they were before.
+      if (error.code === "PGRST202") return null;
+      throw error;
+    }
+    return data?.[0] ?? null;
   },
   async listHouseholdLocations() {
     const { data, error } = await client()

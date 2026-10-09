@@ -309,6 +309,12 @@ export interface DataProvider {
   /** Assigns an unassigned chore to a staff member. */
   claimHouseholdTask(id: string, staffId: string): Promise<HouseholdTask>;
   listStaffProfiles(): Promise<StaffProfile[]>;
+  /**
+   * The signed-in admin's own row on the roster (Phase 139) — who they are
+   * when they assign themselves a chore or work in Action Mode. Null where
+   * there is none to be had (mock mode; a database without migrations/106).
+   */
+  ensureMyMemberProfile(householdId: string): Promise<{ id: string; name: string } | null>;
   /** The household's rooms, by name (Phase 135). */
   listHouseholdLocations(): Promise<HouseholdLocation[]>;
   /**

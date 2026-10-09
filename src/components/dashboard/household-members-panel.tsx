@@ -75,10 +75,10 @@ export function HouseholdMembersPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">Household Members</h2>
+      <h2 className="text-sm font-semibold text-gray-900">Admins</h2>
       <p className="-mt-1 text-xs text-muted-foreground">
-        People who sign in with Google and see this dashboard. Staff phones are not listed here —
-        they appear under Staff &amp; PINs.
+        People who sign in with Google and can use Manage. Everyone who signs in with a PIN
+        appears under People &amp; PINs.
       </p>
 
       {failed ? (
@@ -113,7 +113,7 @@ export function HouseholdMembersPanel() {
                 )}
                 {member.is_founder && !member.is_self && (
                   <Badge variant="secondary" className="shrink-0 text-[10px]">
-                    Owner
+                    Founder
                   </Badge>
                 )}
 
@@ -143,7 +143,7 @@ export function HouseholdMembersPanel() {
             <DialogTitle>Remove access?</DialogTitle>
             <DialogDescription>
               {pending?.email} will lose access to this household immediately. Their phone keeps
-              working as a staff device if it has its own invite.
+              working as a PIN device if it has its own invite.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -95,7 +95,7 @@ export default function OnboardingPage() {
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Let&apos;s set up your household. It takes one step — then you can add your pets,
-        chores and staff from the dashboard.
+        chores and the people who share the house.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-3">
@@ -113,7 +113,7 @@ export default function OnboardingPage() {
           className="min-h-[48px]"
         />
         <p className="text-xs text-muted-foreground">
-          Shown at the top of every screen, for you and your staff.
+          Shown at the top of every screen, for everyone in the house.
         </p>
         <Button type="submit" disabled={saving || !name.trim()} className="min-h-[52px]">
           {saving && <Loader2 className="animate-spin" />} Create household

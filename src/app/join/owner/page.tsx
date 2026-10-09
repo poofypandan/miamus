@@ -90,7 +90,7 @@ function JoinOwnerScreen() {
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 text-center">
         <h1 className="text-xl font-semibold text-gray-900">Invalid or Expired Link</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          This invite has already been used or has expired. Ask the household owner for a new one.
+          This invite has already been used or has expired. Ask a household admin for a new one.
         </p>
         <Link
           href="/"
@@ -109,7 +109,7 @@ function JoinOwnerScreen() {
           You&apos;ve been invited
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Sign in with Google to join this household as a co-owner.
+          Sign in with Google to join this household as an admin.
         </p>
         <Button onClick={signIn} className="mt-8 min-h-[52px] w-full">
           Continue with Google

@@ -114,7 +114,7 @@ export function CancelRoutineButton({
             <DialogDescription>
               Removes {doomed.length} upcoming{" "}
               {doomed.length === 1 ? "occurrence" : "occurrences"} of {title} for {entity.name}.
-              Past records are kept, and staff see a cancellation notice on today&apos;s feed.
+              Past records are kept, and everyone sees a cancellation notice on today&apos;s feed.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-2">

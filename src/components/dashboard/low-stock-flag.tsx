@@ -36,14 +36,14 @@ const COPY = {
   en: {
     trigger: "Flag Low Stock",
     title: "Flag Low Stock",
-    description: "Let the owner know something needs restocking.",
+    description: "Let the admins know something needs restocking.",
     pet: "Pet",
     petPlaceholder: "Select pet",
     item: "Item",
     note: "Note (optional)",
     notePlaceholder: "e.g. Down to the last cup",
     validation: "Choose an item type",
-    success: "Low stock flagged for the owner",
+    success: "Low stock flagged for the admins",
     failure: "Failed to flag low stock",
     items: {
       food: "Food",
@@ -61,14 +61,14 @@ const COPY = {
   id: {
     trigger: "Laporkan Stok Menipis",
     title: "Laporkan Stok Menipis",
-    description: "Beri tahu pemilik kalau ada yang perlu dibeli lagi.",
+    description: "Beri tahu admin kalau ada yang perlu dibeli lagi.",
     pet: "Anjing",
     petPlaceholder: "Pilih anjing",
     item: "Barang",
     note: "Catatan (opsional)",
     notePlaceholder: "mis. Tinggal sisa sedikit",
     validation: "Pilih jenis barang dulu",
-    success: "Laporan stok menipis terkirim ke pemilik",
+    success: "Laporan stok menipis terkirim ke admin",
     failure: "Gagal mengirim laporan",
     items: {
       food: "Makanan",

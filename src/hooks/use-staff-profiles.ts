@@ -8,7 +8,8 @@ import type { StaffProfile } from "@/types/database";
 const useRoster = createResource(() => dataProvider.listStaffProfiles());
 
 /**
- * The staff roster, loaded on demand rather than in HouseholdContext: it is
+ * The household's roster — everyone a chore can be assigned to, admins
+ * included since Phase 139 (migrations/106) — loaded on demand rather than in HouseholdContext: it is
  * read by the owner's Agenda, Chores and Access tabs, the chore editor and
  * the staff view, and nothing else needs it.
  *
@@ -33,7 +34,7 @@ export function useStaffProfiles() {
  */
 export function useStaffNameLookup(
   profiles: StaffProfile[] | null,
-  fallback = "Staff"
+  fallback = "Someone"
 ): (id: string | null | undefined) => string {
   return useMemo(() => {
     const byId = new Map((profiles ?? []).map((p) => [p.id, p.name]));

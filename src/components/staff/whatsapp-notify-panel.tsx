@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { cn, generateWhatsAppLink } from "@/lib/utils";
 
 const DEFAULT_DESCRIPTION =
-  "Pemilik belum tentu langsung melihatnya. Kirim pesan supaya cepat ditanggapi.";
-const DEFAULT_CTA = "Beri tahu Pemilik via WhatsApp";
+  "Admin belum tentu langsung melihatnya. Kirim pesan supaya cepat ditanggapi.";
+const DEFAULT_CTA = "Beri tahu Admin via WhatsApp";
 
 /**
  * How the panel's badge reads at a glance.

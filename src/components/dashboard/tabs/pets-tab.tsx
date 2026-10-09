@@ -104,7 +104,7 @@ export function PetsTab() {
         <EmptyState
           icon={PawPrint}
           title="No pets yet"
-          description="Add your first pet to start their profile, daily routines and photo log. Staff see them on their phones straight away."
+          description="Add your first pet to start their profile, daily routines and photo log. Everyone sees them in Action Mode straight away."
         >
           {canManagePets && (
             <Button className="min-h-[44px]" onClick={() => setAddOpen(true)}>

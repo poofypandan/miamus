@@ -800,7 +800,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 </Button>
               ) : (
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Foto hanya bisa dihapus dalam 5 menit setelah dicatat. Hubungi pemilik untuk
+                  Foto hanya bisa dihapus dalam 5 menit setelah dicatat. Hubungi admin untuk
                   menghapus foto lama.
                 </p>
               )}

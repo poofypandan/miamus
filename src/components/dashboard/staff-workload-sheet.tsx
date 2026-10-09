@@ -68,7 +68,7 @@ export function StaffWorkloadSheet() {
     <Sheet open={horizon !== null} onOpenChange={(next) => !next && close()}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Staff Workload</SheetTitle>
+          <SheetTitle>Workload</SheetTitle>
           <SheetDescription>
             Tasks finished, counted by who completed them — pet routines and chores together.
           </SheetDescription>
@@ -98,8 +98,8 @@ export function StaffWorkloadSheet() {
           ) : staff.length === 0 ? (
             <EmptyState
               icon={BarChart3}
-              title="No staff yet"
-              description="Add your staff on the Access tab. Their finished tasks will be counted here."
+              title="Nobody on the roster yet"
+              description="Add people on the Access tab. Their finished tasks will be counted here."
             />
           ) : (
             <>
@@ -120,8 +120,7 @@ export function StaffWorkloadSheet() {
               {unattributed > 0 && (
                 <p className="text-xs text-muted-foreground">
                   {unattributed} more {unattributed === 1 ? "task was" : "tasks were"} finished
-                  without a staff name — logged on an owner&apos;s phone, or before staff
-                  profiles existed.
+                  without a name — logged before everyone had one on the roster.
                 </p>
               )}
             </>

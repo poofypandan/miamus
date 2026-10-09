@@ -263,7 +263,7 @@ function FinishChoreBody({
             <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               <Eye className="mt-0.5 size-4 shrink-0" />
               <span>
-                Tugas ini harus dikerjakan bersama Pemilik. Tunggu Pemilik datang dulu,
+                Tugas ini harus dikerjakan bersama Admin. Tunggu Admin datang dulu,
                 jangan dikerjakan sendiri.
               </span>
             </p>
@@ -331,7 +331,7 @@ function FinishChoreBody({
 
               {!mine && (
                 <p className="text-[11px] text-muted-foreground">
-                  Tugas ini untuk petugas lain, tapi kamu tetap bisa menyelesaikannya kalau
+                  Tugas ini untuk orang lain, tapi kamu tetap bisa menyelesaikannya kalau
                   sudah dikerjakan.
                 </p>
               )}

@@ -26,14 +26,14 @@ export function InvitePanel() {
       <InviteCard
         kind="owner"
         icon={UserPlus}
-        title="Invite Co-Owner"
-        description="For a partner or family member. They sign in with Google and get full access to this dashboard, the same as you."
+        title="Invite Admin"
+        description="For a partner, sibling or housemate. They sign in with Google, get full access to Manage, the same as you, and can be assigned chores."
       />
       <InviteCard
         kind="staff"
         icon={Smartphone}
-        title="Invite Staff Device"
-        description="Send this to the phone your staff use. Opening it connects that phone to this household — no account or email needed — and each person then signs in with their name and PIN."
+        title="Invite Device"
+        description="For someone without a Google account, or a shared house phone. Opening it connects that phone to this household — no account or email needed — and each person then signs in with their name and PIN."
       />
     </div>
   );

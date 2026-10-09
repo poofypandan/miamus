@@ -628,6 +628,10 @@ export const mockProvider: DataProvider = {
     );
     return delay(result);
   },
+  async ensureMyMemberProfile() {
+    // No accounts in mock mode, so no admin to be.
+    return delay(null);
+  },
   async listStaffProfiles() {
     return delay(loadDB().staffProfiles);
   },

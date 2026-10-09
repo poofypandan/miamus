@@ -135,7 +135,7 @@ export function PushNotificationSettings() {
           <div className="flex min-w-0 flex-col gap-0.5">
             <p className="text-sm font-medium">Push notifications</p>
             <p className="text-xs text-muted-foreground">
-              Get an alert on this device the moment staff report a sick pet.
+              Get an alert on this device the moment someone reports a sick pet.
             </p>
           </div>
 

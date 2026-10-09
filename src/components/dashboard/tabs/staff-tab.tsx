@@ -91,12 +91,13 @@ export function StaffTab() {
         action: `Proposed routine · ${proposal.status}`,
         subject: `${proposal.title} · ${petName(proposal.pet_id)}`,
         // staff_id when the proposal was filed by someone who had signed in;
-        // created_by ("staff"/"owner") is all the older rows carry.
+        // created_by ("staff"/"owner") is all the older rows carry — shown
+        // in the app's words, not the database's (Phase 139).
         actor: proposal.staff_id
           ? staffName(proposal.staff_id)
-          : proposal.created_by
-            ? titleCase(proposal.created_by)
-            : "Staff",
+          : proposal.created_by === "owner"
+            ? "Admin"
+            : "Member",
       })),
       ...inventoryAlerts.map((alert) => ({
         id: `alert-${alert.id}`,
@@ -145,7 +146,7 @@ export function StaffTab() {
         <Info className="mt-0.5 size-3.5 shrink-0" />
         <span>
           Names come from who was signed in on the phone, so they show who was on duty rather than
-          proving who tapped. Entries from before staff sign-ins simply read &ldquo;Staff&rdquo;.
+          proving who tapped. Entries from before name sign-ins simply read &ldquo;Someone&rdquo;.
         </span>
       </div>
 
@@ -191,10 +192,6 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
   );
 }
 
-function titleCase(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
 // Owner-facing, so entirely English per the Phase 46 language boundary.
 function StaffRoster({
   profiles,
@@ -224,7 +221,7 @@ function StaffRoster({
       toast.success(`${name} added — they choose their own PIN on first sign-in`);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add staff member");
+      toast.error("Failed to add this person");
     } finally {
       setAdding(false);
     }
@@ -251,19 +248,19 @@ function StaffRoster({
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">Staff &amp; PINs</h2>
+      <h2 className="text-sm font-semibold text-gray-900">People &amp; PINs</h2>
 
       {/* How the pieces fit (Phase 120). A new owner meets a roster, an
           invite card further down and the word "PIN" with nothing saying they
           are one flow — and which half the staff member does themselves. */}
       <ol className="flex flex-col gap-1.5 rounded-xl border bg-card px-4 py-3 text-xs text-muted-foreground">
         <li>
-          <span className="font-medium text-gray-900">1. Add each person</span> who works in the
-          house, by name, below.
+          <span className="font-medium text-gray-900">1. Add each person</span> who helps run the
+          house without a Google account, by name, below. Admins are listed automatically.
         </li>
         <li>
-          <span className="font-medium text-gray-900">2. Invite their phone</span> with a Staff
-          Device link (under Invites). A shared house phone works too.
+          <span className="font-medium text-gray-900">2. Invite their phone</span> with a Device
+          link (under Invites). A shared house phone works too.
         </li>
         <li>
           <span className="font-medium text-gray-900">3. They sign in</span> on that phone by
@@ -279,7 +276,7 @@ function StaffRoster({
       />
 
       {failed ? (
-        <p className="text-sm text-destructive">Couldn&apos;t load the staff list.</p>
+        <p className="text-sm text-destructive">Couldn&apos;t load the list of people.</p>
       ) : profiles === null ? (
         <Skeleton className="h-24 w-full rounded-xl" />
       ) : (
@@ -287,7 +284,7 @@ function StaffRoster({
           <CardContent className="flex flex-col divide-y px-0">
             {profiles.length === 0 ? (
               <p className="px-4 py-3 text-sm text-muted-foreground">
-                No staff yet. Add the first name below — their PIN can wait until they sign in.
+                Nobody yet. Add the first name below — their PIN can wait until they sign in.
               </p>
             ) : (
               profiles.map((profile) => (
@@ -301,9 +298,16 @@ function StaffRoster({
                         bcrypt hash in a column no client may read
                         (migrations/095-096). Only whether one exists. */}
                     <span className="text-xs text-muted-foreground">
-                      {profile.has_pin ? "PIN set" : "No PIN yet"}
+                      {profile.user_id
+                        ? "Admin · signs in with Google"
+                        : profile.has_pin
+                          ? "PIN set"
+                          : "No PIN yet"}
                     </span>
                   </span>
+                  {/* An admin's row is theirs through Google (migrations/106),
+                      and the database refuses a PIN on it — so no button. */}
+                  {!profile.user_id && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -318,6 +322,7 @@ function StaffRoster({
                     )}
                     {profile.has_pin ? "Change PIN" : "Set PIN"}
                   </Button>
+                  )}
                 </div>
               ))
             )}
@@ -336,7 +341,7 @@ function StaffRoster({
         >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="new-staff-name" className="text-xs">
-              New staff name
+              New person&apos;s name
             </Label>
             <Input
               id="new-staff-name"
@@ -347,11 +352,11 @@ function StaffRoster({
               autoComplete="off"
             />
             <p className="text-[11px] text-muted-foreground">
-              The name they&apos;ll tap on the staff phone, so use what they go by.
+              The name they&apos;ll tap when signing in with a PIN, so use what they go by.
             </p>
           </div>
           <Button type="submit" disabled={adding} className="min-h-[48px]">
-            {adding ? <Loader2 className="animate-spin" /> : <Plus />} Add New Staff
+            {adding ? <Loader2 className="animate-spin" /> : <Plus />} Add Person
           </Button>
         </form>
       </Card>

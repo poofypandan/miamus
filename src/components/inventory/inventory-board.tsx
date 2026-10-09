@@ -45,7 +45,7 @@ const COPY = {
     copied: () => "",
     copyFailed: "",
     emptyTitle: () => "Belum ada barang",
-    empty: () => "Pemilik belum menambahkan barang di sini.",
+    empty: () => "Admin belum menambahkan barang di sini.",
   },
 } as const;
 

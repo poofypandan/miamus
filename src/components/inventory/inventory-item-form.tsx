@@ -247,7 +247,7 @@ export function InventoryItemForm({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Staff count it every</Label>
+              <Label>Count it every</Label>
               <Select value={String(checkEvery)} onValueChange={(v) => setCheckEvery(Number(v))}>
                 <SelectTrigger className="min-h-[48px] w-full">
                   <SelectValue />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -93,8 +93,17 @@ export function ChoreEditorDialog({
     householdTasks,
     materialiseChoreOccurrence,
     updateHouseholdTaskStatus,
+    memberProfile,
   } = useHousehold();
   const { profiles } = useStaffProfiles();
+  // Everyone in the house, admins included (Phase 139; migrations/106 put
+  // them on the roster). Yourself first, since assigning your own chores is
+  // the common case in a house without staff.
+  const assignees = useMemo(() => {
+    const list = profiles ?? [];
+    const selfId = memberProfile?.id;
+    return [...list.filter((p) => p.id === selfId), ...list.filter((p) => p.id !== selfId)];
+  }, [profiles, memberProfile?.id]);
   const { locations } = useHouseholdLocations();
   const editing = !!task;
 
@@ -333,9 +342,13 @@ export function ChoreEditorDialog({
                     picked up by whoever is free, which is how most of these
                     actually get done. */}
                 <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
-                {(profiles ?? []).map((p) => (
+                {assignees.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.name}
+                    {p.id === memberProfile?.id
+                      ? `${p.name} (me)`
+                      : p.user_id
+                        ? `${p.name} · Admin`
+                        : p.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -425,8 +438,8 @@ export function ChoreEditorDialog({
             <span className="flex flex-col gap-0.5">
               <span className="text-sm font-medium text-amber-900">Requires supervision</span>
               <span className="text-[11px] text-amber-900/80">
-                Flags the chore on every staff phone so they wait for you rather than starting
-                on their own.
+                Flags the chore in Action Mode so whoever does it waits for an admin rather
+                than starting on their own.
               </span>
             </span>
           </label>

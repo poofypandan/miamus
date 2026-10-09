@@ -114,7 +114,7 @@ function FrontDoor() {
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] text-center">
       <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Welcome to Miamus</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        Run your household from one place — pets, chores, staff and stock.
+        Run your household from one place — pets, chores, people and stock.
       </p>
 
       <Button onClick={handleGoogle} disabled={busy} className="mt-10 min-h-[52px] w-full">
@@ -130,7 +130,7 @@ function FrontDoor() {
           way back for a staff phone is its invite link, so that is what this
           says, in Bahasa Indonesia because it is staff who need to read it. */}
       <p className="mt-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-xs leading-relaxed text-amber-900">
-        <span className="font-semibold">Untuk Staf:</span> Jangan masuk dengan Google. Silakan
+        <span className="font-semibold">Masuk dengan PIN?</span> Jangan masuk dengan Google. Silakan
         klik link undangan Miamus di WhatsApp Anda untuk membuka jadwal.
       </p>
     </main>

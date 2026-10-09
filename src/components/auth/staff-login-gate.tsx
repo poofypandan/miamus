@@ -17,6 +17,7 @@ import { StaffSplash } from "@/components/staff/staff-splash";
 import { StaffLoadingScreen } from "@/components/brand/loading-screens";
 import { dataProvider } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { activeMemberProfile } from "@/lib/member-identity";
 import type { StaffProfile } from "@/types/database";
 
 const STAFF_ID_KEY = "banyuwangi11:staffId";
@@ -48,6 +49,11 @@ export function useStaffIdentity(): StaffIdentity {
  */
 export function readActiveStaffId(): string | null {
   if (typeof window === "undefined") return null;
+  // An admin is always themselves (Phase 139): their own roster row, never a
+  // staff name that may once have been picked on this phone — which would
+  // file the admin's work under someone else.
+  const member = activeMemberProfile();
+  if (member !== undefined) return member?.id ?? null;
   try {
     return window.localStorage.getItem(STAFF_ID_KEY);
   } catch {
@@ -69,7 +75,7 @@ export function readActiveStaffId(): string | null {
  * Staff-facing, so entirely Bahasa Indonesia per the Phase 46 language boundary.
  */
 export function StaffLoginGate({ children }: { children: ReactNode }) {
-  const { userRole, roleHydrated } = useHousehold();
+  const { userRole, roleHydrated, memberProfile, memberProfileReady } = useHousehold();
   const [staffId, setStaffId] = useState<string | null>(null);
   const [staffName, setStaffName] = useState<string | null>(null);
   // Starts false so the server HTML and the first client render agree; the
@@ -98,10 +104,11 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // The owner opens this view to look, not to work. Making them borrow a staff
-  // member's name would both annoy them and file their taps under someone
-  // else, so they pass straight through — their rows carry no staff_id, which
-  // is the truthful answer.
+  // An admin never meets the PIN screen: they signed in with Google, and
+  // their roster row is linked to that account (Phase 139, migrations/106).
+  // They pass straight through as themselves — so Action Mode shows their own
+  // chores, and what they finish is filed under their name. Before 106 there
+  // is no row, and they pass through as nobody, as they always did.
   const ownerBypass = userRole === "owner";
 
   // Nothing is rendered until both the stored identity and the owner role have
@@ -112,7 +119,12 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
   // The RUMAH screen rather than nothing while that happens (Phase 121): the
   // same one app/staff/loading.tsx shows, so a cold start is one calm screen
   // instead of white, then rules, then the list.
-  if (!hydrated || !roleHydrated) return <StaffLoadingScreen />;
+  //
+  // An admin on a first launch also waits for their roster row, so the list
+  // does not show every chore and then narrow to theirs.
+  if (!hydrated || !roleHydrated || (ownerBypass && !memberProfileReady)) {
+    return <StaffLoadingScreen />;
+  }
 
   if (!staffId && !ownerBypass) {
     return <StaffGateScreen onIdentified={identify} />;
@@ -123,7 +135,13 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
   // again. Correcting a wrong choice means clearing the browser's site data
   // for this app.
   return (
-    <StaffIdentityContext.Provider value={{ staffId, staffName }}>
+    <StaffIdentityContext.Provider
+      value={
+        ownerBypass
+          ? { staffId: memberProfile?.id ?? null, staffName: memberProfile?.name ?? null }
+          : { staffId, staffName }
+      }
+    >
       {children}
     </StaffIdentityContext.Provider>
   );
@@ -143,7 +161,9 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
     let live = true;
     dataProvider
       .listStaffProfiles()
-      .then((rows) => live && setProfiles(rows))
+      // Admins sign in with Google, not here: offering their names would let
+      // anyone holding this phone set a PIN and act as them (Phase 139).
+      .then((rows) => live && setProfiles(rows.filter((row) => !row.user_id)))
       .catch((err) => {
         console.error(err);
         if (live) setFailed(true);
@@ -178,7 +198,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
 
       {failed ? (
         <p className="text-center text-sm text-destructive">
-          Gagal memuat daftar staf. Periksa koneksi lalu muat ulang halaman.
+          Gagal memuat daftar nama. Periksa koneksi lalu muat ulang halaman.
         </p>
       ) : profiles === null ? (
         <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -186,7 +206,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
         </p>
       ) : profiles.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground">
-          Belum ada staf terdaftar. Minta pemilik menambahkan nama kamu dulu.
+          Belum ada nama terdaftar. Minta admin rumah menambahkan nama kamu dulu.
         </p>
       ) : (
         <div className="flex flex-col gap-3">

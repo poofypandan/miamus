@@ -161,8 +161,8 @@ export function AdHocSheet() {
               <WhatsAppNotifyPanel
                 tone="urgent"
                 title={`Laporan sakit ${urgentReport.petName} tersimpan`}
-                description="Ini laporan darurat. Pemilik tidak menerima notifikasi otomatis — kirim pesan WhatsApp sekarang juga."
-                ctaLabel="Kirim Peringatan ke Pemilik"
+                description="Ini laporan darurat. Admin tidak menerima notifikasi otomatis — kirim pesan WhatsApp sekarang juga."
+                ctaLabel="Kirim Peringatan ke Admin"
                 message={`URGENT 🚨: Laporan sakit/muntah untuk ${urgentReport.petName}.${
                   urgentReport.note ? ` Catatan: ${urgentReport.note}.` : ""
                 } Mohon cek aplikasi sekarang:`}

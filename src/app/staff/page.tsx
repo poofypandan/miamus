@@ -169,7 +169,6 @@ function TasksView() {
     loading,
     selectedDate,
     setSelectedDate,
-    isHouseholdMember,
     todayJumps,
   } = useHousehold();
   const { staffId } = useStaffIdentity();
@@ -200,12 +199,13 @@ function TasksView() {
   // arrive. This keeps each person's list to their own work; it does not
   // stop a determined colleague reading the network traffic.
   //
-  // Owners see everything (Phase 113). Decided by membership — a Google
-  // account in household_members — not by "no staff name on this phone":
-  // an owner who once picked a staff name on their own phone still had one
-  // stored, and Phase 112's filter then hid every colleague's chore from them.
-  // A staff phone has no membership, so it can never take this branch.
-  const isolatedTo = isHouseholdMember ? null : staffId;
+  // Admins too, since Phase 139: Action Mode is everyone's own list, and the
+  // whole household's lives in Manage. An admin's staffId is their own
+  // roster row (migrations/106), never a staff name once picked on their
+  // phone — that was the Phase 113 bug, where a stored name hid every other
+  // chore from an owner. An admin with no row yet (before 106) has a null
+  // id here and still sees everything, as before.
+  const isolatedTo = staffId;
   const chores = useMemo(
     () => (isolatedTo ? occurrencesForStaff(allChores, isolatedTo) : allChores),
     [allChores, isolatedTo]
@@ -244,10 +244,10 @@ function TasksView() {
 
   const [range, setRange] = useAgendaRange();
   const week = useAgendaWeek(selectedDate, isolatedTo);
-  // Only ever needed for the owner browsing this view: a staff phone sees no
-  // chore assigned to anyone but itself.
+  // Only ever needed by an admin without a roster row, who still sees every
+  // chore: everyone else sees no chore assigned to anyone but themselves.
   const { profiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(profiles, "Petugas");
+  const staffName = useStaffNameLookup(profiles, "Anggota");
   const roomName = useLocationName();
 
   // A week at a time, from the selected day (Phase 115).
@@ -265,8 +265,8 @@ function TasksView() {
         key={entry.key}
         occurrence={entry.occurrence}
         locationName={roomName(entry.occurrence.task.location_id)}
-        // Someone else's name only when it is someone else's chore — which a
-        // staff phone never sees, but an owner here does. Left out, the card
+        // Someone else's name only when it is someone else's chore — which
+        // only an admin without a roster row sees. Left out, the card
         // says "Untuk Kamu".
         assigneeName={
           entry.occurrence.task.assigned_to && entry.occurrence.task.assigned_to !== isolatedTo
@@ -411,20 +411,20 @@ function TasksView() {
 // out by accident.
 function HeaderIdentity() {
   const { isHouseholdMember } = useHousehold();
-  const { staffId } = useStaffIdentity();
 
-  // The owner's way back out, shown only to a real household member: a row in
+  // The admin's way back out, shown only to a real household member: a row in
   // household_members, which only a Google account can have. A bound staff
   // device has an anonymous session and no membership, so it never renders
   // this. (Entering the owner PIN on a phone used to be enough to show it,
-  // until Phase 91; the owner PIN itself is gone since Phase 108.) The staffId check stays for the
-  // owner who also signed in as staff on their own phone.
+  // until Phase 91; the owner PIN itself is gone since Phase 108.) Since
+  // Phase 139 an admin always has their own identity here, so membership
+  // alone decides.
   //
   // Still not access control: it hides a button. The dashboard itself is held
   // by the middleware, which sends anonymous sessions back to /staff.
-  if (isHouseholdMember && !staffId) {
+  if (isHouseholdMember) {
     return <HeaderNavLink href="/dashboard" switchTo="owner">
-        ← Owner Dashboard
+        ← Manage
       </HeaderNavLink>;
   }
   return <OnDutyBadge />;
@@ -435,7 +435,7 @@ function OnDutyBadge() {
   return (
     <span className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-xs font-medium text-gray-500">
       <UserRound className="size-3.5" />
-      {staffName ?? "Pemilik"}
+      {staffName ?? "Admin"}
     </span>
   );
 }

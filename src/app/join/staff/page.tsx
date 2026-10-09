@@ -82,7 +82,7 @@ function JoinScreen() {
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 text-center">
         <h1 className="text-xl font-semibold text-gray-900">Link Tidak Berlaku</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Link undangan ini sudah dipakai atau kedaluwarsa. Minta link baru ke pemilik rumah.
+          Link undangan ini sudah dipakai atau kedaluwarsa. Minta link baru ke admin rumah.
         </p>
         <Link
           href="/"

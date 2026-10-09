@@ -103,8 +103,8 @@ export function ChoresTab() {
           title={noChoresYet ? "No chores yet" : "No chores on this day"}
           description={
             noChoresYet
-              ? "Add your first chore — one-off or repeating — and it appears on every staff phone straight away."
-              : "Add one and it appears on every staff phone straight away."
+              ? "Add your first chore — one-off or repeating — and it appears in Action Mode straight away."
+              : "Add one and it appears in Action Mode straight away."
           }
         >
           <Button
