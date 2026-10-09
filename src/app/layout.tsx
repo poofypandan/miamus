@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import { AppToaster } from "@/components/shared/app-toaster";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegistrar } from "@/components/shared/service-worker-registrar";
+import { UpdatePrompt } from "@/components/shared/update-prompt";
 import { NavigationCover } from "@/components/brand/brand-cover";
 import "./globals.css";
 
@@ -83,6 +84,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Push notifications (Phase 119): registers public/sw.js and routes
             a tapped notification. Renders nothing. */}
         <ServiceWorkerRegistrar />
+        {/* Over-the-air updates (Phase 137): a tap-to-reload toast once a
+            newer deployment is live. Never reloads by itself. */}
+        <UpdatePrompt />
         {/* The branded cover over a slow navigation — a tab, or an owner ↔
             staff switch — and only a slow one (Phases 132, 134). Here, above
             both views, so it survives a switch's route change. */}
