@@ -173,17 +173,27 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async uploadPhoto(file, pathPrefix) {
-    const c = client();
+    const { path, url } = supabaseProvider.reservePhotoPath(file, pathPrefix);
+    await supabaseProvider.uploadPhotoAt(path, file);
+    return url;
+  },
+  reservePhotoPath(file, pathPrefix) {
     const ext = extensionFor(file);
     // Household first (Phase 90): the storage policies read the tenant out of
     // the object key, so an upload that skipped the prefix would be refused.
     const path = `${getActiveHouseholdId()}/${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await c.storage
-      .from(STORAGE_BUCKET)
+    // Pure string-building inside supabase-js: no request, so this works with
+    // no signal at all.
+    const { data } = client().storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    return { path, url: data.publicUrl };
+  },
+  async uploadPhotoAt(path, file) {
+    const { error } = await client()
+      .storage.from(STORAGE_BUCKET)
       .upload(path, file, { contentType: file.type });
-    if (error) throw error;
-    const { data } = c.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-    return data.publicUrl;
+    // A retry of an upload whose reply was lost: the object is already there.
+    // Keys are unique per photo, so "exists" can only mean "this one".
+    if (error && !/already exists|duplicate/i.test(error.message)) throw error;
   },
   async deletePhoto(url) {
     const path = extractStoragePath(url);

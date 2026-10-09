@@ -2,13 +2,15 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Crop, Loader2, X } from "lucide-react";
+import { AlertTriangle, Camera, CloudOff, Crop, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
 import { useHousehold } from "@/context/household-context";
 import { compressPhoto } from "@/lib/image";
 import { cn } from "@/lib/utils";
 import { photoSrc } from "@/lib/photos";
+import { discardPhoto, enqueuePhoto } from "@/lib/photo-queue";
+import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 
 /**
  * Loaded only when someone actually crops something.
@@ -87,6 +89,18 @@ interface PhotoPickerProps {
    * photo of the dog is the whole point.
    */
   allowGallery?: boolean;
+  /**
+   * Offline-first capture (Phase 138; see lib/photo-queue.ts). The photo is
+   * kept on the device and `onChange` gets its final URL at once, with or
+   * without signal; the upload follows in the background and the thumbnail
+   * shows how it is going.
+   *
+   * Opt-in, and only for proof that is bound for one database write later —
+   * a chore's before and after, which ensureUploaded settles before the
+   * completion is saved. A caller that writes the URL straight to a row
+   * would be pointing the owner at a photo still sitting on a phone.
+   */
+  offline?: boolean;
 }
 
 export function PhotoPicker({
@@ -102,6 +116,7 @@ export function PhotoPicker({
   onBusyChange,
   masterSrc,
   allowGallery = false,
+  offline = false,
 }: PhotoPickerProps) {
   const { uploadPhoto } = useHousehold();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -127,8 +142,17 @@ export function PhotoPicker({
   async function upload(file: File) {
     setBusy(true);
     try {
-      const compressed = await compressPhoto(file);
-      const url = await uploadPhoto(compressed, pathPrefix);
+      // Offline-first keeps the original if compression fails: a 4MB photo
+      // on the device beats no photo at all.
+      const compressed = offline
+        ? await compressPhoto(file).catch((err) => {
+            console.error("Compression failed; keeping the original", err);
+            return file;
+          })
+        : await compressPhoto(file);
+      const url = offline
+        ? await enqueuePhoto(compressed, pathPrefix)
+        : await uploadPhoto(compressed, pathPrefix);
       onChange(url);
     } catch (err) {
       console.error(err);
@@ -242,11 +266,17 @@ export function PhotoPicker({
     return (
       <div className={cn("flex flex-col items-start gap-2", className)}>
         <div className="relative w-fit">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photoSrc(value, 320)} alt="" className="h-24 w-24 rounded-lg object-cover ring-1 ring-border" />
+          {offline ? (
+            <QueuedThumb url={value} />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoSrc(value, 320)} alt="" className="h-24 w-24 rounded-lg object-cover ring-1 ring-border" />
+          )}
           <button
             type="button"
             onClick={() => {
+              // A retake: the old photo is never uploaded, if it hadn't been.
+              if (offline) void discardPhoto(value);
               onChange(null);
               // Clearing the picture clears both halves of it.
               onMaster?.(null);
@@ -302,5 +332,52 @@ export function PhotoPicker({
         {busy ? busyLabel : label}
       </Button>
     </>
+  );
+}
+
+/**
+ * A photo from the offline queue (Phase 138): the copy on this device until
+ * it is in storage, dimmed while it waits, with what it is waiting on in the
+ * corner. Icons only — this picker is shared by both languages, so the words
+ * belong to the caller (see ProofStep in finish-chore-sheet.tsx).
+ */
+function QueuedThumb({ url }: { url: string }) {
+  const { state, localSrc, ready } = useQueuedPhoto(url);
+  const src = localSrc ?? (ready && state === null ? photoSrc(url, 320) : undefined);
+  return (
+    <div
+      className={cn(
+        "relative h-24 w-24 overflow-hidden rounded-lg bg-muted ring-1",
+        state === "failed" ? "ring-2 ring-destructive" : "ring-border"
+      )}
+    >
+      {src && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          className={cn(
+            "h-full w-full object-cover transition-opacity",
+            (state === "pending" || state === "uploading") && "opacity-60"
+          )}
+        />
+      )}
+      {state && (
+        <span
+          className={cn(
+            "absolute bottom-1 left-1 flex size-6 items-center justify-center rounded-full shadow-sm",
+            state === "failed" ? "bg-destructive text-white" : "bg-background/90 text-muted-foreground"
+          )}
+        >
+          {state === "uploading" ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : state === "pending" ? (
+            <CloudOff className="size-3.5" />
+          ) : (
+            <AlertTriangle className="size-3.5" />
+          )}
+        </span>
+      )}
+    </div>
   );
 }

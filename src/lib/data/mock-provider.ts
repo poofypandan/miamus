@@ -250,6 +250,13 @@ export const mockProvider: DataProvider = {
     // within this browser session.
     return delay(URL.createObjectURL(file), 300);
   },
+  reservePhotoPath(file) {
+    // The object URL is the whole "upload" here, so it is ready at once.
+    return { path: "", url: URL.createObjectURL(file) };
+  },
+  async uploadPhotoAt() {
+    return delay(undefined, 300);
+  },
   async deletePhoto(url) {
     // Mirrors uploadPhoto: nothing persisted server-side in mock mode, but
     // release the blob: URL so the browser can free the memory.

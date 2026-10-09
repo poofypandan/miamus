@@ -237,6 +237,18 @@ export interface DataProvider {
   deleteSchedule(id: string): Promise<void>;
   createMedicalRecord(input: CreateMedicalRecordInput): Promise<MedicalRecord>;
   uploadPhoto(file: File, pathPrefix: string): Promise<string>;
+  /**
+   * The storage key and stored URL a photo will have, worked out on the
+   * device with no request (Phase 138) — so a photo taken offline has its
+   * final reference at once, and only the bytes wait for a connection.
+   */
+  reservePhotoPath(file: File, pathPrefix: string): { path: string; url: string };
+  /**
+   * Uploads to a key from reservePhotoPath. Safe to repeat: an object that is
+   * already there counts as uploaded, which is what a retry after a reply
+   * lost mid-flight finds.
+   */
+  uploadPhotoAt(path: string, file: File): Promise<void>;
   deletePhoto(url: string): Promise<void>;
   listInventoryAlerts(): Promise<InventoryAlert[]>;
   createInventoryAlert(input: CreateInventoryAlertInput): Promise<InventoryAlert>;

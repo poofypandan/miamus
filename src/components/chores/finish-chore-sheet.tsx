@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Check, CheckCircle2, Eye, Hand, Loader2 } from "lucide-react";
+import { AlertTriangle, Camera, Check, CheckCircle2, CloudOff, Eye, Hand, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -23,6 +23,8 @@ import { photoTakenAt } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
+import { discardPhoto, ensureUploaded, PhotoNotUploadedError } from "@/lib/photo-queue";
+import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 
 /**
@@ -106,10 +108,21 @@ function FinishChoreBody({
     writeChoreDraft(draftKey, { before: beforeUrl, after: afterUrl });
   }, [draftKey, beforeUrl, afterUrl, done]);
 
-  // Finished, here or on another phone: nothing is owed any more.
+  // Finished, here or on another phone: nothing is owed any more — including
+  // any proof still waiting on this phone to upload (Phase 138). Finished
+  // here, both are already in storage and discarding is a no-op.
   useEffect(() => {
-    if (done) clearChoreDraft(draftKey);
-  }, [draftKey, done]);
+    if (!done) return;
+    clearChoreDraft(draftKey);
+    if (beforeUrl) void discardPhoto(beforeUrl);
+    if (afterUrl) void discardPhoto(afterUrl);
+  }, [draftKey, done, beforeUrl, afterUrl]);
+
+  // Proof the storage server refused outright (Phase 138): it has to be
+  // retaken, and finishing is held until it is.
+  const beforeState = useQueuedPhoto(beforeUrl).state;
+  const afterState = useQueuedPhoto(afterUrl).state;
+  const photoFailed = beforeState === "failed" || afterState === "failed";
 
   /**
    * Explains a failed save (Phase 133). Nothing here touches the photos: they
@@ -190,6 +203,16 @@ function FinishChoreBody({
     setBusy(true);
     let reloading = false;
     try {
+      // Taken offline, the photos may still be on this phone (Phase 138).
+      // The row must not point at them until they are in storage.
+      try {
+        await ensureUploaded([beforeUrl, afterUrl]);
+      } catch (err) {
+        if (!(err instanceof PhotoNotUploadedError)) throw err;
+        if (err.reason === "failed") toast.error("Ada foto yang rusak. Hapus lalu ambil ulang.");
+        else toast.info("Foto tersimpan di HP. Selesaikan lagi setelah ada sinyal.");
+        return;
+      }
       const id = await rowId();
       await updateHouseholdTaskStatus(id, "completed", {
         before_photo_url: beforeUrl,
@@ -275,12 +298,13 @@ function FinishChoreBody({
                 url={beforeUrl}
               >
                 <PhotoPicker
+                  offline
                   pathPrefix={pathPrefix}
                   value={beforeUrl}
                   onChange={setBeforeUrl}
                   onBusyChange={setUploadingBefore}
                   label="Ambil Foto Sebelum"
-                  busyLabel="Mengunggah..."
+                  busyLabel="Menyimpan foto..."
                   errorMessage="Gagal mengunggah foto"
                   className="min-h-[52px] w-full"
                 />
@@ -293,12 +317,13 @@ function FinishChoreBody({
                 url={afterUrl}
               >
                 <PhotoPicker
+                  offline
                   pathPrefix={pathPrefix}
                   value={afterUrl}
                   onChange={setAfterUrl}
                   onBusyChange={setUploadingAfter}
                   label="Ambil Foto Sesudah"
-                  busyLabel="Mengunggah..."
+                  busyLabel="Menyimpan foto..."
                   errorMessage="Gagal mengunggah foto"
                   className="min-h-[52px] w-full"
                 />
@@ -320,19 +345,23 @@ function FinishChoreBody({
                 a disabled button with no reason reads as broken. */}
             <Button
               onClick={handleFinish}
-              disabled={busy || uploading || !bothPhotos}
+              disabled={busy || uploading || !bothPhotos || photoFailed}
               className="min-h-[52px]"
             >
               {busy || uploading ? (
                 <Loader2 className="animate-spin" />
+              ) : photoFailed ? (
+                <AlertTriangle />
               ) : bothPhotos ? (
                 <CheckCircle2 />
               ) : (
                 <Camera />
               )}
               {uploading
-                ? "Menunggu foto terunggah…"
-                : !beforeUrl && !afterUrl
+                ? "Menyimpan foto…"
+                : photoFailed
+                  ? "Ambil ulang foto yang rusak"
+                  : !beforeUrl && !afterUrl
                   ? "Ambil 2 foto dulu"
                   : !beforeUrl
                     ? "Ambil foto sebelum dulu"
@@ -365,21 +394,37 @@ function ProofStep({
   children: React.ReactNode;
 }) {
   const takenAt = photoTakenAt(url);
+  // Where the photo is on its way to storage (Phase 138). Taken is taken —
+  // the card turns green either way — and the line underneath says the rest.
+  const { state } = useQueuedPhoto(url);
+  const failed = state === "failed";
+  const status =
+    state === "pending"
+      ? "Tersimpan di HP · terkirim otomatis saat ada sinyal"
+      : state === "uploading"
+        ? "Mengirim foto…"
+        : failed
+          ? "Foto rusak. Hapus lalu ambil ulang."
+          : null;
   return (
     <div
       className={cn(
         "flex flex-col gap-2.5 rounded-xl border p-3",
-        url ? "border-emerald-200 bg-emerald-50/60" : "bg-card"
+        failed ? "border-red-200 bg-red-50/60" : url ? "border-emerald-200 bg-emerald-50/60" : "bg-card"
       )}
     >
       <div className="flex items-start gap-2.5">
         <span
           className={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-            url ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
+            failed
+              ? "bg-red-600 text-white"
+              : url
+                ? "bg-emerald-600 text-white"
+                : "bg-muted text-muted-foreground"
           )}
         >
-          {url ? <Check className="size-4" /> : step}
+          {failed ? <AlertTriangle className="size-4" /> : url ? <Check className="size-4" /> : step}
         </span>
         <div className="flex min-w-0 flex-col">
           <p className="text-sm font-semibold">
@@ -388,6 +433,18 @@ function ProofStep({
           <p className="text-xs text-muted-foreground">
             {url && takenAt ? `Diambil ${formatTime12h(takenAt)}` : hint}
           </p>
+          {status && (
+            <p
+              className={cn(
+                "mt-0.5 flex items-center gap-1 text-xs",
+                failed ? "text-red-700" : "text-muted-foreground"
+              )}
+            >
+              {state === "pending" && <CloudOff className="size-3 shrink-0" />}
+              {state === "uploading" && <Loader2 className="size-3 shrink-0 animate-spin" />}
+              {status}
+            </p>
+          )}
         </div>
       </div>
       {children}
