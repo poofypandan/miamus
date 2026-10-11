@@ -9,7 +9,9 @@ export { cn } from "cn"
  * tappable link however the wording changes — and it's taken from the current
  * origin, so a preview deployment links to itself, not to production.
  */
-export function generateWhatsAppLink(message: string): string {
-  const dashboardUrl = `${window.location.origin}/dashboard`
+export function generateWhatsAppLink(message: string, path = "/dashboard"): string {
+  // `path` points the link somewhere specific — a leave request's approval
+  // screen (Phase 140) — instead of the dashboard's front page.
+  const dashboardUrl = `${window.location.origin}${path}`
   return `https://wa.me/?text=${encodeURIComponent(`${message} ${dashboardUrl}`)}`
 }

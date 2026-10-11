@@ -8,6 +8,7 @@ import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { AdHocSheet } from "@/components/staff/adhoc-sheet";
 import { StaffRoutinePicker } from "@/components/staff/staff-routine-picker";
 import { useHousehold } from "@/context/household-context";
+import { LeaveRequestButton } from "@/components/staff/leave-request";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { formatTime12h } from "@/lib/time";
 import { isActiveAlert } from "@/lib/inventory-status";
@@ -162,6 +163,8 @@ export function StaffReportsPanel({
         <LowStockFlagButton locale="id" />
         <StaffRoutinePicker />
         <AdHocSheet />
+        {/* Leave (Phase 140): another request that goes to an admin. */}
+        <LeaveRequestButton />
       </div>
 
       <ReportList title="Stok Menipis" empty="Belum ada laporan stok.">

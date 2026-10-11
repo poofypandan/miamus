@@ -27,6 +27,7 @@ import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { ChoreCard } from "@/components/chores/chore-card";
 import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
+import { LeaveStatusBanner } from "@/components/staff/leave-request";
 import { StockCheckPanel } from "@/components/staff/stock-check-panel";
 import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -292,6 +293,9 @@ function TasksView() {
 
   return (
     <>
+      {/* The person's own leave, pending or under way (Phase 140). */}
+      <LeaveStatusBanner />
+
       {/* Hari | Minggu (Phase 112), the same toggle as the owner's Agenda. */}
       <SegmentedControl
         ariaLabel="Rentang jadwal"

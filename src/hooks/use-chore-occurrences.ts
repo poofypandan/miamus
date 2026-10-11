@@ -5,6 +5,7 @@ import { useHousehold } from "@/context/household-context";
 import { useToday } from "@/hooks/use-today";
 import { expandChores, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { applyLeaveTriage } from "@/lib/leave";
 
 /**
  * The chores the household owes on the day being browsed (Phase 100).
@@ -18,15 +19,22 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
  * `today` comes from useToday rather than the clock, so a phone left open
  * overnight re-expands against the new day instead of still calling yesterday
  * "today" and hiding everything that carried over.
+ *
+ * Leave is applied here too (Phase 140; lib/leave.ts): a chore whose owner is
+ * away comes out reassigned, unassigned or paused, for both views alike.
  */
 export function useChoreOccurrences(): ChoreOccurrence[] {
-  const { householdTasks, selectedDate } = useHousehold();
+  const { householdTasks, selectedDate, leaveRequests } = useHousehold();
   const today = useToday();
   const dateStr = formatDateLocal(selectedDate);
   const todayStr = formatDateLocal(today);
 
   return useMemo(
-    () => expandChores({ rows: householdTasks, date: dateStr, today: todayStr }),
-    [householdTasks, dateStr, todayStr]
+    () =>
+      applyLeaveTriage(
+        expandChores({ rows: householdTasks, date: dateStr, today: todayStr }),
+        leaveRequests
+      ),
+    [householdTasks, dateStr, todayStr, leaveRequests]
   );
 }

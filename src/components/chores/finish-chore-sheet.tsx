@@ -159,7 +159,13 @@ function FinishChoreBody({
     if (occurrence.row) return occurrence.row.id;
     // The template's id: this writes the row that a day of the repeat is
     // missing, and parent_task_id has to point at the repeat itself.
-    const created = await materialiseChoreOccurrence(occurrence.template.id, occurrence.date);
+    // Under the assignee on screen, not the template's: a chore covered for
+    // someone on leave is filed under whoever covers it (Phase 140).
+    const created = await materialiseChoreOccurrence(
+      occurrence.template.id,
+      occurrence.date,
+      occurrence.task.assigned_to
+    );
     return created.id;
   }
 

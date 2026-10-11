@@ -148,6 +148,31 @@ export type MedicalRecord = {
   created_at: string;
 };
 
+export type LeaveStatus = "pending" | "approved" | "rejected" | "ended_early";
+export type LeaveFallbackAction = "reassign" | "unassign" | "pause";
+
+/**
+ * A request for days off, and — once an admin approves it — what happens to
+ * that person's chores meanwhile (migrations/108, Phase 140). The triage
+ * itself is applied where chores are expanded, in lib/leave.ts.
+ */
+export type LeaveRequest = {
+  id: string;
+  household_id: string;
+  /** Whose leave: a roster row, which admins have too (migrations/106). */
+  staff_id: string;
+  start_date: string;
+  end_date: string;
+  status: LeaveStatus;
+  fallback_action: LeaveFallbackAction | null;
+  fallback_assignee_id: string | null;
+  /** First day back, when they returned before end_date. */
+  ended_on: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
+};
+
 export type StaffProfile = {
   id: string;
   // The tenant (migrations/086). Always Banyuwangi 11 until Phase 86B.
@@ -442,6 +467,13 @@ export interface Database {
         Update: Partial<HouseholdTask>;
         Relationships: [];
       };
+      leave_requests: {
+        Row: LeaveRequest;
+        Insert: Partial<LeaveRequest> &
+          Pick<LeaveRequest, "household_id" | "staff_id" | "start_date" | "end_date">;
+        Update: Partial<LeaveRequest>;
+        Relationships: [];
+      };
       household_locations: {
         Row: HouseholdLocation;
         Insert: Partial<HouseholdLocation> & Pick<HouseholdLocation, "household_id" | "name">;
@@ -526,6 +558,11 @@ export interface Database {
         }[];
       };
       // Hashes and stores a PIN, or clears it when given null.
+      // "I'm back early" (migrations/108): ends an approved leave on p_today.
+      end_leave_early: {
+        Args: { p_id: string; p_today: string };
+        Returns: LeaveRequest;
+      };
       // The signed-in admin's own roster row, created if missing (migrations/106).
       ensure_my_member_profile: {
         Args: { p_household_id: string };

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { addDays } from "date-fns";
+import { applyLeaveTriage } from "@/lib/leave";
 import { useHousehold } from "@/context/household-context";
 import { useToday } from "@/hooks/use-today";
 import { expandChores, occurrencesForStaff } from "@/lib/chore-recurrence";
@@ -32,7 +33,7 @@ export interface AgendaDay {
  * whichever view is showing.
  */
 export function useAgendaWeek(date: Date, staffId?: string | null): AgendaDay[] {
-  const { pets, schedules, logs, householdTasks } = useHousehold();
+  const { pets, schedules, logs, householdTasks, leaveRequests } = useHousehold();
   const todayStr = formatDateLocal(useToday());
   const startStr = formatDateLocal(weekStartOf(date));
 
@@ -42,9 +43,14 @@ export function useAgendaWeek(date: Date, staffId?: string | null): AgendaDay[] 
       const day = addDays(first, offset);
       const date = formatDateLocal(day);
       const groups = buildAgenda({ date, entities: pets, schedules, logs });
-      const all = expandChores({ rows: householdTasks, date, today: todayStr });
+      // Leave first, then the person filter: a chore covered for someone who
+      // is away belongs on the cover person's week (Phase 140).
+      const all = applyLeaveTriage(
+        expandChores({ rows: householdTasks, date, today: todayStr }),
+        leaveRequests
+      );
       const chores = staffId ? occurrencesForStaff(all, staffId) : all;
       return { date, day, entries: buildUnifiedAgenda({ groups, chores }) };
     });
-  }, [startStr, pets, schedules, logs, householdTasks, todayStr, staffId]);
+  }, [startStr, pets, schedules, logs, householdTasks, leaveRequests, todayStr, staffId]);
 }

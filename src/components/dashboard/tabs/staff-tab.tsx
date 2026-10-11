@@ -26,6 +26,10 @@ import { useHousehold } from "@/context/household-context";
 import { dataProvider } from "@/lib/data";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { useStaffProfiles, useStaffNameLookup } from "@/hooks/use-staff-profiles";
+import { useToday } from "@/hooks/use-today";
+import { isOnLeave } from "@/lib/leave";
+import { formatDateLocal } from "@/lib/scheduleEngine";
+import { LeavePanel } from "@/components/dashboard/leave-panel";
 import { describeLog } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
 import type { ItemType, StaffProfile } from "@/types/database";
@@ -128,6 +132,8 @@ export function StaffTab() {
 
       <StaffRoster profiles={profiles} failed={failed} reload={reload} />
 
+      <LeavePanel staffName={staffName} />
+
       <InvitePanel />
 
       <PushNotificationSettings />
@@ -206,6 +212,9 @@ function StaffRoster({
   const [adding, setAdding] = useState(false);
   const [resetting, setResetting] = useState<string | null>(null);
   const [pinTarget, setPinTarget] = useState<StaffProfile | null>(null);
+  // Who is away today (Phase 140): a red badge on their row.
+  const { leaveRequests } = useHousehold();
+  const today = formatDateLocal(useToday());
 
   async function addStaff() {
     const name = newName.trim();
@@ -293,7 +302,14 @@ function StaffRoster({
                     <UserRound className="size-4" />
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate font-medium">{profile.name}</span>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate font-medium">{profile.name}</span>
+                      {isOnLeave(leaveRequests, profile.id, today) && (
+                        <Badge className="shrink-0 bg-red-100 text-[10px] text-red-700">
+                          On Leave
+                        </Badge>
+                      )}
+                    </span>
                     {/* The PIN itself is never shown, and cannot be: it is a
                         bcrypt hash in a column no client may read
                         (migrations/095-096). Only whether one exists. */}

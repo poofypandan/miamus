@@ -24,6 +24,7 @@ import type {
   HouseholdLocation,
   HouseholdTaskCategory,
   HouseholdTaskStatus,
+  LeaveRequest,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -305,7 +306,22 @@ export interface DataProvider {
    * that now owns that day, whether this call created it or lost the race to
    * another phone.
    */
-  materialiseChoreOccurrence(templateId: string, date: string): Promise<HouseholdTask>;
+  /**
+   * `assignedTo`, when given, replaces the template's assignee on the written
+   * row — how a chore covered during someone's leave is filed under the
+   * person actually covering it (Phase 140).
+   */
+  materialiseChoreOccurrence(
+    templateId: string,
+    date: string,
+    assignedTo?: string | null
+  ): Promise<HouseholdTask>;
+  /** Leave whose last day is on or after `sinceDate`, oldest first (Phase 140). */
+  listLeaveRequests(sinceDate: string): Promise<LeaveRequest[]>;
+  getLeaveRequest(id: string): Promise<LeaveRequest | null>;
+  createLeaveRequest(input: { staff_id: string; start_date: string; end_date: string }): Promise<LeaveRequest>;
+  decideLeaveRequest(id: string, decision: LeaveDecision): Promise<LeaveRequest>;
+  endLeaveEarly(id: string, today: string): Promise<LeaveRequest>;
   /** Assigns an unassigned chore to a staff member. */
   claimHouseholdTask(id: string, staffId: string): Promise<HouseholdTask>;
   listStaffProfiles(): Promise<StaffProfile[]>;
@@ -337,3 +353,12 @@ export interface DataProvider {
   /** Checks a PIN against its hash (migrations/095). */
   verifyStaffPin(id: string, pin: string): Promise<boolean>;
 }
+
+/** An admin's answer to a leave request (Phase 140). */
+export type LeaveDecision =
+  | { status: "rejected" }
+  | {
+      status: "approved";
+      fallback_action: "reassign" | "unassign" | "pause";
+      fallback_assignee_id: string | null;
+    };

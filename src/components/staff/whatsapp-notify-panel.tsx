@@ -44,6 +44,7 @@ export function WhatsAppNotifyPanel({
   description = DEFAULT_DESCRIPTION,
   ctaLabel = DEFAULT_CTA,
   tone = "success",
+  linkPath,
 }: {
   title: string;
   /** Message body; the dashboard link is appended by generateWhatsAppLink. */
@@ -61,6 +62,8 @@ export function WhatsAppNotifyPanel({
   ctaLabel?: string;
   /** Defaults to the routine green tick; "urgent" swaps it for an amber warning. */
   tone?: NotifyTone;
+  /** Where the link in the message leads; the dashboard when omitted. */
+  linkPath?: string;
 }) {
   const { icon: ToneIcon, className: toneClass } = TONES[tone];
 
@@ -89,7 +92,7 @@ export function WhatsAppNotifyPanel({
           asChild
           className="h-auto min-h-[52px] w-full bg-emerald-700 py-3 text-base leading-snug whitespace-normal text-white hover:bg-emerald-800"
         >
-          <a href={generateWhatsAppLink(message)} target="_blank" rel="noopener noreferrer">
+          <a href={generateWhatsAppLink(message, linkPath)} target="_blank" rel="noopener noreferrer">
             <MessageCircle className="size-5" /> {ctaLabel}
           </a>
         </Button>

@@ -10,6 +10,7 @@ import type {
   StaffProfile,
   HouseholdTask,
   HouseholdLocation,
+  LeaveRequest,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
@@ -32,6 +33,7 @@ interface MockDB {
   staffPins?: Record<string, string | null>;
   householdTasks: HouseholdTask[];
   householdLocations: HouseholdLocation[];
+  leaveRequests: LeaveRequest[];
 }
 
 function freshDB(): MockDB {
@@ -47,6 +49,7 @@ function freshDB(): MockDB {
     staffProfiles: [],
     householdTasks: [],
     householdLocations: [],
+    leaveRequests: [],
   };
 }
 
@@ -68,6 +71,7 @@ function loadDB(): MockDB {
         staffProfiles: parsed.staffProfiles ?? [],
         householdTasks: parsed.householdTasks ?? [],
         householdLocations: parsed.householdLocations ?? [],
+        leaveRequests: parsed.leaveRequests ?? [],
       };
     }
   } catch {
@@ -505,7 +509,7 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(undefined);
   },
-  async materialiseChoreOccurrence(templateId, date) {
+  async materialiseChoreOccurrence(templateId, date, assignedTo) {
     const db = loadDB();
     const existing = db.householdTasks.find(
       (t) => t.parent_task_id === templateId && t.due_date === date
@@ -517,6 +521,7 @@ export const mockProvider: DataProvider = {
       ...template,
       id: uid("chore"),
       parent_task_id: template.id,
+      assigned_to: assignedTo === undefined ? template.assigned_to : assignedTo,
       due_date: date,
       recurrence: "none",
       recurrence_until: null,
@@ -627,6 +632,65 @@ export const mockProvider: DataProvider = {
         (a.name === null ? 1 : b.name === null ? -1 : a.name.localeCompare(b.name))
     );
     return delay(result);
+  },
+  async listLeaveRequests(sinceDate) {
+    return delay(
+      loadDB()
+        .leaveRequests.filter((l) => l.end_date >= sinceDate)
+        .sort((a, b) => a.start_date.localeCompare(b.start_date))
+    );
+  },
+  async getLeaveRequest(id) {
+    return delay(loadDB().leaveRequests.find((l) => l.id === id) ?? null);
+  },
+  async createLeaveRequest(input) {
+    const db = loadDB();
+    const leave: LeaveRequest = {
+      id: uid("leave"),
+      household_id: getActiveHouseholdId(),
+      ...input,
+      status: "pending",
+      fallback_action: null,
+      fallback_assignee_id: null,
+      ended_on: null,
+      decided_by: null,
+      decided_at: null,
+      created_at: new Date().toISOString(),
+    };
+    db.leaveRequests.push(leave);
+    saveDB(db);
+    return delay(leave);
+  },
+  async decideLeaveRequest(id, decision) {
+    const db = loadDB();
+    const idx = db.leaveRequests.findIndex((l) => l.id === id);
+    if (idx === -1) throw new Error("Leave request not found");
+    const approved = decision.status === "approved";
+    const updated: LeaveRequest = {
+      ...db.leaveRequests[idx],
+      status: decision.status,
+      fallback_action: approved ? decision.fallback_action : null,
+      fallback_assignee_id:
+        approved && decision.fallback_action === "reassign" ? decision.fallback_assignee_id : null,
+      decided_at: new Date().toISOString(),
+    };
+    db.leaveRequests[idx] = updated;
+    saveDB(db);
+    return delay(updated);
+  },
+  async endLeaveEarly(id, today) {
+    const db = loadDB();
+    const idx = db.leaveRequests.findIndex((l) => l.id === id && l.status === "approved");
+    if (idx === -1) throw new Error("leave_not_active");
+    const leave = db.leaveRequests[idx];
+    const dayAfterEnd = new Date(`${leave.end_date}T00:00:00`);
+    dayAfterEnd.setDate(dayAfterEnd.getDate() + 1);
+    const cap = `${dayAfterEnd.getFullYear()}-${String(dayAfterEnd.getMonth() + 1).padStart(2, "0")}-${String(dayAfterEnd.getDate()).padStart(2, "0")}`;
+    const endedOn = [leave.start_date, today < cap ? today : cap].sort().at(-1)!;
+    const updated: LeaveRequest = { ...leave, status: "ended_early", ended_on: endedOn };
+    db.leaveRequests[idx] = updated;
+    saveDB(db);
+    return delay(updated);
   },
   async ensureMyMemberProfile() {
     // No accounts in mock mode, so no admin to be.

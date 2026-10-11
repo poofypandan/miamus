@@ -560,7 +560,7 @@ export const supabaseProvider: DataProvider = {
       throw new Error("Chore was not deleted — the delete policy may be missing.");
     }
   },
-  async materialiseChoreOccurrence(templateId, date) {
+  async materialiseChoreOccurrence(templateId, date, assignedTo) {
     const { data: template, error: readError } = await client()
       .from("household_tasks")
       .select("*")
@@ -576,7 +576,7 @@ export const supabaseProvider: DataProvider = {
         title: template.title,
         notes: template.notes,
         category: template.category,
-        assigned_to: template.assigned_to,
+        assigned_to: assignedTo === undefined ? template.assigned_to : assignedTo,
         due_date: date,
         due_time: template.due_time,
         requires_supervision: template.requires_supervision ?? false,
@@ -712,6 +712,57 @@ export const supabaseProvider: DataProvider = {
     const fallback = await list(STAFF_COLUMNS);
     if (fallback.error) throw fallback.error;
     return fallback.data;
+  },
+  async listLeaveRequests(sinceDate) {
+    const { data, error } = await client()
+      .from("leave_requests")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .gte("end_date", sinceDate)
+      .order("start_date");
+    if (error) throw error;
+    return data;
+  },
+  async getLeaveRequest(id) {
+    const { data, error } = await client().from("leave_requests").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+  async createLeaveRequest(input) {
+    const { data, error } = await client()
+      .from("leave_requests")
+      .insert({ ...input, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async decideLeaveRequest(id, decision) {
+    const {
+      data: { session },
+    } = await client().auth.getSession();
+    const { data, error } = await client()
+      .from("leave_requests")
+      .update({
+        status: decision.status,
+        fallback_action: decision.status === "approved" ? decision.fallback_action : null,
+        fallback_assignee_id:
+          decision.status === "approved" && decision.fallback_action === "reassign"
+            ? decision.fallback_assignee_id
+            : null,
+        decided_by: session?.user.id ?? null,
+        decided_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async endLeaveEarly(id, today) {
+    const { data, error } = await client().rpc("end_leave_early", { p_id: id, p_today: today });
+    if (error) throw error;
+    return data;
   },
   async ensureMyMemberProfile(householdId) {
     const { data, error } = await client().rpc("ensure_my_member_profile", {

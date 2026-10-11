@@ -4,6 +4,7 @@ import type {
   InventoryAlert,
   InventoryAuditWithStaff,
   InventoryItem,
+  LeaveRequest,
   MasterSchedule,
   MedicalRecord,
   RoutineProposal,
@@ -45,6 +46,8 @@ export interface HouseholdSnapshot {
   medicalRecords: MedicalRecord[];
   inventoryAlerts: InventoryAlert[];
   routineProposals: RoutineProposal[];
+  /** Optional: snapshots written before Phase 140 have none. */
+  leaveRequests?: LeaveRequest[];
   inventoryItems: InventoryItem[];
   latestInventoryAudits: Record<string, InventoryAuditWithStaff>;
 }

@@ -15,7 +15,9 @@ import type {
   CreateRoutineProposalInput,
   CreateHouseholdTaskInput,
   UpdateHouseholdTaskInput,
+  LeaveDecision,
 } from "@/lib/data";
+import { LEAVE_LOOKBACK_DAYS } from "@/lib/leave";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
 import {
   readCachedMemberProfile,
@@ -50,6 +52,7 @@ import type {
   ProposalStatus,
   HouseholdTask,
   HouseholdTaskStatus,
+  LeaveRequest,
 } from "@/types/database";
 
 /**
@@ -102,6 +105,11 @@ interface HouseholdContextValue {
   medicalRecords: MedicalRecord[];
   inventoryAlerts: InventoryAlert[];
   routineProposals: RoutineProposal[];
+  /**
+   * Leave whose last day is within LEAVE_LOOKBACK_DAYS (Phase 140): pending,
+   * approved and past. Read by the chore hooks, which apply the triage.
+   */
+  leaveRequests: LeaveRequest[];
   inventoryItems: InventoryItem[];
   /** The newest stock check per inventory item, keyed by item id. */
   latestInventoryAudits: Record<string, InventoryAuditWithStaff>;
@@ -187,6 +195,12 @@ interface HouseholdContextValue {
    */
   submitInventoryAudit: (itemId: string, quantity: number, photoFile: File) => Promise<void>;
   submitRoutineProposal: (input: CreateRoutineProposalInput) => Promise<RoutineProposal>;
+  /** Files a pending leave request for someone on the roster (Phase 140). */
+  requestLeave: (input: { staff_id: string; start_date: string; end_date: string }) => Promise<LeaveRequest>;
+  /** An admin's approval (with its fallback) or rejection. */
+  decideLeave: (id: string, decision: LeaveDecision) => Promise<LeaveRequest>;
+  /** "I'm back early": chores return to their owner from today. */
+  endLeaveEarly: (id: string) => Promise<LeaveRequest>;
   submitRoutineProposalsBatch: (inputs: CreateRoutineProposalInput[]) => Promise<RoutineProposal[]>;
   decideRoutineProposals: (
     ids: string[],
@@ -216,7 +230,11 @@ interface HouseholdContextValue {
    * claimed or completed. Returns the row that owns that day — this call's, or
    * the one another phone wrote first.
    */
-  materialiseChoreOccurrence: (templateId: string, date: string) => Promise<HouseholdTask>;
+  materialiseChoreOccurrence: (
+    templateId: string,
+    date: string,
+    assignedTo?: string | null
+  ) => Promise<HouseholdTask>;
   /** Takes an unassigned chore for whoever is signed in on this device. */
   claimHouseholdTask: (id: string) => Promise<HouseholdTask>;
   undoInventoryAlert: (id: string) => Promise<void>;
@@ -233,6 +251,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([]);
   const [routineProposals, setRoutineProposals] = useState<RoutineProposal[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [latestInventoryAudits, setLatestInventoryAudits] = useState<
     Record<string, InventoryAuditWithStaff>
@@ -285,6 +304,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setMedicalRecords(cached.medicalRecords);
       setInventoryAlerts(cached.inventoryAlerts);
       setRoutineProposals(cached.routineProposals);
+      setLeaveRequests(cached.leaveRequests ?? []);
       setInventoryItems(cached.inventoryItems);
       setLatestInventoryAudits(cached.latestInventoryAudits);
       setHydratedFromCache(true);
@@ -401,7 +421,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     // card holding an open photo-tagging dialog — exactly what a refresh
     // triggered by returning from the camera would do.
     if (!silent) setLoading(true);
-    const [e, s, l, m, ia, rp, ii, audits] = await Promise.all([
+    const [e, s, l, m, ia, rp, ii, audits, , leave] = await Promise.all([
       dataProvider.listEntities(),
       dataProvider.listSchedules(),
       dataProvider.listLogs(),
@@ -431,6 +451,15 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       // picks up anything the owner delegated from their own phone. Swallows
       // its own failure inside loadHouseholdTasks.
       loadHouseholdTasks(selectedDateRef.current),
+      // Leave (Phase 140), from far enough back to cover anything that can
+      // still roll over. Same degraded state as above until migrations/108
+      // is applied: no leave, so every chore stays with its owner.
+      dataProvider
+        .listLeaveRequests(formatDateLocal(addDays(new Date(), -LEAVE_LOOKBACK_DAYS)))
+        .catch((err) => {
+          console.warn("leave_requests unavailable — run migrations/108", err);
+          return [] as LeaveRequest[];
+        }),
     ]);
     setEntities(e);
     setSchedules(s);
@@ -438,6 +467,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setMedicalRecords(m);
     setInventoryAlerts(ia);
     setRoutineProposals(rp);
+    setLeaveRequests(leave);
     setInventoryItems(ii);
     setLatestInventoryAudits(audits);
     // Kept for the next mount, so the following page load paints immediately
@@ -450,6 +480,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       medicalRecords: m,
       inventoryAlerts: ia,
       routineProposals: rp,
+      leaveRequests: leave,
       inventoryItems: ii,
       latestInventoryAudits: audits,
     });
@@ -890,15 +921,18 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const materialiseChoreOccurrence = useCallback(async (templateId: string, date: string) => {
-    const row = await dataProvider.materialiseChoreOccurrence(templateId, date);
-    setHouseholdTasks((prev) =>
-      prev.some((task) => task.id === row.id)
-        ? prev.map((task) => (task.id === row.id ? row : task))
-        : [...prev, row]
-    );
-    return row;
-  }, []);
+  const materialiseChoreOccurrence = useCallback(
+    async (templateId: string, date: string, assignedTo?: string | null) => {
+      const row = await dataProvider.materialiseChoreOccurrence(templateId, date, assignedTo);
+      setHouseholdTasks((prev) =>
+        prev.some((task) => task.id === row.id)
+          ? prev.map((task) => (task.id === row.id ? row : task))
+          : [...prev, row]
+      );
+      return row;
+    },
+    []
+  );
 
   const claimHouseholdTask = useCallback(async (id: string) => {
     const staffId = readActiveStaffId();
@@ -915,6 +949,42 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     await dataProvider.deleteInventoryAlert(id);
     setInventoryAlerts((prev) => prev.filter((a) => a.id !== id));
   }, []);
+
+  // Leave (Phase 140). Each replaces the row in place, so the chore triage
+  // re-renders from the new state without waiting for a refresh.
+  const upsertLeave = useCallback((row: LeaveRequest) => {
+    setLeaveRequests((prev) =>
+      prev.some((l) => l.id === row.id) ? prev.map((l) => (l.id === row.id ? row : l)) : [...prev, row]
+    );
+  }, []);
+
+  const requestLeave = useCallback(
+    async (input: { staff_id: string; start_date: string; end_date: string }) => {
+      const row = await dataProvider.createLeaveRequest(input);
+      upsertLeave(row);
+      return row;
+    },
+    [upsertLeave]
+  );
+
+  const decideLeave = useCallback(
+    async (id: string, decision: LeaveDecision) => {
+      const row = await dataProvider.decideLeaveRequest(id, decision);
+      upsertLeave(row);
+      return row;
+    },
+    [upsertLeave]
+  );
+
+  const endLeaveEarly = useCallback(
+    async (id: string) => {
+      // The phone's day, not the server's: see end_leave_early.
+      const row = await dataProvider.endLeaveEarly(id, formatDateLocal(new Date()));
+      upsertLeave(row);
+      return row;
+    },
+    [upsertLeave]
+  );
 
   const undoRoutineProposal = useCallback(async (id: string) => {
     await dataProvider.deleteRoutineProposal(id);
@@ -958,6 +1028,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       medicalRecords,
       inventoryAlerts,
       routineProposals,
+      leaveRequests,
+      requestLeave,
+      decideLeave,
+      endLeaveEarly,
       inventoryItems,
       latestInventoryAudits,
       householdTasks,
@@ -1018,6 +1092,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       medicalRecords,
       inventoryAlerts,
       routineProposals,
+      leaveRequests,
+      requestLeave,
+      decideLeave,
+      endLeaveEarly,
       inventoryItems,
       latestInventoryAudits,
       householdTasks,

@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { assigneeOptions } from "@/lib/leave";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { LocationCombobox } from "@/components/chores/location-combobox";
 import { dayKeyLabel } from "@/lib/date-label";
@@ -94,16 +95,9 @@ export function ChoreEditorDialog({
     materialiseChoreOccurrence,
     updateHouseholdTaskStatus,
     memberProfile,
+    leaveRequests,
   } = useHousehold();
   const { profiles } = useStaffProfiles();
-  // Everyone in the house, admins included (Phase 139; migrations/106 put
-  // them on the roster). Yourself first, since assigning your own chores is
-  // the common case in a house without staff.
-  const assignees = useMemo(() => {
-    const list = profiles ?? [];
-    const selfId = memberProfile?.id;
-    return [...list.filter((p) => p.id === selfId), ...list.filter((p) => p.id !== selfId)];
-  }, [profiles, memberProfile?.id]);
   const { locations } = useHouseholdLocations();
   const editing = !!task;
 
@@ -119,6 +113,21 @@ export function ChoreEditorDialog({
   const [supervision, setSupervision] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Everyone in the house, admins included (Phase 139; migrations/106 put
+  // them on the roster). Yourself first, since assigning your own chores is
+  // the common case in a house without staff; anyone on leave on the chore's
+  // day last and marked, so a one-off is not handed to someone away
+  // (Phase 140).
+  const assignees = useMemo(
+    () =>
+      assigneeOptions(profiles ?? [], {
+        selfId: memberProfile?.id,
+        leaves: leaveRequests,
+        date: date || defaultDate,
+      }),
+    [profiles, memberProfile?.id, leaveRequests, date, defaultDate]
+  );
 
   useBackToClose(open, () => onOpenChange(false));
 
@@ -342,13 +351,9 @@ export function ChoreEditorDialog({
                     picked up by whoever is free, which is how most of these
                     actually get done. */}
                 <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
-                {assignees.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.id === memberProfile?.id
-                      ? `${p.name} (me)`
-                      : p.user_id
-                        ? `${p.name} · Admin`
-                        : p.name}
+                {assignees.map(({ profile, label }) => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    {label}
                   </SelectItem>
                 ))}
               </SelectContent>
