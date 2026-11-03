@@ -3,22 +3,20 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { toast } from "sonner";
 import { CalendarDays, PawPrint, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterPill } from "@/components/shared/filter-pill";
-import { AgendaWeekGrid } from "@/components/agenda/agenda-week-grid";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { WeekPager } from "@/components/agenda/week-pager";
+import { WeekSummaryView } from "@/components/agenda/week-summary-view";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue } from "@/components/dashboard/approval-queue";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
-import { ChoreReviewLightbox, hasChoreProof } from "@/components/chores/chore-proof-photos";
 import { useHousehold } from "@/context/household-context";
 import { useAgendaRange } from "@/hooks/use-agenda-range";
 import { applyAgendaFilter, useAgendaFilter, type AgendaFilter } from "@/hooks/use-agenda-filter";
@@ -88,9 +86,11 @@ export function AgendaTab() {
   // The day the editor was opened from (Phase 128): what "skip this day" and
   // "end the repeat here" act on. Null when adding.
   const [editingDate, setEditingDate] = useState<string | null>(null);
-  // A finished chore opened from the Week grid, for review (Phase 129).
-  const [reviewing, setReviewing] = useState<HouseholdTask | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  // The Week view's every-day matrix (Phase 143). Held here rather than in the
+  // view, which remounts on every page-turn: paging back through weeks to
+  // check whether evening doses were missed should not fold it up each time.
+  const [rhythmOpen, setRhythmOpen] = useState(false);
 
   const groups = useMemo(
     () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
@@ -107,14 +107,6 @@ export function AgendaTab() {
   );
   const entries = useMemo(() => applyAgendaFilter(allEntries, filter), [allEntries, filter]);
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
-  const weekEntries = useMemo(() => week.flatMap((day) => day.entries), [week]);
-  const filteredWeek = useMemo(
-    () =>
-      filter === "all"
-        ? week
-        : week.map((day) => ({ ...day, entries: applyAgendaFilter(day.entries, filter) })),
-    [week, filter]
-  );
 
   // Same page, so in place — and in a transition like the tab bar's, so
   // Agenda stays up until Pets is ready to replace it (Phase 125).
@@ -303,47 +295,30 @@ export function AgendaTab() {
           <>
             {/* Sunday to Saturday, a week at a time, endlessly (Phase 115). */}
             <WeekPager date={selectedDate} locale="en" onShift={shiftWeek} />
-            <AgendaFilterPills
-              value={filter}
-              onChange={setFilter}
-              entries={weekEntries}
-            />
-            {/* Keyed on the week, so a new one fades in rather than snapping. */}
+            {/* No All | Pets | Chores pills here since Phase 143: the summary
+                already separates the routine (the matrix) from everything
+                else (the list), which is what the filter was standing in for.
+                Keyed on the week, so a new one fades in rather than snapping. */}
             <div
               key={formatDateLocal(weekStartOf(selectedDate))}
               className="animate-view-fade motion-reduce:animate-none"
             >
-              <AgendaWeekGrid
-                days={filteredWeek}
-                locale="en"
+              <WeekSummaryView
+                days={week}
+                today={formatDateLocal(today)}
+                staffName={staffName}
+                renderEntry={renderEntry}
                 onOpenDay={(day) => {
                   setSelectedDate(day);
                   setRange("day");
                 }}
-                onChorePress={(occurrence) => {
-                  // Same split as the Day rows (Phase 129): a finished chore
-                  // is reviewed, never edited, from the Agenda.
-                  if (occurrence.status === "completed") {
-                    if (hasChoreProof(occurrence.row)) setReviewing(occurrence.row);
-                    else toast("No photos were saved for this chore");
-                    return;
-                  }
-                  setEditing(occurrence.row ?? occurrence.template);
-                  setEditingDate(occurrence.date);
-                  setEditorOpen(true);
-                }}
-                onShiftWeek={shiftWeek}
+                rhythmOpen={rhythmOpen}
+                onRhythmOpenChange={setRhythmOpen}
               />
             </div>
           </>
         )}
       </div>
-
-      <ChoreReviewLightbox
-        row={reviewing}
-        open={!!reviewing}
-        onClose={() => setReviewing(null)}
-      />
 
       <ChoreEditorDialog
         open={editorOpen}

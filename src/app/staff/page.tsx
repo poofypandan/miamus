@@ -1,24 +1,18 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { addDays } from "date-fns";
 import { useSearchParams } from "next/navigation";
 import { Hand, Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
-import { AgendaWeekGrid } from "@/components/agenda/agenda-week-grid";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { TodayButton } from "@/components/agenda/today-button";
-import { WeekPager } from "@/components/agenda/week-pager";
 import { StaffLoginGate, useStaffIdentity } from "@/components/auth/staff-login-gate";
-import { useAgendaRange } from "@/hooks/use-agenda-range";
-import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useToday } from "@/hooks/use-today";
 import { occurrencesForStaff } from "@/lib/chore-recurrence";
 import {
   buildUnifiedAgenda,
   splitOverdue,
-  weekStartOf,
   type UnifiedAgendaEntry,
 } from "@/lib/unified-agenda";
 import { DischargeButton } from "@/components/dashboard/discharge-button";
@@ -243,18 +237,11 @@ function TasksView() {
     [chores, openKey]
   );
 
-  const [range, setRange] = useAgendaRange();
-  const week = useAgendaWeek(selectedDate, isolatedTo);
   // Only ever needed by an admin without a roster row, who still sees every
   // chore: everyone else sees no chore assigned to anyone but themselves.
   const { allProfiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(allProfiles, "Anggota");
   const roomName = useLocationName();
-
-  // A week at a time, from the selected day (Phase 115).
-  function shiftWeek(weeks: -1 | 1) {
-    setSelectedDate(addDays(selectedDate, weeks * 7));
-  }
 
   // `compact` inside Selesai: a finished chore loses its inline photo pair
   // and says "Lihat foto" instead (Phase 131); routines are compact already.
@@ -296,25 +283,18 @@ function TasksView() {
       {/* The person's own leave, pending or under way (Phase 140). */}
       <LeaveStatusBanner />
 
-      {/* Hari | Minggu (Phase 112), the same toggle as the owner's Agenda. */}
-      <SegmentedControl
-        ariaLabel="Rentang jadwal"
-        segments={[
-          { value: "day", label: "Hari" },
-          { value: "week", label: "Minggu" },
-        ]}
-        value={range}
-        onChange={setRange}
-      />
+      {/* No Hari | Minggu toggle since Phase 143. Staff work the day in front
+          of them; a week grid is oversight, which is the owner's job and now
+          lives in the owner's Agenda as a summary. The ribbon still lets
+          anyone look ahead a day at a time. */}
 
-      {/* Fades in afresh on Hari ⇄ Minggu and on Hari ini (Phase 115), the
-          same as the owner's Agenda. */}
+      {/* Fades in afresh on Hari ini (Phase 115), the same as the owner's
+          Agenda. */}
       <div
-        key={`${range}|${todayJumps}`}
+        key={todayJumps}
         className="flex flex-1 animate-view-fade flex-col gap-4 motion-reduce:animate-none"
       >
-        {/* Hari only: in Minggu the grid's own headers are the days. */}
-        {range === "day" && <DateRibbon value={selectedDate} onChange={setSelectedDate} />}
+        <DateRibbon value={selectedDate} onChange={setSelectedDate} />
 
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.
@@ -344,25 +324,7 @@ function TasksView() {
         )}
 
         <main className="flex flex-1 flex-col gap-3">
-          {range === "week" && !loading ? (
-            <>
-              <WeekPager date={selectedDate} locale="id" onShift={shiftWeek} />
-              <div
-                key={formatDateLocal(weekStartOf(selectedDate))}
-                className="animate-view-fade motion-reduce:animate-none"
-              >
-                <AgendaWeekGrid
-                  days={week}
-                  locale="id"
-                  onOpenDay={(day) => {
-                    setSelectedDate(day);
-                    setRange("day");
-                  }}
-                  onShiftWeek={shiftWeek}
-                />
-              </div>
-            </>
-          ) : loading ? (
+          {loading ? (
             <>
               <Skeleton className="h-28 w-full rounded-xl" />
               <Skeleton className="h-28 w-full rounded-xl" />
