@@ -14,6 +14,7 @@ import { WeekSummaryView } from "@/components/agenda/week-summary-view";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue } from "@/components/dashboard/approval-queue";
+import { MedicationCourseAlerts } from "@/components/dashboard/medication-course-alerts";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
@@ -189,6 +190,12 @@ export function AgendaTab() {
             work, so it outranks the day itself. Renders nothing when the queue
             is empty. */}
         <ApprovalQueue />
+
+        {/* A medicine course ending, ended or never started (Phase 144). Here
+            rather than on the Pets tab because this is the screen the owner
+            opens every day, and a course stops without a word otherwise.
+            Renders nothing when there is nothing to ask. */}
+        <MedicationCourseAlerts />
 
         {range === "day" ? (
           <>
