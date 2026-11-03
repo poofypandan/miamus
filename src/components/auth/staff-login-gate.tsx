@@ -327,6 +327,21 @@ function PinStep({
       console.error(err);
       busy.current = false;
       setSaving(false);
+      // Since Phase 142 a staff phone may only claim a name with no PIN yet.
+      // If someone else claimed it first — another phone, a moment ago — the
+      // name now has a PIN, so send them to enter it rather than leaving them
+      // retrying a save that will never succeed.
+      // Supabase throws a PostgrestError, which is not reliably an Error
+      // instance across client versions — read `message` off any object.
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : String(err ?? "");
+      if (message.includes("pin_already_set")) {
+        reject("Nama ini sudah punya PIN — masukkan PIN-nya");
+        setStep({ kind: "enter", profile: { ...step.profile, has_pin: true } });
+        return;
+      }
       reject("Gagal menyimpan PIN");
     }
   }
