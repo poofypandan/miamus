@@ -247,8 +247,8 @@ function TasksView() {
   const week = useAgendaWeek(selectedDate, isolatedTo);
   // Only ever needed by an admin without a roster row, who still sees every
   // chore: everyone else sees no chore assigned to anyone but themselves.
-  const { profiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(profiles, "Anggota");
+  const { allProfiles } = useStaffProfiles();
+  const staffName = useStaffNameLookup(allProfiles, "Anggota");
   const roomName = useLocationName();
 
   // A week at a time, from the selected day (Phase 115).

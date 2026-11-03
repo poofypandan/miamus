@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Info, KeyRound, Loader2, PackageX, Plus, Send, UserRound } from "lucide-react";
+import {
+  Camera,
+  Info,
+  KeyRound,
+  Loader2,
+  PackageX,
+  Plus,
+  RotateCcw,
+  Send,
+  UserMinus,
+  UserRound,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,9 +77,9 @@ const KIND_META: Record<AuditKind, { icon: typeof Camera; label: string; classNa
 export function StaffTab() {
   const { logs, routineProposals, inventoryAlerts, pets, schedules, loading } = useHousehold();
   const isOwner = useRequireOwner();
-  const { profiles, failed, reload } = useStaffProfiles();
+  const { profiles, failed, reload, allProfiles } = useStaffProfiles();
 
-  const staffName = useStaffNameLookup(profiles);
+  const staffName = useStaffNameLookup(allProfiles);
 
   const petName = useMemo(() => {
     const byId = new Map(pets.map((p) => [p.id, p.name]));
@@ -130,7 +141,12 @@ export function StaffTab() {
     <div className="flex flex-col gap-4">
       <HouseholdMembersPanel />
 
-      <StaffRoster profiles={profiles} failed={failed} reload={reload} />
+      <StaffRoster
+        profiles={profiles}
+        allProfiles={allProfiles}
+        failed={failed}
+        reload={reload}
+      />
 
       <LeavePanel staffName={staffName} />
 
@@ -201,10 +217,14 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
 // Owner-facing, so entirely English per the Phase 46 language boundary.
 function StaffRoster({
   profiles,
+  allProfiles,
   failed,
   reload,
 }: {
+  /** On the roster now. */
   profiles: StaffProfile[] | null;
+  /** Including people who have been taken off it (Phase 141). */
+  allProfiles: StaffProfile[] | null;
   failed: boolean;
   reload: () => Promise<void>;
 }) {
@@ -212,6 +232,13 @@ function StaffRoster({
   const [adding, setAdding] = useState(false);
   const [resetting, setResetting] = useState<string | null>(null);
   const [pinTarget, setPinTarget] = useState<StaffProfile | null>(null);
+  // Who the owner is about to take off the roster, held until they confirm.
+  const [removeTarget, setRemoveTarget] = useState<StaffProfile | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const archived = useMemo(
+    () => (allProfiles ?? []).filter((p) => p.archived_at),
+    [allProfiles]
+  );
   // Who is away today (Phase 140): a red badge on their row.
   const { leaveRequests } = useHousehold();
   const today = formatDateLocal(useToday());
@@ -233,6 +260,35 @@ function StaffRoster({
       toast.error("Failed to add this person");
     } finally {
       setAdding(false);
+    }
+  }
+
+  async function archive(profile: StaffProfile) {
+    setBusyId(profile.id);
+    try {
+      await dataProvider.archiveStaffProfile(profile.id);
+      await reload();
+      setRemoveTarget(null);
+      toast.success(`${profile.name} removed — their past work keeps their name`);
+    } catch (err) {
+      console.error(err);
+      toast.error(`Couldn't remove ${profile.name}`);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function restore(profile: StaffProfile) {
+    setBusyId(profile.id);
+    try {
+      await dataProvider.restoreStaffProfile(profile.id);
+      await reload();
+      toast.success(`${profile.name} is back — they pick a new PIN at next sign-in`);
+    } catch (err) {
+      console.error(err);
+      toast.error(`Couldn't bring ${profile.name} back`);
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -322,22 +378,40 @@ function StaffRoster({
                     </span>
                   </span>
                   {/* An admin's row is theirs through Google (migrations/106),
-                      and the database refuses a PIN on it — so no button. */}
+                      and the database refuses a PIN on it — so neither button.
+                      Removing an admin is the Admins panel's job, which takes
+                      their Google access away rather than just the name. */}
                   {!profile.user_id && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="min-h-[40px] shrink-0"
-                    onClick={() => setPinTarget(profile)}
-                    disabled={resetting === profile.id}
-                  >
-                    {resetting === profile.id ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <KeyRound />
-                    )}
-                    {profile.has_pin ? "Change PIN" : "Set PIN"}
-                  </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-[40px] shrink-0"
+                        onClick={() => setPinTarget(profile)}
+                        disabled={resetting === profile.id}
+                      >
+                        {resetting === profile.id ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <KeyRound />
+                        )}
+                        {profile.has_pin ? "Change PIN" : "Set PIN"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="min-h-[40px] shrink-0 px-2 text-destructive"
+                        onClick={() => setRemoveTarget(profile)}
+                        disabled={busyId === profile.id}
+                        aria-label={`Remove ${profile.name}`}
+                      >
+                        {busyId === profile.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <UserMinus className="size-4" />
+                        )}
+                      </Button>
+                    </>
                   )}
                 </div>
               ))
@@ -376,6 +450,97 @@ function StaffRoster({
           </Button>
         </form>
       </Card>
+
+      {/* Kept visible rather than hidden away: their name is still on months
+          of finished work, so an owner who finds it there needs somewhere
+          that explains why, and a way back if they tapped the wrong person. */}
+      {archived.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-xs font-medium text-gray-500">No longer here</h3>
+          <Card className="py-2">
+            <CardContent className="flex flex-col divide-y px-0">
+              {archived.map((profile) => (
+                <div key={profile.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
+                    <UserRound className="size-4" />
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-medium text-muted-foreground">
+                      {profile.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Removed{" "}
+                      {profile.archived_at
+                        ? new Date(profile.archived_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : ""}{" "}
+                      · past work still shows their name
+                    </span>
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-[40px] shrink-0"
+                    onClick={() => restore(profile)}
+                    disabled={busyId === profile.id}
+                  >
+                    {busyId === profile.id ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <RotateCcw />
+                    )}
+                    Bring back
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <Dialog
+        open={!!removeTarget}
+        onOpenChange={(open) => !open && setRemoveTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove {removeTarget?.name}?</DialogTitle>
+            <DialogDescription asChild>
+              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                <p>
+                  Their PIN stops working straight away, and their name comes off the
+                  sign-in screen and every assignee list.
+                </p>
+                <p>
+                  Anything of theirs that is still unfinished goes back to Unassigned, so
+                  someone else can pick it up. Everything they already finished keeps their
+                  name on it.
+                </p>
+                <p>You can bring them back later if you need to.</p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="min-h-[44px]"
+              onClick={() => setRemoveTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="min-h-[44px]"
+              disabled={!!busyId}
+              onClick={() => removeTarget && archive(removeTarget)}
+            >
+              {busyId ? <Loader2 className="animate-spin" /> : <UserMinus />} Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

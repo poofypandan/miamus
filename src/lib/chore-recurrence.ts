@@ -118,6 +118,27 @@ export function previousOccurrence(task: HouseholdTask, beforeDate: string): str
 }
 
 /**
+ * The first day on or after `afterDate` (exclusive) on which a repeat falls,
+ * within its run — or null if it has none left, which happens when
+ * recurrence_until cuts the series short.
+ *
+ * The mirror of previousOccurrence, and bounded the same way: a daily, weekly
+ * or monthly chore always has its next day within LONGEST_REPEAT_GAP_DAYS, so
+ * running out of road means the repeat is genuinely over rather than that the
+ * search gave up.
+ */
+export function nextOccurrence(task: HouseholdTask, afterDate: string): string | null {
+  const cursor = parseDayKey(afterDate);
+  for (let i = 0; i < LONGEST_REPEAT_GAP_DAYS; i++) {
+    cursor.setDate(cursor.getDate() + 1);
+    const key = dayKey(cursor);
+    if (task.recurrence_until && key > task.recurrence_until) return null;
+    if (occursOn(task, key)) return key;
+  }
+  return null;
+}
+
+/**
  * One chore on one day — the unit both views render.
  *
  * `task` is the row it came from, which for a virtual occurrence is the

@@ -191,6 +191,19 @@ export type StaffProfile = {
    * Optional: absent until that migration is applied.
    */
   user_id?: string | null;
+  /**
+   * When this person was taken off the active roster, or null while they are
+   * on it (migrations/109, Phase 141).
+   *
+   * Archived rather than deleted because task_logs.staff_id and
+   * household_tasks.completed_by point here: removing the row would strip the
+   * author off every job they ever finished. They keep their name on their
+   * past work and drop out of everywhere forward-looking — the sign-in
+   * screen, assignee pickers, the workload strip.
+   *
+   * Optional: absent until that migration is applied, which reads as active.
+   */
+  archived_at?: string | null;
 };
 
 // Note: unlike every other table here, this one's foreign key column is
@@ -571,6 +584,16 @@ export interface Database {
       set_staff_pin: {
         Args: { p_staff_id: string; p_pin: string | null };
         Returns: undefined;
+      };
+      // Taking someone off the roster, and putting them back (migrations/109).
+      // Both return the row they changed.
+      archive_staff_profile: {
+        Args: { p_staff_id: string };
+        Returns: StaffProfile;
+      };
+      restore_staff_profile: {
+        Args: { p_staff_id: string };
+        Returns: StaffProfile;
       };
       // Who has co-owner access, with emails — the table itself only ever
       // shows you your own row (migrations/094).

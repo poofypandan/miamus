@@ -73,8 +73,8 @@ export function AgendaTab() {
   // Nothing anywhere yet, not just nothing today: the first screen after
   // onboarding, which greets rather than reports (Phase 120).
   const brandNew = pets.length === 0 && householdTasks.length === 0;
-  const { profiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(profiles);
+  const { allProfiles } = useStaffProfiles();
+  const staffName = useStaffNameLookup(allProfiles);
   const roomName = useLocationName();
   const chores = useChoreOccurrences();
   const today = useToday();

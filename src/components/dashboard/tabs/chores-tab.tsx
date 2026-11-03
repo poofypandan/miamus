@@ -34,12 +34,12 @@ export function ChoresTab() {
   // household should be told to make its first, not that today is free
   // (Phase 120).
   const noChoresYet = householdTasks.length === 0;
-  const { profiles } = useStaffProfiles();
+  const { allProfiles } = useStaffProfiles();
   // Default fallback ("Staff"), not "Unassigned": the two null cases mean
   // different things. An absent assigned_to is genuinely unassigned and is
   // spelled out on the badge; an id this roster cannot resolve — a profile
   // still loading — is a name we don't have, not an empty chore.
-  const staffName = useStaffNameLookup(profiles);
+  const staffName = useStaffNameLookup(allProfiles);
   const roomName = useLocationName();
   const occurrences = useChoreOccurrences();
   const today = useToday();

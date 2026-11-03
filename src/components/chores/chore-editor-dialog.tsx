@@ -33,6 +33,7 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import {
   CHORE_RECURRENCES,
   RECURRENCE_LABELS_EN,
+  nextOccurrence,
   recurrenceOf,
 } from "@/lib/chore-recurrence";
 import {
@@ -237,9 +238,13 @@ export function ChoreEditorDialog({
   const isFirstDay = !!series && day === series.due_date;
   const dayDone =
     dayRow?.status === "completed" || (isFirstDay && series?.status === "completed");
-  // A repeat's first day is the template row itself, which cannot be
-  // cancelled without cancelling the whole series — change its start instead.
-  const canSkip = isSeries && !!day && !dayDone && !isFirstDay;
+  // Every unfinished day of a repeat can be dropped, the first one included.
+  // It used to be excluded because the first day IS the template row, so
+  // there is nothing to write a cancelled tombstone against — which left the
+  // owner opening day one of a repeat and being offered nothing but "delete
+  // everything". skipDay handles that case by moving the series start
+  // forward instead; see there.
+  const canSkip = isSeries && !!day && !dayDone;
   const canEnd = isSeries && !!day && !!series && day > series.due_date;
   const dayName = day ? dayKeyLabel(day, new Date(), "en") : "";
 
@@ -259,6 +264,24 @@ export function ChoreEditorDialog({
   function skipDay() {
     if (!series || !day) return;
     return run(async () => {
+      // The first day is the template row itself. Cancelling it would cancel
+      // the whole series, and a tombstone cannot stand in for a row that is
+      // the definition — so the start moves to the next day the pattern
+      // lands on instead. That drops day one and leaves every later day
+      // exactly where it was: advancing by one period keeps the anchor
+      // occursOn reads (weekday for weekly, day-of-month for monthly).
+      if (isFirstDay) {
+        const next = nextOccurrence(series, day);
+        if (!next) {
+          toast.error(
+            `${dayName} is the only day left on this chore — use Delete everything instead`
+          );
+          return;
+        }
+        await updateHouseholdTask(series.id, { due_date: next });
+        toast.success(`Skipped "${series.title}" for ${dayName}`);
+        return;
+      }
       // A day nothing is written for gets its row first; another phone may
       // have written it meanwhile, and a finished day is never cancelled.
       const row = dayRow ?? (await materialiseChoreOccurrence(series.id, day));
@@ -479,6 +502,18 @@ export function ChoreEditorDialog({
                         disabled={saving}
                         onClick={endRepeat}
                       />
+                    )}
+                    {/* A finished day cannot be skipped — its photo and its
+                        author are the record — so on a completed first day
+                        both narrower options are gone. Say why, rather than
+                        leaving the red box looking like the only thing this
+                        chore supports. */}
+                    {!canSkip && !canEnd && (
+                      <p className="text-xs text-muted-foreground">
+                        {dayDone
+                          ? `${dayName} is already done, so it can't be skipped without losing that record.`
+                          : "There's no single day to drop here."}
+                      </p>
                     )}
                     <div className="flex flex-col gap-1.5 rounded-lg border border-red-200 bg-red-50 p-3">
                       <p className="text-xs text-red-900">

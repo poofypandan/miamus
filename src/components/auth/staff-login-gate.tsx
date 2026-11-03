@@ -163,7 +163,13 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
       .listStaffProfiles()
       // Admins sign in with Google, not here: offering their names would let
       // anyone holding this phone set a PIN and act as them (Phase 139).
-      .then((rows) => live && setProfiles(rows.filter((row) => !row.user_id)))
+      // Archived people are off the roster (Phase 141) — their PIN is already
+      // revoked, so leaving the name here would only offer a dead end, or
+      // worse, let whoever holds the phone set a fresh PIN and come back.
+      .then(
+        (rows) =>
+          live && setProfiles(rows.filter((row) => !row.user_id && !row.archived_at))
+      )
       .catch((err) => {
         console.error(err);
         if (live) setFailed(true);

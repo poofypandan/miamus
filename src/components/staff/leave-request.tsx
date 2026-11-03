@@ -160,8 +160,8 @@ export function LeaveStatusBanner() {
   const { leaveRequests, endLeaveEarly } = useHousehold();
   const { staffId, staffName } = useStaffIdentity();
   const today = formatDateLocal(useToday());
-  const { profiles } = useStaffProfiles();
-  const nameOf = useStaffNameLookup(profiles, "seseorang");
+  const { allProfiles } = useStaffProfiles();
+  const nameOf = useStaffNameLookup(allProfiles, "seseorang");
   const [ending, setEnding] = useState(false);
 
   const status = useMemo(() => ownLeaveStatus(leaveRequests, staffId, today), [leaveRequests, staffId, today]);

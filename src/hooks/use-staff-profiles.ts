@@ -23,7 +23,16 @@ const useRoster = createResource(() => dataProvider.listStaffProfiles());
  */
 export function useStaffProfiles() {
   const { data, failed, reload } = useRoster();
-  return { profiles: data, failed, reload };
+  // Archived people (migrations/109) drop out of `profiles`, which is what
+  // every forward-looking surface reads: the sign-in screen, assignee
+  // pickers, the workload strip. They stay in `allProfiles`, which is what
+  // name lookups read, so the mopping they did in March still has their name
+  // on it rather than reading "Someone".
+  const profiles = useMemo(
+    () => (data === null ? null : data.filter((p) => !p.archived_at)),
+    [data]
+  );
+  return { profiles, allProfiles: data, failed, reload };
 }
 
 /**

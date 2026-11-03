@@ -350,6 +350,14 @@ export interface DataProvider {
    * The value is hashed server-side; nothing here ever holds a stored PIN.
    */
   setStaffPin(id: string, pin: string | null): Promise<void>;
+  /**
+   * Takes someone off the active roster without deleting them, so their name
+   * stays on the work they finished (migrations/109). Also revokes their PIN
+   * and releases any pending chore still assigned to them.
+   */
+  archiveStaffProfile(id: string): Promise<StaffProfile>;
+  /** Puts an archived person back on the roster. They re-choose a PIN. */
+  restoreStaffProfile(id: string): Promise<StaffProfile>;
   /** Checks a PIN against its hash (migrations/095). */
   verifyStaffPin(id: string, pin: string): Promise<boolean>;
 }

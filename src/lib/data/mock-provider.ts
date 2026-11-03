@@ -738,6 +738,32 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(profile);
   },
+  async archiveStaffProfile(id) {
+    const db = loadDB();
+    const profile = db.staffProfiles.find((s) => s.id === id);
+    if (!profile) throw new Error("Staff profile not found");
+    if (profile.user_id) throw new Error("This person is an admin");
+    // Mirrors archive_staff_profile (migrations/109): mark, revoke the PIN,
+    // and release their unfinished chores.
+    profile.archived_at = new Date().toISOString();
+    profile.has_pin = false;
+    db.staffPins = { ...(db.staffPins ?? {}), [id]: null };
+    db.householdTasks = db.householdTasks.map((task) =>
+      task.assigned_to === id && task.status === "pending"
+        ? { ...task, assigned_to: null }
+        : task
+    );
+    saveDB(db);
+    return delay(profile);
+  },
+  async restoreStaffProfile(id) {
+    const db = loadDB();
+    const profile = db.staffProfiles.find((s) => s.id === id);
+    if (!profile) throw new Error("Staff profile not found");
+    profile.archived_at = null;
+    saveDB(db);
+    return delay(profile);
+  },
   async setStaffPin(id, pin) {
     const db = loadDB();
     const profile = db.staffProfiles.find((s) => s.id === id);
