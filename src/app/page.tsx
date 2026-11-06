@@ -127,9 +127,20 @@ function FrontDoor() {
         Kelola rumah dari satu tempat — hewan, tugas, orang dan stok.
       </p>
 
-      <Button onClick={handleGoogle} disabled={busy} className="mt-10 min-h-[52px] w-full">
+      {/* Two short lines rather than one long one: on a 360-390px phone the
+          single "English · Indonesian" label ran past the button's edges. */}
+      <Button
+        onClick={handleGoogle}
+        disabled={busy}
+        className="mt-10 h-auto min-h-[56px] w-full gap-3 py-2 whitespace-normal"
+      >
         {busy ? <Loader2 className="animate-spin" /> : <GoogleMark />}
-        Continue with Google · Lanjutkan dengan Google
+        <span className="flex flex-col items-start text-left leading-tight">
+          <span lang="en">Continue with Google</span>
+          <span lang="id" className="text-xs font-normal opacity-80">
+            Lanjutkan dengan Google
+          </span>
+        </span>
       </Button>
 
       {(failed || error) && <p className="mt-4 text-sm text-destructive">{failed ?? error}</p>}
