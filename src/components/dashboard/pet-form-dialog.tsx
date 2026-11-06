@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
-import { useT } from "@/context/owner-locale-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { getPetMeta } from "@/lib/pets";
 import { photoSrc } from "@/lib/photos";
@@ -42,6 +42,7 @@ export function PetFormDialog({
   // `open` is owned by whichever parent rendered this dialog.
   useBackToClose(open, () => onOpenChange(false));
   const t = useT();
+  const locale = useOwnerLocale();
 
   const meta = pet ? getPetMeta(pet) : {};
   const [name, setName] = useState(pet?.name ?? "");
@@ -178,6 +179,7 @@ export function PetFormDialog({
               masterSrc={photoSrc(fullImageUrl ?? avatarUrl)}
               label={t("Add photo", "Tambah foto")}
               busyLabel={t("Uploading...", "Mengunggah...")}
+              locale={locale}
               errorMessage={t("Failed to upload photo", "Foto gagal diunggah")}
               square
               allowGallery

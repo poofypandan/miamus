@@ -293,6 +293,7 @@ export function InventoryItemForm({
               onBusyChange={setPhotoBusy}
               label={t("Add photo", "Tambah foto")}
               busyLabel={t("Uploading...", "Mengunggah...")}
+              locale={locale}
               errorMessage={t("Failed to upload photo", "Foto gagal diunggah")}
               square
               allowGallery

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useUiLabels } from "@/components/ui/ui-labels"
 import { cn } from "cn"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
@@ -55,6 +56,7 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  const closeLabel = useUiLabels().close
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -85,7 +87,7 @@ function SheetContent({
             >
               <XIcon
               />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{closeLabel}</span>
             </Button>
           </SheetPrimitive.Close>
         )}

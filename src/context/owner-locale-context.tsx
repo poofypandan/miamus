@@ -18,6 +18,7 @@ import {
   type OwnerLocale,
 } from "@/lib/owner-locale";
 import { supabase } from "@/lib/supabase/client";
+import { UiLabelsProvider } from "@/components/ui/ui-labels";
 
 interface OwnerLocaleValue {
   locale: OwnerLocale;
@@ -120,7 +121,12 @@ export function OwnerLocaleProvider({ children }: { children: ReactNode }) {
     () => ({ locale, chosen, ready, setLocale }),
     [locale, chosen, ready, setLocale]
   );
-  return <OwnerLocaleContext.Provider value={value}>{children}</OwnerLocaleContext.Provider>;
+  return (
+    <OwnerLocaleContext.Provider value={value}>
+      {/* The shared primitives' own words (dialog close, photo arrows) follow. */}
+      <UiLabelsProvider locale={locale}>{children}</UiLabelsProvider>
+    </OwnerLocaleContext.Provider>
+  );
 }
 
 /**

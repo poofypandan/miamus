@@ -160,6 +160,7 @@ export function HealthRecordForm({ petId, onSaved }: { petId: string; onSaved?: 
           onChange={setPhotoUrl}
           label={t("Upload photo", "Unggah foto")}
           busyLabel={t("Uploading...", "Mengunggah...")}
+          locale={locale}
           errorMessage={t("Failed to upload photo", "Foto gagal diunggah")}
         />
       </div>

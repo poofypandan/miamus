@@ -310,6 +310,7 @@ function FinishChoreBody({
                   onChange={setBeforeUrl}
                   onBusyChange={setUploadingBefore}
                   label="Ambil Foto Sebelum"
+                  locale="id"
                   busyLabel="Menyimpan foto..."
                   errorMessage="Gagal mengunggah foto"
                   className="min-h-[52px] w-full"
@@ -329,6 +330,7 @@ function FinishChoreBody({
                   onChange={setAfterUrl}
                   onBusyChange={setUploadingAfter}
                   label="Ambil Foto Sesudah"
+                  locale="id"
                   busyLabel="Menyimpan foto..."
                   errorMessage="Gagal mengunggah foto"
                   className="min-h-[52px] w-full"
