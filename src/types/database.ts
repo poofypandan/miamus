@@ -616,6 +616,40 @@ export interface Database {
         Args: Record<string, never>;
         Returns: string[];
       };
+      // Household approval (migrations/113, Phase 148). See lib/household-access.
+      is_platform_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      my_household_access: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+      request_household_access: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+      // Platform admins only: pending requests, then the last 30 days' decisions.
+      list_household_access_requests: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          full_name: string | null;
+          email: string | null;
+          status: string;
+          requested_at: string;
+          decided_at: string | null;
+        }[];
+      };
+      decide_household_access: {
+        Args: { p_user_id: string; p_approve: boolean };
+        Returns: undefined;
+      };
+      // The household and its owner membership in one transaction.
+      create_household: {
+        Args: { p_name: string };
+        Returns: string;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

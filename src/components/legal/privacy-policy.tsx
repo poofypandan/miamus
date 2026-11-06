@@ -60,6 +60,7 @@ const COPY: Record<
               "Household admins — people who sign in with Google to set up and run a household.",
               "Household staff — people an admin adds, who use Miamus on a phone with a 4-digit PIN.",
               "Anyone whose information an admin or staff member enters, such as a name in a task or a note.",
+              "People who ask to set up a new household.",
             ],
           },
         ],
@@ -72,6 +73,12 @@ const COPY: Record<
             ul: [
               "From Google sign-in: your name, email address and profile picture. We never see your Google password.",
               "Your household's name, its rooms or areas, and which admins belong to it.",
+            ],
+          },
+          { h: "Requests to set up a household" },
+          {
+            ul: [
+              "If you sign in with Google to set up a new household, we keep your request: when you asked, and whether it was approved or rejected. While we review it, we see your name and email from Google sign-in.",
             ],
           },
           { h: "Staff" },
@@ -118,7 +125,7 @@ const COPY: Record<
           {
             ul: [
               "Running Miamus for your household — showing tasks, recording who did what, reminders, leave and stock. This is needed to provide the service you asked for.",
-              "Keeping it secure — sign-in, keeping each household's data separate, and preventing misuse. This is our legitimate interest.",
+              "Keeping it secure — sign-in, keeping each household's data separate, reviewing requests to set up new households, and preventing misuse. This is our legitimate interest.",
               "Sending notifications you've turned on. This is based on your consent, which you can withdraw at any time in your phone or browser settings.",
               "Meeting legal obligations, where any apply.",
             ],
@@ -134,6 +141,7 @@ const COPY: Record<
           {
             ul: [
               "Inside your household: admins can see everything in their household. Staff see the tasks, schedules and information they need for their work. Other households can never see your data.",
+              `Requests to set up a household — only ${operator}, who runs Miamus.`,
               `Supabase — database, sign-in and photo storage, on servers in ${LEGAL.dataRegion.en}.`,
               "Vercel — hosts the app. Photos pass through its servers when they're shown, but aren't stored there.",
               "Google — sign-in for admins.",
@@ -161,6 +169,7 @@ const COPY: Record<
             ul: [
               "Chore and routine proof photos (including before and after photos) are deleted automatically after 30 days.",
               "Everything else is kept while your household uses Miamus.",
+              "A request to set up a household that isn't approved is deleted 30 days after the decision, together with the Google sign-in it came from, unless that account has since joined a household. Approved requests are kept while the account is used.",
               "If an admin asks us to delete their household, or anyone asks us to delete their data, we delete it within 30 days unless the law requires us to keep it. Copies in our providers' backups are cleared on their normal schedule.",
               "When staff are removed from a household, their profile is archived and their name stays on past work, so the household's records stay accurate. The admin or the staff member can ask us to remove it.",
             ],
@@ -261,6 +270,7 @@ const COPY: Record<
               "Admin rumah — orang yang masuk dengan Google untuk membuat dan mengelola rumah tangga.",
               "Staf rumah — orang yang ditambahkan oleh admin dan memakai Miamus di HP dengan PIN 4 angka.",
               "Siapa pun yang datanya dimasukkan oleh admin atau staf, misalnya nama dalam tugas atau catatan.",
+              "Orang yang meminta untuk membuat rumah tangga baru.",
             ],
           },
         ],
@@ -273,6 +283,12 @@ const COPY: Record<
             ul: [
               "Dari login Google: nama, alamat email, dan foto profil Anda. Kami tidak pernah melihat kata sandi Google Anda.",
               "Nama rumah tangga, ruangan atau area di rumah, dan daftar admin.",
+            ],
+          },
+          { h: "Permintaan membuat rumah tangga" },
+          {
+            ul: [
+              "Jika Anda masuk dengan Google untuk membuat rumah tangga baru, kami menyimpan permintaan Anda: kapan Anda memintanya, dan apakah disetujui atau ditolak. Selama kami meninjaunya, kami melihat nama dan email Anda dari login Google.",
             ],
           },
           { h: "Staf" },
@@ -319,7 +335,7 @@ const COPY: Record<
           {
             ul: [
               "Menjalankan Miamus untuk rumah tangga Anda — menampilkan tugas, mencatat siapa mengerjakan apa, pengingat, cuti, dan stok. Ini diperlukan untuk memberikan layanan yang Anda minta.",
-              "Menjaga keamanan — login, memisahkan data setiap rumah tangga, dan mencegah penyalahgunaan. Ini adalah kepentingan sah kami.",
+              "Menjaga keamanan — login, memisahkan data setiap rumah tangga, meninjau permintaan membuat rumah tangga baru, dan mencegah penyalahgunaan. Ini adalah kepentingan sah kami.",
               "Mengirim notifikasi yang Anda nyalakan. Ini berdasarkan persetujuan Anda, yang dapat Anda tarik kapan saja lewat pengaturan HP atau browser.",
               "Memenuhi kewajiban hukum, jika ada.",
             ],
@@ -335,6 +351,7 @@ const COPY: Record<
           {
             ul: [
               "Di dalam rumah tangga Anda: admin dapat melihat semua data rumah tangganya. Staf melihat tugas, jadwal, dan informasi yang diperlukan untuk pekerjaannya. Rumah tangga lain tidak pernah bisa melihat data Anda.",
+              `Permintaan membuat rumah tangga — hanya ${operator}, pengelola Miamus.`,
               `Supabase — database, login, dan penyimpanan foto, di server yang berada di ${LEGAL.dataRegion.id}.`,
               "Vercel — hosting aplikasi. Foto melewati servernya saat ditampilkan, tetapi tidak disimpan di sana.",
               "Google — login untuk admin.",
@@ -362,6 +379,7 @@ const COPY: Record<
             ul: [
               "Foto bukti tugas dan rutinitas (termasuk foto sebelum dan sesudah) dihapus otomatis setelah 30 hari.",
               "Data lainnya disimpan selama rumah tangga Anda memakai Miamus.",
+              "Permintaan membuat rumah tangga yang tidak disetujui dihapus 30 hari setelah keputusan, bersama akun login Google yang dipakai untuk memintanya, kecuali akun itu sudah bergabung ke sebuah rumah tangga. Permintaan yang disetujui disimpan selama akun tersebut dipakai.",
               "Jika admin meminta rumah tangganya dihapus, atau siapa pun meminta datanya dihapus, kami menghapusnya dalam 30 hari, kecuali hukum mewajibkan kami menyimpannya. Salinan di cadangan (backup) penyedia kami terhapus sesuai jadwal normal mereka.",
               "Staf yang dikeluarkan dari rumah tangga diarsipkan, dan namanya tetap tercatat pada pekerjaan sebelumnya agar catatan rumah tetap akurat. Admin atau staf yang bersangkutan dapat meminta kami menghapusnya.",
             ],
