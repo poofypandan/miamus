@@ -34,10 +34,24 @@ interface Entry<T> {
   settled?: Settled<T>;
   settledAt?: number;
   inflight?: Promise<Settled<T>>;
+  /** What the first read suspends on; see FIRST_READ_MAX_WAIT_MS. */
+  firstRead?: Promise<unknown>;
 }
 
 /** A refresh this soon after a load would only fetch the same answer again. */
 const FRESH_MS = 5000;
+
+/**
+ * The longest a first read holds the screen (Phase 146).
+ *
+ * Suspending until the load settles is right when the load takes a moment,
+ * and wrong when the Wi-Fi is down: PostgREST retries a failed request three
+ * times, and the staff task list — already painted from this phone's cache —
+ * stayed hidden for twenty seconds waiting to learn the roster could not be
+ * fetched. Past this the screen draws without it: the value is null, as
+ * after a failed load, and arrives with a re-render when the load lands.
+ */
+const FIRST_READ_MAX_WAIT_MS = 2500;
 
 export interface ResourceState<T> {
   /** null only after a failed first load. */
@@ -105,7 +119,13 @@ export function createResource<T>(load: () => Promise<T>) {
     // The first read suspends — but never on the server, where there is no
     // session to load with and nothing would ever resolve.
     if (!entry.settled && typeof window !== "undefined") {
-      use(refresh(key));
+      // One promise per entry, kept: use() must be handed the same promise on
+      // every render, or it suspends again on each one.
+      entry.firstRead ??= Promise.race([
+        refresh(key),
+        new Promise((resolve) => setTimeout(resolve, FIRST_READ_MAX_WAIT_MS)),
+      ]);
+      use(entry.firstRead);
     }
 
     useEffect(() => {

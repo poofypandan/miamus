@@ -7,6 +7,7 @@ import { BottomTabBar } from "@/components/navigation/bottom-tab-bar";
 import { LaunchCover } from "@/components/brand/brand-cover";
 import { OwnerAppLock } from "@/components/auth/owner-app-lock";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
+import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { useHousehold } from "@/context/household-context";
@@ -56,6 +57,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           contentClassName="flex flex-1 flex-col"
         >
           <InventoryAlertBanner />
+          {/* A failed load, in the owner's words (Phase 146). */}
+          <div className="px-4 pt-3 empty:hidden">
+            <ConnectionNotice locale="en" />
+          </div>
           {/* Sits outside <main> so the one-time hint stays put above the
             swipeable carousel rather than scrolling with a single tab. */}
           <StaffOnboardingBanner />

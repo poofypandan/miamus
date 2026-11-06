@@ -33,7 +33,7 @@ import type { InventoryItem } from "@/types/database";
  * the shelf right now.
  */
 export function StockCheckPanel() {
-  const { inventoryItems, loading } = useHousehold();
+  const { inventoryItems, loading, syncFailed, hasData } = useHousehold();
 
   const due = useMemo(() => dueStockItems(inventoryItems), [inventoryItems]);
 
@@ -53,6 +53,10 @@ export function StockCheckPanel() {
       </div>
     );
   }
+
+  // Never loaded: "nothing to check today" would be a guess. The staff
+  // page's ConnectionNotice is what says so (Phase 146).
+  if (syncFailed && !hasData) return null;
 
   return (
     <div className="flex flex-col gap-6">

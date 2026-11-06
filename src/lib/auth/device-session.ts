@@ -1,6 +1,60 @@
 "use client";
 
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
+
+/**
+ * True when this device has a session that cannot be used *right now* — the
+ * access token ran out overnight and the refresh that would renew it could
+ * not reach the server (Phase 146).
+ *
+ * supabase-js reports that exactly as it reports "never signed in": a null
+ * session. The difference is only in the error beside it, and it matters a
+ * great deal. The session is still on the phone and will renew itself once
+ * the Wi-Fi is back. Treating it as missing is how a staff phone ends up
+ * signed in afresh as somebody new (see ensureAnonymousSession), and how a
+ * query goes out with only the public key and comes back from RLS as an
+ * empty household.
+ */
+export async function isSessionUnreachable(): Promise<boolean> {
+  if (!supabase) return false;
+  const { data, error } = await supabase.auth.getSession();
+  return !data.session && isAuthRetryableFetchError(error);
+}
+
+/**
+ * The user this device's stored session belongs to, read straight from
+ * storage — without renewing it, and so without touching the network
+ * (Phase 146).
+ *
+ * getSession() cannot answer "whose phone is this?" quickly in the one case
+ * that matters most: the first open of the morning. The access token ran out
+ * overnight, so it renews it first, and on bad Wi-Fi auth-js keeps retrying
+ * that for up to 30 seconds. Who the session belongs to does not depend on
+ * whether the token is fresh, and the stored copy already says.
+ *
+ * Reads the auth client's own storage adapter, so the cookie chunking and
+ * base64 encoding are decoded exactly as auth-js itself would. Those two
+ * fields are not in its public types; anything unexpected returns null and
+ * the caller takes the slow path.
+ */
+export async function peekStoredUser(): Promise<{ id: string; isAnonymous: boolean } | null> {
+  if (!supabase) return null;
+  try {
+    const auth = supabase.auth as unknown as {
+      storage?: { getItem(key: string): string | null | Promise<string | null> };
+      storageKey?: string;
+    };
+    if (!auth.storage || !auth.storageKey) return null;
+    const raw = await auth.storage.getItem(auth.storageKey);
+    if (!raw) return null;
+    const user = (JSON.parse(raw) as { user?: { id?: unknown; is_anonymous?: unknown } }).user;
+    if (typeof user?.id !== "string") return null;
+    return { id: user.id, isAnonymous: user.is_anonymous === true };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Gives this device an identity of its own, signing in anonymously if it has
