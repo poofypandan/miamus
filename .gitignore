@@ -43,3 +43,7 @@ next-env.d.ts
 
 # supabase cli scratch
 /supabase/.temp
+
+# Playwright
+/test-results/
+/playwright-report/
