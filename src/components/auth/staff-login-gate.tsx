@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { ChevronLeft, Delete, Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -237,6 +238,14 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
         </div>
       )}
 
+      {/* Transparency for staff (Phase 143, UU PDP): what is recorded about
+          them, and where to read more. Staff-facing, so Bahasa Indonesia. */}
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
+        Miamus mencatat tugas, foto, dan cuti kamu untuk rumah ini.{" "}
+        <Link href="/privasi" className="font-medium text-gray-900 underline underline-offset-4">
+          Baca Kebijakan Privasi
+        </Link>
+      </p>
     </div>
   );
 }

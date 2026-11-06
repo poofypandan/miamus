@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MiamusMark } from "@/components/brand/loading-screens";
@@ -123,6 +124,14 @@ function FrontDoor() {
       </Button>
 
       {(failed || error) && <p className="mt-4 text-sm text-destructive">{failed ?? error}</p>}
+
+      <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+        By continuing, you agree to Miamus&apos;s{" "}
+        <Link href="/privacy" className="font-medium text-gray-900 underline underline-offset-4">
+          Privacy Policy
+        </Link>
+        .
+      </p>
 
       {/* Deliberately not a link. Staff who lost their session were tapping
           "Continue with Google", which signs them in as a brand-new owner and

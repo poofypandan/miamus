@@ -26,3 +26,9 @@
 - Run `tsc` and `next build` to verify type safety and build integrity after code changes.
 - Never introduce breaking database migrations; keep historical foreign keys nullable.
 - Never perform hard browser reloads for data updates; rely on silent soft syncs.
+
+## Owner & Public Identity
+- Miamus is operated by **Poofy Labs**. The only public contact is **support@poofylabs.dev**.
+- Never put a personal email or phone number in user-facing text, config or emails. Public contact details live in `src/config/legal.ts` only.
+- Before changing what data Miamus stores, where it is stored, or which services touch it, update the privacy policy (`src/components/legal/privacy-policy.tsx`, both languages).
+- Current state, open items and the working agreement (Claude writes, Codex reviews, staging first): `docs/handoff-2026-11-05.md`.
