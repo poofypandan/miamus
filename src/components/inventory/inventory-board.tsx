@@ -104,7 +104,7 @@ export function InventoryBoard({ lang, canManage }: { lang: "en" | "id"; canMana
   );
 
   async function copyShoppingList() {
-    const list = buildShoppingList(inventoryItems);
+    const list = buildShoppingList(inventoryItems, lang);
     if (!list) return;
     try {
       await navigator.clipboard.writeText(list);

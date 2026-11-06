@@ -123,7 +123,7 @@ export function HouseholdMembersPanel() {
                 )}
                 {member.is_founder && !member.is_self && (
                   <Badge variant="secondary" className="shrink-0 text-[10px]">
-                    {t("Founder", "Pendiri")}
+                    {t("Founder", "Pemilik")}
                   </Badge>
                 )}
 
@@ -154,7 +154,7 @@ export function HouseholdMembersPanel() {
             <DialogDescription>
               {t(
                 `${pending?.email ?? ""} will lose access to this household immediately. Their phone keeps working as a PIN device if it has its own invite.`,
-                `${pending?.email ?? ""} langsung kehilangan akses ke rumah ini. Ponselnya tetap bisa dipakai sebagai perangkat PIN jika punya undangan sendiri.`
+                `${pending?.email ?? ""} langsung kehilangan akses ke rumah ini. HP-nya tetap bisa dipakai sebagai perangkat PIN jika punya undangan sendiri.`
               )}
             </DialogDescription>
           </DialogHeader>

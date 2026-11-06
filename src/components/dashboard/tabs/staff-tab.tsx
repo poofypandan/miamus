@@ -161,7 +161,7 @@ export function StaffTab() {
         <span>
           {t(
             "Names come from who was signed in on the phone, so they show who was on duty rather than proving who tapped. Entries from before name sign-ins simply read “Someone”.",
-            "Nama diambil dari siapa yang masuk di ponsel, jadi menunjukkan siapa yang bertugas, bukan bukti siapa yang mengetuk. Catatan dari sebelum ada masuk dengan nama tertulis “Seseorang”."
+            "Nama diambil dari siapa yang masuk di HP, jadi menunjukkan siapa yang bertugas, bukan bukti siapa yang mengetuk. Catatan dari sebelum ada masuk dengan nama tertulis “Seseorang”."
           )}
         </span>
       </div>
@@ -293,17 +293,17 @@ function StaffRoster({
           )}
         </li>
         <li>
-          <span className="font-medium text-gray-900">{t("2. Invite their phone", "2. Undang ponselnya")}</span>{" "}
+          <span className="font-medium text-gray-900">{t("2. Invite their phone", "2. Undang HP-nya")}</span>{" "}
           {t(
             "with a Device link (under Invites). A shared house phone works too.",
-            "dengan link Perangkat (di bagian Undangan). Ponsel bersama di rumah juga bisa."
+            "dengan link Perangkat (di bagian Undangan). HP bersama di rumah juga bisa."
           )}
         </li>
         <li>
           <span className="font-medium text-gray-900">{t("3. They sign in", "3. Mereka masuk")}</span>{" "}
           {t(
             `on that phone by tapping their name and choosing a ${PIN_LENGTH}-digit PIN. You never need to know it.`,
-            `di ponsel itu dengan mengetuk namanya dan memilih PIN ${PIN_LENGTH} angka. Anda tidak perlu tahu PIN-nya.`
+            `di HP itu dengan mengetuk namanya dan memilih PIN ${PIN_LENGTH} angka. Anda tidak perlu tahu PIN-nya.`
           )}
         </li>
       </ol>

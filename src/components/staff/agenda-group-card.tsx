@@ -367,7 +367,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       <Stethoscope className="size-3" /> Rawat inap · dijeda
     </span>
   ) : visitOpen ? (
-    <TapHint label="Ketuk untuk selesaikan visit" icon={Stethoscope} />
+    <TapHint label="Ketuk untuk selesaikan kunjungan" icon={Stethoscope} />
   ) : finished ? (
     <span className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-700">
       {photoGroups.length > 0 ? "Lihat foto" : "Selesai"}
@@ -471,7 +471,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               {finished
                 ? "Semua selesai. Foto bisa dihapus dalam 5 menit setelah dicatat."
                 : visitOpen
-                  ? "Anjing sedang di klinik. Selesaikan visit saat dia pulang atau menginap."
+                  ? "Anjing sedang di klinik. Selesaikan kunjungan saat dia pulang atau menginap."
                   : "Ambil foto, lalu centang anjing yang ada di foto."}
             </SheetDescription>
           </SheetHeader>
@@ -582,7 +582,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               className="min-h-[48px] w-full bg-indigo-600 text-sm hover:bg-indigo-700"
             >
               {busy ? <Loader2 className="animate-spin" /> : <Stethoscope className="size-5" />}
-              Selesaikan Visit
+              Selesaikan Kunjungan
             </Button>
           ) : allDone ? (
             <p className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/5 text-sm font-medium text-emerald-600">
@@ -630,7 +630,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       <Dialog open={finishOpen} onOpenChange={(open) => !open && setFinishOpen(false)}>
         <DialogContent className="sm:max-w-xs">
           <DialogHeader>
-            <DialogTitle>Selesaikan visit</DialogTitle>
+            <DialogTitle>Selesaikan kunjungan</DialogTitle>
             <DialogDescription>
               Anjingnya pulang hari ini, atau menginap di klinik?
             </DialogDescription>

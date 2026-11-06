@@ -195,7 +195,7 @@ begin
   loop
     if not public.queue_push(
       target.household_id, 'all',
-      case when indonesian then '🔔 Notifikasi uji' else '🔔 Test notification' end,
+      case when indonesian then '🔔 Tes notifikasi' else '🔔 Test notification' end,
       case when indonesian then 'Notifikasi sudah berfungsi di perangkat ini.'
            else 'Push notifications are working on this device.' end,
       '/dashboard?module=access',
@@ -257,7 +257,7 @@ begin
     perform public.queue_owner_push(
       household,
       '🚨 Pet Alert', message_en,
-      '🚨 Peringatan Hewan', message_id,
+      '🚨 Hewan Sakit', message_id,
       '/dashboard?module=agenda', 'sick-' || new.id::text,
       auth.uid()
     );

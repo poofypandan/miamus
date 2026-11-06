@@ -76,7 +76,7 @@ export function StaffOnboardingBanner() {
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
                 Tips: ketuk hewan mana saja untuk membuka catatannya. Makan dan buang air dicatat
-                di Mode Kerja, dengan kamera, di ponsel masing-masing.
+                di Mode Kerja, dengan kamera, di HP masing-masing.
               </p>
             </div>
           ) : (

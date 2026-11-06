@@ -21,7 +21,7 @@ const COPY = {
   id: {
     heading: "Bahasa",
     label: "Bahasa",
-    hint: "Berlaku untuk Anda di setiap ponsel tempat Anda masuk, dan untuk notifikasi Anda. Layar staf tetap dalam Bahasa Indonesia.",
+    hint: "Berlaku untuk Anda di setiap HP tempat Anda masuk, dan untuk notifikasi Anda. Layar staf tetap dalam Bahasa Indonesia.",
     saved: "Bahasa diubah ke Bahasa Indonesia",
     failed: "Bahasa gagal disimpan. Coba lagi.",
   },

@@ -82,7 +82,7 @@ export function SecuritySettings() {
               <p className="text-xs text-muted-foreground">
                 {t(
                   "Locks the dashboard on this phone after 5 minutes away. Unlocks with Face ID or your fingerprint, or by signing in with Google again.",
-                  "Mengunci dasbor di ponsel ini setelah 5 menit ditinggal. Dibuka dengan Face ID atau sidik jari, atau dengan masuk lagi lewat Google."
+                  "Mengunci dasbor di HP ini setelah 5 menit ditinggal. Dibuka dengan Face ID atau sidik jari, atau dengan masuk lagi lewat Google."
                 )}
               </p>
             </div>
@@ -132,7 +132,7 @@ export function SecuritySettings() {
           <p className="text-[11px] text-muted-foreground">
             {t(
               "This protects the app on this phone only. Your household data stays protected by your Google sign-in either way.",
-              "Ini hanya melindungi aplikasi di ponsel ini. Data rumah Anda tetap terlindungi oleh login Google Anda."
+              "Ini hanya melindungi aplikasi di HP ini. Data rumah Anda tetap terlindungi oleh login Google Anda."
             )}
           </p>
         </CardContent>

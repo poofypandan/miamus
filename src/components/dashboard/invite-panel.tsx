@@ -40,7 +40,7 @@ export function InvitePanel() {
         title={t("Invite Device", "Undang Perangkat")}
         description={t(
           "For someone without a Google account, or a shared house phone. Opening it connects that phone to this household — no account or email needed — and each person then signs in with their name and PIN.",
-          "Untuk orang tanpa akun Google, atau ponsel bersama di rumah. Membukanya menghubungkan ponsel itu ke rumah ini — tanpa akun atau email — lalu setiap orang masuk dengan nama dan PIN-nya."
+          "Untuk orang tanpa akun Google, atau HP bersama di rumah. Membukanya menghubungkan HP itu ke rumah ini — tanpa akun atau email — lalu setiap orang masuk dengan nama dan PIN-nya."
         )}
       />
     </div>
@@ -141,7 +141,7 @@ function InviteCard({
           <p className="text-[11px] text-muted-foreground">
             {t(
               `Paste it into WhatsApp or a message. Single use, expires in ${INVITE_TTL_DAYS} days, and anyone with it can join until it is used, so send it only to the person or phone it is for.`,
-              `Tempel di WhatsApp atau pesan. Sekali pakai, berlaku ${INVITE_TTL_DAYS} hari, dan siapa pun yang memegangnya bisa bergabung sampai dipakai, jadi kirim hanya ke orang atau ponsel yang dituju.`
+              `Tempel di WhatsApp atau pesan. Sekali pakai, berlaku ${INVITE_TTL_DAYS} hari, dan siapa pun yang memegangnya bisa bergabung sampai dipakai, jadi kirim hanya ke orang atau HP yang dituju.`
             )}
           </p>
         )}

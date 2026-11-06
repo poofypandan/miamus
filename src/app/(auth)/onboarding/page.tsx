@@ -106,7 +106,10 @@ function Onboarding() {
   if (access === null || !ready) {
     return (
       <Screen>
-        <Loader2 className="size-6 animate-spin text-muted-foreground" aria-label="Loading" />
+        <Loader2
+          className="size-6 animate-spin text-muted-foreground"
+          aria-label={t("Loading", "Memuat")}
+        />
       </Screen>
     );
   }

@@ -127,12 +127,12 @@ export function PushNotificationSettings() {
       }
       toast.success(
         devices === 1
-          ? t("Test sent", "Uji terkirim")
-          : t(`Test sent to ${devices} devices`, `Uji terkirim ke ${devices} perangkat`)
+          ? t("Test sent", "Tes terkirim")
+          : t(`Test sent to ${devices} devices`, `Tes terkirim ke ${devices} perangkat`)
       );
     } catch (err) {
       console.error(err);
-      toast.error(t("Couldn't send a test notification", "Notifikasi uji gagal dikirim"));
+      toast.error(t("Couldn't send a test notification", "Tes notifikasi gagal dikirim"));
     } finally {
       setBusy(null);
     }
@@ -235,7 +235,7 @@ export function PushNotificationSettings() {
                   disabled={busy !== null}
                 >
                   {busy === "test" && <Loader2 className="animate-spin" />}
-                  {t("Send test", "Kirim uji")}
+                  {t("Send test", "Kirim tes")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -253,7 +253,7 @@ export function PushNotificationSettings() {
           <p className="text-[11px] text-muted-foreground">
             {t(
               "Each phone or computer is turned on separately. Signing out turns it off here.",
-              "Setiap ponsel atau komputer diaktifkan sendiri-sendiri. Keluar akan mematikannya di sini."
+              "Setiap HP atau komputer diaktifkan sendiri-sendiri. Keluar akan mematikannya di sini."
             )}
           </p>
         </CardContent>

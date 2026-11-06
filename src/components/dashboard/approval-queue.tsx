@@ -195,7 +195,7 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
         <p className="text-xs font-medium text-amber-700">
           {t(
             "This date has already passed — approving it now adds a routine that has already expired, so no staff phone will show it.",
-            "Tanggal ini sudah lewat — menyetujuinya sekarang menambahkan rutinitas yang sudah kedaluwarsa, jadi tidak akan muncul di ponsel staf."
+            "Tanggal ini sudah lewat — menyetujuinya sekarang menambahkan rutinitas yang sudah kedaluwarsa, jadi tidak akan muncul di HP staf."
           )}
         </p>
       )}

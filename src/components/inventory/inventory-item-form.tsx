@@ -33,6 +33,7 @@ import {
   SCOPE_CATEGORIES,
   SCOPE_LABELS_EN,
   SCOPE_LABELS_ID,
+  unitLabel,
 } from "@/lib/inventory";
 import type {
   InventoryCategory,
@@ -237,7 +238,7 @@ export function InventoryItemForm({
                 <SelectContent>
                   {INVENTORY_UNITS.map((u) => (
                     <SelectItem key={u} value={u}>
-                      {u}
+                      {unitLabel(u, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>

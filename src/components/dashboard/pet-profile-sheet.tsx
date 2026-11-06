@@ -152,7 +152,7 @@ export function PetProfileSheet() {
               <SheetDescription className="sr-only">
                 {t(
                   `${pet.name}'s daily feed, schedule, and health passport.`,
-                  `Catatan harian, jadwal, dan paspor kesehatan ${pet.name}.`
+                  `Catatan harian, jadwal, dan catatan kesehatan ${pet.name}.`
                 )}
               </SheetDescription>
             </SheetHeader>
@@ -223,7 +223,7 @@ export function PetProfileSheet() {
 
             <section className="mt-8">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-gray-900">{t("Health Passport", "Paspor Kesehatan")}</h3>
+                <h3 className="text-sm font-semibold text-gray-900">{t("Health Passport", "Catatan Kesehatan")}</h3>
                 {canManagePets && (
                   <Dialog open={addRecordOpen} onOpenChange={setAddRecordOpen}>
                     <DialogTrigger asChild>

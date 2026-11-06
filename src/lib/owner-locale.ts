@@ -47,3 +47,17 @@ export function writeCachedOwnerLocale(locale: OwnerLocale): void {
     // Private mode or storage full: the account still has the choice.
   }
 }
+
+/**
+ * The language for a message raised outside any React language context — a
+ * toast from the household data layer, the update prompt (Phase 149). Owner
+ * screens (/dashboard, /onboarding) use the owner's choice as cached on this
+ * phone; every other screen is a staff screen, and staff read Bahasa
+ * Indonesia — an owner in Action Mode included, as on the rest of that view.
+ */
+export function screenLocale(pathname?: string): OwnerLocale {
+  const path = pathname ?? (typeof window === "undefined" ? "" : window.location.pathname);
+  const ownerScreen = path.startsWith("/dashboard") || path.startsWith("/onboarding");
+  if (!ownerScreen) return "id";
+  return (typeof window === "undefined" ? null : readCachedOwnerLocale()) ?? DEFAULT_OWNER_LOCALE;
+}
