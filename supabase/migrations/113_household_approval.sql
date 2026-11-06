@@ -334,8 +334,21 @@ revoke insert, update on public.household_members from anon, authenticated;
 -- only if it has since become something else — a member of a household (a
 -- co-owner invite), a staff device, or a platform admin — in which case just
 -- the request goes. Every foreign key to auth.users in this schema cascades or
--- sets null; each account is still deleted on its own, so one that cannot be
+-- sets null; each account is handled on its own, so one that cannot be deleted
 -- does not hold up the rest.
+--
+-- THE LOCK. The account row is locked FOR UPDATE before anything is checked.
+-- A membership, device session or admin row being inserted for it at that
+-- moment takes a FOR KEY SHARE lock on the same row (the foreign key), so the
+-- two are serialised: an insert that committed first is seen by the checks
+-- below and keeps the account; one that comes after waits, then fails its
+-- foreign key cleanly (the invite can be sent again). Without the lock, a
+-- co-owner invite redeemed mid-run could be deleted along with the account it
+-- had just joined (Codex review, PR #5).
+--
+-- FAILURES ARE RETRIED. If the account cannot be deleted, the request is kept,
+-- so the next night tries again; dropping it would forget the account for good
+-- and break the 30-day promise (Codex review, PR #5).
 create or replace function public.prune_household_access_requests()
 returns integer
 language plpgsql
@@ -353,19 +366,25 @@ begin
        and r.decided_at < now() - interval '30 days'
   loop
     begin
-      if not exists (select 1 from public.household_members m where m.user_id = target.user_id)
+      perform 1 from auth.users u where u.id = target.user_id for update;
+
+      if found
+         and not exists (select 1 from public.household_members m where m.user_id = target.user_id)
          and not exists (select 1 from public.device_sessions d where d.user_id = target.user_id)
          and not exists (select 1 from public.platform_admins pa where pa.user_id = target.user_id)
       then
         -- Cascades to the request row, identities, sessions and push devices.
         delete from auth.users u where u.id = target.user_id;
+      else
+        -- Gone already, or kept because it is something else now: only the
+        -- request goes.
+        delete from public.household_access_requests r where r.user_id = target.user_id;
       end if;
+      removed := removed + 1;
     exception when others then
-      raise warning 'Rejected account % not deleted: %', target.user_id, sqlerrm;
+      -- The block's changes roll back, the request with them: retried tomorrow.
+      raise warning 'Rejected account % not deleted, will retry: %', target.user_id, sqlerrm;
     end;
-
-    delete from public.household_access_requests r where r.user_id = target.user_id;
-    removed := removed + 1;
   end loop;
 
   return removed;
