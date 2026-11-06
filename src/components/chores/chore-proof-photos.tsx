@@ -210,20 +210,22 @@ export function ChoreReviewLightbox({
   row,
   open,
   onClose,
+  locale = "en",
 }: {
   row: HouseholdTask | null;
   open: boolean;
   onClose: () => void;
+  locale?: "en" | "id";
 }) {
   if (!row) return null;
-  const proof = choreProofShots(row, "en");
+  const proof = choreProofShots(row, locale);
   if (proof.shots.length === 0) return null;
   return (
     <PhotoLightbox
       open={open}
       onClose={onClose}
       initialIndex={0}
-      items={choreProofGallery(row, proof, "en")}
+      items={choreProofGallery(row, proof, locale)}
     />
   );
 }

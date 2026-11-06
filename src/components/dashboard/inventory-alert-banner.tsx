@@ -6,21 +6,15 @@ import { Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
 import { isActiveAlert } from "@/lib/inventory-status";
-import type { ItemType } from "@/types/database";
-
-const ITEM_TYPE_LABELS: Record<ItemType, string> = {
-  food: "Food",
-  medicine: "Medicine",
-  treats: "Treats",
-  shampoo: "Shampoo",
-  pee_pad: "Pee Pad",
-  other: "Other",
-};
+import { ITEM_TYPE_LABELS } from "@/lib/item-types";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 
 // Owner-only: surfaces low-stock flags staff raised from the Daily Feed so
 // they're seen the moment the owner opens the app, not buried in a list.
 export function InventoryAlertBanner() {
   const { userRole, inventoryAlerts, entities, resolveInventoryAlert } = useHousehold();
+  const locale = useOwnerLocale();
+  const t = useT();
 
   if (userRole !== "owner") return null;
 
@@ -34,8 +28,8 @@ export function InventoryAlertBanner() {
       {active.map((alert) => (
         <AlertRow
           key={alert.id}
-          petName={alert.pet_id ? (entityById.get(alert.pet_id)?.name ?? "Unknown pet") : null}
-          itemLabel={ITEM_TYPE_LABELS[alert.item_type]}
+          petName={alert.pet_id ? (entityById.get(alert.pet_id)?.name ?? t("Unknown pet", "Hewan tidak dikenal")) : null}
+          itemLabel={ITEM_TYPE_LABELS[locale][alert.item_type]}
           note={alert.note}
           onResolve={() => resolveInventoryAlert(alert.id)}
         />
@@ -57,15 +51,16 @@ function AlertRow({
   onResolve: () => Promise<void>;
 }) {
   const [resolving, setResolving] = useState(false);
+  const t = useT();
 
   async function handleResolve() {
     setResolving(true);
     try {
       await onResolve();
-      toast.success("Marked resolved");
+      toast.success(t("Marked resolved", "Ditandai selesai"));
     } catch (err) {
       console.error(err);
-      toast.error("Failed to mark resolved");
+      toast.error(t("Failed to mark resolved", "Gagal menandai selesai"));
     } finally {
       setResolving(false);
     }
@@ -77,7 +72,9 @@ function AlertRow({
         <TriangleAlert className="size-4 shrink-0 translate-y-0.5" />
         <span className="min-w-0">
           <span className="font-medium">
-            {petName ? `Low Stock: ${petName}'s ${itemLabel}` : `Low Stock: ${itemLabel} (Household)`}
+            {petName
+              ? t(`Low Stock: ${petName}'s ${itemLabel}`, `Stok Menipis: ${itemLabel} ${petName}`)
+              : t(`Low Stock: ${itemLabel} (Household)`, `Stok Menipis: ${itemLabel} (Rumah)`)}
           </span>
           {note && <span className="text-amber-800"> — {note}</span>}
         </span>
@@ -90,7 +87,7 @@ function AlertRow({
         disabled={resolving}
       >
         {resolving ? <Loader2 className="animate-spin" /> : null}
-        Mark Resolved
+        {t("Mark Resolved", "Tandai Selesai")}
       </Button>
     </div>
   );

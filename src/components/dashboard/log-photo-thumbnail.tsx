@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
+import { useT } from "@/context/owner-locale-context";
 import { PhotoLightbox, type LightboxItem } from "@/components/dashboard/photo-lightbox";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
@@ -109,6 +110,7 @@ export function LogPhotoThumbnail({
   logs,
 }: LogPhotoThumbnailProps) {
   const { userRole, deleteLogWithPhoto, schedules } = useHousehold();
+  const t = useT();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -187,12 +189,12 @@ export function LogPhotoThumbnail({
         const isLast = i === rows.length - 1;
         await deleteLogWithPhoto(isLast ? rows[i] : { ...rows[i], photo_url: null });
       }
-      toast.success("Task undone");
+      toast.success(t("Task undone", "Tugas dibatalkan"));
       setConfirmOpen(false);
       setLightboxOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to delete photo");
+      toast.error(t("Failed to delete photo", "Foto gagal dihapus"));
     } finally {
       setDeleting(false);
     }
@@ -214,7 +216,9 @@ export function LogPhotoThumbnail({
         // click, but this also stops a suppressed tap bubbling to the carousel.
         onClick={(e) => tap.cancelled(e)}
         aria-label={
-          entityName ? `View photo for ${entityName} · ${eventTitle}` : `View photo for ${eventTitle}`
+          entityName
+            ? t(`View photo for ${entityName} · ${eventTitle}`, `Lihat foto ${entityName} · ${eventTitle}`)
+            : t(`View photo for ${eventTitle}`, `Lihat foto ${eventTitle}`)
         }
         className={cn(
           // touch-pan-y, not touch-none. touch-none told the browser to hand
@@ -248,11 +252,17 @@ export function LogPhotoThumbnail({
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-xs">
           <DialogHeader>
-            <DialogTitle>Delete this photo?</DialogTitle>
+            <DialogTitle>{t("Delete this photo?", "Hapus foto ini?")}</DialogTitle>
             <DialogDescription>
               {logs && logs.length > 1
-                ? `This removes the photo and marks all ${logs.length} tasks pending again.`
-                : "This removes the photo and marks the task pending again."}
+                ? t(
+                    `This removes the photo and marks all ${logs.length} tasks pending again.`,
+                    `Foto dihapus dan ${logs.length} tugas kembali belum selesai.`
+                  )
+                : t(
+                    "This removes the photo and marks the task pending again.",
+                    "Foto dihapus dan tugas kembali belum selesai."
+                  )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-2">
@@ -262,7 +272,7 @@ export function LogPhotoThumbnail({
               onClick={() => setConfirmOpen(false)}
               disabled={deleting}
             >
-              Cancel
+              {t("Cancel", "Batal")}
             </Button>
             <Button
               variant="destructive"
@@ -271,7 +281,7 @@ export function LogPhotoThumbnail({
               disabled={deleting}
             >
               {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-              Delete
+              {t("Delete", "Hapus")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -41,3 +41,11 @@ staging tests or the owner's approval. Background: `docs/handoff-2026-11-05.md`.
 - **Flag personal contact details (personal email addresses, phone numbers)
   in user-facing text, config or emails.** The public contact for Miamus is
   support@poofylabs.dev, set in `src/config/legal.ts`.
+
+### Language
+
+- **Flag owner-facing text that has no Bahasa Indonesia version, and any
+  English on a staff screen.** Owners choose English or Bahasa Indonesia
+  (Phase 149); staff screens are Bahasa Indonesia only. Safe path: owner text
+  goes through `useT()` from `src/context/owner-locale-context.tsx`, shared
+  components take a `locale` prop, and staff screens pass `"id"`.

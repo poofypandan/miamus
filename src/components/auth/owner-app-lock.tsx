@@ -10,6 +10,7 @@ import {
   setAppLockEnabled,
   verifyBiometric,
 } from "@/lib/app-lock";
+import { useT } from "@/context/owner-locale-context";
 import { cn } from "@/lib/utils";
 
 // Unlocked-ness lives in sessionStorage, not localStorage: it should survive a
@@ -45,6 +46,7 @@ function readUnlockedAt(): number {
  */
 export function OwnerAppLock({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const t = useT();
   // Starts unlocked and stays that way through the first paint: the lock is
   // off for most people, and reading localStorage during render would make
   // the server HTML and the client's first render disagree.
@@ -146,9 +148,9 @@ export function OwnerAppLock({ children }: { children: ReactNode }) {
             <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <Lock className="size-5" />
             </span>
-            <h2 className="mt-4 text-lg font-semibold text-gray-900">Locked</h2>
+            <h2 className="mt-4 text-lg font-semibold text-gray-900">{t("Locked", "Terkunci")}</h2>
             <p className="mt-1 text-center text-sm text-muted-foreground">
-              Unlock with Face ID or your fingerprint.
+              {t("Unlock with Face ID or your fingerprint.", "Buka dengan Face ID atau sidik jari Anda.")}
             </p>
 
             <div className="mt-6 flex w-full flex-col gap-2">
@@ -157,7 +159,7 @@ export function OwnerAppLock({ children }: { children: ReactNode }) {
                 disabled={biometricBusy || signingOut}
                 onClick={() => void tryBiometric()}
               >
-                <Fingerprint /> {biometricBusy ? "Waiting…" : "Unlock"}
+                <Fingerprint /> {biometricBusy ? t("Waiting…", "Menunggu…") : t("Unlock", "Buka")}
               </Button>
               <Button
                 variant="ghost"
@@ -165,8 +167,8 @@ export function OwnerAppLock({ children }: { children: ReactNode }) {
                 disabled={signingOut}
                 onClick={() => void signOut()}
               >
-                {signingOut ? <Loader2 className="animate-spin" /> : <LogOut />} Sign out and
-                sign in with Google
+                {signingOut ? <Loader2 className="animate-spin" /> : <LogOut />}{" "}
+                {t("Sign out and sign in with Google", "Keluar dan masuk lagi dengan Google")}
               </Button>
             </div>
           </div>

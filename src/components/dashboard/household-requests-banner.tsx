@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ChevronRight, UserRoundPlus } from "lucide-react";
 import { pendingCount, type AccessRequest } from "@/lib/household-access";
 import { supabase } from "@/lib/supabase/client";
+import { useT } from "@/context/owner-locale-context";
 
 /**
  * "2 household requests waiting" — for platform admins only (Phase 148,
@@ -18,6 +19,7 @@ import { supabase } from "@/lib/supabase/client";
  */
 export function HouseholdRequestsBanner() {
   const pathname = usePathname();
+  const t = useT();
   const [waiting, setWaiting] = useState(0);
   const onApprovals = pathname === "/dashboard/approvals";
 
@@ -49,7 +51,9 @@ export function HouseholdRequestsBanner() {
           <UserRoundPlus className="size-4" />
         </span>
         <span className="min-w-0 flex-1 text-sm font-medium text-amber-950">
-          {waiting === 1 ? "1 household request waiting" : `${waiting} household requests waiting`}
+          {waiting === 1
+            ? t("1 household request waiting", "1 permintaan rumah menunggu")
+            : t(`${waiting} household requests waiting`, `${waiting} permintaan rumah menunggu`)}
         </span>
         <ChevronRight className="size-4 shrink-0 text-amber-700" />
       </Link>

@@ -96,7 +96,7 @@ function StaffTasks() {
   useScrollTopOnChange(view);
 
 
-  useOfflineSync();
+  useOfflineSync("id");
 
   // Shown on the pill so a due count is visible from the task list, where
   // staff spend most of the day.

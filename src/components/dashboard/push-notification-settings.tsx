@@ -14,6 +14,7 @@ import {
   pushAvailability,
   sendTestPush,
 } from "@/lib/push";
+import { useT } from "@/context/owner-locale-context";
 
 type Status =
   | "loading"
@@ -31,10 +32,11 @@ type Status =
  * itself, and turning it on here says nothing about any other phone. What it
  * delivers today is the sick-report alert (migrations/103).
  *
- * Owner-facing, so entirely English per the Phase 46 language boundary.
+ * Owner-facing, in the language the owner chose (Phase 149).
  */
 export function PushNotificationSettings() {
   const { activeHouseholdId, tenantReady } = useHousehold();
+  const t = useT();
   const [status, setStatus] = useState<Status>("loading");
   // Fetched before any tap, so enabling can ask for permission first thing
   // (see enablePush on why Safari needs that).
@@ -78,14 +80,14 @@ export function PushNotificationSettings() {
       const result = await enablePush(activeHouseholdId, publicKey);
       if (result === "denied") {
         setStatus(Notification.permission === "denied" ? "denied" : "off");
-        toast.error("Notifications weren't allowed");
+        toast.error(t("Notifications weren't allowed", "Notifikasi tidak diizinkan"));
         return;
       }
       setStatus("on");
-      toast.success("Notifications on for this device");
+      toast.success(t("Notifications on for this device", "Notifikasi aktif di perangkat ini"));
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't turn on notifications");
+      toast.error(t("Couldn't turn on notifications", "Notifikasi gagal diaktifkan"));
     } finally {
       setBusy(null);
     }
@@ -97,10 +99,10 @@ export function PushNotificationSettings() {
     try {
       await disablePush();
       setStatus("off");
-      toast.success("Notifications off for this device");
+      toast.success(t("Notifications off for this device", "Notifikasi mati di perangkat ini"));
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't turn off notifications");
+      toast.error(t("Couldn't turn off notifications", "Notifikasi gagal dimatikan"));
     } finally {
       setBusy(null);
     }
@@ -115,13 +117,22 @@ export function PushNotificationSettings() {
         // The browser still holds a subscription the server no longer has —
         // say so plainly and offer the way back.
         setStatus("off");
-        toast.error("This device isn't registered any more. Turn notifications on again.");
+        toast.error(
+          t(
+            "This device isn't registered any more. Turn notifications on again.",
+            "Perangkat ini sudah tidak terdaftar. Aktifkan lagi notifikasinya."
+          )
+        );
         return;
       }
-      toast.success(devices === 1 ? "Test sent" : `Test sent to ${devices} devices`);
+      toast.success(
+        devices === 1
+          ? t("Test sent", "Uji terkirim")
+          : t(`Test sent to ${devices} devices`, `Uji terkirim ke ${devices} perangkat`)
+      );
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't send a test notification");
+      toast.error(t("Couldn't send a test notification", "Notifikasi uji gagal dikirim"));
     } finally {
       setBusy(null);
     }
@@ -129,13 +140,16 @@ export function PushNotificationSettings() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">Notifications</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t("Notifications", "Notifikasi")}</h2>
       <Card className="py-4">
         <CardContent className="flex flex-col gap-3 px-4">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <p className="text-sm font-medium">Push notifications</p>
+            <p className="text-sm font-medium">{t("Push notifications", "Notifikasi push")}</p>
             <p className="text-xs text-muted-foreground">
-              Get an alert on this device the moment someone reports a sick pet.
+              {t(
+                "Get an alert on this device the moment someone reports a sick pet.",
+                "Dapatkan peringatan di perangkat ini begitu ada yang melaporkan hewan sakit."
+              )}
             </p>
           </div>
 
@@ -153,11 +167,16 @@ export function PushNotificationSettings() {
               <Share className="mt-0.5 size-4 shrink-0 text-zinc-500" />
               <div className="flex flex-col gap-1">
                 <p className="font-medium">
-                  To receive notifications on iPhone, tap &apos;Share&apos; and &apos;Add to Home
-                  Screen&apos; first.
+                  {t(
+                    "To receive notifications on iPhone, tap 'Share' and 'Add to Home Screen' first.",
+                    "Untuk menerima notifikasi di iPhone, ketuk 'Bagikan' lalu 'Tambahkan ke Layar Utama' dulu."
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Then open Miamus from your Home Screen and come back to this tab.
+                  {t(
+                    "Then open Miamus from your Home Screen and come back to this tab.",
+                    "Lalu buka Miamus dari Layar Utama dan kembali ke tab ini."
+                  )}
                 </p>
               </div>
             </div>
@@ -165,22 +184,29 @@ export function PushNotificationSettings() {
 
           {status === "unsupported" && (
             <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-              This browser can&apos;t receive push notifications. Chrome, Edge, Firefox and Safari
-              can.
+              {t(
+                "This browser can't receive push notifications. Chrome, Edge, Firefox and Safari can.",
+                "Browser ini tidak bisa menerima notifikasi push. Chrome, Edge, Firefox dan Safari bisa."
+              )}
             </p>
           )}
 
           {status === "unconfigured" && (
             <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-              Push notifications aren&apos;t set up on the server yet.
+              {t(
+                "Push notifications aren't set up on the server yet.",
+                "Notifikasi push belum disiapkan di server."
+              )}
             </p>
           )}
 
           {status === "denied" && (
             <p className="flex items-start gap-1.5 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
               <BellOff className="mt-px size-3.5 shrink-0" />
-              Notifications are blocked for Miamus on this device. Allow them in your browser or
-              system settings, then come back here.
+              {t(
+                "Notifications are blocked for Miamus on this device. Allow them in your browser or system settings, then come back here.",
+                "Notifikasi untuk Miamus diblokir di perangkat ini. Izinkan di pengaturan browser atau sistem, lalu kembali ke sini."
+              )}
             </p>
           )}
 
@@ -191,14 +217,15 @@ export function PushNotificationSettings() {
               disabled={busy !== null || !tenantReady}
             >
               {busy === "enable" ? <Loader2 className="animate-spin" /> : <BellRing />}
-              Enable Notifications on this Device
+              {t("Enable Notifications on this Device", "Aktifkan Notifikasi di Perangkat Ini")}
             </Button>
           )}
 
           {status === "on" && (
             <>
               <p className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-                <BellRing className="size-3.5 shrink-0" /> On for this device.
+                <BellRing className="size-3.5 shrink-0" />{" "}
+                {t("On for this device.", "Aktif di perangkat ini.")}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -208,7 +235,7 @@ export function PushNotificationSettings() {
                   disabled={busy !== null}
                 >
                   {busy === "test" && <Loader2 className="animate-spin" />}
-                  Send test
+                  {t("Send test", "Kirim uji")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -217,14 +244,17 @@ export function PushNotificationSettings() {
                   disabled={busy !== null}
                 >
                   {busy === "disable" && <Loader2 className="animate-spin" />}
-                  Turn off
+                  {t("Turn off", "Matikan")}
                 </Button>
               </div>
             </>
           )}
 
           <p className="text-[11px] text-muted-foreground">
-            Each phone or computer is turned on separately. Signing out turns it off here.
+            {t(
+              "Each phone or computer is turned on separately. Signing out turns it off here.",
+              "Setiap ponsel atau komputer diaktifkan sendiri-sendiri. Keluar akan mematikannya di sini."
+            )}
           </p>
         </CardContent>
       </Card>

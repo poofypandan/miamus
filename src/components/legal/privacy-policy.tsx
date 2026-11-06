@@ -73,6 +73,7 @@ const COPY: Record<
             ul: [
               "From Google sign-in: your name, email address and profile picture. We never see your Google password.",
               "Your household's name, its rooms or areas, and which admins belong to it.",
+              "Your language choice (English or Bahasa Indonesia), so Miamus and its notifications to you appear in it. Your phone keeps a copy so the app opens in the right language.",
             ],
           },
           { h: "Requests to set up a household" },
@@ -283,6 +284,7 @@ const COPY: Record<
             ul: [
               "Dari login Google: nama, alamat email, dan foto profil Anda. Kami tidak pernah melihat kata sandi Google Anda.",
               "Nama rumah tangga, ruangan atau area di rumah, dan daftar admin.",
+              "Pilihan bahasa Anda (English atau Bahasa Indonesia), agar Miamus dan notifikasinya untuk Anda tampil dalam bahasa itu. HP Anda menyimpan salinannya agar aplikasi langsung terbuka dalam bahasa yang benar.",
             ],
           },
           { h: "Permintaan membuat rumah tangga" },

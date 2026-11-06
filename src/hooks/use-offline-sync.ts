@@ -17,7 +17,7 @@ import { clearFromQueue, getOfflineQueue } from "@/lib/offline-queue";
  * field is exactly the primary offline scenario this queue exists for, so
  * the listener needs to be reachable from there too, not just /dashboard.
  */
-export function useOfflineSync() {
+export function useOfflineSync(lang: "en" | "id") {
   const { refresh } = useHousehold();
 
   useEffect(() => {
@@ -38,7 +38,9 @@ export function useOfflineSync() {
       }
 
       if (syncedAny) {
-        toast.success("Offline logs synced successfully!");
+        toast.success(
+          lang === "id" ? "Catatan offline berhasil dikirim!" : "Offline logs synced successfully!"
+        );
         await refresh();
       }
     }
@@ -47,5 +49,5 @@ export function useOfflineSync() {
     // Also run once on mount in case they reloaded while already online.
     handleOnline();
     return () => window.removeEventListener("online", handleOnline);
-  }, [refresh]);
+  }, [refresh, lang]);
 }

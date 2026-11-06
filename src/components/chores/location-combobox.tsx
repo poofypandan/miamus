@@ -8,6 +8,7 @@ import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { dataProvider } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import type { HouseholdLocation } from "@/types/database";
+import { useT } from "@/context/owner-locale-context";
 
 /** Enough to choose from without pushing the rest of the form off screen. */
 const MAX_OPTIONS = 6;
@@ -33,6 +34,7 @@ export function LocationCombobox({
   onChange: (room: HouseholdLocation | null) => void;
 }) {
   const { locations, reload } = useHouseholdLocations();
+  const t = useT();
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -68,7 +70,7 @@ export function LocationCombobox({
       void reload();
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add the location");
+      toast.error(t("Failed to add the location", "Lokasi gagal ditambahkan"));
     } finally {
       setCreating(false);
     }
@@ -87,7 +89,7 @@ export function LocationCombobox({
             // Straight back to typing: clearing is nearly always to pick another.
             requestAnimationFrame(() => inputRef.current?.focus());
           }}
-          aria-label={`Remove location ${value.name}`}
+          aria-label={t(`Remove location ${value.name}`, `Hapus lokasi ${value.name}`)}
           className="-mr-2 flex size-11 items-center justify-center rounded-lg text-muted-foreground active:bg-muted"
         >
           <X className="size-4" />
@@ -119,7 +121,11 @@ export function LocationCombobox({
             if (exact) choose(exact);
             else void create();
           }}
-          placeholder={(locations ?? []).length > 0 ? "Choose or add a room" : "e.g. Kitchen"}
+          placeholder={
+            (locations ?? []).length > 0
+              ? t("Choose or add a room", "Pilih atau tambah ruangan")
+              : t("e.g. Kitchen", "mis. Dapur")
+          }
           className="min-h-[48px] pl-9"
         />
       </div>
@@ -128,7 +134,7 @@ export function LocationCombobox({
         <ul
           id={listId}
           role="listbox"
-          aria-label="Locations"
+          aria-label={t("Locations", "Lokasi")}
           className="flex flex-col overflow-hidden rounded-lg border bg-popover p-1 shadow-sm"
         >
           {matches.map((room) => (
@@ -163,7 +169,7 @@ export function LocationCombobox({
                 ) : (
                   <Plus className="size-3.5 shrink-0" />
                 )}
-                <span className="truncate">Create &ldquo;{typed}&rdquo;</span>
+                <span className="truncate">{t(`Create “${typed}”`, `Buat “${typed}”`)}</span>
               </button>
             </li>
           )}

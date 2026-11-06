@@ -6,6 +6,7 @@ import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useWorkloadParam } from "@/hooks/use-staff-workload";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import { cn } from "@/lib/utils";
+import { useT } from "@/context/owner-locale-context";
 
 interface StaffStat {
   id: string;
@@ -33,7 +34,7 @@ interface StaffStat {
  * 116): this strip says who has today's chores left; the sheet says who has
  * actually been doing the work, dogs included, over days or weeks.
  *
- * Owner-facing, so English.
+ * Owner-facing, in the owner's language.
  */
 export function StaffCompletionStrip({
   occurrences,
@@ -48,6 +49,7 @@ export function StaffCompletionStrip({
 }) {
   const { profiles } = useStaffProfiles();
   const workload = useWorkloadParam();
+  const t = useT();
 
   const stats = useMemo<StaffStat[]>(() => {
     const ownerOf = (o: ChoreOccurrence) => o.task.assigned_to ?? o.task.completed_by ?? null;
@@ -66,22 +68,24 @@ export function StaffCompletionStrip({
     const people = (profiles ?? []).map((p) => ({ id: p.id, name: p.name, ...tally(p.id) }));
     const unclaimed = tally(null);
     return unclaimed.total > 0 || unclaimed.overdue > 0
-      ? [...people, { id: "unclaimed", name: "Unclaimed", ...unclaimed }]
+      ? [...people, { id: "unclaimed", name: t("Unclaimed", "Belum diambil"), ...unclaimed }]
       : people;
-  }, [occurrences, date, profiles]);
+  }, [occurrences, date, profiles, t]);
 
   if (stats.length === 0) return null;
 
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-gray-900">{dayLabel}&apos;s progress</h2>
+        <h2 className="text-sm font-semibold text-gray-900">
+          {t(`${dayLabel}'s progress`, `Progres ${dayLabel}`)}
+        </h2>
         <button
           type="button"
           onClick={() => workload.open()}
           className="-mr-2 flex min-h-9 items-center gap-0.5 rounded-lg px-2 text-xs font-medium text-muted-foreground active:bg-muted"
         >
-          Workload <ChevronRight className="size-3.5" />
+          {t("Workload", "Beban Kerja")} <ChevronRight className="size-3.5" />
         </button>
       </div>
       {/* Bleeds to the screen edges so the cards scroll under the gutter
@@ -96,6 +100,7 @@ export function StaffCompletionStrip({
 }
 
 function StatCard({ stat, onPress }: { stat: StaffStat; onPress: () => void }) {
+  const t = useT();
   const unclaimed = stat.id === "unclaimed";
   const pct = stat.total > 0 ? stat.done / stat.total : 0;
   const complete = stat.total > 0 && stat.done === stat.total;
@@ -110,7 +115,10 @@ function StatCard({ stat, onPress }: { stat: StaffStat; onPress: () => void }) {
     <button
       type="button"
       onClick={onPress}
-      aria-label={`${stat.name}: ${stat.done} of ${stat.total} done. Open workload`}
+      aria-label={t(
+        `${stat.name}: ${stat.done} of ${stat.total} done. Open workload`,
+        `${stat.name}: ${stat.done} dari ${stat.total} selesai. Buka beban kerja`
+      )}
       className="flex w-36 shrink-0 snap-start flex-col gap-2 rounded-xl border bg-card p-3 text-left active:bg-muted/60"
     >
       <div className="flex items-center gap-2">
@@ -130,13 +138,19 @@ function StatCard({ stat, onPress }: { stat: StaffStat; onPress: () => void }) {
             {stat.done}/{stat.total}
           </span>
           <span className="truncate text-[11px] text-muted-foreground">
-            {stat.total === 0 ? "No chores" : complete ? "All done" : "done"}
+            {stat.total === 0
+              ? t("No chores", "Tidak ada tugas")
+              : complete
+                ? t("All done", "Semua selesai")
+                : t("done", "selesai")}
           </span>
         </div>
       </div>
 
       {stat.overdue > 0 && (
-        <span className="text-[11px] font-medium text-red-700">+{stat.overdue} overdue</span>
+        <span className="text-[11px] font-medium text-red-700">
+          {t(`+${stat.overdue} overdue`, `+${stat.overdue} terlambat`)}
+        </span>
       )}
     </button>
   );
@@ -153,7 +167,7 @@ function ProgressRing({ pct, complete }: { pct: number; complete: boolean }) {
       viewBox="0 0 40 40"
       className="size-10 shrink-0 -rotate-90"
       role="img"
-      aria-label={`${Math.round(pct * 100)}% complete`}
+      aria-label={`${Math.round(pct * 100)}%`}
     >
       <circle cx="20" cy="20" r={r} fill="none" strokeWidth="4" className="stroke-muted" />
       <circle

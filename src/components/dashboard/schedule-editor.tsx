@@ -33,6 +33,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { DATE_LOCALE } from "@/lib/owner-locale";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import type { CreateScheduleInput } from "@/lib/data";
 import {
@@ -118,9 +120,12 @@ export function daysBetweenInclusive(startStr: string, endStr: string): number {
   return Math.round(diff / msPerDay) + 1;
 }
 
-export function formatDateShort(dateStr: string): string {
-  return parseLocalDate(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+export function formatDateShort(dateStr: string, locale: "en" | "id" = "en"): string {
+  return parseLocalDate(dateStr).toLocaleDateString(DATE_LOCALE[locale], { month: "short", day: "numeric" });
 }
+
+/** The owner's "Days" / "Weeks" (INTERVAL_UNIT_OPTIONS stays English for staff-routine-sheet's own map). */
+const INTERVAL_UNIT_IDS: Record<IntervalUnit, string> = { days: "Hari", weeks: "Minggu" };
 
 // Walks start -> end in `intervalValue` day/week steps using Date's native
 // setDate/getDate, which correctly rolls over month boundaries and leap
@@ -176,6 +181,7 @@ export function ManageRoutinesSheet({
   onClose: () => void;
 }) {
   const { pets, schedules, createSchedule, createSchedulesBatch, deleteSchedule } = useHousehold();
+  const tr = useT();
 
   // Claims its own history entry, so Back closes this sheet and leaves
   // whatever opened it (the picker, the profile sheet) standing.
@@ -189,9 +195,14 @@ export function ManageRoutinesSheet({
         {entity && (
           <>
             <SheetHeader className="border-b px-4 py-3">
-              <SheetTitle>Manage {entity.name}&apos;s Routines</SheetTitle>
+              <SheetTitle>
+                {tr(`Manage ${entity.name}'s Routines`, `Kelola Rutinitas ${entity.name}`)}
+              </SheetTitle>
               <SheetDescription className="sr-only">
-                Meals, potty routine, medications, grooming, and other one-off tasks.
+                {tr(
+                  "Meals, potty routine, medications, grooming, and other one-off tasks.",
+                  "Makan, rutinitas buang air, obat, grooming, dan tugas sekali lainnya."
+                )}
               </SheetDescription>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -252,6 +263,7 @@ export function ManageRoutinesSheet({
 
 export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
   const { schedules } = useHousehold();
+  const tr = useT();
   const [manageEntity, setManageEntity] = useState<TaskEntity | null>(null);
   const dogSchedules = schedules.filter((s) => s.entity_id === entity.id);
 
@@ -264,7 +276,7 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
         size="lg"
         className="min-h-[52px] w-full bg-zinc-900 text-base text-white hover:bg-zinc-800"
       >
-        <Settings2 /> Manage Routines
+        <Settings2 /> {tr("Manage Routines", "Kelola Rutinitas")}
       </Button>
 
       <ManageRoutinesSheet entity={manageEntity} onClose={() => setManageEntity(null)} />
@@ -283,6 +295,7 @@ function MealTimesCard({
   createSchedule: CreateScheduleFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const tr = useT();
   const [time, setTime] = useState("12:00");
   const [label, setLabel] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -300,7 +313,7 @@ function MealTimesCard({
       setLabel("");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add meal time");
+      toast.error(tr("Failed to add meal time", "Jam makan gagal ditambahkan"));
     } finally {
       setSubmitting(false);
     }
@@ -311,7 +324,7 @@ function MealTimesCard({
       await deleteSchedule(id);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to remove meal time");
+      toast.error(tr("Failed to remove meal time", "Jam makan gagal dihapus"));
     }
   }
 
@@ -319,7 +332,7 @@ function MealTimesCard({
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-1.5 text-base">
-          <Utensils className="size-4" /> Meal Times
+          <Utensils className="size-4" /> {tr("Meal Times", "Jam Makan")}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
@@ -337,13 +350,13 @@ function MealTimesCard({
             </Badge>
           ))}
           {meals.length === 0 && (
-            <p className="text-sm text-muted-foreground">No meal times yet.</p>
+            <p className="text-sm text-muted-foreground">{tr("No meal times yet.", "Belum ada jam makan.")}</p>
           )}
         </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Time</Label>
+            <Label className="text-xs">{tr("Time", "Jam")}</Label>
             <input
               type="time"
               step={60}
@@ -353,22 +366,25 @@ function MealTimesCard({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Label (optional)</Label>
+            <Label className="text-xs">{tr("Label (optional)", "Nama (opsional)")}</Label>
             <Input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Kibble + Salmon Oil"
+              placeholder={tr("e.g. Kibble + Salmon Oil", "mis. Kibble + Minyak Salmon")}
             />
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Defaults to &quot;{mealLabelForTime(time)}&quot; if left blank.
+          {tr(
+            `Defaults to "${mealLabelForTime(time)}" if left blank.`,
+            `Otomatis "${mealLabelForTime(time)}" jika dikosongkan.`
+          )}
         </p>
 
         <Button onClick={handleAdd} disabled={submitting} className="min-h-[48px] w-fit">
           {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-          Add meal
+          {tr("Add meal", "Tambah jam makan")}
         </Button>
       </CardContent>
     </Card>
@@ -386,6 +402,7 @@ function PottyRoutineCard({
   createSchedulesBatch: CreateSchedulesBatchFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const tr = useT();
   const [start, setStart] = useState("06:00");
   const [end, setEnd] = useState("22:00");
   const [intervalHours, setIntervalHours] = useState(2);
@@ -398,7 +415,7 @@ function PottyRoutineCard({
 
   async function handleGenerate() {
     if (newSlots.length === 0) {
-      toast.error("No new times to add in that range");
+      toast.error(tr("No new times to add in that range", "Tidak ada jam baru di rentang itu"));
       return;
     }
     setGenerating(true);
@@ -412,10 +429,15 @@ function PottyRoutineCard({
           fixed_times: [time],
         }))
       );
-      toast.success(`Added ${newSlots.length} potty ${newSlots.length === 1 ? "time" : "times"}`);
+      toast.success(
+        tr(
+          `Added ${newSlots.length} potty ${newSlots.length === 1 ? "time" : "times"}`,
+          `${newSlots.length} jam buang air ditambahkan`
+        )
+      );
     } catch (err) {
       console.error(err);
-      toast.error("Failed to generate potty routine");
+      toast.error(tr("Failed to generate potty routine", "Rutinitas buang air gagal dibuat"));
     } finally {
       setGenerating(false);
     }
@@ -426,7 +448,7 @@ function PottyRoutineCard({
       await deleteSchedule(id);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to remove potty time");
+      toast.error(tr("Failed to remove potty time", "Jam buang air gagal dihapus"));
     }
   }
 
@@ -438,7 +460,7 @@ function PottyRoutineCard({
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-1.5 text-base">
-          <Droplets className="size-4" /> Potty Routine
+          <Droplets className="size-4" /> {tr("Potty Routine", "Rutinitas Buang Air")}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
@@ -456,13 +478,13 @@ function PottyRoutineCard({
             </Badge>
           ))}
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground">No potty times yet.</p>
+            <p className="text-sm text-muted-foreground">{tr("No potty times yet.", "Belum ada jam buang air.")}</p>
           )}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Start time</Label>
+            <Label className="text-xs">{tr("Start time", "Jam mulai")}</Label>
             <input
               type="time"
               step={60}
@@ -472,7 +494,7 @@ function PottyRoutineCard({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">End time</Label>
+            <Label className="text-xs">{tr("End time", "Jam selesai")}</Label>
             <input
               type="time"
               step={60}
@@ -484,7 +506,7 @@ function PottyRoutineCard({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Every</Label>
+          <Label className="text-xs">{tr("Every", "Setiap")}</Label>
           <div className="flex gap-1.5">
             {INTERVAL_HOUR_OPTIONS.map((h) => (
               <Button
@@ -495,7 +517,7 @@ function PottyRoutineCard({
                 className="min-h-[48px] flex-1"
                 onClick={() => setIntervalHours(h)}
               >
-                {h}h
+                {tr(`${h}h`, `${h} jam`)}
               </Button>
             ))}
           </div>
@@ -503,8 +525,11 @@ function PottyRoutineCard({
 
         <p className="text-xs text-muted-foreground">
           {newSlots.length > 0
-            ? `Will add ${newSlots.length}: ${newSlots.map(formatTime12h).join(", ")}`
-            : "No new times to add in this range."}
+            ? tr(
+                `Will add ${newSlots.length}: ${newSlots.map(formatTime12h).join(", ")}`,
+                `Akan menambah ${newSlots.length}: ${newSlots.map(formatTime12h).join(", ")}`
+              )
+            : tr("No new times to add in this range.", "Tidak ada jam baru di rentang ini.")}
         </p>
 
         <Button
@@ -513,7 +538,7 @@ function PottyRoutineCard({
           className="min-h-[48px] w-fit"
         >
           {generating ? <Loader2 className="animate-spin" /> : <Plus />}
-          Generate Routine
+          {tr("Generate Routine", "Buat Rutinitas")}
         </Button>
       </CardContent>
     </Card>
@@ -531,6 +556,8 @@ function MedicationsCard({
   createSchedulesBatch: CreateSchedulesBatchFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const tr = useT();
+  const locale = useOwnerLocale();
   const today = formatDateLocal(new Date());
   const [label, setLabel] = useState("");
   const [timesPerDay, setTimesPerDay] = useState(1);
@@ -558,11 +585,11 @@ function MedicationsCard({
 
   async function handleGenerate() {
     if (!label.trim()) {
-      toast.error("Give the medication a label");
+      toast.error(tr("Give the medication a label", "Beri nama obatnya"));
       return;
     }
     if (!endDate || endDate < today) {
-      toast.error("Pick an end date today or later");
+      toast.error(tr("Pick an end date today or later", "Pilih tanggal selesai hari ini atau sesudahnya"));
       return;
     }
     setGenerating(true);
@@ -578,13 +605,16 @@ function MedicationsCard({
         }))
       );
       toast.success(
-        `${label.trim()} scheduled ${timesPerDay}x/day through ${formatDateShort(endDate)} (${totalDoses} doses)`
+        tr(
+          `${label.trim()} scheduled ${timesPerDay}x/day through ${formatDateShort(endDate, locale)} (${totalDoses} doses)`,
+          `${label.trim()} dijadwalkan ${timesPerDay}x/hari sampai ${formatDateShort(endDate, locale)} (${totalDoses} dosis)`
+        )
       );
       setLabel("");
       setEndDate("");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to generate medication schedule");
+      toast.error(tr("Failed to generate medication schedule", "Jadwal obat gagal dibuat"));
     } finally {
       setGenerating(false);
     }
@@ -595,7 +625,7 @@ function MedicationsCard({
       await deleteSchedule(id);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to remove medication");
+      toast.error(tr("Failed to remove medication", "Obat gagal dihapus"));
     }
   }
 
@@ -609,7 +639,7 @@ function MedicationsCard({
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-1.5 text-base">
-          <Pill className="size-4" /> Medicines & Vitamins
+          <Pill className="size-4" /> {tr("Medicines & Vitamins", "Obat & Vitamin")}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
@@ -620,7 +650,7 @@ function MedicationsCard({
               {m.expires_at && (
                 <span className="text-muted-foreground">
                   {" "}
-                  · until {formatDateShort(m.expires_at)}
+                  · {tr("until", "sampai")} {formatDateShort(m.expires_at, locale)}
                 </span>
               )}
               <button
@@ -633,21 +663,23 @@ function MedicationsCard({
             </Badge>
           ))}
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground">No medications scheduled yet.</p>
+            <p className="text-sm text-muted-foreground">
+              {tr("No medications scheduled yet.", "Belum ada jadwal obat.")}
+            </p>
           )}
         </div>
 
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">Label</Label>
+          <Label className="text-xs">{tr("Label", "Nama")}</Label>
           <Input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. Heartworm Pill, Antibiotics"
+            placeholder={tr("e.g. Heartworm Pill, Antibiotics", "mis. Obat Cacing Jantung, Antibiotik")}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Times per day</Label>
+          <Label className="text-xs">{tr("Times per day", "Kali per hari")}</Label>
           <div className="flex gap-1.5">
             {DOSE_COUNT_OPTIONS.map((n) => (
               <Button
@@ -665,7 +697,7 @@ function MedicationsCard({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-xs">Dose times</Label>
+          <Label className="text-xs">{tr("Dose times", "Jam minum obat")}</Label>
           <div className="grid grid-cols-2 gap-2">
             {doseTimes.map((t, i) => (
               <input
@@ -681,7 +713,7 @@ function MedicationsCard({
         </div>
 
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">End date</Label>
+          <Label className="text-xs">{tr("End date", "Tanggal selesai")}</Label>
           <Input
             type="date"
             min={today}
@@ -692,8 +724,14 @@ function MedicationsCard({
 
         <p className="text-xs text-muted-foreground">
           {totalDoses > 0
-            ? `${totalDays} day${totalDays === 1 ? "" : "s"} · ${totalDoses} total doses`
-            : "Pick an end date to preview the course length."}
+            ? tr(
+                `${totalDays} day${totalDays === 1 ? "" : "s"} · ${totalDoses} total doses`,
+                `${totalDays} hari · total ${totalDoses} dosis`
+              )
+            : tr(
+                "Pick an end date to preview the course length.",
+                "Pilih tanggal selesai untuk melihat lamanya pengobatan."
+              )}
         </p>
 
         <Button
@@ -702,7 +740,7 @@ function MedicationsCard({
           className="min-h-[48px] w-fit"
         >
           {generating ? <Loader2 className="animate-spin" /> : <Plus />}
-          Generate Medication Schedule
+          {tr("Generate Medication Schedule", "Buat Jadwal Obat")}
         </Button>
       </CardContent>
     </Card>
@@ -720,6 +758,8 @@ function GroomingCareCard({
   createSchedulesBatch: CreateSchedulesBatchFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const tr = useT();
+  const locale = useOwnerLocale();
   const today = formatDateLocal(new Date());
   const [label, setLabel] = useState("");
   const [startDate, setStartDate] = useState(today);
@@ -736,11 +776,16 @@ function GroomingCareCard({
 
   async function handleGenerate() {
     if (!label.trim()) {
-      toast.error("Give the task a label");
+      toast.error(tr("Give the task a label", "Beri nama tugasnya"));
       return;
     }
     if (occurrences.length === 0) {
-      toast.error("Pick a start date, interval, and end date that produce at least one visit");
+      toast.error(
+        tr(
+          "Pick a start date, interval, and end date that produce at least one visit",
+          "Pilih tanggal mulai, jarak, dan tanggal selesai yang menghasilkan minimal satu kunjungan"
+        )
+      );
       return;
     }
     setGenerating(true);
@@ -757,13 +802,16 @@ function GroomingCareCard({
         }))
       );
       toast.success(
-        `Scheduled ${occurrences.length} ${label.trim()} visit${occurrences.length === 1 ? "" : "s"}`
+        tr(
+          `Scheduled ${occurrences.length} ${label.trim()} visit${occurrences.length === 1 ? "" : "s"}`,
+          `${occurrences.length} kunjungan ${label.trim()} dijadwalkan`
+        )
       );
       setLabel("");
       setEndDate("");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to generate grooming schedule");
+      toast.error(tr("Failed to generate grooming schedule", "Jadwal grooming gagal dibuat"));
     } finally {
       setGenerating(false);
     }
@@ -774,7 +822,7 @@ function GroomingCareCard({
       await deleteSchedule(id);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to remove task");
+      toast.error(tr("Failed to remove task", "Tugas gagal dihapus"));
     }
   }
 
@@ -786,14 +834,14 @@ function GroomingCareCard({
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-1.5 text-base">
-          <Scissors className="size-4" /> Grooming & Care
+          <Scissors className="size-4" /> {tr("Grooming & Care", "Grooming & Perawatan")}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-wrap gap-2">
           {sortedItems.map((g) => (
             <Badge key={g.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
-              {g.expires_at ? formatDateShort(g.expires_at) : "—"}
+              {g.expires_at ? formatDateShort(g.expires_at, locale) : "—"}
               {g.fixed_times?.[0] ? `, ${formatTime12h(g.fixed_times[0])}` : ""} ·{" "}
               {displayTitle(g)}
               <button
@@ -806,22 +854,24 @@ function GroomingCareCard({
             </Badge>
           ))}
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground">No grooming visits scheduled yet.</p>
+            <p className="text-sm text-muted-foreground">
+              {tr("No grooming visits scheduled yet.", "Belum ada jadwal grooming.")}
+            </p>
           )}
         </div>
 
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">Label</Label>
+          <Label className="text-xs">{tr("Label", "Nama")}</Label>
           <Input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. Bath, Nail Clipping"
+            placeholder={tr("e.g. Bath, Nail Clipping", "mis. Mandi, Potong Kuku")}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Start date</Label>
+            <Label className="text-xs">{tr("Start date", "Tanggal mulai")}</Label>
             <Input
               type="date"
               min={today}
@@ -830,7 +880,7 @@ function GroomingCareCard({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Time</Label>
+            <Label className="text-xs">{tr("Time", "Jam")}</Label>
             <input
               type="time"
               step={60}
@@ -842,7 +892,7 @@ function GroomingCareCard({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Repeat every</Label>
+          <Label className="text-xs">{tr("Repeat every", "Ulangi setiap")}</Label>
           <div className="flex gap-2">
             <Input
               type="number"
@@ -862,7 +912,7 @@ function GroomingCareCard({
                   className="min-h-[48px] flex-1"
                   onClick={() => setIntervalUnit(opt.value)}
                 >
-                  {opt.label}
+                  {locale === "id" ? INTERVAL_UNIT_IDS[opt.value] : opt.label}
                 </Button>
               ))}
             </div>
@@ -870,7 +920,7 @@ function GroomingCareCard({
         </div>
 
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">End date</Label>
+          <Label className="text-xs">{tr("End date", "Tanggal selesai")}</Label>
           <Input
             type="date"
             min={startDate || today}
@@ -881,11 +931,19 @@ function GroomingCareCard({
 
         <p className="text-xs text-muted-foreground">
           {occurrences.length > 0
-            ? `Will schedule ${occurrences.length} visit${occurrences.length === 1 ? "" : "s"}: ${occurrences
+            ? tr(
+                `Will schedule ${occurrences.length} visit${occurrences.length === 1 ? "" : "s"}: `,
+                `Akan menjadwalkan ${occurrences.length} kunjungan: `
+              ) +
+              occurrences
                 .slice(0, 4)
-                .map((o) => formatDateShort(o.date))
-                .join(", ")}${occurrences.length > 4 ? "…" : ""}`
-            : "Pick a start date, interval, and end date to preview visits."}
+                .map((o) => formatDateShort(o.date, locale))
+                .join(", ") +
+              (occurrences.length > 4 ? "…" : "")
+            : tr(
+                "Pick a start date, interval, and end date to preview visits.",
+                "Pilih tanggal mulai, jarak, dan tanggal selesai untuk melihat kunjungannya."
+              )}
         </p>
 
         <Button
@@ -894,7 +952,7 @@ function GroomingCareCard({
           className="min-h-[48px] w-fit"
         >
           {generating ? <Loader2 className="animate-spin" /> : <Plus />}
-          Generate Grooming Schedule
+          {tr("Generate Grooming Schedule", "Buat Jadwal Grooming")}
         </Button>
       </CardContent>
     </Card>
@@ -922,6 +980,8 @@ function VetVisitsCard({
   createSchedule: CreateScheduleFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const tr = useT();
+  const locale = useOwnerLocale();
   const today = formatDateLocal(new Date());
   const [label, setLabel] = useState("");
   const [date, setDate] = useState(today);
@@ -932,11 +992,11 @@ function VetVisitsCard({
 
   async function handleAdd() {
     if (!label.trim()) {
-      toast.error("Give the visit a label");
+      toast.error(tr("Give the visit a label", "Beri nama kunjungannya"));
       return;
     }
     if (!date) {
-      toast.error("Pick a date");
+      toast.error(tr("Pick a date", "Pilih tanggal"));
       return;
     }
     setSubmitting(true);
@@ -950,11 +1010,16 @@ function VetVisitsCard({
         created_at: parseLocalDate(date).toISOString(),
         expires_at: date,
       });
-      toast.success(`${label.trim()} booked for ${formatDateShort(date)}`);
+      toast.success(
+        tr(
+          `${label.trim()} booked for ${formatDateShort(date, locale)}`,
+          `${label.trim()} dijadwalkan pada ${formatDateShort(date, locale)}`
+        )
+      );
       setLabel("");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add visit");
+      toast.error(tr("Failed to add visit", "Kunjungan gagal ditambahkan"));
     } finally {
       setSubmitting(false);
     }
@@ -965,7 +1030,7 @@ function VetVisitsCard({
       await deleteSchedule(id);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to remove visit");
+      toast.error(tr("Failed to remove visit", "Kunjungan gagal dihapus"));
     }
   }
 
@@ -975,18 +1040,18 @@ function VetVisitsCard({
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-1.5 text-base">
-          <Stethoscope className="size-4" /> Vet &amp; Doctor
+          <Stethoscope className="size-4" /> {tr("Vet & Doctor", "Dokter Hewan")}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-wrap gap-2">
           {sorted.map((v) => (
             <Badge key={v.id} variant="secondary" className="h-8 gap-1 px-2.5 text-sm">
-              {v.expires_at ? formatDateShort(v.expires_at) : "—"} · {displayTitle(v)}
+              {v.expires_at ? formatDateShort(v.expires_at, locale) : "—"} · {displayTitle(v)}
               <button
                 type="button"
                 onClick={() => remove(v.id)}
-                aria-label={`Remove ${displayTitle(v)}`}
+                aria-label={tr(`Remove ${displayTitle(v)}`, `Hapus ${displayTitle(v)}`)}
                 className="ml-0.5 rounded-full p-0.5 hover:bg-background/60"
               >
                 <X className="size-3.5" />
@@ -996,17 +1061,17 @@ function VetVisitsCard({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Label</Label>
+          <Label className="text-xs">{tr("Label", "Nama")}</Label>
           <Input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. Annual checkup"
+            placeholder={tr("e.g. Annual checkup", "mis. Pemeriksaan tahunan")}
           />
         </div>
 
         <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
           <div className="flex min-w-0 flex-col gap-1.5">
-            <Label className="text-xs">Date</Label>
+            <Label className="text-xs">{tr("Date", "Tanggal")}</Label>
             <input
               type="date"
               value={date}
@@ -1016,7 +1081,7 @@ function VetVisitsCard({
             />
           </div>
           <div className="flex min-w-0 flex-col gap-1.5">
-            <Label className="text-xs">Time</Label>
+            <Label className="text-xs">{tr("Time", "Jam")}</Label>
             <input
               type="time"
               value={time}
@@ -1027,7 +1092,7 @@ function VetVisitsCard({
         </div>
         {dateInPast && (
           <p className="text-xs font-medium text-destructive">
-            The date can&apos;t be before today.
+            {tr("The date can't be before today.", "Tanggal tidak boleh sebelum hari ini.")}
           </p>
         )}
 
@@ -1037,7 +1102,7 @@ function VetVisitsCard({
           className="min-h-[48px] w-fit"
         >
           {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-          Add Visit
+          {tr("Add Visit", "Tambah Kunjungan")}
         </Button>
       </CardContent>
     </Card>
@@ -1055,6 +1120,7 @@ function OthersCard({
   createSchedule: CreateScheduleFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const tr = useT();
   const [title, setTitle] = useState("");
   const [time, setTime] = useState("08:00");
   const [expiresAt, setExpiresAt] = useState("");
@@ -1062,7 +1128,7 @@ function OthersCard({
 
   async function handleAdd() {
     if (!title || !expiresAt) {
-      toast.error("Fill in a title and expiry date");
+      toast.error(tr("Fill in a title and expiry date", "Isi judul dan tanggal berakhir"));
       return;
     }
     setSubmitting(true);
@@ -1077,10 +1143,10 @@ function OthersCard({
       });
       setTitle("");
       setExpiresAt("");
-      toast.success("Task added");
+      toast.success(tr("Task added", "Tugas ditambahkan"));
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add task");
+      toast.error(tr("Failed to add task", "Tugas gagal ditambahkan"));
     } finally {
       setSubmitting(false);
     }
@@ -1091,7 +1157,7 @@ function OthersCard({
       await deleteSchedule(id);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to remove task");
+      toast.error(tr("Failed to remove task", "Tugas gagal dihapus"));
     }
   }
 
@@ -1099,7 +1165,7 @@ function OthersCard({
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-1.5 text-base">
-          <List className="size-4" /> Others
+          <List className="size-4" /> {tr("Others", "Lainnya")}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
@@ -1113,26 +1179,30 @@ function OthersCard({
                 <p className="font-medium">
                   {t.fixed_times?.[0] ? formatTime12h(t.fixed_times[0]) : "—"} · {t.title}
                 </p>
-                <p className="text-xs text-muted-foreground">Expires {t.expires_at}</p>
+                <p className="text-xs text-muted-foreground">
+                  {tr("Expires", "Berakhir")} {t.expires_at}
+                </p>
               </div>
               <Button variant="ghost" size="icon-sm" onClick={() => remove(t.id)}>
                 <X className="size-4" />
               </Button>
             </div>
           ))}
-          {tasks.length === 0 && <p className="text-sm text-muted-foreground">No other tasks.</p>}
+          {tasks.length === 0 && (
+            <p className="text-sm text-muted-foreground">{tr("No other tasks.", "Tidak ada tugas lain.")}</p>
+          )}
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Task title</Label>
+            <Label className="text-xs">{tr("Task title", "Judul tugas")}</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Farm visit reminder"
+              placeholder={tr("e.g. Farm visit reminder", "mis. Pengingat kunjungan ke peternakan")}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Time</Label>
+            <Label className="text-xs">{tr("Time", "Jam")}</Label>
             <input
               type="time"
               step={60}
@@ -1142,7 +1212,7 @@ function OthersCard({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Expires on</Label>
+            <Label className="text-xs">{tr("Expires on", "Berakhir pada")}</Label>
             <Input
               type="date"
               value={expiresAt}
@@ -1152,7 +1222,7 @@ function OthersCard({
         </div>
         <Button onClick={handleAdd} disabled={submitting} className="min-h-[48px] w-fit">
           {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-          Add task
+          {tr("Add task", "Tambah tugas")}
         </Button>
       </CardContent>
     </Card>
@@ -1174,6 +1244,7 @@ function CopyScheduleDrawer({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copying, setCopying] = useState(false);
+  const tr = useT();
   // Above the early return below — hooks can't run conditionally.
   useBackToClose(open, () => setOpen(false));
 
@@ -1190,7 +1261,7 @@ function CopyScheduleDrawer({
 
   async function handleCopy() {
     if (selected.size === 0) {
-      toast.error("Choose at least one pet");
+      toast.error(tr("Choose at least one pet", "Pilih minimal satu hewan"));
       return;
     }
     setCopying(true);
@@ -1216,12 +1287,12 @@ function CopyScheduleDrawer({
         .filter((t) => selected.has(t.id))
         .map((t) => t.name)
         .join(", ");
-      toast.success(`Schedule copied to ${names}`);
+      toast.success(tr(`Schedule copied to ${names}`, `Jadwal disalin ke ${names}`));
       setSelected(new Set());
       setOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to copy schedule");
+      toast.error(tr("Failed to copy schedule", "Jadwal gagal disalin"));
     } finally {
       setCopying(false);
     }
@@ -1235,15 +1306,17 @@ function CopyScheduleDrawer({
           className="min-h-[48px] w-full"
           disabled={sourceSchedules.length === 0}
         >
-          <Copy /> Copy schedule to...
+          <Copy /> {tr("Copy schedule to...", "Salin jadwal ke...")}
         </Button>
       </SheetTrigger>
       <SheetContent side="bottom">
         <SheetHeader>
-          <SheetTitle>Copy {entity.name}&apos;s schedule</SheetTitle>
+          <SheetTitle>{tr(`Copy ${entity.name}'s schedule`, `Salin jadwal ${entity.name}`)}</SheetTitle>
           <SheetDescription>
-            Choose which pets should get a copy of {entity.name}&apos;s{" "}
-            {sourceSchedules.length} schedule{sourceSchedules.length === 1 ? "" : "s"}.
+            {tr(
+              `Choose which pets should get a copy of ${entity.name}'s ${sourceSchedules.length} schedule${sourceSchedules.length === 1 ? "" : "s"}.`,
+              `Pilih hewan mana yang mendapat salinan ${sourceSchedules.length} jadwal ${entity.name}.`
+            )}
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-2 px-4">
@@ -1265,7 +1338,10 @@ function CopyScheduleDrawer({
         <SheetFooter>
           <Button onClick={handleCopy} disabled={copying || selected.size === 0}>
             {copying ? <Loader2 className="animate-spin" /> : <Copy />}
-            Copy to {selected.size || ""} pet{selected.size === 1 ? "" : "s"}
+            {tr(
+              `Copy to ${selected.size || ""} pet${selected.size === 1 ? "" : "s"}`,
+              `Salin ke ${selected.size || ""} hewan`
+            )}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -1308,6 +1384,7 @@ function LivePreviewCard({
   schedules: MasterSchedule[];
 }) {
   const { logs, selectedDate } = useHousehold();
+  const tr = useT();
   const dateStr = formatDateLocal(selectedDate);
   // Flattened one-row-per-schedule-item, not one-row-per-group — grouping by
   // time+title (as buildAgenda's groups do, for the Staff View's multi-dog
@@ -1335,7 +1412,7 @@ function LivePreviewCard({
     <Card className="py-4">
       <CardContent className="flex flex-col gap-2 px-4">
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No tasks scheduled.</p>
+          <p className="text-sm text-muted-foreground">{tr("No tasks scheduled.", "Tidak ada tugas terjadwal.")}</p>
         ) : (
           rows.map((row) => {
             if (row.kind === "group") {
@@ -1407,12 +1484,13 @@ function LivePreviewCard({
 /**
  * A dog's medicines for one time slot, as a single row with a checklist.
  *
- * Owner-facing, so English. The row carries one status and one photo because
+ * Owner-facing, in the owner's language. The row carries one status and one photo because
  * that is the truth of it — the staff member took one photo for the lot — while
  * each medicine keeps its own delete, since cancelling a course of Albumin
  * should not cancel the Postbiotik alongside it.
  */
 function MedicineGroupRow({ group, entity }: { group: AgendaGroup; entity: TaskEntity }) {
+  const tr = useT();
   const Icon = categoryIcon("medication");
   const tint = categoryCardTintStrong("medication");
   // Every medicine has to be logged before the slot counts as done; the worst
@@ -1432,11 +1510,13 @@ function MedicineGroupRow({ group, entity }: { group: AgendaGroup; entity: TaskE
           {formatTime12h(group.time)}
         </span>
         <Icon className={cn("size-4 shrink-0", categoryIconColor("medication"))} />
-        <span className="flex-1 font-medium">Medicines ({group.titles.length})</span>
+        <span className="flex-1 font-medium">
+          {tr("Medicines", "Obat")} ({group.titles.length})
+        </span>
         {photoLog?.photo_url ? (
           <LogPhotoThumbnail
             log={photoLog}
-            title={`Medicines · ${group.titles.join(", ")}`}
+            title={`${tr("Medicines", "Obat")} · ${group.titles.join(", ")}`}
             className="size-9 shrink-0 rounded-md ring-1 ring-border"
           />
         ) : (

@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import type { OwnerLocale } from "@/lib/owner-locale";
 import { FilterPill } from "@/components/shared/filter-pill";
 import { categoryIcon, describeLog, type ScheduleCategory } from "@/lib/schedule-categories";
 import { formatTime12h } from "@/lib/time";
@@ -13,17 +15,27 @@ import { cn } from "@/lib/utils";
 import { distinct, groupByPhoto } from "@/lib/photos";
 import type { TaskEntity, TaskLog } from "@/types/database";
 
-// Owner-facing, so English. Pills follow this order — the same order as the
+// Owner-facing, in the owner's language (Phase 149). Pills follow this order — the same order as the
 // routine editor's cards — rather than whichever category logged first today,
 // so the row doesn't reshuffle as the day fills in.
 const FILTER_ORDER: ScheduleCategory[] = ["meal", "potty", "vet", "medication", "grooming", "temporary"];
-const FILTER_LABELS: Record<ScheduleCategory, string> = {
-  meal: "Meals",
-  potty: "Potty",
-  vet: "Vet",
-  medication: "Medicine",
-  grooming: "Grooming",
-  temporary: "Others",
+const FILTER_LABELS: Record<OwnerLocale, Record<ScheduleCategory, string>> = {
+  en: {
+    meal: "Meals",
+    potty: "Potty",
+    vet: "Vet",
+    medication: "Medicine",
+    grooming: "Grooming",
+    temporary: "Others",
+  },
+  id: {
+    meal: "Makan",
+    potty: "Pipis & Pup",
+    vet: "Dokter Hewan",
+    medication: "Obat",
+    grooming: "Grooming",
+    temporary: "Lainnya",
+  },
 };
 
 /**
@@ -32,8 +44,8 @@ const FILTER_LABELS: Record<ScheduleCategory, string> = {
  * a stored row from a newer build, say. Showing the raw name capitalised is a
  * readable "Physio" rather than an empty pill.
  */
-function filterLabel(category: ScheduleCategory): string {
-  return FILTER_LABELS[category] ?? category.charAt(0).toUpperCase() + category.slice(1);
+function filterLabel(category: ScheduleCategory, locale: OwnerLocale): string {
+  return FILTER_LABELS[locale][category] ?? category.charAt(0).toUpperCase() + category.slice(1);
 }
 
 type PhotoFilter = ScheduleCategory | "all";
@@ -53,6 +65,8 @@ interface PhotoStreamProps {
 
 export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
   const { schedules } = useHousehold();
+  const locale = useOwnerLocale();
+  const t = useT();
   const [filter, setFilter] = useState<PhotoFilter>("all");
   const [isExpanded, setIsExpanded] = useState(false);
   const entityById = new Map(entities.map((e) => [e.id, e]));
@@ -126,7 +140,9 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
   );
 
   if (photos.length === 0) {
-    return <p className="text-sm text-muted-foreground">No photos logged yet today.</p>;
+    return <p className="text-sm text-muted-foreground">
+        {t("No photos logged yet today.", "Belum ada foto hari ini.")}
+      </p>;
   }
 
   return (
@@ -135,7 +151,7 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
       {categories.length > 1 && (
         <div
           role="group"
-          aria-label="Filter photos by category"
+          aria-label={t("Filter photos by category", "Saring foto menurut kategori")}
           // Same guard as DateRibbon: the owner feed sits in a swipeable
           // carousel, and without this a sideways scroll of the pills would
           // drag the whole tab instead.
@@ -143,7 +159,7 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
           className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           <FilterPill
-            label="All"
+            label={t("All", "Semua")}
             count={photos.length}
             active={activeFilter === "all"}
             onClick={() => selectFilter("all")}
@@ -151,7 +167,7 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
           {categories.map((category) => (
             <FilterPill
               key={category}
-              label={filterLabel(category)}
+              label={filterLabel(category, locale)}
               // The same icon the photo's own corner badge carries, so the
               // pill and the tiles it filters to are recognisably one thing.
               icon={categoryIcon(category)}
@@ -219,7 +235,9 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
           aria-expanded={isExpanded}
           className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg text-sm font-medium text-zinc-600 active:bg-zinc-100"
         >
-          {isExpanded ? "Show Fewer" : `View All Photos (${matching.length})`}
+          {isExpanded
+            ? t("Show Fewer", "Tampilkan Lebih Sedikit")
+            : t(`View All Photos (${matching.length})`, `Lihat Semua Foto (${matching.length})`)}
           <ChevronDown className={cn("size-4 transition-transform", isExpanded && "rotate-180")} />
         </button>
       )}

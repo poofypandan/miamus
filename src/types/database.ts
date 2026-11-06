@@ -650,6 +650,14 @@ export interface Database {
         Args: { p_name: string };
         Returns: string;
       };
+      my_locale: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      set_my_locale: {
+        Args: { p_locale: string };
+        Returns: string;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

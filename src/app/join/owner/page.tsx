@@ -122,7 +122,9 @@ function JoinOwnerScreen() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
       <Loader2 className="size-6 animate-spin text-muted-foreground" />
       <p className="text-sm text-muted-foreground">
-        {stage === "redeeming" ? "Joining the household…" : "Checking your invite…"}
+        {stage === "redeeming"
+          ? "Joining the household… · Bergabung ke rumah…"
+          : "Checking your invite… · Memeriksa undangan…"}
       </p>
     </main>
   );
