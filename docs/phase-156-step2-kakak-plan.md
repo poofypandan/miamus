@@ -42,7 +42,7 @@ hand, as today (parent plan, rule M1).
    (Today has no primary button now). The first time, one line under it:
    "Kakak can set things up for you — just tell her." / "Kakak bisa
    mengaturnya untuk Anda — cukup bilang saja." Tapped once, never shown
-   again (kept on the account with the language choice, `user_preferences`).
+   again on that phone (a `localStorage` flag; no database change).
    In step 3 the same button gains hold-to-talk; nothing moves.
 2. **The typing sheet.** A bottom sheet: Kakak's avatar and "What should I
    set up?" / "Mau Kakak atur apa?", one large typing box, **Send** /
@@ -373,8 +373,8 @@ conventions before writing it). A second, tiny handler
   household, so Plus can change it later.
 - **Global: US$5 a day** across all households (`kakak_config`,
   platform-admin only). Reached → every household gets the "try again
-  tomorrow" message, and the owner (operator) is told by the existing
-  admin push. At family scale it is never reached; it exists so a bug
+  tomorrow" message and the route logs it as an error (a push to the
+  operator can come with Plus). At family scale it is never reached; it exists so a bug
   can't run up a bill.
 - **Per request:** at most 8 turns, 500 characters per typed turn, 3
   questions; `max_tokens` 4,000; 30-second timeout; one retry on
