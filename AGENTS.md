@@ -11,7 +11,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Code Review Rules
 
 These guide Codex's pull-request reviews. They don't replace `npm run build`,
-staging tests or the owner's approval. Background: `docs/handoff-2026-11-05.md`.
+staging tests or the owner's approval. Background: `docs/handoff-2026-11-07.md`.
 
 ### Database
 

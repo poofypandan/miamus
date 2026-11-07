@@ -114,6 +114,9 @@ function JoinScreen() {
         return null;
       }
       console.error("Invite redemption failed", error);
+      // The database's own refusal of a Google account (migrations/120): the
+      // same answer as the check above, for a session it missed.
+      if (error?.message?.includes("staff_invite_needs_staff_phone")) return "owner";
       if (await goIfBound(identity.userId)) return null;
       return isConnectionError(error) ? "offline" : "invalid";
     }

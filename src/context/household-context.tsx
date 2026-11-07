@@ -781,6 +781,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         photo_url: input.photo_url ?? null,
         notes: input.notes ?? null,
         completed_at: completedAt,
+        // Who logged it, stamped now as the batch path does: whoever is on
+        // duty when the signal comes back may be someone else.
+        staff_id: withStaffId(input).staff_id ?? null,
       });
       const optimisticLog: TaskLog = {
         id: `offline-${crypto.randomUUID()}`,
