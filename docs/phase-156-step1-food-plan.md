@@ -157,3 +157,30 @@ at phone size in both languages.
 | R1 | Keep finished food 90 days (no photo) for a later "what got wasted" view, then delete | Yes |
 | W1 | Wording: Dapur, Makanan · Belanja, Dimakan · Diberikan · Dibuang, Kulkas / Freezer / Lemari / Meja, "Kedaluwarsa", "Kembalikan wadah ke …" — added to the glossary | Yes |
 | T1 | Today line counts food past its date, today or tomorrow | Yes |
+
+## Added after review (owner, 2026-11-07)
+
+Staff receive most food at the door, and leftovers count too:
+
+- **Makanan masuk** is first in the staff's **+ Lapor** sheet: the same
+  add-food form, one tap from any screen.
+- **A photo is enough:** the name may stay empty when there is a photo
+  (shown as "Food" / "Makanan").
+- **"Tidak tahu" / "Don't know"** for the expiry. The food sits on top with
+  an amber **"Cek tanggalnya" / "Check the date"**, and owners get one amber
+  line on Today ("1 food needs a date") until someone sets one.
+- **Owners are told:** when a staff phone logs food, the admins get a push
+  in their own language — "Sari: Lapis legit dari Tante Rina, di kulkas,
+  kedaluwarsa besok." Composed in the database (like the sick-pet alert),
+  never by the phone. Owners' own entries send nothing.
+- **Who logged it:** "Dicatat Sari" / "Logged by Sari" on its own line in
+  the owner's list.
+- **Where it came from:** Cooked at home (leftovers) · From someone ·
+  Bought. "From someone" opens who gave it and the container tick.
+- **Shopping, not "To buy":** the second pill is the shopping list with the
+  home's supplies under it ("Supplies at home" / "Stok di rumah": soap, pee
+  pads, dog food — the old Inventory). Indonesian stays "Belanja".
+
+Codex review (PR #10): the photo clean-up now also spares food-folder photos
+that a pet, a medical record, inventory or an unfinished chore still uses;
+a finished food's photo is removed only when its Undo toast closes.

@@ -18,7 +18,9 @@ function KitchenSwitch({ locale }: { locale: FoodLocale }) {
       ariaLabel={id ? "Dapur" : "Kitchen"}
       segments={[
         { value: "food", label: id ? "Makanan" : "Food" },
-        { value: "buy", label: id ? "Belanja" : "To buy" },
+        // "Shopping", not "To buy": it holds the list and the home's supplies
+        // (soap, pee pads) — the old Inventory (owner, 2026-11-07).
+        { value: "buy", label: id ? "Belanja" : "Shopping" },
       ]}
       value={view}
       onChange={setView}
@@ -29,8 +31,8 @@ function KitchenSwitch({ locale }: { locale: FoodLocale }) {
 /**
  * The owner's Kitchen tab (Phase 156; it replaced Shopping, still the
  * "inventory" module in the URL so old links land here). Food first, because
- * it is the time-sensitive one; To buy is the Phase 154 shopping list,
- * unchanged. No sixth tab.
+ * it is the time-sensitive one; Shopping is the Phase 154 shopping list with
+ * the home's supplies under it (soap, pee pads, dog food). No sixth tab.
  */
 export function KitchenTab() {
   const locale = useOwnerLocale();

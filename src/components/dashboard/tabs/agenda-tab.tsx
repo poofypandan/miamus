@@ -31,7 +31,7 @@ import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
 import { isLowStock } from "@/lib/inventory";
-import { countEatSoon, eatSoonLabel } from "@/lib/food";
+import { countEatSoon, countNeedsDate, eatSoonLabel, needsDateLabel } from "@/lib/food";
 import { isActiveAlert } from "@/lib/inventory-status";
 import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -127,8 +127,10 @@ export function AgendaTab() {
 
   // Food to eat soon (Phase 156): the same kind of quiet line, above it.
   const eatSoon = useMemo(() => countEatSoon(foodItems, formatDateLocal(today)), [foodItems, today]);
+  // Staff answered "don't know" for a date: waiting for an owner (amber).
+  const needsDate = useMemo(() => countNeedsDate(foodItems), [foodItems]);
 
-  // The Kitchen tab opens on Food; the shopping line goes straight to To buy.
+  // The Kitchen tab opens on Food; the shopping line goes straight to Shopping.
   const toBuyHref = `${moduleHref("inventory")}&kitchen=buy`;
   function switchToShopping(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;
@@ -230,8 +232,20 @@ export function AgendaTab() {
             Renders nothing when there is nothing to ask. */}
         <MedicationCourseAlerts />
 
-        {(eatSoon > 0 || toBuy > 0) && (
+        {(needsDate > 0 || eatSoon > 0 || toBuy > 0) && (
           <div className="-my-1 flex flex-col">
+            {needsDate > 0 && (
+              <Link
+                href={moduleHref("inventory")}
+                scroll={false}
+                onClick={switchToFood}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-amber-800 active:bg-muted"
+              >
+                <CookingPot className="size-4 shrink-0 text-amber-700" />
+                <span className="flex-1">{needsDateLabel(needsDate, locale)}</span>
+                <ChevronRight className="size-4 shrink-0 text-amber-700" />
+              </Link>
+            )}
             {eatSoon > 0 && (
               <Link
                 href={moduleHref("inventory")}

@@ -35,11 +35,20 @@
 --   failed for lack of signal, an abandoned form's upload. Only its two SQL
 --   functions change; the Edge Function and its secret are untouched.
 --
+-- STAFF RECEIVE THE FOOD (owner, 2026-11-07)
+--   A photo is enough: the name may be left empty when there is a photo
+--   (the app shows "Food" / "Makanan"). "Don't know" is an answer for the
+--   expiry (expiry_unknown): owners see "Check the date" until one is set.
+--   Where it came from (source): cooked at home (leftovers), from someone,
+--   or bought. When a staff phone adds food, the household's owners get a
+--   push in their own language (notify_food_from_staff, same path as 114's
+--   sick-report alert: composed here, so no phone can make it say anything).
+--
 -- HOW LONG ROWS ARE KEPT
 --   Finished food stays 90 days without its photo (for a later "what got
 --   eaten, given away, wasted" view), then a nightly job deletes it.
 --
--- Additive: one table, its policies and triggers, four functions (two of them
+-- Additive: one table, its policies and triggers, five functions (two of them
 -- replaced), one cron job. No SECURITY DEFINER function a client can call.
 -- ============================================================================
 
@@ -47,10 +56,12 @@
 create table if not exists public.food_items (
   id uuid primary key default gen_random_uuid(),
   household_id uuid not null references public.households (id) on delete cascade,
-  name text not null,
+  name text,
   photo_url text,
   kept_in text not null default 'fridge',
   expires_on date,
+  expiry_unknown boolean not null default false,
+  source text,
   from_whom text,
   return_container boolean not null default false,
   container_returned_at timestamptz,
@@ -62,7 +73,8 @@ create table if not exists public.food_items (
   outcome text,
   finished_at timestamptz,
   finished_by uuid references public.staff_profiles (id) on delete set null,
-  constraint food_items_name_length check (char_length(btrim(name)) between 1 and 80),
+  constraint food_items_name_length check (name is null or char_length(btrim(name)) between 1 and 80),
+  constraint food_items_source_check check (source is null or source in ('home', 'gift', 'bought')),
   constraint food_items_kept_in_check check (kept_in in ('fridge', 'freezer', 'pantry', 'counter')),
   constraint food_items_from_whom_length check (from_whom is null or char_length(from_whom) <= 60),
   constraint food_items_notes_length check (notes is null or char_length(notes) <= 200),
@@ -134,7 +146,15 @@ begin
     end if;
   end if;
   new.updated_at := now();
-  new.name := btrim(new.name);
+  new.name := nullif(btrim(new.name), '');
+  -- A name or a photo: one of them says what it is.
+  if tg_op = 'INSERT' and new.name is null and new.photo_url is null then
+    raise exception 'food_needs_name_or_photo' using errcode = '23514';
+  end if;
+  -- A date, once known, answers "don't know".
+  if new.expires_on is not null then
+    new.expiry_unknown := false;
+  end if;
   return new;
 end;
 $$;
@@ -190,6 +210,84 @@ create trigger food_items_check_people
 -- Trigger functions are never called directly.
 revoke all on function public.food_items_server_fields() from public, anon, authenticated;
 revoke all on function public.food_items_check_people() from public, anon, authenticated;
+
+-- --- 3b. Owners hear when staff log food ------------------------------------------
+-- After insert, from a staff phone only: a session that is a member of the
+-- household is an owner, who knows what they just added. Bilingual through
+-- 114's queue_owner_push; never blocks the insert.
+create or replace function public.notify_food_from_staff()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  staff_name text;
+  days int;
+  place_en text;
+  place_id text;
+  what_en text;
+  what_id text;
+  when_en text;
+  when_id text;
+  message_en text;
+  message_id text;
+begin
+  if exists (select 1 from public.household_members m
+              where m.user_id = auth.uid() and m.household_id = new.household_id) then
+    return new;
+  end if;
+
+  begin
+    if new.added_by is not null then
+      select s.name into staff_name from public.staff_profiles s where s.id = new.added_by;
+    end if;
+
+    place_en := case new.kept_in when 'fridge' then 'in the fridge' when 'freezer' then 'in the freezer'
+                                 when 'pantry' then 'in the cupboard' else 'on the counter' end;
+    place_id := case new.kept_in when 'fridge' then 'di kulkas' when 'freezer' then 'di freezer'
+                                 when 'pantry' then 'di lemari' else 'di meja' end;
+    what_en := coalesce(new.name, 'Food (photo)') || coalesce(' from ' || new.from_whom, '');
+    what_id := coalesce(new.name, 'Makanan (foto)') || coalesce(' dari ' || new.from_whom, '');
+
+    if new.expires_on is not null then
+      days := new.expires_on - (now() at time zone 'Asia/Jakarta')::date;
+      when_en := case when days < 0 then 'already past its date'
+                      when days = 0 then 'expires today'
+                      when days = 1 then 'expires tomorrow'
+                      else 'expires in ' || days || ' days' end;
+      when_id := case when days < 0 then 'sudah lewat tanggal'
+                      when days = 0 then 'kedaluwarsa hari ini'
+                      when days = 1 then 'kedaluwarsa besok'
+                      else 'kedaluwarsa ' || days || ' hari lagi' end;
+    elsif new.expiry_unknown then
+      when_en := 'check the date';
+      when_id := 'cek tanggalnya';
+    end if;
+
+    message_en := coalesce(staff_name || ': ', '') || what_en || ', ' || place_en || coalesce(', ' || when_en, '') || '.';
+    message_id := coalesce(staff_name || ': ', '') || what_id || ', ' || place_id || coalesce(', ' || when_id, '') || '.';
+
+    perform public.queue_owner_push(
+      new.household_id,
+      'Food came in', message_en,
+      'Makanan masuk', message_id,
+      '/dashboard?module=inventory', 'food-' || new.id::text,
+      auth.uid()
+    );
+  exception when others then
+    raise warning 'Food push not queued for %: %', new.id, sqlerrm;
+  end;
+  return new;
+end;
+$$;
+
+drop trigger if exists food_items_notify_owners on public.food_items;
+create trigger food_items_notify_owners
+  after insert on public.food_items
+  for each row execute function public.notify_food_from_staff();
+
+revoke all on function public.notify_food_from_staff() from public, anon, authenticated;
 
 -- --- 4. Photo clean-up, extended to food (replaces 101's two functions) ---------
 -- A food photo is due when it is under <household>/food/, over a day old,
@@ -270,6 +368,16 @@ begin
     where f.photo_url is not null
       and (f.finished_at is null or f.finished_at >= food_cutoff)
   ),
+  -- Anything else that still needs the object protects it too (Codex review,
+  -- PR #10): the folder is a convention, a reference is a fact. Permanent
+  -- references, and task photos still inside their window.
+  still_needed as (
+    select pm.r[2] as object_name from permanent pm
+    where pm.r is not null and pm.r[1] = 'household-logs'
+    union all
+    select rf.r[2] from refs rf
+    where rf.r is not null and rf.r[1] = 'household-logs' and not rf.expired
+  ),
   food_due as (
     select o.name, (o.metadata->>'size')::bigint as size, o.created_at
     from storage.objects o
@@ -277,6 +385,9 @@ begin
       and o.name ~ '^[0-9a-f-]{36}/food/'
       and o.created_at < food_cutoff
       and not exists (select 1 from food_kept k where k.object_name = o.name)
+      and not exists (select 1 from still_needed sn where sn.object_name = o.name)
+      -- Never twice in one answer: task_due may already list it.
+      and not exists (select 1 from task_due td where td.name = o.name)
   )
   select x.name, x.size, x.created_at
   from (select * from task_due union all select * from food_due) x

@@ -221,13 +221,16 @@ interface HouseholdContextValue {
   /** `photo`: a new File replaces the photo, null removes it, undefined keeps it. */
   editFood: (id: string, input: Omit<FoodItemInput, "photo_url">, photo?: File | null) => Promise<FoodItem>;
   /**
-   * Eaten, given away or thrown away. The photo is removed once Undo is no
-   * longer offered (FOOD_PHOTO_GRACE_MS); the nightly clean-up catches any
-   * the phone never got to.
+   * Eaten, given away or thrown away. The photo stays until the caller says
+   * Undo is no longer offered (releaseFinishedFoodPhoto, from the toast's
+   * close), with FOOD_PHOTO_FALLBACK_MS as a backstop; the nightly clean-up
+   * catches any the phone never got to.
    */
   finishFood: (id: string, outcome: FoodOutcome) => Promise<void>;
   /** Undo for finishFood: back on the list, photo kept. */
   unfinishFood: (id: string) => Promise<void>;
+  /** Undo is gone (its toast closed): remove the finished food's photo now. */
+  releaseFinishedFoodPhoto: (id: string) => void;
   returnFoodContainer: (id: string) => Promise<void>;
   /** Admins only: food added by mistake. Takes its photo with it. */
   removeFood: (id: string) => Promise<void>;
@@ -298,9 +301,11 @@ interface HouseholdContextValue {
 // A normal one is well under two seconds even on a phone's mobile data; past
 // this, the house's Wi-Fi is the likelier explanation than a big household.
 const REFRESH_SLOW_MS = 10_000;
-// How long a finished food keeps its photo: past the Undo toast, so Undo
-// brings back the food with its photo (Phase 156).
-const FOOD_PHOTO_GRACE_MS = 15_000;
+// Backstop for a finished food's photo (Phase 156). Normally it goes when
+// the Undo toast closes (releaseFinishedFoodPhoto); this covers a toast that
+// never reports closing. Far past FOOD_UNDO_TOAST_MS, so a toast held open by
+// a finger still has its photo behind it (Codex review, PR #10).
+const FOOD_PHOTO_FALLBACK_MS = 120_000;
 // Between automatic retries after a failed load; the last repeats.
 const SYNC_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
 
@@ -1037,42 +1042,65 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     [putFood, dropPhoto]
   );
 
+  // Removes a finished food's photo — unless it was put back meanwhile.
+  // Undo marks the id synchronously (foodUndone), before its own save, so a
+  // toast closing in the same moment as an Undo tap never deletes.
+  const foodUndone = useRef(new Set<string>());
+  const deleteFinishedPhoto = useCallback(
+    (id: string) => {
+      const timer = foodPhotoTimers.current.get(id);
+      if (!timer) return; // Already released, or never had a photo.
+      clearTimeout(timer);
+      foodPhotoTimers.current.delete(id);
+      if (foodUndone.current.has(id)) return;
+      const item = foodItemsRef.current.find((f) => f.id === id);
+      const url = item?.photo_url;
+      if (!item || item.outcome === null || !url) return;
+      void (async () => {
+        await dropPhoto(url);
+        try {
+          putFood(await dataProvider.updateFoodItem(id, { photo_url: null }));
+        } catch (err) {
+          // Deleted meanwhile, or no signal: the nightly clean-up clears it.
+          console.warn("Food photo link not cleared", err);
+        }
+      })();
+    },
+    [putFood, dropPhoto]
+  );
+
   const finishFood = useCallback(
     async (id: string, outcome: FoodOutcome) => {
       const before = foodItemsRef.current.find((f) => f.id === id);
       if (!before) return;
+      foodUndone.current.delete(id);
       // Off the list at once; back if the save fails.
       putFood({ ...before, outcome, finished_at: new Date().toISOString() });
       try {
         const item = await dataProvider.updateFoodItem(id, { outcome, finished_by: readActiveStaffId() });
         putFood(item);
-        const url = item.photo_url;
-        if (url) {
-          const timer = setTimeout(() => {
-            foodPhotoTimers.current.delete(id);
-            void (async () => {
-              await dropPhoto(url);
-              try {
-                const cleared = await dataProvider.updateFoodItem(id, { photo_url: null });
-                putFood(cleared);
-              } catch (err) {
-                // Deleted meanwhile, or no signal: the nightly clean-up clears it.
-                console.warn("Food photo link not cleared", err);
-              }
-            })();
-          }, FOOD_PHOTO_GRACE_MS);
-          foodPhotoTimers.current.set(id, timer);
+        if (item.photo_url) {
+          foodPhotoTimers.current.set(
+            id,
+            setTimeout(() => deleteFinishedPhoto(id), FOOD_PHOTO_FALLBACK_MS)
+          );
         }
       } catch (err) {
         putFood(before);
         throw err;
       }
     },
-    [putFood, dropPhoto]
+    [putFood, deleteFinishedPhoto]
+  );
+
+  const releaseFinishedFoodPhoto = useCallback(
+    (id: string) => deleteFinishedPhoto(id),
+    [deleteFinishedPhoto]
   );
 
   const unfinishFood = useCallback(
     async (id: string) => {
+      foodUndone.current.add(id);
       const timer = foodPhotoTimers.current.get(id);
       if (timer) {
         clearTimeout(timer);
@@ -1473,6 +1501,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       editFood,
       finishFood,
       unfinishFood,
+      releaseFinishedFoodPhoto,
       returnFoodContainer,
       removeFood,
       adjustInventoryQuantity,
@@ -1547,6 +1576,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       editFood,
       finishFood,
       unfinishFood,
+      releaseFinishedFoodPhoto,
       returnFoodContainer,
       removeFood,
       adjustInventoryQuantity,

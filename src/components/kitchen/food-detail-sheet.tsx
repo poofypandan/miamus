@@ -12,8 +12,12 @@ import {
   FOOD_OUTCOMES,
   FOOD_OUTCOME_LABELS,
   FOOD_PLACE_LABELS,
+  FOOD_SOURCE_LABELS,
+  FOOD_UNDO_TOAST_MS,
   daysLeft,
   expiryLabel,
+  foodName,
+  needsDate,
   type FoodLocale,
 } from "@/lib/food";
 import { DATE_LOCALE } from "@/lib/owner-locale";
@@ -86,7 +90,8 @@ function Detail({
 }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { finishFood, unfinishFood, removeFood } = useHousehold();
+  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood } = useHousehold();
+  const name = foodName(item, locale);
   const today = formatDateLocal(useToday());
   const [busy, setBusy] = useState<FoodOutcome | "delete" | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -104,7 +109,14 @@ function Detail({
     try {
       await finishFood(item.id, outcome);
       onClose();
-      toast.success(`${FOOD_OUTCOME_LABELS[locale][outcome]} — ${item.name}`, {
+      // The photo goes when this toast closes — by itself, by a swipe or by
+      // Undo — so Undo always brings the food back with its photo (Codex
+      // review, PR #10). After an Undo, release finds it back on the list
+      // and keeps the photo.
+      toast.success(`${FOOD_OUTCOME_LABELS[locale][outcome]} — ${name}`, {
+        duration: FOOD_UNDO_TOAST_MS,
+        onAutoClose: () => releaseFinishedFoodPhoto(item.id),
+        onDismiss: () => releaseFinishedFoodPhoto(item.id),
         action: {
           label: tr("Undo", "Batalkan"),
           onClick: () =>
@@ -125,7 +137,7 @@ function Detail({
     try {
       await removeFood(item.id);
       onClose();
-      toast.success(tr(`Deleted — ${item.name}`, `Dihapus — ${item.name}`));
+      toast.success(tr(`Deleted — ${name}`, `Dihapus — ${name}`));
     } catch (err) {
       console.error(err);
       toast.error(tr("Couldn't delete. Try again.", "Gagal menghapus. Coba lagi."));
@@ -136,7 +148,7 @@ function Detail({
   return (
     <div className="flex flex-col">
       <SheetHeader className="pb-2">
-        <SheetTitle className="px-8 text-center text-lg font-semibold">{item.name}</SheetTitle>
+        <SheetTitle className="px-8 text-center text-lg font-semibold">{name}</SheetTitle>
         <SheetDescription className="sr-only">
           {tr("Details, and whether it is finished.", "Detail, dan apakah sudah habis.")}
         </SheetDescription>
@@ -147,20 +159,26 @@ function Detail({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photoSrc(item.photo_url, 640)}
-            alt={item.name}
+            alt={name}
             className="max-h-56 w-full rounded-xl bg-muted object-cover"
           />
         )}
 
         <dl className="flex flex-col divide-y text-sm">
           <Fact label={tr("Expires", "Kedaluwarsa")}>
-            <span className={cn(days !== null && days < 0 && "text-red-700")}>
-              {expiryLabel(days, locale)}
+            <span
+              className={cn(days !== null && days < 0 && "text-red-700", needsDate(item) && "text-amber-700")}
+            >
+              {expiryLabel(days, locale, item.expiry_unknown)}
               {item.expires_on && days !== null && days >= 0 && ` · ${shortDate(item.expires_on)}`}
             </span>
           </Fact>
           <Fact label={tr("Kept in", "Disimpan di")}>{FOOD_PLACE_LABELS[locale][item.kept_in]}</Fact>
-          {item.from_whom && <Fact label={tr("From", "Dari")}>{item.from_whom}</Fact>}
+          {(item.from_whom || item.source) && (
+            <Fact label={tr("From", "Dari")}>
+              {item.from_whom ?? (item.source ? FOOD_SOURCE_LABELS[locale][item.source] : null)}
+            </Fact>
+          )}
           <Fact label={tr("Added", "Ditambahkan")}>
             {[addedBy, shortDate(item.created_at)].filter(Boolean).join(" · ")}
           </Fact>

@@ -1,4 +1,4 @@
-import type { FoodItem, FoodOutcome, FoodPlace } from "@/types/database";
+import type { FoodItem, FoodOutcome, FoodPlace, FoodSource } from "@/types/database";
 
 /**
  * Food at home (Phase 156, migrations/123): how the list is grouped and the
@@ -22,6 +22,47 @@ export const FOOD_OUTCOME_LABELS: Record<FoodLocale, Record<FoodOutcome, string>
   en: { eaten: "Eaten", given_away: "Given away", thrown_away: "Thrown away" },
   id: { eaten: "Dimakan", given_away: "Diberikan", thrown_away: "Dibuang" },
 };
+
+export const FOOD_SOURCES: readonly FoodSource[] = ["home", "gift", "bought"];
+
+/** The add sheet's "Where is it from?" choices. "Cooked at home" is leftovers. */
+export const FOOD_SOURCE_LABELS: Record<FoodLocale, Record<FoodSource, string>> = {
+  en: { home: "Cooked at home", gift: "From someone", bought: "Bought" },
+  id: { home: "Dimasak di rumah", gift: "Dari orang", bought: "Dibeli" },
+};
+
+/** How long Finished — Undo stays up; the photo goes when it closes. */
+export const FOOD_UNDO_TOAST_MS = 6000;
+
+/** What to call a food: its name, or — logged with just a photo — "Food". */
+export function foodName(item: Pick<FoodItem, "name">, locale: FoodLocale): string {
+  return item.name?.trim() || (locale === "id" ? "Makanan" : "Food");
+}
+
+/** The short word in a row: "home-cooked", "from Tante Rina", "bought". */
+export function sourceLabel(item: Pick<FoodItem, "source" | "from_whom">, locale: FoodLocale): string | null {
+  const id = locale === "id";
+  const who = item.from_whom?.trim();
+  if (who) return id ? `dari ${who}` : `from ${who}`;
+  if (item.source === "home") return id ? "masakan rumah" : "home-cooked";
+  if (item.source === "bought") return id ? "dibeli" : "bought";
+  return null;
+}
+
+/** "Don't know" for the date, and none set since: an owner should look. */
+export function needsDate(item: Pick<FoodItem, "outcome" | "expires_on" | "expiry_unknown">): boolean {
+  return item.outcome === null && !item.expires_on && item.expiry_unknown;
+}
+
+export function countNeedsDate(items: FoodItem[]): number {
+  return items.filter(needsDate).length;
+}
+
+export function needsDateLabel(count: number, locale: FoodLocale): string {
+  return locale === "id"
+    ? `${count} makanan perlu dicek tanggalnya`
+    : `${count} food${count === 1 ? " needs" : "s need"} a date`;
+}
 
 /** Field limits, matching migrations/123's checks. */
 export const FOOD_LIMITS = { name: 80, fromWhom: 60, notes: 200 } as const;
@@ -63,7 +104,9 @@ export function containerToReturn(
 }
 
 /** Past its date, or expiring today: the group at the top. */
-export function foodGroup(item: Pick<FoodItem, "expires_on">, today: string): FoodGroup {
+export function foodGroup(item: Pick<FoodItem, "expires_on" | "expiry_unknown">, today: string): FoodGroup {
+  // Nobody knows the date: on top, where someone will look at it.
+  if (!item.expires_on && item.expiry_unknown) return "today";
   const days = daysLeft(item, today);
   if (days === null) return "later";
   if (days <= 0) return "today";
@@ -89,7 +132,7 @@ export function compareFood(a: FoodItem, b: FoodItem): number {
     if (!b.expires_on) return -1;
     return a.expires_on < b.expires_on ? -1 : 1;
   }
-  return a.name.localeCompare(b.name);
+  return (a.name ?? "").localeCompare(b.name ?? "");
 }
 
 /** The listed food in its three groups, each sorted soonest first. */
@@ -103,8 +146,9 @@ export function groupFood(items: FoodItem[], today: string): Record<FoodGroup, F
 }
 
 /** The words beside a food: "Tomorrow", "4 days", "2 days past date — check first". */
-export function expiryLabel(days: number | null, locale: FoodLocale): string {
+export function expiryLabel(days: number | null, locale: FoodLocale, unknown = false): string {
   const id = locale === "id";
+  if (days === null && unknown) return id ? "Cek tanggalnya" : "Check the date";
   if (days === null) return id ? "Tanpa tanggal" : "No date";
   if (days < 0) {
     const n = -days;

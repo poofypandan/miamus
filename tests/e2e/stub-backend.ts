@@ -211,6 +211,8 @@ function answerFood(route: Route, foods: Record<string, unknown>[], wantsObject:
       photo_url: null,
       kept_in: "fridge",
       expires_on: null,
+      expiry_unknown: false,
+      source: null,
       from_whom: null,
       return_container: false,
       container_returned_at: null,

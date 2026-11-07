@@ -38,6 +38,18 @@ insert into public.staff_profiles (id, household_id, name, archived_at) values
   ('00000000-0000-0000-0000-0000000123e2', '00000000-0000-0000-0000-0000000123f1', 'Joko', now()),
   ('00000000-0000-0000-0000-0000000123e3', '00000000-0000-0000-0000-0000000123f2', 'Wati', null);
 
+-- Owner pushes, captured instead of sent (replaced for this transaction only).
+create temp table pushes (household uuid, title_en text, body_en text, title_id text, body_id text, url text);
+grant insert on pushes to authenticated;
+create or replace function public.queue_owner_push(
+  p_household_id uuid, p_title_en text, p_body_en text, p_title_id text, p_body_id text,
+  p_url text default '/', p_tag text default null, p_exclude_user_id uuid default null)
+returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  insert into pg_temp.pushes values (p_household_id, p_title_en, p_body_en, p_title_id, p_body_id, p_url);
+  return true;
+end $$;
+
 -- --- Adding ---------------------------------------------------------------------
 set local role authenticated;
 select pg_temp.act('00000000-0000-0000-0000-0000000123a1');
@@ -56,6 +68,14 @@ insert into public.food_items (id, household_id, name, kept_in, added_by)
 values ('00000000-0000-0000-0000-0000000123d2', '00000000-0000-0000-0000-0000000123f1', 'Rendang', 'fridge',
         '00000000-0000-0000-0000-0000000123e1');
 select pg_temp.ok((select count(*) = 2 from public.food_items), 'a staff phone adds food and sees the household''s list');
+reset role;
+select pg_temp.ok((select count(*) = 1 from pg_temp.pushes), 'only the staff phone''s food told the owners, not the owner''s own');
+select pg_temp.ok((select body_en = 'Sari: Rendang, in the fridge.' and body_id = 'Sari: Rendang, di kulkas.'
+                          and title_en = 'Food came in' and title_id = 'Makanan masuk'
+                     from pg_temp.pushes),
+  'owners hear who logged what, and where, in both languages');
+set local role authenticated;
+select pg_temp.act('00000000-0000-0000-0000-0000000123b1');
 
 do $$ begin
   insert into public.food_items (household_id, name, added_by)
@@ -87,9 +107,32 @@ select pg_temp.ok(true, 'only fridge, freezer, cupboard or counter');
 
 do $$ begin
   insert into public.food_items (household_id, name) values ('00000000-0000-0000-0000-0000000123f1', '   ');
-  raise exception 'FAIL: blank name accepted';
+  raise exception 'FAIL: no name and no photo accepted';
 exception when check_violation then null; end $$;
-select pg_temp.ok(true, 'a name is required');
+select pg_temp.ok(true, 'a name or a photo is required');
+
+insert into public.food_items (id, household_id, name, photo_url, expiry_unknown, source, added_by)
+values ('00000000-0000-0000-0000-0000000123d3', '00000000-0000-0000-0000-0000000123f1', ' ',
+        'http://x/storage/v1/object/public/household-logs/00000000-0000-0000-0000-0000000123f1/food/p.webp',
+        true, 'gift', '00000000-0000-0000-0000-0000000123e1');
+reset role;
+select pg_temp.ok((select body_id = 'Sari: Makanan (foto), di kulkas, cek tanggalnya.' from pg_temp.pushes
+                    order by ctid desc limit 1),
+  'a photo-only food with an unknown date says so in the push');
+set local role authenticated;
+select pg_temp.act('00000000-0000-0000-0000-0000000123b1');
+select pg_temp.ok((select name is null and expiry_unknown and source = 'gift'
+                     from public.food_items where id = '00000000-0000-0000-0000-0000000123d3'),
+  'a staff phone logs food with just a photo and "don''t know" for the date (the owner push never blocks it)');
+update public.food_items set expires_on = current_date + 3 where id = '00000000-0000-0000-0000-0000000123d3';
+select pg_temp.ok((select not expiry_unknown from public.food_items where id = '00000000-0000-0000-0000-0000000123d3'),
+  'setting a date answers "don''t know"');
+
+do $$ begin
+  insert into public.food_items (household_id, name, source) values ('00000000-0000-0000-0000-0000000123f1', 'Kue', 'stolen');
+  raise exception 'FAIL: odd source accepted';
+exception when check_violation then null; end $$;
+select pg_temp.ok(true, 'only cooked at home, from someone or bought');
 
 -- --- Editing and finishing (staff phone) ---------------------------------------
 update public.food_items set kept_in = 'freezer', notes = 'Potong dulu'
@@ -175,7 +218,8 @@ select pg_temp.ok(not has_function_privilege(r, f, 'execute'), format('%s cannot
 from unnest(array['anon', 'authenticated']) as r,
      unnest(array['public.prune_finished_food()', 'public.food_photo_keep_cutoff()',
                   'public.task_photos_due_for_pruning(text,integer)', 'public.forget_missing_task_photos(text)',
-                  'public.food_items_server_fields()', 'public.food_items_check_people()']) as f;
+                  'public.food_items_server_fields()', 'public.food_items_check_people()',
+                  'public.notify_food_from_staff()']) as f;
 select pg_temp.ok(has_function_privilege('service_role', 'public.task_photos_due_for_pruning(text,integer)', 'execute')
                   and has_function_privilege('service_role', 'public.forget_missing_task_photos(text)', 'execute')
                   and has_function_privilege('service_role', 'public.prune_finished_food()', 'execute'),
@@ -192,7 +236,15 @@ insert into storage.objects (bucket_id, name, created_at, metadata) values
   ('household-logs', '00000000-0000-0000-0000-0000000123f1/food/undo.webp',     now() - interval '5 days', '{"size": 1}'),
   ('household-logs', '00000000-0000-0000-0000-0000000123f1/food/orphan.webp',   now() - interval '5 days', '{"size": 1}'),
   ('household-logs', '00000000-0000-0000-0000-0000000123f1/food/saving.webp',   now() - interval '1 hour', '{"size": 1}'),
-  ('household-logs', '00000000-0000-0000-0000-0000000123f1/avatars/pet.webp',   now() - interval '5 days', '{"size": 1}');
+  ('household-logs', '00000000-0000-0000-0000-0000000123f1/avatars/pet.webp',   now() - interval '5 days', '{"size": 1}'),
+  ('household-logs', '00000000-0000-0000-0000-0000000123f1/food/also-pet.webp', now() - interval '5 days', '{"size": 1}'),
+  ('household-logs', '00000000-0000-0000-0000-0000000123f1/food/also-chore.webp', now() - interval '5 days', '{"size": 1}');
+insert into public.task_entities (household_id, entity_type, name, metadata) values
+  ('00000000-0000-0000-0000-0000000123f1', 'pet', 'Mochi',
+   '{"avatar_url": "http://x/storage/v1/object/public/household-logs/00000000-0000-0000-0000-0000000123f1/food/also-pet.webp"}');
+insert into public.household_tasks (household_id, title, photo_url) values
+  ('00000000-0000-0000-0000-0000000123f1', 'Masak',
+   'http://x/storage/v1/object/public/household-logs/00000000-0000-0000-0000-0000000123f1/food/also-chore.webp');
 insert into public.food_items (household_id, name, photo_url, outcome, finished_at) values
   ('00000000-0000-0000-0000-0000000123f1', 'Listed',   'http://x/storage/v1/object/public/household-logs/00000000-0000-0000-0000-0000000123f1/food/listed.webp', null, null),
   ('00000000-0000-0000-0000-0000000123f1', 'Finished', 'http://x/storage/v1/object/public/household-logs/00000000-0000-0000-0000-0000000123f1/food/finished.webp', 'eaten', now() - interval '2 days'),
@@ -219,7 +271,7 @@ create temp table due as
 select pg_temp.ok((select array_agg(name order by name) from due)
                   = array['00000000-0000-0000-0000-0000000123f1/food/finished.webp',
                           '00000000-0000-0000-0000-0000000123f1/food/orphan.webp'],
-  'due: food finished over a day ago, and an old photo nothing points at — not listed food, an Undo, a fresh upload or a pet photo');
+  'due: food finished over a day ago, and an old photo nothing points at — not listed food, an Undo, a fresh upload, or a photo a pet or an unfinished chore still uses (Codex review)');
 
 do $$ begin
   perform public.task_photos_due_for_pruning('wrong', 10);

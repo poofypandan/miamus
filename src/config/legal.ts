@@ -18,8 +18,10 @@ export const LEGAL = {
   // 2026-11-07: the language picked on the sign-in screen, kept on the phone
   // (Phase 150). Staff sign-in attempts (30 days) and the linked-phones list
   // admins see (Phase 151, migrations/115).
-  // 2026-11-07.3: food the household lists, its photo (kept while listed)
-  // and finished food (kept 90 days) (Phase 156, migrations/123).
+  // 2026-11-07.3: food the household lists — where it came from, where it
+  // is kept, its expiry (or "don't know"), its photo (kept while listed) —
+  // finished food (kept 90 days), and the admins' notification when staff
+  // add food (Phase 156, migrations/123).
   policyVersion: "2026-11-07.3",
   effectiveDate: { en: "7 November 2026", id: "7 November 2026" },
   /**

@@ -75,7 +75,7 @@ const TABS: Record<DashboardModule, React.ReactNode> = {
   agenda: <AgendaTab />,
   pets: <PetsTab />,
   chores: <ChoresTab />,
-  // Kitchen (Phase 156): Food · To buy. Still "inventory" in the URL.
+  // Kitchen (Phase 156): Food · Shopping. Still "inventory" in the URL.
   inventory: <KitchenTab />,
   access: (
     <div className="px-4 pb-6">

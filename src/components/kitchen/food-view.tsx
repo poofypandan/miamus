@@ -18,10 +18,14 @@ import {
   containerToReturn,
   daysLeft,
   expiryLabel,
+  foodName,
   groupFood,
+  needsDate,
+  sourceLabel,
   type FoodGroup,
   type FoodLocale,
 } from "@/lib/food";
+import { openAfterOverlayCloses } from "@/lib/overlay-handoff";
 import { photoSrc } from "@/lib/photos";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
@@ -52,6 +56,12 @@ export function FoodView({ locale, canDelete }: { locale: FoodLocale; canDelete:
   const { allProfiles } = useStaffProfiles();
   const lookup = useStaffNameLookup(allProfiles, "");
   const staffName = (staffId: string | null) => (staffId ? lookup(staffId) || null : null);
+  // Staff, not an admin's own roster row (user_id set, Phase 139): owners
+  // want to see which food a staff member logged, not their own.
+  const staffOnly = useMemo(() => {
+    const staff = new Set((allProfiles ?? []).filter((p) => !p.user_id).map((p) => p.id));
+    return (staffId: string | null) => (staffId && staff.has(staffId) ? lookup(staffId) || null : null);
+  }, [allProfiles, lookup]);
 
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<FoodItem | null>(null);
@@ -105,14 +115,17 @@ export function FoodView({ locale, canDelete }: { locale: FoodLocale; canDelete:
                 <button
                   type="button"
                   onClick={() => returned(item)}
-                  aria-label={tr(`Container returned: ${item.name}`, `Wadah sudah dikembalikan: ${item.name}`)}
+                  aria-label={tr(
+                    `Container returned: ${foodName(item, locale)}`,
+                    `Wadah sudah dikembalikan: ${foodName(item, locale)}`
+                  )}
                   className="flex size-12 shrink-0 items-center justify-center text-muted-foreground active:text-gray-900"
                 >
                   <Circle className="size-5" />
                 </button>
                 <span className="flex min-w-0 flex-1 flex-col py-2">
                   <span className="truncate text-sm font-medium">{containerLabel(item.from_whom, locale)}</span>
-                  <span className="truncate text-xs text-muted-foreground">{item.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{foodName(item, locale)}</span>
                 </span>
               </div>
             ))}
@@ -137,7 +150,14 @@ export function FoodView({ locale, canDelete }: { locale: FoodLocale; canDelete:
             </h2>
             <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
               {groups[group].map((item) => (
-                <FoodRow key={item.id} item={item} today={today} locale={locale} onPress={() => setOpenId(item.id)} />
+                <FoodRow
+                  key={item.id}
+                  item={item}
+                  today={today}
+                  locale={locale}
+                  loggedBy={staffOnly(item.added_by)}
+                  onPress={() => setOpenId(item.id)}
+                />
               ))}
             </div>
           </section>
@@ -152,19 +172,7 @@ export function FoodView({ locale, canDelete }: { locale: FoodLocale; canDelete:
         onClose={() => setOpenId(null)}
         onEdit={(item) => {
           setOpenId(null);
-          // One overlay after the other, as on the Shopping list (Codex
-          // review, PR #9): closing the sheet pops its history entry
-          // asynchronously, and opening the editor in the same moment would
-          // let that pop close the editor.
-          let opened = false;
-          const openEditor = () => {
-            if (opened) return;
-            opened = true;
-            window.removeEventListener("popstate", openEditor);
-            setEditing(item);
-          };
-          window.addEventListener("popstate", openEditor, { once: true });
-          window.setTimeout(openEditor, 400);
+          openAfterOverlayCloses(() => setEditing(item));
         }}
       />
       <FoodFormSheet
@@ -184,19 +192,23 @@ function FoodRow({
   item,
   today,
   locale,
+  loggedBy,
   onPress,
 }: {
   item: FoodItem;
   today: string;
   locale: FoodLocale;
+  /** The staff member who logged it, if it was staff. */
+  loggedBy: string | null;
   onPress: () => void;
 }) {
   const days = daysLeft(item, today);
   const past = days !== null && days < 0;
+  const unknown = needsDate(item);
   const Icon = PLACE_ICONS[item.kept_in];
   const detail = [
     FOOD_PLACE_LABELS[locale][item.kept_in],
-    item.from_whom ? (locale === "id" ? `dari ${item.from_whom}` : `from ${item.from_whom}`) : null,
+    sourceLabel(item, locale),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -215,12 +227,22 @@ function FoodRow({
         </span>
       )}
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium">{item.name}</span>
+        <span className="truncate text-sm font-medium">{foodName(item, locale)}</span>
         <span className={cn("truncate text-xs", past ? "font-medium text-red-700" : "text-muted-foreground")}>
           {past ? expiryLabel(days, locale) : detail}
         </span>
+        {/* Its own line, so a narrow phone never cuts off who logged it. */}
+        {loggedBy && (
+          <span className="truncate text-xs text-muted-foreground">
+            {locale === "id" ? `Dicatat ${loggedBy}` : `Logged by ${loggedBy}`}
+          </span>
+        )}
       </span>
-      {!past && <span className="shrink-0 text-xs text-muted-foreground">{expiryLabel(days, locale)}</span>}
+      {!past && (
+        <span className={cn("shrink-0 text-xs", unknown ? "font-medium text-amber-700" : "text-muted-foreground")}>
+          {expiryLabel(days, locale, item.expiry_unknown)}
+        </span>
+      )}
     </button>
   );
 }

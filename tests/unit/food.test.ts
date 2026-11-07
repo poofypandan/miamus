@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   addDaysTo,
+  countNeedsDate,
+  foodName,
+  sourceLabel,
   containerLabel,
   containerToReturn,
   countEatSoon,
@@ -22,6 +25,8 @@ function food(name: string, expires_on: string | null, extra: Partial<FoodItem> 
     photo_url: null,
     kept_in: "fridge",
     expires_on,
+    expiry_unknown: false,
+    source: null,
     from_whom: null,
     return_container: false,
     container_returned_at: null,
@@ -126,5 +131,30 @@ describe("expiry words", () => {
     expect(expiryLabel(4, "id")).toBe("4 hari");
     expect(expiryLabel(-1, "en")).toBe("1 day past date — check first");
     expect(expiryLabel(-2, "id")).toBe("Lewat 2 hari — cek dulu");
+  });
+});
+
+describe("staff-logged food", () => {
+  it("calls a photo-only food Food / Makanan", () => {
+    expect(foodName(food("x", null, { name: null }), "en")).toBe("Food");
+    expect(foodName(food("x", null, { name: null }), "id")).toBe("Makanan");
+    expect(foodName(food("Rendang", null), "id")).toBe("Rendang");
+  });
+
+  it("puts an unknown date on top, asks owners to check it, until a date is set", () => {
+    const unknown = food("Kue", null, { expiry_unknown: true });
+    expect(foodGroup(unknown, TODAY)).toBe("today");
+    expect(countNeedsDate([unknown, food("Nastar", null)])).toBe(1);
+    expect(countNeedsDate([food("Kue", "2026-11-09", { expiry_unknown: true })])).toBe(0);
+    expect(countEatSoon([unknown], TODAY)).toBe(0);
+    expect(expiryLabel(null, "id", true)).toBe("Cek tanggalnya");
+  });
+
+  it("says where it came from: leftovers, a gift, or bought", () => {
+    expect(sourceLabel(food("Rendang", null, { source: "home" }), "en")).toBe("home-cooked");
+    expect(sourceLabel(food("Rendang", null, { source: "home" }), "id")).toBe("masakan rumah");
+    expect(sourceLabel(food("Kue", null, { source: "gift", from_whom: "Tante Rina" }), "id")).toBe("dari Tante Rina");
+    expect(sourceLabel(food("Susu", null, { source: "bought" }), "en")).toBe("bought");
+    expect(sourceLabel(food("Susu", null), "en")).toBeNull();
   });
 });

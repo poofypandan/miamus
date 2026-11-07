@@ -6,7 +6,7 @@ import { pushInPlace } from "@/lib/in-place-navigation";
 export type KitchenView = "food" | "buy";
 
 /**
- * The Kitchen's Food · To buy pill (Phase 156), in the URL as ?kitchen=buy —
+ * The Kitchen's Food · Shopping pill (Phase 156), in the URL as ?kitchen=buy —
  * the same rule as every other toggle (CLAUDE.md, State Persistence): the
  * pill and the list read one value, it survives the reload a phone can do on
  * the way back from the camera, and Back flips it back.

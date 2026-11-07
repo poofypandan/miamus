@@ -267,6 +267,9 @@ export type StockStatus = "ok" | "low" | "out";
 /** Where a food is kept (migrations/123, Phase 156). */
 export type FoodPlace = "fridge" | "freezer" | "pantry" | "counter";
 
+/** Where a food came from: cooked at home (leftovers), a gift, or bought. */
+export type FoodSource = "home" | "gift" | "bought";
+
 /** What happened to a food once it left the list. */
 export type FoodOutcome = "eaten" | "given_away" | "thrown_away";
 
@@ -277,12 +280,16 @@ export type FoodOutcome = "eaten" | "given_away" | "thrown_away";
 export type FoodItem = {
   id: string;
   household_id: string;
-  name: string;
+  /** Null when a photo says what it is (staff can log food with just a photo). */
+  name: string | null;
   /** household-logs, <household>/food/...; deleted when the food is finished. */
   photo_url: string | null;
   kept_in: FoodPlace;
   /** YYYY-MM-DD, or null for no date. */
   expires_on: string | null;
+  /** "Don't know" was the answer: owners see "Check the date" until one is set. */
+  expiry_unknown: boolean;
+  source: FoodSource | null;
   from_whom: string | null;
   return_container: boolean;
   /** Stamped by the server when the container is ticked returned. */
@@ -517,7 +524,7 @@ export interface Database {
       };
       food_items: {
         Row: FoodItem;
-        Insert: Partial<FoodItem> & Pick<FoodItem, "household_id" | "name">;
+        Insert: Partial<FoodItem> & Pick<FoodItem, "household_id">;
         Update: Partial<FoodItem>;
         Relationships: [];
       };

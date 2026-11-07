@@ -419,7 +419,7 @@ export const mockProvider: DataProvider = {
       id: uid("food"),
       household_id: getActiveHouseholdId(),
       ...input,
-      name: input.name.trim(),
+      name: input.name?.trim() || null,
       added_by: addedBy,
       created_by: null,
       created_at: now,
@@ -446,6 +446,7 @@ export const mockProvider: DataProvider = {
       if (!patch.outcome) item.finished_by = null;
     }
     if ("container_returned_at" in patch) item.container_returned_at = patch.container_returned_at ? now : null;
+    if (item.expires_on) item.expiry_unknown = false;
     db.foodItems[index] = item;
     saveDB(db);
     return delay(item);

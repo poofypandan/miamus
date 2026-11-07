@@ -14,6 +14,7 @@ import type {
   FoodItem,
   FoodOutcome,
   FoodPlace,
+  FoodSource,
   StockStatus,
   InventoryCategory,
   InventoryScope,
@@ -205,10 +206,13 @@ export interface InventoryItemInput {
 /** One stock check as the staff member recorded it (migrations/083, 099). */
 /** What a person fills in when adding or editing food (Phase 156). */
 export interface FoodItemInput {
-  name: string;
+  /** Null when there is a photo instead. */
+  name: string | null;
   photo_url: string | null;
   kept_in: FoodPlace;
   expires_on: string | null;
+  expiry_unknown: boolean;
+  source: FoodSource | null;
   from_whom: string | null;
   return_container: boolean;
   notes: string | null;
