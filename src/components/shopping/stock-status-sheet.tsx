@@ -12,6 +12,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import {
   CATEGORY_LABELS_EN,
   CATEGORY_LABELS_ID,
@@ -49,6 +50,9 @@ export function StockStatusSheet({
 }) {
   const { setInventoryStatus } = useHousehold();
   const [busy, setBusy] = useState<StockStatus | null>(null);
+  // Back (Android, or the browser's) closes the sheet, not the list under it
+  // — as every other sheet does (Codex review, PR #9).
+  useBackToClose(item !== null, onClose);
   const id = lang === "id";
   const labels = STOCK_STATUS_LABELS[lang];
 
