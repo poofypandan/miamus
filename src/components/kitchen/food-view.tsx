@@ -25,7 +25,6 @@ import {
   type FoodGroup,
   type FoodLocale,
 } from "@/lib/food";
-import { openAfterOverlayCloses } from "@/lib/overlay-handoff";
 import { photoSrc } from "@/lib/photos";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
@@ -172,7 +171,7 @@ export function FoodView({ locale, canDelete }: { locale: FoodLocale; canDelete:
         onClose={() => setOpenId(null)}
         onEdit={(item) => {
           setOpenId(null);
-          openAfterOverlayCloses(() => setEditing(item));
+          setEditing(item);
         }}
       />
       <FoodFormSheet
