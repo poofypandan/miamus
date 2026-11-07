@@ -144,7 +144,7 @@ export function PushNotificationSettings() {
       <Card className="py-4">
         <CardContent className="flex flex-col gap-3 px-4">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <p className="text-sm font-medium">{t("Push notifications", "Notifikasi push")}</p>
+            <p className="text-sm font-medium">{t("Notifications on this phone", "Notifikasi di HP ini")}</p>
             <p className="text-xs text-muted-foreground">
               {t(
                 "Get an alert on this device the moment someone reports a sick pet.",

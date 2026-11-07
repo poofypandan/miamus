@@ -28,19 +28,19 @@ export function InvitePanel() {
       <InviteCard
         kind="owner"
         icon={UserPlus}
-        title={t("Invite Admin", "Undang Admin")}
+        title={t("Invite family", "Undang keluarga")}
         description={t(
-          "For a partner, sibling or housemate. They sign in with Google, get full access to Manage, the same as you, and can be assigned chores.",
-          "Untuk pasangan, saudara atau teman serumah. Mereka masuk dengan Google, mendapat akses penuh untuk mengelola, sama seperti Anda, dan bisa diberi tugas."
+          "For your partner, family or a housemate. They sign in with Google, can manage everything just like you, and can be given chores.",
+          "Untuk pasangan, keluarga atau teman serumah. Mereka masuk dengan Google, bisa mengelola semuanya seperti Anda, dan bisa diberi tugas."
         )}
       />
       <InviteCard
         kind="staff"
         icon={Smartphone}
-        title={t("Invite Device", "Undang Perangkat")}
+        title={t("Link a staff phone", "Hubungkan HP staf")}
         description={t(
-          "For someone without a Google account, or a shared house phone. Opening it connects that phone to this household — no account or email needed — and each person then signs in with their name and PIN.",
-          "Untuk orang tanpa akun Google, atau HP bersama di rumah. Membukanya menghubungkan HP itu ke rumah ini — tanpa akun atau email — lalu setiap orang masuk dengan nama dan PIN-nya."
+          "For your staff's own phone, or a shared house phone. Opening the link connects that phone to your home — no account or email needed — and each person then signs in with their name and PIN.",
+          "Untuk HP staf, atau HP bersama di rumah. Membuka link-nya menghubungkan HP itu ke rumah Anda — tanpa akun atau email — lalu setiap orang masuk dengan nama dan PIN-nya."
         )}
       />
     </div>

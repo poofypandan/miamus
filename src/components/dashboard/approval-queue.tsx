@@ -77,7 +77,7 @@ export function ApprovalQueue() {
     // the spacing belongs below it instead of above.
     <section className="mb-6 flex flex-col gap-3">
       <h3 className="text-sm font-semibold text-gray-900">
-        {t("Approval Queue", "Menunggu Persetujuan")} <span className="text-gray-400">({batches.length})</span>
+        {t("Waiting for you", "Menunggu Anda")} <span className="text-gray-400">({batches.length})</span>
       </h3>
       <div className="flex flex-col gap-2">
         {batches.map((batch) => (
@@ -246,7 +246,7 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
         <Button
           onClick={approve}
           disabled={busy !== null}
-          className="min-h-[44px] flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+          className="min-h-[44px] flex-1"
         >
           {busy === "approve" ? <Loader2 className="animate-spin" /> : <Check />}
           {restart ? t("Approve from today", "Setujui mulai hari ini") : t("Approve", "Setujui")}

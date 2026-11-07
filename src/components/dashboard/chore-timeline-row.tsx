@@ -88,7 +88,7 @@ export function ChoreTimelineRow({
     >
       <span
         className={cn(
-          "w-16 shrink-0 font-mono text-xs",
+          "w-16 shrink-0 text-xs tabular-nums",
           // A shade darker on a tint: muted grey falls under 4.5:1 there.
           "text-zinc-600"
         )}
@@ -99,8 +99,7 @@ export function ChoreTimelineRow({
       </span>
 
       <Icon
-        // Amber even when done (Phase 132), with the row's amber edge: the
-        // house stays recognisable as the house among finished dog routines.
+        // The chore tone's icon colour (neutral since Phase 153).
         className={cn("size-4 shrink-0", AGENDA_TONES.chore.icon)}
       />
 
@@ -114,8 +113,8 @@ export function ChoreTimelineRow({
               the one detail the title no longer carries. */}
           {locationName && (
             <>
-              <MapPin className={cn("size-3 shrink-0", !done && "text-amber-700")} />
-              <span className={cn("truncate font-medium", !done && "text-amber-800")}>
+              <MapPin className="size-3 shrink-0" />
+              <span className={cn("truncate font-medium", !done && "text-gray-700")}>
                 {locationName}
               </span>
               <span aria-hidden>·</span>
@@ -128,7 +127,7 @@ export function ChoreTimelineRow({
         {/* Its own line: sharing the one above, the Indonesian label pushed
             the room off a 360px screen (narrow-phone sweep, Phase 149). */}
         {overdue && !done && (
-          <span className="flex items-center gap-1 text-xs text-amber-700">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <AlertTriangle className="size-3 shrink-0" />
             {t("carried over", "terbawa dari kemarin")}
           </span>

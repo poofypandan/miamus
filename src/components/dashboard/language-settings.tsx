@@ -144,8 +144,8 @@ export function LanguagePrompt() {
             </span>
           </DialogTitle>
           <DialogDescription>
-            <span lang="en">You can change it any time in Access.</span>{" "}
-            <span lang="id">Bisa diubah kapan saja di Akses.</span>
+            <span lang="en">You can change it any time under Household.</span>{" "}
+            <span lang="id">Bisa diubah kapan saja di tab Rumah.</span>
           </DialogDescription>
         </DialogHeader>
         <LanguageChoice onChosen={() => setDismissed(true)} />

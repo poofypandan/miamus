@@ -22,10 +22,13 @@ export function TodayButton({ locale }: { locale: "en" | "id" }) {
       variant="outline"
       size="sm"
       onClick={jumpToToday}
-      className="min-h-9 shrink-0 gap-1.5 rounded-lg px-3"
+      // Icon only since Phase 153, to leave the header room for the
+      // Overview | Staff switch; the label is still there for screen readers.
+      aria-label={locale === "en" ? "Today" : "Hari ini"}
+      title={locale === "en" ? "Today" : "Hari ini"}
+      className="size-10 shrink-0 rounded-lg p-0"
     >
       <CalendarCheck className="size-4" />
-      {locale === "en" ? "Today" : "Hari ini"}
     </Button>
   );
 }

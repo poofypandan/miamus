@@ -122,7 +122,7 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
           4.24:1 against indigo-50, just under the 4.5:1 small text needs. */}
       <span
         className={cn(
-          "w-16 shrink-0 font-mono text-xs",
+          "w-16 shrink-0 text-xs tabular-nums",
           tint ? "text-zinc-600" : "text-muted-foreground"
         )}
       >
@@ -216,7 +216,7 @@ function TimelineAvatarStatus({
       />
       {suspended ? (
         <Stethoscope
-          aria-label={t("Hospitalized", "Dirawat inap")}
+          aria-label={t("At the vet", "Dirawat di klinik")}
           className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-indigo-600"
         />
       ) : (

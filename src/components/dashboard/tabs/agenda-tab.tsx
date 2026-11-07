@@ -203,7 +203,7 @@ export function AgendaTab() {
         {range === "day" ? (
           <>
             <h2 className="text-sm font-semibold text-gray-900">
-              {t(`${label}'s Agenda`, `Agenda ${label}`)}
+              {label}
             </h2>
             {/* Under the heading, as the Pets tab's photo filters sit under
                 theirs (Phase 134). Not on an empty day — unless a filter is

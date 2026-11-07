@@ -26,7 +26,7 @@ import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
 import { StockCheckPanel } from "@/components/staff/stock-check-panel";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
-import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
+import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
@@ -278,9 +278,9 @@ function TasksView() {
         // before anything is photographed.
         action={
           entry.occurrence.task.assigned_to ? (
-            <TapHint urgent={entry.occurrence.overdue} />
+            <TapHint />
           ) : (
-            <TapHint label="Ketuk untuk ambil" icon={Hand} urgent={entry.occurrence.overdue} />
+            <TapHint label="Saya kerjakan" icon={Hand} />
           )
         }
       />
@@ -313,17 +313,17 @@ function TasksView() {
             {admittedPets.map((pet) => (
               <div
                 key={pet.id}
-                className="flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3"
+                className="flex flex-col gap-2 rounded-xl border bg-card p-3"
               >
-                <p className="flex items-center gap-1.5 text-sm font-medium text-indigo-900">
-                  <Stethoscope className="size-4 shrink-0" /> {pet.name} sedang rawat inap
+                <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+                  <Stethoscope className="size-4 shrink-0 text-muted-foreground" /> {pet.name} sedang dirawat di klinik
                 </p>
-                <p className="text-xs text-indigo-900/80">
-                  Jadwal makan dan pipisnya dijeda sampai dijemput.
+                <p className="text-xs text-muted-foreground">
+                  Jadwal makan dan Pipis & Pup-nya berhenti dulu sampai pulang.
                 </p>
                 <DischargeButton
                   pet={pet}
-                  label="Jemput dari Klinik"
+                  label="Sudah pulang dari klinik"
                   successMessage={`${pet.name} sudah pulang — jadwal aktif lagi`}
                   errorMessage="Gagal memperbarui status"
                 />
@@ -408,9 +408,7 @@ function HeaderIdentity() {
   // Still not access control: it hides a button. The dashboard itself is held
   // by the middleware, which sends anonymous sessions back to /staff.
   if (isHouseholdMember) {
-    return <HeaderNavLink href="/dashboard" switchTo="owner">
-        {ownerLocale === "id" ? "← Kelola" : "← Manage"}
-      </HeaderNavLink>;
+    return <ViewSwitch current="staff" locale={ownerLocale} />;
   }
   return <OnDutyBadge />;
 }

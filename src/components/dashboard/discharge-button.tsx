@@ -50,7 +50,7 @@ export function DischargeButton({
     <Button
       onClick={discharge}
       disabled={busy}
-      className={cn("min-h-[48px] w-full bg-indigo-600 text-sm hover:bg-indigo-700", className)}
+      className={cn("min-h-[48px] w-full text-sm", className)}
     >
       {busy ? <Loader2 className="animate-spin" /> : <Home className="size-5" />}
       {label}

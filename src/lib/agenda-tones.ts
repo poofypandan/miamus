@@ -49,7 +49,10 @@ interface ToneStyle {
 
 export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
   critical: {
-    tint: "border-red-200 bg-red-50",
+    // Neutral face, red icon (Phase 153, calm colour): a medicine dose matters,
+    // but four of them a day in red made the whole Agenda look alarmed. Red
+    // faces are kept for what is late or sick.
+    tint: "",
     tintStrong: "border-red-300 bg-red-100",
     icon: "text-red-600",
     badge: "bg-red-100 text-red-800",
@@ -65,10 +68,11 @@ export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
     doneEdge: "border-l-[3px] border-l-zinc-400",
   },
   chore: {
-    tint: "border-amber-200 bg-amber-50",
-    tintStrong: "border-amber-300 bg-amber-100",
-    icon: "text-amber-600",
-    badge: "bg-amber-100 text-amber-900",
+    // Neutral since Phase 153: a chore is ordinary work, not a warning.
+    tint: "",
+    tintStrong: "",
+    icon: "text-zinc-500",
+    badge: "bg-zinc-100 text-zinc-700",
     block: "border-l-amber-500 bg-amber-50 text-amber-950",
     doneEdge: "border-l-[3px] border-l-amber-400",
   },

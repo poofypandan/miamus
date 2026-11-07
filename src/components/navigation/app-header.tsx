@@ -2,7 +2,9 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useHouseholdName } from "@/hooks/use-household-name";
 import { isPlainClick } from "@/lib/in-place-navigation";
 import { beginNavigation, type CoverVariant } from "@/lib/launch-state";
@@ -75,5 +77,37 @@ export function HeaderNavLink({
         {children}
       </Link>
     </Button>
+  );
+}
+
+type View = "owner" | "staff";
+
+/**
+ * Overview | Staff: the switch between the owner dashboard and the staff
+ * view (Phase 153; it replaced "Action Mode →" and "← Manage").
+ *
+ * Owners only. The dashboard renders it behind the middleware and
+ * useRequireOwner, and the staff page only for a household member (a Google
+ * account with a household_members row), so a staff phone never sees it.
+ * Hiding it is not the protection: the middleware sends anonymous sessions
+ * away from /dashboard whatever they tap.
+ */
+export function ViewSwitch({ current, locale }: { current: View; locale: "en" | "id" }) {
+  const router = useRouter();
+  return (
+    <SegmentedControl<View>
+      size="sm"
+      ariaLabel={locale === "id" ? "Pilih tampilan" : "Choose view"}
+      value={current}
+      segments={[
+        { value: "owner", label: locale === "id" ? "Ringkasan" : "Overview" },
+        { value: "staff", label: locale === "id" ? "Staf" : "Staff" },
+      ]}
+      onChange={(next) => {
+        if (next === current) return;
+        beginNavigation("switch", next);
+        router.push(next === "owner" ? "/dashboard" : "/staff");
+      }}
+    />
   );
 }

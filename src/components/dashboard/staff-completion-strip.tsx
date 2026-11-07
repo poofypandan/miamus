@@ -74,7 +74,7 @@ export function StaffCompletionStrip({
     });
     const unclaimed = tally(null);
     return unclaimed.total > 0 || unclaimed.overdue > 0
-      ? [...people, { id: "unclaimed", name: t("Unclaimed", "Belum diambil"), ...unclaimed }]
+      ? [...people, { id: "unclaimed", name: t("Not taken yet", "Belum ada yang ambil"), ...unclaimed }]
       : people;
   }, [occurrences, date, profiles, t]);
 
@@ -91,7 +91,7 @@ export function StaffCompletionStrip({
           onClick={() => workload.open()}
           className="-mr-2 flex min-h-9 items-center gap-0.5 rounded-lg px-2 text-xs font-medium text-muted-foreground active:bg-muted"
         >
-          {t("Workload", "Beban Kerja")} <ChevronRight className="size-3.5" />
+          {t("Who did what", "Siapa mengerjakan apa")} <ChevronRight className="size-3.5" />
         </button>
       </div>
       {/* Bleeds to the screen edges so the cards scroll under the gutter
@@ -122,8 +122,8 @@ function StatCard({ stat, onPress }: { stat: StaffStat; onPress: () => void }) {
       type="button"
       onClick={onPress}
       aria-label={t(
-        `${stat.name}: ${stat.done} of ${stat.total} done. Open workload`,
-        `${stat.name}: ${stat.done} dari ${stat.total} selesai. Buka beban kerja`
+        `${stat.name}: ${stat.done} of ${stat.total} done. Open who did what`,
+        `${stat.name}: ${stat.done} dari ${stat.total} selesai. Buka siapa mengerjakan apa`
       )}
       className="flex w-36 shrink-0 snap-start flex-col gap-2 rounded-xl border bg-card p-3 text-left active:bg-muted/60"
     >

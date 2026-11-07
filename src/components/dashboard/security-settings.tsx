@@ -77,7 +77,7 @@ export function SecuritySettings() {
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-0.5">
               <p className="text-sm font-medium">
-                {t("Require authentication to open app", "Minta verifikasi untuk membuka aplikasi")}
+                {t("Lock with Face ID", "Kunci dengan Face ID")}
               </p>
               <p className="text-xs text-muted-foreground">
                 {t(
@@ -91,7 +91,7 @@ export function SecuritySettings() {
               type="button"
               role="switch"
               aria-checked={enabled}
-              aria-label={t("Require authentication to open app", "Minta verifikasi untuk membuka aplikasi")}
+              aria-label={t("Lock with Face ID", "Kunci dengan Face ID")}
               // Turning it off is always allowed; turning it on needs a sensor.
               disabled={busy || (!enabled && !available)}
               onClick={toggle}

@@ -67,9 +67,9 @@ const KIND_META: Record<
   AuditKind,
   { icon: typeof Camera; label: (t: Translate) => string; className: string }
 > = {
-  log: { icon: Camera, label: (t) => t("Task", "Tugas"), className: "bg-emerald-100 text-emerald-900" },
-  proposal: { icon: Send, label: (t) => t("Proposal", "Usulan"), className: "bg-amber-100 text-amber-900" },
-  alert: { icon: PackageX, label: (t) => t("Inventory", "Stok"), className: "bg-sky-100 text-sky-900" },
+  log: { icon: Camera, label: (t) => t("Task", "Tugas"), className: "bg-zinc-100 text-zinc-700" },
+  proposal: { icon: Send, label: (t) => t("Suggestion", "Usulan"), className: "bg-zinc-100 text-zinc-700" },
+  alert: { icon: PackageX, label: (t) => t("Shopping", "Belanja"), className: "bg-zinc-100 text-zinc-700" },
 };
 
 function proposalStatus(status: ProposalStatus, t: Translate): string {
@@ -110,7 +110,7 @@ export function StaffTab() {
         id: `proposal-${proposal.id}`,
         kind: "proposal" as const,
         at: proposal.created_at,
-        action: `${t("Proposed routine", "Usulan rutinitas")} · ${proposalStatus(proposal.status, t)}`,
+        action: `${t("Suggested routine", "Usulan rutinitas")} · ${proposalStatus(proposal.status, t)}`,
         subject: `${proposal.title} · ${petName(proposal.pet_id)}`,
         // staff_id when the proposal was filed by someone who had signed in;
         // created_by ("staff"/"owner") is all the older rows carry — shown
@@ -167,7 +167,7 @@ export function StaffTab() {
 
       <SecuritySettings />
 
-      <h2 className="mt-2 text-sm font-semibold text-gray-900">{t("Audit Log", "Log Aktivitas")}</h2>
+      <h2 className="mt-2 text-sm font-semibold text-gray-900">{t("Activity", "Aktivitas")}</h2>
 
       {/* Stated rather than implied. Since Phase 71 each person signs in under
           their own name, so most rows can name someone — but that name is
@@ -371,8 +371,8 @@ function StaffRoster({
         <li>
           <span className="font-medium text-gray-900">{t("2. Invite their phone", "2. Undang HP-nya")}</span>{" "}
           {t(
-            "with a Device link (under Invites). A shared house phone works too.",
-            "dengan link Perangkat (di bagian Undangan). HP bersama di rumah juga bisa."
+            "with a staff-phone link (under Invite someone). A shared house phone works too.",
+            "dengan link HP staf (di bagian Undang). HP bersama di rumah juga bisa."
           )}
         </li>
         <li>

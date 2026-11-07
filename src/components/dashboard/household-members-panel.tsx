@@ -130,7 +130,7 @@ export function HouseholdMembersPanel() {
                 )}
                 {member.is_founder && !member.is_self && (
                   <Badge variant="secondary" className="shrink-0 text-[10px]">
-                    {t("Founder", "Pemilik")}
+                    {t("Owner", "Pemilik")}
                   </Badge>
                 )}
 

@@ -83,7 +83,7 @@ export function StaffWorkloadSheet() {
     <Sheet open={horizon !== null} onOpenChange={(next) => !next && close()}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{t("Workload", "Beban Kerja")}</SheetTitle>
+          <SheetTitle>{t("Who did what", "Siapa mengerjakan apa")}</SheetTitle>
           <SheetDescription>
             {t(
               "Tasks finished, counted by who completed them — pet routines and chores together.",
@@ -121,8 +121,8 @@ export function StaffWorkloadSheet() {
               icon={BarChart3}
               title={t("Nobody on the roster yet", "Belum ada orang di daftar")}
               description={t(
-                "Add people on the Access tab. Their finished tasks will be counted here.",
-                "Tambahkan orang di tab Akses. Tugas yang mereka selesaikan akan dihitung di sini."
+                "Add your staff on the Household tab. What they finish will be counted here.",
+                "Tambahkan staf di tab Rumah. Yang mereka selesaikan akan dihitung di sini."
               )}
             />
           ) : (
