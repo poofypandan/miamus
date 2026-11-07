@@ -348,9 +348,14 @@ function StaffRoster({
     }
   }
 
+  // Staff only: admins sign in with Google and have their own section above
+  // (HouseholdMembersPanel). Their roster rows still exist for chores and
+  // names (migrations/106); they just aren't listed twice.
+  const staff = profiles === null ? null : profiles.filter((p) => !p.user_id);
+
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("People & PINs", "Orang & PIN")}</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t("Staff", "Staf")}</h2>
 
       {/* How the pieces fit (Phase 120). A new owner meets a roster, an
           invite card further down and the word "PIN" with nothing saying they
@@ -359,8 +364,8 @@ function StaffRoster({
         <li>
           <span className="font-medium text-gray-900">{t("1. Add each person", "1. Tambahkan setiap orang")}</span>{" "}
           {t(
-            "who helps run the house without a Google account, by name, below. Admins are listed automatically.",
-            "yang membantu di rumah tanpa akun Google, dengan namanya, di bawah. Admin tercantum otomatis."
+            "who helps run the house, by name, below.",
+            "yang membantu di rumah, dengan namanya, di bawah."
           )}
         </li>
         <li>
@@ -390,12 +395,12 @@ function StaffRoster({
         <p className="text-sm text-destructive">
           {t("Couldn't load the list of people.", "Daftar orang gagal dimuat.")}
         </p>
-      ) : profiles === null ? (
+      ) : staff === null ? (
         <Skeleton className="h-24 w-full rounded-xl" />
       ) : (
         <Card className="py-2">
           <CardContent className="flex flex-col divide-y px-0">
-            {profiles.length === 0 ? (
+            {staff.length === 0 ? (
               <p className="px-4 py-3 text-sm text-muted-foreground">
                 {t(
                   "Nobody yet. Add the first name below — their PIN can wait until they sign in.",
@@ -403,7 +408,7 @@ function StaffRoster({
                 )}
               </p>
             ) : (
-              profiles.map((profile) => (
+              staff.map((profile) => (
                 <div key={profile.id} className="flex items-center gap-3 px-4 py-3 text-sm">
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
                     <UserRound className="size-4" />
@@ -421,19 +426,12 @@ function StaffRoster({
                         bcrypt hash in a column no client may read
                         (migrations/095-096). Only whether one exists. */}
                     <span className="text-xs text-muted-foreground">
-                      {profile.user_id
-                        ? t("Admin · signs in with Google", "Admin · masuk dengan Google")
-                        : profile.has_pin
-                          ? t("PIN set", "PIN sudah diatur")
-                          : t("No PIN yet", "Belum ada PIN")}
+                      {profile.has_pin
+                        ? t("PIN set", "PIN sudah diatur")
+                        : t("No PIN yet", "Belum ada PIN")}
                     </span>
                   </span>
-                  {/* An admin's row is theirs through Google (migrations/106),
-                      and the database refuses a PIN on it — so neither button.
-                      Removing an admin is the Admins panel's job, which takes
-                      their Google access away rather than just the name. */}
-                  {!profile.user_id && (
-                    <>
+                  <>
                       <Button
                         variant="outline"
                         size="sm"
@@ -463,7 +461,6 @@ function StaffRoster({
                         )}
                       </Button>
                     </>
-                  )}
                 </div>
               ))
             )}

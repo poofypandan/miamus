@@ -82,8 +82,8 @@ export function HouseholdMembersPanel() {
       <h2 className="text-sm font-semibold text-gray-900">{t("Admins", "Admin")}</h2>
       <p className="-mt-1 text-xs text-muted-foreground">
         {t(
-          "People who sign in with Google and can use Manage. Everyone who signs in with a PIN appears under People & PINs.",
-          "Orang yang masuk dengan Google dan bisa mengelola. Semua yang masuk dengan PIN ada di bagian Orang & PIN."
+          "People who sign in with Google and can manage the household. Staff, who sign in with a PIN, are listed below.",
+          "Orang yang masuk dengan Google dan bisa mengelola rumah. Staf, yang masuk dengan PIN, ada di bawah."
         )}
       </p>
 

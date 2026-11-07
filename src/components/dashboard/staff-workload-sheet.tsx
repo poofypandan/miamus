@@ -21,6 +21,7 @@ import {
 import type { StaffWorkload } from "@/lib/data/types";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 
 const HORIZON_LABELS: Record<OwnerLocale, Record<WorkloadHorizon, string>> = {
   en: { today: "Today", "7d": "Last 7 Days", "30d": "Last 30 Days" },
@@ -49,12 +50,24 @@ const SPAN_PHRASE: Record<OwnerLocale, Record<WorkloadHorizon, string>> = {
 export function StaffWorkloadSheet() {
   const { horizon, setHorizon, close } = useWorkloadParam();
   const { rows, failed } = useStaffWorkload(horizon);
+  const { allProfiles } = useStaffProfiles();
   const shown = horizon ?? "today";
   const locale = useOwnerLocale();
   const t = useT();
 
   const { staff, unattributed, grandTotal, top } = useMemo(() => {
-    const people = (rows ?? []).filter((r) => r.staffId !== null);
+    // Only people who are still here: staff on the roster, and admins who
+    // actually finished something in this span. Someone removed (archived,
+    // migrations/109) is left out, and so is a row the roster no longer has.
+    // Until the roster has loaded, nobody is hidden for want of it.
+    const roster = allProfiles ? new Map(allProfiles.map((p) => [p.id, p])) : null;
+    const people = (rows ?? []).filter((r) => {
+      if (r.staffId === null) return false;
+      if (!roster) return true;
+      const person = roster.get(r.staffId);
+      if (!person || person.archived_at) return false;
+      return !person.user_id || r.totalCompleted > 0;
+    });
     const nobody = (rows ?? []).find((r) => r.staffId === null);
     return {
       staff: people,
@@ -64,7 +77,7 @@ export function StaffWorkloadSheet() {
       grandTotal: people.reduce((sum, r) => sum + r.totalCompleted, 0),
       top: Math.max(1, ...people.map((r) => r.totalCompleted)),
     };
-  }, [rows]);
+  }, [rows, allProfiles]);
 
   return (
     <Sheet open={horizon !== null} onOpenChange={(next) => !next && close()}>

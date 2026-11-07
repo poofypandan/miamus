@@ -65,7 +65,13 @@ export function StaffCompletionStrip({
       };
     };
 
-    const people = (profiles ?? []).map((p) => ({ id: p.id, name: p.name, ...tally(p.id) }));
+    // Staff always have a card; an admin (a roster row linked to Google,
+    // migrations/106) only on a day they have chores of their own. Removed
+    // people are already out of `profiles`.
+    const people = (profiles ?? []).flatMap((p) => {
+      const stat = { id: p.id, name: p.name, ...tally(p.id) };
+      return !p.user_id || stat.total > 0 || stat.overdue > 0 ? [stat] : [];
+    });
     const unclaimed = tally(null);
     return unclaimed.total > 0 || unclaimed.overdue > 0
       ? [...people, { id: "unclaimed", name: t("Unclaimed", "Belum diambil"), ...unclaimed }]
