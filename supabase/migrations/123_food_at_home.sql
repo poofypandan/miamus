@@ -233,7 +233,9 @@ declare
   message_en text;
   message_id text;
 begin
-  if exists (select 1 from public.household_members m
+  -- Only a signed-in staff phone: no session at all is maintenance, and a
+  -- household member is an owner, who knows what they just added.
+  if auth.uid() is null or exists (select 1 from public.household_members m
               where m.user_id = auth.uid() and m.household_id = new.household_id) then
     return new;
   end if;

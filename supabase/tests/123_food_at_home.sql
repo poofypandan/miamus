@@ -213,6 +213,13 @@ exception when insufficient_privilege then null; end $$;
 reset role;
 select pg_temp.ok(true, 'logged-out callers cannot read the table');
 
+-- No session at all (maintenance, a migration's backfill) is not a staff
+-- phone: owners are not told.
+create temp table before_count as select count(*) as n from pg_temp.pushes;
+insert into public.food_items (household_id, name) values ('00000000-0000-0000-0000-0000000123f1', 'Maintenance row');
+select pg_temp.ok((select count(*) from pg_temp.pushes) = (select n from before_count),
+  'a row written with no session sends no push');
+
 -- --- Grants on functions -------------------------------------------------------------
 select pg_temp.ok(not has_function_privilege(r, f, 'execute'), format('%s cannot call %s', r, f))
 from unnest(array['anon', 'authenticated']) as r,
