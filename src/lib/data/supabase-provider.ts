@@ -392,6 +392,39 @@ export const supabaseProvider: DataProvider = {
     if (itemError) throw itemError;
     return { audit, item };
   },
+  async listFoodItems() {
+    const { data, error } = await client()
+      .from("food_items")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .or("outcome.is.null,and(return_container.eq.true,container_returned_at.is.null)")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  async createFoodItem(input, addedBy) {
+    const { data, error } = await client()
+      .from("food_items")
+      .insert({ ...input, added_by: addedBy, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async updateFoodItem(id, patch) {
+    // .select() so an RLS-filtered update (200, no rows) is an error rather
+    // than a silent no-op.
+    const { data, error } = await client().from("food_items").update(patch).eq("id", id).select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Food was not updated");
+    return data[0];
+  },
+  async deleteFoodItem(id) {
+    // Admins only (migrations/123); a staff phone's delete matches no rows.
+    const { data, error } = await client().from("food_items").delete().eq("id", id).select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Food was not deleted");
+  },
   async listRoutineProposals() {
     const { data, error } = await client()
       .from("routine_proposals")

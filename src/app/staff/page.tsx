@@ -24,7 +24,7 @@ import { ChoreCard } from "@/components/chores/chore-card";
 import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
-import { StaffShopping } from "@/components/shopping/staff-shopping";
+import { StaffKitchen } from "@/components/kitchen/kitchen-tab";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -124,7 +124,9 @@ function StaffTasks() {
           ariaLabel="Tampilan"
           segments={[
             { value: "tugas", label: "Tugas Hari Ini" },
-            { value: "stok", label: "Belanja" },
+            // Dapur (Phase 156): Makanan · Belanja inside. Still "stok" in
+            // the URL, so old links land here.
+            { value: "stok", label: "Dapur" },
           ]}
           value={activeView}
           onChange={setView}
@@ -140,7 +142,7 @@ function StaffTasks() {
           {/* Never remounted, so a view that suspends on first read keeps the
               other one on screen until it is complete (Phase 125). */}
           <Suspense fallback={null}>
-            {view === "tugas" ? <TasksView /> : <StaffShopping />}
+            {view === "tugas" ? <TasksView /> : <StaffKitchen />}
           </Suspense>
         </div>
       </PullToRefresh>

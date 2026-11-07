@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { ChevronRight, CookingPot, Plus } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -15,7 +15,9 @@ import {
   useNow,
   visibleProposalBatches,
 } from "@/components/staff/staff-reports-panel";
+import { FoodFormSheet } from "@/components/kitchen/food-form-sheet";
 import { useHousehold } from "@/context/household-context";
+import { openAfterOverlayCloses } from "@/lib/overlay-handoff";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 
 /**
@@ -29,6 +31,8 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 export function StaffActionsFab() {
   const { routineProposals } = useHousehold();
   const [open, setOpen] = useState(false);
+  // Food came to the door (Phase 156): the add-food sheet, straight from here.
+  const [addingFood, setAddingFood] = useState(false);
   useBackToClose(open, () => setOpen(false));
 
   // Owned here rather than in the panel: the badge below and the drawer's
@@ -86,16 +90,37 @@ export function StaffActionsFab() {
           <SheetHeader className="border-b">
             <SheetTitle>Laporan & Usulan</SheetTitle>
             <SheetDescription>
-              Laporkan stok, usulkan jadwal, atau catat kegiatan ekstra.
+              Catat makanan masuk, laporkan stok, usulkan jadwal, atau catat kegiatan ekstra.
             </SheetDescription>
           </SheetHeader>
           {/* overscroll-contain: reaching the end of the list must not start
               scrolling (or pull-to-refreshing) the page behind the sheet. */}
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-6">
+            {/* First, because food arrives mid-task and goes off: a photo is
+                enough, the owners are told. */}
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                openAfterOverlayCloses(() => setAddingFood(true));
+              }}
+              className="mb-4 flex min-h-16 w-full items-center gap-3 rounded-xl border bg-card px-4 text-left active:bg-muted"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                <CookingPot className="size-5" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-base font-semibold">Makanan masuk</span>
+                <span className="text-xs text-muted-foreground">Foto, simpan di mana, kedaluwarsa</span>
+              </span>
+              <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+            </button>
             <StaffReportsPanel dismissed={dismissed} dismiss={dismiss} now={now} />
           </div>
         </SheetContent>
       </Sheet>
+
+      <FoodFormSheet open={addingFood} item={null} locale="id" onClose={() => setAddingFood(false)} />
     </>
   );
 }

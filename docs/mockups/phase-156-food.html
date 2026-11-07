@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Food at home mockups</title>
+<style>
+  :root {
+    --bg: #f8fafc; --card: #fff; --ink: #111827; --ink2: #374151; --muted: #6b7280;
+    --line: #e5e7eb; --track: #f3f4f6; --primary: #171717; --red: #b91c1c; --redbg: #fef2f2;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ecef; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color: var(--ink); }
+  header.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 4px; }
+  header.page h1 { font-size: 20px; margin: 0 0 4px; }
+  header.page p { margin: 0; color: var(--muted); }
+  section.screen { max-width: 1100px; margin: 0 auto; padding: 18px 16px 8px; }
+  section.screen h2 { font-size: 15px; margin: 0 0 2px; }
+  section.screen > p { margin: 0 0 12px; color: var(--muted); max-width: 640px; }
+  .pair { display: flex; gap: 20px; flex-wrap: wrap; }
+  .phone { width: 360px; max-width: 100%; height: 720px; background: var(--bg); border-radius: 36px; border: 8px solid #111; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .tag { position: absolute; top: -2px; right: 18px; background: #111; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 0 0 8px 8px; z-index: 5; }
+  .status { height: 22px; flex: none; }
+  .appbar { background: #fff; border-bottom: 1px solid var(--line); padding: 8px 14px 10px; flex: none; }
+  .appbar .row { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+  .brand { font-weight: 600; font-size: 17px; display: flex; gap: 6px; align-items: center; }
+  .brand i { width: 22px; height: 22px; border-radius: 7px; background: #111; display: inline-block; }
+  .seg { display: flex; gap: 3px; background: var(--track); border-radius: 999px; padding: 3px; }
+  .seg span { flex: 1; text-align: center; border-radius: 999px; padding: 8px 6px; font-weight: 500; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .seg span.on { background: var(--primary); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .seg.sm span { flex: none; padding: 6px 10px; font-size: 11px; }
+  .body { flex: 1; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+  .body > *, .sheet > * { flex: none; }
+  .body > .spacer, .sheet > .spacer { flex: 1; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 12px; font-weight: 600; font-size: 14px; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.outline { border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 500; }
+  .h { font-size: 13px; font-weight: 600; color: var(--ink); margin: 2px 0 -4px; }
+  .h small { color: #9ca3af; font-weight: 600; }
+  .group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .item { display: flex; gap: 10px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); min-height: 56px; }
+  .item:first-child { border-top: 0; }
+  .thumb { width: 38px; height: 38px; border-radius: 9px; flex: none; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .item .t { flex: 1; min-width: 0; }
+  .item .t b { display: block; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .t span { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .t span.red { color: var(--red); }
+  .item .days { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .item .days.red { color: var(--red); font-weight: 600; }
+  .tick { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid #9ca3af; flex: none; }
+  .tabbar { flex: none; height: 58px; background: #fff; border-top: 1px solid var(--line); display: flex; }
+  .tabbar span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; color: var(--muted); font-weight: 500; }
+  .tabbar span i { width: 20px; height: 20px; border-radius: 6px; border: 1.7px solid currentColor; display: block; }
+  .tabbar span.on { color: var(--ink); }
+  .tabbar span.on i { background: currentColor; }
+  /* sheet */
+  .dim { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 2; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 70px; background: #fff; border-radius: 20px 20px 0 0; z-index: 3; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .grab { width: 36px; height: 5px; border-radius: 9px; background: #d1d5db; margin: 0 auto 2px; }
+  .sheet h3 { margin: 0; font-size: 17px; text-align: center; }
+  .label { font-size: 12px; font-weight: 600; color: var(--ink2); margin-bottom: 6px; }
+  .label em { font-style: normal; font-weight: 400; color: var(--muted); }
+  .input { border: 1px solid var(--line); border-radius: 12px; min-height: 44px; padding: 11px 12px; color: var(--ink); font-size: 14px; }
+  .input.ph { color: #9ca3af; }
+  .photo { height: 86px; border: 1.5px dashed #d1d5db; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-weight: 500; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .choice { border: 1px solid var(--line); border-radius: 12px; padding: 8px 2px; text-align: center; font-size: 12px; font-weight: 500; color: var(--ink2); }
+  .choice div { font-size: 20px; line-height: 1.3; }
+  .choice.on { border: 2px solid var(--primary); padding: 7px 1px; color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; font-size: 13px; color: var(--ink2); }
+  .chip.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .more { color: var(--ink2); font-weight: 500; font-size: 13px; }
+  .spacer { flex: 1; }
+  .big { width: 100%; height: 150px; border-radius: 14px; background: linear-gradient(135deg,#f5e6c8,#e9cf9c); display: flex; align-items: center; justify-content: center; font-size: 54px; }
+  .facts { display: flex; flex-direction: column; }
+  .fact { display: flex; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .fact:first-child { border-top: 0; }
+  .fact span { color: var(--muted); }
+  .outs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .out { border: 1px solid var(--line); border-radius: 12px; padding: 10px 2px; text-align: center; font-size: 12.5px; font-weight: 600; }
+  .out div { font-size: 22px; }
+  .link { text-align: center; font-size: 13px; color: var(--ink2); font-weight: 500; }
+  .link.danger { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .quiet { display: flex; align-items: center; gap: 8px; padding: 6px 4px; min-height: 40px; color: var(--ink2); }
+  .quiet .ico { width: 16px; text-align: center; color: var(--muted); }
+  .quiet .chev { margin-left: auto; color: var(--muted); }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .faded { opacity: .55; }
+  .note { font-size: 12px; color: var(--muted); text-align: center; }
+  .toast { position: absolute; left: 14px; right: 14px; bottom: 72px; background: #111; color: #fff; border-radius: 12px; padding: 11px 14px; font-size: 13px; display: flex; justify-content: space-between; z-index: 4; }
+  .toast b { font-weight: 600; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Phase 156, step 1 — Food at home (by hand)</h1>
+  <p>Phone-size mockups for approval. English and Indonesian side by side; staff screens in Indonesian only. Not built yet.</p>
+</header>
+<main id="root"></main>
+
+<script>
+const L = {
+  en: {
+    tag: "Owner · English", food: "Food", buy: "To buy", overview: "Overview", staff: "Staff",
+    tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    add: "＋ Add food",
+    containers: "Containers to return", container: (w) => `Return container to ${w}`, returned: "Returned",
+    today: "Eat today", week: "This week", later: "Later",
+    past: (n) => `${n} days past date — check first`, d0: "Today", d1: "Tomorrow", dn: (n) => `${n} days`, nodate: "No date",
+    fridge: "Fridge", freezer: "Freezer", pantry: "Cupboard", counter: "Counter",
+    from: (w) => `from ${w}`,
+    sheetTitle: "Add food", photo: "📷  Add a photo", optional: "(optional)",
+    what: "What is it?", whatPh: "e.g. Lapis legit", where: "Where is it kept?", expires: "Expires",
+    chips: ["Today", "Tomorrow", "3 days", "1 week", "Pick a date", "No date"],
+    more: "＋ From whom, notes", fromL: "From whom", fromPh: "e.g. Tante Rina", contL: "The container goes back to them",
+    save: "Save",
+    gone: "Is it finished?", eaten: "Eaten", given: "Given away", thrown: "Thrown away",
+    edit: "Edit", remove: "Delete — added by mistake",
+    fWhere: "Kept in", fExp: "Expires", fFrom: "From", fAdded: "Added", fNotes: "Notes",
+    toast: "Eaten — Lapis legit", undo: "Undo",
+    todayDate: "Saturday, 7 November", soon: (n) => `${n} foods to eat soon`, tobuy: (n) => `${n} things to buy`,
+    empty: "No food listed", emptyD: "When food comes into the house — a gift, leftovers, a cake — add it here so nobody forgets to eat it.",
+  },
+  id: {
+    tag: "Pemilik · Indonesia", food: "Makanan", buy: "Belanja", overview: "Ringkasan", staff: "Staf",
+    tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    add: "＋ Tambah makanan",
+    containers: "Wadah yang perlu dikembalikan", container: (w) => `Kembalikan wadah ke ${w}`, returned: "Sudah",
+    today: "Makan hari ini", week: "Minggu ini", later: "Nanti",
+    past: (n) => `Lewat ${n} hari — cek dulu`, d0: "Hari ini", d1: "Besok", dn: (n) => `${n} hari`, nodate: "Tanpa tanggal",
+    fridge: "Kulkas", freezer: "Freezer", pantry: "Lemari", counter: "Meja",
+    from: (w) => `dari ${w}`,
+    sheetTitle: "Tambah makanan", photo: "📷  Tambah foto", optional: "(boleh dikosongkan)",
+    what: "Makanan apa?", whatPh: "mis. Lapis legit", where: "Disimpan di mana?", expires: "Kedaluwarsa",
+    chips: ["Hari ini", "Besok", "3 hari", "1 minggu", "Pilih tanggal", "Tidak ada"],
+    more: "＋ Dari siapa, catatan", fromL: "Dari siapa", fromPh: "mis. Tante Rina", contL: "Wadahnya perlu dikembalikan",
+    save: "Simpan",
+    gone: "Sudah habis?", eaten: "Dimakan", given: "Diberikan", thrown: "Dibuang",
+    edit: "Ubah", remove: "Hapus — salah tambah",
+    fWhere: "Disimpan di", fExp: "Kedaluwarsa", fFrom: "Dari", fAdded: "Ditambahkan", fNotes: "Catatan",
+    toast: "Dimakan — Lapis legit", undo: "Batalkan",
+    todayDate: "Sabtu, 7 November", soon: (n) => `${n} makanan perlu segera dimakan`, tobuy: (n) => `${n} barang perlu dibeli`,
+    empty: "Belum ada makanan", emptyD: "Kalau ada makanan masuk — hadiah, sisa masakan, kue — tambahkan di sini supaya tidak lupa dimakan.",
+  },
+};
+
+const FOODS = (s) => ({
+  today: [
+    { e: "🍛", n: "Rendang", d: `${s.fridge} · ${s.from("Bu Ani")}`, days: s.past(2), red: true },
+    { e: "🍱", n: "Nasi kotak", d: `${s.counter}`, days: s.d0 },
+  ],
+  week: [
+    { e: "🍰", n: "Lapis legit", d: `${s.counter} · ${s.from("Tante Rina")}`, days: s.d1 },
+    { e: "🥭", n: "Mangga", d: s.pantry, days: s.dn(4) },
+  ],
+  later: [
+    { e: "🥟", n: "Dimsum", d: s.freezer, days: s.dn(25) },
+    { e: "🍪", n: "Nastar", d: `${s.pantry} · ${s.from("Om Budi")}`, days: s.nodate },
+  ],
+});
+
+const appbar = (s, inner) => `
+  <div class="status"></div>
+  <div class="appbar">
+    <div class="row"><div class="brand"><i></i>Miamus</div>
+      <div class="seg sm"><span class="on">${s.overview}</span><span>${s.staff}</span></div></div>
+    ${inner || ""}
+  </div>`;
+
+const tabbar = (s, on) => `<div class="tabbar">${s.tabs.map((t, i) => `<span class="${i === on ? "on" : ""}"><i></i>${t}</span>`).join("")}</div>`;
+
+const items = (list) => `<div class="group">${list.map((f) => `
+  <div class="item"><div class="thumb">${f.e}</div>
+    <div class="t"><b>${f.n}</b><span>${f.d}</span></div>
+    <div class="days ${f.red ? "red" : ""}">${f.red ? "" : f.days}</div></div>`).join("")}</div>`;
+
+function itemsWithPast(list) {
+  return `<div class="group">${list.map((f) => `
+  <div class="item"><div class="thumb">${f.e}</div>
+    <div class="t"><b>${f.n}</b><span class="${f.red ? "red" : ""}">${f.red ? f.days : f.d}</span></div>
+    <div class="days">${f.red ? "" : f.days}</div></div>`).join("")}</div>`;
+}
+
+function foodList(s, opts = {}) {
+  const f = FOODS(s);
+  return `
+    <div class="btn primary">${s.add}</div>
+    <div class="h">${s.containers}</div>
+    <div class="group"><div class="item"><div class="tick"></div>
+      <div class="t"><b>${s.container("Tante Rina")}</b><span>Lapis legit · rantang</span></div></div></div>
+    <div class="h">${s.today}</div>${itemsWithPast(f.today)}
+    <div class="h">${s.week}</div>${items(f.week)}
+    <div class="h">${s.later}</div>${items(f.later)}`;
+}
+
+function screenList(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>
+    ${appbar(s)}
+    <div class="body">
+      <div class="seg"><span class="on">${s.food}</span><span>${s.buy}</span></div>
+      ${foodList(s)}
+    </div>${tabbar(s, 3)}</div>`;
+}
+
+function screenAdd(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>
+    ${appbar(s)}<div class="body faded"><div class="seg"><span class="on">${s.food}</span><span>${s.buy}</span></div></div>
+    <div class="dim"></div>
+    <div class="sheet"><div class="grab"></div><h3>${s.sheetTitle}</h3>
+      <div class="photo">${s.photo} <span style="font-weight:400">${s.optional}</span></div>
+      <div><div class="label">${s.what}</div><div class="input">Lapis legit</div></div>
+      <div><div class="label">${s.where}</div>
+        <div class="grid4"><div class="choice"><div>🧊</div>${s.fridge}</div><div class="choice"><div>❄️</div>${s.freezer}</div>
+        <div class="choice"><div>🗄️</div>${s.pantry}</div><div class="choice on"><div>🍽️</div>${s.counter}</div></div></div>
+      <div><div class="label">${s.expires}</div>
+        <div class="chips">${s.chips.map((c, i) => `<span class="chip ${i === 3 ? "on" : ""}">${c}</span>`).join("")}</div></div>
+      <div class="more">${s.more}</div>
+      <div class="spacer"></div>
+      <div class="btn primary">${s.save}</div>
+    </div></div>`;
+}
+
+function screenMore(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>
+    ${appbar(s)}<div class="body faded"></div>
+    <div class="dim"></div>
+    <div class="sheet" style="top:150px"><div class="grab"></div>
+      <div class="note">… ${s.expires} ✓</div>
+      <div><div class="label">${s.fromL} <em>${s.optional}</em></div><div class="input">Tante Rina</div></div>
+      <div class="card" style="display:flex;gap:10px;align-items:center;padding:10px 12px">
+        <span style="width:22px;height:22px;border-radius:6px;background:#171717;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px">✓</span>
+        <span>${s.contL}</span></div>
+      <div><div class="label">${s.fNotes} <em>${s.optional}</em></div><div class="input ph">…</div></div>
+      <div class="spacer"></div>
+      <div class="btn primary">${s.save}</div>
+    </div></div>`;
+}
+
+function screenDetail(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>
+    ${appbar(s)}<div class="body faded"></div>
+    <div class="dim"></div>
+    <div class="sheet"><div class="grab"></div><h3>Lapis legit</h3>
+      <div class="big">🍰</div>
+      <div class="facts">
+        <div class="fact"><span>${s.fExp}</span><b>${s.d1} · 8 Nov</b></div>
+        <div class="fact"><span>${s.fWhere}</span><b>${s.counter}</b></div>
+        <div class="fact"><span>${s.fFrom}</span><b>Tante Rina</b></div>
+        <div class="fact"><span>${s.fAdded}</span><b>Sari · 5 Nov</b></div>
+      </div>
+      <div class="label" style="margin:2px 0 -4px">${s.gone}</div>
+      <div class="outs"><div class="out"><div>😋</div>${s.eaten}</div><div class="out"><div>🤲</div>${s.given}</div><div class="out"><div>🗑️</div>${s.thrown}</div></div>
+      <div class="spacer"></div>
+      <div class="link">${s.edit}</div>
+      <div class="link danger">${s.remove}</div>
+    </div></div>`;
+}
+
+function screenToday(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>
+    ${appbar(s)}
+    <div class="body">
+      <div class="quiet"><span class="ico">🍽</span>${s.soon(3)}<span class="chev">›</span></div>
+      <div class="quiet" style="margin-top:-12px"><span class="ico">🧺</span>${s.tobuy(2)}<span class="chev">›</span></div>
+      <div class="h">${s.todayDate}</div>
+      <div class="card faded" style="height:70px"></div>
+      <div class="card faded" style="height:70px"></div>
+      <div class="card faded" style="height:70px"></div>
+    </div>
+    <div class="toast"><span>${s.toast}</span><b>${s.undo}</b></div>
+    ${tabbar(s, 0)}</div>`;
+}
+
+function screenEmpty(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>
+    ${appbar(s)}
+    <div class="body">
+      <div class="seg"><span class="on">${s.food}</span><span>${s.buy}</span></div>
+      <div class="btn primary">${s.add}</div>
+      <div style="text-align:center;padding:40px 18px;color:var(--muted)">
+        <div style="font-size:34px">🍱</div>
+        <div style="font-weight:600;color:var(--ink);margin:6px 0 4px">${s.empty}</div>
+        <div>${s.emptyD}</div></div>
+    </div>${tabbar(s, 3)}</div>`;
+}
+
+function staffDapur() {
+  const s = { ...L.id, tag: "Staf · Indonesia" };
+  return `<div class="phone"><div class="tag">${s.tag}</div>
+    <div class="status"></div>
+    <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div><span style="font-size:13px;color:var(--muted)">Sari ▾</span></div>
+      <div class="seg"><span>Tugas Hari Ini</span><span class="on">Dapur</span></div></div>
+    <div class="body">
+      <div class="seg"><span class="on">Makanan</span><span>Belanja</span></div>
+      ${foodList(s)}
+    </div></div>`;
+}
+
+function staffFlat() {
+  const s = { ...L.id, tag: "Staf · pilihan B" };
+  return `<div class="phone"><div class="tag">${s.tag}</div>
+    <div class="status"></div>
+    <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div><span style="font-size:13px;color:var(--muted)">Sari ▾</span></div>
+      <div class="seg"><span>Tugas</span><span class="on">Makanan</span><span>Belanja</span></div></div>
+    <div class="body">${foodList(s)}</div></div>`;
+}
+
+const screens = [
+  ["1. Kitchen → Food", "The Shopping tab becomes Kitchen / Dapur. The pill switch opens on Food (time-sensitive); To buy is today's shopping list, unchanged. One main action: Add food. Containers to return sit on top only when there are any; groups appear only when they have food.", screenList],
+  ["2. Add food", "A bottom sheet. Only the name is required. Where it's kept is four big choices; the expiry is one tap (Today … 1 week, Pick a date, No date). Photo is optional. From whom and notes are one tap away.", screenAdd],
+  ["2b. Add food — more details", "From whom, and — only once a name is filled in — the container tick. Notes last.", screenMore],
+  ["3. Tap a food", "Its photo and facts, then the one question: is it finished? Three big answers. Edit is a quiet link; delete (for mistakes) is owners only. Finishing deletes the photo.", screenDetail],
+  ["4. Today", "One quiet line above the day, like the shopping line: food that expires today or tomorrow, or is past its date. Hidden when there is none. Undo after finishing, as everywhere.", screenToday],
+  ["5. Empty", "The first time: what the list is for, in one sentence.", screenEmpty],
+];
+
+let html = "";
+for (const [title, text, fn] of screens) {
+  html += `<section class="screen"><h2>${title}</h2><p>${text}</p><div class="pair">${fn(L.en)}${fn(L.id)}</div></section>`;
+}
+html += `<section class="screen"><h2>6. Staff phone (Indonesian only)</h2>
+  <p>Staff have no tab bar; their header switch becomes Tugas Hari Ini · Dapur, and Dapur has the same Makanan · Belanja pill (A, recommended: the same shape as the owners'). Option B puts all three in the header instead — one tap fewer, but "Tugas Hari Ini" shortens to "Tugas". Staff can add, edit and finish food, but not delete it.</p>
+  <div class="pair">${staffDapur()}${staffFlat()}</div></section>`;
+document.getElementById("root").innerHTML = html;
+</script>
+</body>
+</html>

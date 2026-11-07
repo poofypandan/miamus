@@ -3,7 +3,7 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, PawPrint, Plus, ShoppingBasket, Sparkles } from "lucide-react";
+import { CalendarDays, ChevronRight, CookingPot, PawPrint, Plus, ShoppingBasket, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -31,6 +31,7 @@ import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
 import { isLowStock } from "@/lib/inventory";
+import { countEatSoon, countNeedsDate, eatSoonLabel, needsDateLabel } from "@/lib/food";
 import { isActiveAlert } from "@/lib/inventory-status";
 import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -71,6 +72,7 @@ export function AgendaTab() {
     setSelectedDate,
     todayJumps,
     inventoryItems,
+    foodItems,
     inventoryAlerts,
   } = useHousehold();
   const householdName = useHouseholdName();
@@ -123,7 +125,20 @@ export function AgendaTab() {
     [inventoryItems, inventoryAlerts]
   );
 
+  // Food to eat soon (Phase 156): the same kind of quiet line, above it.
+  const eatSoon = useMemo(() => countEatSoon(foodItems, formatDateLocal(today)), [foodItems, today]);
+  // Staff answered "don't know" for a date: waiting for an owner (amber).
+  const needsDate = useMemo(() => countNeedsDate(foodItems), [foodItems]);
+
+  // The Kitchen tab opens on Food; the shopping line goes straight to Shopping.
+  const toBuyHref = `${moduleHref("inventory")}&kitchen=buy`;
   function switchToShopping(event: React.MouseEvent) {
+    if (!isPlainClick(event)) return;
+    event.preventDefault();
+    startTransition(() => pushInPlace(toBuyHref));
+  }
+
+  function switchToFood(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;
     event.preventDefault();
     startTransition(() => pushInPlace(moduleHref("inventory")));
@@ -217,22 +232,51 @@ export function AgendaTab() {
             Renders nothing when there is nothing to ask. */}
         <MedicationCourseAlerts />
 
-        {toBuy > 0 && (
-          <Link
-            href={moduleHref("inventory")}
-            scroll={false}
-            onClick={switchToShopping}
-            className="-my-1 flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
-          >
-            <ShoppingBasket className="size-4 shrink-0 text-muted-foreground" />
-            <span className="flex-1">
-              {t(
-                `${toBuy} thing${toBuy === 1 ? "" : "s"} to buy`,
-                `${toBuy} barang perlu dibeli`
-              )}
-            </span>
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-          </Link>
+        {(needsDate > 0 || eatSoon > 0 || toBuy > 0) && (
+          <div className="-my-1 flex flex-col">
+            {needsDate > 0 && (
+              <Link
+                href={moduleHref("inventory")}
+                scroll={false}
+                onClick={switchToFood}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-amber-800 active:bg-muted"
+              >
+                <CookingPot className="size-4 shrink-0 text-amber-700" />
+                <span className="flex-1">{needsDateLabel(needsDate, locale)}</span>
+                <ChevronRight className="size-4 shrink-0 text-amber-700" />
+              </Link>
+            )}
+            {eatSoon > 0 && (
+              <Link
+                href={moduleHref("inventory")}
+                scroll={false}
+                onClick={switchToFood}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+              >
+                <CookingPot className="size-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1">{eatSoonLabel(eatSoon, locale)}</span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </Link>
+            )}
+
+            {toBuy > 0 && (
+              <Link
+                href={toBuyHref}
+                scroll={false}
+                onClick={switchToShopping}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+              >
+                <ShoppingBasket className="size-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1">
+                  {t(
+                    `${toBuy} thing${toBuy === 1 ? "" : "s"} to buy`,
+                    `${toBuy} barang perlu dibeli`
+                  )}
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </Link>
+            )}
+          </div>
         )}
 
         {range === "day" ? (

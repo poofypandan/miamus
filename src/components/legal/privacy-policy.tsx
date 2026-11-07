@@ -11,7 +11,8 @@ import { LEGAL, isLegalDraft } from "@/config/legal";
  *
  * Written against UU PDP (Law No. 27 of 2022) and against what this codebase
  * actually stores — see the tables in supabase/migrations and the retention
- * window in task_photo_retention_cutoff() (migrations/102). If either changes,
+ * window in task_photo_retention_cutoff() (migrations/102), and food photos
+ * and finished food (migrations/123). If either changes,
  * this has to change with it. Not legal advice: have it reviewed before a
  * public launch.
  */
@@ -99,6 +100,7 @@ const COPY: Record<
               "Photos taken in the app: task proof photos, before and after photos, stock-check photos, pet photos and scans of pet documents.",
               "Details about your pets, including their vet and health records.",
               "The household's shopping list: which supplies are running low or out, and who said so.",
+              "Food the household lists: what it is, an optional photo, where it came from (cooked at home, from someone, or bought), where it is kept, when it expires (or that nobody knows yet), who gave it (a name you type in), notes, who added it, and whether it was eaten, given away or thrown away. When staff add food, the household's admins get a notification saying so.",
             ],
           },
           { h: "Technical" },
@@ -174,6 +176,7 @@ const COPY: Record<
             ul: [
               "Chore and routine proof photos (including before and after photos) are deleted automatically after 30 days.",
               "Records of staff sign-in attempts are deleted automatically after 30 days.",
+              "A food photo is kept while the food is on the list, and deleted once it is marked eaten, given away or thrown away, or deleted. Finished food is kept 90 days without its photo, then deleted automatically.",
               "A staff phone's ID is deleted 7 days after it was last used, once the phone is no longer linked to a household.",
               "Everything else is kept while your household uses Miamus.",
               "A request to set up a household that isn't approved is deleted 30 days after the decision, together with the Google sign-in it came from, unless that account has since joined a household. Approved requests are kept while the account is used.",
@@ -316,6 +319,7 @@ const COPY: Record<
               "Foto yang diambil di aplikasi: foto bukti tugas, foto sebelum dan sesudah, foto cek stok, foto hewan peliharaan, dan scan dokumen hewan.",
               "Data hewan peliharaan Anda, termasuk catatan dokter hewan dan kesehatannya.",
               "Daftar belanja rumah: barang yang hampir habis atau habis, dan siapa yang memberi tahu.",
+              "Makanan yang dicatat rumah tangga: makanan apa, foto (boleh tidak ada), dari mana (dimasak di rumah, dari orang, atau dibeli), disimpan di mana, kapan kedaluwarsa (atau belum ada yang tahu), dari siapa (nama yang Anda ketik), catatan, siapa yang menambahkan, dan apakah sudah dimakan, diberikan, atau dibuang. Kalau staf menambahkan makanan, admin rumah tangga mendapat notifikasi.",
             ],
           },
           { h: "Teknis" },
@@ -391,6 +395,7 @@ const COPY: Record<
             ul: [
               "Foto bukti tugas dan rutinitas (termasuk foto sebelum dan sesudah) dihapus otomatis setelah 30 hari.",
               "Catatan percobaan masuk staf dihapus otomatis setelah 30 hari.",
+              "Foto makanan disimpan selama makanannya masih ada di daftar, dan dihapus setelah ditandai dimakan, diberikan, atau dibuang, atau setelah dihapus. Makanan yang sudah habis disimpan 90 hari tanpa fotonya, lalu dihapus otomatis.",
               "ID HP staf dihapus 7 hari setelah terakhir dipakai, jika HP itu tidak lagi terhubung ke rumah tangga.",
               "Data lainnya disimpan selama rumah tangga Anda memakai Miamus.",
               "Permintaan membuat rumah tangga yang tidak disetujui dihapus 30 hari setelah keputusan, bersama akun login Google yang dipakai untuk memintanya, kecuali akun itu sudah bergabung ke sebuah rumah tangga. Permintaan yang disetujui disimpan selama akun tersebut dipakai.",
