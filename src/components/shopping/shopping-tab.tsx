@@ -270,22 +270,10 @@ export function ShoppingTab() {
         lang={locale}
         onClose={() => setChoosing(null)}
         onEdit={(item) => {
+          // Straight from one sheet to the next: useBackToClose holds the
+          // editor's history entry until the sheet's own has gone.
           setChoosing(null);
-          // One overlay after the other (Codex review, PR #9): closing the
-          // sheet pops its history entry asynchronously (useBackToClose).
-          // Opening the editor in the same moment pushed the editor's entry
-          // first, and that late pop then closed the editor as if Back had
-          // been pressed. So the editor opens once the pop has landed — or
-          // after a moment, if the sheet had no entry left to pop.
-          let opened = false;
-          const openEditor = () => {
-            if (opened) return;
-            opened = true;
-            window.removeEventListener("popstate", openEditor);
-            edit(item);
-          };
-          window.addEventListener("popstate", openEditor, { once: true });
-          window.setTimeout(openEditor, 400);
+          edit(item);
         }}
       />
       <InventoryItemForm
