@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 import { ChevronLeft, Delete, Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
+import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { StaffSplash } from "@/components/staff/staff-splash";
 import { StaffLoadingScreen } from "@/components/brand/loading-screens";
 import { dataProvider } from "@/lib/data";
@@ -97,6 +99,21 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
+  // The remembered person was taken off the roster (migrations/109, /119):
+  // forget them, so the phone asks "who is on duty?" again instead of
+  // carrying on in a removed person's name.
+  const forget = useCallback(() => {
+    setStaffId(null);
+    setStaffName(null);
+    try {
+      window.localStorage.removeItem(STAFF_ID_KEY);
+      window.localStorage.removeItem(STAFF_NAME_KEY);
+    } catch {
+      // Not stored, so nothing to forget.
+    }
+    toast.info("Nama ini sudah tidak ada di daftar staf. Pilih nama Anda lagi.");
+  }, []);
+
   const identify = useCallback((profile: StaffProfile) => {
     setStaffId(profile.id);
     setStaffName(profile.name);
@@ -146,9 +163,37 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
           : { staffId, staffName }
       }
     >
+      {!ownerBypass && staffId && (
+        // Its own boundary: the roster's first read suspends, and the page
+        // must not wait on this check.
+        <Suspense fallback={null}>
+          <RemovedFromRosterCheck staffId={staffId} onRemoved={forget} />
+        </Suspense>
+      )}
       {children}
     </StaffIdentityContext.Provider>
   );
+}
+
+/**
+ * Forgets a remembered person who is no longer on this household's roster:
+ * archived (migrations/109) or gone. Only acts on a roster that actually
+ * loaded — offline, or on a failed read, nobody is signed out.
+ */
+function RemovedFromRosterCheck({
+  staffId,
+  onRemoved,
+}: {
+  staffId: string;
+  onRemoved: () => void;
+}) {
+  const { allProfiles } = useStaffProfiles();
+  useEffect(() => {
+    if (!allProfiles) return;
+    const person = allProfiles.find((p) => p.id === staffId);
+    if (!person || person.archived_at) onRemoved();
+  }, [allProfiles, staffId, onRemoved]);
+  return null;
 }
 
 type GateStep =
@@ -162,6 +207,11 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
   // Bumped to fetch the roster again — by the button, the timer and the
   // "online" event below (Phase 146).
   const [attempt, setAttempt] = useState(0);
+  // The last attempt that finished, either way. The retry timer waits for the
+  // current one: on slow Wi-Fi a renewal plus the roster read can take longer
+  // than the retry interval, and starting the next attempt would discard the
+  // one about to succeed (Codex review, PR #2).
+  const [settled, setSettled] = useState(-1);
   const [step, setStep] = useState<GateStep>({ kind: "choose" });
 
   useEffect(() => {
@@ -188,25 +238,29 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
       .catch((err) => {
         console.error(err);
         if (live) setFailed(true);
+      })
+      .finally(() => {
+        if (live) setSettled(attempt);
       });
     return () => {
       live = false;
     };
   }, [attempt]);
 
-  // While it is failing, keep trying: every 10 seconds, and at once when the
-  // phone says it is back online. "Reload the page" was the old advice, and
-  // an installed app has no reload button to press.
+  // While it is failing, keep trying: 10 seconds after each attempt has
+  // finished, and at once when the phone says it is back online. "Reload the
+  // page" was the old advice, and an installed app has no reload button to
+  // press. Nothing is scheduled while an attempt is still running.
   useEffect(() => {
-    if (!failed) return;
+    if (!failed || settled !== attempt) return;
     const again = () => setAttempt((n) => n + 1);
-    const timer = setInterval(again, 10_000);
+    const timer = setTimeout(again, 10_000);
     window.addEventListener("online", again);
     return () => {
-      clearInterval(timer);
+      clearTimeout(timer);
       window.removeEventListener("online", again);
     };
-  }, [failed]);
+  }, [failed, settled, attempt]);
 
   if (step.kind !== "choose") {
     return (

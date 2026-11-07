@@ -585,6 +585,12 @@ function StaffRoster({
                 </p>
                 <p>
                   {t(
+                    "Phones they last signed in on are signed out too. If they had their own phone, also remove it under Linked staff phones.",
+                    "HP yang terakhir mereka pakai untuk masuk juga ikut keluar. Kalau mereka punya HP sendiri, hapus juga di HP staf yang terhubung."
+                  )}
+                </p>
+                <p>
+                  {t(
                     "You can bring them back later if you need to.",
                     "Anda bisa mengembalikannya nanti jika perlu."
                   )}
