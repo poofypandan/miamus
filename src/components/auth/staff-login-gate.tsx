@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 import { ChevronLeft, Delete, Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
+import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { StaffSplash } from "@/components/staff/staff-splash";
 import { StaffLoadingScreen } from "@/components/brand/loading-screens";
 import { dataProvider } from "@/lib/data";
@@ -96,6 +98,21 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
+  // The remembered person was taken off the roster (migrations/109, /119):
+  // forget them, so the phone asks "who is on duty?" again instead of
+  // carrying on in a removed person's name.
+  const forget = useCallback(() => {
+    setStaffId(null);
+    setStaffName(null);
+    try {
+      window.localStorage.removeItem(STAFF_ID_KEY);
+      window.localStorage.removeItem(STAFF_NAME_KEY);
+    } catch {
+      // Not stored, so nothing to forget.
+    }
+    toast.info("Nama ini sudah tidak ada di daftar staf. Pilih nama Anda lagi.");
+  }, []);
+
   const identify = useCallback((profile: StaffProfile) => {
     setStaffId(profile.id);
     setStaffName(profile.name);
@@ -145,9 +162,37 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
           : { staffId, staffName }
       }
     >
+      {!ownerBypass && staffId && (
+        // Its own boundary: the roster's first read suspends, and the page
+        // must not wait on this check.
+        <Suspense fallback={null}>
+          <RemovedFromRosterCheck staffId={staffId} onRemoved={forget} />
+        </Suspense>
+      )}
       {children}
     </StaffIdentityContext.Provider>
   );
+}
+
+/**
+ * Forgets a remembered person who is no longer on this household's roster:
+ * archived (migrations/109) or gone. Only acts on a roster that actually
+ * loaded — offline, or on a failed read, nobody is signed out.
+ */
+function RemovedFromRosterCheck({
+  staffId,
+  onRemoved,
+}: {
+  staffId: string;
+  onRemoved: () => void;
+}) {
+  const { allProfiles } = useStaffProfiles();
+  useEffect(() => {
+    if (!allProfiles) return;
+    const person = allProfiles.find((p) => p.id === staffId);
+    if (!person || person.archived_at) onRemoved();
+  }, [allProfiles, staffId, onRemoved]);
+  return null;
 }
 
 type GateStep =
@@ -166,7 +211,13 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
       .listStaffProfiles()
       // Admins sign in with Google, not here: offering their names would let
       // anyone holding this phone set a PIN and act as them (Phase 139).
-      .then((rows) => live && setProfiles(rows.filter((row) => !row.user_id)))
+      // Archived people are off the roster (Phase 141) — their PIN is already
+      // revoked, so leaving the name here would only offer a dead end, or
+      // worse, let whoever holds the phone set a fresh PIN and come back.
+      .then(
+        (rows) =>
+          live && setProfiles(rows.filter((row) => !row.user_id && !row.archived_at))
+      )
       .catch((err) => {
         console.error(err);
         if (live) setFailed(true);
@@ -332,6 +383,21 @@ function PinStep({
       console.error(err);
       busy.current = false;
       setSaving(false);
+      // Since Phase 142 a staff phone may only claim a name with no PIN yet.
+      // If someone else claimed it first — another phone, a moment ago — the
+      // name now has a PIN, so send them to enter it rather than leaving them
+      // retrying a save that will never succeed.
+      // Supabase throws a PostgrestError, which is not reliably an Error
+      // instance across client versions — read `message` off any object.
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : String(err ?? "");
+      if (message.includes("pin_already_set")) {
+        reject("Nama ini sudah punya PIN — masukkan PIN-nya");
+        setStep({ kind: "enter", profile: { ...step.profile, has_pin: true } });
+        return;
+      }
       reject("Gagal menyimpan PIN");
     }
   }

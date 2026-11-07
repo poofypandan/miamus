@@ -15,7 +15,7 @@ import type {
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
-import { rolloverFloorFor } from "@/lib/chore-recurrence";
+import { isTemplate, rolloverFloorFor } from "@/lib/chore-recurrence";
 
 const STORAGE_KEY = "maimus_mock_db_v1";
 // The preview household's house code, as an admin would read it out: MIA-M23.
@@ -503,6 +503,26 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(updated);
   },
+  async advanceChoreStart(id, fromDate, toDate) {
+    const db = loadDB();
+    const idx = db.householdTasks.findIndex(
+      (t) => t.id === id && t.due_date === fromDate && t.status === "pending"
+    );
+    if (idx === -1) return delay(null);
+    const updated: HouseholdTask = { ...db.householdTasks[idx], due_date: toDate };
+    db.householdTasks[idx] = updated;
+    saveDB(db);
+    return delay(updated);
+  },
+  async skipChoreOccurrence(id) {
+    const db = loadDB();
+    const idx = db.householdTasks.findIndex((t) => t.id === id && t.status === "pending");
+    if (idx === -1) return delay(null);
+    const updated: HouseholdTask = { ...db.householdTasks[idx], status: "cancelled" };
+    db.householdTasks[idx] = updated;
+    saveDB(db);
+    return delay(updated);
+  },
   async deleteHouseholdTask(id) {
     const db = loadDB();
     // Mirrors `on delete cascade` on parent_task_id (migrations/097): removing
@@ -739,6 +759,36 @@ export const mockProvider: DataProvider = {
       created_at: new Date().toISOString(),
     };
     db.staffProfiles.push(profile);
+    saveDB(db);
+    return delay(profile);
+  },
+  async archiveStaffProfile(id) {
+    const db = loadDB();
+    const profile = db.staffProfiles.find((s) => s.id === id);
+    if (!profile) throw new Error("Staff profile not found");
+    if (profile.user_id) throw new Error("This person is an admin");
+    // Mirrors archive_staff_profile (migrations/109, /118): mark, revoke the
+    // PIN, and release their unfinished chores and every repeating chore
+    // they hold, keeping who did a repeat's first day.
+    profile.archived_at = new Date().toISOString();
+    profile.has_pin = false;
+    db.staffPins = { ...(db.staffPins ?? {}), [id]: null };
+    db.householdTasks = db.householdTasks.map((task) => {
+      if (task.assigned_to !== id) return task;
+      if (task.status === "pending") return { ...task, assigned_to: null };
+      if (task.status === "completed" && isTemplate(task)) {
+        return { ...task, assigned_to: null, completed_by: task.completed_by ?? id };
+      }
+      return task;
+    });
+    saveDB(db);
+    return delay(profile);
+  },
+  async restoreStaffProfile(id) {
+    const db = loadDB();
+    const profile = db.staffProfiles.find((s) => s.id === id);
+    if (!profile) throw new Error("Staff profile not found");
+    profile.archived_at = null;
     saveDB(db);
     return delay(profile);
   },

@@ -10,6 +10,8 @@ import { parseLocalDate } from "@/components/dashboard/schedule-editor";
 import type { CreateScheduleInput } from "@/lib/data";
 import { useToday } from "@/hooks/use-today";
 import { approvalDateSummary } from "@/lib/approval-dates";
+import { shiftDay } from "@/lib/medication-courses";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import { categoryIcon, groomingTitle, medicationTitle, vetTitle } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { groupProposals, type ProposalBatch } from "@/lib/proposal-batches";
@@ -108,13 +110,37 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
   const today = useToday();
   const schedule = approvalDateSummary(batch, today, locale);
 
+  // A medicine course whose last day has passed (Phase 144). As filed it
+  // would be created already over — created_at is the approval, expires_at
+  // the last day — and never run a single dose, while this card said
+  // "Approved". That is how a dewormer was lost in the live household. It is
+  // offered from today instead, for the number of days the staff member
+  // asked for, with both dates shown before anyone taps.
+  //
+  // Medicine only: a vet visit or a grooming slot is a booked day, and moving
+  // it is not this card's decision. Those keep the existing warning.
+  const restart = useMemo(() => {
+    if (head.category !== "medication" || !schedule?.past || !head.scheduled_date) return null;
+    const filed = formatDateLocal(new Date(head.created_at));
+    const asked =
+      Math.round(
+        (Date.parse(`${head.scheduled_date}T00:00:00Z`) - Date.parse(`${filed}T00:00:00Z`)) /
+          86_400_000
+      ) + 1;
+    const days = Math.max(1, asked);
+    return { days, endDate: shiftDay(formatDateLocal(today), days - 1) };
+  }, [head, schedule?.past, today]);
+
   async function approve() {
     setBusy("approve");
     try {
       // Schedules first, statuses second: if the insert fails the whole batch
       // stays pending and can be retried, rather than being marked approved
       // with no routines to show for it.
-      await createSchedulesBatch(batch.proposals.map(scheduleFromProposal));
+      const rows = batch.proposals.map(scheduleFromProposal);
+      await createSchedulesBatch(
+        restart ? rows.map((row) => ({ ...row, expires_at: restart.endDate })) : rows
+      );
       await decideRoutineProposals(ids, "approved");
       toast.success(
         t(
@@ -192,13 +218,28 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
 
       {head.notes && <p className="text-xs text-muted-foreground">{head.notes}</p>}
 
-      {schedule?.past && (
+      {restart ? (
         <p className="text-xs font-medium text-amber-700">
-          {t(
-            "This date has already passed — approving it now adds a routine that has already expired, so no staff phone will show it.",
-            "Tanggal ini sudah lewat — menyetujuinya sekarang menambahkan rutinitas yang sudah kedaluwarsa, jadi tidak akan muncul di HP staf."
-          )}
+          {(() => {
+            const through = new Date(`${restart.endDate}T00:00:00`).toLocaleDateString(
+              locale === "id" ? "id-ID" : "en-US",
+              { weekday: "short", month: "short", day: "numeric" }
+            );
+            return t(
+              `The last day of this course has passed, so as filed it would never run. Approving starts it today for the ${restart.days} day${restart.days === 1 ? "" : "s"} asked for, through ${through}.`,
+              `Hari terakhir pengobatan ini sudah lewat, jadi seperti yang diajukan tidak akan pernah berjalan. Jika disetujui, pengobatan dimulai hari ini selama ${restart.days} hari yang diminta, sampai ${through}.`
+            );
+          })()}
         </p>
+      ) : (
+        schedule?.past && (
+          <p className="text-xs font-medium text-amber-700">
+            {t(
+              "This date has already passed — approving it now adds a routine that has already expired, so no staff phone will show it.",
+              "Tanggal ini sudah lewat — menyetujuinya sekarang menambahkan rutinitas yang sudah kedaluwarsa, jadi tidak akan muncul di HP staf."
+            )}
+          </p>
+        )
       )}
 
       <div className="flex gap-2">
@@ -208,7 +249,7 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
           className="min-h-[44px] flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
         >
           {busy === "approve" ? <Loader2 className="animate-spin" /> : <Check />}
-          {t("Approve", "Setujui")}
+          {restart ? t("Approve from today", "Setujui mulai hari ini") : t("Approve", "Setujui")}
         </Button>
         <Button
           onClick={reject}

@@ -118,6 +118,69 @@ export function previousOccurrence(task: HouseholdTask, beforeDate: string): str
 }
 
 /**
+ * The first day on or after `afterDate` (exclusive) on which a repeat falls,
+ * within its run — or null if it has none left, which happens when
+ * recurrence_until cuts the series short.
+ *
+ * The mirror of previousOccurrence, and bounded the same way: a daily, weekly
+ * or monthly chore always has its next day within LONGEST_REPEAT_GAP_DAYS, so
+ * running out of road means the repeat is genuinely over rather than that the
+ * search gave up.
+ */
+export function nextOccurrence(task: HouseholdTask, afterDate: string): string | null {
+  const cursor = parseDayKey(afterDate);
+  for (let i = 0; i < LONGEST_REPEAT_GAP_DAYS; i++) {
+    cursor.setDate(cursor.getDate() + 1);
+    const key = dayKey(cursor);
+    if (task.recurrence_until && key > task.recurrence_until) return null;
+    if (occursOn(task, key)) return key;
+  }
+  return null;
+}
+
+/**
+ * Where a repeat starts once its first day is skipped, without changing the
+ * pattern (Codex review, PR #1).
+ *
+ * The first day is the template's own due_date, which is also its anchor:
+ * a monthly chore repeats on that day of the month. Moving due_date to the
+ * next occurrence is right for daily and weekly chores, and for a monthly one
+ * anchored on the 1st–28th. But for one anchored on the 31st the next
+ * occurrence can be a clamped day — 28 February — and moving the start there
+ * would re-anchor the whole series on the 28th: March onwards would land on
+ * the 28th instead of the 31st.
+ *
+ * So `start` is the next occurrence that falls on the anchor day itself, and
+ * `clampedDays` are the shorter-month days before it. The caller writes those
+ * as their own rows first (a materialised occurrence shows on its own day
+ * whatever the template's due_date — see expandChores), so 28 February still
+ * happens and 31 March stays the 31st.
+ *
+ * If the run ends before any anchor-day occurrence (recurrence_until), the
+ * pattern no longer matters: the series starts on its next day as before.
+ * `start` is null when no day is left at all.
+ */
+export function startAfterSkippingFirst(task: HouseholdTask): {
+  start: string | null;
+  clampedDays: string[];
+} {
+  const first = nextOccurrence(task, task.due_date);
+  if (!first || recurrenceOf(task) !== "monthly") return { start: first, clampedDays: [] };
+
+  const anchorDay = parseDayKey(task.due_date).getDate();
+  const clampedDays: string[] = [];
+  let cursor: string | null = first;
+  // A day of the month up to 31 comes round again within two months (the
+  // 29th–30th within a year); twelve months always reaches it.
+  for (let i = 0; cursor && i < 12; i++) {
+    if (parseDayKey(cursor).getDate() === anchorDay) return { start: cursor, clampedDays };
+    clampedDays.push(cursor);
+    cursor = nextOccurrence(task, cursor);
+  }
+  return { start: first, clampedDays: [] };
+}
+
+/**
  * One chore on one day — the unit both views render.
  *
  * `task` is the row it came from, which for a virtual occurrence is the
@@ -236,9 +299,12 @@ export function expandChores(params: {
     }
 
     // The row's own day: true for a one-off, and for a template's first
-    // occurrence.
+    // occurrence — unless that day already has a row of its own, which
+    // governs it. That happens when a skipped first day moves the start onto
+    // a day someone had already finished or called off (Codex review, PR #1):
+    // the template would otherwise bring it back as pending.
     if (row.due_date === date) {
-      push(toOccurrence(row, row, date, today));
+      if (!materialised.has(`${row.id}|${date}`)) push(toOccurrence(row, row, date, today));
       continue;
     }
 
@@ -292,16 +358,17 @@ export function expandChores(params: {
       const missed = previousOccurrence(row, today);
       if (!missed) continue;
 
-      // That day's state: the template itself on its first day, otherwise a
-      // materialised row, if anyone ever touched it.
-      if (missed === row.due_date) {
-        if (row.status === "pending") push(toOccurrence(row, row, missed, today));
-        continue;
-      }
+      // That day's state: a materialised row if anyone ever touched it —
+      // even on the template's first day (see above) — otherwise the
+      // template itself on its first day.
       const written = rows.find((r) => r.parent_task_id === row.id && r.due_date === missed);
       // Done or called off; or pending, and already carried over as itself by
       // the loop above.
       if (written) continue;
+      if (missed === row.due_date) {
+        if (row.status === "pending") push(toOccurrence(row, row, missed, today));
+        continue;
+      }
       push({
         key: `${row.id}|${missed}`,
         task: row,

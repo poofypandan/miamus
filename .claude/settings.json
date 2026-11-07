@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Supabase__list_tables",
+      "mcp__Supabase__list_migrations",
+      "mcp__Supabase__list_projects",
+      "mcp__Supabase__get_project",
+      "mcp__Supabase__get_advisors",
+      "mcp__Supabase__list_extensions",
+      "mcp__Supabase__search_docs",
+      "mcp__Supabase__generate_typescript_types",
+      "Bash(npx tsc *)",
+      "Bash(npm run build)",
+      "Bash(npm run build *)",
+      "Bash(npm install)",
+      "Bash(npx eslint *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git fetch *)",
+      "Bash(git push -u origin claude/*)"
+    ]
+  }
+}

@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Info, KeyRound, Loader2, PackageX, Plus, Send, UserRound } from "lucide-react";
+import {
+  Camera,
+  Info,
+  KeyRound,
+  Loader2,
+  PackageX,
+  Plus,
+  RotateCcw,
+  Send,
+  UserMinus,
+  UserRound,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,9 +84,9 @@ export function StaffTab() {
   const locale = useOwnerLocale();
   const t = useT();
   const isOwner = useRequireOwner();
-  const { profiles, failed, reload } = useStaffProfiles();
+  const { profiles, failed, reload, allProfiles } = useStaffProfiles();
 
-  const staffName = useStaffNameLookup(profiles, t("Someone", "Seseorang"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
 
   const petName = useMemo(() => {
     const byId = new Map(pets.map((p) => [p.id, p.name]));
@@ -137,7 +148,12 @@ export function StaffTab() {
     <div className="flex flex-col gap-4">
       <HouseholdMembersPanel />
 
-      <StaffRoster profiles={profiles} failed={failed} reload={reload} />
+      <StaffRoster
+        profiles={profiles}
+        allProfiles={allProfiles}
+        failed={failed}
+        reload={reload}
+      />
 
       <LeavePanel staffName={staffName} />
 
@@ -218,18 +234,30 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
 
 function StaffRoster({
   profiles,
+  allProfiles,
   failed,
   reload,
 }: {
+  /** On the roster now. */
   profiles: StaffProfile[] | null;
+  /** Including people who have been taken off it (Phase 141). */
+  allProfiles: StaffProfile[] | null;
   failed: boolean;
   reload: () => Promise<void>;
 }) {
   const t = useT();
+  const locale = useOwnerLocale();
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
   const [resetting, setResetting] = useState<string | null>(null);
   const [pinTarget, setPinTarget] = useState<StaffProfile | null>(null);
+  // Who the owner is about to take off the roster, held until they confirm.
+  const [removeTarget, setRemoveTarget] = useState<StaffProfile | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const archived = useMemo(
+    () => (allProfiles ?? []).filter((p) => p.archived_at),
+    [allProfiles]
+  );
   // Who is away today (Phase 140): a red badge on their row.
   const { leaveRequests } = useHousehold();
   const today = formatDateLocal(useToday());
@@ -256,6 +284,45 @@ function StaffRoster({
       toast.error(t("Failed to add this person", "Gagal menambahkan orang ini"));
     } finally {
       setAdding(false);
+    }
+  }
+
+  async function archive(profile: StaffProfile) {
+    setBusyId(profile.id);
+    try {
+      await dataProvider.archiveStaffProfile(profile.id);
+      await reload();
+      setRemoveTarget(null);
+      toast.success(
+        t(
+          `${profile.name} removed — their past work keeps their name`,
+          `${profile.name} dihapus — pekerjaan sebelumnya tetap atas namanya`
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error(t(`Couldn't remove ${profile.name}`, `Gagal menghapus ${profile.name}`));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function restore(profile: StaffProfile) {
+    setBusyId(profile.id);
+    try {
+      await dataProvider.restoreStaffProfile(profile.id);
+      await reload();
+      toast.success(
+        t(
+          `${profile.name} is back — they pick a new PIN at next sign-in`,
+          `${profile.name} kembali — dia memilih PIN baru saat masuk nanti`
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error(t(`Couldn't bring ${profile.name} back`, `Gagal mengembalikan ${profile.name}`));
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -362,22 +429,40 @@ function StaffRoster({
                     </span>
                   </span>
                   {/* An admin's row is theirs through Google (migrations/106),
-                      and the database refuses a PIN on it — so no button. */}
+                      and the database refuses a PIN on it — so neither button.
+                      Removing an admin is the Admins panel's job, which takes
+                      their Google access away rather than just the name. */}
                   {!profile.user_id && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="min-h-[40px] shrink-0"
-                    onClick={() => setPinTarget(profile)}
-                    disabled={resetting === profile.id}
-                  >
-                    {resetting === profile.id ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <KeyRound />
-                    )}
-                    {profile.has_pin ? t("Change PIN", "Ubah PIN") : t("Set PIN", "Atur PIN")}
-                  </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-[40px] shrink-0"
+                        onClick={() => setPinTarget(profile)}
+                        disabled={resetting === profile.id}
+                      >
+                        {resetting === profile.id ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <KeyRound />
+                        )}
+                        {profile.has_pin ? t("Change PIN", "Ubah PIN") : t("Set PIN", "Atur PIN")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="min-h-[40px] shrink-0 px-2 text-destructive"
+                        onClick={() => setRemoveTarget(profile)}
+                        disabled={busyId === profile.id}
+                        aria-label={t(`Remove ${profile.name}`, `Hapus ${profile.name}`)}
+                      >
+                        {busyId === profile.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <UserMinus className="size-4" />
+                        )}
+                      </Button>
+                    </>
                   )}
                 </div>
               ))
@@ -419,6 +504,120 @@ function StaffRoster({
           </Button>
         </form>
       </Card>
+
+      {/* Kept visible rather than hidden away: their name is still on months
+          of finished work, so an owner who finds it there needs somewhere
+          that explains why, and a way back if they tapped the wrong person. */}
+      {archived.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-xs font-medium text-gray-500">
+            {t("No longer here", "Sudah tidak bekerja")}
+          </h3>
+          <Card className="py-2">
+            <CardContent className="flex flex-col divide-y px-0">
+              {archived.map((profile) => (
+                <div key={profile.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
+                    <UserRound className="size-4" />
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-medium text-muted-foreground">
+                      {profile.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {(() => {
+                        const when = profile.archived_at
+                          ? new Date(profile.archived_at).toLocaleDateString(
+                              locale === "id" ? "id-ID" : "en-US",
+                              { month: "short", day: "numeric" }
+                            )
+                          : "";
+                        return t(
+                          `Removed ${when} · past work still shows their name`,
+                          `Dihapus ${when} · pekerjaan sebelumnya tetap menampilkan namanya`
+                        );
+                      })()}
+                    </span>
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-[40px] shrink-0"
+                    onClick={() => restore(profile)}
+                    disabled={busyId === profile.id}
+                  >
+                    {busyId === profile.id ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <RotateCcw />
+                    )}
+                    {t("Bring back", "Kembalikan")}
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <Dialog
+        open={!!removeTarget}
+        onOpenChange={(open) => !open && setRemoveTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t(`Remove ${removeTarget?.name ?? ""}?`, `Hapus ${removeTarget?.name ?? ""}?`)}
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                <p>
+                  {t(
+                    "Their PIN stops working straight away, and their name comes off the sign-in screen and every assignee list.",
+                    "PIN-nya langsung tidak berlaku, dan namanya hilang dari layar masuk dan dari semua daftar penugasan."
+                  )}
+                </p>
+                <p>
+                  {t(
+                    "Anything of theirs that is still unfinished goes back to Unassigned, so someone else can pick it up. Everything they already finished keeps their name on it.",
+                    "Tugasnya yang belum selesai kembali ke Belum ditugaskan, supaya bisa diambil orang lain. Semua yang sudah selesai tetap atas namanya."
+                  )}
+                </p>
+                <p>
+                  {t(
+                    "Phones they last signed in on are signed out too. If they had their own phone, also remove it under Linked staff phones.",
+                    "HP yang terakhir mereka pakai untuk masuk juga ikut keluar. Kalau mereka punya HP sendiri, hapus juga di HP staf yang terhubung."
+                  )}
+                </p>
+                <p>
+                  {t(
+                    "You can bring them back later if you need to.",
+                    "Anda bisa mengembalikannya nanti jika perlu."
+                  )}
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="min-h-[44px]"
+              onClick={() => setRemoveTarget(null)}
+            >
+              {t("Cancel", "Batal")}
+            </Button>
+            <Button
+              variant="destructive"
+              className="min-h-[44px]"
+              disabled={!!busyId}
+              onClick={() => removeTarget && archive(removeTarget)}
+            >
+              {busyId ? <Loader2 className="animate-spin" /> : <UserMinus />}{" "}
+              {t("Remove", "Hapus")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -46,6 +46,16 @@ const STAFF_COLUMNS = "id, household_id, name, created_at, has_pin";
 // With the admin link (migrations/106). Tried first; a database that has not
 // had 106 refuses the column, and the roster falls back to the list above.
 const STAFF_COLUMNS_WITH_MEMBER = `${STAFF_COLUMNS}, user_id`;
+// Richest first. Each later entry drops the column set of a migration that
+// may not be applied yet — 109 (archived_at), then 106 (user_id) — so a
+// client running ahead of its database degrades a feature at a time instead
+// of failing the whole roster read, which is what the sign-in screen needs
+// to draw at all. A dropped archived_at reads as "active" everywhere.
+const STAFF_COLUMN_SETS = [
+  `${STAFF_COLUMNS_WITH_MEMBER}, archived_at`,
+  STAFF_COLUMNS_WITH_MEMBER,
+  STAFF_COLUMNS,
+];
 
 // An audit plus its author's name, embedded through audited_by.
 const AUDIT_COLUMNS = "*, staff_profiles(name)";
@@ -546,6 +556,34 @@ export const supabaseProvider: DataProvider = {
     }
     return data[0];
   },
+  async advanceChoreStart(id, fromDate, toDate) {
+    // One conditional update, so a first day finished on another phone after
+    // the editor opened is never moved to the next day with its photos and
+    // its author (Codex review, PR #1).
+    const { data, error } = await client()
+      .from("household_tasks")
+      .update({ due_date: toDate })
+      .eq("id", id)
+      .eq("due_date", fromDate)
+      .eq("status", "pending")
+      .select();
+    if (error) throw error;
+    return data && data.length > 0 ? data[0] : null;
+  },
+  async skipChoreOccurrence(id) {
+    // Conditional for the same reason as advanceChoreStart: the editor's copy
+    // of the row can be older than a completion saved on a staff phone, and
+    // an unconditional cancel would wipe that completion's author and photos.
+    // A pending row has none of those to clear.
+    const { data, error } = await client()
+      .from("household_tasks")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .eq("status", "pending")
+      .select();
+    if (error) throw error;
+    return data && data.length > 0 ? data[0] : null;
+  },
   async deleteHouseholdTask(id) {
     // .select() for the same reason: without a DELETE policy this returns 200
     // and zero rows, which is exactly how this failed silently before
@@ -705,13 +743,14 @@ export const supabaseProvider: DataProvider = {
         .eq("household_id", getActiveHouseholdId())
         .order("name")
         .returns<StaffProfile[]>();
-    const { data, error } = await list(STAFF_COLUMNS_WITH_MEMBER);
-    if (!error) return data;
-    // 42703 no such column, 42501 not granted: migrations/106 is not in.
-    if (error.code !== "42703" && error.code !== "42501") throw error;
-    const fallback = await list(STAFF_COLUMNS);
-    if (fallback.error) throw fallback.error;
-    return fallback.data;
+    // 42703 no such column, 42501 not granted: that migration is not in yet,
+    // so try the next-poorest column set. Any other error is real and thrown.
+    for (const columns of STAFF_COLUMN_SETS) {
+      const { data, error } = await list(columns);
+      if (!error) return data;
+      if (error.code !== "42703" && error.code !== "42501") throw error;
+    }
+    throw new Error("Could not read the roster with any known column set");
   },
   async listLeaveRequests(sinceDate) {
     const { data, error } = await client()
@@ -813,6 +852,20 @@ export const supabaseProvider: DataProvider = {
       .insert({ name, household_id: getActiveHouseholdId() })
       .select(STAFF_COLUMNS)
       .single();
+    if (error) throw error;
+    return data;
+  },
+  async archiveStaffProfile(id) {
+    // Through the function, not the table: archiving also revokes the PIN and
+    // releases this person's unfinished chores, and all three have to happen
+    // together or the household is left worse off than before
+    // (migrations/109).
+    const { data, error } = await client().rpc("archive_staff_profile", { p_staff_id: id });
+    if (error) throw error;
+    return data;
+  },
+  async restoreStaffProfile(id) {
+    const { data, error } = await client().rpc("restore_staff_profile", { p_staff_id: id });
     if (error) throw error;
     return data;
   },

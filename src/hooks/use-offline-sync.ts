@@ -51,6 +51,14 @@ export function useOfflineSync(lang: "en" | "id") {
           await clearFromQueue(item.id);
           syncedAny = true;
         } catch (err) {
+          // Recorded under someone since removed from the household
+          // (migrations/119): it will never be accepted, so it leaves the
+          // queue instead of being retried forever.
+          const message = (err as { message?: unknown } | null)?.message;
+          if (typeof message === "string" && message.includes("staff_archived")) {
+            await clearFromQueue(item.id);
+            continue;
+          }
           console.error("Failed to sync offline log", item.id, err);
         }
       }

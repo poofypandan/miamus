@@ -224,6 +224,10 @@ interface HouseholdContextValue {
   ) => Promise<HouseholdTask>;
   /** Owner-only. Edits a chore's own fields; never its completion state. */
   updateHouseholdTask: (id: string, patch: UpdateHouseholdTaskInput) => Promise<HouseholdTask>;
+  /** Owner-only. Skips a repeat's first day; null if it was finished or moved meanwhile. */
+  advanceChoreStart: (id: string, fromDate: string, toDate: string) => Promise<HouseholdTask | null>;
+  /** Owner-only. Calls off one pending day of a repeat; null if it was finished meanwhile. */
+  skipChoreOccurrence: (id: string) => Promise<HouseholdTask | null>;
   /** Owner-only. Deleting a repeat takes its materialised occurrences with it. */
   deleteHouseholdTask: (id: string) => Promise<void>;
   /**
@@ -918,6 +922,25 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const advanceChoreStart = useCallback(
+    async (id: string, fromDate: string, toDate: string) => {
+      const updated = await dataProvider.advanceChoreStart(id, fromDate, toDate);
+      if (updated) {
+        setHouseholdTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
+      }
+      return updated;
+    },
+    []
+  );
+
+  const skipChoreOccurrence = useCallback(async (id: string) => {
+    const updated = await dataProvider.skipChoreOccurrence(id);
+    if (updated) {
+      setHouseholdTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
+    }
+    return updated;
+  }, []);
+
   const deleteHouseholdTask = useCallback(async (id: string) => {
     await dataProvider.deleteHouseholdTask(id);
     // Drops the row and anything that hung off it, matching the cascade on
@@ -1080,6 +1103,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       decideRoutineProposals,
       createHouseholdTask,
       updateHouseholdTask,
+      advanceChoreStart,
+      skipChoreOccurrence,
       deleteHouseholdTask,
       materialiseChoreOccurrence,
       updateHouseholdTaskStatus,
@@ -1141,6 +1166,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       decideRoutineProposals,
       createHouseholdTask,
       updateHouseholdTask,
+      advanceChoreStart,
+      skipChoreOccurrence,
       deleteHouseholdTask,
       materialiseChoreOccurrence,
       updateHouseholdTaskStatus,
