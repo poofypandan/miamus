@@ -97,12 +97,12 @@ export function AdHocSheet() {
 
   async function handleSubmit() {
     if (!entityId || !type) {
-      toast.error("Pilih anjing dan jenis catatan dulu");
+      toast.error("Pilih hewan dan jenis catatan dulu");
       return;
     }
     const typeLabel = ADHOC_TYPES.find((t) => t.value === type)?.label ?? "Ekstra";
     // Read before reset() clears the form — the handoff needs the dog's name.
-    const petName = pets.find((p) => p.id === entityId)?.name ?? "anjing";
+    const petName = pets.find((p) => p.id === entityId)?.name ?? "hewan";
     const note = notes.trim();
     setSubmitting(true);
     try {
@@ -177,10 +177,10 @@ export function AdHocSheet() {
           </SheetHeader>
           <div className="flex flex-col gap-4 px-4">
             <div className="flex flex-col gap-1.5">
-              <Label>Anjing</Label>
+              <Label>Hewan</Label>
               <Select value={entityId} onValueChange={setEntityId}>
                 <SelectTrigger className="min-h-[48px] w-full">
-                  <SelectValue placeholder="Pilih anjing" />
+                  <SelectValue placeholder="Pilih hewan" />
                 </SelectTrigger>
                 <SelectContent>
                   {pets.map((p) => (

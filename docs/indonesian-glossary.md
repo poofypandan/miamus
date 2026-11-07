@@ -74,6 +74,10 @@ people are **staf** and **admin**.
 | Return container to … | **Kembalikan wadah ke …** | Food often comes in someone's rantang or container. |
 | N foods to eat soon | **N makanan perlu segera dimakan** | The quiet line on Today. |
 | (optional), on staff-facing forms | **(boleh dikosongkan)** | Plainer than "opsional" for staff; owner-only forms may keep "opsional". |
+| Pet (in staff text: "pick a pet", "the pet is at the vet") | **Hewan** | Never "anjing" for pets in general: households also have cats. Product categories keep their own names ("Makanan Anjing"). Phase 157. |
+| Buy again (after finishing bought food) | **Beli lagi** | Puts the food on the shopping list. |
+| Food to eat soon (morning push) | **Makanan perlu segera dimakan** | "Perlu segera dimakan: Rendang, Lapis legit, dan 1 lagi." |
+| Staff view (owner header switch) | **tampilan Staf** | Replaces the old "Mode Kerja" / "Action Mode" in help text. |
 | Upload / uploading | **Unggah** / **Mengunggah** | Standard in Indonesian apps. |
 | Offline | **offline** | Everyday loanword. |
 | House code (staff sign-in) | **Kode rumah** | Plain; "kode" is everyday. Shown as XXX-XXX. |

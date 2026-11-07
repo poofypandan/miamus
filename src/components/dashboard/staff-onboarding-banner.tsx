@@ -76,7 +76,7 @@ export function StaffOnboardingBanner() {
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
                 Tips: ketuk hewan mana saja untuk membuka catatannya. Makan dan Pipis & Pup dicatat
-                di Mode Kerja, dengan kamera, di HP masing-masing.
+                di tampilan Staf, dengan kamera, di HP masing-masing.
               </p>
             </div>
           ) : (
@@ -90,7 +90,7 @@ export function StaffOnboardingBanner() {
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
                 Tip: tap any pet to open their records. Meals and potty breaks are logged in
-                Action Mode, with the camera, on each person&apos;s own phone.
+                the Staff view, with the camera, on each person&apos;s own phone.
               </p>
             </div>
           )}

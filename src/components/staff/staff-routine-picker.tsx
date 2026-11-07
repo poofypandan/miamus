@@ -37,9 +37,9 @@ export function StaffRoutinePicker() {
       <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
         <SheetContent side="bottom" className="gap-0 rounded-t-2xl px-4 pb-10">
           <SheetHeader className="px-0">
-            <SheetTitle>Pilih Anjing</SheetTitle>
+            <SheetTitle>Pilih Hewan</SheetTitle>
             <SheetDescription>
-              Pilih anjing yang mau diusulkan jadwal barunya.
+              Pilih hewan yang mau diusulkan jadwal barunya.
             </SheetDescription>
           </SheetHeader>
           <div className="flex flex-col gap-2">
