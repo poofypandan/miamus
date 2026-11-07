@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { OwnerLocale } from "@/lib/owner-locale";
+import { PUBLIC_LOCALE_KEY, type OwnerLocale } from "@/lib/owner-locale";
 
 /**
  * The language of the public screens — sign-in, the co-owner invite — before
  * anyone has signed in (Phase 150). One language at a time instead of both:
  *
- *   1. what this phone chose with the EN | ID switch, if it ever did;
- *   2. otherwise the phone's own language: Indonesian if it lists "id" (or
- *      the old "in") anywhere in its preferences, English for everything else.
+ *   1. what this phone chose with the EN | ID switch, if it ever did, or the
+ *      language its owner chose for their account (writeCachedOwnerLocale);
+ *   2. otherwise the phone's main language setting: Indonesian if it is "id"
+ *      (or the old "in"), English for everything else.
  *
  * Staff phones are nearly all set to Indonesian, so staff see Indonesian
  * without doing anything; an owner whose phone is in English sees English.
@@ -17,7 +18,7 @@ import type { OwnerLocale } from "@/lib/owner-locale";
  * Proficiency Index, and signed-out staff land here too
  * (docs/phase-150-plan.md).
  */
-const STORAGE_KEY = "miamus.public-locale";
+const STORAGE_KEY = PUBLIC_LOCALE_KEY;
 
 export function phoneLocale(): OwnerLocale {
   if (typeof navigator === "undefined") return "en";
