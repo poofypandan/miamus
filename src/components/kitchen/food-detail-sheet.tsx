@@ -90,7 +90,7 @@ function Detail({
 }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood } = useHousehold();
+  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood, flagLowStock } = useHousehold();
   const name = foodName(item, locale);
   const today = formatDateLocal(useToday());
   const [busy, setBusy] = useState<FoodOutcome | "delete" | null>(null);
@@ -117,6 +117,19 @@ function Detail({
         duration: FOOD_UNDO_TOAST_MS,
         onAutoClose: () => releaseFinishedFoodPhoto(item.id),
         onDismiss: () => releaseFinishedFoodPhoto(item.id),
+        // Bought food that is gone may need buying again (Phase 157): one tap
+        // puts it on the shopping list, as a note in this person's name.
+        ...(item.source === "bought" && outcome !== "given_away"
+          ? {
+              cancel: {
+                label: tr("Buy again", "Beli lagi"),
+                onClick: () =>
+                  void flagLowStock({ pet_id: null, item_type: "other", note: name.slice(0, 120) })
+                    .then(() => toast.success(tr(`On the shopping list — ${name}`, `Masuk daftar belanja — ${name}`)))
+                    .catch(() => toast.error(tr("Couldn't add it. Try again.", "Gagal menambahkan. Coba lagi."))),
+              },
+            }
+          : {}),
         action: {
           label: tr("Undo", "Batalkan"),
           onClick: () =>
