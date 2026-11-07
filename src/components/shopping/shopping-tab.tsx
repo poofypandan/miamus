@@ -56,6 +56,13 @@ export function ShoppingTab() {
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const [choosing, setChoosing] = useState<InventoryItem | null>(null);
   const [editing, setEditing] = useState<InventoryItem | "new" | null>(null);
+  // The item the form shows, kept while it closes so the title doesn't flip
+  // to "Add item" during the fade-out.
+  const [formItem, setFormItem] = useState<InventoryItem | null>(null);
+  function edit(next: InventoryItem | "new") {
+    setFormItem(next === "new" ? null : next);
+    setEditing(next);
+  }
   const [jot, setJot] = useState("");
   const [jotting, setJotting] = useState(false);
 
@@ -240,7 +247,7 @@ export function ShoppingTab() {
           <h2 id="everything-title" className="text-sm font-semibold text-gray-900">
             {t("Everything", "Semua barang")}
           </h2>
-          <Button variant="ghost" size="sm" className="-mr-2 min-h-10" onClick={() => setEditing("new")}>
+          <Button variant="ghost" size="sm" className="-mr-2 min-h-10" onClick={() => edit("new")}>
             <Plus /> {t("Add item", "Tambah barang")}
           </Button>
         </div>
@@ -264,13 +271,27 @@ export function ShoppingTab() {
         onClose={() => setChoosing(null)}
         onEdit={(item) => {
           setChoosing(null);
-          setEditing(item);
+          // One overlay after the other (Codex review, PR #9): closing the
+          // sheet pops its history entry asynchronously (useBackToClose).
+          // Opening the editor in the same moment pushed the editor's entry
+          // first, and that late pop then closed the editor as if Back had
+          // been pressed. So the editor opens once the pop has landed — or
+          // after a moment, if the sheet had no entry left to pop.
+          let opened = false;
+          const openEditor = () => {
+            if (opened) return;
+            opened = true;
+            window.removeEventListener("popstate", openEditor);
+            edit(item);
+          };
+          window.addEventListener("popstate", openEditor, { once: true });
+          window.setTimeout(openEditor, 400);
         }}
       />
       <InventoryItemForm
         open={editing !== null}
         onOpenChange={(open) => !open && setEditing(null)}
-        item={editing === "new" ? null : editing}
+        item={formItem}
         defaultScope="pet"
       />
     </div>
