@@ -556,6 +556,20 @@ export const supabaseProvider: DataProvider = {
     }
     return data[0];
   },
+  async advanceChoreStart(id, fromDate, toDate) {
+    // One conditional update, so a first day finished on another phone after
+    // the editor opened is never moved to the next day with its photos and
+    // its author (Codex review, PR #1).
+    const { data, error } = await client()
+      .from("household_tasks")
+      .update({ due_date: toDate })
+      .eq("id", id)
+      .eq("due_date", fromDate)
+      .eq("status", "pending")
+      .select();
+    if (error) throw error;
+    return data && data.length > 0 ? data[0] : null;
+  },
   async deleteHouseholdTask(id) {
     // .select() for the same reason: without a DELETE policy this returns 200
     // and zero rows, which is exactly how this failed silently before

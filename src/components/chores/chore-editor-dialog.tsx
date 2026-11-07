@@ -96,6 +96,7 @@ export function ChoreEditorDialog({
     deleteHouseholdTask,
     householdTasks,
     materialiseChoreOccurrence,
+    advanceChoreStart,
     updateHouseholdTaskStatus,
     memberProfile,
     leaveRequests,
@@ -302,7 +303,18 @@ export function ChoreEditorDialog({
           return;
         }
         for (const clamped of clampedDays) await materialiseChoreOccurrence(series.id, clamped);
-        await updateHouseholdTask(series.id, { due_date: next });
+        // Only if the first day is still unfinished: another phone may have
+        // finished it since this editor opened, and moving it then would
+        // carry that finished record onto the next day.
+        if (!(await advanceChoreStart(series.id, day, next))) {
+          toast.error(
+            t(
+              "That day was already completed, so it was left as it is",
+              "Hari itu sudah selesai, jadi dibiarkan apa adanya"
+            )
+          );
+          return;
+        }
         toast.success(
           t(`Skipped "${series.title}" for ${dayName}`, `"${series.title}" dilewati untuk ${dayName}`)
         );

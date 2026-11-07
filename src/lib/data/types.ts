@@ -293,6 +293,13 @@ export interface DataProvider {
   createHouseholdTask(input: CreateHouseholdTaskInput): Promise<HouseholdTask>;
   /** Owner-only edit of a chore's own fields. */
   updateHouseholdTask(id: string, patch: UpdateHouseholdTaskInput): Promise<HouseholdTask>;
+  /**
+   * Owner-only. Moves a repeat's start from `fromDate` to `toDate` (skipping
+   * its first day) — only if that first day is still unfinished and still
+   * the start. Null when another phone finished or moved it meanwhile; the
+   * row is then left exactly as it is.
+   */
+  advanceChoreStart(id: string, fromDate: string, toDate: string): Promise<HouseholdTask | null>;
   /** Owner-only. Deleting a template takes its materialised occurrences with it. */
   deleteHouseholdTask(id: string): Promise<void>;
   updateHouseholdTaskStatus(
