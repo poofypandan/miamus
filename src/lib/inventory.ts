@@ -52,6 +52,21 @@ export const INVENTORY_UNITS: InventoryUnit[] = [
   "ml",
 ];
 
+/**
+ * How each unit reads (Phase 149). The stored value never changes; only the
+ * label does. "pcs" stays as it is in Indonesian — it is what every shop,
+ * receipt and marketplace listing in Indonesia says — and the metric units
+ * are the same in both languages.
+ */
+export const UNIT_LABELS: Record<"en" | "id", Record<InventoryUnit, string>> = {
+  en: { pcs: "pcs", pack: "pack", box: "box", bottle: "bottle", roll: "roll", tube: "tube", kg: "kg", g: "g", L: "L", ml: "ml" },
+  id: { pcs: "pcs", pack: "pak", box: "kotak", bottle: "botol", roll: "rol", tube: "tube", kg: "kg", g: "g", L: "L", ml: "ml" },
+};
+
+export function unitLabel(unit: InventoryUnit, lang: "en" | "id"): string {
+  return UNIT_LABELS[lang][unit] ?? unit;
+}
+
 // Owner-facing, so English per the Phase 46 language boundary.
 export const SCOPE_LABELS_EN: Record<InventoryScope, string> = { pet: "Pets", home: "Home" };
 // Staff-facing, so Bahasa Indonesia.
@@ -117,9 +132,12 @@ export function stepFor(unit: InventoryUnit): number {
   return unit === "g" || unit === "ml" ? 100 : 1;
 }
 
-/** 2, 2.5, 0.25 — never 2.50000001 from float arithmetic. */
-export function formatQuantity(value: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
+/**
+ * 2, 2.5, 0.25 — never 2.50000001 from float arithmetic. In Bahasa Indonesia
+ * the decimal mark is a comma: 2,5 (Phase 149).
+ */
+export function formatQuantity(value: number, lang: "en" | "id" = "en"): string {
+  return new Intl.NumberFormat(lang === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 2 }).format(value);
 }
 
 /**
@@ -188,9 +206,13 @@ export function alertTypeForItem(item: InventoryItem): ItemType {
  * The owner's WhatsApp-ready shopping list: every low item, grouped by scope
  * and shelf, with what is left against the minimum. Asterisks are WhatsApp
  * bold. Null when nothing is low, so the caller can say so instead of
- * copying an empty list.
+ * copying an empty list. In the owner's language (Phase 149) — it is usually
+ * pasted to whoever does the shopping.
  */
-export function buildShoppingList(items: InventoryItem[]): string | null {
+export function buildShoppingList(items: InventoryItem[], lang: "en" | "id" = "en"): string | null {
+  const id = lang === "id";
+  const scopes = id ? SCOPE_LABELS_ID : SCOPE_LABELS_EN;
+  const categories = id ? CATEGORY_LABELS_ID : CATEGORY_LABELS_EN;
   const sections = INVENTORY_SCOPES.flatMap((scope) =>
     SCOPE_CATEGORIES[scope].flatMap((category) => {
       const lines = items
@@ -198,13 +220,15 @@ export function buildShoppingList(items: InventoryItem[]): string | null {
         .sort((a, b) => stockItemName(a).localeCompare(stockItemName(b)))
         .map(
           (item) =>
-            `- ${stockItemName(item)} (${formatQuantity(item.quantity)} ${item.unit} left, min ${formatQuantity(item.min_threshold)})`
+            id
+              ? `- ${stockItemName(item)} (sisa ${formatQuantity(item.quantity, lang)} ${unitLabel(item.unit, lang)}, min ${formatQuantity(item.min_threshold, lang)})`
+              : `- ${stockItemName(item)} (${formatQuantity(item.quantity, lang)} ${unitLabel(item.unit, lang)} left, min ${formatQuantity(item.min_threshold, lang)})`
         );
       return lines.length > 0
-        ? [`*${SCOPE_LABELS_EN[scope]} · ${CATEGORY_LABELS_EN[category]}:*\n${lines.join("\n")}`]
+        ? [`*${scopes[scope]} · ${categories[category]}:*\n${lines.join("\n")}`]
         : [];
     })
   );
   if (sections.length === 0) return null;
-  return `*🛒 MIAMUS SHOPPING LIST*\n\n${sections.join("\n\n")}`;
+  return `*🛒 ${id ? "DAFTAR BELANJA MIAMUS" : "MIAMUS SHOPPING LIST"}*\n\n${sections.join("\n\n")}`;
 }

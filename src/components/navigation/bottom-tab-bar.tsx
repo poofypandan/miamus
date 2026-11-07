@@ -18,16 +18,18 @@ import {
 } from "@/lib/dashboard-modules";
 import { PendingBar } from "@/components/shared/pending-bar";
 import { useTabNavigation } from "@/hooks/use-tab-navigation";
+import { useOwnerLocale } from "@/context/owner-locale-context";
+import type { OwnerLocale } from "@/lib/owner-locale";
 import { isPlainClick } from "@/lib/in-place-navigation";
 import { cn } from "@/lib/utils";
 
-const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
-  pets: { label: "Pets", icon: PawPrint },
-  chores: { label: "Chores", icon: ClipboardList },
-  agenda: { label: "Agenda", icon: CalendarDays },
-  inventory: { label: "Inventory", icon: Package },
+const TABS: Record<DashboardModule, { label: Record<OwnerLocale, string>; icon: LucideIcon }> = {
+  pets: { label: { en: "Pets", id: "Hewan" }, icon: PawPrint },
+  chores: { label: { en: "Chores", id: "Tugas" }, icon: ClipboardList },
+  agenda: { label: { en: "Agenda", id: "Agenda" }, icon: CalendarDays },
+  inventory: { label: { en: "Inventory", id: "Stok" }, icon: Package },
   // Holds household members, staff profiles, invite links and the app lock.
-  access: { label: "Access", icon: Users },
+  access: { label: { en: "Access", id: "Akses" }, icon: Users },
 };
 
 /**
@@ -49,6 +51,7 @@ const TABS: Record<DashboardModule, { label: string; icon: LucideIcon }> = {
  */
 export function BottomTabBar() {
   const searchParams = useSearchParams();
+  const locale = useOwnerLocale();
   const routeModule = moduleFromParam(searchParams.get("module"));
   // The tapped tab lights at once; the content follows when it is ready —
   // see useTabNavigation (Phase 125).
@@ -63,7 +66,7 @@ export function BottomTabBar() {
     {/* A slow switch's only sign: the current tab stays on screen meanwhile. */}
     <PendingBar active={isPending} />
     <nav
-      aria-label="Sections"
+      aria-label={locale === "id" ? "Bagian" : "Sections"}
       // pb-safe keeps the tabs clear of the iOS home indicator and Android's
       // gesture bar; the solid background fills that inset rather than
       // leaving page content showing through beneath the tabs.
@@ -71,7 +74,8 @@ export function BottomTabBar() {
     >
       <div className="flex h-16">
         {enabledModules().map((module) => {
-          const { label, icon: Icon } = TABS[module];
+          const { label: labels, icon: Icon } = TABS[module];
+          const label = labels[locale];
           const active = module === activeModule;
           return (
             <Link

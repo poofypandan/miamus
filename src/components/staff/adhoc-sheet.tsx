@@ -221,6 +221,7 @@ export function AdHocSheet() {
                 value={photoUrl}
                 onChange={setPhotoUrl}
                 label="Ambil Foto"
+                locale="id"
                 busyLabel="Mengunggah..."
                 errorMessage="Gagal mengunggah foto"
               />

@@ -1,19 +1,22 @@
-const TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
-});
+const TIME_FORMATTERS = {
+  en: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+  id: new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }),
+} as const;
 
 /**
- * Formats a "HH:mm" (or "HH:mm:ss") 24h time string, or a Date, into
- * 12-hour AM/PM form (e.g. "6:00 AM", "12:00 PM").
+ * Formats a "HH:mm" (or "HH:mm:ss") 24h time string, or a Date, the way the
+ * screen's language writes it: "6:00 AM" in English, "06.00" in Bahasa
+ * Indonesia (Phase 149 — written Indonesian uses the 24-hour clock with a
+ * dot; AM/PM belongs to English). Components use useFormatTime(), which
+ * picks the language from the screen.
  */
-export function formatTime12h(value: string | Date): string {
-  if (value instanceof Date) return TIME_FORMATTER.format(value);
+export function formatTime(value: string | Date, lang: "en" | "id" = "en"): string {
+  const formatter = TIME_FORMATTERS[lang];
+  if (value instanceof Date) return formatter.format(value);
   const [h, m] = value.slice(0, 5).split(":").map(Number);
   const d = new Date();
   d.setHours(h, m || 0, 0, 0);
-  return TIME_FORMATTER.format(d);
+  return formatter.format(d);
 }
 
 /**

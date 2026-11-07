@@ -6,15 +6,28 @@ import { TopNav } from "@/components/dashboard/top-nav";
 import { BottomTabBar } from "@/components/navigation/bottom-tab-bar";
 import { LaunchCover } from "@/components/brand/brand-cover";
 import { OwnerAppLock } from "@/components/auth/owner-app-lock";
+import { HouseholdRequestsBanner } from "@/components/dashboard/household-requests-banner";
+import { LanguagePrompt } from "@/components/dashboard/language-settings";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { useHousehold } from "@/context/household-context";
+import { OwnerLocaleProvider, useOwnerLocale } from "@/context/owner-locale-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { useHouseholdNameState } from "@/hooks/use-household-name";
 import { usePushResync } from "@/hooks/use-push-resync";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+  // Outermost, so the app lock and every banner read the owner's language
+  // (Phase 149).
+  return (
+    <OwnerLocaleProvider>
+      <DashboardShell>{children}</DashboardShell>
+    </OwnerLocaleProvider>
+  );
+}
+
+function DashboardShell({ children }: { children: ReactNode }) {
   // Runs once on mount only — the mobile virtual keyboard (from whatever
   // input the owner left to get here) can still be collapsing when this layout
   // first mounts, leaving the page scrolled from its perspective. The delay
@@ -26,7 +39,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, []);
 
-  useOfflineSync();
+  useOfflineSync(useOwnerLocale());
   usePushResync();
   const { refresh, loading, tenantReady, roleHydrated } = useHousehold();
   const { ready: nameReady } = useHouseholdNameState();
@@ -55,6 +68,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           className="flex flex-1 flex-col"
           contentClassName="flex flex-1 flex-col"
         >
+          {/* Platform admins only: new households waiting for approval
+              (Phase 148). Renders nothing for everyone else. */}
+          <HouseholdRequestsBanner />
           <InventoryAlertBanner />
           {/* Sits outside <main> so the one-time hint stays put above the
             swipeable carousel rather than scrolling with a single tab. */}
@@ -85,6 +101,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Suspense fallback={null}>
           <BottomTabBar />
         </Suspense>
+
+        {/* Once, for an owner who has never chosen (Phase 149). */}
+        <LanguagePrompt />
       </div>
     </OwnerAppLock>
   );

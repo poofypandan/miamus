@@ -5,9 +5,34 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PublicLanguageSwitch } from "@/components/shared/public-language-switch";
+import { usePublicLocale } from "@/hooks/use-public-locale";
 import { supabase } from "@/lib/supabase/client";
 
 type Stage = "checking" | "needs-login" | "redeeming" | "failed";
+
+const COPY = {
+  en: {
+    expiredTitle: "Invalid or expired link",
+    expiredBody: "This invite has already been used or has expired. Ask a household admin for a new one.",
+    backToSignIn: "Back to sign in",
+    invitedTitle: "You've been invited",
+    invitedBody: "Sign in with Google to join this household as an admin.",
+    google: "Continue with Google",
+    joining: "Joining the household…",
+    checking: "Checking your invite…",
+  },
+  id: {
+    expiredTitle: "Link tidak valid atau kedaluwarsa",
+    expiredBody: "Undangan ini sudah dipakai atau sudah kedaluwarsa. Minta yang baru ke admin rumah.",
+    backToSignIn: "Kembali ke halaman masuk",
+    invitedTitle: "Anda diundang",
+    invitedBody: "Masuk dengan Google untuk bergabung ke rumah ini sebagai admin.",
+    google: "Lanjutkan dengan Google",
+    joining: "Bergabung ke rumah…",
+    checking: "Memeriksa undangan…",
+  },
+} as const;
 
 /**
  * A co-owner accepting their invite (Phase 89).
@@ -19,7 +44,9 @@ type Stage = "checking" | "needs-login" | "redeeming" | "failed";
  * survives the round trip even on a browser that clears site data between
  * redirects.
  *
- * Owner-facing, so English.
+ * One language at a time, the phone's or the EN | ID switch's (Phase 150):
+ * the person arriving has not chosen one yet — they may not even have an
+ * account — and the dashboard asks them once they are in.
  */
 export default function JoinOwnerPage() {
   return (
@@ -32,6 +59,7 @@ export default function JoinOwnerPage() {
 function JoinOwnerScreen() {
   const token = useSearchParams().get("token");
   const [stage, setStage] = useState<Stage>("checking");
+  const [locale, setLocale] = usePublicLocale();
   // Redemption spends the token, so React's development double-effect must
   // not run it twice — the second call would fail against a used invite.
   const started = useRef(false);
@@ -85,18 +113,23 @@ function JoinOwnerScreen() {
     });
   }
 
+  if (!locale) return null;
+  const t = COPY[locale];
+
   if (stage === "failed") {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 text-center">
-        <h1 className="text-xl font-semibold text-gray-900">Invalid or Expired Link</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          This invite has already been used or has expired. Ask a household admin for a new one.
-        </p>
+      <main
+        lang={locale}
+        className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 text-center"
+      >
+        <PublicLanguageSwitch locale={locale} onChange={setLocale} />
+        <h1 className="text-xl font-semibold text-gray-900">{t.expiredTitle}</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{t.expiredBody}</p>
         <Link
           href="/"
           className="mt-8 text-sm font-medium text-gray-900 underline underline-offset-4"
         >
-          Back to sign in
+          {t.backToSignIn}
         </Link>
       </main>
     );
@@ -104,25 +137,25 @@ function JoinOwnerScreen() {
 
   if (stage === "needs-login") {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-          You&apos;ve been invited
-        </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Sign in with Google to join this household as an admin.
-        </p>
+      <main
+        lang={locale}
+        className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 text-center"
+      >
+        <PublicLanguageSwitch locale={locale} onChange={setLocale} />
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t.invitedTitle}</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{t.invitedBody}</p>
         <Button onClick={signIn} className="mt-8 min-h-[52px] w-full">
-          Continue with Google
+          {t.google}
         </Button>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+    <main lang={locale} className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
       <Loader2 className="size-6 animate-spin text-muted-foreground" />
       <p className="text-sm text-muted-foreground">
-        {stage === "redeeming" ? "Joining the household…" : "Checking your invite…"}
+        {stage === "redeeming" ? t.joining : t.checking}
       </p>
     </main>
   );

@@ -18,7 +18,7 @@ import { useStaffIdentity } from "@/components/auth/staff-login-gate";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { categoryLabel } from "@/lib/household-tasks";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import { photoTakenAt } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
@@ -73,6 +73,7 @@ function FinishChoreBody({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const formatTime = useFormatTime();
   const {
     activeHouseholdId,
     updateHouseholdTaskStatus,
@@ -174,7 +175,7 @@ function FinishChoreBody({
     let reloading = false;
     try {
       await claimHouseholdTask(await rowId());
-      toast.success(`"${task.title}" jadi tugas kamu`);
+      toast.success(`"${task.title}" jadi tugas Anda`);
     } catch (err) {
       // A dropped connection is not a lost race; say which it was.
       const handled = explainFailure(err);
@@ -254,7 +255,7 @@ function FinishChoreBody({
           <SheetTitle>{task.title}</SheetTitle>
           <SheetDescription>
             {categoryLabel(task.category, "id")} ·{" "}
-            {task.due_time ? formatTime12h(task.due_time) : "Kapan saja hari ini"}
+            {task.due_time ? formatTime(task.due_time) : "Kapan saja hari ini"}
           </SheetDescription>
         </SheetHeader>
 
@@ -310,6 +311,7 @@ function FinishChoreBody({
                   onChange={setBeforeUrl}
                   onBusyChange={setUploadingBefore}
                   label="Ambil Foto Sebelum"
+                  locale="id"
                   busyLabel="Menyimpan foto..."
                   errorMessage="Gagal mengunggah foto"
                   className="min-h-[52px] w-full"
@@ -329,6 +331,7 @@ function FinishChoreBody({
                   onChange={setAfterUrl}
                   onBusyChange={setUploadingAfter}
                   label="Ambil Foto Sesudah"
+                  locale="id"
                   busyLabel="Menyimpan foto..."
                   errorMessage="Gagal mengunggah foto"
                   className="min-h-[52px] w-full"
@@ -337,7 +340,7 @@ function FinishChoreBody({
 
               {!mine && (
                 <p className="text-[11px] text-muted-foreground">
-                  Tugas ini untuk orang lain, tapi kamu tetap bisa menyelesaikannya kalau
+                  Tugas ini untuk orang lain, tapi tetap bisa diselesaikan kalau
                   sudah dikerjakan.
                 </p>
               )}
@@ -399,6 +402,7 @@ function ProofStep({
   url: string | null;
   children: React.ReactNode;
 }) {
+  const formatTime = useFormatTime();
   const takenAt = photoTakenAt(url);
   // Where the photo is on its way to storage (Phase 138). Taken is taken —
   // the card turns green either way — and the line underneath says the rest.
@@ -437,7 +441,7 @@ function ProofStep({
             {title} <span className="font-normal text-red-600">· wajib</span>
           </p>
           <p className="text-xs text-muted-foreground">
-            {url && takenAt ? `Diambil ${formatTime12h(takenAt)}` : hint}
+            {url && takenAt ? `Diambil ${formatTime(takenAt)}` : hint}
           </p>
           {status && (
             <p

@@ -13,9 +13,10 @@ import { approvalDateSummary } from "@/lib/approval-dates";
 import { shiftDay } from "@/lib/medication-courses";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { categoryIcon, groomingTitle, medicationTitle, vetTitle } from "@/lib/schedule-categories";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import { groupProposals, type ProposalBatch } from "@/lib/proposal-batches";
 import { cn } from "@/lib/utils";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import type { RoutineProposal, ScheduleCategoryName } from "@/types/database";
 
 // Rebuilds the title the way ScheduleEditor writes it, so an approved proposal
@@ -60,9 +61,10 @@ function scheduleFromProposal(proposal: RoutineProposal): CreateScheduleInput {
   return { ...base, created_at: parseLocalDate(date).toISOString(), expires_at: date };
 }
 
-// Owner-facing, so entirely English per the Phase 46 language boundary.
+// Owner-facing, in the language the owner chose (Phase 149).
 export function ApprovalQueue() {
   const { routineProposals } = useHousehold();
+  const t = useT();
   const batches = useMemo(
     () => groupProposals(routineProposals.filter((p) => p.status === "pending")),
     [routineProposals]
@@ -75,7 +77,7 @@ export function ApprovalQueue() {
     // the spacing belongs below it instead of above.
     <section className="mb-6 flex flex-col gap-3">
       <h3 className="text-sm font-semibold text-gray-900">
-        Approval Queue <span className="text-gray-400">({batches.length})</span>
+        {t("Approval Queue", "Menunggu Persetujuan")} <span className="text-gray-400">({batches.length})</span>
       </h3>
       <div className="flex flex-col gap-2">
         {batches.map((batch) => (
@@ -87,8 +89,11 @@ export function ApprovalQueue() {
 }
 
 function BatchRow({ batch }: { batch: ProposalBatch }) {
+  const formatTime = useFormatTime();
   const { pets, createSchedulesBatch, decideRoutineProposals } = useHousehold();
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
+  const locale = useOwnerLocale();
+  const t = useT();
 
   const head = batch.proposals[0];
   const pet = pets.find((p) => p.id === head.pet_id) ?? null;
@@ -97,13 +102,13 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
   // Deduplicated: a medication batch carries one row per dose time and so
   // several distinct times, but a grooming series carries one row per visit at
   // the same time of day, which listed "10:00 AM" once per occurrence.
-  const times = [...new Set(batch.proposals.map((p) => formatTime12h(p.time)))];
+  const times = [...new Set(batch.proposals.map((p) => formatTime(p.time)))];
 
   // Read from the hook rather than `new Date()` so the label is re-evaluated
   // when the day rolls over or the app returns to the foreground — a card that
   // said "Tomorrow" last night must not still say it this morning.
   const today = useToday();
-  const schedule = approvalDateSummary(batch, today);
+  const schedule = approvalDateSummary(batch, today, locale);
 
   // A medicine course whose last day has passed (Phase 144). As filed it
   // would be created already over — created_at is the approval, expires_at
@@ -138,11 +143,14 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
       );
       await decideRoutineProposals(ids, "approved");
       toast.success(
-        `Approved — ${head.title} (${ids.length} time${ids.length === 1 ? "" : "s"}) added to ${pet?.name ?? "the pet"}`
+        t(
+          `Approved — ${head.title} (${ids.length} time${ids.length === 1 ? "" : "s"}) added to ${pet?.name ?? "the pet"}`,
+          `Disetujui — ${head.title} (${ids.length} waktu) ditambahkan ke ${pet?.name ?? "hewan"}`
+        )
       );
     } catch (err) {
       console.error(err);
-      toast.error("Failed to approve proposal");
+      toast.error(t("Failed to approve proposal", "Usulan gagal disetujui"));
     } finally {
       setBusy(null);
     }
@@ -152,10 +160,10 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
     setBusy("reject");
     try {
       await decideRoutineProposals(ids, "rejected");
-      toast.success(`Rejected — ${head.title}`);
+      toast.success(t(`Rejected — ${head.title}`, `Ditolak — ${head.title}`));
     } catch (err) {
       console.error(err);
-      toast.error("Failed to reject proposal");
+      toast.error(t("Failed to reject proposal", "Usulan gagal ditolak"));
     } finally {
       setBusy(null);
     }
@@ -175,7 +183,11 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
               // "scheduled times" read as a contradiction next to the single
               // deduplicated time a grooming batch now shows.
               <span className="text-muted-foreground">
-                ({ids.length} {head.category === "grooming" ? "visits" : "scheduled times"})
+                ({ids.length}{" "}
+                {head.category === "grooming"
+                  ? t("visits", "kunjungan")
+                  : t("scheduled times", "jadwal")}
+                )
               </span>
             )}
           </span>
@@ -198,7 +210,7 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
               </>
             )}
             <span>
-              {pet?.name ?? "Unknown pet"} · {times.join(", ")}
+              {pet?.name ?? t("Unknown pet", "Hewan tidak dikenal")} · {times.join(", ")}
             </span>
           </span>
         </span>
@@ -208,21 +220,24 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
 
       {restart ? (
         <p className="text-xs font-medium text-amber-700">
-          The last day of this course has passed, so as filed it would never run. Approving
-          starts it today for the {restart.days} day{restart.days === 1 ? "" : "s"} asked for,
-          through{" "}
-          {new Date(`${restart.endDate}T00:00:00`).toLocaleDateString("en-US", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-          })}
-          .
+          {(() => {
+            const through = new Date(`${restart.endDate}T00:00:00`).toLocaleDateString(
+              locale === "id" ? "id-ID" : "en-US",
+              { weekday: "short", month: "short", day: "numeric" }
+            );
+            return t(
+              `The last day of this course has passed, so as filed it would never run. Approving starts it today for the ${restart.days} day${restart.days === 1 ? "" : "s"} asked for, through ${through}.`,
+              `Hari terakhir pengobatan ini sudah lewat, jadi seperti yang diajukan tidak akan pernah berjalan. Jika disetujui, pengobatan dimulai hari ini selama ${restart.days} hari yang diminta, sampai ${through}.`
+            );
+          })()}
         </p>
       ) : (
         schedule?.past && (
           <p className="text-xs font-medium text-amber-700">
-            This date has already passed — approving it now adds a routine that has
-            already expired, so no staff phone will show it.
+            {t(
+              "This date has already passed — approving it now adds a routine that has already expired, so no staff phone will show it.",
+              "Tanggal ini sudah lewat — menyetujuinya sekarang menambahkan rutinitas yang sudah kedaluwarsa, jadi tidak akan muncul di HP staf."
+            )}
           </p>
         )
       )}
@@ -234,7 +249,7 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
           className="min-h-[44px] flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
         >
           {busy === "approve" ? <Loader2 className="animate-spin" /> : <Check />}
-          {restart ? "Approve from today" : "Approve"}
+          {restart ? t("Approve from today", "Setujui mulai hari ini") : t("Approve", "Setujui")}
         </Button>
         <Button
           onClick={reject}
@@ -243,7 +258,7 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
           className="min-h-[44px] flex-1"
         >
           {busy === "reject" ? <Loader2 className="animate-spin" /> : <X />}
-          Reject
+          {t("Reject", "Tolak")}
         </Button>
       </div>
     </div>

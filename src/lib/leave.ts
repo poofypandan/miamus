@@ -139,7 +139,14 @@ export function formatLeaveRange(
  */
 export function assigneeOptions<P extends { id: string; name: string; user_id?: string | null }>(
   profiles: P[],
-  opts: { selfId?: string | null; leaves: LeaveRequest[]; date: string; exclude?: string }
+  opts: {
+    selfId?: string | null;
+    leaves: LeaveRequest[];
+    date: string;
+    exclude?: string;
+    /** The owner's language (Phase 149). */
+    lang?: "en" | "id";
+  }
 ): { profile: P; label: string; onLeave: boolean }[] {
   const rank = (o: { profile: P; onLeave: boolean }) =>
     o.onLeave ? 2 : o.profile.id === opts.selfId ? 0 : 1;
@@ -147,13 +154,14 @@ export function assigneeOptions<P extends { id: string; name: string; user_id?: 
     .filter((p) => p.id !== opts.exclude)
     .map((profile) => {
       const onLeave = isOnLeave(opts.leaves, profile.id, opts.date);
+      const id = opts.lang === "id";
       const base =
         profile.id === opts.selfId
-          ? `${profile.name} (me)`
+          ? `${profile.name} ${id ? "(saya)" : "(me)"}`
           : profile.user_id
             ? `${profile.name} · Admin`
             : profile.name;
-      return { profile, onLeave, label: onLeave ? `${base} [On Leave]` : base };
+      return { profile, onLeave, label: onLeave ? `${base} ${id ? "[Cuti]" : "[On Leave]"}` : base };
     })
     .sort((a, b) => rank(a) - rank(b));
 }

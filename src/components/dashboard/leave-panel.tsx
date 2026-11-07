@@ -10,6 +10,7 @@ import { useToday } from "@/hooks/use-today";
 import { formatLeaveRange, leaveApprovalPath, leaveCovering } from "@/lib/leave";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 
 /**
  * Leave on the Access tab (Phase 140): requests waiting for a decision, and
@@ -17,11 +18,13 @@ import { cn } from "@/lib/utils";
  * the quick way to a request; this is where it can always be found again.
  * Past and rejected leave is left out — it changes nothing any more.
  *
- * Owner-facing, so English.
+ * Owner-facing: English or Bahasa Indonesia, as the owner chose (Phase 149).
  */
 export function LeavePanel({ staffName }: { staffName: (id: string) => string }) {
   const { leaveRequests } = useHousehold();
   const today = formatDateLocal(useToday());
+  const locale = useOwnerLocale();
+  const t = useT();
 
   const open = useMemo(
     () =>
@@ -44,7 +47,7 @@ export function LeavePanel({ staffName }: { staffName: (id: string) => string })
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">Leave</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t("Leave", "Cuti")}</h2>
       <Card className="py-2">
         <CardContent className="flex flex-col divide-y px-0">
           {open.map((leave) => {
@@ -60,7 +63,7 @@ export function LeavePanel({ staffName }: { staffName: (id: string) => string })
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-medium">{staffName(leave.staff_id)}</span>
-                  <span className="text-xs text-muted-foreground">{formatLeaveRange(leave, "en")}</span>
+                  <span className="text-xs text-muted-foreground">{formatLeaveRange(leave, locale)}</span>
                 </span>
                 <Badge
                   className={cn(
@@ -72,7 +75,11 @@ export function LeavePanel({ staffName }: { staffName: (id: string) => string })
                         : "bg-emerald-100 text-emerald-800"
                   )}
                 >
-                  {leave.status === "pending" ? "Needs decision" : away ? "On Leave" : "Approved"}
+                  {leave.status === "pending"
+                    ? t("Needs decision", "Perlu keputusan")
+                    : away
+                      ? t("On Leave", "Cuti")
+                      : t("Approved", "Disetujui")}
                 </Badge>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               </Link>

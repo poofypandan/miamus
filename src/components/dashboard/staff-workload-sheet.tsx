@@ -19,17 +19,17 @@ import {
   type WorkloadHorizon,
 } from "@/hooks/use-staff-workload";
 import type { StaffWorkload } from "@/lib/data/types";
+import type { OwnerLocale } from "@/lib/owner-locale";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 
-const HORIZON_LABELS: Record<WorkloadHorizon, string> = {
-  today: "Today",
-  "7d": "Last 7 Days",
-  "30d": "Last 30 Days",
+const HORIZON_LABELS: Record<OwnerLocale, Record<WorkloadHorizon, string>> = {
+  en: { today: "Today", "7d": "Last 7 Days", "30d": "Last 30 Days" },
+  id: { today: "Hari Ini", "7d": "7 Hari Terakhir", "30d": "30 Hari Terakhir" },
 };
 
-const SPAN_PHRASE: Record<WorkloadHorizon, string> = {
-  today: "today",
-  "7d": "in the last 7 days",
-  "30d": "in the last 30 days",
+const SPAN_PHRASE: Record<OwnerLocale, Record<WorkloadHorizon, string>> = {
+  en: { today: "today", "7d": "in the last 7 days", "30d": "in the last 30 days" },
+  id: { today: "hari ini", "7d": "dalam 7 hari terakhir", "30d": "dalam 30 hari terakhir" },
 };
 
 /**
@@ -43,13 +43,15 @@ const SPAN_PHRASE: Record<WorkloadHorizon, string> = {
  *
  * Owner-only: it lives on the owner dashboard, and the RPC behind it refuses
  * any caller who is not a household member, so a staff phone cannot total up
- * a colleague's week even by asking the database directly. English, per the
- * owner side of the language boundary.
+ * a colleague's week even by asking the database directly. In the owner's
+ * language (Phase 149).
  */
 export function StaffWorkloadSheet() {
   const { horizon, setHorizon, close } = useWorkloadParam();
   const { rows, failed } = useStaffWorkload(horizon);
   const shown = horizon ?? "today";
+  const locale = useOwnerLocale();
+  const t = useT();
 
   const { staff, unattributed, grandTotal, top } = useMemo(() => {
     const people = (rows ?? []).filter((r) => r.staffId !== null);
@@ -68,18 +70,21 @@ export function StaffWorkloadSheet() {
     <Sheet open={horizon !== null} onOpenChange={(next) => !next && close()}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Workload</SheetTitle>
+          <SheetTitle>{t("Workload", "Beban Kerja")}</SheetTitle>
           <SheetDescription>
-            Tasks finished, counted by who completed them — pet routines and chores together.
+            {t(
+              "Tasks finished, counted by who completed them — pet routines and chores together.",
+              "Tugas yang selesai, dihitung menurut siapa yang menyelesaikannya — rutinitas hewan dan tugas rumah digabung."
+            )}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-col gap-4 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           <SegmentedControl
-            ariaLabel="Time span"
+            ariaLabel={t("Time span", "Rentang waktu")}
             segments={WORKLOAD_HORIZONS.map((value) => ({
               value,
-              label: HORIZON_LABELS[value],
+              label: HORIZON_LABELS[locale][value],
             }))}
             value={shown}
             onChange={setHorizon}
@@ -87,7 +92,10 @@ export function StaffWorkloadSheet() {
 
           {rows === null && failed ? (
             <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
-              Couldn&apos;t load the workload. Pull to refresh and try again.
+              {t(
+                "Couldn't load the workload. Pull to refresh and try again.",
+                "Beban kerja gagal dimuat. Tarik untuk memuat ulang lalu coba lagi."
+              )}
             </p>
           ) : rows === null ? (
             <div className="flex flex-col gap-2">
@@ -98,14 +106,18 @@ export function StaffWorkloadSheet() {
           ) : staff.length === 0 ? (
             <EmptyState
               icon={BarChart3}
-              title="Nobody on the roster yet"
-              description="Add people on the Access tab. Their finished tasks will be counted here."
+              title={t("Nobody on the roster yet", "Belum ada orang di daftar")}
+              description={t(
+                "Add people on the Access tab. Their finished tasks will be counted here.",
+                "Tambahkan orang di tab Akses. Tugas yang mereka selesaikan akan dihitung di sini."
+              )}
             />
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
                 <span className="font-semibold text-gray-900 tabular-nums">{grandTotal}</span>{" "}
-                {grandTotal === 1 ? "task" : "tasks"} finished {SPAN_PHRASE[shown]}
+                {t(grandTotal === 1 ? "task" : "tasks", "tugas")} {t("finished", "selesai")}{" "}
+                {SPAN_PHRASE[locale][shown]}
               </p>
 
               <ol className="flex flex-col gap-2">
@@ -119,8 +131,10 @@ export function StaffWorkloadSheet() {
                   includes. */}
               {unattributed > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {unattributed} more {unattributed === 1 ? "task was" : "tasks were"} finished
-                  without a name — logged before everyone had one on the roster.
+                  {t(
+                    `${unattributed} more ${unattributed === 1 ? "task was" : "tasks were"} finished without a name — logged before everyone had one on the roster.`,
+                    `${unattributed} tugas lain selesai tanpa nama — dicatat sebelum semua orang ada di daftar.`
+                  )}
                 </p>
               )}
             </>
@@ -133,6 +147,7 @@ export function StaffWorkloadSheet() {
 
 function WorkloadRow({ row, top }: { row: StaffWorkload; top: number }) {
   const name = row.name ?? "";
+  const t = useT();
   const initials = name
     .split(/\s+/)
     .map((part) => part[0])
@@ -163,7 +178,10 @@ function WorkloadRow({ row, top }: { row: StaffWorkload; top: number }) {
         <div
           className="flex h-2 overflow-hidden rounded-full bg-muted"
           role="img"
-          aria-label={`${row.petsCompleted} pet tasks, ${row.choresCompleted} chores`}
+          aria-label={t(
+            `${row.petsCompleted} pet tasks, ${row.choresCompleted} chores`,
+            `${row.petsCompleted} tugas hewan, ${row.choresCompleted} tugas rumah`
+          )}
         >
           <span
             className="h-full bg-zinc-400"
@@ -176,8 +194,10 @@ function WorkloadRow({ row, top }: { row: StaffWorkload; top: number }) {
         </div>
 
         <span className="text-xs text-muted-foreground tabular-nums">
-          🐕 {row.petsCompleted} {row.petsCompleted === 1 ? "Pet task" : "Pet tasks"} · 🧹{" "}
-          {row.choresCompleted} {row.choresCompleted === 1 ? "Chore" : "Chores"}
+          🐕 {row.petsCompleted}{" "}
+          {row.petsCompleted === 1 ? t("Pet task", "Tugas hewan") : t("Pet tasks", "Tugas hewan")} · 🧹{" "}
+          {row.choresCompleted}{" "}
+          {row.choresCompleted === 1 ? t("Chore", "Tugas rumah") : t("Chores", "Tugas rumah")}
         </span>
       </div>
     </li>

@@ -3,6 +3,7 @@
 import { useId, useMemo, type ReactNode } from "react";
 import { Check, ChevronDown, Clock, X } from "lucide-react";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import type { AgendaDay } from "@/hooks/use-agenda-week";
 import { leaveCovering } from "@/lib/leave";
 import { isEntryDone, type UnifiedAgendaEntry } from "@/lib/unified-agenda";
@@ -36,7 +37,8 @@ import {
  * that day stays out in full. Today and the days ahead are shown whole.
  *
  * Rows in (3) are the Day view's own rows, so a chore behaves identically
- * wherever it is tapped. Owner-facing, so English.
+ * wherever it is tapped. Owner-facing: English or Bahasa Indonesia, as the
+ * owner chose (Phase 149).
  */
 export function WeekSummaryView({
   days,
@@ -57,6 +59,8 @@ export function WeekSummaryView({
   onRhythmOpenChange: (open: boolean) => void;
 }) {
   const { schedules, leaveRequests } = useHousehold();
+  const t = useT();
+  const dateLocale = useOwnerLocale() === "id" ? "id-ID" : "en-US";
   const summary = useMemo(
     () => summarizeWeek({ days, today, schedules }),
     [days, today, schedules]
@@ -98,16 +102,19 @@ export function WeekSummaryView({
         <div className="flex flex-col gap-0.5">
           {/* Not "This week": the pager above already says that. */}
           <h2 id="week-beyond-title" className="text-sm font-semibold text-gray-900">
-            Chores &amp; appointments
+            {t("Chores & appointments", "Tugas & janji temu")}
           </h2>
           <p className="text-xs text-muted-foreground">
-            Everything that isn&apos;t the same every day.
+            {t("Everything that isn't the same every day.", "Semua yang tidak sama setiap hari.")}
           </p>
         </div>
 
         {summary.beyond.length === 0 ? (
           <p className="rounded-xl border border-dashed px-3 py-5 text-center text-sm text-muted-foreground">
-            Nothing beyond the daily routine this week.
+            {t(
+              "Nothing beyond the daily routine this week.",
+              "Minggu ini tidak ada apa-apa selain rutinitas harian."
+            )}
           </p>
         ) : (
           summary.beyond.map(({ date, entries }) => {
@@ -123,20 +130,22 @@ export function WeekSummaryView({
                   onClick={() => onOpenDay(day)}
                   className="flex min-h-[32px] items-center gap-2 self-start rounded-lg text-left text-xs font-medium text-gray-500 active:text-gray-900"
                 >
-                  {day.toLocaleDateString("en-US", {
+                  {day.toLocaleDateString(dateLocale, {
                     weekday: "short",
                     month: "short",
                     day: "numeric",
                   })}
                   {date === today && (
                     <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-semibold text-white">
-                      Today
+                      {t("Today", "Hari ini")}
                     </span>
                   )}
                   {folded > 0 && (
                     <span className="flex items-center gap-1 text-emerald-700">
                       <Check className="size-3.5" />
-                      {shown.length === 0 ? `All ${folded} done` : `${folded} done`}
+                      {shown.length === 0
+                        ? t(`All ${folded} done`, `Semua ${folded} selesai`)
+                        : t(`${folded} done`, `${folded} selesai`)}
                     </span>
                   )}
                 </button>
@@ -165,21 +174,30 @@ function WeekStrip({
   awayByDate: Map<string, string[]>;
   onOpenDay: (day: Date) => void;
 }) {
+  const t = useT();
+  const dateLocale = useOwnerLocale() === "id" ? "id-ID" : "en-US";
   return (
-    <div className="grid grid-cols-7 gap-1" role="list" aria-label="This week, day by day">
+    <div
+      className="grid grid-cols-7 gap-1"
+      role="list"
+      aria-label={t("This week, day by day", "Minggu ini, per hari")}
+    >
       {days.map((d) => {
         const day = dateOf.get(d.date)!;
         const away = awayByDate.get(d.date) ?? [];
         const allDone = d.total > 0 && d.done === d.total;
         const pct = d.total > 0 ? (d.done / d.total) * 100 : 0;
-        const weekday = day.toLocaleDateString("en-US", { weekday: "short" });
+        const weekday = day.toLocaleDateString(dateLocale, { weekday: "short" });
         const label = [
-          day.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }),
+          day.toLocaleDateString(dateLocale, { weekday: "long", month: "short", day: "numeric" }),
           d.when === "future"
-            ? `${d.total} planned`
-            : `${d.done} of ${d.total} done`,
-          d.missed > 0 && (d.when === "past" ? `${d.missed} missed` : `${d.missed} late`),
-          away.length > 0 && `${away.join(", ")} away`,
+            ? t(`${d.total} planned`, `${d.total} direncanakan`)
+            : t(`${d.done} of ${d.total} done`, `${d.done} dari ${d.total} selesai`),
+          d.missed > 0 &&
+            (d.when === "past"
+              ? t(`${d.missed} missed`, `${d.missed} terlewat`)
+              : t(`${d.missed} late`, `${d.missed} terlambat`)),
+          away.length > 0 && t(`${away.join(", ")} away`, `${away.join(", ")} cuti`),
         ]
           .filter(Boolean)
           .join(", ");
@@ -236,7 +254,7 @@ function WeekStrip({
               {d.when === "future" ? "·" : allDone ? <Check className="size-3" /> : `${d.done}/${d.total}`}
             </span>
             {away.length > 0 && (
-              <span className="text-[9px] font-medium text-red-700">{away.length} away</span>
+              <span className="text-[9px] font-medium text-red-700">{t(`${away.length} away`, `${away.length} cuti`)}</span>
             )}
           </button>
         );
@@ -247,15 +265,26 @@ function WeekStrip({
 
 // --- 2. The every-day matrix ------------------------------------------------
 
-const RHYTHM_NOUNS: Record<RhythmRow["category"], string> = {
-  medication: "medicine",
-  meal: "meals",
-  potty: "potty",
-  chore: "daily chores",
-  // Never reached: these never land in the rhythm. Listed so the record is total.
-  vet: "vet",
-  grooming: "grooming",
-  temporary: "other",
+const RHYTHM_NOUNS: Record<"en" | "id", Record<RhythmRow["category"], string>> = {
+  en: {
+    medication: "medicine",
+    meal: "meals",
+    potty: "potty",
+    chore: "daily chores",
+    // Never reached: these never land in the rhythm. Listed so the record is total.
+    vet: "vet",
+    grooming: "grooming",
+    temporary: "other",
+  },
+  id: {
+    medication: "obat",
+    meal: "makan",
+    potty: "pipis & pup",
+    chore: "tugas harian",
+    vet: "dokter hewan",
+    grooming: "grooming",
+    temporary: "lainnya",
+  },
 };
 
 function joinNouns(nouns: string[]): string {
@@ -279,16 +308,19 @@ function RhythmSection({
   onOpenChange: (open: boolean) => void;
 }) {
   const bodyId = useId();
+  const locale = useOwnerLocale();
+  const t = useT();
+  const dateLocale = locale === "id" ? "id-ID" : "en-US";
   const nouns = joinNouns(
     (["meal", "potty", "medication", "chore"] as const)
       .filter((c) => rows.some((r) => r.category === c))
-      .map((c) => RHYTHM_NOUNS[c])
+      .map((c) => RHYTHM_NOUNS[locale][c])
   );
   const groups = groupRhythmRows(rows);
 
   return (
     <section
-      aria-label="Every day"
+      aria-label={t("Every day", "Setiap hari")}
       className="flex flex-col gap-2 rounded-xl border bg-card p-2"
     >
       <button
@@ -299,24 +331,40 @@ function RhythmSection({
         className="flex min-h-[48px] items-center gap-2 rounded-lg px-1 text-left active:bg-muted"
       >
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-sm font-semibold text-gray-900">Every day</span>
+          <span className="text-sm font-semibold text-gray-900">
+            {t("Every day", "Setiap hari")}
+          </span>
           <span className="text-xs text-muted-foreground">
-            {nouns.charAt(0).toUpperCase() + nouns.slice(1)} · {totals.perDay} a day
+            {nouns.charAt(0).toUpperCase() + nouns.slice(1)} ·{" "}
+            {t(`${totals.perDay} a day`, `${totals.perDay} per hari`)}
           </span>
           {totals.due > 0 && (
             <span className="mt-0.5 text-xs font-medium">
               <span
                 className={totals.done === totals.due ? "text-emerald-700" : "text-gray-700"}
               >
-                {totals.done} of {totals.due} done
+                {t(
+                  `${totals.done} of ${totals.due} done`,
+                  `${totals.done} dari ${totals.due} selesai`
+                )}
               </span>
-              {totals.missed > 0 && <span className="text-red-700"> · {totals.missed} missed</span>}
-              {totals.late > 0 && <span className="text-amber-700"> · {totals.late} late</span>}
+              {totals.missed > 0 && (
+                <span className="text-red-700">
+                  {" "}
+                  · {t(`${totals.missed} missed`, `${totals.missed} terlewat`)}
+                </span>
+              )}
+              {totals.late > 0 && (
+                <span className="text-amber-700">
+                  {" "}
+                  · {t(`${totals.late} late`, `${totals.late} terlambat`)}
+                </span>
+              )}
             </span>
           )}
         </span>
         <span className="text-[11px] font-medium text-muted-foreground">
-          {open ? "Hide" : "Show"}
+          {open ? t("Hide", "Tutup") : t("Show", "Lihat")}
         </span>
         <ChevronDown
           className={cn(
@@ -339,7 +387,7 @@ function RhythmSection({
           <thead>
             <tr>
               <th scope="col" className="sr-only">
-                Task
+                {t("Task", "Tugas")}
               </th>
               {days.map((d) => {
                 const day = dateOf.get(d.date)!;
@@ -353,10 +401,10 @@ function RhythmSection({
                     )}
                   >
                     <abbr
-                      title={day.toLocaleDateString("en-US", { weekday: "long" })}
+                      title={day.toLocaleDateString(dateLocale, { weekday: "long" })}
                       className="no-underline"
                     >
-                      {day.toLocaleDateString("en-US", { weekday: "narrow" })}
+                      {day.toLocaleDateString(dateLocale, { weekday: "narrow" })}
                     </abbr>
                   </th>
                 );
@@ -371,7 +419,8 @@ function RhythmSection({
                   colSpan={days.length + 1}
                   className="px-1 pt-2 pb-0.5 text-left text-xs font-semibold text-gray-900"
                 >
-                  {g.group}
+                  {/* lib/week-summary.ts groups daily chores under "House". */}
+                  {g.group === "House" ? t("House", "Rumah") : g.group}
                 </th>
               </tr>
               {g.rows.map((row) => (
@@ -405,8 +454,9 @@ function RhythmSection({
 }
 
 function Cell({ cell }: { cell: RhythmCell | null }) {
-  if (!cell) return <span className="sr-only">Not scheduled</span>;
-  const words = `${cell.done} of ${cell.total} done`;
+  const t = useT();
+  if (!cell) return <span className="sr-only">{t("Not scheduled", "Tidak dijadwalkan")}</span>;
+  const words = t(`${cell.done} of ${cell.total} done`, `${cell.done} dari ${cell.total} selesai`);
   switch (cell.state) {
     case "done":
       return (
@@ -414,7 +464,7 @@ function Cell({ cell }: { cell: RhythmCell | null }) {
       );
     case "upcoming":
       return (
-        <span className="text-xs text-muted-foreground/60" aria-label="Upcoming">
+        <span className="text-xs text-muted-foreground/60" aria-label={t("Upcoming", "Akan datang")}>
           ·
         </span>
       );
@@ -427,7 +477,13 @@ function Cell({ cell }: { cell: RhythmCell | null }) {
           : cell.state === "late"
             ? "text-amber-700"
             : "text-gray-500";
-      const label = `${words}${cell.state === "missed" ? `, ${cell.missed} missed` : cell.state === "late" ? `, ${cell.missed} late` : ""}`;
+      const label = `${words}${
+        cell.state === "missed"
+          ? t(`, ${cell.missed} missed`, `, ${cell.missed} terlewat`)
+          : cell.state === "late"
+            ? t(`, ${cell.missed} late`, `, ${cell.missed} terlambat`)
+            : ""
+      }`;
       // One slot a day reads better as a mark than as "0/1".
       if (cell.total === 1 && cell.state !== "partial") {
         const Icon = cell.state === "missed" ? X : Clock;

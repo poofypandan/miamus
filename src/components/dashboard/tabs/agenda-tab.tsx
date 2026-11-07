@@ -19,6 +19,7 @@ import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useAgendaRange } from "@/hooks/use-agenda-range";
 import { applyAgendaFilter, useAgendaFilter, type AgendaFilter } from "@/hooks/use-agenda-filter";
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
@@ -53,7 +54,7 @@ import type { HouseholdTask } from "@/types/database";
  * the thing this tab exists for — below two screens of pictures. Those are
  * about the dogs rather than about the day, and they live on the Pets tab.
  *
- * Owner-facing, so entirely English per the Phase 46 language boundary. Every
+ * Owner-facing, in the language the owner chose (Phase 149). Every
  * row here is tappable only as far as reading and editing goes: completing a
  * chore is staff work and lives on their phones.
  */
@@ -69,16 +70,18 @@ export function AgendaTab() {
     todayJumps,
   } = useHousehold();
   const householdName = useHouseholdName();
+  const locale = useOwnerLocale();
+  const t = useT();
   // Nothing anywhere yet, not just nothing today: the first screen after
   // onboarding, which greets rather than reports (Phase 120).
   const brandNew = pets.length === 0 && householdTasks.length === 0;
   const { allProfiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(allProfiles);
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const roomName = useLocationName();
   const chores = useChoreOccurrences();
   const today = useToday();
   const dateStr = formatDateLocal(selectedDate);
-  const label = dayLabel(selectedDate, today);
+  const label = dayLabel(selectedDate, today, locale);
 
   const [range, setRange] = useAgendaRange();
   const week = useAgendaWeek(selectedDate);
@@ -160,10 +163,10 @@ export function AgendaTab() {
       {/* Day | Week (Phase 112): which view. What the view shows is the
           filter row further down, with the list it narrows (Phase 134). */}
       <SegmentedControl
-        ariaLabel="Agenda range"
+        ariaLabel={t("Agenda range", "Rentang agenda")}
         segments={[
-          { value: "day", label: "Day" },
-          { value: "week", label: "Week" },
+          { value: "day", label: t("Day", "Hari") },
+          { value: "week", label: t("Week", "Minggu") },
         ]}
         value={range}
         onChange={setRange}
@@ -183,7 +186,7 @@ export function AgendaTab() {
             Day view only since Phase 115: the Week grid's own headers are the
             days, and a strip of the same dates above them said it twice. */}
         {range === "day" && (
-          <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
+          <DateRibbon value={selectedDate} onChange={setSelectedDate} locale={locale} />
         )}
 
         {/* A pending proposal is the only thing here blocking someone else's
@@ -199,7 +202,9 @@ export function AgendaTab() {
 
         {range === "day" ? (
           <>
-            <h2 className="text-sm font-semibold text-gray-900">{label}&apos;s Agenda</h2>
+            <h2 className="text-sm font-semibold text-gray-900">
+              {t(`${label}'s Agenda`, `Agenda ${label}`)}
+            </h2>
             {/* Under the heading, as the Pets tab's photo filters sit under
                 theirs (Phase 134). Not on an empty day — unless a filter is
                 on, which must stay reachable to be turned off. */}
@@ -223,14 +228,17 @@ export function AgendaTab() {
                 // a new owner sees jump.
                 title={
                   householdName === APP_NAME
-                    ? "Welcome to your new household!"
-                    : `Welcome to ${householdName}!`
+                    ? t("Welcome to your new household!", "Selamat datang di rumah baru Anda!")
+                    : t(`Welcome to ${householdName}!`, `Selamat datang di ${householdName}!`)
                 }
-                description="Let's start by adding a pet or a chore. Everything you add shows up here, day by day, for everyone in the house."
+                description={t(
+                  "Let's start by adding a pet or a chore. Everything you add shows up here, day by day, for everyone in the house.",
+                  "Mari mulai dengan menambahkan hewan atau tugas. Semua yang Anda tambahkan muncul di sini, hari demi hari, untuk semua orang di rumah."
+                )}
               >
                 <Button className="min-h-[44px]" asChild>
                   <Link href={moduleHref("pets")} scroll={false} onClick={switchToPets}>
-                    <PawPrint /> Add Pet
+                    <PawPrint /> {t("Add Pet", "Tambah Hewan")}
                   </Link>
                 </Button>
                 <Button
@@ -242,23 +250,31 @@ export function AgendaTab() {
                     setEditorOpen(true);
                   }}
                 >
-                  <Plus /> Add Chore
+                  <Plus /> {t("Add Chore", "Tambah Tugas")}
                 </Button>
               </EmptyState>
             ) : entries.length === 0 && filter !== "all" ? (
               // Filtered to nothing, on a day that has other things: say what
               // the filter hid, rather than "Nothing scheduled".
               <p className="py-6 text-center text-sm text-muted-foreground">
-                {filter === "pets" ? "No pet routines on this day." : "No chores on this day."}
+                {filter === "pets"
+                  ? t("No pet routines on this day.", "Tidak ada rutinitas hewan hari ini.")
+                  : t("No chores on this day.", "Tidak ada tugas hari ini.")}
               </p>
             ) : entries.length === 0 ? (
               <EmptyState
                 icon={CalendarDays}
-                title="Nothing scheduled"
+                title={t("Nothing scheduled", "Tidak ada jadwal")}
                 description={
                   pets.length === 0
-                    ? "No chores on this day. Add one, or add a pet to plan their daily routines."
-                    : "No pet routines or chores on this day."
+                    ? t(
+                        "No chores on this day. Add one, or add a pet to plan their daily routines.",
+                        "Tidak ada tugas hari ini. Tambahkan satu, atau tambahkan hewan untuk merencanakan rutinitas hariannya."
+                      )
+                    : t(
+                        "No pet routines or chores on this day.",
+                        "Tidak ada rutinitas hewan atau tugas hari ini."
+                      )
                 }
               >
                 <Button
@@ -269,12 +285,12 @@ export function AgendaTab() {
                     setEditorOpen(true);
                   }}
                 >
-                  <Plus /> Add Chore
+                  <Plus /> {t("Add Chore", "Tambah Tugas")}
                 </Button>
                 {pets.length === 0 && (
                   <Button variant="outline" className="min-h-[44px]" asChild>
                     <Link href={moduleHref("pets")} scroll={false} onClick={switchToPets}>
-                      <PawPrint /> Add Pet
+                      <PawPrint /> {t("Add Pet", "Tambah Hewan")}
                     </Link>
                   </Button>
                 )}
@@ -283,7 +299,7 @@ export function AgendaTab() {
               <>
                 {/* Undone chores from earlier days lead today (Phase 113). */}
                 {overdue.length > 0 && (
-                  <OverdueSection count={overdue.length} locale="en">
+                  <OverdueSection count={overdue.length} locale={locale}>
                     {overdue.map((entry) => renderEntry(entry))}
                   </OverdueSection>
                 )}
@@ -301,7 +317,7 @@ export function AgendaTab() {
         ) : (
           <>
             {/* Sunday to Saturday, a week at a time, endlessly (Phase 115). */}
-            <WeekPager date={selectedDate} locale="en" onShift={shiftWeek} />
+            <WeekPager date={selectedDate} locale={locale} onShift={shiftWeek} />
             {/* No All | Pets | Chores pills here since Phase 143: the summary
                 already separates the routine (the matrix) from everything
                 else (the list), which is what the filter was standing in for.
@@ -355,30 +371,31 @@ function AgendaFilterPills({
   entries: UnifiedAgendaEntry[];
 }) {
   const pets = entries.filter((entry) => entry.kind === "routine").length;
+  const t = useT();
   return (
     <div
       role="group"
-      aria-label="Filter the agenda"
+      aria-label={t("Filter the agenda", "Saring agenda")}
       // As in PhotoStream: a sideways scroll of the pills must not drag the
       // swipeable tab carousel underneath.
       onPointerDownCapture={(e) => e.stopPropagation()}
       className="-mt-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <FilterPill
-        label="All"
+        label={t("All", "Semua")}
         count={entries.length}
         active={value === "all"}
         onClick={() => onChange("all")}
       />
       <FilterPill
-        label="Pets"
+        label={t("Pets", "Hewan")}
         icon={PawPrint}
         count={pets}
         active={value === "pets"}
         onClick={() => onChange("pets")}
       />
       <FilterPill
-        label="Chores"
+        label={t("Chores", "Tugas")}
         icon={Sparkles}
         count={entries.length - pets}
         active={value === "chores"}

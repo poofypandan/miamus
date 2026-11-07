@@ -2,16 +2,55 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PublicLanguageSwitch } from "@/components/shared/public-language-switch";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { MiamusMark } from "@/components/brand/loading-screens";
+import { usePublicLocale } from "@/hooks/use-public-locale";
+import type { OwnerLocale } from "@/lib/owner-locale";
 import { supabase } from "@/lib/supabase/client";
 import { readStoredTenantId } from "@/lib/tenant";
 
-const ERRORS: Record<string, string> = {
-  missing_code: "Sign-in was cancelled. Try again.",
-  exchange_failed: "Google sign-in didn't complete. Try again.",
-};
+// One language at a time (Phase 150): the phone's, or what the EN | ID switch
+// last chose on this phone. See usePublicLocale.
+const COPY = {
+  en: {
+    title: "Welcome to Miamus",
+    tagline: "Run your household from one place — pets, chores, people and stock.",
+    google: "Continue with Google",
+    // Indonesian on the English screen too: it is for staff, who must
+    // recognise their own door at a glance whatever the phone is set to.
+    staff: "Saya staf",
+    consentBefore: "By continuing, you agree to Miamus's ",
+    privacy: "Privacy Policy",
+    privacyHref: "/privacy",
+    consentAfter: ".",
+    notConfigured: "Supabase isn't configured on this deployment.",
+    unreachable: "Couldn't reach Google sign-in. Try again.",
+    errors: {
+      missing_code: "Sign-in was cancelled. Try again.",
+      exchange_failed: "Google sign-in didn't complete. Try again.",
+    } as Record<string, string>,
+  },
+  id: {
+    title: "Selamat datang di Miamus",
+    tagline: "Kelola rumah dari satu tempat — hewan, tugas, orang dan stok.",
+    google: "Lanjutkan dengan Google",
+    staff: "Saya staf",
+    consentBefore: "Dengan melanjutkan, Anda menyetujui ",
+    privacy: "Kebijakan Privasi",
+    privacyHref: "/privasi",
+    consentAfter: ".",
+    notConfigured: "Supabase belum disiapkan di server ini.",
+    unreachable: "Tidak bisa membuka login Google. Coba lagi.",
+    errors: {
+      missing_code: "Login dibatalkan. Coba lagi.",
+      exchange_failed: "Login Google tidak selesai. Coba lagi.",
+    } as Record<string, string>,
+  },
+} satisfies Record<OwnerLocale, unknown>;
 
 // Written by the staff gate once someone picks their name on this device. Read
 // here (rather than through the gate's own module) because this page must
@@ -44,12 +83,13 @@ export default function Home() {
 
 function FrontDoor() {
   const router = useRouter();
-  const error = ERRORS[useSearchParams().get("error") ?? ""];
+  const errorKey = useSearchParams().get("error") ?? "";
   // "deciding" until we know: rendering the sign-in UI first and redirecting
   // after would flash a Google button at every staff member on every launch.
   const [deciding, setDeciding] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failed, setFailed] = useState<"notConfigured" | "unreachable" | null>(null);
+  const [locale, setLocale] = usePublicLocale();
 
   useEffect(() => {
     let cancelled = false;
@@ -89,7 +129,7 @@ function FrontDoor() {
 
   async function handleGoogle() {
     if (!supabase) {
-      setFailed("Supabase isn't configured on this deployment.");
+      setFailed("notConfigured");
       return;
     }
     setBusy(true);
@@ -102,36 +142,58 @@ function FrontDoor() {
     });
     if (signInError) {
       console.error(signInError);
-      setFailed("Couldn't reach Google sign-in. Try again.");
+      setFailed("unreachable");
       setBusy(false);
     }
     // On success the browser leaves for Google; no need to clear `busy`.
   }
 
-  if (deciding) return <Splash />;
+  if (deciding || !locale) return <Splash />;
+
+  const t = COPY[locale];
+  const message = failed ? t[failed] : t.errors[errorKey];
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] text-center">
-      <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Welcome to Miamus</h1>
-      <p className="mt-3 text-sm text-muted-foreground">
-        Run your household from one place — pets, chores, people and stock.
-      </p>
+    <main
+      lang={locale}
+      className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] text-center"
+    >
+      <PublicLanguageSwitch locale={locale} onChange={setLocale} />
 
-      <Button onClick={handleGoogle} disabled={busy} className="mt-10 min-h-[52px] w-full">
+      {/* The mark, still: the same picture as the launch splash a moment ago,
+          without its spinner, so this reads as the same app (Phase 150). */}
+      <div aria-hidden className="mx-auto mb-6 size-16 overflow-hidden rounded-full">
+        <BrandMark size={64} rounded={false} />
+      </div>
+
+      <h1 className="text-3xl font-semibold tracking-tight text-balance text-gray-900">{t.title}</h1>
+      <p className="mt-3 text-sm text-muted-foreground">{t.tagline}</p>
+
+      <Button onClick={handleGoogle} disabled={busy} className="mt-10 min-h-[52px] w-full gap-3">
         {busy ? <Loader2 className="animate-spin" /> : <GoogleMark />}
-        Continue with Google
+        {t.google}
       </Button>
 
-      {(failed || error) && <p className="mt-4 text-sm text-destructive">{failed ?? error}</p>}
+      {/* Staff who lost their session used to tap "Continue with Google",
+          which signs them in as a brand-new owner and starts an empty
+          household — it happened twice in production. Their own door, as
+          plain as the owner's (Phase 150): the house-code sign-in (Phase 151). */}
+      <Button variant="outline" onClick={() => router.push("/join/code")} className="mt-3 min-h-[52px] w-full gap-2">
+        <UserRound />
+        {t.staff}
+      </Button>
 
-      {/* Deliberately not a link. Staff who lost their session were tapping
-          "Continue with Google", which signs them in as a brand-new owner and
-          starts an empty household — it has happened twice in production. The
-          way back for a staff phone is its invite link, so that is what this
-          says, in Bahasa Indonesia because it is staff who need to read it. */}
-      <p className="mt-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-xs leading-relaxed text-amber-900">
-        <span className="font-semibold">Masuk dengan PIN?</span> Jangan masuk dengan Google. Silakan
-        klik link undangan Miamus di WhatsApp Anda untuk membuka jadwal.
+      {message && <p className="mt-4 text-sm text-destructive">{message}</p>}
+
+      <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+        {t.consentBefore}
+        <Link
+          href={t.privacyHref}
+          className="font-medium whitespace-nowrap text-gray-900 underline underline-offset-4"
+        >
+          {t.privacy}
+        </Link>
+        {t.consentAfter}
       </p>
     </main>
   );

@@ -3,6 +3,7 @@
 import { Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useUiLabels } from "@/components/ui/ui-labels";
 
 export const PIN_LENGTH = 4;
 
@@ -27,6 +28,7 @@ export function PinPad({
   onDigit: (digit: string) => void;
   onBackspace: () => void;
 }) {
+  const labels = useUiLabels();
   return (
     <>
       <div className={cn("flex justify-center gap-3 py-2", shake && "animate-shake")}>
@@ -55,7 +57,7 @@ export function PinPad({
               type="button"
               variant="ghost"
               className="min-h-[56px] text-lg"
-              aria-label="Backspace"
+              aria-label={labels.backspace}
               onClick={onBackspace}
             >
               <Delete className="size-5" />

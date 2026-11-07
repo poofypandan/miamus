@@ -111,8 +111,8 @@ export function LeaveRequestButton() {
             <SheetHeader>
               <SheetTitle>Ajukan Cuti</SheetTitle>
               <SheetDescription>
-                Pilih tanggal kamu tidak bekerja. Admin yang memutuskan siapa yang mengerjakan
-                tugasmu selama itu.
+                Pilih tanggal tidak bekerja. Admin yang memutuskan siapa yang mengerjakan
+                tugas Anda selama itu.
               </SheetDescription>
             </SheetHeader>
             <div className="flex flex-col gap-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
@@ -174,7 +174,7 @@ export function LeaveStatusBanner() {
         <p className="flex items-start gap-2 text-gray-700">
           <CalendarOff className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
           <span>
-            Cuti {formatLeaveRange(leave, "id")} menunggu persetujuan Admin. Tugasmu tetap
+            Cuti {formatLeaveRange(leave, "id")} menunggu persetujuan Admin. Tugas Anda tetap
             seperti biasa sampai disetujui.
           </span>
         </p>
@@ -193,16 +193,16 @@ export function LeaveStatusBanner() {
 
   const handover =
     leave.fallback_action === "pause"
-      ? "Tugasmu dijeda selama cuti."
+      ? "Tugas Anda dijeda selama cuti."
       : leave.fallback_action === "reassign" && leave.fallback_assignee_id
-        ? `Tugasmu dikerjakan ${nameOf(leave.fallback_assignee_id)} selama cuti.`
-        : "Tugasmu terbuka untuk siapa saja selama cuti.";
+        ? `Tugas Anda dikerjakan ${nameOf(leave.fallback_assignee_id)} selama cuti.`
+        : "Tugas Anda terbuka untuk siapa saja selama cuti.";
 
   async function handleBack() {
     setEnding(true);
     try {
       await endLeaveEarly(leave.id);
-      toast.success("Selamat datang kembali! Tugasmu sudah kembali ke daftar.");
+      toast.success("Selamat datang kembali! Tugas Anda sudah kembali ke daftar.");
     } catch (err) {
       console.error(err);
       toast.error("Gagal menyimpan. Periksa koneksi lalu coba lagi.");
@@ -216,7 +216,7 @@ export function LeaveStatusBanner() {
       <p className="flex items-start gap-2 text-gray-700">
         <Plane className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <span>
-          Kamu sedang cuti sampai{" "}
+          Anda sedang cuti sampai{" "}
           {new Date(`${leave.end_date}T00:00:00`).toLocaleDateString("id-ID", {
             weekday: "long",
             day: "numeric",

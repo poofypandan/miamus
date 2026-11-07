@@ -1,14 +1,14 @@
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import type { MedicalRecord, TaskEntity } from "@/types/database";
 import { photoSrc } from "@/lib/photos";
+import type { OwnerLocale } from "@/lib/owner-locale";
 
-const TYPE_LABEL: Record<MedicalRecord["record_type"], string> = {
-  vaccine: "Vaccine",
-  vet: "Vet Visit",
-  medication: "Medication",
-  weight: "Weight",
+const TYPE_LABEL: Record<OwnerLocale, Record<MedicalRecord["record_type"], string>> = {
+  en: { vaccine: "Vaccine", vet: "Vet Visit", medication: "Medication", weight: "Weight" },
+  id: { vaccine: "Vaksin", vet: "Kunjungan Dokter", medication: "Obat", weight: "Berat Badan" },
 };
 
 function daysUntil(dateStr: string): number {
@@ -30,13 +30,15 @@ export function HealthRecordCard({
   pet?: TaskEntity;
 }) {
   const due = record.next_due_date ? daysUntil(record.next_due_date) : null;
+  const locale = useOwnerLocale();
+  const t = useT();
 
   return (
     <Card className="gap-2 py-4">
       <CardHeader className="px-4">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">{record.title}</CardTitle>
-          <Badge variant="secondary">{TYPE_LABEL[record.record_type]}</Badge>
+          <Badge variant="secondary">{TYPE_LABEL[locale][record.record_type]}</Badge>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2 px-4 text-sm">
@@ -46,7 +48,8 @@ export function HealthRecordCard({
             {dogName}
           </span>
           {record.administered_at && (
-            <span>{record.record_type === "weight" ? "Measured" : "Given"} {record.administered_at}</span>
+            <span>{record.record_type === "weight" ? t("Measured", "Diukur") : t("Given", "Diberikan")}{" "}
+              {record.administered_at}</span>
           )}
         </div>
         {record.record_type === "weight" && record.value != null && (
@@ -59,7 +62,11 @@ export function HealthRecordCard({
             variant={due < 0 ? "destructive" : due <= 7 ? "default" : "outline"}
             className="w-fit"
           >
-            {due < 0 ? `Overdue by ${Math.abs(due)}d` : due === 0 ? "Due today" : `Due in ${due}d`}
+            {due < 0
+              ? t(`Overdue by ${Math.abs(due)}d`, `Terlambat ${Math.abs(due)} hr`)
+              : due === 0
+                ? t("Due today", "Jatuh tempo hari ini")
+                : t(`Due in ${due}d`, `${due} hr lagi`)}
           </Badge>
         )}
         {record.notes && <p className="text-muted-foreground">{record.notes}</p>}

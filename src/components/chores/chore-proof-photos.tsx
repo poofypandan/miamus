@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PhotoLightbox, type LightboxItem } from "@/components/dashboard/photo-lightbox";
 import { photoSrc, photoTakenAt } from "@/lib/photos";
-import { formatDuration, formatTime12h } from "@/lib/time";
+import { formatDuration, formatTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { HouseholdTask } from "@/types/database";
 
@@ -28,7 +28,7 @@ const COPY = {
  * finished the next, and a bare time would read as the same morning.
  */
 function stamp(at: Date, withDay: boolean, locale: "en" | "id"): string {
-  const time = formatTime12h(at);
+  const time = formatTime(at, locale);
   if (!withDay) return time;
   const day = at.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", { weekday: "short" });
   return `${day} ${time}`;
@@ -210,20 +210,22 @@ export function ChoreReviewLightbox({
   row,
   open,
   onClose,
+  locale = "en",
 }: {
   row: HouseholdTask | null;
   open: boolean;
   onClose: () => void;
+  locale?: "en" | "id";
 }) {
   if (!row) return null;
-  const proof = choreProofShots(row, "en");
+  const proof = choreProofShots(row, locale);
   if (proof.shots.length === 0) return null;
   return (
     <PhotoLightbox
       open={open}
       onClose={onClose}
       initialIndex={0}
-      items={choreProofGallery(row, proof, "en")}
+      items={choreProofGallery(row, proof, locale)}
     />
   );
 }

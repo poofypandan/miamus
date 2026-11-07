@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useHousehold } from "@/context/household-context";
 import { createInviteLink, INVITE_TTL_DAYS, type InviteKind } from "@/lib/invites";
+import { useT } from "@/context/owner-locale-context";
 
 /**
  * Where the owner hands out access (Phase 89).
@@ -17,23 +18,30 @@ import { createInviteLink, INVITE_TTL_DAYS, type InviteKind } from "@/lib/invite
  *   Staff device — a phone, which gets an anonymous identity of its own and
  *                  sees only the staff view.
  *
- * Owner-facing, so entirely English per the Phase 46 language boundary.
+ * Owner-facing, in the language the owner chose (Phase 149).
  */
 export function InvitePanel() {
+  const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">Invites</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t("Invites", "Undangan")}</h2>
       <InviteCard
         kind="owner"
         icon={UserPlus}
-        title="Invite Admin"
-        description="For a partner, sibling or housemate. They sign in with Google, get full access to Manage, the same as you, and can be assigned chores."
+        title={t("Invite Admin", "Undang Admin")}
+        description={t(
+          "For a partner, sibling or housemate. They sign in with Google, get full access to Manage, the same as you, and can be assigned chores.",
+          "Untuk pasangan, saudara atau teman serumah. Mereka masuk dengan Google, mendapat akses penuh untuk mengelola, sama seperti Anda, dan bisa diberi tugas."
+        )}
       />
       <InviteCard
         kind="staff"
         icon={Smartphone}
-        title="Invite Device"
-        description="For someone without a Google account, or a shared house phone. Opening it connects that phone to this household — no account or email needed — and each person then signs in with their name and PIN."
+        title={t("Invite Device", "Undang Perangkat")}
+        description={t(
+          "For someone without a Google account, or a shared house phone. Opening it connects that phone to this household — no account or email needed — and each person then signs in with their name and PIN.",
+          "Untuk orang tanpa akun Google, atau HP bersama di rumah. Membukanya menghubungkan HP itu ke rumah ini — tanpa akun atau email — lalu setiap orang masuk dengan nama dan PIN-nya."
+        )}
       />
     </div>
   );
@@ -51,6 +59,7 @@ function InviteCard({
   description: string;
 }) {
   const { activeHouseholdId } = useHousehold();
+  const t = useT();
   const [link, setLink] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -65,7 +74,7 @@ function InviteCard({
       await copy(url);
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't create the invite link");
+      toast.error(t("Couldn't create the invite link", "Link undangan gagal dibuat"));
     } finally {
       setBusy(false);
     }
@@ -75,13 +84,18 @@ function InviteCard({
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      toast.success("Invite link copied");
+      toast.success(t("Invite link copied", "Link undangan disalin"));
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       // Clipboard access needs a secure context and sometimes a permission;
       // the link stays on screen to be copied by hand.
       console.error(err);
-      toast.error("Couldn't copy — select the link and copy it manually");
+      toast.error(
+        t(
+          "Couldn't copy — select the link and copy it manually",
+          "Gagal menyalin — pilih link-nya lalu salin manual"
+        )
+      );
     }
   }
 
@@ -109,14 +123,14 @@ function InviteCard({
         <div className="flex gap-2">
           <Button onClick={generate} disabled={busy} className="min-h-[44px] flex-1">
             {busy ? <Loader2 className="animate-spin" /> : <Icon />}
-            {link ? "New link" : title}
+            {link ? t("New link", "Link baru") : title}
           </Button>
           {link && (
             <Button
               variant="outline"
               className="min-h-[44px]"
               onClick={() => copy(link)}
-              aria-label="Copy invite link"
+              aria-label={t("Copy invite link", "Salin link undangan")}
             >
               {copied ? <Check /> : <Copy />}
             </Button>
@@ -125,9 +139,10 @@ function InviteCard({
 
         {link && (
           <p className="text-[11px] text-muted-foreground">
-            Paste it into WhatsApp or a message. Single use, expires in{" "}
-            {INVITE_TTL_DAYS} days, and anyone with it can join until it is used, so send it
-            only to the person or phone it is for.
+            {t(
+              `Paste it into WhatsApp or a message. Single use, expires in ${INVITE_TTL_DAYS} days, and anyone with it can join until it is used, so send it only to the person or phone it is for.`,
+              `Tempel di WhatsApp atau pesan. Sekali pakai, berlaku ${INVITE_TTL_DAYS} hari, dan siapa pun yang memegangnya bisa bergabung sampai dipakai, jadi kirim hanya ke orang atau HP yang dituju.`
+            )}
           </p>
         )}
       </CardContent>

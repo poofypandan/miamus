@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiLabels } from "@/components/ui/ui-labels";
 import {
   useCallback,
   useEffect,
@@ -70,6 +71,7 @@ export function PhotoLightbox({
   onIndexChange?: (index: number) => void;
 }) {
   const [index, setIndex] = useState(initialIndex);
+  const labels = useUiLabels();
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   useBackToClose(open, onClose);
 
@@ -201,9 +203,9 @@ export function PhotoLightbox({
                   rather than swipes and for desktop, where there is no swipe at
                   all. Transparent, so the picture is never covered by chrome;
                   the chevrons surface on hover, which touch never fires. */}
-              {index > 0 && <NavZone side="left" label="Previous photo" onClick={handlePrev} />}
+              {index > 0 && <NavZone side="left" label={labels.previousPhoto} onClick={handlePrev} />}
               {index < items.length - 1 && (
-                <NavZone side="right" label="Next photo" onClick={handleNext} />
+                <NavZone side="right" label={labels.nextPhoto} onClick={handleNext} />
               )}
             </>
           )}

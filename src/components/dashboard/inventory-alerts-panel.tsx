@@ -6,27 +6,24 @@ import { Check, ChevronDown, Loader2, PackageX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { ITEM_TYPE_LABELS } from "@/lib/item-types";
+import { DATE_LOCALE } from "@/lib/owner-locale";
 import { isActiveAlert, isRestocked, restockedAt } from "@/lib/inventory-status";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
-import type { InventoryAlert, ItemType } from "@/types/database";
+import type { InventoryAlert } from "@/types/database";
 
 // Three rows, matching the photo grid's cap: the history is a record, not the
 // day's work, so it stays a glance rather than a list to scroll past.
 const COLLAPSED_LIMIT = 3;
 
-const ITEM_LABELS: Record<ItemType, string> = {
-  food: "Food",
-  medicine: "Medicine",
-  treats: "Treats",
-  shampoo: "Shampoo",
-  pee_pad: "Pee Pad",
-  other: "Other",
-};
 
-// Owner-facing, so entirely English per the Phase 46 language boundary.
+
+// Owner-facing, in the language the owner chose (Phase 149).
 export function InventoryAlertsPanel() {
   const { inventoryAlerts, entities, userRole, selectedDate } = useHousehold();
+  const t = useT();
   const [tab, setTab] = useState<"active" | "history">("active");
   const [isExpanded, setIsExpanded] = useState(false);
   const dateStr = formatDateLocal(selectedDate);
@@ -69,20 +66,22 @@ export function InventoryAlertsPanel() {
 
   return (
     <section className="mt-8 flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-gray-900">Inventory</h3>
+      <h3 className="text-sm font-semibold text-gray-900">{t("Inventory", "Stok")}</h3>
 
       <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
         <TabButton active={tab === "active"} onClick={() => setTab("active")}>
-          Active Alerts {active.length > 0 && `(${active.length})`}
+          {t("Active Alerts", "Peringatan Aktif")} {active.length > 0 && `(${active.length})`}
         </TabButton>
         <TabButton active={tab === "history"} onClick={() => setTab("history")}>
-          Restocked {history.length > 0 && `(${history.length})`}
+          {t("Restocked", "Sudah Diisi")} {history.length > 0 && `(${history.length})`}
         </TabButton>
       </div>
 
       {rows.length === 0 ? (
         <p className="py-2 text-sm text-muted-foreground">
-          {tab === "active" ? "Nothing is running low." : "No restocks on this day."}
+          {tab === "active"
+            ? t("Nothing is running low.", "Tidak ada yang menipis.")
+            : t("No restocks on this day.", "Tidak ada pengisian stok hari ini.")}
         </p>
       ) : (
         <div className="flex flex-col gap-2">
@@ -101,7 +100,9 @@ export function InventoryAlertsPanel() {
               aria-expanded={isExpanded}
               className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg text-sm font-medium text-zinc-600 active:bg-zinc-100"
             >
-              {isExpanded ? "Show Fewer" : `View All Restocked (${matching.length})`}
+              {isExpanded
+                ? t("Show Fewer", "Tampilkan Lebih Sedikit")
+                : t(`View All Restocked (${matching.length})`, `Lihat Semua yang Diisi (${matching.length})`)}
               <ChevronDown className={cn("size-4 transition-transform", isExpanded && "rotate-180")} />
             </button>
           )}
@@ -138,20 +139,25 @@ function TabButton({
 
 function AlertRow({ alert, petName }: { alert: InventoryAlert; petName: string | null }) {
   const { resolveInventoryAlert } = useHousehold();
+  const locale = useOwnerLocale();
+  const t = useT();
+  const itemLabel = ITEM_TYPE_LABELS[locale][alert.item_type];
   const [busy, setBusy] = useState(false);
   const restocked = isRestocked(alert);
 
   // A shared household item has no pet to name — Phase 49 made pet_id optional.
-  const subject = petName ? `${petName}'s ${ITEM_LABELS[alert.item_type]}` : `${ITEM_LABELS[alert.item_type]} (Household)`;
+  const subject = petName
+    ? t(`${petName}'s ${itemLabel}`, `${itemLabel} ${petName}`)
+    : t(`${itemLabel} (Household)`, `${itemLabel} (Rumah)`);
 
   async function handleResolve() {
     setBusy(true);
     try {
       await resolveInventoryAlert(alert.id);
-      toast.success(`Marked restocked — ${subject}`);
+      toast.success(t(`Marked restocked — ${subject}`, `Ditandai sudah diisi — ${subject}`));
     } catch (err) {
       console.error(err);
-      toast.error("Failed to mark restocked");
+      toast.error(t("Failed to mark restocked", "Gagal menandai sudah diisi"));
     } finally {
       setBusy(false);
     }
@@ -164,8 +170,8 @@ function AlertRow({ alert, petName }: { alert: InventoryAlert; petName: string |
         {alert.note && <span className="truncate text-xs text-muted-foreground">{alert.note}</span>}
         {restocked && (
           <span className="text-xs text-muted-foreground">
-            Restocked{" "}
-            {new Date(restockedAt(alert)).toLocaleDateString("en-US", {
+            {t("Restocked", "Diisi")}{" "}
+            {new Date(restockedAt(alert)).toLocaleDateString(DATE_LOCALE[locale], {
               month: "short",
               day: "numeric",
               year: "numeric",
@@ -176,7 +182,7 @@ function AlertRow({ alert, petName }: { alert: InventoryAlert; petName: string |
 
       {restocked ? (
         <Badge className="shrink-0 gap-1 bg-emerald-600 text-white">
-          <Check className="size-3.5" /> Restocked
+          <Check className="size-3.5" /> {t("Restocked", "Sudah Diisi")}
         </Badge>
       ) : (
         <Button
@@ -187,7 +193,7 @@ function AlertRow({ alert, petName }: { alert: InventoryAlert; petName: string |
           disabled={busy}
         >
           {busy ? <Loader2 className="animate-spin" /> : <PackageX />}
-          Restocked
+          {t("Restocked", "Sudah Diisi")}
         </Button>
       )}
     </div>

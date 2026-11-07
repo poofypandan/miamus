@@ -37,6 +37,11 @@ interface PhotoPickerProps {
   // included, or the staff flow flashes "Uploading..." mid-upload.
   busyLabel?: string;
   errorMessage?: string;
+  /**
+   * The language of the picker's own controls — Re-crop, the cropper, the
+   * remove button (Phase 149). Owners pass theirs; staff screens pass "id".
+   */
+  locale?: "en" | "id";
   className?: string;
   /**
    * Opt in to a square crop step between choosing a photo and uploading it
@@ -110,6 +115,7 @@ export function PhotoPicker({
   label = "Add photo",
   busyLabel = "Uploading...",
   errorMessage = "Failed to upload photo",
+  locale = "en",
   className,
   square = false,
   onMaster,
@@ -247,6 +253,7 @@ export function PhotoPicker({
         file={file}
         url={pendingUrl}
         onCancel={cancelCrop}
+        locale={locale}
         onCropped={(cropped) => {
           setPendingFile(null);
           setPendingUrl(null);
@@ -281,6 +288,7 @@ export function PhotoPicker({
               // Clearing the picture clears both halves of it.
               onMaster?.(null);
             }}
+            aria-label={locale === "id" ? "Hapus foto" : "Remove photo"}
             className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
           >
             <X className="size-3" />
@@ -301,7 +309,7 @@ export function PhotoPicker({
               setPendingUrl(masterSrc);
             }}
           >
-            <Crop className="size-3.5" /> Re-crop
+            <Crop className="size-3.5" /> {locale === "id" ? "Potong ulang" : "Re-crop"}
           </Button>
         )}
       </div>
