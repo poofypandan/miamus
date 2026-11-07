@@ -337,6 +337,20 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(item);
   },
+  async setInventoryStatus(id, status, staffId) {
+    const db = loadDB();
+    const index = db.inventoryItems.findIndex((i) => i.id === id);
+    if (index === -1) throw new Error("Item not found");
+    const item: InventoryItem = {
+      ...db.inventoryItems[index],
+      stock_status: status,
+      stock_status_by: staffId,
+      stock_status_at: new Date().toISOString(),
+    };
+    db.inventoryItems[index] = item;
+    saveDB(db);
+    return delay(item);
+  },
   async adjustInventoryQuantity(id, delta) {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);

@@ -301,6 +301,20 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
+  async setInventoryStatus(id, status, staffId) {
+    // A plain update: stock_status is not one of the owner-only fields that
+    // inventory_items_owner_guard protects (099), so staff phones may set
+    // it; the trigger stamps the time (122). .select() so an RLS-filtered
+    // update (200, no rows) is an error rather than a silent no-op.
+    const { data, error } = await client()
+      .from("inventory_items")
+      .update({ stock_status: status, stock_status_by: staffId })
+      .eq("id", id)
+      .select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Item was not updated");
+    return data[0];
+  },
   async adjustInventoryQuantity(id, delta) {
     // migrations/099. Returns the updated row; none at all means RLS hid it
     // (another household's id, or a row deleted under us).

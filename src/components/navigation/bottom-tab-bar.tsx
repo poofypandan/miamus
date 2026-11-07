@@ -6,7 +6,7 @@ import {
   CalendarDays,
   ClipboardList,
   PawPrint,
-  Package,
+  ShoppingBasket,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -27,7 +27,7 @@ const TABS: Record<DashboardModule, { label: Record<OwnerLocale, string>; icon: 
   pets: { label: { en: "Pets", id: "Hewan" }, icon: PawPrint },
   chores: { label: { en: "Chores", id: "Tugas" }, icon: ClipboardList },
   agenda: { label: { en: "Today", id: "Hari ini" }, icon: CalendarDays },
-  inventory: { label: { en: "Inventory", id: "Stok" }, icon: Package },
+  inventory: { label: { en: "Shopping", id: "Belanja" }, icon: ShoppingBasket },
   // Holds household members, staff profiles, invite links and the app lock.
   access: { label: { en: "Household", id: "Rumah" }, icon: Users },
 };

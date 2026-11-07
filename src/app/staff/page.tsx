@@ -24,7 +24,7 @@ import { ChoreCard } from "@/components/chores/chore-card";
 import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
-import { StockCheckPanel } from "@/components/staff/stock-check-panel";
+import { StaffShopping } from "@/components/shopping/staff-shopping";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -33,7 +33,6 @@ import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useLocationName } from "@/hooks/use-household-locations";
-import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { LaunchCover } from "@/components/brand/brand-cover";
@@ -81,7 +80,7 @@ const VIEWS = ["tugas", "stok"] as const;
 type StaffView = (typeof VIEWS)[number];
 
 function StaffTasks() {
-  const { inventoryItems, refresh } = useHousehold();
+  const { refresh } = useHousehold();
   const param = useSearchParams().get("view");
   const view: StaffView = VIEWS.includes(param as StaffView) ? (param as StaffView) : "tugas";
 
@@ -97,9 +96,6 @@ function StaffTasks() {
 
   useOfflineSync("id");
 
-  // Shown on the pill so a due count is visible from the task list, where
-  // staff spend most of the day.
-  const dueCount = useMemo(() => dueStockItems(inventoryItems).length, [inventoryItems]);
 
   // The same shell as dashboard/layout.tsx — column, shared AppHeader outside
   // the pull, content starting pt-3 below it — so switching between the two
@@ -130,7 +126,7 @@ function StaffTasks() {
           ariaLabel="Tampilan"
           segments={[
             { value: "tugas", label: "Tugas Hari Ini" },
-            { value: "stok", label: "Stok", badge: dueCount > 0 ? dueCount : undefined },
+            { value: "stok", label: "Belanja" },
           ]}
           value={activeView}
           onChange={setView}
@@ -146,7 +142,7 @@ function StaffTasks() {
           {/* Never remounted, so a view that suspends on first read keeps the
               other one on screen until it is complete (Phase 125). */}
           <Suspense fallback={null}>
-            {view === "tugas" ? <TasksView /> : <StockCheckPanel />}
+            {view === "tugas" ? <TasksView /> : <StaffShopping />}
           </Suspense>
         </div>
       </PullToRefresh>

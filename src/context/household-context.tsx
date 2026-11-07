@@ -51,6 +51,7 @@ import type {
   InventoryAlert,
   RoutineProposal,
   InventoryItem,
+  StockStatus,
   InventoryAuditWithStaff,
   ProposalStatus,
   HouseholdTask,
@@ -200,6 +201,8 @@ interface HouseholdContextValue {
   /** Owner only — the database refuses item edits from staff devices (migrations/099). */
   addInventoryItem: (input: InventoryItemInput) => Promise<InventoryItem>;
   updateInventoryItem: (id: string, patch: Partial<InventoryItemInput>) => Promise<InventoryItem>;
+  /** Anyone in the household: enough, running low or out (Phase 154). */
+  setInventoryStatus: (id: string, status: StockStatus) => Promise<InventoryItem>;
   removeInventoryItem: (id: string) => Promise<void>;
   /**
    * One tap of an item's +/- stepper (Phase 110). Applied to the screen at
@@ -906,6 +909,29 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const setInventoryStatus = useCallback(async (id: string, status: StockStatus) => {
+    // Shown at once; put back if the save fails.
+    let previous: InventoryItem | undefined;
+    setInventoryItems((prev) =>
+      prev.map((i) => {
+        if (i.id !== id) return i;
+        previous = i;
+        return { ...i, stock_status: status };
+      })
+    );
+    try {
+      const item = await dataProvider.setInventoryStatus(id, status, readActiveStaffId());
+      setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
+      return item;
+    } catch (err) {
+      if (previous) {
+        const restore = previous;
+        setInventoryItems((prev) => prev.map((i) => (i.id === id ? restore : i)));
+      }
+      throw err;
+    }
+  }, []);
+
   const removeInventoryItem = useCallback(async (id: string) => {
     await dataProvider.deleteInventoryItem(id);
     setInventoryItems((prev) => prev.filter((i) => i.id !== id));
@@ -1267,6 +1293,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       resolveInventoryAlert,
       addInventoryItem,
       updateInventoryItem,
+      setInventoryStatus,
       removeInventoryItem,
       adjustInventoryQuantity,
       reloadTenant,
@@ -1333,6 +1360,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       resolveInventoryAlert,
       addInventoryItem,
       updateInventoryItem,
+      setInventoryStatus,
       removeInventoryItem,
       adjustInventoryQuantity,
       reloadTenant,

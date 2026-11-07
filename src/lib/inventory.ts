@@ -8,7 +8,10 @@ import {
   Wheat,
   type LucideIcon,
 } from "lucide-react";
+import { ITEM_TYPE_LABELS } from "@/lib/item-types";
 import type {
+  InventoryAlert,
+  StockStatus,
   InventoryCategory,
   InventoryItem,
   InventoryScope,
@@ -110,17 +113,30 @@ export function stockItemName(item: InventoryItem): string {
   return item.variant ? `${item.name} (${item.variant})` : item.name;
 }
 
-/**
- * At or below the minimum. The minimum is the point to buy at: an owner who
- * says "keep at least 2" means two left is time to restock, not one.
- */
-export function isLowStock(item: InventoryItem): boolean {
-  return item.quantity <= item.min_threshold;
+/** The item's place on the shopping list; a row from an older build reads as enough. */
+export function stockStatus(item: InventoryItem): StockStatus {
+  return item.stock_status ?? "ok";
 }
 
-/** Nothing left at all — the stronger of the two warnings. */
+export const STOCK_STATUSES: StockStatus[] = ["ok", "low", "out"];
+
+/** Plain words in each language (Phase 154; glossary). */
+export const STOCK_STATUS_LABELS: Record<"en" | "id", Record<StockStatus, string>> = {
+  en: { ok: "Enough", low: "Running low", out: "Out" },
+  id: { ok: "Masih ada", low: "Hampir habis", out: "Habis" },
+};
+
+/**
+ * On the shopping list: someone said it is running low or out (Phase 154).
+ * Replaced the count-against-a-minimum rule, whose counts went stale.
+ */
+export function isLowStock(item: InventoryItem): boolean {
+  return stockStatus(item) !== "ok";
+}
+
+/** Nothing left at all — the stronger of the two. */
 export function isOutOfStock(item: InventoryItem): boolean {
-  return item.quantity <= 0;
+  return stockStatus(item) === "out";
 }
 
 /**
@@ -203,32 +219,44 @@ export function alertTypeForItem(item: InventoryItem): ItemType {
 }
 
 /**
- * The owner's WhatsApp-ready shopping list: every low item, grouped by scope
- * and shelf, with what is left against the minimum. Asterisks are WhatsApp
- * bold. Null when nothing is low, so the caller can say so instead of
- * copying an empty list. In the owner's language (Phase 149) — it is usually
- * pasted to whoever does the shopping.
+ * What a staff note ("something else we need") is about: "Mochi's Food",
+ * or "Food (Home)" for a household one. In the given language.
  */
-export function buildShoppingList(items: InventoryItem[], lang: "en" | "id" = "en"): string | null {
+export function alertSubject(alert: InventoryAlert, petName: string | null, lang: "en" | "id"): string {
+  // Something written down as it is ("Kantong sampah", "Eggs"): the words
+  // are the thing to buy (Phase 154's quick add, and the staff's "Lainnya").
+  if (alert.item_type === "other" && !petName && alert.note) return alert.note;
+  const label = ITEM_TYPE_LABELS[lang][alert.item_type];
+  if (petName) return lang === "id" ? `${label} ${petName}` : `${petName}'s ${label}`;
+  return lang === "id" ? `${label} (Rumah)` : `${label} (Home)`;
+}
+
+/**
+ * The WhatsApp-ready shopping list (Phase 154): every item running low or
+ * out, grouped Pets / Home, then the staff's other notes. Asterisks are
+ * WhatsApp bold. Null when there is nothing to buy. In the owner's language;
+ * it is usually sent to whoever does the shopping.
+ */
+export function buildShoppingList(
+  items: InventoryItem[],
+  notes: { alert: InventoryAlert; petName: string | null }[],
+  lang: "en" | "id" = "en"
+): string | null {
   const id = lang === "id";
   const scopes = id ? SCOPE_LABELS_ID : SCOPE_LABELS_EN;
-  const categories = id ? CATEGORY_LABELS_ID : CATEGORY_LABELS_EN;
-  const sections = INVENTORY_SCOPES.flatMap((scope) =>
-    SCOPE_CATEGORIES[scope].flatMap((category) => {
-      const lines = items
-        .filter((item) => item.scope === scope && item.category === category && isLowStock(item))
-        .sort((a, b) => stockItemName(a).localeCompare(stockItemName(b)))
-        .map(
-          (item) =>
-            id
-              ? `- ${stockItemName(item)} (sisa ${formatQuantity(item.quantity, lang)} ${unitLabel(item.unit, lang)}, min ${formatQuantity(item.min_threshold, lang)})`
-              : `- ${stockItemName(item)} (${formatQuantity(item.quantity, lang)} ${unitLabel(item.unit, lang)} left, min ${formatQuantity(item.min_threshold, lang)})`
-        );
-      return lines.length > 0
-        ? [`*${scopes[scope]} · ${categories[category]}:*\n${lines.join("\n")}`]
-        : [];
-    })
-  );
+  const status = STOCK_STATUS_LABELS[lang];
+  const sections = INVENTORY_SCOPES.flatMap((scope) => {
+    const lines = items
+      .filter((item) => item.scope === scope && isLowStock(item))
+      .sort(compareForList)
+      .map((item) => `- ${stockItemName(item)} (${status[stockStatus(item)].toLowerCase()})`);
+    return lines.length > 0 ? [`*${scopes[scope]}*\n${lines.join("\n")}`] : [];
+  });
+  const noteLines = notes.map(({ alert, petName }) => {
+    const subject = alertSubject(alert, petName, lang);
+    return `- ${subject}${alert.note && alert.note !== subject ? `: ${alert.note}` : ""}`;
+  });
+  if (noteLines.length > 0) sections.push(`*${id ? "Lainnya" : "Also"}*\n${noteLines.join("\n")}`);
   if (sections.length === 0) return null;
-  return `*🛒 ${id ? "DAFTAR BELANJA MIAMUS" : "MIAMUS SHOPPING LIST"}*\n\n${sections.join("\n\n")}`;
+  return `*🛒 ${id ? "Daftar belanja" : "Shopping list"}*\n\n${sections.join("\n\n")}`;
 }

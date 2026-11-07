@@ -11,6 +11,7 @@ import type {
   ItemType,
   RoutineProposal,
   InventoryItem,
+  StockStatus,
   InventoryCategory,
   InventoryScope,
   InventoryUnit,
@@ -258,6 +259,11 @@ export interface DataProvider {
   listInventoryItems(): Promise<InventoryItem[]>;
   createInventoryItem(input: InventoryItemInput): Promise<InventoryItem>;
   updateInventoryItem(id: string, patch: Partial<InventoryItemInput>): Promise<InventoryItem>;
+  /**
+   * Any household session: marks an item enough, running low or out
+   * (migrations/122). `staffId` is who is on duty on this phone, or null.
+   */
+  setInventoryStatus(id: string, status: StockStatus, staffId: string | null): Promise<InventoryItem>;
   deleteInventoryItem(id: string): Promise<void>;
   /**
    * The +/- stepper: adds `delta` (negative to consume) on the server, floored

@@ -8,7 +8,6 @@ import { LaunchCover } from "@/components/brand/brand-cover";
 import { OwnerAppLock } from "@/components/auth/owner-app-lock";
 import { HouseholdRequestsBanner } from "@/components/dashboard/household-requests-banner";
 import { LanguagePrompt } from "@/components/dashboard/language-settings";
-import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
@@ -73,7 +72,6 @@ function DashboardShell({ children }: { children: ReactNode }) {
           {/* Platform admins only: new households waiting for approval
               (Phase 148). Renders nothing for everyone else. */}
           <HouseholdRequestsBanner />
-          <InventoryAlertBanner />
           {/* A failed load, in the owner's language (Phases 146, 149). */}
           <div className="px-4 pt-3 empty:hidden">
             <ConnectionNotice locale={ownerLocale} />
