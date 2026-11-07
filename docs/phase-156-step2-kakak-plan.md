@@ -357,8 +357,11 @@ conventions before writing it). A second, tiny handler
    - the household is on the family list (`kakak_settings.allowed`, set
      only by a platform admin) and an owner has turned Kakak on;
    - today's count (Jakarta date) is under the household's limit, and the
-     day's total spend across all households is under the global cap; if
-     so it adds one and returns how many are left.
+     day's total number of calls across all households is under the
+     global cap; if so it adds one, creates the request's row in
+     `kakak_requests` (outcome `pending`, no tokens yet) and returns its id
+     and how many calls are left. Both counts are kept by the database
+     itself, never reported by the phone.
    Any "no" → 403 (not an admin, not allowed, off) or 429 (limit), with a
    reason the sheet turns into screen 8. Nothing is sent to Anthropic.
 3. `KAKAK_ENABLED` (server env) is the kill switch: false → every call is
@@ -371,11 +374,19 @@ conventions before writing it). A second, tiny handler
   for a family (the parent plan's heavy user is 10 sentences a day, ~20
   calls), and it caps a stuck phone or a curious child. Stored per
   household, so Plus can change it later.
-- **Global: US$5 a day** across all households (`kakak_config`,
-  platform-admin only). Reached → every household gets the "try again
-  tomorrow" message and the route logs it as an error (a push to the
-  operator can come with Plus). At family scale it is never reached; it exists so a bug
+- **Global: 400 calls a day** across all households (`kakak_config`,
+  platform-admin only), counted by `kakak_begin` from `kakak_usage`. One
+  household can use at most its own 40, so no owner can use up the
+  others' share. Reached → every household gets the "try again tomorrow"
+  message and the route logs it as an error (a push to the operator can
+  come with Plus). At family scale it is never reached; it exists so a bug
   can't run up a bill.
+- **The money cap is Anthropic's own:** a monthly spend limit on the
+  Anthropic workspace the key belongs to (the owner sets it in Anthropic's
+  console when creating the key; US$20 suggested for the family phase).
+  When it is reached the API refuses and Kakak says she's busy. No limit
+  in Miamus depends on a cost figure, because the cost rows below are
+  written with an owner's session and so are statistics, not proof.
 - **Per request:** at most 8 turns, 500 characters per typed turn, 3
   questions; `max_tokens` 4,000; 30-second timeout; one retry on
   `overloaded`/5xx, none on 4xx.
@@ -442,9 +453,10 @@ in `src/lib/kakak/schemas.ts`).
 
 ### Logging and cost tracking
 
-- **One row per call in `kakak_requests`** (migration 124): household, the
-  owner's user id, time, model, outcome (`question`, `suggestion`,
-  `message`, `refused`, `error`), which tools were suggested, input /
+- **One row per call in `kakak_requests`** (migration 124), created by
+  `kakak_begin` and filled in once by `kakak_record` after the reply:
+  household, the owner's user id, time, model, outcome (`question`, `suggestion`,
+  `message`, `error`; refusals are counted in server logs, not here), which tools were suggested, input /
   cache-read / cache-write / output tokens, the cost worked out from them
   (in millionths of a dollar), latency, and later what the owner did with
   it (`confirmed`, `changed`, `cancelled`, `undone`, from the outcome
@@ -456,6 +468,14 @@ in `src/lib/kakak/schemas.ts`).
   not the request body.
 - The owner (operator) sees totals with one SQL query on staging or
   production; a small operator page can come with Plus.
+- **Trust:** the route calls `kakak_record` with the owner's own session
+  (the web app holds no Supabase service-role key, and this plan adds
+  none). An owner calling it directly could only fill in their own
+  household's pending rows, once each, with a cost capped at the most one
+  call can cost; each such row needs a real `kakak_begin`, counted against
+  their 40. Nothing is decided from these figures. Before Plus uses
+  per-household cost for fair use or billing, recording moves to a
+  server-only path (decision K13).
 
 ### The owner's opt-in switch
 
@@ -665,7 +685,7 @@ changes.
 | `kakak_settings` | `household_id` PK (FK, cascade), `allowed` boolean default false, `enabled` boolean default false, `enabled_by` uuid null, `enabled_at` timestamptz null, `daily_limit` int default 40 | admins of the household read (household_members check); writes only through the functions below |
 | `kakak_usage` | `household_id`, `day` date (Jakarta), `calls` int; PK (`household_id`, `day`) | no direct access; functions only; rows older than 35 days deleted nightly |
 | `kakak_requests` | `id`, `household_id`, `user_id`, `created_at`, `model`, `outcome`, `tools` text[], `input_tokens`, `cache_read_tokens`, `cache_write_tokens`, `output_tokens`, `cost_micro_usd` bigint, `latency_ms`, `result` null (`confirmed`/`changed`/`cancelled`/`undone`) | admins read their household's rows; written through functions; deleted after 13 months |
-| `kakak_config` | one row: `daily_budget_micro_usd` (default 5,000,000) | platform admins only |
+| `kakak_config` | one row: `daily_call_cap` int (default 400), `max_call_cost_micro_usd` (default 150,000, the most one call can cost at `max_tokens` on the dearest model) | platform admins only |
 
 No text column anywhere: these tables can't hold a sentence.
 
@@ -683,11 +703,14 @@ authenticated`; the admin check is a `household_members` row for
   `is_platform_admin()` only.
 - `kakak_begin(p_household)` → the checks in section 4, then increments
   `kakak_usage` atomically (`insert … on conflict … do update … where calls
-  < limit`) and returns `ok` with calls left, or the reason.
-- `kakak_record(p_household, …usage…)` → inserts the `kakak_requests` row;
-  admins only. (An admin could write fake rows for their own household;
-  that affects only their own statistics. Anthropic's console stays the
-  source of truth for the bill.)
+  < limit`), checks the day's total across households against
+  `daily_call_cap`, inserts the `pending` request row, and returns `ok`
+  with its id and calls left, or the reason.
+- `kakak_record(p_request, …usage…)` → fills in a `pending` row once:
+  admins of that row's household only, only within 5 minutes of
+  `kakak_begin`, cost clamped to `max_call_cost_micro_usd`. Statistics
+  only; no check anywhere reads them. Anthropic's console stays the
+  source of truth for the bill.
 - `kakak_set_result(p_request, p_result)` → admins of that request's
   household only, once.
 - The nightly clean-up gains two deletes (usage over 35 days, requests over
@@ -698,7 +721,9 @@ authenticated`; the admin check is a `household_members` row for
 can turn it on only when allowed; a staff phone (anonymous session in the
 household) is refused by every function; an admin of another household is
 refused; logged-out callers get nothing; the limit stops at 40 and resets
-the next Jakarta day; the global budget refuses; `platform_set_kakak_allowed`
+the next Jakarta day; the global call cap refuses; `kakak_record` refuses
+a second fill, another household's row, a row older than 5 minutes, and
+clamps the cost; `platform_set_kakak_allowed`
 refuses non-platform admins; every function's grants checked; no text
 column exists.
 
@@ -745,13 +770,14 @@ languages, and the owner's mother trying it.
 | K3 | At most three questions per sentence, then the card with what she has | Yes |
 | K4 | Chore titles and shopping notes always in Bahasa Indonesia (staff read them), with an English line on the card for English-speaking owners | Yes |
 | K5 | Food with no date: Kakak asks, offering her cautious guess as one answer, labelled "Kakak's guess — check it" | Yes |
-| K6 | Limits: 40 calls per household per day; US$5 a day across all households; family households only (platform list) | Yes |
+| K6 | Limits: 40 calls per household per day; 400 calls a day across all households; family households only (platform list); a US$20/month spend limit on the Anthropic workspace as the money cap | Yes |
 | K7 | Ask Anthropic for zero data retention now | Not now — standard 30-day retention, stated in the policy; revisit before Plus |
 | K8 | Before step 3, try the phone keyboard's dictation key in the typing box with your mother | Yes |
 | K9 | Speech-to-text test: Soniox and ElevenLabs Scribe v2 first, Google Chirp 3 third | Yes |
 | K10 | Model: Opus 5.5 at low effort to start; test Sonnet 5.5 and Haiku 5.5 on the 40 sentences and switch if they match | Yes (you decide after the test) |
 | K11 | Keep counts and costs per request (no text) for 13 months | Yes |
 | K12 | Undo after saving removes what the card added; a new room stays | Yes |
+| K13 | Cost per request is recorded with the owner's session (statistics only, bounded); move it to a server-only path before Plus uses it for fair use or billing | Yes |
 
 The parent plan's V1 (suggest, then confirm), V2 (chores, shopping, pet
 routines, food), V3 (typed first), P1 (opt-in) and K1 (the name Kakak) are
