@@ -127,8 +127,16 @@ function JoinOwnerScreen() {
         <p lang="id" className="mt-1 text-sm text-muted-foreground">
           Masuk dengan Google untuk bergabung ke rumah ini sebagai admin.
         </p>
-        <Button onClick={signIn} className="mt-8 min-h-[52px] w-full">
-          Continue with Google · Lanjutkan dengan Google
+        {/* Two lines, as on the sign-in screen: one line ran past the button's
+            edges on a 360px phone (Codex review, PR #6). */}
+        <Button
+          onClick={signIn}
+          className="mt-8 h-auto min-h-[56px] w-full flex-col gap-0 py-2 whitespace-normal leading-tight"
+        >
+          <span lang="en">Continue with Google</span>
+          <span lang="id" className="text-xs font-normal opacity-80">
+            Lanjutkan dengan Google
+          </span>
         </Button>
       </main>
     );

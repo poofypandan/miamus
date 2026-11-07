@@ -169,7 +169,7 @@ export function PetProfileSheet() {
                 <p className="text-xs text-indigo-900/80">
                   {t(
                     `Daily meals and potty breaks are paused until ${pet.name} is collected.`,
-                    `Makan dan buang air harian dihentikan sementara sampai ${pet.name} dijemput.`
+                    `Makan dan Pipis & Pup harian dihentikan sementara sampai ${pet.name} dijemput.`
                   )}
                 </p>
                 <DischargeButton

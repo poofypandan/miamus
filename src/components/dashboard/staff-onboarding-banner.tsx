@@ -75,7 +75,7 @@ export function StaffOnboardingBanner() {
                 tampilannya jadi layar penuh, dan pencatatan tetap jalan saat sinyal hilang.
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
-                Tips: ketuk hewan mana saja untuk membuka catatannya. Makan dan buang air dicatat
+                Tips: ketuk hewan mana saja untuk membuka catatannya. Makan dan Pipis & Pup dicatat
                 di Mode Kerja, dengan kamera, di HP masing-masing.
               </p>
             </div>

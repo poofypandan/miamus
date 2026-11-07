@@ -201,7 +201,7 @@ export function ManageRoutinesSheet({
               <SheetDescription className="sr-only">
                 {tr(
                   "Meals, potty routine, medications, grooming, and other one-off tasks.",
-                  "Makan, rutinitas buang air, obat, grooming, dan tugas sekali lainnya."
+                  "Makan, rutinitas Pipis & Pup, obat, grooming, dan tugas sekali lainnya."
                 )}
               </SheetDescription>
             </SheetHeader>
@@ -434,12 +434,12 @@ function PottyRoutineCard({
       toast.success(
         tr(
           `Added ${newSlots.length} potty ${newSlots.length === 1 ? "time" : "times"}`,
-          `${newSlots.length} jam buang air ditambahkan`
+          `${newSlots.length} jam Pipis & Pup ditambahkan`
         )
       );
     } catch (err) {
       console.error(err);
-      toast.error(tr("Failed to generate potty routine", "Rutinitas buang air gagal dibuat"));
+      toast.error(tr("Failed to generate potty routine", "Rutinitas Pipis & Pup gagal dibuat"));
     } finally {
       setGenerating(false);
     }
@@ -450,7 +450,7 @@ function PottyRoutineCard({
       await deleteSchedule(id);
     } catch (err) {
       console.error(err);
-      toast.error(tr("Failed to remove potty time", "Jam buang air gagal dihapus"));
+      toast.error(tr("Failed to remove potty time", "Jam Pipis & Pup gagal dihapus"));
     }
   }
 
@@ -462,7 +462,7 @@ function PottyRoutineCard({
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-1.5 text-base">
-          <Droplets className="size-4" /> {tr("Potty Routine", "Rutinitas Buang Air")}
+          <Droplets className="size-4" /> {tr("Potty Routine", "Rutinitas Pipis & Pup")}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
@@ -480,7 +480,7 @@ function PottyRoutineCard({
             </Badge>
           ))}
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground">{tr("No potty times yet.", "Belum ada jam buang air.")}</p>
+            <p className="text-sm text-muted-foreground">{tr("No potty times yet.", "Belum ada jam Pipis & Pup.")}</p>
           )}
         </div>
 
