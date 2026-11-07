@@ -17,8 +17,8 @@ export interface ApprovalDateSummary {
  * the one thing the card didn't answer. A 9:00 AM vet visit is a very
  * different decision tomorrow than it is in three weeks.
  *
- * English, because only the owner decides on proposals (the Phase 46 language
- * boundary); the staff-side list of the same batches keeps its own Indonesian
+ * In the owner's language (Phase 149), because only owners decide on
+ * proposals; the staff-side list of the same batches keeps its own Indonesian
  * copy. Relative where relative helps and absolute otherwise, via the same
  * dayLabel the date ribbon uses, so "Today" means one thing across the app.
  *
@@ -32,14 +32,15 @@ export interface ApprovalDateSummary {
  */
 export function approvalDateSummary(
   batch: ProposalBatch,
-  today: Date
+  today: Date,
+  lang: "en" | "id" = "en"
 ): ApprovalDateSummary | null {
   const days = batchDates(batch);
   if (days.length === 0) return null;
 
   const first = days[0];
   const last = days[days.length - 1];
-  const label = (key: string) => dayKeyLabel(key, today);
+  const label = (key: string) => dayKeyLabel(key, today, lang);
 
   // Past only once the *last* day has gone, so a grooming series that started
   // last week but runs into next month is not written off as expired. Worth
@@ -53,7 +54,10 @@ export function approvalDateSummary(
   // happens — it becomes expires_at on approval, and the course runs daily up
   // to it. Left as a bare "Oct 24" it would read as a single visit.
   if (batch.proposals[0].category === "medication") {
-    return { text: `Daily until ${label(last)}`, past };
+    return {
+      text: lang === "id" ? `Setiap hari sampai ${label(last)}` : `Daily until ${label(last)}`,
+      past,
+    };
   }
 
   // One day for a vet visit or a one-off; several for a grooming series, which

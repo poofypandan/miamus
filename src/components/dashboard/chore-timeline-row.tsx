@@ -8,8 +8,9 @@ import { photoSrc } from "@/lib/photos";
 import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
 import { categoryIcon } from "@/lib/household-tasks";
 import { recurrenceOf, type ChoreOccurrence } from "@/lib/chore-recurrence";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 
 /**
  * A chore as a row of the owner's Agenda, shaped to match TimelineRow (Phase
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils";
  * same list. A chore rendered as a bordered card between timeline rows would
  * announce the seam this phase exists to remove.
  *
- * Owner-facing, so English, and tappable — with an intent that depends on
+ * Owner-facing, in the owner's language, and tappable — with an intent that depends on
  * the chore's state (Phase 129):
  *   open      → the editor: the owner is managing the schedule;
  *   completed → the proof gallery: the owner is reviewing the work. The
@@ -41,16 +42,19 @@ export function ChoreTimelineRow({
   locationName?: string | null;
   onPress: () => void;
 }) {
+  const formatTime = useFormatTime();
   const { task, status, overdue } = occurrence;
   const Icon = categoryIcon(task.category);
   const done = status === "completed";
   const supervised = !!task.requires_supervision;
   const repeats = recurrenceOf(occurrence.template) !== "none";
   const [reviewing, setReviewing] = useState(false);
+  const locale = useOwnerLocale();
+  const t = useT();
 
   // The proof, when this day's row carries any: only a completed occurrence
   // can, and only it is reviewed rather than edited.
-  const proof = done && occurrence.row ? choreProofShots(occurrence.row, "en") : null;
+  const proof = done && occurrence.row ? choreProofShots(occurrence.row, locale) : null;
   const shots = proof?.shots ?? [];
 
   function handlePress() {
@@ -61,7 +65,7 @@ export function ChoreTimelineRow({
     // Never the editor for a finished chore, even one with nothing to show:
     // completions from before photos existed simply have none.
     if (shots.length === 0) {
-      toast("No photos were saved for this chore");
+      toast(t("No photos were saved for this chore", "Tidak ada foto tersimpan untuk tugas ini"));
       return;
     }
     setReviewing(true);
@@ -72,7 +76,7 @@ export function ChoreTimelineRow({
     <button
       type="button"
       onClick={handlePress}
-      aria-label={done && shots.length > 0 ? `Review photos: ${task.title}` : undefined}
+      aria-label={done && shots.length > 0 ? t(`Review photos: ${task.title}`, `Lihat foto: ${task.title}`) : undefined}
       className={cn(
         "flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-left text-sm active:bg-muted/60",
         // Amber marks every open chore (Phase 112's three tones), so the house
@@ -91,7 +95,7 @@ export function ChoreTimelineRow({
       >
         {/* Untimed chores say so rather than borrowing a clock they do not
             have; they sort to the top of the day (see buildUnifiedAgenda). */}
-        {task.due_time ? formatTime12h(task.due_time) : "Anytime"}
+        {task.due_time ? formatTime(task.due_time) : t("Anytime", "Kapan saja")}
       </span>
 
       <Icon
@@ -117,16 +121,18 @@ export function ChoreTimelineRow({
               <span aria-hidden>·</span>
             </>
           )}
-          {assigneeName ?? "Anyone"}
+          {assigneeName ?? t("Anyone", "Siapa saja")}
           {repeats && <Repeat className="size-3 shrink-0" />}
           {supervised && <Eye className="size-3 shrink-0 text-amber-700" />}
-          {overdue && !done && (
-            <>
-              <AlertTriangle className="size-3 shrink-0 text-amber-700" />
-              <span className="text-amber-700">carried over</span>
-            </>
-          )}
         </span>
+        {/* Its own line: sharing the one above, the Indonesian label pushed
+            the room off a 360px screen (narrow-phone sweep, Phase 149). */}
+        {overdue && !done && (
+          <span className="flex items-center gap-1 text-xs text-amber-700">
+            <AlertTriangle className="size-3 shrink-0" />
+            {t("carried over", "terbawa dari kemarin")}
+          </span>
+        )}
       </span>
 
       {done &&
@@ -155,7 +161,7 @@ export function ChoreTimelineRow({
           </span>
         ) : (
           <span className={cn("flex shrink-0 items-center gap-1 text-xs font-medium", DONE_TONE.icon)}>
-            <CheckCircle2 className="size-4" /> Done
+            <CheckCircle2 className="size-4" /> {t("Done", "Selesai")}
           </span>
         ))}
     </button>
@@ -165,6 +171,7 @@ export function ChoreTimelineRow({
         row={occurrence.row}
         open={reviewing}
         onClose={() => setReviewing(false)}
+        locale={locale}
       />
     )}
     </>

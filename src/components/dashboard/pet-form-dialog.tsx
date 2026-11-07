@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { getPetMeta } from "@/lib/pets";
 import { photoSrc } from "@/lib/photos";
@@ -40,6 +41,8 @@ export function PetFormDialog({
   // Covers both entry points (Manage Pets and Edit Pet) in one place, since
   // `open` is owned by whichever parent rendered this dialog.
   useBackToClose(open, () => onOpenChange(false));
+  const t = useT();
+  const locale = useOwnerLocale();
 
   const meta = pet ? getPetMeta(pet) : {};
   const [name, setName] = useState(pet?.name ?? "");
@@ -74,7 +77,7 @@ export function PetFormDialog({
 
   async function handleSubmit() {
     if (!name.trim()) {
-      toast.error("Give the pet a name");
+      toast.error(t("Give the pet a name", "Beri nama hewannya"));
       return;
     }
     setSubmitting(true);
@@ -87,15 +90,15 @@ export function PetFormDialog({
       };
       if (pet) {
         await updateEntity(pet.id, { name: name.trim(), metadata });
-        toast.success("Pet updated");
+        toast.success(t("Pet updated", "Hewan diperbarui"));
       } else {
         await createEntity({ entity_type: "pet", name: name.trim(), icon: "dog", metadata });
-        toast.success("Pet added");
+        toast.success(t("Pet added", "Hewan ditambahkan"));
       }
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to save pet");
+      toast.error(t("Failed to save pet", "Hewan gagal disimpan"));
     } finally {
       setSubmitting(false);
     }
@@ -106,11 +109,11 @@ export function PetFormDialog({
     setSubmitting(true);
     try {
       await updateEntity(pet.id, { metadata: { ...pet.metadata, archived: true } });
-      toast.success(`${pet.name} archived`);
+      toast.success(t(`${pet.name} archived`, `${pet.name} diarsipkan`));
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to archive pet");
+      toast.error(t("Failed to archive pet", "Hewan gagal diarsipkan"));
     } finally {
       setSubmitting(false);
     }
@@ -121,11 +124,11 @@ export function PetFormDialog({
     setSubmitting(true);
     try {
       await deleteEntity(pet.id);
-      toast.success(`${pet.name} deleted`);
+      toast.success(t(`${pet.name} deleted`, `${pet.name} dihapus`));
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to delete pet");
+      toast.error(t("Failed to delete pet", "Hewan gagal dihapus"));
     } finally {
       setSubmitting(false);
     }
@@ -135,29 +138,29 @@ export function PetFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{pet ? "Edit Pet" : "Add Pet"}</DialogTitle>
+          <DialogTitle>{pet ? t("Edit Pet", "Ubah Hewan") : t("Add Pet", "Tambah Hewan")}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label>Name</Label>
+            <Label>{t("Name", "Nama")}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Buddy"
+              placeholder={t("e.g. Buddy", "mis. Buddy")}
               className="min-h-[48px]"
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>Breed (optional)</Label>
+            <Label>{t("Breed (optional)", "Ras (opsional)")}</Label>
             <Input
               value={breed}
               onChange={(e) => setBreed(e.target.value)}
-              placeholder="e.g. Golden Retriever"
+              placeholder={t("e.g. Golden Retriever", "mis. Golden Retriever")}
               className="min-h-[48px]"
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>Avatar photo (optional)</Label>
+            <Label>{t("Avatar photo (optional)", "Foto profil (opsional)")}</Label>
             {/* square: an avatar is the one photo in this app that has to
                 live inside a fixed box forever, so the owner picks the square
                 rather than letting object-cover centre on a dog's chest. */}
@@ -174,7 +177,10 @@ export function PetFormDialog({
               // the cropper existed can be re-framed too — for those, the
               // "master" is the untouched portrait they already are.
               masterSrc={photoSrc(fullImageUrl ?? avatarUrl)}
-              label="Add photo"
+              label={t("Add photo", "Tambah foto")}
+              busyLabel={t("Uploading...", "Mengunggah...")}
+              locale={locale}
+              errorMessage={t("Failed to upload photo", "Foto gagal diunggah")}
               square
               allowGallery
             />
@@ -187,7 +193,7 @@ export function PetFormDialog({
             className="min-h-[48px] w-full"
           >
             {submitting || photoBusy ? <Loader2 className="animate-spin" /> : null}
-            {photoBusy ? "Waiting for photo..." : "Save pet"}
+            {photoBusy ? t("Waiting for photo...", "Menunggu foto...") : t("Save pet", "Simpan hewan")}
           </Button>
           {pet && (
             <div className="flex w-full gap-2">
@@ -198,7 +204,7 @@ export function PetFormDialog({
                 onClick={handleArchive}
                 disabled={submitting}
               >
-                <Archive /> Archive
+                <Archive /> {t("Archive", "Arsipkan")}
               </Button>
               {confirmingDelete ? (
                 <>
@@ -209,7 +215,7 @@ export function PetFormDialog({
                     onClick={handleDelete}
                     disabled={submitting}
                   >
-                    Confirm delete
+                    {t("Confirm delete", "Yakin hapus")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -218,7 +224,7 @@ export function PetFormDialog({
                     onClick={() => setConfirmingDelete(false)}
                     disabled={submitting}
                   >
-                    Cancel
+                    {t("Cancel", "Batal")}
                   </Button>
                 </>
               ) : (
@@ -229,7 +235,7 @@ export function PetFormDialog({
                   onClick={() => setConfirmingDelete(true)}
                   disabled={submitting}
                 >
-                  <Trash2 /> Delete
+                  <Trash2 /> {t("Delete", "Hapus")}
                 </Button>
               )}
             </div>

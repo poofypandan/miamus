@@ -1,8 +1,9 @@
 # Plan: staff sign-in with a house code + PIN
 
-Status: **proposal, not built.** Written 2026-11-06 for the owner to decide on.
-Nothing here changes the database or the app until the decisions below are made
-and the privacy policy is on GitHub (handoff conflict 8).
+Status: **superseded.** The house code was built in Phases 150–151 (PR #7,
+migrations 115 and 117) from the owner's decisions of 2026-11-07, recorded in
+`docs/phase-150-plan.md`. This first proposal (2026-11-06) is kept for its
+reasoning only; where the two differ, `phase-150-plan.md` is what was built.
 
 ## Why
 

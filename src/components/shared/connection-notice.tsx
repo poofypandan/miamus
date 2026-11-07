@@ -11,7 +11,7 @@ const COPY = {
     bannerBody: "Ini data terakhir di HP ini. Dicoba lagi otomatis.",
     cardTitle: "Belum bisa memuat data rumah",
     cardBody:
-      "Periksa Wi-Fi atau data seluler. Kamu tidak keluar dari akun — aplikasi mencoba lagi sendiri.",
+      "Periksa Wi-Fi atau data seluler. Anda tidak keluar dari akun — aplikasi mencoba lagi sendiri.",
     retry: "Coba lagi",
   },
   en: {

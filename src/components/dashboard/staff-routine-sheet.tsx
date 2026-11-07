@@ -297,7 +297,7 @@ function MedicineProposalCard({ entity, onSent }: { entity: TaskEntity; onSent: 
         time,
         // Last day of the course — becomes expires_at on approval.
         scheduled_date: endDate,
-        notes: `Sampai ${formatDateShort(endDate)} · ${timesPerDay}x/hari`,
+        notes: `Sampai ${formatDateShort(endDate, "id")} · ${timesPerDay}x/hari`,
       })),
       () => {
         setLabel("");
@@ -421,7 +421,7 @@ function GroomingProposalCard({ entity, onSent }: { entity: TaskEntity; onSent: 
         time: occTime,
         // This visit's single day — pins the approved schedule to it.
         scheduled_date: date,
-        notes: `Tanggal ${formatDateShort(date)}`,
+        notes: `Tanggal ${formatDateShort(date, "id")}`,
       })),
       () => {
         setLabel("");

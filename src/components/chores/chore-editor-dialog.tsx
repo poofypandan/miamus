@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { assigneeOptions } from "@/lib/leave";
@@ -33,7 +34,8 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import {
   CHORE_RECURRENCES,
   RECURRENCE_LABELS_EN,
-  nextOccurrence,
+  RECURRENCE_LABELS_ID,
+  startAfterSkippingFirst,
   recurrenceOf,
 } from "@/lib/chore-recurrence";
 import {
@@ -56,7 +58,7 @@ const UNASSIGNED = "unassigned";
 /**
  * Add and edit, in one dialog (Phase 100).
  *
- * Owner-facing, so entirely English per the Phase 46 language boundary — and
+ * Owner-facing, in the language the owner chose (Phase 149) — and
  * owner-only in a stronger sense than that: this is the whole mutation surface
  * for chores, and nothing in the staff view imports it.
  *
@@ -100,6 +102,8 @@ export function ChoreEditorDialog({
   } = useHousehold();
   const { profiles } = useStaffProfiles();
   const { locations } = useHouseholdLocations();
+  const locale = useOwnerLocale();
+  const t = useT();
   const editing = !!task;
 
   const [title, setTitle] = useState("");
@@ -125,9 +129,10 @@ export function ChoreEditorDialog({
       assigneeOptions(profiles ?? [], {
         selfId: memberProfile?.id,
         leaves: leaveRequests,
+        lang: locale,
         date: date || defaultDate,
       }),
-    [profiles, memberProfile?.id, leaveRequests, date, defaultDate]
+    [profiles, memberProfile?.id, leaveRequests, date, defaultDate, locale]
   );
 
   useBackToClose(open, () => onOpenChange(false));
@@ -171,11 +176,11 @@ export function ChoreEditorDialog({
 
   async function save() {
     if (!title.trim()) {
-      toast.error("Give the chore a title");
+      toast.error(t("Give the chore a title", "Beri judul tugasnya"));
       return;
     }
     if (untilBeforeStart) {
-      toast.error("The repeat cannot end before it starts");
+      toast.error(t("The repeat cannot end before it starts", "Pengulangan tidak bisa berakhir sebelum dimulai"));
       return;
     }
     setSaving(true);
@@ -198,15 +203,19 @@ export function ChoreEditorDialog({
       };
       if (task) {
         await updateHouseholdTask(task.id, fields);
-        toast.success(`Saved "${fields.title}"`);
+        toast.success(t(`Saved "${fields.title}"`, `"${fields.title}" disimpan`));
       } else {
         await createHouseholdTask(fields);
-        toast.success(`Added "${fields.title}"`);
+        toast.success(t(`Added "${fields.title}"`, `"${fields.title}" ditambahkan`));
       }
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      toast.error(editing ? "Failed to save the chore" : "Failed to add the chore");
+      toast.error(
+        editing
+          ? t("Failed to save the chore", "Tugas gagal disimpan")
+          : t("Failed to add the chore", "Tugas gagal ditambahkan")
+      );
     } finally {
       setSaving(false);
     }
@@ -246,7 +255,7 @@ export function ChoreEditorDialog({
   // forward instead; see there.
   const canSkip = isSeries && !!day && !dayDone;
   const canEnd = isSeries && !!day && !!series && day > series.due_date;
-  const dayName = day ? dayKeyLabel(day, new Date(), "en") : "";
+  const dayName = day ? dayKeyLabel(day, new Date(), locale) : "";
 
   async function run(action: () => Promise<void>, failure: string) {
     setSaving(true);
@@ -271,27 +280,41 @@ export function ChoreEditorDialog({
       // exactly where it was: advancing by one period keeps the anchor
       // occursOn reads (weekday for weekly, day-of-month for monthly).
       if (isFirstDay) {
-        const next = nextOccurrence(series, day);
+        // Not simply the next occurrence: for a chore on the 31st that can be
+        // 28 February, which would move every later month to the 28th.
+        // Shorter months before the new start keep their own rows.
+        const { start: next, clampedDays } = startAfterSkippingFirst(series);
         if (!next) {
           toast.error(
-            `${dayName} is the only day left on this chore — use Delete everything instead`
+            t(
+              `${dayName} is the only day left on this chore — use Delete everything instead`,
+              `${dayName} adalah satu-satunya hari yang tersisa untuk tugas ini — pakai Hapus semuanya`
+            )
           );
           return;
         }
+        for (const clamped of clampedDays) await materialiseChoreOccurrence(series.id, clamped);
         await updateHouseholdTask(series.id, { due_date: next });
-        toast.success(`Skipped "${series.title}" for ${dayName}`);
+        toast.success(
+          t(`Skipped "${series.title}" for ${dayName}`, `"${series.title}" dilewati untuk ${dayName}`)
+        );
         return;
       }
       // A day nothing is written for gets its row first; another phone may
       // have written it meanwhile, and a finished day is never cancelled.
       const row = dayRow ?? (await materialiseChoreOccurrence(series.id, day));
       if (row.status === "completed") {
-        toast.error("That day was already completed, so it was left as it is");
+        toast.error(
+          t(
+            "That day was already completed, so it was left as it is",
+            "Hari itu sudah selesai, jadi dibiarkan apa adanya"
+          )
+        );
         return;
       }
       await updateHouseholdTaskStatus(row.id, "cancelled");
-      toast.success(`Skipped "${series.title}" for ${dayName}`);
-    }, "Failed to skip that day");
+      toast.success(t(`Skipped "${series.title}" for ${dayName}`, `"${series.title}" dilewati untuk ${dayName}`));
+    }, t("Failed to skip that day", "Gagal melewati hari itu"));
   }
 
   function endRepeat() {
@@ -300,8 +323,13 @@ export function ChoreEditorDialog({
     lastDay.setDate(lastDay.getDate() - 1);
     return run(async () => {
       await updateHouseholdTask(series.id, { recurrence_until: formatDateLocal(lastDay) });
-      toast.success(`"${series.title}" no longer repeats from ${dayName}`);
-    }, "Failed to end the repeat");
+      toast.success(
+        t(
+          `"${series.title}" no longer repeats from ${dayName}`,
+          `"${series.title}" tidak lagi berulang mulai ${dayName}`
+        )
+      );
+    }, t("Failed to end the repeat", "Gagal menghentikan pengulangan"));
   }
 
   function deleteAll() {
@@ -309,8 +337,8 @@ export function ChoreEditorDialog({
     if (!target) return;
     return run(async () => {
       await deleteHouseholdTask(target.id);
-      toast.success(`Deleted "${target.title}"`);
-    }, "Failed to delete the chore");
+      toast.success(t(`Deleted "${target.title}"`, `"${target.title}" dihapus`));
+    }, t("Failed to delete the chore", "Tugas gagal dihapus"));
   }
 
   const repeats = recurrence !== "none";
@@ -319,32 +347,35 @@ export function ChoreEditorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Chore" : "Add Chore"}</DialogTitle>
+          <DialogTitle>{editing ? t("Edit Chore", "Ubah Tugas") : t("Add Chore", "Tambah Tugas")}</DialogTitle>
           {editing && repeats && (
             <DialogDescription>
-              This chore repeats. Changes apply to every occurrence that has not been done yet.
+              {t(
+                "This chore repeats. Changes apply to every occurrence that has not been done yet.",
+                "Tugas ini berulang. Perubahan berlaku untuk setiap jadwal yang belum dikerjakan."
+              )}
             </DialogDescription>
           )}
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Title</Label>
+            <Label className="text-xs">{t("Title", "Judul")}</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Mop the terrace"
+              placeholder={t("e.g. Mop the terrace", "mis. Pel teras")}
             />
           </div>
 
           {/* Right under the title, which it used to be typed into (Phase 135). */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Location (optional)</Label>
+            <Label className="text-xs">{t("Location (optional)", "Lokasi (opsional)")}</Label>
             <LocationCombobox value={location} onChange={setLocation} />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Category</Label>
+            <Label className="text-xs">{t("Category", "Kategori")}</Label>
             <div className="grid grid-cols-2 gap-2">
               {HOUSEHOLD_TASK_CATEGORIES.map((c) => {
                 const Icon = categoryIcon(c);
@@ -356,7 +387,7 @@ export function ChoreEditorDialog({
                     className="min-h-[44px]"
                     onClick={() => setCategory(c)}
                   >
-                    <Icon /> {categoryLabel(c, "en")}
+                    <Icon /> {categoryLabel(c, locale)}
                   </Button>
                 );
               })}
@@ -364,7 +395,7 @@ export function ChoreEditorDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Assignee</Label>
+            <Label className="text-xs">{t("Assignee", "Ditugaskan ke")}</Label>
             <Select value={assignee} onValueChange={setAssignee}>
               <SelectTrigger className="min-h-[48px] w-full">
                 <SelectValue />
@@ -373,7 +404,7 @@ export function ChoreEditorDialog({
                 {/* First, and the default: a chore nobody is named on gets
                     picked up by whoever is free, which is how most of these
                     actually get done. */}
-                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                <SelectItem value={UNASSIGNED}>{t("Unassigned", "Belum ditugaskan")}</SelectItem>
                 {assignees.map(({ profile, label }) => (
                   <SelectItem key={profile.id} value={profile.id}>
                     {label}
@@ -385,11 +416,11 @@ export function ChoreEditorDialog({
 
           <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
             <div className="flex min-w-0 flex-col gap-1.5">
-              <Label className="text-xs">{repeats ? "Starts" : "Date"}</Label>
+              <Label className="text-xs">{repeats ? t("Starts", "Mulai") : t("Date", "Tanggal")}</Label>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
             <div className="flex min-w-0 flex-col gap-1.5">
-              <Label className="text-xs">Time (optional)</Label>
+              <Label className="text-xs">{t("Time (optional)", "Jam (opsional)")}</Label>
               {/* A real time control, and clearable: setting a chore back to
                   "sometime today" was impossible before this phase, because
                   the only way to change a time was to delete the chore. */}
@@ -407,18 +438,21 @@ export function ChoreEditorDialog({
                     className="min-h-[44px] shrink-0 px-2 text-xs"
                     onClick={() => setTime("")}
                   >
-                    Clear
+                    {t("Clear", "Hapus")}
                   </Button>
                 )}
               </div>
             </div>
           </div>
           <p className="-mt-2 text-[11px] text-muted-foreground">
-            No time means &ldquo;sometime today&rdquo;, and sorts below timed chores.
+            {t(
+              "No time means “sometime today”, and sorts below timed chores.",
+              "Tanpa jam berarti “kapan saja hari ini”, dan muncul di bawah tugas berjam."
+            )}
           </p>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Repeat</Label>
+            <Label className="text-xs">{t("Repeat", "Ulangi")}</Label>
             <div className="grid grid-cols-2 gap-2">
               {CHORE_RECURRENCES.map((r) => (
                 <Button
@@ -428,7 +462,7 @@ export function ChoreEditorDialog({
                   className="min-h-[44px]"
                   onClick={() => setRecurrence(r)}
                 >
-                  {RECURRENCE_LABELS_EN[r]}
+                  {(locale === "id" ? RECURRENCE_LABELS_ID : RECURRENCE_LABELS_EN)[r]}
                 </Button>
               ))}
             </div>
@@ -436,7 +470,7 @@ export function ChoreEditorDialog({
 
           {repeats && (
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Repeat until (optional)</Label>
+              <Label className="text-xs">{t("Repeat until (optional)", "Ulangi sampai (opsional)")}</Label>
               <Input
                 type="date"
                 value={until}
@@ -445,12 +479,14 @@ export function ChoreEditorDialog({
               />
               {untilBeforeStart ? (
                 <p className="text-[11px] font-medium text-destructive">
-                  The repeat cannot end before it starts.
+                  {t("The repeat cannot end before it starts.", "Pengulangan tidak bisa berakhir sebelum dimulai.")}
                 </p>
               ) : (
                 <p className="text-[11px] text-muted-foreground">
-                  Leave empty to keep repeating. Nothing is written in advance — occurrences
-                  appear on the agenda as their day comes round.
+                  {t(
+                    "Leave empty to keep repeating. Nothing is written in advance — occurrences appear on the agenda as their day comes round.",
+                    "Kosongkan agar terus berulang. Tidak ada yang dibuat di muka — jadwal muncul di agenda saat harinya tiba."
+                  )}
                 </p>
               )}
             </div>
@@ -464,20 +500,24 @@ export function ChoreEditorDialog({
               className="mt-0.5 size-4 shrink-0 accent-amber-700"
             />
             <span className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium text-amber-900">Requires supervision</span>
+              <span className="text-sm font-medium text-amber-900">
+                {t("Requires supervision", "Perlu diawasi")}
+              </span>
               <span className="text-[11px] text-amber-900/80">
-                Flags the chore in Action Mode so whoever does it waits for an admin rather
-                than starting on their own.
+                {t(
+                  "Flags the chore in Action Mode so whoever does it waits for an admin rather than starting on their own.",
+                  "Menandai tugas di Mode Kerja agar yang mengerjakan menunggu admin, bukan mulai sendiri."
+                )}
               </span>
             </span>
           </label>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Notes (optional)</Label>
+            <Label className="text-xs">{t("Notes (optional)", "Catatan (opsional)")}</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. the brush is in the back store room"
+              placeholder={t("e.g. the brush is in the back store room", "mis. sikatnya di gudang belakang")}
             />
           </div>
 
@@ -486,19 +526,27 @@ export function ChoreEditorDialog({
               {confirmDelete ? (
                 isSeries ? (
                   <div className="flex flex-col gap-2">
-                    <p className="text-sm font-medium">This chore repeats. Remove what?</p>
+                    <p className="text-sm font-medium">
+                      {t("This chore repeats. Remove what?", "Tugas ini berulang. Hapus yang mana?")}
+                    </p>
                     {canSkip && (
                       <RemoveOption
-                        label={`Skip ${dayName} only`}
-                        detail="Just this day is removed. The repeat carries on as before."
+                        label={t(`Skip ${dayName} only`, `Lewati ${dayName} saja`)}
+                        detail={t(
+                          "Just this day is removed. The repeat carries on as before.",
+                          "Hanya hari ini yang dihapus. Pengulangan berjalan seperti biasa."
+                        )}
                         disabled={saving}
                         onClick={skipDay}
                       />
                     )}
                     {canEnd && (
                       <RemoveOption
-                        label={`Stop repeating from ${dayName}`}
-                        detail="Nothing new from this day on. Every past day and its photos are kept."
+                        label={t(`Stop repeating from ${dayName}`, `Berhenti berulang mulai ${dayName}`)}
+                        detail={t(
+                          "Nothing new from this day on. Every past day and its photos are kept.",
+                          "Tidak ada jadwal baru mulai hari ini. Semua hari sebelumnya dan fotonya tetap disimpan."
+                        )}
                         disabled={saving}
                         onClick={endRepeat}
                       />
@@ -511,13 +559,22 @@ export function ChoreEditorDialog({
                     {!canSkip && !canEnd && (
                       <p className="text-xs text-muted-foreground">
                         {dayDone
-                          ? `${dayName} is already done, so it can't be skipped without losing that record.`
-                          : "There's no single day to drop here."}
+                          ? t(
+                              `${dayName} is already done, so it can't be skipped without losing that record.`,
+                              `${dayName} sudah selesai, jadi tidak bisa dilewati tanpa menghapus catatannya.`
+                            )
+                          : t(
+                              "There's no single day to drop here.",
+                              "Tidak ada satu hari pun yang bisa dilewati di sini."
+                            )}
                       </p>
                     )}
                     <div className="flex flex-col gap-1.5 rounded-lg border border-red-200 bg-red-50 p-3">
                       <p className="text-xs text-red-900">
-                        This will delete this chore and all its past completed records.
+                        {t(
+                          "This will delete this chore and all its past completed records.",
+                          "Ini akan menghapus tugas ini beserta semua catatan penyelesaiannya."
+                        )}
                       </p>
                       <Button
                         variant="destructive"
@@ -525,8 +582,8 @@ export function ChoreEditorDialog({
                         disabled={saving}
                         onClick={deleteAll}
                       >
-                        {saving ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete
-                        everything
+                        {saving ? <Loader2 className="animate-spin" /> : <Trash2 />}{" "}
+                        {t("Delete everything", "Hapus semuanya")}
                       </Button>
                     </div>
                     <Button
@@ -535,12 +592,14 @@ export function ChoreEditorDialog({
                       disabled={saving}
                       onClick={() => setConfirmDelete(false)}
                     >
-                      Cancel
+                      {t("Cancel", "Batal")}
                     </Button>
                   </div>
                 ) : (
                 <>
-                  <p className="text-xs text-muted-foreground">This cannot be undone.</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("This cannot be undone.", "Ini tidak bisa dibatalkan.")}
+                  </p>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -548,7 +607,7 @@ export function ChoreEditorDialog({
                       disabled={saving}
                       onClick={() => setConfirmDelete(false)}
                     >
-                      Cancel
+                      {t("Cancel", "Batal")}
                     </Button>
                     <Button
                       variant="destructive"
@@ -556,7 +615,7 @@ export function ChoreEditorDialog({
                       disabled={saving}
                       onClick={deleteAll}
                     >
-                      {saving ? <Loader2 className="animate-spin" /> : <Trash2 />} Delete
+                      {saving ? <Loader2 className="animate-spin" /> : <Trash2 />} {t("Delete", "Hapus")}
                     </Button>
                   </div>
                 </>
@@ -568,7 +627,7 @@ export function ChoreEditorDialog({
                   disabled={saving}
                   onClick={() => setConfirmDelete(true)}
                 >
-                  <Trash2 /> {isSeries ? "Remove…" : "Delete chore"}
+                  <Trash2 /> {isSeries ? t("Remove…", "Hapus…") : t("Delete chore", "Hapus tugas")}
                 </Button>
               )}
             </div>
@@ -578,7 +637,7 @@ export function ChoreEditorDialog({
         <DialogFooter>
           <Button onClick={save} disabled={saving} className="min-h-[48px]">
             {saving ? <Loader2 className="animate-spin" /> : editing ? <Save /> : <Plus />}
-            {editing ? "Save Changes" : "Add Chore"}
+            {editing ? t("Save Changes", "Simpan Perubahan") : t("Add Chore", "Tambah Tugas")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useUiLabels } from "@/components/ui/ui-labels";
 
 /**
  * A thin bar across the top edge while a view is on its way (Phase 125).
@@ -14,11 +15,12 @@ import { cn } from "@/lib/utils";
  * The sliding segment is a transform; the fade is opacity. Nothing else moves.
  */
 export function PendingBar({ active }: { active: boolean }) {
+  const labels = useUiLabels();
   if (!active) return null;
   return (
     <div
       role="progressbar"
-      aria-label="Loading"
+      aria-label={labels.loading}
       className="pointer-events-none fixed top-0 left-1/2 z-[35] h-0.5 w-full max-w-md -translate-x-1/2 animate-loader-in overflow-hidden motion-reduce:animate-none"
     >
       <div
