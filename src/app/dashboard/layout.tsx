@@ -6,6 +6,7 @@ import { TopNav } from "@/components/dashboard/top-nav";
 import { BottomTabBar } from "@/components/navigation/bottom-tab-bar";
 import { LaunchCover } from "@/components/brand/brand-cover";
 import { OwnerAppLock } from "@/components/auth/owner-app-lock";
+import { HouseholdRequestsBanner } from "@/components/dashboard/household-requests-banner";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
@@ -55,6 +56,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           className="flex flex-1 flex-col"
           contentClassName="flex flex-1 flex-col"
         >
+          {/* Platform admins only: new households waiting for approval
+              (Phase 148). Renders nothing for everyone else. */}
+          <HouseholdRequestsBanner />
           <InventoryAlertBanner />
           {/* Sits outside <main> so the one-time hint stays put above the
             swipeable carousel rather than scrolling with a single tab. */}

@@ -12,8 +12,10 @@ export const LEGAL = {
   operatorName: "Poofy Labs",
   /** An inbox you actually check. Data requests under UU PDP arrive here. */
   contactEmail: "support@poofylabs.dev",
-  policyVersion: "2026-11-05",
-  effectiveDate: { en: "5 November 2026", id: "5 November 2026" },
+  // 2026-11-06: requests to set up a household, and their 30-day retention
+  // (Phase 148, migrations/113).
+  policyVersion: "2026-11-06",
+  effectiveDate: { en: "6 November 2026", id: "6 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-northeast-1. Update this if the project moves region.
