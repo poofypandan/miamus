@@ -346,7 +346,7 @@ conventions before writing it). A second, tiny handler
 
 1. A signed-in session from the cookie (`createSupabaseServerClient`, as
    the photo route). No session → 401.
-2. The route calls `kakak_begin(p_household)` (migration 124) **with the
+2. The route calls `kakak_begin(p_household)` (migration 126) **with the
    caller's own JWT**. That function decides, in one transaction:
    - the caller is an **admin of that household**: a `household_members`
      row for `auth.uid()` and `p_household` — the narrow question
@@ -453,7 +453,7 @@ in `src/lib/kakak/schemas.ts`).
 
 ### Logging and cost tracking
 
-- **One row per call in `kakak_requests`** (migration 124), created by
+- **One row per call in `kakak_requests`** (migration 126), created by
   `kakak_begin` and filled in once by `kakak_record` after the reply:
   household, the owner's user id, time, model, outcome (`question`, `suggestion`,
   `message`, `error`; refusals are counted in server logs, not here), which tools were suggested, input /
@@ -673,9 +673,9 @@ the owner does (this plan adds no account and no key). Staff are data
 subjects too: the staff-facing privacy text (Indonesian) gains one sentence
 that owners may use an assistant that receives their first name.
 
-## 10. The database — migration 124 (text only, nothing written yet)
+## 10. The database — migration 126 (text only, nothing written yet)
 
-`supabase/migrations/124_kakak.sql`, additive only; nothing existing
+`supabase/migrations/126_kakak.sql` (124 and 125 are taken by PR #14), additive only; nothing existing
 changes.
 
 **Tables**
@@ -717,7 +717,7 @@ authenticated`; the admin check is a `household_members` row for
   13 months), as `create or replace` of the existing function, re-revoked
   and re-granted to `service_role` only.
 
-**Tests:** `supabase/tests/124_kakak.sql` in the 122/123 style — an owner
+**Tests:** `supabase/tests/126_kakak.sql` in the 122/123 style — an owner
 can turn it on only when allowed; a staff phone (anonymous session in the
 household) is refused by every function; an admin of another household is
 refused; logged-out callers get nothing; the limit stops at 40 and resets
