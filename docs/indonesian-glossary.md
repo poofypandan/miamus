@@ -62,6 +62,18 @@ people are **staf** and **admin**.
 | Invite family / Link a staff phone | **Undang keluarga / Hubungkan HP staf** | Replaced "Invite Admin" / "Invite Device". |
 | At the vet / Back home from the vet | **Dirawat di klinik / Sudah pulang dari klinik** | |
 | Tabs: Today, Household | **Hari ini, Rumah** | Replaced "Agenda" and "Access" / "Akses". |
+| Kakak (the AI helper) / Tell Kakak | **Kakak / Bilang ke Kakak** | Poofy Labs' elder-sister character; the face of all AI help (Phase 156 plan, section 0b). Warm and short; addresses people as *Anda* or by name. |
+| Kitchen (tab) / Food · Shopping | **Dapur** / **Makanan · Belanja** | Phase 156: the Shopping tab became Kitchen; the staff header says Tugas Hari Ini · Dapur. Shopping holds the list and the home's supplies. |
+| Supplies at home | **Stok di rumah** | Soap, pee pads, dog food — the old Inventory, under Shopping. |
+| Cooked at home · From someone · Bought | **Dimasak di rumah · Dari orang · Dibeli** | Where a food came from; "Dimasak di rumah" is leftovers. In a row: "masakan rumah", "dari Tante Rina", "dibeli". |
+| Food came in (staff button; owner push) | **Makanan masuk** | First in the staff's Lapor sheet. |
+| Don't know (expiry) / Check the date | **Tidak tahu** / **Cek tanggalnya** | Staff who can't read a label say so; owners see it in amber. |
+| Eaten · Given away · Thrown away | **Dimakan · Diberikan · Dibuang** | What happened to a food; short enough for three buttons in a row. |
+| Fridge · Freezer · Cupboard · Counter | **Kulkas · Freezer · Lemari · Meja** | What households say; "freezer" is the everyday word. |
+| Expires | **Kedaluwarsa** | The word on food labels. Past the date: "Lewat 2 hari — cek dulu". |
+| Return container to … | **Kembalikan wadah ke …** | Food often comes in someone's rantang or container. |
+| N foods to eat soon | **N makanan perlu segera dimakan** | The quiet line on Today. |
+| (optional), on staff-facing forms | **(boleh dikosongkan)** | Plainer than "opsional" for staff; owner-only forms may keep "opsional". |
 | Upload / uploading | **Unggah** / **Mengunggah** | Standard in Indonesian apps. |
 | Offline | **offline** | Everyday loanword. |
 | House code (staff sign-in) | **Kode rumah** | Plain; "kode" is everyday. Shown as XXX-XXX. |

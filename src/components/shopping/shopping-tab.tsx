@@ -245,7 +245,7 @@ export function ShoppingTab() {
       <section className="flex flex-col gap-2" aria-labelledby="everything-title">
         <div className="flex items-center justify-between gap-2">
           <h2 id="everything-title" className="text-sm font-semibold text-gray-900">
-            {t("Everything", "Semua barang")}
+            {t("Supplies at home", "Stok di rumah")}
           </h2>
           <Button variant="ghost" size="sm" className="-mr-2 min-h-10" onClick={() => edit("new")}>
             <Plus /> {t("Add item", "Tambah barang")}

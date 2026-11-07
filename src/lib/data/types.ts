@@ -11,6 +11,10 @@ import type {
   ItemType,
   RoutineProposal,
   InventoryItem,
+  FoodItem,
+  FoodOutcome,
+  FoodPlace,
+  FoodSource,
   StockStatus,
   InventoryCategory,
   InventoryScope,
@@ -200,6 +204,30 @@ export interface InventoryItemInput {
 }
 
 /** One stock check as the staff member recorded it (migrations/083, 099). */
+/** What a person fills in when adding or editing food (Phase 156). */
+export interface FoodItemInput {
+  /** Null when there is a photo instead. */
+  name: string | null;
+  photo_url: string | null;
+  kept_in: FoodPlace;
+  expires_on: string | null;
+  expiry_unknown: boolean;
+  source: FoodSource | null;
+  from_whom: string | null;
+  return_container: boolean;
+  notes: string | null;
+}
+
+/**
+ * Everything a food row may be changed by from the app. The server stamps
+ * finished_at and container_returned_at itself (migrations/123).
+ */
+export type FoodItemPatch = Partial<FoodItemInput> & {
+  outcome?: FoodOutcome | null;
+  finished_by?: string | null;
+  container_returned_at?: string | null;
+};
+
 export interface CreateInventoryAuditInput {
   item_id: string;
   /** The count, in the item's unit. */
@@ -282,6 +310,15 @@ export interface DataProvider {
   createInventoryAudit(
     input: CreateInventoryAuditInput
   ): Promise<{ audit: InventoryAuditWithStaff; item: InventoryItem }>;
+  /**
+   * Food still on the list, plus finished food whose container has not gone
+   * back yet (Phase 156, migrations/123).
+   */
+  listFoodItems(): Promise<FoodItem[]>;
+  createFoodItem(input: FoodItemInput, addedBy: string | null): Promise<FoodItem>;
+  updateFoodItem(id: string, patch: FoodItemPatch): Promise<FoodItem>;
+  /** Admins only (the delete policy); for food added by mistake. */
+  deleteFoodItem(id: string): Promise<void>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
   createRoutineProposalsBatch(inputs: CreateRoutineProposalInput[]): Promise<RoutineProposal[]>;
