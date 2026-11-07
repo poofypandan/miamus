@@ -512,7 +512,7 @@ come from the test set run and `kakak_requests`.
 **Quality and speed, to measure:** the test set (section 7) on all three, at
 effort low and medium. Pass mark: 36 of 40 right, and none of the "must
 never" failures (inventing a person, saving or deleting, guessing between
-two people). Also the median and slowest reply time on a phone on 4G.
+two people, filling in a food's date without asking). Also the median and slowest reply time on a phone on 4G.
 
 **Recommendation:** start the family phase on **Opus 5.5 at low effort**
 (parent decision V5; at family scale the cost is a few dollars a month),

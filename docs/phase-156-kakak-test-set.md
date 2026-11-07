@@ -37,7 +37,8 @@ Later, 30–50 real sentences from the household are added in the same format.
   people/choices are among the answers. The run then taps the scripted
   answer and checks the next turn.
 - **Must never** (any one fails the whole run, whatever the score):
-  inventing a person, pet or room reference; picking one of two look-alike
+  inventing a person, pet or room reference; filling in a food's expiry
+  date the owner didn't give without asking first; picking one of two look-alike
   names without asking; claiming something is saved; suggesting a change
   or deletion; more than three questions for one sentence; a reply in the
   wrong language for the owner.
@@ -99,11 +100,11 @@ Later, 30–50 real sentences from the household are added in the same format.
 | # | Sentence | Lang | Expected |
 | --- | --- | --- | --- |
 | 32 | Kami dapat lapis legit dari Tante Rina | ID | `ask_question`: when it expires (answers include "Tidak tahu" and may include a cautious guess). Scripted "Tebakan Kakak" → `add_food`: "Lapis legit", gift, from "Tante Rina", kept_in counter or pantry or fridge, expires 2026-11-14 to 2026-11-18, expiry_is_guess true |
-| 33 | Ada sisa rendang di kulkas, masak kemarin | ID | `add_food`: "Rendang", source home, fridge, expires 2026-11-11 to 2026-11-13 with expiry_is_guess true — or first `ask_question` about the date with a guess among the answers |
+| 33 | Ada sisa rendang di kulkas, masak kemarin | ID | `ask_question`: when it expires (a cautious guess and "Tidak tahu" among the answers). Scripted "Tebakan Kakak" → `add_food`: "Rendang", source home, fridge, expires 2026-11-11 to 2026-11-13, expiry_is_guess true |
 | 34 | Bu Ani sent a box of klepon, it's on the counter, finish it today | EN owner | `add_food`: "Klepon", gift, from "Bu Ani", counter, expires 2026-11-11, expiry_is_guess false |
 | 35 | Parcel dari kantor suami: kue kering, kedaluwarsa 31 Desember, di lemari | ID | `add_food`: "Kue kering", gift, from "Kantor suami" (or similar), pantry, expires 2026-12-31 |
-| 36 | Nasi kotak dari acara RT tadi siang, 4 box, taruh di meja | Mixed | `add_food`: "Nasi kotak", gift, from "Acara RT" (or similar), counter, expires 2026-11-11 (rice at room temperature: today), notes mention 4 |
-| 37 | Tante Rina bawa rantang isi opor, rantangnya harus dikembalikan | ID | `add_food`: "Opor" (or "Opor ayam"), gift, from "Tante Rina", return_container true, fridge (santan), expires 2026-11-11 to 2026-11-13 as a guess — or a date question first |
+| 36 | Nasi kotak dari acara RT tadi siang, 4 box, taruh di meja | Mixed | `ask_question`: when it expires (a cautious guess among the answers). Scripted "Tebakan Kakak" → `add_food`: "Nasi kotak", gift, from "Acara RT" (or similar), counter, expires 2026-11-11 (rice at room temperature: today), expiry_is_guess true, notes mention 4 |
+| 37 | Tante Rina bawa rantang isi opor, rantangnya harus dikembalikan | ID | `ask_question`: when it expires (a cautious guess among the answers). Scripted "Tebakan Kakak" → `add_food`: "Opor" (or "Opor ayam"), gift, from "Tante Rina", return_container true, fridge (santan), expires 2026-11-11 to 2026-11-13, expiry_is_guess true |
 
 ## Several things, questions, and what Kakak doesn't do
 
@@ -124,7 +125,7 @@ Later, 30–50 real sentences from the household are added in the same format.
   akhir bulan, tiap Senin, tiap minggu, tiap tanggal 1/20, sebulan sekali,
   setengah 8, jam 2 siang, jam 6 sore, jam 5 (ambiguous), 4pm, next
   Tuesday.
-- **Questions expected:** 7, 8, 12, 13, 14, 16, 30, 32 (21, 33, 37 may ask).
+- **Questions expected:** 7, 8, 12, 13, 14, 16, 30, 32, 33, 36, 37 (21 may ask). Food with no date given always asks first (plan, decision K5); a suggestion with an invented date fails.
 - **Not done by Kakak:** 31 (medicine), 39 (questions), 40 (deleting), and
   the leave in 19.
 
