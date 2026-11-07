@@ -299,9 +299,12 @@ export function expandChores(params: {
     }
 
     // The row's own day: true for a one-off, and for a template's first
-    // occurrence.
+    // occurrence — unless that day already has a row of its own, which
+    // governs it. That happens when a skipped first day moves the start onto
+    // a day someone had already finished or called off (Codex review, PR #1):
+    // the template would otherwise bring it back as pending.
     if (row.due_date === date) {
-      push(toOccurrence(row, row, date, today));
+      if (!materialised.has(`${row.id}|${date}`)) push(toOccurrence(row, row, date, today));
       continue;
     }
 
@@ -355,16 +358,17 @@ export function expandChores(params: {
       const missed = previousOccurrence(row, today);
       if (!missed) continue;
 
-      // That day's state: the template itself on its first day, otherwise a
-      // materialised row, if anyone ever touched it.
-      if (missed === row.due_date) {
-        if (row.status === "pending") push(toOccurrence(row, row, missed, today));
-        continue;
-      }
+      // That day's state: a materialised row if anyone ever touched it —
+      // even on the template's first day (see above) — otherwise the
+      // template itself on its first day.
       const written = rows.find((r) => r.parent_task_id === row.id && r.due_date === missed);
       // Done or called off; or pending, and already carried over as itself by
       // the loop above.
       if (written) continue;
+      if (missed === row.due_date) {
+        if (row.status === "pending") push(toOccurrence(row, row, missed, today));
+        continue;
+      }
       push({
         key: `${row.id}|${missed}`,
         task: row,
