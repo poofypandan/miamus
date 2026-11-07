@@ -32,7 +32,7 @@ next, in order. Nothing here was merged or applied to production.
 | 7 | Bought food that runs out had no way back to the shopping list. | Food ↔ Shopping | **Yes** — "Beli lagi / Buy again" on the Eaten / Thrown away toast. |
 | 8 | The staff-food push (migration 123) would also fire for a row written with **no session** (maintenance). | Database | **Yes** — fixed in 123 (PR #10), SQL test added, staging updated. |
 | 9 | A sheet opened within ~1 s of closing another **closed itself** (shared back-button hook). | Every sheet | **In progress** — separate session and PR ("Fix: sheet opened right after another closes…"). |
-| 10 | **15 access rules** call `auth.uid()` per row instead of once (performance advisor "auth_rls_initplan"). Harmless at a few households, slow at thousands. | Database performance | No — recommended (R5). Touching 15 security policies deserves its own careful PR. |
+| 10 | **15 access rules** call `auth.uid()` per row instead of once (performance advisor "auth_rls_initplan"). Harmless at a few households, slow at thousands. | Database performance | **Yes** — migration 125: `ALTER POLICY` with `(select auth.uid())`, generated from the live definitions. The same 15 behaviour checks pass before and after. |
 | 11 | **No error reporting**: a crash on someone's phone is never seen by us. | Reliability | No — needs a new outside service and a privacy-policy change (R3). |
 | 12 | **No self-serve data export or account deletion.** Today it's by email to support@poofylabs.dev, which the policy states; UU PDP is satisfied, but self-serve is better. | Privacy | No — recommended (R7). |
 | 13 | **Backups are off** (Free plan). | Data safety | No — owner action (see below). |
@@ -49,17 +49,17 @@ next, in order. Nothing here was merged or applied to production.
 3. **Codex security review** returns nothing in this repo — turn it on in
    the Codex settings if you want it.
 4. **Merging PR #10** needs migration 123 on production first (your OK).
-   PR "Phase 157" (this review's fixes) then needs 124 the same way.
+   PR "Phase 157" (this review's fixes) then needs 124 and 125 the same way.
 
 ## Recommended next, in order
 
 | # | What | Why | Size |
 | --- | --- | --- | --- |
 | R1 | **Merge PR #10** (after production 123) and the sheet fix | Food at home is done and reviewed | Owner |
-| R2 | **Phase 157 PR** (this review's fixes; migration 124 to staging then production) | Error screens, wording, indexes, morning reminder | Small |
+| R2 | **Phase 157 PR** (this review's fixes; migrations 124 and 125 to staging then production) | Error screens, wording, indexes, morning reminder | Small |
 | R3 | **Error reporting** (e.g. Sentry, EU/Asia region, no personal data in events) + privacy policy | We are blind to crashes on real phones | Small, needs your OK for the service |
 | R4 | **Step 2: Tell Kakak (typed)** — plan PR tonight | The reason to pay; reuses Food's pipeline | Large |
-| R5 | Rewrite the 15 per-row `auth.uid()` policies as `(select auth.uid())` | Speed at scale, no behaviour change | Small, careful |
+| R5 | ~~Rewrite the 15 per-row `auth.uid()` policies~~ — done in migration 125 (Phase 157 PR) | Speed at scale, no behaviour change | Done |
 | R6 | Owner-screen browser tests against local Supabase | Owners' screens are untested end to end | Medium |
 | R7 | Self-serve "Download my household's data" and "Delete my household" (admins) | UU PDP rights without an email | Medium |
 | R8 | Step 3: Rooms · floors · repairs (by hand) | In the accepted plan | Large |
