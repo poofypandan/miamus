@@ -264,6 +264,41 @@ export type InventoryUnit =
 /** Where an item stands on the shopping list (migrations/122, Phase 154). */
 export type StockStatus = "ok" | "low" | "out";
 
+/** Where a food is kept (migrations/123, Phase 156). */
+export type FoodPlace = "fridge" | "freezer" | "pantry" | "counter";
+
+/** What happened to a food once it left the list. */
+export type FoodOutcome = "eaten" | "given_away" | "thrown_away";
+
+/**
+ * Food in the house (migrations/123): a gift, leftovers, a cake. Listed while
+ * `outcome` is null; finished rows stay 90 days without their photo.
+ */
+export type FoodItem = {
+  id: string;
+  household_id: string;
+  name: string;
+  /** household-logs, <household>/food/...; deleted when the food is finished. */
+  photo_url: string | null;
+  kept_in: FoodPlace;
+  /** YYYY-MM-DD, or null for no date. */
+  expires_on: string | null;
+  from_whom: string | null;
+  return_container: boolean;
+  /** Stamped by the server when the container is ticked returned. */
+  container_returned_at: string | null;
+  notes: string | null;
+  /** Who added it, as selected on their phone (self-declared, cf. 071). */
+  added_by: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  outcome: FoodOutcome | null;
+  /** Stamped by the server when an outcome is set. */
+  finished_at: string | null;
+  finished_by: string | null;
+};
+
 export type InventoryItem = {
   id: string;
   // The tenant (migrations/086).
@@ -478,6 +513,12 @@ export interface Database {
         Row: InventoryItem;
         Insert: Partial<InventoryItem> & Pick<InventoryItem, "name">;
         Update: Partial<InventoryItem>;
+        Relationships: [];
+      };
+      food_items: {
+        Row: FoodItem;
+        Insert: Partial<FoodItem> & Pick<FoodItem, "household_id" | "name">;
+        Update: Partial<FoodItem>;
         Relationships: [];
       };
       inventory_audit_logs: {

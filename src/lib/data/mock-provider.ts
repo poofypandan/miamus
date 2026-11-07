@@ -6,6 +6,7 @@ import type {
   InventoryAlert,
   RoutineProposal,
   InventoryItem,
+  FoodItem,
   InventoryAuditWithStaff,
   StaffProfile,
   HouseholdTask,
@@ -29,6 +30,7 @@ interface MockDB {
   inventoryAlerts: InventoryAlert[];
   routineProposals: RoutineProposal[];
   inventoryItems: InventoryItem[];
+  foodItems: FoodItem[];
   inventoryAudits: InventoryAuditWithStaff[];
   staffProfiles: StaffProfile[];
   /** Mock-only: PINs are hashed in the real database (migrations/095). */
@@ -49,6 +51,7 @@ function freshDB(): MockDB {
     inventoryAlerts: [],
     routineProposals: [],
     inventoryItems: [],
+    foodItems: [],
     inventoryAudits: [],
     staffProfiles: [],
     householdTasks: [],
@@ -71,6 +74,7 @@ function loadDB(): MockDB {
         // Items from before Phase 110 have no scope or quantity; dropped
         // rather than half-rendered.
         inventoryItems: (parsed.inventoryItems ?? []).filter((item) => item.scope),
+        foodItems: parsed.foodItems ?? [],
         inventoryAudits: parsed.inventoryAudits ?? [],
         staffProfiles: parsed.staffProfiles ?? [],
         householdTasks: parsed.householdTasks ?? [],
@@ -400,6 +404,57 @@ export const mockProvider: DataProvider = {
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay({ audit, item });
+  },
+  async listFoodItems() {
+    return delay(
+      loadDB().foodItems.filter(
+        (f) => f.outcome === null || (f.return_container && !f.container_returned_at)
+      )
+    );
+  },
+  async createFoodItem(input, addedBy) {
+    const db = loadDB();
+    const now = new Date().toISOString();
+    const item: FoodItem = {
+      id: uid("food"),
+      household_id: getActiveHouseholdId(),
+      ...input,
+      name: input.name.trim(),
+      added_by: addedBy,
+      created_by: null,
+      created_at: now,
+      updated_at: now,
+      container_returned_at: null,
+      outcome: null,
+      finished_at: null,
+      finished_by: null,
+    };
+    db.foodItems.push(item);
+    saveDB(db);
+    return delay(item);
+  },
+  async updateFoodItem(id, patch) {
+    const db = loadDB();
+    const index = db.foodItems.findIndex((f) => f.id === id);
+    if (index === -1) throw new Error("Food not found");
+    const before = db.foodItems[index];
+    const now = new Date().toISOString();
+    const item: FoodItem = { ...before, ...patch, updated_at: now };
+    // The server's rules (migrations/123), so mock mode behaves the same.
+    if ("outcome" in patch && patch.outcome !== before.outcome) {
+      item.finished_at = patch.outcome ? now : null;
+      if (!patch.outcome) item.finished_by = null;
+    }
+    if ("container_returned_at" in patch) item.container_returned_at = patch.container_returned_at ? now : null;
+    db.foodItems[index] = item;
+    saveDB(db);
+    return delay(item);
+  },
+  async deleteFoodItem(id) {
+    const db = loadDB();
+    db.foodItems = db.foodItems.filter((f) => f.id !== id);
+    saveDB(db);
+    return delay(undefined);
   },
   async listRoutineProposals() {
     return delay(loadDB().routineProposals);

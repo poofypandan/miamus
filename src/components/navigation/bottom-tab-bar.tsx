@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   ClipboardList,
+  CookingPot,
   PawPrint,
-  ShoppingBasket,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -27,7 +27,8 @@ const TABS: Record<DashboardModule, { label: Record<OwnerLocale, string>; icon: 
   pets: { label: { en: "Pets", id: "Hewan" }, icon: PawPrint },
   chores: { label: { en: "Chores", id: "Tugas" }, icon: ClipboardList },
   agenda: { label: { en: "Today", id: "Hari ini" }, icon: CalendarDays },
-  inventory: { label: { en: "Shopping", id: "Belanja" }, icon: ShoppingBasket },
+  // Kitchen (Phase 156): food at home and the shopping list.
+  inventory: { label: { en: "Kitchen", id: "Dapur" }, icon: CookingPot },
   // Holds household members, staff profiles, invite links and the app lock.
   access: { label: { en: "Household", id: "Rumah" }, icon: Users },
 };

@@ -21,5 +21,7 @@ export type {
   HouseholdTaskStatusPatch,
   CreateInventoryAuditInput,
   InventoryItemInput,
+  FoodItemInput,
+  FoodItemPatch,
   LeaveDecision,
 } from "./types";

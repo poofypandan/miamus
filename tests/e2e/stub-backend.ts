@@ -72,6 +72,8 @@ export interface Stub {
     anonTables: string[];
     realBackend: string[];
   };
+  /** food_items rows as the stub holds them (Phase 156). */
+  foods: Record<string, unknown>[];
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
   sessionUser(): Promise<string | null>;
@@ -99,6 +101,7 @@ function subOf(authorization: string | undefined): string {
 export async function installStub(context: BrowserContext, options: StubOptions = {}): Promise<Stub> {
   const net = { token: true, rest: true, signup: true };
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [] };
+  const foods: Record<string, unknown>[] = [];
 
   if (options.stored) {
     await context.addCookies([
@@ -161,9 +164,11 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       if (table === "device_sessions") {
         return route.fulfill({ json: options.bound ? [{ household_id: HOUSEHOLD_ID }] : [] });
       }
-      const rows = TABLES[table] ?? [];
       const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
-      return route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+      if (table === "food_items") return answerFood(route, foods, wantsObject);
+      const rows = TABLES[table] ?? [];
+      const wantsObjectRow = (request.headers()["accept"] ?? "").includes("pgrst.object");
+      return route.fulfill({ json: wantsObjectRow ? (rows[0] ?? null) : rows });
     }
     return route.fulfill({ json: {} });
   });
@@ -171,6 +176,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   return {
     net,
     seen,
+    foods,
     setNetwork(up: boolean) {
       net.token = net.rest = net.signup = up;
     },
@@ -186,6 +192,59 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   };
 }
 
+/**
+ * food_items (migrations/123), enough of PostgREST for the Kitchen: list,
+ * insert, update by id. The server's own fields are stamped as 123's
+ * trigger does. Filters other than id are left to the app.
+ */
+function answerFood(route: Route, foods: Record<string, unknown>[], wantsObject: boolean) {
+  const request = route.request();
+  const method = request.method();
+  const reply = (rows: Record<string, unknown>[]) =>
+    route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  if (method === "GET") return reply(foods);
+  const now = new Date().toISOString();
+  if (method === "POST") {
+    const body = request.postDataJSON();
+    const row: Record<string, unknown> = {
+      id: `00000000-0000-4000-8000-${String(foods.length + 1).padStart(12, "0")}`,
+      photo_url: null,
+      kept_in: "fridge",
+      expires_on: null,
+      from_whom: null,
+      return_container: false,
+      container_returned_at: null,
+      notes: null,
+      added_by: null,
+      created_by: USER,
+      outcome: null,
+      finished_at: null,
+      finished_by: null,
+      ...(Array.isArray(body) ? body[0] : body),
+      created_at: now,
+      updated_at: now,
+    };
+    foods.push(row);
+    return reply([row]);
+  }
+  const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
+  const index = foods.findIndex((f) => f.id === id);
+  if (index === -1) return reply([]);
+  if (method === "PATCH") {
+    const patch = request.postDataJSON();
+    const before = foods[index];
+    const row = { ...before, ...patch, updated_at: now };
+    if ("outcome" in patch && patch.outcome !== before.outcome) {
+      row.finished_at = patch.outcome ? now : null;
+      if (!patch.outcome) row.finished_by = null;
+    }
+    foods[index] = row;
+    return reply([row]);
+  }
+  if (method === "DELETE") return reply(foods.splice(index, 1));
+  return reply([]);
+}
+
 /** The lists the household provider loads; none may go out with only the public key. */
 export const HOUSEHOLD_TABLES = [
   "task_entities",
@@ -198,5 +257,6 @@ export const HOUSEHOLD_TABLES = [
   "inventory_audit_logs",
   "household_tasks",
   "leave_requests",
+  "food_items",
 ];
 

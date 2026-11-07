@@ -13,6 +13,7 @@ import type {
   CreateMedicalRecordInput,
   CreateInventoryAlertInput,
   InventoryItemInput,
+  FoodItemInput,
   CreateRoutineProposalInput,
   CreateHouseholdTaskInput,
   UpdateHouseholdTaskInput,
@@ -51,6 +52,8 @@ import type {
   InventoryAlert,
   RoutineProposal,
   InventoryItem,
+  FoodItem,
+  FoodOutcome,
   StockStatus,
   InventoryAuditWithStaff,
   ProposalStatus,
@@ -115,6 +118,11 @@ interface HouseholdContextValue {
    */
   leaveRequests: LeaveRequest[];
   inventoryItems: InventoryItem[];
+  /**
+   * Food on the list, plus finished food whose container still has to go
+   * back (Phase 156, migrations/123).
+   */
+  foodItems: FoodItem[];
   /** The newest stock check per inventory item, keyed by item id. */
   latestInventoryAudits: Record<string, InventoryAuditWithStaff>;
   /**
@@ -205,6 +213,25 @@ interface HouseholdContextValue {
   setInventoryStatus: (id: string, status: StockStatus) => Promise<InventoryItem>;
   removeInventoryItem: (id: string) => Promise<void>;
   /**
+   * Food at home (Phase 156). Anyone in the household adds, edits and
+   * finishes food; only admins delete it (the database decides). A photo is
+   * uploaded first and filed under <household>/food/.
+   */
+  addFood: (input: Omit<FoodItemInput, "photo_url">, photo: File | null) => Promise<FoodItem>;
+  /** `photo`: a new File replaces the photo, null removes it, undefined keeps it. */
+  editFood: (id: string, input: Omit<FoodItemInput, "photo_url">, photo?: File | null) => Promise<FoodItem>;
+  /**
+   * Eaten, given away or thrown away. The photo is removed once Undo is no
+   * longer offered (FOOD_PHOTO_GRACE_MS); the nightly clean-up catches any
+   * the phone never got to.
+   */
+  finishFood: (id: string, outcome: FoodOutcome) => Promise<void>;
+  /** Undo for finishFood: back on the list, photo kept. */
+  unfinishFood: (id: string) => Promise<void>;
+  returnFoodContainer: (id: string) => Promise<void>;
+  /** Admins only: food added by mistake. Takes its photo with it. */
+  removeFood: (id: string) => Promise<void>;
+  /**
    * One tap of an item's +/- stepper (Phase 110). Applied to the screen at
    * once; sent to the server in a batch — see the implementation.
    */
@@ -271,6 +298,9 @@ interface HouseholdContextValue {
 // A normal one is well under two seconds even on a phone's mobile data; past
 // this, the house's Wi-Fi is the likelier explanation than a big household.
 const REFRESH_SLOW_MS = 10_000;
+// How long a finished food keeps its photo: past the Undo toast, so Undo
+// brings back the food with its photo (Phase 156).
+const FOOD_PHOTO_GRACE_MS = 15_000;
 // Between automatic retries after a failed load; the last repeats.
 const SYNC_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
 
@@ -285,6 +315,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [routineProposals, setRoutineProposals] = useState<RoutineProposal[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
   const [latestInventoryAudits, setLatestInventoryAudits] = useState<
     Record<string, InventoryAuditWithStaff>
   >({});
@@ -340,6 +371,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setRoutineProposals(cached.routineProposals);
       setLeaveRequests(cached.leaveRequests ?? []);
       setInventoryItems(cached.inventoryItems);
+      setFoodItems(cached.foodItems ?? []);
       setLatestInventoryAudits(cached.latestInventoryAudits);
       setHydratedFromCache(true);
       setLoading(false);
@@ -469,7 +501,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // The fetch itself, split out of refresh() below so the bookkeeping around
   // it reads on one screen. `pass` is that refresh's number.
   const loadEverything = useCallback(async (pass: number) => {
-    const [e, s, l, m, ia, rp, ii, audits, , leave] = await Promise.all([
+    const [e, s, l, m, ia, rp, ii, audits, , leave, food] = await Promise.all([
       dataProvider.listEntities(),
       dataProvider.listSchedules(),
       dataProvider.listLogs(),
@@ -508,6 +540,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
           console.warn("leave_requests unavailable — run migrations/108", err);
           return [] as LeaveRequest[];
         }),
+      // Food at home (Phase 156). Same degraded state until migrations/123
+      // is applied: an empty list rather than a broken dashboard.
+      dataProvider.listFoodItems().catch((err) => {
+        console.warn("food_items unavailable — run migrations/123", err);
+        return [] as FoodItem[];
+      }),
     ]);
     // A newer refresh already landed: its answer is the more recent one.
     if (pass < appliedRefresh.current) return;
@@ -520,6 +558,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setRoutineProposals(rp);
     setLeaveRequests(leave);
     setInventoryItems(ii);
+    setFoodItems(food);
     setLatestInventoryAudits(audits);
     // Kept for the next mount, so the following page load paints immediately
     // (Phase 92). Written after the state, never before: a snapshot is only
@@ -533,6 +572,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       routineProposals: rp,
       leaveRequests: leave,
       inventoryItems: ii,
+      foodItems: food,
       latestInventoryAudits: audits,
     });
     setHasData(true);
@@ -937,6 +977,139 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     setInventoryItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
+  // --- Food at home (Phase 156) ---------------------------------------------
+  const foodItemsRef = useRef(foodItems);
+  useEffect(() => {
+    foodItemsRef.current = foodItems;
+  }, [foodItems]);
+  // Photos of finished food waiting for Undo to lapse, by food id.
+  const foodPhotoTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+
+  const putFood = useCallback((item: FoodItem) => {
+    setFoodItems((prev) =>
+      prev.some((f) => f.id === item.id) ? prev.map((f) => (f.id === item.id ? item : f)) : [item, ...prev]
+    );
+  }, []);
+
+  // Best effort: a photo left behind is removed by the nightly clean-up
+  // (migrations/123), so a failure here is logged, not shown.
+  const dropPhoto = useCallback(async (url: string | null) => {
+    if (!url) return;
+    try {
+      await dataProvider.deletePhoto(url);
+    } catch (err) {
+      console.warn("Food photo not removed; the nightly clean-up will", err);
+    }
+  }, []);
+
+  const addFood = useCallback(
+    async (input: Omit<FoodItemInput, "photo_url">, photo: File | null) => {
+      const photoUrl = photo ? await dataProvider.uploadPhoto(photo, "food") : null;
+      try {
+        const item = await dataProvider.createFoodItem({ ...input, photo_url: photoUrl }, readActiveStaffId());
+        putFood(item);
+        return item;
+      } catch (err) {
+        void dropPhoto(photoUrl);
+        throw err;
+      }
+    },
+    [putFood, dropPhoto]
+  );
+
+  const editFood = useCallback(
+    async (id: string, input: Omit<FoodItemInput, "photo_url">, photo?: File | null) => {
+      const before = foodItemsRef.current.find((f) => f.id === id);
+      const newUrl = photo ? await dataProvider.uploadPhoto(photo, "food") : null;
+      const photoPatch = photo === undefined ? {} : { photo_url: newUrl };
+      try {
+        const item = await dataProvider.updateFoodItem(id, { ...input, ...photoPatch });
+        putFood(item);
+        if (photo !== undefined && before?.photo_url && before.photo_url !== item.photo_url) {
+          void dropPhoto(before.photo_url);
+        }
+        return item;
+      } catch (err) {
+        void dropPhoto(newUrl);
+        throw err;
+      }
+    },
+    [putFood, dropPhoto]
+  );
+
+  const finishFood = useCallback(
+    async (id: string, outcome: FoodOutcome) => {
+      const before = foodItemsRef.current.find((f) => f.id === id);
+      if (!before) return;
+      // Off the list at once; back if the save fails.
+      putFood({ ...before, outcome, finished_at: new Date().toISOString() });
+      try {
+        const item = await dataProvider.updateFoodItem(id, { outcome, finished_by: readActiveStaffId() });
+        putFood(item);
+        const url = item.photo_url;
+        if (url) {
+          const timer = setTimeout(() => {
+            foodPhotoTimers.current.delete(id);
+            void (async () => {
+              await dropPhoto(url);
+              try {
+                const cleared = await dataProvider.updateFoodItem(id, { photo_url: null });
+                putFood(cleared);
+              } catch (err) {
+                // Deleted meanwhile, or no signal: the nightly clean-up clears it.
+                console.warn("Food photo link not cleared", err);
+              }
+            })();
+          }, FOOD_PHOTO_GRACE_MS);
+          foodPhotoTimers.current.set(id, timer);
+        }
+      } catch (err) {
+        putFood(before);
+        throw err;
+      }
+    },
+    [putFood, dropPhoto]
+  );
+
+  const unfinishFood = useCallback(
+    async (id: string) => {
+      const timer = foodPhotoTimers.current.get(id);
+      if (timer) {
+        clearTimeout(timer);
+        foodPhotoTimers.current.delete(id);
+      }
+      const item = await dataProvider.updateFoodItem(id, { outcome: null });
+      putFood(item);
+    },
+    [putFood]
+  );
+
+  const returnFoodContainer = useCallback(
+    async (id: string) => {
+      const before = foodItemsRef.current.find((f) => f.id === id);
+      if (before) putFood({ ...before, container_returned_at: new Date().toISOString() });
+      try {
+        const item = await dataProvider.updateFoodItem(id, { container_returned_at: new Date().toISOString() });
+        // Done with: it leaves the list on the next load anyway.
+        setFoodItems((prev) => prev.filter((f) => f.id !== item.id));
+      } catch (err) {
+        if (before) putFood(before);
+        throw err;
+      }
+    },
+    [putFood]
+  );
+
+  const removeFood = useCallback(
+    async (id: string) => {
+      const before = foodItemsRef.current.find((f) => f.id === id);
+      await dataProvider.deleteFoodItem(id);
+      setFoodItems((prev) => prev.filter((f) => f.id !== id));
+      void dropPhoto(before?.photo_url ?? null);
+    },
+    [dropPhoto]
+  );
+
   /**
    * Works the tenant out again, for the one moment it changes under a mounted
    * app: onboarding (Phase 111). The provider lives in the root layout, so it
@@ -1259,6 +1432,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       decideLeave,
       endLeaveEarly,
       inventoryItems,
+      foodItems,
       latestInventoryAudits,
       householdTasks,
       loading,
@@ -1295,6 +1469,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       updateInventoryItem,
       setInventoryStatus,
       removeInventoryItem,
+      addFood,
+      editFood,
+      finishFood,
+      unfinishFood,
+      returnFoodContainer,
+      removeFood,
       adjustInventoryQuantity,
       reloadTenant,
       submitInventoryAudit,
@@ -1329,6 +1509,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       decideLeave,
       endLeaveEarly,
       inventoryItems,
+      foodItems,
       latestInventoryAudits,
       householdTasks,
       loading,
@@ -1362,6 +1543,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       updateInventoryItem,
       setInventoryStatus,
       removeInventoryItem,
+      addFood,
+      editFood,
+      finishFood,
+      unfinishFood,
+      returnFoodContainer,
+      removeFood,
       adjustInventoryQuantity,
       reloadTenant,
       submitInventoryAudit,
