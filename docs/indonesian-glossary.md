@@ -62,6 +62,7 @@ people are **staf** and **admin**.
 | Invite family / Link a staff phone | **Undang keluarga / Hubungkan HP staf** | Replaced "Invite Admin" / "Invite Device". |
 | At the vet / Back home from the vet | **Dirawat di klinik / Sudah pulang dari klinik** | |
 | Tabs: Today, Household | **Hari ini, Rumah** | Replaced "Agenda" and "Access" / "Akses". |
+| Kakak (the AI helper) / Tell Kakak | **Kakak / Bilang ke Kakak** | Poofy Labs' elder-sister character; the face of all AI help (Phase 156 plan, section 0b). Warm and short; addresses people as *Anda* or by name. |
 | Upload / uploading | **Unggah** / **Mengunggah** | Standard in Indonesian apps. |
 | Offline | **offline** | Everyday loanword. |
 | House code (staff sign-in) | **Kode rumah** | Plain; "kode" is everyday. Shown as XXX-XXX. |

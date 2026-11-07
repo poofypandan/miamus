@@ -1,4 +1,4 @@
-# Phase 156 plan — Tell Miamus, and Food at home
+# Phase 156 plan — Tell Kakak, and Food at home
 
 Status: **accepted by the owner, 2026-11-07** (decisions V1–O1, plus the
 owner's notes folded into sections 0 and 3b). Nothing is built yet.
@@ -6,7 +6,7 @@ owner's notes folded into sections 0 and 3b). Nothing is built yet.
 The owner's aim: *if my mum can use it, anyone can.* Two ideas, one shared
 piece of technology:
 
-1. **Tell Miamus** — say (or type) what you want — "have Sari mop the terrace
+1. **Tell Kakak** — say (or type) what you want — "have Sari mop the terrace
    every Monday" — and Miamus asks what's missing, then sets it up after you
    confirm. A reason to pay for Miamus later.
 2. **Food at home** — Indonesian homes receive a lot of food and gifts
@@ -43,6 +43,32 @@ straight to the point.
 - **Each screen is checked at phone size, in both languages, with the owner,
   before it is merged.**
 
+## 0b. Kakak — the face of the AI help
+
+All of Miamus's AI help is one character: **Kakak**, Poofy Labs' caring,
+loving elder-sister character across its products. Owner decision
+2026-11-07: "Kakak" for now; a proper name ("Kak …") only if it causes
+confusion or a trademark need (the name lives in one place, so renaming is
+cheap).
+
+- **The simple story:** *free — you do it by hand; Plus — Kakak helps you.*
+  Talking to set things up, reading food photos, estimating expiry dates and
+  the weekly summary are all "Kakak".
+- **Name plus purpose:** the button says **"Bilang ke Kakak" / "Tell
+  Kakak"** with her small avatar; the first time, one line explains it —
+  "Kakak can set things up for you — just tell her." / "Kakak bisa
+  mengaturnya untuk Anda — cukup bilang saja."
+- **Only where she acts:** the mic button, her questions, the confirmation
+  card. No mascot elsewhere, so her face always means "help that does
+  things for you".
+- **Tone:** warm, short, calm; never cutesy, no strings of emoji. She
+  addresses people as the glossary says (owners and staff as *Anda*, or by
+  name) and never talks down to anyone.
+- **Honest:** she always asks before saving, and says plainly when she is
+  unsure or got something wrong.
+- **One look everywhere:** avatar, colour (and a voice, if she ever speaks)
+  defined once by Poofy Labs and reused across products.
+
 ## 1. The rule both AI features follow: suggest, then confirm
 
 - **Nothing is saved until a person taps "Looks right".** The AI only fills in
@@ -54,10 +80,10 @@ straight to the point.
   only.
 - **Typing always works too** (noisy kitchen, shy about talking).
 
-## 2. Tell Miamus
+## 2. Tell Kakak
 
-**Where:** one round mic button on Today (owners), labelled "Tell Miamus" /
-"Bilang ke Miamus". Hold to talk, or tap to type.
+**Where:** one round mic button on Today (owners), labelled "Tell Kakak" /
+"Bilang ke Kakak". Hold to talk, or tap to type.
 
 **First things it can do** (the most common, the least risky):
 
@@ -210,7 +236,7 @@ filled in by splitting today's names that start with "LT2" and the like.
 ## 6. Miamus Plus (later)
 
 - **Free:** everything Miamus does today, plus Food at home with typing.
-- **Plus (subscription):** Tell Miamus (voice and typing), photo reading for
+- **Plus (subscription):** Tell Kakak (voice and typing), photo reading for
   food, a weekly "what happened at home" summary, later WhatsApp voice notes
   and staff voice reports.
 - **Fair use:** AI costs grow with use, so Plus has a daily limit (generous
@@ -225,7 +251,7 @@ filled in by splitting today's names that start with "LT2" and the like.
 | --- | --- | --- |
 | 0 | **Backups on**, short guide | Before family data goes in |
 | 1 | **Food at home**, typing first, then photo reading | Self-contained; sets up the AI route, privacy update and cost tracking on one feature |
-| 2 | **Tell Miamus, typed**, owner-only, family-only | Reuses step 1's pipeline; tests understanding cheaply |
+| 2 | **Tell Kakak, typed**, owner-only, family-only | Reuses step 1's pipeline; tests understanding cheaply |
 | 3 | **The mic** (speech-to-text) | Once typing works for the owner's mother |
 | 4 | **Rooms view, floors, repairs** (by hand) | The house at a glance; repairs then gain voice/photo later |
 | 5 | Staff voice reports | The low-literacy win |
@@ -239,7 +265,7 @@ with the owner's OK — as now.
 | # | Question | Recommended |
 | --- | --- | --- |
 | V1 | Suggest-then-confirm, never saving or deleting on its own | Yes |
-| V2 | Tell Miamus starts with: chores, shopping list, pet routines, food | Yes |
+| V2 | Tell Kakak starts with: chores, shopping list, pet routines, food | Yes |
 | V3 | Typed first, mic second | Yes |
 | V4 | Speech-to-text: test 2–3 services with real Indonesian recordings, then choose | Yes |
 | V5 | Model: start on Opus 5.5; try cheaper ones on the household's own test set | Yes (owner decides after the test) |
@@ -254,3 +280,4 @@ with the owner's OK — as now.
 | D1 | The design rules in section 0 (five tabs, one main action, progressive disclosure) | Yes |
 | H1 | Chores gets Today · Rooms; rooms grouped by floor | Yes |
 | H2 | Repairs: photo, status, share on WhatsApp; kept until fixed | Yes |
+| K1 | The AI help is "Kakak" ("Bilang ke Kakak" / "Tell Kakak"); rename only if needed | Yes (owner, 2026-11-07) |
