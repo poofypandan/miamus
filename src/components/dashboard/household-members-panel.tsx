@@ -88,12 +88,19 @@ export function HouseholdMembersPanel() {
       </p>
 
       {failed ? (
-        <p className="text-sm text-destructive">
-          {t(
-            "Couldn't load the member list. Check your connection and reload.",
-            "Daftar anggota gagal dimuat. Periksa koneksi lalu muat ulang."
-          )}
-        </p>
+        // A button rather than "reload": an installed app has no reload
+        // button to press.
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-destructive">
+            {t(
+              "Couldn't load the member list. Check your connection.",
+              "Daftar anggota gagal dimuat. Periksa koneksi."
+            )}
+          </p>
+          <Button variant="outline" size="sm" className="min-h-[40px]" onClick={() => void load()}>
+            {t("Try again", "Coba lagi")}
+          </Button>
+        </div>
       ) : members === null ? (
         <Skeleton className="h-24 w-full rounded-xl" />
       ) : (

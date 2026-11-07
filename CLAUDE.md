@@ -31,4 +31,4 @@
 - Miamus is operated by **Poofy Labs**. The only public contact is **support@poofylabs.dev**.
 - Never put a personal email or phone number in user-facing text, config or emails. Public contact details live in `src/config/legal.ts` only.
 - Before changing what data Miamus stores, where it is stored, or which services touch it, update the privacy policy (`src/components/legal/privacy-policy.tsx`, both languages).
-- Current state, open items and the working agreement (Claude writes, Codex reviews, staging first): `docs/handoff-2026-11-05.md`.
+- Current state, open items and the working agreement (Claude writes, Codex reviews, staging first): `docs/handoff-2026-11-07.md`.
