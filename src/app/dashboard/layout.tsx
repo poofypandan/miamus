@@ -14,7 +14,6 @@ import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { useHousehold } from "@/context/household-context";
 import { OwnerLocaleProvider, useOwnerLocale } from "@/context/owner-locale-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
-import { useHouseholdNameState } from "@/hooks/use-household-name";
 import { usePushResync } from "@/hooks/use-push-resync";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -43,7 +42,6 @@ function DashboardShell({ children }: { children: ReactNode }) {
   useOfflineSync(ownerLocale);
   usePushResync();
   const { refresh, loading, tenantReady, roleHydrated } = useHousehold();
-  const { ready: nameReady } = useHouseholdNameState();
 
   return (
     // Google sign-in is what got them to this route (see middleware); the
@@ -97,7 +95,7 @@ function DashboardShell({ children }: { children: ReactNode }) {
             seen swapping "Miamus" for the real name. */}
         <LaunchCover
           variant="owner"
-          ready={tenantReady && roleHydrated && !loading && nameReady}
+          ready={tenantReady && roleHydrated && !loading}
         />
 
         {/* Outside PullToRefresh on purpose — see BottomTabBar. It reads the

@@ -73,9 +73,9 @@ export function ApprovalQueue() {
   if (batches.length === 0) return null;
 
   return (
-    // mb-6 rather than mt-8: this sits directly under the date ribbon now, so
-    // the spacing belongs below it instead of above.
-    <section className="mb-6 flex flex-col gap-3">
+    // No extra margin: the Agenda's own gap spaces it, and an mb-6 here left a
+    // hole above the next line ("3 things to buy", Phase 154).
+    <section className="flex flex-col gap-3">
       <h3 className="text-sm font-semibold text-gray-900">
         {t("Waiting for you", "Menunggu Anda")} <span className="text-gray-400">({batches.length})</span>
       </h3>

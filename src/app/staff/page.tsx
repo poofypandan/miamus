@@ -39,14 +39,12 @@ import { LaunchCover } from "@/components/brand/brand-cover";
 import { TapHint } from "@/components/staff/tap-hint";
 import { CompletedSection } from "@/components/agenda/completed-section";
 import { isEntrySettled } from "@/lib/staff-agenda";
-import { useHouseholdNameState } from "@/hooks/use-household-name";
 import { PendingBar } from "@/components/shared/pending-bar";
 import { useScrollTopOnChange, useTabNavigation } from "@/hooks/use-tab-navigation";
 import { cn } from "@/lib/utils";
 
 export default function StaffPage() {
   const { loading, tenantReady, roleHydrated } = useHousehold();
-  const { ready: nameReady } = useHouseholdNameState();
   return (
     // Staff screens are Bahasa Indonesia, the shared primitives' own words
     // included (Phase 149).
@@ -62,7 +60,7 @@ export default function StaffPage() {
           it covers the gate's own first moments as well as the task list. */}
       <LaunchCover
         variant="staff"
-        ready={tenantReady && roleHydrated && !loading && nameReady}
+        ready={tenantReady && roleHydrated && !loading}
       />
     </UiLabelsProvider>
   );
