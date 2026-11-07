@@ -265,7 +265,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
 
   async function handleConfirm() {
     if (!capture || capture.selected.size === 0) {
-      toast.error("Pilih minimal satu anjing");
+      toast.error("Pilih minimal satu hewan");
       return;
     }
     setConfirming(true);
@@ -472,8 +472,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               {finished
                 ? "Semua selesai. Foto bisa dihapus dalam 5 menit setelah dicatat."
                 : visitOpen
-                  ? "Anjing sedang di klinik. Selesaikan kunjungan saat dia pulang atau menginap."
-                  : "Ambil foto, lalu centang anjing yang ada di foto."}
+                  ? "Hewan sedang di klinik. Selesaikan kunjungan saat dia pulang atau menginap."
+                  : "Ambil foto, lalu centang hewan yang ada di foto."}
             </SheetDescription>
           </SheetHeader>
         <div
@@ -615,7 +615,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                   {isVet
                     ? "Check-In Klinik"
                     : pendingItems.length > 1
-                      ? `Ambil Foto untuk ${pendingItems.length} Anjing`
+                      ? `Ambil Foto untuk ${pendingItems.length} Hewan`
                       : "Ambil Foto untuk Selesai"}
                 </span>
               )}
@@ -633,7 +633,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           <DialogHeader>
             <DialogTitle>Selesaikan kunjungan</DialogTitle>
             <DialogDescription>
-              Anjingnya pulang hari ini, atau menginap di klinik?
+              Hewannya pulang hari ini, atau menginap di klinik?
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
@@ -683,12 +683,12 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       <Dialog open={!!capture} onOpenChange={(open) => !open && setCapture(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Pilih anjing yang ada di foto</DialogTitle>
+            <DialogTitle>Pilih hewan yang ada di foto</DialogTitle>
             {/* Reworded, not just translated: with nothing pre-ticked the old
                 "untick anyone who isn't here" instruction told staff to do
                 the opposite of what the dialog now needs. */}
             <DialogDescription>
-              Centang anjing yang benar-benar terlihat di foto ini. Yang tidak dicentang tetap
+              Centang hewan yang benar-benar terlihat di foto ini. Yang tidak dicentang tetap
               belum selesai.
             </DialogDescription>
           </DialogHeader>

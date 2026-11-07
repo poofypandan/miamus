@@ -22,7 +22,9 @@ export const LEGAL = {
   // is kept, its expiry (or "don't know"), its photo (kept while listed) —
   // finished food (kept 90 days), and the admins' notification when staff
   // add food (Phase 156, migrations/123).
-  policyVersion: "2026-11-07.3",
+  // 2026-11-07.4: the admins' morning notification of food that expires
+  // today or tomorrow (Phase 157, migrations/124).
+  policyVersion: "2026-11-07.4",
   effectiveDate: { en: "7 November 2026", id: "7 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
