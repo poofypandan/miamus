@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,14 @@ export default function OnboardingPage() {
           {saving && <Loader2 className="animate-spin" />} Create household
         </Button>
         {failed && <p className="text-sm text-destructive">{failed}</p>}
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          By creating a household, you confirm you&apos;ve read the{" "}
+          <Link href="/privacy" className="font-medium text-gray-900 underline underline-offset-4">
+            Privacy Policy
+          </Link>{" "}
+          and will let the people who work in your home know that Miamus records their tasks,
+          photos and leave.
+        </p>
       </form>
     </main>
   );
