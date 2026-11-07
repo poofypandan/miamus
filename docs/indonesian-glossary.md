@@ -57,6 +57,9 @@ people are **staf** and **admin**.
 | Workload | **Beban Kerja** | Understood; keep unless owners say otherwise. |
 | Upload / uploading | **Unggah** / **Mengunggah** | Standard in Indonesian apps. |
 | Offline | **offline** | Everyday loanword. |
+| House code (staff sign-in) | **Kode rumah** | Plain; "kode" is everyday. Shown as XXX-XXX. |
+| Linked phones | **HP yang terhubung** | Matches "menghubungkan HP" in the invite text. |
+| I'm staff (start screen) | **Saya staf** | Shown in Indonesian on the English start screen too: it is the staff's door (owner decision, 2026-11-07). |
 
 ## Formatting
 

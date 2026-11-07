@@ -19,6 +19,7 @@ import {
 import { PinPad, PIN_LENGTH } from "@/components/auth/pin-pad";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InvitePanel } from "@/components/dashboard/invite-panel";
+import { HouseCodePanel } from "@/components/dashboard/house-code-panel";
 import { HouseholdMembersPanel } from "@/components/dashboard/household-members-panel";
 import { SecuritySettings } from "@/components/dashboard/security-settings";
 import { PushNotificationSettings } from "@/components/dashboard/push-notification-settings";
@@ -141,6 +142,8 @@ export function StaffTab() {
       <LeavePanel staffName={staffName} />
 
       <InvitePanel />
+
+      <HouseCodePanel />
 
       <PushNotificationSettings />
 

@@ -658,6 +658,35 @@ export interface Database {
         Args: { p_locale: string };
         Returns: string;
       };
+      // Phase 151, migrations/115.
+      check_staff_pin: {
+        Args: { p_staff_id: string; p_pin: string };
+        Returns: Record<string, unknown>;
+      };
+      house_code_roster: {
+        Args: { p_code: string };
+        Returns: { id: string; name: string; has_pin: boolean }[];
+      };
+      sign_in_with_house_code: {
+        Args: { p_code: string; p_staff_id: string; p_pin: string };
+        Returns: Record<string, unknown>;
+      };
+      my_house_code: {
+        Args: { p_household_id: string };
+        Returns: string | null;
+      };
+      rotate_house_code: {
+        Args: { p_household_id: string };
+        Returns: string;
+      };
+      list_linked_phones: {
+        Args: { p_household_id: string };
+        Returns: { id: string; linked_at: string; last_seen_at: string }[];
+      };
+      remove_linked_phone: {
+        Args: { p_household_id: string; p_device_id: string };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

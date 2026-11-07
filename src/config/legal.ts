@@ -15,8 +15,11 @@ export const LEGAL = {
   // 2026-11-06: requests to set up a household, and their 30-day retention
   // (Phase 148, migrations/113); an admin's language choice (Phase 149,
   // migrations/114).
-  policyVersion: "2026-11-06",
-  effectiveDate: { en: "6 November 2026", id: "6 November 2026" },
+  // 2026-11-07: the language picked on the sign-in screen, kept on the phone
+  // (Phase 150). Staff sign-in attempts (30 days) and the linked-phones list
+  // admins see (Phase 151, migrations/115).
+  policyVersion: "2026-11-07",
+  effectiveDate: { en: "7 November 2026", id: "7 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-northeast-1. Update this if the project moves region.

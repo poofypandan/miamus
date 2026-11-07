@@ -19,6 +19,8 @@ import { StaffLoadingScreen } from "@/components/brand/loading-screens";
 import { dataProvider } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { activeMemberProfile } from "@/lib/member-identity";
+import type { PinCheck } from "@/lib/data/types";
+import { formatTime } from "@/lib/time";
 import type { StaffProfile } from "@/types/database";
 
 const STAFF_ID_KEY = "banyuwangi11:staffId";
@@ -291,10 +293,10 @@ function PinStep({
       // "you typed it wrong".
       busy.current = true;
       try {
-        const ok = await dataProvider.verifyStaffPin(step.profile.id, value);
+        const result = await dataProvider.checkStaffPin(step.profile.id, value);
         busy.current = false;
-        if (!ok) {
-          reject("PIN salah");
+        if (result.status !== "ok") {
+          reject(pinFailureMessage(result));
           return;
         }
         onDone(step.profile);
@@ -406,4 +408,32 @@ function PinStep({
       </Button>
     </div>
   );
+}
+
+/**
+ * What a staff member reads when a PIN is refused (Phase 151): the tries left
+ * before the 5-try lock, or until when it is locked, in 24-hour time.
+ */
+export function pinFailureMessage(result: Exclude<PinCheck, { status: "ok" }>): string {
+  if (result.status === "locked") {
+    return `PIN terkunci karena 5 kali salah. Coba lagi pukul ${formatTime(new Date(result.locked_until), "id")}.`;
+  }
+  if (result.status === "wrong_pin" && result.attempts_left > 0) {
+    return `PIN salah. Sisa ${result.attempts_left} kali coba.`;
+  }
+  return "PIN salah";
+}
+
+/**
+ * Remembers who is holding this phone, as picking a name on the gate does, so
+ * the staff page opens straight on their schedule (Phase 151: the house-code
+ * sign-in has already checked the PIN).
+ */
+export function rememberStaffOnThisPhone(profile: { id: string; name: string }): void {
+  try {
+    window.localStorage.setItem(STAFF_ID_KEY, profile.id);
+    window.localStorage.setItem(STAFF_NAME_KEY, profile.name);
+  } catch {
+    // Blocked storage: the gate asks for the name and PIN again instead.
+  }
 }

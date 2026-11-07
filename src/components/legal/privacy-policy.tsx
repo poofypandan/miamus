@@ -88,6 +88,8 @@ const COPY: Record<
               "Your name, as entered by the household admin.",
               "Your 4-digit PIN, stored only in scrambled (hashed) form. Nobody — including us — can read it back.",
               "Which tasks you completed and when, and your leave dates and their status.",
+              "Each time someone signs in to your name with the house code or a PIN: when, from which phone session, and whether it worked. Kept 30 days, only to stop PIN guessing (5 wrong tries locks the PIN for 15 minutes and tells the admins).",
+              "Which phones are linked to the household, when each was linked and when it last signed in. Admins can see this list and remove a phone.",
             ],
           },
           { h: "Everyone in a household" },
@@ -110,7 +112,7 @@ const COPY: Record<
           { h: "Kept only on your phone" },
           {
             ul: [
-              "Your sign-in session, which staff name is selected on a shared phone, photos waiting to upload while you're offline, and app-lock settings.",
+              "Your sign-in session, which staff name is selected on a shared phone, photos waiting to upload while you're offline, app-lock settings, and the language you picked on the sign-in screen.",
               "If you unlock Miamus with Face ID or a fingerprint, your phone does the check. Your face or fingerprint data never leaves your phone, and we never receive it.",
             ],
           },
@@ -169,6 +171,7 @@ const COPY: Record<
           {
             ul: [
               "Chore and routine proof photos (including before and after photos) are deleted automatically after 30 days.",
+              "Records of staff sign-in attempts are deleted automatically after 30 days.",
               "Everything else is kept while your household uses Miamus.",
               "A request to set up a household that isn't approved is deleted 30 days after the decision, together with the Google sign-in it came from, unless that account has since joined a household. Approved requests are kept while the account is used.",
               "If an admin asks us to delete their household, or anyone asks us to delete their data, we delete it within 30 days unless the law requires us to keep it. Copies in our providers' backups are cleared on their normal schedule.",
@@ -219,7 +222,7 @@ const COPY: Record<
             ul: [
               "Everything travels over encrypted connections (HTTPS).",
               "Each household's data is walled off in the database, and photos are kept in private storage.",
-              "PINs are stored hashed, and admins can turn on a Face ID or fingerprint lock.",
+              "PINs are stored hashed and lock after 5 wrong tries, and admins can turn on a Face ID or fingerprint lock.",
             ],
           },
           {
@@ -299,6 +302,8 @@ const COPY: Record<
               "Nama Anda, seperti yang dimasukkan oleh admin rumah.",
               "PIN 4 angka Anda, yang hanya disimpan dalam bentuk acak (hash). Tidak ada yang bisa membacanya kembali — termasuk kami.",
               "Tugas yang Anda selesaikan dan waktunya, serta tanggal cuti dan statusnya.",
+              "Setiap kali ada yang masuk dengan nama Anda memakai kode rumah atau PIN: kapan, dari sesi HP yang mana, dan berhasil atau tidak. Disimpan 30 hari, hanya untuk mencegah tebak-tebakan PIN (5 kali salah mengunci PIN selama 15 menit dan memberi tahu admin).",
+              "HP mana saja yang terhubung ke rumah tangga, kapan masing-masing terhubung, dan kapan terakhir masuk. Admin dapat melihat daftar ini dan menghapus HP.",
             ],
           },
           { h: "Semua orang di rumah tangga" },
@@ -321,7 +326,7 @@ const COPY: Record<
           { h: "Hanya disimpan di HP Anda" },
           {
             ul: [
-              "Sesi login, nama staf yang dipilih di HP bersama, foto yang menunggu diunggah saat offline, dan pengaturan kunci aplikasi.",
+              "Sesi login, nama staf yang dipilih di HP bersama, foto yang menunggu diunggah saat offline, pengaturan kunci aplikasi, dan bahasa yang Anda pilih di halaman masuk.",
               "Jika Anda membuka Miamus dengan Face ID atau sidik jari, HP Anda yang memeriksanya. Data wajah atau sidik jari Anda tidak pernah keluar dari HP, dan tidak pernah kami terima.",
             ],
           },
@@ -380,6 +385,7 @@ const COPY: Record<
           {
             ul: [
               "Foto bukti tugas dan rutinitas (termasuk foto sebelum dan sesudah) dihapus otomatis setelah 30 hari.",
+              "Catatan percobaan masuk staf dihapus otomatis setelah 30 hari.",
               "Data lainnya disimpan selama rumah tangga Anda memakai Miamus.",
               "Permintaan membuat rumah tangga yang tidak disetujui dihapus 30 hari setelah keputusan, bersama akun login Google yang dipakai untuk memintanya, kecuali akun itu sudah bergabung ke sebuah rumah tangga. Permintaan yang disetujui disimpan selama akun tersebut dipakai.",
               "Jika admin meminta rumah tangganya dihapus, atau siapa pun meminta datanya dihapus, kami menghapusnya dalam 30 hari, kecuali hukum mewajibkan kami menyimpannya. Salinan di cadangan (backup) penyedia kami terhapus sesuai jadwal normal mereka.",
@@ -430,7 +436,7 @@ const COPY: Record<
             ul: [
               "Semua data dikirim melalui koneksi terenkripsi (HTTPS).",
               "Data setiap rumah tangga dipisahkan di database, dan foto disimpan di penyimpanan privat.",
-              "PIN disimpan dalam bentuk hash, dan admin dapat menyalakan kunci Face ID atau sidik jari.",
+              "PIN disimpan dalam bentuk hash dan terkunci setelah 5 kali salah, dan admin dapat menyalakan kunci Face ID atau sidik jari.",
             ],
           },
           {
