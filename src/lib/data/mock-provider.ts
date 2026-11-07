@@ -503,6 +503,26 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(updated);
   },
+  async advanceChoreStart(id, fromDate, toDate) {
+    const db = loadDB();
+    const idx = db.householdTasks.findIndex(
+      (t) => t.id === id && t.due_date === fromDate && t.status === "pending"
+    );
+    if (idx === -1) return delay(null);
+    const updated: HouseholdTask = { ...db.householdTasks[idx], due_date: toDate };
+    db.householdTasks[idx] = updated;
+    saveDB(db);
+    return delay(updated);
+  },
+  async skipChoreOccurrence(id) {
+    const db = loadDB();
+    const idx = db.householdTasks.findIndex((t) => t.id === id && t.status === "pending");
+    if (idx === -1) return delay(null);
+    const updated: HouseholdTask = { ...db.householdTasks[idx], status: "cancelled" };
+    db.householdTasks[idx] = updated;
+    saveDB(db);
+    return delay(updated);
+  },
   async deleteHouseholdTask(id) {
     const db = loadDB();
     // Mirrors `on delete cascade` on parent_task_id (migrations/097): removing

@@ -96,7 +96,8 @@ export function ChoreEditorDialog({
     deleteHouseholdTask,
     householdTasks,
     materialiseChoreOccurrence,
-    updateHouseholdTaskStatus,
+    advanceChoreStart,
+    skipChoreOccurrence,
     memberProfile,
     leaveRequests,
   } = useHousehold();
@@ -245,8 +246,11 @@ export function ChoreEditorDialog({
   /** This day's own row, when one is written. */
   const dayRow = task?.parent_task_id ? task : null;
   const isFirstDay = !!series && day === series.due_date;
-  const dayDone =
-    dayRow?.status === "completed" || (isFirstDay && series?.status === "completed");
+  // A day with its own row is governed by that row, even the series' first
+  // day (expandChores): the template's status then says nothing about it.
+  const dayDone = dayRow
+    ? dayRow.status === "completed"
+    : isFirstDay && series?.status === "completed";
   // Every unfinished day of a repeat can be dropped, the first one included.
   // It used to be excluded because the first day IS the template row, so
   // there is nothing to write a cancelled tombstone against — which left the
@@ -279,7 +283,12 @@ export function ChoreEditorDialog({
       // lands on instead. That drops day one and leaves every later day
       // exactly where it was: advancing by one period keeps the anchor
       // occursOn reads (weekday for weekly, day-of-month for monthly).
-      if (isFirstDay) {
+      //
+      // Unless the first day already has its own row — an earlier skip can
+      // move the start onto a day someone had claimed. That row governs the
+      // day, so it is cancelled like any other day's below; moving the start
+      // again would leave it pending and carried over (Codex review, PR #1).
+      if (isFirstDay && !dayRow) {
         // Not simply the next occurrence: for a chore on the 31st that can be
         // 28 February, which would move every later month to the 28th.
         // Shorter months before the new start keep their own rows.
@@ -294,7 +303,18 @@ export function ChoreEditorDialog({
           return;
         }
         for (const clamped of clampedDays) await materialiseChoreOccurrence(series.id, clamped);
-        await updateHouseholdTask(series.id, { due_date: next });
+        // Only if the first day is still unfinished: another phone may have
+        // finished it since this editor opened, and moving it then would
+        // carry that finished record onto the next day.
+        if (!(await advanceChoreStart(series.id, day, next))) {
+          toast.error(
+            t(
+              "That day was already completed, so it was left as it is",
+              "Hari itu sudah selesai, jadi dibiarkan apa adanya"
+            )
+          );
+          return;
+        }
         toast.success(
           t(`Skipped "${series.title}" for ${dayName}`, `"${series.title}" dilewati untuk ${dayName}`)
         );
@@ -302,8 +322,11 @@ export function ChoreEditorDialog({
       }
       // A day nothing is written for gets its row first; another phone may
       // have written it meanwhile, and a finished day is never cancelled.
+      // Cancelled only while still pending: this editor's copy of the row can
+      // be older than a completion saved on a staff phone (Codex review,
+      // PR #1), and cancelling that would wipe its author and photos.
       const row = dayRow ?? (await materialiseChoreOccurrence(series.id, day));
-      if (row.status === "completed") {
+      if (row.status === "completed" || !(await skipChoreOccurrence(row.id))) {
         toast.error(
           t(
             "That day was already completed, so it was left as it is",
@@ -312,7 +335,6 @@ export function ChoreEditorDialog({
         );
         return;
       }
-      await updateHouseholdTaskStatus(row.id, "cancelled");
       toast.success(t(`Skipped "${series.title}" for ${dayName}`, `"${series.title}" dilewati untuk ${dayName}`));
     }, t("Failed to skip that day", "Gagal melewati hari itu"));
   }
