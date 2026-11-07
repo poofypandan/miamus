@@ -21,8 +21,11 @@ const STORAGE_KEY = "miamus.public-locale";
 
 export function phoneLocale(): OwnerLocale {
   if (typeof navigator === "undefined") return "en";
-  const tags = navigator.languages?.length ? navigator.languages : [navigator.language];
-  return tags.some((tag) => /^(id|in)\b/i.test(tag ?? "")) ? "id" : "en";
+  // The phone's main language only (Phase 153): English unless the phone
+  // itself is set to Indonesian. Matching Indonesian anywhere in the list
+  // turned an English phone with an Indonesian keyboard added to Indonesian.
+  const main = navigator.languages?.[0] ?? navigator.language ?? "";
+  return /^(id|in)\b/i.test(main) ? "id" : "en";
 }
 
 /** The switch's choice on this phone, or null if it was never used. */
