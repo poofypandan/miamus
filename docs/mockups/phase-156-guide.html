@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Owner guide mockups</title>
+<style>
+  :root {
+    --bg: #f8fafc; --card: #fff; --ink: #111827; --ink2: #374151; --muted: #6b7280;
+    --line: #e5e7eb; --track: #f3f4f6; --primary: #171717;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ecef; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color: var(--ink); }
+  header.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 4px; }
+  header.page h1 { font-size: 20px; margin: 0 0 4px; }
+  header.page p { margin: 0; color: var(--muted); max-width: 720px; }
+  section.screen { max-width: 1100px; margin: 0 auto; padding: 18px 16px 8px; }
+  section.screen h2 { font-size: 15px; margin: 0 0 2px; }
+  section.screen > p { margin: 0 0 12px; color: var(--muted); max-width: 680px; }
+  .pair { display: flex; gap: 20px; flex-wrap: wrap; }
+  .phone { width: 360px; max-width: 100%; height: 720px; background: var(--bg); border-radius: 36px; border: 8px solid #111; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .tag { position: absolute; top: -2px; right: 18px; background: #111; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 0 0 8px 8px; z-index: 5; }
+  .status { height: 22px; flex: none; }
+  .appbar { background: #fff; border-bottom: 1px solid var(--line); padding: 8px 14px 10px; flex: none; }
+  .appbar .row { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+  .brand { font-weight: 600; font-size: 17px; display: flex; gap: 6px; align-items: center; }
+  .brand i { width: 22px; height: 22px; border-radius: 7px; background: #111; display: inline-block; }
+  .seg { display: flex; gap: 3px; background: var(--track); border-radius: 999px; padding: 3px; }
+  .seg span { flex: 1; text-align: center; border-radius: 999px; padding: 8px 6px; font-weight: 500; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .seg span.on { background: var(--primary); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .seg.sm span { flex: none; padding: 6px 10px; font-size: 11px; }
+  .body { flex: 1; overflow: hidden; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+  .body > * { flex: none; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 12px; font-weight: 600; font-size: 14px; padding: 0 14px; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.outline { border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 500; }
+  .group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .row1 { display: flex; gap: 12px; align-items: center; padding: 0 14px; border-top: 1px solid var(--line); min-height: 50px; font-weight: 500; }
+  .row1:first-child { border-top: 0; }
+  .row1 .ico { width: 18px; text-align: center; color: var(--muted); font-size: 14px; }
+  .row1 .t { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row1 .d { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .row1 .chev { color: var(--muted); }
+  .row1.new { background: #fafafa; }
+  .newdot { font-size: 10px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; margin-left: 4px; }
+  .back { color: var(--muted); font-weight: 500; font-size: 14px; }
+  .title { font-size: 20px; font-weight: 600; margin: 0; }
+  .sub { color: var(--muted); margin-top: -10px; }
+  .help { text-align: center; color: var(--muted); font-size: 13px; }
+  .help u { color: var(--ink2); text-decoration: none; font-weight: 500; }
+  .tabbar { flex: none; height: 58px; background: #fff; border-top: 1px solid var(--line); display: flex; }
+  .tabbar span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; color: var(--muted); font-weight: 500; }
+  .tabbar span i { width: 20px; height: 20px; border-radius: 6px; border: 1.7px solid currentColor; display: block; }
+  .tabbar span.on { color: var(--ink); }
+  .tabbar span.on i { background: currentColor; }
+  .faded { opacity: .45; }
+  /* sheet */
+  .dim { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 2; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 20px 20px 0 0; z-index: 3; padding: 8px 18px 22px; display: flex; flex-direction: column; gap: 12px; max-height: 640px; }
+  .grab { width: 36px; height: 5px; border-radius: 9px; background: #d1d5db; margin: 0 auto 4px; }
+  .sheet .step { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+  .sheet h3 { margin: -6px 0 0; font-size: 19px; }
+  .sheet .txt { display: flex; flex-direction: column; gap: 9px; color: var(--ink2); font-size: 14.5px; line-height: 1.45; }
+  .sheet .txt p { margin: 0; }
+  .sheet .txt ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+  .sheet .txt .small { font-size: 13px; color: var(--muted); }
+  .link { text-align: center; font-size: 14px; color: var(--ink2); font-weight: 500; }
+  /* today */
+  .welcome { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; position: relative; display: flex; flex-direction: column; gap: 10px; }
+  .welcome .x { position: absolute; top: 8px; right: 12px; color: #9ca3af; font-size: 16px; }
+  .welcome b { font-size: 15px; }
+  .welcome p { margin: -6px 0 0; color: var(--muted); padding-right: 14px; }
+  .welcome .acts { display: flex; gap: 10px; align-items: center; }
+  .welcome .acts .btn { flex: none; }
+  .welcome .acts .q { color: var(--ink2); font-weight: 500; padding: 0 8px; }
+  .h { font-size: 13px; font-weight: 600; color: var(--ink); margin: 2px 0 -6px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .empty { text-align: center; padding: 28px 16px; color: var(--muted); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .empty .em { font-size: 34px; }
+  .empty b { color: var(--ink); font-size: 16px; }
+  .empty .acts { display: flex; gap: 8px; }
+  .empty .lnk { color: var(--ink2); font-weight: 500; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Phase 156, step 0 — How Miamus works (owner guide)</h1>
+  <p>Phone-size mockups for approval. English and Indonesian side by side. Owners only: staff phones never see the guide or the welcome card. Not built yet. Plan: docs/phase-156-step0-guide-plan.md.</p>
+</header>
+<main id="root"></main>
+
+<script>
+const L = {
+  en: {
+    tag: "Owner · English", overview: "Overview", staff: "Staff",
+    tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    hh: [["👑", "Family"], ["👤", "Staff", "2"]],
+    hh2: [["＋", "Invite someone"], ["🔑", "Staff sign-in"]],
+    hh3: [["🔔", "Notifications"], ["文", "Language", "English"], ["🔒", "App lock"]],
+    hh4: [["🕘", "Activity"]],
+    guideRow: "How Miamus works", isNew: "new",
+    back: "‹ Household", guideTitle: "How Miamus works", guideSub: "Seven short answers. Tap one.",
+    help: "Still stuck? Email", next: "Next:", done: "Done", of: (i) => `${i} of 7`,
+    welcomeT: "New to Miamus?", welcomeD: "Seven short answers, about two minutes. You can find them any time in Household.",
+    welcomeBtn: "How Miamus works", notNow: "Not now",
+    date: "Saturday, 7 November", waiting: "Waiting for you",
+    emptyT: "Welcome to your new household!",
+    emptyD: "Let's start by adding a pet or a chore. Everything you add shows up here, day by day, for everyone in the house.",
+    addPet: "Add Pet", addChore: "＋ Add Chore", emptyLink: "How Miamus works →",
+  },
+  id: {
+    tag: "Pemilik · Indonesia", overview: "Ringkasan", staff: "Staf",
+    tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    hh: [["👑", "Keluarga"], ["👤", "Staf", "2"]],
+    hh2: [["＋", "Undang"], ["🔑", "Masuk staf"]],
+    hh3: [["🔔", "Notifikasi"], ["文", "Bahasa", "Bahasa Indonesia"], ["🔒", "Kunci aplikasi"]],
+    hh4: [["🕘", "Aktivitas"]],
+    guideRow: "Cara pakai Miamus", isNew: "baru",
+    back: "‹ Rumah", guideTitle: "Cara pakai Miamus", guideSub: "Tujuh jawaban singkat. Ketuk salah satu.",
+    help: "Masih bingung? Kirim email ke", next: "Berikutnya:", done: "Selesai", of: (i) => `${i} dari 7`,
+    welcomeT: "Baru pakai Miamus?", welcomeD: "Tujuh jawaban singkat, sekitar dua menit. Bisa dibuka kapan saja di Rumah.",
+    welcomeBtn: "Cara pakai Miamus", notNow: "Nanti saja",
+    date: "Sabtu, 7 November", waiting: "Menunggu Anda",
+    emptyT: "Selamat datang di rumah baru Anda!",
+    emptyD: "Mari mulai dengan menambahkan hewan atau tugas. Semua yang Anda tambahkan muncul di sini, hari demi hari, untuk semua orang di rumah.",
+    addPet: "Tambah Hewan", addChore: "＋ Tambah Tugas", emptyLink: "Cara pakai Miamus →",
+  },
+};
+
+// The seven cards — the same text as the plan (docs/phase-156-step0-guide-plan.md).
+const CARDS = [
+  { ico: "🏠",
+    en: { t: "Your first day", btn: "Go to Pets", body: [
+      "Today shows the whole house at a glance: pet routines, chores, and anything waiting for you.",
+      "Start with your pets. Add each one in Pets and set its meal and medicine times — staff tick them off every day.",
+      "Then add a few chores (next card). Everything can be changed later.",
+      "<span class='small'>Tip: add Miamus to your Home Screen so it opens like an app.</span>"] },
+    id: { t: "Hari pertama Anda", btn: "Buka Hewan", body: [
+      "Hari ini menampilkan seisi rumah sekilas: rutinitas hewan, tugas, dan apa pun yang menunggu Anda.",
+      "Mulai dari hewan Anda. Tambahkan satu per satu di Hewan, lalu atur jam makan dan obatnya — staf menandainya setiap hari.",
+      "Lalu tambahkan beberapa tugas (kartu berikutnya). Semuanya bisa diubah nanti.",
+      "<span class='small'>Tips: tambahkan Miamus ke Layar Utama supaya terbuka seperti aplikasi.</span>"] } },
+  { ico: "📋",
+    en: { t: "Chores", btn: "Go to Chores", body: [
+      "In Chores, tap Add Chore: what to do, who does it, the day and time, and whether it repeats.",
+      "Leave it Unassigned and anyone can take it — staff tap “Saya kerjakan”. Turn on “Wait for an owner” for chores that need you at home.",
+      "Staff tick each chore off and can add a photo. You see who did what on Today and in Chores."] },
+    id: { t: "Tugas", btn: "Buka Tugas", body: [
+      "Di Tugas, ketuk Tambah Tugas: apa yang dikerjakan, siapa yang mengerjakan, hari dan jamnya, dan apakah berulang.",
+      "Biarkan “Belum ditugaskan” supaya siapa saja bisa mengambilnya — staf ketuk “Saya kerjakan”. Nyalakan “Tunggu pemilik rumah” untuk tugas yang perlu Anda ada di rumah.",
+      "Staf menandai tugas selesai dan bisa menambahkan foto. Anda melihat siapa mengerjakan apa di Hari ini dan di Tugas."] } },
+  { ico: "📱",
+    en: { t: "Linking a staff phone", btn: "Go to Staff", body: [
+      "<ol><li>Add the person: Household → Staff → their name.</li><li>Send their phone a link: Household → Invite someone → Link a staff phone. A shared house phone works too.</li><li>On that phone they open the link, tap their name and choose a 4-digit PIN. You never need to know it.</li></ol>",
+      "<span class='small'>Phone signed out later? They tap “Saya staf”, type the house code (Household → Staff sign-in), pick their name and enter their PIN. Someone has left? Remove them in Staff; their phones are signed out.</span>"] },
+    id: { t: "Menghubungkan HP staf", btn: "Buka Staf", body: [
+      "<ol><li>Tambahkan orangnya: Rumah → Staf → namanya.</li><li>Kirim link ke HP-nya: Rumah → Undang → Hubungkan HP staf. HP bersama di rumah juga bisa.</li><li>Di HP itu, mereka buka link-nya, ketuk nama mereka, lalu pilih PIN 4 angka. Anda tidak perlu tahu PIN-nya.</li></ol>",
+      "<span class='small'>Nanti HP-nya keluar dari Miamus? Mereka ketuk “Saya staf”, ketik kode rumah (Rumah → Masuk staf), pilih nama, lalu masukkan PIN. Ada yang sudah tidak bekerja? Hapus di Staf; HP-nya otomatis keluar.</span>"] } },
+  { ico: "🍲",
+    en: { t: "Kitchen: food and shopping", btn: "Go to Kitchen", body: [
+      "Food shows what's in the house, what to eat first at the top. Add food when it arrives; when it's gone, tap Eaten, Given away or Thrown away.",
+      "Staff log food at the door with “Lapor → Makanan masuk”, and you get a notification.",
+      "Shopping is the shopping list, with the supplies at home underneath — soap, pee pads, pet food."] },
+    id: { t: "Dapur: makanan dan belanja", btn: "Buka Dapur", body: [
+      "Makanan menunjukkan makanan yang ada di rumah, yang perlu segera dimakan paling atas. Tambahkan makanan saat datang; kalau sudah habis, ketuk Dimakan, Diberikan, atau Dibuang.",
+      "Staf mencatat makanan yang datang lewat “Lapor → Makanan masuk”, dan Anda mendapat notifikasi.",
+      "Belanja berisi daftar belanja, dengan Stok di rumah di bawahnya — sabun, pee pad, makanan hewan."] } },
+  { ico: "👀",
+    en: { t: "What staff see", btn: "Open the staff view", body: [
+      "Staff screens are always in Bahasa Indonesia, and simple: today's tasks — theirs and the ones nobody has taken — and Dapur.",
+      "With “Lapor” they report a sick pet, log food, suggest a routine or ask for leave. Suggestions wait for you on Today under “Waiting for you”; leave in Household → Leave.",
+      "To see exactly what they see, tap Staff at the top of the screen. Overview brings you back."] },
+    id: { t: "Yang dilihat staf", btn: "Buka tampilan staf", body: [
+      "Layar staf selalu dalam Bahasa Indonesia, dan sederhana: tugas hari ini — milik mereka dan yang belum ada yang ambil — serta Dapur.",
+      "Lewat “Lapor”, mereka melaporkan hewan sakit, mencatat makanan masuk, mengusulkan rutinitas, atau mengajukan cuti. Usulan menunggu Anda di Hari ini, di bagian “Menunggu Anda”; cuti di Rumah → Cuti.",
+      "Untuk melihat persis yang mereka lihat, ketuk Staf di bagian atas layar. Ringkasan membawa Anda kembali."] } },
+  { ico: "👪",
+    en: { t: "Inviting family", btn: "Invite family", body: [
+      "Your partner or family can run the house with you.",
+      "Go to Household → Invite someone → Invite family, and send the link on WhatsApp. They sign in with Google and can do everything you can.",
+      "The link works once, for 7 days — send it only to them."] },
+    id: { t: "Mengundang keluarga", btn: "Undang keluarga", body: [
+      "Pasangan atau keluarga bisa ikut mengurus rumah bersama Anda.",
+      "Buka Rumah → Undang → Undang keluarga, lalu kirim link-nya lewat WhatsApp. Mereka masuk dengan Google dan bisa melakukan semua yang Anda bisa.",
+      "Link-nya sekali pakai dan berlaku 7 hari — kirim hanya ke orang itu."] } },
+  { ico: "🔔",
+    en: { t: "Getting notifications", btn: "Turn on notifications", body: [
+      "Miamus tells you when staff report a sick pet or log food that came in.",
+      "Turn it on for each phone: Household → Notifications.",
+      "On iPhone, first add Miamus to your Home Screen (Share → Add to Home Screen) and open it from there. Then tap Send test to check."] },
+    id: { t: "Notifikasi", btn: "Aktifkan notifikasi", body: [
+      "Miamus memberi tahu Anda saat staf melaporkan hewan sakit atau mencatat makanan masuk.",
+      "Aktifkan di setiap HP: Rumah → Notifikasi.",
+      "Di iPhone, tambahkan Miamus ke Layar Utama dulu (Bagikan → Tambahkan ke Layar Utama) dan buka dari sana. Lalu ketuk Kirim tes untuk mencoba."] } },
+];
+
+const lang = (s) => (s === L.en ? "en" : "id");
+
+const appbar = (s) => `
+  <div class="status"></div>
+  <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div>
+    <div class="seg sm"><span class="on">${s.overview}</span><span>${s.staff}</span></div></div></div>`;
+
+const tabbar = (s, on) => `<div class="tabbar">${s.tabs.map((t, i) => `<span class="${i === on ? "on" : ""}"><i></i>${t}</span>`).join("")}</div>`;
+
+const group = (rows, cls = "") => `<div class="group">${rows.map(([ico, t, d]) => `
+  <div class="row1 ${cls}"><span class="ico">${ico}</span><span class="t">${t}</span>${d ? `<span class="d">${d}</span>` : ""}<span class="chev">›</span></div>`).join("")}</div>`;
+
+function screenHousehold(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>${appbar(s)}
+    <div class="body">
+      ${group(s.hh)}${group(s.hh2)}${group(s.hh3)}${group(s.hh4)}
+      <div class="group"><div class="row1 new"><span class="ico">📖</span><span class="t">${s.guideRow}</span><span class="chev">›</span></div></div>
+    </div>${tabbar(s, 4)}</div>`;
+}
+
+function guideList(s) {
+  const l = lang(s);
+  return `<div class="back">${s.back}</div>
+      <h2 class="title">${s.guideTitle}</h2>
+      <div class="sub">${s.guideSub}</div>
+      ${group(CARDS.map((c) => [c.ico, c[l].t]))}
+      <div class="help">${s.help} <u>support@poofylabs.dev</u></div>`;
+}
+
+function screenGuide(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>${appbar(s)}
+    <div class="body">${guideList(s)}</div>${tabbar(s, 4)}</div>`;
+}
+
+function screenCard(i) {
+  return (s) => {
+    const l = lang(s);
+    const c = CARDS[i][l];
+    const next = CARDS[i + 1];
+    return `<div class="phone"><div class="tag">${s.tag}</div>${appbar(s)}
+      <div class="body faded">${guideList(s)}</div>${tabbar(s, 4)}
+      <div class="dim"></div>
+      <div class="sheet"><div class="grab"></div>
+        <div class="step">${s.of(i + 1)}</div>
+        <h3>${c.t}</h3>
+        <div class="txt">${c.body.map((p) => (p.startsWith("<ol") ? p : `<p>${p}</p>`)).join("")}</div>
+        <div class="btn primary" style="margin-top:4px">${c.btn}</div>
+        <div class="link">${next ? `${s.next} ${next[l].t}` : s.done}</div>
+      </div></div>`;
+  };
+}
+
+function screenWelcome(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>${appbar(s)}
+    <div class="body">
+      <div class="welcome"><span class="x">✕</span>
+        <b>${s.welcomeT}</b><p>${s.welcomeD}</p>
+        <div class="acts"><div class="btn primary">${s.welcomeBtn}</div><span class="q">${s.notNow}</span></div></div>
+      <div class="h">${s.date}</div>
+      <div class="card faded" style="height:64px"></div>
+      <div class="card faded" style="height:64px"></div>
+      <div class="card faded" style="height:64px"></div>
+      <div class="card faded" style="height:64px"></div>
+    </div>${tabbar(s, 0)}</div>`;
+}
+
+function screenEmpty(s) {
+  return `<div class="phone"><div class="tag">${s.tag}</div>${appbar(s)}
+    <div class="body">
+      <div class="h">${s.date}</div>
+      <div class="empty"><div class="em">🏡</div><b>${s.emptyT}</b><div>${s.emptyD}</div>
+        <div class="acts"><div class="btn primary">🐾 ${s.addPet}</div><div class="btn outline">${s.addChore}</div></div>
+        <div class="lnk">${s.emptyLink}</div></div>
+    </div>${tabbar(s, 0)}</div>`;
+}
+
+const screens = [
+  ["1. Household — the new row", "One more group at the bottom of the Household list: How Miamus works. Same row as the others. The rest of the list is unchanged.", screenHousehold],
+  ["2. The guide", "A page of the Household tab (?module=access&page=guide). Seven rows, then the support address. No screenshots, no slideshow.", screenGuide],
+  ...CARDS.map((c, i) => [
+    `3.${i + 1} Card — ${c.en.t}`,
+    i === 0
+      ? "Tapping a row opens its card in a bottom sheet: a few short lines, one button that goes to the right screen, and a quiet link to the next card. The open card is in the URL (&card=…), so the phone's back gesture closes it."
+      : "",
+    screenCard(i),
+  ]),
+  ["4. Today — the welcome card, once", "Owners who joined this household in the last 30 days, once per phone. How Miamus works opens the guide; Not now or ✕ closes it for good. Neutral, not amber: nothing is waiting. The Add to Home Screen tip waits until this card is gone.", screenWelcome],
+  ["5. Today — a household with nothing yet", "The existing welcome stays as it is, with one quiet link added under its buttons. No separate welcome card here, so there are never two welcomes on one screen.", screenEmpty],
+];
+
+let html = "";
+for (const [title, text, fn] of screens) {
+  html += `<section class="screen"><h2>${title}</h2>${text ? `<p>${text}</p>` : ""}<div class="pair">${fn(L.en)}${fn(L.id)}</div></section>`;
+}
+document.getElementById("root").innerHTML = html;
+</script>
+</body>
+</html>
