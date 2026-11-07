@@ -207,6 +207,11 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
   // Bumped to fetch the roster again — by the button, the timer and the
   // "online" event below (Phase 146).
   const [attempt, setAttempt] = useState(0);
+  // The last attempt that finished, either way. The retry timer waits for the
+  // current one: on slow Wi-Fi a renewal plus the roster read can take longer
+  // than the retry interval, and starting the next attempt would discard the
+  // one about to succeed (Codex review, PR #2).
+  const [settled, setSettled] = useState(-1);
   const [step, setStep] = useState<GateStep>({ kind: "choose" });
 
   useEffect(() => {
@@ -233,25 +238,29 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
       .catch((err) => {
         console.error(err);
         if (live) setFailed(true);
+      })
+      .finally(() => {
+        if (live) setSettled(attempt);
       });
     return () => {
       live = false;
     };
   }, [attempt]);
 
-  // While it is failing, keep trying: every 10 seconds, and at once when the
-  // phone says it is back online. "Reload the page" was the old advice, and
-  // an installed app has no reload button to press.
+  // While it is failing, keep trying: 10 seconds after each attempt has
+  // finished, and at once when the phone says it is back online. "Reload the
+  // page" was the old advice, and an installed app has no reload button to
+  // press. Nothing is scheduled while an attempt is still running.
   useEffect(() => {
-    if (!failed) return;
+    if (!failed || settled !== attempt) return;
     const again = () => setAttempt((n) => n + 1);
-    const timer = setInterval(again, 10_000);
+    const timer = setTimeout(again, 10_000);
     window.addEventListener("online", again);
     return () => {
-      clearInterval(timer);
+      clearTimeout(timer);
       window.removeEventListener("online", again);
     };
-  }, [failed]);
+  }, [failed, settled, attempt]);
 
   if (step.kind !== "choose") {
     return (

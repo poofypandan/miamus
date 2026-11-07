@@ -56,13 +56,15 @@ function JoinScreen() {
   const [attempt, setAttempt] = useState(0);
   // Redemption spends the token, so React's development double-effect must
   // not run the same attempt twice — the second call would fail against a
-  // used invite.
-  const ran = useRef<number | null>(null);
+  // used invite. The attempt's promise is kept instead of a "ran" flag, so
+  // the replayed effect still hears how it ended: with only a flag, the
+  // first run's cleanup silenced the one request there was, and the page sat
+  // on the spinner forever (Codex review, PR #2).
+  const inFlight = useRef<{ attempt: number; result: Promise<JoinState | null> } | null>(null);
+  // The last attempt that finished, so the offline retry waits for it.
+  const [settled, setSettled] = useState(-1);
 
   useEffect(() => {
-    if (ran.current === attempt) return;
-    ran.current = attempt;
-
     if (!token || !supabase) {
       setState("invalid");
       return;
@@ -116,29 +118,38 @@ function JoinScreen() {
       return isConnectionError(error) ? "offline" : "invalid";
     }
 
-    redeem()
-      .then((next) => live && next && setState(next))
-      .catch((err) => {
-        console.error("Invite redemption failed", err);
-        if (live) setState(isConnectionError(err) ? "offline" : "error");
-      });
+    if (inFlight.current?.attempt !== attempt) {
+      inFlight.current = {
+        attempt,
+        result: redeem().catch((err): JoinState => {
+          console.error("Invite redemption failed", err);
+          return isConnectionError(err) ? "offline" : "error";
+        }),
+      };
+    }
+    inFlight.current.result.then((next) => {
+      if (!live) return;
+      if (next) setState(next);
+      setSettled(attempt);
+    });
     return () => {
       live = false;
     };
   }, [token, attempt]);
 
-  // Offline: try again every 15 seconds, and at once when the phone says it
-  // is back. Nothing reached the server, so trying costs the invite nothing.
+  // Offline: try again 15 seconds after each attempt has finished, and at
+  // once when the phone says it is back. Nothing reached the server, so
+  // trying costs the invite nothing.
   useEffect(() => {
-    if (state !== "offline") return;
+    if (state !== "offline" || settled !== attempt) return;
     const again = () => setAttempt((n) => n + 1);
-    const timer = setInterval(again, 15_000);
+    const timer = setTimeout(again, 15_000);
     window.addEventListener("online", again);
     return () => {
-      clearInterval(timer);
+      clearTimeout(timer);
       window.removeEventListener("online", again);
     };
-  }, [state]);
+  }, [state, settled, attempt]);
 
   const retry = () => setAttempt((n) => n + 1);
 
