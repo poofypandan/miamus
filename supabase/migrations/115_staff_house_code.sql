@@ -21,7 +21,10 @@
 --     the household's admins get a push. Applies to the house-code sign-in
 --     and to the PIN check on phones that are already linked
 --     (verify_staff_pin), which had no limit at all.
---   * 10 wrong codes from one phone session in an hour → that session waits.
+--   * 10 wrong codes from one phone session in an hour → that session waits;
+--     200 across all sessions in an hour → house-code sign-in pauses (fresh
+--     anonymous sessions are free, so the per-session limit alone is not
+--     enough). Invite links and linked phones are unaffected.
 --   * Only anonymous sessions (staff phones) may use a house code: a Google
 --     account can never be turned into a staff device (handoff conflict 6).
 --   * A phone is linked to the household only by the right code, name and
@@ -132,6 +135,10 @@ create index if not exists staff_sign_in_attempts_user_idx
   on public.staff_sign_in_attempts (user_id, created_at);
 create index if not exists staff_sign_in_attempts_created_idx
   on public.staff_sign_in_attempts (created_at);
+-- For the across-all-sessions limit on wrong codes.
+create index if not exists staff_sign_in_attempts_wrong_code_idx
+  on public.staff_sign_in_attempts (created_at)
+  where kind = 'code' and not success;
 
 alter table public.staff_sign_in_attempts enable row level security;
 revoke all on public.staff_sign_in_attempts from public, anon, authenticated;
@@ -245,6 +252,16 @@ begin
 end;
 $$;
 
+-- Two limits on wrong codes, both over the last hour:
+--   * 10 from this phone session;
+--   * 200 across every session. An anonymous session is free to replace, so
+--     the first limit alone would give each fresh one another ten guesses
+--     (Codex review, PR #7). If someone is guessing codes at scale, house-code
+--     sign-in pauses for everyone for up to an hour; invite links and phones
+--     already linked are unaffected. Real staff mistype a code a few times a
+--     day across all households, far below 200.
+-- Callers hold the per-session advisory lock (lock_house_code_session), so
+-- two calls at once from one session can't both pass on the last try.
 create or replace function public.house_code_attempts_exceeded(p_user_id uuid)
 returns boolean
 language sql
@@ -252,12 +269,31 @@ stable
 security definer
 set search_path = ''
 as $$
-  select count(*) >= 10
-    from public.staff_sign_in_attempts a
-   where a.user_id = p_user_id
-     and a.kind = 'code'
-     and not a.success
-     and a.created_at > now() - interval '1 hour';
+  select
+    (select count(*) >= 10
+       from public.staff_sign_in_attempts a
+      where a.user_id = p_user_id
+        and a.kind = 'code'
+        and not a.success
+        and a.created_at > now() - interval '1 hour')
+    or
+    (select count(*) >= 200
+       from public.staff_sign_in_attempts a
+      where a.kind = 'code'
+        and not a.success
+        and a.created_at > now() - interval '1 hour');
+$$;
+
+-- Held until the calling transaction ends: one house-code call at a time per
+-- phone session, so check, try and record happen as one step.
+create or replace function public.lock_house_code_session(p_user_id uuid)
+returns void
+language sql
+volatile
+security definer
+set search_path = ''
+as $$
+  select pg_advisory_xact_lock(hashtextextended('house-code:' || p_user_id::text, 0));
 $$;
 
 -- --- Staff: sign in with the code ------------------------------------------------------
@@ -274,6 +310,7 @@ declare
   uid uuid := public.require_staff_phone_session();
   household uuid;
 begin
+  perform public.lock_house_code_session(uid);
   if public.house_code_attempts_exceeded(uid) then
     raise exception 'too_many_attempts' using errcode = 'P0001';
   end if;
@@ -313,6 +350,7 @@ declare
   household uuid;
   result jsonb;
 begin
+  perform public.lock_house_code_session(uid);
   if public.house_code_attempts_exceeded(uid) then
     return jsonb_build_object('status', 'too_many_attempts');
   end if;
@@ -546,6 +584,7 @@ revoke all on function public.give_household_join_code() from public, anon, auth
 revoke all on function public.check_pin_internal(uuid, text, uuid, uuid) from public, anon, authenticated;
 revoke all on function public.require_staff_phone_session() from public, anon, authenticated;
 revoke all on function public.house_code_attempts_exceeded(uuid) from public, anon, authenticated;
+revoke all on function public.lock_house_code_session(uuid) from public, anon, authenticated;
 revoke all on function public.require_household_admin(uuid) from public, anon, authenticated;
 revoke all on function public.prune_staff_sign_in_attempts() from public, anon, authenticated;
 grant execute on function public.new_house_code() to service_role;
@@ -553,5 +592,6 @@ grant execute on function public.normalize_house_code(text) to service_role;
 grant execute on function public.check_pin_internal(uuid, text, uuid, uuid) to service_role;
 grant execute on function public.require_staff_phone_session() to service_role;
 grant execute on function public.house_code_attempts_exceeded(uuid) to service_role;
+grant execute on function public.lock_house_code_session(uuid) to service_role;
 grant execute on function public.require_household_admin(uuid) to service_role;
 grant execute on function public.prune_staff_sign_in_attempts() to service_role;
