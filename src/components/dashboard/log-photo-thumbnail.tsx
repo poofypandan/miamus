@@ -24,7 +24,8 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { categoryIcon, describeLog } from "@/lib/schedule-categories";
-import { formatTime12h } from "@/lib/time";
+import { formatTime } from "@/lib/time";
+import { useScreenLang } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
 import type { MasterSchedule, TaskLog } from "@/types/database";
 import { photoSrc } from "@/lib/photos";
@@ -43,16 +44,19 @@ export function logLightboxItem({
   title,
   entityName,
   schedules,
+  lang = "en",
 }: {
   log: TaskLog;
   title?: string;
   entityName?: string;
   schedules: MasterSchedule[];
+  /** The screen's language, for the time (useScreenLang). */
+  lang?: "en" | "id";
 }): LightboxItem {
   const described = describeLog(log, schedules);
   const eventTitle = title ?? described.title;
   const EventIcon = categoryIcon(described.category);
-  const takenAt = formatTime12h(new Date(log.completed_at));
+  const takenAt = formatTime(new Date(log.completed_at), lang);
   return {
     src: log.photo_url ?? undefined,
     alt: entityName ? `${entityName} · ${eventTitle}` : eventTitle,
@@ -109,6 +113,7 @@ export function LogPhotoThumbnail({
   gallery,
   logs,
 }: LogPhotoThumbnailProps) {
+  const lang = useScreenLang();
   const { userRole, deleteLogWithPhoto, schedules } = useHousehold();
   const t = useT();
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -245,7 +250,7 @@ export function LogPhotoThumbnail({
       <PhotoLightbox
         open={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
-        items={gallery ? gallery.items : [logLightboxItem({ log, title, entityName, schedules })]}
+        items={gallery ? gallery.items : [logLightboxItem({ log, title, entityName, schedules, lang })]}
         initialIndex={gallery ? gallery.index : 0}
       />
 

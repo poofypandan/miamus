@@ -11,6 +11,7 @@ import {
   verifyBiometric,
 } from "@/lib/app-lock";
 import { useT } from "@/context/owner-locale-context";
+import { clearCachedOwnerLocale } from "@/lib/owner-locale";
 import { cn } from "@/lib/utils";
 
 // Unlocked-ness lives in sessionStorage, not localStorage: it should survive a
@@ -79,6 +80,7 @@ export function OwnerAppLock({ children }: { children: ReactNode }) {
     // Off first: the next person through is whoever passes Google sign-in,
     // which is a stronger check than this lock ever was.
     setAppLockEnabled(false);
+    clearCachedOwnerLocale();
     try {
       // This phone stops receiving the household's alerts (Phase 119). Done
       // while still signed in — the row is only deletable by its owner — and

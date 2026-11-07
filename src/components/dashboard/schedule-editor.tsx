@@ -50,7 +50,7 @@ import {
 } from "@/lib/schedule-categories";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
 import type { TaskEntity, MasterSchedule } from "@/types/database";
 import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
@@ -295,6 +295,7 @@ function MealTimesCard({
   createSchedule: CreateScheduleFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const formatTime = useFormatTime();
   const tr = useT();
   const [time, setTime] = useState("12:00");
   const [label, setLabel] = useState("");
@@ -339,7 +340,7 @@ function MealTimesCard({
         <div className="flex flex-wrap gap-2">
           {meals.map((m) => (
             <Badge key={m.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
-              {m.fixed_times?.[0] ? formatTime12h(m.fixed_times[0]) : "—"} · {m.title}
+              {m.fixed_times?.[0] ? formatTime(m.fixed_times[0]) : "—"} · {m.title}
               <button
                 type="button"
                 onClick={() => removeMeal(m.id)}
@@ -402,6 +403,7 @@ function PottyRoutineCard({
   createSchedulesBatch: CreateSchedulesBatchFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const formatTime = useFormatTime();
   const tr = useT();
   const [start, setStart] = useState("06:00");
   const [end, setEnd] = useState("22:00");
@@ -467,7 +469,7 @@ function PottyRoutineCard({
         <div className="flex flex-wrap gap-2">
           {sortedItems.map((i) => (
             <Badge key={i.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
-              {i.fixed_times?.[0] ? formatTime12h(i.fixed_times[0]) : "—"}
+              {i.fixed_times?.[0] ? formatTime(i.fixed_times[0]) : "—"}
               <button
                 type="button"
                 onClick={() => removeSlot(i.id)}
@@ -526,8 +528,8 @@ function PottyRoutineCard({
         <p className="text-xs text-muted-foreground">
           {newSlots.length > 0
             ? tr(
-                `Will add ${newSlots.length}: ${newSlots.map(formatTime12h).join(", ")}`,
-                `Akan menambah ${newSlots.length}: ${newSlots.map(formatTime12h).join(", ")}`
+                `Will add ${newSlots.length}: ${newSlots.map(formatTime).join(", ")}`,
+                `Akan menambah ${newSlots.length}: ${newSlots.map(formatTime).join(", ")}`
               )
             : tr("No new times to add in this range.", "Tidak ada jam baru di rentang ini.")}
         </p>
@@ -556,6 +558,7 @@ function MedicationsCard({
   createSchedulesBatch: CreateSchedulesBatchFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const formatTime = useFormatTime();
   const tr = useT();
   const locale = useOwnerLocale();
   const today = formatDateLocal(new Date());
@@ -646,7 +649,7 @@ function MedicationsCard({
         <div className="flex flex-wrap gap-2">
           {sortedItems.map((m) => (
             <Badge key={m.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
-              {m.fixed_times?.[0] ? formatTime12h(m.fixed_times[0]) : "—"} · {displayTitle(m)}
+              {m.fixed_times?.[0] ? formatTime(m.fixed_times[0]) : "—"} · {displayTitle(m)}
               {m.expires_at && (
                 <span className="text-muted-foreground">
                   {" "}
@@ -758,6 +761,7 @@ function GroomingCareCard({
   createSchedulesBatch: CreateSchedulesBatchFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const formatTime = useFormatTime();
   const tr = useT();
   const locale = useOwnerLocale();
   const today = formatDateLocal(new Date());
@@ -842,7 +846,7 @@ function GroomingCareCard({
           {sortedItems.map((g) => (
             <Badge key={g.id} variant="secondary" className="gap-1.5 py-1 pr-1 pl-2.5 text-sm">
               {g.expires_at ? formatDateShort(g.expires_at, locale) : "—"}
-              {g.fixed_times?.[0] ? `, ${formatTime12h(g.fixed_times[0])}` : ""} ·{" "}
+              {g.fixed_times?.[0] ? `, ${formatTime(g.fixed_times[0])}` : ""} ·{" "}
               {displayTitle(g)}
               <button
                 type="button"
@@ -1120,6 +1124,7 @@ function OthersCard({
   createSchedule: CreateScheduleFn;
   deleteSchedule: DeleteScheduleFn;
 }) {
+  const formatTime = useFormatTime();
   const tr = useT();
   const [title, setTitle] = useState("");
   const [time, setTime] = useState("08:00");
@@ -1177,7 +1182,7 @@ function OthersCard({
             >
               <div>
                 <p className="font-medium">
-                  {t.fixed_times?.[0] ? formatTime12h(t.fixed_times[0]) : "—"} · {t.title}
+                  {t.fixed_times?.[0] ? formatTime(t.fixed_times[0]) : "—"} · {t.title}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {tr("Expires", "Berakhir")} {t.expires_at}
@@ -1383,6 +1388,7 @@ function LivePreviewCard({
   entity: TaskEntity;
   schedules: MasterSchedule[];
 }) {
+  const formatTime = useFormatTime();
   const { logs, selectedDate } = useHousehold();
   const tr = useT();
   const dateStr = formatDateLocal(selectedDate);
@@ -1439,7 +1445,7 @@ function LivePreviewCard({
                     tint ? "text-zinc-700" : "text-muted-foreground"
                   )}
                 >
-                  {formatTime12h(item.time)}
+                  {formatTime(item.time)}
                 </span>
                 <Icon
                   className={cn(
@@ -1490,6 +1496,7 @@ function LivePreviewCard({
  * should not cancel the Postbiotik alongside it.
  */
 function MedicineGroupRow({ group, entity }: { group: AgendaGroup; entity: TaskEntity }) {
+  const formatTime = useFormatTime();
   const tr = useT();
   const Icon = categoryIcon("medication");
   const tint = categoryCardTintStrong("medication");
@@ -1507,7 +1514,7 @@ function MedicineGroupRow({ group, entity }: { group: AgendaGroup; entity: TaskE
     <div className={cn("flex flex-col gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-sm", tint)}>
       <div className="flex items-center gap-2">
         <span className="w-16 shrink-0 font-mono text-xs text-zinc-700">
-          {formatTime12h(group.time)}
+          {formatTime(group.time)}
         </span>
         <Icon className={cn("size-4 shrink-0", categoryIconColor("medication"))} />
         <span className="flex-1 font-medium">

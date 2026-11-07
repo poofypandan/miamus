@@ -7,6 +7,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -47,6 +48,9 @@ export function OwnerLocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<OwnerLocale>(DEFAULT_OWNER_LOCALE);
   const [chosen, setChosen] = useState<boolean | null>(null);
   const [ready, setReady] = useState(false);
+  // Set once the owner picks here. The account's answer can arrive after
+  // that (a slow network on launch) and must not undo what they just chose.
+  const choseHere = useRef(false);
 
   // The cached choice, before the first paint, so an Indonesian owner never
   // sees the English screens flash on launch. Read here rather than in
@@ -72,7 +76,7 @@ export function OwnerLocaleProvider({ children }: { children: ReactNode }) {
         // Staff phones (anonymous) never have an owner language.
         if (!user || user.is_anonymous) return;
         const { data, error } = await client.rpc("my_locale");
-        if (cancelled || error) return;
+        if (cancelled || error || choseHere.current) return;
         const saved = parseOwnerLocale(data);
         if (saved) {
           setLocaleState(saved);
@@ -102,6 +106,7 @@ export function OwnerLocaleProvider({ children }: { children: ReactNode }) {
     async (next: OwnerLocale) => {
       const before = locale;
       const wasChosen = chosen;
+      choseHere.current = true;
       setLocaleState(next);
       setChosen(true);
       writeCachedOwnerLocale(next);

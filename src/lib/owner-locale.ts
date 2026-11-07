@@ -49,6 +49,18 @@ export function writeCachedOwnerLocale(locale: OwnerLocale): void {
 }
 
 /**
+ * Forget the phone's copy on sign-out, so the next account to sign in on this
+ * phone does not open in the last one's language before its own arrives.
+ */
+export function clearCachedOwnerLocale(): void {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Nothing to clear, or storage blocked.
+  }
+}
+
+/**
  * The language for a message raised outside any React language context — a
  * toast from the household data layer, the update prompt (Phase 149). Owner
  * screens (/dashboard, /onboarding) use the owner's choice as cached on this

@@ -11,7 +11,7 @@ import type { CreateScheduleInput } from "@/lib/data";
 import { useToday } from "@/hooks/use-today";
 import { approvalDateSummary } from "@/lib/approval-dates";
 import { categoryIcon, groomingTitle, medicationTitle, vetTitle } from "@/lib/schedule-categories";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import { groupProposals, type ProposalBatch } from "@/lib/proposal-batches";
 import { cn } from "@/lib/utils";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
@@ -87,6 +87,7 @@ export function ApprovalQueue() {
 }
 
 function BatchRow({ batch }: { batch: ProposalBatch }) {
+  const formatTime = useFormatTime();
   const { pets, createSchedulesBatch, decideRoutineProposals } = useHousehold();
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
   const locale = useOwnerLocale();
@@ -99,7 +100,7 @@ function BatchRow({ batch }: { batch: ProposalBatch }) {
   // Deduplicated: a medication batch carries one row per dose time and so
   // several distinct times, but a grooming series carries one row per visit at
   // the same time of day, which listed "10:00 AM" once per occurrence.
-  const times = [...new Set(batch.proposals.map((p) => formatTime12h(p.time)))];
+  const times = [...new Set(batch.proposals.map((p) => formatTime(p.time)))];
 
   // Read from the hook rather than `new Date()` so the label is re-evaluated
   // when the day rolls over or the app returns to the foreground — a card that

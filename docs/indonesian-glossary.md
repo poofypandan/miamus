@@ -15,7 +15,10 @@ here.
   age about 40; the largest groups finished junior high (28%), did not finish
   primary school (26%) or finished primary (19%). Write short, plain sentences;
   avoid English except words they already use (HP, foto, link, PIN, WA).
-  Addressed as **kamu** (see open question below).
+  Addressed as **Anda**, or with no pronoun where the sentence reads
+  naturally without one ("Pilih tanggal tidak bekerja"). Never **kamu** or
+  **-mu**: the average worker is about 40, often older than the family they
+  work for, and the app speaks for the employer (owner decision, 2026-11-07).
 
 ## Rule of thumb
 
@@ -59,15 +62,14 @@ people are **staf** and **admin**.
 
 - Dates: `toLocaleDateString("id-ID")` (e.g. "6 Nov").
 - Decimals: comma — 2,5 kg (`formatQuantity(value, "id")`).
-- Times: currently 12-hour ("9:00 AM") everywhere. Open question below.
+- Times: in Bahasa Indonesia, 24-hour with a dot — **09.00**, **15.30** —
+  on staff screens and for owners who chose Indonesian. Owners who chose
+  English keep "9:00 AM". Written Indonesian uses the 24-hour clock; AM/PM
+  belongs to English (owner decision, 2026-11-07). Components use
+  `useFormatTime()` from `src/components/ui/ui-labels.tsx`.
 
 ## Open questions (owner to decide)
 
-1. **Staff address: "kamu" or "Anda"?** The average household worker is about
-   40, often older than the person employing them. "kamu" is friendly and what
-   most consumer apps use, but can read as talking down to an older worker.
-2. **24-hour time for Indonesian screens?** Indonesians usually write times as
-   14.30 or "pukul 14.30"; AM/PM is less natural in Bahasa Indonesia.
-3. **Test with real readers.** Five people — two Indonesian-speaking owners,
+1. **Test with real readers.** Five people — two Indonesian-speaking owners,
    three household workers — reading the main screens catches what no review
    does.

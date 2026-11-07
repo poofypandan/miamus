@@ -128,7 +128,7 @@ function StatCard({ stat, onPress }: { stat: StaffStat; onPress: () => void }) {
         >
           {unclaimed ? <Users className="size-3.5" /> : initials}
         </span>
-        <span className="truncate text-sm font-medium">{stat.name}</span>
+        <span className="line-clamp-2 text-sm leading-tight font-medium break-words">{stat.name}</span>
       </div>
 
       <div className="flex items-center gap-2.5">
@@ -137,7 +137,7 @@ function StatCard({ stat, onPress }: { stat: StaffStat; onPress: () => void }) {
           <span className="text-base font-semibold tabular-nums">
             {stat.done}/{stat.total}
           </span>
-          <span className="truncate text-[11px] text-muted-foreground">
+          <span className="text-[11px] leading-tight text-muted-foreground">
             {stat.total === 0
               ? t("No chores", "Tidak ada tugas")
               : complete

@@ -10,7 +10,7 @@ import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { FilterPill } from "@/components/shared/filter-pill";
 import { categoryIcon, describeLog, type ScheduleCategory } from "@/lib/schedule-categories";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime, useScreenLang } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
 import { distinct, groupByPhoto } from "@/lib/photos";
 import type { TaskEntity, TaskLog } from "@/types/database";
@@ -64,6 +64,8 @@ interface PhotoStreamProps {
 }
 
 export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
+  const formatTime = useFormatTime();
+  const lang = useScreenLang();
   const { schedules } = useHousehold();
   const locale = useOwnerLocale();
   const t = useT();
@@ -133,10 +135,11 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
           title,
           entityName: namesOf(entityIds),
           schedules,
+          lang,
         })
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- entityById is rebuilt every render from `entities`, which is the real input
-    [matching, entities, schedules]
+    [matching, entities, schedules, lang]
   );
 
   if (photos.length === 0) {
@@ -202,7 +205,7 @@ export function PhotoStream({ logs, entities, showAvatar }: PhotoStreamProps) {
                     <EventIcon className="size-3" />
                   </span>
                   <span className="absolute right-1 bottom-1 rounded-md bg-black/55 px-1 py-0.5 text-[9px] leading-none font-medium text-white tabular-nums">
-                    {formatTime12h(new Date(log.completed_at))}
+                    {formatTime(new Date(log.completed_at))}
                   </span>
                   <span className="absolute bottom-1 left-1 flex">
                     {showAvatar && pets.length > 0 ? (

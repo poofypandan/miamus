@@ -38,7 +38,7 @@ import { useTapGuard } from "@/hooks/use-tap-guard";
 import { compressPhoto } from "@/lib/image";
 import { isAdmitted } from "@/lib/pets";
 import { categoryCardTint, categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import { UNDO_WINDOW_MS } from "@/lib/undo-window";
 import { vetVisitState } from "@/lib/staff-agenda";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
@@ -64,6 +64,7 @@ function deletableUntil(completedAt: string): number {
 }
 
 export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
+  const formatTime = useFormatTime();
   const { logTasksBatch, uploadPhoto, pets, deleteLogWithPhoto, logs, updateEntity } =
     useHousehold();
   const [busy, setBusy] = useState(false);
@@ -386,7 +387,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       // Nothing to do while every dog is at the clinic.
       disabled={wholeCardSuspended}
       aria-haspopup="dialog"
-      aria-label={`${formatTime12h(group.time)} ${cardTitle}`}
+      aria-label={`${formatTime(group.time)} ${cardTitle}`}
       className={cn(
         "flex w-full flex-col gap-2 rounded-xl border p-3 text-left active:bg-muted/60",
         finished ? DONE_TONE.tint : cn("bg-card", categoryCardTint(group.category)),
@@ -400,7 +401,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             finished ? DONE_TONE.icon : categoryIconColor(group.category)
           )}
         />
-        <span className="shrink-0 text-sm font-medium tabular-nums">{formatTime12h(group.time)}</span>
+        <span className="shrink-0 text-sm font-medium tabular-nums">{formatTime(group.time)}</span>
         <span
           className={cn(
             "min-w-0 flex-1 truncate text-sm font-medium",
@@ -462,7 +463,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           <SheetHeader className="border-b">
             <SheetTitle className="flex items-center gap-2">
               <CategoryIcon className={cn("size-4 shrink-0", categoryIconColor(group.category))} />
-              <span className="tabular-nums">{formatTime12h(group.time)}</span>
+              <span className="tabular-nums">{formatTime(group.time)}</span>
               <span className="min-w-0 truncate font-normal text-muted-foreground">
                 · {cardTitle}
               </span>
@@ -763,7 +764,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           // A medicine block's photo names every medicine it covers;
           // group.title alone is just the first of them.
           title: consolidated ? photo.titles.join(" · ") : group.title,
-          description: formatTime12h(new Date(photo.at)),
+          description: formatTime(new Date(photo.at)),
           footer: (
             <>
               <div className="flex flex-wrap gap-1.5">

@@ -8,7 +8,7 @@ import { photoSrc } from "@/lib/photos";
 import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
 import { categoryIcon } from "@/lib/household-tasks";
 import { recurrenceOf, type ChoreOccurrence } from "@/lib/chore-recurrence";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 
@@ -42,6 +42,7 @@ export function ChoreTimelineRow({
   locationName?: string | null;
   onPress: () => void;
 }) {
+  const formatTime = useFormatTime();
   const { task, status, overdue } = occurrence;
   const Icon = categoryIcon(task.category);
   const done = status === "completed";
@@ -94,7 +95,7 @@ export function ChoreTimelineRow({
       >
         {/* Untimed chores say so rather than borrowing a clock they do not
             have; they sort to the top of the day (see buildUnifiedAgenda). */}
-        {task.due_time ? formatTime12h(task.due_time) : t("Anytime", "Kapan saja")}
+        {task.due_time ? formatTime(task.due_time) : t("Anytime", "Kapan saja")}
       </span>
 
       <Icon
@@ -123,13 +124,15 @@ export function ChoreTimelineRow({
           {assigneeName ?? t("Anyone", "Siapa saja")}
           {repeats && <Repeat className="size-3 shrink-0" />}
           {supervised && <Eye className="size-3 shrink-0 text-amber-700" />}
-          {overdue && !done && (
-            <>
-              <AlertTriangle className="size-3 shrink-0 text-amber-700" />
-              <span className="text-amber-700">{t("carried over", "terbawa dari kemarin")}</span>
-            </>
-          )}
         </span>
+        {/* Its own line: sharing the one above, the Indonesian label pushed
+            the room off a 360px screen (narrow-phone sweep, Phase 149). */}
+        {overdue && !done && (
+          <span className="flex items-center gap-1 text-xs text-amber-700">
+            <AlertTriangle className="size-3 shrink-0" />
+            {t("carried over", "terbawa dari kemarin")}
+          </span>
+        )}
       </span>
 
       {done &&

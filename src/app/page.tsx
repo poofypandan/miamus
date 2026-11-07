@@ -146,19 +146,21 @@ function FrontDoor() {
       {(failed || error) && <p className="mt-4 text-sm text-destructive">{failed ?? error}</p>}
 
       <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-        <span lang="en">
+        {/* One line per language, like the welcome text above: run together,
+            the Indonesian started partway across a line. */}
+        <span lang="en" className="block">
           By continuing, you agree to Miamus&apos;s{" "}
-          <Link href="/privacy" className="font-medium text-gray-900 underline underline-offset-4">
+          <Link href="/privacy" className="font-medium whitespace-nowrap text-gray-900 underline underline-offset-4">
             Privacy Policy
           </Link>
           .
-        </span>{" "}
-        <span lang="id">
+        </span>
+        <span lang="id" className="mt-1 block">
           Dengan melanjutkan, Anda menyetujui{" "}
-          <Link href="/privasi" className="font-medium text-gray-900 underline underline-offset-4">
+          <Link href="/privasi" className="font-medium whitespace-nowrap text-gray-900 underline underline-offset-4">
             Kebijakan Privasi
-          </Link>{" "}
-          Miamus.
+          </Link>
+          .
         </span>
       </p>
 

@@ -18,7 +18,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { formatDateLocal } from "@/lib/scheduleEngine";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { HouseholdTask } from "@/types/database";
 
@@ -234,6 +234,7 @@ function ChoreProof({
   staffName: (id: string) => string;
   onEdit: () => void;
 }) {
+  const formatTime = useFormatTime();
   const t = useT();
   const row = occurrence.row;
   // A completed occurrence always has a row — it is what records the
@@ -245,7 +246,7 @@ function ChoreProof({
       {row.completed_by && (
         <p className="text-[11px] text-muted-foreground">
           {t("Done by", "Diselesaikan oleh")} {staffName(row.completed_by)}
-          {row.completed_at && ` · ${formatTime12h(new Date(row.completed_at))}`}
+          {row.completed_at && ` · ${formatTime(new Date(row.completed_at))}`}
         </p>
       )}
 

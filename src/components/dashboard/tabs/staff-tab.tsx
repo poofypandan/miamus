@@ -35,7 +35,7 @@ import { isOnLeave } from "@/lib/leave";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { LeavePanel } from "@/components/dashboard/leave-panel";
 import { describeLog } from "@/lib/schedule-categories";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ProposalStatus, StaffProfile } from "@/types/database";
 
 const AUDIT_LIMIT = 20;
@@ -184,6 +184,7 @@ export function StaffTab() {
 }
 
 function AuditRow({ entry }: { entry: AuditEntry }) {
+  const formatTime = useFormatTime();
   const locale = useOwnerLocale();
   const t = useT();
   const meta = KIND_META[entry.kind];
@@ -203,7 +204,7 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
       </span>
       <span className="shrink-0 text-right text-xs text-muted-foreground">
         <span className="block">{at.toLocaleDateString(DATE_LOCALE[locale], { month: "short", day: "numeric" })}</span>
-        <span className="block tabular-nums">{formatTime12h(at)}</span>
+        <span className="block tabular-nums">{formatTime(at)}</span>
       </span>
       <Badge variant="secondary" className="hidden shrink-0 text-[10px] sm:inline-flex">
         {meta.label(t)}

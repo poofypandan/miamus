@@ -14,7 +14,7 @@ import {
   type ScheduleCategory,
 } from "@/lib/schedule-categories";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime, useScreenLang } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
 import { useT } from "@/context/owner-locale-context";
 import { distinct, groupByPhoto } from "@/lib/photos";
@@ -28,6 +28,8 @@ import type { TaskEntity } from "@/types/database";
  * would be the obvious place for the two to start looking different.
  */
 export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }) {
+  const formatTime = useFormatTime();
+  const lang = useScreenLang();
   const { schedules } = useHousehold();
   const t = useT();
   const Icon = categoryIcon(group.category);
@@ -55,9 +57,9 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
   const gallery = useMemo(
     () =>
       photos.map((photo) =>
-        logLightboxItem({ log: photo.logs[0], title: photo.title, entityName: photo.names, schedules })
+        logLightboxItem({ log: photo.logs[0], title: photo.title, entityName: photo.names, schedules, lang })
       ),
-    [photos, schedules]
+    [photos, schedules, lang]
   );
   // The avatar cluster: each photo once, then each dog nothing photographed
   // covers, once — a medicine group is one dog's three items, and three
@@ -124,7 +126,7 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
           tint ? "text-zinc-600" : "text-muted-foreground"
         )}
       >
-        {formatTime12h(group.time)}
+        {formatTime(group.time)}
       </span>
       <Icon
         className={cn("size-4 shrink-0", categoryIconColor(group.category))}

@@ -23,7 +23,7 @@ import {
   parseHouseholdAccess,
   type HouseholdAccess,
 } from "@/lib/household-access";
-import { LOCALE_NAMES } from "@/lib/owner-locale";
+import { clearCachedOwnerLocale, LOCALE_NAMES } from "@/lib/owner-locale";
 import { supabase } from "@/lib/supabase/client";
 
 /**
@@ -459,7 +459,7 @@ function StaffHint() {
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
       <p lang="id" className="text-sm leading-relaxed font-medium text-amber-900">
-        Staf rumah? Kamu tidak perlu akun Google — minta link undangan ke pemilik rumah.
+        Staf rumah? Anda tidak perlu akun Google — minta link undangan ke pemilik rumah.
       </p>
       <p lang="en" className="mt-1 text-xs leading-relaxed text-amber-800">
         Household staff? You don&apos;t need a Google account — ask the homeowner for your invite
@@ -477,6 +477,7 @@ function SignOutButton({ bilingual = false }: { bilingual?: boolean }) {
 
   async function signOut() {
     setSigningOut(true);
+    clearCachedOwnerLocale();
     try {
       await supabase?.auth.signOut();
     } finally {

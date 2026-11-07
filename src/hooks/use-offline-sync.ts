@@ -65,10 +65,29 @@ export function useOfflineSync(lang: "en" | "id") {
       }
     }
 
+    // The module-level guard covers this page; a Web Lock covers other tabs
+    // of the app (and the installed PWA beside a browser tab), which share the
+    // IndexedDB queue but not this module. `ifAvailable`: if another tab holds
+    // it, that tab is already draining and this one steps aside.
+    async function drainOnce(): Promise<void> {
+      if (typeof navigator !== "undefined" && navigator.locks) {
+        await navigator.locks.request(
+          "miamus-offline-drain",
+          { ifAvailable: true },
+          async (lock) => {
+            if (lock) await drain();
+          }
+        );
+        return;
+      }
+      await drain();
+    }
+
     function handleOnline() {
-      // Already draining: that run reads the queue afresh and covers this one.
+      // Already draining here: skip. An entry queued after that run read the
+      // queue goes on the next "online" event or the next mount.
       if (draining) return;
-      draining = drain()
+      draining = drainOnce()
         .catch((err) => console.error("Offline sync failed", err))
         .finally(() => {
           draining = null;
