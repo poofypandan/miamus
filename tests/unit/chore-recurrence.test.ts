@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  expandChores,
   nextOccurrence,
   occursOn,
   previousOccurrence,
@@ -87,5 +88,51 @@ describe("skipping the first day keeps the pattern", () => {
 
   it("has no start when no day is left", () => {
     expect(startAfterSkippingFirst(task("2027-01-31", "monthly", "2027-02-10")).start).toBeNull();
+  });
+});
+
+// Codex review, PR #1: a day's own row governs it, even on the repeat's first
+// day. Skipping a first day can move the start onto a day someone already
+// finished or called off; the template must not bring it back as pending,
+// whichever order the rows arrive in.
+describe("a day's own row wins over the repeat's first day", () => {
+  const template = {
+    ...task("2027-03-31", "monthly"),
+    id: "T",
+    status: "pending",
+    parent_task_id: null,
+  } as HouseholdTask;
+  const finished = {
+    ...task("2027-03-31", "none"),
+    id: "M",
+    status: "completed",
+    parent_task_id: "T",
+  } as HouseholdTask;
+  const calledOff = { ...finished, id: "C", status: "cancelled" } as HouseholdTask;
+  const show = (rows: HouseholdTask[], date: string) =>
+    expandChores({ rows, date, today: "2027-04-02" }).map((o) => `${o.task.id}:${o.date}:${o.status}`);
+
+  it.each([
+    ["template first", [template, finished]],
+    ["row first", [finished, template]],
+  ] as const)("finished day stays finished (%s)", (_, rows) => {
+    expect(show([...rows], "2027-03-31")).toEqual(["M:2027-03-31:completed"]);
+  });
+
+  it.each([
+    ["template first", [template, calledOff]],
+    ["row first", [calledOff, template]],
+  ] as const)("called-off day stays off (%s)", (_, rows) => {
+    expect(show([...rows], "2027-03-31")).toEqual([]);
+  });
+
+  it("is not carried over to today as missed", () => {
+    expect(show([template, finished], "2027-04-02")).toEqual([]);
+    expect(show([template, calledOff], "2027-04-02")).toEqual([]);
+  });
+
+  it("a first day with no row of its own still shows and carries over", () => {
+    expect(show([template], "2027-03-31")).toEqual(["T:2027-03-31:pending"]);
+    expect(show([template], "2027-04-02")).toEqual(["T:2027-03-31:pending"]);
   });
 });
