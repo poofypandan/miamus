@@ -10,6 +10,7 @@ import {
   compareForList,
   stockItemName,
 } from "@/lib/inventory";
+import { photoSrc } from "@/lib/photos";
 import type { InventoryItem } from "@/types/database";
 
 /**
@@ -45,7 +46,20 @@ export function ItemList({
                     onClick={() => onPress(item)}
                     className="flex min-h-[52px] items-center gap-3 px-3 text-left text-sm active:bg-muted"
                   >
-                    <Icon className="size-4 shrink-0 text-muted-foreground" />
+                    {item.photo_url ? (
+                      // The product itself, so the right brand is bought.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photoSrc(item.photo_url, 160)}
+                        alt=""
+                        loading="lazy"
+                        className="size-9 shrink-0 rounded-md object-cover ring-1 ring-border"
+                      />
+                    ) : (
+                      <span className="flex size-9 shrink-0 items-center justify-center" aria-hidden>
+                        <Icon className="size-4 text-muted-foreground" />
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1 truncate">{stockItemName(item)}</span>
                     <StockStatusText item={item} lang={lang} />
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />

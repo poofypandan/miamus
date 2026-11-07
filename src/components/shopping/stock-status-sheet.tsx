@@ -20,6 +20,7 @@ import {
   stockItemName,
   stockStatus,
 } from "@/lib/inventory";
+import { photoSrc } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 import type { InventoryItem, StockStatus } from "@/types/database";
 
@@ -79,6 +80,16 @@ export function StockStatusSheet({
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-2 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          {item?.photo_url && (
+            // The owner's reference photo, so whoever buys it gets the right
+            // product (staff included; Codex review, PR #9).
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photoSrc(item.photo_url, 640)}
+              alt={stockItemName(item)}
+              className="mb-1 max-h-48 w-full rounded-xl bg-muted object-contain"
+            />
+          )}
           {STOCK_STATUSES.map((status) => {
             const Icon = ICONS[status];
             const selected = status === current;

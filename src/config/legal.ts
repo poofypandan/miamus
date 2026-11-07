@@ -18,7 +18,7 @@ export const LEGAL = {
   // 2026-11-07: the language picked on the sign-in screen, kept on the phone
   // (Phase 150). Staff sign-in attempts (30 days) and the linked-phones list
   // admins see (Phase 151, migrations/115).
-  policyVersion: "2026-11-07",
+  policyVersion: "2026-11-07.2",
   effectiveDate: { en: "7 November 2026", id: "7 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
