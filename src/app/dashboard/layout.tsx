@@ -9,6 +9,7 @@ import { OwnerAppLock } from "@/components/auth/owner-app-lock";
 import { HouseholdRequestsBanner } from "@/components/dashboard/household-requests-banner";
 import { LanguagePrompt } from "@/components/dashboard/language-settings";
 import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
+import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { useHousehold } from "@/context/household-context";
@@ -39,7 +40,8 @@ function DashboardShell({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, []);
 
-  useOfflineSync(useOwnerLocale());
+  const ownerLocale = useOwnerLocale();
+  useOfflineSync(ownerLocale);
   usePushResync();
   const { refresh, loading, tenantReady, roleHydrated } = useHousehold();
   const { ready: nameReady } = useHouseholdNameState();
@@ -72,6 +74,10 @@ function DashboardShell({ children }: { children: ReactNode }) {
               (Phase 148). Renders nothing for everyone else. */}
           <HouseholdRequestsBanner />
           <InventoryAlertBanner />
+          {/* A failed load, in the owner's language (Phases 146, 149). */}
+          <div className="px-4 pt-3 empty:hidden">
+            <ConnectionNotice locale={ownerLocale} />
+          </div>
           {/* Sits outside <main> so the one-time hint stays put above the
             swipeable carousel rather than scrolling with a single tab. */}
           <StaffOnboardingBanner />

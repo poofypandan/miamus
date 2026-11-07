@@ -33,6 +33,8 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import { AGENDA_WEEK_DAYS, weekStartOf } from "@/lib/unified-agenda";
 import { compressPhoto } from "@/lib/image";
 import { readSnapshot, writeSnapshot } from "@/lib/snapshot-cache";
+import { isSessionUnreachable } from "@/lib/auth/device-session";
+import { isConnectionError } from "@/lib/network-errors";
 import { warmImagesWhenIdle } from "@/lib/image-warm";
 import {
   resolveActiveHouseholdId,
@@ -121,6 +123,21 @@ interface HouseholdContextValue {
    */
   householdTasks: HouseholdTask[];
   loading: boolean;
+  /**
+   * The latest attempt to load the household failed — no connection, or one
+   * too slow to wait for (Phase 146). Whatever is on screen stays; the
+   * provider keeps retrying by itself, and this goes false when one lands.
+   */
+  syncFailed: boolean;
+  /**
+   * Something real is on screen: this device's cached copy, or a load that
+   * succeeded. When syncFailed is true and this is false, the empty lists
+   * mean "not loaded", not "nothing today", and must not be shown as the
+   * latter.
+   */
+  hasData: boolean;
+  /** Tries the load again now, without skeletons. Never rejects. */
+  retrySync: () => Promise<void>;
   isMockMode: boolean;
   // null = Unified Overview; a pet id = that pet's detail view. This is the
   // sole source of truth for master-detail navigation across the dashboard.
@@ -247,6 +264,13 @@ interface HouseholdContextValue {
   decideRoutineProposal: (id: string, status: Exclude<ProposalStatus, "pending">) => Promise<void>;
 }
 
+// How long a load may run before the screen stops waiting for it (Phase 146).
+// A normal one is well under two seconds even on a phone's mobile data; past
+// this, the house's Wi-Fi is the likelier explanation than a big household.
+const REFRESH_SLOW_MS = 10_000;
+// Between automatic retries after a failed load; the last repeats.
+const SYNC_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
+
 const HouseholdContext = createContext<HouseholdContextValue | null>(null);
 
 export function HouseholdProvider({ children }: { children: React.ReactNode }) {
@@ -263,6 +287,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   >({});
   const [householdTasks, setHouseholdTasks] = useState<HouseholdTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncFailed, setSyncFailed] = useState(false);
+  const [hasData, setHasData] = useState(false);
 
   // Resolved before anything is fetched (Phase 86C). Every query is scoped to
   // this, so loading first would show one household's data and then swap it.
@@ -315,6 +341,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setHydratedFromCache(true);
       setLoading(false);
     }
+    // Per household: a switch to one this device has never loaded starts
+    // with nothing worth showing, whatever the previous one had.
+    setHasData(!!cached);
     setTenantReady(true);
     // Both sources have now been read: localStorage above, membership here.
     setRoleHydrated(true);
@@ -411,6 +440,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     try {
       setHouseholdTasks(await dataProvider.listHouseholdTasks(from, to, todayRef.current));
     } catch (err) {
+      // No connection is not "no chores" (Phase 146). Emptying the list here
+      // wiped a staff phone's chores off the screen every time the Wi-Fi
+      // dropped. The chores already shown stay, and the failure goes up to
+      // refresh(), which reports it and retries.
+      if (isConnectionError(err)) throw err;
       // Same degraded state as routine_proposals and inventory_items below:
       // household_tasks arrives with the Phase 82 migration, and until it is
       // applied the request 404s. An empty chore list is the correct answer —
@@ -420,12 +454,18 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const refresh = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
-    // A silent pass leaves `loading` alone. It matters more than it looks:
-    // flipping it re-renders the staff list as skeletons, which unmounts the
-    // card holding an open photo-tagging dialog — exactly what a refresh
-    // triggered by returning from the camera would do.
-    if (!silent) setLoading(true);
+  // Numbers each refresh, so one that lands late cannot overwrite what a
+  // newer one already put on screen (Phase 146) — see refresh().
+  const refreshCount = useRef(0);
+  const appliedRefresh = useRef(0);
+  // How many are still waiting on the network. The retry loop below adds
+  // none while one is: on Wi-Fi that hangs rather than fails, stacking more
+  // requests on the same dead line only slows the one that might get through.
+  const refreshesInFlight = useRef(0);
+
+  // The fetch itself, split out of refresh() below so the bookkeeping around
+  // it reads on one screen. `pass` is that refresh's number.
+  const loadEverything = useCallback(async (pass: number) => {
     const [e, s, l, m, ia, rp, ii, audits, , leave] = await Promise.all([
       dataProvider.listEntities(),
       dataProvider.listSchedules(),
@@ -466,6 +506,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
           return [] as LeaveRequest[];
         }),
     ]);
+    // A newer refresh already landed: its answer is the more recent one.
+    if (pass < appliedRefresh.current) return;
+    appliedRefresh.current = pass;
     setEntities(e);
     setSchedules(s);
     setLogs(l);
@@ -489,17 +532,137 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       inventoryItems: ii,
       latestInventoryAudits: audits,
     });
-    if (!silent) setLoading(false);
+    setHasData(true);
+    setSyncFailed(false);
+    // Silent or not: if skeletons are up, real data has just arrived to
+    // replace them. When they are not, this changes nothing.
+    setLoading(false);
   }, [loadHouseholdTasks]);
+
+  const refresh = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    // A silent pass never *puts up* skeletons. It matters more than it looks:
+    // flipping `loading` on re-renders the staff list as skeletons, which
+    // unmounts the card holding an open photo-tagging dialog — exactly what a
+    // refresh triggered by returning from the camera would do. Taking them
+    // down is another matter; see below.
+    if (!silent) setLoading(true);
+    const pass = ++refreshCount.current;
+    refreshesInFlight.current += 1;
+
+    // Too slow to wait for: stop holding the screen (Phase 146). Bad Wi-Fi
+    // rarely fails outright — the request just hangs — and until now the
+    // skeletons stayed up for as long as it did. The request is not
+    // abandoned: if it lands after this, it is applied like any other.
+    const slow = setTimeout(() => {
+      if (pass <= appliedRefresh.current) return;
+      setSyncFailed(true);
+      setLoading(false);
+    }, REFRESH_SLOW_MS);
+
+    try {
+      // A session the phone still holds but cannot renew right now (the token
+      // ran out overnight, the Wi-Fi is down) reads to supabase-js as no
+      // session at all, and every query below would then go out with only the
+      // public key. RLS answers those with empty lists — which, written to
+      // state and to the snapshot, replace the household with nothing. That
+      // looks exactly like being signed out, and is how a working phone ended
+      // up being sent a fresh invite. Report it as what it is instead.
+      if (await isSessionUnreachable()) {
+        throw new Error("Session could not be renewed — no connection");
+      }
+      await loadEverything(pass);
+    } catch (err) {
+      // Only if nothing newer has already succeeded: a stale failure must not
+      // put a warning over data that is current.
+      if (pass > appliedRefresh.current) {
+        setSyncFailed(true);
+        // Always, silent or not: a load that failed must never leave
+        // skeletons up. Before Phase 146 a failed first load did exactly that,
+        // and no later silent refresh took them down — the staff screen stayed
+        // grey until the app was killed and reopened.
+        setLoading(false);
+      }
+      throw err;
+    } finally {
+      clearTimeout(slow);
+      refreshesInFlight.current -= 1;
+    }
+  }, [loadEverything]);
 
   useEffect(() => {
     // Gated on the tenant: `loading` starts true, so the app shows skeletons
     // through this window rather than an empty household. Silent when the
     // cache already painted — the revalidation must not replace cards the
     // user is reading with skeletons.
-    if (tenantReady) void refresh({ silent: hydratedFromCache });
+    //
+    // A failure is already on screen (syncFailed) and retried below; all
+    // that is left to do with it here is not leave it unhandled.
+    if (tenantReady) {
+      refresh({ silent: hydratedFromCache }).catch((err) =>
+        console.warn("Household load failed — retrying", err)
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hydratedFromCache decides how this fetch renders, not whether to run it again
   }, [refresh, tenantReady]);
+
+  // Keeps trying after a failed load until one lands (Phase 146).
+  //
+  // Nothing did before. AutoRefresh only fires when the app comes back to the
+  // foreground and the browser claims to be online, and use-offline-sync only
+  // when it has queued logs to send — so a phone that opened on a dead
+  // connection stayed on whatever it first showed. Backing off to once a
+  // minute, and paused while the app is in the background. "online" and
+  // coming back to the foreground both retry at once and restart the
+  // back-off: iOS often never fires the first on a Wi-Fi handover, which is
+  // what the timer is for.
+  useEffect(() => {
+    if (!syncFailed) return;
+    let cancelled = false;
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const schedule = () => {
+      clearTimeout(timer);
+      const delay = SYNC_RETRY_DELAYS_MS[Math.min(attempt, SYNC_RETRY_DELAYS_MS.length - 1)];
+      attempt += 1;
+      timer = setTimeout(tryNow, delay);
+    };
+    function tryNow() {
+      if (cancelled) return;
+      if (document.visibilityState !== "visible" || refreshesInFlight.current > 0) {
+        schedule();
+        return;
+      }
+      // Success sets syncFailed false, which tears this effect down.
+      refresh({ silent: true }).catch(() => {
+        if (!cancelled) schedule();
+      });
+    }
+    const onWake = () => {
+      if (document.visibilityState !== "visible") return;
+      attempt = 0;
+      clearTimeout(timer);
+      tryNow();
+    };
+
+    schedule();
+    window.addEventListener("online", onWake);
+    document.addEventListener("visibilitychange", onWake);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      window.removeEventListener("online", onWake);
+      document.removeEventListener("visibilitychange", onWake);
+    };
+  }, [syncFailed, refresh]);
+
+  const retrySync = useCallback(
+    () =>
+      refresh({ silent: true }).catch((err) => {
+        console.warn("Manual retry failed", err);
+      }),
+    [refresh]
+  );
 
   // Pulls the recent feed's photos into the browser cache once the screen has
   // settled (Phase 95). Driven by state rather than by the fetch, so a mount
@@ -547,7 +710,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       choresLoadedOnce.current = true;
       return;
     }
-    void loadHouseholdTasks(selectedWeekStr);
+    // Offline, the week browsed to keeps the chores already loaded; the
+    // retry loop in refresh() fetches the right ones once it reconnects.
+    loadHouseholdTasks(selectedWeekStr).catch((err) =>
+      console.warn("Chores for the browsed week did not load", err)
+    );
   }, [selectedWeekStr, loadHouseholdTasks]);
 
   const [todayJumps, setTodayJumps] = useState(0);
@@ -1066,6 +1233,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       latestInventoryAudits,
       householdTasks,
       loading,
+      syncFailed,
+      hasData,
+      retrySync,
       isMockMode,
       activePetId,
       setActivePetId,
@@ -1132,6 +1302,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       latestInventoryAudits,
       householdTasks,
       loading,
+      syncFailed,
+      hasData,
+      retrySync,
       activePetId,
       selectedDate,
       jumpToToday,

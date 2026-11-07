@@ -19,6 +19,7 @@ import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { StaffSplash } from "@/components/staff/staff-splash";
 import { StaffLoadingScreen } from "@/components/brand/loading-screens";
 import { dataProvider } from "@/lib/data";
+import { isSessionUnreachable } from "@/lib/auth/device-session";
 import { cn } from "@/lib/utils";
 import { activeMemberProfile } from "@/lib/member-identity";
 import type { PinCheck } from "@/lib/data/types";
@@ -203,12 +204,27 @@ type GateStep =
 function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfile) => void }) {
   const [profiles, setProfiles] = useState<StaffProfile[] | null>(null);
   const [failed, setFailed] = useState(false);
+  // Bumped to fetch the roster again — by the button, the timer and the
+  // "online" event below (Phase 146).
+  const [attempt, setAttempt] = useState(0);
+  // The last attempt that finished, either way. The retry timer waits for the
+  // current one: on slow Wi-Fi a renewal plus the roster read can take longer
+  // than the retry interval, and starting the next attempt would discard the
+  // one about to succeed (Codex review, PR #2).
+  const [settled, setSettled] = useState(-1);
   const [step, setStep] = useState<GateStep>({ kind: "choose" });
 
   useEffect(() => {
     let live = true;
-    dataProvider
-      .listStaffProfiles()
+    // Checked first for the same reason as in refresh(): with the session out
+    // of reach, the query would go out with only the public key and RLS would
+    // answer with no names at all — shown below as "nobody is registered,
+    // ask the admin", which sends staff off to fix the wrong thing.
+    isSessionUnreachable()
+      .then((unreachable) => {
+        if (unreachable) throw new Error("Session could not be renewed — no connection");
+        return dataProvider.listStaffProfiles();
+      })
       // Admins sign in with Google, not here: offering their names would let
       // anyone holding this phone set a PIN and act as them (Phase 139).
       // Archived people are off the roster (Phase 141) — their PIN is already
@@ -218,14 +234,33 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
         (rows) =>
           live && setProfiles(rows.filter((row) => !row.user_id && !row.archived_at))
       )
+      .then(() => live && setFailed(false))
       .catch((err) => {
         console.error(err);
         if (live) setFailed(true);
+      })
+      .finally(() => {
+        if (live) setSettled(attempt);
       });
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
+
+  // While it is failing, keep trying: 10 seconds after each attempt has
+  // finished, and at once when the phone says it is back online. "Reload the
+  // page" was the old advice, and an installed app has no reload button to
+  // press. Nothing is scheduled while an attempt is still running.
+  useEffect(() => {
+    if (!failed || settled !== attempt) return;
+    const again = () => setAttempt((n) => n + 1);
+    const timer = setTimeout(again, 10_000);
+    window.addEventListener("online", again);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("online", again);
+    };
+  }, [failed, settled, attempt]);
 
   if (step.kind !== "choose") {
     return (
@@ -250,10 +285,19 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
         <p className="text-sm text-muted-foreground">Pilih nama Anda untuk mulai mencatat.</p>
       </div>
 
-      {failed ? (
-        <p className="text-center text-sm text-destructive">
-          Gagal memuat daftar nama. Periksa koneksi lalu muat ulang halaman.
-        </p>
+      {failed && profiles === null ? (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-sm text-destructive">
+            Gagal memuat daftar nama. Periksa Wi-Fi atau data seluler — dicoba lagi otomatis.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => setAttempt((n) => n + 1)}
+            className="min-h-[44px] rounded-lg"
+          >
+            Coba lagi
+          </Button>
+        </div>
       ) : profiles === null ? (
         <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Memuat…

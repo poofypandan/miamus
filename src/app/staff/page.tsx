@@ -25,6 +25,7 @@ import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
 import { StockCheckPanel } from "@/components/staff/stock-check-panel";
+import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -140,6 +141,8 @@ function StaffTasks() {
           list for skeletons mid-gesture would be worse than no feedback. */}
       <PullToRefresh onRefresh={() => refresh({ silent: true })}>
         <div className="flex flex-col gap-4 px-4 pt-3">
+          {/* Above both views: a failed load is the same news for either. */}
+          <ConnectionNotice locale="id" />
           {/* Never remounted, so a view that suspends on first read keeps the
               other one on screen until it is complete (Phase 125). */}
           <Suspense fallback={null}>
@@ -166,6 +169,8 @@ function TasksView() {
     schedules,
     logs,
     loading,
+    syncFailed,
+    hasData,
     selectedDate,
     setSelectedDate,
     todayJumps,
@@ -259,7 +264,7 @@ function TasksView() {
         locationName={roomName(entry.occurrence.task.location_id)}
         // Someone else's name only when it is someone else's chore — which
         // only an admin without a roster row sees. Left out, the card
-        // says "Untuk Kamu".
+        // says "Untuk Anda".
         assigneeName={
           entry.occurrence.task.assigned_to && entry.occurrence.task.assigned_to !== isolatedTo
             ? staffName(entry.occurrence.task.assigned_to)
@@ -334,7 +339,9 @@ function TasksView() {
               <Skeleton className="h-28 w-full rounded-xl" />
               <Skeleton className="h-28 w-full rounded-xl" />
             </>
-          ) : entries.length === 0 ? (
+          ) : syncFailed && !hasData ? null : entries.length === 0 ? (
+            // Not loaded is not "nothing today": ConnectionNotice above
+            // says which it is, and this stays quiet until it knows.
             <p className="pt-10 text-center text-sm text-muted-foreground">
               Tidak ada jadwal untuk tanggal ini.
             </p>

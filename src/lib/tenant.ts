@@ -92,8 +92,24 @@ export async function resolveActiveHouseholdId(): Promise<ResolvedTenant> {
   // gate lets an owner through, as it does for a real one.
   if (!supabase) return { householdId: fallback, isMember: true };
 
+  // A staff phone that already knows its household answers from storage
+  // (Phase 146). Waiting on the network to confirm what this device was told
+  // when it redeemed its invite held the first screen of the morning for
+  // twenty seconds and more on bad Wi-Fi: first the token renewal, then two
+  // lookups that PostgREST retries three times each.
+  //
+  // Only for an anonymous session. Those are staff devices and never
+  // household members — owner invites refuse them (migrations/093) — so the
+  // lookups below could only confirm the stored id. A Google session, or no
+  // session, still goes the whole way.
+  if (stored) {
+    const { peekStoredUser } = await import("@/lib/auth/device-session");
+    if ((await peekStoredUser())?.isAnonymous) return { householdId: stored, isMember: false };
+  }
+
   try {
-    // getSession reads the cookie without a network round trip.
+    // getSession reads the cookie without a network round trip — unless the
+    // access token has expired, in which case it renews it first.
     const userId = (await supabase.auth.getSession()).data.session?.user?.id ?? null;
 
     // No session at all: an unbound device. It gets no identity here — one is
