@@ -17,7 +17,6 @@ import {
 } from "@/components/staff/staff-reports-panel";
 import { FoodFormSheet } from "@/components/kitchen/food-form-sheet";
 import { useHousehold } from "@/context/household-context";
-import { openAfterOverlayCloses } from "@/lib/overlay-handoff";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 
 /**
@@ -102,7 +101,7 @@ export function StaffActionsFab() {
               type="button"
               onClick={() => {
                 setOpen(false);
-                openAfterOverlayCloses(() => setAddingFood(true));
+                setAddingFood(true);
               }}
               className="mb-4 flex min-h-16 w-full items-center gap-3 rounded-xl border bg-card px-4 text-left active:bg-muted"
             >
