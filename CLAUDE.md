@@ -9,7 +9,7 @@
 - **Platform:** Mobile-first Progressive Web App (PWA)
 
 ## Language & Role Partitioning
-- **Owner Views:** 100% English. Focuses on configuration, delegation, and high-level audits.
+- **Owner Views:** English or Bahasa Indonesia, each owner's choice (Phase 149). Asked once at sign-up, changeable in Access, saved on the account (`user_preferences`, migrations/114) and defaulting to English. Every owner-facing string needs both languages: use `useT()` / `useOwnerLocale()` from `src/context/owner-locale-context.tsx`. Indonesian wording follows `docs/indonesian-glossary.md`. Focuses on configuration, delegation, and high-level audits.
 - **Staff Views:** 100% Indonesian. Focuses on low-friction execution, checklist completion, and photo capture.
 - **Staff Identity:** Locked to personal device `localStorage` via 4-digit PIN setup. Attribution via `staff_id` across all logged actions.
 

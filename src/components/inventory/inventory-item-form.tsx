@@ -23,13 +23,17 @@ import {
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import {
   CATEGORY_LABELS_EN,
+  CATEGORY_LABELS_ID,
   INVENTORY_SCOPES,
   INVENTORY_UNITS,
   SCOPE_CATEGORIES,
   SCOPE_LABELS_EN,
+  SCOPE_LABELS_ID,
+  unitLabel,
 } from "@/lib/inventory";
 import type {
   InventoryCategory,
@@ -53,7 +57,7 @@ function parseAmount(raw: string): number | null {
  * never renders it, and the database refuses item edits from a staff device
  * regardless (migrations/099).
  *
- * Owner-facing, so entirely English per the Phase 46 language boundary.
+ * Owner-facing: English or Bahasa Indonesia, as the owner chose (Phase 149).
  */
 export function InventoryItemForm({
   open,
@@ -69,6 +73,10 @@ export function InventoryItemForm({
   defaultScope: InventoryScope;
 }) {
   const { addInventoryItem, updateInventoryItem, removeInventoryItem } = useHousehold();
+  const locale = useOwnerLocale();
+  const t = useT();
+  const scopeLabels = locale === "id" ? SCOPE_LABELS_ID : SCOPE_LABELS_EN;
+  const categoryLabels = locale === "id" ? CATEGORY_LABELS_ID : CATEGORY_LABELS_EN;
   useBackToClose(open, () => onOpenChange(false));
 
   const [scope, setScope] = useState<InventoryScope>(defaultScope);
@@ -115,9 +123,9 @@ export function InventoryItemForm({
   async function handleSave() {
     const qty = parseAmount(quantity);
     const min = parseAmount(threshold);
-    if (!name.trim()) return void toast.error("Give the item a name");
-    if (qty === null) return void toast.error("Enter how many are in stock");
-    if (min === null) return void toast.error("Enter the low-stock threshold");
+    if (!name.trim()) return void toast.error(t("Give the item a name", "Beri nama barangnya"));
+    if (qty === null) return void toast.error(t("Enter how many are in stock", "Masukkan jumlah stok"));
+    if (min === null) return void toast.error(t("Enter the low-stock threshold", "Masukkan batas stok menipis"));
 
     setSaving(true);
     const input = {
@@ -133,15 +141,15 @@ export function InventoryItemForm({
     try {
       if (item) {
         await updateInventoryItem(item.id, input);
-        toast.success(`${input.name} updated`);
+        toast.success(t(`${input.name} updated`, `${input.name} diperbarui`));
       } else {
         await addInventoryItem(input);
-        toast.success(`${input.name} added`);
+        toast.success(t(`${input.name} added`, `${input.name} ditambahkan`));
       }
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to save item");
+      toast.error(t("Failed to save item", "Barang gagal disimpan"));
       setSaving(false);
     }
   }
@@ -151,11 +159,11 @@ export function InventoryItemForm({
     setSaving(true);
     try {
       await removeInventoryItem(item.id);
-      toast.success(`${item.name} deleted`);
+      toast.success(t(`${item.name} deleted`, `${item.name} dihapus`));
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to delete item");
+      toast.error(t("Failed to delete item", "Barang gagal dihapus"));
       setSaving(false);
     }
   }
@@ -164,30 +172,34 @@ export function InventoryItemForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{item ? "Edit item" : "Add item"}</DialogTitle>
+          <DialogTitle>{item ? t("Edit item", "Ubah barang") : t("Add item", "Tambah barang")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
           <SegmentedControl
-            ariaLabel="Inventory"
-            segments={INVENTORY_SCOPES.map((s) => ({ value: s, label: SCOPE_LABELS_EN[s] }))}
+            ariaLabel={t("Inventory", "Stok")}
+            segments={INVENTORY_SCOPES.map((s) => ({ value: s, label: scopeLabels[s] }))}
             value={scope}
             onChange={changeScope}
           />
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="inv-name">Name</Label>
+            <Label htmlFor="inv-name">{t("Name", "Nama")}</Label>
             <Input
               id="inv-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={scope === "pet" ? "e.g. Royal Canin Mini Adult" : "e.g. Floor Cleaner"}
+              placeholder={
+                scope === "pet"
+                  ? t("e.g. Royal Canin Mini Adult", "mis. Royal Canin Mini Adult")
+                  : t("e.g. Floor Cleaner", "mis. Pembersih Lantai")
+              }
               className="min-h-[48px]"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Category</Label>
+            <Label>{t("Category", "Kategori")}</Label>
             {/* Three per scope, so one row of three. Allowed to wrap: "Household
                 Supplies" does not fit a third of a phone on one line. */}
             <div className="grid grid-cols-3 gap-2">
@@ -199,7 +211,7 @@ export function InventoryItemForm({
                   className="h-auto min-h-[44px] px-2 text-xs leading-tight whitespace-normal"
                   onClick={() => setCategory(c)}
                 >
-                  {CATEGORY_LABELS_EN[c]}
+                  {categoryLabels[c]}
                 </Button>
               ))}
             </div>
@@ -207,7 +219,7 @@ export function InventoryItemForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="inv-qty">In stock</Label>
+              <Label htmlFor="inv-qty">{t("In stock", "Stok saat ini")}</Label>
               <Input
                 id="inv-qty"
                 inputMode="decimal"
@@ -218,7 +230,7 @@ export function InventoryItemForm({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Unit</Label>
+              <Label>{t("Unit", "Satuan")}</Label>
               <Select value={unit} onValueChange={(v) => setUnit(v as InventoryUnit)}>
                 <SelectTrigger className="min-h-[48px] w-full">
                   <SelectValue />
@@ -226,7 +238,7 @@ export function InventoryItemForm({
                 <SelectContent>
                   {INVENTORY_UNITS.map((u) => (
                     <SelectItem key={u} value={u}>
-                      {u}
+                      {unitLabel(u, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -236,7 +248,7 @@ export function InventoryItemForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="inv-min">Low at or below</Label>
+              <Label htmlFor="inv-min">{t("Low at or below", "Menipis jika")}</Label>
               <Input
                 id="inv-min"
                 inputMode="decimal"
@@ -247,7 +259,7 @@ export function InventoryItemForm({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Count it every</Label>
+              <Label>{t("Count it every", "Hitung setiap")}</Label>
               <Select value={String(checkEvery)} onValueChange={(v) => setCheckEvery(Number(v))}>
                 <SelectTrigger className="min-h-[48px] w-full">
                   <SelectValue />
@@ -255,7 +267,7 @@ export function InventoryItemForm({
                 <SelectContent>
                   {CHECK_INTERVALS.map((days) => (
                     <SelectItem key={days} value={String(days)}>
-                      {days} days
+                      {t(`${days} days`, `${days} hari`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -264,9 +276,12 @@ export function InventoryItemForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Reference photo (optional)</Label>
+            <Label>{t("Reference photo (optional)", "Foto contoh (opsional)")}</Label>
             <p className="text-xs text-muted-foreground">
-              The exact product, so whoever shops buys the right one.
+              {t(
+                "The exact product, so whoever shops buys the right one.",
+                "Produk yang tepat, agar yang berbelanja membeli yang benar."
+              )}
             </p>
             {/* Square-cropped like a pet avatar, since it renders in the same
                 fixed thumbnail. From the library: a product shot is a
@@ -277,7 +292,10 @@ export function InventoryItemForm({
               value={photoUrl}
               onChange={setPhotoUrl}
               onBusyChange={setPhotoBusy}
-              label="Add photo"
+              label={t("Add photo", "Tambah foto")}
+              busyLabel={t("Uploading...", "Mengunggah...")}
+              locale={locale}
+              errorMessage={t("Failed to upload photo", "Foto gagal diunggah")}
               square
               allowGallery
             />
@@ -291,7 +309,11 @@ export function InventoryItemForm({
             className="min-h-[48px] w-full"
           >
             {(saving || photoBusy) && <Loader2 className="animate-spin" />}
-            {photoBusy ? "Waiting for photo..." : item ? "Save changes" : "Add item"}
+            {photoBusy
+              ? t("Waiting for photo...", "Menunggu foto...")
+              : item
+                ? t("Save changes", "Simpan perubahan")
+                : t("Add item", "Tambah barang")}
           </Button>
           {item &&
             (confirmingDelete ? (
@@ -302,7 +324,7 @@ export function InventoryItemForm({
                   onClick={handleDelete}
                   disabled={saving}
                 >
-                  Confirm delete
+                  {t("Confirm delete", "Yakin hapus")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -310,7 +332,7 @@ export function InventoryItemForm({
                   onClick={() => setConfirmingDelete(false)}
                   disabled={saving}
                 >
-                  Cancel
+                  {t("Cancel", "Batal")}
                 </Button>
               </div>
             ) : (
@@ -320,7 +342,7 @@ export function InventoryItemForm({
                 onClick={() => setConfirmingDelete(true)}
                 disabled={saving}
               >
-                <Trash2 /> Delete item
+                <Trash2 /> {t("Delete item", "Hapus barang")}
               </Button>
             ))}
         </DialogFooter>

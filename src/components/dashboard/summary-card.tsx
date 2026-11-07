@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useHousehold } from "@/context/household-context";
+import { useT } from "@/context/owner-locale-context";
 import { compressPhoto } from "@/lib/image";
 import { POTTY_TITLE } from "@/lib/schedule-categories";
 import type { AgendaItem } from "@/lib/scheduleEngine";
@@ -28,6 +29,7 @@ function StatusIcon({ status }: { status: AgendaItem["status"] }) {
 // this card's one call site is the Pet Profile Sheet, which already shows the
 // name at 2xl next to the avatar a few pixels above it.
 export function SummaryCard({ items }: { items: AgendaItem[] }) {
+  const t = useT();
   const potty = items.filter((i) => i.title === POTTY_TITLE);
   const pottyDone = potty.filter((i) => i.status === "completed").length;
   const nextPotty = potty.find((i) => i.status !== "completed");
@@ -39,12 +41,12 @@ export function SummaryCard({ items }: { items: AgendaItem[] }) {
       <CardContent className="flex flex-col gap-1.5 px-4 text-sm">
         <TaskRow
           icon={Droplets}
-          label="Potty"
+          label={t("Potty", "Pipis & Pup")}
           item={nextPotty}
           statusText={`${pottyDone}/${potty.length}`}
         />
-        <TaskRow icon={Utensils} label="Lunch" item={lunch} />
-        <TaskRow icon={Utensils} label="Dinner" item={dinner} />
+        <TaskRow icon={Utensils} label={t("Lunch", "Makan Siang")} item={lunch} />
+        <TaskRow icon={Utensils} label={t("Dinner", "Makan Malam")} item={dinner} />
       </CardContent>
     </Card>
   );
@@ -65,6 +67,7 @@ function TaskRow({
   statusText?: string;
 }) {
   const { logTask, uploadPhoto } = useHousehold();
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const loggable = !!item && item.status !== "completed";
 
@@ -82,10 +85,10 @@ function TaskRow({
         module: item.module,
         photo_url: url,
       });
-      toast.success(`${label} logged`);
+      toast.success(t(`${label} logged`, `${label} dicatat`));
     } catch (err) {
       console.error(err);
-      toast.error(`Failed to log ${label.toLowerCase()}`);
+      toast.error(t(`Failed to log ${label.toLowerCase()}`, `Gagal mencatat ${label.toLowerCase()}`));
     } finally {
       setBusy(false);
     }

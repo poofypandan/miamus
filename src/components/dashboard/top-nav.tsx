@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { TodayButton } from "@/components/agenda/today-button";
 import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
 import { moduleFromParam } from "@/lib/dashboard-modules";
+import { useOwnerLocale } from "@/context/owner-locale-context";
 
 /**
  * The dashboard header: the property name and the way into the staff view —
@@ -16,13 +17,14 @@ import { moduleFromParam } from "@/lib/dashboard-modules";
  */
 export function TopNav() {
   const onAgenda = moduleFromParam(useSearchParams().get("module")) === "agenda";
+  const locale = useOwnerLocale();
   return (
     <AppHeader
       action={
         <div className="flex shrink-0 items-center gap-1">
-          {onAgenda && <TodayButton locale="en" />}
+          {onAgenda && <TodayButton locale={locale} />}
           <HeaderNavLink href="/staff" switchTo="staff">
-            Action Mode →
+            {locale === "id" ? "Mode Kerja →" : "Action Mode →"}
           </HeaderNavLink>
         </div>
       }

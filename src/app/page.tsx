@@ -9,9 +9,10 @@ import { MiamusMark } from "@/components/brand/loading-screens";
 import { supabase } from "@/lib/supabase/client";
 import { readStoredTenantId } from "@/lib/tenant";
 
+// Both languages, English first (Phase 149): nobody here has chosen one yet.
 const ERRORS: Record<string, string> = {
-  missing_code: "Sign-in was cancelled. Try again.",
-  exchange_failed: "Google sign-in didn't complete. Try again.",
+  missing_code: "Sign-in was cancelled. Try again. · Login dibatalkan. Coba lagi.",
+  exchange_failed: "Google sign-in didn't complete. Try again. · Login Google tidak selesai. Coba lagi.",
 };
 
 // Written by the staff gate once someone picks their name on this device. Read
@@ -90,7 +91,7 @@ function FrontDoor() {
 
   async function handleGoogle() {
     if (!supabase) {
-      setFailed("Supabase isn't configured on this deployment.");
+      setFailed("Supabase isn't configured on this deployment. · Supabase belum disiapkan di server ini.");
       return;
     }
     setBusy(true);
@@ -103,7 +104,7 @@ function FrontDoor() {
     });
     if (signInError) {
       console.error(signInError);
-      setFailed("Couldn't reach Google sign-in. Try again.");
+      setFailed("Couldn't reach Google sign-in. Try again. · Tidak bisa membuka login Google. Coba lagi.");
       setBusy(false);
     }
     // On success the browser leaves for Google; no need to clear `busy`.
@@ -113,24 +114,54 @@ function FrontDoor() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] text-center">
-      <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Welcome to Miamus</h1>
-      <p className="mt-3 text-sm text-muted-foreground">
+      <h1 lang="en" className="text-3xl font-semibold tracking-tight text-gray-900">
+        Welcome to Miamus
+      </h1>
+      <p lang="id" className="mt-1 text-base font-medium text-muted-foreground">
+        Selamat datang di Miamus
+      </p>
+      <p lang="en" className="mt-3 text-sm text-muted-foreground">
         Run your household from one place — pets, chores, people and stock.
       </p>
+      <p lang="id" className="mt-1 text-sm text-muted-foreground">
+        Kelola rumah dari satu tempat — hewan, tugas, orang dan stok.
+      </p>
 
-      <Button onClick={handleGoogle} disabled={busy} className="mt-10 min-h-[52px] w-full">
+      {/* Two short lines rather than one long one: on a 360-390px phone the
+          single "English · Indonesian" label ran past the button's edges. */}
+      <Button
+        onClick={handleGoogle}
+        disabled={busy}
+        className="mt-10 h-auto min-h-[56px] w-full gap-3 py-2 whitespace-normal"
+      >
         {busy ? <Loader2 className="animate-spin" /> : <GoogleMark />}
-        Continue with Google
+        <span className="flex flex-col items-start text-left leading-tight">
+          <span lang="en">Continue with Google</span>
+          <span lang="id" className="text-xs font-normal opacity-80">
+            Lanjutkan dengan Google
+          </span>
+        </span>
       </Button>
 
       {(failed || error) && <p className="mt-4 text-sm text-destructive">{failed ?? error}</p>}
 
       <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-        By continuing, you agree to Miamus&apos;s{" "}
-        <Link href="/privacy" className="font-medium text-gray-900 underline underline-offset-4">
-          Privacy Policy
-        </Link>
-        .
+        {/* One line per language, like the welcome text above: run together,
+            the Indonesian started partway across a line. */}
+        <span lang="en" className="block">
+          By continuing, you agree to Miamus&apos;s{" "}
+          <Link href="/privacy" className="font-medium whitespace-nowrap text-gray-900 underline underline-offset-4">
+            Privacy Policy
+          </Link>
+          .
+        </span>
+        <span lang="id" className="mt-1 block">
+          Dengan melanjutkan, Anda menyetujui{" "}
+          <Link href="/privasi" className="font-medium whitespace-nowrap text-gray-900 underline underline-offset-4">
+            Kebijakan Privasi
+          </Link>
+          .
+        </span>
       </p>
 
       {/* Deliberately not a link. Staff who lost their session were tapping

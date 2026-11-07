@@ -1,6 +1,8 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { UiLabelsProvider } from "@/components/ui/ui-labels";
+import { readCachedOwnerLocale, type OwnerLocale } from "@/lib/owner-locale";
 import { addDays } from "date-fns";
 import { useSearchParams } from "next/navigation";
 import { Hand, Stethoscope, UserRound } from "lucide-react";
@@ -52,7 +54,9 @@ export default function StaffPage() {
   const { loading, tenantReady, roleHydrated } = useHousehold();
   const { ready: nameReady } = useHouseholdNameState();
   return (
-    <>
+    // Staff screens are Bahasa Indonesia, the shared primitives' own words
+    // included (Phase 149).
+    <UiLabelsProvider locale="id">
       <StaffLoginGate>
         {/* useSearchParams() needs a Suspense boundary to keep the page static;
             nothing here is worth a fallback while it resolves. */}
@@ -66,7 +70,7 @@ export default function StaffPage() {
         variant="staff"
         ready={tenantReady && roleHydrated && !loading && nameReady}
       />
-    </>
+    </UiLabelsProvider>
   );
 }
 
@@ -96,7 +100,7 @@ function StaffTasks() {
   useScrollTopOnChange(view);
 
 
-  useOfflineSync();
+  useOfflineSync("id");
 
   // Shown on the pill so a due count is visible from the task list, where
   // staff spend most of the day.
@@ -415,6 +419,14 @@ function TasksView() {
 // out by accident.
 function HeaderIdentity() {
   const { isHouseholdMember } = useHousehold();
+  // Only an owner sees this link, so it is in the owner's language — read
+  // from this phone's copy of it (Phase 149; the staff page has no
+  // OwnerLocaleProvider). After mount: the server render has no storage.
+  const [ownerLocale, setOwnerLocale] = useState<OwnerLocale>("en");
+  useEffect(() => {
+    const cached = readCachedOwnerLocale();
+    if (cached) setOwnerLocale(cached);
+  }, []);
 
   // The admin's way back out, shown only to a real household member: a row in
   // household_members, which only a Google account can have. A bound staff
@@ -428,7 +440,7 @@ function HeaderIdentity() {
   // by the middleware, which sends anonymous sessions back to /staff.
   if (isHouseholdMember) {
     return <HeaderNavLink href="/dashboard" switchTo="owner">
-        ← Manage
+        {ownerLocale === "id" ? "← Kelola" : "← Manage"}
       </HeaderNavLink>;
   }
   return <OnDutyBadge />;

@@ -12,12 +12,13 @@ import { DateRibbon } from "@/components/date-ribbon";
 import { ChoreCard } from "@/components/chores/chore-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { formatDateLocal } from "@/lib/scheduleEngine";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { HouseholdTask } from "@/types/database";
 
@@ -25,11 +26,13 @@ import type { HouseholdTask } from "@/types/database";
  * The owner's chore desk: what the house owes on the selected day, and the
  * only place chores are created, edited or deleted (Phase 100).
  *
- * Owner-facing, so entirely English per the Phase 46 language boundary, and
+ * Owner-facing, in the language the owner chose (Phase 149), and
  * owner-only in capability: the staff view imports none of this.
  */
 export function ChoresTab() {
   const { selectedDate, setSelectedDate, householdTasks } = useHousehold();
+  const locale = useOwnerLocale();
+  const t = useT();
   // No chore exists at all, as opposed to none falling on this day: a new
   // household should be told to make its first, not that today is free
   // (Phase 120).
@@ -39,7 +42,7 @@ export function ChoresTab() {
   // different things. An absent assigned_to is genuinely unassigned and is
   // spelled out on the badge; an id this roster cannot resolve — a profile
   // still loading — is a name we don't have, not an empty chore.
-  const staffName = useStaffNameLookup(profiles);
+  const staffName = useStaffNameLookup(profiles, t("Someone", "Seseorang"));
   const roomName = useLocationName();
   const occurrences = useChoreOccurrences();
   const today = useToday();
@@ -74,16 +77,16 @@ export function ChoresTab() {
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
-      <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
+      <DateRibbon value={selectedDate} onChange={setSelectedDate} locale={locale} />
 
       <StaffCompletionStrip
         occurrences={occurrences}
         date={dateStr}
-        dayLabel={dayLabel(selectedDate, today)}
+        dayLabel={dayLabel(selectedDate, today, locale)}
       />
 
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-gray-900">Chores</h2>
+        <h2 className="text-sm font-semibold text-gray-900">{t("Chores", "Tugas")}</h2>
         <Button
           variant="outline"
           className="min-h-[36px] shrink-0 px-3 text-xs"
@@ -93,18 +96,28 @@ export function ChoresTab() {
             setEditorOpen(true);
           }}
         >
-          <Plus className="size-3.5" /> Add Chore
+          <Plus className="size-3.5" /> {t("Add Chore", "Tambah Tugas")}
         </Button>
       </div>
 
       {occurrences.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title={noChoresYet ? "No chores yet" : "No chores on this day"}
+          title={
+            noChoresYet
+              ? t("No chores yet", "Belum ada tugas")
+              : t("No chores on this day", "Tidak ada tugas hari ini")
+          }
           description={
             noChoresYet
-              ? "Add your first chore — one-off or repeating — and it appears in Action Mode straight away."
-              : "Add one and it appears in Action Mode straight away."
+              ? t(
+                  "Add your first chore — one-off or repeating — and it appears in Action Mode straight away.",
+                  "Tambahkan tugas pertama Anda — sekali atau berulang — dan langsung muncul di Mode Kerja."
+                )
+              : t(
+                  "Add one and it appears in Action Mode straight away.",
+                  "Tambahkan satu dan langsung muncul di Mode Kerja."
+                )
           }
         >
           <Button
@@ -115,19 +128,19 @@ export function ChoresTab() {
               setEditorOpen(true);
             }}
           >
-            <Plus /> Add Chore
+            <Plus /> {t("Add Chore", "Tambah Tugas")}
           </Button>
         </EmptyState>
       ) : (
         <>
           {overdue.length > 0 && (
-            <OverdueSection count={overdue.length} locale="en">
+            <OverdueSection count={overdue.length} locale={locale}>
               {overdue.map((occurrence) => (
                 <ChoreCard
                   key={occurrence.key}
                   occurrence={occurrence}
                   locationName={roomName(occurrence.task.location_id)}
-                  locale="en"
+                  locale={locale}
                   today={today}
                   assigneeName={
                     occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
@@ -145,7 +158,7 @@ export function ChoresTab() {
                 key={occurrence.key}
                 occurrence={occurrence}
                 locationName={roomName(occurrence.task.location_id)}
-                locale="en"
+                locale={locale}
                 today={today}
                 assigneeName={
                   occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
@@ -155,13 +168,15 @@ export function ChoresTab() {
               />
             ))}
             {open.length === 0 && overdue.length === 0 && (
-              <p className="text-sm text-muted-foreground">Everything on this day is done.</p>
+              <p className="text-sm text-muted-foreground">
+                {t("Everything on this day is done.", "Semua tugas hari ini sudah selesai.")}
+              </p>
             )}
           </div>
 
           {done.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h3 className="text-xs font-medium text-gray-500">Completed</h3>
+              <h3 className="text-xs font-medium text-gray-500">{t("Completed", "Selesai")}</h3>
               {done.map((occurrence) => (
                 // No onPress on a completed chore: its footer holds the proof
                 // photos, which are themselves buttons, and a button inside a
@@ -171,7 +186,7 @@ export function ChoresTab() {
                   key={occurrence.key}
                   occurrence={occurrence}
                   locationName={roomName(occurrence.task.location_id)}
-                  locale="en"
+                  locale={locale}
                   today={today}
                   assigneeName={
                     occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
@@ -219,6 +234,8 @@ function ChoreProof({
   staffName: (id: string) => string;
   onEdit: () => void;
 }) {
+  const formatTime = useFormatTime();
+  const t = useT();
   const row = occurrence.row;
   // A completed occurrence always has a row — it is what records the
   // completion — so this is a type guard rather than a real case.
@@ -228,8 +245,8 @@ function ChoreProof({
     <div className="flex flex-col gap-2 border-t pt-2">
       {row.completed_by && (
         <p className="text-[11px] text-muted-foreground">
-          Done by {staffName(row.completed_by)}
-          {row.completed_at && ` · ${formatTime12h(new Date(row.completed_at))}`}
+          {t("Done by", "Diselesaikan oleh")} {staffName(row.completed_by)}
+          {row.completed_at && ` · ${formatTime(new Date(row.completed_at))}`}
         </p>
       )}
 
@@ -238,7 +255,7 @@ function ChoreProof({
         onClick={onEdit}
         className="self-start rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground underline underline-offset-2 active:bg-muted"
       >
-        Edit chore
+        {t("Edit chore", "Ubah tugas")}
       </button>
     </div>
   );

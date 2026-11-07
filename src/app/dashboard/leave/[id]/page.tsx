@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import type { OwnerLocale } from "@/lib/owner-locale";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { expandChores } from "@/lib/chore-recurrence";
@@ -30,7 +32,7 @@ import type { LeaveFallbackAction, LeaveRequest } from "@/types/database";
 /**
  * Where a leave request's WhatsApp link lands (Phase 140): the admin reads
  * it, says what happens to the person's chores while they are away, and
- * approves or rejects. Owner-facing, so English.
+ * approves or rejects. Owner-facing, in the owner's language.
  *
  * Under /dashboard, so the middleware's sign-in guard and the app lock both
  * apply to it as to every other admin screen.
@@ -46,26 +48,35 @@ export default function LeaveApprovalPage() {
 
 const ACTIONS: {
   value: LeaveFallbackAction;
-  label: string;
-  hint: string;
+  label: Record<OwnerLocale, string>;
+  hint: Record<OwnerLocale, string>;
   icon: typeof Users;
 }[] = [
   {
     value: "reassign",
-    label: "Re-assign",
-    hint: "Their chores go to one person you choose.",
+    label: { en: "Re-assign", id: "Alihkan" },
+    hint: {
+      en: "Their chores go to one person you choose.",
+      id: "Tugasnya dialihkan ke satu orang yang Anda pilih.",
+    },
     icon: UserRoundCheck,
   },
   {
     value: "unassign",
-    label: "Unassign",
-    hint: "Their chores become open for anyone to pick up.",
+    label: { en: "Unassign", id: "Lepaskan" },
+    hint: {
+      en: "Their chores become open for anyone to pick up.",
+      id: "Tugasnya terbuka untuk diambil siapa saja.",
+    },
     icon: Users,
   },
   {
     value: "pause",
-    label: "Pause",
-    hint: "Their chores are skipped for those days.",
+    label: { en: "Pause", id: "Jeda" },
+    hint: {
+      en: "Their chores are skipped for those days.",
+      id: "Tugasnya dilewati selama hari-hari itu.",
+    },
     icon: PauseCircle,
   },
 ];
@@ -79,7 +90,9 @@ function LeaveApproval() {
   const isOwner = useRequireOwner();
   const { leaveRequests, decideLeave, householdTasks, memberProfile, tenantReady } = useHousehold();
   const { profiles } = useStaffProfiles();
-  const nameOf = useStaffNameLookup(profiles, "Someone");
+  const locale = useOwnerLocale();
+  const t = useT();
+  const nameOf = useStaffNameLookup(profiles, t("Someone", "Seseorang"));
 
   // The context's copy when it has one — it updates the moment a decision is
   // saved. Otherwise fetched directly: a link opened cold can arrive before
@@ -116,9 +129,10 @@ function LeaveApproval() {
             leaves: leaveRequests,
             date: leave.start_date,
             exclude: leave.staff_id,
+            lang: locale,
           })
         : [],
-    [leave, profiles, memberProfile?.id, leaveRequests]
+    [leave, profiles, memberProfile?.id, leaveRequests, locale]
   );
 
   // How many of their chores Pause would skip. Repeats are counted across the
@@ -145,7 +159,10 @@ function LeaveApproval() {
     return (
       <Shell>
         <p className="text-sm text-muted-foreground">
-          This leave request no longer exists, or belongs to another household.
+          {t(
+            "This leave request no longer exists, or belongs to another household.",
+            "Permintaan cuti ini sudah tidak ada, atau milik rumah lain."
+          )}
         </p>
       </Shell>
     );
@@ -161,7 +178,7 @@ function LeaveApproval() {
     try {
       if (kind === "reject") {
         await decideLeave(leave.id, { status: "rejected" });
-        toast.success(`Leave for ${name} rejected`);
+        toast.success(t(`Leave for ${name} rejected`, `Cuti ${name} ditolak`));
       } else {
         if (!action) return;
         await decideLeave(leave.id, {
@@ -169,12 +186,17 @@ function LeaveApproval() {
           fallback_action: action,
           fallback_assignee_id: action === "reassign" ? cover : null,
         });
-        toast.success(`Leave for ${name} approved`);
+        toast.success(t(`Leave for ${name} approved`, `Cuti ${name} disetujui`));
       }
       router.push(moduleHref("access"));
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't save the decision. Check your connection and try again.");
+      toast.error(
+        t(
+          "Couldn't save the decision. Check your connection and try again.",
+          "Keputusan gagal disimpan. Periksa koneksi lalu coba lagi."
+        )
+      );
     } finally {
       setSaving(null);
     }
@@ -185,12 +207,14 @@ function LeaveApproval() {
       <Card className="py-4">
         <CardContent className="flex flex-col gap-1 px-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-base font-semibold text-gray-900">{name} is asking for leave</p>
+            <p className="text-base font-semibold text-gray-900">
+              {t(`${name} is asking for leave`, `${name} mengajukan cuti`)}
+            </p>
             <StatusBadge status={leave.status} />
           </div>
           <p className="text-sm text-muted-foreground">
-            {formatLeaveRange(leave, "en")} · {leaveDays(leave)}{" "}
-            {leaveDays(leave) === 1 ? "day" : "days"}
+            {formatLeaveRange(leave, locale)} · {leaveDays(leave)}{" "}
+            {t(leaveDays(leave) === 1 ? "day" : "days", "hari")}
           </p>
         </CardContent>
       </Card>
@@ -199,19 +223,31 @@ function LeaveApproval() {
         <Card className="py-4">
           <CardContent className="px-4 text-sm text-muted-foreground">
             {leave.status === "rejected"
-              ? "This request was rejected."
+              ? t("This request was rejected.", "Permintaan ini ditolak.")
               : leave.fallback_action === "pause"
-                ? "Approved. Their chores are paused for these days."
+                ? t(
+                    "Approved. Their chores are paused for these days.",
+                    "Disetujui. Tugasnya dijeda selama hari-hari ini."
+                  )
                 : leave.fallback_action === "reassign" && leave.fallback_assignee_id
-                  ? `Approved. ${nameOf(leave.fallback_assignee_id)} covers their chores.`
-                  : "Approved. Their chores are open for anyone."}
-            {leave.status === "ended_early" && " They have since come back early."}
+                  ? t(
+                      `Approved. ${nameOf(leave.fallback_assignee_id)} covers their chores.`,
+                      `Disetujui. ${nameOf(leave.fallback_assignee_id)} menggantikan tugasnya.`
+                    )
+                  : t(
+                      "Approved. Their chores are open for anyone.",
+                      "Disetujui. Tugasnya terbuka untuk siapa saja."
+                    )}
+            {leave.status === "ended_early" &&
+              t(" They have since come back early.", " Ia sudah kembali lebih awal.")}
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            <Label className="text-xs">While {name} is away, their chores…</Label>
+            <Label className="text-xs">
+              {t(`While ${name} is away, their chores…`, `Selama ${name} pergi, tugasnya…`)}
+            </Label>
             {/* Required before approving: a leave with no rule would leave
                 every chore of theirs assigned to someone who is not there. */}
             <div className="grid grid-cols-3 gap-2">
@@ -224,23 +260,26 @@ function LeaveApproval() {
                   onClick={() => setAction(value)}
                 >
                   <Icon className="size-4" />
-                  {label}
+                  {label[locale]}
                 </Button>
               ))}
             </div>
             <p className="text-[11px] text-muted-foreground">
               {action
-                ? ACTIONS.find((a) => a.value === action)?.hint
-                : "Choose what happens to their chores before approving."}
+                ? ACTIONS.find((a) => a.value === action)?.hint[locale]
+                : t(
+                    "Choose what happens to their chores before approving.",
+                    "Pilih apa yang terjadi pada tugasnya sebelum menyetujui."
+                  )}
             </p>
           </div>
 
           {action === "reassign" && (
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Covered by</Label>
+              <Label className="text-xs">{t("Covered by", "Digantikan oleh")}</Label>
               <Select value={cover} onValueChange={setCover}>
                 <SelectTrigger className="min-h-[48px] w-full">
-                  <SelectValue placeholder="Choose who covers" />
+                  <SelectValue placeholder={t("Choose who covers", "Pilih penggantinya")} />
                 </SelectTrigger>
                 <SelectContent>
                   {coverOptions.map(({ profile, label }) => (
@@ -257,13 +296,20 @@ function LeaveApproval() {
             <div className="flex flex-col gap-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
               <p className="font-semibold">
                 {pausedCount > 0
-                  ? `At least ${pausedCount} of ${name}'s chores will be skipped and not done by anyone.`
-                  : `Any chores assigned to ${name} on these days will be skipped and not done by anyone.`}
+                  ? t(
+                      `At least ${pausedCount} of ${name}'s chores will be skipped and not done by anyone.`,
+                      `Setidaknya ${pausedCount} tugas ${name} akan dilewati dan tidak dikerjakan siapa pun.`
+                    )
+                  : t(
+                      `Any chores assigned to ${name} on these days will be skipped and not done by anyone.`,
+                      `Tugas yang diberikan ke ${name} pada hari-hari ini akan dilewati dan tidak dikerjakan siapa pun.`
+                    )}
               </p>
               <p>
-                Pet routines — meals, walks, medication — are shared by the household and are never
-                paused; someone still has to do them. If {name} usually handles the pets, choose
-                Re-assign instead so it is clear who does.
+                {t(
+                  `Pet routines — meals, walks, medication — are shared by the household and are never paused; someone still has to do them. If ${name} usually handles the pets, choose Re-assign instead so it is clear who does.`,
+                  `Rutinitas hewan — makan, jalan-jalan, obat — dikerjakan bersama dan tidak pernah dijeda; tetap harus ada yang mengerjakan. Jika ${name} biasanya mengurus hewan, pilih Alihkan agar jelas siapa yang mengerjakan.`
+                )}
               </p>
             </div>
           )}
@@ -274,7 +320,7 @@ function LeaveApproval() {
               disabled={!canApprove || !!saving}
               onClick={() => decide("approve")}
             >
-              {saving === "approve" ? <Loader2 className="animate-spin" /> : <Check />} Approve leave
+              {saving === "approve" ? <Loader2 className="animate-spin" /> : <Check />} {t("Approve leave", "Setujui cuti")}
             </Button>
             <Button
               variant="outline"
@@ -282,7 +328,7 @@ function LeaveApproval() {
               disabled={!!saving}
               onClick={() => decide("reject")}
             >
-              {saving === "reject" ? <Loader2 className="animate-spin" /> : <X />} Reject
+              {saving === "reject" ? <Loader2 className="animate-spin" /> : <X />} {t("Reject", "Tolak")}
             </Button>
           </div>
         </>
@@ -292,26 +338,28 @@ function LeaveApproval() {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
       <Link
         href={moduleHref("access")}
         className="flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground"
       >
-        <ArrowLeft className="size-3.5" /> People
+        <ArrowLeft className="size-3.5" /> {t("People", "Orang")}
       </Link>
-      <h1 className="text-lg font-semibold text-gray-900">Leave request</h1>
+      <h1 className="text-lg font-semibold text-gray-900">{t("Leave request", "Permintaan cuti")}</h1>
       {children}
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: LeaveRequest["status"] }) {
+  const t = useT();
   const copy = {
-    pending: "Pending",
-    approved: "Approved",
-    rejected: "Rejected",
-    ended_early: "Ended early",
+    pending: t("Pending", "Menunggu"),
+    approved: t("Approved", "Disetujui"),
+    rejected: t("Rejected", "Ditolak"),
+    ended_early: t("Ended early", "Selesai lebih awal"),
   }[status];
   return (
     <Badge

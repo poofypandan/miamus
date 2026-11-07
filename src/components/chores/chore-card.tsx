@@ -28,7 +28,7 @@ import {
   type ChoreOccurrence,
 } from "@/lib/chore-recurrence";
 import { dayKeyLabel } from "@/lib/date-label";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
 
 // Both views render the same card, so the two dictionaries live together and
@@ -46,7 +46,7 @@ const COPY = {
   id: {
     anytime: "Kapan saja hari ini",
     unassigned: "Siapa saja",
-    forYou: "Untuk Kamu",
+    forYou: "Untuk Anda",
     supervision: "Tunggu Admin",
     done: "Selesai",
     overdue: (label: string) => `Belum selesai dari ${label}`,
@@ -105,6 +105,7 @@ export function ChoreCard({
   /** For the "carried over from …" label; defaults to the real today. */
   today?: Date;
 }) {
+  const formatTime = useFormatTime();
   const t = COPY[locale];
   const { task, status, overdue } = occurrence;
   const CategoryIcon = categoryIcon(task.category);
@@ -151,7 +152,7 @@ export function ChoreCard({
 
         <Badge variant="secondary" className="h-5 gap-1 px-1.5 text-[10px]">
           <Clock className="size-3" />
-          {task.due_time ? formatTime12h(task.due_time) : t.anytime}
+          {task.due_time ? formatTime(task.due_time) : t.anytime}
         </Badge>
 
         <Badge variant="outline" className="h-5 gap-1 px-1.5 text-[10px] font-normal">

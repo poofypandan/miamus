@@ -9,7 +9,7 @@ import { AGENDA_TONES, routineTone, type AgendaTone } from "@/lib/agenda-tones";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { ScheduleCategory } from "@/lib/schedule-categories";
 import { formatDateLocal } from "@/lib/scheduleEngine";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime, useScreenLang } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
 import { hourOf, minutesOf } from "@/lib/week-grid";
 import type { HouseholdTaskCategory } from "@/types/database";
@@ -85,7 +85,9 @@ interface AllDayItem {
   onPress: () => void;
 }
 
-function hourLabel(hour: number): string {
+// The grid's hour rail: "9 AM" in English, "09.00" in Bahasa Indonesia (Phase 149).
+function hourLabel(hour: number, lang: "en" | "id"): string {
+  if (lang === "id") return `${String(hour).padStart(2, "0")}.00`;
   if (hour === 0) return "12 AM";
   if (hour === 12) return "12 PM";
   return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
@@ -144,6 +146,7 @@ export function AgendaWeekGrid({
    */
   onShiftWeek?: (weeks: -1 | 1) => void;
 }) {
+  const lang = useScreenLang();
   const t = COPY[locale];
   const todayStr = formatDateLocal(useToday());
   const nowMinute = useMinuteOfDay();
@@ -376,7 +379,7 @@ export function AgendaWeekGrid({
                 <div data-hour={hour} className="sticky left-0 z-10 bg-card">
                   {hour > 0 && (
                     <span className="absolute right-1 -translate-y-1/2 text-[9px] text-muted-foreground tabular-nums">
-                      {hourLabel(hour)}
+                      {hourLabel(hour, lang)}
                     </span>
                   )}
                 </div>
@@ -419,12 +422,13 @@ export function AgendaWeekGrid({
 }
 
 function Block({ event, alone }: { event: GridEvent; alone: boolean }) {
+  const formatTime = useFormatTime();
   return (
     <button
       type="button"
       onClick={event.onPress}
       // The clock time stays for screen readers: they have no gutter to read.
-      aria-label={`${formatTime12h(event.time)} ${event.title}`}
+      aria-label={`${formatTime(event.time)} ${event.title}`}
       className={cn(
         // Alone, a block fills its hour, as an hour-long event would. Stacked,
         // each takes its own height. Never stretched further: an hour made

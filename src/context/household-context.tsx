@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { addDays } from "date-fns";
 import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
+import { screenLocale } from "@/lib/owner-locale";
 import type {
   CreateEntityInput,
   CreateLogInput,
@@ -620,7 +621,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         completed_at: completedAt,
       };
       setLogs((prev) => [optimisticLog, ...prev]);
-      toast.warning("Saved offline. Will sync when reconnected.");
+      toast.warning(
+        screenLocale() === "id"
+          ? "Tersimpan offline. Akan dikirim saat ada sinyal."
+          : "Saved offline. Will sync when reconnected."
+      );
       return optimisticLog;
     }
     const log = await dataProvider.createLog(withStaffId(input));
@@ -646,7 +651,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         completed_at: completedAt,
       }));
       setLogs((prev) => [...optimisticLogs, ...prev]);
-      toast.warning("Saved offline. Will sync when reconnected.");
+      toast.warning(
+        screenLocale() === "id"
+          ? "Tersimpan offline. Akan dikirim saat ada sinyal."
+          : "Saved offline. Will sync when reconnected."
+      );
       return optimisticLogs;
     }
     const newLogs = await dataProvider.createLogsBatch(input);
@@ -749,11 +758,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // Read by the stepper's failure path, which runs from a timer long after
   // the render that created it.
   const refreshRef = useRef(refresh);
-  const userRoleRef = useRef(userRole);
   useEffect(() => {
     refreshRef.current = refresh;
-    userRoleRef.current = userRole;
-  }, [refresh, userRole]);
+  }, [refresh]);
 
   // The stepper's taps not yet sent, per item, and the timer that will send
   // them. Refs, not state: nothing renders from them.
@@ -808,7 +815,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error(err);
         toast.error(
-          userRoleRef.current === "owner" ? "Couldn't update the stock" : "Gagal memperbarui stok"
+          screenLocale() === "id" ? "Gagal memperbarui stok" : "Couldn't update the stock"
         );
         void refreshRef.current({ silent: true });
       }

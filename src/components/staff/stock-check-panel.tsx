@@ -16,6 +16,7 @@ import {
   dueStockItems,
   stepFor,
   stockItemName,
+  unitLabel,
 } from "@/lib/inventory";
 import { photoSrc } from "@/lib/photos";
 import type { InventoryItem } from "@/types/database";
@@ -157,14 +158,14 @@ function AuditCard({ item }: { item: InventoryItem }) {
             {/* The unit, never the recorded count: a count that starts from
                 the last number can be saved without looking at the shelf. */}
             <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-normal">
-              Satuan: {item.unit}
+              Satuan: {unitLabel(item.unit, "id")}
             </Badge>
           </div>
         </div>
       </div>
 
       <NumberStepper
-        label={`Jumlah di rak (${item.unit})`}
+        label={`Jumlah di rak (${unitLabel(item.unit, "id")})`}
         value={count}
         onChange={setCount}
         disabled={saving}

@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useHousehold } from "@/context/household-context";
+import { useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { categorizeSchedule, displayTitle } from "@/lib/schedule-categories";
 import { formatDateLocal } from "@/lib/scheduleEngine";
@@ -44,7 +45,7 @@ export function futureRowsForRoutine(
   );
 }
 
-// Owner-facing, so entirely English per the Phase 46 language boundary.
+// Owner-facing, in the language the owner chose (Phase 149).
 export function CancelRoutineButton({
   entity,
   title,
@@ -55,6 +56,7 @@ export function CancelRoutineButton({
   category: string;
 }) {
   const { schedules, deleteSchedule, logTask } = useHousehold();
+  const t = useT();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -85,12 +87,15 @@ export function CancelRoutineButton({
       }
 
       toast.success(
-        `Cancelled ${title} — ${doomed.length} upcoming ${doomed.length === 1 ? "entry" : "entries"} removed`
+        t(
+          `Cancelled ${title} — ${doomed.length} upcoming ${doomed.length === 1 ? "entry" : "entries"} removed`,
+          `${title} dibatalkan — ${doomed.length} jadwal berikutnya dihapus`
+        )
       );
       setConfirmOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to cancel routine");
+      toast.error(t("Failed to cancel routine", "Rutinitas gagal dibatalkan"));
     } finally {
       setBusy(false);
     }
@@ -101,7 +106,7 @@ export function CancelRoutineButton({
       <button
         type="button"
         onClick={() => setConfirmOpen(true)}
-        aria-label={`Cancel ${title}`}
+        aria-label={t(`Cancel ${title}`, `Batalkan ${title}`)}
         className="flex min-h-[32px] shrink-0 items-center rounded-lg px-1.5 text-muted-foreground hover:text-destructive"
       >
         <Trash2 className="size-4" />
@@ -110,11 +115,12 @@ export function CancelRoutineButton({
       <Dialog open={confirmOpen} onOpenChange={(open) => !open && setConfirmOpen(false)}>
         <DialogContent className="sm:max-w-xs">
           <DialogHeader>
-            <DialogTitle>Cancel this routine?</DialogTitle>
+            <DialogTitle>{t("Cancel this routine?", "Batalkan rutinitas ini?")}</DialogTitle>
             <DialogDescription>
-              Removes {doomed.length} upcoming{" "}
-              {doomed.length === 1 ? "occurrence" : "occurrences"} of {title} for {entity.name}.
-              Past records are kept, and everyone sees a cancellation notice on today&apos;s feed.
+              {t(
+                `Removes ${doomed.length} upcoming ${doomed.length === 1 ? "occurrence" : "occurrences"} of ${title} for ${entity.name}. Past records are kept, and everyone sees a cancellation notice on today's feed.`,
+                `Menghapus ${doomed.length} jadwal ${title} berikutnya untuk ${entity.name}. Catatan lama tetap disimpan, dan semua orang melihat pemberitahuan pembatalan di daftar hari ini.`
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row gap-2">
@@ -124,7 +130,7 @@ export function CancelRoutineButton({
               onClick={() => setConfirmOpen(false)}
               disabled={busy}
             >
-              Keep
+              {t("Keep", "Biarkan")}
             </Button>
             <Button
               variant="destructive"
@@ -133,7 +139,7 @@ export function CancelRoutineButton({
               disabled={busy}
             >
               {busy ? <Loader2 className="animate-spin" /> : <Trash2 />}
-              Cancel
+              {t("Cancel", "Batalkan")}
             </Button>
           </DialogFooter>
         </DialogContent>

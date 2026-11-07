@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
+import { useT } from "@/context/owner-locale-context";
 import { useLongPress } from "@/hooks/use-long-press";
 import { isAdmitted, petMasterUrl } from "@/lib/pets";
 import { POTTY_TITLE } from "@/lib/schedule-categories";
@@ -69,6 +70,7 @@ function PetOverviewRow({
   date: Date;
 }) {
   const { setActivePetId } = useHousehold();
+  const t = useT();
   const [viewingAvatar, setViewingAvatar] = useState(false);
   // The LIGHTBOX's image only. The row itself renders MiniPetAvatar, which
   // sources the 1:1 crop; holding an avatar is a request to see the photo
@@ -122,10 +124,10 @@ function PetOverviewRow({
       </div>
       <span className="flex-1 truncate text-lg font-medium">{pet.name}</span>
       {/* A dog at the clinic has no meals or potty breaks to count here, so the
-          tallies give way to where it actually is. Owner-facing, so English. */}
+          tallies give way to where it actually is. In the owner's language. */}
       {admitted ? (
         <span className="flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-900">
-          <Stethoscope className="size-3.5" /> Hospitalized
+          <Stethoscope className="size-3.5" /> {t("Hospitalized", "Dirawat inap")}
         </span>
       ) : (
         <>

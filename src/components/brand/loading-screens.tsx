@@ -4,6 +4,7 @@ import { BrandMark } from "@/components/brand/brand-mark";
 import { hasLaunched } from "@/lib/launch-state";
 import { RUMAH } from "@/components/staff/staff-splash";
 import { cn } from "@/lib/utils";
+import { useUiLabels } from "@/components/ui/ui-labels";
 
 /**
  * The branded pictures (Phases 121–125): the circular Miamus mark and the
@@ -72,11 +73,13 @@ export function RumahRules({ className }: { className?: string }) {
 
 /** Owner-facing: the Miamus mark inside a spinning ring. */
 export function OwnerLoadingScreen() {
+  // In the owner's language: the dashboard's OwnerLocaleProvider sets it.
+  const labels = useUiLabels();
   if (hasLaunched()) return null;
   return (
     <div
       role="status"
-      aria-label="Loading"
+      aria-label={labels.loading}
       className="flex min-h-[60vh] flex-1 animate-loader-in items-center justify-center motion-reduce:animate-none"
     >
       <MiamusMark />

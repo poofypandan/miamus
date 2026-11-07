@@ -194,7 +194,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
 
       <div className="flex flex-col gap-1 text-center">
         <h1 className="text-2xl font-semibold text-gray-900">Siapa yang bertugas?</h1>
-        <p className="text-sm text-muted-foreground">Pilih nama kamu untuk mulai mencatat.</p>
+        <p className="text-sm text-muted-foreground">Pilih nama Anda untuk mulai mencatat.</p>
       </div>
 
       {failed ? (
@@ -207,7 +207,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
         </p>
       ) : profiles.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground">
-          Belum ada nama terdaftar. Minta admin rumah menambahkan nama kamu dulu.
+          Belum ada nama terdaftar. Minta admin rumah menambahkan nama Anda dulu.
         </p>
       ) : (
         <div className="flex flex-col gap-3">
@@ -241,7 +241,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
       {/* Transparency for staff (Phase 143, UU PDP): what is recorded about
           them, and where to read more. Staff-facing, so Bahasa Indonesia. */}
       <p className="text-center text-xs leading-relaxed text-muted-foreground">
-        Miamus mencatat tugas, foto, dan cuti kamu untuk rumah ini.{" "}
+        Miamus mencatat tugas, foto, dan cuti Anda untuk rumah ini.{" "}
         <Link href="/privasi" className="font-medium text-gray-900 underline underline-offset-4">
           Baca Kebijakan Privasi
         </Link>

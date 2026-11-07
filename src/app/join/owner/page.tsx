@@ -19,7 +19,9 @@ type Stage = "checking" | "needs-login" | "redeeming" | "failed";
  * survives the round trip even on a browser that clears site data between
  * redirects.
  *
- * Owner-facing, so English.
+ * In both languages, English first (Phase 149): the person arriving has not
+ * chosen one yet — they may not even have an account — and the dashboard asks
+ * them once they are in.
  */
 export default function JoinOwnerPage() {
   return (
@@ -88,15 +90,23 @@ function JoinOwnerScreen() {
   if (stage === "failed") {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 text-center">
-        <h1 className="text-xl font-semibold text-gray-900">Invalid or Expired Link</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
+        <h1 lang="en" className="text-xl font-semibold text-gray-900">
+          Invalid or Expired Link
+        </h1>
+        <p lang="id" className="text-base font-medium text-muted-foreground">
+          Link tidak valid atau kedaluwarsa
+        </p>
+        <p lang="en" className="mt-3 text-sm text-muted-foreground">
           This invite has already been used or has expired. Ask a household admin for a new one.
+        </p>
+        <p lang="id" className="mt-1 text-sm text-muted-foreground">
+          Undangan ini sudah dipakai atau sudah kedaluwarsa. Minta yang baru ke admin rumah.
         </p>
         <Link
           href="/"
           className="mt-8 text-sm font-medium text-gray-900 underline underline-offset-4"
         >
-          Back to sign in
+          Back to sign in · Kembali ke halaman masuk
         </Link>
       </main>
     );
@@ -105,14 +115,28 @@ function JoinOwnerScreen() {
   if (stage === "needs-login") {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+        <h1 lang="en" className="text-2xl font-semibold tracking-tight text-gray-900">
           You&apos;ve been invited
         </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p lang="id" className="text-base font-medium text-muted-foreground">
+          Anda diundang
+        </p>
+        <p lang="en" className="mt-3 text-sm text-muted-foreground">
           Sign in with Google to join this household as an admin.
         </p>
-        <Button onClick={signIn} className="mt-8 min-h-[52px] w-full">
-          Continue with Google
+        <p lang="id" className="mt-1 text-sm text-muted-foreground">
+          Masuk dengan Google untuk bergabung ke rumah ini sebagai admin.
+        </p>
+        {/* Two lines, as on the sign-in screen: one line ran past the button's
+            edges on a 360px phone (Codex review, PR #6). */}
+        <Button
+          onClick={signIn}
+          className="mt-8 h-auto min-h-[56px] w-full flex-col gap-0 py-2 whitespace-normal leading-tight"
+        >
+          <span lang="en">Continue with Google</span>
+          <span lang="id" className="text-xs font-normal opacity-80">
+            Lanjutkan dengan Google
+          </span>
         </Button>
       </main>
     );
@@ -122,7 +146,9 @@ function JoinOwnerScreen() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
       <Loader2 className="size-6 animate-spin text-muted-foreground" />
       <p className="text-sm text-muted-foreground">
-        {stage === "redeeming" ? "Joining the household…" : "Checking your invite…"}
+        {stage === "redeeming"
+          ? "Joining the household… · Bergabung ke rumah…"
+          : "Checking your invite… · Memeriksa undangan…"}
       </p>
     </main>
   );

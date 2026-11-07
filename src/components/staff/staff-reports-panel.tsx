@@ -10,7 +10,7 @@ import { StaffRoutinePicker } from "@/components/staff/staff-routine-picker";
 import { useHousehold } from "@/context/household-context";
 import { LeaveRequestButton } from "@/components/staff/leave-request";
 import { formatDateLocal } from "@/lib/scheduleEngine";
-import { formatTime12h } from "@/lib/time";
+import { useFormatTime } from "@/components/ui/ui-labels";
 import { isActiveAlert } from "@/lib/inventory-status";
 import { groupProposals, batchCreatedAt, type ProposalBatch } from "@/lib/proposal-batches";
 import { isWithinUndoWindow } from "@/lib/undo-window";
@@ -130,6 +130,7 @@ export function StaffReportsPanel({
   dismiss: (key: string) => void;
   now: number;
 }) {
+  const formatTime = useFormatTime();
   const {
     pets,
     inventoryAlerts,
@@ -203,7 +204,7 @@ export function StaffReportsPanel({
           <ReportRow
             key={log.id}
             label={`${log.notes ?? "Catatan"} · ${petName(log.entity_id)}`}
-            detail={formatTime12h(new Date(log.completed_at))}
+            detail={formatTime(new Date(log.completed_at))}
             undoable={isWithinUndoWindow(log.completed_at, now)}
             onUndo={() => deleteLogWithPhoto(log)}
           />
@@ -261,7 +262,7 @@ function ReportRow({
 
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl border bg-card px-3 py-2 text-sm">
-      <span className="min-w-0 flex-1 truncate">
+      <span className="min-w-0 flex-1 break-words line-clamp-2">
         <span className="font-medium">{label}</span>
         {detail && <span className="text-muted-foreground"> — {detail}</span>}
       </span>
@@ -319,7 +320,7 @@ function ProposalBatchRow({
 
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl border bg-card px-3 py-2 text-sm">
-      <span className="min-w-0 flex-1 truncate">
+      <span className="min-w-0 flex-1 break-words line-clamp-2">
         <span className="font-medium">
           {head.title} · {petName}
         </span>
