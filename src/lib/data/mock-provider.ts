@@ -15,7 +15,7 @@ import type {
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
-import { rolloverFloorFor } from "@/lib/chore-recurrence";
+import { isTemplate, rolloverFloorFor } from "@/lib/chore-recurrence";
 
 const STORAGE_KEY = "maimus_mock_db_v1";
 // The preview household's house code, as an admin would read it out: MIA-M23.
@@ -747,16 +747,20 @@ export const mockProvider: DataProvider = {
     const profile = db.staffProfiles.find((s) => s.id === id);
     if (!profile) throw new Error("Staff profile not found");
     if (profile.user_id) throw new Error("This person is an admin");
-    // Mirrors archive_staff_profile (migrations/109): mark, revoke the PIN,
-    // and release their unfinished chores.
+    // Mirrors archive_staff_profile (migrations/109, /118): mark, revoke the
+    // PIN, and release their unfinished chores and every repeating chore
+    // they hold, keeping who did a repeat's first day.
     profile.archived_at = new Date().toISOString();
     profile.has_pin = false;
     db.staffPins = { ...(db.staffPins ?? {}), [id]: null };
-    db.householdTasks = db.householdTasks.map((task) =>
-      task.assigned_to === id && task.status === "pending"
-        ? { ...task, assigned_to: null }
-        : task
-    );
+    db.householdTasks = db.householdTasks.map((task) => {
+      if (task.assigned_to !== id) return task;
+      if (task.status === "pending") return { ...task, assigned_to: null };
+      if (task.status === "completed" && isTemplate(task)) {
+        return { ...task, assigned_to: null, completed_by: task.completed_by ?? id };
+      }
+      return task;
+    });
     saveDB(db);
     return delay(profile);
   },

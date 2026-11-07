@@ -35,7 +35,7 @@ import {
   CHORE_RECURRENCES,
   RECURRENCE_LABELS_EN,
   RECURRENCE_LABELS_ID,
-  nextOccurrence,
+  startAfterSkippingFirst,
   recurrenceOf,
 } from "@/lib/chore-recurrence";
 import {
@@ -280,7 +280,10 @@ export function ChoreEditorDialog({
       // exactly where it was: advancing by one period keeps the anchor
       // occursOn reads (weekday for weekly, day-of-month for monthly).
       if (isFirstDay) {
-        const next = nextOccurrence(series, day);
+        // Not simply the next occurrence: for a chore on the 31st that can be
+        // 28 February, which would move every later month to the 28th.
+        // Shorter months before the new start keep their own rows.
+        const { start: next, clampedDays } = startAfterSkippingFirst(series);
         if (!next) {
           toast.error(
             t(
@@ -290,6 +293,7 @@ export function ChoreEditorDialog({
           );
           return;
         }
+        for (const clamped of clampedDays) await materialiseChoreOccurrence(series.id, clamped);
         await updateHouseholdTask(series.id, { due_date: next });
         toast.success(
           t(`Skipped "${series.title}" for ${dayName}`, `"${series.title}" dilewati untuk ${dayName}`)
