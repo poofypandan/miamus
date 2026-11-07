@@ -570,6 +570,20 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data && data.length > 0 ? data[0] : null;
   },
+  async skipChoreOccurrence(id) {
+    // Conditional for the same reason as advanceChoreStart: the editor's copy
+    // of the row can be older than a completion saved on a staff phone, and
+    // an unconditional cancel would wipe that completion's author and photos.
+    // A pending row has none of those to clear.
+    const { data, error } = await client()
+      .from("household_tasks")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .eq("status", "pending")
+      .select();
+    if (error) throw error;
+    return data && data.length > 0 ? data[0] : null;
+  },
   async deleteHouseholdTask(id) {
     // .select() for the same reason: without a DELETE policy this returns 200
     // and zero rows, which is exactly how this failed silently before

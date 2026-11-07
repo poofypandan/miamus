@@ -300,6 +300,12 @@ export interface DataProvider {
    * row is then left exactly as it is.
    */
   advanceChoreStart(id: string, fromDate: string, toDate: string): Promise<HouseholdTask | null>;
+  /**
+   * Owner-only. Calls off one day of a repeat (its materialised row) — only
+   * while it is still pending. Null when another phone finished it
+   * meanwhile; the row, with its photos and author, is then left as it is.
+   */
+  skipChoreOccurrence(id: string): Promise<HouseholdTask | null>;
   /** Owner-only. Deleting a template takes its materialised occurrences with it. */
   deleteHouseholdTask(id: string): Promise<void>;
   updateHouseholdTaskStatus(

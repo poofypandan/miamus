@@ -97,7 +97,7 @@ export function ChoreEditorDialog({
     householdTasks,
     materialiseChoreOccurrence,
     advanceChoreStart,
-    updateHouseholdTaskStatus,
+    skipChoreOccurrence,
     memberProfile,
     leaveRequests,
   } = useHousehold();
@@ -322,8 +322,11 @@ export function ChoreEditorDialog({
       }
       // A day nothing is written for gets its row first; another phone may
       // have written it meanwhile, and a finished day is never cancelled.
+      // Cancelled only while still pending: this editor's copy of the row can
+      // be older than a completion saved on a staff phone (Codex review,
+      // PR #1), and cancelling that would wipe its author and photos.
       const row = dayRow ?? (await materialiseChoreOccurrence(series.id, day));
-      if (row.status === "completed") {
+      if (row.status === "completed" || !(await skipChoreOccurrence(row.id))) {
         toast.error(
           t(
             "That day was already completed, so it was left as it is",
@@ -332,7 +335,6 @@ export function ChoreEditorDialog({
         );
         return;
       }
-      await updateHouseholdTaskStatus(row.id, "cancelled");
       toast.success(t(`Skipped "${series.title}" for ${dayName}`, `"${series.title}" dilewati untuk ${dayName}`));
     }, t("Failed to skip that day", "Gagal melewati hari itu"));
   }
