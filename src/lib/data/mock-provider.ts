@@ -18,6 +18,8 @@ import type { DataProvider } from "./types";
 import { rolloverFloorFor } from "@/lib/chore-recurrence";
 
 const STORAGE_KEY = "maimus_mock_db_v1";
+// The preview household's house code, as an admin would read it out: MIA-M23.
+const MOCK_HOUSE_CODE = "MIAM23";
 
 interface MockDB {
   entities: TaskEntity[];
@@ -31,6 +33,8 @@ interface MockDB {
   staffProfiles: StaffProfile[];
   /** Mock-only: PINs are hashed in the real database (migrations/095). */
   staffPins?: Record<string, string | null>;
+  // The house code (Phase 151); MOCK_HOUSE_CODE until "Change code" is used.
+  houseCode?: string;
   householdTasks: HouseholdTask[];
   householdLocations: HouseholdLocation[];
   leaveRequests: LeaveRequest[];
@@ -752,5 +756,50 @@ export const mockProvider: DataProvider = {
   async verifyStaffPin(id, pin) {
     const db = loadDB();
     return delay((db.staffPins ?? {})[id] === pin);
+  },
+  // House code (Phase 151): enough to walk the screens offline. No limits or
+  // locks here; those live in the database (migrations/115).
+  async checkStaffPin(id, pin) {
+    const db = loadDB();
+    return delay(
+      (db.staffPins ?? {})[id] === pin
+        ? { status: "ok" as const }
+        : { status: "wrong_pin" as const, attempts_left: 4 }
+    );
+  },
+  async houseCodeRoster(code) {
+    const db = loadDB();
+    if (code.replace(/[^a-z0-9]/gi, "").toUpperCase() !== (db.houseCode ?? MOCK_HOUSE_CODE)) return delay([]);
+    return delay(
+      db.staffProfiles
+        .filter((p) => !p.user_id)
+        .map((p) => ({ id: p.id, name: p.name, has_pin: p.has_pin }))
+    );
+  },
+  async signInWithHouseCode(code, staffId, pin) {
+    const db = loadDB();
+    if (code.replace(/[^a-z0-9]/gi, "").toUpperCase() !== (db.houseCode ?? MOCK_HOUSE_CODE)) {
+      return delay({ status: "wrong_code" as const });
+    }
+    if ((db.staffPins ?? {})[staffId] !== pin) {
+      return delay({ status: "wrong_pin" as const, attempts_left: 4 });
+    }
+    return delay({ status: "ok" as const, household_id: getActiveHouseholdId() });
+  },
+  async getHouseCode() {
+    return delay(loadDB().houseCode ?? MOCK_HOUSE_CODE);
+  },
+  async rotateHouseCode() {
+    const db = loadDB();
+    const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    db.houseCode = Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+    saveDB(db);
+    return delay(db.houseCode);
+  },
+  async listLinkedPhones() {
+    return delay([]);
+  },
+  async removeLinkedPhone() {
+    return delay(false);
   },
 };

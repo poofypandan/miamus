@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useOwnerLocaleContext } from "@/context/owner-locale-context";
+import { initialPublicLocale } from "@/hooks/use-public-locale";
 import { LOCALE_NAMES, OWNER_LOCALES, type OwnerLocale } from "@/lib/owner-locale";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +64,11 @@ export function LanguageSettings() {
  */
 export function LanguageChoice({ onChosen }: { onChosen?: (locale: OwnerLocale) => void }) {
   const { locale, chosen, setLocale } = useOwnerLocaleContext();
+  // Before the owner has chosen, the language the start screen was showing
+  // (the phone's, or its EN | ID switch) comes first (Phase 150). Only
+  // rendered once the account's answer is in, so never on the server.
+  const first = chosen === false ? initialPublicLocale() : null;
+  const order = first ? [first, ...OWNER_LOCALES.filter((value) => value !== first)] : OWNER_LOCALES;
   const [saving, setSaving] = useState<OwnerLocale | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -78,7 +84,7 @@ export function LanguageChoice({ onChosen }: { onChosen?: (locale: OwnerLocale) 
 
   return (
     <div className="flex flex-col gap-2">
-      {OWNER_LOCALES.map((value) => {
+      {order.map((value) => {
         const current = chosen === true && value === locale;
         return (
           <button

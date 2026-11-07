@@ -7,7 +7,7 @@ import type {
   InventoryItem,
   StaffProfile,
 } from "@/types/database";
-import type { DataProvider } from "./types";
+import type { DataProvider, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
 import { rolloverFloorFor } from "@/lib/chore-recurrence";
 
 function client() {
@@ -828,6 +828,64 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client().rpc("verify_staff_pin", {
       p_staff_id: id,
       p_pin: pin,
+    });
+    if (error) throw error;
+    return data === true;
+  },
+  async checkStaffPin(id, pin) {
+    const { data, error } = await client().rpc("check_staff_pin", { p_staff_id: id, p_pin: pin });
+    // PGRST202: no such function — migrations/115 is not in yet, so ask the
+    // old way and say only right or wrong.
+    if (error?.code === "PGRST202") {
+      return (await this.verifyStaffPin(id, pin))
+        ? { status: "ok" }
+        : { status: "wrong_pin", attempts_left: -1 };
+    }
+    if (error) throw error;
+    return data as unknown as PinCheck;
+  },
+  async houseCodeRoster(code) {
+    const { data, error } = await client().rpc("house_code_roster", { p_code: code });
+    if (error) {
+      if (error.message?.includes("too_many_attempts")) throw new Error("too_many_attempts");
+      throw error;
+    }
+    return (data ?? []) as HouseCodePerson[];
+  },
+  async signInWithHouseCode(code, staffId, pin) {
+    const { data, error } = await client().rpc("sign_in_with_house_code", {
+      p_code: code,
+      p_staff_id: staffId,
+      p_pin: pin,
+    });
+    if (error) throw error;
+    return data as unknown as HouseCodeSignIn;
+  },
+  async getHouseCode() {
+    const { data, error } = await client().rpc("my_house_code", {
+      p_household_id: getActiveHouseholdId(),
+    });
+    if (error) throw error;
+    return (data as string | null) ?? null;
+  },
+  async rotateHouseCode() {
+    const { data, error } = await client().rpc("rotate_house_code", {
+      p_household_id: getActiveHouseholdId(),
+    });
+    if (error) throw error;
+    return data as string;
+  },
+  async listLinkedPhones() {
+    const { data, error } = await client().rpc("list_linked_phones", {
+      p_household_id: getActiveHouseholdId(),
+    });
+    if (error) throw error;
+    return (data ?? []) as LinkedPhone[];
+  },
+  async removeLinkedPhone(id) {
+    const { data, error } = await client().rpc("remove_linked_phone", {
+      p_household_id: getActiveHouseholdId(),
+      p_device_id: id,
     });
     if (error) throw error;
     return data === true;
