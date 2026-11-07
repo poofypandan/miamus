@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tell Kakak mockups</title>
+<style>
+  :root {
+    --bg: #f8fafc; --card: #fff; --ink: #111827; --ink2: #374151; --muted: #6b7280;
+    --line: #e5e7eb; --track: #f3f4f6; --primary: #171717; --red: #b91c1c; --amber: #92400e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ecef; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color: var(--ink); }
+  header.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 4px; }
+  header.page h1 { font-size: 20px; margin: 0 0 4px; }
+  header.page p { margin: 0; color: var(--muted); max-width: 720px; }
+  section.screen { max-width: 1100px; margin: 0 auto; padding: 18px 16px 8px; }
+  section.screen h2 { font-size: 15px; margin: 0 0 2px; }
+  section.screen > p { margin: 0 0 12px; color: var(--muted); max-width: 640px; }
+  .pair { display: flex; gap: 20px; flex-wrap: wrap; }
+  .phone { width: 360px; max-width: 100%; height: 720px; background: var(--bg); border-radius: 36px; border: 8px solid #111; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .tag { position: absolute; top: -2px; right: 18px; background: #111; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 0 0 8px 8px; z-index: 6; }
+  .status { height: 22px; flex: none; }
+  .appbar { background: #fff; border-bottom: 1px solid var(--line); padding: 8px 14px 10px; flex: none; }
+  .appbar .row { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+  .brand { font-weight: 600; font-size: 17px; display: flex; gap: 6px; align-items: center; }
+  .brand i { width: 22px; height: 22px; border-radius: 7px; background: #111; display: inline-block; }
+  .seg { display: flex; gap: 3px; background: var(--track); border-radius: 999px; padding: 3px; }
+  .seg span { flex: 1; text-align: center; border-radius: 999px; padding: 8px 6px; font-weight: 500; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .seg span.on { background: var(--primary); color: #fff; }
+  .seg.sm span { flex: none; padding: 6px 10px; font-size: 11px; }
+  .body { flex: 1; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .body > * { flex: none; }
+  .h { font-size: 13px; font-weight: 600; margin: 4px 0 -2px; }
+  .group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .item { display: flex; gap: 10px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); min-height: 52px; }
+  .item:first-child { border-top: 0; }
+  .item .time { width: 44px; font-size: 12px; color: var(--muted); }
+  .item .t { flex: 1; min-width: 0; }
+  .item .t b { display: block; font-weight: 500; }
+  .item .t span { display: block; font-size: 12px; color: var(--muted); }
+  .quiet { display: flex; align-items: center; gap: 8px; padding: 6px 4px; min-height: 36px; color: var(--ink2); }
+  .quiet .chev { margin-left: auto; color: var(--muted); }
+  .tabbar { flex: none; height: 58px; background: #fff; border-top: 1px solid var(--line); display: flex; }
+  .tabbar span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; color: var(--muted); font-weight: 500; }
+  .tabbar span i { width: 20px; height: 20px; border-radius: 6px; border: 1.7px solid currentColor; display: block; }
+  .tabbar span.on { color: var(--ink); }
+  .tabbar span.on i { background: currentColor; }
+  /* Kakak */
+  .av { width: 30px; height: 30px; border-radius: 999px; flex: none; background: radial-gradient(circle at 50% 38%, #fde7d9 0 34%, transparent 35%), radial-gradient(circle at 50% 110%, #f4c7ad 0 52%, transparent 53%), #fbeee6; border: 1.5px solid #f1d5c4; }
+  .av.lg { width: 44px; height: 44px; }
+  .fab { position: absolute; right: 14px; bottom: 72px; z-index: 2; display: flex; align-items: center; gap: 8px; background: var(--primary); color: #fff; border-radius: 18px; padding: 8px 14px 8px 8px; font-weight: 600; box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+  .hint { position: absolute; right: 14px; bottom: 124px; z-index: 2; max-width: 230px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font-size: 12.5px; color: var(--ink2); box-shadow: 0 4px 10px rgba(0,0,0,.06); }
+  .dim { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 3; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 64px; background: #fff; border-radius: 20px 20px 0 0; z-index: 4; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .sheet > * { flex: none; }
+  .sheet > .spacer { flex: 1; }
+  .grab { width: 36px; height: 5px; border-radius: 9px; background: #d1d5db; margin: 0 auto 2px; }
+  .who { display: flex; align-items: center; gap: 10px; }
+  .who b { font-size: 16px; }
+  .box { border: 1px solid var(--line); border-radius: 14px; min-height: 96px; padding: 12px; font-size: 15px; color: var(--ink); }
+  .box.ph { color: #9ca3af; }
+  .ex { display: flex; flex-direction: column; gap: 6px; }
+  .ex span { border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font-size: 13px; color: var(--ink2); }
+  .ex small { color: var(--muted); font-size: 12px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; border-radius: 12px; font-weight: 600; font-size: 15px; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.outline { border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 500; }
+  .btn.off { background: #d1d5db; color: #fff; }
+  .link { text-align: center; font-size: 13px; color: var(--muted); }
+  .mine { align-self: flex-end; max-width: 85%; background: var(--track); border-radius: 16px 16px 4px 16px; padding: 9px 12px; font-size: 14px; }
+  .her { display: flex; gap: 8px; align-items: flex-start; }
+  .her .bub { background: #fff; border: 1px solid var(--line); border-radius: 16px 16px 16px 4px; padding: 9px 12px; font-size: 14px; max-width: 260px; }
+  .dots { display: flex; gap: 4px; padding: 6px 2px; }
+  .dots i { width: 7px; height: 7px; border-radius: 9px; background: #cbd5e1; display: block; }
+  .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .answers span { border: 1px solid var(--line); border-radius: 12px; min-height: 46px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; text-align: center; padding: 6px; }
+  .answers.one span { grid-column: 1 / -1; }
+  .typeans { text-align: center; color: var(--ink2); font-size: 13px; font-weight: 500; }
+  .card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .card .ctitle { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #fafafa; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 13px; }
+  .card .ctitle em { font-style: normal; color: var(--muted); font-weight: 400; }
+  .fact { display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .fact:first-of-type { border-top: 0; }
+  .fact span { color: var(--muted); flex: none; }
+  .fact b { font-weight: 500; text-align: right; }
+  .fact b small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+  .fact.amber b { color: var(--amber); }
+  .safety { font-size: 12px; color: var(--muted); padding: 8px 12px; border-top: 1px solid var(--line); }
+  .row2 { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+  .toast { position: absolute; left: 14px; right: 14px; bottom: 72px; background: #111; color: #fff; border-radius: 12px; padding: 11px 14px; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; z-index: 5; }
+  .toast b { font-weight: 600; white-space: nowrap; }
+  .settings h3 { margin: 4px 0 2px; font-size: 18px; }
+  .switch { display: flex; align-items: center; justify-content: space-between; padding: 12px; min-height: 52px; }
+  .sw { width: 46px; height: 28px; border-radius: 999px; background: #34c759; position: relative; flex: none; }
+  .sw::after { content: ""; position: absolute; right: 2px; top: 2px; width: 24px; height: 24px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .small { font-size: 12.5px; color: var(--muted); padding: 0 4px; }
+  .small a { color: var(--ink2); }
+  .faded { opacity: .55; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Phase 156, step 2 — Tell Kakak (typed)</h1>
+  <p>Phone-size mockups for approval: owner screens, English and Bahasa Indonesia side by side. Staff phones don't change. Kakak's avatar is a placeholder until Poofy Labs' character art exists. Not built yet. Plan: docs/phase-156-step2-kakak-plan.md.</p>
+</header>
+<main id="root"></main>
+
+<script>
+const L = {
+  en: {
+    tag: "Owner · English", overview: "Overview", staff: "Staff", day: "Day", week: "Week",
+    tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    dateline: "Wednesday 11 November", eatSoon: "2 foods to eat soon", toBuy: "3 things to buy",
+    rows: [["07:00", "Mochi — Breakfast", "Done · Sari"], ["09:00", "Mop the terrace", "Sari · Terrace"], ["12:00", "Kopi — Lunch", "Not taken yet"], ["16:00", "Water the garden", "Yanti"]],
+    fab: "Tell Kakak", hint: "Kakak can set things up for you — just tell her.",
+    ask: "What should I set up?", ph: "For example: Have Sari mop the terrace every Monday at 9",
+    exTitle: "Try:", ex: ["Mbak Sari pel teras tiap Senin jam 9", "Buy eggs and dish soap", "Mochi eats at 7am and 6pm"],
+    send: "Send", mic: "The keyboard's 🎤 key works here too.",
+    typedQ: "Nanti sore Mbak Yan please beresin dapur", moment: "One moment…",
+    q: "Yanti or Yati?", qa: ["Yanti", "Yati"], typeAns: "Or type an answer",
+    typed1: "Mbak Sari pel teras tiap Senin jam 9",
+    intro: "Here's what I'll add:",
+    chore: "Chore", fWhat: "What", fWho: "Who", fWhen: "When", fRep: "Repeats", fRoom: "Room",
+    c1: { what: "Pel teras", gloss: "Mop the terrace", who: "Sari", when: "Mon 16 Nov, 9:00 AM", rep: "Every Monday", room: "Terrace" },
+    looks: "Looks right", change: "Change", cancel: "Cancel",
+    typed2: "Besok Sari pel teras, terus beli telur juga",
+    shop: "Shopping list", eggs: "Eggs", eggsWhy: "Out — on the list", save2: "Save 2",
+    c2: { what: "Pel teras", gloss: "Mop the terrace", who: "Sari", when: "Tomorrow, Thu 12 Nov", rep: "Once" },
+    toast: "Saved — Mop the terrace, every Monday, Sari", undo: "Undo",
+    typed3: "Gudang dibersihin besok sama Budi",
+    roomQ: "Gudang isn't one of your rooms yet. Add it?", roomA: ["Add Gudang", "No room"],
+    typed4: "Kami dapat lapis legit dari Tante Rina",
+    foodQ: "When does it expire?", foodA: ["My guess: about 5 days", "Pick a date", "Don't know", "There's a date on it"],
+    food: "Food", fName: "Food", fKept: "Kept in", fExp: "Expires", fFrom: "From",
+    foodCard: { name: "Lapis legit", kept: "Cupboard", exp: "Mon 16 Nov", guess: "Kakak's guess — check it", from: "Tante Rina" },
+    safety: "If it smells or looks off, throw it away.", afterGuess: "After tapping her guess, the card:",
+    typed5: "Kasih obat cacing ke Mochi tiap 3 bulan",
+    cant: "I can't set up medicine yet. You can add it on the Pets tab.", openPets: "Open Pets", gotIt: "OK",
+    limit: "Kakak has helped a lot today. Try again tomorrow, or add it yourself.",
+    setTitle: "Kakak", setWhat: "Kakak sets up chores, shopping, pet meals and food from what you type. Nothing is saved until you confirm.",
+    setSwitch: "Let Kakak help", setSent: "What you type, and the first names of your staff, pets and rooms, are sent to Anthropic (Claude) in the United States to understand it. Miamus keeps only a count of requests.",
+    setPolicy: "Privacy policy", setWho: "Turned on by Dewi, 7 Nov", setLeft: "Requests left today", back: "‹ Household",
+  },
+  id: {
+    tag: "Pemilik · Bahasa Indonesia", overview: "Ringkasan", staff: "Staf", day: "Hari", week: "Minggu",
+    tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    dateline: "Rabu, 11 November", eatSoon: "2 makanan perlu segera dimakan", toBuy: "3 barang perlu dibeli",
+    rows: [["07.00", "Mochi — Sarapan", "Selesai · Sari"], ["09.00", "Pel teras", "Sari · Teras"], ["12.00", "Kopi — Makan siang", "Belum ada yang ambil"], ["16.00", "Siram taman", "Yanti"]],
+    fab: "Bilang ke Kakak", hint: "Kakak bisa mengaturnya untuk Anda — cukup bilang saja.",
+    ask: "Mau Kakak atur apa?", ph: "Misalnya: Mbak Sari pel teras tiap Senin jam 9",
+    exTitle: "Coba:", ex: ["Mbak Sari pel teras tiap Senin jam 9", "Beli telur sama sabun cuci piring", "Mochi makan jam 7 pagi dan 6 sore"],
+    send: "Kirim", mic: "Tombol 🎤 di keyboard juga bisa dipakai.",
+    typedQ: "Nanti sore Mbak Yan please beresin dapur", moment: "Sebentar…",
+    q: "Yanti atau Yati?", qa: ["Yanti", "Yati"], typeAns: "Atau ketik jawaban",
+    typed1: "Mbak Sari pel teras tiap Senin jam 9",
+    intro: "Ini yang akan Kakak tambahkan:",
+    chore: "Tugas", fWhat: "Apa", fWho: "Siapa", fWhen: "Kapan", fRep: "Diulang", fRoom: "Ruangan",
+    c1: { what: "Pel teras", gloss: "", who: "Sari", when: "Sen, 16 Nov, 09.00", rep: "Setiap Senin", room: "Teras" },
+    looks: "Sudah benar", change: "Ubah", cancel: "Batal",
+    typed2: "Besok Sari pel teras, terus beli telur juga",
+    shop: "Daftar belanja", eggs: "Telur", eggsWhy: "Habis — masuk daftar", save2: "Simpan 2",
+    c2: { what: "Pel teras", gloss: "", who: "Sari", when: "Besok, Kam 12 Nov", rep: "Sekali" },
+    toast: "Tersimpan — Pel teras, setiap Senin, Sari", undo: "Batalkan",
+    typed3: "Gudang dibersihin besok sama Budi",
+    roomQ: "Gudang belum ada di daftar ruangan. Tambahkan?", roomA: ["Tambahkan Gudang", "Tanpa ruangan"],
+    typed4: "Kami dapat lapis legit dari Tante Rina",
+    foodQ: "Kapan kedaluwarsanya?", foodA: ["Tebakan Kakak: sekitar 5 hari", "Pilih tanggal", "Tidak tahu", "Ada tanggalnya"],
+    food: "Makanan", fName: "Makanan", fKept: "Disimpan di", fExp: "Kedaluwarsa", fFrom: "Dari",
+    foodCard: { name: "Lapis legit", kept: "Lemari", exp: "Sen, 16 Nov", guess: "Tebakan Kakak — cek lagi", from: "Tante Rina" },
+    safety: "Kalau bau atau tampilannya aneh, buang saja.", afterGuess: "Setelah tebakan Kakak dipilih, kartunya:",
+    typed5: "Kasih obat cacing ke Mochi tiap 3 bulan",
+    cant: "Kakak belum bisa mengatur obat. Anda bisa menambahkannya di tab Hewan.", openPets: "Buka Hewan", gotIt: "Oke",
+    limit: "Kakak sudah banyak membantu hari ini. Coba lagi besok, atau tambahkan sendiri.",
+    setTitle: "Kakak", setWhat: "Kakak mengatur tugas, belanja, jam makan hewan, dan makanan dari yang Anda ketik. Tidak ada yang disimpan sebelum Anda setuju.",
+    setSwitch: "Izinkan Kakak membantu", setSent: "Yang Anda ketik, serta nama depan staf, hewan, dan ruangan, dikirim ke Anthropic (Claude) di Amerika Serikat untuk dipahami. Miamus hanya menyimpan jumlah permintaan.",
+    setPolicy: "Kebijakan privasi", setWho: "Dinyalakan oleh Dewi, 7 Nov", setLeft: "Sisa permintaan hari ini", back: "‹ Rumah",
+  },
+};
+
+function frame(t, inner, opts = {}) {
+  const tab = opts.tab ?? 0;
+  return `<div class="phone"><div class="tag">${t.tag}</div><div class="status"></div>
+    <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div>
+      <div class="seg sm"><span class="on">${t.overview}</span><span>${t.staff}</span></div></div></div>
+    ${inner}
+    <div class="tabbar">${t.tabs.map((x, i) => `<span class="${i === tab ? "on" : ""}"><i></i>${x}</span>`).join("")}</div>
+  </div>`;
+}
+
+function today(t, { faded = false } = {}) {
+  return `<div class="body ${faded ? "faded" : ""}">
+    <div class="seg"><span class="on">${t.day}</span><span>${t.week}</span></div>
+    <div class="quiet">🍲 <span>${t.eatSoon}</span><span class="chev">›</span></div>
+    <div class="quiet" style="margin-top:-8px">🧺 <span>${t.toBuy}</span><span class="chev">›</span></div>
+    <div class="h">${t.dateline}</div>
+    <div class="group">${t.rows.map(r => `<div class="item"><div class="time">${r[0]}</div><div class="t"><b>${r[1]}</b><span>${r[2]}</span></div></div>`).join("")}</div>
+  </div>`;
+}
+
+const sheet = (inner) => `<div class="dim"></div><div class="sheet"><div class="grab"></div>${inner}</div>`;
+const who = (t) => `<div class="who"><div class="av lg"></div><b>${t.ask}</b></div>`;
+const mine = (s) => `<div class="mine">${s}</div>`;
+const her = (s) => `<div class="her"><div class="av"></div><div class="bub">${s}</div></div>`;
+const fact = (k, v, cls = "") => `<div class="fact ${cls}"><span>${k}</span><b>${v}</b></div>`;
+
+const screens = [
+  {
+    title: "1. Today, with Kakak's button",
+    note: "Today's one main action, bottom right, owners only and only when Kakak is on. The one-line hint shows the first time; tapping the button hides it for good. In step 3 the same button gains hold-to-talk.",
+    render: (t) => frame(t, today(t) + `<div class="hint">${t.hint}</div><div class="fab"><div class="av"></div>${t.fab}</div>`),
+  },
+  {
+    title: "2. The typing sheet",
+    note: "One box and one button. The examples fill the box when tapped, and show what Kakak can do without a help page. The keyboard's own dictation key already works.",
+    render: (t) => frame(t, today(t, { faded: true }) + sheet(`${who(t)}<div class="box ph">${t.ph}</div>
+      <div class="ex"><small>${t.exTitle}</small>${t.ex.map(e => `<span>${e}</span>`).join("")}</div>
+      <div class="small">${t.mic}</div><div class="spacer"></div><div class="btn off">${t.send}</div>`)),
+  },
+  {
+    title: "3. Kakak is reading",
+    note: "The sentence stays exactly as typed, so the owner sees what Kakak read. Usually a few seconds.",
+    render: (t) => frame(t, today(t, { faded: true }) + sheet(`${who(t)}${mine(t.typedQ)}
+      <div class="her"><div class="av"></div><div class="bub"><div class="dots"><i></i><i></i><i></i></div></div></div>
+      <div class="small" style="padding-left:40px">${t.moment}</div><div class="spacer"></div>`)),
+  },
+  {
+    title: "4. One question, tappable answers",
+    note: "\"Mbak Yan\" fits Yanti and Yati, so Kakak asks — never guesses. Two to four big answers; typing is the fallback. At most three questions per sentence.",
+    render: (t) => frame(t, today(t, { faded: true }) + sheet(`${who(t)}${mine(t.typedQ)}${her(t.q)}
+      <div class="spacer"></div><div class="answers">${t.qa.map(a => `<span>${a}</span>`).join("")}</div>
+      <div class="typeans">${t.typeAns}</div>`)),
+  },
+  {
+    title: "5. The confirmation card",
+    note: "Facts in plain words. The title is in Indonesian because staff read it; English-speaking owners see a translation under it. Looks right saves; Change opens the ordinary chore form, already filled in.",
+    render: (t) => frame(t, today(t, { faded: true }) + sheet(`${who(t)}${mine(t.typed1)}${her(t.intro)}
+      <div class="card"><div class="ctitle">${t.chore}</div>
+        ${fact(t.fWhat, t.c1.what + (t.c1.gloss ? `<small>${t.c1.gloss}</small>` : ""))}
+        ${fact(t.fWho, t.c1.who)}${fact(t.fWhen, t.c1.when)}${fact(t.fRep, t.c1.rep)}${fact(t.fRoom, t.c1.room)}
+      </div><div class="spacer"></div>
+      <div class="row2"><div class="btn outline">${t.change}</div><div class="btn primary">${t.looks}</div></div>
+      <div class="link">${t.cancel}</div>`)),
+  },
+  {
+    title: "5b. Two things from one sentence",
+    note: "One card, one row each, a small × to drop a row. The button counts what will be saved.",
+    render: (t) => frame(t, today(t, { faded: true }) + sheet(`${who(t)}${mine(t.typed2)}${her(t.intro)}
+      <div class="card"><div class="ctitle">${t.chore}<em>×</em></div>
+        ${fact(t.fWhat, t.c2.what + (t.c2.gloss ? `<small>${t.c2.gloss}</small>` : ""))}${fact(t.fWho, t.c2.who)}${fact(t.fWhen, t.c2.when)}
+      </div>
+      <div class="card"><div class="ctitle">${t.shop}<em>×</em></div>${fact(t.eggs, t.eggsWhy)}</div>
+      <div class="spacer"></div>
+      <div class="row2"><div class="btn outline">${t.change}</div><div class="btn primary">${t.save2}</div></div>
+      <div class="link">${t.cancel}</div>`)),
+  },
+  {
+    title: "6. Saved, with Undo",
+    note: "The sheet closes; the usual toast. Undo removes only what this card added.",
+    render: (t) => frame(t, today(t) + `<div class="toast"><span>${t.toast}</span><b>${t.undo}</b></div>`),
+  },
+  {
+    title: "7. A room Kakak doesn't know",
+    note: "Created only when the card is saved.",
+    render: (t) => frame(t, today(t, { faded: true }) + sheet(`${who(t)}${mine(t.typed3)}${her(t.roomQ)}
+      <div class="spacer"></div><div class="answers">${t.roomA.map(a => `<span>${a}</span>`).join("")}</div>
+      <div class="typeans">${t.typeAns}</div>`)),
+  },
+  {
+    title: "7b. Food with no date: ask, with a cautious guess",
+    note: "Kakak asks when it expires; her guess is one answer, on the short side. On the card the guess is labelled in amber (\"waiting for you\" — it needs checking), with the safety line.",
+    render: (t) => frame(t, today(t, { faded: true }) + sheet(`${mine(t.typed4)}${her(t.foodQ)}
+      <div class="answers">${t.foodA.map(a => `<span>${a}</span>`).join("")}</div>
+      <div class="small">${t.afterGuess}</div>
+      <div class="card"><div class="ctitle">${t.food}</div>
+        ${fact(t.fName, t.foodCard.name)}${fact(t.fKept, t.foodCard.kept)}
+        ${fact(t.fExp, `${t.foodCard.exp}<small>${t.foodCard.guess}</small>`, "amber")}${fact(t.fFrom, t.foodCard.from)}
+        <div class="safety">${t.safety}</div></div>
+      <div class="spacer"></div><div class="row2"><div class="btn outline">${t.change}</div><div class="btn primary">${t.looks}</div></div>`)),
+  },
+  {
+    title: "8. When Kakak can't",
+    note: "Short, honest, and the way to do it by hand. Same pattern for deleting or changing, questions about the day, the daily limit, no connection and errors.",
+    render: (t) => frame(t, today(t, { faded: true }) + sheet(`${who(t)}${mine(t.typed5)}${her(t.cant)}
+      <div class="her faded"><div class="av"></div><div class="bub">${t.limit}</div></div>
+      <div class="spacer"></div><div class="row2"><div class="btn outline">${t.gotIt}</div><div class="btn primary">${t.openPets}</div></div>`)),
+  },
+  {
+    title: "9. Turning Kakak on (Household tab)",
+    note: "Off until an owner turns it on. Says what is sent and to whom, and who turned it on. Only family households see this row in step 2.",
+    render: (t) => frame(t, `<div class="body settings">
+      <div class="small">${t.back}</div>
+      <div class="who"><div class="av lg"></div><h3>${t.setTitle}</h3></div>
+      <div class="small" style="color:var(--ink2)">${t.setWhat}</div>
+      <div class="group"><div class="switch"><b style="font-weight:500">${t.setSwitch}</b><div class="sw"></div></div></div>
+      <div class="small">${t.setSent} <a>${t.setPolicy}</a></div>
+      <div class="group"><div class="item"><div class="t"><b>${t.setLeft}</b><span>${t.setWho}</span></div><b>38</b></div></div>
+    </div>`, { tab: 4 }),
+  },
+];
+
+document.getElementById("root").innerHTML = screens.map(s => `<section class="screen"><h2>${s.title}</h2><p>${s.note}</p>
+  <div class="pair">${s.render(L.en)}${s.render(L.id)}</div></section>`).join("");
+</script>
+</body>
+</html>
