@@ -79,7 +79,7 @@ export function HouseholdMembersPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("Admins", "Admin")}</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t("Family", "Keluarga")}</h2>
       <p className="-mt-1 text-xs text-muted-foreground">
         {t(
           "People who sign in with Google and can manage the household. Staff, who sign in with a PIN, are listed below.",

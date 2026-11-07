@@ -24,7 +24,7 @@ export function InvitePanel() {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("Invites", "Undangan")}</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t("Invite someone", "Undang")}</h2>
       <InviteCard
         kind="owner"
         icon={UserPlus}

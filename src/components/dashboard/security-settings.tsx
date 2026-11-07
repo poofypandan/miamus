@@ -71,7 +71,7 @@ export function SecuritySettings() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("Security", "Keamanan")}</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t("App lock", "Kunci aplikasi")}</h2>
       <Card className="py-4">
         <CardContent className="flex flex-col gap-3 px-4">
           <div className="flex items-start justify-between gap-3">
