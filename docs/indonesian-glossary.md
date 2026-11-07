@@ -48,13 +48,20 @@ people are **staf** and **admin**.
 | Grooming | **Grooming** | Pet salons in Indonesia say grooming. |
 | Pee pad | **Pee pad** | Product name. |
 | Vet | **Dokter hewan** | Everyday. |
-| Health passport | **Catatan kesehatan** | "Paspor kesehatan" is not a phrase Indonesians use for pets. |
-| Founder (of the household) | **Pemilik** | "Pendiri" sounds like an organisation. |
+| Health record (was Health passport) | **Catatan kesehatan** | "Paspor kesehatan" is not a phrase Indonesians use for pets. |
+| Owner (was Founder) | **Pemilik** | "Pendiri" sounds like an organisation. |
 | Test notification | **Tes notifikasi** | "Tes" is everyday; "uji" reads technical. |
 | Pet Alert (sick report push) | **Hewan Sakit** | Says what happened. |
-| Action Mode | **Mode Kerja** | |
-| Manage | **Kelola** | |
-| Workload | **Beban Kerja** | Understood; keep unless owners say otherwise. |
+| Overview \| Staff (header switch, owners only) | **Ringkasan \| Staf** | Replaced "Action Mode" / "Mode Kerja" and "Manage" / "Kelola" (owner decision, 2026-11-07). |
+| Who did what | **Siapa mengerjakan apa** | Replaced "Workload" / "Beban Kerja", which sounded like an office report. |
+| Waiting for you | **Menunggu Anda** | Replaced "Approval Queue" / "Menunggu Persetujuan". |
+| Not taken yet | **Belum ada yang ambil** | A chore nobody has taken. |
+| I'll do it (staff, taking a chore) | **Saya kerjakan** | Replaced "Ketuk untuk ambil". |
+| Wait for an owner (chore that needs someone home) | **Tunggu pemilik rumah** | Replaced "Tunggu Admin". "Admin" stays the role word in owner settings. |
+| Activity | **Aktivitas** | Replaced "Audit Log" / "Log Aktivitas". |
+| Invite family / Link a staff phone | **Undang keluarga / Hubungkan HP staf** | Replaced "Invite Admin" / "Invite Device". |
+| At the vet / Back home from the vet | **Dirawat di klinik / Sudah pulang dari klinik** | |
+| Tabs: Today, Household | **Hari ini, Rumah** | Replaced "Agenda" and "Access" / "Akses". |
 | Upload / uploading | **Unggah** / **Mengunggah** | Standard in Indonesian apps. |
 | Offline | **offline** | Everyday loanword. |
 | House code (staff sign-in) | **Kode rumah** | Plain; "kode" is everyday. Shown as XXX-XXX. |

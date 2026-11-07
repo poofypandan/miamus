@@ -261,6 +261,9 @@ export type InventoryUnit =
   | "L"
   | "ml";
 
+/** Where an item stands on the shopping list (migrations/122, Phase 154). */
+export type StockStatus = "ok" | "low" | "out";
+
 export type InventoryItem = {
   id: string;
   // The tenant (migrations/086).
@@ -281,6 +284,15 @@ export type InventoryItem = {
   audit_frequency_days: number;
   last_audited_at: string | null;
   notes: string | null;
+  /**
+   * Enough, running low or out (migrations/122). Optional only because a
+   * row cached by an older build lacks it; read it through stockStatus().
+   */
+  stock_status?: StockStatus;
+  /** When the status last changed, by the server's clock. */
+  stock_status_at?: string | null;
+  /** Who changed it, as selected on their phone (self-declared, cf. 071). */
+  stock_status_by?: string | null;
   // The Phase 83 box/loose ledger. Still in the table so a phone on the
   // previous build keeps working through the deploy; nothing reads them now.
   unit_type?: string;

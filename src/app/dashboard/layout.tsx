@@ -8,14 +8,12 @@ import { LaunchCover } from "@/components/brand/brand-cover";
 import { OwnerAppLock } from "@/components/auth/owner-app-lock";
 import { HouseholdRequestsBanner } from "@/components/dashboard/household-requests-banner";
 import { LanguagePrompt } from "@/components/dashboard/language-settings";
-import { InventoryAlertBanner } from "@/components/dashboard/inventory-alert-banner";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { useHousehold } from "@/context/household-context";
 import { OwnerLocaleProvider, useOwnerLocale } from "@/context/owner-locale-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
-import { useHouseholdNameState } from "@/hooks/use-household-name";
 import { usePushResync } from "@/hooks/use-push-resync";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -44,7 +42,6 @@ function DashboardShell({ children }: { children: ReactNode }) {
   useOfflineSync(ownerLocale);
   usePushResync();
   const { refresh, loading, tenantReady, roleHydrated } = useHousehold();
-  const { ready: nameReady } = useHouseholdNameState();
 
   return (
     // Google sign-in is what got them to this route (see middleware); the
@@ -73,7 +70,6 @@ function DashboardShell({ children }: { children: ReactNode }) {
           {/* Platform admins only: new households waiting for approval
               (Phase 148). Renders nothing for everyone else. */}
           <HouseholdRequestsBanner />
-          <InventoryAlertBanner />
           {/* A failed load, in the owner's language (Phases 146, 149). */}
           <div className="px-4 pt-3 empty:hidden">
             <ConnectionNotice locale={ownerLocale} />
@@ -99,7 +95,7 @@ function DashboardShell({ children }: { children: ReactNode }) {
             seen swapping "Miamus" for the real name. */}
         <LaunchCover
           variant="owner"
-          ready={tenantReady && roleHydrated && !loading && nameReady}
+          ready={tenantReady && roleHydrated && !loading}
         />
 
         {/* Outside PullToRefresh on purpose — see BottomTabBar. It reads the

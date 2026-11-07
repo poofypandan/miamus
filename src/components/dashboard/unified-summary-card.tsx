@@ -126,8 +126,8 @@ function PetOverviewRow({
       {/* A dog at the clinic has no meals or potty breaks to count here, so the
           tallies give way to where it actually is. In the owner's language. */}
       {admitted ? (
-        <span className="flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-900">
-          <Stethoscope className="size-3.5" /> {t("Hospitalized", "Dirawat inap")}
+        <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700">
+          <Stethoscope className="size-3.5" /> {t("At the vet", "Di klinik")}
         </span>
       ) : (
         <>

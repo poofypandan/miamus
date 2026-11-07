@@ -2,12 +2,12 @@
 
 import { useSearchParams } from "next/navigation";
 import { TodayButton } from "@/components/agenda/today-button";
-import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
+import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
 import { moduleFromParam } from "@/lib/dashboard-modules";
 import { useOwnerLocale } from "@/context/owner-locale-context";
 
 /**
- * The dashboard header: the property name and the way into the staff view —
+ * The dashboard header: the household's name and the Overview | Staff switch —
  * and, on the Agenda, the Today button (Phase 115).
  *
  * It used to carry a second row of pills for whichever module had two panels —
@@ -23,9 +23,7 @@ export function TopNav() {
       action={
         <div className="flex shrink-0 items-center gap-1">
           {onAgenda && <TodayButton locale={locale} />}
-          <HeaderNavLink href="/staff" switchTo="staff">
-            {locale === "id" ? "Mode Kerja →" : "Action Mode →"}
-          </HeaderNavLink>
+          <ViewSwitch current="owner" locale={locale} />
         </div>
       }
     />

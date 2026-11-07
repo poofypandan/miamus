@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AgendaTab } from "@/components/dashboard/tabs/agenda-tab";
 import { ChoresTab } from "@/components/dashboard/tabs/chores-tab";
-import { InventoryMasterTab } from "@/components/dashboard/tabs/inventory-master-tab";
+import { ShoppingTab } from "@/components/shopping/shopping-tab";
 import { PetsTab } from "@/components/dashboard/tabs/pets-tab";
 import { StaffTab } from "@/components/dashboard/tabs/staff-tab";
 import { PetProfileSheet } from "@/components/dashboard/pet-profile-sheet";
@@ -75,7 +75,7 @@ const TABS: Record<DashboardModule, React.ReactNode> = {
   agenda: <AgendaTab />,
   pets: <PetsTab />,
   chores: <ChoresTab />,
-  inventory: <InventoryMasterTab />,
+  inventory: <ShoppingTab />,
   access: (
     <div className="px-4 pb-6">
       <StaffTab />

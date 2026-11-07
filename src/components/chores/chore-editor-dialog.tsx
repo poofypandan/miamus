@@ -523,12 +523,12 @@ export function ChoreEditorDialog({
             />
             <span className="flex flex-col gap-0.5">
               <span className="text-sm font-medium text-amber-900">
-                {t("Requires supervision", "Perlu diawasi")}
+                {t("Wait for an owner", "Tunggu pemilik rumah")}
               </span>
               <span className="text-[11px] text-amber-900/80">
                 {t(
-                  "Flags the chore in Action Mode so whoever does it waits for an admin rather than starting on their own.",
-                  "Menandai tugas di Mode Kerja agar yang mengerjakan menunggu admin, bukan mulai sendiri."
+                  "Whoever does this chore waits for one of you to be there, rather than starting on their own.",
+                  "Yang mengerjakan tugas ini menunggu salah satu pemilik rumah ada, bukan mulai sendiri."
                 )}
               </span>
             </span>

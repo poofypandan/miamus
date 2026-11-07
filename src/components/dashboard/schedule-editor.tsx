@@ -1441,7 +1441,7 @@ function LivePreviewCard({
               >
                 <span
                   className={cn(
-                    "w-16 shrink-0 font-mono text-xs",
+                    "w-16 shrink-0 text-xs tabular-nums",
                     tint ? "text-zinc-700" : "text-muted-foreground"
                   )}
                 >
@@ -1513,7 +1513,7 @@ function MedicineGroupRow({ group, entity }: { group: AgendaGroup; entity: TaskE
   return (
     <div className={cn("flex flex-col gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-sm", tint)}>
       <div className="flex items-center gap-2">
-        <span className="w-16 shrink-0 font-mono text-xs text-zinc-700">
+        <span className="w-16 shrink-0 text-xs tabular-nums text-zinc-700">
           {formatTime(group.time)}
         </span>
         <Icon className={cn("size-4 shrink-0", categoryIconColor("medication"))} />

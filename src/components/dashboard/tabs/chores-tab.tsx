@@ -111,12 +111,12 @@ export function ChoresTab() {
           description={
             noChoresYet
               ? t(
-                  "Add your first chore — one-off or repeating — and it appears in Action Mode straight away.",
-                  "Tambahkan tugas pertama Anda — sekali atau berulang — dan langsung muncul di Mode Kerja."
+                  "Add your first chore — once or repeating — and your staff see it straight away.",
+                  "Tambahkan tugas pertama Anda — sekali atau berulang — dan staf Anda langsung melihatnya."
                 )
               : t(
-                  "Add one and it appears in Action Mode straight away.",
-                  "Tambahkan satu dan langsung muncul di Mode Kerja."
+                  "Add one and your staff see it straight away.",
+                  "Tambahkan satu dan staf Anda langsung melihatnya."
                 )
           }
         >

@@ -22,6 +22,7 @@ export function SegmentedControl<T extends string>({
   ariaLabel,
   className,
   scrollable = false,
+  size = "md",
 }: {
   segments: Segment<T>[];
   value: T;
@@ -37,13 +38,20 @@ export function SegmentedControl<T extends string>({
    * pill legible and the aesthetic identical.
    */
   scrollable?: boolean;
+  /**
+   * "sm" sizes the track to its labels instead of the full width: the
+   * header's Overview | Staff switch (Phase 153), which shares its row with
+   * the household name.
+   */
+  size?: "md" | "sm";
 }) {
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "flex w-full gap-1 rounded-full bg-muted p-1",
+        "flex gap-1 rounded-full bg-muted p-1",
+        size === "sm" ? "w-auto shrink-0 gap-0.5 p-0.5" : "w-full",
         scrollable && "overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className
       )}
@@ -58,8 +66,9 @@ export function SegmentedControl<T extends string>({
             aria-selected={active}
             onClick={() => onChange(segment.value)}
             className={cn(
-              "flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium",
-              scrollable ? "shrink-0" : "flex-1",
+              "flex items-center justify-center gap-1.5 rounded-full font-medium",
+              size === "sm" ? "min-h-10 px-3 text-xs" : "min-h-[44px] px-3 text-sm",
+              scrollable || size === "sm" ? "shrink-0" : "flex-1",
               active
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground active:bg-background/60"

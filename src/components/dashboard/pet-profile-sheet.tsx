@@ -161,20 +161,20 @@ export function PetProfileSheet() {
                 it is actionable: the dog's routines are suspended until it is
                 collected. In the owner's language. */}
             {isAdmitted(pet) && (
-              <div className="mt-4 flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
-                <p className="flex items-center gap-1.5 text-sm font-medium text-indigo-900">
-                  <Stethoscope className="size-4 shrink-0" />{" "}
-                  {t(`${pet.name} is at the clinic`, `${pet.name} sedang di klinik`)}
+              <div className="mt-4 flex flex-col gap-2 rounded-xl border bg-card p-3">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+                  <Stethoscope className="size-4 shrink-0 text-muted-foreground" />{" "}
+                  {t(`${pet.name} is at the vet`, `${pet.name} sedang dirawat di klinik`)}
                 </p>
-                <p className="text-xs text-indigo-900/80">
+                <p className="text-xs text-muted-foreground">
                   {t(
-                    `Daily meals and potty breaks are paused until ${pet.name} is collected.`,
-                    `Makan dan Pipis & Pup harian dihentikan sementara sampai ${pet.name} dijemput.`
+                    `Daily meals and potty breaks are paused until ${pet.name} is home.`,
+                    `Makan dan Pipis & Pup harian berhenti dulu sampai ${pet.name} pulang.`
                   )}
                 </p>
                 <DischargeButton
                   pet={pet}
-                  label={t("Bring Home from Clinic", "Jemput dari Klinik")}
+                  label={t("Back home from the vet", "Sudah pulang dari klinik")}
                   successMessage={t(
                     `${pet.name} is home — routines resumed`,
                     `${pet.name} sudah pulang — rutinitas berjalan lagi`
@@ -223,7 +223,7 @@ export function PetProfileSheet() {
 
             <section className="mt-8">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-gray-900">{t("Health Passport", "Catatan Kesehatan")}</h3>
+                <h3 className="text-sm font-semibold text-gray-900">{t("Health record", "Catatan kesehatan")}</h3>
                 {canManagePets && (
                   <Dialog open={addRecordOpen} onOpenChange={setAddRecordOpen}>
                     <DialogTrigger asChild>

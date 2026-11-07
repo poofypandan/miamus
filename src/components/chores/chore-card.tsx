@@ -39,7 +39,7 @@ const COPY = {
     anytime: "Anytime today",
     unassigned: "Anyone",
     forYou: "For you",
-    supervision: "Admin must be present",
+    supervision: "Wait for an owner",
     done: "Done",
     overdue: (label: string) => `Carried over from ${label}`,
   },
@@ -47,7 +47,7 @@ const COPY = {
     anytime: "Kapan saja hari ini",
     unassigned: "Siapa saja",
     forYou: "Untuk Anda",
-    supervision: "Tunggu Admin",
+    supervision: "Tunggu pemilik rumah",
     done: "Selesai",
     overdue: (label: string) => `Belum selesai dari ${label}`,
   },
@@ -137,7 +137,7 @@ export function ChoreCard({
         {done && <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", DONE_TONE.check)} />}
         {/* A span, not a button: the card is already the button. */}
         {editable && !done && (
-          <span className="-mt-0.5 -mr-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full bg-background/80 px-2.5 text-xs font-medium text-amber-900 ring-1 ring-amber-300">
+          <span className="-mt-0.5 -mr-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full bg-background/80 px-2.5 text-xs font-medium text-gray-700 ring-1 ring-border">
             <Pencil className="size-3" />
             {locale === "en" ? "Edit" : "Ubah"}
           </span>
@@ -174,10 +174,9 @@ export function ChoreCard({
           </Badge>
         )}
 
-        {/* Solid, not pale: every chore card is amber now (Phase 112), so a
-            pale amber badge would vanish into it — and this is the one badge
-            that changes what a staff member should do: wait, rather than
-            start. */}
+        {/* The one amber thing on a chore (Phase 153 colour rule: amber means
+            waiting): it changes what a staff member should do — wait, rather
+            than start. */}
         {supervised && (
           <Badge className="h-5 gap-1 bg-amber-700 px-1.5 text-[10px] text-white">
             <Eye className="size-3" />
@@ -196,7 +195,7 @@ export function ChoreCard({
       {/* Only ever shown on today's list, where it is the explanation for a
           chore whose own date has passed (see expandChores). */}
       {overdue && !done && (
-        <p className="flex items-center gap-1 text-[11px] font-medium text-amber-700">
+        <p className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
           <AlertTriangle className="size-3 shrink-0" />
           {t.overdue(dayKeyLabel(occurrence.date, today, locale))}
         </p>
@@ -214,11 +213,10 @@ export function ChoreCard({
 
   const className = cn(
     "flex w-full flex-col gap-2 rounded-xl border p-3 text-left",
-    // Amber for every open chore — the third of the Agenda's three tones
-    // (Phase 112). Done turns green, like a finished routine (Phase 114);
-    // supervision and carry-over are said by their own badge and line rather
-    // than by a second shade of amber.
-    done ? DONE_TONE.tint : AGENDA_TONES.chore.tint
+    // A plain card for an open chore (Phase 153; amber since Phase 112), white
+    // even inside the red "Belum selesai" frame. Done turns green, like a
+    // finished routine (Phase 114).
+    done ? DONE_TONE.tint : cn("bg-card", AGENDA_TONES.chore.tint)
   );
 
   if (!onPress) return <div className={className}>{body}</div>;

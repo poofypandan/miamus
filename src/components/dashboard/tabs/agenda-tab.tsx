@@ -3,7 +3,7 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { CalendarDays, PawPrint, Plus, Sparkles } from "lucide-react";
+import { CalendarDays, ChevronRight, PawPrint, Plus, ShoppingBasket, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -30,6 +30,8 @@ import { useToday } from "@/hooks/use-today";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
+import { isLowStock } from "@/lib/inventory";
+import { isActiveAlert } from "@/lib/inventory-status";
 import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import {
@@ -68,6 +70,8 @@ export function AgendaTab() {
     selectedDate,
     setSelectedDate,
     todayJumps,
+    inventoryItems,
+    inventoryAlerts,
   } = useHousehold();
   const householdName = useHouseholdName();
   const locale = useOwnerLocale();
@@ -111,6 +115,19 @@ export function AgendaTab() {
   );
   const entries = useMemo(() => applyAgendaFilter(allEntries, filter), [allEntries, filter]);
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
+
+  // Things to buy (Phase 154): one quiet line here instead of a banner on
+  // every tab. Items marked running low or out, plus the staff's notes.
+  const toBuy = useMemo(
+    () => inventoryItems.filter(isLowStock).length + inventoryAlerts.filter(isActiveAlert).length,
+    [inventoryItems, inventoryAlerts]
+  );
+
+  function switchToShopping(event: React.MouseEvent) {
+    if (!isPlainClick(event)) return;
+    event.preventDefault();
+    startTransition(() => pushInPlace(moduleHref("inventory")));
+  }
 
   // Same page, so in place — and in a transition like the tab bar's, so
   // Agenda stays up until Pets is ready to replace it (Phase 125).
@@ -200,10 +217,28 @@ export function AgendaTab() {
             Renders nothing when there is nothing to ask. */}
         <MedicationCourseAlerts />
 
+        {toBuy > 0 && (
+          <Link
+            href={moduleHref("inventory")}
+            scroll={false}
+            onClick={switchToShopping}
+            className="-my-1 flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+          >
+            <ShoppingBasket className="size-4 shrink-0 text-muted-foreground" />
+            <span className="flex-1">
+              {t(
+                `${toBuy} thing${toBuy === 1 ? "" : "s"} to buy`,
+                `${toBuy} barang perlu dibeli`
+              )}
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
+        )}
+
         {range === "day" ? (
           <>
             <h2 className="text-sm font-semibold text-gray-900">
-              {t(`${label}'s Agenda`, `Agenda ${label}`)}
+              {label}
             </h2>
             {/* Under the heading, as the Pets tab's photo filters sit under
                 theirs (Phase 134). Not on an empty day — unless a filter is

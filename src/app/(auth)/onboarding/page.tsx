@@ -137,9 +137,9 @@ function LanguageScreen() {
         </p>
       </div>
       <p className="text-sm leading-relaxed text-gray-700">
-        <span lang="en">You can change it later in Access.</span>{" "}
+        <span lang="en">You can change it later under Household.</span>{" "}
         <span lang="id" className="text-muted-foreground">
-          Bisa diubah nanti di Akses.
+          Bisa diubah nanti di tab Rumah.
         </span>
       </p>
       <LanguageChoice />

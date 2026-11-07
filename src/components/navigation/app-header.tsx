@@ -2,8 +2,10 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { Button } from "@/components/ui/button";
-import { useHouseholdName } from "@/hooks/use-household-name";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { isPlainClick } from "@/lib/in-place-navigation";
 import { beginNavigation, type CoverVariant } from "@/lib/launch-state";
 
@@ -21,19 +23,25 @@ import { beginNavigation, type CoverVariant } from "@/lib/launch-state";
  * and those are different heights — left to size itself, the row (and
  * everything under it) would shift by a few pixels between the two views.
  *
- * The name is the active household's own (Phase 107). It was a constant —
- * one residence's name, shown to every tenant who signed up.
+ * Top left is the Miamus mark and name, never the household's (Phase 153;
+ * it showed the household's name from Phase 107). Owners show the app to
+ * friends, and a household name is often the street address — so the
+ * header carries the brand instead.
  *
  * Sticky, so the segmented control stays in reach while a long feed scrolls.
  * Callers render it outside PullToRefresh, so the pull moves the content
  * beneath it rather than the header itself.
  */
 export function AppHeader({ action, children }: { action?: ReactNode; children?: ReactNode }) {
-  const householdName = useHouseholdName();
   return (
     <div className="sticky top-0 z-30 border-b bg-background">
       <div className="flex h-17 items-center justify-between gap-2 px-4">
-        <h1 className="truncate text-lg font-semibold">{householdName}</h1>
+        <h1 className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight">
+          <span className="shrink-0" aria-hidden>
+            <BrandMark size={28} rounded />
+          </span>
+          <span className="truncate">Miamus</span>
+        </h1>
         {action}
       </div>
       {children && <div className="px-4 pb-3">{children}</div>}
@@ -75,5 +83,37 @@ export function HeaderNavLink({
         {children}
       </Link>
     </Button>
+  );
+}
+
+type View = "owner" | "staff";
+
+/**
+ * Overview | Staff: the switch between the owner dashboard and the staff
+ * view (Phase 153; it replaced "Action Mode →" and "← Manage").
+ *
+ * Owners only. The dashboard renders it behind the middleware and
+ * useRequireOwner, and the staff page only for a household member (a Google
+ * account with a household_members row), so a staff phone never sees it.
+ * Hiding it is not the protection: the middleware sends anonymous sessions
+ * away from /dashboard whatever they tap.
+ */
+export function ViewSwitch({ current, locale }: { current: View; locale: "en" | "id" }) {
+  const router = useRouter();
+  return (
+    <SegmentedControl<View>
+      size="sm"
+      ariaLabel={locale === "id" ? "Pilih tampilan" : "Choose view"}
+      value={current}
+      segments={[
+        { value: "owner", label: locale === "id" ? "Ringkasan" : "Overview" },
+        { value: "staff", label: locale === "id" ? "Staf" : "Staff" },
+      ]}
+      onChange={(next) => {
+        if (next === current) return;
+        beginNavigation("switch", next);
+        router.push(next === "owner" ? "/dashboard" : "/staff");
+      }}
+    />
   );
 }

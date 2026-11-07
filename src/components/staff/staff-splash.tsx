@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Download, Loader2, Share, SquarePlus } from "lucide-react";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
-import { useHouseholdName } from "@/hooks/use-household-name";
 
 // Exported for the staff loading screen (Phase 121), which shows the same rules.
 export const RUMAH = [
@@ -26,11 +25,11 @@ export const RUMAH = [
  * Staff-facing, so entirely Bahasa Indonesia.
  */
 export function StaffSplash() {
-  // The household this phone was invited to, or "Miamus" before it is bound.
-  const householdName = useHouseholdName();
+  // The brand, not the household's name (Phase 153): an owner showing the app
+  // to someone should not show where they live.
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{householdName}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Miamus</h1>
 
       <div className="flex w-fit flex-col items-start space-y-2 text-left text-sm">
         {RUMAH.map((r) => (

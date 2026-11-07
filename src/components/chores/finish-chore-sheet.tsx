@@ -270,8 +270,8 @@ function FinishChoreBody({
             <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               <Eye className="mt-0.5 size-4 shrink-0" />
               <span>
-                Tugas ini harus dikerjakan bersama Admin. Tunggu Admin datang dulu,
-                jangan dikerjakan sendiri.
+                Tugas ini dikerjakan bersama pemilik rumah. Tunggu pemilik rumah
+                datang dulu, jangan dikerjakan sendiri.
               </span>
             </p>
           )}

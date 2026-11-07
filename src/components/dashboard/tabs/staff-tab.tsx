@@ -1,17 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
+  Bell,
+  CalendarOff,
   Camera,
+  ChevronLeft,
+  ChevronRight,
+  Crown,
+  History,
   Info,
   KeyRound,
+  Languages,
   Loader2,
+  Lock,
   PackageX,
   Plus,
   RotateCcw,
   Send,
   UserMinus,
+  UserPlus,
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +53,8 @@ import { dataProvider } from "@/lib/data";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { useStaffProfiles, useStaffNameLookup } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
+import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
+import { pushInPlace } from "@/lib/in-place-navigation";
 import { isOnLeave } from "@/lib/leave";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { LeavePanel } from "@/components/dashboard/leave-panel";
@@ -67,9 +79,9 @@ const KIND_META: Record<
   AuditKind,
   { icon: typeof Camera; label: (t: Translate) => string; className: string }
 > = {
-  log: { icon: Camera, label: (t) => t("Task", "Tugas"), className: "bg-emerald-100 text-emerald-900" },
-  proposal: { icon: Send, label: (t) => t("Proposal", "Usulan"), className: "bg-amber-100 text-amber-900" },
-  alert: { icon: PackageX, label: (t) => t("Inventory", "Stok"), className: "bg-sky-100 text-sky-900" },
+  log: { icon: Camera, label: (t) => t("Task", "Tugas"), className: "bg-zinc-100 text-zinc-700" },
+  proposal: { icon: Send, label: (t) => t("Suggestion", "Usulan"), className: "bg-zinc-100 text-zinc-700" },
+  alert: { icon: PackageX, label: (t) => t("Shopping", "Belanja"), className: "bg-zinc-100 text-zinc-700" },
 };
 
 function proposalStatus(status: ProposalStatus, t: Translate): string {
@@ -78,9 +90,85 @@ function proposalStatus(status: ProposalStatus, t: Translate): string {
   return t("pending", "menunggu");
 }
 
-// Owner-facing: English or Bahasa Indonesia, as the owner chose (Phase 149).
+const HOUSEHOLD_PAGES = [
+  "family",
+  "staff",
+  "leave",
+  "invite",
+  "sign-in",
+  "notifications",
+  "language",
+  "lock",
+  "activity",
+] as const;
+type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
+
+/** A rounded group of rows, like a section of iPhone Settings (Phase 155). */
+function SettingsGroup({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">{children}</div>;
+}
+
+function SettingsRow({
+  icon: Icon,
+  label,
+  detail,
+  waiting = false,
+  onPress,
+}: {
+  icon: typeof Bell;
+  label: string;
+  detail?: string;
+  /** Amber: something is waiting for the owner (Phase 153 colour rule). */
+  waiting?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      className="flex min-h-[52px] items-center gap-3 px-4 text-left text-sm active:bg-muted"
+    >
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <span className="min-w-0 flex-1 truncate font-medium text-gray-900">{label}</span>
+      {detail && (
+        <span className={waiting ? "text-xs font-medium text-amber-700" : "text-xs text-muted-foreground"}>
+          {detail}
+        </span>
+      )}
+      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+
+/**
+ * The Household tab (Phase 155; "Access" until Phase 153): a short list in
+ * four groups — people; inviting and staff sign-in; this phone's settings;
+ * activity — each row opening its own page. It was one page with ten
+ * sections in a single scroll.
+ *
+ * Owner-facing: English or Bahasa Indonesia, as the owner chose (Phase 149).
+ */
 export function StaffTab() {
-  const { logs, routineProposals, inventoryAlerts, pets, schedules, loading } = useHousehold();
+  const { logs, routineProposals, inventoryAlerts, pets, schedules, loading, leaveRequests } = useHousehold();
+  // Which page of the Household tab, in the URL like the tab itself
+  // (CLAUDE.md, State Persistence): ?module=access&page=staff. None = the list.
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const pageParam = searchParams.get("page");
+  useScrollTopOnChange(pageParam ?? "list");
+  function open(next: HouseholdPage | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) params.set("page", next);
+    else params.delete("page");
+    pushInPlace(`${pathname}?${params.toString()}`);
+  }
+  const today = formatDateLocal(useToday());
+  // Leave worth a row: waiting for an answer, or approved and not over yet —
+  // the same rule as LeavePanel.
+  const openLeave = leaveRequests.filter(
+    (l) => (l.status === "pending" || l.status === "approved") && l.end_date >= today
+  ).length;
+  const pendingLeave = leaveRequests.filter((l) => l.status === "pending" && l.end_date >= today).length;
   const locale = useOwnerLocale();
   const t = useT();
   const isOwner = useRequireOwner();
@@ -110,7 +198,7 @@ export function StaffTab() {
         id: `proposal-${proposal.id}`,
         kind: "proposal" as const,
         at: proposal.created_at,
-        action: `${t("Proposed routine", "Usulan rutinitas")} · ${proposalStatus(proposal.status, t)}`,
+        action: `${t("Suggested routine", "Usulan rutinitas")} · ${proposalStatus(proposal.status, t)}`,
         subject: `${proposal.title} · ${petName(proposal.pet_id)}`,
         // staff_id when the proposal was filed by someone who had signed in;
         // created_by ("staff"/"owner") is all the older rows carry — shown
@@ -125,7 +213,7 @@ export function StaffTab() {
         id: `alert-${alert.id}`,
         kind: "alert" as const,
         at: alert.created_at,
-        action: t("Reported low stock", "Melaporkan stok menipis"),
+        action: t("Added to the shopping list", "Menambah ke daftar belanja"),
         subject: `${ITEM_TYPE_LABELS[locale][alert.item_type]} · ${petName(alert.pet_id)}`,
         actor: staffName(alert.staff_id),
       })),
@@ -144,30 +232,90 @@ export function StaffTab() {
     );
   }
 
+  const page = HOUSEHOLD_PAGES.includes(pageParam as HouseholdPage) ? (pageParam as HouseholdPage) : null;
+
+  if (!page) {
+    const staffCount = (profiles ?? []).filter((p) => !p.user_id).length;
+    return (
+      <div className="flex flex-col gap-5">
+        <SettingsGroup>
+          <SettingsRow icon={Crown} label={t("Family", "Keluarga")} onPress={() => open("family")} />
+          <SettingsRow
+            icon={UserRound}
+            label={t("Staff", "Staf")}
+            detail={profiles ? String(staffCount) : undefined}
+            onPress={() => open("staff")}
+          />
+          {openLeave > 0 && (
+            <SettingsRow
+              icon={CalendarOff}
+              label={t("Leave", "Cuti")}
+              detail={
+                pendingLeave > 0
+                  ? t(`${pendingLeave} to decide`, `${pendingLeave} perlu keputusan`)
+                  : String(openLeave)
+              }
+              waiting={pendingLeave > 0}
+              onPress={() => open("leave")}
+            />
+          )}
+        </SettingsGroup>
+        <SettingsGroup>
+          <SettingsRow icon={UserPlus} label={t("Invite someone", "Undang")} onPress={() => open("invite")} />
+          <SettingsRow icon={KeyRound} label={t("Staff sign-in", "Masuk staf")} onPress={() => open("sign-in")} />
+        </SettingsGroup>
+        <SettingsGroup>
+          <SettingsRow icon={Bell} label={t("Notifications", "Notifikasi")} onPress={() => open("notifications")} />
+          <SettingsRow
+            icon={Languages}
+            label={t("Language", "Bahasa")}
+            detail={locale === "id" ? "Bahasa Indonesia" : "English"}
+            onPress={() => open("language")}
+          />
+          <SettingsRow icon={Lock} label={t("App lock", "Kunci aplikasi")} onPress={() => open("lock")} />
+        </SettingsGroup>
+        <SettingsGroup>
+          <SettingsRow icon={History} label={t("Activity", "Aktivitas")} onPress={() => open("activity")} />
+        </SettingsGroup>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <HouseholdMembersPanel />
+      <button
+        type="button"
+        onClick={() => open(null)}
+        className="-ml-2 flex min-h-11 items-center gap-0.5 self-start rounded-lg px-2 text-sm font-medium text-muted-foreground active:bg-muted"
+      >
+        <ChevronLeft className="size-4" /> {t("Household", "Rumah")}
+      </button>
 
-      <StaffRoster
-        profiles={profiles}
-        allProfiles={allProfiles}
-        failed={failed}
-        reload={reload}
-      />
+      {page === "family" && <HouseholdMembersPanel />}
+      {page === "staff" && (
+        <StaffRoster profiles={profiles} allProfiles={allProfiles} failed={failed} reload={reload} />
+      )}
+      {page === "leave" &&
+        (openLeave > 0 ? (
+          <LeavePanel staffName={staffName} />
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("No leave right now.", "Tidak ada cuti saat ini.")}</p>
+        ))}
+      {page === "invite" && <InvitePanel />}
+      {page === "sign-in" && <HouseCodePanel />}
+      {page === "notifications" && <PushNotificationSettings />}
+      {page === "language" && <LanguageSettings />}
+      {page === "lock" && <SecuritySettings />}
+      {page === "activity" && <ActivityPage entries={entries} />}
+    </div>
+  );
+}
 
-      <LeavePanel staffName={staffName} />
-
-      <InvitePanel />
-
-      <HouseCodePanel />
-
-      <PushNotificationSettings />
-
-      <LanguageSettings />
-
-      <SecuritySettings />
-
-      <h2 className="mt-2 text-sm font-semibold text-gray-900">{t("Audit Log", "Log Aktivitas")}</h2>
+function ActivityPage({ entries }: { entries: AuditEntry[] }) {
+  const t = useT();
+  return (
+    <>
+      <h2 className="text-sm font-semibold text-gray-900">{t("Activity", "Aktivitas")}</h2>
 
       {/* Stated rather than implied. Since Phase 71 each person signs in under
           their own name, so most rows can name someone — but that name is
@@ -198,7 +346,7 @@ export function StaffTab() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </>
   );
 }
 
@@ -348,26 +496,34 @@ function StaffRoster({
     }
   }
 
+  // Staff only: admins sign in with Google and have their own section above
+  // (HouseholdMembersPanel). Their roster rows still exist for chores and
+  // names (migrations/106); they just aren't listed twice.
+  const staff = profiles === null ? null : profiles.filter((p) => !p.user_id);
+
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("People & PINs", "Orang & PIN")}</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t("Staff", "Staf")}</h2>
 
       {/* How the pieces fit (Phase 120). A new owner meets a roster, an
           invite card further down and the word "PIN" with nothing saying they
-          are one flow — and which half the staff member does themselves. */}
+          are one flow — and which half the staff member does themselves.
+          Only until the first person is added (Phase 155): after that it is
+          clutter, and the guide explains it. */}
+      {staff !== null && staff.length === 0 && (
       <ol className="flex flex-col gap-1.5 rounded-xl border bg-card px-4 py-3 text-xs text-muted-foreground">
         <li>
           <span className="font-medium text-gray-900">{t("1. Add each person", "1. Tambahkan setiap orang")}</span>{" "}
           {t(
-            "who helps run the house without a Google account, by name, below. Admins are listed automatically.",
-            "yang membantu di rumah tanpa akun Google, dengan namanya, di bawah. Admin tercantum otomatis."
+            "who helps run the house, by name, below.",
+            "yang membantu di rumah, dengan namanya, di bawah."
           )}
         </li>
         <li>
           <span className="font-medium text-gray-900">{t("2. Invite their phone", "2. Undang HP-nya")}</span>{" "}
           {t(
-            "with a Device link (under Invites). A shared house phone works too.",
-            "dengan link Perangkat (di bagian Undangan). HP bersama di rumah juga bisa."
+            "with a staff-phone link (Household → Invite someone). A shared house phone works too.",
+            "dengan link HP staf (Rumah → Undang). HP bersama di rumah juga bisa."
           )}
         </li>
         <li>
@@ -378,6 +534,7 @@ function StaffRoster({
           )}
         </li>
       </ol>
+      )}
 
       <SetPinDialog
         profile={pinTarget}
@@ -390,12 +547,12 @@ function StaffRoster({
         <p className="text-sm text-destructive">
           {t("Couldn't load the list of people.", "Daftar orang gagal dimuat.")}
         </p>
-      ) : profiles === null ? (
+      ) : staff === null ? (
         <Skeleton className="h-24 w-full rounded-xl" />
       ) : (
         <Card className="py-2">
           <CardContent className="flex flex-col divide-y px-0">
-            {profiles.length === 0 ? (
+            {staff.length === 0 ? (
               <p className="px-4 py-3 text-sm text-muted-foreground">
                 {t(
                   "Nobody yet. Add the first name below — their PIN can wait until they sign in.",
@@ -403,7 +560,7 @@ function StaffRoster({
                 )}
               </p>
             ) : (
-              profiles.map((profile) => (
+              staff.map((profile) => (
                 <div key={profile.id} className="flex items-center gap-3 px-4 py-3 text-sm">
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
                     <UserRound className="size-4" />
@@ -421,19 +578,12 @@ function StaffRoster({
                         bcrypt hash in a column no client may read
                         (migrations/095-096). Only whether one exists. */}
                     <span className="text-xs text-muted-foreground">
-                      {profile.user_id
-                        ? t("Admin · signs in with Google", "Admin · masuk dengan Google")
-                        : profile.has_pin
-                          ? t("PIN set", "PIN sudah diatur")
-                          : t("No PIN yet", "Belum ada PIN")}
+                      {profile.has_pin
+                        ? t("PIN set", "PIN sudah diatur")
+                        : t("No PIN yet", "Belum ada PIN")}
                     </span>
                   </span>
-                  {/* An admin's row is theirs through Google (migrations/106),
-                      and the database refuses a PIN on it — so neither button.
-                      Removing an admin is the Admins panel's job, which takes
-                      their Google access away rather than just the name. */}
-                  {!profile.user_id && (
-                    <>
+                  <>
                       <Button
                         variant="outline"
                         size="sm"
@@ -463,7 +613,6 @@ function StaffRoster({
                         )}
                       </Button>
                     </>
-                  )}
                 </div>
               ))
             )}

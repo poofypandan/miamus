@@ -98,13 +98,13 @@ const COPY: Record<
               "Tasks, chores, routines, schedules and notes.",
               "Photos taken in the app: task proof photos, before and after photos, stock-check photos, pet photos and scans of pet documents.",
               "Details about your pets, including their vet and health records.",
-              "Supplies and stock counts.",
+              "The household's shopping list: which supplies are running low or out, and who said so.",
             ],
           },
           { h: "Technical" },
           {
             ul: [
-              "A random ID for each staff phone, and when it was last used.",
+              "A random ID for each staff phone, and when it was last used. Once a phone is no longer linked to a household, its ID is deleted after 7 days without use.",
               "Your browser's push-notification details, if you turn notifications on.",
               "Basic records our hosting providers keep when you use the app, such as IP address, browser type and time of access.",
             ],
@@ -174,6 +174,7 @@ const COPY: Record<
             ul: [
               "Chore and routine proof photos (including before and after photos) are deleted automatically after 30 days.",
               "Records of staff sign-in attempts are deleted automatically after 30 days.",
+              "A staff phone's ID is deleted 7 days after it was last used, once the phone is no longer linked to a household.",
               "Everything else is kept while your household uses Miamus.",
               "A request to set up a household that isn't approved is deleted 30 days after the decision, together with the Google sign-in it came from, unless that account has since joined a household. Approved requests are kept while the account is used.",
               "If an admin asks us to delete their household, or anyone asks us to delete their data, we delete it within 30 days unless the law requires us to keep it. Copies in our providers' backups are cleared on their normal schedule.",
@@ -314,13 +315,13 @@ const COPY: Record<
               "Tugas, pekerjaan rumah, rutinitas, jadwal, dan catatan.",
               "Foto yang diambil di aplikasi: foto bukti tugas, foto sebelum dan sesudah, foto cek stok, foto hewan peliharaan, dan scan dokumen hewan.",
               "Data hewan peliharaan Anda, termasuk catatan dokter hewan dan kesehatannya.",
-              "Persediaan dan jumlah stok.",
+              "Daftar belanja rumah: barang yang hampir habis atau habis, dan siapa yang memberi tahu.",
             ],
           },
           { h: "Teknis" },
           {
             ul: [
-              "ID acak untuk setiap HP staf, dan kapan terakhir dipakai.",
+              "ID acak untuk setiap HP staf, dan kapan terakhir dipakai. Jika HP tidak lagi terhubung ke rumah tangga, ID-nya dihapus setelah 7 hari tidak dipakai.",
               "Data notifikasi browser Anda, jika Anda menyalakan notifikasi.",
               "Catatan dasar yang disimpan penyedia hosting saat Anda memakai aplikasi, seperti alamat IP, jenis browser, dan waktu akses.",
             ],
@@ -390,6 +391,7 @@ const COPY: Record<
             ul: [
               "Foto bukti tugas dan rutinitas (termasuk foto sebelum dan sesudah) dihapus otomatis setelah 30 hari.",
               "Catatan percobaan masuk staf dihapus otomatis setelah 30 hari.",
+              "ID HP staf dihapus 7 hari setelah terakhir dipakai, jika HP itu tidak lagi terhubung ke rumah tangga.",
               "Data lainnya disimpan selama rumah tangga Anda memakai Miamus.",
               "Permintaan membuat rumah tangga yang tidak disetujui dihapus 30 hari setelah keputusan, bersama akun login Google yang dipakai untuk memintanya, kecuali akun itu sudah bergabung ke sebuah rumah tangga. Permintaan yang disetujui disimpan selama akun tersebut dipakai.",
               "Jika admin meminta rumah tangganya dihapus, atau siapa pun meminta datanya dihapus, kami menghapusnya dalam 30 hari, kecuali hukum mewajibkan kami menyimpannya. Salinan di cadangan (backup) penyedia kami terhapus sesuai jadwal normal mereka.",

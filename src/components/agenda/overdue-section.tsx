@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 
 const COPY = {
-  en: { title: "Overdue", hint: "Still not done from an earlier day" },
-  id: { title: "Terlambat", hint: "Belum selesai dari hari sebelumnya" },
+  en: { title: "From earlier", hint: "Not done yet" },
+  id: { title: "Belum selesai", hint: "Dari hari sebelumnya" },
 } as const;
 
 /**

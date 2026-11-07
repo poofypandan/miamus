@@ -24,30 +24,27 @@ import { ChoreCard } from "@/components/chores/chore-card";
 import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
-import { StockCheckPanel } from "@/components/staff/stock-check-panel";
+import { StaffShopping } from "@/components/shopping/staff-shopping";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
-import { AppHeader, HeaderNavLink } from "@/components/navigation/app-header";
+import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useLocationName } from "@/hooks/use-household-locations";
-import { dueStockItems } from "@/lib/inventory";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { LaunchCover } from "@/components/brand/brand-cover";
 import { TapHint } from "@/components/staff/tap-hint";
 import { CompletedSection } from "@/components/agenda/completed-section";
 import { isEntrySettled } from "@/lib/staff-agenda";
-import { useHouseholdNameState } from "@/hooks/use-household-name";
 import { PendingBar } from "@/components/shared/pending-bar";
 import { useScrollTopOnChange, useTabNavigation } from "@/hooks/use-tab-navigation";
 import { cn } from "@/lib/utils";
 
 export default function StaffPage() {
   const { loading, tenantReady, roleHydrated } = useHousehold();
-  const { ready: nameReady } = useHouseholdNameState();
   return (
     // Staff screens are Bahasa Indonesia, the shared primitives' own words
     // included (Phase 149).
@@ -63,7 +60,7 @@ export default function StaffPage() {
           it covers the gate's own first moments as well as the task list. */}
       <LaunchCover
         variant="staff"
-        ready={tenantReady && roleHydrated && !loading && nameReady}
+        ready={tenantReady && roleHydrated && !loading}
       />
     </UiLabelsProvider>
   );
@@ -81,7 +78,7 @@ const VIEWS = ["tugas", "stok"] as const;
 type StaffView = (typeof VIEWS)[number];
 
 function StaffTasks() {
-  const { inventoryItems, refresh } = useHousehold();
+  const { refresh } = useHousehold();
   const param = useSearchParams().get("view");
   const view: StaffView = VIEWS.includes(param as StaffView) ? (param as StaffView) : "tugas";
 
@@ -97,9 +94,6 @@ function StaffTasks() {
 
   useOfflineSync("id");
 
-  // Shown on the pill so a due count is visible from the task list, where
-  // staff spend most of the day.
-  const dueCount = useMemo(() => dueStockItems(inventoryItems).length, [inventoryItems]);
 
   // The same shell as dashboard/layout.tsx — column, shared AppHeader outside
   // the pull, content starting pt-3 below it — so switching between the two
@@ -130,7 +124,7 @@ function StaffTasks() {
           ariaLabel="Tampilan"
           segments={[
             { value: "tugas", label: "Tugas Hari Ini" },
-            { value: "stok", label: "Stok", badge: dueCount > 0 ? dueCount : undefined },
+            { value: "stok", label: "Belanja" },
           ]}
           value={activeView}
           onChange={setView}
@@ -146,7 +140,7 @@ function StaffTasks() {
           {/* Never remounted, so a view that suspends on first read keeps the
               other one on screen until it is complete (Phase 125). */}
           <Suspense fallback={null}>
-            {view === "tugas" ? <TasksView /> : <StockCheckPanel />}
+            {view === "tugas" ? <TasksView /> : <StaffShopping />}
           </Suspense>
         </div>
       </PullToRefresh>
@@ -278,9 +272,9 @@ function TasksView() {
         // before anything is photographed.
         action={
           entry.occurrence.task.assigned_to ? (
-            <TapHint urgent={entry.occurrence.overdue} />
+            <TapHint />
           ) : (
-            <TapHint label="Ketuk untuk ambil" icon={Hand} urgent={entry.occurrence.overdue} />
+            <TapHint label="Saya kerjakan" icon={Hand} />
           )
         }
       />
@@ -313,17 +307,17 @@ function TasksView() {
             {admittedPets.map((pet) => (
               <div
                 key={pet.id}
-                className="flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3"
+                className="flex flex-col gap-2 rounded-xl border bg-card p-3"
               >
-                <p className="flex items-center gap-1.5 text-sm font-medium text-indigo-900">
-                  <Stethoscope className="size-4 shrink-0" /> {pet.name} sedang rawat inap
+                <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+                  <Stethoscope className="size-4 shrink-0 text-muted-foreground" /> {pet.name} sedang dirawat di klinik
                 </p>
-                <p className="text-xs text-indigo-900/80">
-                  Jadwal makan dan pipisnya dijeda sampai dijemput.
+                <p className="text-xs text-muted-foreground">
+                  Jadwal makan dan Pipis & Pup-nya berhenti dulu sampai pulang.
                 </p>
                 <DischargeButton
                   pet={pet}
-                  label="Jemput dari Klinik"
+                  label="Sudah pulang dari klinik"
                   successMessage={`${pet.name} sudah pulang — jadwal aktif lagi`}
                   errorMessage="Gagal memperbarui status"
                 />
@@ -408,9 +402,7 @@ function HeaderIdentity() {
   // Still not access control: it hides a button. The dashboard itself is held
   // by the middleware, which sends anonymous sessions back to /staff.
   if (isHouseholdMember) {
-    return <HeaderNavLink href="/dashboard" switchTo="owner">
-        {ownerLocale === "id" ? "← Kelola" : "← Manage"}
-      </HeaderNavLink>;
+    return <ViewSwitch current="staff" locale={ownerLocale} />;
   }
   return <OnDutyBadge />;
 }

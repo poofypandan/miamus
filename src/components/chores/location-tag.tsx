@@ -24,7 +24,7 @@ export function LocationTag({
     <span
       className={cn(
         "flex min-w-0 items-center gap-1 text-xs font-medium",
-        muted ? "text-muted-foreground" : "text-amber-800",
+        muted ? "text-muted-foreground" : "text-gray-700",
         className
       )}
     >

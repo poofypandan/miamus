@@ -375,9 +375,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       <ChevronRight className="size-3.5" />
     </span>
   ) : isVet ? (
-    <TapHint label="Ketuk untuk check-in" icon={Stethoscope} urgent={anyOverdue} />
+    <TapHint label="Ketuk untuk check-in" icon={Stethoscope} />
   ) : (
-    <TapHint urgent={anyOverdue} />
+    <TapHint />
   );
 
   const row = (

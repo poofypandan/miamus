@@ -40,9 +40,19 @@ export function readCachedOwnerLocale(): OwnerLocale | null {
   }
 }
 
+/**
+ * The start screen's language on this phone (usePublicLocale). Kept here so
+ * an owner's account language can set it too.
+ */
+export const PUBLIC_LOCALE_KEY = "miamus.public-locale";
+
 export function writeCachedOwnerLocale(locale: OwnerLocale): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, locale);
+    // The phone's owner's language is also the start screen's (Phase 153):
+    // signed out, they still see the app in the language they chose. Not
+    // cleared on sign-out — it is the phone's preference, not the account's.
+    window.localStorage.setItem(PUBLIC_LOCALE_KEY, locale);
   } catch {
     // Private mode or storage full: the account still has the choice.
   }

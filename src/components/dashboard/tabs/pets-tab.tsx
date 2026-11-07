@@ -108,8 +108,8 @@ export function PetsTab() {
           icon={PawPrint}
           title={t("No pets yet", "Belum ada hewan")}
           description={t(
-            "Add your first pet to start their profile, daily routines and photo log. Everyone sees them in Action Mode straight away.",
-            "Tambahkan hewan pertama Anda untuk memulai profil, rutinitas harian dan log fotonya. Semua orang langsung melihatnya di Mode Kerja."
+            "Add your first pet to start their profile, daily routines and photos. Your staff see them straight away.",
+            "Tambahkan hewan pertama Anda untuk memulai profil, rutinitas harian dan fotonya. Staf Anda langsung melihatnya."
           )}
         >
           {canManagePets && (

@@ -13,13 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
@@ -29,31 +22,19 @@ import {
   CATEGORY_LABELS_EN,
   CATEGORY_LABELS_ID,
   INVENTORY_SCOPES,
-  INVENTORY_UNITS,
   SCOPE_CATEGORIES,
   SCOPE_LABELS_EN,
   SCOPE_LABELS_ID,
-  unitLabel,
 } from "@/lib/inventory";
 import type {
   InventoryCategory,
   InventoryItem,
   InventoryScope,
-  InventoryUnit,
 } from "@/types/database";
 
-// How often staff are asked to count the item on "Stok". The fresh/pantry
-// cadences of Phase 83B (3 and 14 days) sit either side of the weekly default.
-const CHECK_INTERVALS = [3, 7, 14, 30] as const;
-
-/** "2", "2.5", "2,5" (an Indonesian keyboard's decimal) — or null if not a number ≥ 0. */
-function parseAmount(raw: string): number | null {
-  const value = Number(raw.trim().replace(",", "."));
-  return raw.trim() !== "" && Number.isFinite(value) && value >= 0 ? value : null;
-}
-
 /**
- * Adding or editing an inventory item (Phase 110). Owner only: the staff view
+ * Adding or editing an item on the shopping list (Phase 110; name, shelf and
+ * photo only since Phase 154). Owner only: the staff view
  * never renders it, and the database refuses item edits from a staff device
  * regardless (migrations/099).
  *
@@ -82,10 +63,6 @@ export function InventoryItemForm({
   const [scope, setScope] = useState<InventoryScope>(defaultScope);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<InventoryCategory>(SCOPE_CATEGORIES[defaultScope][0]);
-  const [quantity, setQuantity] = useState("0");
-  const [unit, setUnit] = useState<InventoryUnit>("pcs");
-  const [threshold, setThreshold] = useState("1");
-  const [checkEvery, setCheckEvery] = useState<number>(7);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -102,10 +79,6 @@ export function InventoryItemForm({
       setScope(startScope);
       setName(item?.name ?? "");
       setCategory(item?.category ?? SCOPE_CATEGORIES[startScope][0]);
-      setQuantity(String(item?.quantity ?? 0));
-      setUnit(item?.unit ?? "pcs");
-      setThreshold(String(item?.min_threshold ?? 1));
-      setCheckEvery(item?.audit_frequency_days ?? 7);
       setPhotoUrl(item?.photo_url ?? null);
       setPhotoBusy(false);
       setSaving(false);
@@ -121,30 +94,26 @@ export function InventoryItemForm({
   }
 
   async function handleSave() {
-    const qty = parseAmount(quantity);
-    const min = parseAmount(threshold);
     if (!name.trim()) return void toast.error(t("Give the item a name", "Beri nama barangnya"));
-    if (qty === null) return void toast.error(t("Enter how many are in stock", "Masukkan jumlah stok"));
-    if (min === null) return void toast.error(t("Enter the low-stock threshold", "Masukkan batas stok menipis"));
 
     setSaving(true);
-    const input = {
-      scope,
-      name: name.trim(),
-      category,
-      quantity: qty,
-      unit,
-      min_threshold: min,
-      photo_url: photoUrl,
-      audit_frequency_days: checkEvery,
-    };
+    // No counts or thresholds since Phase 154 (a shopping list, not a
+    // ledger): an edit leaves those columns as they are, and a new item gets
+    // neutral values the database still requires.
+    const details = { scope, name: name.trim(), category, photo_url: photoUrl };
     try {
       if (item) {
-        await updateInventoryItem(item.id, input);
-        toast.success(t(`${input.name} updated`, `${input.name} diperbarui`));
+        await updateInventoryItem(item.id, details);
+        toast.success(t(`${details.name} updated`, `${details.name} diperbarui`));
       } else {
-        await addInventoryItem(input);
-        toast.success(t(`${input.name} added`, `${input.name} ditambahkan`));
+        await addInventoryItem({
+          ...details,
+          quantity: 0,
+          unit: "pcs",
+          min_threshold: 0,
+          audit_frequency_days: 30,
+        });
+        toast.success(t(`${details.name} added`, `${details.name} ditambahkan`));
       }
       onOpenChange(false);
     } catch (err) {
@@ -214,64 +183,6 @@ export function InventoryItemForm({
                   {categoryLabels[c]}
                 </Button>
               ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="inv-qty">{t("In stock", "Stok saat ini")}</Label>
-              <Input
-                id="inv-qty"
-                inputMode="decimal"
-                value={quantity}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => setQuantity(e.target.value)}
-                className="min-h-[48px] tabular-nums"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("Unit", "Satuan")}</Label>
-              <Select value={unit} onValueChange={(v) => setUnit(v as InventoryUnit)}>
-                <SelectTrigger className="min-h-[48px] w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {INVENTORY_UNITS.map((u) => (
-                    <SelectItem key={u} value={u}>
-                      {unitLabel(u, locale)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="inv-min">{t("Low at or below", "Menipis jika")}</Label>
-              <Input
-                id="inv-min"
-                inputMode="decimal"
-                value={threshold}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => setThreshold(e.target.value)}
-                className="min-h-[48px] tabular-nums"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("Count it every", "Hitung setiap")}</Label>
-              <Select value={String(checkEvery)} onValueChange={(v) => setCheckEvery(Number(v))}>
-                <SelectTrigger className="min-h-[48px] w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHECK_INTERVALS.map((days) => (
-                    <SelectItem key={days} value={String(days)}>
-                      {t(`${days} days`, `${days} hari`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
