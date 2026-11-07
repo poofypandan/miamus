@@ -103,7 +103,9 @@ function FoodForm({ item, locale, onDone }: { item: FoodItem | null; locale: Foo
       expiry_unknown: unknownDate,
       source,
       from_whom: who ? who.slice(0, FOOD_LIMITS.fromWhom) : null,
-      return_container: who ? returnContainer : false,
+      // Kept without a name too: "Kembalikan wadahnya" still reminds (Codex
+      // review, PR #10).
+      return_container: source === "gift" ? returnContainer : false,
       notes: notes.trim() ? notes.trim().slice(0, FOOD_LIMITS.notes) : null,
     };
     try {

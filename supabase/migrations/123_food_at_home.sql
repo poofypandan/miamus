@@ -353,6 +353,14 @@ begin
     ) p
     where p.url is not null
   ),
+  -- Food still listed, or finished less than a day ago (Undo), keeps its
+  -- photo whichever branch would otherwise take it (Codex review, PR #10).
+  food_kept as (
+    select (public.photo_object_ref(f.photo_url))[2] as object_name
+    from public.food_items f
+    where f.photo_url is not null
+      and (f.finished_at is null or f.finished_at >= food_cutoff)
+  ),
   task_due as (
     select o.name, (o.metadata->>'size')::bigint as size, o.created_at
     from due d
@@ -361,12 +369,7 @@ begin
       select 1 from permanent pm
       where pm.r is not null and pm.r[1] = 'household-logs' and pm.r[2] = d.object_name
     )
-  ),
-  food_kept as (
-    select (public.photo_object_ref(f.photo_url))[2] as object_name
-    from public.food_items f
-    where f.photo_url is not null
-      and (f.finished_at is null or f.finished_at >= food_cutoff)
+      and not exists (select 1 from food_kept k where k.object_name = d.object_name)
   ),
   -- Anything else that still needs the object protects it too (Codex review,
   -- PR #10): the folder is a convention, a reference is a fact. Permanent

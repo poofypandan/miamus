@@ -238,10 +238,20 @@ insert into storage.objects (bucket_id, name, created_at, metadata) values
   ('household-logs', '00000000-0000-0000-0000-0000000123f1/food/saving.webp',   now() - interval '1 hour', '{"size": 1}'),
   ('household-logs', '00000000-0000-0000-0000-0000000123f1/avatars/pet.webp',   now() - interval '5 days', '{"size": 1}'),
   ('household-logs', '00000000-0000-0000-0000-0000000123f1/food/also-pet.webp', now() - interval '5 days', '{"size": 1}'),
-  ('household-logs', '00000000-0000-0000-0000-0000000123f1/food/also-chore.webp', now() - interval '5 days', '{"size": 1}');
+  ('household-logs', '00000000-0000-0000-0000-0000000123f1/food/also-chore.webp', now() - interval '5 days', '{"size": 1}'),
+  ('household-logs', '00000000-0000-0000-0000-0000000123f1/chores/shared.webp', now() - interval '40 days', '{"size": 1}');
 insert into public.task_entities (household_id, entity_type, name, metadata) values
   ('00000000-0000-0000-0000-0000000123f1', 'pet', 'Mochi',
    '{"avatar_url": "http://x/storage/v1/object/public/household-logs/00000000-0000-0000-0000-0000000123f1/food/also-pet.webp"}');
+-- A photo an old, finished chore and a listed food share: the chore alone
+-- would let it go after 30 days; the food keeps it (Codex review).
+insert into public.household_tasks (household_id, title, photo_url, completed_at) values
+  ('00000000-0000-0000-0000-0000000123f1', 'Bersih kulkas',
+   'http://x/storage/v1/object/public/household-logs/00000000-0000-0000-0000-0000000123f1/chores/shared.webp',
+   now() - interval '40 days');
+insert into public.food_items (household_id, name, photo_url) values
+  ('00000000-0000-0000-0000-0000000123f1', 'Shared',
+   'http://x/storage/v1/object/public/household-logs/00000000-0000-0000-0000-0000000123f1/chores/shared.webp');
 insert into public.household_tasks (household_id, title, photo_url) values
   ('00000000-0000-0000-0000-0000000123f1', 'Masak',
    'http://x/storage/v1/object/public/household-logs/00000000-0000-0000-0000-0000000123f1/food/also-chore.webp');
@@ -271,7 +281,7 @@ create temp table due as
 select pg_temp.ok((select array_agg(name order by name) from due)
                   = array['00000000-0000-0000-0000-0000000123f1/food/finished.webp',
                           '00000000-0000-0000-0000-0000000123f1/food/orphan.webp'],
-  'due: food finished over a day ago, and an old photo nothing points at — not listed food, an Undo, a fresh upload, or a photo a pet or an unfinished chore still uses (Codex review)');
+  'due: food finished over a day ago, and an old photo nothing points at — not listed food, an Undo, a fresh upload, or a photo a pet, an unfinished chore or a listed food still uses (Codex review)');
 
 do $$ begin
   perform public.task_photos_due_for_pruning('wrong', 10);
