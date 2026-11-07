@@ -53,6 +53,7 @@ declare
   today date := (now() at time zone 'Asia/Jakarta')::date;
   household record;
   shown text;
+  named_count int;
   extra int;
   message_en text;
   message_id text;
@@ -68,10 +69,12 @@ begin
     group by f.household_id
   loop
     begin
-      -- Up to two names; photo-only food is counted, not named.
-      select string_agg(n, ', ') into shown
+      -- Up to two names; photo-only food is counted, not named. The count of
+      -- names shown comes from the rows, not from splitting the text: a name
+      -- may contain ", " (Codex review, PR #14).
+      select string_agg(n, ', '), count(*) into shown, named_count
       from (select n from unnest(household.names) as n where n <> '' limit 2) named;
-      extra := household.total - coalesce(array_length(string_to_array(shown, ', '), 1), 0);
+      extra := household.total - named_count;
 
       if shown is null then
         message_en := household.total || ' food' || case when household.total = 1 then '' else 's' end

@@ -28,7 +28,8 @@ insert into auth.users (id, instance_id, aud, role, email, is_anonymous, created
 insert into public.households (id, name, owner_auth_id) values
   ('00000000-0000-0000-0000-0000000124f1', 'Rumah A', '00000000-0000-0000-0000-0000000124a1'),
   ('00000000-0000-0000-0000-0000000124f2', 'Rumah B', '00000000-0000-0000-0000-0000000124a1'),
-  ('00000000-0000-0000-0000-0000000124f3', 'Rumah C', '00000000-0000-0000-0000-0000000124a1');
+  ('00000000-0000-0000-0000-0000000124f3', 'Rumah C', '00000000-0000-0000-0000-0000000124a1'),
+  ('00000000-0000-0000-0000-0000000124f4', 'Rumah D', '00000000-0000-0000-0000-0000000124a1');
 
 -- As the cron job sees "today": Jakarta's calendar day.
 create temp table d as select (now() at time zone 'Asia/Jakarta')::date as today;
@@ -47,10 +48,14 @@ from (values
   -- B: only a photo-only food tomorrow.
   ('00000000-0000-0000-0000-0000000124f2'::uuid, null, 'http://x/q.webp', 1, null),
   -- C: nothing due.
-  ('00000000-0000-0000-0000-0000000124f3'::uuid, 'Kerupuk', null, 30, null)
+  ('00000000-0000-0000-0000-0000000124f3'::uuid, 'Kerupuk', null, 30, null),
+  -- D: a comma inside a name must not be counted as two foods.
+  ('00000000-0000-0000-0000-0000000124f4'::uuid, 'Nasi, ayam', null, 0, null),
+  ('00000000-0000-0000-0000-0000000124f4'::uuid, 'Rendang', null, 1, null),
+  ('00000000-0000-0000-0000-0000000124f4'::uuid, 'Soto', null, 1, null)
 ) v(h, n, p, o, oc);
 
-select pg_temp.ok(public.notify_food_expiring() = 2, 'two households have food due; the third is left alone');
+select pg_temp.ok(public.notify_food_expiring() = 3, 'three households have food due; the one with nothing due is left alone');
 select pg_temp.ok((select body_en = 'To eat soon: Rendang, Lapis legit and 2 more.'
                           and body_id = 'Perlu segera dimakan: Rendang, Lapis legit, dan 2 lagi.'
                           and title_id = 'Makanan perlu segera dimakan'
@@ -61,6 +66,9 @@ select pg_temp.ok((select body_en = '1 food to eat today or tomorrow.'
                           and body_id = '1 makanan perlu dimakan hari ini atau besok.'
                      from pg_temp.pushes where household = '00000000-0000-0000-0000-0000000124f2' and tag like 'food-soon-%'),
   'photo-only food is counted, not named');
+select pg_temp.ok((select body_en = 'To eat soon: Nasi, ayam, Rendang and 1 more.'
+                     from pg_temp.pushes where household = '00000000-0000-0000-0000-0000000124f4' and tag like 'food-soon-%'),
+  'a comma inside a name is not counted as two foods (Codex review)');
 
 -- Grants and schedule.
 select pg_temp.ok(not has_function_privilege(r, 'public.notify_food_expiring()', 'execute'), r || ' cannot call it')

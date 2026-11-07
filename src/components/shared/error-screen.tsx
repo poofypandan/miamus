@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CircleAlert, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isStaffPath } from "@/components/shared/not-found-screen";
 import { readCachedOwnerLocale, type OwnerLocale } from "@/lib/owner-locale";
 
 /**
@@ -15,11 +17,9 @@ import { readCachedOwnerLocale, type OwnerLocale } from "@/lib/owner-locale";
  */
 export function ErrorScreen({ reset }: { reset: () => void }) {
   const pathname = usePathname() ?? "/";
-  const [locale, setLocale] = useState<OwnerLocale>(
-    pathname.startsWith("/staff") || pathname.startsWith("/join") ? "id" : "en"
-  );
+  const [locale, setLocale] = useState<OwnerLocale>(isStaffPath(pathname) ? "id" : "en");
   useEffect(() => {
-    if (pathname.startsWith("/staff") || pathname.startsWith("/join")) return;
+    if (isStaffPath(pathname)) return;
     const cached = readCachedOwnerLocale();
     if (cached) setLocale(cached);
   }, [pathname]);
@@ -43,9 +43,11 @@ export function ErrorScreen({ reset }: { reset: () => void }) {
       <Button className="min-h-12 w-full max-w-xs rounded-xl" onClick={reset}>
         <RotateCcw /> {id ? "Coba lagi" : "Try again"}
       </Button>
-      <a href={home} className="min-h-11 text-sm font-medium text-gray-700">
+      {/* Client-side, so going back to the start never reloads the app
+          (Codex review, PR #14). */}
+      <Link href={home} className="flex min-h-11 items-center text-sm font-medium text-gray-700">
         {id ? "Kembali ke awal" : "Back to the start"}
-      </a>
+      </Link>
     </div>
   );
 }
