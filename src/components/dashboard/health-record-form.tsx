@@ -16,8 +16,16 @@ import {
 } from "@/components/ui/select";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { RecordType } from "@/types/database";
+
+const RECORD_TYPE_IDS: Record<string, string> = {
+  vaccine: "Vaksin",
+  weight: "Berat Badan",
+  vet: "Kunjungan Dokter",
+  medication: "Obat",
+};
 
 const RECORD_TYPES: { value: RecordType; label: string }[] = [
   { value: "vaccine", label: "Vaccine" },
@@ -28,6 +36,8 @@ const RECORD_TYPES: { value: RecordType; label: string }[] = [
 
 export function HealthRecordForm({ petId, onSaved }: { petId: string; onSaved?: () => void }) {
   const { createMedicalRecord } = useHousehold();
+  const locale = useOwnerLocale();
+  const t = useT();
   const [recordType, setRecordType] = useState<RecordType | "">("");
   const [title, setTitle] = useState("");
   const [recordDate, setRecordDate] = useState(() => formatDateLocal(new Date()));
@@ -42,11 +52,11 @@ export function HealthRecordForm({ petId, onSaved }: { petId: string; onSaved?: 
 
   async function handleSubmit() {
     if (!recordType || !title) {
-      toast.error("Fill in record type and title");
+      toast.error(t("Fill in record type and title", "Isi jenis catatan dan judulnya"));
       return;
     }
     if (showWeight && !value) {
-      toast.error("Enter a weight");
+      toast.error(t("Enter a weight", "Masukkan berat badan"));
       return;
     }
     setSubmitting(true);
@@ -61,11 +71,11 @@ export function HealthRecordForm({ petId, onSaved }: { petId: string; onSaved?: 
         document_photo_url: photoUrl,
         notes: notes || null,
       });
-      toast.success("Record added");
+      toast.success(t("Record added", "Catatan ditambahkan"));
       onSaved?.();
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add record");
+      toast.error(t("Failed to add record", "Catatan gagal ditambahkan"));
     } finally {
       setSubmitting(false);
     }
@@ -74,15 +84,15 @@ export function HealthRecordForm({ petId, onSaved }: { petId: string; onSaved?: 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label>Record type</Label>
+        <Label>{t("Record type", "Jenis catatan")}</Label>
         <Select value={recordType} onValueChange={(v) => setRecordType(v as RecordType)}>
           <SelectTrigger className="min-h-[48px] w-full">
-            <SelectValue placeholder="Select type" />
+            <SelectValue placeholder={t("Select type", "Pilih jenis")} />
           </SelectTrigger>
           <SelectContent>
-            {RECORD_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
+            {RECORD_TYPES.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {locale === "id" ? RECORD_TYPE_IDS[type.value] : type.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -90,22 +100,26 @@ export function HealthRecordForm({ petId, onSaved }: { petId: string; onSaved?: 
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label>Title</Label>
+        <Label>{t("Title", "Judul")}</Label>
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder={showWeight ? "e.g. Monthly weigh-in" : "e.g. Rabies vaccine"}
+          placeholder={
+            showWeight
+              ? t("e.g. Monthly weigh-in", "mis. Timbang bulanan")
+              : t("e.g. Rabies vaccine", "mis. Vaksin rabies")
+          }
         />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div className="flex flex-col gap-1.5">
-          <Label>Date</Label>
+          <Label>{t("Date", "Tanggal")}</Label>
           <Input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)} />
         </div>
         {showWeight && (
           <div className="flex flex-col gap-1.5">
-            <Label>Weight (kg)</Label>
+            <Label>{t("Weight (kg)", "Berat (kg)")}</Label>
             <Input
               type="number"
               inputMode="decimal"
@@ -113,13 +127,13 @@ export function HealthRecordForm({ petId, onSaved }: { petId: string; onSaved?: 
               min="0"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="e.g. 4.2"
+              placeholder={t("e.g. 4.2", "mis. 4,2")}
             />
           </div>
         )}
         {showNextDue && (
           <div className="flex flex-col gap-1.5">
-            <Label>Next due date</Label>
+            <Label>{t("Next due date", "Jatuh tempo berikutnya")}</Label>
             <Input
               type="date"
               value={nextDueDate}
@@ -130,27 +144,30 @@ export function HealthRecordForm({ petId, onSaved }: { petId: string; onSaved?: 
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label>Notes</Label>
+        <Label>{t("Notes", "Catatan")}</Label>
         <Textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Optional notes"
+          placeholder={t("Optional notes", "Catatan opsional")}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label>Certificate / invoice photo (optional)</Label>
+        <Label>{t("Certificate / invoice photo (optional)", "Foto sertifikat / nota (opsional)")}</Label>
         <PhotoPicker
           pathPrefix={`medical/${petId}`}
           value={photoUrl}
           onChange={setPhotoUrl}
-          label="Upload photo"
+          label={t("Upload photo", "Unggah foto")}
+          busyLabel={t("Uploading...", "Mengunggah...")}
+          locale={locale}
+          errorMessage={t("Failed to upload photo", "Foto gagal diunggah")}
         />
       </div>
 
       <Button onClick={handleSubmit} disabled={submitting} className="min-h-[48px] w-full">
         {submitting ? <Loader2 className="animate-spin" /> : null}
-        Save record
+        {t("Save record", "Simpan catatan")}
       </Button>
     </div>
   );

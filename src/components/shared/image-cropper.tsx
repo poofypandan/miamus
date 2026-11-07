@@ -27,12 +27,32 @@ import { cropToSquareFile, type CropArea } from "@/lib/image-crop";
  * flow opts in today, and the obvious next use is a staff proof photo, which
  * would want a dictionary rather than a rewrite.
  */
+const COPY = {
+  en: {
+    failed: "Could not crop that photo",
+    hint: "Drag to move, pinch or use the slider to zoom. The square is what gets saved.",
+    zoom: "Zoom",
+    cancel: "Cancel",
+    use: "Use photo",
+  },
+  id: {
+    failed: "Foto gagal dipotong",
+    hint: "Geser untuk memindahkan, cubit atau pakai slider untuk memperbesar. Kotak inilah yang disimpan.",
+    zoom: "Perbesar",
+    cancel: "Batal",
+    use: "Pakai foto",
+  },
+} as const;
+
 export function ImageCropper({
   file,
   url,
   onCancel,
   onCropped,
+  locale = "en",
 }: {
+  /** The owner's language (Phase 149); staff screens never crop. */
+  locale?: "en" | "id";
   /** A file the user just chose. Exactly one of `file` or `url`. */
   file?: File | null;
   /**
@@ -47,6 +67,7 @@ export function ImageCropper({
   onCancel: () => void;
   onCropped: (cropped: File) => void;
 }) {
+  const t = COPY[locale];
   const [src, setSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -81,7 +102,7 @@ export function ImageCropper({
       onCropped(await cropToSquareFile(src, area, file?.name ?? "avatar.jpg"));
     } catch (err) {
       console.error(err);
-      toast.error("Could not crop that photo");
+      toast.error(t.failed);
       setBusy(false);
     }
     // Deliberately no setBusy(false) on success: the parent unmounts this and
@@ -111,12 +132,12 @@ export function ImageCropper({
       </div>
 
       <p className="px-1 text-[11px] text-muted-foreground">
-        Drag to move, pinch or use the slider to zoom. The square is what gets saved.
+        {t.hint}
       </p>
 
       <label className="flex items-center gap-3 px-1">
         <ZoomIn className="size-4 shrink-0 text-muted-foreground" />
-        <span className="sr-only">Zoom</span>
+        <span className="sr-only">{t.zoom}</span>
         {/* A native range input rather than another UI dependency: one
             control, already accessible and already touch-friendly. */}
         <input
@@ -138,7 +159,7 @@ export function ImageCropper({
           onClick={onCancel}
           disabled={busy}
         >
-          <X /> Cancel
+          <X /> {t.cancel}
         </Button>
         <Button
           type="button"
@@ -146,7 +167,7 @@ export function ImageCropper({
           onClick={confirm}
           disabled={busy || !area}
         >
-          {busy ? <Loader2 className="animate-spin" /> : <Check />} Use photo
+          {busy ? <Loader2 className="animate-spin" /> : <Check />} {t.use}
         </Button>
       </div>
     </div>

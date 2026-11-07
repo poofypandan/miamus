@@ -639,6 +639,77 @@ export interface Database {
         Args: Record<string, never>;
         Returns: string[];
       };
+      // Household approval (migrations/113, Phase 148). See lib/household-access.
+      is_platform_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      my_household_access: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+      request_household_access: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+      // Platform admins only: pending requests, then the last 30 days' decisions.
+      list_household_access_requests: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          full_name: string | null;
+          email: string | null;
+          status: string;
+          requested_at: string;
+          decided_at: string | null;
+        }[];
+      };
+      decide_household_access: {
+        Args: { p_user_id: string; p_approve: boolean };
+        Returns: undefined;
+      };
+      // The household and its owner membership in one transaction.
+      create_household: {
+        Args: { p_name: string };
+        Returns: string;
+      };
+      my_locale: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      set_my_locale: {
+        Args: { p_locale: string };
+        Returns: string;
+      };
+      // Phase 151, migrations/115.
+      check_staff_pin: {
+        Args: { p_staff_id: string; p_pin: string };
+        Returns: Record<string, unknown>;
+      };
+      house_code_roster: {
+        Args: { p_code: string };
+        Returns: { id: string; name: string; has_pin: boolean }[];
+      };
+      sign_in_with_house_code: {
+        Args: { p_code: string; p_staff_id: string; p_pin: string };
+        Returns: Record<string, unknown>;
+      };
+      my_house_code: {
+        Args: { p_household_id: string };
+        Returns: string | null;
+      };
+      rotate_house_code: {
+        Args: { p_household_id: string };
+        Returns: string;
+      };
+      list_linked_phones: {
+        Args: { p_household_id: string };
+        Returns: { id: string; linked_at: string; last_seen_at: string }[];
+      };
+      remove_linked_phone: {
+        Args: { p_household_id: string; p_device_id: string };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

@@ -360,7 +360,38 @@ export interface DataProvider {
   restoreStaffProfile(id: string): Promise<StaffProfile>;
   /** Checks a PIN against its hash (migrations/095). */
   verifyStaffPin(id: string, pin: string): Promise<boolean>;
+  /** The same check with the reason when it fails: tries left, or locked (migrations/115). */
+  checkStaffPin(id: string, pin: string): Promise<PinCheck>;
+
+  // House code (Phase 151, migrations/115).
+  /** The names behind a house code; empty for a wrong code. Throws "too_many_attempts". */
+  houseCodeRoster(code: string): Promise<HouseCodePerson[]>;
+  /** Code, name and PIN together; on "ok" this phone is linked to the household. */
+  signInWithHouseCode(code: string, staffId: string, pin: string): Promise<HouseCodeSignIn>;
+  /** Admins only, for the active household. */
+  getHouseCode(): Promise<string | null>;
+  rotateHouseCode(): Promise<string>;
+  listLinkedPhones(): Promise<LinkedPhone[]>;
+  removeLinkedPhone(id: string): Promise<boolean>;
 }
+
+/** A PIN check's answer (migrations/115). */
+export type PinCheck =
+  | { status: "ok" }
+  | { status: "wrong_pin"; attempts_left: number }
+  | { status: "locked"; locked_until: string }
+  | { status: "no_pin" };
+
+export type HouseCodePerson = { id: string; name: string; has_pin: boolean };
+
+export type HouseCodeSignIn =
+  | Exclude<PinCheck, { status: "ok" }>
+  | { status: "ok"; household_id: string }
+  | { status: "wrong_code" }
+  | { status: "too_many_attempts" };
+
+/** A staff phone linked to the household (device_sessions). */
+export type LinkedPhone = { id: string; linked_at: string; last_seen_at: string };
 
 /** An admin's answer to a leave request (Phase 140). */
 export type LeaveDecision =

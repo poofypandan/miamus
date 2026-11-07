@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loader2, Pill, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useToday } from "@/hooks/use-today";
 import {
   medicationCourseAlerts,
@@ -18,9 +19,9 @@ const DISMISSED_KEY = "miamus_dismissed_course_alerts";
 
 /** How long to extend or restart by. */
 const LENGTHS = [
-  { days: 3, label: "3 days" },
-  { days: 7, label: "1 week" },
-  { days: 14, label: "2 weeks" },
+  { days: 3, en: "3 days", id: "3 hari" },
+  { days: 7, en: "1 week", id: "1 minggu" },
+  { days: 14, en: "2 weeks", id: "2 minggu" },
 ] as const;
 
 /**
@@ -58,8 +59,8 @@ function useDismissed() {
   return { dismissed, dismiss };
 }
 
-function shortDate(key: string): string {
-  return new Date(`${key}T00:00:00`).toLocaleDateString("en-US", {
+function shortDate(key: string, locale: "en" | "id"): string {
+  return new Date(`${key}T00:00:00`).toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -78,12 +79,13 @@ function shortDate(key: string): string {
  * Red family, as everything about a dog's health is in the Agenda
  * (agenda-tones.ts). Renders nothing when there is nothing to ask.
  *
- * Owner-facing, so English.
+ * Owner-facing: English or Bahasa Indonesia, as the owner chose (Phase 149).
  */
 export function MedicationCourseAlerts() {
   const { schedules, pets } = useHousehold();
   const today = formatDateLocal(useToday());
   const { dismissed, dismiss } = useDismissed();
+  const t = useT();
 
   const alerts = useMemo(
     () =>
@@ -106,7 +108,7 @@ export function MedicationCourseAlerts() {
         id="course-alerts-title"
         className="flex items-center gap-1.5 text-sm font-semibold text-red-950"
       >
-        <Pill className="size-4 text-red-600" /> Medicine courses
+        <Pill className="size-4 text-red-600" /> {t("Medicine courses", "Pengobatan")}
       </h2>
       <div className="flex flex-col divide-y divide-red-200/70">
         {alerts.map((alert) => (
@@ -132,25 +134,40 @@ function CourseAlertRow({
   onDismiss: () => void;
 }) {
   const { updateSchedule, createSchedulesBatch } = useHousehold();
+  const locale = useOwnerLocale();
+  const t = useT();
+  const day = (key: string) => shortDate(key, locale);
   const [choosing, setChoosing] = useState(false);
   const [busy, setBusy] = useState(false);
   const running = alert.kind === "ending";
   const doses = alert.courses.flatMap((c) => c.schedules);
-  const medicines = alert.courses.length === 1 ? alert.courses[0].label : `${alert.courses.length} medicines`;
+  const medicines =
+    alert.courses.length === 1
+      ? alert.courses[0].label
+      : t(`${alert.courses.length} medicines`, `${alert.courses.length} obat`);
 
   const status =
     alert.kind === "ending"
       ? alert.daysLeft === 0
-        ? "Last dose today"
+        ? t("Last dose today", "Dosis terakhir hari ini")
         : alert.daysLeft === 1
-          ? "Last dose tomorrow"
-          : `Last dose ${shortDate(alert.endDate)} · ${alert.daysLeft} days left`
+          ? t("Last dose tomorrow", "Dosis terakhir besok")
+          : t(
+              `Last dose ${day(alert.endDate)} · ${alert.daysLeft} days left`,
+              `Dosis terakhir ${day(alert.endDate)} · sisa ${alert.daysLeft} hari`
+            )
       : alert.kind === "ended"
         ? alert.daysAgo === 1
-          ? "Ended yesterday"
-          : `Ended ${shortDate(alert.endDate)} · ${alert.daysAgo} days ago`
+          ? t("Ended yesterday", "Selesai kemarin")
+          : t(
+              `Ended ${day(alert.endDate)} · ${alert.daysAgo} days ago`,
+              `Selesai ${day(alert.endDate)} · ${alert.daysAgo} hari lalu`
+            )
         : // Approved after its own last day, so created already over.
-          `Never ran — its last day (${shortDate(alert.endDate)}) was before it started (${shortDate(alert.courses[0].startDate)})`;
+          t(
+            `Never ran — its last day (${day(alert.endDate)}) was before it started (${day(alert.courses[0].startDate)})`,
+            `Tidak pernah berjalan — hari terakhirnya (${day(alert.endDate)}) sebelum tanggal mulai (${day(alert.courses[0].startDate)})`
+          );
 
   async function apply(days: number) {
     setBusy(true);
@@ -160,7 +177,12 @@ function CourseAlertRow({
         // between was ever unscheduled.
         const newEnd = shiftDay(alert.endDate, days);
         for (const dose of doses) await updateSchedule(dose.id, { expires_at: newEnd });
-        toast.success(`${medicines} for ${alert.petName} extended to ${shortDate(newEnd)}`);
+        toast.success(
+          t(
+            `${medicines} for ${alert.petName} extended to ${day(newEnd)}`,
+            `${medicines} untuk ${alert.petName} diperpanjang sampai ${day(newEnd)}`
+          )
+        );
       } else {
         // Already stopped, so new rows from today — never the old ones
         // stretched. Extending a course that ended on the 19th would mark the
@@ -180,12 +202,21 @@ function CourseAlertRow({
             expires_at: newEnd,
           }))
         );
-        toast.success(`${medicines} for ${alert.petName} restarted, through ${shortDate(newEnd)}`);
+        toast.success(
+          t(
+            `${medicines} for ${alert.petName} restarted, through ${day(newEnd)}`,
+            `${medicines} untuk ${alert.petName} dimulai lagi, sampai ${day(newEnd)}`
+          )
+        );
       }
       setChoosing(false);
     } catch (err) {
       console.error(err);
-      toast.error(running ? "Couldn't extend the course" : "Couldn't restart the course");
+      toast.error(
+        running
+          ? t("Couldn't extend the course", "Pengobatan gagal diperpanjang")
+          : t("Couldn't restart the course", "Pengobatan gagal dimulai lagi")
+      );
     } finally {
       setBusy(false);
     }
@@ -202,7 +233,7 @@ function CourseAlertRow({
             {alert.courses.length > 1 && (
               <span className="font-normal text-muted-foreground">
                 {" "}
-                · {alert.courses.length} medicines
+                · {t(`${alert.courses.length} medicines`, `${alert.courses.length} obat`)}
               </span>
             )}
           </span>
@@ -229,13 +260,20 @@ function CourseAlertRow({
               className="min-h-[36px] bg-white"
               onClick={() => setChoosing(true)}
             >
-              {running ? "Extend" : alert.kind === "never_ran" ? "Start now" : "Restart"}
+              {running
+                ? t("Extend", "Perpanjang")
+                : alert.kind === "never_ran"
+                  ? t("Start now", "Mulai sekarang")
+                  : t("Restart", "Mulai lagi")}
             </Button>
             {!running && (
               <button
                 type="button"
                 onClick={onDismiss}
-                aria-label={`Dismiss — ${alert.petName}'s course was meant to end`}
+                aria-label={t(
+                  `Dismiss — ${alert.petName}'s course was meant to end`,
+                  `Tutup — pengobatan ${alert.petName} memang sudah selesai`
+                )}
                 className="flex size-9 items-center justify-center rounded-lg text-muted-foreground active:bg-red-100"
               >
                 <X className="size-4" />
@@ -248,9 +286,11 @@ function CourseAlertRow({
       {choosing && (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs text-muted-foreground">
-            {running ? "Add" : "Run for"}
+            {running ? t("Add", "Tambah") : t("Run for", "Jalankan selama")}
           </span>
-          {LENGTHS.map(({ days, label }) => (
+          {LENGTHS.map(({ days, ...names }) => {
+            const label = names[locale];
+            return (
             <Button
               key={days}
               size="sm"
@@ -260,7 +300,8 @@ function CourseAlertRow({
             >
               {running ? `+${label}` : label}
             </Button>
-          ))}
+            );
+          })}
           <Button
             variant="ghost"
             size="sm"
@@ -268,7 +309,7 @@ function CourseAlertRow({
             disabled={busy}
             onClick={() => setChoosing(false)}
           >
-            {busy ? <Loader2 className="animate-spin" /> : "Cancel"}
+            {busy ? <Loader2 className="animate-spin" /> : t("Cancel", "Batal")}
           </Button>
         </div>
       )}

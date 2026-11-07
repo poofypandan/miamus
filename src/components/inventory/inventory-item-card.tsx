@@ -10,6 +10,7 @@ import {
   CATEGORY_LABELS_EN,
   CATEGORY_LABELS_ID,
   formatQuantity,
+  unitLabel,
   isLowStock,
   isOutOfStock,
   stepFor,
@@ -134,7 +135,7 @@ export function InventoryItemCard({
         >
           {out ? t.out : low ? t.low : null}
           {(out || low) && " · "}
-          {t.min} {formatQuantity(item.min_threshold)} {item.unit}
+          {t.min} {formatQuantity(item.min_threshold, lang)} {unitLabel(item.unit, lang)}
         </p>
 
         <div className="flex shrink-0 items-center gap-1">
@@ -150,8 +151,8 @@ export function InventoryItemCard({
             aria-live="polite"
             className="min-w-16 text-center text-sm font-semibold tabular-nums"
           >
-            {formatQuantity(item.quantity)}{" "}
-            <span className="font-normal text-muted-foreground">{item.unit}</span>
+            {formatQuantity(item.quantity, lang)}{" "}
+            <span className="font-normal text-muted-foreground">{unitLabel(item.unit, lang)}</span>
           </span>
           <StepButton label={t.more(name)} onClick={() => adjustInventoryQuantity(item.id, step)}>
             <Plus className="size-4" />

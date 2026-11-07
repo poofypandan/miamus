@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { RefreshCw, X } from "lucide-react";
 import { useVersionCheck } from "@/hooks/use-version-check";
+import { screenLocale } from "@/lib/owner-locale";
 
 const TOAST_ID = "miamus-update-available";
 
@@ -18,17 +19,18 @@ const TOAST_ID = "miamus-update-available";
  * would lose it. Tapping is the reload. Dismissing only hides it until the
  * app next comes back to the foreground, since the tab is still stale.
  *
- * Indonesian everywhere but the owner dashboard, which is English.
+ * In the owner's chosen language on owner screens, Indonesian everywhere else
+ * (Phase 149; see screenLocale).
  */
 export function UpdatePrompt() {
   const updateAvailable = useVersionCheck();
-  const owner = usePathname().startsWith("/dashboard");
+  const lang = screenLocale(usePathname());
 
   useEffect(() => {
     if (!updateAvailable) return;
 
-    const label = owner ? "Update available. Tap to reload." : "Pembaruan tersedia. Ketuk untuk memuat ulang.";
-    const dismissLabel = owner ? "Dismiss" : "Tutup";
+    const label = lang === "en" ? "Update available. Tap to reload." : "Pembaruan tersedia. Ketuk untuk memuat ulang.";
+    const dismissLabel = lang === "en" ? "Dismiss" : "Tutup";
 
     function show() {
       toast.custom(
@@ -62,7 +64,7 @@ export function UpdatePrompt() {
     }
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [updateAvailable, owner]);
+  }, [updateAvailable, lang]);
 
   return null;
 }

@@ -17,6 +17,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { createResource } from "@/lib/resource";
 import { supabase } from "@/lib/supabase/client";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { DATE_LOCALE } from "@/lib/owner-locale";
 
 interface Member {
   user_id: string;
@@ -37,7 +39,7 @@ interface Member {
  * caller's membership themselves, so this component is a view of a decision
  * the database makes, not the decision itself.
  *
- * Owner-facing, so entirely English per the Phase 46 language boundary.
+ * Owner-facing, in the language the owner chose (Phase 149).
  */
 // A Suspense resource (Phase 125, lib/resource): the Access tab switches in
 // with its member list already drawn, rather than a skeleton that becomes a
@@ -53,6 +55,8 @@ export function HouseholdMembersPanel() {
   const { data: members, failed, reload: load } = useMembers();
   const [pending, setPending] = useState<Member | null>(null);
   const [removing, setRemoving] = useState(false);
+  const locale = useOwnerLocale();
+  const t = useT();
 
   async function confirmRemove() {
     if (!pending || !supabase) return;
@@ -62,12 +66,12 @@ export function HouseholdMembersPanel() {
         p_user_id: pending.user_id,
       });
       if (error) throw error;
-      toast.success(`${pending.email} no longer has access`);
+      toast.success(t(`${pending.email} no longer has access`, `${pending.email} tidak lagi punya akses`));
       setPending(null);
       await load();
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't remove this person");
+      toast.error(t("Couldn't remove this person", "Orang ini gagal dihapus"));
     } finally {
       setRemoving(false);
     }
@@ -75,15 +79,20 @@ export function HouseholdMembersPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">Admins</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t("Admins", "Admin")}</h2>
       <p className="-mt-1 text-xs text-muted-foreground">
-        People who sign in with Google and can use Manage. Everyone who signs in with a PIN
-        appears under People &amp; PINs.
+        {t(
+          "People who sign in with Google and can use Manage. Everyone who signs in with a PIN appears under People & PINs.",
+          "Orang yang masuk dengan Google dan bisa mengelola. Semua yang masuk dengan PIN ada di bagian Orang & PIN."
+        )}
       </p>
 
       {failed ? (
         <p className="text-sm text-destructive">
-          Couldn&apos;t load the member list. Check your connection and reload.
+          {t(
+            "Couldn't load the member list. Check your connection and reload.",
+            "Daftar anggota gagal dimuat. Periksa koneksi lalu muat ulang."
+          )}
         </p>
       ) : members === null ? (
         <Skeleton className="h-24 w-full rounded-xl" />
@@ -99,7 +108,8 @@ export function HouseholdMembersPanel() {
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm font-medium">{member.email}</span>
                   <span className="text-xs text-muted-foreground">
-                    Joined {new Date(member.joined_at).toLocaleDateString("en-US", {
+                    {t("Joined", "Bergabung")}{" "}
+                    {new Date(member.joined_at).toLocaleDateString(DATE_LOCALE[locale], {
                       month: "short",
                       day: "numeric",
                     })}
@@ -108,12 +118,12 @@ export function HouseholdMembersPanel() {
 
                 {member.is_self && (
                   <Badge variant="secondary" className="shrink-0 text-[10px]">
-                    You
+                    {t("You", "Anda")}
                   </Badge>
                 )}
                 {member.is_founder && !member.is_self && (
                   <Badge variant="secondary" className="shrink-0 text-[10px]">
-                    Founder
+                    {t("Founder", "Pemilik")}
                   </Badge>
                 )}
 
@@ -126,9 +136,9 @@ export function HouseholdMembersPanel() {
                     size="sm"
                     className="min-h-[36px] shrink-0 text-destructive"
                     onClick={() => setPending(member)}
-                    aria-label={`Remove ${member.email}`}
+                    aria-label={t(`Remove ${member.email}`, `Hapus ${member.email}`)}
                   >
-                    <UserMinus /> Remove
+                    <UserMinus /> {t("Remove", "Hapus")}
                   </Button>
                 )}
               </div>
@@ -140,15 +150,17 @@ export function HouseholdMembersPanel() {
       <Dialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Remove access?</DialogTitle>
+            <DialogTitle>{t("Remove access?", "Hapus akses?")}</DialogTitle>
             <DialogDescription>
-              {pending?.email} will lose access to this household immediately. Their phone keeps
-              working as a PIN device if it has its own invite.
+              {t(
+                `${pending?.email ?? ""} will lose access to this household immediately. Their phone keeps working as a PIN device if it has its own invite.`,
+                `${pending?.email ?? ""} langsung kehilangan akses ke rumah ini. HP-nya tetap bisa dipakai sebagai perangkat PIN jika punya undangan sendiri.`
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" className="min-h-[44px]" onClick={() => setPending(null)}>
-              Cancel
+              {t("Cancel", "Batal")}
             </Button>
             <Button
               variant="destructive"
@@ -156,7 +168,7 @@ export function HouseholdMembersPanel() {
               disabled={removing}
               onClick={confirmRemove}
             >
-              {removing ? <Loader2 className="animate-spin" /> : <UserMinus />} Remove
+              {removing ? <Loader2 className="animate-spin" /> : <UserMinus />} {t("Remove", "Hapus")}
             </Button>
           </DialogFooter>
         </DialogContent>

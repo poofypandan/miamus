@@ -32,6 +32,8 @@ const COPY = {
     copyFailed: "Couldn't copy to the clipboard",
     emptyTitle: (scope: InventoryScope) =>
       scope === "pet" ? "No pet supplies yet" : "No home supplies yet",
+    // English is only ever the owner's (staff screens are Indonesian), so it
+    // has no staff variant.
     empty: (scope: InventoryScope) =>
       scope === "pet"
         ? "Tap Add item for the dog food, supplies and medicine this household keeps."
@@ -40,12 +42,21 @@ const COPY = {
   id: {
     scopes: SCOPE_LABELS_ID,
     aria: "Inventaris",
-    add: "",
-    copy: "",
-    copied: () => "",
-    copyFailed: "",
-    emptyTitle: () => "Belum ada barang",
-    empty: () => "Admin belum menambahkan barang di sini.",
+    // Read by an owner who chose Bahasa Indonesia (Phase 149): the staff
+    // view never renders the Add or shopping-list controls.
+    add: "Tambah barang",
+    copy: "Salin daftar belanja",
+    copied: (n: number) => `Daftar belanja disalin — ${n} barang`,
+    copyFailed: "Gagal menyalin ke clipboard",
+    emptyTitle: (scope: InventoryScope) =>
+      scope === "pet" ? "Belum ada perlengkapan hewan" : "Belum ada perlengkapan rumah",
+    // Staff: wait for an admin. An Indonesian-speaking owner: add it yourself.
+    empty: (scope: InventoryScope, canManage: boolean) =>
+      !canManage
+        ? "Admin belum menambahkan barang di sini."
+        : scope === "pet"
+          ? "Ketuk Tambah barang untuk makanan anjing, perlengkapan dan obat yang disimpan di rumah ini."
+          : "Ketuk Tambah barang untuk makanan segar, bahan pokok dan perlengkapan rumah yang Anda simpan.",
   },
 } as const;
 
@@ -93,7 +104,7 @@ export function InventoryBoard({ lang, canManage }: { lang: "en" | "id"; canMana
   );
 
   async function copyShoppingList() {
-    const list = buildShoppingList(inventoryItems);
+    const list = buildShoppingList(inventoryItems, lang);
     if (!list) return;
     try {
       await navigator.clipboard.writeText(list);
@@ -140,7 +151,7 @@ export function InventoryBoard({ lang, canManage }: { lang: "en" | "id"; canMana
           <Skeleton className="h-28 w-full rounded-xl" />
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState icon={Package} title={t.emptyTitle(scope)} description={t.empty(scope)} />
+        <EmptyState icon={Package} title={t.emptyTitle(scope)} description={t.empty(scope, canManage)} />
       ) : (
         <div className="flex flex-col gap-2">
           {visible.map((item) => (

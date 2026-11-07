@@ -23,6 +23,7 @@ import { HealthRecordCard } from "@/components/dashboard/health-record-card";
 import { HealthRecordForm } from "@/components/dashboard/health-record-form";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useToday } from "@/hooks/use-today";
 import { isAdmitted, petMasterUrl } from "@/lib/pets";
@@ -50,6 +51,8 @@ export function PetProfileSheet() {
     updateEntity,
     deleteEntity,
   } = useHousehold();
+  const locale = useOwnerLocale();
+  const t = useT();
   const [editOpen, setEditOpen] = useState(false);
   const [addRecordOpen, setAddRecordOpen] = useState(false);
   const [viewingAvatar, setViewingAvatar] = useState(false);
@@ -70,7 +73,7 @@ export function PetProfileSheet() {
   useBackToClose(!!pet && addRecordOpen, () => setAddRecordOpen(false));
 
   const dateStr = formatDateLocal(selectedDate);
-  const label = dayLabel(selectedDate, useToday());
+  const label = dayLabel(selectedDate, useToday(), locale);
 
   const items = useMemo(() => {
     if (!pet) return [];
@@ -126,7 +129,7 @@ export function PetProfileSheet() {
                     <button
                       type="button"
                       onClick={() => setViewingAvatar(true)}
-                      aria-label={`Lihat foto ${pet.name}`}
+                      aria-label={t(`View ${pet.name}'s photo`, `Lihat foto ${pet.name}`)}
                       className="shrink-0 rounded-2xl transition-transform active:scale-95"
                     >
                       <MiniPetAvatar pet={pet} className="size-20 rounded-2xl" />
@@ -142,31 +145,41 @@ export function PetProfileSheet() {
                     onClick={() => setEditOpen(true)}
                     className="flex items-center text-sm font-medium text-gray-500 hover:text-black"
                   >
-                    <Edit2 className="mr-1 size-4" /> Edit Pet
+                    <Edit2 className="mr-1 size-4" /> {t("Edit Pet", "Ubah Hewan")}
                   </button>
                 )}
               </div>
               <SheetDescription className="sr-only">
-                {pet.name}&apos;s daily feed, schedule, and health passport.
+                {t(
+                  `${pet.name}'s daily feed, schedule, and health passport.`,
+                  `Catatan harian, jadwal, dan catatan kesehatan ${pet.name}.`
+                )}
               </SheetDescription>
             </SheetHeader>
 
             {/* Above everything else, because while it is true nothing below
                 it is actionable: the dog's routines are suspended until it is
-                collected. Owner-facing, so English. */}
+                collected. In the owner's language. */}
             {isAdmitted(pet) && (
               <div className="mt-4 flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
                 <p className="flex items-center gap-1.5 text-sm font-medium text-indigo-900">
-                  <Stethoscope className="size-4 shrink-0" /> {pet.name} is at the clinic
+                  <Stethoscope className="size-4 shrink-0" />{" "}
+                  {t(`${pet.name} is at the clinic`, `${pet.name} sedang di klinik`)}
                 </p>
                 <p className="text-xs text-indigo-900/80">
-                  Daily meals and potty breaks are paused until {pet.name} is collected.
+                  {t(
+                    `Daily meals and potty breaks are paused until ${pet.name} is collected.`,
+                    `Makan dan Pipis & Pup harian dihentikan sementara sampai ${pet.name} dijemput.`
+                  )}
                 </p>
                 <DischargeButton
                   pet={pet}
-                  label="Bring Home from Clinic"
-                  successMessage={`${pet.name} is home — routines resumed`}
-                  errorMessage="Couldn't update status"
+                  label={t("Bring Home from Clinic", "Jemput dari Klinik")}
+                  successMessage={t(
+                    `${pet.name} is home — routines resumed`,
+                    `${pet.name} sudah pulang — rutinitas berjalan lagi`
+                  )}
+                  errorMessage={t("Couldn't update status", "Status gagal diperbarui")}
                 />
               </div>
             )}
@@ -184,13 +197,15 @@ export function PetProfileSheet() {
                 the days scroll under the same edge. Letting it run to the
                 screen edge here would make the sheet the odd one out. */}
             <div className="mt-4">
-              <DateRibbon value={selectedDate} onChange={setSelectedDate} locale="en" />
+              <DateRibbon value={selectedDate} onChange={setSelectedDate} locale={locale} />
             </div>
 
             <section className="mt-6">
-              <h3 className="mb-3 text-sm font-semibold text-gray-900">{label}&apos;s Overview</h3>
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">
+                {t(`${label}'s Overview`, `Ringkasan ${label}`)}
+              </h3>
               <SummaryCard items={items} />
-              <h3 className="mt-8 mb-3 text-sm font-semibold text-gray-900">Photos</h3>
+              <h3 className="mt-8 mb-3 text-sm font-semibold text-gray-900">{t("Photos", "Foto")}</h3>
               <PhotoStream logs={todaysLogs} entities={entities} />
             </section>
 
@@ -200,7 +215,7 @@ export function PetProfileSheet() {
                     above, so browsing to another date via the ribbon renames
                     both rather than leaving one claiming "Today's". */}
                 <h3 className="mb-3 text-sm font-semibold text-gray-900">
-                  {label}&apos;s Timeline
+                  {t(`${label}'s Timeline`, `Jadwal ${label}`)}
                 </h3>
                 <ScheduleEditor entity={pet} />
               </section>
@@ -208,17 +223,17 @@ export function PetProfileSheet() {
 
             <section className="mt-8">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-gray-900">Health Passport</h3>
+                <h3 className="text-sm font-semibold text-gray-900">{t("Health Passport", "Catatan Kesehatan")}</h3>
                 {canManagePets && (
                   <Dialog open={addRecordOpen} onOpenChange={setAddRecordOpen}>
                     <DialogTrigger asChild>
                       <Button size="sm">
-                        <Plus /> Add record
+                        <Plus /> {t("Add record", "Tambah catatan")}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Add Health Record</DialogTitle>
+                        <DialogTitle>{t("Add Health Record", "Tambah Catatan Kesehatan")}</DialogTitle>
                       </DialogHeader>
                       <HealthRecordForm petId={pet.id} onSaved={() => setAddRecordOpen(false)} />
                     </DialogContent>
@@ -226,7 +241,9 @@ export function PetProfileSheet() {
                 )}
               </div>
               {healthRecords.length === 0 ? (
-                <p className="pt-4 text-center text-sm text-muted-foreground">No health records yet.</p>
+                <p className="pt-4 text-center text-sm text-muted-foreground">
+                  {t("No health records yet.", "Belum ada catatan kesehatan.")}
+                </p>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {healthRecords.map((record) => (

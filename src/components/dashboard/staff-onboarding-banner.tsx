@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Share, X } from "lucide-react";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { useOwnerLocale } from "@/context/owner-locale-context";
 
 const DISMISSED_KEY = "b11_onboarding_dismissed";
 
@@ -18,6 +19,7 @@ export function StaffOnboardingBanner() {
   // this never sees it flash back in on every load.
   const [visible, setVisible] = useState(false);
   const { isStandalone } = usePwaInstall();
+  const locale = useOwnerLocale();
 
   useEffect(() => {
     try {
@@ -50,7 +52,7 @@ export function StaffOnboardingBanner() {
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Dismiss tip"
+          aria-label={locale === "id" ? "Tutup tips" : "Dismiss tip"}
           className="absolute top-1 right-1 flex size-11 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 active:bg-slate-100"
         >
           <X className="size-4" />
@@ -61,19 +63,37 @@ export function StaffOnboardingBanner() {
             <Share className="size-4" />
           </span>
 
-          <div className="flex min-w-0 flex-col gap-1">
-            <p className="text-sm leading-snug font-medium text-slate-900">Add to Home Screen</p>
-            <p className="text-[13px] leading-relaxed text-slate-500">
-              Tap <span className="font-medium text-slate-700">Share</span> in Safari, or the{" "}
-              <span className="font-medium text-slate-700">⋮</span> menu in Chrome, then{" "}
-              <span className="font-medium text-slate-700">Add to Home Screen</span> — you get the
-              full screen, and logging keeps working when the signal drops.
-            </p>
-            <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
-              Tip: tap any pet to open their records. Meals and potty breaks are logged in
-              Action Mode, with the camera, on each person&apos;s own phone.
-            </p>
-          </div>
+          {locale === "id" ? (
+            <div className="flex min-w-0 flex-col gap-1">
+              <p className="text-sm leading-snug font-medium text-slate-900">
+                Tambahkan ke Layar Utama
+              </p>
+              <p className="text-[13px] leading-relaxed text-slate-500">
+                Ketuk <span className="font-medium text-slate-700">Bagikan</span> di Safari, atau
+                menu <span className="font-medium text-slate-700">⋮</span> di Chrome, lalu{" "}
+                <span className="font-medium text-slate-700">Tambahkan ke Layar Utama</span> —
+                tampilannya jadi layar penuh, dan pencatatan tetap jalan saat sinyal hilang.
+              </p>
+              <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
+                Tips: ketuk hewan mana saja untuk membuka catatannya. Makan dan Pipis & Pup dicatat
+                di Mode Kerja, dengan kamera, di HP masing-masing.
+              </p>
+            </div>
+          ) : (
+            <div className="flex min-w-0 flex-col gap-1">
+              <p className="text-sm leading-snug font-medium text-slate-900">Add to Home Screen</p>
+              <p className="text-[13px] leading-relaxed text-slate-500">
+                Tap <span className="font-medium text-slate-700">Share</span> in Safari, or the{" "}
+                <span className="font-medium text-slate-700">⋮</span> menu in Chrome, then{" "}
+                <span className="font-medium text-slate-700">Add to Home Screen</span> — you get the
+                full screen, and logging keeps working when the signal drops.
+              </p>
+              <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
+                Tip: tap any pet to open their records. Meals and potty breaks are logged in
+                Action Mode, with the camera, on each person&apos;s own phone.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

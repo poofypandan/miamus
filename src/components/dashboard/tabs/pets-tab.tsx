@@ -10,6 +10,7 @@ import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { useHousehold } from "@/context/household-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useToday } from "@/hooks/use-today";
 import { dayLabel } from "@/lib/date-label";
 import { petPhotoLogs } from "@/lib/pets";
@@ -29,7 +30,7 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
  * selectedDate the Agenda and chores use, so browsing back through last week's
  * photos does not drag the Agenda along with it.
  *
- * Owner-facing, so entirely English per the Phase 46 language boundary.
+ * Owner-facing, in the language the owner chose (Phase 149).
  */
 export function PetsTab() {
   const {
@@ -42,6 +43,8 @@ export function PetsTab() {
     updateEntity,
     deleteEntity,
   } = useHousehold();
+  const locale = useOwnerLocale();
+  const t = useT();
   const [addOpen, setAddOpen] = useState(false);
   const canManagePets = userRole === "owner";
 
@@ -88,7 +91,7 @@ export function PetsTab() {
       variant="outline"
       className="min-h-[48px] w-full rounded-xl border-zinc-200 bg-white text-sm font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
     >
-      <Plus /> Add Pet
+      <Plus /> {t("Add Pet", "Tambah Hewan")}
     </Button>
   ) : null;
 
@@ -103,22 +106,25 @@ export function PetsTab() {
         // list-footer style read as disabled on a page with nothing else on it.
         <EmptyState
           icon={PawPrint}
-          title="No pets yet"
-          description="Add your first pet to start their profile, daily routines and photo log. Everyone sees them in Action Mode straight away."
+          title={t("No pets yet", "Belum ada hewan")}
+          description={t(
+            "Add your first pet to start their profile, daily routines and photo log. Everyone sees them in Action Mode straight away.",
+            "Tambahkan hewan pertama Anda untuk memulai profil, rutinitas harian dan log fotonya. Semua orang langsung melihatnya di Mode Kerja."
+          )}
         >
           {canManagePets && (
             <Button className="min-h-[44px]" onClick={() => setAddOpen(true)}>
-              <Plus /> Add Pet
+              <Plus /> {t("Add Pet", "Tambah Hewan")}
             </Button>
           )}
         </EmptyState>
       ) : (
         <>
           {/* Local to this tab: moving it does not move the Agenda. */}
-          <DateRibbon value={date} onChange={setChosenDate} locale="en" />
+          <DateRibbon value={date} onChange={setChosenDate} locale={locale} />
 
           <h2 className="text-sm font-semibold text-gray-900">
-            {dayLabel(date, today)}&apos;s Progress
+            {t(`${dayLabel(date, today, locale)}'s Progress`, `Progres ${dayLabel(date, today, locale)}`)}
           </h2>
           {/* Every row opens that pet's profile sheet — details, routines,
               medical records — which is what the directory above this used to
@@ -126,7 +132,7 @@ export function PetsTab() {
           <UnifiedSummaryCard date={date} />
           {addButton}
 
-          <h2 className="mt-2 text-sm font-semibold text-gray-900">Photos</h2>
+          <h2 className="mt-2 text-sm font-semibold text-gray-900">{t("Photos", "Foto")}</h2>
           {/* No "Flag Low Stock" here: reporting is staff data entry and lives
               in the staff view. The owner reads reports and restocks. */}
           <PhotoStream logs={photoLogs} entities={entities} showAvatar />
