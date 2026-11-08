@@ -60,6 +60,7 @@ import { isOnLeave } from "@/lib/leave";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { LeavePanel } from "@/components/dashboard/leave-panel";
 import { SignOutSheet } from "@/components/auth/sign-out-sheet";
+import { AboutMiamus } from "@/components/dashboard/about-miamus";
 import { describeLog } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ProposalStatus, StaffProfile } from "@/types/database";
@@ -102,6 +103,7 @@ const HOUSEHOLD_PAGES = [
   "language",
   "lock",
   "activity",
+  "about",
 ] as const;
 type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
 
@@ -279,6 +281,9 @@ export function StaffTab() {
         <SettingsGroup>
           <SettingsRow icon={History} label={t("Activity", "Aktivitas")} onPress={() => open("activity")} />
         </SettingsGroup>
+        <SettingsGroup>
+          <SettingsRow icon={Info} label={t("About Miamus", "Tentang Miamus")} onPress={() => open("about")} />
+        </SettingsGroup>
         <SignOutRow locale={locale} />
       </div>
     );
@@ -310,6 +315,7 @@ export function StaffTab() {
       {page === "language" && <LanguageSettings />}
       {page === "lock" && <SecuritySettings />}
       {page === "activity" && <ActivityPage entries={entries} />}
+      {page === "about" && <AboutMiamus />}
     </div>
   );
 }
