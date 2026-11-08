@@ -103,8 +103,9 @@ does for old chore photos. It gets a second, separate pass:
   household is gone.
 - The function removes them through the Storage API, up to 2,000 a night.
 
-So photos are gone within about a day of the deletion (the nightly run at
-03:00 WIB).
+So photos go in the first nightly run after the deletion (03:00 WIB). The
+pass removes up to 2,000 files a night, so a household with more takes a
+few nights; the policy says exactly that (Codex review, PR #22).
 
 **Nothing is kept about the deleted household.** The scheduling row
 cascades with the household. (Option for the owner: keep a one-line log —
@@ -212,8 +213,9 @@ to a short-lived private link) — that's a new moving part worth its own PR.
 
 - **7. How long we keep it:** replace "If an admin asks us to delete their
   household…" with: an admin can delete the household in the app; it is
-  deleted 7 days later unless an admin cancels; photos within a day after
-  that; database backups up to 7 days more. Requests by email still work,
+  deleted 7 days later unless an admin cancels; photos at night after
+  that, usually the same night, a few nights for very many photos;
+  database backups up to 7 days more. Requests by email still work,
   within 30 days.
 - **8. Your rights:** add that admins can download a copy and delete the
   household themselves in Household → Your data; everything else by email.

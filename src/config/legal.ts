@@ -31,7 +31,7 @@ export const LEGAL = {
   // logs and photos, and chore drafts (PR #17).
   // 2026-11-08.3: admins download a copy of their household's data and the
   // founder deletes the household in the app, 7 days after asking; photos
-  // follow within a day (R7, migrations/127).
+  // follow in the nightly clean-up, 2,000 a night (R7, migrations/127).
   policyVersion: "2026-11-08.3",
   effectiveDate: { en: "8 November 2026", id: "8 November 2026" },
   /**
