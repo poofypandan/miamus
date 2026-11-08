@@ -19,7 +19,7 @@ const COPY = {
   en: {
     title: "Welcome to Miamus",
     promise: "A little less on your mind.",
-    tagline: "Run your household from one place — pets, chores, people and stock.",
+    tagline: "Your pets, the chores, the kitchen, and everyone who helps — together in one place.",
     google: "Continue with Google",
     // Indonesian on the English screen too: it is for staff, who must
     // recognise their own door at a glance whatever the phone is set to.
@@ -38,7 +38,7 @@ const COPY = {
   id: {
     title: "Selamat datang di Miamus",
     promise: "Biar pikiran sedikit lebih ringan.",
-    tagline: "Kelola rumah dari satu tempat — hewan, tugas, orang dan stok.",
+    tagline: "Hewan, tugas rumah, dapur, dan semua yang ikut membantu — bersama di satu tempat.",
     google: "Lanjutkan dengan Google",
     staff: "Saya staf",
     consentBefore: "Dengan melanjutkan, Anda menyetujui ",
