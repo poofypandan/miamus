@@ -36,6 +36,22 @@ the new sign-in address in Google Cloud, and re-sign-in on the phones.
 
 Claude: everything else, with each production step announced first.
 
+## Scripts
+
+`scripts/singapore-move/` does the copying. Each script reads
+`~/.miamus-move.env` (from `env.example`; passwords and keys stay in that
+file, `chmod 600`), never prints a secret, and writes the dump to
+`~/.miamus-move/`, outside the repo:
+
+| Script | Step |
+| --- | --- |
+| `1-dump.sh` | 8. Dump Tokyo: roles, schema, data (not photos, Vault or sessions) |
+| `2-restore.sh` | 9. Restore into Singapore in one transaction, triggers off |
+| `3-vault-and-cron.sh` | 10–11. Vault secrets (VAPID copied, others new) and the nightly jobs |
+| `4-copy-photos.mjs` | 12. Photos through the Storage API, same paths; `--check` compares only |
+| `5-compare.sh` | 13. Row counts, sign-ins, photos, jobs, secrets: Tokyo vs Singapore |
+| `9-cleanup.sh` | After the move is confirmed: delete the dump and the connection file |
+
 ## A. Before the switch (no downtime; can be done any day)
 
 1. **Create the project:** poofypandan org (Pro), name `Miamus`, region
