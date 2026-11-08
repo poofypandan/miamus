@@ -24,13 +24,17 @@ export const LEGAL = {
   // add food (Phase 156, migrations/123).
   // 2026-11-07.4: the admins' morning notification of food that expires
   // today or tomorrow (Phase 157, migrations/124).
-  policyVersion: "2026-11-07.4",
-  effectiveDate: { en: "7 November 2026", id: "7 November 2026" },
+  // 2026-11-08.1: data moves from Tokyo to Singapore (new Supabase project
+  // in ap-southeast-1); the app's server code also runs in Singapore
+  // (vercel.json, PR #15). Set effectiveDate to the day of the move.
+  policyVersion: "2026-11-08.1",
+  effectiveDate: { en: "8 November 2026", id: "8 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
-   * project is in AWS ap-northeast-1. Update this if the project moves region.
+   * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on
+   * the date above). Update this if the project moves region again.
    */
-  dataRegion: { en: "Tokyo, Japan", id: "Tokyo, Jepang" },
+  dataRegion: { en: "Singapore", id: "Singapura" },
 } as const;
 
 export const isLegalDraft = !LEGAL.operatorName || !LEGAL.contactEmail;
