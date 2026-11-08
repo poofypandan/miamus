@@ -11,7 +11,7 @@
  * Nothing in the household itself changes; signing in again brings it all back.
  */
 
-import { del } from "idb-keyval";
+import { clear, createStore, del } from "idb-keyval";
 import { getOfflineQueue } from "@/lib/offline-queue";
 import { hasPendingPhotos } from "@/lib/photo-queue";
 import { clearCachedOwnerLocale } from "@/lib/owner-locale";
@@ -27,6 +27,7 @@ const LOCAL_KEYS = [
 ];
 const SESSION_KEYS = ["miamus_owner_unlocked_at"];
 const SNAPSHOT_PREFIX = "miamus_snapshot_v";
+const CHORE_DRAFT_PREFIX = "miamus_chore_draft:";
 const OFFLINE_QUEUE_KEY = "b11-sync-queue";
 
 /**
@@ -36,6 +37,7 @@ const OFFLINE_QUEUE_KEY = "b11-sync-queue";
 export async function hasUnsavedWork(): Promise<boolean> {
   try {
     if (hasPendingPhotos()) return true;
+    if (Object.keys(window.localStorage).some((key) => key.startsWith(CHORE_DRAFT_PREFIX))) return true;
     return (await getOfflineQueue()).length > 0;
   } catch {
     return false;
@@ -47,7 +49,9 @@ function clearLocalData(): void {
     for (const key of LOCAL_KEYS) window.localStorage.removeItem(key);
     for (let i = window.localStorage.length - 1; i >= 0; i--) {
       const key = window.localStorage.key(i);
-      if (key?.startsWith(SNAPSHOT_PREFIX)) window.localStorage.removeItem(key);
+      if (key?.startsWith(SNAPSHOT_PREFIX) || key?.startsWith(CHORE_DRAFT_PREFIX)) {
+        window.localStorage.removeItem(key);
+      }
     }
   } catch {
     // Storage blocked: nothing was stored to clear.
@@ -60,26 +64,70 @@ function clearLocalData(): void {
 }
 
 /**
- * Ends this phone's session and forgets the household on it, then opens the
- * start screen. Every clean-up step is best-effort: a failure in one must
- * never leave someone signed in.
+ * The session's own copy on this phone (cookies and storage named "sb-…"),
+ * removed by hand. Used when the sign-out request can't reach the server:
+ * this phone must still be signed out (Codex review, PR #17).
+ */
+function forgetStoredSession(): void {
+  for (const part of document.cookie.split(";")) {
+    const name = part.split("=")[0]?.trim();
+    if (name?.startsWith("sb-")) document.cookie = `${name}=; Max-Age=0; path=/`;
+  }
+  try {
+    for (let i = window.localStorage.length - 1; i >= 0; i--) {
+      const key = window.localStorage.key(i);
+      if (key?.startsWith("sb-")) window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Nothing stored there.
+  }
+}
+
+/** Unsent work on this phone: queued logs, queued photos (Codex review, PR #17). */
+async function clearQueues(): Promise<void> {
+  await del(OFFLINE_QUEUE_KEY).catch(() => undefined);
+  await clear(createStore("miamus-photo-queue", "photos")).catch(() => undefined);
+}
+
+/** Stops this phone's notifications even when the server row can't be removed. */
+async function stopPush(): Promise<void> {
+  const push = await import("@/lib/push");
+  try {
+    // The row first, while still signed in: only its owner may delete it.
+    await push.disablePush();
+  } catch (err) {
+    console.error("Push row clean-up on sign-out failed", err);
+    // The browser's side regardless, so nothing more arrives on this phone.
+    await push
+      .currentSubscription()
+      .then((subscription) => subscription?.unsubscribe())
+      .catch(() => undefined);
+  }
+}
+
+/**
+ * Signs this phone out — only this phone: the owner stays signed in on their
+ * other devices (scope "local"; the default would end every session) — and
+ * forgets the household on it, then opens the start screen.
+ *
+ * Throws if this phone is somehow still signed in afterwards, so the caller
+ * can say so instead of reloading into the app with app lock already off.
  */
 export async function signOutThisDevice(): Promise<void> {
+  const { supabase } = await import("@/lib/supabase/client");
+  await stopPush().catch(() => undefined);
+
+  const result = await supabase?.auth.signOut({ scope: "local" });
+  // Offline or the server refused: the stored session is still here.
+  if (result?.error) forgetStoredSession();
+  const { peekStoredUser } = await import("@/lib/auth/device-session");
+  if (await peekStoredUser()) throw new Error("still_signed_in");
+
   setAppLockEnabled(false);
   clearCachedOwnerLocale();
-  try {
-    // Stops this phone's notifications. Done while still signed in: only the
-    // signed-in person may delete their own subscription row (Phase 119).
-    const { disablePush } = await import("@/lib/push");
-    await disablePush().catch((err) => console.error("Push clean-up on sign-out failed", err));
-    // Unsent logs would otherwise be sent later under whoever signs in next.
-    await del(OFFLINE_QUEUE_KEY).catch(() => undefined);
-    const { supabase } = await import("@/lib/supabase/client");
-    await supabase?.auth.signOut();
-  } finally {
-    clearLocalData();
-    // A full page load, not a client-side route change: the household held
-    // in memory (context, caches) must not survive into the next session.
-    window.location.replace("/");
-  }
+  await clearQueues();
+  clearLocalData();
+  // A full page load, not a client-side route change: the household held in
+  // memory (context, caches) must not survive into the next session.
+  window.location.replace("/");
 }

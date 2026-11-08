@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { CircleAlert, Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,7 +69,17 @@ export function SignOutSheet({
 
   async function confirm() {
     setBusy(true);
-    await signOutThisDevice();
+    try {
+      await signOutThisDevice();
+    } catch (err) {
+      console.error(err);
+      setBusy(false);
+      toast.error(
+        id
+          ? "Belum bisa keluar. Periksa internet, lalu coba lagi."
+          : "Couldn't sign out. Check your connection and try again."
+      );
+    }
   }
 
   return (

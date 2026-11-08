@@ -115,7 +115,7 @@ const COPY: Record<
           {
             ul: [
               "Your sign-in session, which staff name is selected on a shared phone, app-lock settings, and the language you picked (on the sign-in screen, and a copy of your account's language).",
-              "To keep working on bad Wi-Fi: a copy of the household data this phone last loaded (replaced on every load, and not used after 24 hours), routines logged while offline and photos waiting to upload until they are sent, and the photos of a chore still in progress until it is finished.",
+              "To keep working on bad Wi-Fi: a copy of the household data this phone last loaded (replaced on every load, and not used after 24 hours), routines logged while offline and photos waiting to upload until they are sent, and the photos of a chore still in progress until it is finished. Signing out deletes all of these from the phone, including anything not yet sent.",
               "Which medicine-course reminders you closed on this phone.",
               "If you unlock Miamus with Face ID or a fingerprint, your phone does the check. Your face or fingerprint data never leaves your phone, and we never receive it.",
             ],
@@ -334,7 +334,7 @@ const COPY: Record<
           {
             ul: [
               "Sesi login, nama staf yang dipilih di HP bersama, pengaturan kunci aplikasi, dan bahasa yang Anda pilih (di halaman masuk, dan salinan bahasa akun Anda).",
-              "Supaya tetap bisa dipakai saat sinyal jelek: salinan data rumah yang terakhir dimuat di HP ini (diganti setiap kali dimuat, dan tidak dipakai setelah 24 jam), catatan rutinitas yang dibuat saat offline dan foto yang menunggu diunggah sampai terkirim, serta foto tugas yang sedang dikerjakan sampai tugasnya selesai.",
+              "Supaya tetap bisa dipakai saat sinyal jelek: salinan data rumah yang terakhir dimuat di HP ini (diganti setiap kali dimuat, dan tidak dipakai setelah 24 jam), catatan rutinitas yang dibuat saat offline dan foto yang menunggu diunggah sampai terkirim, serta foto tugas yang sedang dikerjakan sampai tugasnya selesai. Jika Anda keluar, semuanya dihapus dari HP ini, termasuk yang belum terkirim.",
               "Pengingat pengobatan mana yang sudah Anda tutup di HP ini.",
               "Jika Anda membuka Miamus dengan Face ID atau sidik jari, HP Anda yang memeriksanya. Data wajah atau sidik jari Anda tidak pernah keluar dari HP, dan tidak pernah kami terima.",
             ],

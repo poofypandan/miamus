@@ -27,7 +27,9 @@ export const LEGAL = {
   // 2026-11-08.1: data moves from Tokyo to Singapore (new Supabase project
   // in ap-southeast-1); the app's server code also runs in Singapore
   // (vercel.json, PR #15). Set effectiveDate to the day of the move.
-  policyVersion: "2026-11-08.1",
+  // 2026-11-08.2: signing out deletes this phone's offline copy, unsent
+  // logs and photos, and chore drafts (PR #17).
+  policyVersion: "2026-11-08.2",
   effectiveDate: { en: "8 November 2026", id: "8 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
