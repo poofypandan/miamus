@@ -150,7 +150,7 @@ const COPY: Record<
               "Inside your household: admins can see everything in their household. Staff see the tasks, schedules and information they need for their work. Other households can never see your data.",
               `Requests to set up a household — only ${operator}, who runs Miamus.`,
               `Supabase — database, sign-in and photo storage, on servers in ${LEGAL.dataRegion.en}.`,
-              "Vercel — hosts the app. Photos pass through its servers when they're shown, but aren't stored there.",
+              "Vercel — hosts the app, on servers in Singapore. Photos pass through its servers when they're shown, but aren't stored there.",
               "Google — sign-in for admins.",
               "Apple, Google or Mozilla push services — deliver notifications to your device.",
               "Authorities — only when Indonesian law requires it.",
@@ -165,7 +165,7 @@ const COPY: Record<
         title: "6. Storing data outside Indonesia",
         body: [
           {
-            p: `Miamus data is stored in ${LEGAL.dataRegion.en}, and our providers may process it in other countries, such as Singapore or the United States. We follow Article 56 of UU PDP: we use providers in countries with an equal or higher level of data protection, or that are bound by agreement to protect your data, and where neither applies, we rely on your consent.`,
+            p: `Miamus data is stored in ${LEGAL.dataRegion.en}, and our providers may process it in other countries, such as Japan or the United States. We follow Article 56 of UU PDP: we use providers in countries with an equal or higher level of data protection, or that are bound by agreement to protect your data, and where neither applies, we rely on your consent.`,
           },
         ],
       },
@@ -369,7 +369,7 @@ const COPY: Record<
               "Di dalam rumah tangga Anda: admin dapat melihat semua data rumah tangganya. Staf melihat tugas, jadwal, dan informasi yang diperlukan untuk pekerjaannya. Rumah tangga lain tidak pernah bisa melihat data Anda.",
               `Permintaan membuat rumah tangga — hanya ${operator}, pengelola Miamus.`,
               `Supabase — database, login, dan penyimpanan foto, di server yang berada di ${LEGAL.dataRegion.id}.`,
-              "Vercel — hosting aplikasi. Foto melewati servernya saat ditampilkan, tetapi tidak disimpan di sana.",
+              "Vercel — hosting aplikasi, di server yang berada di Singapura. Foto melewati servernya saat ditampilkan, tetapi tidak disimpan di sana.",
               "Google — login untuk admin.",
               "Layanan notifikasi Apple, Google, atau Mozilla — mengirim notifikasi ke perangkat Anda.",
               "Instansi berwenang — hanya jika diwajibkan oleh hukum Indonesia.",
@@ -384,7 +384,7 @@ const COPY: Record<
         title: "6. Penyimpanan data di luar Indonesia",
         body: [
           {
-            p: `Data Miamus disimpan di ${LEGAL.dataRegion.id}, dan penyedia kami dapat memprosesnya di negara lain, seperti Singapura atau Amerika Serikat. Kami mengikuti Pasal 56 UU PDP: kami memakai penyedia di negara dengan tingkat pelindungan data yang setara atau lebih tinggi, atau yang terikat perjanjian untuk melindungi data Anda, dan jika keduanya tidak berlaku, kami mengandalkan persetujuan Anda.`,
+            p: `Data Miamus disimpan di ${LEGAL.dataRegion.id}, dan penyedia kami dapat memprosesnya di negara lain, seperti Jepang atau Amerika Serikat. Kami mengikuti Pasal 56 UU PDP: kami memakai penyedia di negara dengan tingkat pelindungan data yang setara atau lebih tinggi, atau yang terikat perjanjian untuk melindungi data Anda, dan jika keduanya tidak berlaku, kami mengandalkan persetujuan Anda.`,
           },
         ],
       },
