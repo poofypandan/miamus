@@ -884,7 +884,6 @@ function SignOutRow({ locale }: { locale: "en" | "id" }) {
       <SignOutSheet
         open={confirming}
         onClose={() => setConfirming(false)}
-        who="owner"
         lang={locale}
         account={email}
       />

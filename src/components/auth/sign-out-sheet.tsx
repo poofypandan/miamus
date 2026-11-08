@@ -20,21 +20,21 @@ import { LEGAL } from "@/config/legal";
  * forgets it, and how to come back. Warns first if something logged on this
  * phone hasn't been saved yet.
  *
- * Owners: their own language; they come back with Google. Staff: always
- * Indonesian; they come back with the house code and their PIN.
+ * Owners only (owner, 2026-11-08): a staff phone is the household's tool,
+ * and an accidental sign-out would lock staff out. Staff leave through the
+ * owner instead — archiving a person, or removing a linked phone, signs that
+ * phone out.
  */
 export function SignOutSheet({
   open,
   onClose,
-  who,
   lang,
   account,
 }: {
   open: boolean;
   onClose: () => void;
-  who: "owner" | "staff";
   lang: "en" | "id";
-  /** Shown under the title: the owner's email, or the staff member's name. */
+  /** Shown under the title: the owner's email. */
   account?: string | null;
 }) {
   const [unsaved, setUnsaved] = useState(false);
@@ -62,12 +62,9 @@ export function SignOutSheet({
   }, [open]);
 
   const id = lang === "id";
-  const comeBack =
-    who === "staff"
-      ? "Untuk masuk lagi, buka Miamus, ketuk “Saya staf”, lalu masukkan kode rumah dan PIN Anda. Lupa kode rumah? Tanyakan ke pemilik rumah."
-      : id
-        ? "Rumah tangga dan semua datanya tetap aman. Masuk lagi kapan saja dengan Google. Notifikasi di HP ini berhenti sampai Anda masuk lagi."
-        : "Your household and everything in it stay safe. Sign in again any time with Google. Notifications on this phone stop until you do.";
+  const comeBack = id
+    ? "Rumah tangga dan semua datanya tetap aman. Masuk lagi kapan saja dengan Google. Notifikasi di HP ini berhenti sampai Anda masuk lagi."
+    : "Your household and everything in it stay safe. Sign in again any time with Google. Notifications on this phone stop until you do.";
 
   async function confirm() {
     setBusy(true);
@@ -91,13 +88,11 @@ export function SignOutSheet({
                 : "Some logs or photos haven't been sent yet. Wait until you're back online, or they'll be lost."}
             </p>
           )}
-          {who === "owner" && (
-            <p className="text-xs text-muted-foreground">
-              {id
-                ? `Ingin berhenti memakai Miamus atau menghapus data rumah tangga? Kirim email ke ${LEGAL.contactEmail}.`
-                : `Want to stop using Miamus or delete your household's data? Email ${LEGAL.contactEmail}.`}
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            {id
+              ? `Ingin berhenti memakai Miamus atau menghapus data rumah tangga? Kirim email ke ${LEGAL.contactEmail}.`
+              : `Want to stop using Miamus or delete your household's data? Email ${LEGAL.contactEmail}.`}
+          </p>
           <Button
             variant="destructive"
             className="mt-2 min-h-12 rounded-xl text-base"

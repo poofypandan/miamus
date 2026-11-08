@@ -28,7 +28,6 @@ import { StaffKitchen } from "@/components/kitchen/kitchen-tab";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { SignOutSheet } from "@/components/auth/sign-out-sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
@@ -379,10 +378,10 @@ function TasksView() {
   );
 }
 
-// Who the app thinks is holding the phone. Each person works from their own
-// device, so this is not a "switch person" control: tapping it opens the
-// sign-out sheet, which asks before doing anything and says how to come back
-// (owner request, 2026-11-08: everyone must be able to find "Keluar").
+// Who the app thinks is holding the phone — a label, not a control. Each
+// person works from their own device, so switching mid-shift is not a thing
+// that happens, and a tappable badge only invited someone to sign themselves
+// out by accident.
 function HeaderIdentity() {
   const { isHouseholdMember } = useHousehold();
   // Only an owner sees this link, so it is in the owner's language — read
@@ -412,25 +411,10 @@ function HeaderIdentity() {
 
 function OnDutyBadge() {
   const { staffName } = useStaffIdentity();
-  const [confirming, setConfirming] = useState(false);
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        aria-label={`${staffName ?? "Staf"} — keluar dari HP ini`}
-        className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-xs font-medium text-gray-500 active:bg-gray-50"
-      >
-        <UserRound className="size-3.5" />
-        {staffName ?? "Admin"}
-      </button>
-      <SignOutSheet
-        open={confirming}
-        onClose={() => setConfirming(false)}
-        who="staff"
-        lang="id"
-        account={staffName}
-      />
-    </>
+    <span className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-xs font-medium text-gray-500">
+      <UserRound className="size-3.5" />
+      {staffName ?? "Admin"}
+    </span>
   );
 }
