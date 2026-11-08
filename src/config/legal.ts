@@ -29,7 +29,13 @@ export const LEGAL = {
   // (vercel.json, PR #15). Set effectiveDate to the day of the move.
   // 2026-11-08.2: signing out deletes this phone's offline copy, unsent
   // logs and photos, and chore drafts (PR #17).
-  policyVersion: "2026-11-08.2",
+  // 2026-11-08.3: Kakak, the AI assistant an admin can turn on (off by
+  // default). Anthropic (United States) becomes a processor: what admins
+  // type to Kakak plus first names of staff, pets, rooms and shopping items
+  // are sent with each request; Anthropic keeps them up to 30 days, longer
+  // only if flagged for safety, and doesn't train on them. Miamus keeps only
+  // request counts and costs (no text), 13 months (Phase 156).
+  policyVersion: "2026-11-08.3",
   effectiveDate: { en: "8 November 2026", id: "8 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

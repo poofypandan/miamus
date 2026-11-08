@@ -737,6 +737,49 @@ export interface Database {
         Args: Record<string, never>;
         Returns: string | null;
       };
+      // Kakak (migrations/126, Phase 156 step 2). Admins of the household only.
+      kakak_status: {
+        Args: { p_household: string };
+        Returns: {
+          allowed: boolean;
+          enabled: boolean;
+          enabled_by: string | null;
+          enabled_at: string | null;
+          daily_limit: number;
+          calls_left: number;
+        }[];
+      };
+      set_kakak_enabled: {
+        Args: { p_household: string; p_on: boolean };
+        Returns: undefined;
+      };
+      platform_set_kakak_allowed: {
+        Args: { p_household: string; p_allowed: boolean };
+        Returns: undefined;
+      };
+      kakak_begin: {
+        Args: { p_household: string };
+        Returns: Record<string, unknown>;
+      };
+      kakak_record: {
+        Args: {
+          p_request: string;
+          p_model: string;
+          p_outcome: string;
+          p_tools: string[];
+          p_input_tokens: number;
+          p_cache_read_tokens: number;
+          p_cache_write_tokens: number;
+          p_output_tokens: number;
+          p_cost_micro_usd: number;
+          p_latency_ms: number;
+        };
+        Returns: undefined;
+      };
+      kakak_set_result: {
+        Args: { p_request: string; p_result: string };
+        Returns: undefined;
+      };
       set_my_locale: {
         Args: { p_locale: string };
         Returns: string;

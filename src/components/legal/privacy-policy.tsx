@@ -12,7 +12,8 @@ import { LEGAL, isLegalDraft } from "@/config/legal";
  * Written against UU PDP (Law No. 27 of 2022) and against what this codebase
  * actually stores — see the tables in supabase/migrations and the retention
  * window in task_photo_retention_cutoff() (migrations/102), and food photos
- * and finished food (migrations/123). If either changes,
+ * and finished food (migrations/123), and Kakak's request counts (kept 13
+ * months; the text itself goes to Anthropic, not our database). If either changes,
  * this has to change with it. Not legal advice: have it reviewed before a
  * public launch.
  */
@@ -91,6 +92,7 @@ const COPY: Record<
               "Which tasks you completed and when, and your leave dates and their status.",
               "Each time someone signs in to your name with the house code or a PIN: when, from which phone session, and whether it worked. Kept 30 days, only to stop PIN guessing (5 wrong tries locks the PIN for 15 minutes and tells the admins).",
               "Which phones are linked to the household, when each was linked and when it last signed in. Admins can see this list and remove a phone.",
+              "If an admin uses Kakak, the household's AI assistant, your first name is sent to Anthropic with the admin's requests so Kakak knows who is meant (see “Kakak” below).",
             ],
           },
           { h: "Everyone in a household" },
@@ -101,6 +103,16 @@ const COPY: Record<
               "Details about your pets, including their vet and health records.",
               "The household's shopping list: which supplies are running low or out, and who said so.",
               "Food the household lists: what it is, an optional photo, where it came from (cooked at home, from someone, or bought), where it is kept, when it expires (or that nobody knows yet), who gave it (a name you type in), notes, who added it, and whether it was eaten, given away or thrown away. When staff add food, the household's admins get a notification saying so, and each morning a notification lists food that expires today or tomorrow.",
+            ],
+          },
+          { h: "Kakak, the AI assistant (only if an admin turns it on)" },
+          {
+            ul: [
+              "Kakak is off unless an admin of your household turns it on, and any admin can turn it off again.",
+              "What you type to Kakak, her questions and your answers are sent to Anthropic to be understood (see section 5). Miamus doesn't store them: the conversation stays on your phone while Kakak is open, then is forgotten.",
+              "To understand requests like “ask Mbak Sari to water the plants”, each request also carries the first names of your staff, your pets' names, your room names, the names of items on your shopping list, and today's date. Nothing else about your staff is sent.",
+              "A count of Kakak requests and what each cost, without any of the text.",
+              "Kakak's suggestions can be wrong. Nothing is saved until you check and confirm it; what is saved is the chore, food or shopping item you confirmed, just as if you had typed it yourself.",
             ],
           },
           { h: "Technical" },
@@ -134,6 +146,7 @@ const COPY: Record<
               "Running Miamus for your household — showing tasks, recording who did what, reminders, leave and stock. This is needed to provide the service you asked for.",
               "Keeping it secure — sign-in, keeping each household's data separate, reviewing requests to set up new households, and preventing misuse. This is our legitimate interest.",
               "Sending notifications you've turned on. This is based on your consent, which you can withdraw at any time in your phone or browser settings.",
+              "Kakak, if an admin turns it on — understanding what admins type so it can suggest chores, food and shopping items. This is based on the consent the admin gives by turning Kakak on, which they can withdraw by turning it off.",
               "Meeting legal obligations, where any apply.",
             ],
           },
@@ -152,9 +165,13 @@ const COPY: Record<
               `Supabase — database, sign-in and photo storage, on servers in ${LEGAL.dataRegion.en}.`,
               "Vercel — hosts the app, on servers in Singapore. Photos pass through its servers when they're shown, but aren't stored there.",
               "Google — sign-in for admins.",
+              "Anthropic — understands what admins type to Kakak, if an admin turns it on, on servers in the United States. It keeps this up to 30 days (longer only if its safety systems flag a request, or the law requires it), and doesn't use it to train its AI.",
               "Apple, Google or Mozilla push services — deliver notifications to your device.",
               "Authorities — only when Indonesian law requires it.",
             ],
+          },
+          {
+            p: "With each Kakak request, Anthropic also receives the first names of your staff, your pets' names, room names and shopping item names, so Kakak can tell who and what you mean. Nothing else about your staff or family is sent.",
           },
           {
             p: "These providers handle data only to run Miamus for us. We don't share your data with advertisers or anyone else.",
@@ -167,6 +184,9 @@ const COPY: Record<
           {
             p: `Miamus data is stored in ${LEGAL.dataRegion.en}, and our providers may process it in other countries, such as Japan or the United States. We follow Article 56 of UU PDP: we use providers in countries with an equal or higher level of data protection, or that are bound by agreement to protect your data, and where neither applies, we rely on your consent.`,
           },
+          {
+            p: "If an admin turns on Kakak, what is typed to Kakak is processed by Anthropic in the United States (and its providers may process it in other countries). Anthropic is bound by agreement through its data processing addendum, part of its commercial terms; where that isn't enough, the admin gives consent by turning Kakak on.",
+          },
         ],
       },
       {
@@ -178,6 +198,7 @@ const COPY: Record<
               "Records of staff sign-in attempts are deleted automatically after 30 days.",
               "A food photo is kept while the food is on the list, and deleted once it is marked eaten, given away or thrown away, or deleted. Finished food is kept 90 days without its photo, then deleted automatically.",
               "A staff phone's ID is deleted 7 days after it was last used, once the phone is no longer linked to a household.",
+              "Counts of Kakak requests and their cost (without anything that was typed) are kept 13 months, then deleted.",
               "Everything else is kept while your household uses Miamus.",
               "A request to set up a household that isn't approved is deleted 30 days after the decision, together with the Google sign-in it came from, unless that account has since joined a household. Approved requests are kept while the account is used.",
               "If an admin asks us to delete their household, or anyone asks us to delete their data, we delete it within 30 days unless the law requires us to keep it. Copies in our providers' backups are cleared on their normal schedule.",
@@ -310,6 +331,7 @@ const COPY: Record<
               "Tugas yang Anda selesaikan dan waktunya, serta tanggal cuti dan statusnya.",
               "Setiap kali ada yang masuk dengan nama Anda memakai kode rumah atau PIN: kapan, dari sesi HP yang mana, dan berhasil atau tidak. Disimpan 30 hari, hanya untuk mencegah tebak-tebakan PIN (5 kali salah mengunci PIN selama 15 menit dan memberi tahu admin).",
               "HP mana saja yang terhubung ke rumah tangga, kapan masing-masing terhubung, dan kapan terakhir masuk. Admin dapat melihat daftar ini dan menghapus HP.",
+              "Jika admin memakai Kakak, asisten AI di Miamus, nama depan Anda ikut dikirim ke Anthropic bersama permintaan admin, supaya Kakak tahu siapa yang dimaksud (lihat “Kakak” di bawah).",
             ],
           },
           { h: "Semua orang di rumah tangga" },
@@ -320,6 +342,16 @@ const COPY: Record<
               "Data hewan peliharaan Anda, termasuk catatan dokter hewan dan kesehatannya.",
               "Daftar belanja rumah: barang yang hampir habis atau habis, dan siapa yang memberi tahu.",
               "Makanan yang dicatat rumah tangga: makanan apa, foto (boleh tidak ada), dari mana (dimasak di rumah, dari orang, atau dibeli), disimpan di mana, kapan kedaluwarsa (atau belum ada yang tahu), dari siapa (nama yang Anda ketik), catatan, siapa yang menambahkan, dan apakah sudah dimakan, diberikan, atau dibuang. Kalau staf menambahkan makanan, admin rumah tangga mendapat notifikasi, dan setiap pagi ada notifikasi berisi makanan yang kedaluwarsa hari ini atau besok.",
+            ],
+          },
+          { h: "Kakak, asisten AI (hanya jika admin menyalakannya)" },
+          {
+            ul: [
+              "Kakak tidak aktif kecuali admin rumah tangga Anda menyalakannya, dan setiap admin bisa mematikannya lagi.",
+              "Yang Anda ketik ke Kakak, pertanyaan Kakak, dan jawaban Anda dikirim ke Anthropic untuk dipahami (lihat bagian 5). Miamus tidak menyimpannya: percakapan hanya ada di HP Anda selama Kakak terbuka, lalu dilupakan.",
+              "Supaya Kakak paham permintaan seperti “minta Mbak Sari menyiram tanaman”, setiap permintaan juga membawa nama depan staf, nama hewan peliharaan, nama ruangan, nama barang di daftar belanja, dan tanggal hari ini. Tidak ada data staf lain yang dikirim.",
+              "Jumlah permintaan ke Kakak dan biaya masing-masing, tanpa isi teksnya.",
+              "Saran Kakak bisa salah. Tidak ada yang disimpan sebelum Anda memeriksa dan mengonfirmasinya; yang disimpan adalah tugas, makanan, atau barang belanja yang Anda konfirmasi, sama seperti jika Anda mengetiknya sendiri.",
             ],
           },
           { h: "Teknis" },
@@ -353,6 +385,7 @@ const COPY: Record<
               "Menjalankan Miamus untuk rumah tangga Anda — menampilkan tugas, mencatat siapa mengerjakan apa, pengingat, cuti, dan stok. Ini diperlukan untuk memberikan layanan yang Anda minta.",
               "Menjaga keamanan — login, memisahkan data setiap rumah tangga, meninjau permintaan membuat rumah tangga baru, dan mencegah penyalahgunaan. Ini adalah kepentingan sah kami.",
               "Mengirim notifikasi yang Anda nyalakan. Ini berdasarkan persetujuan Anda, yang dapat Anda tarik kapan saja lewat pengaturan HP atau browser.",
+              "Kakak, jika admin menyalakannya — memahami yang diketik admin agar Kakak bisa menyarankan tugas, makanan, dan barang belanja. Ini berdasarkan persetujuan yang diberikan admin saat menyalakan Kakak, yang dapat ditarik dengan mematikannya.",
               "Memenuhi kewajiban hukum, jika ada.",
             ],
           },
@@ -371,9 +404,13 @@ const COPY: Record<
               `Supabase — database, login, dan penyimpanan foto, di server yang berada di ${LEGAL.dataRegion.id}.`,
               "Vercel — hosting aplikasi, di server yang berada di Singapura. Foto melewati servernya saat ditampilkan, tetapi tidak disimpan di sana.",
               "Google — login untuk admin.",
+              "Anthropic — memahami yang diketik admin ke Kakak, jika admin menyalakannya, di server yang berada di Amerika Serikat. Anthropic menyimpannya paling lama 30 hari (lebih lama hanya jika sistem keamanannya menandai sebuah permintaan, atau jika diwajibkan hukum), dan tidak memakainya untuk melatih AI-nya.",
               "Layanan notifikasi Apple, Google, atau Mozilla — mengirim notifikasi ke perangkat Anda.",
               "Instansi berwenang — hanya jika diwajibkan oleh hukum Indonesia.",
             ],
+          },
+          {
+            p: "Bersama setiap permintaan ke Kakak, Anthropic juga menerima nama depan staf, nama hewan peliharaan, nama ruangan, dan nama barang belanja, supaya Kakak tahu siapa dan apa yang Anda maksud. Tidak ada data lain tentang staf atau keluarga Anda yang dikirim.",
           },
           {
             p: "Penyedia ini hanya mengolah data untuk menjalankan Miamus bagi kami. Kami tidak membagikan data Anda kepada pengiklan atau pihak lain.",
@@ -386,6 +423,9 @@ const COPY: Record<
           {
             p: `Data Miamus disimpan di ${LEGAL.dataRegion.id}, dan penyedia kami dapat memprosesnya di negara lain, seperti Jepang atau Amerika Serikat. Kami mengikuti Pasal 56 UU PDP: kami memakai penyedia di negara dengan tingkat pelindungan data yang setara atau lebih tinggi, atau yang terikat perjanjian untuk melindungi data Anda, dan jika keduanya tidak berlaku, kami mengandalkan persetujuan Anda.`,
           },
+          {
+            p: "Jika admin menyalakan Kakak, yang diketik ke Kakak diproses oleh Anthropic di Amerika Serikat (dan penyedianya dapat memprosesnya di negara lain). Anthropic terikat perjanjian melalui perjanjian pemrosesan datanya (data processing addendum), yang menjadi bagian dari ketentuan komersialnya; jika itu tidak cukup, admin memberikan persetujuannya dengan menyalakan Kakak.",
+          },
         ],
       },
       {
@@ -397,6 +437,7 @@ const COPY: Record<
               "Catatan percobaan masuk staf dihapus otomatis setelah 30 hari.",
               "Foto makanan disimpan selama makanannya masih ada di daftar, dan dihapus setelah ditandai dimakan, diberikan, atau dibuang, atau setelah dihapus. Makanan yang sudah habis disimpan 90 hari tanpa fotonya, lalu dihapus otomatis.",
               "ID HP staf dihapus 7 hari setelah terakhir dipakai, jika HP itu tidak lagi terhubung ke rumah tangga.",
+              "Jumlah permintaan ke Kakak dan biayanya (tanpa isi yang diketik) disimpan 13 bulan, lalu dihapus.",
               "Data lainnya disimpan selama rumah tangga Anda memakai Miamus.",
               "Permintaan membuat rumah tangga yang tidak disetujui dihapus 30 hari setelah keputusan, bersama akun login Google yang dipakai untuk memintanya, kecuali akun itu sudah bergabung ke sebuah rumah tangga. Permintaan yang disetujui disimpan selama akun tersebut dipakai.",
               "Jika admin meminta rumah tangganya dihapus, atau siapa pun meminta datanya dihapus, kami menghapusnya dalam 30 hari, kecuali hukum mewajibkan kami menyimpannya. Salinan di cadangan (backup) penyedia kami terhapus sesuai jadwal normal mereka.",
