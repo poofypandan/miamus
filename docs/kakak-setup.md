@@ -16,11 +16,18 @@ everywhere until all four of these are true, in this order:
      answers "not available" before doing anything.
    - Optional: `KAKAK_MODEL` (default `claude-opus-5-5`) and `KAKAK_EFFORT`
      (default `low`). Pick them from the eval (`docs/kakak-eval.md`).
-3. **The household is on the family list.** A platform admin, signed in,
-   runs in the browser console or from the SQL editor as that admin:
-   `select platform_set_kakak_allowed('<household id>', true);`
-   (it refuses anyone who is not a platform admin). Only then does the
-   **Kakak** row appear in the Household tab.
+3. **The household is on the family list.** `platform_set_kakak_allowed`
+   checks `is_platform_admin()`, so it needs a signed-in platform admin;
+   there is no screen for it yet. Until there is, the operator sets it from
+   the Supabase SQL editor (which runs as the database owner, not as a user):
+
+   ```sql
+   insert into public.kakak_settings (household_id, allowed)
+   values ('<household id>', true)
+   on conflict (household_id) do update set allowed = true;
+   ```
+
+   Only then does the **Kakak** row appear in the Household tab.
 4. **An owner turns it on**: Household → Kakak → **Let Kakak help**. The
    page says what is sent to Anthropic and links the privacy policy.
 

@@ -108,6 +108,12 @@ export function checkHistory(history: unknown): KakakHistory {
       if (block.type === "tool_use" && !(KAKAK_TOOL_NAMES as readonly string[]).includes(block.name)) {
         throw new BadTurnError(`message ${index} uses an unknown tool`);
       }
+      // Kakak's own words and calls are short. Thinking blocks are signed by
+      // Anthropic, so a forged one is refused by the API itself.
+      if (block.type === "text" && block.text.length > 2000) throw new BadTurnError(`message ${index} is too long`);
+      if (block.type === "tool_use" && JSON.stringify(block.input ?? {}).length > 4000) {
+        throw new BadTurnError(`message ${index} is too long`);
+      }
     }
   });
   if (messages.length > 0 && messages.length % 2 !== 0) throw new BadTurnError("history must end with Kakak's turn");

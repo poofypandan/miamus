@@ -11,6 +11,7 @@ import { useCallback } from "react";
 import { useHousehold } from "@/context/household-context";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { dataProvider } from "@/lib/data";
+import { stockStatus } from "@/lib/inventory";
 import { isSaveableSuggestion, type KakakSuggestion } from "./suggestions";
 import type { StockStatus } from "@/types/database";
 
@@ -68,7 +69,7 @@ export function useKakakSave() {
               for (const entry of item.entries) {
                 if (entry.type === "item") {
                   const current = household.inventoryItems.find((i) => i.id === entry.itemId);
-                  const before: StockStatus = current?.stock_status ?? "ok";
+                  const before: StockStatus = current ? stockStatus(current) : "ok";
                   await household.setInventoryStatus(entry.itemId, entry.status);
                   undos.push(() => household.setInventoryStatus(entry.itemId, before));
                 } else {

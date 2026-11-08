@@ -171,7 +171,7 @@ const COPY: Record<
             ],
           },
           {
-            p: "With each Kakak request, Anthropic also receives the first names of your staff, your pets' names, room names and shopping item names, so Kakak can tell who and what you mean. Nothing else about your staff or family is sent.",
+            p: "With each Kakak request, Anthropic also receives the first names of the people on your household's list (staff, and family members who are admins), your pets' names, room names and shopping item names, so Kakak can tell who and what you mean. Nothing else about your staff or family is sent.",
           },
           {
             p: "These providers handle data only to run Miamus for us. We don't share your data with advertisers or anyone else.",
@@ -410,7 +410,7 @@ const COPY: Record<
             ],
           },
           {
-            p: "Bersama setiap permintaan ke Kakak, Anthropic juga menerima nama depan staf, nama hewan peliharaan, nama ruangan, dan nama barang belanja, supaya Kakak tahu siapa dan apa yang Anda maksud. Tidak ada data lain tentang staf atau keluarga Anda yang dikirim.",
+            p: "Bersama setiap permintaan ke Kakak, Anthropic juga menerima nama depan orang-orang di daftar rumah Anda (staf, dan anggota keluarga yang menjadi admin), nama hewan peliharaan, nama ruangan, dan nama barang belanja, supaya Kakak tahu siapa dan apa yang Anda maksud. Tidak ada data lain tentang staf atau keluarga Anda yang dikirim.",
           },
           {
             p: "Penyedia ini hanya mengolah data untuk menjalankan Miamus bagi kami. Kami tidak membagikan data Anda kepada pengiklan atau pihak lain.",
