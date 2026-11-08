@@ -5,6 +5,33 @@ Supabase can't change a project's region, so the move is: a new project in
 Singapore, a copy of everything, then the app switches to it. This file is
 the order of work, who does what, and how to undo it.
 
+## What happened on 2026-11-08
+
+The move was done on 2026-11-08 between 11:20 and 11:45 WIB. Differences from
+the plan below, so the next move can start from here:
+
+- **No passwords were needed.** The Supabase CLI (signed in to the owner's
+  account) dumps with `--remote=<ref>` and runs SQL with
+  `supabase db query --remote=<ref> -f file --yes` through a temporary login
+  role. `~/.miamus-move.env` was not used. Data was dumped as `INSERT`s (not
+  `--use-copy`), because `db query` cannot stream `COPY`.
+- **Grants are not restored by the dump.** The new project starts with
+  Supabase's default grants (everything executable by `anon` and
+  `authenticated`). Tokyo's exact ACLs were generated from its catalog
+  (functions, tables, sequences, columns) and replayed; then 1,974
+  role/privilege checks were compared and matched. Do this on every move.
+- **Storage policies** are not in the schema dump; they were recreated from
+  Tokyo's `pg_policies` (5 on `storage.objects`).
+- **VAPID keys:** the CLI role cannot decrypt Vault, so Singapore got new
+  keys and `push_subscriptions` was emptied; owners re-enable notifications.
+- **Photos:** `4-copy-photos.mjs`, with each project's secret key fetched by
+  the CLI inside the same command (never printed).
+- **Old address not forwarded yet** (Codex): a phone on `miamus.vercel.app`
+  may still hold unsent logs; that address serves the Singapore build, so
+  they still arrive.
+- Making Tokyo read-only for the API was tried and blocked by a safety
+  check; low risk, since everyone signed in again on the new build.
+
 ## What production holds (checked 2026-11-08, structure only)
 
 | Piece | Size / list | How it moves |

@@ -12,7 +12,13 @@ set -euo pipefail
 source "$HOME/.miamus-move.env"
 
 secret_from_old() {
-  psql "$OLD_DB_URL" -At -c "select decrypted_secret from vault.decrypted_secrets where name = '$1'"
+  local value
+  # A failed query or a missing secret must stop the move, not write an
+  # empty value over the target's (Codex review, PR #16).
+  value="$(psql "$OLD_DB_URL" -At -v ON_ERROR_STOP=1 -c "select decrypted_secret from vault.decrypted_secrets where name = '$1'")" \
+    || { echo "could not read $1 from Tokyo" >&2; exit 1; }
+  [ -n "$value" ] || { echo "$1 is empty or missing in Tokyo" >&2; exit 1; }
+  printf '%s' "$value"
 }
 
 put_secret() { # name, value (via SECRET_VALUE)
@@ -26,7 +32,8 @@ SQL
 
 put_secret project_url "$NEW_URL"
 for name in push_vapid_public_key push_vapid_private_key push_vapid_subject; do
-  put_secret "$name" "$(secret_from_old "$name")"
+  value="$(secret_from_old "$name")" || exit 1
+  put_secret "$name" "$value"
 done
 put_secret push_dispatch_secret "$(openssl rand -hex 32)"
 put_secret task_photo_retention_secret "$(openssl rand -hex 32)"
