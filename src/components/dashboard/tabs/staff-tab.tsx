@@ -16,6 +16,7 @@ import {
   Languages,
   Loader2,
   Lock,
+  LogOut,
   PackageX,
   Plus,
   RotateCcw,
@@ -58,6 +59,7 @@ import { pushInPlace } from "@/lib/in-place-navigation";
 import { isOnLeave } from "@/lib/leave";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { LeavePanel } from "@/components/dashboard/leave-panel";
+import { SignOutSheet } from "@/components/auth/sign-out-sheet";
 import { describeLog } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ProposalStatus, StaffProfile } from "@/types/database";
@@ -277,6 +279,7 @@ export function StaffTab() {
         <SettingsGroup>
           <SettingsRow icon={History} label={t("Activity", "Aktivitas")} onPress={() => open("activity")} />
         </SettingsGroup>
+        <SignOutRow locale={locale} />
       </div>
     );
   }
@@ -839,5 +842,51 @@ function SetPinDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * The last row of the Household tab: who is signed in on this phone, and the
+ * way out (owner request, 2026-11-08). Red text and a confirmation sheet, so
+ * it is easy to find and hard to hit by accident.
+ */
+function SignOutRow({ locale }: { locale: "en" | "id" }) {
+  const t = useT();
+  const [email, setEmail] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void import("@/lib/supabase/client").then(async ({ supabase }) => {
+      const { data } = (await supabase?.auth.getSession()) ?? { data: { session: null } };
+      if (!cancelled) setEmail(data.session?.user.email ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <>
+      <SettingsGroup>
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="flex min-h-[52px] items-center gap-3 px-4 text-left text-sm active:bg-muted"
+        >
+          <LogOut className="size-4 shrink-0 text-red-600" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-red-600">{t("Sign out", "Keluar")}</span>
+            {email && <span className="block truncate text-xs text-muted-foreground">{email}</span>}
+          </span>
+        </button>
+      </SettingsGroup>
+      <SignOutSheet
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        lang={locale}
+        account={email}
+      />
+    </>
   );
 }
