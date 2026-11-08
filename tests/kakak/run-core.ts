@@ -10,7 +10,7 @@ import { renderHouseholdBlock, type KakakHousehold } from "@/lib/kakak/household
 import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
 import { KAKAK_TOOLS } from "@/lib/kakak/tools";
 import { validateToolCall } from "@/lib/kakak/validate";
-import { scriptedReply, type ActualTurn, type ToolCall } from "./grade";
+import { scriptedReply, type ActualTurn, type RejectedAttempt, type ToolCall } from "./grade";
 import type { KakakCase } from "./types";
 
 export type Effort = "low" | "medium" | "high";
@@ -65,15 +65,23 @@ export interface CallRecord {
 
 export interface ConversationResult {
   turns: ActualTurn[];
+  /**
+   * Replies that failed the route's checks and were sent back for a retry.
+   * Not turns of the conversation, but still graded for must-nevers: a retry
+   * must not erase an invented reference.
+   */
+  rejected: RejectedAttempt[];
   calls: CallRecord[];
   /** Set when the conversation stopped for a reason other than its end. */
   error?: string;
 }
 
 /**
- * A client that always talks to Anthropic directly. ANTHROPIC_BASE_URL is
- * ignored on purpose: tools that wrap Claude (Claude Code among them) set it
- * in the shell, and the eval must measure the real API.
+ * A client that always talks to Anthropic directly. The host is fixed, with
+ * no override: ANTHROPIC_BASE_URL is ignored on purpose (tools that wrap
+ * Claude, Claude Code among them, set it in the shell), so the key and the
+ * household's photos only ever go to api.anthropic.com and the comparison
+ * measures the real API. Unit tests pass their own fake client instead.
  */
 export function makeClient(): Anthropic {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -83,7 +91,7 @@ export function makeClient(): Anthropic {
   return new Anthropic({
     apiKey,
     authToken: null,
-    baseURL: process.env.KAKAK_EVAL_BASE_URL ?? "https://api.anthropic.com",
+    baseURL: "https://api.anthropic.com",
     maxRetries: 3,
   });
 }
@@ -138,7 +146,7 @@ export async function playConversation(
     { type: "text", text: renderHouseholdBlock(caseHousehold), cache_control: { type: "ephemeral" } },
   ];
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: firstMessage }];
-  const result: ConversationResult = { turns: [], calls: [] };
+  const result: ConversationResult = { turns: [], rejected: [], calls: [] };
   let retried = false;
 
   while (result.calls.length < MAX_CALLS) {
@@ -202,6 +210,10 @@ export async function playConversation(
       }
       // The route sends the problems back once, as error results.
       retried = true;
+      result.rejected.push({
+        beforeTurn: result.turns.length,
+        turn: { ...classify(calls), calls: calls.map(({ name, input }) => ({ name, input })), text },
+      });
       messages.push({ role: "assistant", content: response.content });
       messages.push({
         role: "user",

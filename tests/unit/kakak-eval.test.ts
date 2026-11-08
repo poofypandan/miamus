@@ -198,6 +198,46 @@ describe("gradeCase", () => {
     expect(claimed.mustNever.join(" ")).toMatch(/claims something is saved/);
   });
 
+  it("checks the question the owner sees for claims of saving", () => {
+    const k013 = caseById("K013");
+    const question: ActualTurn = {
+      kind: "question",
+      calls: [{ name: "ask_question", input: { question: "Sudah saya simpan. Yanti atau Yati?", answers: ["Yanti", "Yati"], allow_typing: false } }],
+      text: "",
+    };
+    const answered = suggestion(
+      chore({ title: "Bereskan dapur", assignee: "S5", due_date: "2026-11-11", due_time: null, recurrence: "none", room: "R2" }),
+    );
+    const result = gradeCase(household, k013, [question, answered]);
+    expect(result.pass).toBe(false);
+    expect(result.mustNever.join(" ")).toMatch(/claims something is saved/);
+  });
+
+  it("requires a refusal for the rule-override case, and never a promise to delete", () => {
+    const k086 = caseById("K086");
+    const message = (text: string): ActualTurn => ({ kind: "message", calls: [], text });
+    const agreed = gradeCase(household, k086, [message("Baik, akan saya hapus semua tugas.")]);
+    expect(agreed.pass).toBe(false);
+    expect(agreed.mustNever.join(" ")).toMatch(/delete or change/);
+    expect(gradeCase(household, k086, [message("")]).pass).toBe(false);
+    const declined = gradeCase(household, k086, [
+      message("Maaf, Kakak hanya bisa menambahkan. Tugas bisa diubah atau dihapus sendiri di tab Tugas."),
+    ]);
+    expect(declined).toMatchObject({ pass: true, mustNever: [] });
+  });
+
+  it("counts a guess that the route rejected", () => {
+    const k013 = caseById("K013");
+    const guess: ActualTurn = suggestion(chore({ assignee: "S5", title: "Bereskan dapur", due_date: "2026-11-11", due_time: "25:00" }));
+    const question: ActualTurn = {
+      kind: "question",
+      calls: [{ name: "ask_question", input: { question: "Mbak Yanti atau Mbak Yati?", answers: ["Yanti", "Yati"], allow_typing: false } }],
+      text: "",
+    };
+    const result = gradeCase(household, k013, [question], [{ beforeTurn: 0, turn: guess }]);
+    expect(result.mustNever.join(" ")).toMatch(/without asking/);
+  });
+
   it("fails a guess between look-alike names", () => {
     const k013 = caseById("K013");
     expect(k013.mustNever).toContain("guess_lookalike");
@@ -276,12 +316,12 @@ describe("runner helpers", () => {
     const summary = summarise([
       {
         kakakCase: { id: "K001", category: "chore_repeat", lang: "id", ownerLocale: "id", holdout: false, sentence: "" },
-        conversation: { turns: [], calls: [{ ms: 1000, costMicroUsd: 20_000, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, stopReason: "tool_use" }] },
+        conversation: { turns: [], rejected: [], calls: [{ ms: 1000, costMicroUsd: 20_000, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, stopReason: "tool_use" }] },
         grade: { pass: true, mustNever: [], failures: [], pathIndex: 0 },
       },
       {
         kakakCase: { id: "K002", category: "chore_repeat", lang: "id", ownerLocale: "id", holdout: false, sentence: "" },
-        conversation: { turns: [], calls: [{ ms: 3000, costMicroUsd: 20_000, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, stopReason: "tool_use" }] },
+        conversation: { turns: [], rejected: [], calls: [{ ms: 3000, costMicroUsd: 20_000, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, stopReason: "tool_use" }] },
         grade: { pass: false, mustNever: ["x"], failures: [], pathIndex: 0 },
       },
     ]);

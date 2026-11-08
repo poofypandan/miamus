@@ -110,7 +110,7 @@ async function main() {
         { type: "text", text: photo.caption },
       ];
       const conversation = await playConversation(client, variant, household, photo.kakakCase, content);
-      const grade = gradeCase(household, photo.kakakCase, conversation.turns);
+      const grade = gradeCase(household, photo.kakakCase, conversation.turns, conversation.rejected);
       const { id, category, lang, ownerLocale, holdout, sentence } = photo.kakakCase;
       outcomes.push({ kakakCase: { id, category, lang, ownerLocale, holdout, sentence }, conversation, grade });
       console.log(`  ${id} ${grade.pass ? "pass" : `FAIL: ${[...grade.mustNever, ...grade.failures].join(" · ")}`}`);

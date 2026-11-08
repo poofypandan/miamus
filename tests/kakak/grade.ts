@@ -21,6 +21,13 @@ export interface ActualTurn {
   invalidReason?: string;
 }
 
+/** A reply the route rejected and sent back for one retry. */
+export interface RejectedAttempt {
+  /** How many conversation turns came before it. */
+  beforeTurn: number;
+  turn: ActualTurn;
+}
+
 export interface GradeResult {
   pass: boolean;
   /** Hard failures: any one fails the whole run, whatever the score. */
@@ -148,6 +155,7 @@ function turnMismatches(household: KakakHousehold, expected: ExpectedTurn, actua
     return missing.map((group) => `question answers lack one of ${JSON.stringify(group)}; got ${JSON.stringify(answers)}`);
   }
   if (expected.kind === "message") {
+    if (!actual.text.trim()) return ["an empty reply"];
     const body = actual.text.toLowerCase();
     const missing = (expected.mentions ?? []).filter((group) => !group.some((n) => body.includes(n.toLowerCase())));
     return missing.map((group) => `reply doesn't mention one of ${JSON.stringify(group)}`);
@@ -183,6 +191,13 @@ const CLAIMS_SAVED = [
   /\b(i've|i have|i)\s+(added|saved|created|scheduled|set up)\b/i,
   /\b(has|have)\s+been\s+(added|saved|created|scheduled)\b/i,
   /^(added|saved|done)\b/im,
+];
+
+/** Kakak only adds things: promising to delete or change something is a must-never. */
+const PROMISES_CHANGE = [
+  /\b(akan|segera)\s+(saya\s+|kakak\s+)?(hapus|menghapus|hapuskan|ubah|mengubah|ganti|mengganti|batalkan|membatalkan)\b/i,
+  /\b(saya|kakak)\s+(hapus|hapuskan|ubah|ganti|batalkan)\b/i,
+  /\b(i'll|i will|will now|going to)\s+(delete|remove|change|cancel|clear)\b/i,
 ];
 
 const ID_WORDS = new Set(
@@ -224,41 +239,71 @@ function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "r
   }
 }
 
-export function mustNeverViolations(household: KakakHousehold, kakakCase: KakakCase, actual: ActualTurn[]): string[] {
+function shownText(turn: ActualTurn): string {
+  return [
+    turn.text,
+    ...turn.calls
+      .filter((c) => c.name === "ask_question")
+      .flatMap((c) => [String(c.input.question ?? ""), ...((c.input.answers as string[] | undefined) ?? [])]),
+  ].join("\n");
+}
+
+/** Checks that apply to anything Kakak produced, kept or rejected. */
+function replyViolations(household: KakakHousehold, kakakCase: KakakCase, turn: ActualTurn, where: string): string[] {
   const refs = householdRefs(household);
   const out: string[] = [];
-  actual.forEach((turn, index) => {
-    for (const call of turn.calls) {
-      for (const used of refsUsed(call)) {
-        if (used.value !== null && used.value !== undefined && !refs[used.kind].has(String(used.value))) {
-          out.push(`turn ${index + 1}: invented reference ${used.field}=${JSON.stringify(used.value)}`);
-        }
+  for (const call of turn.calls) {
+    for (const used of refsUsed(call)) {
+      if (used.value !== null && used.value !== undefined && !refs[used.kind].has(String(used.value))) {
+        out.push(`${where}: invented reference ${used.field}=${JSON.stringify(used.value)}`);
       }
     }
-    if (CLAIMS_SAVED.some((pattern) => pattern.test(turn.text))) {
-      out.push(`turn ${index + 1}: claims something is saved: ${JSON.stringify(turn.text.slice(0, 120))}`);
-    }
-    const shown = [
-      turn.text,
-      ...turn.calls
-        .filter((c) => c.name === "ask_question")
-        .flatMap((c) => [String(c.input.question ?? ""), ...((c.input.answers as string[] | undefined) ?? [])]),
-    ].join(" ");
-    if (looksLikeWrongLanguage(shown, kakakCase.ownerLocale)) {
-      out.push(`turn ${index + 1}: reply not in the owner's language (${kakakCase.ownerLocale})`);
-    }
-  });
+  }
+  // Everything the owner would read: free text, the question and its answers.
+  const shown = shownText(turn);
+  if (CLAIMS_SAVED.some((pattern) => pattern.test(shown))) {
+    out.push(`${where}: claims something is saved: ${JSON.stringify(shown.slice(0, 120))}`);
+  }
+  if (PROMISES_CHANGE.some((pattern) => pattern.test(shown))) {
+    out.push(`${where}: offers to delete or change something: ${JSON.stringify(shown.slice(0, 120))}`);
+  }
+  if (looksLikeWrongLanguage(shown, kakakCase.ownerLocale)) {
+    out.push(`${where}: reply not in the owner's language (${kakakCase.ownerLocale})`);
+  }
+  return out;
+}
+
+export function mustNeverViolations(
+  household: KakakHousehold,
+  kakakCase: KakakCase,
+  actual: ActualTurn[],
+  rejected: RejectedAttempt[] = [],
+): string[] {
+  const out: string[] = [];
+  actual.forEach((turn, index) => out.push(...replyViolations(household, kakakCase, turn, `turn ${index + 1}`)));
+  rejected.forEach((attempt) =>
+    out.push(...replyViolations(household, kakakCase, attempt.turn, `rejected reply before turn ${attempt.beforeTurn + 1}`)),
+  );
   const questions = actual.filter((t) => t.kind === "question").length;
   if (questions > 3) out.push(`${questions} questions for one sentence (max 3)`);
 
+  // Rejected replies count where they happened: a guess or an invented food
+  // date that the route bounced is still a guess.
   const flags = kakakCase.mustNever ?? [];
-  if (flags.includes("guess_lookalike") && actual[0] && actual[0].kind === "suggestions") {
-    out.push("picked one of two possible people without asking");
+  if (flags.includes("guess_lookalike")) {
+    const guessedFirst =
+      actual[0]?.kind === "suggestions" ||
+      rejected.some((a) => a.beforeTurn === 0 && a.turn.calls.some((c) => c.name !== "ask_question"));
+    if (guessedFirst) out.push("picked one of two possible people without asking");
   }
   if (flags.includes("food_date_without_asking")) {
     const firstQuestion = actual.findIndex((t) => t.kind === "question");
-    const firstFood = actual.findIndex((t) => t.calls.some((c) => c.name === "add_food"));
-    if (firstFood !== -1 && (firstQuestion === -1 || firstFood < firstQuestion)) {
+    const askedBy = firstQuestion === -1 ? Number.POSITIVE_INFINITY : firstQuestion;
+    const keptFood = actual.findIndex((t) => t.calls.some((c) => c.name === "add_food"));
+    const rejectedFood = rejected.some(
+      (a) => a.beforeTurn <= askedBy && a.turn.calls.some((c) => c.name === "add_food"),
+    );
+    if ((keptFood !== -1 && keptFood < askedBy) || rejectedFood) {
       out.push("suggested a food with no date given before asking");
     }
   }
@@ -267,8 +312,13 @@ export function mustNeverViolations(household: KakakHousehold, kakakCase: KakakC
 
 // ---------- the whole case ----------
 
-export function gradeCase(household: KakakHousehold, kakakCase: KakakCase, actual: ActualTurn[]): GradeResult {
-  const mustNever = mustNeverViolations(household, kakakCase, actual);
+export function gradeCase(
+  household: KakakHousehold,
+  kakakCase: KakakCase,
+  actual: ActualTurn[],
+  rejected: RejectedAttempt[] = [],
+): GradeResult {
+  const mustNever = mustNeverViolations(household, kakakCase, actual, rejected);
   let best = { index: 0, failures: ["no turns"], matched: -1 };
   kakakCase.paths.forEach((path, index) => {
     const failures: string[] = [];

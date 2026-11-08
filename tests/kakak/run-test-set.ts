@@ -110,7 +110,7 @@ async function main() {
       }
       const conversation = await playConversation(client, variant, household, kakakCase, kakakCase.sentence);
       spentMicro += conversation.calls.reduce((sum, c) => sum + c.costMicroUsd, 0);
-      const grade = gradeCase(household, kakakCase, conversation.turns);
+      const grade = gradeCase(household, kakakCase, conversation.turns, conversation.rejected);
       outcomes.push({
         kakakCase: {
           id: kakakCase.id,

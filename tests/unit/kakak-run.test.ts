@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
 import type { KakakHousehold } from "@/lib/kakak/household";
 import { gradeCase } from "../kakak/grade";
-import { playConversation, type Variant } from "../kakak/run-core";
+import { makeClient, playConversation, type Variant } from "../kakak/run-core";
 import type { KakakTestSet } from "../kakak/types";
 
 const root = join(__dirname, "..", "kakak");
@@ -71,6 +71,22 @@ const chore = (assignee: string) => ({
 
 const sonnet: Variant = { model: "claude-sonnet-5-5", effort: "low", thinking: "adaptive" };
 
+describe("makeClient", () => {
+  it("always uses api.anthropic.com, whatever the shell says", () => {
+    const saved = { key: process.env.ANTHROPIC_API_KEY, base: process.env.ANTHROPIC_BASE_URL };
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.ANTHROPIC_BASE_URL = "http://elsewhere.test";
+    try {
+      expect(makeClient().baseURL).toBe("https://api.anthropic.com");
+    } finally {
+      if (saved.key === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = saved.key;
+      if (saved.base === undefined) delete process.env.ANTHROPIC_BASE_URL;
+      else process.env.ANTHROPIC_BASE_URL = saved.base;
+    }
+  });
+});
+
 describe("playConversation", () => {
   it("asks, sends the tapped answer back, and grades the suggestion", async () => {
     const { client, bodies } = fakeApi([
@@ -122,8 +138,13 @@ describe("playConversation", () => {
     expect(retry.content[0].is_error).toBe(true);
     expect(retry.content[0].content).toMatch(/^Not accepted: /);
     expect(result.turns.map((t) => t.kind)).toEqual(["suggestions"]);
-    // Picking Yati without asking is still a must-never for this sentence.
-    expect(gradeCase(household, k013, result.turns).mustNever.join(" ")).toMatch(/without asking/);
+    expect(result.rejected).toHaveLength(1);
+    expect(result.rejected[0].beforeTurn).toBe(0);
+    const grade = gradeCase(household, k013, result.turns, result.rejected);
+    // Picking Yati without asking is still a must-never for this sentence…
+    expect(grade.mustNever.join(" ")).toMatch(/without asking/);
+    // …and so is the invented S9, even though the retry corrected it.
+    expect(grade.mustNever.join(" ")).toMatch(/rejected reply before turn 1: invented reference assignee="S9"/);
   });
 
   it("gives up after a second failed check", async () => {
