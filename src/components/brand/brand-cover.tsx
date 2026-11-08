@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MiamusMark, RumahRules } from "@/components/brand/loading-screens";
+import { MiamusMark, MiamusPromise, PROMISE, RumahRules } from "@/components/brand/loading-screens";
+import { readCachedOwnerLocale } from "@/lib/owner-locale";
 import {
   endNavigation,
   hasLaunched,
@@ -160,9 +161,29 @@ function CoverFace({
         fadeIn && !revealing && "animate-view-fade motion-reduce:animate-none"
       )}
     >
-      {variant === "owner" ? <MiamusMark /> : <RumahRules />}
+      {variant === "owner" ? (
+        <div className="flex flex-col items-center">
+          <MiamusMark />
+          <OwnerPromise />
+        </div>
+      ) : (
+        <RumahRules />
+      )}
     </div>
   );
+}
+
+/**
+ * The philosophy line on the owner's cover, in this phone's owner language.
+ * Read after mount: the server render has no storage, and the line is still
+ * invisible for its first 1.5s, so it never visibly changes language.
+ */
+function OwnerPromise() {
+  const [text, setText] = useState<string>(PROMISE.en);
+  useEffect(() => {
+    if (readCachedOwnerLocale() === "id") setText(PROMISE.id);
+  }, []);
+  return <MiamusPromise text={text} />;
 }
 
 /**

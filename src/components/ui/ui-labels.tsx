@@ -20,6 +20,7 @@ const LABELS = {
     nextPhoto: "Next photo",
     backspace: "Delete last digit",
     loading: "Loading",
+    promise: "A little less on your mind.",
   },
   id: {
     lang: "id",
@@ -28,6 +29,7 @@ const LABELS = {
     nextPhoto: "Foto berikutnya",
     backspace: "Hapus angka terakhir",
     loading: "Memuat",
+    promise: "Biar pikiran sedikit lebih ringan.",
   },
 } as const;
 

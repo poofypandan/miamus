@@ -30,16 +30,41 @@ import { useUiLabels } from "@/components/ui/ui-labels";
  * The ring is two layers — a faint full track, and a darker quarter that
  * rotates. Rotation is a transform on its own layer; the mark never moves.
  */
-export function MiamusMark() {
+/**
+ * Miamus's philosophy in one line (owner, 2026-11-08): sharing the everyday
+ * load so there is a little less to remember. Calm, and no promise that
+ * everything is handled. Owner screens only; staff have the RUMAH rules.
+ */
+export const PROMISE = {
+  en: "A little less on your mind.",
+  id: "Biar pikiran sedikit lebih ringan.",
+} as const;
+
+/**
+ * The line under the owner's mark while something loads. It waits 1.5s
+ * before fading in (animate-promise-in): a quick load shows the logo alone,
+ * and words that flash for a moment read as a glitch.
+ */
+export function MiamusPromise({ text }: { text: string }) {
   return (
-    <div className="relative flex size-24 items-center justify-center">
+    <p className="mt-6 animate-promise-in text-center text-sm text-gray-500 motion-reduce:animate-none">
+      {text}
+    </p>
+  );
+}
+
+export function MiamusMark() {
+  // 88px, the same as the start screen's mark (2026-11-08), so the picture
+  // stays put when the splash hands over to the start screen.
+  return (
+    <div className="relative flex size-28 items-center justify-center">
       <span aria-hidden className="absolute inset-0 rounded-full border-2 border-zinc-200" />
       <span
         aria-hidden
         className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-zinc-900 will-change-transform motion-reduce:animate-none"
       />
-      <div className="size-[72px] overflow-hidden rounded-full">
-        <BrandMark size={72} rounded={false} />
+      <div className="size-[88px] overflow-hidden rounded-full">
+        <BrandMark size={88} rounded={false} />
       </div>
     </div>
   );
@@ -80,9 +105,10 @@ export function OwnerLoadingScreen() {
     <div
       role="status"
       aria-label={labels.loading}
-      className="flex min-h-[60vh] flex-1 animate-loader-in items-center justify-center motion-reduce:animate-none"
+      className="flex min-h-[60vh] flex-1 animate-loader-in flex-col items-center justify-center motion-reduce:animate-none"
     >
       <MiamusMark />
+      <MiamusPromise text={labels.promise} />
     </div>
   );
 }

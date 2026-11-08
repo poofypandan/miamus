@@ -287,6 +287,10 @@
 @theme inline {
   --animate-loader-in: loader-in 200ms ease-out 150ms both;
   --animate-loader-pulse: loader-pulse 1.6s ease-in-out infinite;
+  /* The philosophy line under the owner's mark (2026-11-08): invisible for
+     the first 1.5s, so a quick load shows the logo alone and only a slow one
+     gets the words. Reuses loader-in's "from transparent" keyframes. */
+  --animate-promise-in: loader-in 600ms ease-out 1500ms both;
 
   @keyframes loader-in {
     from {
