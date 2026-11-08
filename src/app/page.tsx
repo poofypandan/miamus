@@ -18,7 +18,8 @@ import { readStoredTenantId } from "@/lib/tenant";
 const COPY = {
   en: {
     title: "Welcome to Miamus",
-    tagline: "Run your household from one place — pets, chores, people and stock.",
+    promise: "A little less on your mind.",
+    tagline: "Your pets, the chores, the kitchen, and everyone who helps — together in one place.",
     google: "Continue with Google",
     // Indonesian on the English screen too: it is for staff, who must
     // recognise their own door at a glance whatever the phone is set to.
@@ -36,7 +37,8 @@ const COPY = {
   },
   id: {
     title: "Selamat datang di Miamus",
-    tagline: "Kelola rumah dari satu tempat — hewan, tugas, orang dan stok.",
+    promise: "Biar pikiran sedikit lebih ringan.",
+    tagline: "Hewan, tugas rumah, dapur, dan semua yang ikut membantu — bersama di satu tempat.",
     google: "Lanjutkan dengan Google",
     staff: "Saya staf",
     consentBefore: "Dengan melanjutkan, Anda menyetujui ",
@@ -162,12 +164,15 @@ function FrontDoor() {
 
       {/* The mark, still: the same picture as the launch splash a moment ago,
           without its spinner, so this reads as the same app (Phase 150). */}
-      <div aria-hidden className="mx-auto mb-6 size-16 overflow-hidden rounded-full">
-        <BrandMark size={64} rounded={false} />
+      <div aria-hidden className="mx-auto mb-6 size-[88px] overflow-hidden rounded-full">
+        <BrandMark size={88} rounded={false} />
       </div>
 
       <h1 className="text-3xl font-semibold tracking-tight text-balance text-gray-900">{t.title}</h1>
-      <p className="mt-3 text-sm text-muted-foreground">{t.tagline}</p>
+      {/* Why, then what (2026-11-08): the philosophy first, the plain
+          description under it, smaller. */}
+      <p className="mt-3 text-base text-gray-700">{t.promise}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{t.tagline}</p>
 
       <Button onClick={handleGoogle} disabled={busy} className="mt-10 min-h-[52px] w-full gap-3">
         {busy ? <Loader2 className="animate-spin" /> : <GoogleMark />}
