@@ -15,7 +15,8 @@ Group). Google requires the domain to be verified by a project Owner or
 Editor, and the support-email group to be managed by the account that is
 signed in to Google Cloud.
 
-Order: **A → B → C → D.** About 20 minutes, plus waiting for DNS.
+Order: **A → B → (check authorized domains) → C → D.** About 20 minutes,
+plus waiting for DNS.
 
 ---
 
@@ -35,7 +36,10 @@ is best, under 1 MB.
    - App name: **Miamus**
    - Application home page: **https://miamus.app**
    - Application privacy policy link: **https://miamus.app/privacy**
-   - Authorized domains: **miamus.app** is listed.
+   - Authorized domains: **miamus.app** is listed. **Write down every other
+     domain in that list** (for example `supabase.co`, from the old Tokyo
+     and staging sign-in addresses). See "Before C: every authorized domain
+     must be yours" below.
 6. **Save**. Don't press *Verify branding* yet (that is step C).
 
 > Uploading a logo is what makes Google ask for brand verification. Until
@@ -67,6 +71,34 @@ is best, under 1 MB.
    quick; Google says it can take up to a day).
 6. **Keep the TXT record forever.** Removing it un-verifies the domain, and
    the brand verification can lapse with it.
+
+---
+
+## Before C: every authorized domain must be yours
+
+Google verifies **every** domain under *Authorized domains*, not only the
+home page's ([its rule](https://support.google.com/cloud/answer/13464321)).
+You can only verify domains you own, so anything other than `miamus.app`
+(most likely `supabase.co`) has to go before step C, or verification fails.
+
+What removing `supabase.co` changes:
+
+- **Production: nothing.** Sign-in now runs through `auth.miamus.app`
+  (since 2026-11-08), which is covered by `miamus.app`.
+- **Old Tokyo project:** its Google sign-in stops working. It is only a
+  fallback and is due to be deleted, so this is fine.
+- **Staging** (`varctrfggidbnwlbsyrw.supabase.co`): its Google sign-in
+  stops working through this OAuth client. Two ways out — pick one:
+  1. **Recommended:** give staging its own small Google Cloud project with
+     its own OAuth client (stays in *Testing*, you as the only test user;
+     no branding or verification needed). Claude can write those steps.
+  2. Wait with step C until you no longer need Google sign-in on staging.
+
+To remove it: **Google Auth Platform → Branding → Authorized domains** →
+the bin icon next to the domain → **Save**. Also remove the matching
+`…supabase.co/auth/v1/callback` lines from **Clients → Miamus →
+Authorized redirect URIs** only once you are sure nothing uses them (keep
+`https://auth.miamus.app/auth/v1/callback`).
 
 ---
 
@@ -166,6 +198,5 @@ account that owns the Google Cloud project.
 ## After all four
 
 Tell Claude: "Google branding done" — Claude will update the handoff and the
-business-setup memory (brand verified, support email replaced) and remind
-you later to remove the Tokyo and staging authorized domains once Tokyo is
-deleted.
+business-setup memory (brand verified, support email replaced, which
+authorized domains and redirect URIs remain).
