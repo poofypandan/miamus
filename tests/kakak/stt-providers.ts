@@ -118,6 +118,30 @@ const scribe: Provider = {
 // The clip and its transcript are deleted from Soniox after each run.
 const SONIOX_API = "https://api.soniox.com/v1";
 
+/** Deletes the transcription and the uploaded clip; returns what is left behind. */
+export async function sonioxCleanup(
+  auth: Record<string, string>,
+  transcriptionId: string | null,
+  fileId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string[]> {
+  const targets = [
+    ...(transcriptionId ? [{ what: `transcription ${transcriptionId}`, url: `${SONIOX_API}/transcriptions/${transcriptionId}` }] : []),
+    { what: `file ${fileId}`, url: `${SONIOX_API}/files/${fileId}` },
+  ];
+  const leftovers: string[] = [];
+  for (const target of targets) {
+    try {
+      const response = await fetchImpl(target.url, { method: "DELETE", headers: auth });
+      // 404: already gone, which is what we want.
+      if (!response.ok && response.status !== 404) leftovers.push(`${target.what} (HTTP ${response.status})`);
+    } catch (error) {
+      leftovers.push(`${target.what} (${error instanceof Error ? error.message : "network error"})`);
+    }
+  }
+  return leftovers;
+}
+
 const soniox: Provider = {
   id: "soniox",
   label: "Soniox async",
@@ -169,13 +193,15 @@ const soniox: Provider = {
       if (typeof json.text !== "string") throw new Error("Soniox: transcript has no text");
       return { text: json.text, ms: Date.now() - started };
     } finally {
-      // Don't leave household voices on Soniox's servers.
-      if (transcriptionId) {
-        await fetch(`${SONIOX_API}/transcriptions/${transcriptionId}`, { method: "DELETE", headers: auth }).catch(
-          () => undefined,
+      // Don't leave household voices on Soniox's servers. Both deletions are
+      // always tried; if either fails, the clip's result becomes an error
+      // naming what to delete by hand, so it can't pass unnoticed.
+      const leftovers = await sonioxCleanup(auth, transcriptionId, fileId);
+      if (leftovers.length) {
+        throw new Error(
+          `Soniox: could not delete ${leftovers.join(" and ")}. Delete by hand (DELETE ${SONIOX_API}/transcriptions/<id> and /files/<id>) or in the Soniox console.`,
         );
       }
-      await fetch(`${SONIOX_API}/files/${fileId}`, { method: "DELETE", headers: auth }).catch(() => undefined);
     }
   },
 };

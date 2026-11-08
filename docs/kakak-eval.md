@@ -57,8 +57,9 @@ The runner always calls `https://api.anthropic.com` directly. It ignores
 - `tests/kakak/media/` and `tests/kakak/results/` are git-ignored: photos,
   voices and transcripts never go into the repo.
 - Anthropic keeps API data for up to 30 days and doesn't train on it. Soniox's
-  clips are deleted straight after each transcription (the runner does this).
-  ElevenLabs and Deepgram keep data according to their own terms: check them
+  clips are deleted straight after each transcription (the runner does this;
+  if a deletion fails, that clip shows an error saying what to delete by
+  hand). ElevenLabs and Deepgram keep data according to their own terms: check them
   before sending staff voices.
 - None of this changes what the app stores, so the privacy policy doesn't
   change yet. It does when Kakak ships (plan, section 9).

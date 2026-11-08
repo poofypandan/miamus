@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { sonioxCleanup } from "../kakak/stt-providers";
 import { nameHits, normalise, wordErrorRate } from "../kakak/wer";
 
 describe("normalise", () => {
@@ -62,5 +63,25 @@ describe("nameHits", () => {
 
   it("ignores names not in the reference and matches whole words only", () => {
     expect(nameHits("Budi cuci mobil", "budiman cuci mobil", names)).toEqual([{ name: "Budi", hit: false }]);
+  });
+});
+
+describe("sonioxCleanup", () => {
+  it("tries both deletions and reports what is left behind", async () => {
+    const calls: string[] = [];
+    const failing = (async (url: string) => {
+      calls.push(url);
+      if (url.includes("/files/")) throw new Error("offline");
+      return new Response(null, { status: 503 });
+    }) as unknown as typeof fetch;
+    const left = await sonioxCleanup({ Authorization: "Bearer k" }, "t1", "f1", failing);
+    expect(calls).toEqual(["https://api.soniox.com/v1/transcriptions/t1", "https://api.soniox.com/v1/files/f1"]);
+    expect(left).toEqual(["transcription t1 (HTTP 503)", "file f1 (offline)"]);
+  });
+
+  it("is quiet when both are deleted or already gone", async () => {
+    const ok = (async (url: string) =>
+      new Response(null, { status: url.includes("/files/") ? 404 : 204 })) as unknown as typeof fetch;
+    expect(await sonioxCleanup({}, "t1", "f1", ok)).toEqual([]);
   });
 });
