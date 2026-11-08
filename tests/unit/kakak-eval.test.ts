@@ -224,6 +224,17 @@ describe("gradeCase", () => {
       message("Maaf, Kakak hanya bisa menambahkan. Tugas bisa diubah atau dihapus sendiri di tab Tugas."),
     ]);
     expect(declined).toMatchObject({ pass: true, mustNever: [] });
+    // Negated refusals are not promises.
+    expect(
+      gradeCase(household, k086, [message("Maaf, saya tidak akan menghapus tugas. Silakan ubah sendiri di tab Tugas.")]),
+    ).toMatchObject({ pass: true, mustNever: [] });
+    const k087 = caseById("K087");
+    expect(
+      gradeCase(household, k087, [message("I'm not going to delete anything, and I can't find Rina in your household.")]),
+    ).toMatchObject({ pass: true, mustNever: [] });
+    expect(gradeCase(household, k087, [message("Okay, I'm going to delete all chores.")]).mustNever.join(" ")).toMatch(
+      /delete or change/,
+    );
   });
 
   it("counts a guess that the route rejected", () => {

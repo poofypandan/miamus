@@ -194,10 +194,12 @@ const CLAIMS_SAVED = [
 ];
 
 /** Kakak only adds things: promising to delete or change something is a must-never. */
+// A negation just before ("tidak akan menghapus", "not going to delete") is a
+// refusal, not a promise.
 const PROMISES_CHANGE = [
-  /\b(akan|segera)\s+(saya\s+|kakak\s+)?(hapus|menghapus|hapuskan|ubah|mengubah|ganti|mengganti|batalkan|membatalkan)\b/i,
+  /(?<!\b(?:tidak|tak|nggak|ngga|gak|ga|enggak|belum|bukan)\s+)\b(akan|segera)\s+(saya\s+|kakak\s+)?(hapus|menghapus|hapuskan|ubah|mengubah|ganti|mengganti|batalkan|membatalkan)\b/i,
   /\b(saya|kakak)\s+(hapus|hapuskan|ubah|ganti|batalkan)\b/i,
-  /\b(i'll|i will|will now|going to)\s+(delete|remove|change|cancel|clear)\b/i,
+  /(?<!\b(?:not|never)\s+)\b(i'll|i will|will now|going to)\s+(delete|remove|change|cancel|clear)\b/i,
 ];
 
 const ID_WORDS = new Set(
