@@ -75,7 +75,10 @@ function timesFrom(text: string): string[] {
   const pad = (h: number, m: number) => `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   const hour = (raw: string, suffix: string | undefined) => {
     let h = Number(raw);
-    if ((suffix === "pm" || suffix === "sore" || suffix === "malam") && h < 12) h += 12;
+    if ((suffix === "pm" || suffix === "sore") && h < 12) h += 12;
+    // "jam 1 siang" is 13:00; "jam 11 siang" stays 11:00.
+    if (suffix === "siang" && h <= 5) h += 12;
+    if (suffix === "malam") h = h === 12 ? 0 : h < 12 ? h + 12 : h;
     if (suffix === "am" && h === 12) h = 0;
     return h;
   };
@@ -86,7 +89,7 @@ function timesFrom(text: string): string[] {
       return " ";
     });
   };
-  take(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/g, (m) => {
+  take(/\b(\d{1,2})[:.](\d{2})\s*(am|pm|pagi|siang|sore|malam)?\b/g, (m) => {
     const h = hour(m[1], m[3]);
     const min = Number(m[2]);
     return h < 24 && min < 60 ? pad(h, min) : null;
@@ -290,12 +293,15 @@ interface Conversation {
   asked: number;
   /** The last turn was the engine telling Kakak a suggestion was invalid. */
   corrected: boolean;
+  /** The owner typed a change after a suggestion card ("Ganti jam 10"). */
+  changed: boolean;
 }
 
 function readConversation(messages: Anthropic.MessageParam[]): Conversation {
   const said: string[] = [];
   let asked = 0;
   let corrected = false;
+  let changed = false;
   messages.forEach((message, index) => {
     const last = index === messages.length - 1;
     if (message.role === "assistant") {
@@ -313,11 +319,12 @@ function readConversation(messages: Anthropic.MessageParam[]): Conversation {
         if (last) corrected = true;
         continue;
       }
+      if (content.startsWith("Not saved. The owner says: ")) changed = true;
       const owner = content.replace(/^Not saved\. The owner says: /, "").replace(/\n\(That was the third question[\s\S]*$/, "");
       if (owner && owner !== "Not saved.") said.push(owner);
     }
   });
-  return { said, asked, corrected };
+  return { said, asked, corrected, changed };
 }
 
 let counter = 0;
@@ -357,6 +364,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     in3: "In 3 days",
     dunno: "Don't know",
     stuck: "(Practice) I can't set that up in practice mode. Try: \"Ari mops the terrace every Monday at 9\".",
+    noChange: "(Practice) In practice mode I can only change a chore's day, time, room or person. Cancel and type the whole thing again.",
   },
   id: {
     here: "(Latihan) Ini yang akan Kakak tambahkan:",
@@ -368,17 +376,21 @@ const COPY: Record<Locale, Record<string, string>> = {
     in3: "3 hari lagi",
     dunno: "Tidak tahu",
     stuck: "(Latihan) Ini belum bisa di mode latihan. Coba: \"Ari pel teras setiap Senin jam 9\".",
+    noChange: "(Latihan) Di mode latihan, Kakak hanya bisa mengubah hari, jam, ruangan atau orang untuk tugas. Batalkan lalu ketik ulang semuanya.",
   },
 };
 
 function respond(household: KakakHousehold, model: string, messages: Anthropic.MessageParam[]): Anthropic.Message {
   const copy = COPY[household.ownerLocale];
-  const { said, asked, corrected } = readConversation(messages);
+  const { said, asked, corrected, changed } = readConversation(messages);
   // The engine refused the last suggestion: don't loop, explain.
   if (corrected || said.length === 0) return message(model, [text(copy.stuck)]);
   const first = said[0];
   const all = said.join(" · ");
   const intent = intentOf(household, first);
+  // Only chores take a typed change; anything else would come back unchanged
+  // and look corrected (Codex, PR #31), so say so instead.
+  if (changed && intent !== "chore") return message(model, [text(copy.noChange)]);
   const canAsk = asked < 1;
 
   if (intent === "shopping") {

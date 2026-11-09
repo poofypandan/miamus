@@ -180,6 +180,19 @@ describe("practice conversations", () => {
     expect(am.items[0].kind === "pet_routine" ? am.items[0].times.map((t) => t.time) : []).toEqual(["09:15"]);
   });
 
+  it("Indonesian evening times with minutes", async () => {
+    const result = suggestions(await runKakakTurn(setup("id").deps, null, "Mochi makan jam 9.30 malam"));
+    expect(result.items[0].kind === "pet_routine" ? result.items[0].times.map((t) => t.time) : []).toEqual(["21:30"]);
+  });
+
+  it("a change to a shopping or pet card is declined, not silently ignored", async () => {
+    const { deps } = setup("en");
+    const card = suggestions(await runKakakTurn(deps, null, "Buy sugar 2 kg"));
+    const changed = await runKakakTurn(deps, card.history, "Change to 3 kg");
+    expect(changed).toMatchObject({ kind: "message" });
+    expect(changed.kind === "message" ? changed.text : "").toMatch(/only change a chore/);
+  });
+
   it("12 am is midnight, once", async () => {
     const { deps } = setup("en");
     const result = suggestions(await runKakakTurn(deps, null, "Feed Mochi at 12 am"));
