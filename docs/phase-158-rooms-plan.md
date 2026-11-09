@@ -210,6 +210,47 @@ AGENTS.md; reviewers please confirm.)
 | No vacuum yet | **Belum ada vakum** (pattern: "Belum ada {job}") |
 | Job names | as in the jobs table |
 
+## Tutorial (shown once, per role)
+
+A small **What's new** card, the first time each person opens the app after
+the update. Dismissible; re-openable later from the Household tab. PR A builds
+the card once so later features reuse it.
+
+**Owners** (English or Bahasa Indonesia, their choice), PR A:
+
+1. "Chores now has **Rooms**: tap it to see every room and what's set up
+   there." / "Tugas sekarang punya **Ruangan**: ketuk untuk melihat setiap
+   ruangan dan tugasnya."
+2. "Tap **Vacuum** (or Mop, Dust…) to see which rooms have it and which
+   don't." / "Ketuk **Vakum** (atau Pel, Lap debu…) untuk melihat ruangan
+   mana yang sudah dan belum."
+3. "Tap **Add** next to a room to set it up there." / "Ketuk **Tambah** di
+   samping ruangan untuk menambahkannya."
+
+PR B adds: "Sort your rooms into floors once, and pick several rooms when you
+add a chore."
+
+**Staff** (Bahasa Indonesia only): nothing in PR A changes their screens, so
+no card. PR B, one line: "Nama ruangan sekarang ada lantainya, misalnya
+**LT2 · Lounge**."
+
+## Next: repairs (Phase 159, its own plan)
+
+Floors and rooms are household places, not only for chores: the next phase
+uses them for repairs. Not built here, but migration 128 must not get in its
+way. In short:
+
+- Anyone can **report a problem** in a room ("LT3 · Music Room: wall
+  cracked"), with a photo. Owners' reports go straight in; staff reports wait
+  for an owner to accept, like staff routine proposals today.
+- A repair is a chore in the existing **Maintenance / Perbaikan** category,
+  with who fixes it (a staff member or an outside repair person) and when.
+- Staff take **before and after photos** while the repair person works,
+  using the photo steps chores already have.
+- Each room keeps its **repair history**, with photos, in the room sheet.
+- Repair photos are evidence, so they need longer retention than chore
+  photos: that's a privacy policy change, in Phase 159.
+
 ## When
 
 1. Merge what's open (#20–#26). Migrations 126/127 are already on staging and
@@ -226,3 +267,4 @@ AGENTS.md; reviewers please confirm.)
 - Rooms for food or supplies (the Kitchen keeps Fridge, Freezer, Cupboard,
   Counter).
 - Staff list grouped by room (D3 B), unless chosen.
+- Repairs (Phase 159, above).
