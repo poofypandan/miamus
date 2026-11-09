@@ -296,6 +296,15 @@ begin
     end if;
   end loop;
 
+  -- Never merge into a room this plan deletes: its chores would lose their
+  -- room when it goes (Codex, #34).
+  if exists (
+    select 1 from jsonb_array_elements(coalesce(p_plan -> 'merges', '[]')) m
+     where (m ->> 'into') in (select value #>> '{}' from jsonb_array_elements(coalesce(p_plan -> 'delete', '[]')))
+  ) then
+    raise exception 'merge_into_deleted_room' using errcode = '22023';
+  end if;
+
   for merge in select * from jsonb_array_elements(coalesce(p_plan -> 'merges', '[]')) loop
     if not exists (select 1 from public.household_locations where id = (merge ->> 'into')::uuid and household_id = hid)
        or not exists (select 1 from public.household_locations where id = (merge ->> 'from')::uuid and household_id = hid) then

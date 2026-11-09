@@ -158,6 +158,11 @@ select pg_temp.ok(pg_temp.err_as(:owner, $q$ select public.organise_rooms('{"hou
 select pg_temp.ok((select name = 'Other household room' from public.household_locations where id = '00000000-0000-0000-0000-0000000129c9'),
   'and it is unchanged');
 select pg_temp.ok(not has_function_privilege('anon', 'public.organise_rooms(jsonb)', 'execute'), 'logged-out callers cannot call organise_rooms');
+select pg_temp.ok(pg_temp.err_as(:owner, $q$ select public.organise_rooms('{"household_id": "00000000-0000-0000-0000-0000000129f1",
+  "places": [],
+  "merges": [{"from": "00000000-0000-0000-0000-0000000129c4", "into": "00000000-0000-0000-0000-0000000129c3", "spot": "Wastafel"}],
+  "chores": [], "delete": ["00000000-0000-0000-0000-0000000129c3"]}'::jsonb) $q$) = 'merge_into_deleted_room',
+  'a plan that merges into a room it deletes is refused');
 
 -- ---- Two levels ------------------------------------------------------------------
 insert into public.household_locations (id, household_id, name, kind) values

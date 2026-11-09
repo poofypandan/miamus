@@ -121,8 +121,19 @@ export function buildSortPlan(
         list.push(room);
         groups.set(key(part.base), list);
       }
-      for (const [baseKey, parts] of groups) {
+      // A room that receives a merge is never merged away itself: with
+      // "GB2 Bathroom", "… Shower" and "… Shower Cermin", Cermin joins Shower
+      // and Shower stays, rather than Cermin's chores following a room that
+      // is then deleted (Codex, #34).
+      const receivers = new Set<string>();
+      for (const [baseKey] of groups) {
         const existing = onFloor.find((r) => key(r.name) === baseKey);
+        if (existing) receivers.add(existing.location.id);
+      }
+      for (const [baseKey, allParts] of groups) {
+        const existing = onFloor.find((r) => key(r.name) === baseKey);
+        const parts = allParts.filter((p) => !receivers.has(p.location.id));
+        if (parts.length === 0) continue;
         const base = splitPart(parts[0].name)!.base;
         if (!existing && (parts.length < 2 || base.split(/\s+/).length < 2)) continue;
         const kept = existing ?? parts[0];

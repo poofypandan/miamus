@@ -132,3 +132,20 @@ describe("buildRoomsModel with stored floors", () => {
     expect(model.otherRooms.map((r) => r.label)).toEqual(["Teras"]);
   });
 });
+
+describe("nested parts", () => {
+  it("never merges into a room that is itself merged away", () => {
+    const nested = [
+      room("f", "LT2"),
+      room("a", "LT2 GB2 Bathroom"),
+      room("b", "LT2 GB2 Bathroom Shower"),
+      room("c", "LT2 GB2 Bathroom Shower Cermin"),
+    ];
+    const { plan } = buildSortPlan(H, nested, [], TODAY, { mergeParts: true, linkChores: false }, newId);
+    // Cermin joins Shower; Shower (a receiver) is kept, not merged into Bathroom.
+    expect(plan.merges).toEqual([{ from: "c", into: "b", spot: "Cermin" }]);
+    expect(plan.delete).toEqual(["c"]);
+    const merged = new Set(plan.delete);
+    for (const m of plan.merges ?? []) expect(merged.has(m.into)).toBe(false);
+  });
+});
