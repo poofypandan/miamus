@@ -10,8 +10,8 @@ import type { OwnerLocale } from "@/lib/owner-locale";
  * Indonesian follows docs/indonesian-glossary.md. No emoji anywhere: icons
  * are drawn by the page (AGENTS.md, Design).
  *
- * The weak-signal question waits for PR #41 (saves queued on a bad
- * connection); until it is live, the page has seven questions.
+ * The weak-signal answer relies on PR #41 (every staff save queued on a
+ * bad connection, src/lib/offline-queue.ts).
  */
 
 export type LandingFeature = "pets" | "chores" | "kitchen" | "repairs";
@@ -175,6 +175,10 @@ export const LANDING_COPY: Record<OwnerLocale, LandingCopy> = {
           a: "No app store needed. Open miamus.app on Android or iPhone and add it to the home screen. It opens full screen, like an app.",
         },
         {
+          q: "What if the signal is weak?",
+          a: "Staff keep working. Their logs, finished chores and the food they add wait on the phone and are sent when the signal is back.",
+        },
+        {
           q: "Does Miamus send WhatsApp messages?",
           a: "No automatic messages. You share the invite link yourself, and after a sick-pet report staff can tap once to tell you on WhatsApp. If you turn on notifications, urgent things also reach your phone straight away.",
         },
@@ -307,6 +311,10 @@ export const LANDING_COPY: Record<OwnerLocale, LandingCopy> = {
         {
           q: "Apakah perlu unduh aplikasi?",
           a: "Tidak perlu lewat app store. Buka miamus.app di Android atau iPhone, lalu tambahkan ke layar utama. Tampilannya layar penuh, seperti aplikasi.",
+        },
+        {
+          q: "Bagaimana kalau sinyal lemah?",
+          a: "Staf tetap bisa bekerja. Catatan, tugas yang selesai, dan makanan yang mereka tambahkan menunggu di HP dan terkirim saat sinyal kembali.",
         },
         {
           q: "Apakah Miamus mengirim pesan WhatsApp?",

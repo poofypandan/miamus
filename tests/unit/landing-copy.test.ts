@@ -71,8 +71,8 @@ describe("landing copy", () => {
       expect(all).not.toMatch(/Singap/i);
       // Kakak isn't named until she's live (L6).
       expect(all).not.toMatch(/Kakak/);
-      // The weak-signal answer waits for PR #41.
-      expect(LANDING_COPY[locale].faq.items).toHaveLength(7);
+      // Eight questions, the weak-signal one included since PR #41.
+      expect(LANDING_COPY[locale].faq.items).toHaveLength(8);
     }
   });
 
