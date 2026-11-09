@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rooms and floors mockups</title>
+<style>
+  :root {
+    --bg: #f8fafc; --card: #fff; --ink: #111827; --ink2: #374151; --muted: #6b7280;
+    --line: #e5e7eb; --track: #f3f4f6; --primary: #171717; --red: #b91c1c; --redbg: #fef2f2;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ecef; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color: var(--ink); }
+  header.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 4px; }
+  header.page h1 { font-size: 20px; margin: 0 0 4px; }
+  header.page p { margin: 0; color: var(--muted); }
+  section.screen { max-width: 1100px; margin: 0 auto; padding: 18px 16px 8px; }
+  section.screen h2 { font-size: 15px; margin: 0 0 2px; }
+  section.screen > p { margin: 0 0 12px; color: var(--muted); max-width: 640px; }
+  .pair { display: flex; gap: 20px; flex-wrap: wrap; }
+  .phone { width: 360px; max-width: 100%; height: 720px; background: var(--bg); border-radius: 36px; border: 8px solid #111; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .tag { position: absolute; top: -2px; right: 18px; background: #111; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 0 0 8px 8px; z-index: 5; }
+  .status { height: 22px; flex: none; }
+  .appbar { background: #fff; border-bottom: 1px solid var(--line); padding: 8px 14px 10px; flex: none; }
+  .appbar .row { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+  .brand { font-weight: 600; font-size: 17px; display: flex; gap: 6px; align-items: center; }
+  .brand i { width: 22px; height: 22px; border-radius: 7px; background: #111; display: inline-block; }
+  .seg { display: flex; gap: 3px; background: var(--track); border-radius: 999px; padding: 3px; }
+  .seg span { flex: 1; text-align: center; border-radius: 999px; padding: 8px 6px; font-weight: 500; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .seg span.on { background: var(--primary); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .seg.sm span { flex: none; padding: 6px 10px; font-size: 11px; }
+  .body { flex: 1; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+  .body > *, .sheet > * { flex: none; }
+  .body > .spacer, .sheet > .spacer { flex: 1; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 12px; font-weight: 600; font-size: 14px; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.outline { border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 500; }
+  .h { font-size: 13px; font-weight: 600; color: var(--ink); margin: 2px 0 -4px; }
+  .h small { color: #9ca3af; font-weight: 600; }
+  .group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .item { display: flex; gap: 10px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); min-height: 56px; }
+  .item:first-child { border-top: 0; }
+  .thumb { width: 38px; height: 38px; border-radius: 9px; flex: none; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .item .t { flex: 1; min-width: 0; }
+  .item .t b { display: block; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .t span { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .t span.red { color: var(--red); }
+  .item .days { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .item .days.red { color: var(--red); font-weight: 600; }
+  .tick { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid #9ca3af; flex: none; }
+  .tabbar { flex: none; height: 58px; background: #fff; border-top: 1px solid var(--line); display: flex; }
+  .tabbar span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; color: var(--muted); font-weight: 500; }
+  .tabbar span i { width: 20px; height: 20px; border-radius: 6px; border: 1.7px solid currentColor; display: block; }
+  .tabbar span.on { color: var(--ink); }
+  .tabbar span.on i { background: currentColor; }
+  /* sheet */
+  .dim { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 2; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 70px; background: #fff; border-radius: 20px 20px 0 0; z-index: 3; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .grab { width: 36px; height: 5px; border-radius: 9px; background: #d1d5db; margin: 0 auto 2px; }
+  .sheet h3 { margin: 0; font-size: 17px; text-align: center; }
+  .label { font-size: 12px; font-weight: 600; color: var(--ink2); margin-bottom: 6px; }
+  .label em { font-style: normal; font-weight: 400; color: var(--muted); }
+  .input { border: 1px solid var(--line); border-radius: 12px; min-height: 44px; padding: 11px 12px; color: var(--ink); font-size: 14px; }
+  .input.ph { color: #9ca3af; }
+  .photo { height: 86px; border: 1.5px dashed #d1d5db; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-weight: 500; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .choice { border: 1px solid var(--line); border-radius: 12px; padding: 8px 2px; text-align: center; font-size: 12px; font-weight: 500; color: var(--ink2); }
+  .choice div { font-size: 20px; line-height: 1.3; }
+  .choice.on { border: 2px solid var(--primary); padding: 7px 1px; color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; font-size: 13px; color: var(--ink2); }
+  .chip.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .more { color: var(--ink2); font-weight: 500; font-size: 13px; }
+  .spacer { flex: 1; }
+  .big { width: 100%; height: 150px; border-radius: 14px; background: linear-gradient(135deg,#f5e6c8,#e9cf9c); display: flex; align-items: center; justify-content: center; font-size: 54px; }
+  .facts { display: flex; flex-direction: column; }
+  .fact { display: flex; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .fact:first-child { border-top: 0; }
+  .fact span { color: var(--muted); }
+  .outs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .out { border: 1px solid var(--line); border-radius: 12px; padding: 10px 2px; text-align: center; font-size: 12.5px; font-weight: 600; }
+  .out div { font-size: 22px; }
+  .link { text-align: center; font-size: 13px; color: var(--ink2); font-weight: 500; }
+  .link.danger { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .quiet { display: flex; align-items: center; gap: 8px; padding: 6px 4px; min-height: 40px; color: var(--ink2); }
+  .quiet .ico { width: 16px; text-align: center; color: var(--muted); }
+  .quiet .chev { margin-left: auto; color: var(--muted); }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .faded { opacity: .55; }
+  .note { font-size: 12px; color: var(--muted); text-align: center; }
+  .toast { position: absolute; left: 14px; right: 14px; bottom: 72px; background: #111; color: #fff; border-radius: 12px; padding: 11px 14px; font-size: 13px; display: flex; justify-content: space-between; z-index: 4; }
+  .toast b { font-weight: 600; }
+  /* Phase 158 additions */
+  .fl { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 2px -4px; }
+  .fl b { font-size: 13px; }
+  .fl span { font-size: 12px; color: var(--muted); }
+  .room { display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; border-top: 1px solid var(--line); }
+  .room:first-child { border-top: 0; }
+  .room .top { display: flex; align-items: center; gap: 8px; }
+  .room .top b { flex: 1; font-weight: 500; font-size: 14px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .room .top .chev { color: var(--muted); }
+  .jobs { display: flex; flex-wrap: wrap; gap: 4px; }
+  .job { background: var(--track); border-radius: 999px; padding: 3px 8px; font-size: 11.5px; color: var(--ink2); }
+  .yes { font-size: 12.5px; color: var(--ink2); }
+  .yes::before { content: "✓ "; color: #15803d; font-weight: 700; }
+  .no { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
+  .addsm { border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; font-size: 12px; color: var(--ink); font-weight: 500; background: #fff; }
+  .whole { background: #fafafa; }
+  .whole .top b { font-weight: 600; font-size: 12.5px; color: var(--ink2); }
+  .scrollchips { display: flex; gap: 6px; overflow: hidden; white-space: nowrap; }
+  .scrollchips .chip { padding: 6px 11px; font-size: 12.5px; flex: none; }
+  .summary { font-size: 12.5px; color: var(--ink2); background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; }
+  .summary b { font-weight: 600; }
+  .ch { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+  .ch:first-child { border-top: 0; }
+  .ch .t { flex: 1; min-width: 0; }
+  .ch .t b { display: block; font-weight: 500; font-size: 13.5px; }
+  .ch .t span { display: block; font-size: 12px; color: var(--muted); }
+  .jh { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin: 6px 0 -6px; }
+  .pick { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .pick .ph { padding: 6px 12px; font-size: 11px; font-weight: 600; color: var(--muted); background: #fafafa; border-top: 1px solid var(--line); }
+  .pick .ph:first-child { border-top: 0; }
+  .pick .po { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid #9ca3af; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; }
+  .box.on { background: var(--primary); border-color: var(--primary); }
+  .split { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12.5px; }
+  .split:first-child { border-top: 0; }
+  .split s { color: var(--muted); text-decoration: none; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .split .arrow { color: var(--muted); }
+  .split b { font-weight: 600; flex: 1.3; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mgr { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); font-size: 14px; }
+  .mgr:first-child { border-top: 0; }
+  .mgr span { flex: 1; }
+  .mgr i { font-style: normal; color: var(--muted); font-size: 13px; }
+  .back { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 16px; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Phase 158 — Rooms and floors for chores</h1>
+  <p>Phone-size mockups for the plan in <code>docs/phase-158-rooms-plan.md</code>. Room names are examples. Not built yet.</p>
+</header>
+
+<section class="screen">
+  <h2>1. Chores → Rooms (All)</h2>
+  <p>A second pill in the Chores tab. Floors are sections; each room shows its jobs and days. Whole-floor chores come first in each floor.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
+        <div class="seg"><span>Today</span><span class="on">Rooms</span></div></div>
+      <div class="body">
+        <div class="scrollchips"><span class="chip on">All</span><span class="chip">Vacuum</span><span class="chip">Mop</span><span class="chip">Dust</span><span class="chip">Toilet</span><span class="chip">Towels</span></div>
+        <div class="fl"><b>LT1</b><span>1 room</span></div>
+        <div class="group">
+          <div class="room"><div class="top"><b>Service Area</b><span class="chev">›</span></div><div class="jobs"><span class="job">Supplies · Sat</span></div></div>
+        </div>
+        <div class="fl"><b>LT2</b><span>13 rooms</span></div>
+        <div class="group">
+          <div class="room whole"><div class="top"><b>Whole floor</b><span class="chev">›</span></div><div class="jobs"><span class="job">Trash · daily</span></div></div>
+          <div class="room"><div class="top"><b>Lounge</b><span class="chev">›</span></div><div class="jobs"><span class="job">Vacuum · Mon Thu</span><span class="job">Mop · Mon Thu</span><span class="job">Dust · Mon</span></div></div>
+          <div class="room"><div class="top"><b>Master Bedroom</b><span class="chev">›</span></div><div class="jobs"><span class="job">Vacuum · Tue</span><span class="job">Sheets · Sat</span></div></div>
+          <div class="room"><div class="top"><b>Master Bathroom</b><span class="chev">›</span></div><div class="jobs"><span class="job">Towels · daily</span><span class="job">Toilet · Wed</span></div></div>
+          <div class="room"><div class="top"><b>Playroom</b><span class="chev">›</span></div><div class="jobs"><span class="job">Vacuum · Fri</span><span class="job">Mop · Fri</span></div></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><i></i>Today</span><span><i></i>Pets</span><span class="on"><i></i>Chores</span><span><i></i>Kitchen</span><span><i></i>Household</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>1b. Tap "Vacuum": which rooms have it</h2>
+  <p>Each room shows ✓ with days and who does it, or a quiet "No vacuum yet" with Add (room and title filled in). Not red: some rooms don't need it.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
+        <div class="seg"><span>Today</span><span class="on">Rooms</span></div></div>
+      <div class="body">
+        <div class="scrollchips"><span class="chip">All</span><span class="chip on">Vacuum</span><span class="chip">Mop</span><span class="chip">Dust</span><span class="chip">Toilet</span><span class="chip">Towels</span></div>
+        <div class="summary"><b>Vacuum</b> in 9 of 19 rooms</div>
+        <div class="fl"><b>LT2</b><span>Vacuum in 7 of 13</span></div>
+        <div class="group">
+          <div class="room"><div class="top"><b>Lounge</b></div><div class="yes">Mon, Thu · Ari</div></div>
+          <div class="room"><div class="top"><b>Master Bedroom</b></div><div class="yes">Tue · Sari</div></div>
+          <div class="room"><div class="top"><b>Walk-in closet</b></div><div class="no"><span>No vacuum yet</span><span class="addsm">＋ Add</span></div></div>
+          <div class="room"><div class="top"><b>Playroom</b></div><div class="yes">Fri · Ari</div></div>
+          <div class="room"><div class="top"><b>Guest Bedroom 2</b></div><div class="no"><span>No vacuum yet</span><span class="addsm">＋ Add</span></div></div>
+        </div>
+        <div class="fl"><b>LT3</b><span>Vacuum in 2 of 4</span></div>
+        <div class="group">
+          <div class="room"><div class="top"><b>Creative Space</b></div><div class="yes">Wed · Sari</div></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><i></i>Today</span><span><i></i>Pets</span><span class="on"><i></i>Chores</span><span><i></i>Kitchen</span><span><i></i>Household</span></div>
+    </div>
+    <div class="phone"><div class="tag">Owner · Indonesia</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
+        <div class="seg"><span>Hari ini</span><span class="on">Ruangan</span></div></div>
+      <div class="body">
+        <div class="scrollchips"><span class="chip">Semua</span><span class="chip on">Vakum</span><span class="chip">Pel</span><span class="chip">Lap debu</span><span class="chip">Toilet</span><span class="chip">Handuk</span></div>
+        <div class="summary"><b>Vakum</b> di 9 dari 19 ruangan</div>
+        <div class="fl"><b>LT2</b><span>Vakum di 7 dari 13</span></div>
+        <div class="group">
+          <div class="room"><div class="top"><b>Lounge</b></div><div class="yes">Sen, Kam · Ari</div></div>
+          <div class="room"><div class="top"><b>Master Bedroom</b></div><div class="yes">Sel · Sari</div></div>
+          <div class="room"><div class="top"><b>Walk-in closet</b></div><div class="no"><span>Belum ada vakum</span><span class="addsm">＋ Tambah</span></div></div>
+          <div class="room"><div class="top"><b>Playroom</b></div><div class="yes">Jum · Ari</div></div>
+          <div class="room"><div class="top"><b>Guest Bedroom 2</b></div><div class="no"><span>Belum ada vakum</span><span class="addsm">＋ Tambah</span></div></div>
+        </div>
+        <div class="fl"><b>LT3</b><span>Vakum di 2 dari 4</span></div>
+        <div class="group">
+          <div class="room"><div class="top"><b>Creative Space</b></div><div class="yes">Rab · Sari</div></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><i></i>Hari ini</span><span><i></i>Hewan</span><span class="on"><i></i>Tugas</span><span><i></i>Dapur</span><span><i></i>Rumah</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>2. Tap a room</h2>
+  <p>Everything set up in the room, by job. Tap a chore for the usual editor; Add chore here fills in the room.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
+        <div class="seg"><span>Today</span><span class="on">Rooms</span></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>LT2 · Lounge</h3>
+        <div class="jh">Vacuum · Mop · Dust</div>
+        <div class="card">
+          <div class="ch"><div class="t"><b>Vacuum &amp; pel, dusting plafon</b><span>Every Monday · 09:00 · Ari</span></div><span class="chev">›</span></div>
+          <div class="ch"><div class="t"><b>Vacuum &amp; pel</b><span>Every Thursday · Ari</span></div><span class="chev">›</span></div>
+        </div>
+        <div class="jh">Other</div>
+        <div class="card">
+          <div class="ch"><div class="t"><b>Vacuum sofa</b><span>Sat 14 Nov · Sari</span></div><span class="chev">›</span></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="btn primary">＋ Add chore here</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>3. Chore form: room by floor, several rooms at once</h2>
+  <p>Rooms listed under their floor, with "Whole floor". When adding, tick several rooms: one chore per room.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Add Chore</h3>
+        <div><div class="label">Title</div><div class="input">Vacuum &amp; pel</div></div>
+        <div><div class="label">Rooms <em>(3 chosen, one chore each)</em></div>
+          <div class="pick">
+            <div class="ph">LT2</div>
+            <div class="po"><span class="box"></span>Whole floor</div>
+            <div class="po"><span class="box on">✓</span>Lounge</div>
+            <div class="po"><span class="box on">✓</span>Master Bedroom</div>
+            <div class="po"><span class="box on">✓</span>Playroom</div>
+            <div class="po"><span class="box"></span>Walk-in closet</div>
+            <div class="ph">LT3</div>
+            <div class="po"><span class="box"></span>Creative Space</div>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="btn primary">Add 3 chores</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>4. Sort your rooms into floors (one time)</h2>
+  <p>Shown when room names start with a floor. Previews the split; rooms named just "LT2" become that floor. Optional: link older chores whose title names a room. Undo afterwards.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
+        <div class="seg"><span>Today</span><span class="on">Rooms</span></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Sort your rooms into floors</h3>
+        <div class="note">Your room names start with a floor. Miamus can group them — names stay as you typed, without the floor.</div>
+        <div class="card">
+          <div class="split"><s>LT2</s><span class="arrow">→</span><b>Floor LT2</b></div>
+          <div class="split"><s>LT2 Lounge</s><span class="arrow">→</span><b>LT2 · Lounge</b></div>
+          <div class="split"><s>LT2 Master Bedroom</s><span class="arrow">→</span><b>LT2 · Master Bedroom</b></div>
+          <div class="split"><s>LT1 Service Area</s><span class="arrow">→</span><b>LT1 · Service Area</b></div>
+          <div class="split"><s>LT2 Service Area</s><span class="arrow">→</span><b>LT2 · Service Area</b></div>
+          <div class="split"><s>…16 more</s></div>
+        </div>
+        <div class="quiet"><span class="box on">✓</span><span>Also link 31 older chores whose title names a room (finished ones stay as they are)</span></div>
+        <div class="spacer"></div>
+        <div class="btn primary">Sort rooms</div>
+        <div class="link">Not now</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>5. Household → Rooms</h2>
+  <p>Floors and rooms: add, rename, move to another floor, reorder, delete (chores stay, they just lose the room).</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · Indonesia</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="back">‹ Ruangan</div></div></div>
+      <div class="body">
+        <div class="fl"><b>LT1</b><span>⋯</span></div>
+        <div class="group">
+          <div class="mgr"><span>Service Area</span><i>2 tugas</i><i>›</i></div>
+        </div>
+        <div class="fl"><b>LT2</b><span>⋯</span></div>
+        <div class="group">
+          <div class="mgr"><span>Lounge</span><i>6 tugas</i><i>›</i></div>
+          <div class="mgr"><span>Master Bedroom</span><i>4 tugas</i><i>›</i></div>
+          <div class="mgr"><span>Playroom</span><i>3 tugas</i><i>›</i></div>
+          <div class="mgr"><span>Walk-in closet</span><i>2 tugas</i><i>›</i></div>
+        </div>
+        <div class="fl"><b>Belum ada lantai</b><span></span></div>
+        <div class="group">
+          <div class="mgr"><span>Teras</span><i>1 tugas</i><i>›</i></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="btn outline">＋ Tambah ruangan</div>
+        <div class="btn outline">＋ Tambah lantai</div>
+      </div>
+      <div class="tabbar"><span><i></i>Hari ini</span><span><i></i>Hewan</span><span><i></i>Tugas</span><span><i></i>Dapur</span><span class="on"><i></i>Rumah</span></div>
+    </div>
+  </div>
+</section>
+</body>
+</html>
