@@ -287,6 +287,14 @@ already works.
   primary buttons (`rounded-xl`), the rounded-square mark, emerald only for
   "done". Same tokens as the app, so the page and the app feel like one
   product.
+- **No emoji anywhere on the page** (owner, 2026-11-09). Icons are the app's
+  own Lucide line icons (`lucide-react`, already a dependency), drawn at a
+  1.5–1.75 stroke in near-black and set in soft white tiles with a hairline
+  border: Pets `PawPrint`, Chores `ClipboardList`, Kitchen `CookingPot`
+  (the same as the tab bar), Repairs `Wrench`; staff points `Languages`,
+  `KeyRound`, `CalendarOff`, `MapPinOff`; data `ShieldCheck`, `Download`;
+  **Saya staf** `UserRound` (as on sign-in). The real Miamus mark, never a
+  placeholder, and Google's own mark on the Google button.
 - Calm rhythm: one idea per section, generous space, at most two buttons on
   screen at once.
 - Phone-width column (the root layout's frame). On a desktop it shows as the
@@ -326,7 +334,7 @@ One PR, on a new branch:
    - unit `tests/unit/landing-copy.test.ts`: English and Indonesian have the
      same keys; no Indonesian string uses words the glossary rules out
      ("ponsel", "pembantu", "majikan", "kamu"); the contact email comes from
-     `LEGAL`.
+     `LEGAL`; no copy string contains an emoji.
 8. `tsc`, `npm run build`, Playwright with the stub env (`CI=1`), Codex review
    until clean, then the owner's OK before merging (merging deploys to
    production).
