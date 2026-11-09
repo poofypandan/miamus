@@ -134,10 +134,49 @@ select pg_temp.ok(pg_temp.err_as(:staff, $q$
   insert into public.household_tasks (household_id, parent_task_id, title, category, due_date, recurrence)
   values ('00000000-0000-0000-0000-0000000128f1', '00000000-0000-0000-0000-0000000128d3', 'Sapu halaman', 'cleaning', '2026-11-30', 'none') $q$)
   = 'chore_owner_only', 'never from another household''s template');
+select pg_temp.ok(pg_temp.err_as(:staff, $q$
+  update public.household_tasks set status = 'cancelled' where id = '00000000-0000-0000-0000-0000000128d1' $q$)
+  = 'chore_owner_only', 'staff cannot cancel (hide) a repeating chore');
+select pg_temp.ok(pg_temp.err_as(:staff, $q$
+  update public.household_tasks set status = 'cancelled' where id = '00000000-0000-0000-0000-0000000128d2' $q$)
+  = 'chore_owner_only', 'staff cannot cancel a one-off');
+-- 2026-11-24 is a Tuesday; the repeat is on Mondays (from 2026-11-16).
+select pg_temp.ok(pg_temp.err_as(:staff, $q$
+  insert into public.household_tasks (household_id, parent_task_id, title, notes, category, due_date, due_time, location_id, recurrence)
+  values ('00000000-0000-0000-0000-0000000128f1', '00000000-0000-0000-0000-0000000128d1', 'Pel teras', 'Pakai lap hijau',
+    'cleaning', '2026-11-24', '09:00', '00000000-0000-0000-0000-0000000128c1', 'none') $q$)
+  = 'chore_owner_only', 'never a day the repeat doesn''t fall on');
+select pg_temp.ok(pg_temp.err_as(:staff, $q$
+  insert into public.household_tasks (household_id, parent_task_id, title, notes, category, due_date, due_time, location_id, recurrence)
+  values ('00000000-0000-0000-0000-0000000128f1', '00000000-0000-0000-0000-0000000128d1', 'Pel teras', 'Pakai lap hijau',
+    'cleaning', '2026-11-09', '09:00', '00000000-0000-0000-0000-0000000128c1', 'none') $q$)
+  = 'chore_owner_only', 'never before the repeat starts');
+select pg_temp.ok(pg_temp.err_as(:staff, $q$
+  insert into public.household_tasks (household_id, parent_task_id, title, notes, category, due_date, due_time, location_id, recurrence, status)
+  values ('00000000-0000-0000-0000-0000000128f1', '00000000-0000-0000-0000-0000000128d1', 'Pel teras', 'Pakai lap hijau',
+    'cleaning', '2026-11-30', '09:00', '00000000-0000-0000-0000-0000000128c1', 'none', 'cancelled') $q$)
+  = 'chore_owner_only', 'never inserted as cancelled');
 select pg_temp.ok(
-  (select title = 'Pel teras' and recurrence = 'weekly' and location_id = '00000000-0000-0000-0000-0000000128c1'
+  (select title = 'Pel teras' and recurrence = 'weekly' and location_id = '00000000-0000-0000-0000-0000000128c1' and status = 'pending'
      from public.household_tasks where id = '00000000-0000-0000-0000-0000000128d1'),
   'the template is unchanged');
+
+-- chore_occurs_on matches occursOn (src/lib/chore-recurrence.ts).
+do $$
+declare t public.household_tasks;
+begin
+  t.due_date := '2027-01-31'; t.recurrence := 'monthly';
+  if not public.chore_occurs_on(t, '2027-02-28') then raise exception 'FAIL: monthly 31st clamps to end of February'; end if;
+  if public.chore_occurs_on(t, '2027-02-27') then raise exception 'FAIL: monthly not on the 27th'; end if;
+  if not public.chore_occurs_on(t, '2027-03-31') then raise exception 'FAIL: monthly on 31 March'; end if;
+  t.recurrence := 'daily'; t.recurrence_until := '2027-02-05';
+  if not public.chore_occurs_on(t, '2027-02-05') then raise exception 'FAIL: daily on its last day'; end if;
+  if public.chore_occurs_on(t, '2027-02-06') then raise exception 'FAIL: daily after its end'; end if;
+  t.recurrence := 'weekly'; t.recurrence_until := null;
+  if not public.chore_occurs_on(t, '2027-02-07') then raise exception 'FAIL: weekly on the same weekday'; end if;
+  if public.chore_occurs_on(t, '2027-02-08') then raise exception 'FAIL: weekly on another weekday'; end if;
+end $$;
+select 'ok  chore_occurs_on: daily, weekly and monthly (31st clamped) as occursOn';
 
 -- Another household's staff phone sees and changes nothing here (RLS, as before).
 select pg_temp.ok(pg_temp.err_as(:staff2, $q$
@@ -167,6 +206,8 @@ select pg_temp.ok(
 -- ---- Grants --------------------------------------------------------------------
 select pg_temp.ok(not has_function_privilege('anon', 'public.household_tasks_owner_guard()', 'execute'), 'anon cannot execute the guard');
 select pg_temp.ok(not has_function_privilege('authenticated', 'public.household_tasks_owner_guard()', 'execute'), 'authenticated cannot execute the guard');
+select pg_temp.ok(not has_function_privilege('anon', 'public.chore_occurs_on(public.household_tasks, date)', 'execute')
+  and not has_function_privilege('authenticated', 'public.chore_occurs_on(public.household_tasks, date)', 'execute'), 'the date helper is not callable from the API');
 select pg_temp.ok(
   (select prosecdef and proconfig = array['search_path=""'] from pg_proc where oid = 'public.household_tasks_owner_guard()'::regprocedure),
   'security definer with an empty search_path');
