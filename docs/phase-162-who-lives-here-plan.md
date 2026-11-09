@@ -1,6 +1,9 @@
 # Phase 162 — "Who lives here?" at sign-up
 
-Status: **plan, waiting for the owner's decisions (D1–D7).** Nothing built.
+Status: **approved by the owner, 2026-11-09: recommended options for D1–D7.**
+Nothing built yet; the build starts after PR #41 merges (see "One PR, after #41").
+D7 keeps today's landing line; if the landing page proposal (PR #43) is
+adopted, its wording replaces it.
 Roadmap item 12 (`docs/roadmap-2026-11-09.md`, P2). Mockup:
 `docs/mockups/phase-162-who-lives-here.html` (open in a browser, phone width).
 
