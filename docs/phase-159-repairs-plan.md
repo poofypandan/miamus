@@ -82,7 +82,7 @@ part), so a visit finishing never closes the repair on its own.
 2. **Owners: Repairs list.** **Report a problem** button. Then, each only
    when it has something:
    - **To review** (staff reports, with Accept / Not needed);
-   - **Open**: each row reads Not scheduled, *Thu 10:00 · Pak Budi*, or
+   - **Open**: each row reads Not scheduled, *Thu 10:00 · Pak Budi* (Indonesian: *Kam 10.00*, with the glossary's dot), or
      *Work done — check the photos*;
    - **Fixed** (the last 30 days; older ones in the rooms' history).
    Urgent ones are first and have the only coloured tint. Nothing else is red.
@@ -190,8 +190,21 @@ client chooses the text.
   deletes a repair, its visits fall back to the normal 30-day rule.
 - Deleting a repair removes its own photos straight away through the Storage
   API (as food does); the nightly job is the safety net. Same Edge Function,
-  same secret; only its SQL functions change (`create or replace`, re-revoked,
-  `service_role` only).
+  same secret:
+  - visit photos in `household-logs` go through the existing
+    `task_photos_due_for_pruning` (re-created, re-revoked, `service_role`
+    only);
+  - everything else a repair holds (its problem photo, and in PR B its
+    receipts in `owner-receipts`) goes through a new
+    `repair_photos_due_for_pruning(p_secret, p_limit)` that returns
+    `(bucket_id, name)`. `prune-task-photos/index.ts` gets one more pass that
+    removes them per bucket, the way PR #22's deleted-household pass already
+    does (`orphaned_household_photos`, also `(bucket_id, name)`). The
+    existing pass hard-codes `household-logs`, so without this receipts would
+    never be deleted. The updated Edge Function is deployed with the
+    migration, staging then production.
+  - Tests: a receipt of a repair closed 2 years ago is listed with
+    `owner-receipts`; one of an open repair is not.
 
 **Export and deletion (R7, migration 127)**: **a prerequisite.** Migration
 127 is in PR #22, applied to staging and production on 2026-11-09 but not yet
