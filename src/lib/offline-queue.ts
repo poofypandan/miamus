@@ -424,6 +424,12 @@ export interface DrainReport {
   refused: OfflineQueueItem[];
   /** Still waiting after this pass. */
   waiting: number;
+  /**
+   * False when the reload after sending failed: the sent saves then stay in
+   * the queue — and on screen — and the next pass confirms them (resending
+   * the same ids, told "already saved") (Codex, PR #41).
+   */
+  confirmed: boolean;
 }
 
 /**
@@ -438,7 +444,7 @@ export interface DrainReport {
 export async function drainOutbox(
   beforeClear?: (report: DrainReport) => Promise<void>
 ): Promise<DrainReport> {
-  const report: DrainReport = { sent: [], refused: [], waiting: 0 };
+  const report: DrainReport = { sent: [], refused: [], waiting: 0, confirmed: true };
   if (!available()) return report;
   const household = getActiveHouseholdId();
   const queue = await readAll();
@@ -472,9 +478,12 @@ export async function drainOutbox(
     try {
       await beforeClear?.(report);
     } catch (err) {
-      console.error("Reload after sending the queue failed", err);
+      // Removing them now would take them off the screen until some later
+      // reload works — long enough for someone to log the same thing again.
+      console.error("Reload after sending the queue failed; keeping the sent saves until it works", err);
+      report.confirmed = false;
     }
-    const done = new Set([...report.sent, ...report.refused].map((item) => item.id));
+    const done = new Set([...(report.confirmed ? report.sent : []), ...report.refused].map((item) => item.id));
     await mutate((current) => current.filter((item) => !done.has(item.id))).catch((err) =>
       console.error("Could not remove sent saves from the queue", err)
     );

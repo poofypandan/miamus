@@ -255,6 +255,21 @@ describe("drainOutbox", () => {
     expect(await stored()).toEqual([]);
   });
 
+  it("keeps sent saves in the queue (and on screen) when the reload after sending fails", async () => {
+    await queueUp(logJob());
+    provider.createLogsBatch.mockResolvedValue([{ id: "id-dog-1" }]);
+    const failed = await queue.drainOutbox(async () => {
+      throw NO_ANSWER;
+    });
+    expect(failed.confirmed).toBe(false);
+    expect(await stored()).toHaveLength(1);
+    // The next pass resends the same id, is told "already saved", and clears it.
+    provider.createLogsBatch.mockRejectedValue(LOST_REPLY);
+    const next = await queue.drainOutbox(async () => undefined);
+    expect(next.confirmed).toBe(true);
+    expect(await stored()).toEqual([]);
+  });
+
   it("leaves saves for another household alone", async () => {
     await queueUp(logJob());
     household = "house-b";

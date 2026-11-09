@@ -82,7 +82,7 @@ export function useOfflineSync(lang: "en" | "id") {
     function report(result: DrainReport | null) {
       if (!result) return;
       const id = langRef.current === "id";
-      if (result.sent.length > 0) {
+      if (result.sent.length > 0 && result.confirmed) {
         toast.success(id ? "Catatan yang tertunda sudah terkirim ✅" : "Waiting saves sent ✅");
       }
       if (result.refused.length > 0) {
@@ -113,7 +113,7 @@ export function useOfflineSync(lang: "en" | "id") {
       draining = drainOnce()
         .then((result) => {
           report(result);
-          if (result && result.waiting === 0) failures = 0;
+          if (result && result.waiting === 0 && result.confirmed) failures = 0;
           else failures++;
         })
         .catch((err) => {
