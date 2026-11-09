@@ -276,6 +276,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     }
     setConfirming(true);
     submittedPhoto.current = capture.photoUrl;
+    let logSubmitted = false;
     try {
       const chosen = capture.items.filter((i) => capture.selected.has(i.entityId));
       // Derived at the moment of saving: a first vet photo is the check-in, a
@@ -291,6 +292,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         photo_url: capture.photoUrl,
         sub_type: subType,
       });
+      // Saved, or queued holding the photo: from here on a failure (the
+      // admission below) must not release it (Codex, PR #41).
+      logSubmitted = true;
       // The admission is what suspends the dog's meals and potty breaks, so it
       // is written after the log rather than before: a failed photo must not
       // leave a dog marked as living at the clinic.
@@ -322,7 +326,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     } catch (err) {
       console.error(err);
       // Refused, so no save holds it: closing the dialog may discard it again.
-      submittedPhoto.current = null;
+      if (!logSubmitted) submittedPhoto.current = null;
       toast.error("Gagal menyimpan catatan");
     } finally {
       setConfirming(false);

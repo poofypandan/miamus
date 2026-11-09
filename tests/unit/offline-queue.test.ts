@@ -4,11 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // weak signal counts as well as "offline", and nothing is saved twice.
 
 const memory = new Map<string, unknown>();
+/** Set to make the next queue write fail, as a full device would. */
+const writes = { failNext: false };
 vi.mock("idb-keyval", () => ({
   get: async (key: string) => structuredClone(memory.get(key)),
   set: async (key: string, value: unknown) => void memory.set(key, structuredClone(value)),
-  update: async (key: string, change: (old: unknown) => unknown) =>
-    void memory.set(key, structuredClone(change(structuredClone(memory.get(key))))),
+  update: async (key: string, change: (old: unknown) => unknown) => {
+    if (writes.failNext) {
+      writes.failNext = false;
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    }
+    memory.set(key, structuredClone(change(structuredClone(memory.get(key)))));
+  },
 }));
 
 const provider = {
@@ -150,6 +157,17 @@ describe("items queued before Phase 161", () => {
     await queue.drainOutbox(async () => undefined);
     expect(provider.createLogsBatch.mock.calls[1][0].ids).toEqual(sentWith);
     expect(await stored()).toEqual([]);
+  });
+
+  it("wait, untouched, when their ids cannot be kept on a full device", async () => {
+    const legacy = { id: "q1", table: "task_logs", payload: { entries: [{ entity_id: "d" }], module: "pet" }, timestamp: 5 };
+    memory.set("b11-sync-queue", [legacy]);
+    writes.failNext = true;
+    const report = await queue.drainOutbox();
+    expect(provider.createLogsBatch).not.toHaveBeenCalled();
+    expect(report.refused).toEqual([]);
+    expect(report.waiting).toBe(1);
+    expect(memory.get("b11-sync-queue")).toEqual([legacy]);
   });
 
   it("are sent like any other", async () => {

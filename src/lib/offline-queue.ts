@@ -440,13 +440,19 @@ async function withStableIds(item: OfflineQueueItem): Promise<OutboxJob> {
   let kept: OutboxJob | null = null;
   // Kept only if they reached the device: ids that might not survive a
   // reload would not make the next send safe, so then it waits.
-  await mutate((current) =>
-    current.map((i) => {
-      if (i.id !== item.id || i.job.kind !== "logs") return i;
-      kept = { ...i.job, ids: i.job.ids ?? ids };
-      return { ...i, job: kept };
-    })
-  );
+  try {
+    await mutate((current) =>
+      current.map((i) => {
+        if (i.id !== item.id || i.job.kind !== "logs") return i;
+        kept = { ...i.job, ids: i.job.ids ?? ids };
+        return { ...i, job: kept };
+      })
+    );
+  } catch (err) {
+    // A full device, say: the entry stays as it was, and waits (Codex, PR #41).
+    console.error("Could not keep row ids for a queued save", err);
+    throw new IdsNotKeptError();
+  }
   if (!kept) throw new IdsNotKeptError();
   return kept;
 }
