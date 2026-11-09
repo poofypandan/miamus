@@ -79,6 +79,8 @@ export interface StubOptions {
   chores?: Record<string, unknown>[];
   /** Answer the room list with a server error until set back (Phase 158). */
   roomsFail?: { on: boolean };
+  /** repairs rows the household already has (Phase 159); changed in place. */
+  repairs?: Record<string, unknown>[];
 }
 
 export interface Stub {
@@ -98,6 +100,8 @@ export interface Stub {
   tasks: Record<string, unknown>[];
   /** Kakak's switch, as the admin last set it. */
   kakak: { allowed: boolean; enabled: boolean };
+  /** repairs rows as the stub holds them (Phase 159). */
+  repairs: Record<string, unknown>[];
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
   sessionUser(): Promise<string | null>;
@@ -127,6 +131,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [] };
   const foods: Record<string, unknown>[] = [];
   const tasks: Record<string, unknown>[] = [];
+  const repairs: Record<string, unknown>[] = options.repairs ?? [];
   const kakak = { allowed: false, enabled: false, ...options.kakak };
   if (options.owner && !options.stored) options = { ...options, stored: freshSession(OWNER, false) };
 
@@ -219,6 +224,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         return route.fulfill({ status: 500, json: { message: "stub: rooms unavailable" } });
       }
       if (table === "household_locations" && options.rooms) return answerRooms(route, options.rooms);
+      if (table === "repairs") return answerRepairs(route, repairs, who === OWNER);
       if (table === "rpc/organise_rooms" && options.rooms) {
         return route.fulfill({ json: organise(request.postDataJSON()?.p_plan, options.rooms, options.chores ?? []) });
       }
@@ -243,6 +249,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     seen,
     foods,
     tasks,
+    repairs,
     kakak,
     setNetwork(up: boolean) {
       net.token = net.rest = net.signup = up;
@@ -315,10 +322,15 @@ function filterRows(rows: Record<string, unknown>[], params: URLSearchParams): R
     is: (a, b) => (b === "null" ? a === null : String(a) === b),
   };
   const filters: [string, (a: string | null, b: string) => boolean, string][] = [];
-  for (const [column, raw] of params.entries()) {
+  for (const [column, rawValue] of params.entries()) {
     if (["select", "order", "limit", "offset", "or", "and"].includes(column)) continue;
+    // "not.is.null" (the repair visits' read, Phase 159): the inner filter, negated.
+    const negate = rawValue.startsWith("not.");
+    const raw = negate ? rawValue.slice(4) : rawValue;
     const dot = raw.indexOf(".");
-    const op = ops[raw.slice(0, dot)];
+    const name = raw.slice(0, dot);
+    const inner = name in ops ? ops[name] : undefined;
+    const op = inner === undefined ? undefined : negate ? (a: string | null, b: string) => !inner(a, b) : inner;
     if (dot > 0 && op) filters.push([column, op, raw.slice(dot + 1)]);
   }
   return rows.filter((row) =>
@@ -429,6 +441,60 @@ function answerTasks(route: Route, tasks: Record<string, unknown>[], seeded: Rec
   const row = index === -1 ? seeded.find((t) => t.id === id) : tasks[index];
   if (row && request.method() === "PATCH") Object.assign(row, request.postDataJSON() ?? {});
   return reply(row ? [row] : []);
+}
+
+/**
+ * repairs (migrations/130), enough for the Repairs screens: list, report,
+ * change by id, delete by id. The server's fields are stamped as 130's
+ * guard does; a staff phone's report waits ("reported").
+ */
+function answerRepairs(route: Route, repairs: Record<string, unknown>[], owner: boolean) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
+  const now = new Date().toISOString();
+  if (request.method() === "GET") return reply(repairs);
+  if (request.method() === "POST") {
+    const body = request.postDataJSON();
+    const fields = Array.isArray(body) ? body[0] : body;
+    if (owner ? fields.status !== "open" : fields.status !== "reported") {
+      return route.fulfill({ status: 403, json: { message: owner ? "repair_owner_reports_open" : "repair_staff_report_only" } });
+    }
+    const row: Record<string, unknown> = {
+      id: `00000000-0000-4000-8000-${String(500 + repairs.length).padStart(12, "0")}`,
+      household_id: HOUSEHOLD_ID,
+      location_id: null,
+      spot: null,
+      details: null,
+      photo_url: null,
+      urgent: false,
+      reported_by_staff: null,
+      created_by: null,
+      created_at: now,
+      updated_at: now,
+      decided_by: null,
+      decided_at: null,
+      dismiss_reason: null,
+      fixed_by_name: null,
+      closed_at: null,
+      ...fields,
+    };
+    repairs.push(row);
+    return reply([row]);
+  }
+  const index = repairs.findIndex((r) => r.id === id);
+  if (request.method() === "DELETE") return reply(index === -1 ? [] : repairs.splice(index, 1));
+  if (index === -1 || !owner) return reply([]);
+  const patch = request.postDataJSON() ?? {};
+  const row = repairs[index];
+  if (patch.status && patch.status !== row.status) {
+    if (row.status === "reported") row.decided_at = now;
+    row.closed_at = patch.status === "fixed" || patch.status === "dismissed" ? now : null;
+  }
+  Object.assign(row, patch, { updated_at: now });
+  if (row.status !== "dismissed") row.dismiss_reason = null;
+  return reply([row]);
 }
 
 /**

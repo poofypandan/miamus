@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { Check, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useHousehold } from "@/context/household-context";
-import { useT } from "@/context/owner-locale-context";
+import { translator, useT } from "@/context/owner-locale-context";
+import type { OwnerLocale } from "@/lib/owner-locale";
 import { MAX_SPOT_LENGTH, cleanSpot, sameSpot, spotsUsed } from "@/lib/room-picker";
 import { cn } from "@/lib/utils";
 
@@ -19,14 +20,18 @@ export function SpotField({
   value,
   onChange,
   placeIds,
+  locale,
 }: {
   value: string | null;
   onChange: (spot: string | null) => void;
   /** The chosen room(s): their spots become the chips. */
   placeIds: string[];
+  /** Staff screens pass "id"; owner screens use the owner's language. */
+  locale?: OwnerLocale;
 }) {
   const { householdTasks } = useHousehold();
-  const t = useT();
+  const ownerT = useT();
+  const t = locale ? translator(locale) : ownerT;
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState("");
 

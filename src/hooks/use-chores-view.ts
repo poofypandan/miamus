@@ -4,7 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { pushInPlace, replaceInPlace } from "@/lib/in-place-navigation";
 import { isChoreJob, type ChoreJob } from "@/lib/chore-jobs";
 
-export type ChoresView = "today" | "rooms";
+export type ChoresView = "today" | "rooms" | "repairs";
 
 /**
  * The Chores tab's pill (Today · Rooms) and the Rooms view's job filter, read
@@ -24,7 +24,9 @@ export function useChoresView(): {
 } {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const view: ChoresView = searchParams.get("chores") === "rooms" ? "rooms" : "today";
+  const raw = searchParams.get("chores");
+  // Today · Rooms · Repairs (Phase 159 adds the third, `?chores=repairs`).
+  const view: ChoresView = raw === "rooms" || raw === "repairs" ? raw : "today";
   const rawJob = searchParams.get("job");
   const job = view === "rooms" && isChoreJob(rawJob) ? rawJob : null;
 
@@ -42,8 +44,8 @@ export function useChoresView(): {
       if (next === view) return;
       pushInPlace(
         hrefWith((params) => {
-          if (next === "rooms") params.set("chores", "rooms");
-          else params.delete("chores");
+          if (next === "today") params.delete("chores");
+          else params.set("chores", next);
           params.delete("job");
         })
       );

@@ -32,6 +32,7 @@ import type {
   HouseholdTaskCategory,
   HouseholdTaskStatus,
   LeaveRequest,
+  Repair,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -157,6 +158,33 @@ export interface CreateHouseholdTaskInput {
    * still takes the chore.
    */
   spot?: string | null;
+  /** The repair this chore is a visit for (migrations/130). Left out, nothing is sent. */
+  repair_id?: string | null;
+}
+
+/** A new repair (Phase 159). Status: owners 'open', staff phones 'reported'. */
+export interface RepairInput {
+  title: string;
+  details?: string | null;
+  location_id?: string | null;
+  spot?: string | null;
+  photo_url?: string | null;
+  urgent?: boolean;
+  status: "open" | "reported";
+  reported_by_staff?: string | null;
+}
+
+/** What owners change on a repair. */
+export interface RepairPatch {
+  title?: string;
+  details?: string | null;
+  location_id?: string | null;
+  spot?: string | null;
+  photo_url?: string | null;
+  urgent?: boolean;
+  status?: "open" | "fixed" | "dismissed";
+  dismiss_reason?: string | null;
+  fixed_by_name?: string | null;
 }
 
 /**
@@ -356,6 +384,16 @@ export interface DataProvider {
    * "several rooms at once" makes one chore per room (Phase 158).
    */
   createHouseholdTasks(inputs: CreateHouseholdTaskInput[]): Promise<HouseholdTask[]>;
+  /** Every repair of the household, newest first (Phase 159, migrations/130). */
+  listRepairs(): Promise<Repair[]>;
+  /** Every chore that is a visit for a repair (repair_id set), any date or status. */
+  listRepairVisits(): Promise<HouseholdTask[]>;
+  /** Owners report open; a staff phone reports and waits (the database enforces both). */
+  createRepair(input: RepairInput): Promise<Repair>;
+  /** Owners only. */
+  updateRepair(id: string, patch: RepairPatch): Promise<Repair>;
+  /** Owners, or the phone that reported it within 5 minutes. */
+  deleteRepair(id: string): Promise<void>;
   /** Owner-only edit of a chore's own fields. */
   updateHouseholdTask(id: string, patch: UpdateHouseholdTaskInput): Promise<HouseholdTask>;
   /**

@@ -108,6 +108,19 @@ people are **staf** and **admin**.
 | Room (optional) | **Ruangan (opsional)** | Phase 158 PR B2, the chore form. Replaces "Lokasi (opsional)". |
 | More rooms (pick several when adding) | **Pilih ruangan lain** | Phase 158 PR B2. Not "Ruangan lain", which is the "Other rooms" section. |
 | Spot (optional) / New spot | **Bagian (opsional)** / **Bagian baru** | Phase 158 PR B2, the chore form's chips. |
+| Repairs (pill) / Repair | **Perbaikan** | Phase 159. Matches the Maintenance category. |
+| Report a problem | **Lapor kerusakan** | Owners' button and the staff's Lapor sheet. |
+| What's wrong? | **Apa yang rusak?** | The report form's required field. |
+| Urgent | **Darurat** | As the sick report's "laporan darurat". |
+| To review | **Perlu dicek** | Staff reports waiting for an owner. |
+| Accept / Not needed | **Terima** / **Tidak perlu** | Deciding a staff report. |
+| Schedule a visit | **Jadwalkan perbaikan** | Opens the chore form for a visit. |
+| Repair person | **Tukang** | A name only (D5). |
+| Work done — check the photos | **Pekerjaan selesai — cek fotonya** | A visit finished, none still planned. |
+| Fixed / Needs another visit | **Sudah diperbaiki** / **Perlu datang lagi** | |
+| Before / after the repair (photos) | **Foto sebelum diperbaiki** / **Foto sesudah diperbaiki** | A visit's photo steps on staff phones. |
+| Waiting / Scheduled (staff report status) | **Menunggu dicek** / **Dijadwalkan** | What staff see beside their report. |
+| Spot, on a staff form | **Bagian (boleh dikosongkan)** | Staff forms never say "opsional". |
 
 ## Formatting
 

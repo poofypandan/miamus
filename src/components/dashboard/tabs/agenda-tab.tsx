@@ -3,7 +3,7 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, CookingPot, PawPrint, Plus, ShoppingBasket, Sparkles } from "lucide-react";
+import { CalendarDays, ChevronRight, CookingPot, PawPrint, Plus, ShoppingBasket, Sparkles, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -27,6 +27,8 @@ import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
+import { useRepairs } from "@/hooks/use-repairs";
+import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
@@ -130,6 +132,17 @@ export function AgendaTab() {
   // Staff answered "don't know" for a date: waiting for an owner (amber).
   const needsDate = useMemo(() => countNeedsDate(foodItems), [foodItems]);
 
+  // Repairs (Phase 159): staff reports to review, and work done to check.
+  // Normal staff reports land here rather than as a push (D6).
+  const { repairs, visits } = useRepairs();
+  const repairLines = useMemo(() => repairsToday(repairs, visits), [repairs, visits]);
+  const repairsHref = `${moduleHref("chores")}&chores=repairs`;
+  function switchToRepairs(event: React.MouseEvent) {
+    if (!isPlainClick(event)) return;
+    event.preventDefault();
+    startTransition(() => pushInPlace(repairsHref));
+  }
+
   // The Kitchen tab opens on Food; the shopping line goes straight to Shopping.
   const toBuyHref = `${moduleHref("inventory")}&kitchen=buy`;
   function switchToShopping(event: React.MouseEvent) {
@@ -232,8 +245,32 @@ export function AgendaTab() {
             Renders nothing when there is nothing to ask. */}
         <MedicationCourseAlerts />
 
-        {(needsDate > 0 || eatSoon > 0 || toBuy > 0) && (
+        {(needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
           <div className="-my-1 flex flex-col">
+            {repairLines.toReview > 0 && (
+              <Link
+                href={repairsHref}
+                scroll={false}
+                onClick={switchToRepairs}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-amber-800 active:bg-muted"
+              >
+                <Wrench className="size-4 shrink-0 text-amber-700" />
+                <span className="flex-1">{repairsTodayLabel("review", repairLines.toReview, locale)}</span>
+                <ChevronRight className="size-4 shrink-0 text-amber-700" />
+              </Link>
+            )}
+            {repairLines.toCheck > 0 && (
+              <Link
+                href={repairsHref}
+                scroll={false}
+                onClick={switchToRepairs}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+              >
+                <Wrench className="size-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1">{repairsTodayLabel("check", repairLines.toCheck, locale)}</span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </Link>
+            )}
             {needsDate > 0 && (
               <Link
                 href={moduleHref("inventory")}

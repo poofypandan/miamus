@@ -19,7 +19,8 @@ import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { categoryLabel } from "@/lib/household-tasks";
 import { useFormatTime } from "@/components/ui/ui-labels";
-import { photoTakenAt } from "@/lib/photos";
+import { photoSrc, photoTakenAt } from "@/lib/photos";
+import { useRepairs } from "@/hooks/use-repairs";
 import { cn } from "@/lib/utils";
 import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
@@ -74,6 +75,7 @@ function FinishChoreBody({
   onOpenChange: (open: boolean) => void;
 }) {
   const formatTime = useFormatTime();
+  const { repairs } = useRepairs();
   const {
     activeHouseholdId,
     updateHouseholdTaskStatus,
@@ -247,6 +249,10 @@ function FinishChoreBody({
   // (Phase 90), so tenancy is unaffected.
   const pathPrefix = `household/${occurrence.template.id}`;
   const mine = !!staffId && task.assigned_to === staffId;
+  // A repair visit (Phase 159): the problem on top, and photo steps worded
+  // for the repair person's work.
+  const repair = task.repair_id ? (repairs.find((r) => r.id === task.repair_id) ?? null) : null;
+  const isVisit = !!task.repair_id;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -260,6 +266,17 @@ function FinishChoreBody({
         </SheetHeader>
 
         <div className="flex flex-col gap-4 px-4">
+          {repair && (
+            <div className="flex flex-col gap-2 rounded-xl border p-3">
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Yang rusak</p>
+              {repair.photo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoSrc(repair.photo_url, 640)} alt="" className="max-h-48 w-full rounded-lg bg-muted object-cover" />
+              )}
+              <p className="text-sm font-medium">{repair.title}</p>
+              {repair.details && <p className="text-sm text-muted-foreground">{repair.details}</p>}
+            </div>
+          )}
           {task.notes && (
             <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
               {task.notes}
@@ -300,8 +317,12 @@ function FinishChoreBody({
                   the time once its photo is in. */}
               <ProofStep
                 step={1}
-                title="Foto Sebelum"
-                hint="Saat mulai bekerja, sebelum apa pun dibersihkan."
+                title={isVisit ? "Foto sebelum diperbaiki" : "Foto Sebelum"}
+                hint={
+                  isVisit
+                    ? "Saat tukang mulai bekerja, sebelum apa pun diperbaiki."
+                    : "Saat mulai bekerja, sebelum apa pun dibersihkan."
+                }
                 url={beforeUrl}
               >
                 <PhotoPicker
@@ -320,8 +341,12 @@ function FinishChoreBody({
 
               <ProofStep
                 step={2}
-                title="Foto Sesudah"
-                hint="Saat selesai, dari sudut yang sama dengan foto sebelum."
+                title={isVisit ? "Foto sesudah diperbaiki" : "Foto Sesudah"}
+                hint={
+                  isVisit
+                    ? "Saat tukang selesai, dari sudut yang sama dengan foto sebelum."
+                    : "Saat selesai, dari sudut yang sama dengan foto sebelum."
+                }
                 url={afterUrl}
               >
                 <PhotoPicker

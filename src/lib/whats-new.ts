@@ -23,6 +23,25 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "repairs-2026-11",
+    date: "2026-11-09",
+    audience: "owner",
+    title: { en: "New: Repairs", id: "Baru: Perbaikan" },
+    steps: {
+      en: [
+        "Something broken? Chores → Repairs → Report a problem: pick the room, add a photo.",
+        "Staff can report too: you accept or dismiss in To review.",
+        "Schedule a visit and staff take before and after photos while the repair person works. Each room keeps its repair history.",
+      ],
+      id: [
+        "Ada yang rusak? Tugas → Perbaikan → Lapor kerusakan: pilih ruangan, tambahkan foto.",
+        "Staf juga bisa melapor: terima atau tolak di Perlu dicek.",
+        "Jadwalkan perbaikan, staf mengambil foto sebelum dan sesudah selama tukang bekerja. Riwayat perbaikan tersimpan per ruangan.",
+      ],
+    },
+    tryLabel: { en: "Show me Repairs", id: "Lihat Perbaikan" },
+  },
+  {
     id: "room-picker-2026-11",
     date: "2026-11-09",
     audience: "owner",
@@ -90,7 +109,8 @@ export interface StaffWhatsNewEntry {
   id: string;
   date: string;
   title: string;
-  text: string;
+  /** One line per step; most features need one. */
+  lines: string[];
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
@@ -98,7 +118,19 @@ export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
     id: "staff-floors-2026-11",
     date: "2026-11-09",
     title: "Baru: lantai dan bagian ruangan",
-    text: "Nama ruangan sekarang ada lantai dan bagiannya, misalnya LT2 · GB2 Bathroom · Wastafel: kerjakan bagian itu saja.",
+    lines: [
+      "Nama ruangan sekarang ada lantai dan bagiannya, misalnya LT2 · GB2 Bathroom · Wastafel: kerjakan bagian itu saja.",
+    ],
+  },
+  {
+    id: "staff-repairs-2026-11",
+    date: "2026-11-09",
+    title: "Baru: Lapor kerusakan",
+    lines: [
+      "Lihat ada yang rusak? Ketuk Lapor → Lapor kerusakan, pilih ruangan, ambil foto.",
+      "Kalau bocor, listrik atau gas, nyalakan Darurat: pemilik rumah langsung diberi tahu.",
+      "Saat tukang datang, buka tugas perbaikannya: foto sebelum saat mulai, foto sesudah saat selesai.",
+    ],
   },
 ];
 
