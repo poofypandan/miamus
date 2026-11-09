@@ -35,7 +35,27 @@ staff phone does on bad Wi-Fi. It covers Phases 146–147:
 - opening the app offline;
 - a sign-in that can't be renewed;
 - the saved copy while offline;
-- every outcome of an invite link.
+- every outcome of an invite link;
+- owner screens (R6): the middleware's three routes (nobody → "/", staff
+  phone → /staff, admin → dashboard), the Household tab and its Sign out
+  sheet, Kitchen in Bahasa Indonesia, and Today.
+
+### How owner screens are faked
+
+The middleware checks the Google session and household membership **on the
+server**, so those requests never pass through the browser where
+`stub-backend.ts` answers. `tests/e2e/server-stub.cjs` is preloaded into
+`next start` by `playwright.config.ts` (`NODE_OPTIONS=--require …`,
+`E2E_SERVER_STUB=1`): it runs a tiny HTTP server inside the Next process and
+points connections for `supabase.test` at it. It knows one admin, `OWNER`
+(also exported by `stub-backend.ts`). In a test:
+
+```ts
+const stub = await installStub(context, { owner: { locale: "en" } });
+await page.goto("/dashboard?module=access");
+```
+
+It is loaded only by the browser tests, and only touches the fake host.
 
 The app must be built against the stub first:
 

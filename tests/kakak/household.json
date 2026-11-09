@@ -1,0 +1,40 @@
+{
+  "today": "2026-11-11",
+  "now": "08:30",
+  "ownerLocale": "id",
+  "owner": { "ref": "M1", "name": "Dewi" },
+  "people": [
+    { "ref": "S1", "name": "Sari" },
+    { "ref": "S2", "name": "Nah" },
+    { "ref": "S3", "name": "Budi" },
+    { "ref": "S4", "name": "Yanti" },
+    { "ref": "S5", "name": "Yati" }
+  ],
+  "pets": [
+    { "ref": "P1", "name": "Mochi", "kind": "dog", "meals": ["07:00", "17:00"], "potty": [] },
+    { "ref": "P2", "name": "Kopi", "kind": "dog", "meals": ["07:00"], "potty": [] },
+    { "ref": "P3", "name": "Luna", "kind": "cat", "meals": [], "potty": [] }
+  ],
+  "rooms": [
+    { "ref": "R1", "name": "Teras" },
+    { "ref": "R2", "name": "Dapur" },
+    { "ref": "R3", "name": "Kamar mandi atas" },
+    { "ref": "R4", "name": "Kamar mandi bawah" },
+    { "ref": "R5", "name": "Kamar utama" },
+    { "ref": "R6", "name": "Ruang tamu" },
+    { "ref": "R7", "name": "Garasi" },
+    { "ref": "R8", "name": "Taman" },
+    { "ref": "R9", "name": "Kamar anak" }
+  ],
+  "items": [
+    { "ref": "I1", "name": "Telur", "pet": false },
+    { "ref": "I2", "name": "Sabun cuci piring", "pet": false },
+    { "ref": "I3", "name": "Deterjen", "pet": false },
+    { "ref": "I4", "name": "Beras", "pet": false },
+    { "ref": "I5", "name": "Makanan anjing", "pet": true },
+    { "ref": "I6", "name": "Pee pad", "pet": true },
+    { "ref": "I7", "name": "Tisu", "pet": false },
+    { "ref": "I8", "name": "Minyak goreng", "pet": false },
+    { "ref": "I9", "name": "Galon air", "pet": false }
+  ]
+}

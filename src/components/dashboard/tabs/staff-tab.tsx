@@ -64,6 +64,7 @@ import { LeavePanel } from "@/components/dashboard/leave-panel";
 import { SignOutSheet } from "@/components/auth/sign-out-sheet";
 import { HouseholdDataPanel } from "@/components/dashboard/household-data-panel";
 import { useHouseholdDeletion } from "@/hooks/use-household-deletion";
+import { AboutMiamus } from "@/components/dashboard/about-miamus";
 import { describeLog } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ProposalStatus, StaffProfile } from "@/types/database";
@@ -107,6 +108,7 @@ const HOUSEHOLD_PAGES = [
   "lock",
   "activity",
   "data",
+  "about",
 ] as const;
 type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
 
@@ -302,6 +304,9 @@ export function StaffTab() {
           <SettingsRow icon={History} label={t("Activity", "Aktivitas")} onPress={() => open("activity")} />
           <SettingsRow icon={ShieldCheck} label={t("Your data", "Data Anda")} onPress={() => open("data")} />
         </SettingsGroup>
+        <SettingsGroup>
+          <SettingsRow icon={Info} label={t("About Miamus", "Tentang Miamus")} onPress={() => open("about")} />
+        </SettingsGroup>
         <SignOutRow locale={locale} />
       </div>
     );
@@ -334,6 +339,7 @@ export function StaffTab() {
       {page === "lock" && <SecuritySettings />}
       {page === "activity" && <ActivityPage entries={entries} />}
       {page === "data" && <HouseholdDataPanel status={deletion.status} reload={deletion.reload} />}
+      {page === "about" && <AboutMiamus />}
     </div>
   );
 }

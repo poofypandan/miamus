@@ -26,6 +26,9 @@ interface StaffStat {
  * card says when someone also has older work open, since that is usually the
  * more useful thing to know.
  *
+ * Staff come first, in roster order; an admin follows only on a day they
+ * have chores (R9, docs/app-review-2026-11-07.md).
+ *
  * A chore counts for whoever it is assigned to, or failing that whoever
  * finished it, so an unclaimed chore that someone just did lands on them. One
  * nobody has taken or done sits on its own "Unclaimed" card.
@@ -66,9 +69,11 @@ export function StaffCompletionStrip({
     };
 
     // Staff always have a card; an admin (a roster row linked to Google,
-    // migrations/106) only on a day they have chores of their own. Removed
-    // people are already out of `profiles`.
-    const people = (profiles ?? []).flatMap((p) => {
+    // migrations/106) only on a day they have chores of their own, and after
+    // the staff (R9: the strip is about the people who help). Removed people
+    // are already out of `profiles`.
+    const roster = profiles ?? [];
+    const people = [...roster.filter((p) => !p.user_id), ...roster.filter((p) => p.user_id)].flatMap((p) => {
       const stat = { id: p.id, name: p.name, ...tally(p.id) };
       return !p.user_id || stat.total > 0 || stat.overdue > 0 ? [stat] : [];
     });
