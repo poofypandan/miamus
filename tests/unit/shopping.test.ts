@@ -62,7 +62,7 @@ describe("shopping list", () => {
       "id"
     );
     expect(text).toBe(
-      "*🛒 Daftar belanja*\n\n" +
+      "*Daftar belanja*\n\n" +
         "*Hewan*\n- Makanan (habis)\n- Pee pad (hampir habis)\n\n" +
         "*Rumah*\n- Sabun (hampir habis)\n\n" +
         "*Lainnya*\n- Kantong sampah"
@@ -71,12 +71,12 @@ describe("shopping list", () => {
 
   it("a note about a pet's thing keeps its label", () => {
     const text = buildShoppingList([], [{ alert: { ...note, item_type: "food", note: "sisa 1 hari" }, petName: "Mochi" }], "id");
-    expect(text).toBe("*🛒 Daftar belanja*\n\n*Lainnya*\n- Makanan Mochi: sisa 1 hari");
+    expect(text).toBe("*Daftar belanja*\n\n*Lainnya*\n- Makanan Mochi: sisa 1 hari");
   });
 
   it("speaks English for an owner who chose it", () => {
     expect(buildShoppingList([item("Pee pad", "pet", "out")], [], "en")).toBe(
-      "*🛒 Shopping list*\n\n*Pets*\n- Pee pad (out)"
+      "*Shopping list*\n\n*Pets*\n- Pee pad (out)"
     );
   });
 });

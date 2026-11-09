@@ -96,10 +96,10 @@ here needs AI.
    "Any pets at home? Miamus can hide the Pets tab if not." · **We have pets**
    · **No pets**.
 
-## Where the answer is stored — migration 132
+## Where the answer is stored — migration 133
 
-Next free number is **132** (checked `supabase/migrations` and the open PRs:
-#41 has no migration; #11 and #13 are docs only).
+Number **133**: 132 went to the push titles without emoji (2026-11-09).
+Re-check `supabase/migrations` and the open PRs before building.
 
 Additive. `households` gains:
 
@@ -138,7 +138,7 @@ really two or three yes/no answers.
   from `public, anon`, granted to `authenticated`.
 - **No direct update grant** on `households`; the function is the only
   door, as with Kakak's switch.
-- Tests: `supabase/tests/132_has_pets.sql` (rolled back): backfill (pets →
+- Tests: `supabase/tests/133_has_pets.sql` (rolled back): backfill (pets →
   true, none → null); `create_household` with and without the flag; the old
   one-argument call still works; the setter refuses staff phones, other
   households' owners and logged-out callers; turning off with a live pet is
@@ -290,7 +290,7 @@ policy. This phase touches three of those (Catat Ekstra, the reports panel,
 What's new), so **it's built after #41 merges**, on a fresh branch from
 `main`. Size: small–medium.
 
-1. Migration 132 + SQL tests; types (`Household` gains the three fields).
+1. Migration 133 + SQL tests; types (`Household` gains the three fields).
 2. `useHouseholdProfile()`; flags into `dashboard-modules.ts` callers.
 3. Onboarding chips; `create_household` with `p_has_pets`.
 4. Today, Kitchen, staff hides; Household row and sheet; the Today card (D3).
