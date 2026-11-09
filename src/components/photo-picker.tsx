@@ -106,6 +106,12 @@ interface PhotoPickerProps {
    * would be pointing the owner at a photo still sitting on a phone.
    */
   offline?: boolean;
+  /**
+   * Locks the photo while the save it belongs to is being sent (Phase 161):
+   * once a queued save holds the URL, removing the photo would delete the
+   * bytes that save still has to upload (Codex, PR #41).
+   */
+  disabled?: boolean;
 }
 
 export function PhotoPicker({
@@ -123,6 +129,7 @@ export function PhotoPicker({
   masterSrc,
   allowGallery = false,
   offline = false,
+  disabled = false,
 }: PhotoPickerProps) {
   const { uploadPhoto } = useHousehold();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -281,6 +288,7 @@ export function PhotoPicker({
           )}
           <button
             type="button"
+            disabled={disabled}
             onClick={() => {
               // A retake: the old photo is never uploaded, if it hadn't been.
               if (offline) void discardPhoto(value);
@@ -289,7 +297,7 @@ export function PhotoPicker({
               onMaster?.(null);
             }}
             aria-label={locale === "id" ? "Hapus foto" : "Remove photo"}
-            className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+            className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground disabled:opacity-40"
           >
             <X className="size-3" />
           </button>
@@ -333,7 +341,7 @@ export function PhotoPicker({
         type="button"
         variant="outline"
         className={className}
-        disabled={busy}
+        disabled={busy || disabled}
         onClick={() => inputRef.current?.click()}
       >
         {busy ? <Loader2 className="animate-spin" /> : <Camera />}

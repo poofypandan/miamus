@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Archive, Circle, CookingPot, Plus, Refrigerator, Snowflake, Utensils } from "lucide-react";
+import { Archive, Circle, CloudUpload, CookingPot, Plus, Refrigerator, Snowflake, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FoodDetailSheet } from "@/components/kitchen/food-detail-sheet";
 import { FoodFormSheet } from "@/components/kitchen/food-form-sheet";
+import { SyncedImg } from "@/components/shared/synced-img";
 import { useHousehold } from "@/context/household-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
@@ -25,7 +26,6 @@ import {
   type FoodGroup,
   type FoodLocale,
 } from "@/lib/food";
-import { photoSrc } from "@/lib/photos";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 import type { FoodItem, FoodPlace } from "@/types/database";
@@ -50,7 +50,7 @@ const GROUPS: FoodGroup[] = ["today", "week", "later"];
 export function FoodView({ locale, canDelete }: { locale: FoodLocale; canDelete: boolean }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { foodItems, loading, returnFoodContainer } = useHousehold();
+  const { foodItems, loading, returnFoodContainer, pendingIds } = useHousehold();
   const today = formatDateLocal(useToday());
   const { allProfiles } = useStaffProfiles();
   const lookup = useStaffNameLookup(allProfiles, "");
@@ -156,6 +156,7 @@ export function FoodView({ locale, canDelete }: { locale: FoodLocale; canDelete:
                   locale={locale}
                   loggedBy={staffOnly(item.added_by)}
                   onPress={() => setOpenId(item.id)}
+                  waitingToSend={pendingIds.has(item.id)}
                 />
               ))}
             </div>
@@ -193,7 +194,9 @@ function FoodRow({
   locale,
   loggedBy,
   onPress,
+  waitingToSend = false,
 }: {
+  waitingToSend?: boolean;
   item: FoodItem;
   today: string;
   locale: FoodLocale;
@@ -218,8 +221,7 @@ function FoodRow({
       className="flex min-h-16 w-full items-center gap-3 px-3 py-2 text-left active:bg-muted"
     >
       {item.photo_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={photoSrc(item.photo_url, 160)} alt="" className="size-11 shrink-0 rounded-lg bg-muted object-cover" />
+        <SyncedImg url={item.photo_url} size={160} className="size-11 shrink-0 rounded-lg bg-muted object-cover" />
       ) : (
         <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Icon className="size-5" strokeWidth={1.75} />
@@ -230,6 +232,13 @@ function FoodRow({
         <span className={cn("truncate text-xs", past ? "font-medium text-red-700" : "text-muted-foreground")}>
           {past ? expiryLabel(days, locale) : detail}
         </span>
+        {/* Added on this phone, not sent yet (Phase 161). Amber: waiting. */}
+        {waitingToSend && (
+          <span className="flex items-center gap-1 truncate text-xs font-medium text-amber-700">
+            <CloudUpload className="size-3 shrink-0" />
+            {locale === "id" ? "Menunggu dikirim" : "Waiting to send"}
+          </span>
+        )}
         {/* Its own line, so a narrow phone never cuts off who logged it. */}
         {loggedBy && (
           <span className="truncate text-xs text-muted-foreground">

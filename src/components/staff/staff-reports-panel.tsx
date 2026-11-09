@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { AdHocSheet } from "@/components/staff/adhoc-sheet";
 import { StaffRoutinePicker } from "@/components/staff/staff-routine-picker";
+import { SaveStillWaitingError } from "@/lib/offline-queue";
 import { useHousehold } from "@/context/household-context";
 import { LeaveRequestButton } from "@/components/staff/leave-request";
 import { formatDateLocal } from "@/lib/scheduleEngine";
@@ -254,7 +255,11 @@ function ReportRow({
       toast.success("Berhasil dibatalkan");
     } catch (err) {
       console.error(err);
-      toast.error("Gagal membatalkan");
+      toast.error(
+        err instanceof SaveStillWaitingError
+          ? "Belum terkirim. Tunggu sampai terkirim, lalu batalkan."
+          : "Gagal membatalkan"
+      );
     } finally {
       setBusy(false);
     }
@@ -312,7 +317,11 @@ function ProposalBatchRow({
       toast.success("Berhasil dibatalkan");
     } catch (err) {
       console.error(err);
-      toast.error("Gagal membatalkan");
+      toast.error(
+        err instanceof SaveStillWaitingError
+          ? "Belum terkirim. Tunggu sampai terkirim, lalu batalkan."
+          : "Gagal membatalkan"
+      );
     } finally {
       setBusy(false);
     }

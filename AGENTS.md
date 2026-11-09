@@ -42,6 +42,15 @@ staging tests or the owner's approval. Background: `docs/handoff-2026-11-07.md`.
   in user-facing text, config or emails.** The public contact for Miamus is
   support@poofylabs.dev, set in `src/config/legal.ts`.
 
+### Design
+
+- **Flag standard emoji or symbol characters used as icons (🐾 ✅ 🎉 🛒 🚨,
+  ♛ ⚿ ✓) in anything users see: screens, toasts, push titles, WhatsApp and
+  share text, and the mockups in `docs/mockups/`.** Miamus should feel
+  premium and professional (owner, 2026-11-09). Safe path: the app's own
+  `lucide-react` line icons beside the text, or plain text where no icon is
+  needed.
+
 ### Language
 
 - **Flag owner-facing text that has no Bahasa Indonesia version, and any
@@ -52,11 +61,3 @@ staging tests or the owner's approval. Background: `docs/handoff-2026-11-07.md`.
 - **Flag Indonesian that departs from `docs/indonesian-glossary.md`** (for
   example "ponsel" instead of "HP", or "pembantu" anywhere). The glossary is
   the agreed wording; changes to it are made there first.
-
-### Design
-
-- **Flag standard emoji or symbol glyphs used as icons in anything users
-  see** (screens, toasts, push titles, share text, mockups), for example
-  "selesai ✅" or a 🐾 chip. Miamus aims for a calm, premium look (owner
-  decision, 2026-11-09). Safe path: the app's own `lucide-react` icons; in
-  plain text (a toast, a push title), no icon at all.
