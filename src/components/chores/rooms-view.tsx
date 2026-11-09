@@ -18,6 +18,7 @@ import {
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { SortRoomsCard } from "@/components/chores/sort-rooms-card";
 import { WhatsNewCard } from "@/components/shared/whats-new";
+import { RoomRepairs } from "@/components/repairs/room-repairs";
 import { canSortIntoFloors } from "@/lib/organise-rooms";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
@@ -329,6 +330,7 @@ export function RoomsView() {
       <RoomSheet
         open={sheet !== null}
         title={sheet === "none" ? t("No room", "Tanpa ruangan") : (sheetEntry?.fullName ?? "")}
+        locationId={sheet && sheet !== "none" ? sheet : null}
         chores={sheet === "none" ? model.noRoom : (sheetEntry?.chores ?? [])}
         locale={locale}
         staffName={staffName}
@@ -488,6 +490,7 @@ function RoomRow({
 function RoomSheet({
   open,
   title,
+  locationId,
   chores,
   locale,
   staffName,
@@ -497,6 +500,8 @@ function RoomSheet({
 }: {
   open: boolean;
   title: string;
+  /** The room, or null for "No room" (no repairs section then). */
+  locationId: string | null;
   chores: RoomChore[];
   locale: OwnerLocale;
   staffName: (id: string | null | undefined) => string;
@@ -549,6 +554,8 @@ function RoomSheet({
               </div>
             </div>
           ))}
+          {/* Phase 159: what's broken here, and what was fixed. */}
+          {locationId && <RoomRepairs locationId={locationId} />}
         </div>
         <SheetFooter>
           <Button className="min-h-[48px] w-full" onClick={onAdd}>

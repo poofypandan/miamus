@@ -414,6 +414,43 @@ export type HouseholdTask = {
    * room (migrations/129). Optional: absent until that migration.
    */
   spot?: string | null;
+  /**
+   * The repair this chore is a visit for (migrations/130), or null. Owners
+   * set it; a materialised day copies its template's. Optional: absent
+   * until that migration.
+   */
+  repair_id?: string | null;
+};
+
+/** Where a repair stands (migrations/130). "Scheduled" and "work done" are read from its visits. */
+export type RepairStatus = "reported" | "open" | "fixed" | "dismissed";
+
+/**
+ * A reported problem in a room (Phase 159, migrations/130): "LT3 · Music
+ * Room: wall cracked". Fixed by one or more visits, each a Maintenance chore
+ * with repair_id set. Owners' reports start open; staff reports wait for an
+ * owner ("reported").
+ */
+export type Repair = {
+  id: string;
+  household_id: string;
+  location_id: string | null;
+  spot: string | null;
+  title: string;
+  details: string | null;
+  photo_url: string | null;
+  urgent: boolean;
+  status: RepairStatus;
+  reported_by_staff: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  dismiss_reason: string | null;
+  /** The repair person, a name only (D5). */
+  fixed_by_name: string | null;
+  closed_at: string | null;
 };
 
 // A room or area of the house a chore can be tagged with (Phase 135,
@@ -575,6 +612,12 @@ export interface Database {
         Insert: Partial<LeaveRequest> &
           Pick<LeaveRequest, "household_id" | "staff_id" | "start_date" | "end_date">;
         Update: Partial<LeaveRequest>;
+        Relationships: [];
+      };
+      repairs: {
+        Row: Repair;
+        Insert: Partial<Repair> & Pick<Repair, "household_id" | "title">;
+        Update: Partial<Repair>;
         Relationships: [];
       };
       household_locations: {

@@ -315,6 +315,7 @@ function TasksView() {
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
 
         <StaffWhatsNewCard id="staff-floors-2026-11" show={showFloorsTip} />
+        <StaffWhatsNewCard id="staff-repairs-2026-11" show />
 
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.

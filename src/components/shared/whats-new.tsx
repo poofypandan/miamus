@@ -126,7 +126,15 @@ export function StaffWhatsNewCard({ id, show }: { id: string; show: boolean }) {
         <Sparkles className="size-4 shrink-0" aria-hidden />
         {entry.title}
       </h3>
-      <p className="pr-2 text-[13px] leading-snug text-gray-700">{entry.text}</p>
+      {entry.lines.length === 1 ? (
+        <p className="pr-2 text-[13px] leading-snug text-gray-700">{entry.lines[0]}</p>
+      ) : (
+        <ol className="flex list-decimal flex-col gap-1 pl-5 text-[13px] leading-snug text-gray-700">
+          {entry.lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }
