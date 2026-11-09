@@ -115,7 +115,7 @@ Eight short sections, one idea each, no carousel, no stock photos of people.
    (→ `/`).
 2. **Hero**: headline, sub-line, brand line. Primary button **Request
    access**; secondary **I already have an account** (→ `/`). Under them,
-   small: **Staff? Saya staf →** (→ `/join/code`). One phone screenshot:
+   small, with a `UserRound` icon: **Staff? Saya staf** (→ `/join/code`). One phone screenshot:
    the owner's Today.
 3. **How it works**: the demonstration, in three steps (below).
 4. **What it looks after**: four cards (Pets, Chores and rooms, Kitchen,
@@ -125,7 +125,7 @@ Eight short sections, one idea each, no carousel, no stock photos of people.
    (cuti) built in; nothing tracks where they are.
 6. **Your household's data**: never sold, no ads;
    download it or delete the household any time. Link to the privacy policy.
-7. **Questions**: seven FAQs (eight once PR #41 is live), collapsed.
+7. **Questions**: eight FAQs, collapsed.
 8. **Request access** (repeated) and the footer: Poofy Labs, privacy policy,
    support@poofylabs.dev.
 
@@ -172,7 +172,7 @@ available (built, switched off).
 | Brand line | A little less on your mind. | Biar pikiran sedikit lebih ringan. |
 | Primary | Request access | Minta akses |
 | Secondary | I already have an account | Saya sudah punya akun |
-| Staff link | Staff? **Saya staf** → | Staf? **Saya staf** → |
+| Staff link (with a `UserRound` icon) | Staff? **Saya staf** | Staf? **Saya staf** |
 | Beta note | Free while Miamus is in beta. We review every new household. | Gratis selama Miamus masih beta. Setiap rumah baru kami tinjau. |
 
 ### What it looks after
@@ -210,7 +210,7 @@ untuk siapa saja selama cuti"); no geolocation anywhere in `src/`.
 | **Your household's data stays yours.** | **Data rumah Anda tetap milik Anda.** |
 | No ads, and we never sell your data. | Tanpa iklan, dan kami tidak pernah menjual data Anda. |
 | Download a copy any time. Asked to delete your household? It's deleted 7 days later, so a mistake can still be undone. | Unduh salinannya kapan saja. Minta rumah Anda dihapus? Rumah dihapus 7 hari kemudian, jadi masih bisa dibatalkan. |
-| Read the privacy policy → | Baca Kebijakan Privasi → |
+| Read the privacy policy | Baca Kebijakan Privasi |
 
 Grounded in: the privacy policy section on ads and selling; Household → Your
 data (`household-data-panel.tsx`, migration 127: the founder asks, the
@@ -228,19 +228,17 @@ privacy policy (linked right below) does that, with Article 56 as the basis.
 | 2 | **Do my staff need an account or email?** No. You send a link (on WhatsApp, for example). It connects their phone to your home, and they sign in with their name and a PIN. If they're ever signed out, they use the house code. | **Apakah staf perlu akun atau email?** Tidak. Anda kirim link (misalnya lewat WhatsApp). Link itu menghubungkan HP mereka ke rumah Anda, lalu mereka masuk dengan nama dan PIN. Kalau suatu saat keluar, mereka masuk lagi dengan kode rumah. |
 | 3 | **What language do staff see?** Bahasa Indonesia, always. You choose English or Bahasa Indonesia for yourself. | **Staf melihat bahasa apa?** Selalu Bahasa Indonesia. Anda sendiri bisa memilih Bahasa Inggris atau Bahasa Indonesia. |
 | 4 | **Is there an app to download?** No app store needed. Open miamus.app on Android or iPhone and add it to the home screen. It opens full screen, like an app. | **Apakah perlu unduh aplikasi?** Tidak perlu lewat app store. Buka miamus.app di Android atau iPhone, lalu tambahkan ke layar utama. Tampilannya layar penuh, seperti aplikasi. |
-| 5 | **What if the signal is weak?** *(added only after PR #41 merges)* Staff keep working. What they save waits on the phone and is sent when the signal is back. | **Bagaimana kalau sinyal lemah?** *(ditambahkan setelah PR #41 digabung)* Staf tetap bisa bekerja. Yang mereka simpan menunggu di HP dan terkirim saat sinyal kembali. |
+| 5 | **What if the signal is weak?** Staff keep working. Their logs, finished chores and the food they add wait on the phone and are sent when the signal is back. | **Bagaimana kalau sinyal lemah?** Staf tetap bisa bekerja. Catatan, tugas yang selesai, dan makanan yang mereka tambahkan menunggu di HP dan terkirim saat sinyal kembali. |
 | 6 | **Does Miamus send WhatsApp messages?** No automatic messages. You share the invite link yourself, and after a sick-pet report staff can tap once to tell you on WhatsApp. If you turn on notifications, urgent things also reach your phone straight away. | **Apakah Miamus mengirim pesan WhatsApp?** Tidak ada pesan otomatis. Anda sendiri yang membagikan link undangan, dan setelah laporan hewan sakit staf bisa sekali ketuk untuk memberi tahu Anda lewat WhatsApp. Kalau notifikasi dinyalakan, hal yang darurat juga langsung masuk ke HP Anda. |
 | 7 | **Can my family help manage?** Yes. Invite your partner or family; they sign in with Google and manage the household day to day, just like you. Only the person who created the household can delete it. | **Apakah keluarga bisa ikut mengelola?** Bisa. Undang pasangan atau keluarga; mereka masuk dengan Google dan bisa mengelola rumah sehari-hari, sama seperti Anda. Hanya pembuat rumah yang bisa menghapusnya. |
 | 8 | **What does it cost?** Free while Miamus is in beta. Everything you do by hand will stay free; later, an optional AI helper will be the paid extra. | **Berapa biayanya?** Gratis selama Miamus masih beta. Semua yang dikerjakan secara manual akan tetap gratis; nanti, asisten AI opsional menjadi tambahan berbayar. |
 
 Notes for review:
 
-- **FAQ 5 waits for PR #41.** On `main` today, a chore finished without
-  signal keeps its photos but staff must tap Finish again later
-  (`finish-chore-sheet.tsx`), and routine photos upload directly
-  (`agenda-group-card.tsx`). PR #41 queues every staff save. The page ships
-  with seven questions; FAQ 5 is added in a one-line follow-up once #41 is
-  live.
+- **FAQ 5 relies on PR #41** (merged 9 Nov): routine logs, extra notes,
+  finished chores and added food are queued on the phone when a save gets
+  no answer (`src/lib/offline-queue.ts`). Repair reports and leave requests
+  aren't queued, so the answer names what is.
 - **FAQ 8** says the agreed direction (manual free, AI the paid extra) in
   public for the first time. See L5.
 - Kakak isn't named anywhere on the page. See L6.
