@@ -42,14 +42,25 @@ export function LocationCombobox({
   const listId = useId();
 
   const typed = query.trim();
+  // A room on a floor reads "LT2 · Lounge" (migrations/129), so two rooms
+  // with one name on two floors can be told apart; a floor itself is offered
+  // too, for chores on the whole floor.
+  const label = useMemo(() => {
+    const byId = new Map((locations ?? []).map((room) => [room.id, room]));
+    return (room: HouseholdLocation) => {
+      const floor = room.parent_id ? byId.get(room.parent_id) : undefined;
+      return floor ? `${floor.name} · ${room.name}` : room.name;
+    };
+  }, [locations]);
   const matches = useMemo(() => {
     const needle = typed.toLowerCase();
     return (locations ?? [])
-      .filter((room) => room.name.toLowerCase().includes(needle))
+      .filter((room) => label(room).toLowerCase().includes(needle))
       .slice(0, MAX_OPTIONS);
-  }, [locations, typed]);
+  }, [locations, typed, label]);
+  // "Create" makes a room with no floor, so only those can be an exact match.
   const exact = (locations ?? []).find(
-    (room) => room.name.trim().toLowerCase() === typed.toLowerCase()
+    (room) => !room.parent_id && room.name.trim().toLowerCase() === typed.toLowerCase()
   );
   const canCreate = typed.length > 0 && typed.length <= 60 && !exact;
   const open = focused && (matches.length > 0 || canCreate);
@@ -81,7 +92,7 @@ export function LocationCombobox({
     return (
       <div className="flex min-h-[48px] items-center gap-2 rounded-lg border bg-amber-50/60 px-3">
         <MapPin className="size-4 shrink-0 text-amber-700" />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">{value.name}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{label(value)}</span>
         <button
           type="button"
           onClick={() => {
@@ -89,7 +100,7 @@ export function LocationCombobox({
             // Straight back to typing: clearing is nearly always to pick another.
             requestAnimationFrame(() => inputRef.current?.focus());
           }}
-          aria-label={t(`Remove location ${value.name}`, `Hapus lokasi ${value.name}`)}
+          aria-label={t(`Remove location ${label(value)}`, `Hapus lokasi ${label(value)}`)}
           className="-mr-2 flex size-11 items-center justify-center rounded-lg text-muted-foreground active:bg-muted"
         >
           <X className="size-4" />
@@ -148,7 +159,7 @@ export function LocationCombobox({
                 className="flex min-h-[44px] w-full items-center gap-2 rounded-md px-2.5 text-left text-sm active:bg-muted"
               >
                 <MapPin className="size-3.5 shrink-0 text-amber-700" />
-                <span className="truncate">{room.name}</span>
+                <span className="truncate">{label(room)}</span>
               </button>
             </li>
           ))}

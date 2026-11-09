@@ -100,6 +100,11 @@ people are **staf** and **admin**.
 | Jobs: Vacuum, Mop, Sweep, Dust, Toilet, Sheets, Towels, Trash, Tidy, Ironing, Windows, Plants | **Vakum, Pel, Sapu, Lap debu, Toilet, Seprai, Handuk, Sampah, Rapikan, Setrika, Kaca, Tanaman** | Phase 158 job chips. "Vakum" is the KBBI spelling; households also write "vacuum", which the app still recognises. Other = **Lainnya**. |
 | What's new / Got it | **Yang baru** / **Mengerti** | The feature tutorials (owner, 2026-11-09). |
 | Practice mode (Kakak) | **Mode latihan** | Scripted answers, no AI (owner, 2026-11-09). |
+| Floor / Floors | **Lantai** | Phase 158 PR B. Floor names stay as households type them ("LT2"). |
+| No floor yet | **Belum ada lantai** | Rooms not on a floor. |
+| Sort your rooms into floors / Sort rooms | **Kelompokkan ruangan per lantai** / **Kelompokkan** | The one-time card. |
+| Spot (part of a room) | **Bagian** | On chores: "LT2 · GB2 Bathroom · Wastafel". |
+| Add a room / Add a floor | **Tambah ruangan** / **Tambah lantai** | Household → Ruangan. |
 
 ## Formatting
 

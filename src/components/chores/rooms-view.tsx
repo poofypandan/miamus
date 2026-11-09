@@ -16,6 +16,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
+import { SortRoomsCard } from "@/components/chores/sort-rooms-card";
+import { WhatsNewCard } from "@/components/shared/whats-new";
+import { canSortIntoFloors } from "@/lib/organise-rooms";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
@@ -185,6 +188,10 @@ export function RoomsView() {
           )}
         </p>
       )}
+      <WhatsNewCard id="floors-2026-11" />
+      {!model.storedFloors && canSortIntoFloors(locations) && (
+        <SortRoomsCard locations={locations} chores={chores} today={today} />
+      )}
       {model.jobs.length > 0 && (
         <div
           role="group"
@@ -221,7 +228,7 @@ export function RoomsView() {
       )}
 
       {model.floors.map((floor) => (
-        <section key={floor.floor} className="flex flex-col gap-1.5" aria-label={floor.label}>
+        <section key={floor.key} className="flex flex-col gap-1.5" aria-label={floor.label}>
           <SectionHeader
             title={floor.label}
             detail={
@@ -263,9 +270,18 @@ export function RoomsView() {
       ))}
 
       {model.otherRooms.length > 0 && (
-        <section className="flex flex-col gap-1.5" aria-label={t("Other rooms", "Ruangan lain")}>
+        <section
+          className="flex flex-col gap-1.5"
+          aria-label={model.storedFloors ? t("No floor yet", "Belum ada lantai") : t("Other rooms", "Ruangan lain")}
+        >
           <SectionHeader
-            title={model.floors.length > 0 ? t("Other rooms", "Ruangan lain") : t("Rooms", "Ruangan")}
+            title={
+              model.storedFloors
+                ? t("No floor yet", "Belum ada lantai")
+                : model.floors.length > 0
+                  ? t("Other rooms", "Ruangan lain")
+                  : t("Rooms", "Ruangan")
+            }
             detail={
               job
                 ? t(
@@ -520,6 +536,7 @@ function RoomSheet({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-gray-900">{task.title}</span>
                       <span className="block truncate text-xs text-muted-foreground">
+                        {task.spot?.trim() && `${task.spot.trim()} · `}
                         {repeatPhrase(task, locale)}
                         {task.due_time && ` · ${task.due_time.slice(0, 5).replace(":", locale === "id" ? "." : ":")}`}
                         {task.assigned_to && ` · ${staffName(task.assigned_to)}`}

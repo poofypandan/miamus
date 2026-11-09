@@ -257,7 +257,7 @@ function TasksView() {
       <ChoreCard
         key={entry.key}
         occurrence={entry.occurrence}
-        locationName={roomName(entry.occurrence.task.location_id)}
+        locationName={roomName(entry.occurrence.task.location_id, entry.occurrence.task.spot)}
         // Someone else's name only when it is someone else's chore — which
         // only an admin without a roster row sees. Left out, the card
         // says "Untuk Anda".

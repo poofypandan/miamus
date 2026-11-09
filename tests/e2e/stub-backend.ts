@@ -210,12 +210,18 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         // The simple PostgREST filters the app's chore reads use (eq, neq,
         // lt, lte, gt, gte, is), so each read returns what the real backend
         // would: the week read misses a chore set up for later (Codex, #30).
-        return route.fulfill({ json: filterRows([...options.chores, ...tasks], new URL(request.url()).searchParams) });
+        const rows = filterRows([...options.chores, ...tasks], new URL(request.url()).searchParams);
+        // .single() asks for one object, not a list.
+        const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: one ? (rows[0] ?? null) : rows });
       }
       if (table === "household_locations" && options.roomsFail?.on) {
         return route.fulfill({ status: 500, json: { message: "stub: rooms unavailable" } });
       }
-      if (table === "household_locations" && options.rooms) return route.fulfill({ json: options.rooms });
+      if (table === "household_locations" && options.rooms) return answerRooms(route, options.rooms);
+      if (table === "rpc/organise_rooms" && options.rooms) {
+        return route.fulfill({ json: organise(request.postDataJSON()?.p_plan, options.rooms, options.chores ?? []) });
+      }
       if (options.owner && who === OWNER) {
         const answer = ownerAnswer(table, options.owner.locale);
         if (answer !== undefined) return route.fulfill({ json: answer });
@@ -318,6 +324,76 @@ function filterRows(rows: Record<string, unknown>[], params: URLSearchParams): R
   return rows.filter((row) =>
     filters.every(([column, op, value]) => op(row[column] == null ? null : String(row[column]), value))
   );
+}
+
+/**
+ * household_locations reads and owner writes (Phase 158): the stub's rooms
+ * array is changed in place, so later reads see it. Deleting a floor moves
+ * its rooms to "no floor", as migrations/129 does.
+ */
+function answerRooms(route: Route, rooms: Record<string, unknown>[]) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
+  if (request.method() === "GET") return route.fulfill({ json: rooms });
+  if (request.method() === "POST") {
+    const body = request.postDataJSON();
+    const row = {
+      id: `00000000-0000-4000-8000-${String(700 + rooms.length).padStart(12, "0")}`,
+      kind: "room",
+      parent_id: null,
+      sort_order: 0,
+      created_at: new Date().toISOString(),
+      ...(Array.isArray(body) ? body[0] : body),
+    };
+    rooms.push(row);
+    return reply([row]);
+  }
+  const index = rooms.findIndex((r) => r.id === id);
+  if (index === -1) return reply([]);
+  if (request.method() === "DELETE") {
+    for (const r of rooms) if (r.parent_id === id) r.parent_id = null;
+    return reply(rooms.splice(index, 1));
+  }
+  Object.assign(rooms[index], request.postDataJSON() ?? {});
+  return reply([rooms[index]]);
+}
+
+/** organise_rooms (migrations/129), applied to the stub's rooms and chores. */
+function organise(
+  plan: {
+    places?: Record<string, unknown>[];
+    merges?: { from: string; into: string; spot: string }[];
+    chores?: Record<string, unknown>[];
+    delete?: string[];
+  },
+  rooms: Record<string, unknown>[],
+  chores: Record<string, unknown>[]
+) {
+  for (const place of plan.places ?? []) {
+    const room = rooms.find((r) => r.id === place.id);
+    if (room) Object.assign(room, place);
+    else rooms.push({ kind: "room", parent_id: null, sort_order: 0, created_at: new Date().toISOString(), ...place });
+  }
+  const moved: Record<string, unknown>[] = [];
+  for (const merge of plan.merges ?? []) {
+    for (const chore of chores) {
+      if (chore.location_id !== merge.from) continue;
+      moved.push({ id: chore.id, location_id: chore.location_id, spot: chore.spot ?? null });
+      chore.location_id = merge.into;
+      chore.spot = chore.spot ?? merge.spot;
+    }
+  }
+  for (const change of plan.chores ?? []) {
+    const chore = chores.find((c) => c.id === change.id);
+    if (chore) Object.assign(chore, change);
+  }
+  for (const id of plan.delete ?? []) {
+    const index = rooms.findIndex((r) => r.id === id);
+    if (index !== -1) rooms.splice(index, 1);
+  }
+  return { moved };
 }
 
 /** household_tasks writes, enough for a chore saved and undone (Kakak). */

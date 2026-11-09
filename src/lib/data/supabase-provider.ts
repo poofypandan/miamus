@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
-import type {
+import type { OrganiseRoomsMoved,
   HouseholdTask,
   InventoryAuditLog,
   InventoryAuditWithStaff,
@@ -694,6 +694,9 @@ export const supabaseProvider: DataProvider = {
         due_time: template.due_time,
         requires_supervision: template.requires_supervision ?? false,
         location_id: template.location_id ?? null,
+        // The part of the room (migrations/129). Copied, or 128's guard
+        // refuses a staff phone's copy; sent only once the column exists.
+        ...("spot" in template ? { spot: template.spot ?? null } : {}),
         // The occurrence is a one-off: the repeat belongs to the template, and
         // copying it here would make every completed Tuesday a template of its
         // own, each generating its own infinite series.
@@ -897,18 +900,28 @@ export const supabaseProvider: DataProvider = {
       .eq("household_id", getActiveHouseholdId())
       .order("name");
     if (error) throw error;
-    return data;
+    // Floors and rooms in their order, then by name (sort_order arrives with
+    // migrations/129; before it every row reads as 0).
+    return [...data].sort(
+      (a, b) =>
+        (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+    );
   },
-  async createHouseholdLocation(name) {
+  async createHouseholdLocation(name, options) {
     const household_id = getActiveHouseholdId();
-    const { data, error } = await client()
-      .from("household_locations")
-      .insert({ household_id, name })
-      .select()
-      .single();
+    const parentId = options?.parentId ?? null;
+    const row: { household_id: string; name: string; kind?: "room" | "floor"; parent_id?: string | null } = {
+      household_id,
+      name,
+    };
+    // Only sent when asked for, so a database before migrations/129 still works.
+    if (options?.kind) row.kind = options.kind;
+    if (parentId) row.parent_id = parentId;
+    const { data, error } = await client().from("household_locations").insert(row).select().single();
     if (!error) return data;
-    // 23505: the case-insensitive name index (migrations/105) — the room
-    // exists already, perhaps added from another phone. Use it.
+    // 23505: the name is already on that floor (migrations/105, 129), perhaps
+    // added from another phone. Use it.
     if (error.code === "23505") {
       const { data: rooms, error: readError } = await client()
         .from("household_locations")
@@ -916,10 +929,35 @@ export const supabaseProvider: DataProvider = {
         .eq("household_id", household_id);
       if (readError) throw readError;
       const key = name.trim().toLowerCase();
-      const existing = rooms.find((room) => room.name.trim().toLowerCase() === key);
-      if (existing) return existing;
+      const existing = rooms.find(
+        (room) => room.name.trim().toLowerCase() === key && (room.parent_id ?? null) === parentId
+      );
+      // Only the same kind of place: a floor asked for under the name of a
+      // room (or the other way round) is a clash, not a success (Codex, #34).
+      if (existing && (existing.kind ?? "room") === (options?.kind ?? "room")) return existing;
     }
     throw error;
+  },
+  async updateHouseholdLocation(id, patch) {
+    const { data, error } = await client()
+      .from("household_locations")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteHouseholdLocation(id) {
+    // .select() so a delete RLS filtered to nothing is an error, not success.
+    const { data, error } = await client().from("household_locations").delete().eq("id", id).select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Room not deleted");
+  },
+  async organiseRooms(plan) {
+    const { data, error } = await client().rpc("organise_rooms", { p_plan: plan });
+    if (error) throw error;
+    return (data as { moved?: OrganiseRoomsMoved[] } | null)?.moved ?? [];
   },
   async createStaffProfile(name) {
     const { data, error } = await client()

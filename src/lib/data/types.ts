@@ -27,6 +27,8 @@ import type {
   ChoreRecurrence,
   HouseholdTask,
   HouseholdLocation,
+  OrganiseRoomsMoved,
+  OrganiseRoomsPlan,
   HouseholdTaskCategory,
   HouseholdTaskStatus,
   LeaveRequest,
@@ -395,13 +397,32 @@ export interface DataProvider {
    * there is none to be had (mock mode; a database without migrations/106).
    */
   ensureMyMemberProfile(householdId: string): Promise<{ id: string; name: string } | null>;
-  /** The household's rooms, by name (Phase 135). */
+  /** The household's floors and rooms, in their order (Phase 135, 158). */
   listHouseholdLocations(): Promise<HouseholdLocation[]>;
   /**
-   * Owner-only: adds a room. A name the household already has (in any case)
-   * returns that room instead of failing, so "Create" never makes a twin.
+   * Owner-only: adds a room (or, with kind "floor", a floor), on a floor when
+   * parentId is given. A name already on that floor (in any case) returns
+   * that place instead of failing, so "Create" never makes a twin.
    */
-  createHouseholdLocation(name: string): Promise<HouseholdLocation>;
+  createHouseholdLocation(
+    name: string,
+    options?: { kind?: "room" | "floor"; parentId?: string | null }
+  ): Promise<HouseholdLocation>;
+  /** Owner-only: rename, move to another floor, or reorder (migrations/129). */
+  updateHouseholdLocation(
+    id: string,
+    patch: { name?: string; parent_id?: string | null; sort_order?: number }
+  ): Promise<HouseholdLocation>;
+  /**
+   * Owner-only: deletes a room or floor. Its chores keep going without a
+   * room; a floor's rooms move to "no floor" (renamed if a name clashes).
+   */
+  deleteHouseholdLocation(id: string): Promise<void>;
+  /**
+   * Owner-only: "Sort your rooms into floors" or its Undo, in one step.
+   * Returns the chores a merge moved, as they were, for an exact Undo.
+   */
+  organiseRooms(plan: OrganiseRoomsPlan): Promise<OrganiseRoomsMoved[]>;
   /**
    * Owner-only: finished pet routines and chores per staff member between
    * two instants (`from` inclusive, `to` exclusive), most first. The server

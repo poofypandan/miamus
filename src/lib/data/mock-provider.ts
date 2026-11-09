@@ -804,26 +804,102 @@ export const mockProvider: DataProvider = {
     return delay(
       loadDB()
         .householdLocations.filter((room) => room.household_id === household)
-        .sort((a, b) => a.name.localeCompare(b.name))
+        .sort(
+          (a, b) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+            a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+        )
     );
   },
-  async createHouseholdLocation(name) {
+  async createHouseholdLocation(name, options) {
     const db = loadDB();
     const household = getActiveHouseholdId();
+    const parentId = options?.parentId ?? null;
     const key = name.trim().toLowerCase();
     const existing = db.householdLocations.find(
-      (room) => room.household_id === household && room.name.trim().toLowerCase() === key
+      (room) =>
+        room.household_id === household &&
+        room.name.trim().toLowerCase() === key &&
+        (room.parent_id ?? null) === parentId
     );
-    if (existing) return delay(existing);
+    if (existing) {
+      if ((existing.kind ?? "room") !== (options?.kind ?? "room")) {
+        throw Object.assign(new Error("A place with this name exists"), { code: "23505" });
+      }
+      return delay(existing);
+    }
     const room: HouseholdLocation = {
       id: uid("room"),
       household_id: household,
       name: name.trim(),
       created_at: new Date().toISOString(),
+      kind: options?.kind ?? "room",
+      parent_id: parentId,
+      sort_order: 0,
     };
     db.householdLocations.push(room);
     saveDB(db);
     return delay(room);
+  },
+  async updateHouseholdLocation(id, patch) {
+    const db = loadDB();
+    const room = db.householdLocations.find((r) => r.id === id);
+    if (!room) throw new Error("Room not found");
+    Object.assign(room, patch);
+    saveDB(db);
+    return delay(room);
+  },
+  async deleteHouseholdLocation(id) {
+    const db = loadDB();
+    const room = db.householdLocations.find((r) => r.id === id);
+    // A floor's rooms move to "no floor", as migrations/129 does (renaming
+    // clashes is the database's job; mock mode keeps names as they are).
+    for (const r of db.householdLocations) if (r.parent_id === id) r.parent_id = null;
+    for (const t of db.householdTasks) if (t.location_id === id) t.location_id = null;
+    db.householdLocations = db.householdLocations.filter((r) => r !== room);
+    saveDB(db);
+    return delay(undefined);
+  },
+  async organiseRooms(plan) {
+    const db = loadDB();
+    for (const place of plan.places) {
+      const room = db.householdLocations.find((r) => r.id === place.id);
+      if (room) {
+        if (place.name !== undefined) room.name = place.name;
+        if (place.kind !== undefined) room.kind = place.kind;
+        if ("parent_id" in place) room.parent_id = place.parent_id ?? null;
+        if (place.sort_order !== undefined) room.sort_order = place.sort_order;
+      } else {
+        db.householdLocations.push({
+          id: place.id,
+          household_id: plan.household_id,
+          name: place.name ?? "",
+          created_at: new Date().toISOString(),
+          kind: place.kind ?? "room",
+          parent_id: place.parent_id ?? null,
+          sort_order: place.sort_order ?? 0,
+        });
+      }
+    }
+    const moved: { id: string; location_id: string | null; spot: string | null }[] = [];
+    for (const merge of plan.merges ?? []) {
+      for (const task of db.householdTasks) {
+        if (task.location_id !== merge.from) continue;
+        moved.push({ id: task.id, location_id: task.location_id ?? null, spot: task.spot ?? null });
+        task.location_id = merge.into;
+        task.spot = task.spot ?? merge.spot;
+      }
+    }
+    for (const chore of plan.chores) {
+      const task = db.householdTasks.find((t) => t.id === chore.id);
+      if (!task) continue;
+      if ("location_id" in chore) task.location_id = chore.location_id ?? null;
+      if ("spot" in chore) task.spot = chore.spot ?? null;
+      if (chore.title !== undefined) task.title = chore.title;
+    }
+    db.householdLocations = db.householdLocations.filter((r) => !plan.delete.includes(r.id));
+    saveDB(db);
+    return delay(moved);
   },
   async createStaffProfile(name) {
     const db = loadDB();
