@@ -1,4 +1,4 @@
-import { recurrenceOf } from "@/lib/chore-recurrence";
+import { nextOccurrence, occursOn, recurrenceOf } from "@/lib/chore-recurrence";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import type { HouseholdTask, Repair } from "@/types/database";
 
@@ -31,9 +31,9 @@ export type RepairStage =
   | { kind: "fixed" }
   | { kind: "dismissed" };
 
-/** A visit still to happen: not done, not called off. A repeat counts by its template. */
-function isPending(visit: HouseholdTask): boolean {
-  return visit.status === "pending";
+/** Today as a day key ("2026-11-09"), in the phone's time zone. */
+function todayKey(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 /** The visits of one repair, in date then time order. */
@@ -46,15 +46,48 @@ export function visitsOf(repairId: string, visits: HouseholdTask[]): HouseholdTa
     );
 }
 
-export function repairStage(repair: Repair, visits: HouseholdTask[]): RepairStage {
+/**
+ * A repeating visit's next day still to happen, from today on, or null when
+ * its run is over. Its template's own status only speaks for its first day;
+ * later days are virtual until someone writes them (expandChores), and a day
+ * written as done or called off is skipped (Codex, PR #37).
+ */
+function nextRepeatDay(template: HouseholdTask, rows: HouseholdTask[], today: string): string | null {
+  const settled = new Set(
+    rows
+      .filter((r) => r.parent_task_id === template.id && r.status !== "pending")
+      .map((r) => r.due_date)
+  );
+  if (template.status !== "pending") settled.add(template.due_date);
+  let day: string | null =
+    today < template.due_date ? template.due_date : occursOn(template, today) ? today : nextOccurrence(template, today);
+  // A handful of steps is plenty: each settled day is one already written.
+  for (let i = 0; day && i < 400; i++) {
+    if (!settled.has(day)) return day;
+    day = nextOccurrence(template, day);
+  }
+  return null;
+}
+
+export function repairStage(repair: Repair, visits: HouseholdTask[], today: string = todayKey()): RepairStage {
   if (repair.status === "reported") return { kind: "reported" };
   if (repair.status === "fixed") return { kind: "fixed" };
   if (repair.status === "dismissed") return { kind: "dismissed" };
   const mine = visitsOf(repair.id, visits);
-  // A repeating visit (rare: "watch the repair person daily this week") is
-  // its template's business; one still running counts as planned.
-  const pending = mine.filter((v) => isPending(v) && (recurrenceOf(v) === "none" || !v.parent_task_id));
-  if (pending.length > 0) return { kind: "scheduled", next: pending[0] };
+  const repeats = mine.filter((v) => !v.parent_task_id && recurrenceOf(v) !== "none");
+  const upcoming: HouseholdTask[] = [
+    // One-off visits, and days of a repeat written as their own rows.
+    ...mine.filter((v) => v.status === "pending" && recurrenceOf(v) === "none"),
+    // A repeat still running: its next day, as that day would read.
+    ...repeats.flatMap((t) => {
+      const day = nextRepeatDay(t, mine, today);
+      return day ? [{ ...t, due_date: day, status: "pending" as const }] : [];
+    }),
+  ].sort(
+    (a, b) =>
+      a.due_date.localeCompare(b.due_date) || (a.due_time ?? "99:99").localeCompare(b.due_time ?? "99:99")
+  );
+  if (upcoming.length > 0) return { kind: "scheduled", next: upcoming[0] };
   const done = mine.filter((v) => v.status === "completed");
   if (done.length > 0) return { kind: "check", last: done[done.length - 1] };
   return { kind: "unscheduled" };

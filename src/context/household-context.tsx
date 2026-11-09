@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { addDays } from "date-fns";
 import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
+import { refreshRepairs } from "@/lib/repairs-store";
 import { screenLocale } from "@/lib/owner-locale";
 import type {
   CreateEntityInput,
@@ -590,6 +591,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, [loadHouseholdTasks]);
 
   const refresh = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    // Repairs live in their own cache (src/lib/repairs-store.ts); catch it
+    // up with everything else (Codex, PR #37).
+    refreshRepairs();
     // A silent pass never *puts up* skeletons. It matters more than it looks:
     // flipping `loading` on re-renders the staff list as skeletons, which
     // unmounts the card holding an open photo-tagging dialog — exactly what a

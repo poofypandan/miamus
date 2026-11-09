@@ -59,6 +59,23 @@ describe("where a repair stands", () => {
     expect(repairStage(repair({}), [visit({ id: "a", status: "completed" }), visit({ id: "b" })]).kind).toBe("scheduled");
   });
 
+  it("reads a repeating visit's next day from its recurrence, not its first day's status (Codex, PR #37)", () => {
+    // Weekly on Mondays from 2 Nov; the first day is done.
+    const series = visit({ id: "t", due_date: "2026-11-02", recurrence: "weekly", status: "completed" });
+    const today = "2026-11-09";
+    const stage = repairStage(repair({}), [series], today);
+    expect(stage.kind).toBe("scheduled");
+    if (stage.kind === "scheduled") expect(stage.next.due_date).toBe("2026-11-09");
+    // Today's day written as done: the next is a week later.
+    const doneToday = visit({ id: "d", parent_task_id: "t", due_date: "2026-11-09", status: "completed" });
+    const later = repairStage(repair({}), [series, doneToday], today);
+    if (later.kind === "scheduled") expect(later.next.due_date).toBe("2026-11-16");
+    else throw new Error(`expected scheduled, got ${later.kind}`);
+    // The run ends today and today is done: nothing left, so check the work.
+    const ended = { ...series, recurrence_until: "2026-11-09" };
+    expect(repairStage(repair({}), [ended, doneToday], today).kind).toBe("check");
+  });
+
   it("ignores cancelled visits and other repairs' visits", () => {
     expect(repairStage(repair({}), [visit({ status: "cancelled" }), visit({ repair_id: "other" })]).kind).toBe("unscheduled");
   });
