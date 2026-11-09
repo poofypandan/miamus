@@ -236,7 +236,7 @@ function FinishChoreBody({
         toast.info("Tugas selesai, disimpan di HP. Akan dikirim otomatis saat sinyal bagus.");
       } else {
         clearChoreDraft(draftKey);
-        toast.success(`"${task.title}" selesai ✅`);
+        toast.success(`"${task.title}" selesai`);
       }
       onOpenChange(false);
     } catch (err) {

@@ -9,7 +9,7 @@ import { STAFF_ID, freshSession, installStub } from "./stub-backend";
 // Before: "Gagal menyimpan", and the work was gone unless typed in again.
 
 const WAITING_STRIP = /catatan menunggu dikirim/;
-const SENT_TOAST = "Catatan yang tertunda sudah terkirim ✅";
+const SENT_TOAST = "Catatan yang tertunda sudah terkirim";
 
 async function stillOnline(page: Page) {
   expect(await page.evaluate(() => navigator.onLine)).toBe(true);

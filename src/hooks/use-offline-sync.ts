@@ -83,7 +83,7 @@ export function useOfflineSync(lang: "en" | "id") {
       if (!result) return;
       const id = langRef.current === "id";
       if (result.sent.length > 0 && result.confirmed) {
-        toast.success(id ? "Catatan yang tertunda sudah terkirim ✅" : "Waiting saves sent ✅");
+        toast.success(id ? "Catatan yang tertunda sudah terkirim" : "Waiting saves sent");
       }
       if (result.refused.length > 0) {
         toast.error(
