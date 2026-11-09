@@ -1,4 +1,4 @@
-import { nextOccurrence, occursOn, recurrenceOf } from "@/lib/chore-recurrence";
+import { nextOccurrence, occursOn, previousOccurrence, recurrenceOf } from "@/lib/chore-recurrence";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import type { HouseholdTask, Repair } from "@/types/database";
 
@@ -59,6 +59,15 @@ function nextRepeatDay(template: HouseholdTask, rows: HouseholdTask[], today: st
       .map((r) => r.due_date)
   );
   if (template.status !== "pending") settled.add(template.due_date);
+  // A missed day still owed, exactly as expandChores carries it into Today
+  // as overdue: the most recent day before today, while today isn't one of
+  // the repeat's days, and nobody has written that day yet (Codex, PR #37).
+  if (!occursOn(template, today)) {
+    const missed = previousOccurrence(template, today);
+    if (missed && !rows.some((r) => r.parent_task_id === template.id && r.due_date === missed)) {
+      if (missed !== template.due_date || template.status === "pending") return missed;
+    }
+  }
   let day: string | null =
     today < template.due_date ? template.due_date : occursOn(template, today) ? today : nextOccurrence(template, today);
   // A handful of steps is plenty: each settled day is one already written.

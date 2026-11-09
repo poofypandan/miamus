@@ -77,6 +77,11 @@ describe("where a repair stands", () => {
     if (afterSkip.kind === "scheduled") expect(afterSkip.next.due_date).toBe("2026-11-16");
     else throw new Error(`expected scheduled, got ${afterSkip.kind}`);
     expect(repairStage(repair({}), [{ ...series, recurrence_until: "2026-11-09" }, skipped], today).kind).toBe("check");
+    // The run ended yesterday with that day not done: it's still owed, as
+    // Today shows it overdue, so the work isn't done yet.
+    const endedYesterday = repairStage(repair({}), [{ ...series, recurrence_until: "2026-11-09" }], "2026-11-10");
+    if (endedYesterday.kind === "scheduled") expect(endedYesterday.next.due_date).toBe("2026-11-09");
+    else throw new Error(`expected scheduled, got ${endedYesterday.kind}`);
     // The run ends today and today is done: nothing left, so check the work.
     const ended = { ...series, recurrence_until: "2026-11-09" };
     expect(repairStage(repair({}), [ended, doneToday], today).kind).toBe("check");
