@@ -15,8 +15,12 @@
  * so without it this endpoint can neither list nor delete anything.
  *
  * A second pass (migration 127) removes the photos of households that were
- * deleted: orphaned_household_photos lists files in either bucket whose
+ * deleted: orphaned_household_photos lists files in any photo bucket whose
  * household no longer exists and that no remaining row points at.
+ *
+ * A third pass (migration 131) removes repair receipts from the owner-only
+ * owner-receipts bucket: repair_receipts_due_for_pruning lists receipts of
+ * repairs closed more than 2 years ago, and ones no cost row points at.
  *
  * POST {}               → prune
  * POST {"dryRun": true} → report what is due, delete nothing
@@ -66,18 +70,24 @@ Deno.serve(async (req) => {
   const orphans = (limit: number) =>
     admin.rpc("orphaned_household_photos", { p_secret: secret, p_limit: limit });
 
+  const receipts = (limit: number) =>
+    admin.rpc("repair_receipts_due_for_pruning", { p_secret: secret, p_limit: limit });
+
   if (dryRun) {
     const { data, error } = await due(100_000);
     if (error) return failure(error);
     const rows = (data ?? []) as Due[];
     const { data: orphanData, error: orphanError } = await orphans(100_000);
     if (orphanError) return failure(orphanError);
+    const { data: receiptData, error: receiptError } = await receipts(100_000);
+    if (receiptError) return failure(receiptError);
     return json({
       dryRun: true,
       due: rows.length,
       bytes: rows.reduce((sum, r) => sum + (r.size ?? 0), 0),
       oldest: rows[0]?.created_at ?? null,
       deletedHouseholdPhotos: (orphanData ?? []).length,
+      repairReceipts: (receiptData ?? []).length,
     });
   }
 
@@ -135,10 +145,51 @@ Deno.serve(async (req) => {
     if (goneThisBatch < rows.length) break;
   }
 
-  const result = { removed, bytes, urlsCleared: cleared, deletedHouseholdPhotosRemoved: orphansRemoved };
+  // Repair receipts (owner-receipts bucket), on their own for the same reason.
+  const receiptsRemoved = await removeByBucket(receipts, admin, "repair receipts");
+  if (receiptsRemoved instanceof Response) return receiptsRemoved;
+
+  const result = {
+    removed,
+    bytes,
+    urlsCleared: cleared,
+    deletedHouseholdPhotosRemoved: orphansRemoved,
+    repairReceiptsRemoved: receiptsRemoved,
+  };
   console.log("prune-task-photos", result);
   return json(result);
 });
+
+/**
+ * Removes what a (bucket_id, name) RPC lists, a batch at a time, bucket by
+ * bucket; stops when a batch comes back with something Storage kept.
+ */
+async function removeByBucket(
+  list: (limit: number) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>,
+  admin: ReturnType<typeof createClient>,
+  label: string,
+): Promise<number | Response> {
+  let removed = 0;
+  for (let i = 0; i < MAX_BATCHES; i++) {
+    const { data, error } = await list(BATCH);
+    if (error) return failure(error);
+    const rows = (data ?? []) as Orphan[];
+    if (rows.length === 0) break;
+    let goneThisBatch = 0;
+    for (const bucket of new Set(rows.map((r) => r.bucket_id))) {
+      const names = rows.filter((r) => r.bucket_id === bucket).map((r) => r.name);
+      const { data: gone, error: removeError } = await admin.storage.from(bucket).remove(names);
+      if (removeError) {
+        console.error(`Storage remove failed (${label})`, removeError);
+        continue;
+      }
+      goneThisBatch += (gone ?? []).length;
+    }
+    removed += goneThisBatch;
+    if (goneThisBatch < rows.length) break;
+  }
+  return removed;
+}
 
 function failure(error: { code?: string; message: string }) {
   if (error.code === "42501") return json({ error: "Forbidden" }, 403);

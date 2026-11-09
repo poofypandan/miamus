@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ChevronRight, Plus, RefreshCw, Siren, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
+import { WhatsNewCard } from "@/components/shared/whats-new";
 import { RepairReportSheet } from "@/components/repairs/repair-report-sheet";
 import { RepairSheet, repairStageText } from "@/components/repairs/repair-sheet";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
@@ -33,6 +34,7 @@ export function RepairsView() {
 
   return (
     <div className="flex flex-col gap-4">
+      <WhatsNewCard id="repair-costs-2026-11" />
       <Button className="min-h-[48px] rounded-xl" onClick={() => setReporting(true)}>
         <Plus /> {t("Report a problem", "Lapor kerusakan")}
       </Button>

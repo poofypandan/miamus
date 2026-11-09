@@ -191,3 +191,89 @@ export function canUndoReport(repair: Repair, staffId: string | null, now: numbe
     now - new Date(repair.created_at).getTime() < STAFF_UNDO_MS
   );
 }
+
+// --- PR B (migrations/131): notes, cost, warranty, repair people -------------
+
+/** A note is short (repair_notes' check). */
+export const NOTE_LIMIT = 500;
+/** A cost's note (repair_costs' check). */
+export const COST_NOTE_LIMIT = 200;
+
+/** May this phone still take back its note? (its own, under 5 minutes old) */
+export function canTakeBackNote(
+  note: { staff_id: string | null; created_at: string },
+  staffId: string | null,
+  now: number = Date.now()
+): boolean {
+  return !!staffId && note.staff_id === staffId && now - new Date(note.created_at).getTime() < STAFF_UNDO_MS;
+}
+
+/** "Mon 9 Nov, 14:05" (or "2:05 PM" in English) for a note's time. */
+export function noteTime(iso: string, locale: OwnerLocale): string {
+  return new Intl.DateTimeFormat(locale === "id" ? "id-ID" : "en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** Rupiah as people write it: "Rp350.000". */
+export function formatIdr(amount: number): string {
+  return `Rp${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(amount)}`;
+}
+
+/**
+ * What an owner typed as a cost, as whole rupiah: "350.000", "350000",
+ * "Rp 350.000" and "350rb" all read 350000. Null for blank or unreadable.
+ */
+export function parseIdr(text: string): number | null {
+  const raw = text.trim().toLowerCase().replace(/^rp\.?\s*/, "");
+  if (!raw) return null;
+  const thousands = /^(\d+(?:[.,]\d+)?)\s*(rb|ribu|k)$/.exec(raw);
+  if (thousands) return Math.round(Number(thousands[1].replace(",", ".")) * 1000);
+  const millions = /^(\d+(?:[.,]\d+)?)\s*(jt|juta)$/.exec(raw);
+  if (millions) return Math.round(Number(millions[1].replace(",", ".")) * 1_000_000);
+  const compact = raw.replace(/\s/g, "");
+  // Indonesian grouping, cents optional: 350.000 / 350.000,00 (Codex, PR #38).
+  const indonesian = /^(\d{1,3}(?:\.\d{3})+)(?:,(\d{1,2}))?$/.exec(compact);
+  // English grouping: 350,000 / 350,000.00.
+  const english = /^(\d{1,3}(?:,\d{3})+)(?:\.(\d{1,2}))?$/.exec(compact);
+  // No grouping: 350000 / 350000,00 / 350000.00.
+  const plain = /^(\d+)(?:[.,](\d{1,2}))?$/.exec(compact);
+  const match = indonesian ?? english ?? plain;
+  if (!match) return null;
+  const whole = match[1].replace(/[.,]/g, "");
+  if (whole.length > 13) return null;
+  // Whole rupiah: cents round to the nearest rupiah.
+  return Math.round(Number(`${whole}.${match[2] ?? "0"}`));
+}
+
+/** "Under warranty until 3 Mar 2027", or that it ended; null without a date. */
+export function warrantyLabel(until: string | null | undefined, locale: OwnerLocale, today: string = todayKey()): string | null {
+  if (!until) return null;
+  const date = new Intl.DateTimeFormat(locale === "id" ? "id-ID" : "en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${until}T00:00:00`));
+  if (until >= today) return locale === "id" ? `Garansi sampai ${date}` : `Under warranty until ${date}`;
+  return locale === "id" ? `Garansi berakhir ${date}` : `Warranty ended ${date}`;
+}
+
+/** Repair people named before, most used first, for the name field's suggestions. */
+export function repairPeople(repairs: Repair[]): string[] {
+  const counts = new Map<string, { name: string; count: number }>();
+  for (const repair of repairs) {
+    const name = repair.fixed_by_name?.trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const entry = counts.get(key) ?? { name, count: 0 };
+    entry.count += 1;
+    counts.set(key, entry);
+  }
+  return [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .map((entry) => entry.name);
+}

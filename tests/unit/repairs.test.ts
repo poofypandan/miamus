@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  canTakeBackNote,
   canUndoReport,
+  formatIdr,
+  parseIdr,
+  repairPeople,
+  warrantyLabel,
   repairStage,
   repairsBoard,
   repairsToday,
@@ -153,5 +158,50 @@ describe("staff screens", () => {
     expect(visitTitle(repair({ title: "x".repeat(120) }))).toHaveLength(120);
     expect(visitNotes(repair({ fixed_by_name: "Pak Budi" }))).toBe("Tukang: Pak Budi");
     expect(visitNotes(repair({}))).toBeNull();
+  });
+});
+
+describe("PR B: cost, warranty, notes, repair people", () => {
+  it("reads a cost however it was typed, in whole rupiah", () => {
+    expect(parseIdr("350.000")).toBe(350000);
+    expect(parseIdr("Rp 350.000")).toBe(350000);
+    expect(parseIdr("350000")).toBe(350000);
+    expect(parseIdr("350rb")).toBe(350000);
+    expect(parseIdr("1,5 jt")).toBe(1500000);
+    expect(parseIdr("")).toBeNull();
+    expect(parseIdr("murah")).toBeNull();
+    // Cents never become rupiah (Codex, PR #38).
+    expect(parseIdr("Rp 350.000,00")).toBe(350000);
+    expect(parseIdr("350000,00")).toBe(350000);
+    expect(parseIdr("350,000")).toBe(350000);
+    expect(parseIdr("350,000.50")).toBe(350001);
+    expect(parseIdr("35.00.0")).toBeNull();
+    expect(formatIdr(350000)).toBe("Rp350.000");
+  });
+
+  it("says whether a warranty still runs, in both languages", () => {
+    expect(warrantyLabel("2027-03-03", "en", "2026-11-09")).toBe("Under warranty until 3 Mar 2027");
+    expect(warrantyLabel("2027-03-03", "id", "2026-11-09")).toBe("Garansi sampai 3 Mar 2027");
+    expect(warrantyLabel("2026-10-01", "en", "2026-11-09")).toBe("Warranty ended 1 Oct 2026");
+    expect(warrantyLabel(null, "en")).toBeNull();
+  });
+
+  it("suggests repair people named before, most used first, one per name whatever the case", () => {
+    const people = repairPeople([
+      repair({ id: "a", fixed_by_name: "Pak Budi" }),
+      repair({ id: "b", fixed_by_name: "pak budi" }),
+      repair({ id: "c", fixed_by_name: "Pak Joko" }),
+      repair({ id: "d", fixed_by_name: null }),
+    ]);
+    expect(people).toEqual(["Pak Budi", "Pak Joko"]);
+  });
+
+  it("lets a phone take back its own note for 5 minutes only", () => {
+    const note = { staff_id: "s1", created_at: "2026-11-09T10:00:00Z" };
+    const at = (minutes: number) => new Date("2026-11-09T10:00:00Z").getTime() + minutes * 60_000;
+    expect(canTakeBackNote(note, "s1", at(4))).toBe(true);
+    expect(canTakeBackNote(note, "s1", at(6))).toBe(false);
+    expect(canTakeBackNote(note, "s2", at(1))).toBe(false);
+    expect(canTakeBackNote({ ...note, staff_id: null }, null, at(1))).toBe(false);
   });
 });

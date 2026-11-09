@@ -16,7 +16,7 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useHousehold } from "@/context/household-context";
 import { useRepairs } from "@/hooks/use-repairs";
 import { dataProvider } from "@/lib/data";
-import { REPAIR_LIMITS } from "@/lib/repairs";
+import { REPAIR_LIMITS, repairPeople } from "@/lib/repairs";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { cn } from "@/lib/utils";
 import type { Repair } from "@/types/database";
@@ -90,12 +90,14 @@ function ReportForm({
 }) {
   const ind = locale === "id";
   const tr = (en: string, id: string) => (ind ? id : en);
-  const { reload } = useRepairs();
+  const { reload, repairs } = useRepairs();
+  // Repair people named on earlier repairs, as suggestions (PR B).
+  const people = repairPeople(repairs);
   // An owner on the Staff view reports as an owner: straight on the list
   // (migrations/130 refuses a "waiting" report from an owner).
   const { userRole } = useHousehold();
   const waitsForOwner = asStaff && userRole !== "owner";
-  const ids = { room: useId(), title: useId(), details: useId(), who: useId() };
+  const ids = { room: useId(), title: useId(), details: useId(), who: useId(), people: useId(), warranty: useId() };
 
   const [locationId, setLocationId] = useState<string | null>(repair?.location_id ?? presetLocationId);
   const [spot, setSpot] = useState<string | null>(repair?.spot ?? null);
@@ -105,6 +107,7 @@ function ReportForm({
   const [photoBusy, setPhotoBusy] = useState(false);
   const [urgent, setUrgent] = useState(repair?.urgent ?? false);
   const [fixedBy, setFixedBy] = useState(repair?.fixed_by_name ?? "");
+  const [warranty, setWarranty] = useState(repair?.warranty_until ?? "");
   const [saving, setSaving] = useState(false);
 
   const canSave = title.trim().length > 0 && !photoBusy && !saving;
@@ -135,6 +138,8 @@ function ReportForm({
           ...fields,
           ...photoPatch,
           fixed_by_name: fixedBy.trim() ? fixedBy.trim().slice(0, REPAIR_LIMITS.fixedByName) : null,
+          // Sent only when set or cleared: a database before migrations/131 has no such column.
+          ...(warranty || repair.warranty_until ? { warranty_until: warranty || null } : {}),
         });
         if ("photo_url" in photoPatch) void dropPhoto(repair.photo_url);
         toast.success(tr("Saved", "Tersimpan"));
@@ -278,10 +283,34 @@ function ReportForm({
               onChange={(e) => setFixedBy(e.target.value)}
               placeholder={tr("e.g. Pak Budi, AC repair", "mis. Pak Budi, tukang AC")}
               className="min-h-[48px]"
+              list={people.length > 0 ? ids.people : undefined}
+              autoComplete="off"
             />
+            {people.length > 0 && (
+              <datalist id={ids.people}>
+                {people.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            )}
             <p className="text-[11px] text-muted-foreground">
               {tr("A name only. Their number stays in your phone.", "Nama saja. Nomornya tetap di HP Anda.")}
             </p>
+          </div>
+        )}
+
+        {repair && !asStaff && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={ids.warranty} className="text-xs">
+              {tr("Warranty until (optional)", "Garansi sampai (opsional)")}
+            </Label>
+            <Input
+              id={ids.warranty}
+              type="date"
+              value={warranty}
+              onChange={(e) => setWarranty(e.target.value)}
+              className="min-h-[48px]"
+            />
           </div>
         )}
 

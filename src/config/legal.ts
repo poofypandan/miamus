@@ -42,7 +42,11 @@ export const LEGAL = {
   // each visit before and after, who reported it, who fixed it (a name
   // only), kept while open and 2 years after closing; admins are notified
   // of urgent staff reports (Phase 159, migrations/130). No new service.
-  policyVersion: "2026-11-09.2",
+  // 2026-11-09.3: repairs, part 2 — a warranty end date; notes on a repair
+  // by admins or staff (optional photo); for admins only, a repair's cost,
+  // receipt photo and note, in storage only admins can open. Kept as long as
+  // the repair (open, then 2 years). No new service (migrations/131).
+  policyVersion: "2026-11-09.3",
   effectiveDate: { en: "9 November 2026", id: "9 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

@@ -121,6 +121,10 @@ people are **staf** and **admin**.
 | Before / after the repair (photos) | **Foto sebelum diperbaiki** / **Foto sesudah diperbaiki** | A visit's photo steps on staff phones. |
 | Waiting / Scheduled (staff report status) | **Menunggu dicek** / **Dijadwalkan** | What staff see beside their report. |
 | Spot, on a staff form | **Bagian (boleh dikosongkan)** | Staff forms never say "opsional". |
+| Cost / Receipt / Cost and receipt | **Biaya** / **Nota** / **Biaya dan nota** | Phase 159 PR B. Owners only. |
+| Notes (on a repair) / Send | **Catatan** / **Kirim** | The repair's thread, owners and staff. |
+| Warranty until / Under warranty until / Warranty ended | **Garansi sampai** / **Garansi sampai** / **Garansi berakhir** | |
+| Owners only | **Hanya pemilik** | Marks what staff never see. |
 
 ## Formatting
 

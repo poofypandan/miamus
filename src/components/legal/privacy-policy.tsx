@@ -104,7 +104,7 @@ const COPY: Record<
               "Details about your pets, including their vet and health records.",
               "The household's shopping list: which supplies are running low or out, and who said so.",
               "Food the household lists: what it is, an optional photo, where it came from (cooked at home, from someone, or bought), where it is kept, when it expires (or that nobody knows yet), who gave it (a name you type in), notes, who added it, and whether it was eaten, given away or thrown away. When staff add food, the household's admins get a notification saying so, and each morning a notification lists food that expires today or tomorrow.",
-              "Repairs: what broke and where (room and part of the room), details, a photo of the problem, whether it is urgent, who reported it, the visits to fix it with their before and after photos, who fixed it (a name you type in, for example the repair person), and whether it was fixed or not needed (with the reason, which staff can see). When staff report something urgent, the household's admins get a notification.",
+              "Repairs: what broke and where (room and part of the room), details, a photo of the problem, whether it is urgent, who reported it, the visits to fix it with their before and after photos, who fixed it (a name you type in, for example the repair person), when its warranty ends, and whether it was fixed or not needed (with the reason, which staff can see). Short notes on a repair, with an optional photo, written by admins or staff. For admins only, never shown to staff: what a repair cost, its receipt photo and a note. When staff report something urgent, the household's admins get a notification.",
             ],
           },
           { h: "Kakak, the AI assistant (only if an admin turns it on)" },
@@ -197,7 +197,7 @@ const COPY: Record<
           {
             ul: [
               "Chore and routine proof photos (including before and after photos) are deleted automatically after 30 days, except the photos of a repair's visits (below).",
-              "A repair, its photo and the photos of its visits are kept while the repair is open, and for 2 years after it is closed (fixed or not needed), then deleted automatically. If a repair is deleted, its photo is deleted too, and its visits' photos follow the 30-day rule.",
+              "A repair, its photo, its notes and their photos, its cost and receipt, and the photos of its visits are kept while the repair is open, and for 2 years after it is closed (fixed or not needed), then deleted automatically. If a repair is deleted, its photo, notes, cost and receipt are deleted too, and its visits' photos follow the 30-day rule.",
               "Records of staff sign-in attempts are deleted automatically after 30 days.",
               "A food photo is kept while the food is on the list, and deleted once it is marked eaten, given away or thrown away, or deleted. Finished food is kept 90 days without its photo, then deleted automatically.",
               "A staff phone's ID is deleted 7 days after it was last used, once the phone is no longer linked to a household.",
@@ -349,7 +349,7 @@ const COPY: Record<
               "Data hewan peliharaan Anda, termasuk catatan dokter hewan dan kesehatannya.",
               "Daftar belanja rumah: barang yang hampir habis atau habis, dan siapa yang memberi tahu.",
               "Makanan yang dicatat rumah tangga: makanan apa, foto (boleh tidak ada), dari mana (dimasak di rumah, dari orang, atau dibeli), disimpan di mana, kapan kedaluwarsa (atau belum ada yang tahu), dari siapa (nama yang Anda ketik), catatan, siapa yang menambahkan, dan apakah sudah dimakan, diberikan, atau dibuang. Kalau staf menambahkan makanan, admin rumah tangga mendapat notifikasi, dan setiap pagi ada notifikasi berisi makanan yang kedaluwarsa hari ini atau besok.",
-              "Perbaikan: apa yang rusak dan di mana (ruangan dan bagiannya), keterangan, foto kerusakannya, apakah darurat, siapa yang melapor, kunjungan untuk memperbaikinya beserta foto sebelum dan sesudah, siapa yang memperbaiki (nama yang Anda ketik, misalnya tukangnya), dan apakah sudah diperbaiki atau tidak perlu (dengan alasannya, yang bisa dibaca staf). Kalau staf melaporkan kerusakan darurat, admin rumah tangga mendapat notifikasi.",
+              "Perbaikan: apa yang rusak dan di mana (ruangan dan bagiannya), keterangan, foto kerusakannya, apakah darurat, siapa yang melapor, kunjungan untuk memperbaikinya beserta foto sebelum dan sesudah, siapa yang memperbaiki (nama yang Anda ketik, misalnya tukangnya), kapan garansinya berakhir, dan apakah sudah diperbaiki atau tidak perlu (dengan alasannya, yang bisa dibaca staf). Catatan singkat tentang perbaikan, dengan foto (boleh tidak ada), yang ditulis admin atau staf. Hanya untuk admin, tidak pernah ditampilkan ke staf: biaya perbaikan, foto notanya, dan catatannya. Kalau staf melaporkan kerusakan darurat, admin rumah tangga mendapat notifikasi.",
             ],
           },
           { h: "Kakak, asisten AI (hanya jika admin menyalakannya)" },
@@ -442,7 +442,7 @@ const COPY: Record<
           {
             ul: [
               "Foto bukti tugas dan rutinitas (termasuk foto sebelum dan sesudah) dihapus otomatis setelah 30 hari, kecuali foto kunjungan perbaikan (di bawah).",
-              "Perbaikan, fotonya, dan foto kunjungannya disimpan selama perbaikan masih berjalan, dan 2 tahun setelah ditutup (sudah diperbaiki atau tidak perlu), lalu dihapus otomatis. Jika perbaikan dihapus, fotonya ikut dihapus, dan foto kunjungannya mengikuti aturan 30 hari.",
+              "Perbaikan, fotonya, catatan beserta fotonya, biaya dan notanya, serta foto kunjungannya disimpan selama perbaikan masih berjalan, dan 2 tahun setelah ditutup (sudah diperbaiki atau tidak perlu), lalu dihapus otomatis. Jika perbaikan dihapus, foto, catatan, biaya, dan notanya ikut dihapus, dan foto kunjungannya mengikuti aturan 30 hari.",
               "Catatan percobaan masuk staf dihapus otomatis setelah 30 hari.",
               "Foto makanan disimpan selama makanannya masih ada di daftar, dan dihapus setelah ditandai dimakan, diberikan, atau dibuang, atau setelah dihapus. Makanan yang sudah habis disimpan 90 hari tanpa fotonya, lalu dihapus otomatis.",
               "ID HP staf dihapus 7 hari setelah terakhir dipakai, jika HP itu tidak lagi terhubung ke rumah tangga.",

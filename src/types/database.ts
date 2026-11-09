@@ -451,6 +451,33 @@ export type Repair = {
   /** The repair person, a name only (D5). */
   fixed_by_name: string | null;
   closed_at: string | null;
+  /** When the repair's warranty ends (migrations/131). Optional: absent before it. */
+  warranty_until?: string | null;
+};
+
+/** What a repair cost, and its receipt (migrations/131). Owners only (D4). */
+export type RepairCost = {
+  repair_id: string;
+  household_id: string;
+  amount_idr: number | null;
+  /** owner-receipts bucket, readable by the household's owners only. */
+  receipt_url: string | null;
+  note: string | null;
+  created_by: string | null;
+  updated_at: string;
+};
+
+/** A short note on a repair, by an owner or a staff phone (migrations/131). */
+export type RepairNote = {
+  id: string;
+  household_id: string;
+  repair_id: string;
+  body: string;
+  photo_url: string | null;
+  /** The staff member who wrote it (self-declared, like every staff_id), or null for an owner. */
+  staff_id: string | null;
+  created_by: string | null;
+  created_at: string;
 };
 
 // A room or area of the house a chore can be tagged with (Phase 135,
@@ -612,6 +639,18 @@ export interface Database {
         Insert: Partial<LeaveRequest> &
           Pick<LeaveRequest, "household_id" | "staff_id" | "start_date" | "end_date">;
         Update: Partial<LeaveRequest>;
+        Relationships: [];
+      };
+      repair_costs: {
+        Row: RepairCost;
+        Insert: Partial<RepairCost> & Pick<RepairCost, "repair_id" | "household_id">;
+        Update: Partial<RepairCost>;
+        Relationships: [];
+      };
+      repair_notes: {
+        Row: RepairNote;
+        Insert: Partial<RepairNote> & Pick<RepairNote, "repair_id" | "household_id" | "body">;
+        Update: Partial<RepairNote>;
         Relationships: [];
       };
       repairs: {

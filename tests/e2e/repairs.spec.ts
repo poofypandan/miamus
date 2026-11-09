@@ -149,3 +149,70 @@ test("a staff phone reports a problem and sees it waiting for the owners", async
   await mine.getByRole("button", { name: "Batalkan" }).click();
   await expect.poll(() => stub.repairs.length).toBe(0);
 });
+
+test("an owner records a repair's cost and warranty and leaves a note; staff see the thread on the visit", async ({ context, page }) => {
+  const repairs: Record<string, unknown>[] = [staffReport({ status: "open", fixed_by_name: "Pak Budi" })];
+  const stub = await installStub(context, { owner: { locale: "en" }, rooms: [LT3, MUSIC], chores: [], repairs });
+  await context.addInitScript(() => {
+    for (const card of ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "repairs-2026-11", "repair-costs-2026-11"]) {
+      localStorage.setItem(`miamus.whats-new.${card}`, "seen");
+    }
+  });
+  await page.goto("/dashboard?module=chores&chores=repairs");
+  await page.getByRole("region", { name: "Open" }).getByText("Dinding retak").click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+
+  // Cost and receipt: owners only.
+  const cost = sheet.getByRole("region", { name: "Cost and receipt" });
+  await cost.getByRole("button", { name: "Add cost or receipt" }).click();
+  await cost.getByLabel("Cost (optional)").fill("350rb");
+  await expect(cost.getByText("Rp350.000")).toBeVisible();
+  await cost.getByLabel("Cost note").fill("Ganti semen");
+  await cost.getByRole("button", { name: "Save" }).click();
+  await expect.poll(() => stub.repairCosts.length).toBe(1);
+  expect(stub.repairCosts[0]).toMatchObject({ repair_id: id(50), amount_idr: 350000, note: "Ganti semen" });
+
+  // A note.
+  const notes = sheet.getByRole("region", { name: "Notes" });
+  await notes.getByLabel("Add a note").fill("Pak Budi comes back Thursday");
+  await notes.getByRole("button", { name: "Send" }).click();
+  await expect.poll(() => stub.repairNotes.length).toBe(1);
+  expect(stub.repairNotes[0]).toMatchObject({ repair_id: id(50), body: "Pak Budi comes back Thursday", staff_id: null });
+  await expect(notes.getByText("Pak Budi comes back Thursday")).toBeVisible();
+
+  // Warranty, through Edit; the repair person is suggested from earlier repairs.
+  await sheet.getByRole("button", { name: "Edit" }).click();
+  const form = page.getByRole("dialog", { name: "Edit repair" });
+  await form.getByLabel("Warranty until (optional)").fill("2027-03-03");
+  await form.getByRole("button", { name: "Save" }).click();
+  await expect.poll(() => repairs[0].warranty_until).toBe("2027-03-03");
+});
+
+test("a staff phone sees a visit's repair and adds a note to its thread", async ({ context, page }) => {
+  const today = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+  const repairs = [staffReport({ status: "open" })];
+  const visit = {
+    id: id(60), household_id: HOUSEHOLD_ID, title: "Perbaiki: Dinding retak", notes: null, category: "maintenance",
+    assigned_to: STAFF_ID, due_date: today, due_time: null, status: "pending", completed_by: null, completed_at: null,
+    photo_url: null, created_at: "2026-11-01T00:00:00Z", recurrence: "none", recurrence_until: null, parent_task_id: null,
+    requires_supervision: false, before_photo_url: null, after_photo_url: null, location_id: MUSIC.id, spot: "Dinding",
+    repair_id: id(50),
+  };
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true, rooms: [LT3, MUSIC], chores: [visit], repairs });
+  await page.goto("/staff");
+  await page.getByText("Perbaiki: Dinding retak").first().click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByText("Yang rusak")).toBeVisible();
+  await expect(sheet.getByText("Foto sebelum diperbaiki")).toBeVisible();
+  const notes = sheet.getByRole("region", { name: "Catatan" });
+  await notes.getByLabel("Tambah catatan").fill("Tukang perlu beli semen, datang lagi Kamis");
+  await notes.getByRole("button", { name: "Kirim" }).click();
+  await expect.poll(() => stub.repairNotes.length).toBe(1);
+  expect(stub.repairNotes[0]).toMatchObject({ repair_id: id(50), staff_id: STAFF_ID });
+  // Its author can take it back for 5 minutes.
+  await notes.getByRole("button", { name: "Batalkan catatan" }).click();
+  await expect.poll(() => stub.repairNotes.length).toBe(0);
+});

@@ -102,6 +102,9 @@ export interface Stub {
   kakak: { allowed: boolean; enabled: boolean };
   /** repairs rows as the stub holds them (Phase 159). */
   repairs: Record<string, unknown>[];
+  /** repair_costs and repair_notes rows (Phase 159 PR B). */
+  repairCosts: Record<string, unknown>[];
+  repairNotes: Record<string, unknown>[];
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
   sessionUser(): Promise<string | null>;
@@ -132,6 +135,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const foods: Record<string, unknown>[] = [];
   const tasks: Record<string, unknown>[] = [];
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
+  const repairCosts: Record<string, unknown>[] = [];
+  const repairNotes: Record<string, unknown>[] = [];
   const kakak = { allowed: false, enabled: false, ...options.kakak };
   if (options.owner && !options.stored) options = { ...options, stored: freshSession(OWNER, false) };
 
@@ -225,6 +230,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       }
       if (table === "household_locations" && options.rooms) return answerRooms(route, options.rooms);
       if (table === "repairs") return answerRepairs(route, repairs, who === OWNER);
+      if (table === "repair_costs") return answerRepairCosts(route, repairCosts, who === OWNER);
+      if (table === "repair_notes") return answerRepairNotes(route, repairNotes);
       if (table === "rpc/organise_rooms" && options.rooms) {
         return route.fulfill({ json: organise(request.postDataJSON()?.p_plan, options.rooms, options.chores ?? []) });
       }
@@ -250,6 +257,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     foods,
     tasks,
     repairs,
+    repairCosts,
+    repairNotes,
     kakak,
     setNetwork(up: boolean) {
       net.token = net.rest = net.signup = up;
@@ -495,6 +504,52 @@ function answerRepairs(route: Route, repairs: Record<string, unknown>[], owner: 
   Object.assign(row, patch, { updated_at: now });
   if (row.status !== "dismissed") row.dismiss_reason = null;
   return reply([row]);
+}
+
+/** repair_costs (migrations/131): owners only; one row per repair, upserted. */
+function answerRepairCosts(route: Route, costs: Record<string, unknown>[], owner: boolean) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  if (!owner) return reply([]);
+  if (request.method() === "GET") {
+    const id = new URL(request.url()).searchParams.get("repair_id")?.replace(/^eq\./, "");
+    return reply(costs.filter((c) => c.repair_id === id));
+  }
+  const body = request.postDataJSON();
+  const fields = Array.isArray(body) ? body[0] : body;
+  const index = costs.findIndex((c) => c.repair_id === fields.repair_id);
+  const row = { ...(index === -1 ? {} : costs[index]), ...fields, updated_at: new Date().toISOString() };
+  if (index === -1) costs.push(row);
+  else costs[index] = row;
+  return reply([row]);
+}
+
+/** repair_notes (migrations/131): read, add, delete by id. */
+function answerRepairNotes(route: Route, notes: Record<string, unknown>[]) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  if (request.method() === "GET") return reply(notes);
+  if (request.method() === "POST") {
+    const body = request.postDataJSON();
+    const fields = Array.isArray(body) ? body[0] : body;
+    const row = {
+      id: `00000000-0000-4000-8000-${String(600 + notes.length).padStart(12, "0")}`,
+      photo_url: null,
+      staff_id: null,
+      created_by: null,
+      created_at: new Date().toISOString(),
+      ...fields,
+      body: String(fields.body ?? "").trim(),
+    };
+    notes.push(row);
+    return reply([row]);
+  }
+  const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
+  const index = notes.findIndex((n) => n.id === id);
+  if (request.method() === "DELETE" && index !== -1) return reply(notes.splice(index, 1));
+  return reply([]);
 }
 
 /**

@@ -23,6 +23,25 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "repair-costs-2026-11",
+    date: "2026-11-09",
+    audience: "owner",
+    title: { en: "New: repair costs, receipts and notes", id: "Baru: biaya, nota, dan catatan perbaikan" },
+    steps: {
+      en: [
+        "Open a repair to note what it cost and add a photo of the receipt. Only owners see these, never staff.",
+        "Notes: you and staff can leave short updates on a repair, like \"needs a part, back Thursday\".",
+        "Edit a repair to add its warranty date; the repair person's name is suggested from earlier repairs.",
+      ],
+      id: [
+        "Buka perbaikan untuk mencatat biayanya dan menambahkan foto nota. Hanya pemilik yang bisa melihatnya, staf tidak.",
+        "Catatan: Anda dan staf bisa menulis kabar singkat di perbaikan, misalnya \"perlu beli suku cadang, datang lagi Kamis\".",
+        "Ubah perbaikan untuk menambahkan tanggal garansi; nama tukang disarankan dari perbaikan sebelumnya.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     id: "repairs-2026-11",
     date: "2026-11-09",
     audience: "owner",
@@ -131,6 +150,12 @@ export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
       "Kalau bocor, listrik atau gas, nyalakan Darurat: pemilik rumah langsung diberi tahu.",
       "Saat tukang datang, buka tugas perbaikannya: foto sebelum saat mulai, foto sesudah saat selesai.",
     ],
+  },
+  {
+    id: "staff-repair-notes-2026-11",
+    date: "2026-11-09",
+    title: "Baru: catatan perbaikan",
+    lines: ["Di tugas perbaikan, tulis catatan untuk pemilik rumah, misalnya \"tukang perlu beli suku cadang, datang lagi Kamis\"."],
   },
 ];
 

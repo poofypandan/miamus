@@ -33,6 +33,8 @@ import type {
   HouseholdTaskStatus,
   LeaveRequest,
   Repair,
+  RepairCost,
+  RepairNote,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -185,6 +187,7 @@ export interface RepairPatch {
   status?: "open" | "fixed" | "dismissed";
   dismiss_reason?: string | null;
   fixed_by_name?: string | null;
+  warranty_until?: string | null;
 }
 
 /**
@@ -394,6 +397,21 @@ export interface DataProvider {
   updateRepair(id: string, patch: RepairPatch): Promise<Repair>;
   /** Owners, or the phone that reported it within 5 minutes. */
   deleteRepair(id: string): Promise<void>;
+  /** A repair's cost and receipt, or null (owners only; migrations/131). */
+  getRepairCost(repairId: string): Promise<RepairCost | null>;
+  /** Owners only: writes the repair's cost row (one per repair). */
+  saveRepairCost(
+    repairId: string,
+    cost: { amount_idr: number | null; receipt_url: string | null; note: string | null }
+  ): Promise<RepairCost>;
+  /** Uploads a receipt to the owner-only owner-receipts bucket; returns its stored URL. */
+  uploadReceipt(file: File, repairId: string): Promise<string>;
+  deleteReceipt(url: string): Promise<void>;
+  /** Every note on the household's repairs, oldest first. */
+  listRepairNotes(): Promise<RepairNote[]>;
+  addRepairNote(note: { repair_id: string; body: string; photo_url?: string | null; staff_id?: string | null }): Promise<RepairNote>;
+  /** Owners, or the note's author within 5 minutes. */
+  deleteRepairNote(id: string): Promise<void>;
   /** Owner-only edit of a chore's own fields. */
   updateHouseholdTask(id: string, patch: UpdateHouseholdTaskInput): Promise<HouseholdTask>;
   /**

@@ -1,6 +1,6 @@
 import { dataProvider } from "@/lib/data";
 import { getActiveHouseholdId } from "@/lib/tenant";
-import type { HouseholdTask, Repair } from "@/types/database";
+import type { HouseholdTask, Repair, RepairNote } from "@/types/database";
 
 /**
  * The repairs cache behind useRepairs (Phase 159), outside React so the
@@ -12,11 +12,13 @@ export interface Snapshot {
   household: string | null;
   repairs: Repair[];
   visits: HouseholdTask[];
+  /** Notes on the household's repairs, oldest first (migrations/131). */
+  notes: RepairNote[];
   loaded: boolean;
   failed: boolean;
 }
 
-export const EMPTY: Snapshot = { household: null, repairs: [], visits: [], loaded: false, failed: false };
+export const EMPTY: Snapshot = { household: null, repairs: [], visits: [], notes: [], loaded: false, failed: false };
 let snapshot: Snapshot = EMPTY;
 
 export function getSnapshot(): Snapshot {
@@ -59,11 +61,16 @@ export async function loadRepairs(force = false): Promise<void> {
   if (inflight) return inflight;
   inflight = (async () => {
     try {
-      const [repairs, visits] = await Promise.all([dataProvider.listRepairs(), dataProvider.listRepairVisits()]);
+      const [repairs, visits, notes] = await Promise.all([
+        dataProvider.listRepairs(),
+        dataProvider.listRepairVisits(),
+        // A database before migrations/131 has no notes: an empty thread, not a failure.
+        dataProvider.listRepairNotes().catch(() => [] as RepairNote[]),
+      ]);
       // The household may have changed while this was in flight.
       if (currentHousehold() === household) {
         loadedAt = Date.now();
-        emit({ household, repairs, visits, loaded: true, failed: false });
+        emit({ household, repairs, visits, notes, loaded: true, failed: false });
       }
     } catch (err) {
       console.error("Repairs not loaded", err);
