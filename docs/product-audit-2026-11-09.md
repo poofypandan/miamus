@@ -167,6 +167,9 @@ effort. "Privacy" means a privacy-policy update in both languages and
 | — | Product explanation: landing page | — | — | PR #43 |
 | — | WhatsApp delivery and replies | Experiment | — | **New service, new personal data**; see the separate section |
 
+Migration numbers: 132 is live (push titles without emoji); 133 is reserved
+for Phase 162; the first item here that needs one starts at **134**.
+
 ### 1. "Tidak bisa dikerjakan": say why a task couldn't be done
 
 - **User problem.** A staff member finds no detergent, a locked room, or a
@@ -307,11 +310,12 @@ effort. "Privacy" means a privacy-policy update in both languages and
   - At most **one** tip card at a time (newest first).
   - Chore notes at 14 px in normal ink, with a small "Catatan" label.
   - Staff subtitles at 13 px.
-  - **No emoji in what staff and owners see** (owner, 2026-11-09): being
-    done separately. PR #45 (merged) added the review rule. PR #46 removes
-    the app's existing emoji (the workload sheet, share text, cancel note,
-    and push titles in migration 132). The remaining "selesai ✅", 🏥 and 🏠
-    in `agenda-group-card.tsx` follow there.
+  - **No emoji in what staff and owners see** (owner, 2026-11-09): done
+    separately. PR #45 added the review rule, and PR #46 removed the app's
+    emoji (the workload sheet, share text, cancel note, and push titles in
+    migration 132, live). Both are merged. PR #47 covers the rest: "selesai
+    ✅", 🏥 and 🏠 in `agenda-group-card.tsx`, and "dicatat ✅" / "URGENT 🚨"
+    in `adhoc-sheet.tsx`.
   - Nothing else moves.
 - **Benefit / effort.** Instructions get read, and the screen starts with
   the work. Small: client only.
@@ -401,7 +405,7 @@ without a new service:
 **One small implementation batch to build first: items 3 + 5** (first-run
 checklist and calmer staff Today).
 
-- The emoji clean-up is no longer part of this batch: PR #46 does it.
+- The emoji clean-up is no longer part of this batch: PRs #46 (merged) and #47 do it.
 - Client only: no migration, no privacy change, no new service. It can ship
   while 1 and 2, which need migrations and a policy line each, get their
   mockups and the owner's decisions.
