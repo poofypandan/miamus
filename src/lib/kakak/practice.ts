@@ -513,6 +513,7 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
       requires_supervision: false,
       room: room?.ref ?? null,
       new_room_name: null,
+      new_room_floor: null,
       notes: null,
     }),
   );

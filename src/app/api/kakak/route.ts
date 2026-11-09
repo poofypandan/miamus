@@ -70,7 +70,7 @@ async function readRows(
       .select("id, name, created_at, user_id, archived_at")
       .eq("household_id", householdId),
     supabase.from("task_entities").select("id, name, created_at, entity_type, metadata").eq("household_id", householdId).eq("entity_type", "pet"),
-    supabase.from("household_locations").select("id, name, created_at").eq("household_id", householdId),
+    supabase.from("household_locations").select("id, name, created_at, kind, parent_id").eq("household_id", householdId),
     supabase.from("inventory_items").select("id, name, scope, created_at").eq("household_id", householdId),
   ]);
   for (const result of [staff, pets, rooms, items]) if (result.error) throw result.error;

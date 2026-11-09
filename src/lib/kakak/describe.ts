@@ -95,11 +95,16 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale): CardI
       ];
       const repeat = repeats(item, locale, t);
       if (repeat) rows.push({ label: t("Repeats", "Ulangi"), value: repeat });
-      const room = item.roomName ?? item.newRoomName;
+      const newRoom = item.newRoomName
+        ? item.newRoomFloorName
+          ? `${item.newRoomFloorName} · ${item.newRoomName}`
+          : item.newRoomName
+        : null;
+      const room = item.roomName ?? newRoom;
       if (room) {
         rows.push({
           label: t("Room", "Ruangan"),
-          value: item.newRoomName ? t(`${room} (new room)`, `${room} (ruangan baru)`) : room,
+          value: newRoom ? t(`${room} (new room)`, `${room} (ruangan baru)`) : room,
         });
       }
       if (item.requiresSupervision) rows.push({ label: t("You", "Anda"), value: t("Need to be there", "Harus ada") });

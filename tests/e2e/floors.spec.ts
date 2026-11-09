@@ -125,3 +125,23 @@ test("a staff phone claiming a day of a chore with a spot copies the spot (128's
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0]).toMatchObject({ title: "Lap keran", spot: "Wastafel", location_id: id(20), assigned_to: STAFF_ID });
 });
+
+test("a staff phone gets the one-line floors tip once a chore shows a floor or spot, and can close it for good", async ({ context, page }) => {
+  const rooms = [
+    { ...room(30, "LT2"), kind: "floor", parent_id: null, sort_order: 0 },
+    { ...room(31, "GB2 Bathroom"), kind: "room", parent_id: id(30), sort_order: 0 },
+  ];
+  const chores = [chore({ title: "Lap keran", assigned_to: null, location_id: id(31), spot: "Wastafel" })];
+  await installStub(context, { stored: freshSession(), staffPhone: true, rooms, chores });
+  await page.goto("/staff");
+
+  const tip = page.getByRole("region", { name: "Baru: lantai dan bagian ruangan" });
+  await expect(tip).toBeVisible({ timeout: 20_000 });
+  await expect(tip).toContainText("kerjakan bagian itu saja");
+  await expect(page.getByText("LT2 · GB2 Bathroom · Wastafel").first()).toBeVisible();
+  await tip.getByRole("button", { name: "Tutup" }).click();
+  await expect(tip).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText("Lap keran").first()).toBeVisible({ timeout: 20_000 });
+  await expect(tip).toHaveCount(0);
+});

@@ -35,6 +35,9 @@ export interface ChoreSuggestion {
   roomName: string | null;
   /** Created when the card is saved (createHouseholdLocation returns an existing room of that name). */
   newRoomName: string | null;
+  /** The floor the new room goes on (migrations/129), or null for none. */
+  newRoomFloorId: string | null;
+  newRoomFloorName: string | null;
   notes: string | null;
 }
 
@@ -105,6 +108,7 @@ export function toSuggestion(
     case "create_chore": {
       const assignee = str(input.assignee);
       const room = str(input.room);
+      const newRoomFloor = str(input.new_room_floor);
       const assignedTo = assignee ? (refs.people[assignee] ?? null) : null;
       return {
         kind: "chore",
@@ -122,6 +126,8 @@ export function toSuggestion(
         locationId: room ? refs.rooms[room] : null,
         roomName: room ? names.rooms[room] : null,
         newRoomName: str(input.new_room_name),
+        newRoomFloorId: newRoomFloor ? (refs.rooms[newRoomFloor] ?? null) : null,
+        newRoomFloorName: newRoomFloor ? (names.rooms[newRoomFloor] ?? null) : null,
         notes: str(input.notes),
       };
     }
@@ -223,6 +229,8 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         okId(s.locationId, true) &&
         okText(s.newRoomName, 60, true) &&
         !(s.locationId !== null && s.newRoomName !== null) &&
+        okId(s.newRoomFloorId ?? null, true) &&
+        !((s.newRoomFloorId ?? null) !== null && s.newRoomName === null) &&
         okText(s.notes, 200, true)
       );
     case "shopping":

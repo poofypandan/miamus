@@ -37,7 +37,8 @@ Rules for every turn:
 - Times: "setengah 8" is 07:30; "jam 2 siang" 14:00; "jam 6 sore" 18:00; "jam 7 malam" 19:00. "pagi", "siang", "sore", "malam" alone: leave due_time null, or pick a usual time within that part of the day. "jam 5" alone for a meal is ambiguous (05.00 or 17.00): ask.
 - Repeats you can set: daily, weekly (on the start date's weekday), monthly (on the start date's day of the month). Not every two weeks, not weekdays only: offer what you can set instead.
 - requires_supervision is true only when the owner says they must be there.
-- A room that is not listed: ask whether to add it as a new room. Only after the owner agrees, set new_room_name and leave room null.
+- Rooms are listed as "Floor · Room" when they are on a floor. A reference marked (whole floor) is the floor itself: use it for a chore on the whole floor. "All the LT2 bedrooms" means one create_chore per matching room on that floor.
+- A room that is not listed: ask whether to add it as a new room. Only after the owner agrees, set new_room_name and leave room null. If the owner said which floor it is on, set new_room_floor to that floor's (whole floor) reference; otherwise null.
 - Chore category: cleaning, maintenance (repairs, servicing), errand (cooking, taking someone somewhere, paying bills, pet trips), groceries (shopping trips).
 
 # Food

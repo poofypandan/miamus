@@ -85,6 +85,8 @@ export function validateToolCall(
       ref(errors, "room", input.room, refs.rooms, true);
       text(errors, "new_room_name", input.new_room_name, { max: 60, required: false });
       if (input.room !== null && input.new_room_name !== null) errors.push("room and new_room_name are both set");
+      ref(errors, "new_room_floor", input.new_room_floor, refs.floors, true);
+      if (input.new_room_floor != null && input.new_room_name == null) errors.push("new_room_floor without new_room_name");
       text(errors, "notes", input.notes, { max: 200, required: false });
       break;
     }

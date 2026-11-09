@@ -7,7 +7,7 @@ import type { OrganiseRoomsMoved,
   InventoryItem,
   StaffProfile,
 } from "@/types/database";
-import type { DataProvider, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
+import type { CreateHouseholdTaskInput, DataProvider, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
 import { rolloverFloorFor } from "@/lib/chore-recurrence";
 
 function client() {
@@ -725,24 +725,18 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async createHouseholdTask(input) {
+    const [task] = await supabaseProvider.createHouseholdTasks([input]);
+    return task;
+  },
+  async createHouseholdTasks(inputs) {
+    const household_id = getActiveHouseholdId();
+    // One insert, so several rooms at once are saved together or not at all.
     const { data, error } = await client()
       .from("household_tasks")
-      .insert({
-        household_id: getActiveHouseholdId(),
-        title: input.title,
-        category: input.category,
-        assigned_to: input.assigned_to ?? null,
-        due_date: input.due_date,
-        due_time: input.due_time ?? null,
-        notes: input.notes ?? null,
-        recurrence: input.recurrence ?? "none",
-        recurrence_until: input.recurrence_until ?? null,
-        requires_supervision: input.requires_supervision ?? false,
-        location_id: input.location_id ?? null,
-      })
-      .select()
-      .single();
+      .insert(inputs.map((input) => taskRow(household_id, input)))
+      .select();
     if (error) throw error;
+    if (!data || data.length !== inputs.length) throw new Error("Not every chore was saved.");
     return data;
   },
   async updateHouseholdTaskStatus(id, status, patch) {
@@ -1057,3 +1051,22 @@ export const supabaseProvider: DataProvider = {
     return data === true;
   },
 };
+
+/** A new chore as household_tasks takes it. */
+function taskRow(household_id: string, input: CreateHouseholdTaskInput) {
+  return {
+    household_id,
+    title: input.title,
+    category: input.category,
+    assigned_to: input.assigned_to ?? null,
+    due_date: input.due_date,
+    due_time: input.due_time ?? null,
+    notes: input.notes ?? null,
+    recurrence: input.recurrence ?? "none",
+    recurrence_until: input.recurrence_until ?? null,
+    requires_supervision: input.requires_supervision ?? false,
+    location_id: input.location_id ?? null,
+    // Only when given: a database before migrations/129 has no spot column.
+    ...(input.spot !== undefined ? { spot: input.spot } : {}),
+  };
+}

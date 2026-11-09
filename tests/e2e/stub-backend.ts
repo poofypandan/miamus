@@ -403,19 +403,23 @@ function answerTasks(route: Route, tasks: Record<string, unknown>[], seeded: Rec
   const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
   if (request.method() === "POST") {
     const body = request.postDataJSON();
-    const row: Record<string, unknown> = {
-      id: `00000000-0000-4000-8000-${String(900 + tasks.length).padStart(12, "0")}`,
-      household_id: HOUSEHOLD_ID,
-      status: "pending",
-      completed_at: null,
-      completed_by: null,
-      photo_url: null,
-      parent_task_id: null,
-      created_at: new Date().toISOString(),
-      ...(Array.isArray(body) ? body[0] : body),
-    };
-    tasks.push(row);
-    return reply([row]);
+    // One insert may carry several chores (one per room, Phase 158).
+    const rows = (Array.isArray(body) ? body : [body]).map((fields: Record<string, unknown>) => {
+      const row: Record<string, unknown> = {
+        id: `00000000-0000-4000-8000-${String(900 + tasks.length).padStart(12, "0")}`,
+        household_id: HOUSEHOLD_ID,
+        status: "pending",
+        completed_at: null,
+        completed_by: null,
+        photo_url: null,
+        parent_task_id: null,
+        created_at: new Date().toISOString(),
+        ...fields,
+      };
+      tasks.push(row);
+      return row;
+    });
+    return reply(rows);
   }
   const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
   const index = tasks.findIndex((t) => t.id === id);

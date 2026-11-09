@@ -41,7 +41,10 @@ export function useKakakSave() {
             case "chore": {
               let locationId = item.locationId;
               if (item.newRoomName) {
-                const room = await dataProvider.createHouseholdLocation(item.newRoomName);
+                const room = await dataProvider.createHouseholdLocation(
+                  item.newRoomName,
+                  item.newRoomFloorId ? { parentId: item.newRoomFloorId } : undefined,
+                );
                 locationId = room.id;
                 reloadRooms?.();
               }

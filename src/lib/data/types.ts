@@ -151,6 +151,12 @@ export interface CreateHouseholdTaskInput {
   requires_supervision?: boolean | null;
   /** The room it is in (Phase 135), or null for none. */
   location_id?: string | null;
+  /**
+   * The part of the room ("Sink"), or null for the whole room
+   * (migrations/129). Left out, nothing is sent, so a database before 129
+   * still takes the chore.
+   */
+  spot?: string | null;
 }
 
 /**
@@ -172,6 +178,7 @@ export interface UpdateHouseholdTaskInput {
   recurrence_until?: string | null;
   requires_supervision?: boolean | null;
   location_id?: string | null;
+  spot?: string | null;
 }
 
 /**
@@ -344,6 +351,11 @@ export interface DataProvider {
    */
   listSetUpChores(today: string): Promise<HouseholdTask[]>;
   createHouseholdTask(input: CreateHouseholdTaskInput): Promise<HouseholdTask>;
+  /**
+   * Owner-only. Several chores in one insert, all or none: the chore form's
+   * "several rooms at once" makes one chore per room (Phase 158).
+   */
+  createHouseholdTasks(inputs: CreateHouseholdTaskInput[]): Promise<HouseholdTask[]>;
   /** Owner-only edit of a chore's own fields. */
   updateHouseholdTask(id: string, patch: UpdateHouseholdTaskInput): Promise<HouseholdTask>;
   /**
