@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isPhotoBucket } from "@/lib/photos";
+import { resizeForWidth } from "@/lib/photo-resize";
+
+// sharp is a native module: Node, never the edge runtime.
+export const runtime = "nodejs";
 
 /**
  * Serves a photo out of a private bucket to whoever is allowed to see it
@@ -15,11 +19,11 @@ import { isPhotoBucket } from "@/lib/photos";
  * would let a caller name any bucket in the project.
  */
 // Widths the proxy will render, so `w` cannot be used to mint unlimited
-// variants (each one is a transform the storage layer has to perform).
+// variants (each one is a resize this server has to perform).
 const ALLOWED_WIDTHS = [160, 320, 640, 1280];
 
-// What the buckets accept, plus AVIF in case the storage transformer ever
-// re-encodes a thumbnail into it.
+// What the buckets accept, plus AVIF, which older storage transforms could
+// hand back.
 const SERVABLE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 
 export async function GET(request: NextRequest) {
@@ -35,28 +39,12 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createSupabaseServerClient();
-  // Resized by the storage layer, not by us: a feed thumbnail asking for 320px
-  // pulls ~24KB instead of the ~185KB original (Phase 92). Without `w` the
-  // untouched object is served, which is what the lightbox wants.
-  //
-  // `resize: "contain"` is not optional (Phase 106). Supabase defaults to
-  // "cover", and "cover" with only a width keeps the ORIGINAL HEIGHT: a 486px
-  // square asked for at w=160 came back as a 160x486 strip cut from its
-  // middle. Every <img> then used object-cover to fill a square box from that
-  // strip, so every thumbnail in the app has been a centre-zoom since Phase 92
-  // — ~3x at w=160, ~1.5x at w=320. Measured against live storage, not
-  // inferred. It is also what the Phase 95 "slivers" were: object-contain on
-  // the same strip, misread at the time as a CSS problem.
-  //
-  // "contain" with a width scales to fit and keeps the aspect ratio, and never
-  // upscales: 486x486 -> 160x160, 733x974 -> 160x213, and a w=1280 request for
-  // a 733px image returns the image untouched.
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .download(
-      path,
-      width ? { transform: { width, quality: 70, resize: "contain" } } : undefined
-    );
+  // Always the original, untouched (Phase 160). Thumbnails used to be resized
+  // by the storage layer (Phase 92, "contain" since Phase 106), but Supabase
+  // counts each photo it resizes against a small monthly allowance and may
+  // refuse resizes past it, which would have broken every thumbnail. The
+  // resize now happens below, with the same rules — src/lib/photo-resize.ts.
+  const { data, error } = await supabase.storage.from(bucket).download(path);
 
   if (error || !data) {
     // RLS denial and a missing object are deliberately the same answer: a
@@ -74,12 +62,20 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  return new NextResponse(data, {
+  // A thumbnail: a feed asking for 320px gets ~24KB instead of the ~185KB
+  // original. Scaled to fit the width, never upscaled; an original no wider
+  // than asked (or one that can't be read) is served as it is.
+  const resized = width ? await resizeForWidth(Buffer.from(await data.arrayBuffer()), width) : null;
+  const body = resized ? new Uint8Array(resized.body) : data;
+  const bodyType = resized ? resized.type : contentType;
+  const bodySize = resized ? resized.body.byteLength : data.size;
+
+  return new NextResponse(body, {
     headers: {
-      "Content-Type": contentType,
+      "Content-Type": bodyType,
       // The type was just checked; this stops a browser second-guessing it.
       "X-Content-Type-Options": "nosniff",
-      "Content-Length": String(data.size),
+      "Content-Length": String(bodySize),
       // Object keys carry a timestamp and a random suffix and are never
       // rewritten, so a hit can be cached hard — a year, immutable, which is
       // what stops the feed re-fetching thumbnails on every navigation.
