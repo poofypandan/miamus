@@ -74,13 +74,16 @@ export function repairStage(repair: Repair, visits: HouseholdTask[], today: stri
   if (repair.status === "fixed") return { kind: "fixed" };
   if (repair.status === "dismissed") return { kind: "dismissed" };
   const mine = visitsOf(repair.id, visits);
+  // Days called off stay in for the recurrence: a skipped day is settled,
+  // not still to come (Codex, PR #37). They're left out of the history.
+  const allRows = visits.filter((v) => v.repair_id === repair.id);
   const repeats = mine.filter((v) => !v.parent_task_id && recurrenceOf(v) !== "none");
   const upcoming: HouseholdTask[] = [
     // One-off visits, and days of a repeat written as their own rows.
     ...mine.filter((v) => v.status === "pending" && recurrenceOf(v) === "none"),
     // A repeat still running: its next day, as that day would read.
     ...repeats.flatMap((t) => {
-      const day = nextRepeatDay(t, mine, today);
+      const day = nextRepeatDay(t, allRows, today);
       return day ? [{ ...t, due_date: day, status: "pending" as const }] : [];
     }),
   ].sort(

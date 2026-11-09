@@ -71,6 +71,12 @@ describe("where a repair stands", () => {
     const later = repairStage(repair({}), [series, doneToday], today);
     if (later.kind === "scheduled") expect(later.next.due_date).toBe("2026-11-16");
     else throw new Error(`expected scheduled, got ${later.kind}`);
+    // Today's day skipped (written as cancelled): also settled.
+    const skipped = visit({ id: "s", parent_task_id: "t", due_date: "2026-11-09", status: "cancelled" });
+    const afterSkip = repairStage(repair({}), [series, skipped], today);
+    if (afterSkip.kind === "scheduled") expect(afterSkip.next.due_date).toBe("2026-11-16");
+    else throw new Error(`expected scheduled, got ${afterSkip.kind}`);
+    expect(repairStage(repair({}), [{ ...series, recurrence_until: "2026-11-09" }, skipped], today).kind).toBe("check");
     // The run ends today and today is done: nothing left, so check the work.
     const ended = { ...series, recurrence_until: "2026-11-09" };
     expect(repairStage(repair({}), [ended, doneToday], today).kind).toBe("check");
