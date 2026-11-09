@@ -26,6 +26,7 @@ import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
 import { StaffKitchen } from "@/components/kitchen/kitchen-tab";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
+import { OutboxNotice } from "@/components/shared/outbox-notice";
 import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -140,6 +141,7 @@ function StaffTasks() {
         <div className="flex flex-col gap-4 px-4 pt-3">
           {/* Above both views: a failed load is the same news for either. */}
           <ConnectionNotice locale="id" />
+          <OutboxNotice locale="id" />
           {/* Never remounted, so a view that suspends on first read keeps the
               other one on screen until it is complete (Phase 125). */}
           <Suspense fallback={null}>
@@ -171,6 +173,7 @@ function TasksView() {
     selectedDate,
     setSelectedDate,
     todayJumps,
+    pendingIds,
   } = useHousehold();
   const { staffId } = useStaffIdentity();
   const dateStr = formatDateLocal(selectedDate);
@@ -287,6 +290,7 @@ function TasksView() {
         today={today}
         onPress={() => setOpenKey(entry.occurrence.key)}
         compact={compact}
+        waitingToSend={!!entry.occurrence.row && pendingIds.has(entry.occurrence.row.id)}
         // What the tap leads to (Phase 130): an unclaimed chore is claimed
         // before anything is photographed.
         action={
@@ -318,6 +322,7 @@ function TasksView() {
       >
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
 
+        <StaffWhatsNewCard id="staff-weak-signal-2026-11" show />
         <StaffWhatsNewCard id="staff-floors-2026-11" show={showFloorsTip} />
         <StaffWhatsNewCard id="staff-repairs-2026-11" show />
         <StaffWhatsNewCard id="staff-repair-notes-2026-11" show={showRepairNotesTip} />

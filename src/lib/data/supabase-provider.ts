@@ -15,6 +15,15 @@ function client() {
   return supabase;
 }
 
+/**
+ * The HTTP status, kept on the error (Phase 161): the save queue tells a
+ * gateway that is briefly down (503) from a real refusal by it, and
+ * PostgREST's error object does not carry it.
+ */
+function withStatus<E extends object>(error: E, status: number): E & { status: number } {
+  return Object.assign(error, { status });
+}
+
 const STORAGE_BUCKET = "household-logs";
 /** Repair receipts: owners only (migrations/131). */
 const RECEIPTS_BUCKET = "owner-receipts";
@@ -148,7 +157,13 @@ export const supabaseProvider: DataProvider = {
   },
   async createLogsBatch(input) {
     const completedAt = input.completed_at ?? new Date().toISOString();
-    const rows = input.entries.map((entry) => ({
+    if (input.ids && input.ids.length !== input.entries.length) {
+      throw new Error("createLogsBatch: one id per entry");
+    }
+    const rows = input.entries.map((entry, i) => ({
+      // Made on the phone when the save is queued (Phase 161): a retry sends
+      // the same ids, and the primary key refuses the second copy.
+      ...(input.ids ? { id: input.ids[i] } : {}),
       schedule_id: entry.schedule_id ?? null,
       entity_id: entry.entity_id,
       module: input.module,
@@ -162,8 +177,8 @@ export const supabaseProvider: DataProvider = {
       // admission. Everything else is a plain "complete".
       sub_type: input.sub_type ?? "complete",
     }));
-    const { data, error } = await client().from("task_logs").insert(rows).select();
-    if (error) throw error;
+    const { data, error, status } = await client().from("task_logs").insert(rows).select();
+    if (error) throw withStatus(error, status);
     return data;
   },
   async deleteLog(id) {
@@ -424,12 +439,12 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async createFoodItem(input, addedBy) {
-    const { data, error } = await client()
+    const { data, error, status } = await client()
       .from("food_items")
       .insert({ ...input, added_by: addedBy, household_id: getActiveHouseholdId() })
       .select()
       .single();
-    if (error) throw error;
+    if (error) throw withStatus(error, status);
     return data;
   },
   async updateFoodItem(id, patch) {
@@ -695,14 +710,14 @@ export const supabaseProvider: DataProvider = {
     }
   },
   async materialiseChoreOccurrence(templateId, date, assignedTo) {
-    const { data: template, error: readError } = await client()
+    const { data: template, error: readError, status: readStatus } = await client()
       .from("household_tasks")
       .select("*")
       .eq("id", templateId)
       .single();
-    if (readError) throw readError;
+    if (readError) throw withStatus(readError, readStatus);
 
-    const { data, error } = await client()
+    const { data, error, status: insertStatus } = await client()
       .from("household_tasks")
       .insert({
         household_id: template.household_id,
@@ -743,7 +758,7 @@ export const supabaseProvider: DataProvider = {
         if (raceError) throw raceError;
         return existing;
       }
-      throw error;
+      throw withStatus(error, insertStatus);
     }
     return data;
   },
@@ -890,11 +905,11 @@ export const supabaseProvider: DataProvider = {
     // because a half-cleared chore would show as open while still crediting
     // someone for it.
     const completing = status === "completed";
-    const { data, error } = await client()
+    const { data, error, status: httpStatus } = await client()
       .from("household_tasks")
       .update({
         status,
-        completed_at: completing ? new Date().toISOString() : null,
+        completed_at: completing ? (patch?.completed_at ?? new Date().toISOString()) : null,
         completed_by: completing ? (patch?.completed_by ?? null) : null,
         photo_url: completing ? (patch?.photo_url ?? null) : null,
         before_photo_url: completing ? (patch?.before_photo_url ?? null) : null,
@@ -902,7 +917,7 @@ export const supabaseProvider: DataProvider = {
       })
       .eq("id", id)
       .select();
-    if (error) throw error;
+    if (error) throw withStatus(error, httpStatus);
     // .select() so an RLS-filtered update (200 with zero rows) surfaces as a
     // failure instead of a chore that silently never closed — same reasoning
     // as setStaffPin.
