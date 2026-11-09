@@ -47,3 +47,7 @@ next-env.d.ts
 # Playwright
 /test-results/
 /playwright-report/
+
+# Kakak eval: household photos and voices never go in the repo; run results stay local
+/tests/kakak/media/
+/tests/kakak/results/
