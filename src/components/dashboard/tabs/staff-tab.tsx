@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Crown,
+  DoorOpen,
   History,
   Info,
   KeyRound,
@@ -70,6 +71,7 @@ import { HouseholdDataPanel } from "@/components/dashboard/household-data-panel"
 import { useHouseholdDeletion } from "@/hooks/use-household-deletion";
 import { AboutMiamus } from "@/components/dashboard/about-miamus";
 import { WhatsNewList } from "@/components/shared/whats-new";
+import { RoomsManager } from "@/components/dashboard/rooms-manager";
 import { describeLog } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ProposalStatus, StaffProfile } from "@/types/database";
@@ -116,6 +118,7 @@ const HOUSEHOLD_PAGES = [
   "data",
   "about",
   "whats-new",
+  "rooms",
 ] as const;
 type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
 
@@ -286,6 +289,7 @@ export function StaffTab() {
             detail={profiles ? String(staffCount) : undefined}
             onPress={() => open("staff")}
           />
+          <SettingsRow icon={DoorOpen} label={t("Rooms", "Ruangan")} onPress={() => open("rooms")} />
           {openLeave > 0 && (
             <SettingsRow
               icon={CalendarOff}
@@ -374,6 +378,7 @@ export function StaffTab() {
       {page === "data" && <HouseholdDataPanel status={deletion.status} reload={deletion.reload} />}
       {page === "about" && <AboutMiamus />}
       {page === "whats-new" && <WhatsNewList />}
+      {page === "rooms" && <RoomsManager />}
     </div>
   );
 }

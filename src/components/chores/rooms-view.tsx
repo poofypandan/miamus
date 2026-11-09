@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { SortRoomsCard } from "@/components/chores/sort-rooms-card";
+import { WhatsNewCard } from "@/components/shared/whats-new";
 import { canSortIntoFloors } from "@/lib/organise-rooms";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
@@ -187,6 +188,7 @@ export function RoomsView() {
           )}
         </p>
       )}
+      <WhatsNewCard id="floors-2026-11" />
       {!model.storedFloors && canSortIntoFloors(locations) && (
         <SortRoomsCard locations={locations} chores={chores} today={today} />
       )}
