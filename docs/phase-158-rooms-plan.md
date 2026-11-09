@@ -101,9 +101,13 @@ spellings, `src/lib/chore-jobs.ts`, finds the jobs in a title (and notes):
 | Plants / Tanaman | siram, tanaman, plants |
 
 One chore can have several jobs ("Vacuum & pel, dusting plafon" = Vacuum,
-Mop, Dust). A chore with none of these words still shows in its room under
-"Other". The list grows as households use new words; unit tests run it over
-the real title patterns above.
+Mop, Dust). **Longest phrase first, and a matched phrase is used up**:
+"sedot debu" is read as Vacuum before the single word "debu" is looked at,
+so "sedot debu karpet" is Vacuum only, never Vacuum and Dust. Words match
+whole words, not parts of words. A chore with none of these words still shows
+in its room under "Other". The list grows as households use new words; unit
+tests run it over the real title patterns above, including "sedot debu
+karpet" (Vacuum only) and "Vacuum & pel, dusting plafon" (Vacuum, Mop, Dust).
 
 ## Which chores count as "set up in a room"
 
@@ -132,6 +136,17 @@ Additive. `household_locations` (migration 105) gains:
   "LT2 Service Area" both become "Service Area". The 105 index is replaced by
   `unique nulls not distinct (household_id, parent_id, lower(btrim(name)))`.
   So everywhere a room is shown alone, it's shown with its floor.
+- **Deleting a floor never fails on a name clash.** Its rooms move to "No
+  floor yet", where a room of the same name may already exist (or arrive from
+  another deleted floor). A `before delete` trigger on floors detaches the
+  rooms itself first; a room whose name is already taken among rooms with no
+  floor gets its floor back in front ("Service Area" → "LT2 Service Area"),
+  then a number if even that is taken ("LT2 Service Area 2"). The FK's
+  `set null` stays as a backstop. The delete screen lists any room that will
+  be renamed.
+- **Moving or renaming a room onto a taken name** is refused by the index;
+  the app says "There's already a room called Lounge on LT2" and saves
+  nothing.
 - **Sorting rooms into floors in one step**: `organise_rooms(p_plan jsonb)`,
   `security invoker` (RLS still applies), owner-only through
   `caller_admin_household()`, one transaction: create floors, set
@@ -142,7 +157,9 @@ Additive. `household_locations` (migration 105) gains:
   (`household_members`) write them (105's policies cover the new columns).
 - Tests: `supabase/tests/128_rooms_floors.sql` (rolled back): two levels
   enforced; cross-household parents refused; deleting a floor keeps its rooms
-  and their chores; staff phones and other households can't write;
+  and their chores; deleting a floor whose room clashes with a room with no
+  floor renames it and succeeds; deleting two floors in turn that both have
+  "Service Area" succeeds with two distinct names; staff phones and other households can't write;
   logged-out callers get nothing; `organise_rooms` refuses non-admins and
   other households' ids; grants checked.
 - Applied: local first, then staging, then production with the owner's OK,
