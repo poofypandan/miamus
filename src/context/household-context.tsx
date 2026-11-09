@@ -35,6 +35,7 @@ import {
   outboxItems,
   submitJob,
   subscribeOutbox,
+  SaveStillWaitingError,
   type OfflineQueueItem,
   type SendResult,
 } from "@/lib/offline-queue";
@@ -975,6 +976,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // immediately) and best-effort cleans up the storage object after — a
   // transient storage failure shouldn't leave the task stuck "done".
   const deleteLogWithPhoto = useCallback(async (log: TaskLog) => {
+    // Every caller, one guard: a log still in the save queue is not deleted
+    // (see SaveStillWaitingError).
+    // Read from the queue itself at the moment of the tap, not from a render.
+    if (outboxView(outboxItems(), getActiveHouseholdId(), []).pendingIds.has(log.id)) {
+      throw new SaveStillWaitingError();
+    }
     await dataProvider.deleteLog(log.id);
     setLogs((prev) => prev.filter((l) => l.id !== log.id));
     if (log.photo_url) {

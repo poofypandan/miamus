@@ -250,6 +250,19 @@ export type SendResult =
   | { kind: "chore"; task: HouseholdTask }
   | { kind: "food"; food: FoodItem | null };
 
+/**
+ * Thrown when something asks to delete a row that is still waiting in the
+ * queue (Codex, PR #41): deleting the server's copy of a save whose reply was
+ * lost would be undone by the next retry, which puts it back — with its photo
+ * already removed. Wait until it has been sent.
+ */
+export class SaveStillWaitingError extends Error {
+  constructor() {
+    super("This save has not been sent yet");
+    this.name = "SaveStillWaitingError";
+  }
+}
+
 /** Photo URLs a job needs in storage before it is sent. */
 export function jobPhotos(job: OutboxJob): string[] {
   switch (job.kind) {
