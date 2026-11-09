@@ -32,6 +32,7 @@ import { CHORE_JOBS, choreJobLabel, type ChoreJob } from "@/lib/chore-jobs";
 import { recurrenceOf } from "@/lib/chore-recurrence";
 import {
   allRoomRows,
+  placesWithJob,
   buildRoomsModel,
   roomHasJob,
   scheduleLabel,
@@ -205,7 +206,7 @@ export function RoomsView() {
             <FilterPill
               key={value}
               label={choreJobLabel(value, locale)}
-              count={rows.filter((r) => roomHasJob(r, value)).length}
+              count={placesWithJob(model, value)}
               active={job === value}
               onClick={() => setJob(job === value ? null : value)}
             />
