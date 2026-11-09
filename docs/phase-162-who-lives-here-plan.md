@@ -81,7 +81,8 @@ here needs AI.
 1. **Sign-up, one step still.** The household-name form gains one row under
    the name: **Who lives here?** / **Siapa yang tinggal di sini?**, a small
    line "Miamus shows only what fits your home. Change it any time under
-   Household.", and chips. Now: **🐾 Pets** (on/off). Later, greyed with
+   Household.", and chips. Now: **Pets**, with the paw icon the tab bar uses (lucide
+   `PawPrint`), on/off. Later, greyed with
    "Soon": **Kids**, **Elders** (D1: shown greyed, or not shown at all).
    Nothing is pre-selected (D2): an untouched chip means no pets. The
    "then you can add your pets, chores…" line becomes "then you can add your
@@ -205,6 +206,13 @@ A new row in the Household settings list, after **Rooms**: **Who lives here**
   "Ada 2 hewan di Miamus. Arsipkan dulu di tab Hewan; riwayatnya tetap
   tersimpan."
 - Later: **Kids** and **Elders** switches join this sheet when Care exists.
+
+## Icons
+
+No emoji anywhere (owner, 2026-11-09): the Pets chip and switch use the
+tab bar's `PawPrint` line icon; the Household row uses a `House` icon; the
+Today greeting keeps the existing `Check` circle. The mockup draws the real
+lucide icons and the real Miamus mark.
 
 ## Owner text (EN / ID)
 

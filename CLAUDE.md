@@ -15,6 +15,7 @@
 
 ## UI/UX Standards
 - Clean, minimalist mobile aesthetic matching established design tokens (rounded corners, subtle borders, neutral palettes).
+- **No emoji, anywhere users look** (screens, toasts, push and WhatsApp text, mockups). Use the app's `lucide-react` line icons for a premium, professional feel, or plain text.
 - High visual hierarchy: subtle background tints for special/urgent items, neutral for base items.
 - Support safe-area insets (`env(safe-area-inset-bottom)`) and pull-to-refresh gestures.
 - **Component Reusability:** Never invent new UI patterns for navigation. All sub-navigation toggles must use a single, shared `<SegmentedControl />` component.
