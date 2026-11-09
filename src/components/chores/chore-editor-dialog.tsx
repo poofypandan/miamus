@@ -77,6 +77,7 @@ export function ChoreEditorDialog({
   task,
   defaultDate,
   occurrenceDate = null,
+  preset = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -89,6 +90,13 @@ export function ChoreEditorDialog({
    * "end the repeat here" act on. Null when adding.
    */
   occurrenceDate?: string | null;
+  /**
+   * What a new chore starts with, when it's added from somewhere that already
+   * knows (Phase 158): the Rooms view's "Add chore here" fills in the room,
+   * and a missing job's "Add" fills in the room and the job as the title.
+   * Ignored when editing.
+   */
+  preset?: { title?: string; locationId?: string | null } | null;
 }) {
   const {
     createHouseholdTask,
@@ -157,8 +165,10 @@ export function ChoreEditorDialog({
       setUntil(task.recurrence_until ?? "");
       setSupervision(!!task.requires_supervision);
     } else {
-      setTitle("");
-      setLocation(null);
+      setTitle(preset?.title ?? "");
+      setLocation(
+        preset?.locationId ? (locations?.find((room) => room.id === preset.locationId) ?? null) : null
+      );
       setCategory("cleaning");
       setAssignee(UNASSIGNED);
       setDate(defaultDate);

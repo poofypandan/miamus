@@ -333,6 +333,14 @@ export interface DataProvider {
    * table.
    */
   listHouseholdTasks(from: string, to: string, today: string): Promise<HouseholdTask[]>;
+  /**
+   * Every chore that is set up, whatever week the Agenda is on (Phase 158):
+   * repeats that haven't ended and one-offs not yet done, due today or later.
+   * The Rooms view's source; listHouseholdTasks only covers the week on
+   * screen, so a chore set up for later would look missing (Codex, PR #30).
+   * Never materialised days of a repeat.
+   */
+  listSetUpChores(today: string): Promise<HouseholdTask[]>;
   createHouseholdTask(input: CreateHouseholdTaskInput): Promise<HouseholdTask>;
   /** Owner-only edit of a chore's own fields. */
   updateHouseholdTask(id: string, patch: UpdateHouseholdTaskInput): Promise<HouseholdTask>;

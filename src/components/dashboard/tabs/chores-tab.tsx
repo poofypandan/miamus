@@ -11,6 +11,11 @@ import { dayLabel } from "@/lib/date-label";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ChoreCard } from "@/components/chores/chore-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
+import { RoomsView } from "@/components/chores/rooms-view";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { WhatsNewCard } from "@/components/shared/whats-new";
+import { useChoresView } from "@/hooks/use-chores-view";
+import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
@@ -30,6 +35,31 @@ import type { HouseholdTask } from "@/types/database";
  * owner-only in capability: the staff view imports none of this.
  */
 export function ChoresTab() {
+  const { view, setView } = useChoresView();
+  const t = useT();
+  useScrollTopOnChange(view);
+
+  return (
+    <div className="flex flex-col gap-4 px-4 pb-6">
+      {/* Today · Rooms (Phase 158): the same chores, by day or by room. The
+          pill reads ?chores= from the URL, like the Kitchen's. */}
+      <SegmentedControl
+        ariaLabel={t("Chores", "Tugas")}
+        segments={[
+          { value: "today", label: t("Today", "Hari ini") },
+          { value: "rooms", label: t("Rooms", "Ruangan") },
+        ]}
+        value={view}
+        onChange={setView}
+      />
+      <WhatsNewCard id="rooms-2026-11" onTry={view === "rooms" ? undefined : () => setView("rooms")} />
+      {view === "rooms" ? <RoomsView /> : <TodayChores />}
+    </div>
+  );
+}
+
+/** The day's chores: what the house owes on the selected day (Phase 100). */
+function TodayChores() {
   const { selectedDate, setSelectedDate, householdTasks } = useHousehold();
   const locale = useOwnerLocale();
   const t = useT();
@@ -76,7 +106,7 @@ export function ChoresTab() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-6">
+    <div className="flex flex-col gap-4">
       <DateRibbon value={selectedDate} onChange={setSelectedDate} locale={locale} />
 
       <StaffCompletionStrip

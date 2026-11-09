@@ -73,6 +73,12 @@ export interface StubOptions {
   owner?: { locale: "en" | "id" };
   /** Kakak's household switch as kakak_status reports it to the admin (migrations/126). */
   kakak?: { allowed: boolean; enabled: boolean };
+  /** household_locations rows the household already has (Phase 158). */
+  rooms?: Record<string, unknown>[];
+  /** household_tasks rows the household already has (Phase 158). */
+  chores?: Record<string, unknown>[];
+  /** Answer the room list with a server error until set back (Phase 158). */
+  roomsFail?: { on: boolean };
 }
 
 export interface Stub {
@@ -199,7 +205,17 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         kakak.enabled = Boolean(request.postDataJSON()?.p_on);
         return route.fulfill({ status: 204, body: "" });
       }
-      if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks);
+      if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks, options.chores);
+      if (table === "household_tasks" && options.chores) {
+        // The simple PostgREST filters the app's chore reads use (eq, neq,
+        // lt, lte, gt, gte, is), so each read returns what the real backend
+        // would: the week read misses a chore set up for later (Codex, #30).
+        return route.fulfill({ json: filterRows([...options.chores, ...tasks], new URL(request.url()).searchParams) });
+      }
+      if (table === "household_locations" && options.roomsFail?.on) {
+        return route.fulfill({ status: 500, json: { message: "stub: rooms unavailable" } });
+      }
+      if (table === "household_locations" && options.rooms) return route.fulfill({ json: options.rooms });
       if (options.owner && who === OWNER) {
         const answer = ownerAnswer(table, options.owner.locale);
         if (answer !== undefined) return route.fulfill({ json: answer });
@@ -277,8 +293,35 @@ function ownerAnswer(table: string, locale: "en" | "id"): unknown {
   }
 }
 
+/**
+ * Applies a request's simple column filters (`col=op.value`) to stub rows.
+ * `or=(…)`, `not.…` and anything else unknown are left out: rows are kept,
+ * so a test can only see more than the real backend would, never less.
+ */
+function filterRows(rows: Record<string, unknown>[], params: URLSearchParams): Record<string, unknown>[] {
+  const ops: Record<string, (a: string | null, b: string) => boolean> = {
+    eq: (a, b) => a === b,
+    neq: (a, b) => a !== null && a !== b,
+    lt: (a, b) => a !== null && a < b,
+    lte: (a, b) => a !== null && a <= b,
+    gt: (a, b) => a !== null && a > b,
+    gte: (a, b) => a !== null && a >= b,
+    is: (a, b) => (b === "null" ? a === null : String(a) === b),
+  };
+  const filters: [string, (a: string | null, b: string) => boolean, string][] = [];
+  for (const [column, raw] of params.entries()) {
+    if (["select", "order", "limit", "offset", "or", "and"].includes(column)) continue;
+    const dot = raw.indexOf(".");
+    const op = ops[raw.slice(0, dot)];
+    if (dot > 0 && op) filters.push([column, op, raw.slice(dot + 1)]);
+  }
+  return rows.filter((row) =>
+    filters.every(([column, op, value]) => op(row[column] == null ? null : String(row[column]), value))
+  );
+}
+
 /** household_tasks writes, enough for a chore saved and undone (Kakak). */
-function answerTasks(route: Route, tasks: Record<string, unknown>[]) {
+function answerTasks(route: Route, tasks: Record<string, unknown>[], seeded: Record<string, unknown>[] = []) {
   const request = route.request();
   const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
   const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
@@ -301,7 +344,11 @@ function answerTasks(route: Route, tasks: Record<string, unknown>[]) {
   const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
   const index = tasks.findIndex((t) => t.id === id);
   if (request.method() === "DELETE") return reply(index === -1 ? [] : tasks.splice(index, 1));
-  return reply(index === -1 ? [] : [tasks[index]]);
+  // An edit (PATCH) applies to a chore created here or one the household
+  // already had (Phase 158's seeded chores).
+  const row = index === -1 ? seeded.find((t) => t.id === id) : tasks[index];
+  if (row && request.method() === "PATCH") Object.assign(row, request.postDataJSON() ?? {});
+  return reply(row ? [row] : []);
 }
 
 /**

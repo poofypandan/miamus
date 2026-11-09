@@ -1313,7 +1313,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       // Replaced in place rather than refetched: editing a repeat's cadence or
       // moving a one-off to another day changes which occurrences this row
       // generates, and expandChores recomputes that from the row itself.
-      setHouseholdTasks((prev) => prev.map((task) => (task.id === id ? updated : task)));
+      // Added when it isn't there (Phase 158): the Rooms view edits chores
+      // outside the week this cache holds, and one moved into it has to show
+      // on Today at once. A row outside the week is harmless here.
+      setHouseholdTasks((prev) =>
+        prev.some((task) => task.id === id)
+          ? prev.map((task) => (task.id === id ? updated : task))
+          : [...prev, updated]
+      );
       return updated;
     },
     []
