@@ -101,8 +101,8 @@ export function SignOutSheet({
           )}
           <p className="text-xs text-muted-foreground">
             {id
-              ? `Ingin berhenti memakai Miamus atau menghapus data rumah tangga? Kirim email ke ${LEGAL.contactEmail}.`
-              : `Want to stop using Miamus or delete your household's data? Email ${LEGAL.contactEmail}.`}
+              ? `Ingin mengunduh atau menghapus data rumah tangga? Buka Rumah → Data Anda. Pertanyaan lain: ${LEGAL.contactEmail}.`
+              : `Want to download or delete your household's data? Open Household → Your data. Anything else: ${LEGAL.contactEmail}.`}
           </p>
           <Button
             variant="destructive"

@@ -21,6 +21,8 @@ import {
   Plus,
   RotateCcw,
   Send,
+  ShieldCheck,
+  Trash2,
   UserMinus,
   UserPlus,
   UserRound,
@@ -60,6 +62,8 @@ import { isOnLeave } from "@/lib/leave";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { LeavePanel } from "@/components/dashboard/leave-panel";
 import { SignOutSheet } from "@/components/auth/sign-out-sheet";
+import { HouseholdDataPanel } from "@/components/dashboard/household-data-panel";
+import { useHouseholdDeletion } from "@/hooks/use-household-deletion";
 import { AboutMiamus } from "@/components/dashboard/about-miamus";
 import { describeLog } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
@@ -103,6 +107,7 @@ const HOUSEHOLD_PAGES = [
   "language",
   "lock",
   "activity",
+  "data",
   "about",
 ] as const;
 type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
@@ -177,6 +182,9 @@ export function StaffTab() {
   const t = useT();
   const isOwner = useRequireOwner();
   const { profiles, failed, reload, allProfiles } = useStaffProfiles();
+  // Scheduled deletion (R7): shown at the top of the list, managed on the
+  // Your data page. One instance, passed down, so both agree.
+  const deletion = useHouseholdDeletion();
 
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
 
@@ -242,6 +250,20 @@ export function StaffTab() {
     const staffCount = (profiles ?? []).filter((p) => !p.user_id).length;
     return (
       <div className="flex flex-col gap-5">
+        {deletion.status?.scheduled && deletion.status.deleteAfter && (
+          <SettingsGroup>
+            <SettingsRow
+              icon={Trash2}
+              label={t("Household will be deleted", "Rumah tangga akan dihapus")}
+              detail={new Date(deletion.status.deleteAfter).toLocaleDateString(DATE_LOCALE[locale], {
+                day: "numeric",
+                month: "short",
+              })}
+              waiting
+              onPress={() => open("data")}
+            />
+          </SettingsGroup>
+        )}
         <SettingsGroup>
           <SettingsRow icon={Crown} label={t("Family", "Keluarga")} onPress={() => open("family")} />
           <SettingsRow
@@ -280,6 +302,7 @@ export function StaffTab() {
         </SettingsGroup>
         <SettingsGroup>
           <SettingsRow icon={History} label={t("Activity", "Aktivitas")} onPress={() => open("activity")} />
+          <SettingsRow icon={ShieldCheck} label={t("Your data", "Data Anda")} onPress={() => open("data")} />
         </SettingsGroup>
         <SettingsGroup>
           <SettingsRow icon={Info} label={t("About Miamus", "Tentang Miamus")} onPress={() => open("about")} />
@@ -315,6 +338,7 @@ export function StaffTab() {
       {page === "language" && <LanguageSettings />}
       {page === "lock" && <SecuritySettings />}
       {page === "activity" && <ActivityPage entries={entries} />}
+      {page === "data" && <HouseholdDataPanel status={deletion.status} reload={deletion.reload} />}
       {page === "about" && <AboutMiamus />}
     </div>
   );
