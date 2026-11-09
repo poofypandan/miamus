@@ -271,6 +271,24 @@ function isPermanent(err: unknown): boolean {
   return /invalid mime|mime type .* not supported|payload too large|exceeded the maximum allowed size/i.test(message);
 }
 
+/** Photos this tab doesn't know of but the device holds, taken into its queue. */
+async function adoptFromDevice(urls: string[]): Promise<void> {
+  if (typeof indexedDB === "undefined") return;
+  let changed = false;
+  for (const url of urls) {
+    if (states.has(url)) continue;
+    try {
+      const entry = await get<QueuedPhoto>(url, db());
+      if (!entry) continue;
+      states.set(url, entry.failed ? "failed" : "pending");
+      changed = true;
+    } catch (err) {
+      console.error("Could not read the photo queue", err);
+    }
+  }
+  if (changed) emit();
+}
+
 /** Thrown by ensureUploaded; `reason` says whether waiting will help. */
 export class PhotoNotUploadedError extends Error {
   constructor(readonly reason: "pending" | "failed") {
@@ -286,6 +304,11 @@ export class PhotoNotUploadedError extends Error {
  */
 export async function ensureUploaded(urls: string[]): Promise<void> {
   await hydratePhotoQueue();
+  // This tab read the queue once, at load. A save queued by another tab of
+  // the app (they share IndexedDB) can name a photo taken there since: look
+  // on the device before reading "not in the queue" as "uploaded" (Codex,
+  // PR #41).
+  await adoptFromDevice(urls);
   const waiting = () => urls.map((url) => states.get(url)).filter(Boolean);
   if (waiting().length === 0) return;
   // Twice: the first may be a drain that started before these were queued, or

@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  CloudUpload,
   Eye,
   Pencil,
   Repeat,
@@ -41,6 +42,7 @@ const COPY = {
     forYou: "For you",
     supervision: "Wait for an owner",
     done: "Done",
+    waiting: "Waiting to send",
     overdue: (label: string) => `Carried over from ${label}`,
   },
   id: {
@@ -49,6 +51,7 @@ const COPY = {
     forYou: "Untuk Anda",
     supervision: "Tunggu pemilik rumah",
     done: "Selesai",
+    waiting: "Menunggu dikirim",
     overdue: (label: string) => `Belum selesai dari ${label}`,
   },
 } as const;
@@ -74,6 +77,7 @@ export function ChoreCard({
   compact = false,
   editable = false,
   today,
+  waitingToSend = false,
 }: {
   occurrence: ChoreOccurrence;
   locale: "en" | "id";
@@ -104,6 +108,11 @@ export function ChoreCard({
   editable?: boolean;
   /** For the "carried over from …" label; defaults to the real today. */
   today?: Date;
+  /**
+   * Finished on this phone and not sent yet (Phase 161): the save waits on
+   * the phone and goes by itself.
+   */
+  waitingToSend?: boolean;
 }) {
   const formatTime = useFormatTime();
   const t = COPY[locale];
@@ -185,6 +194,14 @@ export function ChoreCard({
         )}
 
         {action && !done && <span className="ml-auto">{action}</span>}
+        {/* Amber means waiting (Phase 153 colour rule). */}
+        {done && waitingToSend && (
+          <Badge className="h-5 gap-1 bg-amber-100 px-1.5 text-[10px] text-amber-900">
+            <CloudUpload className="size-3" />
+            {t.waiting}
+          </Badge>
+        )}
+
         {compact && done && occurrence.row && hasChoreProof(occurrence.row) && (
           <span className="ml-auto flex items-center gap-0.5 text-[10px] font-medium text-emerald-700">
             Lihat foto <ChevronRight className="size-3.5" />

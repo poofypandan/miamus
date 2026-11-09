@@ -174,8 +174,12 @@ export const mockProvider: DataProvider = {
   async createLogsBatch(input) {
     const db = loadDB();
     const completedAt = input.completed_at ?? new Date().toISOString();
-    const logs: TaskLog[] = input.entries.map((entry) => ({
-      id: uid("log"),
+    // The primary key's refusal of a retried save, as Postgres words it (Phase 161).
+    if (input.ids?.some((id) => db.logs.some((l) => l.id === id))) {
+      throw { code: "23505", message: 'duplicate key value violates unique constraint "task_logs_pkey"' };
+    }
+    const logs: TaskLog[] = input.entries.map((entry, i) => ({
+      id: input.ids?.[i] ?? uid("log"),
       schedule_id: entry.schedule_id ?? null,
       entity_id: entry.entity_id,
       module: input.module,
@@ -423,10 +427,13 @@ export const mockProvider: DataProvider = {
   async createFoodItem(input, addedBy) {
     const db = loadDB();
     const now = new Date().toISOString();
+    if (input.id && db.foodItems.some((f) => f.id === input.id)) {
+      throw { code: "23505", message: 'duplicate key value violates unique constraint "food_items_pkey"' };
+    }
     const item: FoodItem = {
-      id: uid("food"),
       household_id: getActiveHouseholdId(),
       ...input,
+      id: input.id ?? uid("food"),
       name: input.name?.trim() || null,
       added_by: addedBy,
       created_by: null,
@@ -808,7 +815,7 @@ export const mockProvider: DataProvider = {
     const updated: HouseholdTask = {
       ...db.householdTasks[idx],
       status,
-      completed_at: completing ? new Date().toISOString() : null,
+      completed_at: completing ? (patch?.completed_at ?? new Date().toISOString()) : null,
       completed_by: completing ? (patch?.completed_by ?? null) : null,
       photo_url: completing ? (patch?.photo_url ?? null) : null,
       before_photo_url: completing ? (patch?.before_photo_url ?? null) : null,

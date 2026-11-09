@@ -79,6 +79,12 @@ export interface CreateBatchLogInput {
    * tasks, which the column defaults to "complete".
    */
   sub_type?: LogSubType;
+  /**
+   * Row ids made on the phone, one per entry (Phase 161), so a retry of a
+   * save whose reply was lost cannot save it twice. Omitted: the database
+   * picks them.
+   */
+  ids?: string[];
 }
 
 export interface CreateScheduleInput {
@@ -229,6 +235,12 @@ export interface HouseholdTaskStatusPatch {
    * Set centrally in HouseholdContext, so callers rarely pass it themselves.
    */
   completed_by?: string | null;
+  /**
+   * When it was finished. Sent by a completion queued on the phone (Phase
+   * 161), so a chore finished at 10:00 and sent at 14:00 says 10:00. Defaults
+   * to now.
+   */
+  completed_at?: string;
 }
 
 /** Everything the owner's item form sets (Phase 110). */
@@ -355,7 +367,11 @@ export interface DataProvider {
    * back yet (Phase 156, migrations/123).
    */
   listFoodItems(): Promise<FoodItem[]>;
-  createFoodItem(input: FoodItemInput, addedBy: string | null): Promise<FoodItem>;
+  /**
+   * `id`, when given, is made on the phone (Phase 161): a retry of a save
+   * whose reply was lost is then refused by the primary key, not saved twice.
+   */
+  createFoodItem(input: FoodItemInput & { id?: string }, addedBy: string | null): Promise<FoodItem>;
   updateFoodItem(id: string, patch: FoodItemPatch): Promise<FoodItem>;
   /** Admins only (the delete policy); for food added by mistake. */
   deleteFoodItem(id: string): Promise<void>;
