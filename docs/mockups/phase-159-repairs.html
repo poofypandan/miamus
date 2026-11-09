@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repairs mockups</title>
+<style>
+  :root {
+    --bg: #f8fafc; --card: #fff; --ink: #111827; --ink2: #374151; --muted: #6b7280;
+    --line: #e5e7eb; --track: #f3f4f6; --primary: #171717; --red: #b91c1c; --redbg: #fef2f2;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ecef; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color: var(--ink); }
+  header.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 4px; }
+  header.page h1 { font-size: 20px; margin: 0 0 4px; }
+  header.page p { margin: 0; color: var(--muted); }
+  section.screen { max-width: 1100px; margin: 0 auto; padding: 18px 16px 8px; }
+  section.screen h2 { font-size: 15px; margin: 0 0 2px; }
+  section.screen > p { margin: 0 0 12px; color: var(--muted); max-width: 640px; }
+  .pair { display: flex; gap: 20px; flex-wrap: wrap; }
+  .phone { width: 360px; max-width: 100%; height: 720px; background: var(--bg); border-radius: 36px; border: 8px solid #111; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .tag { position: absolute; top: -2px; right: 18px; background: #111; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 0 0 8px 8px; z-index: 5; }
+  .status { height: 22px; flex: none; }
+  .appbar { background: #fff; border-bottom: 1px solid var(--line); padding: 8px 14px 10px; flex: none; }
+  .appbar .row { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+  .brand { font-weight: 600; font-size: 17px; display: flex; gap: 6px; align-items: center; }
+  .brand i { width: 22px; height: 22px; border-radius: 7px; background: #111; display: inline-block; }
+  .seg { display: flex; gap: 3px; background: var(--track); border-radius: 999px; padding: 3px; }
+  .seg span { flex: 1; text-align: center; border-radius: 999px; padding: 8px 6px; font-weight: 500; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .seg span.on { background: var(--primary); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .seg.sm span { flex: none; padding: 6px 10px; font-size: 11px; }
+  .body { flex: 1; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+  .body > *, .sheet > * { flex: none; }
+  .body > .spacer, .sheet > .spacer { flex: 1; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 12px; font-weight: 600; font-size: 14px; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.outline { border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 500; }
+  .h { font-size: 13px; font-weight: 600; color: var(--ink); margin: 2px 0 -4px; }
+  .h small { color: #9ca3af; font-weight: 600; }
+  .group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .item { display: flex; gap: 10px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); min-height: 56px; }
+  .item:first-child { border-top: 0; }
+  .thumb { width: 38px; height: 38px; border-radius: 9px; flex: none; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .item .t { flex: 1; min-width: 0; }
+  .item .t b { display: block; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .t span { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .t span.red { color: var(--red); }
+  .item .days { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .item .days.red { color: var(--red); font-weight: 600; }
+  .tick { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid #9ca3af; flex: none; }
+  .tabbar { flex: none; height: 58px; background: #fff; border-top: 1px solid var(--line); display: flex; }
+  .tabbar span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; color: var(--muted); font-weight: 500; }
+  .tabbar span i { width: 20px; height: 20px; border-radius: 6px; border: 1.7px solid currentColor; display: block; }
+  .tabbar span.on { color: var(--ink); }
+  .tabbar span.on i { background: currentColor; }
+  /* sheet */
+  .dim { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 2; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 70px; background: #fff; border-radius: 20px 20px 0 0; z-index: 3; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .grab { width: 36px; height: 5px; border-radius: 9px; background: #d1d5db; margin: 0 auto 2px; }
+  .sheet h3 { margin: 0; font-size: 17px; text-align: center; }
+  .label { font-size: 12px; font-weight: 600; color: var(--ink2); margin-bottom: 6px; }
+  .label em { font-style: normal; font-weight: 400; color: var(--muted); }
+  .input { border: 1px solid var(--line); border-radius: 12px; min-height: 44px; padding: 11px 12px; color: var(--ink); font-size: 14px; }
+  .input.ph { color: #9ca3af; }
+  .photo { height: 86px; border: 1.5px dashed #d1d5db; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-weight: 500; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .choice { border: 1px solid var(--line); border-radius: 12px; padding: 8px 2px; text-align: center; font-size: 12px; font-weight: 500; color: var(--ink2); }
+  .choice div { font-size: 20px; line-height: 1.3; }
+  .choice.on { border: 2px solid var(--primary); padding: 7px 1px; color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; font-size: 13px; color: var(--ink2); }
+  .chip.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .more { color: var(--ink2); font-weight: 500; font-size: 13px; }
+  .spacer { flex: 1; }
+  .big { width: 100%; height: 150px; border-radius: 14px; background: linear-gradient(135deg,#f5e6c8,#e9cf9c); display: flex; align-items: center; justify-content: center; font-size: 54px; }
+  .facts { display: flex; flex-direction: column; }
+  .fact { display: flex; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .fact:first-child { border-top: 0; }
+  .fact span { color: var(--muted); }
+  .outs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .out { border: 1px solid var(--line); border-radius: 12px; padding: 10px 2px; text-align: center; font-size: 12.5px; font-weight: 600; }
+  .out div { font-size: 22px; }
+  .link { text-align: center; font-size: 13px; color: var(--ink2); font-weight: 500; }
+  .link.danger { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .quiet { display: flex; align-items: center; gap: 8px; padding: 6px 4px; min-height: 40px; color: var(--ink2); }
+  .quiet .ico { width: 16px; text-align: center; color: var(--muted); }
+  .quiet .chev { margin-left: auto; color: var(--muted); }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .faded { opacity: .55; }
+  .note { font-size: 12px; color: var(--muted); text-align: center; }
+  .toast { position: absolute; left: 14px; right: 14px; bottom: 72px; background: #111; color: #fff; border-radius: 12px; padding: 11px 14px; font-size: 13px; display: flex; justify-content: space-between; z-index: 4; }
+  .toast b { font-weight: 600; }
+  /* Phase 158 additions */
+  .fl { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 2px -4px; }
+  .fl b { font-size: 13px; }
+  .fl span { font-size: 12px; color: var(--muted); }
+  .room { display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; border-top: 1px solid var(--line); }
+  .room:first-child { border-top: 0; }
+  .room .top { display: flex; align-items: center; gap: 8px; }
+  .room .top b { flex: 1; font-weight: 500; font-size: 14px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .room .top .chev { color: var(--muted); }
+  .jobs { display: flex; flex-wrap: wrap; gap: 4px; }
+  .job { background: var(--track); border-radius: 999px; padding: 3px 8px; font-size: 11.5px; color: var(--ink2); }
+  .yes { font-size: 12.5px; color: var(--ink2); }
+  .yes::before { content: "✓ "; color: #15803d; font-weight: 700; }
+  .no { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
+  .addsm { border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; font-size: 12px; color: var(--ink); font-weight: 500; background: #fff; }
+  .whole { background: #fafafa; }
+  .whole .top b { font-weight: 600; font-size: 12.5px; color: var(--ink2); }
+  .scrollchips { display: flex; gap: 6px; overflow: hidden; white-space: nowrap; }
+  .scrollchips .chip { padding: 6px 11px; font-size: 12.5px; flex: none; }
+  .summary { font-size: 12.5px; color: var(--ink2); background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; }
+  .summary b { font-weight: 600; }
+  .ch { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+  .ch:first-child { border-top: 0; }
+  .ch .t { flex: 1; min-width: 0; }
+  .ch .t b { display: block; font-weight: 500; font-size: 13.5px; }
+  .ch .t span { display: block; font-size: 12px; color: var(--muted); }
+  .jh { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin: 6px 0 -6px; }
+  .pick { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .pick .ph { padding: 6px 12px; font-size: 11px; font-weight: 600; color: var(--muted); background: #fafafa; border-top: 1px solid var(--line); }
+  .pick .ph:first-child { border-top: 0; }
+  .pick .po { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid #9ca3af; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; }
+  .box.on { background: var(--primary); border-color: var(--primary); }
+  .split { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12.5px; }
+  .split:first-child { border-top: 0; }
+  .split s { color: var(--muted); text-decoration: none; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .split .arrow { color: var(--muted); }
+  .split b { font-weight: 600; flex: 1.3; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mgr { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); font-size: 14px; }
+  .mgr:first-child { border-top: 0; }
+  .mgr span { flex: 1; }
+  .mgr i { font-style: normal; color: var(--muted); font-size: 13px; }
+  .back { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 16px; }
+  /* Phase 159 additions */
+  .seg3 span { padding: 8px 4px; font-size: 12.5px; }
+  .h2 { font-size: 13px; font-weight: 600; margin: 4px 2px -6px; display: flex; justify-content: space-between; }
+  .h2 span { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .rep { display: flex; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--line); align-items: center; }
+  .rep:first-child { border-top: 0; }
+  .rep.urgent { background: #fff7ed; }
+  .rep .t { flex: 1; min-width: 0; }
+  .rep .t b { display: block; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rep .t span { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rep .t em { font-style: normal; font-size: 12px; color: var(--ink2); }
+  .pic { width: 44px; height: 44px; border-radius: 10px; flex: none; background: linear-gradient(135deg,#d6d3d1,#a8a29e); }
+  .pic.after { background: linear-gradient(135deg,#e7e5e4,#f5f5f4); }
+  .acts { display: flex; gap: 6px; margin-top: 6px; }
+  .acts span { border: 1px solid var(--line); border-radius: 10px; padding: 5px 10px; font-size: 12px; font-weight: 500; background: #fff; }
+  .acts span.pri { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .rep .t b .badge { display: inline; margin-left: 4px; vertical-align: 1px; }
+  .badge { font-size: 10.5px; font-weight: 600; color: #9a3412; background: #ffedd5; border-radius: 999px; padding: 2px 7px; }
+  .switch { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .switch b { font-size: 14px; font-weight: 500; display: block; }
+  .switch span { font-size: 11.5px; color: var(--muted); }
+  .tog { width: 44px; height: 26px; border-radius: 999px; background: #d1d5db; position: relative; flex: none; }
+  .tog::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 999px; background: #fff; }
+  .tl { display: flex; flex-direction: column; gap: 0; }
+  .ev { display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .ev:first-child { border-top: 0; }
+  .ev .d { width: 52px; flex: none; color: var(--muted); font-size: 12px; }
+  .ev .x { flex: 1; min-width: 0; }
+  .pair2 { display: flex; gap: 6px; margin-top: 6px; }
+  .pair2 div { flex: 1; height: 64px; border-radius: 10px; background: linear-gradient(135deg,#d6d3d1,#a8a29e); display: flex; align-items: flex-end; padding: 4px 6px; font-size: 10.5px; color: #fff; font-weight: 600; }
+  .pair2 div.after { background: linear-gradient(135deg,#a3a3a3,#e5e5e5); color: #111; }
+  .bigpic { height: 120px; border-radius: 14px; background: linear-gradient(135deg,#d6d3d1,#78716c); display: flex; align-items: flex-end; padding: 8px 10px; color: #fff; font-size: 12px; font-weight: 600; }
+  .steps { display: flex; flex-direction: column; gap: 8px; }
+  .step { border: 1.5px dashed #d1d5db; border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 500; }
+  .step.done { border-style: solid; border-color: var(--line); }
+  .step .n { width: 24px; height: 24px; border-radius: 999px; background: var(--track); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: none; }
+  .step.done .n { background: #dcfce7; color: #15803d; }
+  .line { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Phase 159 — Repairs</h1>
+  <p>Phone-size mockups for <code>docs/phase-159-repairs-plan.md</code>. Owners in English or Indonesian; staff in Indonesian only. Names and rooms are examples. Not built yet.</p>
+</header>
+
+<section class="screen">
+  <h2>1. Staff: Lapor kerusakan</h2>
+  <p>In the existing Laporan &amp; Usulan sheet. Room by floor, spot, what's wrong, a photo, urgent or not.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Staff · Indonesia</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Lapor kerusakan</h3>
+        <div><div class="label">Ruangan</div><div class="input">LT3 · Music Room</div></div>
+        <div><div class="label">Bagian <em>(boleh dikosongkan)</em></div><div class="chips"><span class="chip on">Dinding</span><span class="chip">AC</span><span class="chip">Pintu</span><span class="chip">＋ Bagian baru</span></div></div>
+        <div><div class="label">Apa yang rusak?</div><div class="input">Dinding retak dekat jendela</div></div>
+        <div class="photo">📷  Ambil foto</div>
+        <div class="switch"><div><b>Darurat</b><span>Bocor, listrik, gas — pemilik langsung diberi tahu</span></div><div class="tog"></div></div>
+        <div class="spacer"></div>
+        <div class="btn primary">Kirim</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>2. Owners: Chores → Repairs</h2>
+  <p>To review (staff reports), Open (with what's next), Fixed. Urgent ones first, with the only tint.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
+        <div class="seg seg3"><span>Today</span><span>Rooms</span><span class="on">Repairs</span></div></div>
+      <div class="body">
+        <div class="btn primary">＋ Report a problem</div>
+        <div class="h2">To review<span>from staff</span></div>
+        <div class="group">
+          <div class="rep urgent"><div class="pic"></div><div class="t"><b>Tap leaking <span class="badge">Urgent</span></b><span>LT2 · GB2 Bathroom · Sink · Sari, 10 min ago</span><div class="acts"><span class="pri">Accept</span><span>Not needed</span></div></div></div>
+        </div>
+        <div class="h2">Open<span>3</span></div>
+        <div class="group">
+          <div class="rep"><div class="pic"></div><div class="t"><b>Wall cracked</b><span>LT3 · Music Room · Wall</span><em>Work done — check the photos</em></div></div>
+          <div class="rep"><div class="pic"></div><div class="t"><b>AC dripping</b><span>LT2 · Master Bedroom · AC</span><em>Thu 10:00 · Pak Budi</em></div></div>
+          <div class="rep"><div class="pic"></div><div class="t"><b>Door handle loose</b><span>LT2 · Playroom · Door</span><em>Not scheduled</em></div></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><i></i>Today</span><span><i></i>Pets</span><span class="on"><i></i>Chores</span><span><i></i>Kitchen</span><span><i></i>Household</span></div>
+    </div>
+    <div class="phone"><div class="tag">Owner · Indonesia</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
+        <div class="seg seg3"><span>Hari ini</span><span>Ruangan</span><span class="on">Perbaikan</span></div></div>
+      <div class="body">
+        <div class="btn primary">＋ Lapor kerusakan</div>
+        <div class="h2">Perlu dicek<span>dari staf</span></div>
+        <div class="group">
+          <div class="rep urgent"><div class="pic"></div><div class="t"><b>Keran bocor <span class="badge">Darurat</span></b><span>LT2 · GB2 Bathroom · Wastafel · Sari, 10 mnt lalu</span><div class="acts"><span class="pri">Terima</span><span>Tidak perlu</span></div></div></div>
+        </div>
+        <div class="h2">Belum selesai<span>3</span></div>
+        <div class="group">
+          <div class="rep"><div class="pic"></div><div class="t"><b>Dinding retak</b><span>LT3 · Music Room · Dinding</span><em>Pekerjaan selesai — cek fotonya</em></div></div>
+          <div class="rep"><div class="pic"></div><div class="t"><b>AC menetes</b><span>LT2 · Master Bedroom · AC</span><em>Kam 10.00 · Pak Budi</em></div></div>
+          <div class="rep"><div class="pic"></div><div class="t"><b>Gagang pintu longgar</b><span>LT2 · Playroom · Pintu</span><em>Belum dijadwalkan</em></div></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><i></i>Hari ini</span><span><i></i>Hewan</span><span class="on"><i></i>Tugas</span><span><i></i>Dapur</span><span><i></i>Rumah</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>3. Owners: a repair</h2>
+  <p>The problem photo, then a timeline with each visit's before and after photos. "Fixed" or "Needs another visit" once work is done.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Wall cracked</h3>
+        <div class="note">LT3 · Music Room · Wall · reported by Sari, 2 Nov</div>
+        <div class="bigpic">The problem</div>
+        <div class="card tl">
+          <div class="ev"><div class="d">2 Nov</div><div class="x">Reported by Sari · accepted by you</div></div>
+          <div class="ev"><div class="d">6 Nov</div><div class="x">Visit · Pak Budi · watched by Sari<div class="pair2"><div>Before</div><div class="after">After</div></div></div></div>
+          <div class="ev"><div class="d"></div><div class="x"><b>Work done — check the photos</b></div></div>
+        </div>
+        <div class="line"><span>Cost (only owners see this)</span><b>Rp 350.000</b></div>
+        <div class="spacer"></div>
+        <div class="btn primary">Fixed</div>
+        <div class="btn outline">Needs another visit</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>4. Staff: the visit</h2>
+  <p>The usual chore sheet. The problem photo on top; the photo steps worded for repairs.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Staff · Indonesia</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Awasi perbaikan: dinding retak</h3>
+        <div class="note">LT3 · Music Room · Dinding · Kam 10.00 · Tukang: Pak Budi</div>
+        <div class="bigpic">Foto kerusakan</div>
+        <div class="steps">
+          <div class="step done"><span class="n">✓</span>Foto sebelum diperbaiki</div>
+          <div class="step"><span class="n">2</span>Foto sesudah diperbaiki</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="btn primary">Selesai</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>5. Room sheet → Repairs</h2>
+  <p>Phase 158's room sheet gains a Repairs section: open first, then history with before/after photos.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · Indonesia</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
+        <div class="seg seg3"><span>Hari ini</span><span class="on">Ruangan</span><span>Perbaikan</span></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>LT3 · Music Room</h3>
+        <div class="jh">Tugas</div>
+        <div class="card">
+          <div class="ch"><div class="t"><b>Vacuum &amp; pel</b><span>Setiap Rabu · Sari</span></div><span class="chev">›</span></div>
+        </div>
+        <div class="jh">Perbaikan</div>
+        <div class="card">
+          <div class="ch"><div class="t"><b>Dinding retak</b><span>Pekerjaan selesai — cek fotonya</span></div><span class="chev">›</span></div>
+          <div class="ch"><div class="pic"></div><div class="pic after"></div><div class="t"><b>AC diservis</b><span>Diperbaiki 12 Agu · Pak Budi</span></div><span class="chev">›</span></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="btn outline">＋ Lapor kerusakan di sini</div>
+        <div class="btn primary">＋ Tambah tugas di sini</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>6. Today line (owners)</h2>
+  <p>One quiet line, only when there's something to do.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div></div>
+      <div class="body">
+        <div class="quiet"><span class="ico">🛒</span>2 things to buy<span class="chev">›</span></div>
+        <div class="quiet"><span class="ico">🔧</span>1 repair to review · 1 done — check the photos<span class="chev">›</span></div>
+        <div class="h">Today</div>
+        <div class="group"><div class="item"><div class="thumb">🐶</div><div class="t"><b>Breakfast</b><span>07:00 · Ari</span></div></div></div>
+      </div>
+      <div class="tabbar"><span class="on"><i></i>Today</span><span><i></i>Pets</span><span><i></i>Chores</span><span><i></i>Kitchen</span><span><i></i>Household</span></div>
+    </div>
+  </div>
+</section>
+</body>
+</html>
