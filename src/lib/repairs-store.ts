@@ -91,3 +91,15 @@ export function subscribeRepairs(listener: () => void) {
 export function refreshRepairs(): void {
   if (listeners.size > 0) void loadRepairs(true);
 }
+
+/**
+ * A chore was deleted: drop it (and the days of it, if it was a repeat) from
+ * the cached visits at once, then reload. Otherwise a deleted visit would
+ * still read as scheduled until the next refresh (Codex, PR #37).
+ */
+export function forgetDeletedChore(id: string): void {
+  if (snapshot.visits.some((v) => v.id === id || v.parent_task_id === id)) {
+    emit({ ...snapshot, visits: snapshot.visits.filter((v) => v.id !== id && v.parent_task_id !== id) });
+  }
+  refreshRepairs();
+}

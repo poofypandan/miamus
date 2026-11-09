@@ -100,6 +100,21 @@ test("an owner reviews a staff report, schedules a visit, and reports a problem"
   expect(repairs[1]).toMatchObject({ title: "Lampu berkedip", status: "open", urgent: true, location_id: MUSIC.id });
   // Urgent first in Open.
   await expect(page.getByRole("region", { name: "Open" }).getByRole("button").first()).toContainText("Lampu berkedip");
+  await expect(page.getByRole("region", { name: "Open" }).getByRole("button", { name: /Dinding retak/ })).not.toContainText(
+    "Not scheduled"
+  );
+
+  // Deleting the visit from Today: Repairs says so at once (Codex, PR #37).
+  await page.getByRole("tab", { name: "Today" }).click();
+  await page.getByText("Perbaiki: Dinding retak").first().click();
+  const chore = page.getByRole("dialog", { name: "Edit Chore" });
+  await chore.getByRole("button", { name: "Delete chore" }).click();
+  await chore.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect.poll(() => stub.tasks.length).toBe(0);
+  await page.getByRole("tab", { name: "Repairs" }).click();
+  await expect(page.getByRole("region", { name: "Open" }).getByRole("button", { name: /Dinding retak/ })).toContainText(
+    "Not scheduled"
+  );
 });
 
 test("a staff phone reports a problem and sees it waiting for the owners", async ({ context, page }) => {
