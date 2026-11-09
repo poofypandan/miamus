@@ -125,6 +125,7 @@ const RETRY_STATUSES = new Set([401, 408, 425, 429, 502, 503, 504, 520, 521, 522
  */
 export function isRetryable(err: unknown): boolean {
   if (err instanceof PhotoNotUploadedError) return err.reason === "pending";
+  if (err instanceof Error && err.name === "IdsNotKeptError") return true;
   if (isConnectionError(err)) return true;
   if (!err || typeof err !== "object") return false;
   const { code, message, status } = err as { code?: unknown; message?: unknown; status?: unknown };
@@ -418,6 +419,38 @@ export function onNewWaiting(listener: () => void): () => void {
   return () => waitingListeners.delete(listener);
 }
 
+/** The ids could not be kept on the device: try again later. */
+class IdsNotKeptError extends Error {
+  constructor() {
+    super("Row ids for a queued save could not be kept");
+    this.name = "IdsNotKeptError";
+  }
+}
+
+/**
+ * A log queued before Phase 161 has no row ids, so a resend (after a reload
+ * that failed, say) would save it again under new ones. Give it ids and keep
+ * them in the queue before its first send, so every later send is the same
+ * rows (Codex, PR #41).
+ */
+async function withStableIds(item: OfflineQueueItem): Promise<OutboxJob> {
+  const { job } = item;
+  if (job.kind !== "logs" || job.ids) return job;
+  const ids = job.payload.entries.map(() => crypto.randomUUID());
+  let kept: OutboxJob | null = null;
+  // Kept only if they reached the device: ids that might not survive a
+  // reload would not make the next send safe, so then it waits.
+  await mutate((current) =>
+    current.map((i) => {
+      if (i.id !== item.id || i.job.kind !== "logs") return i;
+      kept = { ...i.job, ids: i.job.ids ?? ids };
+      return { ...i, job: kept };
+    })
+  );
+  if (!kept) throw new IdsNotKeptError();
+  return kept;
+}
+
 export interface DrainReport {
   sent: OfflineQueueItem[];
   /** Refused by the server and removed. */
@@ -460,7 +493,7 @@ export async function drainOutbox(
     }
     inFlight.add(item.id);
     try {
-      await sendJob(item.job);
+      await sendJob(await withStableIds(item));
       report.sent.push(item);
     } catch (err) {
       if (isRetryable(err)) {

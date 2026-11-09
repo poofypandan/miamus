@@ -133,6 +133,25 @@ describe("items queued before Phase 161", () => {
     expect(queue.normalizeQueueItem("junk")).toBeNull();
   });
 
+  it("get row ids kept on the phone before their first send, so a resend saves nothing twice", async () => {
+    memory.set("b11-sync-queue", [
+      { id: "q1", table: "task_logs", payload: { entries: [{ entity_id: "d" }], module: "pet" }, timestamp: 5 },
+    ]);
+    provider.createLogsBatch.mockResolvedValue([{ id: "server-1" }]);
+    // The reload after it fails: the save stays queued, with the ids it was sent with.
+    await queue.drainOutbox(async () => {
+      throw NO_ANSWER;
+    });
+    const sentWith = provider.createLogsBatch.mock.calls[0][0].ids;
+    expect(sentWith).toHaveLength(1);
+    const [left] = await stored();
+    expect(left.job).toMatchObject({ kind: "logs", ids: sentWith });
+    provider.createLogsBatch.mockRejectedValue(LOST_REPLY);
+    await queue.drainOutbox(async () => undefined);
+    expect(provider.createLogsBatch.mock.calls[1][0].ids).toEqual(sentWith);
+    expect(await stored()).toEqual([]);
+  });
+
   it("are sent like any other", async () => {
     memory.set("b11-sync-queue", [
       { id: "q1", table: "task_logs", payload: { entries: [{ entity_id: "d" }], module: "pet" }, timestamp: 5 },
@@ -140,7 +159,7 @@ describe("items queued before Phase 161", () => {
     provider.createLogsBatch.mockResolvedValue([{ id: "server-1" }]);
     const report = await queue.drainOutbox();
     expect(report.sent).toHaveLength(1);
-    expect(provider.createLogsBatch).toHaveBeenCalledWith(expect.objectContaining({ ids: undefined }));
+    expect(provider.createLogsBatch).toHaveBeenCalledWith(expect.objectContaining({ ids: [expect.any(String)] }));
     expect(await stored()).toEqual([]);
   });
 });
