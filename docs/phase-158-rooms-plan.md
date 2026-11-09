@@ -38,6 +38,7 @@ show at a glance which rooms have that job and which don't.
 | Rooms view | — | floors as sections, rooms inside; job chips on top; "Vacuum: 9 of 19 rooms" |
 | A room | a tag on cards | tap it: everything set up there, grouped by job, and **Add chore here** |
 | Chore form | "Location (optional)", one place, free text | "Room (optional)", picked by floor ("LT2 · Lounge"), or a **whole floor**; when adding, **several rooms at once** |
+| Chore form, after a room | — | **Spot (optional)**: the part of the room, e.g. Sink in GB2 Bathroom (see "Spots inside a room") |
 | Household tab | — | **Rooms / Ruangan** page: floors and rooms, rename, move, reorder, delete |
 | Staff phones | room tag on each card | the tag shows the floor too ("LT2 · Lounge"); otherwise unchanged (D3) |
 | Kakak (after PR #26) | knows room names | knows floors too: "vacuum all the LT2 bedrooms every Monday" |
@@ -79,6 +80,36 @@ Still five tabs. Manual-first: nothing here needs AI.
 5. **Rooms page** (Household tab). Floors in order, each with its rooms.
    Add a floor, add a room, rename, move a room to another floor, reorder with
    up/down, delete (says how many chores lose their room; the chores stay).
+
+## Spots inside a room (PR B)
+
+Some chores are for one thing in a room, not the whole room: wipe the
+**sink** in the bathroom, descale the **shower**, clean the **AC filter**.
+Today the household works around it by making each thing a room
+("GB2 Bathroom Toilet", "GB2 Bathroom Wastafel").
+
+- **Two place levels, plus an optional spot on the chore.** A spot is a
+  short name inside the room (Sink / Wastafel, Toilet, Shower, Mirror /
+  Cermin, AC, Wall / Dinding). It's a field on the chore (and later on a
+  repair, Phase 159), not a third level of places: a third level would make
+  every picker deeper, for something only some rooms need.
+- **Picking one:** once a room is chosen, the form shows **Spot (optional)**
+  as chips: the spots already used in that room, plus "+ New spot". Matched
+  case-insensitively, so "wastafel" and "Wastafel" are one spot. Up to 40
+  characters.
+- **Showing it:** the room tag reads "LT2 · GB2 Bathroom · Sink" (owners and
+  staff); the room sheet groups chores by spot ("Sink: wipe · daily").
+  Without a spot, a chore is for the whole room, as today.
+- **Merging the workaround rooms (D6):** "Sort rooms" also spots rooms on the
+  same floor that share a name start ("GB2 Bathroom Toilet", "GB2 Bathroom
+  Wastafel") and offers to make them one room, **GB2 Bathroom**, with spots
+  **Toilet** and **Wastafel**. Their chores move to the one room with the
+  spot set. Previewed first, optional, with Undo; one transaction through
+  `organise_rooms`.
+- **Recognised from the words, as a fallback:** a chore with no spot whose
+  title names one ("lap keran tempat cuci tangan" → Sink) is shown under that
+  spot in the room sheet, using the same word-list approach as jobs. It's
+  only for display; nothing is written.
 
 ## How jobs are recognised (D2)
 
@@ -130,8 +161,12 @@ Additive. `household_locations` (migration 105) gains:
 - **Two levels only**, enforced by a trigger (`security invoker`,
   `search_path = ''`): a floor has no parent; a room's parent must be a
   floor; a floor that has rooms can't become a room.
-- **Floors are places too**: a chore can point at a floor (whole floor). No
-  change to `household_tasks`; `location_id` stays as it is.
+- **Floors are places too**: a chore can point at a floor (whole floor);
+  `location_id` stays as it is.
+- **`household_tasks.spot`**: nullable text, 1–40 characters after trimming
+  (CHECK), the part of the room. Additive; every existing chore keeps
+  `null` (the whole room). Same rules as the rest of the chore: owners set it,
+  staff phones only read it.
 - **Names unique per floor**, not per household: "LT1 Service Area" and
   "LT2 Service Area" both become "Service Area". The 105 index is replaced by
   `unique nulls not distinct (household_id, parent_id, lower(btrim(name)))`.
@@ -141,9 +176,11 @@ Additive. `household_locations` (migration 105) gains:
   another deleted floor). A `before delete` trigger on floors detaches the
   rooms itself first; a room whose name is already taken among rooms with no
   floor gets its floor back in front ("Service Area" → "LT2 Service Area"),
-  then a number if even that is taken ("LT2 Service Area 2"). The FK's
-  `set null` stays as a backstop. The delete screen lists any room that will
-  be renamed.
+  then a number if even that is taken ("LT2 Service Area 2"). **Within the
+  60-character limit** (105's check): the prefix and the number are kept and
+  the room's own name is shortened to fit (`left(name, 60 - prefix - suffix)`,
+  trimmed), so a 60-character name still renames cleanly. The FK's `set null`
+  stays as a backstop. The delete screen lists any room that will be renamed.
 - **Moving or renaming a room onto a taken name** is refused by the index;
   the app says "There's already a room called Lounge on LT2" and saves
   nothing.
@@ -151,15 +188,19 @@ Additive. `household_locations` (migration 105) gains:
   `security invoker` (RLS still applies), owner-only through
   `caller_admin_household()`, one transaction: create floors, set
   `parent_id`/`name`, and for D4 set `location_id` (and the trimmed title) on
-  the listed chores. Revoked from `public, anon`, granted to `authenticated`.
-  Undo calls it with the reverse plan.
+  the listed chores, and for D6 merge rooms (move their chores to the kept
+  room with `spot` set, then delete the emptied rooms). Revoked from
+  `public, anon`, granted to `authenticated`. Undo calls it with the reverse
+  plan (re-creating merged rooms under their old ids).
 - RLS unchanged: everyone in the household reads rooms; only owners
   (`household_members`) write them (105's policies cover the new columns).
 - Tests: `supabase/tests/128_rooms_floors.sql` (rolled back): two levels
   enforced; cross-household parents refused; deleting a floor keeps its rooms
   and their chores; deleting a floor whose room clashes with a room with no
   floor renames it and succeeds; deleting two floors in turn that both have
-  "Service Area" succeeds with two distinct names; staff phones and other households can't write;
+  "Service Area" succeeds with two distinct names; a clashing room with a
+  60-character name renames within 60 characters; `spot` length and blank
+  checks; merging two rooms moves their chores and sets the spot; staff phones and other households can't write;
   logged-out callers get nothing; `organise_rooms` refuses non-admins and
   other households' ids; grants checked.
 - Applied: local first, then staging, then production with the owner's OK,
@@ -212,6 +253,10 @@ AGENTS.md; reviewers please confirm.)
   history untouched; previewed first; Undo). B: leave them as they are.
 - **D5 — Floor names.** **A (recommended):** keep what you typed ("LT2");
   rename any time on the Rooms page. B: rename to "Lantai 2" while sorting.
+- **D6 — Rooms that are really one room's parts** ("GB2 Bathroom Toilet",
+  "GB2 Bathroom Wastafel"). **A (recommended):** offer to merge them into one
+  room with spots (Toilet, Wastafel) while sorting; previewed, Undo. B: keep
+  them as separate rooms; spots are still there for new chores.
 
 ## Glossary rows to add (before any Indonesian text)
 
@@ -226,6 +271,9 @@ AGENTS.md; reviewers please confirm.)
 | Add chore here | **Tambah tugas di sini** |
 | No vacuum yet | **Belum ada vakum** (pattern: "Belum ada {job}") |
 | Job names | as in the jobs table |
+| Spot (optional) | **Bagian (opsional)** |
+| New spot | **Bagian baru** |
+| Sink / Mirror / Wall | **Wastafel / Cermin / Dinding** |
 
 ## Tutorial (shown once, per role)
 
@@ -244,12 +292,13 @@ the card once so later features reuse it.
 3. "Tap **Add** next to a room to set it up there." / "Ketuk **Tambah** di
    samping ruangan untuk menambahkannya."
 
-PR B adds: "Sort your rooms into floors once, and pick several rooms when you
-add a chore."
+PR B adds: "Sort your rooms into floors once, pick several rooms when you
+add a chore, and pick a spot (like the sink) when a chore is for one thing in
+a room."
 
 **Staff** (Bahasa Indonesia only): nothing in PR A changes their screens, so
-no card. PR B, one line: "Nama ruangan sekarang ada lantainya, misalnya
-**LT2 · Lounge**."
+no card. PR B, one line: "Nama ruangan sekarang ada lantai dan bagiannya,
+misalnya **LT2 · GB2 Bathroom · Wastafel**: kerjakan bagian itu saja."
 
 ## Next: repairs (Phase 159, its own plan)
 
