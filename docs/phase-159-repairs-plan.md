@@ -73,8 +73,9 @@ part), so a visit finishing never closes the repair on its own.
 
 ## The screens (mockups 1–6)
 
-1. **Staff: Lapor kerusakan.** Room (picked by floor), spot (chips of that
-   room's spots, or new), **Apa yang rusak?** (required), photo (camera
+1. **Staff: Lapor kerusakan.** Room (picked by floor), spot, labelled
+   **Bagian (boleh dikosongkan)** as the glossary asks for staff forms (chips
+   of that room's spots, or new), **Apa yang rusak?** (required), photo (camera
    first, strongly suggested), **Darurat** switch with a hint ("bocor,
    listrik, gas — pemilik langsung diberi tahu"). **Kirim**. Then: "Terkirim
    ke pemilik rumah", and Undo for 5 minutes.
@@ -126,9 +127,26 @@ first.
 "Scheduled" and "work done" are **derived** from the linked visits, not
 stored, so they can't disagree with the chores.
 
-**Table `repair_costs`** (D4, owners only, PR B): `repair_id` (PK, FK, cascade),
-`household_id`, `amount_idr` (bigint, ≥ 0), `receipt_photo_url`, `note`.
-Separate so staff phones can never read costs, whatever a client asks for.
+**Table `repair_costs`** (D4, owners only, PR B): `repair_id` (PK),
+`household_id`, `amount_idr` (bigint, ≥ 0), `receipt_photo_url`, `note`. The
+key to the repair is composite, `(repair_id, household_id)` →
+`repairs (id, household_id)`, `on delete cascade`, so a cost can only ever
+belong to a repair of its own household, whatever ids a client sends.
+Separate from `repairs` so staff phones can never read costs.
+
+**Receipt photos live in their own owner-only bucket**, not in
+`household-logs`. Migration 092's `tenant_read_household_logs` lets every
+session of the household, staff phones included, read any `household-logs`
+object, and `/api/photo` relies on those policies; a receipt there would show
+staff the amount even though `repair_costs` is closed to them. So PR B adds a
+private bucket **`owner-receipts`** (`<household>/<repair>/…`), with Storage
+policies that allow select, insert and delete only to a `household_members`
+row of that household (never `get_user_household_ids()`), the same type and
+size limits as the photo buckets, and adds it to `isPhotoBucket`
+(`src/lib/photos.ts`) so `/api/photo` serves it through those policies. No
+change to 092's policies. Tests: a staff session can't list, read or upload
+in `owner-receipts`; an owner of another household can't either; the nightly
+clean-up removes receipts with the repair.
 
 **`household_tasks.repair_id`**: nullable; composite FK `(repair_id,
 household_id)` → `repairs (id, household_id)`, `on delete set null
@@ -175,9 +193,15 @@ client chooses the text.
   same secret; only its SQL functions change (`create or replace`, re-revoked,
   `service_role` only).
 
-**Export and deletion (R7, migration 127, live since 2026-11-09)**:
-`export_household_data()` is re-created to include repairs (and their costs:
-the export is admin-only). Household deletion already cascades.
+**Export and deletion (R7, migration 127)**: **a prerequisite.** Migration
+127 is in PR #22, applied to staging and production on 2026-11-09 but not yet
+merged, so it isn't in `main`'s migrations. PR #22 must merge before this
+phase is built. Then `export_household_data()` is re-created (same
+`security definer`, empty `search_path`, admin check through
+`caller_admin_household()`, revoked from `public, anon`, granted to
+`authenticated`) to include repairs and their costs (the export is
+admin-only). Household deletion already cascades, and 127's orphaned-photo
+sweep is extended to `owner-receipts`.
 
 **Tests**: `supabase/tests/129_repairs.sql`, rolled back:
 - owners report, accept, dismiss, close;
@@ -214,7 +238,7 @@ scheduling a visit through the chore form, "work done → check", the rooms'
 Repairs section and chip, the Today line, the urgent push, the photo
 retention, the export, the privacy policy, the tutorial.
 
-**PR B: costs, receipts and notes**: `repair_costs` (owners only), a short
+**PR B: costs, receipts and notes**: `repair_costs` and the `owner-receipts` bucket (owners only), a short
 **notes thread** on a repair for owners and staff ("the repair person needs a
 part, back Thursday", with an optional photo), repair-person name
 suggestions from earlier repairs, and an optional warranty end date.
@@ -279,12 +303,14 @@ suggestions from earlier repairs, and an optional warranty end date.
 | Fixed / Needs another visit | **Sudah diperbaiki / Perlu datang lagi** |
 | Before / after the repair (photos) | **Foto sebelum diperbaiki / sesudah diperbaiki** |
 | Cost / Receipt | **Biaya / Nota** |
+| Spot, on the staff report form | **Bagian (boleh dikosongkan)** (staff forms never say "opsional") |
 
 ## When
 
-1. Phase 158 PR A (Rooms view), then PR B (floors and spots, migration 128).
-2. **Phase 159 PR A** (this plan), then PR B.
-3. Kakak's go-live runs in parallel. Later, Kakak can file a report from one
+1. PR #22 (migration 127, household export and deletion) merged: required.
+2. Phase 158 PR A (Rooms view), then PR B (floors and spots, migration 128).
+3. **Phase 159 PR A** (this plan), then PR B.
+4. Kakak's go-live runs in parallel. Later, Kakak can file a report from one
    sentence ("AC kamar utama bocor").
 
 ## Not in this phase
