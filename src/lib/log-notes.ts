@@ -6,6 +6,7 @@
  * written before the change are still in the database, so they are cleaned up
  * when shown instead of rewritten. Notes staff typed themselves are left alone.
  */
+/** How cancel-routine-button.tsx starts its note (keep the two in step). */
 export const CANCELLED_NOTE_PREFIX = "Jadwal Dibatalkan:";
 
 const LEGACY_PREFIXES = [/^\s*\u{274C}\u{FE0F}?\s*(?=Jadwal Dibatalkan:)/u];
