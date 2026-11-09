@@ -1,4 +1,4 @@
-import { get, set } from "idb-keyval";
+import { get, update } from "idb-keyval";
 import type { CreateBatchLogInput, FoodItemInput } from "@/lib/data";
 import type { FoodItem, HouseholdTask, TaskLog } from "@/types/database";
 import { dataProvider } from "@/lib/data";
@@ -180,21 +180,18 @@ async function readAll(): Promise<OfflineQueueItem[]> {
 }
 
 /**
- * Read-modify-write under one lock, so two tabs (or the installed app beside
- * a browser tab) never drop each other's items.
+ * Read-modify-write in one IndexedDB transaction (idb-keyval's update), so a
+ * save added while a drain removes another — in this tab or another one, with
+ * or without Web Locks — is never overwritten by the removal (Codex, PR #41).
  */
 async function mutate(change: (current: OfflineQueueItem[]) => OfflineQueueItem[]): Promise<void> {
-  const run = async () => {
-    const next = change(await readAll());
-    await set(QUEUE_KEY, next);
-    items = next;
-    emit();
-  };
-  if (typeof navigator !== "undefined" && navigator.locks) {
-    await navigator.locks.request("miamus-outbox-write", run);
-  } else {
-    await run();
-  }
+  let next: OfflineQueueItem[] = [];
+  await update<unknown[]>(QUEUE_KEY, (raw = []) => {
+    next = change(raw.map(normalizeQueueItem).filter((item): item is OfflineQueueItem => item !== null));
+    return next;
+  });
+  items = next;
+  emit();
 }
 
 /** Reads what an earlier visit left behind, once per page load. */

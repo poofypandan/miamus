@@ -7,6 +7,8 @@ const memory = new Map<string, unknown>();
 vi.mock("idb-keyval", () => ({
   get: async (key: string) => structuredClone(memory.get(key)),
   set: async (key: string, value: unknown) => void memory.set(key, structuredClone(value)),
+  update: async (key: string, change: (old: unknown) => unknown) =>
+    void memory.set(key, structuredClone(change(structuredClone(memory.get(key))))),
 }));
 
 const provider = {
@@ -190,6 +192,16 @@ describe("submitJob", () => {
     delete (globalThis as { indexedDB?: unknown }).indexedDB;
     provider.createLogsBatch.mockRejectedValue(NO_ANSWER);
     await expect(queue.submitJob(logJob())).rejects.toBe(NO_ANSWER);
+  });
+});
+
+describe("queue writes", () => {
+  it("never lose a save added while a sent one is being removed", async () => {
+    provider.createLogsBatch.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(logJob("dog-1"));
+    const [first] = await stored();
+    await Promise.all([queue.clearFromQueue(first.id), queue.submitJob(logJob("dog-2"))]);
+    expect((await stored()).map((i) => i.job)).toEqual([logJob("dog-2")]);
   });
 });
 

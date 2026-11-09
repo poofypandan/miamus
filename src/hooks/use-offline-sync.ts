@@ -103,8 +103,13 @@ export function useOfflineSync(lang: "en" | "id") {
     function run() {
       if (stopped) return;
       if (document.visibilityState !== "visible") return;
-      // Already sending here: that run reschedules when it ends.
-      if (draining) return;
+      // Already sending — possibly started by the instance on the page just
+      // left, whose own reschedule is now a no-op: pick up from where it ends
+      // (Codex, PR #41).
+      if (draining) {
+        void draining.finally(() => schedule(retryDelayMs(failures - 1)));
+        return;
+      }
       draining = drainOnce()
         .then((result) => {
           report(result);

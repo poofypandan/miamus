@@ -70,6 +70,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     useHousehold();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // The photo a pressed Simpan handed to the save queue (see dropCapture).
+  const submittedPhoto = useRef<string | null>(null);
   const [capture, setCapture] = useState<PendingCapture | null>(null);
   // The position in the strip, not the tile itself — the tile is re-derived
   // from photoGroups below, so a delete (or any refresh) flows straight through
@@ -273,6 +275,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       return;
     }
     setConfirming(true);
+    submittedPhoto.current = capture.photoUrl;
     try {
       const chosen = capture.items.filter((i) => capture.selected.has(i.entityId));
       // Derived at the moment of saving: a first vet photo is the check-in, a
@@ -318,6 +321,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       setCapture(null);
     } catch (err) {
       console.error(err);
+      // Refused, so no save holds it: closing the dialog may discard it again.
+      submittedPhoto.current = null;
       toast.error("Gagal menyimpan catatan");
     } finally {
       setConfirming(false);
@@ -325,8 +330,10 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   }
 
   // Closed without saving: the photo on the phone is for nothing now.
+  // Once Simpan is pressed the photo belongs to the save in the queue, even
+  // if the dialog is dismissed while it is still uploading (Codex, PR #41).
   function dropCapture() {
-    if (capture) void discardPhoto(capture.photoUrl);
+    if (capture && submittedPhoto.current !== capture.photoUrl) void discardPhoto(capture.photoUrl);
     setCapture(null);
   }
 
