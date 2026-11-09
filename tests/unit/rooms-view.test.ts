@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { choreJobsIn } from "@/lib/chore-jobs";
 import {
   allRoomRows,
+  placesWithJob,
   buildRoomsModel,
   isSetUp,
   parseRoomName,
@@ -155,6 +156,12 @@ describe("buildRoomsModel", () => {
     const rows = allRoomRows(model);
     expect(rows).toHaveLength(5);
     expect(rows.filter((r) => roomHasJob(r, "vacuum")).map((r) => r.label)).toEqual(["Lounge"]);
+  });
+
+  it("counts a job's places for its chip, whole floors included", () => {
+    // Trash is only set up for the whole of LT2: one place, not zero.
+    expect(placesWithJob(model, "trash")).toBe(1);
+    expect(placesWithJob(model, "vacuum")).toBe(1);
   });
 });
 
