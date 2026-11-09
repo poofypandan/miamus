@@ -204,7 +204,12 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         return route.fulfill({ status: 204, body: "" });
       }
       if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks);
-      if (table === "household_tasks" && options.chores) return route.fulfill({ json: [...options.chores, ...tasks] });
+      if (table === "household_tasks" && options.chores) {
+        // The simple PostgREST filters the app's chore reads use (eq, neq,
+        // lt, lte, gt, gte, is), so each read returns what the real backend
+        // would: the week read misses a chore set up for later (Codex, #30).
+        return route.fulfill({ json: filterRows([...options.chores, ...tasks], new URL(request.url()).searchParams) });
+      }
       if (table === "household_locations" && options.rooms) return route.fulfill({ json: options.rooms });
       if (options.owner && who === OWNER) {
         const answer = ownerAnswer(table, options.owner.locale);
@@ -281,6 +286,33 @@ function ownerAnswer(table: string, locale: "en" | "id"): unknown {
     default:
       return undefined;
   }
+}
+
+/**
+ * Applies a request's simple column filters (`col=op.value`) to stub rows.
+ * `or=(…)`, `not.…` and anything else unknown are left out: rows are kept,
+ * so a test can only see more than the real backend would, never less.
+ */
+function filterRows(rows: Record<string, unknown>[], params: URLSearchParams): Record<string, unknown>[] {
+  const ops: Record<string, (a: string | null, b: string) => boolean> = {
+    eq: (a, b) => a === b,
+    neq: (a, b) => a !== null && a !== b,
+    lt: (a, b) => a !== null && a < b,
+    lte: (a, b) => a !== null && a <= b,
+    gt: (a, b) => a !== null && a > b,
+    gte: (a, b) => a !== null && a >= b,
+    is: (a, b) => (b === "null" ? a === null : String(a) === b),
+  };
+  const filters: [string, (a: string | null, b: string) => boolean, string][] = [];
+  for (const [column, raw] of params.entries()) {
+    if (["select", "order", "limit", "offset", "or", "and"].includes(column)) continue;
+    const dot = raw.indexOf(".");
+    const op = ops[raw.slice(0, dot)];
+    if (dot > 0 && op) filters.push([column, op, raw.slice(dot + 1)]);
+  }
+  return rows.filter((row) =>
+    filters.every(([column, op, value]) => op(row[column] == null ? null : String(row[column]), value))
+  );
 }
 
 /** household_tasks writes, enough for a chore saved and undone (Kakak). */

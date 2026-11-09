@@ -23,6 +23,12 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function inDays(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 let n = 0;
 const chore = (over: Record<string, unknown>) => ({
   id: `00000000-0000-4000-8000-0000000002${String(++n).padStart(2, "0")}`,
@@ -55,6 +61,8 @@ const CHORES = [
   chore({ title: "Rapihkan baju, setrika baju", recurrence: "weekly", due_date: "2026-11-11", location_id: CLOSET.id }),
   chore({ title: "Sedot debu karpet", recurrence: "weekly", due_date: "2026-11-11", location_id: MUSIC.id }),
   chore({ title: "Vacuum sofa" }),
+  // Set up three weeks out: outside the week the Agenda loads (Codex, #30).
+  chore({ title: "Vacuum kamar musik", due_date: inDays(21), location_id: TERRACE.id }),
 ];
 const ROOMS = [LOUNGE, WHOLE_LT2, CLOSET, MUSIC, TERRACE];
 
@@ -78,7 +86,9 @@ test("Rooms: which rooms get vacuumed, and adding it where it's missing", async 
   // Vacuum: "sedot debu" counts as vacuuming, never as dusting.
   await page.getByRole("button", { name: /^Vacuum \d/ }).click();
   await expect(page).toHaveURL(/job=vacuum/);
-  await expect(page.getByText(/in 2 of 4\s+rooms/)).toBeVisible();
+  // The terrace's vacuum is three weeks out, yet it counts.
+  await expect(page.getByText(/in 3 of 4\s+rooms/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Other rooms" }).getByText("No vacuum yet")).toHaveCount(0);
   await expect(lt2.getByText("Vacuum in 1 of 2")).toBeVisible();
   await expect(lt2.getByText("Mon, Thu · Ari")).toBeVisible();
   await expect(page.getByRole("region", { name: "LT3" }).getByText("Wed · Ari")).toBeVisible();
@@ -94,7 +104,7 @@ test("Rooms: which rooms get vacuumed, and adding it where it's missing", async 
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0]).toMatchObject({ title: "Vakum", location_id: CLOSET.id });
   await expect(lt2.getByText("No vacuum yet")).toHaveCount(1);
-  await expect(page.getByText(/in 3 of 4\s+rooms/)).toBeVisible();
+  await expect(page.getByText(/in 4 of 4\s+rooms/)).toBeVisible();
 
   // A room's sheet lists what's set up there, by job.
   await page.getByRole("button", { name: /^All \d/ }).click();
@@ -120,7 +130,7 @@ test("Rooms in Bahasa Indonesia, with its What's new card shown once", async ({ 
   await expect(page.getByText("Vakum · Sen, Kam")).toBeVisible();
 
   await page.getByRole("button", { name: /^Vakum \d/ }).click();
-  await expect(page.getByText(/di 2 dari 4\s+ruangan/)).toBeVisible();
+  await expect(page.getByText(/di 3 dari 4\s+ruangan/)).toBeVisible();
   await expect(page.getByText("Belum ada vakum").first()).toBeVisible();
 
   // Closed once, it stays closed on this phone; Household → Yang baru keeps it.

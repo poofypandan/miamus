@@ -17,6 +17,7 @@ import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
 import { isTemplate, rolloverFloorFor } from "@/lib/chore-recurrence";
+import { isSetUp } from "@/lib/rooms-view";
 
 const STORAGE_KEY = "maimus_mock_db_v1";
 // The preview household's house code, as an admin would read it out: MIA-M23.
@@ -522,6 +523,11 @@ export const mockProvider: DataProvider = {
     db.routineProposals[idx] = updated;
     saveDB(db);
     return delay(updated);
+  },
+  async listSetUpChores(today) {
+    // Same rows listHouseholdTasks reads from, filtered the way the Rooms
+    // view's isSetUp does.
+    return delay(loadDB().householdTasks.filter((task) => isSetUp(task, today)));
   },
   async listHouseholdTasks(from, to, today) {
     // Mirrors the three reads the Supabase provider issues (Phase 100), so

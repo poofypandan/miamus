@@ -589,6 +589,34 @@ export const supabaseProvider: DataProvider = {
     }
     return [...byId.values()];
   },
+  async listSetUpChores(today) {
+    // Two narrow reads, like listHouseholdTasks: the repeats that haven't
+    // ended, and the one-offs still to do. A row with no recurrence is a
+    // one-off (migrations/097 has no CHECK); the client re-checks every row
+    // with isSetUp, so reading a little wide is harmless.
+    const household = getActiveHouseholdId();
+    const base = () =>
+      client()
+        .from("household_tasks")
+        .select("*")
+        .eq("household_id", household)
+        .is("parent_task_id", null)
+        .neq("status", "cancelled");
+    const [repeats, oneOffs] = await Promise.all([
+      base()
+        .neq("recurrence", "none")
+        .or(`recurrence_until.is.null,recurrence_until.gte.${today}`),
+      base()
+        .or("recurrence.is.null,recurrence.eq.none")
+        .neq("status", "completed")
+        .gte("due_date", today),
+    ]);
+    if (repeats.error) throw repeats.error;
+    if (oneOffs.error) throw oneOffs.error;
+    const byId = new Map<string, HouseholdTask>();
+    for (const row of [...(repeats.data ?? []), ...(oneOffs.data ?? [])]) byId.set(row.id, row);
+    return [...byId.values()];
+  },
   async updateHouseholdTask(id, patch) {
     const { data, error } = await client()
       .from("household_tasks")

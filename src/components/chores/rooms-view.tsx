@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronRight, DoorOpen, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { dataProvider } from "@/lib/data";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FilterPill } from "@/components/shared/filter-pill";
 import {
@@ -46,8 +48,47 @@ import type { HouseholdTask } from "@/types/database";
  * Today; adds and edits go through the same ChoreEditorDialog. No database
  * change: floors come from the room names (lib/rooms-view.ts).
  */
-export function RoomsView() {
+/**
+ * Every set-up chore, whatever week the Agenda is on (Codex, PR #30): the
+ * household's chore cache only holds the week on screen, so a chore set up
+ * for later would look missing and invite a duplicate. Read on its own, and
+ * read again whenever the household's chores change, so an edit made here
+ * shows; until that read lands, the cache's fresher copy of any row wins.
+ */
+function useSetUpChores(today: string): { rows: HouseholdTask[] | null; failed: boolean } {
   const { householdTasks } = useHousehold();
+  const [state, setState] = useState<{ rows: HouseholdTask[] | null; failed: boolean }>({
+    rows: null,
+    failed: false,
+  });
+
+  useEffect(() => {
+    let live = true;
+    dataProvider.listSetUpChores(today).then(
+      (rows) => {
+        if (live) setState({ rows, failed: false });
+      },
+      (err) => {
+        console.error("Rooms: set-up chores", err);
+        if (live) setState((previous) => ({ rows: previous.rows, failed: true }));
+      }
+    );
+    return () => {
+      live = false;
+    };
+  }, [today, householdTasks]);
+
+  const rows = useMemo(() => {
+    if (!state.rows) return state.failed ? householdTasks : null;
+    const byId = new Map(state.rows.map((row) => [row.id, row]));
+    for (const row of householdTasks) byId.set(row.id, row);
+    return [...byId.values()];
+  }, [state, householdTasks]);
+
+  return { rows, failed: state.failed && !state.rows };
+}
+
+export function RoomsView() {
   const { locations } = useHouseholdLocations();
   const { allProfiles } = useStaffProfiles();
   const locale = useOwnerLocale();
@@ -55,10 +96,11 @@ export function RoomsView() {
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const today = formatDateLocal(useToday());
   const { job, setJob } = useChoresView();
+  const { rows: chores, failed } = useSetUpChores(today);
 
   const model = useMemo(
-    () => buildRoomsModel(locations ?? [], householdTasks, today),
-    [locations, householdTasks, today]
+    () => buildRoomsModel(locations ?? [], chores ?? [], today),
+    [locations, chores, today]
   );
   const rows = useMemo(() => allRoomRows(model), [model]);
 
@@ -81,7 +123,17 @@ export function RoomsView() {
     setEditor({ task, preset });
   }
 
-  if ((locations ?? []).length === 0 && model.noRoom.length === 0) {
+  if (!chores || !locations) {
+    return (
+      <div className="flex flex-col gap-3" aria-busy="true" aria-label={t("Loading rooms", "Memuat ruangan")}>
+        <Skeleton className="h-9 w-full rounded-full" />
+        <Skeleton className="h-28 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (locations.length === 0 && model.noRoom.length === 0) {
     return (
       <>
         <EmptyState
@@ -106,6 +158,14 @@ export function RoomsView() {
 
   return (
     <div className="flex flex-col gap-4">
+      {failed && (
+        <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {t(
+            "Couldn't load every chore, so this shows only this week's. Rooms may look emptier than they are.",
+            "Tidak semua tugas bisa dimuat, jadi hanya tugas minggu ini yang tampil. Ruangan bisa terlihat lebih kosong dari sebenarnya."
+          )}
+        </p>
+      )}
       {model.jobs.length > 0 && (
         <div
           role="group"
