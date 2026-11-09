@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { LEGAL, isLegalDraft } from "@/config/legal";
 
 /**
@@ -538,8 +539,12 @@ export function PrivacyPolicy({ lang }: { lang: Lang }) {
       className="mx-auto w-full max-w-md px-6 pt-10 pb-[calc(3rem+env(safe-area-inset-bottom))]"
     >
       <div className="flex items-center justify-between gap-4 text-sm">
-        <Link href="/" className="text-muted-foreground underline-offset-4 hover:underline">
-          ← {copy.back}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-muted-foreground underline-offset-4 hover:underline"
+        >
+          <ArrowLeft aria-hidden className="size-4 shrink-0" />
+          {copy.back}
         </Link>
         <Link
           href={copy.other.href}
