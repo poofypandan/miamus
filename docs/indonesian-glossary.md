@@ -105,6 +105,9 @@ people are **staf** and **admin**.
 | Sort your rooms into floors / Sort rooms | **Kelompokkan ruangan per lantai** / **Kelompokkan** | The one-time card. |
 | Spot (part of a room) | **Bagian** | On chores: "LT2 · GB2 Bathroom · Wastafel". |
 | Add a room / Add a floor | **Tambah ruangan** / **Tambah lantai** | Household → Ruangan. |
+| Room (optional) | **Ruangan (opsional)** | Phase 158 PR B2, the chore form. Replaces "Lokasi (opsional)". |
+| More rooms (pick several when adding) | **Pilih ruangan lain** | Phase 158 PR B2. Not "Ruangan lain", which is the "Other rooms" section. |
+| Spot (optional) / New spot | **Bagian (opsional)** / **Bagian baru** | Phase 158 PR B2, the chore form's chips. |
 
 ## Formatting
 

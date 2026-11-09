@@ -29,6 +29,7 @@ import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { assigneeOptions } from "@/lib/leave";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { LocationCombobox } from "@/components/chores/location-combobox";
+import { SpotField } from "@/components/chores/spot-field";
 import { dayKeyLabel } from "@/lib/date-label";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import {
@@ -100,6 +101,7 @@ export function ChoreEditorDialog({
 }) {
   const {
     createHouseholdTask,
+    createHouseholdTasks,
     updateHouseholdTask,
     deleteHouseholdTask,
     householdTasks,
@@ -116,7 +118,9 @@ export function ChoreEditorDialog({
   const editing = !!task;
 
   const [title, setTitle] = useState("");
-  const [location, setLocation] = useState<HouseholdLocation | null>(null);
+  // One place when editing; when adding, up to 12, one chore each (Phase 158).
+  const [places, setPlaces] = useState<HouseholdLocation[]>([]);
+  const [spot, setSpot] = useState<string | null>(null);
   const [category, setCategory] = useState<HouseholdTaskCategory>("cleaning");
   const [assignee, setAssignee] = useState<string>(UNASSIGNED);
   const [date, setDate] = useState(defaultDate);
@@ -155,7 +159,9 @@ export function ChoreEditorDialog({
     if (task) {
       setTitle(task.title);
       // A room that has since been deleted reads as none, and saves as none.
-      setLocation(locations?.find((room) => room.id === task.location_id) ?? null);
+      const room = locations?.find((place) => place.id === task.location_id);
+      setPlaces(room ? [room] : []);
+      setSpot(room ? (task.spot?.trim() || null) : null);
       setCategory(task.category);
       setAssignee(task.assigned_to ?? UNASSIGNED);
       setDate(task.due_date);
@@ -166,9 +172,9 @@ export function ChoreEditorDialog({
       setSupervision(!!task.requires_supervision);
     } else {
       setTitle(preset?.title ?? "");
-      setLocation(
-        preset?.locationId ? (locations?.find((room) => room.id === preset.locationId) ?? null) : null
-      );
+      const room = preset?.locationId ? locations?.find((place) => place.id === preset.locationId) : undefined;
+      setPlaces(room ? [room] : []);
+      setSpot(null);
       setCategory("cleaning");
       setAssignee(UNASSIGNED);
       setDate(defaultDate);
@@ -184,6 +190,7 @@ export function ChoreEditorDialog({
   }, [open, task, defaultDate]);
 
   const untilBeforeStart = !!until && until < date;
+  const placeIds = useMemo(() => places.map((place) => place.id), [places]);
 
   async function save() {
     if (!title.trim()) {
@@ -210,11 +217,29 @@ export function ChoreEditorDialog({
         // quietly cap the repeat if it were ever turned back on.
         recurrence_until: recurrence === "none" ? null : until || null,
         requires_supervision: supervision,
-        location_id: location?.id ?? null,
+        location_id: places[0]?.id ?? null,
+        // The spot goes only with a room. Sent when there is one, or to clear
+        // one this chore has; otherwise left out, so a database before
+        // migrations/129 still takes the chore.
+        ...(places.length > 0 && spot
+          ? { spot }
+          : task?.spot
+            ? { spot: null }
+            : {}),
       };
       if (task) {
         await updateHouseholdTask(task.id, fields);
         toast.success(t(`Saved "${fields.title}"`, `"${fields.title}" disimpan`));
+      } else if (places.length > 1) {
+        // One chore per room, saved together or not at all, so staff tick
+        // each room off and the Rooms view counts each one.
+        await createHouseholdTasks(places.map((place) => ({ ...fields, location_id: place.id })));
+        toast.success(
+          t(
+            `Added "${fields.title}" to ${places.length} rooms`,
+            `"${fields.title}" ditambahkan ke ${places.length} ruangan`
+          )
+        );
       } else {
         await createHouseholdTask(fields);
         toast.success(t(`Added "${fields.title}"`, `"${fields.title}" ditambahkan`));
@@ -402,9 +427,23 @@ export function ChoreEditorDialog({
 
           {/* Right under the title, which it used to be typed into (Phase 135). */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t("Location (optional)", "Lokasi (opsional)")}</Label>
-            <LocationCombobox value={location} onChange={setLocation} />
+            <Label className="text-xs">{t("Room (optional)", "Ruangan (opsional)")}</Label>
+            <LocationCombobox
+              values={places}
+              onChange={(next) => {
+                setPlaces(next);
+                if (next.length === 0) setSpot(null);
+              }}
+              multiple={!editing}
+            />
           </div>
+
+          {places.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">{t("Spot (optional)", "Bagian (opsional)")}</Label>
+              <SpotField value={spot} onChange={setSpot} placeIds={placeIds} />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">{t("Category", "Kategori")}</Label>

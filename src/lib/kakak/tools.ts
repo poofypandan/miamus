@@ -44,6 +44,7 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
         "requires_supervision",
         "room",
         "new_room_name",
+        "new_room_floor",
         "notes",
       ],
       properties: {
@@ -73,6 +74,9 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
         room: nullableString("A room reference (R1, …) or null."),
         new_room_name: nullableString(
           "Only after the owner agreed to add a new room; room must then be null.",
+        ),
+        new_room_floor: nullableString(
+          "With new_room_name only: the floor it is on, as a reference marked (whole floor), or null.",
         ),
         notes: nullableString("Max 200 characters."),
       },

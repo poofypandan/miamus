@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
-import { WHATS_NEW, storageKey, whatsNewEntry } from "@/lib/whats-new";
+import { WHATS_NEW, staffWhatsNewEntry, storageKey, whatsNewEntry } from "@/lib/whats-new";
 
 function wasSeen(id: string): boolean {
   try {
@@ -86,6 +86,47 @@ export function WhatsNewCard({ id, onTry }: { id: string; onTry?: () => void }) 
           {t("Got it", "Mengerti")}
         </Button>
       </div>
+    </section>
+  );
+}
+
+/**
+ * A staff phone's one-line tutorial (lib/whats-new.ts STAFF_WHATS_NEW), in
+ * Bahasa Indonesia only. Shown once, and only when `show` says the feature is
+ * on this household's screens (there's no point explaining floors before the
+ * owner has any).
+ */
+export function StaffWhatsNewCard({ id, show }: { id: string; show: boolean }) {
+  const entry = staffWhatsNewEntry(id);
+  const [seen, setSeen] = useState(true);
+
+  useEffect(() => {
+    if (entry) setSeen(wasSeen(id));
+  }, [entry, id]);
+
+  if (!entry || !show || seen) return null;
+
+  return (
+    <section
+      aria-label={entry.title}
+      className="relative flex flex-col gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 animate-view-fade motion-reduce:animate-none"
+    >
+      <button
+        type="button"
+        onClick={() => {
+          markSeen(id);
+          setSeen(true);
+        }}
+        aria-label="Tutup"
+        className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-zinc-200"
+      >
+        <X className="size-4" />
+      </button>
+      <h3 className="flex items-center gap-1.5 pr-8 text-sm font-semibold text-gray-900">
+        <Sparkles className="size-4 shrink-0" aria-hidden />
+        {entry.title}
+      </h3>
+      <p className="pr-2 text-[13px] leading-snug text-gray-700">{entry.text}</p>
     </section>
   );
 }

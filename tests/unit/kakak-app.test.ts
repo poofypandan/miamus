@@ -304,6 +304,8 @@ describe("the card", () => {
     locationId: id(20),
     roomName: "Teras",
     newRoomName: null,
+    newRoomFloorId: null,
+    newRoomFloorName: null,
     notes: null,
   };
   it("says it in plain words in both languages", () => {

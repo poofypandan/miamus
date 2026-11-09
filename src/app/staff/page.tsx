@@ -32,7 +32,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
-import { useLocationName } from "@/hooks/use-household-locations";
+import { useHouseholdLocations, useLocationName } from "@/hooks/use-household-locations";
+import { StaffWhatsNewCard } from "@/components/shared/whats-new";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { LaunchCover } from "@/components/brand/brand-cover";
@@ -248,6 +249,18 @@ function TasksView() {
   const staffName = useStaffNameLookup(allProfiles, "Anggota");
   const roomName = useLocationName();
 
+  // The floors tip (Phase 158) only once this phone's list actually shows a
+  // floor or a spot: before the owner sorts rooms there is nothing to explain.
+  const { locations } = useHouseholdLocations();
+  const showFloorsTip = useMemo(() => {
+    const onFloor = new Set(
+      (locations ?? []).filter((place) => place.kind === "floor" || place.parent_id).map((place) => place.id)
+    );
+    return chores.some(
+      (chore) => !!chore.task.spot?.trim() || (!!chore.task.location_id && onFloor.has(chore.task.location_id))
+    );
+  }, [chores, locations]);
+
   // `compact` inside Selesai: a finished chore loses its inline photo pair
   // and says "Lihat foto" instead (Phase 131); routines are compact already.
   function renderEntry(entry: UnifiedAgendaEntry, compact = false) {
@@ -300,6 +313,8 @@ function TasksView() {
         className="flex flex-1 animate-view-fade flex-col gap-4 motion-reduce:animate-none"
       >
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+
+        <StaffWhatsNewCard id="staff-floors-2026-11" show={showFloorsTip} />
 
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.

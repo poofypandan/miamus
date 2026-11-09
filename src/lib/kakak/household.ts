@@ -26,7 +26,12 @@ export interface KakakHousehold {
     meals: string[];
     potty: string[];
   }[];
-  rooms: { ref: string; name: string }[];
+  /**
+   * Places (migrations/129): `name` is the place's own name; a room on a
+   * floor carries the floor's name, and a floor itself is `wholeFloor`, for
+   * a chore on the whole floor.
+   */
+  rooms: { ref: string; name: string; floor?: string | null; wholeFloor?: boolean }[];
   items: { ref: string; name: string; pet: boolean }[];
 }
 
@@ -89,12 +94,15 @@ export function householdRefs(household: KakakHousehold): {
   people: Set<string>;
   pets: Set<string>;
   rooms: Set<string>;
+  /** The references that are a floor (whole floor), which a new room may sit on. */
+  floors: Set<string>;
   items: Set<string>;
 } {
   return {
     people: new Set([household.owner.ref, ...household.people.map((p) => p.ref)]),
     pets: new Set(household.pets.map((p) => p.ref)),
     rooms: new Set(household.rooms.map((r) => r.ref)),
+    floors: new Set(household.rooms.filter((r) => r.wholeFloor).map((r) => r.ref)),
     items: new Set(household.items.map((i) => i.ref)),
   };
 }
@@ -119,7 +127,7 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   if (household.pets.length === 0) lines.push("- none");
   lines.push("");
   lines.push("Rooms:");
-  for (const room of household.rooms) lines.push(`- ${room.ref}: ${room.name}`);
+  for (const room of household.rooms) lines.push(`- ${room.ref}: ${roomLine(room)}`);
   if (household.rooms.length === 0) lines.push("- none");
   lines.push("");
   lines.push("Shopping items already in the app:");
@@ -137,4 +145,10 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   lines.push(`First day of next month: ${dayLine(firstDayOfNextMonth(household.today))}.`);
   lines.push("</household>");
   return lines.join("\n");
+}
+
+/** "LT2 (whole floor)", "LT2 · Lounge", or a room with no floor by its name. */
+function roomLine(room: KakakHousehold["rooms"][number]): string {
+  if (room.wholeFloor) return `${room.name} (whole floor)`;
+  return room.floor ? `${room.floor} · ${room.name}` : room.name;
 }

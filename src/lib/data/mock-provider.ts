@@ -638,32 +638,39 @@ export const mockProvider: DataProvider = {
     return delay(occurrence);
   },
   async createHouseholdTask(input) {
+    const [task] = await mockProvider.createHouseholdTasks([input]);
+    return task;
+  },
+  async createHouseholdTasks(inputs) {
     const db = loadDB();
-    const task: HouseholdTask = {
-      id: uid("chore"),
-      household_id: getActiveHouseholdId(),
-      title: input.title,
-      notes: input.notes ?? null,
-      category: input.category,
-      assigned_to: input.assigned_to ?? null,
-      due_date: input.due_date,
-      due_time: input.due_time ?? null,
-      status: "pending",
-      completed_by: null,
-      completed_at: null,
-      photo_url: null,
-      created_at: new Date().toISOString(),
-      recurrence: input.recurrence ?? "none",
-      recurrence_until: input.recurrence_until ?? null,
-      parent_task_id: null,
-      requires_supervision: input.requires_supervision ?? false,
-      location_id: input.location_id ?? null,
-      before_photo_url: null,
-      after_photo_url: null,
-    };
-    db.householdTasks.push(task);
+    const created = inputs.map(
+      (input): HouseholdTask => ({
+        id: uid("chore"),
+        household_id: getActiveHouseholdId(),
+        title: input.title,
+        notes: input.notes ?? null,
+        category: input.category,
+        assigned_to: input.assigned_to ?? null,
+        due_date: input.due_date,
+        due_time: input.due_time ?? null,
+        status: "pending",
+        completed_by: null,
+        completed_at: null,
+        photo_url: null,
+        created_at: new Date().toISOString(),
+        recurrence: input.recurrence ?? "none",
+        recurrence_until: input.recurrence_until ?? null,
+        parent_task_id: null,
+        requires_supervision: input.requires_supervision ?? false,
+        location_id: input.location_id ?? null,
+        spot: input.spot ?? null,
+        before_photo_url: null,
+        after_photo_url: null,
+      })
+    );
+    db.householdTasks.push(...created);
     saveDB(db);
-    return delay(task);
+    return delay(created);
   },
   async updateHouseholdTaskStatus(id, status, patch) {
     const db = loadDB();

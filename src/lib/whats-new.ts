@@ -23,6 +23,25 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "room-picker-2026-11",
+    date: "2026-11-09",
+    audience: "owner",
+    title: { en: "New: several rooms at once, and spots", id: "Baru: beberapa ruangan sekaligus, dan bagian" },
+    steps: {
+      en: [
+        "When you add a chore, pick a room under its floor, or the floor's Whole floor.",
+        "Tap More rooms to add it to several rooms at once: one chore is made for each room.",
+        "Then pick a spot (like the sink) when the chore is for one thing in the room.",
+      ],
+      id: [
+        "Saat menambah tugas, pilih ruangan di bawah lantainya, atau Seluruh lantai.",
+        "Ketuk Pilih ruangan lain untuk menambahkannya ke beberapa ruangan sekaligus: satu tugas dibuat untuk setiap ruangan.",
+        "Lalu pilih bagiannya (misalnya wastafel) kalau tugasnya untuk satu bagian ruangan saja.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     id: "floors-2026-11",
     date: "2026-11-09",
     audience: "owner",
@@ -61,6 +80,31 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Show me Rooms", id: "Lihat Ruangan" },
   },
 ];
+
+/**
+ * Tutorials for staff phones, in Bahasa Indonesia only (staff screens are
+ * Indonesian, whoever holds the phone). One line each: staff change how they
+ * work, not what they set up.
+ */
+export interface StaffWhatsNewEntry {
+  id: string;
+  date: string;
+  title: string;
+  text: string;
+}
+
+export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    id: "staff-floors-2026-11",
+    date: "2026-11-09",
+    title: "Baru: lantai dan bagian ruangan",
+    text: "Nama ruangan sekarang ada lantai dan bagiannya, misalnya LT2 · GB2 Bathroom · Wastafel: kerjakan bagian itu saja.",
+  },
+];
+
+export function staffWhatsNewEntry(id: string): StaffWhatsNewEntry | undefined {
+  return STAFF_WHATS_NEW.find((entry) => entry.id === id);
+}
 
 export function whatsNewEntry(id: string): WhatsNewEntry | undefined {
   return WHATS_NEW.find((entry) => entry.id === id);

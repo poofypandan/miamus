@@ -258,6 +258,8 @@ interface HouseholdContextValue {
     status: Exclude<ProposalStatus, "pending">
   ) => Promise<void>;
   createHouseholdTask: (input: CreateHouseholdTaskInput) => Promise<HouseholdTask>;
+  /** Several chores at once, all or none (one per room, Phase 158). */
+  createHouseholdTasks: (inputs: CreateHouseholdTaskInput[]) => Promise<HouseholdTask[]>;
   /**
    * Flips a chore's status. Completing one stamps the clock and the staff
    * member on the device, and carries the proof photo in the same write — a
@@ -1284,6 +1286,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const createHouseholdTasks = useCallback(async (inputs: CreateHouseholdTaskInput[]) => {
+    const created = await dataProvider.createHouseholdTasks(inputs);
+    setHouseholdTasks((prev) => [...prev, ...created]);
+    return created;
+  }, []);
+
   const updateHouseholdTaskStatus = useCallback(
     async (
       id: string,
@@ -1518,6 +1526,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       submitRoutineProposalsBatch,
       decideRoutineProposals,
       createHouseholdTask,
+      createHouseholdTasks,
       updateHouseholdTask,
       advanceChoreStart,
       skipChoreOccurrence,
@@ -1593,6 +1602,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       submitRoutineProposalsBatch,
       decideRoutineProposals,
       createHouseholdTask,
+      createHouseholdTasks,
       updateHouseholdTask,
       advanceChoreStart,
       skipChoreOccurrence,

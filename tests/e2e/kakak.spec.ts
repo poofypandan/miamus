@@ -23,6 +23,8 @@ const chore = {
   locationId: null,
   roomName: null,
   newRoomName: null,
+  newRoomFloorId: null,
+  newRoomFloorName: null,
   notes: null,
 };
 

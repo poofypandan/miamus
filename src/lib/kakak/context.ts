@@ -41,6 +41,9 @@ export interface ContextRoomRow {
   id: string;
   name: string;
   created_at: string;
+  /** migrations/129; absent before it, which reads as a room with no floor. */
+  kind?: "room" | "floor" | null;
+  parent_id?: string | null;
 }
 
 export interface ContextItemRow {
@@ -164,13 +167,25 @@ export function buildContext(
     names.pets[ref] = name;
   }
 
+  // Each place by its own name, with its floor (migrations/129): "LT2 ·
+  // Lounge" on the card, so "Service Area" on LT1 and on LT2 are told apart,
+  // and a floor offered as a place of its own for whole-floor chores.
   const rooms: KakakHousehold["rooms"] = [];
+  const floorNames = new Map(
+    rows.rooms.filter((room) => room.kind === "floor").map((floor) => [floor.id, cleanName(floor.name)]),
+  );
   for (const room of [...rows.rooms].sort(byAge)) {
     const ref = `R${rooms.length + 1}`;
     const name = cleanName(room.name);
-    rooms.push({ ref, name });
+    if (room.kind === "floor") {
+      rooms.push({ ref, name, wholeFloor: true });
+      names.rooms[ref] = name;
+    } else {
+      const floor = (room.parent_id && floorNames.get(room.parent_id)) || null;
+      rooms.push(floor ? { ref, name, floor } : { ref, name });
+      names.rooms[ref] = floor ? `${floor} · ${name}` : name;
+    }
     refs.rooms[ref] = room.id;
-    names.rooms[ref] = name;
   }
 
   const items: KakakHousehold["items"] = [];

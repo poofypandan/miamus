@@ -53,6 +53,7 @@ export function ChoresTab() {
         onChange={setView}
       />
       <WhatsNewCard id="rooms-2026-11" onTry={view === "rooms" ? undefined : () => setView("rooms")} />
+      <WhatsNewCard id="room-picker-2026-11" />
       {view === "rooms" ? <RoomsView /> : <TodayChores />}
     </div>
   );
