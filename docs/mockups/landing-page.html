@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Landing page mockup</title>
+<style>
+:root{--bg:#fff;--ink:#111827;--ink2:#374151;--muted:#6b7280;--line:#e5e7eb;--track:#f3f4f6;--primary:#171717;--green:#047857;--greenbg:#ecfdf5}
+*{box-sizing:border-box}
+body{margin:0;background:#e9ecef;font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:var(--ink)}
+header.page{max-width:1100px;margin:0 auto;padding:20px 16px 4px}
+header.page h1{font-size:20px;margin:0 0 4px}
+header.page p{margin:0 0 6px;color:var(--muted);max-width:760px}
+section.screen{max-width:1100px;margin:0 auto;padding:18px 16px 8px}
+section.screen>h2{font-size:15px;margin:0 0 2px}
+section.screen>p{margin:0 0 12px;color:var(--muted);max-width:680px}
+.pair{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:360px;max-width:100%;background:var(--bg);border-radius:36px;border:8px solid #111;overflow:hidden;position:relative;padding-top:22px}
+.phone:not(.long){height:640px}
+.tag{position:absolute;top:-2px;right:18px;background:#111;color:#fff;font-size:10px;padding:2px 8px;border-radius:0 0 8px 8px;z-index:5}
+.top{display:flex;align-items:center;gap:8px;padding:8px 16px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff}
+.brand{font-weight:600;font-size:16px;display:flex;gap:6px;align-items:center;flex:1}
+.brand i,.mark{width:22px;height:22px;border-radius:7px;background:#111;display:inline-block}
+.mark{width:48px;height:48px;border-radius:14px;margin:4px auto 14px;display:block}
+.mark.big{width:64px;height:64px;border-radius:18px}
+.lang{display:flex;background:var(--track);border-radius:999px;padding:2px}
+.lang span{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;color:var(--muted)}
+.lang span.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.signin{font-size:13px;font-weight:600}
+section{padding:22px 18px;border-bottom:1px solid var(--line)}
+section.hero{text-align:center;padding-top:26px}
+h1{font-size:25px;line-height:1.2;letter-spacing:-.02em;margin:0 0 10px;text-wrap:balance}
+h2{font-size:18px;letter-spacing:-.01em;margin:0 0 12px}
+h3{font-size:22px;margin:0 0 8px}
+h4{font-size:14.5px;margin:0 0 3px}
+.sub{color:var(--ink2);margin:0 0 6px;font-size:15px}
+.brandline{color:var(--muted);font-size:13px;margin:0 0 18px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:12px;font-weight:600;font-size:15px;margin-top:10px}
+.btn.primary{background:var(--primary);color:#fff}
+.btn.outline{border:1px solid var(--line);color:var(--ink);font-weight:500}
+.gm{width:20px;height:20px;border-radius:999px;background:#fff;color:#4285F4;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+.stafflink{font-size:13px;color:var(--muted);margin:12px 0 2px}
+.stafflink b{color:var(--ink)}
+.beta{font-size:12px;color:var(--muted);margin:2px 0 16px}
+.heroshot{display:flex;justify-content:center}
+.step{display:grid;grid-template-columns:28px 1fr;gap:4px 10px;margin-bottom:18px}
+.num{width:26px;height:26px;border-radius:999px;background:var(--primary);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.stxt p{margin:0;color:var(--ink2);font-size:13.5px}
+.step .shot{grid-column:2}
+.shot{width:100%;max-width:250px;border:1px solid var(--line);border-radius:18px;background:#f8fafc;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 6px 18px rgba(0,0,0,.06);margin-top:8px}
+.sbar{font-size:12px;font-weight:700;text-align:center;padding:2px 0 4px;border-bottom:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+.row.ok{background:var(--greenbg);border-color:#a7f3d0}
+.th{font-size:16px}
+.tt{flex:1;min-width:0;text-align:left}
+.tt b{display:block;font-size:12.5px}
+.tt i{display:block;font-style:normal;font-size:11px;color:var(--muted)}
+.pill{font-size:10.5px;font-weight:600;background:var(--primary);color:#fff;border-radius:999px;padding:4px 7px;white-space:nowrap}
+.ring{width:18px;height:18px;border-radius:999px;border:1.5px solid #9ca3af}
+.tick{width:20px;height:20px;border-radius:999px;background:var(--green);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center}
+.photos{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.photos span{height:46px;border:1.5px dashed #cbd5e1;border-radius:10px;font-size:10.5px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.photos.done span{border:0;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);font-size:18px}
+.field{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 8px}
+.field b{color:var(--ink);font-weight:600}
+.sbtn{background:var(--primary);color:#fff;font-size:11.5px;font-weight:600;text-align:center;border-radius:9px;padding:8px}
+.fcard{display:flex;gap:12px;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px}
+.fcard p{margin:0;color:var(--ink2);font-size:13px}
+.em{width:38px;height:38px;flex:none;border-radius:10px;background:var(--track);display:flex;align-items:center;justify-content:center;font-size:19px}
+section.tint{background:#f8fafc}
+ul{margin:0;padding-left:18px;color:var(--ink2)}
+li{margin:0 0 7px}
+.lnk{font-weight:600;margin:8px 0 0}
+.faq details{border-top:1px solid var(--line);padding:11px 0}
+.faq details:last-child{border-bottom:1px solid var(--line)}
+.faq summary{font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+.faq summary::after{content:"+";color:var(--muted);font-weight:400}
+.faq details[open] summary::after{content:"\2212"}
+.faq p{margin:6px 0 0;color:var(--ink2);font-size:13.5px}
+section.cta{text-align:center}
+section.cta p{color:var(--ink2)}
+.small{font-size:12px;color:var(--muted)!important;margin:8px 0 0}
+footer{padding:16px 18px 26px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px;text-align:center}
+.signinpage{padding:80px 24px 0;text-align:center}
+.newlink{margin:18px 0 0;font-size:13.5px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.new{font-size:10px;background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 5px;text-decoration:none;display:inline-block;margin-left:4px}
+.notes{max-width:1100px;margin:0 auto;padding:6px 16px 30px;color:var(--ink2)}
+.notes li{margin-bottom:4px}
+</style>
+</head>
+<body>
+<header class="page">
+<h1>Public landing page: mockup (for the owner's review)</h1>
+<p>Proposal: <code>docs/landing-page-proposal.md</code>. Two new pages, <code>/welcome</code> (English) and <code>/selamat-datang</code> (Bahasa Indonesia). <code>/</code> stays the sign-in screen, with one new link. The small drawn screens stand in for real screenshots, which the build captures from the app's mock mode with made-up data.</p>
+</header>
+<section class="screen" style="border:0">
+<h2>1. The landing page, top to bottom</h2>
+<p>Hero → How it works (owner asks → staff do it → owner sees it) → What it looks after → Made for the people who do the work → Your data → Questions → Request access. One idea per section; at most two buttons in view.</p>
+<div class="pair"><div class="phone long" lang="en"><div class="tag">Landing · English · /welcome</div>
+<div class="top"><span class="brand"><i></i>Miamus</span><span class="lang"><span class="on">EN</span><span class="">ID</span></span><span class="signin">Sign in</span></div>
+<section class="hero"><div class="mark"></div><h1>Know what's done at home, without asking again.</h1><p class="sub">Your family and staff share the daily care of your pets, home and kitchen, in one calm place.</p><p class="brandline">A little less on your mind.</p>
+<div class="btn primary">Request access</div><div class="btn outline">I already have an account</div>
+<p class="stafflink">Staff? <b>Saya staf →</b></p><p class="beta">Free while Miamus is in beta. We review every new household.</p>
+<div class="heroshot"><div class="shot"><div class="sbar">Today</div>
+<div class="row ok"><span class="th">🧹</span><span class="tt"><b>Pel teras</b><i>Sari · 8:12 AM</i></span><span class="tick">✓</span></div>
+<div class="photos done"><span>🏠</span><span>✨</span></div>
+<div class="row ok"><span class="th">🐶</span><span class="tt"><b>Makan Mochi</b><i>Budi · 7:04 AM</i></span><span class="tick">✓</span></div></div></div></section>
+<section><h2>How it works</h2><div class="step"><div class="num">1</div><div class="stxt"><h4>Set it once.</h4><p>Add “Mop the terrace, every day” for Sari, or Mochi’s meal times. Miamus repeats it, day after day.</p></div><div class="shot"><div class="sbar">Add Chore</div>
+<div class="field">Title<b>Pel teras</b></div>
+<div class="field">Assignee<b>Sari</b></div>
+<div class="field">Repeat<b>Every day</b></div>
+<div class="sbtn">Add Chore</div></div></div><div class="step"><div class="num">2</div><div class="stxt"><h4>They see it on their phone.</h4><p>Sari opens Miamus, and today’s list is in Bahasa Indonesia. She taps her chore, takes a photo before and after, and it’s done. No account, no email.</p></div><div class="shot"><div class="sbar">Tugas Hari Ini</div>
+<div class="row"><span class="th">🧹</span><span class="tt"><b>Pel teras</b><i>Teras · Untuk Anda</i></span><span class="pill">📷 Ketuk untuk foto</span></div>
+<div class="photos"><span>Foto Sebelum</span><span>Foto Sesudah</span></div>
+<div class="row"><span class="th">🐶</span><span class="tt"><b>Makan Mochi</b><i>07.00</i></span><span class="ring"></span></div></div></div><div class="step"><div class="num">3</div><div class="stxt"><h4>You see it’s done.</h4><p>Who did it, when, and the photos, on your Today. If a pet is unwell or something urgent breaks, your phone tells you straight away.</p></div><div class="shot"><div class="sbar">Today</div>
+<div class="row ok"><span class="th">🧹</span><span class="tt"><b>Pel teras</b><i>Sari · 8:12 AM</i></span><span class="tick">✓</span></div>
+<div class="photos done"><span>🏠</span><span>✨</span></div>
+<div class="row ok"><span class="th">🐶</span><span class="tt"><b>Makan Mochi</b><i>Budi · 7:04 AM</i></span><span class="tick">✓</span></div></div></div></section>
+<section><h2>What it looks after</h2><div class="fcard"><span class="em">🐾</span><div><h4>Pets</h4><p>Meals, potty breaks and medicine, with photos. Vet visits and a health record for each pet.</p></div></div><div class="fcard"><span class="em">🧹</span><div><h4>Chores, room by room</h4><p>Who does what, on which floor, with before and after photos.</p></div></div><div class="fcard"><span class="em">🍚</span><div><h4>Kitchen</h4><p>Food at home and when it expires, who gave it, the container to return, and the shopping list.</p></div></div><div class="fcard"><span class="em">🔧</span><div><h4>Repairs</h4><p>Staff report what’s broken with a photo. You schedule the visit and keep the costs to yourself.</p></div></div></section>
+<section class="tint"><h2>Made for the people who do the work.</h2><ul><li>Staff screens are in plain Bahasa Indonesia, with big buttons and photos instead of typing.</li><li>No account or email: each person signs in with their name and a 4-digit PIN.</li><li>Leave (cuti) is built in. Their tasks pause or open up to others while they’re away.</li><li>Miamus never tracks where anyone is.</li></ul></section>
+<section><h2>Your household’s data stays yours.</h2><ul><li>Stored in Singapore. No ads, and we never sell your data.</li><li>Download a copy, or delete your household, any time.</li></ul><p class="lnk">Read the privacy policy →</p></section>
+<section><h2>Questions</h2><div class="faq"><details><summary>Who is Miamus for?</summary><p>Households where family and staff share the daily work: pets, chores, the kitchen, repairs. It works with one helper or several.</p></details><details open><summary>Do my staff need an account or email?</summary><p>No. You send a link (on WhatsApp, for example). It connects their phone to your home, and they sign in with their name and a PIN. If they’re ever signed out, they use the house code.</p></details><details><summary>What language do staff see?</summary><p>Bahasa Indonesia, always. You choose English or Bahasa Indonesia for yourself.</p></details><details><summary>Is there an app to download?</summary><p>No app store needed. Open miamus.app on Android or iPhone and add it to the home screen. It opens full screen, like an app.</p></details><details><summary>What if the signal is weak?</summary><p>Staff can keep logging. Logs and photos wait on the phone and send themselves when the signal comes back.</p></details><details><summary>Does Miamus send WhatsApp messages?</summary><p>No automatic messages. You share the invite link yourself, and after an urgent report staff can tap once to tell you on WhatsApp. Urgent things also reach your phone as a notification.</p></details><details><summary>Can my family help manage?</summary><p>Yes. Invite your partner or family; they sign in with Google and can manage everything you can.</p></details><details><summary>What does it cost?</summary><p>Free while Miamus is in beta. Everything you do by hand will stay free; later, an optional AI helper will be the paid extra.</p></details></div></section>
+<section class="cta"><h2>Start with your household</h2><p>Miamus is invite-only while it’s in beta. Sign in with Google and tap <b>Request access</b>. We’ll review it, and you’ll name your household once it’s approved.</p><div class="btn primary g"><span class="gm">G</span>Continue with Google</div>
+<p class="small">Your request shares your Google name and email with Poofy Labs, who runs Miamus. See the <u>Privacy Policy</u>.</p><p class="small">No Google account? Email support@poofylabs.dev.</p><p class="small">Joining someone’s household? Open the invite link they sent you.</p></section>
+<footer><span>Made with care by Poofy Labs</span><span>Privacy Policy · support@poofylabs.dev</span></footer>
+</div><div class="phone long" lang="id"><div class="tag">Landing · Indonesia · /selamat-datang</div>
+<div class="top"><span class="brand"><i></i>Miamus</span><span class="lang"><span class="">EN</span><span class="on">ID</span></span><span class="signin">Masuk</span></div>
+<section class="hero"><div class="mark"></div><h1>Tahu apa yang sudah beres di rumah, tanpa perlu tanya lagi.</h1><p class="sub">Keluarga dan staf berbagi tugas harian untuk hewan, rumah, dan dapur, di satu tempat yang tenang.</p><p class="brandline">Biar pikiran sedikit lebih ringan.</p>
+<div class="btn primary">Minta akses</div><div class="btn outline">Saya sudah punya akun</div>
+<p class="stafflink">Staf? <b>Saya staf →</b></p><p class="beta">Gratis selama Miamus masih beta. Setiap rumah baru kami tinjau.</p>
+<div class="heroshot"><div class="shot"><div class="sbar">Hari ini</div>
+<div class="row ok"><span class="th">🧹</span><span class="tt"><b>Pel teras</b><i>Sari · 08.12</i></span><span class="tick">✓</span></div>
+<div class="photos done"><span>🏠</span><span>✨</span></div>
+<div class="row ok"><span class="th">🐶</span><span class="tt"><b>Makan Mochi</b><i>Budi · 07.04</i></span><span class="tick">✓</span></div></div></div></section>
+<section><h2>Cara kerjanya</h2><div class="step"><div class="num">1</div><div class="stxt"><h4>Atur sekali.</h4><p>Tambahkan “Pel teras, setiap hari” untuk Sari, atau jam makan Mochi. Miamus mengulangnya setiap hari.</p></div><div class="shot"><div class="sbar">Tambah Tugas</div>
+<div class="field">Judul<b>Pel teras</b></div>
+<div class="field">Ditugaskan ke<b>Sari</b></div>
+<div class="field">Ulangi<b>Setiap hari</b></div>
+<div class="sbtn">Tambah Tugas</div></div></div><div class="step"><div class="num">2</div><div class="stxt"><h4>Staf melihatnya di HP.</h4><p>Sari membuka Miamus, dan daftar hari ini dalam Bahasa Indonesia. Dia ketuk tugasnya, foto sebelum dan sesudah, selesai. Tanpa akun, tanpa email.</p></div><div class="shot"><div class="sbar">Tugas Hari Ini</div>
+<div class="row"><span class="th">🧹</span><span class="tt"><b>Pel teras</b><i>Teras · Untuk Anda</i></span><span class="pill">📷 Ketuk untuk foto</span></div>
+<div class="photos"><span>Foto Sebelum</span><span>Foto Sesudah</span></div>
+<div class="row"><span class="th">🐶</span><span class="tt"><b>Makan Mochi</b><i>07.00</i></span><span class="ring"></span></div></div></div><div class="step"><div class="num">3</div><div class="stxt"><h4>Anda lihat sudah selesai.</h4><p>Siapa yang mengerjakan, jam berapa, dan fotonya, di Hari ini. Kalau hewan sakit atau ada kerusakan darurat, HP Anda langsung diberi tahu.</p></div><div class="shot"><div class="sbar">Hari ini</div>
+<div class="row ok"><span class="th">🧹</span><span class="tt"><b>Pel teras</b><i>Sari · 08.12</i></span><span class="tick">✓</span></div>
+<div class="photos done"><span>🏠</span><span>✨</span></div>
+<div class="row ok"><span class="th">🐶</span><span class="tt"><b>Makan Mochi</b><i>Budi · 07.04</i></span><span class="tick">✓</span></div></div></div></section>
+<section><h2>Yang diurus Miamus</h2><div class="fcard"><span class="em">🐾</span><div><h4>Hewan</h4><p>Makan, Pipis & Pup, dan obat, lengkap dengan foto. Kunjungan dokter hewan dan catatan kesehatan tiap hewan.</p></div></div><div class="fcard"><span class="em">🧹</span><div><h4>Tugas rumah, per ruangan</h4><p>Siapa mengerjakan apa, di lantai mana, dengan foto sebelum dan sesudah.</p></div></div><div class="fcard"><span class="em">🍚</span><div><h4>Dapur</h4><p>Makanan di rumah dan kapan kedaluwarsa, dari siapa, wadah yang perlu dikembalikan, dan daftar belanja.</p></div></div><div class="fcard"><span class="em">🔧</span><div><h4>Perbaikan</h4><p>Staf melaporkan kerusakan dengan foto. Anda menjadwalkan perbaikan, dan biayanya hanya untuk pemilik.</p></div></div></section>
+<section class="tint"><h2>Dibuat untuk yang mengerjakannya.</h2><ul><li>Layar staf memakai Bahasa Indonesia yang sederhana, dengan tombol besar dan foto, bukan ketikan.</li><li>Tanpa akun atau email: setiap orang masuk dengan nama dan PIN 4 angka.</li><li>Cuti sudah tersedia. Selama cuti, tugasnya dijeda atau terbuka untuk yang lain.</li><li>Miamus tidak pernah melacak lokasi siapa pun.</li></ul></section>
+<section><h2>Data rumah Anda tetap milik Anda.</h2><ul><li>Disimpan di Singapura. Tanpa iklan, dan kami tidak pernah menjual data Anda.</li><li>Unduh salinannya, atau hapus rumah Anda, kapan saja.</li></ul><p class="lnk">Baca Kebijakan Privasi →</p></section>
+<section><h2>Pertanyaan</h2><div class="faq"><details><summary>Miamus untuk siapa?</summary><p>Rumah tangga yang tugas hariannya dibagi antara keluarga dan staf: hewan, tugas rumah, dapur, perbaikan. Bisa untuk satu staf atau beberapa.</p></details><details open><summary>Apakah staf perlu akun atau email?</summary><p>Tidak. Anda kirim link (misalnya lewat WhatsApp). Link itu menghubungkan HP mereka ke rumah Anda, lalu mereka masuk dengan nama dan PIN. Kalau suatu saat keluar, mereka masuk lagi dengan kode rumah.</p></details><details><summary>Staf melihat bahasa apa?</summary><p>Selalu Bahasa Indonesia. Anda sendiri bisa memilih Bahasa Inggris atau Bahasa Indonesia.</p></details><details><summary>Apakah perlu unduh aplikasi?</summary><p>Tidak perlu lewat app store. Buka miamus.app di Android atau iPhone, lalu tambahkan ke layar utama. Tampilannya layar penuh, seperti aplikasi.</p></details><details><summary>Bagaimana kalau sinyal lemah?</summary><p>Staf tetap bisa mencatat. Catatan dan foto tersimpan di HP dan terkirim sendiri saat sinyal kembali.</p></details><details><summary>Apakah Miamus mengirim pesan WhatsApp?</summary><p>Tidak ada pesan otomatis. Anda sendiri yang membagikan link undangan, dan setelah laporan darurat staf bisa sekali ketuk untuk memberi tahu Anda lewat WhatsApp. Hal yang darurat juga masuk ke HP Anda sebagai notifikasi.</p></details><details><summary>Apakah keluarga bisa ikut mengelola?</summary><p>Bisa. Undang pasangan atau keluarga; mereka masuk dengan Google dan bisa mengelola semuanya seperti Anda.</p></details><details><summary>Berapa biayanya?</summary><p>Gratis selama Miamus masih beta. Semua yang dikerjakan secara manual akan tetap gratis; nanti, asisten AI opsional menjadi tambahan berbayar.</p></details></div></section>
+<section class="cta"><h2>Mulai dengan rumah Anda</h2><p>Miamus masih beta dan hanya dengan undangan. Masuk dengan Google, lalu ketuk <b>Minta akses</b>. Kami akan meninjaunya, dan Anda bisa memberi nama rumah setelah disetujui.</p><div class="btn primary g"><span class="gm">G</span>Lanjutkan dengan Google</div>
+<p class="small">Permintaan ini membagikan nama dan email Google Anda kepada Poofy Labs, pengelola Miamus. Lihat <u>Kebijakan Privasi</u>.</p><p class="small">Tidak punya akun Google? Kirim email ke support@poofylabs.dev.</p><p class="small">Ingin bergabung ke rumah orang lain? Buka link undangan yang mereka kirim.</p></section>
+<footer><span>Dibuat dengan sepenuh hati oleh Poofy Labs</span><span>Kebijakan Privasi · support@poofylabs.dev</span></footer>
+</div></div>
+</section>
+<section class="screen" style="border:0">
+<h2>2. Today's sign-in screen, with the one new link</h2>
+<p>Nothing else on <code>/</code> changes: staff phones and installed apps still open here and are routed as today.</p>
+<div class="pair"><div class="phone" lang="en"><div class="tag">Sign-in · English · / (unchanged)</div>
+<div class="signinpage"><div class="mark big"></div><h3>Welcome to Miamus</h3><p class="sub">A little less on your mind.</p>
+<div class="btn primary g"><span class="gm">G</span>Continue with Google</div><div class="btn outline">👤 Saya staf</div>
+<p class="newlink">What is Miamus? <span class="new">new</span></p><p class="small">…Privacy Policy.</p></div></div><div class="phone" lang="id"><div class="tag">Sign-in · Indonesia · / (unchanged)</div>
+<div class="signinpage"><div class="mark big"></div><h3>Selamat datang di Miamus</h3><p class="sub">Biar pikiran sedikit lebih ringan.</p>
+<div class="btn primary g"><span class="gm">G</span>Lanjutkan dengan Google</div><div class="btn outline">👤 Saya staf</div>
+<p class="newlink">Apa itu Miamus? <span class="new">new</span></p><p class="small">…Privacy Policy.</p></div></div></div>
+</section>
+<div class="notes"><b>Not on the page, on purpose:</b><ul>
+<li>No claim that Miamus messages staff on WhatsApp (it doesn't), or that staff get notified of new tasks (they don't today).</li>
+<li>No mention of Kakak until she's live (decision L6).</li>
+<li>No prices beyond "free while in beta" (decision L5 decides the second sentence of the last FAQ).</li>
+<li>No stock photos of people, no analytics, no cookies, no new form.</li></ul></div>
+</body>
+</html>
