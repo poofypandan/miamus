@@ -306,6 +306,44 @@
 }
 
 /*
+ * The Miamus mark's roof drawing itself (MiamusMark, 2026-11-09). Two
+ * animations on one 2.4s clock: a strip of the tile's ink slides from just
+ * left of the roof (14px) to just past it (74px), revealing it left to right;
+ * the roof holds, then fades, and at the restart the strip is back over it
+ * while the roof returns to full opacity unseen. Transform and opacity only.
+ */
+@theme inline {
+  /* Started halfway through (-1.2s): the first frame is the whole house, the
+     same picture as the icon just tapped, so a quick load never shows a
+     roofless M. The roof first fades and redraws about 0.7s in. */
+  --animate-roof-reveal: roof-reveal 2.4s -1.2s infinite;
+  --animate-roof-fade: roof-fade 2.4s -1.2s infinite;
+
+  @keyframes roof-reveal {
+    0%,
+    10% {
+      transform: translateX(14px);
+      animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+    }
+    48%,
+    100% {
+      transform: translateX(74px);
+    }
+  }
+
+  @keyframes roof-fade {
+    0%,
+    78% {
+      opacity: 1;
+    }
+    92%,
+    100% {
+      opacity: 0;
+    }
+  }
+}
+
+/*
  * The pending bar's travelling segment (Phase 125): a transform from off the
  * left edge to off the right, on repeat.
  */

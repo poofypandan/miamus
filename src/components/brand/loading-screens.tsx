@@ -1,14 +1,20 @@
 "use client";
 
-import { BrandMark } from "@/components/brand/brand-mark";
+import {
+  BRAND_INK,
+  M_POINTS,
+  MarkStroke,
+  ROOF_POINTS,
+  TILE_RADIUS,
+} from "@/components/brand/brand-mark";
 import { hasLaunched } from "@/lib/launch-state";
 import { RUMAH } from "@/components/staff/staff-splash";
 import { cn } from "@/lib/utils";
 import { useUiLabels } from "@/components/ui/ui-labels";
 
 /**
- * The branded pictures (Phases 121–125): the circular Miamus mark and the
- * RUMAH rules. Drawn by the launch cover (brand-cover.tsx), the "/" splash,
+ * The branded pictures (Phases 121–125): the Miamus mark and the RUMAH
+ * rules. Drawn by the launch cover (brand-cover.tsx), the "/" splash,
  * and the two loaders below, which fill the gates' first moment while a
  * session resolves.
  *
@@ -17,19 +23,12 @@ import { useUiLabels } from "@/components/ui/ui-labels";
  * an owner opening the staff view — resolves within a frame, and a logo
  * there would be a flash of the splash in the middle of using the app.
  *
- * Animations are transform (the ring) and opacity (the fade-in, the pulse)
- * only, so they run on the compositor and cannot drop frames while the page
- * underneath is busy rendering — which, during a load, it is.
+ * Animations are transform (the roof's reveal) and opacity (the roof's fade,
+ * the fade-in, the pulse) only, so they run on the compositor and cannot drop
+ * frames while the page underneath is busy rendering — which, during a load,
+ * it is.
  */
 
-/**
- * The Miamus mark as a circle, inside a spinning ring (Phase 123).
- *
- * The tile BrandMark draws is clipped round rather than redrawn: its glyph
- * sits well inside the inscribed circle, so the clip takes only empty ink.
- * The ring is two layers — a faint full track, and a darker quarter that
- * rotates. Rotation is a transform on its own layer; the mark never moves.
- */
 /**
  * Miamus's philosophy in one line (owner, 2026-11-08): sharing the everyday
  * load so there is a little less to remember. Calm, and no promise that
@@ -53,19 +52,46 @@ export function MiamusPromise({ text }: { text: string }) {
   );
 }
 
-export function MiamusMark() {
-  // 88px, the same as the start screen's mark (2026-11-08), so the picture
-  // stays put when the splash hands over to the start screen.
+/**
+ * The Miamus mark as the app icon's rounded square, with the roof drawing
+ * itself while something loads (2026-11-09; it was a circle in a spinning
+ * ring from Phase 123).
+ *
+ * The M stays put; the roof is its own layer. A strip of the tile's own ink
+ * covers the roof and slides off to the right, so the roof appears left to
+ * right over the house; it holds, fades, and the strip slides back under the
+ * faded roof, ready to draw again. The cycle starts with the house whole
+ * (see globals.css), so a quick load shows the plain logo. Sliding a cover (a transform) rather than
+ * animating the stroke itself keeps this on the compositor (see the top of
+ * this file). Its keyframes are `roof-reveal` and `roof-fade` in globals.css,
+ * one 2.4s cycle shared by both.
+ *
+ * 88px, the same as the start screen's mark, so the picture stays put when
+ * the splash hands over to it. `still` is that start-screen mark: the whole
+ * house, nothing moving. Reduced motion gets the still mark everywhere.
+ */
+export function MiamusMark({ still = false }: { still?: boolean }) {
+  const size = 88;
   return (
-    <div className="relative flex size-28 items-center justify-center">
-      <span aria-hidden className="absolute inset-0 rounded-full border-2 border-zinc-200" />
-      <span
-        aria-hidden
-        className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-zinc-900 will-change-transform motion-reduce:animate-none"
-      />
-      <div className="size-[88px] overflow-hidden rounded-full">
-        <BrandMark size={88} rounded={false} />
+    <div
+      aria-hidden
+      className="relative size-[88px] shrink-0 overflow-hidden"
+      style={{ borderRadius: size * TILE_RADIUS, background: BRAND_INK }}
+    >
+      <div className="absolute inset-0">
+        <MarkStroke points={M_POINTS} size={size} />
       </div>
+      <div className={cn("absolute inset-0", !still && "animate-roof-fade motion-reduce:animate-none")}>
+        <MarkStroke points={ROOF_POINTS} size={size} />
+      </div>
+      {!still && (
+        // The roof's band is the top 41px (its stroke ends at 40.2px; the
+        // M's starts at 41.6px), so the strip never touches the M.
+        <span
+          className="absolute top-0 left-0 h-[41px] w-full animate-roof-reveal will-change-transform motion-reduce:hidden"
+          style={{ background: BRAND_INK }}
+        />
+      )}
     </div>
   );
 }
@@ -96,7 +122,7 @@ export function RumahRules({ className }: { className?: string }) {
   );
 }
 
-/** Owner-facing: the Miamus mark inside a spinning ring. */
+/** Owner-facing: the Miamus mark, its roof drawing itself. */
 export function OwnerLoadingScreen() {
   // In the owner's language: the dashboard's OwnerLocaleProvider sets it.
   const labels = useUiLabels();

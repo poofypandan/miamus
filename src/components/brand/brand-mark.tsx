@@ -16,6 +16,32 @@
 export const BRAND_INK = "#171717";
 export const BRAND_PAPER = "#ffffff";
 
+/**
+ * The tile's corner radius as a share of its edge (2026-11-09): iOS's app
+ * icon ratio, so the mark inside the app is the same rounded square as the
+ * icon on the home screen. One value for every tile the app draws.
+ */
+export const TILE_RADIUS = 0.2237;
+
+/** The drawing, in a 512 × 512 box: the roofline, then the M under it. */
+export const ROOF_POINTS = "112,214 256,104 400,214";
+export const M_POINTS = "152,400 152,262 256,354 360,262 360,400";
+
+/** One stroke of the mark, sized to its box. */
+export function MarkStroke({ points, size }: { points: string; size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 512 512" fill="none">
+      <polyline
+        points={points}
+        stroke={BRAND_PAPER}
+        strokeWidth={40}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function BrandMark({
   size,
   rounded,
@@ -45,13 +71,13 @@ export function BrandMark({
         alignItems: "center",
         justifyContent: "center",
         background: BRAND_INK,
-        borderRadius: rounded ? size * 0.1875 : 0,
+        borderRadius: rounded ? size * TILE_RADIUS : 0,
       }}
     >
       <svg width={glyph} height={glyph} viewBox="0 0 512 512" fill="none">
         {/* Roofline */}
         <polyline
-          points="112,214 256,104 400,214"
+          points={ROOF_POINTS}
           stroke={BRAND_PAPER}
           strokeWidth={40}
           strokeLinecap="round"
@@ -59,7 +85,7 @@ export function BrandMark({
         />
         {/* The M: two walls, and the letter's V meeting between them */}
         <polyline
-          points="152,400 152,262 256,354 360,262 360,400"
+          points={M_POINTS}
           stroke={BRAND_PAPER}
           strokeWidth={40}
           strokeLinecap="round"
