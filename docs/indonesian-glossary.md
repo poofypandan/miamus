@@ -99,6 +99,7 @@ people are **staf** and **admin**.
 | Nothing set up | **Belum ada tugas** | Phase 158. |
 | Jobs: Vacuum, Mop, Sweep, Dust, Toilet, Sheets, Towels, Trash, Tidy, Ironing, Windows, Plants | **Vakum, Pel, Sapu, Lap debu, Toilet, Seprai, Handuk, Sampah, Rapikan, Setrika, Kaca, Tanaman** | Phase 158 job chips. "Vakum" is the KBBI spelling; households also write "vacuum", which the app still recognises. Other = **Lainnya**. |
 | What's new / Got it | **Yang baru** / **Mengerti** | The feature tutorials (owner, 2026-11-09). |
+| Practice mode (Kakak) | **Mode latihan** | Scripted answers, no AI (owner, 2026-11-09). |
 
 ## Formatting
 

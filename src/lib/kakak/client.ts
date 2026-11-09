@@ -8,10 +8,11 @@
 import type { KakakHistory, RefusalReason } from "./engine";
 import type { KakakSuggestion } from "./suggestions";
 
+/** `practice`: the server is in practice mode (scripted answers, no AI). */
 export type KakakReply =
-  | { kind: "question"; question: string; answers: string[]; allowTyping: boolean; requestId: string; history: KakakHistory }
-  | { kind: "suggestions"; text: string; items: KakakSuggestion[]; requestId: string; history: KakakHistory }
-  | { kind: "message"; text: string; requestId: string; history: KakakHistory }
+  | { kind: "question"; question: string; answers: string[]; allowTyping: boolean; requestId: string; history: KakakHistory; practice?: boolean }
+  | { kind: "suggestions"; text: string; items: KakakSuggestion[]; requestId: string; history: KakakHistory; practice?: boolean }
+  | { kind: "message"; text: string; requestId: string; history: KakakHistory; practice?: boolean }
   | { kind: "refused"; reason: RefusalReason | "unavailable" }
   | { kind: "failed"; reason: "invalid" | "api" | "too_long" | "refusal" | "offline" };
 

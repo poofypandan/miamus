@@ -31,6 +31,30 @@ everywhere until all four of these are true, in this order:
 4. **An owner turns it on**: Household → Kakak → **Let Kakak help**. The
    page says what is sent to Anthropic and links the privacy policy.
 
+## Practice mode (no AI, no tokens)
+
+For trying Kakak on staging, a Vercel preview or your own computer without
+an Anthropic key: set `KAKAK_PRACTICE=true` on that server (no
+`ANTHROPIC_API_KEY` or `KAKAK_ENABLED` needed).
+
+- Kakak answers with scripted replies built from your words and your
+  household's real staff, rooms, pets and shopping items: days, times, names,
+  rooms, "beli/buy", food words and pet meal or potty times. She asks once
+  when a chore's day or a food's date is missing.
+- Everything around her runs for real: who may use Kakak (admins only, the
+  household on the family list and switched on), the history checks,
+  validation, the card, saving, and Undo. **Saving still saves**, so use a
+  test household.
+- Nothing is sent to Anthropic, nothing is counted against the daily limits,
+  and nothing is written to `kakak_usage` or `kakak_requests`.
+- The sheet says "Practice mode" at the top, so nobody mistakes it for the
+  real thing.
+- **Never on production:** the server ignores `KAKAK_PRACTICE` when
+  `VERCEL_ENV` is `production` (and logs that it did).
+
+It tests the app around Kakak, not her judgement. Whether she understands
+real sentences is what the eval (`tests/kakak`) is for, against the real API.
+
 ## Limits (migration 126)
 
 - 40 calls per household per Jakarta day (`kakak_settings.daily_limit`).

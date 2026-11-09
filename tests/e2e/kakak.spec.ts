@@ -154,3 +154,22 @@ test("a staff phone never sees Kakak", async ({ context, page }) => {
   await expect(page.getByRole("button", { name: "Lapor" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Bilang ke Kakak")).toHaveCount(0);
 });
+
+test("practice mode: the real Kakak route answers with no AI, and saving still works", async ({ context, page }) => {
+  // No page.route for /api/kakak: the test server runs it with
+  // KAKAK_PRACTICE=true (playwright.config.ts), answered by server-stub.cjs.
+  const stub = await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "Mau Kakak atur apa?" }).fill("Ari pel teras setiap Senin jam 9");
+  await page.getByRole("button", { name: "Kirim" }).click();
+
+  await expect(page.getByText(/^Mode latihan:/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Pel teras", { exact: true })).toBeVisible();
+  await expect(page.getByText("Setiap Senin").first()).toBeVisible();
+  await page.getByRole("button", { name: "Sudah benar" }).click();
+  await expect.poll(() => stub.tasks.length).toBe(1);
+  expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", assigned_to: STAFF_ID, due_time: "09:00", recurrence: "weekly" });
+  expect(stub.seen.realBackend).toEqual([]);
+});

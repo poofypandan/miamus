@@ -47,6 +47,9 @@ export default defineConfig({
       // screens can be tested too (R6). Test-only; see the file.
       NODE_OPTIONS: "--require ./tests/e2e/server-stub.cjs",
       E2E_SERVER_STUB: "1",
+      // Kakak's practice mode: the real /api/kakak route with scripted
+      // answers, so a test can go through it with no key and no tokens.
+      KAKAK_PRACTICE: "true",
     },
   },
 });
