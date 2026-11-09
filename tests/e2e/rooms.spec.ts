@@ -114,6 +114,20 @@ test("Rooms: which rooms get vacuumed, and adding it where it's missing", async 
   await expect(sheet.getByText("Every Monday · Ari")).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Add chore here" })).toBeVisible();
 
+  // A chore three weeks out, moved to today from Rooms, shows on Today at
+  // once (Codex, #30): the shared chore list takes the edited row.
+  await sheet.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("region", { name: "Other rooms" }).getByText("Teras").click();
+  await page.getByRole("dialog").getByText("Vacuum kamar musik").click();
+  const editor = page.getByRole("dialog");
+  await expect(editor.getByRole("heading", { name: "Edit Chore" })).toBeVisible();
+  await editor.locator('input[type="date"]').first().fill(today());
+  await editor.getByRole("button", { name: "Save Changes" }).click();
+  await expect(editor).toHaveCount(0);
+  await page.getByRole("tab", { name: "Today" }).click();
+  // The chore card itself (the saved toast also names it).
+  await expect(page.locator("span", { hasText: /^Vacuum kamar musik$/ }).first()).toBeVisible();
+
   expect(stub.seen.realBackend).toEqual([]);
 });
 

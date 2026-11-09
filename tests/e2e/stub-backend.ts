@@ -203,7 +203,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         kakak.enabled = Boolean(request.postDataJSON()?.p_on);
         return route.fulfill({ status: 204, body: "" });
       }
-      if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks);
+      if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks, options.chores);
       if (table === "household_tasks" && options.chores) {
         // The simple PostgREST filters the app's chore reads use (eq, neq,
         // lt, lte, gt, gte, is), so each read returns what the real backend
@@ -316,7 +316,7 @@ function filterRows(rows: Record<string, unknown>[], params: URLSearchParams): R
 }
 
 /** household_tasks writes, enough for a chore saved and undone (Kakak). */
-function answerTasks(route: Route, tasks: Record<string, unknown>[]) {
+function answerTasks(route: Route, tasks: Record<string, unknown>[], seeded: Record<string, unknown>[] = []) {
   const request = route.request();
   const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
   const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
@@ -339,7 +339,11 @@ function answerTasks(route: Route, tasks: Record<string, unknown>[]) {
   const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
   const index = tasks.findIndex((t) => t.id === id);
   if (request.method() === "DELETE") return reply(index === -1 ? [] : tasks.splice(index, 1));
-  return reply(index === -1 ? [] : [tasks[index]]);
+  // An edit (PATCH) applies to a chore created here or one the household
+  // already had (Phase 158's seeded chores).
+  const row = index === -1 ? seeded.find((t) => t.id === id) : tasks[index];
+  if (row && request.method() === "PATCH") Object.assign(row, request.postDataJSON() ?? {});
+  return reply(row ? [row] : []);
 }
 
 /**
