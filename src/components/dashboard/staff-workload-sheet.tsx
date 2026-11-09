@@ -206,7 +206,8 @@ function WorkloadRow({ row, top }: { row: StaffWorkload; top: number }) {
           />
         </div>
 
-        <span className="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground tabular-nums">
+        {/* Line icons, not emoji (owner, 2026-11-09). */}
+        <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
           <PawPrint className="size-3.5 shrink-0" aria-hidden />
           {row.petsCompleted}{" "}
           {row.petsCompleted === 1 ? t("Pet task", "Tugas hewan") : t("Pet tasks", "Tugas hewan")}
