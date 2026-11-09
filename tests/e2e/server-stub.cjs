@@ -20,6 +20,10 @@
  *   POST /rest/v1/rpc/my_locale     "id"
  *   GET  staff_profiles, task_entities, household_locations,
  *        inventory_items, master_schedules  a small fixed household
+ *   GET /storage/v1/object/household-logs/<household>/...
+ *        a 1080x810 JPEG, for OWNER only (storage RLS in miniature)
+ *   GET /storage/v1/render/...      500: the app resizes photos itself now
+ *                                   (Phase 160), so nothing may ask for this
  *   anything else                   404
  *
  * Tokens are the stub's unsigned test JWTs; only their claims are read.
@@ -96,6 +100,25 @@ function install() {
       return send(res, 200, [
         { allowed: true, enabled: true, enabled_by: OWNER, enabled_at: "2026-11-08T03:00:00Z", daily_limit: 40, calls_left: 40 },
       ]);
+    }
+    // Photos (Phase 160). /api/photo downloads the original and resizes it
+    // itself; a request for Supabase's resizer would be a regression.
+    if (url.pathname.startsWith("/storage/v1/render/")) return send(res, 500, { message: "render not allowed" });
+    const photo = /^\/storage\/v1\/object\/(?:authenticated\/)?household-logs\/(.+)$/.exec(url.pathname);
+    if (photo) {
+      if (!owner || !decodeURIComponent(photo[1]).startsWith(`${HOUSEHOLD_ID}/`)) {
+        return send(res, 400, { statusCode: "404", error: "not_found", message: "Object not found" });
+      }
+      // Loaded only here: the stub stays free of native modules otherwise.
+      const sharp = require("sharp");
+      sharp({ create: { width: 1080, height: 810, channels: 3, background: { r: 30, g: 140, b: 90 } } })
+        .jpeg()
+        .toBuffer()
+        .then((jpeg) => {
+          res.writeHead(200, { "content-type": "image/jpeg", "content-length": String(jpeg.length) });
+          res.end(jpeg);
+        });
+      return;
     }
     if (url.pathname === "/rest/v1/rpc/my_locale") return send(res, 200, owner ? "id" : null);
     const table = url.pathname.replace(/^\/rest\/v1\//, "");
