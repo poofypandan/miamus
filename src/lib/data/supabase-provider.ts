@@ -36,6 +36,25 @@ const INVENTORY_BUCKET = "inventory_audits";
 // From the type, not the name: compressPhoto keeps the original file name, so
 // an iPhone photo re-encoded as JPEG would otherwise be stored as ".heic".
 // Cosmetic — Content-Type is what storage and /api/photo go by.
+/**
+ * Every row of a read, a page at a time: PostgREST returns at most max_rows
+ * (1,000, supabase/config.toml) per request, so a long-lived household's
+ * repairs, visits or notes would otherwise silently lose the newest
+ * (Codex, PR #38). `page` must order by a unique key so pages don't overlap.
+ */
+async function allRows<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+): Promise<T[]> {
+  const size = 1000;
+  const rows: T[] = [];
+  for (let from = 0; ; from += size) {
+    const { data, error } = await page(from, from + size - 1);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if (!data || data.length < size) return rows;
+  }
+}
+
 function extensionFor(file: File): string {
   if (file.type === "image/webp") return "webp";
   if (file.type === "image/jpeg") return "jpg";
@@ -733,23 +752,29 @@ export const supabaseProvider: DataProvider = {
     return task;
   },
   async listRepairs() {
-    const { data, error } = await client()
-      .from("repairs")
-      .select("*")
-      .eq("household_id", getActiveHouseholdId())
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return data ?? [];
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("repairs")
+        .select("*")
+        .eq("household_id", household)
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(from, to)
+    );
   },
   async listRepairVisits() {
-    const { data, error } = await client()
-      .from("household_tasks")
-      .select("*")
-      .eq("household_id", getActiveHouseholdId())
-      .not("repair_id", "is", null)
-      .order("due_date", { ascending: true });
-    if (error) throw error;
-    return data ?? [];
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("household_tasks")
+        .select("*")
+        .eq("household_id", household)
+        .not("repair_id", "is", null)
+        .order("due_date", { ascending: true })
+        .order("id")
+        .range(from, to)
+    );
   },
   async createRepair(input) {
     const { data, error } = await client()
@@ -815,13 +840,16 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
   },
   async listRepairNotes() {
-    const { data, error } = await client()
-      .from("repair_notes")
-      .select("*")
-      .eq("household_id", getActiveHouseholdId())
-      .order("created_at", { ascending: true });
-    if (error) throw error;
-    return data ?? [];
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("repair_notes")
+        .select("*")
+        .eq("household_id", household)
+        .order("created_at", { ascending: true })
+        .order("id")
+        .range(from, to)
+    );
   },
   async addRepairNote(note) {
     const { data, error } = await client()
