@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { HandHeart, Loader2, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
+import { CloudUpload, HandHeart, Loader2, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { SyncedImg } from "@/components/shared/synced-img";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useToday } from "@/hooks/use-today";
 import {
@@ -21,7 +22,6 @@ import {
   type FoodLocale,
 } from "@/lib/food";
 import { DATE_LOCALE } from "@/lib/owner-locale";
-import { photoSrc } from "@/lib/photos";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 import type { FoodItem, FoodOutcome } from "@/types/database";
@@ -90,7 +90,10 @@ function Detail({
 }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood, flagLowStock } = useHousehold();
+  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood, flagLowStock, pendingIds } = useHousehold();
+  // Added on this phone and not sent yet (Phase 161): nothing on the server to
+  // finish, change or delete until it arrives.
+  const waitingToSend = pendingIds.has(item.id);
   const name = foodName(item, locale);
   const today = formatDateLocal(useToday());
   const [busy, setBusy] = useState<FoodOutcome | "delete" | null>(null);
@@ -169,12 +172,7 @@ function Detail({
 
       <div className="flex flex-col gap-4 px-4 pb-4">
         {item.photo_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photoSrc(item.photo_url, 640)}
-            alt={name}
-            className="max-h-56 w-full rounded-xl bg-muted object-cover"
-          />
+          <SyncedImg url={item.photo_url} size={640} alt={name} className="max-h-56 w-full rounded-xl bg-muted object-cover" />
         )}
 
         <dl className="flex flex-col divide-y text-sm">
@@ -198,6 +196,19 @@ function Detail({
           {item.notes && <Fact label={tr("Notes", "Catatan")}>{item.notes}</Fact>}
         </dl>
 
+        {waitingToSend ? (
+          // Amber means waiting (Phase 153 colour rule).
+          <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <CloudUpload className="mt-0.5 size-4 shrink-0" />
+            <span>
+              {tr(
+                "Saved on this phone, waiting to send. It goes by itself when the signal is back; you can change it after that.",
+                "Tersimpan di HP, menunggu dikirim. Terkirim otomatis saat sinyal bagus; setelah itu bisa diubah."
+              )}
+            </span>
+          </p>
+        ) : (
+        <>
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold">{tr("Is it finished?", "Sudah habis?")}</p>
           <div className="grid grid-cols-3 gap-2">
@@ -243,6 +254,8 @@ function Detail({
               {tr("Delete — added by mistake", "Hapus — salah tambah")}
             </button>
           ))}
+        </>
+        )}
       </div>
     </div>
   );

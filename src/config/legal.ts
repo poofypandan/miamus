@@ -46,7 +46,11 @@ export const LEGAL = {
   // by admins or staff (optional photo); for admins only, a repair's cost,
   // receipt photo and note, in storage only admins can open. Kept as long as
   // the repair (open, then 2 years). No new service (migrations/131).
-  policyVersion: "2026-11-09.3",
+  // 2026-11-09.4: what waits on the phone until it is sent now also covers
+  // finished chores and new food, and anything saved on a signal too weak
+  // to send, not only while offline (Phase 161, R10). No new service; still
+  // deleted on sign-out.
+  policyVersion: "2026-11-09.4",
   effectiveDate: { en: "9 November 2026", id: "9 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

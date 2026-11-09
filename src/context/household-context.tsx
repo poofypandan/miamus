@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { addDays } from "date-fns";
 import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
@@ -30,7 +30,16 @@ import {
 } from "@/lib/member-identity";
 import { useToday } from "@/hooks/use-today";
 import { isActivePet } from "@/lib/pets";
-import { addToOfflineQueue } from "@/lib/offline-queue";
+import {
+  hydrateOutbox,
+  outboxItems,
+  submitJob,
+  subscribeOutbox,
+  type OfflineQueueItem,
+  type SendResult,
+} from "@/lib/offline-queue";
+import { outboxView, overlay, pendingFood } from "@/lib/outbox-view";
+import { discardPhoto, enqueuePhoto } from "@/lib/photo-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { AGENDA_WEEK_DAYS, weekStartOf } from "@/lib/unified-agenda";
 import { compressPhoto } from "@/lib/image";
@@ -72,6 +81,9 @@ import type {
  * has never been through the staff gate — which is the honest answer rather
  * than a guess.
  */
+/** The queue's server snapshot: nothing waits during prerender. */
+const NO_QUEUE: readonly OfflineQueueItem[] = [];
+
 function withStaffId<T extends { staff_id?: string | null }>(input: T): T {
   return { ...input, staff_id: input.staff_id ?? readActiveStaffId() };
 }
@@ -196,8 +208,32 @@ interface HouseholdContextValue {
   createEntity: (input: CreateEntityInput) => Promise<TaskEntity>;
   updateEntity: (id: string, patch: Partial<TaskEntity>) => Promise<TaskEntity>;
   deleteEntity: (id: string) => Promise<void>;
+  /**
+   * Pet routines and extra notes. Kept on the phone first and sent from
+   * there (Phase 161): on a weak signal the log waits and a toast says so.
+   */
   logTask: (input: CreateLogInput) => Promise<TaskLog>;
   logTasksBatch: (input: CreateBatchLogInput) => Promise<TaskLog[]>;
+  /**
+   * Saves still waiting on this phone (Phase 161, lib/offline-queue.ts): how
+   * many, and the ids of the rows on screen that are waiting.
+   */
+  outboxCount: number;
+  pendingIds: ReadonlySet<string>;
+  /**
+   * A staff member finishing a chore (Phase 161): kept on the phone and sent,
+   * or left waiting when there is no answer. `queued` says which. Throws only
+   * when the server refuses it.
+   */
+  finishChore: (input: {
+    templateId: string;
+    date: string;
+    rowId: string | null;
+    assignedTo: string | null;
+    before: string;
+    after: string;
+    title: string;
+  }) => Promise<{ queued: boolean }>;
   deleteLogWithPhoto: (log: TaskLog) => Promise<void>;
   createSchedule: (input: CreateScheduleInput) => Promise<MasterSchedule>;
   createSchedulesBatch: (entries: CreateScheduleInput[]) => Promise<MasterSchedule[]>;
@@ -219,6 +255,16 @@ interface HouseholdContextValue {
    * uploaded first and filed under <household>/food/.
    */
   addFood: (input: Omit<FoodItemInput, "photo_url">, photo: File | null) => Promise<FoodItem>;
+  /**
+   * The food form's add (Phase 161): the photo and the row kept on the phone
+   * first, so a weak signal leaves it waiting rather than lost. `queued`: it
+   * has not reached the server yet. Kakak keeps addFood, whose undo needs the
+   * saved row.
+   */
+  addFoodFromForm: (
+    input: Omit<FoodItemInput, "photo_url">,
+    photo: File | null
+  ) => Promise<{ item: FoodItem; queued: boolean }>;
   /** `photo`: a new File replaces the photo, null removes it, undefined keeps it. */
   editFood: (id: string, input: Omit<FoodItemInput, "photo_url">, photo?: File | null) => Promise<FoodItem>;
   /**
@@ -819,77 +865,111 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Staff logging potty breaks / meals in the field is exactly the case with
-  // the flakiest connectivity, so both logging paths below check
-  // navigator.onLine before touching Supabase: offline, the write goes to
-  // an IndexedDB queue instead, and a locally-built log is applied to state
-  // immediately so the checkmark appears right away regardless of
-  // connectivity. The reconnect listener in dashboard/layout.tsx drains
-  // that queue and then calls `refresh()`, which replaces these optimistic,
-  // client-generated ids with the real synced rows.
-  const logTask = useCallback(async (input: CreateLogInput) => {
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      const completedAt = input.completed_at ?? new Date().toISOString();
-      await addToOfflineQueue("task_logs", {
+  // the flakiest connectivity. Since Phase 161 every log goes through the
+  // save queue (lib/offline-queue.ts): kept on the phone, then sent. Answered,
+  // it lands in state as the server returned it. No answer — offline, or a
+  // weak signal that times out while the phone still says it is online — it
+  // stays queued and is shown from there (see `shownLogs` below) under the
+  // id it will have on the server, and useOfflineSync sends it later.
+  const logTasksBatch = useCallback(async (rawInput: CreateBatchLogInput) => {
+    // Stamped here rather than at insert time, so a batch sent later keeps the
+    // author who actually took the photo instead of whoever happens to be on
+    // duty when the signal comes back. The time too: when it was done.
+    const input = withStaffId(rawInput);
+    const payload: CreateBatchLogInput = { ...input, completed_at: input.completed_at ?? new Date().toISOString() };
+    const ids = input.entries.map(() => crypto.randomUUID());
+    const outcome = await submitJob<Extract<SendResult, { kind: "logs" }>>(
+      { kind: "logs", payload, ids },
+      ({ logs: saved }) => {
+        // Empty when an earlier, timed-out try had landed: the refresh after
+        // the next sync brings those rows.
+        if (saved.length > 0) setLogs((prev) => [...saved, ...prev.filter((l) => !ids.includes(l.id))]);
+      }
+    );
+    if (outcome.status === "sent" && outcome.result.logs.length > 0) return outcome.result.logs;
+    if (outcome.status === "waiting") {
+      toast.warning(
+        screenLocale() === "id"
+          ? "Disimpan di HP. Akan dikirim otomatis saat sinyal bagus."
+          : "Saved on this phone. It will send by itself when the signal is back."
+      );
+    }
+    return input.entries.map(
+      (entry, i): TaskLog => ({
+        id: ids[i],
+        schedule_id: entry.schedule_id ?? null,
+        entity_id: entry.entity_id,
+        module: payload.module,
+        photo_url: payload.photo_url ?? null,
+        notes: payload.notes ?? null,
+        completed_at: payload.completed_at!,
+        staff_id: payload.staff_id ?? null,
+        sub_type: payload.sub_type ?? "complete",
+      })
+    );
+  }, []);
+
+  // A single log is a one-entry batch: one path to the queue and back.
+  const logTask = useCallback(
+    async (input: CreateLogInput) => {
+      const [log] = await logTasksBatch({
         entries: [{ schedule_id: input.schedule_id ?? null, entity_id: input.entity_id }],
         module: input.module,
         photo_url: input.photo_url ?? null,
         notes: input.notes ?? null,
-        completed_at: completedAt,
-        // Who logged it, stamped now as the batch path does: whoever is on
-        // duty when the signal comes back may be someone else.
-        staff_id: withStaffId(input).staff_id ?? null,
+        completed_at: input.completed_at,
+        staff_id: input.staff_id,
+        sub_type: input.sub_type,
       });
-      const optimisticLog: TaskLog = {
-        id: `offline-${crypto.randomUUID()}`,
-        schedule_id: input.schedule_id ?? null,
-        entity_id: input.entity_id,
-        module: input.module,
-        photo_url: input.photo_url ?? null,
-        notes: input.notes ?? null,
-        completed_at: completedAt,
-      };
-      setLogs((prev) => [optimisticLog, ...prev]);
-      toast.warning(
-        screenLocale() === "id"
-          ? "Tersimpan offline. Akan dikirim saat ada sinyal."
-          : "Saved offline. Will sync when reconnected."
-      );
-      return optimisticLog;
-    }
-    const log = await dataProvider.createLog(withStaffId(input));
-    setLogs((prev) => [log, ...prev]);
-    return log;
-  }, []);
+      return log;
+    },
+    [logTasksBatch]
+  );
 
-  const logTasksBatch = useCallback(async (rawInput: CreateBatchLogInput) => {
-    // Stamped here rather than at insert time, so a batch queued offline keeps
-    // the author who actually took the photo instead of whoever happens to be
-    // on duty when the signal comes back.
-    const input = withStaffId(rawInput);
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      const completedAt = input.completed_at ?? new Date().toISOString();
-      await addToOfflineQueue("task_logs", { ...input, completed_at: completedAt });
-      const optimisticLogs: TaskLog[] = input.entries.map((entry) => ({
-        id: `offline-${crypto.randomUUID()}`,
-        schedule_id: entry.schedule_id ?? null,
-        entity_id: entry.entity_id,
-        module: input.module,
-        photo_url: input.photo_url ?? null,
-        notes: input.notes ?? null,
-        completed_at: completedAt,
-      }));
-      setLogs((prev) => [...optimisticLogs, ...prev]);
-      toast.warning(
-        screenLocale() === "id"
-          ? "Tersimpan offline. Akan dikirim saat ada sinyal."
-          : "Saved offline. Will sync when reconnected."
-      );
-      return optimisticLogs;
-    }
-    const newLogs = await dataProvider.createLogsBatch(input);
-    setLogs((prev) => [...newLogs, ...prev]);
-    return newLogs;
+  // --- The save queue on screen (Phase 161) ---------------------------------
+  const queued = useSyncExternalStore(subscribeOutbox, outboxItems, () => NO_QUEUE);
+  useEffect(() => {
+    void hydrateOutbox();
   }, []);
+  const waiting = useMemo(
+    () => outboxView(queued, activeHouseholdId, householdTasks),
+    [queued, activeHouseholdId, householdTasks]
+  );
+  const shownLogs = useMemo(() => overlay(logs, waiting.logs), [logs, waiting.logs]);
+  const shownFoods = useMemo(() => overlay(foodItems, waiting.foods), [foodItems, waiting.foods]);
+  const shownTasks = useMemo(
+    () => overlay(householdTasks, waiting.tasks, false),
+    [householdTasks, waiting.tasks]
+  );
+
+  const finishChore = useCallback(
+    async (input: {
+      templateId: string;
+      date: string;
+      rowId: string | null;
+      assignedTo: string | null;
+      before: string;
+      after: string;
+      title: string;
+    }) => {
+      const outcome = await submitJob<Extract<SendResult, { kind: "chore" }>>(
+        {
+          kind: "chore",
+          ...input,
+          // Stamped now, for the same reason as every write here: whoever
+          // holds the phone when the signal returns may be someone else.
+          completedBy: readActiveStaffId(),
+          completedAt: new Date().toISOString(),
+        },
+        ({ task }) =>
+          setHouseholdTasks((prev) =>
+            prev.some((t) => t.id === task.id) ? prev.map((t) => (t.id === task.id ? task : t)) : [...prev, task]
+          )
+      );
+      return { queued: outcome.status === "waiting" };
+    },
+    []
+  );
 
   // Deletes the completion record first (so the UI reverts to pending
   // immediately) and best-effort cleans up the storage object after — a
@@ -1022,6 +1102,34 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         return item;
       } catch (err) {
         void dropPhoto(photoUrl);
+        throw err;
+      }
+    },
+    [putFood, dropPhoto]
+  );
+
+  const addFoodFromForm = useCallback(
+    async (input: Omit<FoodItemInput, "photo_url">, photo: File | null) => {
+      // The photo is kept on the phone and uploads first; the row is not
+      // sent until it has (lib/offline-queue.ts).
+      const photoUrl = photo ? await enqueuePhoto(photo, "food") : null;
+      const full: FoodItemInput = { ...input, photo_url: photoUrl };
+      const id = crypto.randomUUID();
+      const addedBy = readActiveStaffId();
+      const local = pendingFood(id, full, addedBy, getActiveHouseholdId(), new Date().toISOString());
+      try {
+        const outcome = await submitJob<Extract<SendResult, { kind: "food" }>>(
+          { kind: "food", id, input: full, addedBy },
+          ({ food }) => putFood(food ?? local)
+        );
+        if (outcome.status === "waiting") return { item: local, queued: true };
+        return { item: outcome.result.food ?? local, queued: false };
+      } catch (err) {
+        // Refused: nothing will point at the photo.
+        if (photoUrl) {
+          void discardPhoto(photoUrl);
+          void dropPhoto(photoUrl);
+        }
         throw err;
       }
     },
@@ -1472,7 +1580,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       entities,
       pets,
       schedules,
-      logs,
+      logs: shownLogs,
       medicalRecords,
       inventoryAlerts,
       routineProposals,
@@ -1481,9 +1589,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       decideLeave,
       endLeaveEarly,
       inventoryItems,
-      foodItems,
+      foodItems: shownFoods,
       latestInventoryAudits,
-      householdTasks,
+      householdTasks: shownTasks,
       loading,
       syncFailed,
       hasData,
@@ -1505,6 +1613,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteEntity,
       logTask,
       logTasksBatch,
+      outboxCount: queued.length,
+      pendingIds: waiting.pendingIds,
+      finishChore,
       deleteLogWithPhoto,
       createSchedule,
       createSchedulesBatch,
@@ -1519,6 +1630,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setInventoryStatus,
       removeInventoryItem,
       addFood,
+      addFoodFromForm,
       editFood,
       finishFood,
       unfinishFood,
@@ -1551,7 +1663,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       entities,
       pets,
       schedules,
-      logs,
+      shownLogs,
       medicalRecords,
       inventoryAlerts,
       routineProposals,
@@ -1560,9 +1672,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       decideLeave,
       endLeaveEarly,
       inventoryItems,
-      foodItems,
+      shownFoods,
       latestInventoryAudits,
-      householdTasks,
+      shownTasks,
       loading,
       syncFailed,
       hasData,
@@ -1581,6 +1693,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteEntity,
       logTask,
       logTasksBatch,
+      queued.length,
+      waiting.pendingIds,
+      finishChore,
       deleteLogWithPhoto,
       createSchedule,
       createSchedulesBatch,
@@ -1595,6 +1710,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       setInventoryStatus,
       removeInventoryItem,
       addFood,
+      addFoodFromForm,
       editFood,
       finishFood,
       unfinishFood,

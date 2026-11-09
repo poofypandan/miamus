@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { PhotoLightbox, type LightboxItem } from "@/components/dashboard/photo-lightbox";
-import { photoSrc, photoTakenAt } from "@/lib/photos";
+import { photoTakenAt } from "@/lib/photos";
+import { SyncedImg } from "@/components/shared/synced-img";
 import { formatDuration, formatTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { HouseholdTask } from "@/types/database";
@@ -149,9 +150,9 @@ export function ChoreProofPhotos({
         {shots.map((shot, index) => {
           const image = (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photoSrc(shot.url, 640)}
+              <SyncedImg
+                url={shot.url}
+                size={640}
                 alt={`${shot.label}: ${row.title}`}
                 loading="lazy"
                 decoding="async"

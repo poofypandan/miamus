@@ -68,7 +68,7 @@ export function FoodFormSheet({
 function FoodForm({ item, locale, onDone }: { item: FoodItem | null; locale: FoodLocale; onDone: () => void }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { addFood, editFood } = useHousehold();
+  const { addFoodFromForm, editFood } = useHousehold();
   const today = formatDateLocal(useToday());
 
   const [photo, setPhoto] = useState<File | string | null>(item?.photo_url ?? null);
@@ -115,8 +115,19 @@ function FoodForm({ item, locale, onDone }: { item: FoodItem | null; locale: Foo
         await editFood(item.id, input, photoChange);
         toast.success(tr(`Saved — ${input.name ?? "Food"}`, `Tersimpan — ${input.name ?? "Makanan"}`));
       } else {
-        await addFood(input, photo instanceof File ? photo : null);
-        toast.success(tr(`Added — ${input.name ?? "Food"}`, `Ditambahkan — ${input.name ?? "Makanan"}`));
+        // Kept on the phone first (Phase 161): on a weak signal it waits and
+        // sends by itself, and the list marks it as waiting.
+        const { queued } = await addFoodFromForm(input, photo instanceof File ? photo : null);
+        if (queued) {
+          toast.info(
+            tr(
+              "Saved on this phone. It will send by itself when the signal is back.",
+              "Disimpan di HP. Akan dikirim otomatis saat sinyal bagus."
+            )
+          );
+        } else {
+          toast.success(tr(`Added — ${input.name ?? "Food"}`, `Ditambahkan — ${input.name ?? "Makanan"}`));
+        }
       }
       onDone();
     } catch (err) {

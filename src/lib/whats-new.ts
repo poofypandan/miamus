@@ -23,6 +23,25 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "weak-signal-saves-2026-11",
+    date: "2026-11-09",
+    audience: "owner",
+    title: { en: "Saves that survive bad Wi-Fi", id: "Simpanan yang aman saat Wi-Fi lemah" },
+    steps: {
+      en: [
+        "On a weak signal, a log, a finished chore or new food is kept on the phone instead of being lost.",
+        "A \"waiting to send\" note shows until it goes. It sends by itself when the signal is back, and is never saved twice.",
+        "Nothing to do: no need to enter it again.",
+      ],
+      id: [
+        "Saat sinyal lemah, catatan, tugas yang selesai, atau makanan baru disimpan di HP, tidak hilang.",
+        "Ada keterangan \"menunggu dikirim\" sampai terkirim. Terkirim otomatis saat sinyal bagus, dan tidak pernah tersimpan dua kali.",
+        "Tidak perlu apa-apa: tidak perlu dicatat ulang.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     id: "repair-costs-2026-11",
     date: "2026-11-09",
     audience: "owner",
@@ -133,6 +152,15 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    id: "staff-weak-signal-2026-11",
+    date: "2026-11-09",
+    title: "Baru: aman saat sinyal lemah",
+    lines: [
+      "Kalau sinyal lemah, catatan dan foto disimpan di HP dulu. Tulisannya \"Menunggu dikirim\".",
+      "Nanti terkirim sendiri saat sinyal bagus. Tidak perlu dicatat ulang.",
+    ],
+  },
   {
     id: "staff-floors-2026-11",
     date: "2026-11-09",
