@@ -345,6 +345,8 @@ function FinishChoreBody({
               >
                 <PhotoPicker
                   offline
+                  // Held by the save while Selesaikan is being sent.
+                  disabled={busy}
                   pathPrefix={pathPrefix}
                   value={beforeUrl}
                   onChange={setBeforeUrl}
@@ -369,6 +371,8 @@ function FinishChoreBody({
               >
                 <PhotoPicker
                   offline
+                  // Held by the save while Selesaikan is being sent.
+                  disabled={busy}
                   pathPrefix={pathPrefix}
                   value={afterUrl}
                   onChange={setAfterUrl}

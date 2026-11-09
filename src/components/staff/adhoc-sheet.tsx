@@ -220,6 +220,8 @@ export function AdHocSheet() {
                   save queue holds the note until the photo is in storage. */}
               <PhotoPicker
                 offline
+                // Held by the save from the moment Simpan is pressed.
+                disabled={submitting}
                 pathPrefix={entityId ? `pet/${entityId}` : "pet/adhoc"}
                 value={photoUrl}
                 onChange={setPhotoUrl}
