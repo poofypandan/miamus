@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { practiceAllowed } from "@/lib/kakak/practice";
 
 /**
  * What the owner did with Kakak's suggestion (migrations/126,
@@ -28,6 +29,9 @@ export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "not signed in" }, { status: 401 });
+  // Practice requests are never recorded (api/kakak/route.ts), so there is
+  // nothing to mark.
+  if (practiceAllowed(process.env)) return NextResponse.json({ ok: true, practice: true });
   const { error } = await supabase.rpc("kakak_set_result", { p_request: body.requestId, p_result: body.result });
   if (error) return NextResponse.json({ error: "not recorded" }, { status: 409 });
   return NextResponse.json({ ok: true });

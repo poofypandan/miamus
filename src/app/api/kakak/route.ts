@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildContext, jakartaNow, type ContextRows } from "@/lib/kakak/context";
 import type { KakakModel } from "@/lib/kakak/cost";
 import { PRICES } from "@/lib/kakak/cost";
+import { practiceAllowed, practiceClient } from "@/lib/kakak/practice";
 import {
   BadTurnError,
   checkHistory,
@@ -91,8 +92,15 @@ async function readRows(
 }
 
 export async function POST(request: NextRequest) {
+  // Practice mode (KAKAK_PRACTICE=true, never on production): scripted
+  // answers, nothing sent to Anthropic, no key needed, nothing counted or
+  // recorded. Who may use Kakak is still checked, as below.
+  const practice = practiceAllowed(process.env);
+  if (process.env.KAKAK_PRACTICE === "true" && !practice) {
+    console.error("kakak: KAKAK_PRACTICE is ignored on production");
+  }
   // The kill switch: off unless the server says on.
-  if (process.env.KAKAK_ENABLED !== "true" || !process.env.ANTHROPIC_API_KEY) {
+  if (!practice && (process.env.KAKAK_ENABLED !== "true" || !process.env.ANTHROPIC_API_KEY)) {
     return refused("unavailable", 503);
   }
   if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) {
@@ -146,14 +154,27 @@ export async function POST(request: NextRequest) {
   const ownerLocale = locale.data === "id" ? "id" : locale.data === "en" ? "en" : body.locale === "id" ? "id" : "en";
   const built = buildContext(rows, { today, now, ownerLocale, callerUserId: auth.user.id });
 
-  const client = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-    authToken: null,
-    // Fixed: the key and the household's words only ever go to Anthropic.
-    baseURL: "https://api.anthropic.com",
-    timeout: 30_000,
-    maxRetries: 1,
+  const client = practice
+    ? practiceClient(built.household)
+    : new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+        authToken: null,
+        // Fixed: the key and the household's words only ever go to Anthropic.
+        baseURL: "https://api.anthropic.com",
+        timeout: 30_000,
+        maxRetries: 1,
+      });
+
+  // Practice: no call is counted against the limits and nothing is recorded,
+  // so practising never uses up the household's day.
+  const practiceBegin = async (): Promise<BeginResult> => ({
+    ok: true,
+    requestId: crypto.randomUUID(),
+    callsLeft: row.calls_left,
   });
+  const practiceRecord = async (requestId: string, call: CallRecord) => {
+    console.info("kakak practice", requestId, call.outcome);
+  };
 
   const begin = async (): Promise<BeginResult> => {
     const { data, error } = await supabase.rpc("kakak_begin", { p_household: householdId });
@@ -183,7 +204,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await runKakakTurn(
-      { client, model: modelFromEnv(), effort: effortFromEnv(), household: built.household, refs: built.refs, names: built.names, begin, record },
+      {
+        client,
+        model: modelFromEnv(),
+        effort: effortFromEnv(),
+        household: built.household,
+        refs: built.refs,
+        names: built.names,
+        begin: practice ? practiceBegin : begin,
+        record: practice ? practiceRecord : record,
+      },
       body.history,
       reply,
     );
@@ -191,7 +221,7 @@ export async function POST(request: NextRequest) {
       if (result.reason === "busy") console.error("kakak: the global daily cap was reached");
       return refused(result.reason, result.reason === "limit" || result.reason === "busy" ? 429 : 403);
     }
-    return NextResponse.json(result);
+    return NextResponse.json(practice ? { ...result, practice: true } : result);
   } catch (error) {
     if (error instanceof BadTurnError) return NextResponse.json({ error: "bad request" }, { status: 400 });
     const kind = error instanceof Anthropic.APIError ? `${error.status ?? "?"} ${error.name}` : (error as Error)?.name;

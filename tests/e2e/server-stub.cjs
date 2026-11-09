@@ -15,6 +15,11 @@
  * What it answers, as the real services would:
  *   GET /auth/v1/user               the token's own user (401 if expired)
  *   GET /rest/v1/household_members  the owner's membership, for OWNER only
+ *   Kakak's route in practice mode (KAKAK_PRACTICE=true in the test server):
+ *   POST /rest/v1/rpc/kakak_status  allowed and on, for OWNER only
+ *   POST /rest/v1/rpc/my_locale     "id"
+ *   GET  staff_profiles, task_entities, household_locations,
+ *        inventory_items, master_schedules  a small fixed household
  *   anything else                   404
  *
  * Tokens are the stub's unsigned test JWTs; only their claims are read.
@@ -28,6 +33,17 @@ const FAKE_HOST = "supabase.test";
 // Keep in step with tests/e2e/stub-backend.ts and tests/fixtures/household.ts.
 const OWNER = "00000000-0000-4000-8000-00000000e001";
 const HOUSEHOLD_ID = "00000000-0000-4000-8000-000000000001";
+const STAFF_ID = "00000000-0000-4000-8000-00000000c001";
+const TERRACE = "00000000-0000-4000-8000-000000000120";
+
+// What Kakak's route reads about the household (tests/e2e/kakak.spec.ts).
+const HOUSEHOLD = {
+  staff_profiles: [{ id: STAFF_ID, name: "Ari", created_at: "2026-10-01T00:00:00Z", user_id: null, archived_at: null }],
+  task_entities: [],
+  household_locations: [{ id: TERRACE, name: "Teras", created_at: "2026-10-01T00:00:00Z" }],
+  inventory_items: [],
+  master_schedules: [],
+};
 
 function claimsOf(req) {
   const token = (req.headers.authorization || "").split(" ")[1] || "";
@@ -73,6 +89,17 @@ function install() {
       }
       return send(res, 200, rows);
     }
+
+    const owner = live && !claims.is_anonymous && claims.sub === OWNER;
+    if (url.pathname === "/rest/v1/rpc/kakak_status") {
+      if (!owner) return send(res, 403, { code: "42501", message: "not_admin" });
+      return send(res, 200, [
+        { allowed: true, enabled: true, enabled_by: OWNER, enabled_at: "2026-11-08T03:00:00Z", daily_limit: 40, calls_left: 40 },
+      ]);
+    }
+    if (url.pathname === "/rest/v1/rpc/my_locale") return send(res, 200, owner ? "id" : null);
+    const table = url.pathname.replace(/^\/rest\/v1\//, "");
+    if (owner && Object.prototype.hasOwnProperty.call(HOUSEHOLD, table)) return send(res, 200, HOUSEHOLD[table]);
 
     return send(res, 404, {});
   });

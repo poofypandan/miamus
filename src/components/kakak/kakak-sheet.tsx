@@ -65,6 +65,8 @@ function Conversation({ onClose }: { onClose: () => void }) {
   const [draft, setDraft] = useState("");
   const [typingAnswer, setTypingAnswer] = useState(false);
   const [saving, setSaving] = useState(false);
+  /** The server answered in practice mode (scripted, no AI): say so. */
+  const [practice, setPractice] = useState(false);
   const abort = useRef<AbortController | null>(null);
 
   useEffect(() => () => abort.current?.abort(), []);
@@ -94,6 +96,7 @@ function Conversation({ onClose }: { onClose: () => void }) {
   }
 
   function show(reply: KakakReply) {
+    if ("practice" in reply && reply.practice) setPractice(true);
     switch (reply.kind) {
       case "question":
         setHistory(reply.history);
@@ -149,6 +152,14 @@ function Conversation({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-4">
+      {practice && (
+        <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {t(
+            "Practice mode: Kakak's answers are scripted and nothing is sent to the AI. Saving still saves.",
+            "Mode latihan: jawaban Kakak sudah disiapkan dan tidak ada yang dikirim ke AI. Menyimpan tetap tersimpan."
+          )}
+        </p>
+      )}
       {said.length > 0 && (
         <div className="flex flex-col items-end gap-2">
           {said.map((line, index) => (
