@@ -44,7 +44,8 @@ import { vetVisitState } from "@/lib/staff-agenda";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { LogSubType, TaskLog } from "@/types/database";
 import { cn } from "@/lib/utils";
-import { photoSrc } from "@/lib/photos";
+import { SyncedImg } from "@/components/shared/synced-img";
+import { discardPhoto, enqueuePhoto } from "@/lib/photo-queue";
 import { usePrefetchHighRes } from "@/hooks/use-prefetch-high-res";
 
 interface PendingCapture {
@@ -65,10 +66,12 @@ function deletableUntil(completedAt: string): number {
 
 export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const formatTime = useFormatTime();
-  const { logTasksBatch, uploadPhoto, pets, deleteLogWithPhoto, logs, updateEntity } =
+  const { logTasksBatch, pets, deleteLogWithPhoto, logs, updateEntity, pendingIds } =
     useHousehold();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // The photo a pressed Simpan handed to the save queue (see dropCapture).
+  const submittedPhoto = useRef<string | null>(null);
   const [capture, setCapture] = useState<PendingCapture | null>(null);
   // The position in the strip, not the tile itself — the tile is re-derived
   // from photoGroups below, so a delete (or any refresh) flows straight through
@@ -100,7 +103,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // one layer at a time instead of collapsing the lot. The lightbox still
   // clears the confirmation as a backstop for the non-Back close paths.
   useBackToClose(sheetOpen, () => setSheetOpen(false));
-  useBackToClose(!!capture, () => setCapture(null));
+  useBackToClose(!!capture, () => dropCapture());
   useBackToClose(confirmDelete, () => setConfirmDelete(false));
   // No useBackToClose for the lightbox: PhotoLightbox claims its own history
   // entry, and a second one here would need two Back presses to leave a photo.
@@ -231,7 +234,10 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     setBusy(true);
     try {
       const compressed = await compressPhoto(file);
-      const url = await uploadPhoto(compressed, `pet/batch-${group.time.replace(":", "")}`);
+      // Kept on the phone and uploaded in the background (Phase 161): the log
+      // it ends up on waits for it in the save queue, so a weak signal never
+      // costs the photo or the log.
+      const url = await enqueuePhoto(compressed, `pet/batch-${group.time.replace(":", "")}`);
       // Upload first, confirm who's in frame second — the photo is what
       // needs the camera round-trip, tagging is a quick local decision.
       // Starts empty on purpose: pre-ticking every pending dog meant a
@@ -269,6 +275,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       return;
     }
     setConfirming(true);
+    submittedPhoto.current = capture.photoUrl;
+    let logSubmitted = false;
     try {
       const chosen = capture.items.filter((i) => capture.selected.has(i.entityId));
       // Derived at the moment of saving: a first vet photo is the check-in, a
@@ -284,6 +292,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         photo_url: capture.photoUrl,
         sub_type: subType,
       });
+      // Saved, or queued holding the photo: from here on a failure (the
+      // admission below) must not release it (Codex, PR #41).
+      logSubmitted = true;
       // The admission is what suspends the dog's meals and potty breaks, so it
       // is written after the log rather than before: a failed photo must not
       // leave a dog marked as living at the clinic.
@@ -314,14 +325,31 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       setCapture(null);
     } catch (err) {
       console.error(err);
+      // Refused, so no save holds it: closing the dialog may discard it again.
+      if (!logSubmitted) submittedPhoto.current = null;
       toast.error("Gagal menyimpan catatan");
     } finally {
       setConfirming(false);
     }
   }
 
+  // Closed without saving: the photo on the phone is for nothing now.
+  // Once Simpan is pressed the photo belongs to the save in the queue, even
+  // if the dialog is dismissed while it is still uploading (Codex, PR #41).
+  function dropCapture() {
+    if (capture && submittedPhoto.current !== capture.photoUrl) void discardPhoto(capture.photoUrl);
+    setCapture(null);
+  }
+
   async function handleDeletePhoto() {
     if (!lightbox) return;
+    // Not on the server yet (Phase 161): there is nothing there to delete,
+    // and the queued save would put it back.
+    if (lightbox.logs.some((log) => pendingIds.has(log.id))) {
+      toast.error("Foto ini belum terkirim. Tunggu sampai terkirim, lalu hapus.");
+      setConfirmDelete(false);
+      return;
+    }
     // Re-checked at the moment of the tap, not just at render: a phone left
     // open on this screen must not be able to delete past the window.
     if (Date.now() >= deletableUntil(lightbox.at)) {
@@ -680,7 +708,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         />
       )}
 
-      <Dialog open={!!capture} onOpenChange={(open) => !open && setCapture(null)}>
+      <Dialog open={!!capture} onOpenChange={(open) => !open && dropCapture()}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Pilih hewan yang ada di foto</DialogTitle>
@@ -694,12 +722,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           </DialogHeader>
           {capture && (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photoSrc(capture.photoUrl, 320)}
-                alt=""
-                className="max-h-56 w-full rounded-lg object-cover"
-              />
+              <SyncedImg url={capture.photoUrl} size={320} className="max-h-56 w-full rounded-lg object-cover" />
               <div className="flex flex-col gap-2">
                 {dogsIn(capture.items).map((item) => {
                   const checked = capture.selected.has(item.entityId);
@@ -856,10 +879,10 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
 function StripThumbnail({ url, label }: { url: string; label: string }) {
   const prefetchRef = usePrefetchHighRes(url);
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <SyncedImg
       ref={prefetchRef}
-      src={photoSrc(url, 320)}
+      url={url}
+      size={320}
       loading="lazy"
       decoding="async"
       alt={label}

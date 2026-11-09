@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Camera, Check, CheckCircle2, CloudOff, Eye, Hand, Loader2 } from "lucide-react";
+import { AlertTriangle, Camera, Check, CheckCircle2, CloudOff, CloudUpload, Eye, Hand, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -25,7 +25,7 @@ import { RepairNotes } from "@/components/repairs/repair-notes";
 import { cn } from "@/lib/utils";
 import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
-import { discardPhoto, ensureUploaded, PhotoNotUploadedError } from "@/lib/photo-queue";
+import { discardPhoto } from "@/lib/photo-queue";
 import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 
@@ -79,9 +79,10 @@ function FinishChoreBody({
   const { repairs } = useRepairs();
   const {
     activeHouseholdId,
-    updateHouseholdTaskStatus,
     materialiseChoreOccurrence,
     claimHouseholdTask,
+    finishChore,
+    pendingIds,
   } = useHousehold();
   const { staffId } = useStaffIdentity();
   // Photos already uploaded for this day's chore, restored from the device
@@ -104,6 +105,9 @@ function FinishChoreBody({
   const supervised = !!task.requires_supervision;
   const unassigned = !task.assigned_to;
   const done = occurrence.status === "completed";
+  // Finished on this phone, not sent yet (Phase 161): shown as done, but the
+  // draft and the photos on the phone are still what the save will send.
+  const waitingToSend = !!occurrence.row && pendingIds.has(occurrence.row.id);
 
   // Every change to the photos is saved as it happens — an upload landing, or
   // a photo removed to retake it. Removing both drops the draft.
@@ -116,11 +120,11 @@ function FinishChoreBody({
   // any proof still waiting on this phone to upload (Phase 138). Finished
   // here, both are already in storage and discarding is a no-op.
   useEffect(() => {
-    if (!done) return;
+    if (!done || waitingToSend) return;
     clearChoreDraft(draftKey);
     if (beforeUrl) void discardPhoto(beforeUrl);
     if (afterUrl) void discardPhoto(afterUrl);
-  }, [draftKey, done, beforeUrl, afterUrl]);
+  }, [draftKey, done, waitingToSend, beforeUrl, afterUrl]);
 
   // Proof the storage server refused outright (Phase 138): it has to be
   // retaken, and finishing is held until it is.
@@ -213,27 +217,27 @@ function FinishChoreBody({
     setBusy(true);
     let reloading = false;
     try {
-      // Taken offline, the photos may still be on this phone (Phase 138).
-      // The row must not point at them until they are in storage.
-      try {
-        await ensureUploaded([beforeUrl, afterUrl]);
-      } catch (err) {
-        if (!(err instanceof PhotoNotUploadedError)) throw err;
-        if (err.reason === "failed") toast.error("Ada foto yang rusak. Hapus lalu ambil ulang.");
-        else toast.info("Foto tersimpan di HP. Selesaikan lagi setelah ada sinyal.");
-        return;
-      }
-      const id = await rowId();
-      await updateHouseholdTaskStatus(id, "completed", {
-        before_photo_url: beforeUrl,
-        after_photo_url: afterUrl,
-        // Kept in step with after_photo_url so anything still reading the
-        // original single-photo column — an older phone that has not reloaded
-        // the bundle — still finds the proof where it expects it.
-        photo_url: afterUrl,
+      // Kept on the phone and sent from there (Phase 161): photos first, then
+      // the completion. No answer — no signal, or a weak one that times out —
+      // and it waits on the phone and goes by itself; the chore shows as
+      // done meanwhile, marked as waiting. The draft stays until it is sent.
+      const { queued } = await finishChore({
+        templateId: occurrence.template.id,
+        date: occurrence.date,
+        rowId: occurrence.row?.id ?? null,
+        // Under the assignee on screen, not the template's: a chore covered
+        // for someone on leave is filed under whoever covers it (Phase 140).
+        assignedTo: occurrence.task.assigned_to,
+        before: beforeUrl,
+        after: afterUrl,
+        title: task.title,
       });
-      clearChoreDraft(draftKey);
-      toast.success(`"${task.title}" selesai ✅`);
+      if (queued) {
+        toast.info("Tugas selesai, disimpan di HP. Akan dikirim otomatis saat sinyal bagus.");
+      } else {
+        clearChoreDraft(draftKey);
+        toast.success(`"${task.title}" selesai`);
+      }
       onOpenChange(false);
     } catch (err) {
       const handled = explainFailure(err);
@@ -298,9 +302,20 @@ function FinishChoreBody({
 
           {done ? (
             <>
-              <p className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
-                <CheckCircle2 className="size-4 shrink-0" /> Tugas ini sudah selesai.
-              </p>
+              {waitingToSend ? (
+                // Amber means waiting (Phase 153 colour rule).
+                <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <CloudUpload className="mt-0.5 size-4 shrink-0" />
+                  <span>
+                    Sudah selesai, tersimpan di HP. Menunggu dikirim — terkirim
+                    otomatis saat sinyal bagus. Tidak perlu diulang.
+                  </span>
+                </p>
+              ) : (
+                <p className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                  <CheckCircle2 className="size-4 shrink-0" /> Tugas ini sudah selesai.
+                </p>
+              )}
               {/* Where "Lihat foto" on a finished card leads (Phase 131): the
                   before/after pair with their times, each opening full screen. */}
               {occurrence.row && (
@@ -330,6 +345,8 @@ function FinishChoreBody({
               >
                 <PhotoPicker
                   offline
+                  // Held by the save while Selesaikan is being sent.
+                  disabled={busy}
                   pathPrefix={pathPrefix}
                   value={beforeUrl}
                   onChange={setBeforeUrl}
@@ -354,6 +371,8 @@ function FinishChoreBody({
               >
                 <PhotoPicker
                   offline
+                  // Held by the save while Selesaikan is being sent.
+                  disabled={busy}
                   pathPrefix={pathPrefix}
                   value={afterUrl}
                   onChange={setAfterUrl}
