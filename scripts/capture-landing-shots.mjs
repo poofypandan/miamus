@@ -6,11 +6,15 @@
  *   node scripts/capture-landing-shots.mjs
  *
  * The build must be a mock-mode one (no Supabase URL), so nothing leaves the
- * browser. This script starts its own `next start` on port 3390 and stops it
- * when done. Re-run it when one of the captured screens changes noticeably.
+ * browser. NEXT_PUBLIC_* values are fixed at build time, so clearing them for
+ * `next start` would not be enough: the script refuses a build that has any
+ * Supabase address compiled in, and blocks every request that isn't to this
+ * machine while it captures (and fails if one was tried). It starts its own
+ * `next start` on port 3390 and stops it when done. Re-run it when one of the
+ * captured screens changes noticeably.
  */
 import { spawn } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
@@ -49,6 +53,30 @@ async function whatsNewIds() {
   return [...source.matchAll(/^\s+id: "([^"]+)",$/gm)].map((match) => match[1]);
 }
 
+/** Any Supabase address compiled into the client bundle means not mock mode. */
+const BACKEND = /https?:\/\/[a-z0-9-]+\.supabase\.(co|in)|supabase\.test|127\.0\.0\.1:54321|localhost:54321/;
+
+async function assertMockBuild() {
+  const dir = path.join(ROOT, ".next/static/chunks");
+  let files;
+  try {
+    files = await readdir(dir, { recursive: true });
+  } catch {
+    throw new Error("No build found. Run a mock-mode build first (see the top of this file).");
+  }
+  for (const file of files) {
+    if (!String(file).endsWith(".js")) continue;
+    const source = await readFile(path.join(dir, String(file)), "utf8");
+    const match = source.match(BACKEND);
+    if (match) {
+      throw new Error(
+        `This build has a Supabase address compiled in (${match[0]}). Rebuild in mock mode: ` +
+          "NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= npm run build"
+      );
+    }
+  }
+}
+
 async function waitForServer() {
   for (let i = 0; i < 120; i++) {
     try {
@@ -63,6 +91,7 @@ async function waitForServer() {
 }
 
 async function main() {
+  await assertMockBuild();
   const env = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: "", NEXT_PUBLIC_SUPABASE_ANON_KEY: "" };
   const server = spawn("npx", ["next", "start", "-p", String(PORT)], { cwd: ROOT, env, stdio: "ignore" });
   try {
@@ -102,12 +131,23 @@ async function main() {
         },
         { db, locale, seen, staff, household: HOUSEHOLD_ID, sari: SARI }
       );
+      // Nothing may leave this machine.
+      const blocked = [];
+      await context.route("**/*", (route) => {
+        const host = new URL(route.request().url()).hostname;
+        if (host === "localhost" || host === "127.0.0.1" || route.request().url().startsWith("data:")) {
+          return route.continue();
+        }
+        blocked.push(route.request().url());
+        return route.abort("blockedbyclient");
+      });
       const page = await context.newPage();
       await page.goto(`${BASE}${url}`);
       if (then) await then(page);
       await page.waitForTimeout(800);
       const png = await page.screenshot({ fullPage: !!process.env.SHOTS_FULL_PAGE });
       await writeFile(path.join(OUT, `${name}.webp`), await sharp(png).webp({ quality: 82 }).toBuffer());
+      if (blocked.length) throw new Error(`${name}: blocked requests off this machine: ${blocked.join(", ")}`);
       console.log(`captured ${name}`);
       await context.close();
     }

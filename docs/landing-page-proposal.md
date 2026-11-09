@@ -115,7 +115,7 @@ Eight short sections, one idea each, no carousel, no stock photos of people.
    (→ `/`).
 2. **Hero**: headline, sub-line, brand line. Primary button **Request
    access**; secondary **I already have an account** (→ `/`). Under them,
-   small: **Staff? Saya staf →** (→ `/join/code`). One phone screenshot:
+   small, with a `UserRound` icon: **Staff? Saya staf** (→ `/join/code`). One phone screenshot:
    the owner's Today.
 3. **How it works**: the demonstration, in three steps (below).
 4. **What it looks after**: four cards (Pets, Chores and rooms, Kitchen,
@@ -172,7 +172,7 @@ available (built, switched off).
 | Brand line | A little less on your mind. | Biar pikiran sedikit lebih ringan. |
 | Primary | Request access | Minta akses |
 | Secondary | I already have an account | Saya sudah punya akun |
-| Staff link | Staff? **Saya staf** → | Staf? **Saya staf** → |
+| Staff link (with a `UserRound` icon) | Staff? **Saya staf** | Staf? **Saya staf** |
 | Beta note | Free while Miamus is in beta. We review every new household. | Gratis selama Miamus masih beta. Setiap rumah baru kami tinjau. |
 
 ### What it looks after
@@ -210,7 +210,7 @@ untuk siapa saja selama cuti"); no geolocation anywhere in `src/`.
 | **Your household's data stays yours.** | **Data rumah Anda tetap milik Anda.** |
 | No ads, and we never sell your data. | Tanpa iklan, dan kami tidak pernah menjual data Anda. |
 | Download a copy any time. Asked to delete your household? It's deleted 7 days later, so a mistake can still be undone. | Unduh salinannya kapan saja. Minta rumah Anda dihapus? Rumah dihapus 7 hari kemudian, jadi masih bisa dibatalkan. |
-| Read the privacy policy → | Baca Kebijakan Privasi → |
+| Read the privacy policy | Baca Kebijakan Privasi |
 
 Grounded in: the privacy policy section on ads and selling; Household → Your
 data (`household-data-panel.tsx`, migration 127: the founder asks, the
