@@ -38,7 +38,11 @@ export const LEGAL = {
   // are sent with each request; Anthropic keeps them up to 30 days, longer
   // only if flagged for safety, and doesn't train on them. Miamus keeps only
   // request counts and costs (no text), 13 months (Phase 156).
-  policyVersion: "2026-11-09.1",
+  // 2026-11-09.2: repairs — what broke, where, photos of the problem and of
+  // each visit before and after, who reported it, who fixed it (a name
+  // only), kept while open and 2 years after closing; admins are notified
+  // of urgent staff reports (Phase 159, migrations/130). No new service.
+  policyVersion: "2026-11-09.2",
   effectiveDate: { en: "9 November 2026", id: "9 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

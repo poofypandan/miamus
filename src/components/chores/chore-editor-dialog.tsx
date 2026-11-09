@@ -97,7 +97,16 @@ export function ChoreEditorDialog({
    * and a missing job's "Add" fills in the room and the job as the title.
    * Ignored when editing.
    */
-  preset?: { title?: string; locationId?: string | null } | null;
+  preset?: {
+    title?: string;
+    locationId?: string | null;
+    /** Phase 159: "Schedule a visit" fills in a Maintenance chore for a repair. */
+    category?: HouseholdTaskCategory;
+    spot?: string | null;
+    notes?: string | null;
+    /** The repair the new chore is a visit for (migrations/130). */
+    repairId?: string | null;
+  } | null;
 }) {
   const {
     createHouseholdTask,
@@ -174,12 +183,12 @@ export function ChoreEditorDialog({
       setTitle(preset?.title ?? "");
       const room = preset?.locationId ? locations?.find((place) => place.id === preset.locationId) : undefined;
       setPlaces(room ? [room] : []);
-      setSpot(null);
-      setCategory("cleaning");
+      setSpot(room ? (preset?.spot?.trim() || null) : null);
+      setCategory(preset?.category ?? "cleaning");
       setAssignee(UNASSIGNED);
       setDate(defaultDate);
       setTime("");
-      setNotes("");
+      setNotes(preset?.notes ?? "");
       setRecurrence("none");
       setUntil("");
       setSupervision(false);
@@ -190,6 +199,8 @@ export function ChoreEditorDialog({
   }, [open, task, defaultDate]);
 
   const untilBeforeStart = !!until && until < date;
+  // A visit for a repair: one place, linked on save (adding only).
+  const repairId = !editing ? (preset?.repairId ?? null) : null;
   const placeIds = useMemo(() => places.map((place) => place.id), [places]);
 
   async function save() {
@@ -241,7 +252,7 @@ export function ChoreEditorDialog({
           )
         );
       } else {
-        await createHouseholdTask(fields);
+        await createHouseholdTask(repairId ? { ...fields, repair_id: repairId } : fields);
         toast.success(t(`Added "${fields.title}"`, `"${fields.title}" ditambahkan`));
       }
       onOpenChange(false);
@@ -434,7 +445,7 @@ export function ChoreEditorDialog({
                 setPlaces(next);
                 if (next.length === 0) setSpot(null);
               }}
-              multiple={!editing}
+              multiple={!editing && !repairId}
             />
           </div>
 

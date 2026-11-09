@@ -12,6 +12,7 @@ import type {
   HouseholdTask,
   HouseholdLocation,
   LeaveRequest,
+  Repair,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
@@ -41,6 +42,8 @@ interface MockDB {
   householdTasks: HouseholdTask[];
   householdLocations: HouseholdLocation[];
   leaveRequests: LeaveRequest[];
+  /** Phase 159. Optional: a stored demo database from before it has none. */
+  repairs?: Repair[];
 }
 
 function freshDB(): MockDB {
@@ -641,6 +644,72 @@ export const mockProvider: DataProvider = {
     const [task] = await mockProvider.createHouseholdTasks([input]);
     return task;
   },
+  async listRepairs() {
+    const household = getActiveHouseholdId();
+    return delay(
+      (loadDB().repairs ?? [])
+        .filter((r) => r.household_id === household)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    );
+  },
+  async listRepairVisits() {
+    const household = getActiveHouseholdId();
+    return delay(loadDB().householdTasks.filter((t) => t.household_id === household && !!t.repair_id));
+  },
+  async createRepair(input) {
+    const db = loadDB();
+    const now = new Date().toISOString();
+    const repair: Repair = {
+      id: uid("repair"),
+      household_id: getActiveHouseholdId(),
+      location_id: input.location_id ?? null,
+      spot: input.spot?.trim() || null,
+      title: input.title.trim(),
+      details: input.details?.trim() || null,
+      photo_url: input.photo_url ?? null,
+      urgent: input.urgent ?? false,
+      status: input.status,
+      reported_by_staff: input.reported_by_staff ?? null,
+      created_by: null,
+      created_at: now,
+      updated_at: now,
+      decided_by: null,
+      decided_at: null,
+      dismiss_reason: null,
+      fixed_by_name: null,
+      closed_at: null,
+    };
+    db.repairs = [...(db.repairs ?? []), repair];
+    saveDB(db);
+    return delay(repair);
+  },
+  async updateRepair(id, patch) {
+    const db = loadDB();
+    const repairs = db.repairs ?? [];
+    const idx = repairs.findIndex((r) => r.id === id);
+    if (idx === -1) throw new Error(`Repair ${id} not found`);
+    const before = repairs[idx];
+    const now = new Date().toISOString();
+    const next: Repair = { ...before, ...patch, updated_at: now };
+    // As migrations/130's guard: decided once, closed while fixed or dismissed.
+    if (patch.status && patch.status !== before.status) {
+      if (before.status === "reported") next.decided_at = now;
+      next.closed_at = patch.status === "fixed" || patch.status === "dismissed" ? now : null;
+    }
+    if (next.status !== "dismissed") next.dismiss_reason = null;
+    repairs[idx] = next;
+    db.repairs = repairs;
+    saveDB(db);
+    return delay(next);
+  },
+  async deleteRepair(id) {
+    const db = loadDB();
+    db.repairs = (db.repairs ?? []).filter((r) => r.id !== id);
+    // As the foreign key's "set null": visits stay, unlinked.
+    db.householdTasks = db.householdTasks.map((t) => (t.repair_id === id ? { ...t, repair_id: null } : t));
+    saveDB(db);
+    return delay(undefined);
+  },
   async createHouseholdTasks(inputs) {
     const db = loadDB();
     const created = inputs.map(
@@ -664,6 +733,7 @@ export const mockProvider: DataProvider = {
         requires_supervision: input.requires_supervision ?? false,
         location_id: input.location_id ?? null,
         spot: input.spot ?? null,
+        repair_id: input.repair_id ?? null,
         before_photo_url: null,
         after_photo_url: null,
       })

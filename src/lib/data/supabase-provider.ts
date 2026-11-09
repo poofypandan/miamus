@@ -697,6 +697,8 @@ export const supabaseProvider: DataProvider = {
         // The part of the room (migrations/129). Copied, or 128's guard
         // refuses a staff phone's copy; sent only once the column exists.
         ...("spot" in template ? { spot: template.spot ?? null } : {}),
+        // A visit's day carries its repair (migrations/130's guard checks it).
+        ...("repair_id" in template ? { repair_id: template.repair_id ?? null } : {}),
         // The occurrence is a one-off: the repeat belongs to the template, and
         // copying it here would make every completed Tuesday a template of its
         // own, each generating its own infinite series.
@@ -727,6 +729,56 @@ export const supabaseProvider: DataProvider = {
   async createHouseholdTask(input) {
     const [task] = await supabaseProvider.createHouseholdTasks([input]);
     return task;
+  },
+  async listRepairs() {
+    const { data, error } = await client()
+      .from("repairs")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  },
+  async listRepairVisits() {
+    const { data, error } = await client()
+      .from("household_tasks")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .not("repair_id", "is", null)
+      .order("due_date", { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  },
+  async createRepair(input) {
+    const { data, error } = await client()
+      .from("repairs")
+      .insert({
+        household_id: getActiveHouseholdId(),
+        title: input.title,
+        details: input.details ?? null,
+        location_id: input.location_id ?? null,
+        spot: input.spot ?? null,
+        photo_url: input.photo_url ?? null,
+        urgent: input.urgent ?? false,
+        status: input.status,
+        reported_by_staff: input.reported_by_staff ?? null,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async updateRepair(id, patch) {
+    const { data, error } = await client().from("repairs").update(patch).eq("id", id).select();
+    if (error) throw error;
+    // An RLS-filtered update is a 200 with no rows (a staff phone, or another household).
+    if (!data || data.length === 0) throw new Error("Repair was not updated.");
+    return data[0];
+  },
+  async deleteRepair(id) {
+    const { data, error } = await client().from("repairs").delete().eq("id", id).select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Repair was not deleted.");
   },
   async createHouseholdTasks(inputs) {
     const household_id = getActiveHouseholdId();
@@ -1068,5 +1120,7 @@ function taskRow(household_id: string, input: CreateHouseholdTaskInput) {
     location_id: input.location_id ?? null,
     // Only when given: a database before migrations/129 has no spot column.
     ...(input.spot !== undefined ? { spot: input.spot } : {}),
+    // Likewise repair_id (migrations/130).
+    ...(input.repair_id ? { repair_id: input.repair_id } : {}),
   };
 }

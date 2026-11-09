@@ -16,6 +16,8 @@ import {
   visibleProposalBatches,
 } from "@/components/staff/staff-reports-panel";
 import { FoodFormSheet } from "@/components/kitchen/food-form-sheet";
+import { MyRepairReports, StaffReportRepairButton } from "@/components/staff/staff-repairs";
+import { RepairReportSheet } from "@/components/repairs/repair-report-sheet";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 
@@ -32,6 +34,8 @@ export function StaffActionsFab() {
   const [open, setOpen] = useState(false);
   // Food came to the door (Phase 156): the add-food sheet, straight from here.
   const [addingFood, setAddingFood] = useState(false);
+  // Something broken (Phase 159): the repair report, straight from here.
+  const [reportingRepair, setReportingRepair] = useState(false);
   useBackToClose(open, () => setOpen(false));
 
   // Owned here rather than in the panel: the badge below and the drawer's
@@ -89,7 +93,7 @@ export function StaffActionsFab() {
           <SheetHeader className="border-b">
             <SheetTitle>Laporan & Usulan</SheetTitle>
             <SheetDescription>
-              Catat makanan masuk, laporkan stok, usulkan jadwal, atau catat kegiatan ekstra.
+              Catat makanan masuk, lapor kerusakan, laporkan stok, usulkan jadwal, atau catat kegiatan ekstra.
             </SheetDescription>
           </SheetHeader>
           {/* overscroll-contain: reaching the end of the list must not start
@@ -114,12 +118,20 @@ export function StaffActionsFab() {
               </span>
               <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
             </button>
+            <StaffReportRepairButton
+              onPress={() => {
+                setOpen(false);
+                setReportingRepair(true);
+              }}
+            />
+            <MyRepairReports />
             <StaffReportsPanel dismissed={dismissed} dismiss={dismiss} now={now} />
           </div>
         </SheetContent>
       </Sheet>
 
       <FoodFormSheet open={addingFood} item={null} locale="id" onClose={() => setAddingFood(false)} />
+      <RepairReportSheet open={reportingRepair} onClose={() => setReportingRepair(false)} locale="id" asStaff />
     </>
   );
 }

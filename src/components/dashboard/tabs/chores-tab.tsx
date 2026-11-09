@@ -12,6 +12,7 @@ import { DateRibbon } from "@/components/date-ribbon";
 import { ChoreCard } from "@/components/chores/chore-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { RoomsView } from "@/components/chores/rooms-view";
+import { RepairsView } from "@/components/repairs/repairs-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { useChoresView } from "@/hooks/use-chores-view";
@@ -48,13 +49,15 @@ export function ChoresTab() {
         segments={[
           { value: "today", label: t("Today", "Hari ini") },
           { value: "rooms", label: t("Rooms", "Ruangan") },
+          { value: "repairs", label: t("Repairs", "Perbaikan") },
         ]}
         value={view}
         onChange={setView}
       />
       <WhatsNewCard id="rooms-2026-11" onTry={view === "rooms" ? undefined : () => setView("rooms")} />
       <WhatsNewCard id="room-picker-2026-11" />
-      {view === "rooms" ? <RoomsView /> : <TodayChores />}
+      <WhatsNewCard id="repairs-2026-11" onTry={view === "repairs" ? undefined : () => setView("repairs")} />
+      {view === "rooms" ? <RoomsView /> : view === "repairs" ? <RepairsView /> : <TodayChores />}
     </div>
   );
 }
