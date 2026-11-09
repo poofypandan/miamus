@@ -1,6 +1,8 @@
 # Public landing page: proposal
 
-Status: **for the owner's review, 2026-11-09. Nothing built.**
+Status: **approved by the owner, 2026-11-09: recommended options (A) for L1–L7**,
+plus Codex's corrections and the owner's follow-ups (no emoji; no data
+region on the page). Being built on `claude/landing-page`.
 Mockup: `docs/mockups/landing-page.html` (open in a browser at phone width;
 English and Bahasa Indonesia side by side).
 
@@ -121,9 +123,9 @@ Eight short sections, one idea each, no carousel, no stock photos of people.
 5. **Made for the people who do the work**: staff screens in plain Bahasa
    Indonesia; no account or email, just their name and a PIN; leave
    (cuti) built in; nothing tracks where they are.
-6. **Your household's data**: kept in Singapore, never sold, no ads;
+6. **Your household's data**: never sold, no ads;
    download it or delete the household any time. Link to the privacy policy.
-7. **Questions**: eight FAQs, collapsed.
+7. **Questions**: seven FAQs (eight once PR #41 is live), collapsed.
 8. **Request access** (repeated) and the footer: Poofy Labs, privacy policy,
    support@poofylabs.dev.
 
@@ -136,11 +138,11 @@ code (file references are for review, not shown on the page).
 | --- | --- | --- | --- |
 | 1. You set it once | **Set it once.** Add "Mop the terrace, every day" for Sari, or Mochi's meal times. Miamus repeats it, day after day. | **Atur sekali.** Tambahkan "Pel teras, setiap hari" untuk Sari, atau jam makan Mochi. Miamus mengulangnya setiap hari. | Chore editor: title, room, assignee, repeat none/daily/weekly/monthly, notes (`chore-editor-dialog.tsx`, `chore-recurrence.ts`). Pet routines with fixed times (`schedule-editor.tsx`). |
 | 2. Staff see it on their phone | **They see it on their phone.** Sari opens Miamus, and today's list is in Bahasa Indonesia. She taps her chore, takes a photo before and after, and it's done. No account, no email. | **Staf melihatnya di HP.** Sari membuka Miamus, dan daftar hari ini dalam Bahasa Indonesia. Dia ketuk tugasnya, foto sebelum dan sesudah, selesai. Tanpa akun, tanpa email. | Staff Today (`app/staff/page.tsx`), an assigned chore says "Ketuk untuk foto", an unassigned one "Saya kerjakan" (`tap-hint.tsx`, `chore-card.tsx`), before/after photos enforced by the database (migration 104), invite link / house code + PIN (`join/staff`, `join/code`). |
-| 3. You see it's done | **You see it's done.** Who did it, when, and the photos, on your Today. If a pet is unwell or something urgent breaks, your phone tells you straight away. | **Anda lihat sudah selesai.** Siapa yang mengerjakan, jam berapa, dan fotonya, di Hari ini. Kalau hewan sakit atau ada kerusakan darurat, HP Anda langsung diberi tahu. | Owner Today and the staff strip (`agenda-tab.tsx`, `staff-completion-strip.tsx`); owner push for sick reports, urgent repairs, food from staff, food expiring (migrations 103/114, 130, 123, 124). |
+| 3. You see it's done | **You see it's done.** Who did it, when, and the photos, on your Today. Turn on notifications, and your phone tells you straight away when a pet is unwell or something urgent breaks. | **Anda lihat sudah selesai.** Siapa yang mengerjakan, jam berapa, dan fotonya, di Hari ini. Nyalakan notifikasi, dan HP Anda langsung diberi tahu kalau hewan sakit atau ada kerusakan darurat. | Owner Today and the staff strip (`agenda-tab.tsx`, `staff-completion-strip.tsx`); owner push for sick reports, urgent repairs, food from staff, food expiring (migrations 103/114, 130, 123, 124). Owners only get them after turning notifications on (`src/lib/push.ts`); on iPhone, only from the app added to the home screen (`pushAvailability()`), which FAQ 4 already tells them to do. |
 
 What the page deliberately does **not** say: that Miamus messages staff on
 WhatsApp (it doesn't; owners send the invite link themselves, and staff can
-tap to tell the owner on WhatsApp after an urgent report); that staff are
+tap to tell the owner on WhatsApp after a sick-pet report, not after a repair report); that staff are
 notified of new tasks (staff phones don't get push today); that Kakak is
 available (built, switched off).
 
@@ -206,13 +208,17 @@ untuk siapa saja selama cuti"); no geolocation anywhere in `src/`.
 | English | Bahasa Indonesia |
 | --- | --- |
 | **Your household's data stays yours.** | **Data rumah Anda tetap milik Anda.** |
-| Stored in Singapore. No ads, and we never sell your data. | Disimpan di Singapura. Tanpa iklan, dan kami tidak pernah menjual data Anda. |
-| Download a copy, or delete your household, any time. | Unduh salinannya, atau hapus rumah Anda, kapan saja. |
+| No ads, and we never sell your data. | Tanpa iklan, dan kami tidak pernah menjual data Anda. |
+| Download a copy any time. Asked to delete your household? It's deleted 7 days later, so a mistake can still be undone. | Unduh salinannya kapan saja. Minta rumah Anda dihapus? Rumah dihapus 7 hari kemudian, jadi masih bisa dibatalkan. |
 | Read the privacy policy → | Baca Kebijakan Privasi → |
 
-Grounded in: `LEGAL.dataRegion`; privacy policy section on ads and selling;
-Household → Your data (`household-data-panel.tsx`, migration 127). The region
-is read from `src/config/legal.ts`, never typed into the page.
+Grounded in: the privacy policy section on ads and selling; Household → Your
+data (`household-data-panel.tsx`, migration 127: the founder asks, the
+household is deleted 7 days later and can be cancelled until then).
+
+**No data region on the page** (owner, 2026-11-09). It isn't required
+there: UU PDP asks for the transfer to be disclosed, and section 6 of the
+privacy policy (linked right below) does that, with Article 56 as the basis.
 
 ### Questions (FAQ)
 
@@ -222,17 +228,19 @@ is read from `src/config/legal.ts`, never typed into the page.
 | 2 | **Do my staff need an account or email?** No. You send a link (on WhatsApp, for example). It connects their phone to your home, and they sign in with their name and a PIN. If they're ever signed out, they use the house code. | **Apakah staf perlu akun atau email?** Tidak. Anda kirim link (misalnya lewat WhatsApp). Link itu menghubungkan HP mereka ke rumah Anda, lalu mereka masuk dengan nama dan PIN. Kalau suatu saat keluar, mereka masuk lagi dengan kode rumah. |
 | 3 | **What language do staff see?** Bahasa Indonesia, always. You choose English or Bahasa Indonesia for yourself. | **Staf melihat bahasa apa?** Selalu Bahasa Indonesia. Anda sendiri bisa memilih Bahasa Inggris atau Bahasa Indonesia. |
 | 4 | **Is there an app to download?** No app store needed. Open miamus.app on Android or iPhone and add it to the home screen. It opens full screen, like an app. | **Apakah perlu unduh aplikasi?** Tidak perlu lewat app store. Buka miamus.app di Android atau iPhone, lalu tambahkan ke layar utama. Tampilannya layar penuh, seperti aplikasi. |
-| 5 | **What if the signal is weak?** Staff can keep logging. Logs and photos wait on the phone and send themselves when the signal comes back. | **Bagaimana kalau sinyal lemah?** Staf tetap bisa mencatat. Catatan dan foto tersimpan di HP dan terkirim sendiri saat sinyal kembali. |
-| 6 | **Does Miamus send WhatsApp messages?** No automatic messages. You share the invite link yourself, and after an urgent report staff can tap once to tell you on WhatsApp. Urgent things also reach your phone as a notification. | **Apakah Miamus mengirim pesan WhatsApp?** Tidak ada pesan otomatis. Anda sendiri yang membagikan link undangan, dan setelah laporan darurat staf bisa sekali ketuk untuk memberi tahu Anda lewat WhatsApp. Hal yang darurat juga masuk ke HP Anda sebagai notifikasi. |
-| 7 | **Can my family help manage?** Yes. Invite your partner or family; they sign in with Google and can manage everything you can. | **Apakah keluarga bisa ikut mengelola?** Bisa. Undang pasangan atau keluarga; mereka masuk dengan Google dan bisa mengelola semuanya seperti Anda. |
+| 5 | **What if the signal is weak?** *(added only after PR #41 merges)* Staff keep working. What they save waits on the phone and is sent when the signal is back. | **Bagaimana kalau sinyal lemah?** *(ditambahkan setelah PR #41 digabung)* Staf tetap bisa bekerja. Yang mereka simpan menunggu di HP dan terkirim saat sinyal kembali. |
+| 6 | **Does Miamus send WhatsApp messages?** No automatic messages. You share the invite link yourself, and after a sick-pet report staff can tap once to tell you on WhatsApp. If you turn on notifications, urgent things also reach your phone straight away. | **Apakah Miamus mengirim pesan WhatsApp?** Tidak ada pesan otomatis. Anda sendiri yang membagikan link undangan, dan setelah laporan hewan sakit staf bisa sekali ketuk untuk memberi tahu Anda lewat WhatsApp. Kalau notifikasi dinyalakan, hal yang darurat juga langsung masuk ke HP Anda. |
+| 7 | **Can my family help manage?** Yes. Invite your partner or family; they sign in with Google and manage the household day to day, just like you. Only the person who created the household can delete it. | **Apakah keluarga bisa ikut mengelola?** Bisa. Undang pasangan atau keluarga; mereka masuk dengan Google dan bisa mengelola rumah sehari-hari, sama seperti Anda. Hanya pembuat rumah yang bisa menghapusnya. |
 | 8 | **What does it cost?** Free while Miamus is in beta. Everything you do by hand will stay free; later, an optional AI helper will be the paid extra. | **Berapa biayanya?** Gratis selama Miamus masih beta. Semua yang dikerjakan secara manual akan tetap gratis; nanti, asisten AI opsional menjadi tambahan berbayar. |
 
 Notes for review:
 
-- **FAQ 5** is true today for a phone that knows it's offline (the offline
-  queue and photo queue). The "weak but not offline" case is PR #41. If the
-  landing ships before #41 merges, soften it to "Logs and photos wait on the
-  phone when there's no signal…".
+- **FAQ 5 waits for PR #41.** On `main` today, a chore finished without
+  signal keeps its photos but staff must tap Finish again later
+  (`finish-chore-sheet.tsx`), and routine photos upload directly
+  (`agenda-group-card.tsx`). PR #41 queues every staff save. The page ships
+  with seven questions; FAQ 5 is added in a one-line follow-up once #41 is
+  live.
 - **FAQ 8** says the agreed direction (manual free, AI the paid extra) in
   public for the first time. See L5.
 - Kakak isn't named anywhere on the page. See L6.
@@ -265,8 +273,9 @@ The landing page's **Request access** starts that same Google sign-in
 (`signInWithOAuth`, `redirectTo: /auth/callback`). The middleware already
 sends a new account to `/onboarding`, which shows the language screen, then
 the request. The visitor's choice of EN or ID on the landing is saved to the
-public-locale key, so the language screen is pre-selected in the same
-language (the onboarding screen still asks, as today).
+public-locale key, so the onboarding language screen lists that language
+first (`LanguageChoice` orders by `initialPublicLocale()`). It doesn't
+choose for them: the screen still asks, as today.
 
 - **No new personal data, no new service, no new table.** The Google name
   and email shared with Poofy Labs are already in the privacy policy (version
