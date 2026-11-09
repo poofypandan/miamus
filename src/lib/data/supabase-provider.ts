@@ -16,6 +16,8 @@ function client() {
 }
 
 const STORAGE_BUCKET = "household-logs";
+/** Repair receipts: owners only (migrations/131). */
+const RECEIPTS_BUCKET = "owner-receipts";
 
 // getPublicUrl() returns ".../storage/v1/object/public/<bucket>/<path>". Since
 // Phase 90 the buckets are private, so that URL no longer serves anything — it
@@ -779,6 +781,67 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client().from("repairs").delete().eq("id", id).select("id");
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Repair was not deleted.");
+  },
+  async getRepairCost(repairId) {
+    const { data, error } = await client().from("repair_costs").select("*").eq("repair_id", repairId).maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+  async saveRepairCost(repairId, cost) {
+    const { data, error } = await client()
+      .from("repair_costs")
+      .upsert({ repair_id: repairId, household_id: getActiveHouseholdId(), ...cost }, { onConflict: "repair_id" })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async uploadReceipt(file, repairId) {
+    // <household>/<repair>/…: the bucket's policies read the household from
+    // the path and let only its owners in (migrations/131).
+    const ext = extensionFor(file);
+    const path = `${getActiveHouseholdId()}/${repairId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error } = await client().storage.from(RECEIPTS_BUCKET).upload(path, file, { contentType: file.type });
+    if (error) throw error;
+    return client().storage.from(RECEIPTS_BUCKET).getPublicUrl(path).data.publicUrl;
+  },
+  async deleteReceipt(url) {
+    const marker = `/object/public/${RECEIPTS_BUCKET}/`;
+    const idx = url.indexOf(marker);
+    if (idx === -1) return;
+    const { error } = await client()
+      .storage.from(RECEIPTS_BUCKET)
+      .remove([decodeURIComponent(url.slice(idx + marker.length))]);
+    if (error) throw error;
+  },
+  async listRepairNotes() {
+    const { data, error } = await client()
+      .from("repair_notes")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  },
+  async addRepairNote(note) {
+    const { data, error } = await client()
+      .from("repair_notes")
+      .insert({
+        household_id: getActiveHouseholdId(),
+        repair_id: note.repair_id,
+        body: note.body,
+        photo_url: note.photo_url ?? null,
+        staff_id: note.staff_id ?? null,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteRepairNote(id) {
+    const { data, error } = await client().from("repair_notes").delete().eq("id", id).select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Note was not deleted.");
   },
   async createHouseholdTasks(inputs) {
     const household_id = getActiveHouseholdId();

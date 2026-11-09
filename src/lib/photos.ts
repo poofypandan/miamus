@@ -12,7 +12,10 @@
  * browser was going to make anyway, and it caches like any other image.
  */
 
-const BUCKETS = ["household-logs", "inventory_audits"] as const;
+// owner-receipts (migrations/131): repair receipts, which its storage
+// policies let only the household's owners read; /api/photo downloads as the
+// caller, so a staff phone gets nothing.
+const BUCKETS = ["household-logs", "inventory_audits", "owner-receipts"] as const;
 export type PhotoBucket = (typeof BUCKETS)[number];
 
 export function isPhotoBucket(value: string): value is PhotoBucket {

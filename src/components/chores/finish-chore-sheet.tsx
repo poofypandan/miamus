@@ -21,6 +21,7 @@ import { categoryLabel } from "@/lib/household-tasks";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { photoSrc, photoTakenAt } from "@/lib/photos";
 import { useRepairs } from "@/hooks/use-repairs";
+import { RepairNotes } from "@/components/repairs/repair-notes";
 import { cn } from "@/lib/utils";
 import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
@@ -275,6 +276,8 @@ function FinishChoreBody({
               )}
               <p className="text-sm font-medium">{repair.title}</p>
               {repair.details && <p className="text-sm text-muted-foreground">{repair.details}</p>}
+              {/* The repair's thread (PR B): staff can say what the repair person said. */}
+              <RepairNotes repairId={repair.id} locale="id" asStaff />
             </div>
           )}
           {task.notes && (

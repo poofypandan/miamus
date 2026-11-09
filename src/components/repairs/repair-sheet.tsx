@@ -9,6 +9,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { ChoreProofPhotos } from "@/components/chores/chore-proof-photos";
 import { RepairReportSheet } from "@/components/repairs/repair-report-sheet";
+import { RepairCostSection } from "@/components/repairs/repair-cost";
+import { RepairNotes } from "@/components/repairs/repair-notes";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useLocationName } from "@/hooks/use-household-locations";
@@ -18,7 +20,7 @@ import { useToday } from "@/hooks/use-today";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { dataProvider } from "@/lib/data";
 import { photoSrc } from "@/lib/photos";
-import { REPAIR_LIMITS, repairStage, visitNotes, visitTitle, visitsOf } from "@/lib/repairs";
+import { REPAIR_LIMITS, repairStage, visitNotes, visitTitle, visitsOf, warrantyLabel } from "@/lib/repairs";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import type { HouseholdTask, Repair } from "@/types/database";
@@ -138,6 +140,9 @@ function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallb
             {t("Repair person", "Tukang")}: <span className="font-medium">{repair.fixed_by_name}</span>
           </p>
         )}
+        {warrantyLabel(repair.warranty_until, locale) && (
+          <p className="text-sm text-gray-700">{warrantyLabel(repair.warranty_until, locale)}</p>
+        )}
         {repair.status === "dismissed" && repair.dismiss_reason && (
           <p className="text-sm text-gray-700">
             {t("Not needed", "Tidak perlu")}: {repair.dismiss_reason}
@@ -228,6 +233,11 @@ function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallb
             <RotateCcw /> {t("Reopen", "Buka lagi")}
           </Button>
         )}
+
+        {/* PR B (migrations/131): what it cost (owners only), and the thread —
+            below the next step, which is what the sheet is opened for. */}
+        {repair.status !== "reported" && <RepairCostSection repairId={repair.id} />}
+        <RepairNotes repairId={repair.id} locale={locale} />
 
         <div className="flex items-center justify-center gap-2 border-t pt-3">
           <Button variant="ghost" className="min-h-[44px]" onClick={() => setEditing(true)}>

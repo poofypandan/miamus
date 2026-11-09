@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useHousehold } from "@/context/household-context";
 import { EMPTY, currentHousehold, getSnapshot, loadRepairs, subscribeRepairs } from "@/lib/repairs-store";
-import type { HouseholdTask, Repair } from "@/types/database";
+import type { HouseholdTask, Repair, RepairNote } from "@/types/database";
 
 /**
  * The household's repairs and their visits (Phase 159), shared by every
@@ -24,6 +24,7 @@ import type { HouseholdTask, Repair } from "@/types/database";
 export function useRepairs(): {
   repairs: Repair[];
   visits: HouseholdTask[];
+  notes: RepairNote[];
   loaded: boolean;
   failed: boolean;
   reload: () => Promise<void>;
@@ -47,6 +48,7 @@ export function useRepairs(): {
   return {
     repairs: mine ? state.repairs : [],
     visits: mine ? visits : [],
+    notes: mine ? state.notes : [],
     loaded: mine && state.loaded,
     failed: mine && state.failed,
     reload,

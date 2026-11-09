@@ -249,6 +249,10 @@ function TasksView() {
   const staffName = useStaffNameLookup(allProfiles, "Anggota");
   const roomName = useLocationName();
 
+  // The repair-notes tip (Phase 159 PR B) only once a repair visit is on
+  // this phone's list: that's where notes are written.
+  const showRepairNotesTip = useMemo(() => chores.some((chore) => !!chore.task.repair_id), [chores]);
+
   // The floors tip (Phase 158) only once this phone's list actually shows a
   // floor or a spot: before the owner sorts rooms there is nothing to explain.
   const { locations } = useHouseholdLocations();
@@ -316,6 +320,7 @@ function TasksView() {
 
         <StaffWhatsNewCard id="staff-floors-2026-11" show={showFloorsTip} />
         <StaffWhatsNewCard id="staff-repairs-2026-11" show />
+        <StaffWhatsNewCard id="staff-repair-notes-2026-11" show={showRepairNotesTip} />
 
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.

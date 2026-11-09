@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronRight, DoorOpen, Plus } from "lucide-react";
+import { Check, ChevronRight, DoorOpen, Plus, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { dataProvider } from "@/lib/data";
@@ -19,6 +19,7 @@ import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { SortRoomsCard } from "@/components/chores/sort-rooms-card";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { RoomRepairs } from "@/components/repairs/room-repairs";
+import { useRepairs } from "@/hooks/use-repairs";
 import { canSortIntoFloors } from "@/lib/organise-rooms";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
@@ -423,6 +424,11 @@ function RoomRow({
   const names = [...new Set(matching.map((c) => c.task.assigned_to).filter(Boolean).map((id) => staffName(id)))];
   const groups = job ? [] : jobChips(entry.chores, locale, t("Other", "Lainnya"));
   const shown = groups.slice(0, 4);
+  // Phase 159 PR B: a room with something broken says so at a glance.
+  const { repairs } = useRepairs();
+  const openRepairs = repairs.filter(
+    (r) => r.location_id === entry.id && (r.status === "reported" || r.status === "open")
+  ).length;
 
   return (
     <div className={cn("flex items-center gap-2 border-t first:border-t-0", whole && "bg-zinc-50")}>
@@ -435,6 +441,17 @@ function RoomRow({
           <span className={cn("min-w-0 flex-1 truncate text-sm", whole ? "font-semibold text-gray-700" : "font-medium text-gray-900")}>
             {label}
           </span>
+          {openRepairs > 0 && (
+            <span
+              className="flex shrink-0 items-center gap-0.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-800"
+              aria-label={t(
+                `${openRepairs} open repair${openRepairs === 1 ? "" : "s"}`,
+                `${openRepairs} perbaikan berjalan`
+              )}
+            >
+              <Wrench className="size-3" aria-hidden /> {openRepairs}
+            </span>
+          )}
           {!job && <ChevronRight className="size-4 shrink-0 text-muted-foreground" />}
         </span>
         {job ? (

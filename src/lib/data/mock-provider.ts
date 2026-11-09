@@ -13,6 +13,8 @@ import type {
   HouseholdLocation,
   LeaveRequest,
   Repair,
+  RepairCost,
+  RepairNote,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
@@ -44,6 +46,8 @@ interface MockDB {
   leaveRequests: LeaveRequest[];
   /** Phase 159. Optional: a stored demo database from before it has none. */
   repairs?: Repair[];
+  repairCosts?: RepairCost[];
+  repairNotes?: RepairNote[];
 }
 
 function freshDB(): MockDB {
@@ -705,8 +709,62 @@ export const mockProvider: DataProvider = {
   async deleteRepair(id) {
     const db = loadDB();
     db.repairs = (db.repairs ?? []).filter((r) => r.id !== id);
+    // As the cascade: its cost and notes go too.
+    db.repairCosts = (db.repairCosts ?? []).filter((c) => c.repair_id !== id);
+    db.repairNotes = (db.repairNotes ?? []).filter((n) => n.repair_id !== id);
     // As the foreign key's "set null": visits stay, unlinked.
     db.householdTasks = db.householdTasks.map((t) => (t.repair_id === id ? { ...t, repair_id: null } : t));
+    saveDB(db);
+    return delay(undefined);
+  },
+  async getRepairCost(repairId) {
+    return delay((loadDB().repairCosts ?? []).find((c) => c.repair_id === repairId) ?? null);
+  },
+  async saveRepairCost(repairId, cost) {
+    const db = loadDB();
+    const row: RepairCost = {
+      repair_id: repairId,
+      household_id: getActiveHouseholdId(),
+      amount_idr: cost.amount_idr,
+      receipt_url: cost.receipt_url,
+      note: cost.note?.trim() || null,
+      created_by: null,
+      updated_at: new Date().toISOString(),
+    };
+    db.repairCosts = [...(db.repairCosts ?? []).filter((c) => c.repair_id !== repairId), row];
+    saveDB(db);
+    return delay(row);
+  },
+  async uploadReceipt(file) {
+    // Demo mode keeps photos as object URLs, like uploadPhoto.
+    return delay(URL.createObjectURL(file));
+  },
+  async deleteReceipt() {
+    return delay(undefined);
+  },
+  async listRepairNotes() {
+    const household = getActiveHouseholdId();
+    return delay((loadDB().repairNotes ?? []).filter((n) => n.household_id === household));
+  },
+  async addRepairNote(note) {
+    const db = loadDB();
+    const row: RepairNote = {
+      id: uid("note"),
+      household_id: getActiveHouseholdId(),
+      repair_id: note.repair_id,
+      body: note.body.trim(),
+      photo_url: note.photo_url ?? null,
+      staff_id: note.staff_id ?? null,
+      created_by: null,
+      created_at: new Date().toISOString(),
+    };
+    db.repairNotes = [...(db.repairNotes ?? []), row];
+    saveDB(db);
+    return delay(row);
+  },
+  async deleteRepairNote(id) {
+    const db = loadDB();
+    db.repairNotes = (db.repairNotes ?? []).filter((n) => n.id !== id);
     saveDB(db);
     return delay(undefined);
   },
