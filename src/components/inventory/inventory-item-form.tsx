@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PhotoPicker } from "@/components/photo-picker";
+import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
@@ -54,6 +55,11 @@ export function InventoryItemForm({
   defaultScope: InventoryScope;
 }) {
   const { addInventoryItem, updateInventoryItem, removeInventoryItem } = useHousehold();
+  // "Who lives here?" (Phase 162): a home without pets gets no Pets | Home
+  // switch, so every new item is a home item. An existing pet item keeps it,
+  // so it can still be moved.
+  const { petsOn } = useHouseholdProfile();
+  const showScopes = petsOn || item?.scope === "pet";
   const locale = useOwnerLocale();
   const t = useT();
   const scopeLabels = locale === "id" ? SCOPE_LABELS_ID : SCOPE_LABELS_EN;
@@ -145,12 +151,14 @@ export function InventoryItemForm({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <SegmentedControl
-            ariaLabel={t("Inventory", "Stok")}
-            segments={INVENTORY_SCOPES.map((s) => ({ value: s, label: scopeLabels[s] }))}
-            value={scope}
-            onChange={changeScope}
-          />
+          {showScopes && (
+            <SegmentedControl
+              ariaLabel={t("Inventory", "Stok")}
+              segments={INVENTORY_SCOPES.map((s) => ({ value: s, label: scopeLabels[s] }))}
+              value={scope}
+              onChange={changeScope}
+            />
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="inv-name">{t("Name", "Nama")}</Label>

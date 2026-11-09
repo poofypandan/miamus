@@ -19,9 +19,10 @@ export type OptionalModule = (typeof OPTIONAL_MODULES)[number];
 export type ModuleFlags = Record<OptionalModule, boolean>;
 
 /**
- * Which optional tabs are on. Hardcoded until there is a household setting to
- * read them from; the bar and the router already go through enabledModules,
- * so that setting only has to replace this value.
+ * Which optional tabs are on when nothing else is known: every tab. The real
+ * value comes from the household's "Who lives here?" answer (Phase 162,
+ * migrations/133) through useHouseholdProfile's moduleFlagsFrom; callers
+ * that have it pass it in.
  */
 export const DEFAULT_MODULE_FLAGS: ModuleFlags = { pets: true };
 

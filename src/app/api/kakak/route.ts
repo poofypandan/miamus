@@ -63,7 +63,7 @@ async function readRows(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   householdId: string,
 ): Promise<ContextRows> {
-  const [staff, pets, rooms, items] = await Promise.all([
+  const [staff, pets, rooms, items, household] = await Promise.all([
     supabase
       .from("staff_profiles")
       // Named columns: pin is revoked from every client role (migrations/096).
@@ -72,8 +72,13 @@ async function readRows(
     supabase.from("task_entities").select("id, name, created_at, entity_type, metadata").eq("household_id", householdId).eq("entity_type", "pet"),
     supabase.from("household_locations").select("id, name, created_at, kind, parent_id").eq("household_id", householdId),
     supabase.from("inventory_items").select("id, name, scope, created_at").eq("household_id", householdId),
+    // "Who lives here?" (Phase 162): pets switched off means no pet routines.
+    supabase.from("households").select("has_pets").eq("id", householdId).maybeSingle(),
   ]);
   for (const result of [staff, pets, rooms, items]) if (result.error) throw result.error;
+  // Optional: a failed read (or a database without migrations/133) leaves
+  // pets on, as before this phase, rather than failing Kakak's turn.
+  if (household.error) console.error("Kakak: who lives here not read", household.error.message);
   const petIds = (pets.data ?? []).map((p) => p.id as string);
   const schedules = petIds.length
     ? await supabase
@@ -88,6 +93,7 @@ async function readRows(
     schedules: schedules.data ?? [],
     rooms: rooms.data ?? [],
     items: items.data ?? [],
+    hasPets: household.error ? null : ((household.data as { has_pets: boolean | null } | null)?.has_pets ?? null),
   } as ContextRows;
 }
 

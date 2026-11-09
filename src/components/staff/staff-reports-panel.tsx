@@ -143,6 +143,7 @@ export function StaffReportsPanel({
   } = useHousehold();
 
   const petName = (id: string) => pets.find((p) => p.id === id)?.name ?? "—";
+  const hasPets = pets.length > 0;
 
   const proposalBatches = useMemo(
     () => visibleProposalBatches(routineProposals, dismissed, now),
@@ -164,7 +165,8 @@ export function StaffReportsPanel({
       <div className="flex flex-col gap-2">
         <LowStockFlagButton locale="id" />
         <StaffRoutinePicker />
-        <AdHocSheet />
+        {/* Pet notes only: nothing to note in a home without pets (Phase 162). */}
+        {hasPets && <AdHocSheet />}
         {/* Leave (Phase 140): another request that goes to an admin. */}
         <LeaveRequestButton />
       </div>
@@ -185,32 +187,36 @@ export function StaffReportsPanel({
         ))}
       </ReportList>
 
-      <ReportList title="Usulan Jadwal" empty="Belum ada usulan jadwal.">
-        {proposalBatches.map((batch) => (
-          <ProposalBatchRow
-            key={batch.key}
-            batch={batch}
-            petName={petName(batch.proposals[0].pet_id)}
-            now={now}
-            onDismiss={() => dismiss(batch.key)}
-            onUndo={async () => {
-              for (const proposal of batch.proposals) await undoRoutineProposal(proposal.id);
-            }}
-          />
-        ))}
-      </ReportList>
+      {(hasPets || proposalBatches.length > 0) && (
+        <ReportList title="Usulan Jadwal" empty="Belum ada usulan jadwal.">
+          {proposalBatches.map((batch) => (
+            <ProposalBatchRow
+              key={batch.key}
+              batch={batch}
+              petName={petName(batch.proposals[0].pet_id)}
+              now={now}
+              onDismiss={() => dismiss(batch.key)}
+              onUndo={async () => {
+                for (const proposal of batch.proposals) await undoRoutineProposal(proposal.id);
+              }}
+            />
+          ))}
+        </ReportList>
+      )}
 
-      <ReportList title="Catatan Ekstra" empty="Belum ada catatan ekstra hari ini.">
-        {extraLogs.map((log) => (
-          <ReportRow
-            key={log.id}
-            label={`${log.notes ?? "Catatan"} · ${petName(log.entity_id)}`}
-            detail={formatTime(new Date(log.completed_at))}
-            undoable={isWithinUndoWindow(log.completed_at, now)}
-            onUndo={() => deleteLogWithPhoto(log)}
-          />
-        ))}
-      </ReportList>
+      {(hasPets || extraLogs.length > 0) && (
+        <ReportList title="Catatan Ekstra" empty="Belum ada catatan ekstra hari ini.">
+          {extraLogs.map((log) => (
+            <ReportRow
+              key={log.id}
+              label={`${log.notes ?? "Catatan"} · ${petName(log.entity_id)}`}
+              detail={formatTime(new Date(log.completed_at))}
+              undoable={isWithinUndoWindow(log.completed_at, now)}
+              onUndo={() => deleteLogWithPhoto(log)}
+            />
+          ))}
+        </ReportList>
+      )}
     </section>
   );
 }

@@ -14,6 +14,7 @@ import { useRequireOwner } from "@/hooks/use-require-owner";
 import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { moduleFromParam, type DashboardModule } from "@/lib/dashboard-modules";
+import { moduleFlagsFrom, useHouseholdProfile } from "@/hooks/use-household-profile";
 
 export default function DashboardPage() {
   // useSearchParams() opts this subtree out of static rendering unless it's
@@ -36,7 +37,11 @@ export default function DashboardPage() {
  */
 function DashboardCanvas() {
   const searchParams = useSearchParams();
-  const activeModule = moduleFromParam(searchParams.get("module"));
+  // ?module=pets with pets off opens Today, as the bar shows (Phase 162).
+  const activeModule = moduleFromParam(
+    searchParams.get("module"),
+    moduleFlagsFrom(useHouseholdProfile().hasPets)
+  );
   // Every tab here is owner territory; the middleware is what actually keeps
   // staff out of /dashboard (anonymous sessions are sent to /staff), and this
   // is the second line that stops a half-resolved role rendering owner

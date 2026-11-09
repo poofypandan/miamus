@@ -12,6 +12,7 @@ import {
   Crown,
   DoorOpen,
   History,
+  House,
   Info,
   KeyRound,
   Languages,
@@ -70,8 +71,10 @@ import { SignOutSheet } from "@/components/auth/sign-out-sheet";
 import { HouseholdDataPanel } from "@/components/dashboard/household-data-panel";
 import { useHouseholdDeletion } from "@/hooks/use-household-deletion";
 import { AboutMiamus } from "@/components/dashboard/about-miamus";
-import { WhatsNewList } from "@/components/shared/whats-new";
+import { WhatsNewCard, WhatsNewList } from "@/components/shared/whats-new";
 import { RoomsManager } from "@/components/dashboard/rooms-manager";
+import { WhoLivesHerePanel } from "@/components/dashboard/who-lives-here-panel";
+import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { describeLog } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ProposalStatus, StaffProfile } from "@/types/database";
@@ -119,6 +122,7 @@ const HOUSEHOLD_PAGES = [
   "about",
   "whats-new",
   "rooms",
+  "who-lives-here",
 ] as const;
 type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
 
@@ -196,6 +200,8 @@ export function StaffTab() {
   const locale = useOwnerLocale();
   const t = useT();
   const isOwner = useRequireOwner();
+  // "Who lives here?" row (Phase 162).
+  const { petsOn } = useHouseholdProfile();
   const { profiles, failed, reload, allProfiles } = useStaffProfiles();
   // Kakak's row only for a household on the family list (Phase 156 step 2).
   const { status: kakak, reload: reloadKakak } = useKakakStatus();
@@ -267,6 +273,8 @@ export function StaffTab() {
     const staffCount = (profiles ?? []).filter((p) => !p.user_id).length;
     return (
       <div className="flex flex-col gap-5">
+        {/* Where the switch lives, so the tutorial sits here (Phase 162). */}
+        <WhatsNewCard id="who-lives-here-2026-11" />
         {deletion.status?.scheduled && deletion.status.deleteAfter && (
           <SettingsGroup>
             <SettingsRow
@@ -290,6 +298,12 @@ export function StaffTab() {
             onPress={() => open("staff")}
           />
           <SettingsRow icon={DoorOpen} label={t("Rooms", "Ruangan")} onPress={() => open("rooms")} />
+          <SettingsRow
+            icon={House}
+            label={t("Who lives here", "Siapa yang tinggal di sini")}
+            detail={petsOn ? t("Pets", "Hewan") : t("Just people", "Hanya orang")}
+            onPress={() => open("who-lives-here")}
+          />
           {openLeave > 0 && (
             <SettingsRow
               icon={CalendarOff}
@@ -379,6 +393,7 @@ export function StaffTab() {
       {page === "about" && <AboutMiamus />}
       {page === "whats-new" && <WhatsNewList />}
       {page === "rooms" && <RoomsManager />}
+      {page === "who-lives-here" && <WhoLivesHerePanel />}
     </div>
   );
 }

@@ -125,6 +125,11 @@ people are **staf** and **admin**.
 | Notes (on a repair) / Send | **Catatan** / **Kirim** | The repair's thread, owners and staff. |
 | Warranty until / Under warranty until / Warranty ended | **Garansi sampai** / **Garansi sampai** / **Garansi berakhir** | |
 | Owners only | **Hanya pemilik** | Marks what staff never see. |
+| Who lives here? | **Siapa yang tinggal di sini?** | Phase 162: the sign-up question and the Household row. |
+| Just people (no pets) | **Hanya orang** | The Household row's detail when pets are off. |
+| Kids · Elders | **Anak · Lansia** | Shown greyed as "Soon" until the Care tab. "Lansia" is the everyday word; "orang tua" also means parents. |
+| Soon (a greyed choice) | **Segera** | |
+| Any pets at home? / We have pets · No pets | **Ada hewan di rumah?** / **Ada hewan · Tidak ada** | The one-time card on Today. |
 
 ## Formatting
 
