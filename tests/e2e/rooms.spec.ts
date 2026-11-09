@@ -140,7 +140,7 @@ test("Rooms in Bahasa Indonesia, with its What's new card shown once", async ({ 
   await card.getByRole("button", { name: "Lihat Ruangan" }).click();
   await expect(page).toHaveURL(/chores=rooms/);
   await expect(page.getByRole("tab", { name: "Ruangan" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("Seluruh lantai")).toBeVisible();
+  await expect(page.getByText("Seluruh lantai", { exact: true })).toBeVisible();
   await expect(page.getByText("Vakum · Sen, Kam")).toBeVisible();
 
   await page.getByRole("button", { name: /^Vakum \d/ }).click();
