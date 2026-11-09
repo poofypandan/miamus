@@ -42,6 +42,11 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_SUPABASE_URL: "http://supabase.test",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-test-key",
+      // The server's own calls to the fake host (the middleware's "who is
+      // this, are they in a household?") are answered in-process, so owner
+      // screens can be tested too (R6). Test-only; see the file.
+      NODE_OPTIONS: "--require ./tests/e2e/server-stub.cjs",
+      E2E_SERVER_STUB: "1",
     },
   },
 });

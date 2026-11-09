@@ -20,6 +20,13 @@ export const STAFF_ID = "00000000-0000-4000-8000-00000000c001";
 export const USER = "00000000-0000-4000-8000-00000000d001";
 /** What a fresh anonymous sign-in would create instead. */
 export const NEW_USER = "00000000-0000-4000-8000-00000000d002";
+/**
+ * The household's admin, signed in with Google (R6). The server half of the
+ * stub (server-stub.cjs) knows this id too: it is the one account the
+ * middleware finds a household for.
+ */
+export const OWNER = "00000000-0000-4000-8000-00000000e001";
+export const OWNER_PROFILE_ID = "00000000-0000-4000-8000-00000000c0e1";
 
 const b64u = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const nowSeconds = () => Math.floor(Date.now() / 1000);
@@ -59,6 +66,11 @@ export interface StubOptions {
   redeem?: "ok" | "used";
   /** Whether device_sessions says this phone is bound. */
   bound?: boolean;
+  /**
+   * Sign this phone in as the household's admin (R6): a Google session for
+   * OWNER, their membership, and their saved language.
+   */
+  owner?: { locale: "en" | "id" };
 }
 
 export interface Stub {
@@ -102,6 +114,15 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const net = { token: true, rest: true, signup: true };
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [] };
   const foods: Record<string, unknown>[] = [];
+  if (options.owner && !options.stored) options = { ...options, stored: freshSession(OWNER, false) };
+
+  if (options.owner) {
+    await context.addInitScript((locale) => {
+      // The banner about adding staff, already dismissed: not under test.
+      localStorage.setItem("b11_onboarding_dismissed", "true");
+      localStorage.setItem("miamus.owner-locale", locale);
+    }, options.owner.locale);
+  }
 
   if (options.stored) {
     await context.addCookies([
@@ -161,6 +182,10 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         seen.anonTables.push(table);
         return route.fulfill({ json: [] });
       }
+      if (options.owner && who === OWNER) {
+        const answer = ownerAnswer(table, options.owner.locale);
+        if (answer !== undefined) return route.fulfill({ json: answer });
+      }
       if (table === "device_sessions") {
         return route.fulfill({ json: options.bound ? [{ household_id: HOUSEHOLD_ID }] : [] });
       }
@@ -190,6 +215,46 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       }
     },
   };
+}
+
+/**
+ * What the admin's own lookups return (R6). Undefined: fall through to the
+ * shared tables.
+ */
+function ownerAnswer(table: string, locale: "en" | "id"): unknown {
+  switch (table) {
+    case "household_members":
+      return [{ household_id: HOUSEHOLD_ID, role: "owner" }];
+    case "rpc/my_locale":
+      return locale;
+    case "rpc/my_household_access":
+      return "member";
+    case "rpc/ensure_my_member_profile":
+      return [
+        {
+          id: OWNER_PROFILE_ID,
+          household_id: HOUSEHOLD_ID,
+          name: "Owner",
+          has_pin: false,
+          user_id: OWNER,
+          archived_at: null,
+          created_at: "2026-10-01T00:00:00Z",
+        },
+      ];
+    case "rpc/list_household_members":
+      return [
+        {
+          user_id: OWNER,
+          email: "owner@example.test",
+          role: "owner",
+          joined_at: "2026-10-01T00:00:00Z",
+          is_founder: true,
+          is_self: true,
+        },
+      ];
+    default:
+      return undefined;
+  }
 }
 
 /**
