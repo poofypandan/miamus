@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicLanguageSwitch } from "@/components/shared/public-language-switch";
-import { BrandMark } from "@/components/brand/brand-mark";
 import { MiamusMark } from "@/components/brand/loading-screens";
 import { usePublicLocale } from "@/hooks/use-public-locale";
 import type { OwnerLocale } from "@/lib/owner-locale";
@@ -163,9 +162,10 @@ function FrontDoor() {
       <PublicLanguageSwitch locale={locale} onChange={setLocale} />
 
       {/* The mark, still: the same picture as the launch splash a moment ago,
-          without its spinner, so this reads as the same app (Phase 150). */}
-      <div aria-hidden className="mx-auto mb-6 size-[88px] overflow-hidden rounded-full">
-        <BrandMark size={88} rounded={false} />
+          with its roof drawn and nothing moving, so this reads as the same
+          app (Phase 150). */}
+      <div className="mx-auto mb-6">
+        <MiamusMark still />
       </div>
 
       <h1 className="text-3xl font-semibold tracking-tight text-balance text-gray-900">{t.title}</h1>
@@ -206,7 +206,7 @@ function FrontDoor() {
 
 // Deliberately wordless: it shows for a moment on every launch, and whatever
 // it said would be wrong for one of the two audiences about to be routed.
-// The circular mark (Phase 123) is the brand rather than either audience's
+// The mark (Phase 123; a rounded square since 2026-11-09) is the brand rather than either audience's
 // screen, and the same picture /dashboard's launch cover opens on — so an
 // owner's cold start is one unbroken screen from tap to Agenda.
 function Splash() {
