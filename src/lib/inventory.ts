@@ -258,5 +258,5 @@ export function buildShoppingList(
   });
   if (noteLines.length > 0) sections.push(`*${id ? "Lainnya" : "Also"}*\n${noteLines.join("\n")}`);
   if (sections.length === 0) return null;
-  return `*🛒 ${id ? "Daftar belanja" : "Shopping list"}*\n\n${sections.join("\n\n")}`;
+  return `*${id ? "Daftar belanja" : "Shopping list"}*\n\n${sections.join("\n\n")}`;
 }
