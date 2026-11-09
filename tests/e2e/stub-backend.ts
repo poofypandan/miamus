@@ -71,6 +71,8 @@ export interface StubOptions {
    * OWNER, their membership, and their saved language.
    */
   owner?: { locale: "en" | "id" };
+  /** Kakak's household switch as kakak_status reports it to the admin (migrations/126). */
+  kakak?: { allowed: boolean; enabled: boolean };
 }
 
 export interface Stub {
@@ -86,6 +88,10 @@ export interface Stub {
   };
   /** food_items rows as the stub holds them (Phase 156). */
   foods: Record<string, unknown>[];
+  /** household_tasks rows created on this phone (Kakak's saves). */
+  tasks: Record<string, unknown>[];
+  /** Kakak's switch, as the admin last set it. */
+  kakak: { allowed: boolean; enabled: boolean };
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
   sessionUser(): Promise<string | null>;
@@ -114,6 +120,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const net = { token: true, rest: true, signup: true };
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [] };
   const foods: Record<string, unknown>[] = [];
+  const tasks: Record<string, unknown>[] = [];
+  const kakak = { allowed: false, enabled: false, ...options.kakak };
   if (options.owner && !options.stored) options = { ...options, stored: freshSession(OWNER, false) };
 
   if (options.owner) {
@@ -182,6 +190,16 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         seen.anonTables.push(table);
         return route.fulfill({ json: [] });
       }
+      if (options.owner && who === OWNER && table === "rpc/kakak_status") {
+        return route.fulfill({
+          json: [{ ...kakak, enabled_by: kakak.enabled ? OWNER : null, enabled_at: kakak.enabled ? "2026-11-08T03:00:00Z" : null, daily_limit: 40, calls_left: kakak.allowed ? 40 : 0 }],
+        });
+      }
+      if (options.owner && who === OWNER && table === "rpc/set_kakak_enabled") {
+        kakak.enabled = Boolean(request.postDataJSON()?.p_on);
+        return route.fulfill({ status: 204, body: "" });
+      }
+      if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks);
       if (options.owner && who === OWNER) {
         const answer = ownerAnswer(table, options.owner.locale);
         if (answer !== undefined) return route.fulfill({ json: answer });
@@ -202,6 +220,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     net,
     seen,
     foods,
+    tasks,
+    kakak,
     setNetwork(up: boolean) {
       net.token = net.rest = net.signup = up;
     },
@@ -255,6 +275,33 @@ function ownerAnswer(table: string, locale: "en" | "id"): unknown {
     default:
       return undefined;
   }
+}
+
+/** household_tasks writes, enough for a chore saved and undone (Kakak). */
+function answerTasks(route: Route, tasks: Record<string, unknown>[]) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  if (request.method() === "POST") {
+    const body = request.postDataJSON();
+    const row: Record<string, unknown> = {
+      id: `00000000-0000-4000-8000-${String(900 + tasks.length).padStart(12, "0")}`,
+      household_id: HOUSEHOLD_ID,
+      status: "pending",
+      completed_at: null,
+      completed_by: null,
+      photo_url: null,
+      parent_task_id: null,
+      created_at: new Date().toISOString(),
+      ...(Array.isArray(body) ? body[0] : body),
+    };
+    tasks.push(row);
+    return reply([row]);
+  }
+  const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
+  const index = tasks.findIndex((t) => t.id === id);
+  if (request.method() === "DELETE") return reply(index === -1 ? [] : tasks.splice(index, 1));
+  return reply(index === -1 ? [] : [tasks[index]]);
 }
 
 /**

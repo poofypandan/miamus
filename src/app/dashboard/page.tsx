@@ -8,6 +8,7 @@ import { KitchenTab } from "@/components/kitchen/kitchen-tab";
 import { PetsTab } from "@/components/dashboard/tabs/pets-tab";
 import { StaffTab } from "@/components/dashboard/tabs/staff-tab";
 import { PetProfileSheet } from "@/components/dashboard/pet-profile-sheet";
+import { KakakButton } from "@/components/kakak/kakak-button";
 import { OwnerLoadingScreen } from "@/components/brand/loading-screens";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
@@ -58,6 +59,10 @@ function DashboardCanvas() {
           Agenda's summary card and from the Pets tab, and it should survive
           switching between them. */}
       <PetProfileSheet />
+      {/* Tell Kakak (Phase 156 step 2): Today only, and only when the
+          household has Kakak on. Outside the tab so position: fixed is
+          relative to the screen. */}
+      {activeModule === "agenda" && <KakakButton />}
     </>
   );
 }

@@ -83,6 +83,13 @@ people are **staf** and **admin**.
 | House code (staff sign-in) | **Kode rumah** | Plain; "kode" is everyday. Shown as XXX-XXX. |
 | Linked phones | **HP yang terhubung** | Matches "menghubungkan HP" in the invite text. |
 | I'm staff (start screen) | **Saya staf** | Shown in Indonesian on the English start screen too: it is the staff's door (owner decision, 2026-11-07). |
+| Looks right (confirm a Kakak suggestion) | **Sudah benar** | Kakak's card: the owner checks and confirms. Phase 156 plan, section 11. |
+| Change | **Ubah** | Edit a Kakak suggestion before saving. |
+| Save 2 (Save N) | **Simpan 2** (**Simpan N**) | Saving several Kakak suggestions at once. |
+| One moment… | **Sebentar…** | While Kakak thinks. |
+| Or type your answer | **Atau ketik jawaban** | Under Kakak's answer buttons. |
+| Let Kakak help (household switch) | **Izinkan Kakak membantu** | The opt-in switch; says what is sent and to whom. |
+| Kakak's guess — check it | **Tebakan Kakak — cek lagi** | Marks a field Kakak guessed (a date, a room) so the owner looks again. |
 
 ## Formatting
 

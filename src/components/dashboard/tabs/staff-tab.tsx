@@ -48,6 +48,9 @@ import { HouseholdMembersPanel } from "@/components/dashboard/household-members-
 import { SecuritySettings } from "@/components/dashboard/security-settings";
 import { PushNotificationSettings } from "@/components/dashboard/push-notification-settings";
 import { LanguageSettings } from "@/components/dashboard/language-settings";
+import { KakakSettings } from "@/components/kakak/kakak-settings";
+import { KakakAvatar } from "@/components/kakak/kakak-avatar";
+import { useKakakStatus } from "@/hooks/use-kakak-status";
 import { useOwnerLocale, useT, type Translate } from "@/context/owner-locale-context";
 import { DATE_LOCALE } from "@/lib/owner-locale";
 import { ITEM_TYPE_LABELS } from "@/lib/item-types";
@@ -106,11 +109,17 @@ const HOUSEHOLD_PAGES = [
   "notifications",
   "language",
   "lock",
+  "kakak",
   "activity",
   "data",
   "about",
 ] as const;
 type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
+
+/** Kakak's avatar at the size of a row icon. */
+function KakakRowIcon() {
+  return <KakakAvatar className="size-5 shrink-0" />;
+}
 
 /** A rounded group of rows, like a section of iPhone Settings (Phase 155). */
 function SettingsGroup({ children }: { children: ReactNode }) {
@@ -124,7 +133,7 @@ function SettingsRow({
   waiting = false,
   onPress,
 }: {
-  icon: typeof Bell;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   detail?: string;
   /** Amber: something is waiting for the owner (Phase 153 colour rule). */
@@ -182,6 +191,8 @@ export function StaffTab() {
   const t = useT();
   const isOwner = useRequireOwner();
   const { profiles, failed, reload, allProfiles } = useStaffProfiles();
+  // Kakak's row only for a household on the family list (Phase 156 step 2).
+  const { status: kakak, reload: reloadKakak } = useKakakStatus();
   // Scheduled deletion (R7): shown at the top of the list, managed on the
   // Your data page. One instance, passed down, so both agree.
   const deletion = useHouseholdDeletion();
@@ -300,6 +311,16 @@ export function StaffTab() {
           />
           <SettingsRow icon={Lock} label={t("App lock", "Kunci aplikasi")} onPress={() => open("lock")} />
         </SettingsGroup>
+        {kakak?.allowed && (
+          <SettingsGroup>
+            <SettingsRow
+              icon={KakakRowIcon}
+              label="Kakak"
+              detail={kakak.enabled ? t("On", "Aktif") : t("Off", "Mati")}
+              onPress={() => open("kakak")}
+            />
+          </SettingsGroup>
+        )}
         <SettingsGroup>
           <SettingsRow icon={History} label={t("Activity", "Aktivitas")} onPress={() => open("activity")} />
           <SettingsRow icon={ShieldCheck} label={t("Your data", "Data Anda")} onPress={() => open("data")} />
@@ -337,6 +358,14 @@ export function StaffTab() {
       {page === "notifications" && <PushNotificationSettings />}
       {page === "language" && <LanguageSettings />}
       {page === "lock" && <SecuritySettings />}
+      {page === "kakak" &&
+        (kakak?.allowed ? (
+          <KakakSettings status={kakak} reload={reloadKakak} />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {t("Kakak isn't available for this household yet.", "Kakak belum tersedia untuk rumah ini.")}
+          </p>
+        ))}
       {page === "activity" && <ActivityPage entries={entries} />}
       {page === "data" && <HouseholdDataPanel status={deletion.status} reload={deletion.reload} />}
       {page === "about" && <AboutMiamus />}
