@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SaveStillWaitingError } from "@/lib/offline-queue";
 import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
 import { PhotoLightbox, type LightboxItem } from "@/components/dashboard/photo-lightbox";
@@ -200,7 +201,11 @@ export function LogPhotoThumbnail({
       setLightboxOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error(t("Failed to delete photo", "Foto gagal dihapus"));
+      toast.error(
+        err instanceof SaveStillWaitingError
+          ? t("Not sent yet. Wait until it has been sent, then delete it.", "Belum terkirim. Tunggu sampai terkirim, lalu hapus.")
+          : t("Failed to delete photo", "Foto gagal dihapus")
+      );
     } finally {
       setDeleting(false);
     }

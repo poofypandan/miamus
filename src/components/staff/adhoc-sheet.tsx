@@ -216,14 +216,19 @@ export function AdHocSheet() {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>Foto (opsional)</Label>
+              {/* Kept on the phone and sent with the note (Phase 161): the
+                  save queue holds the note until the photo is in storage. */}
               <PhotoPicker
+                offline
+                // Held by the save from the moment Simpan is pressed.
+                disabled={submitting}
                 pathPrefix={entityId ? `pet/${entityId}` : "pet/adhoc"}
                 value={photoUrl}
                 onChange={setPhotoUrl}
                 label="Ambil Foto"
                 locale="id"
-                busyLabel="Mengunggah..."
-                errorMessage="Gagal mengunggah foto"
+                busyLabel="Menyimpan foto..."
+                errorMessage="Gagal menyimpan foto"
               />
             </div>
           </div>

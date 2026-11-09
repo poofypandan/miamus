@@ -83,8 +83,25 @@ export interface StubOptions {
   repairs?: Record<string, unknown>[];
 }
 
+/**
+ * A weak signal on writes to one table (Phase 161), while the browser still
+ * says it is online: `drop` aborts the request unanswered (a timeout);
+ * `lostReply` saves it and then drops the answer (a reply lost on the way
+ * back). Counts go down as they are used: lost replies first, then drops.
+ */
+export interface WriteTrouble {
+  drop?: number;
+  lostReply?: number;
+}
+
 export interface Stub {
   net: { token: boolean; rest: boolean; signup: boolean };
+  /** Weak signal per table, for writes only (Phase 161). */
+  trouble: Record<string, WriteTrouble>;
+  /** Every write request that reached a table, in order: [method, table]. */
+  writes: [string, string][];
+  /** task_logs rows saved on this phone (Phase 161). */
+  logs: Record<string, unknown>[];
   seen: {
     signups: number;
     tokenRefreshes: number;
@@ -131,6 +148,9 @@ function subOf(authorization: string | undefined): string {
 
 export async function installStub(context: BrowserContext, options: StubOptions = {}): Promise<Stub> {
   const net = { token: true, rest: true, signup: true };
+  const trouble: Record<string, WriteTrouble> = {};
+  const writes: [string, string][] = [];
+  const logs: Record<string, unknown>[] = [];
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [] };
   const foods: Record<string, unknown>[] = [];
   const tasks: Record<string, unknown>[] = [];
@@ -166,6 +186,14 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       },
       [HOUSEHOLD_ID, STAFF_ID]
     );
+  }
+
+  /** The writes the weak-signal tests use, answered as the stub would. */
+  function answerWrite(route: Route, table: string) {
+    if (table === "food_items") return answerFood(route, foods, false);
+    if (table === "task_logs") return answerLogs(route, logs);
+    if (table === "household_tasks") return answerTasks(route, tasks, options.chores);
+    return route.fulfill({ json: [] });
   }
 
   // Registered first, so the stub below takes precedence for its own host.
@@ -215,6 +243,21 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         kakak.enabled = Boolean(request.postDataJSON()?.p_on);
         return route.fulfill({ status: 204, body: "" });
       }
+      if (request.method() !== "GET") {
+        writes.push([request.method(), table]);
+        const t = trouble[table];
+        if (t?.lostReply) {
+          t.lostReply -= 1;
+          // Saved, then the answer never arrives.
+          await answerWrite(silent(route), table);
+          return route.abort("connectionreset");
+        }
+        if (t?.drop) {
+          t.drop -= 1;
+          return route.abort("timedout");
+        }
+      }
+      if (table === "task_logs") return answerLogs(route, logs);
       if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks, options.chores);
       if (table === "household_tasks" && options.chores) {
         // The simple PostgREST filters the app's chore reads use (eq, neq,
@@ -253,6 +296,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
 
   return {
     net,
+    trouble,
+    writes,
+    logs,
     seen,
     foods,
     tasks,
@@ -566,6 +612,9 @@ function answerFood(route: Route, foods: Record<string, unknown>[], wantsObject:
   const now = new Date().toISOString();
   if (method === "POST") {
     const body = request.postDataJSON();
+    const fields = Array.isArray(body) ? body[0] : body;
+    // The primary key, as Postgres refuses a second copy (Phase 161).
+    if (fields?.id && foods.some((f) => f.id === fields.id)) return duplicateKey(route, "food_items_pkey");
     const row: Record<string, unknown> = {
       id: `00000000-0000-4000-8000-${String(foods.length + 1).padStart(12, "0")}`,
       photo_url: null,
@@ -622,3 +671,36 @@ export const HOUSEHOLD_TABLES = [
   "food_items",
 ];
 
+
+/** Postgres's unique violation, as PostgREST answers it. */
+function duplicateKey(route: Route, constraint: string) {
+  return route.fulfill({
+    status: 409,
+    json: { code: "23505", message: `duplicate key value violates unique constraint "${constraint}"`, details: null, hint: null },
+  });
+}
+
+/** A route whose answer goes nowhere: the write happens, the reply is lost. */
+function silent(route: Route): Route {
+  return { request: () => route.request(), fulfill: async () => undefined } as unknown as Route;
+}
+
+/**
+ * task_logs (Phase 161): reads, and inserts that keep the phone's ids and
+ * refuse a second copy of one, as the primary key does.
+ */
+function answerLogs(route: Route, logs: Record<string, unknown>[]) {
+  const request = route.request();
+  if (request.method() === "GET") return route.fulfill({ json: logs });
+  if (request.method() !== "POST") return route.fulfill({ json: [] });
+  const body = request.postDataJSON();
+  const rows: Record<string, unknown>[] = Array.isArray(body) ? body : [body];
+  if (rows.some((row) => row.id && logs.some((l) => l.id === row.id))) return duplicateKey(route, "task_logs_pkey");
+  const saved = rows.map((row, i) => ({
+    id: row.id ?? `00000000-0000-4000-8000-${String(800 + logs.length + i).padStart(12, "0")}`,
+    sub_type: "complete",
+    ...row,
+  }));
+  logs.push(...saved);
+  return route.fulfill({ json: saved });
+}
