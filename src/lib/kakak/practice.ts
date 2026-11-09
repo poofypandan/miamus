@@ -280,6 +280,10 @@ function intentOf(household: KakakHousehold, text: string): Intent {
   ) {
     return "pet";
   }
+  // A chore word wins over a food word: "Bersihkan kulkas" is cleaning the
+  // fridge, not food in it (Codex, PR #31).
+  const t = text.toLowerCase();
+  if (EN_TASKS.some(([pattern]) => pattern.test(t)) || ID_TASK.test(t)) return "chore";
   if (has(text, /\b(kulkas|fridge|freezer|kue|lauk|sisa|leftover|leftovers|dikasih|oleh-oleh|gift|cake|soup|sup|rendang|dari tante|from)\b/)) {
     return "food";
   }

@@ -200,6 +200,11 @@ describe("practice conversations", () => {
     expect(changed).toMatchObject({ kind: "message" });
   });
 
+  it("cleaning the fridge is a chore, not food", async () => {
+    const result = suggestions(await runKakakTurn(setup("id").deps, null, "Bersihkan kulkas besok jam 9"));
+    expect(result.items[0]).toMatchObject({ kind: "chore", title: "Bersihkan kulkas", dueTime: "09:00", dueDate: "2026-11-12" });
+  });
+
   it("12 am is midnight, once", async () => {
     const { deps } = setup("en");
     const result = suggestions(await runKakakTurn(deps, null, "Feed Mochi at 12 am"));
