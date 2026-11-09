@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Who lives here mockups</title>
+<style>
+  :root {
+    --bg: #f8fafc; --card: #fff; --ink: #111827; --ink2: #374151; --muted: #6b7280;
+    --line: #e5e7eb; --track: #f3f4f6; --primary: #171717; --amber: #92400e; --amberbg: #fffbeb; --amberline: #fde68a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ecef; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color: var(--ink); }
+  header.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 4px; }
+  header.page h1 { font-size: 20px; margin: 0 0 4px; }
+  header.page p { margin: 0; color: var(--muted); max-width: 680px; }
+  section.screen { max-width: 1100px; margin: 0 auto; padding: 18px 16px 8px; }
+  section.screen h2 { font-size: 15px; margin: 0 0 2px; }
+  section.screen > p { margin: 0 0 12px; color: var(--muted); max-width: 640px; }
+  .pair { display: flex; gap: 20px; flex-wrap: wrap; }
+  .phone { width: 360px; max-width: 100%; height: 720px; background: var(--bg); border-radius: 36px; border: 8px solid #111; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .tag { position: absolute; top: -2px; right: 18px; background: #111; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 0 0 8px 8px; z-index: 5; }
+  .status { height: 22px; flex: none; }
+  .appbar { background: #fff; border-bottom: 1px solid var(--line); padding: 8px 14px 10px; flex: none; }
+  .appbar .row { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+  .brand { font-weight: 600; font-size: 17px; display: flex; gap: 6px; align-items: center; }
+  .brand img { width: 24px; height: 24px; border-radius: 7px; display: block; }
+  .body { flex: 1; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+  .body > * { flex: none; }
+  .body.center { justify-content: center; padding: 0 24px; gap: 10px; }
+  .logo { width: 56px; height: 56px; border-radius: 16px; display: block; box-shadow: 0 8px 20px -8px rgba(17,24,39,.4); }
+  .title { font-size: 22px; font-weight: 600; letter-spacing: -.01em; margin: 10px 0 0; }
+  .sub { font-size: 13px; color: var(--muted); margin: 0; }
+  .label { font-size: 13px; font-weight: 600; color: var(--ink); margin-top: 10px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: -4px; }
+  .input { border: 1px solid var(--line); border-radius: 12px; min-height: 48px; padding: 13px 12px; color: var(--ink); font-size: 14px; background: #fff; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; font-size: 14px; color: var(--ink2); background: #fff; display: flex; gap: 6px; align-items: center; min-height: 40px; }
+  .chip.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .chip.soon { color: #9ca3af; border-style: dashed; background: transparent; }
+  .chip.soon small { font-size: 11px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 52px; border-radius: 12px; font-weight: 600; font-size: 14px; }
+  .btn.sm { min-height: 44px; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.outline { border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 500; }
+  .fine { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .fine u { color: var(--ink); }
+  .switch-lang { text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .h { font-size: 13px; font-weight: 600; color: var(--ink); margin: 2px 0 -4px; }
+  .group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .row-s { display: flex; align-items: center; gap: 12px; padding: 0 12px; min-height: 50px; border-top: 1px solid var(--line); font-size: 14px; }
+  .row-s:first-child { border-top: 0; }
+  .row-s .ico { width: 20px; text-align: center; color: var(--muted); }
+  .row-s .d { margin-left: auto; color: var(--muted); font-size: 13px; }
+  .row-s .chev { color: #9ca3af; }
+  .row-s.new { background: #f9fafb; }
+  .dates { display: flex; gap: 6px; }
+  .dates span { flex: 1; text-align: center; padding: 6px 0; border-radius: 12px; font-size: 11px; color: var(--muted); }
+  .dates span b { display: block; font-size: 15px; color: var(--ink); }
+  .dates span.on { background: var(--primary); color: #fff; }
+  .dates span.on b { color: #fff; }
+  .empty { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 22px 16px; text-align: center; display: flex; flex-direction: column; gap: 10px; }
+  .empty .circle { width: 44px; height: 44px; border-radius: 999px; background: var(--track); margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .empty b { font-size: 15px; }
+  .empty p { margin: 0; font-size: 13px; color: var(--muted); }
+  .chore { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; min-height: 56px; }
+  .chore .tick { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid #9ca3af; flex: none; }
+  .chore .t { flex: 1; min-width: 0; }
+  .chore .t b { display: block; font-weight: 500; }
+  .chore .t span { font-size: 12px; color: var(--muted); }
+  .askcard { background: var(--amberbg); border: 1px solid var(--amberline); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .askcard p { margin: 0; font-size: 13.5px; color: var(--amber); }
+  .askcard p b { display: block; font-size: 14px; color: #78350f; }
+  .askcard .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tabbar { flex: none; height: 58px; background: #fff; border-top: 1px solid var(--line); display: flex; }
+  .tabbar span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; color: var(--muted); font-weight: 500; }
+  .tabbar span i { width: 20px; height: 20px; border-radius: 6px; border: 1.7px solid currentColor; display: block; }
+  .tabbar span.on { color: var(--ink); }
+  .tabbar span.on i { background: currentColor; }
+  .dim { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 2; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 150px; background: #fff; border-radius: 20px 20px 0 0; z-index: 3; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .sheet > * { flex: none; }
+  .sheet.tall { top: 70px; }
+  .grab { width: 36px; height: 5px; border-radius: 9px; background: #d1d5db; margin: 0 auto 2px; }
+  .sheet h3 { margin: 0; font-size: 17px; text-align: center; }
+  .sheet .lead { margin: -6px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+  .toggle { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; }
+  .toggle .t { flex: 1; }
+  .toggle .t b { display: block; font-size: 15px; font-weight: 600; }
+  .toggle .t span { font-size: 12.5px; color: var(--muted); }
+  .sw { width: 46px; height: 28px; border-radius: 999px; background: #d1d5db; position: relative; flex: none; }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .sw.on { background: var(--primary); }
+  .sw.on::after { left: 21px; }
+  .toggle.soon { opacity: .5; border-style: dashed; }
+  .warn { background: var(--amberbg); border: 1px solid var(--amberline); color: var(--amber); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+  .note { font-size: 12px; color: var(--muted); text-align: center; }
+  .rep { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; min-height: 64px; }
+  .rep .c { width: 40px; height: 40px; border-radius: 999px; background: var(--track); display: flex; align-items: center; justify-content: center; font-size: 18px; flex: none; }
+  .rep .t b { display: block; font-size: 15px; }
+  .rep .t span { font-size: 12px; color: var(--muted); }
+  .obtn { border: 1px solid var(--line); border-radius: 12px; min-height: 48px; display: flex; align-items: center; justify-content: center; font-weight: 500; }
+  .gone { border: 1.5px dashed #fca5a5; color: #b91c1c; background: #fef2f2; border-radius: 12px; min-height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12.5px; text-decoration: line-through; }
+  .sect { font-size: 12px; font-weight: 500; color: #6b7280; }
+  .ic { width: 18px; height: 18px; flex: none; display: inline-block; vertical-align: middle; }
+  .chip .ic { width: 16px; height: 16px; }
+  .tile { width: 40px; height: 40px; border-radius: 12px; background: #fff; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; flex: none; color: var(--ink); }
+  .tabbar span .ic { width: 21px; height: 21px; }
+  .tabbar span.on .ic { stroke-width: 2.1; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol><symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></symbol><symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></symbol><symbol id="i-door-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21H2"/><path d="M10 3H7a2 2 0 00-2 2v16"/><path d="M14 12h.01"/><path d="M19 21V5a2 2 0 00-1.675-1.974l-6.163-1.013A1 1 0 0010 3v18a1 1 0 001.124.992z"/><path d="M22 21h-3"/></symbol><symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol><symbol id="i-user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol><symbol id="i-key-round" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-cooking-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol><symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></symbol><symbol id="i-calendar-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 2v3"/><path d="m2 2 20 20"/><path d="M21 9h-5.5"/><path d="M3 9h6"/><path d="M3.586 3.586A2 2 0 003 5v14a2 2 0 002 2h14a2 2 0 001.414-.586"/><path d="M8.656 3H19a2 2 0 012 2v10.344"/></symbol><symbol id="i-package-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12"/><path d="m16.5 14.5 5 5"/><path d="m16.5 19.5 5-5"/><path d="M21 10.5V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l.13-.074"/><path d="M3.29 7 12 12l8.71-5"/><path d="m7.5 4.27 8.997 5.148"/></symbol><symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></symbol><symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol><symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></symbol><symbol id="i-user-round" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol></svg>
+<header class="page">
+  <h1>Phase 162 — "Who lives here?"</h1>
+  <p>Phone-width mockups for <code>docs/phase-162-who-lives-here-plan.md</code>. Owner approved the recommended options, 2026-11-09 (D1 A greyed "Soon" chips, D2 A same form, D3 A one-time card, D4 A archive first, D5 A staff hides). Not built.</p>
+</header>
+
+<section class="screen">
+  <h2>1. Sign-up: still one step</h2>
+  <p>The household-name form gains one question. Nothing is pre-selected; an untouched Pets chip means no pets (D2). Kids and Elders are greyed "Soon" and store nothing (D1). Left: English. Right: Bahasa Indonesia.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">EN</div><div class="status"></div>
+      <div class="body center">
+        <img class="logo" src="data:image/png;base64,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" alt="Miamus">
+        <p class="title">Welcome to Miamus</p>
+        <p class="sub">Let's set up your household. It takes one step — then you can add your chores, staff and family.</p>
+        <div class="label">Name your household</div>
+        <div class="input">Rumah Keluarga Wijaya</div>
+        <div class="label">Who lives here?</div>
+        <div class="hint">Miamus shows only what fits your home. Change it any time under Household.</div>
+        <div class="chips">
+          <span class="chip on"><svg class="ic"><use href="#i-paw-print"/></svg> Pets</span>
+          <span class="chip soon">Kids <small>· Soon</small></span>
+          <span class="chip soon">Elders <small>· Soon</small></span>
+        </div>
+        <div class="btn primary" style="margin-top:8px">Create household</div>
+        <div class="fine">By creating a household, you confirm you've read the <u>Privacy Policy</u> and will let the people who work in your home know that Miamus records their tasks, photos and leave.</div>
+        <div class="switch-lang">Bahasa Indonesia</div>
+      </div>
+    </div>
+    <div class="phone"><div class="tag">ID</div><div class="status"></div>
+      <div class="body center">
+        <img class="logo" src="data:image/png;base64,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" alt="Miamus">
+        <p class="title">Selamat datang di Miamus</p>
+        <p class="sub">Mari siapkan rumah Anda. Cukup satu langkah — lalu Anda bisa menambahkan tugas, staf dan keluarga.</p>
+        <div class="label">Beri nama rumah Anda</div>
+        <div class="input">Rumah Keluarga Wijaya</div>
+        <div class="label">Siapa yang tinggal di sini?</div>
+        <div class="hint">Miamus hanya menampilkan yang sesuai dengan rumah Anda. Bisa diubah kapan saja di tab Rumah.</div>
+        <div class="chips">
+          <span class="chip"><svg class="ic"><use href="#i-paw-print"/></svg> Hewan</span>
+          <span class="chip soon">Anak <small>· Segera</small></span>
+          <span class="chip soon">Lansia <small>· Segera</small></span>
+        </div>
+        <div class="btn primary" style="margin-top:8px">Buat rumah</div>
+        <div class="fine">Dengan membuat rumah, Anda menyatakan sudah membaca <u>Kebijakan Privasi</u> dan akan memberi tahu orang yang bekerja di rumah Anda bahwa Miamus mencatat tugas, foto dan cuti mereka.</div>
+        <div class="switch-lang">English</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>2. Today without pets: four tabs</h2>
+  <p>Left: a brand-new household that left Pets off. The greeting has one button and the tab bar has four tabs. Right: a day with chores: no All · Pets · Chores pills, since there's only one kind.</p>
+  <div class="pair">
+    <div class="phone"><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><img src="data:image/png;base64,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" alt="">Rumah Keluarga Wijaya</span></div></div>
+      <div class="body">
+        <div class="dates"><span>Sen<b>9</b></span><span class="on">Sel<b>10</b></span><span>Rab<b>11</b></span><span>Kam<b>12</b></span><span>Jum<b>13</b></span><span>Sab<b>14</b></span><span>Min<b>15</b></span></div>
+        <div class="empty">
+          <div class="circle"><svg class="ic"><use href="#i-check"/></svg></div>
+          <b>Welcome to your household</b>
+          <p>Let's start by adding a chore. Everything you add shows up here, day by day, for everyone in the house.</p>
+          <div class="btn primary sm"><svg class="ic"><use href="#i-plus"/></svg> Add Chore</div>
+        </div>
+      </div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span><svg class="ic"><use href="#i-users"/></svg>Household</span></div>
+    </div>
+    <div class="phone"><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><img src="data:image/png;base64,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" alt="">Rumah Keluarga Wijaya</span></div></div>
+      <div class="body">
+        <div class="dates"><span>Sen<b>9</b></span><span class="on">Sel<b>10</b></span><span>Rab<b>11</b></span><span>Kam<b>12</b></span><span>Jum<b>13</b></span><span>Sab<b>14</b></span><span>Min<b>15</b></span></div>
+        <div class="h">Tuesday · 3 chores</div>
+        <div class="chore"><span class="tick"></span><div class="t"><b>Vacuum & pel</b><span>LT2 · Lounge · Ari</span></div></div>
+        <div class="chore"><span class="tick"></span><div class="t"><b>Ganti seprai</b><span>LT2 · Master Bedroom · Not taken yet</span></div></div>
+        <div class="chore"><span class="tick"></span><div class="t"><b>Buang sampah</b><span>LT1 · Kitchen · Sri</span></div></div>
+      </div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span><svg class="ic"><use href="#i-users"/></svg>Household</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>3. Household → Who lives here</h2>
+  <p>A new row after Rooms. Left: the row and its detail. Right: the sheet. Turning Pets off while pets are still in Miamus is refused with a way forward (D4 A).</p>
+  <div class="pair">
+    <div class="phone"><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><img src="data:image/png;base64,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" alt="">Household</span></div></div>
+      <div class="body">
+        <div class="group">
+          <div class="row-s"><span class="ico"><svg class="ic"><use href="#i-crown"/></svg></span>Family<span class="d"></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row-s"><span class="ico"><svg class="ic"><use href="#i-user-round"/></svg></span>Staff<span class="d">3</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row-s"><span class="ico"><svg class="ic"><use href="#i-door-open"/></svg></span>Rooms<span class="d"></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row-s new"><span class="ico"><svg class="ic"><use href="#i-house"/></svg></span>Who lives here<span class="d">Just people</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row-s"><span class="ico"><svg class="ic"><use href="#i-calendar-off"/></svg></span>Leave<span class="d"></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="group">
+          <div class="row-s"><span class="ico"><svg class="ic"><use href="#i-user-plus"/></svg></span>Invite someone<span class="d"></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row-s"><span class="ico"><svg class="ic"><use href="#i-key-round"/></svg></span>Staff sign-in<span class="d"></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span class="on"><svg class="ic"><use href="#i-users"/></svg>Household</span></div>
+    </div>
+    <div class="phone"><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><img src="data:image/png;base64,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" alt="">Household</span></div></div>
+      <div class="body"></div>
+      <div class="tabbar"><span><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Pets</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span class="on"><svg class="ic"><use href="#i-users"/></svg>Household</span></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Who lives here</h3>
+        <p class="lead">Miamus shows only what fits your home.</p>
+        <div class="toggle"><span class="tile"><svg class="ic"><use href="#i-paw-print"/></svg></span><div class="t"><b>Pets</b><span>Routines, meals, medicine, vet visits and photos.</span></div><span class="sw on"></span></div>
+        <div class="warn">You have 2 pets in Miamus. Archive them in Pets first; their history stays.</div>
+        <div class="toggle soon"><div class="t"><b>Kids</b><span>Soon</span></div><span class="sw"></span></div>
+        <div class="toggle soon"><div class="t"><b>Elders</b><span>Soon</span></div><span class="sw"></span></div>
+        <div class="note">Shown to everyone in the house, including staff phones.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>4. An existing household without any pet (D3 A)</h2>
+  <p>Households with pets are set to "pets" by the migration and see nothing new. A household that never added a pet sees this card on Today, once. "No pets" hides the Pets tab straight away; "We have pets" keeps it and the card goes. Bahasa Indonesia shown.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAIAAAC2BqGFAAAIS0lEQVR4nOycZ2gUXxfGz5rYNZYYG2JLiEqsKILGRAV7iQVRMHbFEkGjCBYULBHsKLFHo7GiYqzYY436ChELChKxYjeYWEis+D64EBY3c5Ndc8/c+XN+HyR799w7s4+zZ065O4E1atQgQT8lSGBBhGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGZChGYikJxG/fr18e/Tp0/JUTjpiu7Zs+fVq1f/94fLly93796dnENAhQoVyHgCAgIWLFiwaNGiqlWrukeCg4MHDBhQsWLFK1eu/P79m4zHZf5u0pCQkB07drRq1arAd2/dujVixIj379+T2ZjuOjp06HDx4kUrlQHeggHMyGyMdh3x8fGrV68uX7682qxcuXKDBg36+fPnjRs3yFQMdR1wvlu3bo2OjvZpFu6QY8eO/fz5M5mHia6jRYsW8Aa+qgwwBRObN29O5mGc6xg5cmRSUlKVKlXIL4KCggYPHvzhw4c7d+6QSRgkdJkyZdasWTNlyhQEcwozRCAQEVe9lUFgYGDXrl0bNGhw/vx5OG4yA1N8NHRJSUkJDw9X2OTl5U2fPv3QoUP4G0H0qlWrypYtq7DPzMzE9+PJkydkAEb46D59+qSlpalVfvz4cbdu3dwqA/yBlxhUTMGCWBZmZAA2uw54iYULFyLrK1mypMIsNTU1Njb27du3noNwxHv27AkNDW3UqJHVRCyLa79SpUoISOxNIO10HTVr1ty2bZsiGQFfv36dO3furl27FDbDhw9PSEgoXbq0wgYJ5OjRo9+8eUM2YZvQ7dq1S05OVkcXz58/R3r94MEDKozGjRvjJlm3bl2FTXZ29pgxY65fv052YI/rwD0NAQYyOoXN6dOnEai9fv2aikBWVhbcCOQOCwuzssGdEwvCgdiiNbfQlStXxqU3dOhQl8tlZfPjx4/58+fPmzcPf1CRgfHhw4c/ffqEuodVgIiDRkZGtm3b9uzZs3BKxAir62jatOnOnTtr1aqlsMElDGd6+/Zt8peWLVvC9Rd6FHj2e/fuERd84R3kO3HihPrzIzbo3Lnzv6gMMB2LYCmFDU4DJ4NTIi44XAec44YNG+Li4hQp369fv5YsWTJjxoxi+UZjkQMHDsCZtG/fvkSJgi8mnEyXLl0QGp47d44hgdTuOpDy7d69u2HDhgqbd+/eIR7IyMig4gaxzaZNm6pXr66wQdaDIF13AqnXdbhTPrXK165dwzddh8oAAQYWxyEUNjg9nCROlXSi0XUghlu6dKk65UO9AlUkFDFIG1h83759cCC4uq1scJIxMTFwIGj7kh50CT1kyBBkawqDnJwcVHwQ/BILaJ/jSwOnjBqhlQ3iwkePHhUlP/IDXa5j0qRJinfxmTt16nTp0iViBD0BHPTmzZsKm8mTJ5MedAmtqDwgAunXr58tZQccFC5i48aNVgZqR/cv6BL66NGj3oNI21C7QK0OwRzZBA6NtBOn8eXLF+93jx8/TnrQFd6hu4pihWe8cffuXSQIL1++JDNABWrLli2eDUY4aLRmcnNzSQO6bobfv39H5SEiIiIkJOTVq1eJiYmILozqT3/8+BH1AKQ29erVg8dIT09HUo7vHOnBATuV/hvYsJs0ODg4Ojq6du3aDx8+RODx7ds30k+1atXGjRvXrFkz5IHr1q3jvxVzX9FRUVFJSUkolrpfoh0VHx9/5swZ0gnahuvXr893krhPoL+FrgIxwl2PRiE4X2X6U2/CZ8b1hVsl6WHYsGEIKEuVKpU/EhQU1KRJk/379xMjrF1wBCHok3qPr1ixYvbs2aSBOXPmYHHvcSSBzF9lVqEVVbSpU6fi203FCi5khDpW76KsSIywCm1VGnYzcODA1NTUQveOFgUsgqXglMjfkyl2zNrkiDo9Gh8IvekfwHQsgqXIJIzbTYqWB1LK0NBQ8gtMxHTFlhq7MHHbLkLskydPtm7dmnwEUzAR08k8DP1pBSIwONm+ffsWfQqMMQUTyUjM/Q0LCq2bN2+eMGFCUYwnTpwIY/WuMHsx+gedLpcLNVXEYbNmzVKYoX0+atQoMhsjrui/ton+BUREJ9vqXZQ61SrbuLHRE1ahrTbOooF08OBBxUR0ZFCSR43bcxAvMajuXmPZuLg48uVkNGHEFY2uB7RGR1xh06ZNG0QU+Rud6tSpg5cYVExZuXKlogeo2PynA1ahrT6be3zZsmXTpk1TTA8LC0OMHPGHU6dOKTaO4n8ORcHly5eTMZh1M9y7dy9canJystWPU1AtSUtLUy+Sl5eHnhl63mQSxoV3Fy5cgNvNysoiv8BETDdNZTIzjr5//36PHj3UPwQqEHRXMRHTyTwMTVhevHjRq1cvn/bvwrh3796YSEZibmaYk5ODqK5Qj+wGZjDGFDIVox8jgb5tbGxsSkqK2mz79u0w42ny+o0DHvUzc+bMxYsXF5hfYDAhIUGdoBuCM56plJiYOH78+L9+O4SXGFy7di05Acc8vOrYsWNoTSGucL/MzMzs378/BskhOOlxbBkZGZGRkeHh4Uj88hV3Cs577h2uZXIg8iRHJkRoJkRoJlh9dHZ2tk/jzj2oN6xCP3v2zKdx5x7UG9bdpEgxcnNzO3bs6DmI9qvW5zrYclBvbNjxHxUVFRMTg14UKm1HjhxJT08n/dhyUE/kpxVMSNTBhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNhAjNxP8BAAD//+kg8KEAAAAGSURBVAMAepQx5V7HKv8AAAAASUVORK5CYII=" alt="">Rumah Ibu</span></div></div>
+      <div class="body">
+        <div class="dates"><span>Sen<b>9</b></span><span class="on">Sel<b>10</b></span><span>Rab<b>11</b></span><span>Kam<b>12</b></span><span>Jum<b>13</b></span><span>Sab<b>14</b></span><span>Min<b>15</b></span></div>
+        <div class="askcard">
+          <p><b>Ada hewan di rumah?</b>Kalau tidak, Miamus bisa menyembunyikan tab Hewan.</p>
+          <div class="two"><div class="btn outline sm">Ada hewan</div><div class="btn primary sm">Tidak ada</div></div>
+        </div>
+        <div class="h">Selasa · 2 tugas</div>
+        <div class="chore"><span class="tick"></span><div class="t"><b>Siram tanaman</b><span>Taman · Yati</span></div></div>
+        <div class="chore"><span class="tick"></span><div class="t"><b>Lap kaca jendela</b><span>Ruang tamu · Belum ada yang ambil</span></div></div>
+      </div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar-days"/></svg>Hari ini</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Hewan</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Tugas</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Dapur</span><span><svg class="ic"><use href="#i-users"/></svg>Rumah</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>5. Staff phone, household with no pets (D5 A)</h2>
+  <p>Bahasa Indonesia only. Nothing new appears, so no staff tutorial. In the Lapor sheet, the pet-only "Catat Ekstra" and the "Hewan (opsional)" field in "Ada barang lain yang perlu dibeli" go, and the sheet's top line drops "usulkan jadwal" and "catat kegiatan ekstra"; "Usulkan jadwal" already hides today when there are no pets. Red dashed = removed.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Staf</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><img src="data:image/png;base64,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" alt="">Tugas Hari Ini</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet tall">
+        <div class="grab"></div>
+        <h3>Laporan &amp; Usulan</h3>
+        <p class="lead">Catat makanan masuk, lapor kerusakan, atau laporkan stok.</p>
+        <div class="rep"><span class="c"><svg class="ic"><use href="#i-cooking-pot"/></svg></span><div class="t"><b>Makanan masuk</b><span>Foto, simpan di mana, kedaluwarsa</span></div></div>
+        <div class="rep"><span class="c"><svg class="ic"><use href="#i-wrench"/></svg></span><div class="t"><b>Lapor kerusakan</b><span>Pilih ruangan, tambahkan foto</span></div></div>
+        <div class="obtn">Ada barang lain yang perlu dibeli</div>
+        <div class="gone">Catat Ekstra (hewan)</div>
+        <div class="obtn">Ajukan Cuti</div>
+        <div class="sect">Stok Menipis</div>
+        <div class="note" style="text-align:left">Belum ada laporan stok.</div>
+      </div>
+    </div>
+  </div>
+</section>
+</body>
+</html>
