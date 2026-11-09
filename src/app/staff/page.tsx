@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { UiLabelsProvider } from "@/components/ui/ui-labels";
 import { readCachedOwnerLocale, type OwnerLocale } from "@/lib/owner-locale";
 import { useSearchParams } from "next/navigation";
-import { Hand, Stethoscope, UserRound } from "lucide-react";
+import { CheckCheck, Hand, Stethoscope, UserRound } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { TodayButton } from "@/components/agenda/today-button";
@@ -374,8 +374,9 @@ function TasksView() {
               {/* Said plainly when the open list is empty, rather than leaving
                   a lone collapsed section to imply it. */}
               {overdue.length === 0 && openEntries.length === 0 && settled.length > 0 && (
-                <p className="py-4 text-center text-sm font-medium text-emerald-700">
-                  Semua tugas hari ini sudah selesai 🎉
+                <p className="flex items-center justify-center gap-1.5 py-4 text-sm font-medium text-emerald-700">
+                  <CheckCheck className="size-4 shrink-0" aria-hidden />
+                  Semua tugas hari ini sudah selesai
                 </p>
               )}
               {settled.length > 0 && (

@@ -118,7 +118,7 @@ export function AdHocSheet() {
         // toast over it would only compete with the button it is pointing at.
         setUrgentReport({ petName, note });
       } else {
-        toast.success(`${typeLabel} dicatat ✅`);
+        toast.success(`${typeLabel} dicatat`);
         setOpen(false);
       }
     } catch (err) {
@@ -163,7 +163,7 @@ export function AdHocSheet() {
                 title={`Laporan sakit ${urgentReport.petName} tersimpan`}
                 description="Ini laporan darurat. Admin tidak menerima notifikasi otomatis — kirim pesan WhatsApp sekarang juga."
                 ctaLabel="Kirim Peringatan ke Admin"
-                message={`URGENT 🚨: Laporan sakit/muntah untuk ${urgentReport.petName}.${
+                message={`DARURAT: Laporan sakit/muntah untuk ${urgentReport.petName}.${
                   urgentReport.note ? ` Catatan: ${urgentReport.note}.` : ""
                 } Mohon cek aplikasi sekarang:`}
                 onDone={close}

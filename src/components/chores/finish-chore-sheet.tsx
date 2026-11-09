@@ -233,7 +233,7 @@ function FinishChoreBody({
         photo_url: afterUrl,
       });
       clearChoreDraft(draftKey);
-      toast.success(`"${task.title}" selesai ✅`);
+      toast.success(`"${task.title}" selesai`);
       onOpenChange(false);
     } catch (err) {
       const handled = explainFailure(err);

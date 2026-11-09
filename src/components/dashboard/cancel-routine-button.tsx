@@ -15,6 +15,7 @@ import {
 import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { CANCELLED_NOTE_PREFIX } from "@/lib/log-notes";
 import { categorizeSchedule, displayTitle } from "@/lib/schedule-categories";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { MasterSchedule, TaskEntity } from "@/types/database";
@@ -80,7 +81,7 @@ export function CancelRoutineButton({
         await logTask({
           entity_id: entity.id,
           module: "pet",
-          notes: `❌ Jadwal Dibatalkan: ${title}`,
+          notes: `${CANCELLED_NOTE_PREFIX} ${title}`,
         });
       } catch (err) {
         console.error("Cancellation logged locally but the staff notice failed", err);

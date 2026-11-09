@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, ClipboardList, PawPrint } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
@@ -206,9 +206,12 @@ function WorkloadRow({ row, top }: { row: StaffWorkload; top: number }) {
           />
         </div>
 
-        <span className="text-xs text-muted-foreground tabular-nums">
-          🐕 {row.petsCompleted}{" "}
-          {row.petsCompleted === 1 ? t("Pet task", "Tugas hewan") : t("Pet tasks", "Tugas hewan")} · 🧹{" "}
+        <span className="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground tabular-nums">
+          <PawPrint className="size-3.5 shrink-0" aria-hidden />
+          {row.petsCompleted}{" "}
+          {row.petsCompleted === 1 ? t("Pet task", "Tugas hewan") : t("Pet tasks", "Tugas hewan")}
+          <span aria-hidden>·</span>
+          <ClipboardList className="size-3.5 shrink-0" aria-hidden />
           {row.choresCompleted}{" "}
           {row.choresCompleted === 1 ? t("Chore", "Tugas rumah") : t("Chores", "Tugas rumah")}
         </span>
