@@ -1,7 +1,8 @@
 # Phase 159 — Repairs
 
-Status: **plan, waiting for the owner's decisions** (D1–D6 below). Nothing is
-built yet. Mockups: `docs/mockups/phase-159-repairs.html` (open in a browser,
+Status: **approved by the owner, 2026-11-09: recommended options (A) for D1–D6.**
+PR A is being built as migration **130** (128 and 129 went to the staff guard and
+floors). Mockups: `docs/mockups/phase-159-repairs.html` (open in a browser,
 phone width). Builds on Phase 158 (rooms, floors and spots,
 `docs/phase-158-rooms-plan.md`, PR #27).
 
@@ -100,7 +101,7 @@ part), so a visit finishing never closes the repair on its own.
    something open.
 6. **Today line** (owners), as above.
 
-## The database — migration 129 (next free number when built)
+## The database — migration 130
 
 Additive only. Assumes Phase 158's migration 128 (floors, `spot`) is applied
 first.
@@ -216,7 +217,7 @@ phase is built. Then `export_household_data()` is re-created (same
 admin-only). Household deletion already cascades, and 127's orphaned-photo
 sweep is extended to `owner-receipts`.
 
-**Tests**: `supabase/tests/129_repairs.sql`, rolled back:
+**Tests**: `supabase/tests/130_repairs.sql`, rolled back:
 - owners report, accept, dismiss, close;
 - staff phones report only as `reported`, can't decide, can't edit, can
   delete their own within 5 minutes and not after;
@@ -245,7 +246,7 @@ before the merge.
 
 ## Two PRs
 
-**PR A: report, review, visit, fix**: migration 129 (without
+**PR A: report, review, visit, fix**: migration 130 (without
 `repair_costs`), the staff report, the owners' Repairs pill and detail,
 scheduling a visit through the chore form, "work done → check", the rooms'
 Repairs section and chip, the Today line, the urgent push, the photo
