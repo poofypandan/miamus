@@ -80,7 +80,7 @@ export function CancelRoutineButton({
         await logTask({
           entity_id: entity.id,
           module: "pet",
-          notes: `❌ Jadwal Dibatalkan: ${title}`,
+          notes: `Jadwal Dibatalkan: ${title}`,
         });
       } catch (err) {
         console.error("Cancellation logged locally but the staff notice failed", err);
