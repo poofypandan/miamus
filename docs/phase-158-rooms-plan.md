@@ -165,8 +165,26 @@ Additive. `household_locations` (migration 105) gains:
   `location_id` stays as it is.
 - **`household_tasks.spot`**: nullable text, 1–40 characters after trimming
   (CHECK), the part of the room. Additive; every existing chore keeps
-  `null` (the whole room). Same rules as the rest of the chore: owners set it,
-  staff phones only read it.
+  `null` (the whole room). Owners set it; staff phones only read it.
+- **Enforced in the database, not just the screens.** Today
+  `tenant_update_household_tasks` (migration 090) lets any session of the
+  household update a chore, staff phones included, and no trigger limits
+  which columns they change: a staff phone could already rewrite a chore's
+  title or room through the API. Migration 128 adds
+  `household_tasks_owner_columns` (a `before insert or update` trigger,
+  `search_path = ''`). For a session with no `household_members` row:
+  - **update:** refused if it changes `title`, `notes`, `category`,
+    `location_id`, `spot`, `recurrence`, `recurrence_until`,
+    `requires_supervision`, `parent_task_id` or `household_id`. Claiming,
+    photos and finishing (`assigned_to`, `status`, `completed_by`,
+    `completed_at`, the photo columns) stay allowed, as today.
+  - **insert** (a staff phone materialising one day of a repeat): `title`,
+    `category`, `location_id`, `spot` and `requires_supervision` must equal
+    the template's (`parent_task_id`); a staff phone can't insert a chore
+    without a template.
+  Tests: a staff session can't change `spot`, `location_id` or `title`, and
+  can still claim, upload photos, finish, and materialise a repeat (the
+  existing finish flow's rows, replayed).
 - **Names unique per floor**, not per household: "LT1 Service Area" and
   "LT2 Service Area" both become "Service Area". The 105 index is replaced by
   `unique nulls not distinct (household_id, parent_id, lower(btrim(name)))`.
