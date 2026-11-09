@@ -81,7 +81,8 @@ export interface RoomEntry {
 }
 
 export interface FloorSection {
-  floor: number;
+  /** Stable key: the floor's id when stored, its number when read from names. */
+  key: string;
   label: string;
   /** The room named just "LT2", if there is one: chores for the whole floor. */
   whole: RoomEntry | null;
@@ -90,8 +91,10 @@ export interface FloorSection {
 
 export interface RoomsModel {
   floors: FloorSection[];
-  /** Rooms whose names name no floor. */
+  /** Rooms with no floor (stored floors), or whose names name none. */
   otherRooms: RoomEntry[];
+  /** True when the household has floors of its own (migrations/129). */
+  storedFloors: boolean;
   /** Set-up chores with no room (or a room that was deleted). */
   noRoom: RoomChore[];
   /** The jobs that appear at least once, in CHORE_JOBS order. */
@@ -124,6 +127,42 @@ export function buildRoomsModel(
     }
   }
 
+  const jobs = CHORE_JOBS.filter((job) => jobsSeen.has(job));
+
+  // Stored floors (migrations/129): rooms sit under them; a floor's own
+  // chores are its "Whole floor" row, shown only when it has some.
+  if (locations.some((l) => l.kind === "floor")) {
+    const order = (a: HouseholdLocation, b: HouseholdLocation) =>
+      (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+    const floorRows = locations.filter((l) => l.kind === "floor").sort(order);
+    const floorIds = new Set(floorRows.map((f) => f.id));
+    const sections: FloorSection[] = floorRows.map((floor) => {
+      const wholeChores = choresByRoom.get(floor.id) ?? [];
+      return {
+        key: floor.id,
+        label: floor.name,
+        whole: wholeChores.length
+          ? { id: floor.id, label: floor.name, fullName: floor.name, chores: wholeChores }
+          : null,
+        rooms: locations
+          .filter((r) => r.kind !== "floor" && r.parent_id === floor.id)
+          .sort(order)
+          .map((r) => ({
+            id: r.id,
+            label: r.name,
+            fullName: `${floor.name} · ${r.name}`,
+            chores: choresByRoom.get(r.id) ?? [],
+          })),
+      };
+    });
+    const loose = locations
+      .filter((r) => r.kind !== "floor" && (!r.parent_id || !floorIds.has(r.parent_id)))
+      .sort(order)
+      .map((r) => ({ id: r.id, label: r.name, fullName: r.name, chores: choresByRoom.get(r.id) ?? [] }));
+    return { floors: sections, otherRooms: loose, storedFloors: true, noRoom, jobs };
+  }
+
   const floors = new Map<number, FloorSection>();
   const otherRooms: RoomEntry[] = [];
 
@@ -140,7 +179,7 @@ export function buildRoomsModel(
       continue;
     }
     const section = floors.get(parsed.floor) ?? {
-      floor: parsed.floor,
+      key: String(parsed.floor),
       label: parsed.floorLabel,
       whole: null,
       rooms: [],
@@ -156,10 +195,11 @@ export function buildRoomsModel(
   otherRooms.sort(byName);
 
   return {
-    floors: [...floors.values()].sort((a, b) => a.floor - b.floor),
+    floors: [...floors.entries()].sort(([a], [b]) => a - b).map(([, section]) => section),
     otherRooms,
+    storedFloors: false,
     noRoom,
-    jobs: CHORE_JOBS.filter((job) => jobsSeen.has(job)),
+    jobs,
   };
 }
 

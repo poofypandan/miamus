@@ -169,7 +169,7 @@ function TodayChores() {
                 <ChoreCard
                   key={occurrence.key}
                   occurrence={occurrence}
-                  locationName={roomName(occurrence.task.location_id)}
+                  locationName={roomName(occurrence.task.location_id, occurrence.task.spot)}
                   locale={locale}
                   today={today}
                   assigneeName={
@@ -187,7 +187,7 @@ function TodayChores() {
               <ChoreCard
                 key={occurrence.key}
                 occurrence={occurrence}
-                locationName={roomName(occurrence.task.location_id)}
+                locationName={roomName(occurrence.task.location_id, occurrence.task.spot)}
                 locale={locale}
                 today={today}
                 assigneeName={
@@ -215,7 +215,7 @@ function TodayChores() {
                 <ChoreCard
                   key={occurrence.key}
                   occurrence={occurrence}
-                  locationName={roomName(occurrence.task.location_id)}
+                  locationName={roomName(occurrence.task.location_id, occurrence.task.spot)}
                   locale={locale}
                   today={today}
                   assigneeName={

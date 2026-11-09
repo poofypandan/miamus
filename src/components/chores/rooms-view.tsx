@@ -221,7 +221,7 @@ export function RoomsView() {
       )}
 
       {model.floors.map((floor) => (
-        <section key={floor.floor} className="flex flex-col gap-1.5" aria-label={floor.label}>
+        <section key={floor.key} className="flex flex-col gap-1.5" aria-label={floor.label}>
           <SectionHeader
             title={floor.label}
             detail={

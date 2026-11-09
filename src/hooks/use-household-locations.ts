@@ -21,11 +21,24 @@ export function useHouseholdLocations() {
   return { locations: data, failed, reload };
 }
 
-/** A chore's room name by id, or null — for one with none, or one deleted. */
-export function useLocationName(): (id: string | null | undefined) => string | null {
+/**
+ * A chore's place as people read it, or null for none (or one deleted):
+ * "Teras", "LT2 · Lounge" for a room on a floor (migrations/129), and the
+ * spot after it when the chore has one: "LT2 · GB2 Bathroom · Wastafel".
+ */
+export function useLocationName(): (id: string | null | undefined, spot?: string | null) => string | null {
   const { locations } = useHouseholdLocations();
   return useMemo(() => {
-    const byId = new Map((locations ?? []).map((room: HouseholdLocation) => [room.id, room.name]));
-    return (id) => (id ? (byId.get(id) ?? null) : null);
+    const byId = new Map((locations ?? []).map((room: HouseholdLocation) => [room.id, room]));
+    const label = (room: HouseholdLocation) => {
+      const floor = room.parent_id ? byId.get(room.parent_id) : undefined;
+      return floor ? `${floor.name} · ${room.name}` : room.name;
+    };
+    return (id, spot) => {
+      const room = id ? byId.get(id) : undefined;
+      if (!room) return null;
+      const spotText = spot?.trim();
+      return spotText ? `${label(room)} · ${spotText}` : label(room);
+    };
   }, [locations]);
 }

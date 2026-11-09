@@ -409,15 +409,45 @@ export type HouseholdTask = {
   // --- Phase 135 (migrations/105). The room this chore is in, or null. A
   // materialised occurrence carries its template's.
   location_id?: string | null;
+  /**
+   * The part of the room the chore is for ("Sink"), or null for the whole
+   * room (migrations/129). Optional: absent until that migration.
+   */
+  spot?: string | null;
 };
 
 // A room or area of the house a chore can be tagged with (Phase 135,
 // migrations/105). Per household; owners add them, everyone reads them.
+/**
+ * One step of "Sort your rooms into floors" or its Undo (organise_rooms,
+ * migrations/129): places upserted in order, chores updated (a key present is
+ * set), then emptied places deleted.
+ */
+export type OrganiseRoomsPlan = {
+  household_id: string;
+  places: { id: string; name?: string; kind?: "room" | "floor"; parent_id?: string | null; sort_order?: number }[];
+  /** Every chore of room `from` (history too) moves to `into` with that spot. */
+  merges?: { from: string; into: string; spot: string }[];
+  chores: { id: string; location_id?: string | null; spot?: string | null; title?: string }[];
+  delete: string[];
+};
+
+/** What organise_rooms moved for a merge, as it was before: for Undo. */
+export type OrganiseRoomsMoved = { id: string; location_id: string | null; spot: string | null };
+
 export type HouseholdLocation = {
   id: string;
   household_id: string;
   name: string;
   created_at: string;
+  /**
+   * Floors and rooms (migrations/129): a floor is a place too, so a chore can
+   * be for a whole floor; a room may sit on one floor. Optional: absent
+   * until that migration, which reads as a room with no floor.
+   */
+  kind?: "room" | "floor";
+  parent_id?: string | null;
+  sort_order?: number;
 };
 
 // A staff-submitted request for a new routine, awaiting the owner's decision.
@@ -817,6 +847,10 @@ export interface Database {
       export_household_data: {
         Args: Record<string, never>;
         Returns: Record<string, unknown>;
+      };
+      organise_rooms: {
+        Args: { p_plan: OrganiseRoomsPlan };
+        Returns: { moved: OrganiseRoomsMoved[] };
       };
       household_deletion_status: {
         Args: Record<string, never>;

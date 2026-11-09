@@ -237,14 +237,20 @@ grant execute on function public.household_tasks_owner_guard() to service_role;
 --     "places":  [ { "id", "name", "kind", "parent_id", "sort_order" } ]
 --                upserted in the order given (floors before their rooms;
 --                for Undo, rooms back off a floor before it becomes a room),
+--     "merges":  [ { "from", "into", "spot" } ]
+--                every chore of room "from" — history included, so none
+--                loses its room — moves to "into" with that spot,
 --     "chores":  [ { "id", "location_id", "spot", "title" } ]
 --                each key present is set ("spot": null clears it),
 --     "delete":  [ uuid ]  emptied rooms, deleted last }
+-- Returns { "moved": [ { "id", "location_id", "spot" } ] }: what each merged
+-- chore was before, so the phone's Undo can put every one back.
 -- SECURITY INVOKER: the caller's RLS applies to every row (only owners write
 -- rooms; 128's guard stops staff phones on chores), plus an explicit owner
 -- check for a clear error. One transaction: all of it, or nothing.
+drop function if exists public.organise_rooms(jsonb);
 create or replace function public.organise_rooms(p_plan jsonb)
-returns void
+returns jsonb
 language plpgsql
 security invoker
 set search_path = ''
@@ -253,8 +259,10 @@ declare
   hid uuid := (p_plan ->> 'household_id')::uuid;
   place jsonb;
   chore jsonb;
+  merge jsonb;
   pid uuid;
   touched integer;
+  moved jsonb := '[]'::jsonb;
 begin
   if hid is null or not exists (
     select 1 from public.household_members m where m.user_id = auth.uid() and m.household_id = hid
@@ -263,6 +271,7 @@ begin
   end if;
   if jsonb_array_length(coalesce(p_plan -> 'places', '[]')) > 500
      or jsonb_array_length(coalesce(p_plan -> 'chores', '[]')) > 2000
+     or jsonb_array_length(coalesce(p_plan -> 'merges', '[]')) > 500
      or jsonb_array_length(coalesce(p_plan -> 'delete', '[]')) > 500 then
     raise exception 'plan_too_large' using errcode = '22023';
   end if;
@@ -286,6 +295,21 @@ begin
     end if;
   end loop;
 
+  for merge in select * from jsonb_array_elements(coalesce(p_plan -> 'merges', '[]')) loop
+    if not exists (select 1 from public.household_locations where id = (merge ->> 'into')::uuid and household_id = hid)
+       or not exists (select 1 from public.household_locations where id = (merge ->> 'from')::uuid and household_id = hid) then
+      raise exception 'not_this_household' using errcode = '42501';
+    end if;
+    select moved || coalesce(jsonb_agg(jsonb_build_object('id', t.id, 'location_id', t.location_id, 'spot', t.spot)), '[]'::jsonb)
+      into moved
+      from public.household_tasks t
+     where t.household_id = hid and t.location_id = (merge ->> 'from')::uuid;
+    update public.household_tasks
+       set location_id = (merge ->> 'into')::uuid,
+           spot = coalesce(spot, merge ->> 'spot')
+     where household_id = hid and location_id = (merge ->> 'from')::uuid;
+  end loop;
+
   for chore in select * from jsonb_array_elements(coalesce(p_plan -> 'chores', '[]')) loop
     update public.household_tasks
        set location_id = case when chore ? 'location_id' then (chore ->> 'location_id')::uuid else location_id end,
@@ -301,6 +325,8 @@ begin
   delete from public.household_locations
    where household_id = hid
      and id in (select (value #>> '{}')::uuid from jsonb_array_elements(coalesce(p_plan -> 'delete', '[]')));
+
+  return jsonb_build_object('moved', moved);
 end;
 $$;
 

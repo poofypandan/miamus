@@ -68,6 +68,10 @@ insert into public.household_tasks (id, household_id, title, category, due_date,
   ('00000000-0000-0000-0000-0000000129d1', '00000000-0000-0000-0000-0000000129f1', 'Lap toilet', 'cleaning', '2026-11-16', 'weekly', '00000000-0000-0000-0000-0000000129c3'),
   ('00000000-0000-0000-0000-0000000129d2', '00000000-0000-0000-0000-0000000129f1', 'Lap keran', 'cleaning', '2026-11-16', 'weekly', '00000000-0000-0000-0000-0000000129c4'),
   ('00000000-0000-0000-0000-0000000129d3', '00000000-0000-0000-0000-0000000129f1', 'LT2 Lounge - Vacuum & pel', 'cleaning', '2026-11-16', 'weekly', null);
+-- Finished history in the sink "room": it must keep a room when that room is merged.
+insert into public.household_tasks (id, household_id, title, category, due_date, recurrence, location_id, status, completed_at, before_photo_url, after_photo_url) values
+  ('00000000-0000-0000-0000-0000000129d5', '00000000-0000-0000-0000-0000000129f1', 'Lap keran (done)', 'cleaning', '2026-10-01', 'none',
+   '00000000-0000-0000-0000-0000000129c4', 'completed', '2026-10-01T09:00:00Z', 'b.jpg', 'a.jpg');
 
 \set owner '''00000000-0000-0000-0000-0000000129a1'''
 \set other '''00000000-0000-0000-0000-0000000129a2'''
@@ -78,7 +82,9 @@ select pg_temp.ok((select bool_and(kind = 'room' and parent_id is null and sort_
 select pg_temp.ok((select spot is null from public.household_tasks where id = '00000000-0000-0000-0000-0000000129d1'), 'existing chores keep no spot');
 
 -- ---- Sort into floors, merge the bathroom's parts, link the old chore ----------
-select pg_temp.ok(pg_temp.err_as(:owner, $q$ select public.organise_rooms('{
+create temp table organised (result jsonb);
+grant insert on organised to authenticated;
+select pg_temp.ok(pg_temp.err_as(:owner, $q$ insert into organised select public.organise_rooms('{
   "household_id": "00000000-0000-0000-0000-0000000129f1",
   "places": [
     {"id": "00000000-0000-0000-0000-0000000129e1", "name": "LT1", "kind": "floor", "parent_id": null, "sort_order": 1},
@@ -88,13 +94,21 @@ select pg_temp.ok(pg_temp.err_as(:owner, $q$ select public.organise_rooms('{
     {"id": "00000000-0000-0000-0000-0000000129c5", "name": "Service Area", "parent_id": "00000000-0000-0000-0000-0000000129e1"},
     {"id": "00000000-0000-0000-0000-0000000129c6", "name": "Service Area", "parent_id": "00000000-0000-0000-0000-0000000129c1"}
   ],
+  "merges": [
+    {"from": "00000000-0000-0000-0000-0000000129c3", "into": "00000000-0000-0000-0000-0000000129c3", "spot": "Toilet"},
+    {"from": "00000000-0000-0000-0000-0000000129c4", "into": "00000000-0000-0000-0000-0000000129c3", "spot": "Wastafel"}
+  ],
   "chores": [
-    {"id": "00000000-0000-0000-0000-0000000129d1", "spot": "Toilet"},
-    {"id": "00000000-0000-0000-0000-0000000129d2", "location_id": "00000000-0000-0000-0000-0000000129c3", "spot": "Wastafel"},
     {"id": "00000000-0000-0000-0000-0000000129d3", "location_id": "00000000-0000-0000-0000-0000000129c2", "title": "Vacuum & pel"}
   ],
   "delete": ["00000000-0000-0000-0000-0000000129c4"]
 }'::jsonb) $q$) = '', 'the owner sorts rooms into floors in one step');
+select pg_temp.ok((select jsonb_array_length(result -> 'moved') = 3 from organised),
+  'it reports the three merged chores as they were, for Undo');
+select pg_temp.ok((select location_id = '00000000-0000-0000-0000-0000000129c3' and spot = 'Wastafel' from public.household_tasks where id = '00000000-0000-0000-0000-0000000129d5'),
+  'finished history in the merged room moved too, with its spot');
+select pg_temp.ok((select spot = 'Toilet' from public.household_tasks where id = '00000000-0000-0000-0000-0000000129d1'),
+  'the kept room''s own chores got its part as their spot');
 select pg_temp.ok((select kind = 'floor' and parent_id is null from public.household_locations where id = '00000000-0000-0000-0000-0000000129c1'),
   'the room named just "LT2" became the floor');
 select pg_temp.ok((select name = 'Lounge' and parent_id = '00000000-0000-0000-0000-0000000129c1' from public.household_locations where id = '00000000-0000-0000-0000-0000000129c2'),
@@ -119,8 +133,9 @@ select pg_temp.ok(pg_temp.err_as(:owner, $q$ select public.organise_rooms('{
     {"id": "00000000-0000-0000-0000-0000000129c1", "name": "LT2", "kind": "room", "parent_id": null, "sort_order": 0}
   ],
   "chores": [
-    {"id": "00000000-0000-0000-0000-0000000129d1", "spot": null},
+    {"id": "00000000-0000-0000-0000-0000000129d1", "location_id": "00000000-0000-0000-0000-0000000129c3", "spot": null},
     {"id": "00000000-0000-0000-0000-0000000129d2", "location_id": "00000000-0000-0000-0000-0000000129c4", "spot": null},
+    {"id": "00000000-0000-0000-0000-0000000129d5", "location_id": "00000000-0000-0000-0000-0000000129c4", "spot": null},
     {"id": "00000000-0000-0000-0000-0000000129d3", "location_id": null, "title": "LT2 Lounge - Vacuum & pel"}
   ],
   "delete": ["00000000-0000-0000-0000-0000000129e1"]
@@ -129,6 +144,8 @@ select pg_temp.ok((select count(*) = 6 from public.household_locations where hou
    and kind = 'room' and parent_id is null), 'after Undo: the six original rooms, no floors');
 select pg_temp.ok((select location_id = '00000000-0000-0000-0000-0000000129c4' and spot is null from public.household_tasks where id = '00000000-0000-0000-0000-0000000129d2'),
   'after Undo: the sink''s chore is back in its own room');
+select pg_temp.ok((select location_id = '00000000-0000-0000-0000-0000000129c4' and spot is null from public.household_tasks where id = '00000000-0000-0000-0000-0000000129d5'),
+  'after Undo: and so is its finished history');
 
 -- ---- Who may sort ---------------------------------------------------------------
 select pg_temp.ok(pg_temp.err_as(:staff, $q$ select public.organise_rooms('{"household_id": "00000000-0000-0000-0000-0000000129f1", "places": []}'::jsonb) $q$)

@@ -165,7 +165,7 @@ export function AgendaTab() {
       <ChoreTimelineRow
         key={entry.key}
         occurrence={entry.occurrence}
-        locationName={roomName(entry.occurrence.task.location_id)}
+        locationName={roomName(entry.occurrence.task.location_id, entry.occurrence.task.spot)}
         assigneeName={
           entry.occurrence.task.assigned_to ? staffName(entry.occurrence.task.assigned_to) : null
         }
