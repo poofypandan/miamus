@@ -307,17 +307,11 @@ effort. "Privacy" means a privacy-policy update in both languages and
   - At most **one** tip card at a time (newest first).
   - Chore notes at 14 px in normal ink, with a small "Catatan" label.
   - Staff subtitles at 13 px.
-  - **No emoji in what staff and owners see** (owner, 2026-11-09): the
-    "selesai ✅" toasts (`finish-chore-sheet.tsx`, `adhoc-sheet.tsx`,
-    `agenda-group-card.tsx`), "sudah selesai 🎉" (`app/staff/page.tsx`),
-    the 🏥/🏠 clinic lines, 🐕/🧹 in the workload sheet
-    (`staff-workload-sheet.tsx`, owners), ❌ in the cancel note
-    (`cancel-routine-button.tsx`), 🛒 in the shopping share text
-    (`lib/inventory.ts`) and 🚨 in the sick-report WhatsApp text. Replaced
-    with Lucide icons where there's room for one, plain words in toasts and
-    shared text.
-  - Push titles (🚨 Hewan Sakit, 🔒 PIN terkunci, 🔔 Tes notifikasi) live in
-    database functions, so they change with item 2's migration, not here.
+  - **No emoji in what staff and owners see** (owner, 2026-11-09): being
+    done separately. PR #45 (merged) added the review rule. PR #46 removes
+    the app's existing emoji (the workload sheet, share text, cancel note,
+    and push titles in migration 132). The remaining "selesai ✅", 🏥 and 🏠
+    in `agenda-group-card.tsx` follow there.
   - Nothing else moves.
 - **Benefit / effort.** Instructions get read, and the screen starts with
   the work. Small: client only.
@@ -407,7 +401,7 @@ without a new service:
 **One small implementation batch to build first: items 3 + 5** (first-run
 checklist and calmer staff Today).
 
-- Includes the emoji clean-up in item 5 (client strings only).
+- The emoji clean-up is no longer part of this batch: PR #46 does it.
 - Client only: no migration, no privacy change, no new service. It can ship
   while 1 and 2, which need migrations and a policy line each, get their
   mockups and the owner's decisions.
