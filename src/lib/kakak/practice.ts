@@ -131,6 +131,63 @@ function choreTitle(household: KakakHousehold, sentence: string): string {
     .trim();
 }
 
+// Common English chore words and their Indonesian (docs/indonesian-glossary.md),
+// so a practice chore typed in English is still saved in Bahasa Indonesia:
+// chore titles are what staff read (Codex, PR #31). Longest first.
+const EN_TASKS: [RegExp, string, boolean][] = [
+  // [pattern, Indonesian, takes an object ("Pel teras") or stands alone]
+  [/\btakes? out the (?:trash|rubbish|garbage)\b/, "Buang sampah", false],
+  [/\bwaters? the plants\b/, "Siram tanaman", false],
+  [/\bchanges? the (?:bed )?sheets\b/, "Ganti seprai", false],
+  [/\bchanges? the towels\b/, "Ganti handuk", false],
+  [/\b(?:vacuums?|vacuuming)\b/, "Vakum", true],
+  [/\b(?:mops?|mopping)\b/, "Pel", true],
+  [/\b(?:sweeps?|sweeping)\b/, "Sapu", true],
+  [/\b(?:dusts?|dusting)\b/, "Lap debu", true],
+  [/\b(?:wipes?|wiping)\b/, "Lap", true],
+  [/\b(?:cleans?|cleaning)\b/, "Bersihkan", true],
+  [/\b(?:wash(?:es)?|washing)\b/, "Cuci", true],
+  [/\b(?:irons?|ironing)\b/, "Setrika", true],
+  [/\b(?:tid(?:y|ies)(?: up)?)\b/, "Rapikan", true],
+  [/\b(?:fix(?:es)?|repairs?)\b/, "Perbaiki", true],
+];
+const EN_THINGS: [RegExp, string][] = [
+  [/\bliving room\b/, "ruang tamu"],
+  [/\bbathroom\b/, "kamar mandi"],
+  [/\bbedroom\b/, "kamar tidur"],
+  [/\bterrace\b/, "teras"],
+  [/\bkitchen\b/, "dapur"],
+  [/\bwindows?\b/, "jendela"],
+  [/\bfloors?\b/, "lantai"],
+  [/\bstairs\b/, "tangga"],
+  [/\bgarage\b/, "garasi"],
+  [/\bgarden\b/, "taman"],
+  [/\bcar\b/, "mobil"],
+  [/\bfridge\b/, "kulkas"],
+  [/\b(?:carpet|rug)\b/, "karpet"],
+  [/\bsofa\b/, "sofa"],
+  [/\bdishes\b/, "piring"],
+  [/\bclothes\b/, "baju"],
+];
+const ENGLISH = /\b(the|every|each|and|on|at|please|mops?|cleans?|vacuums?|sweeps?|wash(?:es)?|wipes?)\b/;
+
+/**
+ * An Indonesian title for a chore the owner typed in English: the task word
+ * plus the room (as the household named it) or a known thing. Indonesian
+ * text comes back as it is. Null when it's English the list doesn't know:
+ * practice mode then says what it can do rather than save English.
+ */
+function indonesianTitle(sentence: string, roomName: string | null): string | null {
+  const t = sentence.toLowerCase();
+  if (!ENGLISH.test(t)) return sentence;
+  const task = EN_TASKS.find(([pattern]) => pattern.test(t));
+  if (!task) return null;
+  const [, word, takesObject] = task;
+  if (!takesObject) return word;
+  const thing = roomName ?? EN_THINGS.find(([pattern]) => pattern.test(t))?.[1] ?? null;
+  return thing ? `${word} ${thing}` : word;
+}
+
 function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -329,11 +386,16 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
   const plan = when ?? { days: [household.today], recurrence: "none" as const };
   const time = timesFrom(all)[0] ?? null;
   const room = findRef(household.rooms, all);
-  const title = clip(capitalise(choreTitle(household, first)), 80) || clip(capitalise(first), 80);
+  const typed = clip(capitalise(choreTitle(household, first)), 80) || clip(capitalise(first), 80);
+  const indonesian = indonesianTitle(typed, room?.name ?? null);
+  if (indonesian === null) return message(model, [text(copy.stuck)]);
+  const title = clip(capitalise(indonesian), 80);
+  const englishTyped = indonesian !== typed;
   const calls = plan.days.map((day) =>
     toolUse("create_chore", {
       title,
-      title_en: household.ownerLocale === "en" ? title : null,
+      // The owner's English, when they typed it; the title itself is Indonesian.
+      title_en: englishTyped ? typed : household.ownerLocale === "en" ? title : null,
       category: has(first, /\b(perbaiki|benerin|repair|fix|servis|service)\b/) ? "maintenance" : "cleaning",
       assignee: findPerson(household, all),
       due_date: day,

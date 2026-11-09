@@ -87,6 +87,23 @@ describe("practice conversations", () => {
     expect(result.items.map((i) => (i.kind === "chore" ? i.dueDate : null))).toEqual(["2026-11-16", "2026-11-12"]);
   });
 
+  it("a chore typed in English is saved in Bahasa Indonesia, with the English kept as the gloss", async () => {
+    const { deps } = setup("en");
+    const result = suggestions(await runKakakTurn(deps, null, "Sari mops the LT2 Lounge every Monday"));
+    expect(result.items[0]).toMatchObject({ title: "Pel LT2 Lounge", titleEn: "Mops the LT2 Lounge" });
+    const kitchen = suggestions(await runKakakTurn(setup("en").deps, null, "Ari cleans the kitchen tomorrow"));
+    expect(kitchen.items[0]).toMatchObject({ title: "Bersihkan dapur", locationId: null });
+    const trash = suggestions(await runKakakTurn(setup("id").deps, null, "Ari takes out the trash every day"));
+    expect(trash.items[0]).toMatchObject({ title: "Buang sampah", recurrence: "daily" });
+  });
+
+  it("English it doesn't know is never saved as an English chore", async () => {
+    const { deps } = setup("en");
+    const result = await runKakakTurn(deps, null, "Sort out the attic every Monday");
+    expect(result).toMatchObject({ kind: "message" });
+    expect(result.kind === "message" ? result.text : "").toMatch(/practice mode/);
+  });
+
   it("asks which day when it's missing, then suggests with the answer", async () => {
     const { deps } = setup("id");
     const first = await runKakakTurn(deps, null, "Lap jendela teras");
