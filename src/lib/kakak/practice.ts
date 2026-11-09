@@ -181,19 +181,27 @@ const EN_THINGS: [RegExp, string][] = [
   [/\bdishes\b/, "piring"],
   [/\bclothes\b/, "baju"],
 ];
-const ENGLISH = /\b(the|every|each|and|on|at|please|mops?|cleans?|vacuums?|sweeps?|wash(?:es)?|wipes?)\b/;
+// Indonesian chore words: a title with one of these is already Indonesian.
+const ID_TASK =
+  /\b(pel|ngepel|mengepel|sapu|nyapu|menyapu|vakum|vacuum|sedot|lap|lap2|bersihkan|bersihin|cuci|nyuci|setrika|nyetrika|rapikan|rapihkan|beresin|beres|siram|buang|ganti|perbaiki|benerin|servis|sikat|kuras|jemur|angkat|lipat|masak|antar|jemput|bawa|isi|cek|periksa|tuang|semprot|potong)\b/;
 
 /**
  * An Indonesian title for a chore the owner typed in English: the task word
- * plus the room (as the household named it) or a known thing. Indonesian
- * text comes back as it is. Null when it's English the list doesn't know:
- * practice mode then says what it can do rather than save English.
+ * plus the room (as the household named it) or a known thing. Text with an
+ * Indonesian chore word comes back as it is. Null for anything else:
+ * practice mode then says what it can do rather than save a title it can't
+ * vouch for.
  */
 function indonesianTitle(sentence: string, roomName: string | null): string | null {
   const t = sentence.toLowerCase();
-  if (!ENGLISH.test(t)) return sentence;
+  // English task words it knows come first, whatever else is in the sentence.
   const task = EN_TASKS.find(([pattern]) => pattern.test(t));
-  if (!task) return null;
+  if (!task) {
+    // Otherwise only a sentence with an Indonesian chore word is used as is;
+    // anything else is declined, so English never reaches a staff screen
+    // (Codex, PR #31).
+    return ID_TASK.test(t) ? sentence : null;
+  }
   const [, word, takesObject] = task;
   if (!takesObject) return word;
   const thing = roomName ?? EN_THINGS.find(([pattern]) => pattern.test(t))?.[1] ?? null;

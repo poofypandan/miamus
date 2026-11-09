@@ -97,6 +97,11 @@ describe("practice conversations", () => {
     expect(trash.items[0]).toMatchObject({ title: "Buang sampah", recurrence: "daily" });
   });
 
+  it("an English task with no other English cue is still translated", async () => {
+    const result = suggestions(await runKakakTurn(setup("en").deps, null, "Iron clothes tomorrow"));
+    expect(result.items[0]).toMatchObject({ title: "Setrika baju", titleEn: "Iron clothes" });
+  });
+
   it("English it doesn't know is never saved as an English chore", async () => {
     const { deps } = setup("en");
     const result = await runKakakTurn(deps, null, "Sort out the attic every Monday");
