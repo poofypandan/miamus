@@ -822,7 +822,12 @@ export const mockProvider: DataProvider = {
         room.name.trim().toLowerCase() === key &&
         (room.parent_id ?? null) === parentId
     );
-    if (existing) return delay(existing);
+    if (existing) {
+      if ((existing.kind ?? "room") !== (options?.kind ?? "room")) {
+        throw Object.assign(new Error("A place with this name exists"), { code: "23505" });
+      }
+      return delay(existing);
+    }
     const room: HouseholdLocation = {
       id: uid("room"),
       household_id: household,

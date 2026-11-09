@@ -210,7 +210,10 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         // The simple PostgREST filters the app's chore reads use (eq, neq,
         // lt, lte, gt, gte, is), so each read returns what the real backend
         // would: the week read misses a chore set up for later (Codex, #30).
-        return route.fulfill({ json: filterRows([...options.chores, ...tasks], new URL(request.url()).searchParams) });
+        const rows = filterRows([...options.chores, ...tasks], new URL(request.url()).searchParams);
+        // .single() asks for one object, not a list.
+        const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: one ? (rows[0] ?? null) : rows });
       }
       if (table === "household_locations" && options.roomsFail?.on) {
         return route.fulfill({ status: 500, json: { message: "stub: rooms unavailable" } });

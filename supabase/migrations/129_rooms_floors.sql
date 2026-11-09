@@ -270,7 +270,8 @@ begin
     raise exception 'admins_only' using errcode = '42501';
   end if;
   if jsonb_array_length(coalesce(p_plan -> 'places', '[]')) > 500
-     or jsonb_array_length(coalesce(p_plan -> 'chores', '[]')) > 2000
+     -- Room for an Undo: up to 20,000 moved chores plus 2,000 linked ones.
+     or jsonb_array_length(coalesce(p_plan -> 'chores', '[]')) > 22000
      or jsonb_array_length(coalesce(p_plan -> 'merges', '[]')) > 500
      or jsonb_array_length(coalesce(p_plan -> 'delete', '[]')) > 500 then
     raise exception 'plan_too_large' using errcode = '22023';
@@ -309,6 +310,12 @@ begin
            spot = coalesce(spot, merge ->> 'spot')
      where household_id = hid and location_id = (merge ->> 'from')::uuid;
   end loop;
+  -- A sort that succeeds must be undoable in one step: the Undo lists every
+  -- moved chore, so refuse (and roll back) a merge too big for that (Codex, #34).
+  if jsonb_array_length(moved) > 20000
+     or jsonb_array_length(moved) + jsonb_array_length(coalesce(p_plan -> 'chores', '[]')) > 22000 then
+    raise exception 'plan_too_large' using errcode = '22023';
+  end if;
 
   for chore in select * from jsonb_array_elements(coalesce(p_plan -> 'chores', '[]')) loop
     update public.household_tasks

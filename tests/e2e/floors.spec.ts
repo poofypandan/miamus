@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { HOUSEHOLD_ID } from "../fixtures/household";
-import { STAFF_ID, installStub } from "./stub-backend";
+import { STAFF_ID, freshSession, installStub } from "./stub-backend";
 
 // Floors and spots (Phase 158 PR B): "Sort your rooms into floors" with its
 // Undo, and Household → Rooms. Rooms, chores and organise_rooms are answered
@@ -108,4 +108,20 @@ test("Household → Rooms: add a floor and a room on it, then delete the floor",
   await page.getByRole("button", { name: "Hapus", exact: true }).click();
   await expect(page.getByRole("region", { name: "Belum ada lantai" }).getByText("Ruang musik")).toBeVisible();
   expect(rooms.some((r) => r.name === "LT2")).toBe(false);
+});
+
+test("a staff phone claiming a day of a chore with a spot copies the spot (128's guard requires it)", async ({ context, page }) => {
+  // A weekly chore on today's weekday, nobody's yet, for the sink.
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  const lastWeek = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const rooms = [{ ...room(20, "GB2 Bathroom"), kind: "room", parent_id: null, sort_order: 0 }];
+  const chores = [chore({ title: "Lap keran", assigned_to: null, due_date: lastWeek, location_id: id(20), spot: "Wastafel" })];
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true, rooms, chores });
+  await page.goto("/staff");
+
+  await page.getByText("Lap keran").first().click({ timeout: 20_000 });
+  await page.getByRole("button", { name: /Ambil Tugas/ }).click();
+  await expect.poll(() => stub.tasks.length).toBe(1);
+  expect(stub.tasks[0]).toMatchObject({ title: "Lap keran", spot: "Wastafel", location_id: id(20), assigned_to: STAFF_ID });
 });

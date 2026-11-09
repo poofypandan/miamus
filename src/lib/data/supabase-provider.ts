@@ -694,6 +694,9 @@ export const supabaseProvider: DataProvider = {
         due_time: template.due_time,
         requires_supervision: template.requires_supervision ?? false,
         location_id: template.location_id ?? null,
+        // The part of the room (migrations/129). Copied, or 128's guard
+        // refuses a staff phone's copy; sent only once the column exists.
+        ...("spot" in template ? { spot: template.spot ?? null } : {}),
         // The occurrence is a one-off: the repeat belongs to the template, and
         // copying it here would make every completed Tuesday a template of its
         // own, each generating its own infinite series.
@@ -929,7 +932,9 @@ export const supabaseProvider: DataProvider = {
       const existing = rooms.find(
         (room) => room.name.trim().toLowerCase() === key && (room.parent_id ?? null) === parentId
       );
-      if (existing) return existing;
+      // Only the same kind of place: a floor asked for under the name of a
+      // room (or the other way round) is a clash, not a success (Codex, #34).
+      if (existing && (existing.kind ?? "room") === (options?.kind ?? "room")) return existing;
     }
     throw error;
   },
