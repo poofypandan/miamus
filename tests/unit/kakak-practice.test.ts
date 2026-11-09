@@ -157,6 +157,13 @@ describe("practice conversations", () => {
     expect(second.items[0]).toMatchObject({ dueTime: "10:00", dueDate: "2026-11-12", locationId: id(20) });
   });
 
+  it("a time with minutes and am/pm is read once", async () => {
+    const pm = suggestions(await runKakakTurn(setup("en").deps, null, "Feed Mochi at 9:00 pm"));
+    expect(pm.items[0].kind === "pet_routine" ? pm.items[0].times.map((t) => t.time) : []).toEqual(["21:00"]);
+    const am = suggestions(await runKakakTurn(setup("en").deps, null, "Feed Mochi at 9:15 am"));
+    expect(am.items[0].kind === "pet_routine" ? am.items[0].times.map((t) => t.time) : []).toEqual(["09:15"]);
+  });
+
   it("12 am is midnight, once", async () => {
     const { deps } = setup("en");
     const result = suggestions(await runKakakTurn(deps, null, "Feed Mochi at 12 am"));

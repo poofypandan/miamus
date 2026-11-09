@@ -64,31 +64,41 @@ function whenFrom(text: string, today: string): When | null {
   return null;
 }
 
-/** "09:00", "9.30", "jam 9", "at 9", "9am", "3 pm". */
+/**
+ * "09:00", "9.30", "9:00 pm", "jam 9", "at 9", "9am", "3 pm". Each pattern
+ * uses up what it read, so "9:00 pm" is 21:00 only: the later patterns can't
+ * read its "00 pm" again (Codex, PR #31). 12 am is midnight throughout.
+ */
 function timesFrom(text: string): string[] {
-  const t = text.toLowerCase();
+  let rest = text.toLowerCase();
   const found: string[] = [];
   const pad = (h: number, m: number) => `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  for (const match of t.matchAll(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/g)) {
-    let h = Number(match[1]);
-    const m = Number(match[2]);
-    if (match[3] === "pm" && h < 12) h += 12;
-    if (match[3] === "am" && h === 12) h = 0;
-    if (h < 24 && m < 60) found.push(pad(h, m));
-  }
-  for (const match of t.matchAll(/\b(?:jam|pukul|at)\s+(\d{1,2})(?!\s*[:.]\d)\s*(am|pm|pagi|siang|sore|malam)?\b/g)) {
-    let h = Number(match[1]);
-    if ((match[2] === "pm" || match[2] === "sore" || match[2] === "malam") && h < 12) h += 12;
-    // 12 am is midnight, as in the other two patterns (Codex, PR #31).
-    if (match[2] === "am" && h === 12) h = 0;
-    if (h < 24) found.push(pad(h, 0));
-  }
-  for (const match of t.matchAll(/\b(\d{1,2})\s*(am|pm)\b/g)) {
-    let h = Number(match[1]);
-    if (match[2] === "pm" && h < 12) h += 12;
-    if (match[2] === "am" && h === 12) h = 0;
-    if (h < 24) found.push(pad(h, 0));
-  }
+  const hour = (raw: string, suffix: string | undefined) => {
+    let h = Number(raw);
+    if ((suffix === "pm" || suffix === "sore" || suffix === "malam") && h < 12) h += 12;
+    if (suffix === "am" && h === 12) h = 0;
+    return h;
+  };
+  const take = (pattern: RegExp, read: (match: RegExpMatchArray) => string | null) => {
+    rest = rest.replace(pattern, (...args) => {
+      const value = read(args.slice(0, -2) as unknown as RegExpMatchArray);
+      if (value) found.push(value);
+      return " ";
+    });
+  };
+  take(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/g, (m) => {
+    const h = hour(m[1], m[3]);
+    const min = Number(m[2]);
+    return h < 24 && min < 60 ? pad(h, min) : null;
+  });
+  take(/\b(?:jam|pukul|at)\s+(\d{1,2})\s*(am|pm|pagi|siang|sore|malam)?\b/g, (m) => {
+    const h = hour(m[1], m[2]);
+    return h < 24 ? pad(h, 0) : null;
+  });
+  take(/\b(\d{1,2})\s*(am|pm)\b/g, (m) => {
+    const h = hour(m[1], m[2]);
+    return h < 24 ? pad(h, 0) : null;
+  });
   return [...new Set(found)];
 }
 
