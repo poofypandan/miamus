@@ -24,6 +24,10 @@ export function RepairCostSection({ repairId }: { repairId: string }) {
   const locale = useOwnerLocale();
   const [cost, setCost] = useState<RepairCost | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // A failed read is not "no cost yet": editing stays off until a retry
+  // succeeds, so a save can never blank a cost it couldn't see (Codex, PR #38).
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [receipt, setReceipt] = useState<File | string | null>(null);
@@ -33,21 +37,25 @@ export function RepairCostSection({ repairId }: { repairId: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    setFailed(false);
     dataProvider
       .getRepairCost(repairId)
       .then((row) => {
         if (cancelled) return;
+        setLoaded(true);
         setCost(row);
         setAmount(row?.amount_idr != null ? formatIdr(row.amount_idr) : "");
         setNote(row?.note ?? "");
         setReceipt(row?.receipt_url ?? null);
       })
-      .catch((err) => console.error("Repair cost not loaded", err))
-      .finally(() => !cancelled && setLoaded(true));
+      .catch((err) => {
+        console.error("Repair cost not loaded", err);
+        if (!cancelled) setFailed(true);
+      });
     return () => {
       cancelled = true;
     };
-  }, [repairId]);
+  }, [repairId, attempt]);
 
   const parsed = parseIdr(amount);
   const amountInvalid = amount.trim() !== "" && parsed === null;
@@ -83,6 +91,18 @@ export function RepairCostSection({ repairId }: { repairId: string }) {
     }
   }
 
+  if (failed) {
+    return (
+      <section aria-label={t("Cost and receipt", "Biaya dan nota")} className="flex flex-col gap-2 rounded-xl border p-3">
+        <p className="text-sm text-muted-foreground">
+          {t("The cost couldn't load.", "Biaya gagal dimuat.")}
+        </p>
+        <Button variant="outline" className="min-h-[44px] self-start rounded-xl" onClick={() => setAttempt((n) => n + 1)}>
+          {t("Try again", "Coba lagi")}
+        </Button>
+      </section>
+    );
+  }
   if (!loaded) return null;
 
   const hasAny = !!cost && (cost.amount_idr != null || !!cost.receipt_url || !!cost.note);

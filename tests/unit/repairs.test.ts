@@ -170,6 +170,12 @@ describe("PR B: cost, warranty, notes, repair people", () => {
     expect(parseIdr("1,5 jt")).toBe(1500000);
     expect(parseIdr("")).toBeNull();
     expect(parseIdr("murah")).toBeNull();
+    // Cents never become rupiah (Codex, PR #38).
+    expect(parseIdr("Rp 350.000,00")).toBe(350000);
+    expect(parseIdr("350000,00")).toBe(350000);
+    expect(parseIdr("350,000")).toBe(350000);
+    expect(parseIdr("350,000.50")).toBe(350001);
+    expect(parseIdr("35.00.0")).toBeNull();
     expect(formatIdr(350000)).toBe("Rp350.000");
   });
 

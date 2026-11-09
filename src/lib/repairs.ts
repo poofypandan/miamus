@@ -235,9 +235,19 @@ export function parseIdr(text: string): number | null {
   if (thousands) return Math.round(Number(thousands[1].replace(",", ".")) * 1000);
   const millions = /^(\d+(?:[.,]\d+)?)\s*(jt|juta)$/.exec(raw);
   if (millions) return Math.round(Number(millions[1].replace(",", ".")) * 1_000_000);
-  const digits = raw.replace(/[.,\s]/g, "");
-  if (!/^\d{1,13}$/.test(digits)) return null;
-  return Number(digits);
+  const compact = raw.replace(/\s/g, "");
+  // Indonesian grouping, cents optional: 350.000 / 350.000,00 (Codex, PR #38).
+  const indonesian = /^(\d{1,3}(?:\.\d{3})+)(?:,(\d{1,2}))?$/.exec(compact);
+  // English grouping: 350,000 / 350,000.00.
+  const english = /^(\d{1,3}(?:,\d{3})+)(?:\.(\d{1,2}))?$/.exec(compact);
+  // No grouping: 350000 / 350000,00 / 350000.00.
+  const plain = /^(\d+)(?:[.,](\d{1,2}))?$/.exec(compact);
+  const match = indonesian ?? english ?? plain;
+  if (!match) return null;
+  const whole = match[1].replace(/[.,]/g, "");
+  if (whole.length > 13) return null;
+  // Whole rupiah: cents round to the nearest rupiah.
+  return Math.round(Number(`${whole}.${match[2] ?? "0"}`));
 }
 
 /** "Under warranty until 3 Mar 2027", or that it ended; null without a date. */
