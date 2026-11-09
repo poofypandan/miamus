@@ -154,3 +154,14 @@ test("Rooms in Bahasa Indonesia, with its What's new card shown once", async ({ 
   await page.goto("/dashboard?module=access&page=whats-new");
   await expect(page.getByRole("heading", { name: "Baru: Ruangan" })).toBeVisible({ timeout: 20_000 });
 });
+
+test("Rooms says when the room list can't load, and tries again", async ({ context, page }) => {
+  const roomsFail = { on: true };
+  await installStub(context, { owner: { locale: "en" }, rooms: ROOMS, chores: CHORES, roomsFail });
+  await page.goto("/dashboard?module=chores&chores=rooms");
+  await expect(page.getByText("Couldn't load your rooms")).toBeVisible({ timeout: 20_000 });
+
+  roomsFail.on = false;
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("region", { name: "LT2" }).getByText("Lounge")).toBeVisible();
+});

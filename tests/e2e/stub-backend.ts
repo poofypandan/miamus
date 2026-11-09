@@ -77,6 +77,8 @@ export interface StubOptions {
   rooms?: Record<string, unknown>[];
   /** household_tasks rows the household already has (Phase 158). */
   chores?: Record<string, unknown>[];
+  /** Answer the room list with a server error until set back (Phase 158). */
+  roomsFail?: { on: boolean };
 }
 
 export interface Stub {
@@ -209,6 +211,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         // lt, lte, gt, gte, is), so each read returns what the real backend
         // would: the week read misses a chore set up for later (Codex, #30).
         return route.fulfill({ json: filterRows([...options.chores, ...tasks], new URL(request.url()).searchParams) });
+      }
+      if (table === "household_locations" && options.roomsFail?.on) {
+        return route.fulfill({ status: 500, json: { message: "stub: rooms unavailable" } });
       }
       if (table === "household_locations" && options.rooms) return route.fulfill({ json: options.rooms });
       if (options.owner && who === OWNER) {

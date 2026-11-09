@@ -89,7 +89,7 @@ function useSetUpChores(today: string): { rows: HouseholdTask[] | null; failed: 
 }
 
 export function RoomsView() {
-  const { locations } = useHouseholdLocations();
+  const { locations, failed: roomsFailed, reload: reloadRooms } = useHouseholdLocations();
   const { allProfiles } = useStaffProfiles();
   const locale = useOwnerLocale();
   const t = useT();
@@ -121,6 +121,25 @@ export function RoomsView() {
   function openEditor(task: HouseholdTask | null, preset: { title?: string; locationId?: string | null } | null) {
     setSheet(null);
     setEditor({ task, preset });
+  }
+
+  // The room list failed and won't retry on its own: say so, with a way back
+  // (Codex, PR #30), rather than placeholders forever.
+  if (!locations && roomsFailed) {
+    return (
+      <EmptyState
+        icon={DoorOpen}
+        title={t("Couldn't load your rooms", "Ruangan tidak bisa dimuat")}
+        description={t(
+          "Check the connection and try again.",
+          "Periksa koneksi lalu coba lagi."
+        )}
+      >
+        <Button variant="outline" className="min-h-[44px]" onClick={() => void reloadRooms?.()}>
+          {t("Try again", "Coba lagi")}
+        </Button>
+      </EmptyState>
+    );
   }
 
   if (!chores || !locations) {
