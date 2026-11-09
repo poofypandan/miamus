@@ -161,7 +161,7 @@ effort. "Privacy" means a privacy-policy update in both languages and
 | 4 | **Notifications on staff phones** ("new task for you", "the owner answered") | Medium | Yes | Policy (push subscriptions on staff phones); no new service |
 | 5 | **Calmer staff Today**: one tip at a time, readable notes and subtitles | Small | No | None |
 | 6 | **Instructions on pet routines** ("Catatan untuk staf") | Small–medium | Yes | None expected (household instructions, like chore notes) |
-| 7 | **Undo a finished chore** for 5 minutes, like routines | Small–medium | Yes (staff chore guard) | None |
+| 7 | **Undo a finished chore** for 5 minutes, like routines | Small | Optional (tighten the guard) | None |
 | 8 | **Photo proof per chore**: before & after / after only / none | Medium | Yes (trigger 104) | Fewer photos collected; optional policy note |
 | 9 | **Tell approved owners**: reply from support@ when a request is approved | Tiny (process) | No | None (the email already shared for the request) |
 | — | Product explanation: landing page | — | — | PR #43 |
@@ -307,6 +307,17 @@ effort. "Privacy" means a privacy-policy update in both languages and
   - At most **one** tip card at a time (newest first).
   - Chore notes at 14 px in normal ink, with a small "Catatan" label.
   - Staff subtitles at 13 px.
+  - **No emoji in what staff and owners see** (owner, 2026-11-09): the
+    "selesai ✅" toasts (`finish-chore-sheet.tsx`, `adhoc-sheet.tsx`,
+    `agenda-group-card.tsx`), "sudah selesai 🎉" (`app/staff/page.tsx`),
+    the 🏥/🏠 clinic lines, 🐕/🧹 in the workload sheet
+    (`staff-workload-sheet.tsx`, owners), ❌ in the cancel note
+    (`cancel-routine-button.tsx`), 🛒 in the shopping share text
+    (`lib/inventory.ts`) and 🚨 in the sick-report WhatsApp text. Replaced
+    with Lucide icons where there's room for one, plain words in toasts and
+    shared text.
+  - Push titles (🚨 Hewan Sakit, 🔒 PIN terkunci, 🔔 Tes notifikasi) live in
+    database functions, so they change with item 2's migration, not here.
   - Nothing else moves.
 - **Benefit / effort.** Instructions get read, and the screen starts with
   the work. Small: client only.
@@ -337,15 +348,20 @@ effort. "Privacy" means a privacy-policy update in both languages and
 
 - **User problem.** A wrong chore finished, or the wrong photo, can't be
   taken back by the staff member.
-- **Evidence.** Routines: 5-minute undo (`undo-window.ts`). Chores: none
-  (`finish-chore-sheet.tsx`). The staff chore guard (migration 128) only
-  allows claim → finish.
+- **Evidence.** Routines: 5-minute undo (`undo-window.ts`). Chores: no undo
+  in the app (`finish-chore-sheet.tsx`). The database already lets a staff
+  phone set a chore back to pending: the staff chore guard (migration 128)
+  accepts `pending` or `completed` and the completion fields, without checking
+  who finished it or when. So the gap is the missing button, not a blocked
+  write.
 - **Smallest useful improvement.** A **"Batalkan"** toast for 5 minutes
   after finishing. The chore goes back to claimed and keeps its photos for a
   retake.
 - **Benefit / effort.** Safe correction, which the research names as a staff
-  need. Small–medium: the guard widened for the same person within 5
-  minutes.
+  need. Small for the button alone (client only). Optionally tighten the
+  guard (migration) so a staff phone can only reopen a chore *it* finished,
+  within 5 minutes; today any staff phone could reopen any finished chore
+  through the API, which is worth closing in the same change.
 - **Validate.** Count owner edits of completed chores per week; staff test.
 - **Privacy / data / pricing / services.** None.
 
@@ -391,6 +407,7 @@ without a new service:
 **One small implementation batch to build first: items 3 + 5** (first-run
 checklist and calmer staff Today).
 
+- Includes the emoji clean-up in item 5 (client strings only).
 - Client only: no migration, no privacy change, no new service. It can ship
   while 1 and 2, which need migrations and a policy line each, get their
   mockups and the owner's decisions.
@@ -430,8 +447,17 @@ a PIN only).
 **The experiment, if run:** after item 4 has been live for 2 weeks.
 
 - 3–5 households, one flow only: a **07.00 template** listing today's tasks
-  for that person, with **Sudah semua** / **Ada yang tidak bisa** buttons.
-  Replies land as completions or item-1 exceptions.
+  for that person, with **Siap** (seen) / **Ada yang tidak bisa** buttons.
+- **Replies acknowledge; they don't complete.** A chore can only become
+  completed with both proof photos (trigger 104), and a pet routine with its
+  photo, so a "done" button in WhatsApp can't record a completion without
+  weakening the proof rule. "Siap" marks the list as seen; "Ada yang tidak
+  bisa" opens a link to the task's item-1 exception in the app; completion
+  stays in the app with its photos. A per-task WhatsApp photo flow (staff
+  send the after photo in the chat) is possible but is the expensive part
+  of the webhook. Leave it out of the first experiment.
+- Measure acknowledgement in WhatsApp, and completion in the app, for both
+  arms. That keeps the comparison with staff push fair.
 - Compare with staff push (item 4) on:
   - time to acknowledgement;
   - tasks finished;
