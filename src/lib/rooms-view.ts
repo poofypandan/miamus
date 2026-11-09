@@ -208,6 +208,16 @@ export function roomHasJob(entry: RoomEntry, job: ChoreJob): boolean {
   return entry.chores.some((chore) => chore.jobs.includes(job));
 }
 
+/**
+ * The number on a job's chip: rooms that have the job, plus whole floors
+ * that have it. A job set up only as a whole-floor chore (trash for all of
+ * LT2) would otherwise read "Trash 0" next to a floor that clearly has it.
+ */
+export function placesWithJob(model: RoomsModel, job: ChoreJob): number {
+  const wholeFloors = model.floors.filter((floor) => floor.whole && roomHasJob(floor.whole, job)).length;
+  return allRoomRows(model).filter((room) => roomHasJob(room, job)).length + wholeFloors;
+}
+
 /** Every room row, whole-floor rows excluded: what "9 of 19 rooms" counts. */
 export function allRoomRows(model: RoomsModel): RoomEntry[] {
   return [...model.floors.flatMap((f) => f.rooms), ...model.otherRooms];
