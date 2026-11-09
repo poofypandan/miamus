@@ -364,7 +364,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     in3: "In 3 days",
     dunno: "Don't know",
     stuck: "(Practice) I can't set that up in practice mode. Try: \"Ari mops the terrace every Monday at 9\".",
-    noChange: "(Practice) In practice mode I can only change a chore's day, time, room or person. Cancel and type the whole thing again.",
+    noChange: "(Practice) In practice mode I can only change a chore's day, time or person. Cancel and type the whole thing again.",
   },
   id: {
     here: "(Latihan) Ini yang akan Kakak tambahkan:",
@@ -376,7 +376,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     in3: "3 hari lagi",
     dunno: "Tidak tahu",
     stuck: "(Latihan) Ini belum bisa di mode latihan. Coba: \"Ari pel teras setiap Senin jam 9\".",
-    noChange: "(Latihan) Di mode latihan, Kakak hanya bisa mengubah hari, jam, ruangan atau orang untuk tugas. Batalkan lalu ketik ulang semuanya.",
+    noChange: "(Latihan) Di mode latihan, Kakak hanya bisa mengubah hari, jam atau orang untuk tugas. Batalkan lalu ketik ulang semuanya.",
   },
 };
 
@@ -391,6 +391,13 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
   // Only chores take a typed change; anything else would come back unchanged
   // and look corrected (Codex, PR #31), so say so instead.
   if (changed && intent !== "chore") return message(model, [text(copy.noChange)]);
+  // A chore's room is in its title ("Pel teras"), so a change of room would
+  // leave the two disagreeing (Codex, PR #31): only day, time and person.
+  if (changed) {
+    const before = findRef(household.rooms, first);
+    const after = findRef(household.rooms, said[said.length - 1]);
+    if (after && after.ref !== before?.ref) return message(model, [text(copy.noChange)]);
+  }
   const canAsk = asked < 1;
 
   if (intent === "shopping") {

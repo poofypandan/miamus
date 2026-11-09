@@ -193,6 +193,13 @@ describe("practice conversations", () => {
     expect(changed.kind === "message" ? changed.text : "").toMatch(/only change a chore/);
   });
 
+  it("a change of room on a chore is declined (the room is in the title)", async () => {
+    const { deps } = setup("id");
+    const card = suggestions(await runKakakTurn(deps, null, "Pel teras besok jam 9"));
+    const changed = await runKakakTurn(deps, card.history, "Ganti ruangan ke LT2 Lounge");
+    expect(changed).toMatchObject({ kind: "message" });
+  });
+
   it("12 am is midnight, once", async () => {
     const { deps } = setup("en");
     const result = suggestions(await runKakakTurn(deps, null, "Feed Mochi at 12 am"));
