@@ -148,6 +148,22 @@ describe("practice conversations", () => {
     expect(times).toEqual(["17:00"]);
   });
 
+  it("a correction's time replaces the first one", async () => {
+    const { deps } = setup("id");
+    const first = suggestions(await runKakakTurn(deps, null, "Pel teras besok jam 9"));
+    expect(first.items[0]).toMatchObject({ dueTime: "09:00" });
+    // The owner taps Change and types a correction.
+    const second = suggestions(await runKakakTurn(deps, first.history, "Ganti jam 10"));
+    expect(second.items[0]).toMatchObject({ dueTime: "10:00", dueDate: "2026-11-12", locationId: id(20) });
+  });
+
+  it("12 am is midnight, once", async () => {
+    const { deps } = setup("en");
+    const result = suggestions(await runKakakTurn(deps, null, "Feed Mochi at 12 am"));
+    const times = result.items[0].kind === "pet_routine" ? result.items[0].times.map((t) => t.time) : [];
+    expect(times).toEqual(["00:00"]);
+  });
+
   it("the history it returns goes back through the engine's checks", async () => {
     const { deps } = setup("en");
     const first = await runKakakTurn(deps, null, "Clean the terrace");

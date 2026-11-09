@@ -79,6 +79,8 @@ function timesFrom(text: string): string[] {
   for (const match of t.matchAll(/\b(?:jam|pukul|at)\s+(\d{1,2})(?!\s*[:.]\d)\s*(am|pm|pagi|siang|sore|malam)?\b/g)) {
     let h = Number(match[1]);
     if ((match[2] === "pm" || match[2] === "sore" || match[2] === "malam") && h < 12) h += 12;
+    // 12 am is midnight, as in the other two patterns (Codex, PR #31).
+    if (match[2] === "am" && h === 12) h = 0;
     if (h < 24) found.push(pad(h, 0));
   }
   for (const match of t.matchAll(/\b(\d{1,2})\s*(am|pm)\b/g)) {
@@ -383,9 +385,18 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
       }),
     ]);
   }
-  const plan = when ?? { days: [household.today], recurrence: "none" as const };
-  const time = timesFrom(all)[0] ?? null;
-  const room = findRef(household.rooms, all);
+  // The newest words win: a correction ("Ganti jam 10") or an answer
+  // replaces what the first sentence said (Codex, PR #31).
+  const latest = <T,>(read: (words: string) => T | null): T | null => {
+    for (let i = said.length - 1; i >= 0; i--) {
+      const value = read(said[i]);
+      if (value !== null) return value;
+    }
+    return null;
+  };
+  const plan = latest((w) => whenFrom(w, household.today)) ?? when ?? { days: [household.today], recurrence: "none" as const };
+  const time = latest((w) => timesFrom(w)[0] ?? null);
+  const room = latest((w) => findRef(household.rooms, w));
   const typed = clip(capitalise(choreTitle(household, first)), 80) || clip(capitalise(first), 80);
   const indonesian = indonesianTitle(typed, room?.name ?? null);
   if (indonesian === null) return message(model, [text(copy.stuck)]);
@@ -397,7 +408,7 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
       // The owner's English, when they typed it; the title itself is Indonesian.
       title_en: englishTyped ? typed : household.ownerLocale === "en" ? title : null,
       category: has(first, /\b(perbaiki|benerin|repair|fix|servis|service)\b/) ? "maintenance" : "cleaning",
-      assignee: findPerson(household, all),
+      assignee: latest((w) => findPerson(household, w)),
       due_date: day,
       due_time: time,
       recurrence: plan.recurrence,
