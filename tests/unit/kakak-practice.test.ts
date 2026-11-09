@@ -129,6 +129,17 @@ describe("practice conversations", () => {
     ]);
   });
 
+  it("shopping typed in English is saved in Indonesian, or declined", async () => {
+    const result = suggestions(await runKakakTurn(setup("en").deps, null, "Buy sugar 2 kg and dog food"));
+    const entries = result.items[0].kind === "shopping" ? result.items[0].entries : [];
+    expect(entries).toEqual([
+      expect.objectContaining({ type: "note", note: "Gula 2 kg" }),
+      expect.objectContaining({ type: "note", note: "Makanan anjing" }),
+    ]);
+    const unknown = await runKakakTurn(setup("en").deps, null, "Buy a birthday present");
+    expect(unknown).toMatchObject({ kind: "message" });
+  });
+
   it("food asks for the date, then adds it with who gave it", async () => {
     const { deps } = setup("en");
     const first = await runKakakTurn(deps, null, "Lapis legit from Tante Rina");

@@ -208,6 +208,60 @@ function indonesianTitle(sentence: string, roomName: string | null): string | nu
   return thing ? `${word} ${thing}` : word;
 }
 
+// Groceries and supplies: English to the Indonesian shops use, longest first
+// (Codex, PR #31: shopping notes are shown on staff screens).
+const EN_GROCERIES: [RegExp, string][] = [
+  [/\bdish(?:washing)? soap\b/, "Sabun cuci piring"],
+  [/\btoilet (?:paper|rolls?)\b/, "Tisu toilet"],
+  [/\bcooking oil\b/, "Minyak goreng"],
+  [/\bdog food\b/, "Makanan anjing"],
+  [/\bcat food\b/, "Makanan kucing"],
+  [/\btrash bags?\b/, "Kantong sampah"],
+  [/\bpee pads?\b/, "Pee pad"],
+  [/\bdrinking water|water gallon|gallon\b/, "Air galon"],
+  [/\btoothpaste\b/, "Pasta gigi"],
+  [/\bgarlic\b/, "Bawang putih"],
+  [/\bonions?\b/, "Bawang merah"],
+  [/\bsugar\b/, "Gula"],
+  [/\beggs?\b/, "Telur"],
+  [/\brice\b/, "Beras"],
+  [/\bmilk\b/, "Susu"],
+  [/\bsalt\b/, "Garam"],
+  [/\bbread\b/, "Roti"],
+  [/\bcoffee\b/, "Kopi"],
+  [/\btea\b/, "Teh"],
+  [/\bflour\b/, "Tepung"],
+  [/\bnoodles?\b/, "Mi"],
+  [/\bchicken\b/, "Ayam"],
+  [/\bfish\b/, "Ikan"],
+  [/\bbeef|meat\b/, "Daging"],
+  [/\bvegetables?\b/, "Sayur"],
+  [/\bfruits?\b/, "Buah"],
+  [/\bchil(?:l)?i(?:es)?\b/, "Cabai"],
+  [/\bsoap\b/, "Sabun"],
+  [/\bshampoo\b/, "Sampo"],
+  [/\bdetergent|laundry soap\b/, "Deterjen"],
+  [/\btissues?\b/, "Tisu"],
+  [/\bgas\b/, "Gas LPG"],
+];
+const ID_GROCERY =
+  /\b(gula|telur|beras|susu|garam|roti|kopi|teh|tepung|mi|mie|ayam|ikan|daging|sayur|buah|cabai|cabe|bawang|sabun|sampo|deterjen|pewangi|tisu|gas|galon|minyak|kecap|saus|tahu|tempe|makanan|pasir|pee|kantong|pasta|odol|sikat|plastik|baterai|lampu)\b/;
+
+/**
+ * A new shopping note in Indonesian: a known English item translated, with
+ * its amount kept ("sugar 2 kg" → "Gula 2 kg"), or the owner's words when
+ * they name a known Indonesian item. Null otherwise.
+ */
+function shoppingNote(part: string): string | null {
+  const t = part.toLowerCase();
+  const english = EN_GROCERIES.find(([pattern]) => pattern.test(t));
+  if (english) {
+    const amount = /(\d+(?:[.,]\d+)?\s*(?:kg|g|gr|l|liter|litre|ml|pcs|pack|packs|pak|box|kotak|botol|bottles?|rolls?|rol)?)\b/i.exec(t)?.[1]?.trim();
+    return amount ? `${english[1]} ${amount}` : english[1];
+  }
+  return ID_GROCERY.test(t) ? capitalise(part) : null;
+}
+
 function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -336,10 +390,12 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
       .slice(0, 10);
     const items = (parts.length ? parts : [first]).map((part) => {
       const existing = findRef(household.items, part);
-      return existing
-        ? { item: existing.ref, status: "out", note: null, pet: null }
-        : { item: null, status: "out", note: clip(capitalise(part), 120), pet: null };
+      if (existing) return { item: existing.ref, status: "out", note: null, pet: null };
+      const note = shoppingNote(part);
+      return note === null ? null : { item: null, status: "out", note: clip(note, 120), pet: null };
     });
+    // A note it can't vouch is Indonesian is never saved: staff read them.
+    if (items.some((item) => item === null)) return message(model, [text(copy.stuck)]);
     return message(model, [text(copy.here), toolUse("add_to_shopping_list", { items })]);
   }
 
