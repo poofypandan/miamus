@@ -200,7 +200,7 @@ Additive. `household_locations` (migration 105) gains:
   plan (re-creating merged rooms under their old ids).
 - RLS unchanged: everyone in the household reads rooms; only owners
   (`household_members`) write them (105's policies cover the new columns).
-- Tests: `supabase/tests/128_rooms_floors.sql` (rolled back): two levels
+- Tests: `supabase/tests/129_rooms_floors.sql` (rolled back): two levels
   enforced; cross-household parents refused; deleting a floor keeps its rooms
   and their chores; deleting a floor whose room clashes with a room with no
   floor renames it and succeeds; deleting two floors in turn that both have
