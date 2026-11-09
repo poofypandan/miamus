@@ -22,6 +22,7 @@ import {
   RotateCcw,
   Send,
   ShieldCheck,
+  Sparkles,
   Trash2,
   UserMinus,
   UserPlus,
@@ -68,6 +69,7 @@ import { SignOutSheet } from "@/components/auth/sign-out-sheet";
 import { HouseholdDataPanel } from "@/components/dashboard/household-data-panel";
 import { useHouseholdDeletion } from "@/hooks/use-household-deletion";
 import { AboutMiamus } from "@/components/dashboard/about-miamus";
+import { WhatsNewList } from "@/components/shared/whats-new";
 import { describeLog } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ProposalStatus, StaffProfile } from "@/types/database";
@@ -113,6 +115,7 @@ const HOUSEHOLD_PAGES = [
   "activity",
   "data",
   "about",
+  "whats-new",
 ] as const;
 type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
 
@@ -326,6 +329,7 @@ export function StaffTab() {
           <SettingsRow icon={ShieldCheck} label={t("Your data", "Data Anda")} onPress={() => open("data")} />
         </SettingsGroup>
         <SettingsGroup>
+          <SettingsRow icon={Sparkles} label={t("What's new", "Yang baru")} onPress={() => open("whats-new")} />
           <SettingsRow icon={Info} label={t("About Miamus", "Tentang Miamus")} onPress={() => open("about")} />
         </SettingsGroup>
         <SignOutRow locale={locale} />
@@ -369,6 +373,7 @@ export function StaffTab() {
       {page === "activity" && <ActivityPage entries={entries} />}
       {page === "data" && <HouseholdDataPanel status={deletion.status} reload={deletion.reload} />}
       {page === "about" && <AboutMiamus />}
+      {page === "whats-new" && <WhatsNewList />}
     </div>
   );
 }

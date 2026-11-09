@@ -73,6 +73,10 @@ export interface StubOptions {
   owner?: { locale: "en" | "id" };
   /** Kakak's household switch as kakak_status reports it to the admin (migrations/126). */
   kakak?: { allowed: boolean; enabled: boolean };
+  /** household_locations rows the household already has (Phase 158). */
+  rooms?: Record<string, unknown>[];
+  /** household_tasks rows the household already has (Phase 158). */
+  chores?: Record<string, unknown>[];
 }
 
 export interface Stub {
@@ -200,6 +204,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         return route.fulfill({ status: 204, body: "" });
       }
       if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks);
+      if (table === "household_tasks" && options.chores) return route.fulfill({ json: [...options.chores, ...tasks] });
+      if (table === "household_locations" && options.rooms) return route.fulfill({ json: options.rooms });
       if (options.owner && who === OWNER) {
         const answer = ownerAnswer(table, options.owner.locale);
         if (answer !== undefined) return route.fulfill({ json: answer });

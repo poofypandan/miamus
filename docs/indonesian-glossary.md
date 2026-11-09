@@ -90,6 +90,15 @@ people are **staf** and **admin**.
 | Or type your answer | **Atau ketik jawaban** | Under Kakak's answer buttons. |
 | Let Kakak help (household switch) | **Izinkan Kakak membantu** | The opt-in switch; says what is sent and to whom. |
 | Kakak's guess — check it | **Tebakan Kakak — cek lagi** | Marks a field Kakak guessed (a date, a room) so the owner looks again. |
+| Today · Rooms (Chores pill) | **Hari ini · Ruangan** | Phase 158. "Ruangan", not "Kamar": a lounge or a terrace isn't a kamar. |
+| Room / Rooms | **Ruangan** | Phase 158. |
+| Whole floor | **Seluruh lantai** | Phase 158: chores for a room named just "LT2". |
+| Other rooms / No room | **Ruangan lain** / **Tanpa ruangan** | Phase 158. |
+| Add chore here | **Tambah tugas di sini** | Phase 158. |
+| No vacuum yet (pattern) | **Belum ada {pekerjaan}** — "Belum ada vakum" | Phase 158. |
+| Nothing set up | **Belum ada tugas** | Phase 158. |
+| Jobs: Vacuum, Mop, Sweep, Dust, Toilet, Sheets, Towels, Trash, Tidy, Ironing, Windows, Plants | **Vakum, Pel, Sapu, Lap debu, Toilet, Seprai, Handuk, Sampah, Rapikan, Setrika, Kaca, Tanaman** | Phase 158 job chips. "Vakum" is the KBBI spelling; households also write "vacuum", which the app still recognises. Other = **Lainnya**. |
+| What's new / Got it | **Yang baru** / **Mengerti** | The feature tutorials (owner, 2026-11-09). |
 
 ## Formatting
 
