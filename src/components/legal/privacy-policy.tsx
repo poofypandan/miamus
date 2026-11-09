@@ -201,7 +201,8 @@ const COPY: Record<
               "Counts of Kakak requests and their cost (without anything that was typed) are kept 13 months, then deleted.",
               "Everything else is kept while your household uses Miamus.",
               "A request to set up a household that isn't approved is deleted 30 days after the decision, together with the Google sign-in it came from, unless that account has since joined a household. Approved requests are kept while the account is used.",
-              "If an admin asks us to delete their household, or anyone asks us to delete their data, we delete it within 30 days unless the law requires us to keep it. Copies in our providers' backups are cleared on their normal schedule.",
+              "The admin who created a household can delete it in the app (Household → Your data). It is deleted 7 days later, unless an admin cancels before then. Its photos are then deleted automatically at night, usually the same night; a household with very many photos can take a few nights. Database backups keep a copy for up to 7 more days, then it is gone.",
+              "If anyone asks us by email to delete their data or their household, we delete it within 30 days unless the law requires us to keep it. Copies in our providers' backups are cleared on their normal schedule.",
               "When staff are removed from a household, their profile is archived and their name stays on past work, so the household's records stay accurate. The admin or the staff member can ask us to remove it.",
             ],
           },
@@ -222,7 +223,10 @@ const COPY: Record<
             ],
           },
           {
-            p: `Email ${email}. We may need to confirm who you are first, and we'll respond within the time limits UU PDP sets. You can also complain to Indonesia's personal data protection authority.`,
+            p: "Household admins can download a copy of their household's data, in a machine-readable file (JSON), and delete the household themselves, in Household → Your data. Photos aren't in that file; ask us for a copy.",
+          },
+          {
+            p: `For anything else, email ${email}. We may need to confirm who you are first, and we'll respond within the time limits UU PDP sets. You can also complain to Indonesia's personal data protection authority.`,
           },
         ],
       },
@@ -440,7 +444,8 @@ const COPY: Record<
               "Jumlah permintaan ke Kakak dan biayanya (tanpa isi yang diketik) disimpan 13 bulan, lalu dihapus.",
               "Data lainnya disimpan selama rumah tangga Anda memakai Miamus.",
               "Permintaan membuat rumah tangga yang tidak disetujui dihapus 30 hari setelah keputusan, bersama akun login Google yang dipakai untuk memintanya, kecuali akun itu sudah bergabung ke sebuah rumah tangga. Permintaan yang disetujui disimpan selama akun tersebut dipakai.",
-              "Jika admin meminta rumah tangganya dihapus, atau siapa pun meminta datanya dihapus, kami menghapusnya dalam 30 hari, kecuali hukum mewajibkan kami menyimpannya. Salinan di cadangan (backup) penyedia kami terhapus sesuai jadwal normal mereka.",
+              "Admin yang membuat rumah tangga dapat menghapusnya di aplikasi (Rumah → Data Anda). Rumah tangga dihapus 7 hari kemudian, kecuali ada admin yang membatalkannya sebelum itu. Fotonya lalu dihapus otomatis pada malam hari, biasanya malam itu juga; rumah tangga dengan sangat banyak foto bisa memakan beberapa malam. Cadangan (backup) database menyimpan salinannya paling lama 7 hari lagi, lalu terhapus.",
+              "Jika siapa pun meminta lewat email agar datanya atau rumah tangganya dihapus, kami menghapusnya dalam 30 hari, kecuali hukum mewajibkan kami menyimpannya. Salinan di cadangan (backup) penyedia kami terhapus sesuai jadwal normal mereka.",
               "Staf yang dikeluarkan dari rumah tangga diarsipkan, dan namanya tetap tercatat pada pekerjaan sebelumnya agar catatan rumah tetap akurat. Admin atau staf yang bersangkutan dapat meminta kami menghapusnya.",
             ],
           },
@@ -461,7 +466,10 @@ const COPY: Record<
             ],
           },
           {
-            p: `Kirim email ke ${email}. Kami mungkin perlu memastikan identitas Anda terlebih dahulu, dan kami akan menanggapi dalam batas waktu yang ditetapkan UU PDP. Anda juga dapat mengajukan pengaduan ke lembaga pelindungan data pribadi di Indonesia.`,
+            p: "Admin rumah dapat mengunduh salinan data rumah tangganya dalam file yang dapat dibaca mesin (JSON), dan menghapus rumah tangganya sendiri, di Rumah → Data Anda. Foto tidak termasuk dalam file itu; minta salinannya kepada kami.",
+          },
+          {
+            p: `Untuk hal lainnya, kirim email ke ${email}. Kami mungkin perlu memastikan identitas Anda terlebih dahulu, dan kami akan menanggapi dalam batas waktu yang ditetapkan UU PDP. Anda juga dapat mengajukan pengaduan ke lembaga pelindungan data pribadi di Indonesia.`,
           },
         ],
       },

@@ -14,6 +14,10 @@
  * the RPCs, which compare it with the Vault secret and refuse otherwise —
  * so without it this endpoint can neither list nor delete anything.
  *
+ * A second pass (migration 127) removes the photos of households that were
+ * deleted: orphaned_household_photos lists files in either bucket whose
+ * household no longer exists and that no remaining row points at.
+ *
  * POST {}               → prune
  * POST {"dryRun": true} → report what is due, delete nothing
  */
@@ -43,6 +47,7 @@ function json(body: unknown, status = 200) {
 }
 
 type Due = { name: string; size: number | null; created_at: string };
+type Orphan = { bucket_id: string; name: string };
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -58,15 +63,21 @@ Deno.serve(async (req) => {
   const due = (limit: number) =>
     admin.rpc("task_photos_due_for_pruning", { p_secret: secret, p_limit: limit });
 
+  const orphans = (limit: number) =>
+    admin.rpc("orphaned_household_photos", { p_secret: secret, p_limit: limit });
+
   if (dryRun) {
     const { data, error } = await due(100_000);
     if (error) return failure(error);
     const rows = (data ?? []) as Due[];
+    const { data: orphanData, error: orphanError } = await orphans(100_000);
+    if (orphanError) return failure(orphanError);
     return json({
       dryRun: true,
       due: rows.length,
       bytes: rows.reduce((sum, r) => sum + (r.size ?? 0), 0),
       oldest: rows[0]?.created_at ?? null,
+      deletedHouseholdPhotos: (orphanData ?? []).length,
     });
   }
 
@@ -100,7 +111,31 @@ Deno.serve(async (req) => {
   });
   if (forgetError) return failure(forgetError);
 
-  const result = { removed, bytes, urlsCleared: cleared };
+  // Photos of deleted households, in both buckets. Separate from the pass
+  // above so a failure in one never stops the other.
+  let orphansRemoved = 0;
+  for (let i = 0; i < MAX_BATCHES; i++) {
+    const { data, error } = await orphans(BATCH);
+    if (error) return failure(error);
+    const rows = (data ?? []) as Orphan[];
+    if (rows.length === 0) break;
+
+    let goneThisBatch = 0;
+    for (const bucket of new Set(rows.map((r) => r.bucket_id))) {
+      const names = rows.filter((r) => r.bucket_id === bucket).map((r) => r.name);
+      const { data: gone, error: removeError } = await admin.storage.from(bucket).remove(names);
+      if (removeError) {
+        console.error("Storage remove failed (deleted households)", removeError);
+        continue;
+      }
+      goneThisBatch += (gone ?? []).length;
+    }
+    orphansRemoved += goneThisBatch;
+    // Same guard as above: anything Storage kept comes straight back.
+    if (goneThisBatch < rows.length) break;
+  }
+
+  const result = { removed, bytes, urlsCleared: cleared, deletedHouseholdPhotosRemoved: orphansRemoved };
   console.log("prune-task-photos", result);
   return json(result);
 });

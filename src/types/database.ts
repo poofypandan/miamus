@@ -813,6 +813,29 @@ export interface Database {
         Args: { p_household_id: string; p_device_id: string };
         Returns: boolean;
       };
+      // R7, migrations/127: the household download and scheduled deletion.
+      export_household_data: {
+        Args: Record<string, never>;
+        Returns: Record<string, unknown>;
+      };
+      household_deletion_status: {
+        Args: Record<string, never>;
+        Returns: {
+          household_name: string;
+          scheduled: boolean;
+          delete_after: string | null;
+          requested_by_me: boolean;
+          can_schedule: boolean;
+        }[];
+      };
+      schedule_household_deletion: {
+        Args: { p_confirm_name: string };
+        Returns: string;
+      };
+      cancel_household_deletion: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
