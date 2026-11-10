@@ -156,6 +156,42 @@ test("voice: tapping Send while the mic is on sends once", async ({ context, pag
   expect(asked).toEqual(["Buy eggs"]);
 });
 
+test("voice: the card is read once, and not again when an item is removed while listening", async ({ context, page }) => {
+  await fakeSpeech(context, "works");
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  await page.route("**/api/kakak", (route) =>
+    route.fulfill({
+      json: {
+        kind: "suggestions",
+        text: "Here's what I'll add:",
+        items: [
+          { kind: "shopping", entries: [{ type: "item", itemId: "i1", name: "Eggs", status: "out" }] },
+          { kind: "shopping", entries: [{ type: "item", itemId: "i2", name: "Sugar", status: "low" }] },
+        ],
+        requestId: "00000000-0000-4000-8000-0000000000b1",
+        history: { messages: [] },
+      },
+    })
+  );
+  await page.route("**/api/kakak/outcome", (route) => route.fulfill({ json: { ok: true } }));
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Read replies aloud" }).click();
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("Buy eggs and sugar");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save 2" })).toBeVisible();
+  const spoken = () => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken);
+  await expect.poll(spoken).toHaveLength(1);
+  expect((await spoken())[0]).toMatch(/Eggs.*Sugar.*Is that right\?$/);
+
+  await page.getByRole("button", { name: "Change" }).click();
+  await page.getByRole("button", { name: "Talk to Kakak" }).click();
+  await page.getByRole("button", { name: "Remove" }).first().click();
+  await page.waitForTimeout(300);
+  expect(await spoken()).toHaveLength(1);
+});
+
 test("voice: a browser with no speech recognition gets the keyboard mic tip", async ({ context, page }) => {
   await fakeSpeech(context, "missing");
   await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });

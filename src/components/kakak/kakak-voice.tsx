@@ -92,14 +92,16 @@ function Voice({
     if (!busy) setSpoke(false);
   }, [busy]);
 
-  // Read each new reply aloud, if the speaker is on. Keyed by its words, so
-  // dropping an item from the card doesn't start it over.
+  // Read each new reply aloud, if the speaker is on. Keyed by the reply
+  // itself (its kind, request and own words), not by the card's items, so
+  // dropping an item doesn't read the card again; and never while the mic
+  // is listening, or the reading would be heard as the owner's words.
   const words = kakakWords(screen, locale);
-  const wordsKey = `${screen.kind}|${screen.requestId ?? ""}|${words}`;
+  const replyKey = `${screen.kind}|${screen.requestId ?? ""}|${screen.question ?? screen.text ?? ""}`;
   const say = speaker.say;
   useEffect(() => {
-    if (words) say(words);
-  }, [wordsKey, say]); // eslint-disable-line react-hooks/exhaustive-deps -- keyed by wordsKey on purpose
+    if (words && !listening.current) say(words);
+  }, [replyKey, say]); // eslint-disable-line react-hooks/exhaustive-deps -- keyed by replyKey on purpose
 
   const start = useCallback(() => {
     const Ctor = findRecognition();
