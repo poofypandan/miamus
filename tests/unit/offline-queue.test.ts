@@ -23,6 +23,7 @@ const provider = {
   createFoodItem: vi.fn(),
   materialiseChoreOccurrence: vi.fn(),
   updateHouseholdTaskStatus: vi.fn(),
+  updateHouseholdTask: vi.fn(),
 };
 vi.mock("@/lib/data", () => ({ dataProvider: provider }));
 
@@ -336,6 +337,28 @@ describe("drainOutbox", () => {
       // When it was finished, not when the signal came back.
       completed_at: "2026-11-09T02:00:00.000Z",
     });
+  });
+
+  it("takes a leave-covered row over before completing it photo-free, both from the queue", async () => {
+    await queueUp({ ...choreJob(), rowId: "row-3", before: null, after: null, completedBy: "admin-1", takeOverAs: "admin-1" });
+    const order: string[] = [];
+    provider.updateHouseholdTask.mockImplementation(async () => {
+      order.push("takeover");
+      return { id: "row-3" };
+    });
+    provider.updateHouseholdTaskStatus.mockImplementation(async () => {
+      order.push("complete");
+      return { id: "row-3", status: "completed" };
+    });
+    const report = await queue.drainOutbox();
+    expect(report.sent).toHaveLength(1);
+    expect(order).toEqual(["takeover", "complete"]);
+    expect(provider.updateHouseholdTask).toHaveBeenCalledWith("row-3", { assigned_to: "admin-1" });
+    expect(provider.updateHouseholdTaskStatus).toHaveBeenCalledWith("row-3", "completed", expect.objectContaining({
+      before_photo_url: null,
+      after_photo_url: null,
+      completed_by: "admin-1",
+    }));
   });
 
   it("drops a chore whose photo storage refused, so the draft asks for a retake", async () => {

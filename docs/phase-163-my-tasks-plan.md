@@ -1,8 +1,10 @@
 # Phase 163 — "My tasks" on Today
 
 Status: **decided: owner delegated to the recommendations, 2026-11-10
-(D1 A, D2 A, D3 A, D4 A, D5 A).** Being built on its own branch and PR;
-the owner said everything can be changed afterwards.
+(D1 A, D2 A, D3 A, D4 A, D5 A).** Built 2026-11-10 on
+`claude/phase-163-my-tasks` (migration 136, local only until the owner OKs
+staging and production); the owner said everything can be changed
+afterwards.
 Roadmap item 10 (`docs/roadmap-2026-11-09.md`, P1), the other half of R9 in
 `docs/app-review-2026-11-07.md` (the first half, staff first in Chores
 progress, is live). Mockup: `docs/mockups/phase-163-my-tasks.html` (open in a
@@ -94,9 +96,11 @@ there, in your own language; no switch to the staff view.
 ## What "mine" means (D2)
 
 **Assigned to me**: chores whose `assigned_to` is my roster row, on the day
-being viewed, plus my carried-over ones on today. Also any unassigned chore I
-finished myself that day (it lands on me, as it does in Chores progress), so
-finishing never makes a row disappear from my card.
+being viewed, plus my carried-over ones on today. Also any chore I finished
+myself that day, so finishing never makes a row disappear from my card: an
+unassigned one, or one I covered for someone on leave and finished with
+photos, which stays stored under them (widened from "unassigned ones I
+finished" while building; Codex, PR #58).
 
 Unclaimed chores ("Anyone") stay in the day's list. Taking one is already
 possible: open it and pick yourself under **Who** in the chore form.
@@ -118,8 +122,17 @@ own chores**, and keeps them required for staff exactly as now:
   the done row: the sheet has **Mark not done**.
 - **Which days:** today and carried-over chores can be finished. On a future
   day the card shows the rows without circles ("Tomorrow, 2 tasks"), so a
-  chore isn't ticked off before it's due. On a past day, the card is
-  read-only, like the rest of a past Today.
+  chore isn't ticked off before it's due. On a past day nothing new
+  is finished, but a done chore's sheet still has **Mark not done**: a
+  carried-over chore finished today leaves today's list and is found on its
+  own day (Codex, PR #58).
+- **Covering for someone on leave:** a chore shown in My tasks because I
+  cover a staff member's leave is still stored under them. Finishing it
+  photo-free first takes that day over (assigned to me, its own edit), then
+  completes it: the two-step path migration 136 allows (Codex, PR #58). On
+  a repeat's first day, which is stored on the repeat itself, taking over
+  would hand me every future day, so that one needs both photos instead,
+  and the sheet says why.
 - **The staff view is unchanged.** An owner who switches to Staff still sees
   the staff experience, photos and all; it remains the way to see what a
   staff phone sees.

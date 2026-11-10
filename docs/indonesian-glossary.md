@@ -132,6 +132,11 @@ people are **staf** and **admin**.
 | Kids · Elders | **Anak · Lansia** | Shown greyed as "Soon" until the Care tab. "Lansia" is the everyday word; "orang tua" also means parents. |
 | Soon (a greyed choice) | **Segera** | |
 | Any pets at home? / We have pets · No pets | **Ada hewan di rumah?** / **Ada hewan · Tidak ada** | The one-time card on Today. |
+| My tasks (admin's own chores on Today) | **Tugas saya** | Phase 163. |
+| Mark done / Mark not done | **Tandai selesai** / **Tandai belum selesai** | Phase 163: an admin finishing their own chore. |
+| Undo (toast action) | **Batalkan** | Already the word in every Undo toast; never "Urungkan". |
+| Add photos (optional), owner sheet | **Tambah foto (opsional)** | Owner-only form, so "opsional" (staff forms say "boleh dikosongkan"). |
+| Both photos, or none | **Dua foto, atau tidak sama sekali** | Phase 163: an admin's own chore takes both photos or neither. |
 
 ## Formatting
 

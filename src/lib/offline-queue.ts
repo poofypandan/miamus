@@ -52,12 +52,23 @@ export interface ChoreFinishJob {
   /** Null while the day is still virtual (see materialiseChoreOccurrence). */
   rowId: string | null;
   assignedTo: string | null;
-  before: string;
-  after: string;
+  /**
+   * Both, or (an admin finishing their own chore, Phase 163; migrations/136)
+   * neither. Staff saves always carry both.
+   */
+  before: string | null;
+  after: string | null;
   completedBy: string | null;
   /** When it was finished, not when the signal came back. */
   completedAt: string;
   title: string;
+  /**
+   * Leave cover (Phase 163; Codex, PR #58): the admin covering this day takes
+   * the stored row over before completing it photo-free, as its own update
+   * (migrations/136's two-step path). In the job, not a separate call, so a
+   * weak signal keeps both on the phone together. Safe to repeat.
+   */
+  takeOverAs?: string | null;
 }
 
 export type OutboxJob =
@@ -272,7 +283,7 @@ export function jobPhotos(job: OutboxJob): string[] {
     case "food":
       return job.input.photo_url ? [job.input.photo_url] : [];
     case "chore":
-      return [job.before, job.after];
+      return [job.before, job.after].filter((url): url is string => !!url);
   }
 }
 
@@ -318,6 +329,7 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
     case "chore": {
       const rowId =
         ready.rowId ?? (await dataProvider.materialiseChoreOccurrence(ready.templateId, ready.date, ready.assignedTo)).id;
+      if (ready.takeOverAs) await dataProvider.updateHouseholdTask(rowId, { assigned_to: ready.takeOverAs });
       const task = await dataProvider.updateHouseholdTaskStatus(rowId, "completed", {
         before_photo_url: ready.before,
         after_photo_url: ready.after,
