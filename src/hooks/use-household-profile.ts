@@ -89,6 +89,16 @@ async function fetchProfile(householdId: string) {
 
   try {
     const { supabase } = await import("@/lib/supabase/client");
+    // No session yet: the read would go out with only the public key and be
+    // refused. Go on with what the device knows (as after a failed read) and
+    // read once a session arrives.
+    const { readSessionState, waitForSession } = await import("@/lib/auth/device-session");
+    if (supabase && (await readSessionState()) === "none") {
+      entries.set(householdId, { ...entryFor(householdId), ready: true, fetched: false });
+      notify();
+      void waitForSession().then(() => fetchProfile(householdId));
+      return;
+    }
     if (supabase) {
       const { data, error } = await supabase
         .from("households")

@@ -19,7 +19,7 @@ import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { StaffSplash } from "@/components/staff/staff-splash";
 import { StaffLoadingScreen } from "@/components/brand/loading-screens";
 import { dataProvider } from "@/lib/data";
-import { isSessionUnreachable } from "@/lib/auth/device-session";
+import { readSessionState, waitForSession } from "@/lib/auth/device-session";
 import { cn } from "@/lib/utils";
 import { activeMemberProfile } from "@/lib/member-identity";
 import type { PinCheck } from "@/lib/data/types";
@@ -81,7 +81,7 @@ export function readActiveStaffId(): string | null {
  * Staff-facing, so entirely Bahasa Indonesia per the Phase 46 language boundary.
  */
 export function StaffLoginGate({ children }: { children: ReactNode }) {
-  const { userRole, roleHydrated, memberProfile, memberProfileReady } = useHousehold();
+  const { userRole, roleHydrated, memberProfile, memberProfileReady, signedOut } = useHousehold();
   const [staffId, setStaffId] = useState<string | null>(null);
   const [staffName, setStaffName] = useState<string | null>(null);
   // Starts false so the server HTML and the first client render agree; the
@@ -147,7 +147,9 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
     return <StaffLoadingScreen />;
   }
 
-  if (!staffId && !ownerBypass) {
+  // No session on this phone at all (signedOut): nothing can load, whoever is
+  // remembered. The gate says the phone has to be linked again.
+  if ((!staffId || signedOut) && !ownerBypass) {
     return <StaffGateScreen onIdentified={identify} />;
   }
 
@@ -204,6 +206,9 @@ type GateStep =
 function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfile) => void }) {
   const [profiles, setProfiles] = useState<StaffProfile[] | null>(null);
   const [failed, setFailed] = useState(false);
+  // No session on this phone: it hasn't redeemed an invite or a house code,
+  // so there is no roster it may read. Asked first, so nothing goes out.
+  const [notLinked, setNotLinked] = useState(false);
   // Bumped to fetch the roster again — by the button, the timer and the
   // "online" event below (Phase 146).
   const [attempt, setAttempt] = useState(0);
@@ -216,13 +221,21 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
 
   useEffect(() => {
     let live = true;
+    const stop = new AbortController();
     // Checked first for the same reason as in refresh(): with the session out
     // of reach, the query would go out with only the public key and RLS would
     // answer with no names at all — shown below as "nobody is registered,
     // ask the admin", which sends staff off to fix the wrong thing.
-    isSessionUnreachable()
-      .then((unreachable) => {
-        if (unreachable) throw new Error("Session could not be renewed — no connection");
+    readSessionState()
+      .then(async (state) => {
+        if (state === "unreachable") throw new Error("Session could not be renewed — no connection");
+        if (live) setNotLinked(state === "none");
+        // Without a session the roster read would go out with only the
+        // public key and be refused. Wait for one instead (a sign-in in
+        // another tab, or a renewal that finally gets through).
+        if (state === "none") await waitForSession(stop.signal);
+        if (!live) return [];
+        if (state === "none") setNotLinked(false);
         return dataProvider.listStaffProfiles();
       })
       // Admins sign in with Google, not here: offering their names would let
@@ -244,6 +257,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
       });
     return () => {
       live = false;
+      stop.abort();
     };
   }, [attempt]);
 
@@ -285,7 +299,16 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
         <p className="text-sm text-muted-foreground">Pilih nama Anda untuk mulai mencatat.</p>
       </div>
 
-      {failed && profiles === null ? (
+      {notLinked ? (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            HP ini belum terhubung ke rumah. Buka link undangan dari admin rumah, atau masuk dengan kode rumah.
+          </p>
+          <Button asChild variant="outline" className="min-h-[44px] rounded-lg">
+            <Link href="/join/code">Masuk dengan kode rumah</Link>
+          </Button>
+        </div>
+      ) : failed && profiles === null ? (
         <div className="flex flex-col items-center gap-3 text-center">
           <p className="text-sm text-destructive">
             Gagal memuat daftar nama. Periksa Wi-Fi atau data seluler — dicoba lagi otomatis.

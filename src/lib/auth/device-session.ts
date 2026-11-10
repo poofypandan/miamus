@@ -18,9 +18,67 @@ import { isConnectionError } from "@/lib/network-errors";
  * empty household.
  */
 export async function isSessionUnreachable(): Promise<boolean> {
-  if (!supabase) return false;
+  return (await readSessionState()) === "unreachable";
+}
+
+/**
+ * Whether this device can query the household right now.
+ *
+ *   ready        a session, renewed if it had to be. Mock mode (no Supabase)
+ *                is always ready: there is nothing to sign in to.
+ *   unreachable  a session the phone holds but cannot renew right now; see
+ *                isSessionUnreachable.
+ *   none         no session at all: a phone that hasn't redeemed an invite,
+ *                an owner who hasn't signed in, or a bot (Vercel's
+ *                post-deploy check opens the app with no cookies at all).
+ *
+ * In both of the last two cases a query would go out with only the public
+ * key, and RLS refuses it. The production logs reviewed on 2026-11-10 held
+ * about 113 of those for the food and staff lists, all from loads that started
+ * before there was a session. Nothing that lists household data should send a
+ * request unless this says "ready".
+ *
+ * getSession() waits for auth-js to finish restoring the stored session (and
+ * renewing it if it ran out), so a staff phone's anonymous session reads as
+ * ready once it is back, never as none while it is still being restored.
+ */
+export type SessionState = "ready" | "unreachable" | "none";
+
+export async function readSessionState(): Promise<SessionState> {
+  if (!supabase) return "ready";
   const { data, error } = await supabase.auth.getSession();
-  return !data.session && isAuthRetryableFetchError(error);
+  if (data.session) return "ready";
+  return isAuthRetryableFetchError(error) ? "unreachable" : "none";
+}
+
+/**
+ * Resolves once this device has a session: at once if it already has one,
+ * otherwise when auth-js reports one (a sign-in, or a renewal that finally
+ * got through). Never rejects; with no sign-in it simply never resolves, and
+ * the request waiting on it is never sent. `signal` stops listening (a screen
+ * that unmounted); the promise then stays pending.
+ */
+export function waitForSession(signal?: AbortSignal): Promise<void> {
+  const client = supabase;
+  if (!client) return Promise.resolve();
+  return new Promise((resolve) => {
+    if (signal?.aborted) return;
+    let done = false;
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      if (done || !session) return;
+      done = true;
+      // Deferred: auth-js runs these callbacks under its own lock, and
+      // whatever runs next will call back into it.
+      setTimeout(() => {
+        data.subscription.unsubscribe();
+        if (!signal?.aborted) resolve();
+      }, 0);
+    });
+    signal?.addEventListener("abort", () => {
+      done = true;
+      data.subscription.unsubscribe();
+    }, { once: true });
+  });
 }
 
 /**

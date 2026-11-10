@@ -1,4 +1,5 @@
 import { dataProvider } from "@/lib/data";
+import { waitForSession } from "@/lib/auth/device-session";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import type { HouseholdTask, Repair, RepairNote } from "@/types/database";
 
@@ -61,6 +62,9 @@ export async function loadRepairs(force = false): Promise<void> {
   if (inflight) return inflight;
   inflight = (async () => {
     try {
+      // Not before there is a session: with only the public key RLS refuses
+      // all three reads. Screens keep showing "loading" until one arrives.
+      await waitForSession();
       const [repairs, visits, notes] = await Promise.all([
         dataProvider.listRepairs(),
         dataProvider.listRepairVisits(),
