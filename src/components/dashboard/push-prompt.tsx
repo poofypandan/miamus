@@ -5,7 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { BellOff, BellRing, Loader2, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { INSTALL_TIP_DISMISSED_KEY } from "@/components/dashboard/staff-onboarding-banner";
+import {
+  INSTALL_TIP_DISMISSED_EVENT,
+  INSTALL_TIP_DISMISSED_KEY,
+} from "@/components/dashboard/staff-onboarding-banner";
 import { useT } from "@/context/owner-locale-context";
 import { usePushStatus } from "@/hooks/use-push-status";
 import { pushInPlace } from "@/lib/in-place-navigation";
@@ -46,6 +49,10 @@ export function PushPrompt() {
   useEffect(() => {
     setSnoozed(readSnooze());
     setTipShowing(installTipShowing());
+    // Closing the Add to Home Screen tip makes room for this one (Codex, #50).
+    const onTipDismissed = () => setTipShowing(false);
+    window.addEventListener(INSTALL_TIP_DISMISSED_EVENT, onTipDismissed);
+    return () => window.removeEventListener(INSTALL_TIP_DISMISSED_EVENT, onTipDismissed);
   }, []);
 
   if (onSettingsPage || snoozed === undefined || !shouldShowPushPrompt(status, snoozed, Date.now(), tipShowing)) {

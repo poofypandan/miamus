@@ -6,6 +6,8 @@ import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { useOwnerLocale } from "@/context/owner-locale-context";
 
 export const INSTALL_TIP_DISMISSED_KEY = "b11_onboarding_dismissed";
+/** Fired when the tip is closed, so the notifications prompt can take its place (push-prompt.tsx). */
+export const INSTALL_TIP_DISMISSED_EVENT = "miamus:install-tip-dismissed";
 const DISMISSED_KEY = INSTALL_TIP_DISMISSED_KEY;
 
 // First-run hint pointing staff at "Add to Home Screen" — the installed PWA
@@ -34,6 +36,7 @@ export function StaffOnboardingBanner() {
 
   function dismiss() {
     setVisible(false);
+    window.dispatchEvent(new Event(INSTALL_TIP_DISMISSED_EVENT));
     try {
       window.localStorage.setItem(DISMISSED_KEY, "true");
     } catch {

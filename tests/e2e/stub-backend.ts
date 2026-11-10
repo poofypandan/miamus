@@ -88,6 +88,8 @@ export interface StubOptions {
   household?: { hasPets: boolean | null; pets?: boolean };
   /** The VAPID public key get_push_public_key returns to the admin (push set up on the server). */
   pushKey?: string;
+  /** Leave the Add to Home Screen tip showing (owner phones have it closed by default). */
+  installTip?: boolean;
 }
 
 /**
@@ -172,11 +174,14 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   if (options.owner && !options.stored) options = { ...options, stored: freshSession(OWNER, false) };
 
   if (options.owner) {
-    await context.addInitScript((locale) => {
-      // The banner about adding staff, already dismissed: not under test.
-      localStorage.setItem("b11_onboarding_dismissed", "true");
-      localStorage.setItem("miamus.owner-locale", locale);
-    }, options.owner.locale);
+    await context.addInitScript(
+      ({ locale, installTip }) => {
+        // The banner about adding staff, already dismissed: not under test.
+        if (!installTip) localStorage.setItem("b11_onboarding_dismissed", "true");
+        localStorage.setItem("miamus.owner-locale", locale);
+      },
+      { locale: options.owner.locale, installTip: Boolean(options.installTip) }
+    );
   }
 
   if (options.stored) {

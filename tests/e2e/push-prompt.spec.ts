@@ -66,3 +66,24 @@ test("push not set up on the server: no prompt", async ({ context, page }) => {
   });
   await expect(page.getByRole("region", { name: "Turn on notifications" })).toHaveCount(0);
 });
+
+test.describe("iPhone, in a Safari tab", () => {
+  test.use({
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
+  });
+
+  test("the Home Screen steps follow once the install tip is closed, without a reload", async ({ context, page }) => {
+    await permission(context, "default");
+    await installStub(context, { owner: { locale: "en" }, pushKey: PUSH_KEY, installTip: true });
+    await page.goto("/dashboard");
+
+    const close = page.getByRole("button", { name: "Dismiss tip" });
+    await expect(close).toBeVisible({ timeout: 20_000 });
+    // The tip already says Add to Home Screen: not both at once.
+    await expect(page.getByRole("region", { name: "Notifications on iPhone" })).toHaveCount(0);
+
+    await close.click();
+    await expect(page.getByRole("region", { name: "Notifications on iPhone" })).toBeVisible();
+  });
+});
