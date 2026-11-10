@@ -108,6 +108,12 @@ people are **staf** and **admin**.
 | Room (optional) | **Ruangan (opsional)** | Phase 158 PR B2, the chore form. Replaces "Lokasi (opsional)". |
 | More rooms (pick several when adding) | **Pilih ruangan lain** | Phase 158 PR B2. Not "Ruangan lain", which is the "Other rooms" section. |
 | Spot (optional) / New spot | **Bagian (opsional)** / **Bagian baru** | Phase 158 PR B2, the chore form's chips. |
+| Inside (optional) — a room inside a room | **Di dalam (opsional)** | Phase 168. Household → Ruangan, owners only. First option: **Tidak di dalam ruangan** (Not inside a room). |
+| Rooms inside / Add a room inside | **Ruangan di dalamnya** / **Tambah ruangan di dalamnya** | Phase 168. A room's sheet and Household → Ruangan. "{n} inside" on a row: **{n} di dalamnya**. |
+| Bathroom / Walk-in closet / Balcony (quick names) | **Kamar mandi / Ruang ganti / Balkon** | Phase 168 quick names for a room inside; households keep what they type. "Lemari" stays Cupboard (Kitchen). Other name: **Nama lain**. |
+| Master bedroom / Guest bedroom (examples) | **Kamar Utama / Kamar Tamu** | Phase 168, examples in help text and mockups. Room names stay as households type them. |
+| A room inside has its own door, like a bathroom. A sink or a shower is a spot. | **Ruangan di dalam punya pintu sendiri, seperti kamar mandi. Wastafel atau shower adalah bagian.** | Phase 168, the helper under Di dalam. |
+| Shown as | **Tampil sebagai** | Phase 168: the path a room will show ("LT2 · Kamar Tamu 1 · Kamar Mandi"). |
 | Repairs (pill) / Repair | **Perbaikan** | Phase 159. Matches the Maintenance category. |
 | Report a problem | **Lapor kerusakan** | Owners' button and the staff's Lapor sheet. |
 | What's wrong? | **Apa yang rusak?** | The report form's required field. |

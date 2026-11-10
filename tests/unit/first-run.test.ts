@@ -128,6 +128,8 @@ describe("staff tips, one at a time", () => {
     const seen = new Set(["staff-couldnt-do-2026-11"]);
     expect(pickStaffTip(all, (id) => seen.has(id))).toBe("staff-feedback-2026-11");
     seen.add("staff-feedback-2026-11");
+    expect(pickStaffTip(all, (id) => seen.has(id))).toBe("staff-rooms-inside-2026-11");
+    seen.add("staff-rooms-inside-2026-11");
     expect(pickStaffTip(all, (id) => seen.has(id))).toBe("staff-weak-signal-2026-11");
     seen.add("staff-weak-signal-2026-11");
     expect(pickStaffTip(all, (id) => seen.has(id))).toBe("staff-floors-2026-11");
