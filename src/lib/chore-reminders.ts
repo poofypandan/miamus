@@ -90,6 +90,9 @@ export function comingUpReminders(params: {
     if (task.status === "cancelled") continue;
     const remind = remindOf(task);
     if (!remind) continue;
+    // A repeat also due today (daily, or weekly reminded a week ahead) is
+    // already on today's list: not "coming up" as well (as the push).
+    if (isTemplate(task) && occursOn(task, today)) continue;
     const last = addDays(today, remind);
 
     // Its next day after today.

@@ -259,7 +259,7 @@ export const QUICK_ITEMS: QuickItem[] = [
     due: { kind: "in", days: 7 },
     who: "me",
     remind: 1,
-    matches: /\b(pest control|rayap|fogging|basmi|hama)\b/i,
+    matches: /\b(pest control|rayap|fogging|basmi)\b/i,
   },
   {
     kind: "supply",

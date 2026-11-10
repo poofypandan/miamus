@@ -152,6 +152,11 @@ describe("Coming up on Today", () => {
     expect(show([rent, { ...feb, status: "completed" }], "2027-02-26")).toEqual([]);
   });
 
+  it("a daily chore with a reminder isn't also coming up (code review, PR #60)", () => {
+    const plants = task({ title: "Plants", recurrence: "daily", due_date: "2026-11-01", remind_days_before: 1, assigned_to: me });
+    expect(show([plants])).toEqual([]);
+  });
+
   it("a yearly bill a week out", () => {
     const stnk = task({ title: "STNK", recurrence: "monthly", recurrence_interval: 12, due_date: "2025-11-24", remind_days_before: 7, assigned_to: me });
     expect(show([stnk])).toEqual(["STNK:2026-11-24"]);

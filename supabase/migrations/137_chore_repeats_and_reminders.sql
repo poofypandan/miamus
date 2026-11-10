@@ -35,8 +35,8 @@
 -- from chore titles the household already stores. No privacy-policy change
 -- (that comes with payments, 138).
 --
--- Additive: two columns with defaults, two re-created functions, two new
--- functions, one cron job. Old app builds don't send the new columns, so their
+-- Additive: two columns with defaults, one partial index, two re-created
+-- functions, two new functions, one cron job. Old app builds don't send the new columns, so their
 -- writes keep the defaults (and pass the guard). No SECURITY DEFINER function
 -- a client can call; every function created or replaced revokes EXECUTE here.
 -- ============================================================================
@@ -60,6 +60,12 @@ begin
   end if;
 end;
 $$;
+
+-- The 07:05 job reads only the chores with a reminder: a small partial index
+-- instead of a daily scan of every household's every written day.
+create index if not exists household_tasks_reminders_idx
+  on public.household_tasks (household_id)
+  where parent_task_id is null and remind_days_before is not null;
 
 -- --- 2. Which days a repeat falls on, with the interval -----------------------------
 -- The SQL twin of occursOn (src/lib/chore-recurrence.ts). Weekly: the first
@@ -206,7 +212,7 @@ $$;
 revoke all on function public.chore_due_titles(text[], text) from public, anon, authenticated;
 grant execute on function public.chore_due_titles(text[], text) to service_role;
 
--- Returns how many owners were sent one. p_today is for tests; the cron job
+-- Returns how many owners' pushes were queued. p_today is for tests; the cron job
 -- passes nothing and gets today in Jakarta. Not SECURITY DEFINER: only the
 -- cron job (as its owner) and the service role call it.
 create or replace function public.notify_chores_due(p_today date default null)
@@ -236,6 +242,9 @@ begin
          and t.remind_days_before is not null
          and t.status <> 'cancelled'
          and (d.kind = 'due' or t.remind_days_before > 0)
+         -- Not "ahead" for a repeat that is also due today (a daily chore,
+         -- a weekly one reminded a week before): today's line covers it.
+         and (d.kind = 'due' or not public.chore_occurs_on(t, today))
          and public.chore_occurs_on(t, d.day)
       union all
       -- A written day off the repeat's pattern, which still shows and is
@@ -320,14 +329,16 @@ begin
           || label || ': ' || public.chore_due_titles(section.titles, locale) || '.';
       end loop;
 
-      perform public.queue_push(
+      -- Counted only when queued (false when push isn't set up in Vault).
+      if public.queue_push(
         person.household_id, 'owner',
         case when locale = 'id' then 'Pengingat' else 'Reminder' end,
         body,
         '/dashboard?module=agenda', 'chores-due-' || today::text,
         person.user_id, null
-      );
-      sent := sent + 1;
+      ) then
+        sent := sent + 1;
+      end if;
     exception when others then
       raise warning 'Chore reminder not queued for user % in household %: %',
         person.user_id, person.household_id, sqlerrm;

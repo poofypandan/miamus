@@ -275,6 +275,18 @@ select pg_temp.ok(public.notify_chores_due('2027-02-28') >= 1, 'run on 28 Feb 20
 select pg_temp.ok((select body like '%Due today: Rent.%' from pg_temp.pushes where user_id = '00000000-0000-0000-0000-0000000137a1'),
   '... and on the day');
 
+-- A daily chore reminded the day before: one line a morning, not
+-- "Due today: X. Tomorrow: X." (code review, PR #60).
+delete from pg_temp.pushes;
+insert into public.household_tasks
+  (household_id, title, category, recurrence, recurrence_interval, due_date, remind_days_before, assigned_to)
+select '00000000-0000-0000-0000-0000000137f2', 'Water the plants', 'cleaning', 'daily', 1, '2027-03-01', 1, r.a4
+from roster r;
+select pg_temp.ok(public.notify_chores_due('2027-03-10') >= 1, 'run on 10 Mar 2027');
+select pg_temp.ok((select body = 'Due today: Water the plants.'
+                     from pg_temp.pushes where user_id = '00000000-0000-0000-0000-0000000137a4'),
+  'a daily chore is reminded once a morning, not also as tomorrow''s');
+
 -- ---- The list of titles --------------------------------------------------------------
 select pg_temp.ok(public.chore_due_titles(array['A'], 'en') = 'A', 'one title');
 select pg_temp.ok(public.chore_due_titles(array['A', 'B', 'C'], 'en') = 'A, B and C', 'three titles, English');
