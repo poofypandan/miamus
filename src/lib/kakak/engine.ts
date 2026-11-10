@@ -183,6 +183,11 @@ function problemsWith(
   return problems;
 }
 
+/** Every tool, less pet routines for a household that said it has no pets (Phase 162). */
+export function toolsFor(household: KakakHousehold): Anthropic.Tool[] {
+  return household.petsOff ? KAKAK_TOOLS.filter((tool) => tool.name !== "add_pet_routine") : KAKAK_TOOLS;
+}
+
 export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: string): Promise<TurnResult> {
   const history = checkHistory(historyIn);
   const messages: Anthropic.MessageParam[] = [...history.messages, nextUserTurn(history, reply)];
@@ -208,7 +213,7 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
         model: deps.model,
         max_tokens: MAX_TOKENS,
         system,
-        tools: KAKAK_TOOLS,
+        tools: toolsFor(deps.household),
         tool_choice: { type: "auto" },
         thinking: { type: "adaptive" },
         output_config: { effort: deps.effort },

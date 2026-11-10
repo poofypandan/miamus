@@ -81,6 +81,11 @@ export interface StubOptions {
   roomsFail?: { on: boolean };
   /** repairs rows the household already has (Phase 159); changed in place. */
   repairs?: Record<string, unknown>[];
+  /**
+   * "Who lives here?" (Phase 162): households.has_pets, and whether the
+   * household has its two pets (default) or none at all.
+   */
+  household?: { hasPets: boolean | null; pets?: boolean };
 }
 
 /**
@@ -117,6 +122,8 @@ export interface Stub {
   tasks: Record<string, unknown>[];
   /** Kakak's switch, as the admin last set it. */
   kakak: { allowed: boolean; enabled: boolean };
+  /** households.has_pets as the admin last set it (Phase 162). */
+  household: { hasPets: boolean | null };
   /** repairs rows as the stub holds them (Phase 159). */
   repairs: Record<string, unknown>[];
   /** repair_costs and repair_notes rows (Phase 159 PR B). */
@@ -158,6 +165,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const repairCosts: Record<string, unknown>[] = [];
   const repairNotes: Record<string, unknown>[] = [];
   const kakak = { allowed: false, enabled: false, ...options.kakak };
+  const household = { hasPets: options.household?.hasPets ?? null };
+  const withPets = options.household?.pets !== false;
   if (options.owner && !options.stored) options = { ...options, stored: freshSession(OWNER, false) };
 
   if (options.owner) {
@@ -239,6 +248,16 @@ export async function installStub(context: BrowserContext, options: StubOptions 
           json: [{ ...kakak, enabled_by: kakak.enabled ? OWNER : null, enabled_at: kakak.enabled ? "2026-11-08T03:00:00Z" : null, daily_limit: 40, calls_left: kakak.allowed ? 40 : 0 }],
         });
       }
+      if (options.owner && who === OWNER && table === "rpc/set_household_has_pets") {
+        household.hasPets = Boolean(request.postDataJSON()?.p_on);
+        return route.fulfill({ status: 204, body: "" });
+      }
+      if (table === "households") {
+        const row = { id: HOUSEHOLD_ID, name: "Rumah Uji", has_pets: household.hasPets };
+        const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: one ? row : [row] });
+      }
+      if (table === "task_entities" && !withPets) return route.fulfill({ json: [] });
       if (options.owner && who === OWNER && table === "rpc/set_kakak_enabled") {
         kakak.enabled = Boolean(request.postDataJSON()?.p_on);
         return route.fulfill({ status: 204, body: "" });
@@ -306,6 +325,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     repairCosts,
     repairNotes,
     kakak,
+    household,
     setNetwork(up: boolean) {
       net.token = net.rest = net.signup = up;
     },

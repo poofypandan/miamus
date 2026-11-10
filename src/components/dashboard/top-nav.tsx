@@ -5,6 +5,7 @@ import { TodayButton } from "@/components/agenda/today-button";
 import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
 import { moduleFromParam } from "@/lib/dashboard-modules";
 import { useOwnerLocale } from "@/context/owner-locale-context";
+import { moduleFlagsFrom, useHouseholdProfile } from "@/hooks/use-household-profile";
 
 /**
  * The dashboard header: the household's name and the Overview | Staff switch —
@@ -16,7 +17,8 @@ import { useOwnerLocale } from "@/context/owner-locale-context";
  * sub-navigation left to render and the header is back to what it is for.
  */
 export function TopNav() {
-  const onAgenda = moduleFromParam(useSearchParams().get("module")) === "agenda";
+  const flags = moduleFlagsFrom(useHouseholdProfile().hasPets);
+  const onAgenda = moduleFromParam(useSearchParams().get("module"), flags) === "agenda";
   const locale = useOwnerLocale();
   return (
     <AppHeader
