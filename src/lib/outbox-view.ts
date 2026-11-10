@@ -94,6 +94,9 @@ export function outboxView(
           sub_type: payload.sub_type ?? "complete",
         });
       });
+    } else if (job.kind === "couldnt") {
+      // Laid over by the couldn't-do store itself (lib/task-exceptions-store.ts).
+      continue;
     } else if (job.kind === "food") {
       pendingIds.add(job.id);
       foods.push(pendingFood(job.id, job.input, job.addedBy, householdId, new Date(item.timestamp).toISOString()));

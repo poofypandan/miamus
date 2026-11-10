@@ -527,6 +527,44 @@ export type BillPayment = {
   updated_at: string;
 };
 
+/** Why a task couldn't be done (Phase 165, migrations/139). */
+export type TaskExceptionReason = "out_of_stock" | "pet_refused" | "done_by_other" | "other";
+
+/**
+ * Someone said a task couldn't be done (Phase 165, migrations/139): one per
+ * task-day, or per pet and slot for a routine. Staff phones file and read
+ * them for their household and may withdraw one within 5 minutes; nobody
+ * edits one. Kept 90 days; its photo 30.
+ */
+export type TaskException = {
+  id: string;
+  household_id: string;
+  /** The repeat or the one-off (never a written day): with occurs_on, the occurrence key. */
+  chore_id: string | null;
+  schedule_id: string | null;
+  /** The routine's pet (set by the server from the schedule). */
+  entity_id: string | null;
+  /** The task's day, YYYY-MM-DD. */
+  occurs_on: string;
+  /** The routine slot, "HH:MM:SS"; null for a chore. */
+  slot_time: string | null;
+  reason: TaskExceptionReason;
+  note: string | null;
+  photo_url: string | null;
+  /** The shopping-list item that ran out, if one was picked. */
+  inventory_item_id: string | null;
+  staff_id: string | null;
+  /** When it was said, by the server's clock. */
+  created_at: string;
+};
+
+/** Each admin's two notification switches (migrations/139). */
+export type NotificationPrefs = {
+  /** 18–21 (Jakarta), or null when the evening summary is off. */
+  evening_summary_hour: number | null;
+  staff_request_pushes: boolean;
+};
+
 /** A short note on a repair, by an owner or a staff phone (migrations/131). */
 export type RepairNote = {
   id: string;
@@ -713,6 +751,12 @@ export interface Database {
         Update: Partial<BillPayment>;
         Relationships: [];
       };
+      task_exceptions: {
+        Row: TaskException;
+        Insert: Partial<TaskException> & Pick<TaskException, "household_id" | "occurs_on" | "reason">;
+        Update: never;
+        Relationships: [];
+      };
       repair_notes: {
         Row: RepairNote;
         Insert: Partial<RepairNote> & Pick<RepairNote, "repair_id" | "household_id" | "body">;
@@ -868,6 +912,21 @@ export interface Database {
       save_push_subscription: {
         Args: { p_household_id: string; p_subscription: PushSubscriptionJSON };
         Returns: undefined;
+      };
+      // Each admin's notification switches (migrations/139). Never for a
+      // staff phone's anonymous session.
+      my_notification_prefs: {
+        Args: Record<string, never>;
+        Returns: NotificationPrefs[];
+      };
+      set_my_notification_prefs: {
+        Args: { p_hour: number | null; p_requests: boolean };
+        Returns: NotificationPrefs[];
+      };
+      // For the staff's WhatsApp panel: will an admin get the request push?
+      household_requests_push_on: {
+        Args: { p_household_id: string };
+        Returns: boolean;
       };
       // The VAPID public key from Vault; null until push is configured.
       get_push_public_key: {

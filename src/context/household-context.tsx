@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
 import { forgetDeletedChore, refreshRepairs } from "@/lib/repairs-store";
 import { refreshBillPayments } from "@/lib/bill-payments";
+import { refreshTaskExceptions } from "@/lib/task-exceptions-store";
 import { screenLocale } from "@/lib/owner-locale";
 import type {
   CreateEntityInput,
@@ -663,6 +664,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     refreshRepairs();
     // Bill payments too (owners only; only while a screen shows them).
     refreshBillPayments();
+    // Couldn't-do records (Phase 165), likewise only while a screen shows them.
+    refreshTaskExceptions();
     // A silent pass never *puts up* skeletons. It matters more than it looks:
     // flipping `loading` on re-renders the staff list as skeletons, which
     // unmounts the card holding an open photo-tagging dialog — exactly what a
