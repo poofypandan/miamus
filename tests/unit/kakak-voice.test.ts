@@ -328,9 +328,24 @@ describe("what Kakak reads aloud", () => {
       },
       "id"
     );
-    expect(words.startsWith("Ini yang akan Kakak tambahkan:")).toBe(true);
-    expect(words).toContain("Telur");
+    expect(words.startsWith("Ini yang akan Kakak tambahkan: Daftar belanja: Beli Telur.")).toBe(true);
     expect(words.endsWith("Sudah benar?")).toBe(true);
+  });
+
+  it("reads a pet routine's pet and times, not just 'Potty break'", () => {
+    const words = speakable(kakakWords(
+      {
+        kind: "card",
+        text: "Here's what I'll add:",
+        items: [
+          { kind: "pet_routine", petId: "p1", petName: "Mochi", routine: "potty", times: [{ time: "07:00", title: "Potty" }, { time: "17:00", title: "Potty" }], alreadyThere: ["12:00"] },
+        ],
+      },
+      "en"
+    ));
+    expect(words).toBe(
+      "Here's what I'll add: Potty breaks, Mochi: 07:00 Potty break, 17:00 Potty break. 12:00 is already there. Is that right?"
+    );
   });
 
   it("drops symbols a voice would read out", () => {

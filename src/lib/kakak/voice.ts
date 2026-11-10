@@ -290,7 +290,7 @@ export function writeSpeakChoice(storage: Pick<Storage, "setItem"> | undefined, 
 /** Text for reading aloud: dashes become pauses, stray symbols go. */
 export function speakable(text: string): string {
   return text
-    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/\s*[—–·]\s*/g, ", ")
     .replace(/[•*_#]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -312,7 +312,9 @@ export interface VoiceScreen {
 
 /**
  * What Kakak says on this screen, for reading aloud: her question, her
- * message, or the card's words and each item's facts, then "Is that right?".
+ * message, or the card read as it is shown (each item's heading, then every
+ * row's label and value, then its note), then "Is that right?". Labels stay
+ * in because some carry the fact: a pet routine's times are its labels.
  */
 export function kakakWords(screen: VoiceScreen, locale: VoiceLocale): string {
   const t = (en: string, id: string) => (locale === "id" ? id : en);
@@ -322,13 +324,15 @@ export function kakakWords(screen: VoiceScreen, locale: VoiceLocale): string {
     case "message":
       return screen.text ?? "";
     case "card": {
-      const items = (screen.items ?? []).map((item) =>
-        describeSuggestion(item, locale)
-          .rows.map((row) => row.value)
-          .join(", ")
-      );
+      const items = (screen.items ?? []).map((item) => {
+        const card = describeSuggestion(item, locale);
+        const rows = card.rows.map((row) => `${row.label} ${row.value}`).join(", ");
+        return `${card.heading}: ${rows}${card.note ? `. ${card.note}` : ""}`;
+      });
       const intro = screen.text || t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:");
-      return [intro, ...items, t("Is that right?", "Sudah benar?")].join(". ").replace(/:\./g, ":");
+      // One pause between parts: "add:" runs on, and no part ends in "..".
+      const parts = [intro, ...items].map((part) => part.trim().replace(/\.$/, ""));
+      return [...parts, t("Is that right?", "Sudah benar?")].join(". ").replace(/:\./g, ":");
     }
     default:
       return "";

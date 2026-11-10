@@ -25,6 +25,11 @@ import { cn } from "@/lib/utils";
 /** Off switch for the beta: NEXT_PUBLIC_KAKAK_VOICE=false hides it. */
 const VOICE_ON = process.env.NEXT_PUBLIC_KAKAK_VOICE !== "false";
 
+/** Talk to Kakak, or nothing at all (not even reading aloud) when switched off. */
+export function KakakVoice(props: Parameters<typeof Voice>[0]) {
+  return VOICE_ON ? <Voice {...props} /> : null;
+}
+
 /**
  * Talk to Kakak (voice beta). A large mic in the Kakak sheet: press and
  * talk, the words appear live in the typing box, and when the owner stops
@@ -35,7 +40,7 @@ const VOICE_ON = process.env.NEXT_PUBLIC_KAKAK_VOICE !== "false";
  * browser may send the audio to Apple or Google to turn it into text, but
  * Miamus never receives or stores audio, only the text, as typed Kakak does.
  */
-export function KakakVoice({
+function Voice({
   screen,
   listenHere,
   inputShown,
@@ -134,7 +139,7 @@ export function KakakVoice({
     dispatch({ type: "stop" });
   }, []);
 
-  if (!VOICE_ON || !ready) return null;
+  if (!ready) return null;
 
   const { phase } = state;
   const showMic = state.canListen && (listenHere || phase === "listening" || (phase === "thinking" && spoke));
