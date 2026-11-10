@@ -1,7 +1,8 @@
 # Phase 168 — Rooms inside rooms (suites)
 
-Status: **decided: D1–D8 all A. The owner delegated to the recommendations,
-2026-11-10** (the owner can still change any of them). PR A (migration 142,
+Status: **decided: D1–D9 all A. The owner delegated to the recommendations,
+2026-11-10** (the owner can still change any of them). D9 was added the same
+day from the owner's input on English abbreviations. PR A (migration 142,
 by-hand editing, every label) is being built.
 Mockups: `docs/mockups/phase-168-suites.html` (open in a browser, phone
 width). Builds on Phase 158 (`docs/phase-158-rooms-plan.md`, migration 129)
@@ -239,6 +240,28 @@ they keep the same room id, so nothing in history changes; only the label
 does ("LT2 · GB2 Bathroom" → "LT2 · GB2 · Bathroom"). Undo restores the old
 names and parents exactly.
 
+**Clearer names for staff (D9).** Staff read Indonesian, and "GB1" (Guest
+Bedroom 1) is an English abbreviation they may not know; "LT2" is everyday
+Indonesian. So the same card also **suggests** Indonesian names for known
+abbreviations and English room words, each previewed on its own row with
+**Use** or **Keep mine**:
+
+| Typed | Suggested | Note |
+| --- | --- | --- |
+| GB1, GB 1, Guest Bedroom 1, Guest Room 1 | **Kamar Tamu 1** | the number kept |
+| MB, Master, Master Bedroom | **Kamar Utama** | |
+| Bathroom, Bath, KM (inside a room) | **Kamar Mandi** | |
+| Walk-in closet, Closet (inside a bedroom) | **Ruang Ganti** | |
+| Balcony | **Balkon** | |
+| LT2, Lt.2, Floor 2, 2F | **Lantai 2** | optional, off by default: "LT2" is already common Indonesian |
+
+Nothing is renamed without a tap: each suggestion is off until the owner
+accepts it, "Keep mine" leaves the name exactly as typed, and every name stays
+editable in Household → Rooms. A suggestion that would clash with a name
+already in that room (or on that floor) isn't offered. Accepted renames go in
+the same `organise_rooms` call as the grouping, so one Undo puts both back.
+No new column: the name is the name.
+
 ## The database — migration 142 (described, not written)
 
 Additive, no new column and no new table.
@@ -314,7 +337,8 @@ Additive, no new column and no new table.
 
 **PR B — the helpers**
 
-- The "Group bathrooms and closets with their bedroom" card
+- The "Group bathrooms and closets with their bedroom" card, with D9's
+  name suggestions
   (`src/lib/organise-rooms.ts` gains the nesting plan; tests over the
   owner's real name patterns).
 - **Whole Master Bedroom** in the picker when adding.
@@ -322,7 +346,7 @@ Additive, no new column and no new table.
 
 ## Decisions for the owner
 
-**Decided 2026-11-10: A for every decision (owner delegated to the
+**Decided 2026-11-10: A for every decision, D1–D9 (owner delegated to the
 recommendations).**
 
 - **D1 — How to segment.** **A (recommended):** a room can have rooms inside
@@ -354,6 +378,12 @@ recommendations).**
 - **D8 — Kakak.** **A (recommended):** reads rooms inside and can put a new
   room inside a room (checked like floors). B: reads them; new rooms only on
   a floor, moved by hand.
+- **D9 — Clearer names for staff** (owner input, 2026-11-10). **A
+  (recommended):** the grouping card (PR B) suggests Indonesian names for
+  known abbreviations and English room words (GB1 → Kamar Tamu 1, Master →
+  Kamar Utama, Bathroom → Kamar Mandi; LT2 → Lantai 2 optional), each
+  previewed and accepted one by one; never renamed automatically, always
+  editable. B: no suggestions; owners rename by hand.
 
 ## Glossary rows to add (before any Indonesian text)
 
@@ -367,6 +397,7 @@ recommendations).**
 | Group bathrooms and closets with their bedroom / Group | **Kelompokkan kamar mandi dan ruang ganti dengan kamarnya** / **Kelompokkan** | The one-time card; button as 158's card. |
 | Bathroom / Walk-in closet / Balcony (quick names) | **Kamar mandi / Ruang ganti / Balkon** | Quick names only; households keep what they type. "Lemari" stays Cupboard (Kitchen). |
 | Master bedroom / Guest bedroom (examples) | **Kamar Utama / Kamar Tamu** | Examples in mockups and help text. |
+| Use / Keep mine (a suggested name, D9) | **Pakai / Tetap nama saya** | PR B's card; one row per suggestion. |
 | A room inside has its own door, like a bathroom. A sink or a shower is a spot. | **Ruangan di dalam punya pintu sendiri, seperti kamar mandi. Wastafel atau shower adalah bagian.** | Helper under the field. |
 
 ## Tutorial (shown once, per role)
