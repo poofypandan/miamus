@@ -35,7 +35,7 @@ export interface MyChorePhotos {
  * queue's retry.
  */
 export function useFinishMyChore() {
-  const { finishChore, updateHouseholdTaskStatus, reopenBillDay, pendingIds, memberProfile } = useHousehold();
+  const { finishChore, reopenBillDay, pendingIds, memberProfile } = useHousehold();
   const t = useT();
   // Read at the moment of a tap, not from the render that made the toast.
   const pendingRef = useRef(pendingIds);
@@ -72,20 +72,17 @@ export function useFinishMyChore() {
         toast.info(t("Still sending. Try again in a moment.", "Masih dikirim. Coba lagi sebentar lagi."));
         return false;
       }
-      // A bill not paid after all: its payment and the completion go
-      // together, in one transaction, so a dropped connection can't leave
-      // one without the other (migrations/138; Codex, PR #65). The receipt
-      // file goes after, best effort; the nightly sweep is the safety net.
+      // Not done after all: any payment of the day and the completion go
+      // together, in one transaction (reopen_bill_day, migrations/138), for
+      // every chore, not only one still in Bills: its category may have
+      // changed since it was paid (Codex, PR #65). The receipt file goes
+      // after, best effort; the nightly sweep is the safety net.
       try {
-        if (bill) {
-          const removed = await reopenBillDay(rowId);
-          if (removed?.receipt_url) {
-            void dataProvider.deleteReceipt(removed.receipt_url).catch((err) => console.error("Could not delete a receipt", err));
-          }
-          void loadBillPayments(true);
-        } else {
-          await updateHouseholdTaskStatus(rowId, "pending");
+        const removed = await reopenBillDay(rowId);
+        if (removed?.receipt_url) {
+          void dataProvider.deleteReceipt(removed.receipt_url).catch((err) => console.error("Could not delete a receipt", err));
         }
+        if (removed || bill) void loadBillPayments(true);
       } catch (err) {
         explain(err);
         return false;
@@ -97,7 +94,7 @@ export function useFinishMyChore() {
       }
       return true;
     },
-    [updateHouseholdTaskStatus, reopenBillDay, explain, t]
+    [reopenBillDay, explain, t]
   );
 
   const finish = useCallback(

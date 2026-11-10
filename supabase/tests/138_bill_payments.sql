@@ -142,12 +142,18 @@ select pg_temp.ok(pg_temp.err_as(:owner, $q$ insert into reopened select public.
 select pg_temp.ok((select amount_idr = 420000 from public.bill_payments where task_id = '00000000-0000-0000-0000-0000000138d2'),
   '... and the payment is still there: one transaction');
 drop trigger zz_refuse on public.household_tasks;
-select pg_temp.ok(pg_temp.err_as(:staff, $q$ insert into reopened select public.reopen_bill_day('00000000-0000-0000-0000-0000000138d2') $q$) = ''
-  and exists (select 1 from public.bill_payments where task_id = '00000000-0000-0000-0000-0000000138d2'),
-  'a staff phone''s call reaches no payment');
--- Put the day back to done for the owner's call (the staff call reopened it).
+-- A staff phone reopening the day: its own delete reaches no payment, but the
+-- day stops being done, so the payment goes with it (bill_payments_follow_day).
+select pg_temp.ok(pg_temp.err_as(:staff, $q$ insert into reopened select public.reopen_bill_day('00000000-0000-0000-0000-0000000138d2') $q$) = '',
+  'a staff phone reopens the day');
+select pg_temp.ok((select data -> 'payment' = 'null'::jsonb from reopened)
+                  and not exists (select 1 from public.bill_payments where task_id = '00000000-0000-0000-0000-0000000138d2'),
+  '... its own call removed no payment (the policy), the day''s reopening did');
+-- The day done and paid again, for the owner's call.
 update public.household_tasks set status = 'completed', before_photo_url = 'x/b.jpg', after_photo_url = 'x/a.jpg'
  where id = '00000000-0000-0000-0000-0000000138d2';
+insert into public.bill_payments (household_id, task_id, amount_idr) values
+  ('00000000-0000-0000-0000-0000000138f1', '00000000-0000-0000-0000-0000000138d2', 420000);
 delete from reopened;
 select pg_temp.ok(pg_temp.err_as(:owner, $q$ insert into reopened select public.reopen_bill_day('00000000-0000-0000-0000-0000000138d2') $q$) = '',
   'an owner marks the bill not paid');
@@ -156,6 +162,22 @@ select pg_temp.ok((select (data -> 'payment' ->> 'amount_idr')::bigint = 420000 
                   and (select status = 'pending' and completed_by is null from public.household_tasks
                         where id = '00000000-0000-0000-0000-0000000138d2'),
   '... the payment is gone, the day is open, and the removed payment comes back for its receipt');
+-- Reopened some other way (a category changed meanwhile, a staff phone, a
+-- plain update): the payment still goes with the completion.
+select set_config('request.jwt.claims', '', true);
+update public.household_tasks set status = 'completed', before_photo_url = 'x/b.jpg', after_photo_url = 'x/a.jpg'
+ where id = '00000000-0000-0000-0000-0000000138d2';
+insert into public.bill_payments (household_id, task_id, amount_idr) values
+  ('00000000-0000-0000-0000-0000000138f1', '00000000-0000-0000-0000-0000000138d2', 99);
+update public.household_tasks set category = 'errand' where id = '00000000-0000-0000-0000-0000000138d2';
+select pg_temp.ok(pg_temp.err_as(:staff, $q$ update public.household_tasks set status = 'pending', completed_by = null,
+      completed_at = null, before_photo_url = null, after_photo_url = null
+      where id = '00000000-0000-0000-0000-0000000138d2' $q$) = '',
+  'a staff phone reopens a day that is no longer in Bills');
+select pg_temp.ok(not exists (select 1 from public.bill_payments where task_id = '00000000-0000-0000-0000-0000000138d2'),
+  '... and it loses its payment all the same');
+select set_config('request.jwt.claims', '', true);
+update public.household_tasks set category = 'bill' where id = '00000000-0000-0000-0000-0000000138d2';
 select pg_temp.ok(not has_function_privilege('anon', 'public.reopen_bill_day(uuid)', 'execute'),
   'reopen_bill_day: not for logged-out callers');
 -- The day paid again, for the checks below.
@@ -262,7 +284,7 @@ select pg_temp.ok(not exists (select 1 from public.bill_payments where series_id
 select pg_temp.ok(
   not exists (
     select 1 from unnest(array[
-      'public.bill_payments_server_fields()', 'public.prune_old_bill_payments()',
+      'public.bill_payments_server_fields()', 'public.prune_old_bill_payments()', 'public.bill_payments_follow_day()',
       'public.repair_receipts_due_for_pruning(text,integer)', 'public.orphaned_household_photos(text,integer)'
     ]) f
     where has_function_privilege('anon', f, 'execute') or has_function_privilege('authenticated', f, 'execute')
@@ -277,7 +299,7 @@ select pg_temp.ok(not has_table_privilege('anon', 'public.bill_payments', 'selec
 select pg_temp.ok(
   (select bool_and(proconfig = array['search_path=""']) from pg_proc
     where pronamespace = 'public'::regnamespace
-      and proname in ('bill_payments_server_fields', 'prune_old_bill_payments', 'reopen_bill_day', 'repair_receipts_due_for_pruning',
+      and proname in ('bill_payments_server_fields', 'prune_old_bill_payments', 'reopen_bill_day', 'bill_payments_follow_day', 'repair_receipts_due_for_pruning',
                       'orphaned_household_photos', 'export_household_data')),
   'every new or replaced function has an empty search_path');
 

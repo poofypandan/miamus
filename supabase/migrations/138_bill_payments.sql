@@ -131,6 +131,32 @@ create trigger bill_payments_server_fields
 
 revoke all on function public.bill_payments_server_fields() from public, anon, authenticated;
 
+-- A day that stops being done loses its payment, whatever its category now
+-- and whoever reopens it (Codex, PR #65): a payment never outlives the
+-- completion it records. SECURITY DEFINER because the person reopening may be
+-- a staff phone, which the table's policy keeps out; it deletes only the
+-- payment of the row being changed. A trigger function: no client can call it.
+create or replace function public.bill_payments_follow_day()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if old.status = 'completed' and new.status is distinct from 'completed' then
+    delete from public.bill_payments bp where bp.task_id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.bill_payments_follow_day() from public, anon, authenticated;
+
+drop trigger if exists bill_payments_follow_day on public.household_tasks;
+create trigger bill_payments_follow_day
+  after update of status on public.household_tasks
+  for each row execute function public.bill_payments_follow_day();
+
 -- Marking a paid bill not paid (Undo, Mark not done): its payment goes and
 -- the day reopens, in one transaction, so neither half can happen without
 -- the other (Codex, PR #65). Not SECURITY DEFINER: it runs as the caller,
