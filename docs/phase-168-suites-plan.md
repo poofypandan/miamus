@@ -194,12 +194,14 @@ mockup: **Kamar Utama** (Master Bedroom), **Kamar Tamu 1 / 2** (GB1, GB2),
 - A room that has rooms inside can't itself go inside another room (the
   cap); the Inside list leaves those out, and the database refuses it too.
 - **Deleting an outer room** moves its rooms inside out onto its floor,
-  never deletes them; a clash gets the old room's name in front
-  ("Bathroom" → "GB1 Bathroom", then a number), as deleting a floor does.
-  The confirm line says so: "Delete GB1? Its Bathroom moves onto LT2 as GB1
+  never deletes them. Each gets the old room's name in front ("Bathroom" →
+  "GB1 Bathroom"), because a bare "Bathroom" on LT2 would no longer say
+  whose it is; then a number if even that is taken, as deleting a floor
+  does. The confirm line says so: "Delete GB1? Its Bathroom moves onto LT2 as GB1
   Bathroom. Chores stay."
-- Taking a room out ("Inside: none") onto a floor that already has that
-  name is refused with the 158 message: "There's already a room called
+- Taking a room out by hand ("Inside: none") fills in the same longer name
+  ("GB1 Bathroom") for the owner to keep or change; a name already on that
+  floor is refused with the 158 message: "There's already a room called
   Bathroom on LT2."
 
 ### The one-time card for existing names (D7)
@@ -256,8 +258,8 @@ Additive, no new column and no new table.
 - **Deleting an outer room** never deletes or orphans its rooms inside.
   Extend the before-delete trigger (`household_locations_release_floor()`,
   renamed in spirit to "release children"): a deleted room's rooms inside
-  move to its parent (its floor, or no floor), renamed on a clash with the
-  outer room's name in front, then a number, within 105's 60 characters, as
+  move to its parent (its floor, or no floor), renamed with the outer
+  room's name in front ("GB1 Bathroom"), then a number on a clash, within 105's 60 characters, as
   129 does for floors. The FK's `set null` stays the backstop. Deleting a
   floor is unchanged: its top-level rooms go to "No floor yet" and keep
   their rooms inside.
@@ -280,7 +282,7 @@ Additive, no new column and no new table.
   room inside a room is accepted; a third level is refused; a room with
   rooms inside can't go inside another; a cross-household parent is
   refused; three bedrooms can each hold "Bathroom"; deleting an outer room
-  moves its rooms onto its floor, renaming a clash ("GB1 Bathroom", then a
+  moves its rooms onto its floor as "GB1 Bathroom" (then a
   number, within 60 characters); deleting a floor keeps rooms inside their
   room; `repair_place_label` gives the full path; `organise_rooms` nests and
   its Undo restores; staff phones and logged-out callers can't write;
