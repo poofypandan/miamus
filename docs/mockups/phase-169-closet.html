@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Closet mockups</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --okbg:rgba(16,185,129,.06); --okline:rgba(16,185,129,.3); --red:#b91c1c; --amber:#92400e; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1100px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0; color:var(--muted); max-width:680px; }
+  section.screen { max-width:1100px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:640px; }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:740px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone.tall { height:1150px; }
+  .phone.mid { height:1000px; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:40px; }
+  .brand { font-weight:600; font-size:17px; display:flex; gap:6px; align-items:center; }
+  .mark { width:24px; height:24px; display:block; }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:6px 12px; font-size:13px; color:var(--muted); font-weight:500; white-space:nowrap; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .seg.sm span { padding:4px 10px; font-size:12px; }
+  .seg.xs { display:inline-flex; padding:2px; }
+  .seg.xs span { padding:3px 9px; font-size:11.5px; flex:none; }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .dates { display:flex; gap:4px; }
+  .dates span { flex:1; text-align:center; padding:5px 0; border-radius:12px; font-size:11px; color:var(--muted); }
+  .dates span b { display:block; font-size:15px; color:var(--ink); }
+  .dates span.on { background:var(--primary); color:#fff; }
+  .dates span.on b { color:#fff; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .ic.xs { width:12px; height:12px; }
+  .ic.lg { width:22px; height:22px; }
+  .quiet { display:flex; align-items:center; gap:8px; min-height:36px; padding:0 4px; font-size:13.5px; color:var(--ink2); }
+  .quiet span { flex:1; }
+  .quiet.amber { color:var(--amber); font-weight:500; }
+  .quiet.amber .ic { color:#b45309; }
+  .mycard { background:#fff; border:1px solid var(--line); border-radius:12px; padding:6px; display:flex; flex-direction:column; gap:2px; }
+  .mycard header { display:flex; align-items:baseline; justify-content:space-between; padding:4px 6px; }
+  .mycard h3 { margin:0; font-size:14px; font-weight:600; }
+  .mycard header span { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .mrow { display:flex; align-items:center; gap:8px; border-radius:8px; padding:6px; min-height:52px; border:1px solid transparent; }
+  .mrow .circ { width:32px; height:32px; display:flex; align-items:center; justify-content:center; flex:none; }
+  .mrow .circ .ic { color:#9ca3af; }
+  .mrow.done { background:var(--okbg); border-color:var(--okline); }
+  .mrow.done .circ .ic { color:var(--ok); }
+  .mrow.done .t > b { color:var(--muted); }
+  .mrow.flash { box-shadow:0 0 0 3px rgba(16,185,129,.18); }
+  .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .t > b { font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .t > span { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; }
+  .t > span.paid { color:var(--ok); font-weight:500; }
+  .t > span.paid .ic { color:var(--ok); }
+  .dayh { margin:4px 0 0; font-size:14px; font-weight:600; }
+  .trow { display:flex; align-items:center; gap:10px; padding:8px 10px; min-height:52px; background:#fff; border:1px solid var(--line); border-radius:12px; }
+  .time { width:52px; flex:none; font-size:11.5px; color:#52525b; font-variant-numeric:tabular-nums; }
+  .badge { width:28px; height:28px; border-radius:8px; background:#fffbeb; display:flex; align-items:center; justify-content:center; flex:none; }
+  .badge .ic { color:#b45309; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:56px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:8px 16px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+  .sheet.low { top:150px; gap:12px; }
+  .sheet > * { flex:none; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto 2px; }
+  .sheet h3 { margin:0; font-size:17px; text-align:center; }
+  .sheet .lead { margin:-4px 0 0; font-size:13px; color:var(--muted); text-align:center; display:flex; justify-content:center; align-items:center; gap:4px; }
+  .grp { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:2px 2px -4px; }
+  .list { border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .li { display:flex; align-items:center; gap:10px; padding:8px 12px; border-top:1px solid var(--line); min-height:50px; }
+  .li:first-child { border-top:0; }
+  .li .lic { width:30px; height:30px; border-radius:8px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
+  .li .lic .ic { color:var(--ink2); }
+  .li .t > b { font-size:13.5px; }
+  .li .t > span { font-size:11.5px; }
+  .box { width:22px; height:22px; border-radius:6px; border:1.5px solid #9ca3af; flex:none; display:flex; align-items:center; justify-content:center; }
+  .box.on { background:var(--primary); border-color:var(--primary); }
+  .box.on .ic { color:#fff; width:14px; height:14px; }
+  .added { font-size:11.5px; color:var(--ok); display:flex; align-items:center; gap:3px; font-weight:500; white-space:nowrap; }
+  .added .ic { color:var(--ok); }
+  .li.open { background:#fafafa; }
+  .panel { background:#fafafa; border-top:1px dashed var(--line); padding:4px 12px 10px 52px; display:flex; flex-direction:column; gap:6px; }
+  .prow { display:flex; align-items:center; justify-content:space-between; font-size:12.5px; color:var(--ink2); min-height:30px; }
+  .prow b { font-weight:500; color:var(--ink); display:flex; align-items:center; gap:2px; }
+  .hint { font-size:11.5px; color:var(--muted); }
+  .btn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; border-radius:12px; font-weight:600; font-size:14px; }
+  .btn.primary { background:var(--primary); color:#fff; }
+  .btn.primary .ic { color:#fff; }
+  .btn.outline { border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:500; }
+  .link { text-align:center; font-size:13px; color:var(--ink2); font-weight:500; display:flex; align-items:center; justify-content:center; gap:4px; }
+  .foryou { align-self:center; display:flex; align-items:center; gap:4px; font-size:12px; color:var(--ink2); background:var(--track); border-radius:999px; padding:3px 10px; margin-top:-4px; }
+  .label { font-size:12.5px; font-weight:600; color:var(--ink2); margin-bottom:-4px; }
+  .label em { font-style:normal; font-weight:400; color:var(--muted); }
+  .money { display:flex; align-items:center; gap:8px; border:1px solid var(--ink); border-radius:12px; min-height:48px; padding:0 12px; font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .money i { font-style:normal; color:var(--muted); font-weight:500; font-size:15px; }
+  .money .caret { width:1.5px; height:20px; background:var(--ink); margin-left:-6px; }
+  .shot { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .shot span { display:flex; align-items:center; justify-content:center; gap:6px; border:1px dashed #d1d5db; border-radius:12px; min-height:48px; font-size:12.5px; color:var(--ink2); }
+  .lockline { display:flex; align-items:center; justify-content:center; gap:5px; font-size:12px; color:var(--muted); margin-top:-2px; }
+  .hist { display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink2); border-top:1px solid var(--line); padding-top:10px; }
+  .hist span { color:var(--muted); }
+  .toast { position:absolute; left:14px; right:14px; bottom:74px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:center; gap:8px; padding:12px; font-size:13.5px; }
+  .toast span { flex:1; }
+  .toast .ok { color:var(--ok); flex:none; display:flex; }
+  .toast b { display:flex; align-items:center; gap:4px; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-weight:600; }
+  .push { position:absolute; left:10px; right:10px; top:28px; z-index:5; background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 30px -10px rgba(17,24,39,.35); padding:10px 12px; display:flex; gap:10px; }
+  .push .mark { width:34px; height:34px; flex:none; }
+  .push .pt { flex:1; min-width:0; font-size:13px; }
+  .push .pt div { display:flex; justify-content:space-between; color:var(--muted); font-size:11.5px; }
+  .push .pt b { display:block; font-size:13.5px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { border:1px solid var(--line); border-radius:999px; padding:6px 11px; font-size:12.5px; color:var(--ink2); background:#fff; }
+  .chip.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .chip.new { border-style:dashed; border-color:#a3a3a3; }
+  .field { border:1px solid var(--line); border-radius:12px; min-height:44px; padding:11px 12px; font-size:14px; display:flex; justify-content:space-between; align-items:center; }
+  .field span { color:var(--muted); font-size:13px; display:flex; align-items:center; gap:4px; }
+  .legend { font-size:12px; color:var(--muted); margin:-4px 2px 0; }
+  /* Phase 169 additions */
+  .phone.m2 { height:800px; }
+  .rv-line { display:flex; align-items:center; gap:8px; min-height:40px; padding:0 12px; font-size:13.5px; color:var(--ink2); background:#fff; border:1px solid var(--line); border-radius:12px; }
+  .rv-line span { flex:1; }
+  .floor { font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:4px 2px -4px; display:flex; justify-content:space-between; }
+  .room { display:flex; align-items:center; gap:10px; padding:9px 12px; border-top:1px solid var(--line); min-height:50px; background:#fff; }
+  .room:first-child { border-top:0; }
+  .room.inner { padding-left:30px; background:#fcfcfd; }
+  .room.inner .corner { margin-left:-18px; color:#a1a1aa; }
+  .room .t > b { font-size:13.5px; }
+  .room .t > span { font-size:11.5px; }
+  .count { font-size:11.5px; color:var(--ink2); background:var(--track); border-radius:999px; padding:3px 9px; display:flex; align-items:center; gap:4px; white-space:nowrap; font-weight:500; }
+  .count.amber { background:#fffbeb; color:var(--amber); }
+  .count.amber .ic { color:#b45309; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .spot { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+  .spot .ph { height:84px; }
+  .spot div.n { padding:6px 9px; font-size:12.5px; font-weight:500; display:flex; justify-content:space-between; align-items:center; }
+  .spot div.n span { font-size:11px; color:var(--muted); font-weight:400; }
+  .spot.add { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; border-style:dashed; border-color:#a3a3a3; color:var(--ink2); font-size:12.5px; min-height:115px; }
+  /* Photo stand-ins: soft stripes like hanging clothes, folded piles, a bag. Never emoji. */
+  .ph { background:repeating-linear-gradient(90deg,#e7e5e4 0 14px,#d6d3d1 14px 18px,#f5f5f4 18px 30px,#cbd5e1 30px 34px); position:relative; }
+  .ph.fold { background:repeating-linear-gradient(0deg,#e2e8f0 0 10px,#cbd5e1 10px 13px,#f1f5f9 13px 22px,#d6d3d1 22px 25px); }
+  .ph.bag { background:radial-gradient(ellipse at 50% 70%,#d6d3d1 0 38%,transparent 39%),linear-gradient(#f5f5f4,#e7e5e4); }
+  .ph.shoe { background:repeating-linear-gradient(0deg,#e7e5e4 0 18px,#a8a29e 18px 20px); }
+  .ph.dress { background:linear-gradient(135deg,#dbeafe,#bfdbfe 50%,#e0e7ff); }
+  .ph .ic { position:absolute; right:6px; bottom:6px; color:#78716c; width:14px; height:14px; }
+  .trip { display:flex; align-items:center; gap:10px; padding:8px 12px; border-top:1px solid var(--line); min-height:56px; background:#fff; }
+  .trip:first-child { border-top:0; }
+  .trip .thumb { width:40px; height:40px; border-radius:8px; flex:none; overflow:hidden; }
+  .trip .thumb .ph { height:100%; }
+  .trip .t > b { font-size:13.5px; }
+  .trip .t > span { font-size:11.5px; }
+  .trip .t > span.amber { color:var(--amber); font-weight:500; white-space:normal; }
+  .trip .t > span.amber .ic { color:#b45309; }
+  .trip .t > span.ok { color:var(--ok); font-weight:500; }
+  .trip .t > span.ok .ic { color:var(--ok); }
+  .trip.amber { background:#fffbeb; }
+  .mini { font-size:12px; font-weight:600; border:1px solid var(--line); border-radius:8px; padding:6px 9px; white-space:nowrap; background:#fff; }
+  .chores-mini { font-size:12.5px; color:var(--muted); display:flex; justify-content:space-between; border-top:1px solid var(--line); padding-top:8px; }
+  .toggle { width:42px; height:26px; border-radius:999px; background:var(--primary); position:relative; flex:none; }
+  .toggle::after { content:""; position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:50%; background:#fff; }
+  .stepper { display:flex; align-items:center; border:1px solid var(--ink); border-radius:12px; min-height:52px; overflow:hidden; }
+  .stepper span.b { width:56px; display:flex; align-items:center; justify-content:center; align-self:stretch; background:var(--track); }
+  .stepper span.b .ic { color:var(--ink); }
+  .stepper span.v { flex:1; text-align:center; font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .stepper span.v i { font-style:normal; font-size:14px; color:var(--muted); font-weight:500; }
+  .shots { display:flex; gap:8px; }
+  .shots .ph { width:72px; height:72px; border-radius:10px; }
+  .shots .addph { width:72px; height:72px; border-radius:10px; border:1px dashed #a3a3a3; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:11px; color:var(--ink2); }
+  .warn { display:flex; gap:8px; align-items:flex-start; background:#fffbeb; border:1px solid rgba(180,83,9,.25); color:var(--amber); border-radius:12px; padding:10px 12px; font-size:13px; font-weight:500; }
+  .warn .ic { color:#b45309; margin-top:1px; }
+  .note { font-size:12px; color:var(--muted); display:flex; gap:5px; align-items:center; }
+  .sbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 10px; flex:none; display:flex; flex-direction:column; gap:8px; }
+  .sbar .row { display:flex; align-items:center; justify-content:space-between; height:40px; }
+  .who { font-size:13px; color:var(--ink2); display:flex; align-items:center; gap:5px; }
+  .fab { position:absolute; right:16px; bottom:22px; z-index:1; background:var(--primary); color:#fff; border-radius:999px; padding:12px 18px; font-weight:600; display:flex; align-items:center; gap:6px; box-shadow:0 8px 20px -6px rgba(0,0,0,.35); }
+  .fab .ic { color:#fff; }
+  .bigrow { display:flex; align-items:center; gap:12px; min-height:64px; border:1px solid var(--line); border-radius:12px; padding:0 14px; background:#fff; }
+  .bigrow .circle { width:40px; height:40px; border-radius:50%; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
+  .bigrow .circle .ic { color:var(--ink); width:20px; height:20px; }
+  .bigrow .t > b { font-size:15px; font-weight:600; }
+  .pairph { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .pairph div { display:flex; flex-direction:column; gap:4px; font-size:11.5px; color:var(--muted); }
+  .pairph .ph { height:96px; border-radius:10px; }
+  .stat { display:flex; justify-content:space-around; text-align:center; border:1px solid var(--line); border-radius:12px; padding:10px 4px; }
+  .stat div { font-size:11.5px; color:var(--muted); }
+  .stat b { display:block; font-size:18px; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .stat .am b { color:var(--amber); }
+  .answers { display:flex; flex-direction:column; gap:8px; }
+  .facts { border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .facts div { display:flex; justify-content:space-between; padding:10px 12px; border-top:1px solid var(--line); font-size:13px; color:var(--ink2); }
+  .facts div:first-child { border-top:0; }
+  .facts div b { font-weight:500; color:var(--ink); display:flex; gap:4px; align-items:center; }
+  .facts div b.amber { color:var(--amber); }
+  .hero { height:200px; border-radius:14px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .card .kicker { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
+  .card h4 { margin:0; font-size:16px; }
+  .card ol { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:8px; font-size:13.5px; color:var(--ink2); }
+  .card .btns { display:flex; gap:8px; }
+  .card .btns .btn { flex:1; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-corner-down-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 10 5 5-5 5"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></symbol>
+  <symbol id="i-shirt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></symbol>
+  <symbol id="i-washing-machine" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3"/><path d="M17 6h.01"/><rect width="18" height="20" x="3" y="2" rx="2"/><circle cx="12" cy="13" r="5"/><path d="M12 18a2.5 2.5 0 0 0 0-5 2.5 2.5 0 0 1 0-5"/></symbol>
+  <symbol id="i-scissors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="i-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="M3.3 7 12 12l8.7-5"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-door-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21H2"/><path d="M10 3H7a2 2 0 0 0-2 2v16"/><path d="M14 12h.01"/><path d="M19 21V5a2 2 0 0 0-1.675-1.974l-6.163-1.013A1 1 0 0 0 10 3v18a1 1 0 0 0 1.124.992z"/><path d="M22 21h-3"/></symbol>
+  <symbol id="i-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="i-calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></symbol>
+  <symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.05Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol>
+  <symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-cooking-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1c.32-.32.86-.22.98.22a6 6 0 0 1-8.26 7.06l-7.91 7.91a1 1 0 0 1-3-3l7.91-7.91a6 6 0 0 1 7.06-8.26c.44.12.54.66.22.98z"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17a2 2 0 0 1-2 2H6.83a2 2 0 0 0-1.41.59l-2.2 2.2A.71.71 0 0 1 2 21.29V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/><path d="M7 7h8"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="mark" viewBox="0 0 512 512"><rect width="512" height="512" rx="114.5" fill="#171717"/><polyline points="112,214 256,104 400,214" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,400 152,262 256,354 360,262 360,400" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="page">
+  <h1>Phase 169 — The closet: what's where and what's out</h1>
+  <p>Phone-width mockups for <code>docs/phase-169-closet-plan.md</code>, drawn with the recommended options (D1–D12 A). Not decided yet, not built. Owner screens: English left, Bahasa Indonesia right. Staff screens: Bahasa Indonesia only. Names, rooms and photos are stand-ins (the striped tiles are where real photos go).</p>
+</header>
+
+<main id="screens"></main>
+
+<script>
+const T = {
+  en: {
+    overview: "Overview", staff: "Staff",
+    tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    pills: ["Today", "Rooms", "Repairs"],
+    outNow: "Out now: 2 · 15 pcs",
+    floor: "LT2", master: "Master Bedroom", masterSub: "Vacuum · Tue · Sheets · Sat",
+    bath: "Bathroom", bathSub: "Toilet · daily · Mop · Mon Thu",
+    wic: "Walk-in closet", wicSub: "Closet · 4 spots · Tidy · Fri",
+    out3: "3 out", overdue1: "1 overdue",
+    gb1: "GB1", gb1Sub: "Vacuum · Tue", lounge: "Lounge", loungeSub: "Vacuum · Mon Thu",
+    sheetTitle: "Master Bedroom · Walk-in closet", sheetSub: "LT2",
+    spots: "Spots", addSpot: "Add spot",
+    sp: [["Rack A", "fold"], ["Rack B", ""], ["Drawer 1", "fold"], ["Shoes", "shoe"]],
+    taken: "12 Nov",
+    outH: "Out now", logOut: "Log something going out",
+    t1: "Laundry Bu Ani", t1s: "12 pcs · 2 days",
+    t2: "Dry clean", t2s: "3 pcs · 6 days, usually 3",
+    t3: "Lent to Tante Rina", t3s: "1 pc · back by Sat 28 Nov",
+    choresH: "Chores here", choresV: "2 set up",
+    today: "Today",
+    lineMissing: "1 piece missing from Laundry Bu Ani",
+    lineOver: "Dry clean: 6 days, usually 3",
+    bagTitle: "Laundry Bu Ani", bagSub: "Laundry · sent Tue 17 Nov by Sari",
+    leftL: "Went out · Tue 17 Nov", backL: "Came back · Thu 19 Nov",
+    sOut: "out", sBack: "back", sStill: "still out",
+    q: "What happened to the 1 piece?",
+    a1: "Still waiting", a2: "1 missing", a3: "Miscounted (it was 11)",
+    noteHint: "Note (optional)",
+    pieceTitle: "Blue batik tulis", whose: "Whose", whoseV: "Ibu",
+    where: "Spot", whereV: "Walk-in closet · Rack B",
+    status: "Now", statusV: "At the dry cleaner since Tue 17 Nov",
+    bag: "In bag", bagV: "Dry clean · 3 pcs",
+    editPiece: "Edit piece",
+    valuable: "Valuable pieces",
+    v: [["Blue batik tulis", "Ibu · at the dry cleaner", "amber"], ["Wedding kebaya", "Ibu · Rack B", ""], ["Grey suit", "Bapak · Rack A", ""]],
+    wnKicker: "What's new", wnTitle: "Know what's out",
+    wn: [
+      "When staff send clothes to the laundry, dry cleaner or tailor, they log the bag with a photo and a count.",
+      "If fewer come back, you'll see it on Today and decide what happened.",
+      "Turn on <b>Closet</b> for a room and add a photo of each rack and drawer, so anyone knows where things go.",
+    ],
+    showMe: "Show me", gotIt: "Got it",
+  },
+  id: {
+    overview: "Ringkasan", staff: "Staf",
+    tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    pills: ["Hari ini", "Ruangan", "Perbaikan"],
+    outNow: "Di luar: 2 · 15 pcs",
+    floor: "LT2", master: "Kamar Utama", masterSub: "Vakum · Sel · Seprai · Sab",
+    bath: "Kamar Mandi", bathSub: "Toilet · setiap hari · Pel · Sen Kam",
+    wic: "Ruang Ganti", wicSub: "Lemari pakaian · 4 bagian · Rapikan · Jum",
+    out3: "3 di luar", overdue1: "1 terlambat",
+    gb1: "Kamar Tamu 1", gb1Sub: "Vakum · Sel", lounge: "Ruang Keluarga", loungeSub: "Vakum · Sen Kam",
+    sheetTitle: "Kamar Utama · Ruang Ganti", sheetSub: "LT2",
+    spots: "Bagian", addSpot: "Tambah bagian",
+    sp: [["Rak A", "fold"], ["Rak B", ""], ["Laci 1", "fold"], ["Rak sepatu", "shoe"]],
+    taken: "12 Nov",
+    outH: "Di luar", logOut: "Catat pakaian keluar",
+    t1: "Laundry Bu Ani", t1s: "12 pcs · 2 hari",
+    t2: "Dry clean", t2s: "3 pcs · sudah 6 hari, biasanya 3",
+    t3: "Dipinjam Tante Rina", t3s: "1 pcs · kembali Sab 28 Nov",
+    choresH: "Tugas di sini", choresV: "2 tugas",
+    today: "Hari ini",
+    lineMissing: "1 pcs hilang dari Laundry Bu Ani",
+    lineOver: "Dry clean: sudah 6 hari, biasanya 3",
+    bagTitle: "Laundry Bu Ani", bagSub: "Laundry · dikirim Sel 17 Nov oleh Sari",
+    leftL: "Keluar · Sel 17 Nov", backL: "Kembali · Kam 19 Nov",
+    sOut: "keluar", sBack: "kembali", sStill: "belum kembali",
+    q: "Apa yang terjadi dengan 1 pcs itu?",
+    a1: "Masih ditunggu", a2: "Hilang 1", a3: "Salah hitung (memang 11)",
+    noteHint: "Catatan (opsional)",
+    pieceTitle: "Batik tulis biru", whose: "Milik", whoseV: "Ibu",
+    where: "Bagian", whereV: "Ruang Ganti · Rak B",
+    status: "Sekarang", statusV: "Di dry clean sejak Sel 17 Nov",
+    bag: "Ikut kantong", bagV: "Dry clean · 3 pcs",
+    editPiece: "Ubah pakaian",
+    valuable: "Pakaian berharga",
+    v: [["Batik tulis biru", "Ibu · di dry clean", "amber"], ["Kebaya pernikahan", "Ibu · Rak B", ""], ["Jas abu-abu", "Bapak · Rak A", ""]],
+    wnKicker: "Yang baru", wnTitle: "Tahu pakaian yang di luar",
+    wn: [
+      "Saat staf mengirim pakaian ke laundry, dry clean atau penjahit, mereka mencatatnya dengan foto dan jumlahnya.",
+      "Kalau yang kembali kurang, Anda akan melihatnya di Hari ini dan memutuskan apa yang terjadi.",
+      "Nyalakan <b>Lemari pakaian</b> untuk sebuah ruangan dan tambahkan foto setiap rak dan laci, supaya semua tahu tempatnya.",
+    ],
+    showMe: "Lihat", gotIt: "Mengerti",
+  },
+};
+
+const ic = (id, cls = "") => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const mark = (cls = "mark") => `<svg class="${cls}" viewBox="0 0 512 512" aria-hidden="true"><use href="#mark"/></svg>`;
+const ph = (kind = "", cls = "") => `<div class="ph ${kind} ${cls}">${ic("image")}</div>`;
+
+function frame(lang, t, inner, { tab = 0, size = "", overlay = "" } = {}) {
+  const icons = ["calendar-days", "paw-print", "clipboard-list", "cooking-pot", "users"];
+  return `<div class="phone ${size}"><div class="tag">${lang.toUpperCase()}</div><div class="status"></div>
+    <div class="appbar"><div class="row"><span class="brand">${mark()}Miamus</span>
+    <span class="seg sm"><span class="on">${t.overview}</span><span>${t.staff}</span></span></div></div>
+    <div class="body">${inner}</div>
+    <div class="tabbar">${t.tabs.map((n, i) => `<span class="${i === tab ? "on" : ""}">${ic(icons[i])}${n}</span>`).join("")}</div>
+    ${overlay}</div>`;
+}
+
+// Staff phones: Indonesian only, no owner tab bar; the "+ Lapor" button opens the Lapor sheet.
+function staffFrame(inner, { size = "", overlay = "", fab = true } = {}) {
+  return `<div class="phone ${size}"><div class="tag">ID · STAF</div><div class="status"></div>
+    <div class="sbar"><div class="row"><span class="brand">${mark()}Miamus</span><span class="who">${ic("user", "xs")} Sari</span></div>
+    <div class="seg"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
+    <div class="body">${inner}</div>
+    ${fab ? `<div class="fab">${ic("plus")}Lapor</div>` : ""}
+    ${overlay}</div>`;
+}
+
+const staffList = `
+  <div class="trow"><span class="badge">${ic("sparkles")}</span><span class="time">08.00</span><span class="t"><b>Pel teras</b><span>LT1 · Teras</span></span></div>
+  <div class="trow"><span class="badge">${ic("sparkles")}</span><span class="time">10.00</span><span class="t"><b>Setrika dan rapikan pakaian</b><span>LT2 · Kamar Utama · Ruang Ganti</span></span></div>
+  <div class="trow"><span class="badge">${ic("sparkles")}</span><span class="time">Kapan saja</span><span class="t"><b>Ganti seprai</b><span>LT2 · Kamar Tamu 1</span></span></div>`;
+
+// 1. Chores -> Rooms: the Out now line, the walk-in closet inside the Master Bedroom (Phase 168).
+function s1(lang) {
+  const t = T[lang];
+  const inner = `<div class="seg"><span>${t.pills[0]}</span><span class="on">${t.pills[1]}</span><span>${t.pills[2]}</span></div>
+    <div class="rv-line">${ic("shirt")}<span>${t.outNow}</span><span class="count amber" style="flex:none">${ic("clock", "xs")}${t.overdue1}</span>${ic("chevron-right")}</div>
+    <div class="floor"><span>${t.floor}</span></div>
+    <div class="list">
+      <div class="room"><span class="lic" style="width:30px;height:30px;border-radius:8px;background:var(--track);display:flex;align-items:center;justify-content:center;flex:none">${ic("door-open")}</span><span class="t"><b>${t.master}</b><span>${t.masterSub}</span></span>${ic("chevron-right")}</div>
+      <div class="room inner"><span class="corner">${ic("corner-down-right", "xs")}</span><span class="t"><b>${t.bath}</b><span>${t.bathSub}</span></span>${ic("chevron-right")}</div>
+      <div class="room inner"><span class="corner">${ic("corner-down-right", "xs")}</span><span class="t"><b style="display:flex;align-items:center;gap:5px">${ic("shirt", "xs")}${t.wic}</b><span>${t.wicSub}</span></span><span class="count">${t.out3}</span>${ic("chevron-right")}</div>
+      <div class="room"><span class="lic" style="width:30px;height:30px;border-radius:8px;background:var(--track);display:flex;align-items:center;justify-content:center;flex:none">${ic("door-open")}</span><span class="t"><b>${t.gb1}</b><span>${t.gb1Sub}</span></span>${ic("chevron-right")}</div>
+      <div class="room"><span class="lic" style="width:30px;height:30px;border-radius:8px;background:var(--track);display:flex;align-items:center;justify-content:center;flex:none">${ic("door-open")}</span><span class="t"><b>${t.lounge}</b><span>${t.loungeSub}</span></span>${ic("chevron-right")}</div>
+    </div>`;
+  return frame(lang, t, inner, { tab: 2 });
+}
+
+// 2. The closet's sheet: spots with photos, what's out, then the room's chores.
+function s2(lang) {
+  const t = T[lang];
+  const behind = `<div class="seg"><span>${t.pills[0]}</span><span class="on">${t.pills[1]}</span><span>${t.pills[2]}</span></div>`;
+  const sheet = `<div class="dim"></div><div class="sheet"><div class="grab"></div><h3>${t.sheetTitle}</h3><p class="lead">${ic("map-pin", "xs")} ${t.sheetSub}</p>
+    <div class="grp">${t.spots}</div>
+    <div class="grid">
+      ${t.sp.map(([n, k]) => `<div class="spot">${ph(k)}<div class="n">${n}<span>${t.taken}</span></div></div>`).join("")}
+    </div>
+    <div class="link">${ic("plus", "xs")}${t.addSpot}</div>
+    <div class="grp">${t.outH}</div>
+    <div class="list">
+      <div class="trip"><span class="thumb">${ph("bag")}</span><span class="t"><b>${t.t1}</b><span>${ic("washing-machine", "xs")} ${t.t1s}</span></span>${ic("chevron-right")}</div>
+      <div class="trip amber"><span class="thumb">${ph("fold")}</span><span class="t"><b>${t.t2}</b><span class="amber">${ic("clock", "xs")} ${t.t2s}</span></span>${ic("chevron-right")}</div>
+      <div class="trip"><span class="thumb">${ph("dress")}</span><span class="t"><b>${t.t3}</b><span>${ic("user", "xs")} ${t.t3s}</span></span>${ic("chevron-right")}</div>
+    </div>
+    <div class="btn outline">${ic("plus")}${t.logOut}</div>
+    <div class="chores-mini">${t.choresH}<span>${t.choresV} ${ic("chevron-right", "xs")}</span></div></div>`;
+  return frame(lang, t, behind, { tab: 2, size: "m2", overlay: sheet });
+}
+
+// 3a. Staff: the Lapor sheet with Pakaian keluar and, when something is out, Pakaian di luar.
+function s3a() {
+  const sheet = `<div class="dim"></div><div class="sheet" style="top:120px"><div class="grab"></div><h3>Laporan &amp; Usulan</h3>
+    <p class="lead">Catat makanan masuk, pakaian keluar, atau lapor kerusakan.</p>
+    <div class="bigrow"><span class="circle">${ic("cooking-pot")}</span><span class="t"><b>Makanan masuk</b><span>Foto, simpan di mana, kedaluwarsa</span></span>${ic("chevron-right")}</div>
+    <div class="bigrow"><span class="circle">${ic("shirt")}</span><span class="t"><b>Pakaian keluar</b><span>Laundry, dry clean, penjahit, dipinjam</span></span>${ic("chevron-right")}</div>
+    <div class="grp">Pakaian di luar (2)</div>
+    <div class="list">
+      <div class="trip"><span class="thumb">${ph("bag")}</span><span class="t"><b>Laundry Bu Ani</b><span>12 pcs · sudah 2 hari</span></span><span class="mini">Terima kembali</span></div>
+      <div class="trip amber"><span class="thumb">${ph("fold")}</span><span class="t"><b>Dry clean</b><span class="amber">${ic("clock", "xs")} 3 pcs · sudah 6 hari, biasanya 3</span></span><span class="mini">Terima kembali</span></div>
+    </div>
+    <div class="bigrow">${ic("wrench")}<span class="t"><b style="font-size:14px">Lapor kerusakan</b><span>Foto dan ruangannya</span></span>${ic("chevron-right")}</div>
+    <div class="note">${ic("message", "xs")} Kirim masukan</div></div>`;
+  return staffFrame(staffList, { overlay: sheet, fab: false });
+}
+
+// 3b. Staff: Pakaian keluar, the form.
+function s3b() {
+  const sheet = `<div class="dim"></div><div class="sheet"><div class="grab"></div><h3>Pakaian keluar</h3>
+    <div class="label">Ke mana?</div>
+    <div class="chips"><span class="chip on">Laundry</span><span class="chip">Dry clean</span><span class="chip">Penjahit</span><span class="chip">Dipinjam</span><span class="chip">Lainnya</span></div>
+    <div class="label">Nama laundry <em>(boleh dikosongkan)</em></div>
+    <div class="field">Laundry Bu Ani<span>${ic("chevron-down", "xs")}</span></div>
+    <div class="chips"><span class="chip">Laundry Bu Ani</span><span class="chip">Laundry Kilat</span></div>
+    <div class="label">Jumlah</div>
+    <div class="stepper"><span class="b">${ic("minus")}</span><span class="v">12 <i>pcs</i></span><span class="b">${ic("plus")}</span></div>
+    <div class="label">Foto pakaian yang keluar</div>
+    <div class="shots">${ph("bag")}<span class="addph">${ic("camera")}Tambah</span></div>
+    <div class="legend">Foto tumpukan atau isi kantong.</div>
+    <div class="label">Dari lemari mana? <em>(boleh dikosongkan)</em></div>
+    <div class="field">LT2 · Kamar Utama · Ruang Ganti<span>${ic("chevron-down", "xs")}</span></div>
+    <div class="btn primary">${ic("check")}Simpan</div></div>`;
+  return staffFrame("", { overlay: sheet, fab: false });
+}
+
+// 4a. Staff: Terima kembali, fewer came back.
+function s4a() {
+  const sheet = `<div class="dim"></div><div class="sheet"><div class="grab"></div><h3>Terima kembali</h3>
+    <p class="lead">Laundry Bu Ani</p>
+    <div class="trip" style="border:1px solid var(--line);border-radius:12px"><span class="thumb">${ph("bag")}</span><span class="t"><b>Dikirim 12 pcs</b><span>Sel 17 Nov · Sari</span></span></div>
+    <div class="label">Jumlah kembali</div>
+    <div class="stepper"><span class="b">${ic("minus")}</span><span class="v">11 <i>pcs</i></span><span class="b">${ic("plus")}</span></div>
+    <div class="warn">${ic("alert")}<span>Kurang 1. Sisanya dicatat belum kembali.</span></div>
+    <div class="label">Foto pakaian yang kembali</div>
+    <div class="shots">${ph("fold")}<span class="addph">${ic("camera")}Tambah</span></div>
+    <div class="btn primary">${ic("check")}Simpan</div>
+    <div class="note" style="justify-content:center">${ic("user", "xs")} Pemilik rumah akan melihat kalau ada yang kurang.</div></div>`;
+  return staffFrame("", { size: "", overlay: sheet, fab: false });
+}
+
+// 4b. Staff: after saving. The bag stays out with what's missing; Undo for a few seconds.
+function s4b() {
+  const sheet = `<div class="dim"></div><div class="sheet" style="top:250px"><div class="grab"></div><h3>Laporan &amp; Usulan</h3>
+    <div class="bigrow"><span class="circle">${ic("shirt")}</span><span class="t"><b>Pakaian keluar</b><span>Laundry, dry clean, penjahit, dipinjam</span></span>${ic("chevron-right")}</div>
+    <div class="grp">Pakaian di luar (2)</div>
+    <div class="list">
+      <div class="trip amber"><span class="thumb">${ph("bag")}</span><span class="t"><b>Laundry Bu Ani</b><span class="amber">${ic("alert", "xs")} 1 pcs belum kembali</span></span><span class="mini">Terima kembali</span></div>
+      <div class="trip amber"><span class="thumb">${ph("fold")}</span><span class="t"><b>Dry clean</b><span class="amber">${ic("clock", "xs")} 3 pcs · sudah 6 hari, biasanya 3</span></span><span class="mini">Terima kembali</span></div>
+    </div></div>`;
+  const toast = `<div class="toast" style="z-index:4">${'<span class="ok">' + ic("circle-check") + "</span>"}<span>Tercatat: 11 dari 12 pcs kembali</span><b>${ic("undo", "xs")}Batalkan</b></div>`;
+  return staffFrame(staffList, { overlay: sheet + toast, fab: false });
+}
+
+// 5. Owner: Today's amber lines, and the short bag's sheet with the three answers.
+function s5(lang) {
+  const t = T[lang];
+  const behind = `<div class="quiet amber">${ic("alert")}<span>${t.lineMissing}</span>${ic("chevron-right")}</div>
+    <div class="quiet amber">${ic("clock")}<span>${t.lineOver}</span>${ic("chevron-right")}</div>`;
+  const sheet = `<div class="dim"></div><div class="sheet" style="top:168px"><div class="grab"></div><h3>${t.bagTitle}</h3>
+    <p class="lead">${ic("washing-machine", "xs")} ${t.bagSub}</p>
+    <div class="pairph"><div>${ph("bag")}${t.leftL}</div><div>${ph("fold")}${t.backL}</div></div>
+    <div class="stat"><div><b>12</b>${t.sOut}</div><div><b>11</b>${t.sBack}</div><div class="am"><b>1</b>${t.sStill}</div></div>
+    <div class="label">${t.q}</div>
+    <div class="answers">
+      <div class="btn outline">${ic("clock")}${t.a1}</div>
+      <div class="btn outline">${ic("alert")}${t.a2}</div>
+      <div class="btn outline">${ic("pencil")}${t.a3}</div>
+    </div>
+    <div class="field" style="color:var(--muted)">${t.noteHint}</div></div>`;
+  return frame(lang, t, behind, { size: "m2", overlay: sheet });
+}
+
+// 6. Owner, PR B: a valuable piece and the closet's Valuable pieces group.
+function s6(lang) {
+  const t = T[lang];
+  const behind = `<div class="seg"><span>${t.pills[0]}</span><span class="on">${t.pills[1]}</span><span>${t.pills[2]}</span></div>
+    <div class="grp" style="margin-top:6px">${t.valuable}</div>
+    <div class="list">${t.v.map(([n, s, a]) => `<div class="trip"><span class="thumb">${ph(a ? "dress" : "")}</span><span class="t"><b>${n}</b><span class="${a}">${s}</span></span>${ic("chevron-right")}</div>`).join("")}</div>`;
+  const sheet = `<div class="dim"></div><div class="sheet" style="top:270px"><div class="grab"></div><h3>${t.pieceTitle}</h3>
+    ${ph("dress", "hero")}
+    <div class="facts">
+      <div>${t.whose}<b>${t.whoseV}</b></div>
+      <div>${t.where}<b>${t.whereV}</b></div>
+      <div>${t.status}<b class="amber">${ic("clock", "xs")}${t.statusV}</b></div>
+      <div>${t.bag}<b>${t.bagV} ${ic("chevron-right", "xs")}</b></div>
+    </div>
+    <div class="link">${ic("pencil", "xs")}${t.editPiece}</div></div>`;
+  return frame(lang, t, behind, { tab: 2, size: "m2", overlay: sheet });
+}
+
+// 7. What's new: owners (EN / ID).
+function s7(lang) {
+  const t = T[lang];
+  const inner = `<div class="card"><span class="kicker">${ic("sparkles", "xs")} ${t.wnKicker}</span><h4>${t.wnTitle}</h4>
+    <ol>${t.wn.map((x) => `<li>${x}</li>`).join("")}</ol>
+    <div class="btns"><span class="btn outline">${t.gotIt}</span><span class="btn primary">${t.showMe}</span></div></div>`;
+  return frame(lang, t, inner, { tab: 2 });
+}
+
+// 8. What's new: staff (ID only), and a spot's photo retaken by staff.
+function s8a() {
+  const inner = `<div class="card"><span class="kicker">${ic("sparkles", "xs")} Yang baru</span><h4>Pakaian keluar dan kembali</h4>
+    <ol>
+      <li>Pakaian ke laundry atau dry clean? Ketuk <b>+ Lapor</b>, lalu <b>Pakaian keluar</b>, isi jumlahnya, lalu foto.</li>
+      <li>Saat pakaian kembali, ketuk <b>Terima kembali</b>, hitung, lalu foto.</li>
+      <li>Lihat foto setiap rak di lemari pakaian supaya tahu tempatnya.</li>
+    </ol>
+    <div class="btns"><span class="btn primary">Mengerti</span></div></div>${staffList}`;
+  return staffFrame(inner);
+}
+function s8b() {
+  const sheet = `<div class="dim"></div><div class="sheet" style="top:150px"><div class="grab"></div><h3>Rak A</h3>
+    <p class="lead">${ic("map-pin", "xs")} LT2 · Kamar Utama · Ruang Ganti</p>
+    ${ph("fold", "hero")}
+    <div class="legend" style="text-align:center">Foto 12 Nov · Sari</div>
+    <div class="btn outline">${ic("rotate")}Foto ulang</div>
+    <div class="legend" style="text-align:center">Foto bagian ini setelah dirapikan.</div></div>`;
+  return staffFrame(staffList, { overlay: sheet, fab: false });
+}
+
+const SCREENS = [
+  ["1. Chores → Rooms", "The Out now line on top (only when something is out; D4 A). The walk-in closet sits inside the Master Bedroom (Phase 168) with the hanger icon and \"3 out\" (D7 A, D9 A).", (l) => s1(l), true],
+  ["2. The closet's sheet", "Spots are saved on the room with a photo (D6 A); Out now lists the bags that name this closet, overdue in amber with \"usually 3\" learned from the household's history (D5 A). Owners can log a bag here too (photo optional for owners). The room's chores follow, as today.", (l) => s2(l), true],
+  ["3. Staff: Lapor and Pakaian keluar", "Bahasa Indonesia only. Pakaian keluar sits second in the existing Lapor sheet; Pakaian di luar appears only when something is out. The form: where, the place's name (last names used as chips), a count, at least one photo (D1 A, D3 A), and which closet (optional).", null, false, [s3a, s3b]],
+  ["4. Staff: Terima kembali, one short", "The stepper starts at what's still out. Fewer back: amber \"Kurang 1\"; the bag stays open with 1 pcs belum kembali (D2 A). Staff can't close it as missing. Undo for a few seconds, as every toast.", null, false, [s4a, s4b]],
+  ["5. Owner: Today and a short bag", "Today shows amber lines only when something needs a look. The bag's sheet puts the photos that left and came back side by side; only owners answer (D2 A, D3 A).", (l) => s5(l), true],
+  ["6. Owner: valuable pieces (PR B)", "Optional (D8 A): photo, name, whose, spot. The status comes from the bags: this one went out with the dry clean bag.", (l) => s6(l), true],
+  ["7. What's new: owners", "Shown once, in the owner's language (D11 A ships it with PR A).", (l) => s7(l), true],
+  ["8. Staff: What's new, and retaking a spot's photo", "The staff card (Indonesian). Staff open a spot from a chore's room tag and can retake its photo after tidying; they can't add, rename or delete spots (D6 A).", null, false, [s8a, s8b]],
+];
+
+document.getElementById("screens").innerHTML = SCREENS.map(([h, p, fn, owner, staff]) =>
+  `<section class="screen"><h2>${h}</h2><p>${p}</p><div class="pair">${owner ? fn("en") + fn("id") : staff.map((f) => f()).join("")}</div></section>`
+).join("");
+</script>
+</body>
+</html>
