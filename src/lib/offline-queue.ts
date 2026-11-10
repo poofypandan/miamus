@@ -52,8 +52,12 @@ export interface ChoreFinishJob {
   /** Null while the day is still virtual (see materialiseChoreOccurrence). */
   rowId: string | null;
   assignedTo: string | null;
-  before: string;
-  after: string;
+  /**
+   * Both, or (an admin finishing their own chore, Phase 163; migrations/136)
+   * neither. Staff saves always carry both.
+   */
+  before: string | null;
+  after: string | null;
   completedBy: string | null;
   /** When it was finished, not when the signal came back. */
   completedAt: string;
@@ -272,7 +276,7 @@ export function jobPhotos(job: OutboxJob): string[] {
     case "food":
       return job.input.photo_url ? [job.input.photo_url] : [];
     case "chore":
-      return [job.before, job.after];
+      return [job.before, job.after].filter((url): url is string => !!url);
   }
 }
 

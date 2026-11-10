@@ -419,3 +419,44 @@ export function occurrencesForStaff(
     (o) => !o.task.assigned_to || o.task.assigned_to === staffId
   );
 }
+
+/**
+ * An admin's own chores on the day being viewed: "My tasks" on Today (Phase
+ * 163, D2 A).
+ *
+ * Assigned to their roster row (migrations/106), plus an unassigned chore
+ * they finished themselves, which lands on them as it does in Chores
+ * progress, so finishing never makes a row leave the card. Unclaimed chores
+ * nobody has done stay in the household's list. Cancelled days are left out.
+ *
+ * Carried-over first (oldest first), then the day's open ones in the order
+ * given (the agenda's own: untimed, then by time), then the finished ones.
+ * Empty without a roster row: an admin still being looked up is nobody yet,
+ * rather than briefly everybody.
+ */
+export function myOccurrences(
+  occurrences: ChoreOccurrence[],
+  memberId: string | null | undefined
+): ChoreOccurrence[] {
+  if (!memberId) return [];
+  const mine = occurrences.filter(
+    (o) =>
+      o.status !== "cancelled" &&
+      (o.task.assigned_to === memberId ||
+        (!o.task.assigned_to && o.status === "completed" && o.task.completed_by === memberId))
+  );
+  const carried = mine.filter((o) => o.overdue && o.status !== "completed").sort((a, b) => a.date.localeCompare(b.date));
+  const open = mine.filter((o) => !o.overdue && o.status !== "completed");
+  const done = mine.filter((o) => o.status === "completed");
+  return [...carried, ...open, ...done];
+}
+
+/**
+ * Whether "My tasks" may finish chores on the day being viewed (D4 A): today
+ * (and the carried-over chores it shows) yes; a future day is read-only so a
+ * chore isn't ticked off before it's due; a past day is read-only like the
+ * rest of a past Today.
+ */
+export function myTasksMode(viewing: string, today: string): "today" | "future" | "past" {
+  return viewing === today ? "today" : viewing > today ? "future" : "past";
+}

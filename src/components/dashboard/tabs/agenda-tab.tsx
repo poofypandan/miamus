@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterPill } from "@/components/shared/filter-pill";
 import { OverdueSection } from "@/components/agenda/overdue-section";
+import { MyTasksCard } from "@/components/agenda/my-tasks-card";
+import { OwnerFinishSheet } from "@/components/chores/owner-finish-sheet";
 import { WeekPager } from "@/components/agenda/week-pager";
 import { WeekSummaryView } from "@/components/agenda/week-summary-view";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +27,8 @@ import { useAgendaRange } from "@/hooks/use-agenda-range";
 import { applyAgendaFilter, useAgendaFilter, type AgendaFilter } from "@/hooks/use-agenda-filter";
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
+import { useFinishMyChore } from "@/hooks/use-finish-my-chore";
+import { myOccurrences, myTasksMode, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
@@ -61,9 +65,10 @@ import type { HouseholdTask } from "@/types/database";
  * the thing this tab exists for — below two screens of pictures. Those are
  * about the dogs rather than about the day, and they live on the Pets tab.
  *
- * Owner-facing, in the language the owner chose (Phase 149). Every
- * row here is tappable only as far as reading and editing goes: completing a
- * chore is staff work and lives on their phones.
+ * Owner-facing, in the language the owner chose (Phase 149). The
+ * household's rows are tappable only as far as reading and editing goes;
+ * since Phase 163 an admin's OWN chores sit apart, in "My tasks" above the
+ * list, where they can be finished without switching to the staff view.
  */
 export function AgendaTab() {
   const {
@@ -78,6 +83,8 @@ export function AgendaTab() {
     inventoryItems,
     foodItems,
     inventoryAlerts,
+    memberProfile,
+    pendingIds,
   } = useHousehold();
   const householdName = useHouseholdName();
   // "Who lives here?" (Phase 162): with pets off, Today says nothing about
@@ -91,10 +98,26 @@ export function AgendaTab() {
   const { allProfiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const roomName = useLocationName();
-  const chores = useChoreOccurrences();
+  const allChores = useChoreOccurrences();
   const today = useToday();
   const dateStr = formatDateLocal(selectedDate);
   const label = dayLabel(selectedDate, today, locale);
+
+  // My tasks (Phase 163): this admin's own chores on the day, lifted out of
+  // the household's list so none shows twice (D1 A). Without a roster row
+  // (still loading, or none) the card is empty and the list is as before.
+  const mine = useMemo(() => myOccurrences(allChores, memberProfile?.id), [allChores, memberProfile?.id]);
+  const chores = useMemo(() => {
+    if (mine.length === 0) return allChores;
+    const keys = new Set(mine.map((o) => o.key));
+    return allChores.filter((o) => !keys.has(o.key));
+  }, [allChores, mine]);
+  const myMode = myTasksMode(dateStr, formatDateLocal(today));
+  const { finish } = useFinishMyChore();
+  // Held as a key, as the staff list does: occurrences are rebuilt on every
+  // write, so a captured one would go stale the moment the chore is saved.
+  const [myOpenKey, setMyOpenKey] = useState<string | null>(null);
+  const myOpen = useMemo(() => mine.find((o) => o.key === myOpenKey) ?? null, [mine, myOpenKey]);
 
   const [range, setRange] = useAgendaRange();
   const week = useAgendaWeek(selectedDate);
@@ -188,6 +211,9 @@ export function AgendaTab() {
         locationName={roomName(entry.occurrence.task.location_id, entry.occurrence.task.spot)}
         assigneeName={
           entry.occurrence.task.assigned_to ? staffName(entry.occurrence.task.assigned_to) : null
+        }
+        completedByName={
+          entry.occurrence.task.completed_by ? staffName(entry.occurrence.task.completed_by) : null
         }
         onPress={() => {
           // The template, not the occurrence: editing a repeat from any of its
@@ -327,6 +353,20 @@ export function AgendaTab() {
           </div>
         )}
 
+        {/* My tasks (Phase 163): below what waits on a decision, above the
+            household's day. Renders nothing on a day with none of mine. */}
+        {range === "day" && (
+          <MyTasksCard
+            occurrences={mine}
+            mode={myMode}
+            dayLabel={label}
+            roomName={roomName}
+            pendingIds={pendingIds}
+            onFinish={async (occurrence) => (await finish(occurrence)) !== null}
+            onOpen={(occurrence) => setMyOpenKey(occurrence.key)}
+          />
+        )}
+
         {range === "day" ? (
           <>
             <h2 className="text-sm font-semibold text-gray-900">
@@ -390,6 +430,11 @@ export function AgendaTab() {
                   <Plus /> {t("Add Chore", "Tambah Tugas")}
                 </Button>
               </EmptyState>
+            ) : allEntries.length === 0 && mine.length > 0 ? (
+              // Everything on this day is mine, and it is all in the card.
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                {t("Nothing else on this day.", "Tidak ada yang lain hari ini.")}
+              </p>
             ) : entries.length === 0 && filter !== "all" ? (
               // Filtered to nothing, on a day that has other things: say what
               // the filter hid, rather than "Nothing scheduled".
@@ -481,6 +526,18 @@ export function AgendaTab() {
           </>
         )}
       </div>
+
+      <OwnerFinishSheet
+        occurrence={myOpen}
+        mode={myMode}
+        open={!!myOpen}
+        onOpenChange={(next) => !next && setMyOpenKey(null)}
+        onEdit={(occurrence: ChoreOccurrence) => {
+          setEditing(occurrence.row ?? occurrence.template);
+          setEditingDate(occurrence.date);
+          setEditorOpen(true);
+        }}
+      />
 
       <ChoreEditorDialog
         open={editorOpen}
