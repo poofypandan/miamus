@@ -1,6 +1,8 @@
 # Phase 168 — Rooms inside rooms (suites)
 
-Status: **plan for the owner's decision.** Plan and mockup only; no app code.
+Status: **decided: D1–D8 all A. The owner delegated to the recommendations,
+2026-11-10** (the owner can still change any of them). PR A (migration 142,
+by-hand editing, every label) is being built.
 Mockups: `docs/mockups/phase-168-suites.html` (open in a browser, phone
 width). Builds on Phase 158 (`docs/phase-158-rooms-plan.md`, migration 129)
 and Phase 159 (repairs, migration 130). Migration **142** would be next
@@ -319,6 +321,9 @@ Additive, no new column and no new table.
 - Kakak may create a room inside a room.
 
 ## Decisions for the owner
+
+**Decided 2026-11-10: A for every decision (owner delegated to the
+recommendations).**
 
 - **D1 — How to segment.** **A (recommended):** a room can have rooms inside
   it, one level deep (floor → room → room inside → spot). B: a "suite" label
