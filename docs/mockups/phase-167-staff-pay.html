@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff pay mockups</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --okbg:rgba(16,185,129,.06); --okline:rgba(16,185,129,.3); --amber:#92400e; --amberbg:#fffbeb; --amberline:#fde68a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1100px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0 0 6px; color:var(--muted); max-width:720px; }
+  section.screen { max-width:1100px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:680px; }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:740px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone.tall { height:1060px; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:40px; }
+  .brand { font-weight:600; font-size:17px; display:flex; gap:6px; align-items:center; }
+  .mark { width:24px; height:24px; display:block; }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:6px 12px; font-size:13px; color:var(--muted); font-weight:500; white-space:nowrap; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .seg.sm span { padding:4px 10px; font-size:12px; }
+  .nav { background:#fff; border-bottom:1px solid var(--line); flex:none; display:flex; align-items:center; gap:6px; height:48px; padding:0 10px; font-weight:600; font-size:16px; }
+  .nav .ic { color:var(--ink2); }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .ic.xs { width:12px; height:12px; }
+  .ic.lg { width:22px; height:22px; }
+  .quiet { display:flex; align-items:center; gap:8px; min-height:36px; padding:0 4px; font-size:13.5px; color:var(--ink2); }
+  .quiet span { flex:1; }
+  .quiet.amber { color:var(--amber); font-weight:500; }
+  .quiet.amber .ic { color:#b45309; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  .card h3 { margin:0; font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; }
+  .card h3 small { margin-left:auto; font-weight:500; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:3px; }
+  .grp { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:2px 2px -4px; }
+  .list { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+  .li { display:flex; align-items:center; gap:10px; padding:8px 12px; border-top:1px solid var(--line); min-height:52px; }
+  .li:first-child { border-top:0; }
+  .li .lic { width:32px; height:32px; border-radius:999px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; font-weight:600; font-size:13px; color:var(--ink2); }
+  .li .lic.sq { border-radius:8px; }
+  .li .lic .ic { color:var(--ink2); }
+  .li.new { background:#fafafa; }
+  .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .t > b { font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .t > span { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; }
+  .t > span.ok { color:var(--ok); font-weight:500; }
+  .t > span.ok .ic { color:var(--ok); }
+  .t > span.amber { color:var(--amber); font-weight:500; }
+  .t > span.amber .ic { color:#b45309; }
+  .amt { font-variant-numeric:tabular-nums; font-size:13px; font-weight:500; white-space:nowrap; }
+  .kv { display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--ink2); min-height:26px; gap:8px; }
+  .kv b { font-weight:500; color:var(--ink); text-align:right; font-variant-numeric:tabular-nums; }
+  .kv.total { border-top:1px solid var(--line); padding-top:8px; font-weight:600; }
+  .kv.total b { font-weight:600; font-size:15px; }
+  .hint { font-size:11.5px; color:var(--muted); }
+  .lockline { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); }
+  .lockline.c { justify-content:center; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; border-radius:12px; font-weight:600; font-size:14px; }
+  .btn.primary { background:var(--primary); color:#fff; }
+  .btn.primary .ic { color:#fff; }
+  .btn.outline { border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:500; }
+  .btn.sm { min-height:36px; font-size:13px; border-radius:10px; padding:0 12px; }
+  .link { font-size:13px; color:var(--ink2); font-weight:500; display:flex; align-items:center; gap:4px; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:56px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:8px 16px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+  .sheet.low { top:120px; }
+  .sheet > * { flex:none; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto 2px; }
+  .sheet h3 { margin:0; font-size:17px; text-align:center; }
+  .sheet .lead { margin:-4px 0 0; font-size:13px; color:var(--muted); text-align:center; }
+  .label { font-size:12.5px; font-weight:600; color:var(--ink2); margin-bottom:-4px; }
+  .label em { font-style:normal; font-weight:400; color:var(--muted); }
+  .money { display:flex; align-items:center; gap:8px; border:1px solid var(--ink); border-radius:12px; min-height:48px; padding:0 12px; font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .money i { font-style:normal; color:var(--muted); font-weight:500; font-size:15px; }
+  .money.soft { border-color:var(--line); }
+  .field { border:1px solid var(--line); border-radius:12px; min-height:44px; padding:10px 12px; font-size:14px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .field span { color:var(--muted); font-size:13px; display:flex; align-items:center; gap:4px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { border:1px solid var(--line); border-radius:999px; padding:6px 11px; font-size:12.5px; color:var(--ink2); background:#fff; }
+  .chip.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .shot { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .shot span { display:flex; align-items:center; justify-content:center; gap:6px; border:1px dashed #d1d5db; border-radius:12px; min-height:46px; font-size:12.5px; color:var(--ink2); }
+  .toggle { width:42px; height:26px; border-radius:999px; background:var(--primary); position:relative; flex:none; }
+  .toggle::after { content:""; position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:999px; background:#fff; }
+  .meter { height:8px; border-radius:99px; background:var(--track); overflow:hidden; }
+  .meter i { display:block; height:100%; background:var(--primary); border-radius:99px; }
+  .pill { font-size:11px; border-radius:999px; padding:2px 8px; background:var(--track); color:var(--ink2); font-weight:500; white-space:nowrap; }
+  .pill.ok { background:var(--okbg); color:var(--ok); border:1px solid var(--okline); }
+  .pill.mute { color:var(--muted); }
+  .box { width:22px; height:22px; border-radius:6px; border:1.5px solid #9ca3af; flex:none; display:flex; align-items:center; justify-content:center; }
+  .box.on { background:var(--primary); border-color:var(--primary); }
+  .box.on .ic { color:#fff; width:14px; height:14px; }
+  .note { background:var(--track); border-radius:10px; padding:8px 10px; font-size:12px; color:var(--ink2); display:flex; gap:6px; }
+  .note .ic { margin-top:1px; }
+  .toast { position:absolute; left:14px; right:14px; bottom:74px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:center; gap:8px; padding:12px; font-size:13.5px; }
+  .toast span { flex:1; }
+  .toast .okc { color:var(--ok); }
+  .toast b { display:flex; align-items:center; gap:4px; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-weight:600; }
+  .push { position:absolute; left:10px; right:10px; top:28px; z-index:5; background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 30px -10px rgba(17,24,39,.35); padding:10px 12px; display:flex; gap:10px; }
+  .push .mark { width:34px; height:34px; flex:none; }
+  .push .pt { flex:1; min-width:0; font-size:13px; }
+  .push .pt div { display:flex; justify-content:space-between; color:var(--muted); font-size:11.5px; }
+  .push .pt b { display:block; font-size:13.5px; }
+  .masked { letter-spacing:2px; color:var(--muted); }
+  .pinpad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:0 18px; }
+  .pinpad span { height:56px; border-radius:999px; background:var(--track); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:500; }
+  .pinpad span.blank { background:none; }
+  .dots { display:flex; justify-content:center; gap:14px; }
+  .dots i { width:14px; height:14px; border-radius:99px; border:1.5px solid var(--ink); }
+  .dots i.on { background:var(--ink); }
+  .fab { position:absolute; right:16px; bottom:76px; z-index:1; background:var(--primary); color:#fff; border-radius:999px; padding:12px 18px; font-weight:600; display:flex; gap:6px; align-items:center; }
+  .fab .ic { color:#fff; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></symbol>
+  <symbol id="i-calendar-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 4.2A2 2 0 0 0 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 1.82-1.18"/><path d="M21 15.5V6a2 2 0 0 0-2-2H9.5"/><path d="M16 2v4"/><path d="M3 10h7"/><path d="M21 10h-5.5"/><path d="m2 2 20 20"/></symbol>
+  <symbol id="i-calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.05Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol>
+  <symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-cooking-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol>
+  <symbol id="i-calendar-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></symbol>
+  <symbol id="i-file-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17a2 2 0 0 1-2 2H6.83a2 2 0 0 0-1.41.59l-2.2 2.2A.71.71 0 0 1 2 21.29V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="i-plus-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></symbol>
+  <symbol id="mark" viewBox="0 0 512 512"><rect width="512" height="512" rx="114.5" fill="#171717"/><polyline points="112,214 256,104 400,214" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,400 152,262 256,354 360,262 360,400" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="page">
+  <h1>Phase 167 — Staff pay, THR and days off</h1>
+  <p>Phone-width mockups for <code>docs/phase-167-staff-pay-thr-plan.md</code>, drawn with the chosen options (D1–D14 A). Decided 2026-11-10: the owner delegated to the recommendations. Owner screens: English left, Bahasa Indonesia right. Staff screens: Bahasa Indonesia only. "Today" is Tuesday 10 November 2026 unless a screen says otherwise.</p>
+  <p>Example household: Sari (cleaning, live-in, since 14 Jul 2025, THR for Lebaran), Budi (driver, since 1 Jun 2026, THR for Lebaran), Maria (cook, since 3 Feb 2024, THR for Natal). Names and amounts are made up.</p>
+</header>
+
+<main id="screens"></main>
+
+<script>
+const ic = (id, cls = "") => `<svg class="ic ${cls}"><use href="#i-${id}"/></svg>`;
+
+const T = {
+  en: {
+    tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    back: "Household", title: "Pay and days off",
+    thrLine: "THR: Maria by Fri 18 Dec",
+    paydayLine: "Next payday: Wed 25 Nov · Sari and Maria",
+    people: [
+      ["S", "Sari", "Rp 3.200.000 a month · payday 25th", "ok", "Paid for Oct"],
+      ["B", "Budi", "Rp 4.000.000 a month · payday 1st", "ok", "Paid for Nov"],
+      ["M", "Maria", "Rp 2.800.000 a month · payday 25th", "amber", "THR due by Fri 18 Dec"],
+    ],
+    notSet: "Not set up yet", wati: "Wati", watiSub: "Part-time · tap to set up",
+    seeSwitch: "Staff can see their own pay",
+    seeSub: "After entering their PIN. Never other people's.",
+    ownersOnly: "Only owners see pay. Staff see their own after entering their PIN.",
+    legal: "Not legal advice. The law (UU 2/2026) leaves the amounts to what you and your staff agree.",
+    // setup
+    setupTitle: "Sari's pay", setupLead: "What you agreed with Sari. You can change it any time.",
+    monthly: "Monthly pay", weekly: "Weekly pay", payday: "Payday", paydayV: "25th of each month",
+    paidBy: "Paid by", cash: "Cash", transfer: "Transfer",
+    started: "Started working", startedV: "14 Jul 2025",
+    thrFor: "THR for", holidays: ["Lebaran (Idul Fitri)", "Natal", "Nyepi", "Waisak", "Imlek", "Another date"],
+    dayOff: "Weekly day off", days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    leaveDays: "Leave days a year", leaveDaysV: "12 days", save: "Save",
+    // person page
+    pTitle: "Sari", pay: "Pay", agreed: "Rp 3.200.000 a month · payday 25th · transfer",
+    markPaidBtn: "Mark November paid", history: [
+      ["Oct 2026", "Rp 3.200.000", "Received 25 Oct", "ok"],
+      ["Sep 2026", "Rp 3.200.000", "Received 25 Sep", "ok"],
+      ["Aug 2026 · bonus", "Rp 250.000", "Not confirmed yet", ""],
+    ],
+    addPayment: "Add a payment",
+    thr: "THR", thrSum: "Lebaran · about Wed 10 Mar 2027", thrPay: "Pay by Wed 3 Mar · Rp 3.200.000",
+    thrOpen: "Open",
+    daysOff: "Days off", dayOffV: "Weekly day off: Sunday",
+    left: "8 of 12 days left", year: "Work year from 14 Jul",
+    leaves: [["27–28 Aug", "Annual · 2 days", ""], ["15–16 Sep", "Sick · 2 days", "Not counted"], ["2–3 Oct", "Annual · 2 days", ""]],
+    agreedT: "What you've agreed", agreedSum: "6 of 9", agreedOpen: "Open checklist",
+    // mark paid
+    mpTitle: "Pay for November", mpLead: "Sari · agreed Rp 3.200.000",
+    amount: "Amount", paidOn: "Paid on", paidOnV: "Wed 25 Nov 2026",
+    receipt: "Receipt", optional: "(optional)", takePhoto: "Take photo", choose: "Choose photo",
+    note: "Note", noteO: "(optional, owners only)", notePh: "For example: paid early for Lebaran shopping",
+    markPaid: "Mark paid", mpLock: "Only owners see amounts, receipts and notes.",
+    toast: "Paid: Sari · November", undo: "Undo",
+    // THR
+    thrTitle: "THR for Budi", holiday: "Holiday", holidayV: "Lebaran · about Wed 10 Mar 2027",
+    payBy: "Pay by", payByV: "Wed 3 Mar 2027",
+    months: "Months worked", monthsV: "9 (since 1 Jun 2026)",
+    rule: "The usual rule", ruleV: "9 of 12 months × Rp 4.000.000",
+    ruleRes: "Rp 3.000.000",
+    explain: "The usual rule for companies (Permenaker 6/2016). For households, UU 2/2026 says THR is paid in money, as you agreed.",
+    learn: "Learn more", remind: "Remind me", remindV: "30 days before · Mon 1 Feb",
+    saveThr: "Save THR", markThr: "Mark THR paid",
+    // push + today
+    pushNow: "now", pushTitle: "THR reminder",
+    pushBody: "THR for Maria is due by Fri 18 Dec (Natal).",
+    pushTitle2: "Payday", pushBody2: "Payday today: Sari and Maria.",
+    todayH: "Today", dayW: "Day", weekW: "Week",
+    tLines: [["gift", "THR: Maria by Fri 18 Dec", "amber"], ["wallet", "Payday today: Sari and Maria", ""]],
+    rows: [["8:00 AM", "Mop the terrace", "Sari"], ["11:00 AM", "Pick up the kids", "Budi"], ["Anytime", "Cook dinner", "Maria"]],
+    pushNote: "Wed 25 Nov, 7:10 AM",
+    // checklist
+    clTitle: "What you've agreed", clLead: "Sari · this checklist helps you remember. It isn't a contract.",
+    cl: [
+      [1, "Pay and payday", "Set in Sari's pay"],
+      [1, "Work and hours", "Ticked 14 Jul 2025"],
+      [1, "Weekly day off and leave", "Set in Sari's pay"],
+      [1, "THR", "Lebaran"],
+      [1, "Written down and signed by both of you, each with a copy", "Ticked 14 Jul 2025"],
+      [0, "Reported to the RT/RW", "The law asks this of households (Pasal 19)"],
+      [1, "BPJS Kesehatan", "PBI (paid by the government)"],
+      [0, "BPJS Ketenagakerjaan (JKK and JKM)", "Paid by the household (Pasal 16)"],
+      [1, "One month's notice", "Ticked 14 Jul 2025"],
+    ],
+    addBill: "Add as a bill", clFoot: "No ID, BPJS or bank numbers or documents are stored.",
+  },
+  id: {
+    tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    back: "Rumah", title: "Gaji dan cuti",
+    thrLine: "THR: Maria paling lambat Jum 18 Des",
+    paydayLine: "Gajian berikutnya: Rab 25 Nov · Sari dan Maria",
+    people: [
+      ["S", "Sari", "Rp 3.200.000 per bulan · gajian tgl 25", "ok", "Oktober sudah dibayar"],
+      ["B", "Budi", "Rp 4.000.000 per bulan · gajian tgl 1", "ok", "November sudah dibayar"],
+      ["M", "Maria", "Rp 2.800.000 per bulan · gajian tgl 25", "amber", "THR paling lambat Jum 18 Des"],
+    ],
+    notSet: "Belum diatur", wati: "Wati", watiSub: "Paruh waktu · ketuk untuk mengatur",
+    seeSwitch: "Staf bisa melihat gajinya sendiri",
+    seeSub: "Setelah memasukkan PIN. Tidak pernah milik orang lain.",
+    ownersOnly: "Hanya pemilik yang melihat gaji. Staf melihat miliknya sendiri setelah memasukkan PIN.",
+    legal: "Bukan nasihat hukum. UU 2/2026 menyerahkan jumlahnya pada kesepakatan Anda dan staf.",
+    setupTitle: "Gaji Sari", setupLead: "Yang sudah disepakati dengan Sari. Bisa diubah kapan saja.",
+    monthly: "Gaji per bulan", weekly: "Gaji per minggu", payday: "Tanggal gajian", paydayV: "Tiap tanggal 25",
+    paidBy: "Cara bayar", cash: "Tunai", transfer: "Transfer",
+    started: "Mulai bekerja", startedV: "14 Jul 2025",
+    thrFor: "THR untuk", holidays: ["Lebaran (Idul Fitri)", "Natal", "Nyepi", "Waisak", "Imlek", "Tanggal lain"],
+    dayOff: "Libur mingguan", days: ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"],
+    leaveDays: "Jumlah cuti per tahun", leaveDaysV: "12 hari", save: "Simpan",
+    pTitle: "Sari", pay: "Gaji", agreed: "Rp 3.200.000 per bulan · gajian tgl 25 · transfer",
+    markPaidBtn: "Tandai gaji November sudah dibayar", history: [
+      ["Okt 2026", "Rp 3.200.000", "Diterima 25 Okt", "ok"],
+      ["Sep 2026", "Rp 3.200.000", "Diterima 25 Sep", "ok"],
+      ["Agu 2026 · bonus", "Rp 250.000", "Belum dikonfirmasi", ""],
+    ],
+    addPayment: "Tambah pembayaran",
+    thr: "THR", thrSum: "Lebaran · sekitar Rab 10 Mar 2027", thrPay: "Bayar paling lambat Rab 3 Mar · Rp 3.200.000",
+    thrOpen: "Buka",
+    daysOff: "Cuti dan libur", dayOffV: "Libur mingguan: Minggu",
+    left: "Sisa 8 dari 12 hari", year: "Tahun kerja sejak 14 Jul",
+    leaves: [["27–28 Agu", "Tahunan · 2 hari", ""], ["15–16 Sep", "Sakit · 2 hari", "Tidak dihitung"], ["2–3 Okt", "Tahunan · 2 hari", ""]],
+    agreedT: "Yang sudah disepakati", agreedSum: "6 dari 9", agreedOpen: "Buka daftar",
+    mpTitle: "Gaji November", mpLead: "Sari · disepakati Rp 3.200.000",
+    amount: "Jumlah", paidOn: "Dibayar tanggal", paidOnV: "Rab 25 Nov 2026",
+    receipt: "Bukti bayar", optional: "(opsional)", takePhoto: "Ambil foto", choose: "Pilih foto",
+    note: "Catatan", noteO: "(opsional, hanya pemilik)", notePh: "Misalnya: dibayar lebih awal untuk belanja Lebaran",
+    markPaid: "Tandai sudah dibayar", mpLock: "Hanya pemilik yang melihat jumlah, bukti bayar, dan catatan.",
+    toast: "Sudah dibayar: Sari · November", undo: "Batalkan",
+    thrTitle: "THR Budi", holiday: "Hari raya", holidayV: "Lebaran · sekitar Rab 10 Mar 2027",
+    payBy: "Bayar paling lambat", payByV: "Rab 3 Mar 2027",
+    months: "Lama bekerja", monthsV: "9 bulan (sejak 1 Jun 2026)",
+    rule: "Aturan yang lazim", ruleV: "9 dari 12 bulan × Rp 4.000.000",
+    ruleRes: "Rp 3.000.000",
+    explain: "Aturan yang lazim untuk perusahaan (Permenaker 6/2016). Untuk rumah tangga, UU 2/2026 menyebut THR dibayar dalam bentuk uang, sesuai kesepakatan.",
+    learn: "Pelajari", remind: "Ingatkan saya", remindV: "30 hari sebelumnya · Sen 1 Feb",
+    saveThr: "Simpan THR", markThr: "Tandai THR sudah dibayar",
+    pushNow: "sekarang", pushTitle: "Pengingat THR",
+    pushBody: "THR Maria paling lambat Jum 18 Des (Natal).",
+    pushTitle2: "Hari gajian", pushBody2: "Hari ini gajian: Sari dan Maria.",
+    todayH: "Hari ini", dayW: "Hari", weekW: "Minggu",
+    tLines: [["gift", "THR: Maria paling lambat Jum 18 Des", "amber"], ["wallet", "Hari gajian: Sari dan Maria", ""]],
+    rows: [["08.00", "Pel teras", "Sari"], ["11.00", "Jemput anak", "Budi"], ["Kapan saja", "Masak makan malam", "Maria"]],
+    pushNote: "Rab 25 Nov, 07.10",
+    clTitle: "Yang sudah disepakati", clLead: "Sari · daftar ini untuk membantu mengingat, bukan kontrak.",
+    cl: [
+      [1, "Gaji dan tanggal gajian", "Diatur di gaji Sari"],
+      [1, "Pekerjaan dan jam kerja", "Dicentang 14 Jul 2025"],
+      [1, "Libur mingguan dan cuti", "Diatur di gaji Sari"],
+      [1, "THR", "Lebaran"],
+      [1, "Ditulis dan ditandatangani berdua, masing-masing pegang salinan", "Dicentang 14 Jul 2025"],
+      [0, "Sudah dilapor ke RT/RW", "UU meminta ini dari rumah tangga (Pasal 19)"],
+      [1, "BPJS Kesehatan", "PBI (dibayar pemerintah)"],
+      [0, "BPJS Ketenagakerjaan (JKK dan JKM)", "Dibayar rumah tangga (Pasal 16)"],
+      [1, "Pemberitahuan satu bulan sebelum berhenti", "Dicentang 14 Jul 2025"],
+    ],
+    addBill: "Jadikan tagihan", clFoot: "Nomor KTP, BPJS, rekening bank, dan dokumen tidak disimpan.",
+  },
+};
+
+const tabbar = (L, on) => `<div class="tabbar">${["house", "paw-print", "clipboard-list", "cooking-pot", "house"].map((i, n) =>
+  `<span class="${n === on ? "on" : ""}">${ic(n === 0 ? "calendar-days" : i)}${L.tabs[n]}</span>`).join("")}</div>`;
+
+const nav = (title, back) => `<div class="nav">${ic("chevron-left")}<span style="font-weight:500;font-size:14px;color:var(--ink2)">${back}</span><span style="flex:1;text-align:center;margin-right:40px">${title}</span></div>`;
+
+const appbar = (L) => `<div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><div class="seg sm" style="width:170px"><span class="on">${L === T.en ? "Overview" : "Ringkasan"}</span><span>${L === T.en ? "Staff" : "Staf"}</span></div></div></div>`;
+
+function phone(lang, inner, cls = "") {
+  return `<div class="phone ${cls}"><span class="tag">${lang === "en" ? "Owner · English" : lang === "id" ? "Owner · Bahasa Indonesia" : "Staf · Bahasa Indonesia"}</span><div class="status"></div>${inner}</div>`;
+}
+
+// 1. Household → Pay and days off
+function sOverview(L) {
+  return `${nav(L.title, L.back)}<div class="body">
+    <div class="quiet amber">${ic("gift")}<span>${L.thrLine}</span>${ic("chevron-right")}</div>
+    <div class="quiet">${ic("wallet")}<span>${L.paydayLine}</span></div>
+    <div class="list">${L.people.map(([a, n, s, k, st]) => `<div class="li"><span class="lic">${a}</span><span class="t"><b>${n}</b><span>${s}</span><span class="${k}">${ic(k === "ok" ? "circle-check" : "gift", "xs")}${st}</span></span>${ic("chevron-right")}</div>`).join("")}
+      <div class="li new"><span class="lic">W</span><span class="t"><b>${L.wati}</b><span>${L.watiSub}</span></span><span class="pill mute">${L.notSet}</span></div></div>
+    <div class="list"><div class="li"><span class="t"><b style="white-space:normal">${L.seeSwitch}</b><span style="white-space:normal">${L.seeSub}</span></span><span class="toggle"></span></div></div>
+    <div class="lockline">${ic("lock", "xs")}${L.ownersOnly}</div>
+    <div class="note">${ic("info", "xs")}<span>${L.legal}</span></div>
+  </div>${tabbar(L, 4)}`;
+}
+
+// 2. Pay setup
+function sSetup(L) {
+  return `${nav(L.title, L.back)}<div class="body" style="filter:blur(.5px)"></div>${tabbar(L, 4)}<div class="dim"></div>
+  <div class="sheet"><div class="grab"></div><h3>${L.setupTitle}</h3><p class="lead">${L.setupLead}</p>
+    <div class="chips" style="justify-content:center"><span class="chip on">${L.monthly}</span><span class="chip">${L.weekly}</span></div>
+    <div class="money">Rp 3.200.000</div>
+    <div class="label">${L.payday}</div><div class="field">${L.paydayV}<span>${ic("chevron-down")}</span></div>
+    <div class="label">${L.paidBy}</div><div class="chips"><span class="chip">${L.cash}</span><span class="chip on">${L.transfer}</span></div>
+    <div class="label">${L.started}</div><div class="field">${L.startedV}<span>${ic("calendar-days")}</span></div>
+    <div class="label">${L.thrFor}</div><div class="chips">${L.holidays.map((h, i) => `<span class="chip ${i === 0 ? "on" : ""}">${h}</span>`).join("")}</div>
+    <div class="label">${L.dayOff}</div><div class="chips">${L.days.map((d, i) => `<span class="chip ${i === 6 ? "on" : ""}">${d}</span>`).join("")}</div>
+    <div class="label">${L.leaveDays}</div><div class="field">${L.leaveDaysV}<span>${ic("chevron-down")}</span></div>
+    <div class="btn primary">${L.save}</div>
+    <div class="lockline" style="justify-content:center">${ic("lock", "xs")}${L.ownersOnly}</div>
+  </div>`;
+}
+
+// 3. Person page
+function sPerson(L) {
+  return `${nav(L.pTitle, L.title)}<div class="body">
+    <div class="card"><h3>${ic("wallet")}${L.pay}<small>${ic("pencil", "xs")}</small></h3>
+      <div class="hint" style="font-size:12.5px;color:var(--ink2)">${L.agreed}</div>
+      <div class="btn primary sm">${ic("circle-check")}${L.markPaidBtn}</div>
+      <div class="list" style="border:0;border-radius:0;margin:0 -12px">${L.history.map(([p, a, s, k]) => `<div class="li" style="min-height:46px"><span class="t"><b>${p}</b><span class="${k}">${k ? ic("circle-check", "xs") : ""}${s}</span></span><span class="amt">${a}</span>${ic("receipt", "xs")}</div>`).join("")}</div>
+      <div class="link">${ic("plus-circle")}${L.addPayment}</div>
+    </div>
+    <div class="card"><h3>${ic("gift")}${L.thr}<small>${L.thrOpen}${ic("chevron-right", "xs")}</small></h3>
+      <div class="kv">${L.thrSum}</div><div class="kv" style="margin-top:-6px"><span>${L.thrPay}</span></div></div>
+    <div class="card"><h3>${ic("calendar-off")}${L.daysOff}</h3>
+      <div class="kv">${L.dayOffV}</div>
+      <div class="kv"><b style="text-align:left">${L.left}</b><span class="hint">${L.year}</span></div>
+      <div class="meter"><i style="width:66%"></i></div>
+      ${L.leaves.map(([d, k, n]) => `<div class="kv"><span>${d}</span><b style="display:flex;gap:6px;align-items:center">${k}${n ? `<span class="pill mute">${n}</span>` : ""}</b></div>`).join("")}
+    </div>
+    <div class="card"><h3>${ic("file-check")}${L.agreedT}<small>${L.agreedSum}</small></h3><div class="link">${L.agreedOpen}${ic("chevron-right", "xs")}</div></div>
+    <div class="lockline">${ic("lock", "xs")}${L.ownersOnly}</div>
+  </div>${tabbar(L, 4)}`;
+}
+
+// 4. Mark paid
+function sMarkPaid(L) {
+  return `${nav(L.pTitle, L.title)}<div class="body"></div>${tabbar(L, 4)}<div class="dim"></div>
+  <div class="sheet low"><div class="grab"></div><h3>${L.mpTitle}</h3><p class="lead">${L.mpLead}</p>
+    <div class="label">${L.amount}</div><div class="money">Rp 3.200.000</div>
+    <div class="label">${L.paidOn}</div><div class="field">${L.paidOnV}<span>${ic("calendar-days")}</span></div>
+    <div class="chips"><span class="chip">${L.cash}</span><span class="chip on">${L.transfer}</span></div>
+    <div class="label">${L.receipt} <em>${L.optional}</em></div>
+    <div class="shot"><span>${ic("camera")}${L.takePhoto}</span><span>${ic("image")}${L.choose}</span></div>
+    <div class="label">${L.note} <em>${L.noteO}</em></div><div class="field"><span>${L.notePh}</span></div>
+    <div class="btn primary">${L.markPaid}</div>
+    <div class="lockline" style="justify-content:center">${ic("lock", "xs")}${L.mpLock}</div>
+  </div>`;
+}
+
+// 5. THR calculator
+function sThr(L) {
+  return `${nav(L.thrTitle, "Budi")}<div class="body">
+    <div class="card">
+      <div class="kv"><span>${L.holiday}</span><b>${L.holidayV}</b></div>
+      <div class="kv"><span>${L.payBy}</span><b>${L.payByV}</b></div>
+      <div class="kv"><span>${L.months}</span><b>${L.monthsV}</b></div>
+      <div class="kv"><span>${L.rule}</span><b>${L.ruleV}</b></div>
+      <div class="kv total"><span>=</span><b>${L.ruleRes}</b></div>
+    </div>
+    <div class="label">${L.amount}</div><div class="money">Rp 3.000.000</div>
+    <div class="note">${ic("info", "xs")}<span>${L.explain} <u>${L.learn}</u></span></div>
+    <div class="label">${L.remind}</div><div class="field">${L.remindV}<span>${ic("bell")}</span></div>
+    <div class="btn primary">${L.saveThr}</div>
+    <div class="btn outline">${ic("circle-check")}${L.markThr}</div>
+  </div>${tabbar(L, 4)}`;
+}
+
+// 6. Push and Today
+function sToday(L) {
+  return `${appbar(L)}
+  <div class="push"><svg class="mark"><use href="#mark"/></svg><div class="pt"><div><span>Miamus</span><span>${L.pushNow}</span></div><b>${L.pushTitle2}</b>${L.pushBody2}</div></div>
+  <div class="body" style="padding-top:96px">
+    <div class="seg sm" style="width:150px"><span class="on">${L.dayW}</span><span>${L.weekW}</span></div>
+    ${L.tLines.map(([i, s, k]) => `<div class="quiet ${k}">${ic(i)}<span>${s}</span>${ic("chevron-right")}</div>`).join("")}
+    <div style="font-weight:600;margin-top:4px">${L.todayH}</div>
+    ${L.rows.map(([t, n, w]) => `<div class="list"><div class="li"><span style="width:62px;font-size:11.5px;color:#52525b">${t}</span><span class="t"><b>${n}</b><span>${w}</span></span>${ic("chevron-right")}</div></div>`).join("")}
+    <div class="hint" style="text-align:center">${L.pushNote}</div>
+  </div>${tabbar(L, 0)}`;
+}
+function sThrPush(L) {
+  return `${appbar(L)}
+  <div class="push"><svg class="mark"><use href="#mark"/></svg><div class="pt"><div><span>Miamus</span><span>${L.pushNow}</span></div><b>${L.pushTitle}</b>${L.pushBody}</div></div>
+  <div class="body" style="padding-top:96px">
+    <div class="seg sm" style="width:150px"><span class="on">${L.dayW}</span><span>${L.weekW}</span></div>
+    <div class="quiet amber">${ic("gift")}<span>${L.tLines[0][1]}</span>${ic("chevron-right")}</div>
+    <div style="font-weight:600;margin-top:4px">${L.todayH}</div>
+    ${L.rows.slice(0, 2).map(([t, n, w]) => `<div class="list"><div class="li"><span style="width:62px;font-size:11.5px;color:#52525b">${t}</span><span class="t"><b>${n}</b><span>${w}</span></span>${ic("chevron-right")}</div></div>`).join("")}
+    <div class="hint" style="text-align:center">${L === T.en ? "Wed 18 Nov, 7:10 AM: 30 days before the pay-by date" : "Rab 18 Nov, 07.10: 30 hari sebelum batas bayar"}</div>
+  </div>${tabbar(L, 0)}`;
+}
+
+// 7. Checklist
+function sChecklist(L) {
+  return `${nav(L.clTitle, L.pTitle)}<div class="body">
+    <div class="hint" style="font-size:12.5px">${L.clLead}</div>
+    <div class="list">${L.cl.map(([on, a, b], i) => `<div class="li"><span class="box ${on ? "on" : ""}">${on ? ic("check") : ""}</span><span class="t"><b style="white-space:normal">${a}</b><span style="white-space:normal">${b}</span></span>${i === 7 ? `<span class="pill">${L.addBill}</span>` : ""}</div>`).join("")}</div>
+    <div class="lockline">${ic("shield", "xs")}${L.clFoot}</div>
+  </div>${tabbar(L, 4)}`;
+}
+
+// Staff screens (Bahasa Indonesia only)
+const staffHeader = `<div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Sari</span><div class="seg sm" style="width:190px"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div></div>`;
+
+function stLapor() {
+  return `${staffHeader}<div class="body"></div><div class="dim"></div>
+  <div class="sheet low"><div class="grab"></div><h3>Laporan &amp; Usulan</h3>
+    <div class="list">
+      <div class="li"><span class="lic sq">${ic("cooking-pot")}</span><span class="t"><b>Makanan masuk</b></span>${ic("chevron-right")}</div>
+      <div class="li"><span class="lic sq">${ic("wrench")}</span><span class="t"><b>Lapor kerusakan</b></span>${ic("chevron-right")}</div>
+      <div class="li"><span class="lic sq">${ic("calendar-off")}</span><span class="t"><b>Ajukan Cuti</b></span>${ic("chevron-right")}</div>
+      <div class="li new"><span class="lic sq">${ic("wallet")}</span><span class="t"><b>Gaji &amp; cuti saya</b><span>Sisa cuti 8 hari</span></span>${ic("chevron-right")}</div>
+      <div class="li"><span class="lic sq">${ic("message")}</span><span class="t"><b>Kirim masukan</b></span>${ic("chevron-right")}</div>
+    </div>
+    <div class="card" style="background:#fafafa"><h3>${ic("info")}Baru: Gaji &amp; cuti saya</h3><div class="hint" style="font-size:12.5px;color:var(--ink2)">Lihat sisa cuti dan libur mingguan Anda. Gaji dan THR bisa dilihat dengan PIN Anda.</div><div class="btn outline sm" style="align-self:flex-end">Mengerti</div></div>
+  </div>`;
+}
+
+function stMine() {
+  return `${nav("Gaji &amp; cuti saya", "Kembali")}<div class="body">
+    <div class="card"><h3>${ic("calendar-off")}Cuti dan libur</h3>
+      <div class="kv">Libur mingguan<b>Minggu</b></div>
+      <div class="kv">Sisa cuti<b>8 dari 12 hari</b></div>
+      <div class="meter"><i style="width:66%"></i></div>
+      <div class="hint">Tahun kerja sejak 14 Jul</div>
+      <div class="kv"><span>27–28 Agu</span><b>Cuti tahunan · 2 hari</b></div>
+      <div class="kv"><span>15–16 Sep</span><b>Sakit · tidak dihitung</b></div>
+      <div class="kv"><span>2–3 Okt</span><b>Cuti tahunan · 2 hari</b></div>
+    </div>
+    <div class="card"><h3>${ic("wallet")}Gaji dan THR<small>${ic("lock", "xs")}</small></h3>
+      <div class="kv">Gaji<b class="masked">Rp ••••••</b></div>
+      <div class="kv">Riwayat gaji<b class="masked">••••••</b></div>
+      <div class="kv">THR Lebaran<b class="masked">••••••</b></div>
+      <div class="btn primary">${ic("eye")}Lihat dengan PIN</div>
+    </div>
+    <div class="lockline c">${ic("lock", "xs")}Hanya Anda yang bisa melihat gaji Anda, dengan PIN.</div>
+  </div>`;
+}
+
+function stPin() {
+  return `${nav("Gaji &amp; cuti saya", "Kembali")}<div class="body" style="gap:18px;padding-top:28px">
+    <div style="text-align:center"><div class="lic" style="margin:0 auto 10px;width:52px;height:52px;border-radius:99px;background:var(--track);display:flex;align-items:center;justify-content:center">${ic("lock", "lg")}</div>
+    <div style="font-weight:600;font-size:17px">Sari</div><div class="hint" style="font-size:13.5px;color:var(--ink2);margin-top:4px">Masukkan PIN Anda untuk melihat gaji</div></div>
+    <div class="dots"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    <div class="pinpad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<span>${n}</span>`).join("")}<span class="blank"></span><span>0</span><span class="blank" style="font-size:13px;color:var(--muted)">Hapus</span></div>
+    <div class="hint" style="text-align:center">Bukan Sari? Kembali, lalu ganti orang.</div>
+  </div>`;
+}
+
+function stOpen() {
+  return `${nav("Gaji &amp; cuti saya", "Kembali")}<div class="body">
+    <div class="card"><h3>${ic("wallet")}Gaji dan THR<small>${ic("eye", "xs")}Terlihat</small></h3>
+      <div class="kv">Gaji<b>Rp 3.200.000 · tiap tgl 25</b></div>
+      <div class="kv">Dibayar dengan<b>Transfer</b></div>
+    </div>
+    <div class="card" style="border-color:var(--okline);background:var(--okbg)"><h3>${ic("wallet")}Gaji November</h3>
+      <div class="kv">Rp 3.200.000<b>Transfer · 25 Nov</b></div>
+      <div class="btn primary">${ic("circle-check")}Sudah diterima</div>
+    </div>
+    <div class="grp">Riwayat gaji</div>
+    <div class="list">
+      <div class="li"><span class="t"><b>Okt 2026</b><span class="ok">${ic("circle-check", "xs")}Diterima 25 Okt</span></span><span class="amt">Rp 3.200.000</span></div>
+      <div class="li"><span class="t"><b>Sep 2026</b><span class="ok">${ic("circle-check", "xs")}Diterima 25 Sep</span></span><span class="amt">Rp 3.200.000</span></div>
+      <div class="li"><span class="t"><b>Agu 2026 · bonus</b><span>Belum dikonfirmasi</span></span><span class="amt">Rp 250.000</span></div>
+    </div>
+    <div class="card"><h3>${ic("gift")}THR Lebaran</h3><div class="kv">Paling lambat<b>Rab 3 Mar 2027</b></div><div class="kv">Jumlah<b>Rp 3.200.000</b></div></div>
+    <div class="lockline c">${ic("lock", "xs")}Disembunyikan lagi saat ditutup atau setelah 2 menit.</div>
+  </div>`;
+}
+
+function stLeaveAsk() {
+  return `${staffHeader}<div class="body"></div><div class="dim"></div>
+  <div class="sheet low" style="top:200px"><div class="grab"></div><h3>Ajukan Cuti</h3>
+    <div class="label">Tanggal</div><div class="field">Sen 14 Des – Sel 15 Des<span>${ic("calendar-days")}</span></div>
+    <div class="label">Jenis cuti <em>(boleh dikosongkan)</em></div>
+    <div class="chips"><span class="chip on">Cuti tahunan</span><span class="chip">Sakit</span><span class="chip">Keluarga</span><span class="chip">Lainnya</span></div>
+    <div class="hint">Sisa cuti Anda: 8 hari.</div>
+    <div class="btn primary">Kirim ke pemilik rumah</div>
+  </div>`;
+}
+
+const owner = (title, desc, fn, cls = "") => ({ title, desc, html: `<div class="pair">${phone("en", fn(T.en), cls)}${phone("id", fn(T.id), cls)}</div>` });
+const staff = (title, desc, fns) => ({ title, desc, html: `<div class="pair">${fns.map((f) => phone("staff", f())).join("")}</div>` });
+
+const screens = [
+  owner("1. Household → Pay and days off", "A new row in Household (icon Wallet) opens the list: each staff person with their pay, payday and this month's status. THR coming up is amber. Admins (family) aren't listed. One household switch decides whether staff can see their own pay (D8).", sOverview),
+  owner("2. Pay setup", "What was agreed, once per person (D2). THR is named by holiday, not religion (D6). Leave days a year defaults to 12, the usual benchmark (D7). Amount and payday are the only required fields.", sSetup, "tall"),
+  owner("3. A person's page", "Pay with its history (Received = staff confirmed, D9), THR at a glance, days off with the leave balance (Annual only; Sick not counted), and the agreement checklist.", sPerson, "tall"),
+  owner("4. Mark paid", "The agreed amount is filled in and can be changed. Receipt and note are optional and owners only (D3). No deductions in this phase. After saving, a toast offers Undo.", sMarkPaid, "tall"),
+  owner("5. THR calculator", "Months worked from the start date to the holiday, the usual rule shown as working, the amount editable (D4). Pay by is holiday − 7 days. Reminder 30 days before (D5).", sThr),
+  owner("6a. Payday push and Today", "The 07:10 push names people, never amounts (D12). Today's quiet lines: THR in amber, payday in grey; tapping opens Mark paid.", sToday),
+  owner("6b. THR reminder", "30 days before Maria's pay-by date (Fri 18 Dec, Natal), the morning push and an amber line on Today until it's marked paid.", sThrPush),
+  owner("7. What you've agreed", "Optional ticks drawn from UU 2/2026 Pasal 11, 16, 17 and 19 (D10). BPJS Ketenagakerjaan offers Add as a bill (Phase 164). No documents or numbers stored.", sChecklist, "tall"),
+  staff("8. Staff: Lapor sheet and Gaji & cuti saya", "A new row in the Lapor sheet, beside Ajukan Cuti, with a one-time card (D14). The leave balance shows straight away; pay stays masked until the PIN.", [stLapor, stMine]),
+  staff("9. Staff: PIN, then pay", "The existing PIN screen, worded for pay. The server checks the PIN with every request (my_pay), with the usual lockout. Sudah diterima confirms a payment (D9). Amounts hide again when the screen closes or after 2 minutes. Receipts and owners' notes are never shown.", [stPin, stOpen]),
+  staff("10. Staff: Ajukan Cuti gains a kind", "One optional row. Empty counts as annual leave until an owner changes it. The remaining balance is shown, but never blocks a request.", [stLeaveAsk]),
+];
+
+document.getElementById("screens").innerHTML = screens.map((s) => `<section class="screen"><h2>${s.title}</h2><p>${s.desc}</p>${s.html}</section>`).join("");
+</script>
+</body>
+</html>

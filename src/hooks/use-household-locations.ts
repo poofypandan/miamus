@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { dataProvider } from "@/lib/data";
 import { createResource } from "@/lib/resource";
-import type { HouseholdLocation } from "@/types/database";
+import { placeLabel, placeMap } from "@/lib/places";
 
 const useRooms = createResource(() => dataProvider.listHouseholdLocations());
 
@@ -23,22 +23,19 @@ export function useHouseholdLocations() {
 
 /**
  * A chore's place as people read it, or null for none (or one deleted):
- * "Teras", "LT2 · Lounge" for a room on a floor (migrations/129), and the
- * spot after it when the chore has one: "LT2 · GB2 Bathroom · Wastafel".
+ * "Teras", "LT2 · Lounge" for a room on a floor (migrations/129), "LT2 · GB2 ·
+ * Bathroom" for a room inside a room (Phase 168), and the spot after it when
+ * the chore has one: "LT2 · GB2 · Bathroom · Wastafel".
  */
 export function useLocationName(): (id: string | null | undefined, spot?: string | null) => string | null {
   const { locations } = useHouseholdLocations();
   return useMemo(() => {
-    const byId = new Map((locations ?? []).map((room: HouseholdLocation) => [room.id, room]));
-    const label = (room: HouseholdLocation) => {
-      const floor = room.parent_id ? byId.get(room.parent_id) : undefined;
-      return floor ? `${floor.name} · ${room.name}` : room.name;
-    };
+    const byId = placeMap(locations ?? []);
     return (id, spot) => {
       const room = id ? byId.get(id) : undefined;
       if (!room) return null;
       const spotText = spot?.trim();
-      return spotText ? `${label(room)} · ${spotText}` : label(room);
+      return spotText ? `${placeLabel(room, byId)} · ${spotText}` : placeLabel(room, byId);
     };
   }, [locations]);
 }

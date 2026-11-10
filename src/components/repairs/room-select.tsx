@@ -2,6 +2,7 @@
 
 import { MapPin } from "lucide-react";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
+import { outerRoomOf, placeMap } from "@/lib/places";
 import { placeGroups } from "@/lib/room-picker";
 import type { OwnerLocale } from "@/lib/owner-locale";
 
@@ -26,6 +27,13 @@ export function RoomSelect({
   const { locations } = useHouseholdLocations();
   const ind = locale === "id";
   const groups = placeGroups(locations ?? []);
+  const byId = placeMap(locations ?? []);
+  // A room inside reads with its room ("GB1 · Bathroom", Phase 168): a native
+  // list can't indent, and three bedrooms may each have a "Bathroom".
+  const roomName = (place: (typeof groups)[number]["places"][number]) => {
+    const outer = outerRoomOf(place, byId);
+    return outer ? `${outer.name} · ${place.name}` : place.name;
+  };
   const hasFloors = groups.some((g) => g.floor);
 
   return (
@@ -45,7 +53,7 @@ export function RoomSelect({
                 <option key={place.id} value={place.id}>
                   {place.kind === "floor"
                     ? `${place.name} · ${ind ? "Seluruh lantai" : "Whole floor"}`
-                    : `${group.floor!.name} · ${place.name}`}
+                    : `${group.floor!.name} · ${roomName(place)}`}
                 </option>
               ))}
             </optgroup>
@@ -53,14 +61,14 @@ export function RoomSelect({
             <optgroup key="no-floor" label={ind ? "Belum ada lantai" : "No floor yet"}>
               {group.places.map((place) => (
                 <option key={place.id} value={place.id}>
-                  {place.name}
+                  {roomName(place)}
                 </option>
               ))}
             </optgroup>
           ) : (
             group.places.map((place) => (
               <option key={place.id} value={place.id}>
-                {place.name}
+                {roomName(place)}
               </option>
             ))
           )

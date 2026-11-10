@@ -1060,8 +1060,18 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const room = db.householdLocations.find((r) => r.id === id);
     // A floor's rooms move to "no floor", as migrations/129 does (renaming
-    // clashes is the database's job; mock mode keeps names as they are).
-    for (const r of db.householdLocations) if (r.parent_id === id) r.parent_id = null;
+    // clashes is the database's job; mock mode keeps names as they are). A
+    // room's rooms inside move to where it was, with its name in front
+    // ("GB1 Bathroom"), as the rooms-inside-rooms migration does.
+    for (const r of db.householdLocations) {
+      if (r.parent_id !== id || !room) continue;
+      if (room.kind === "floor") {
+        r.parent_id = null;
+      } else {
+        r.parent_id = room.parent_id ?? null;
+        r.name = `${room.name.trim()} ${r.name.trim()}`.slice(0, 60).trim();
+      }
+    }
     for (const t of db.householdTasks) if (t.location_id === id) t.location_id = null;
     db.householdLocations = db.householdLocations.filter((r) => r !== room);
     saveDB(db);
