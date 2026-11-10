@@ -153,7 +153,7 @@ function OwnerFinishBody({
           <SheetTitle>{task.title}</SheetTitle>
           <SheetDescription>{details}</SheetDescription>
           {forMe && (
-            <span className="mx-auto mt-1 flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs text-gray-700">
+            <span className="mt-1 flex w-fit items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs text-gray-700">
               <UserRound className="size-3" aria-hidden /> {t("For you", "Untuk Anda")}
             </span>
           )}

@@ -1,8 +1,10 @@
 # Phase 163 — "My tasks" on Today
 
 Status: **decided: owner delegated to the recommendations, 2026-11-10
-(D1 A, D2 A, D3 A, D4 A, D5 A).** Being built on its own branch and PR;
-the owner said everything can be changed afterwards.
+(D1 A, D2 A, D3 A, D4 A, D5 A).** Built 2026-11-10 on
+`claude/phase-163-my-tasks` (migration 136, local only until the owner OKs
+staging and production); the owner said everything can be changed
+afterwards.
 Roadmap item 10 (`docs/roadmap-2026-11-09.md`, P1), the other half of R9 in
 `docs/app-review-2026-11-07.md` (the first half, staff first in Chores
 progress, is live). Mockup: `docs/mockups/phase-163-my-tasks.html` (open in a

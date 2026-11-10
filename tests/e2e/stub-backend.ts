@@ -205,10 +205,10 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   }
 
   /** The writes the weak-signal tests use, answered as the stub would. */
-  function answerWrite(route: Route, table: string) {
+  function answerWrite(route: Route, table: string, who: string) {
     if (table === "food_items") return answerFood(route, foods, false);
     if (table === "task_logs") return answerLogs(route, logs);
-    if (table === "household_tasks") return answerTasks(route, tasks, options.chores);
+    if (table === "household_tasks") return answerTasks(route, tasks, options.chores, who);
     return route.fulfill({ json: [] });
   }
 
@@ -278,7 +278,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         if (t?.lostReply) {
           t.lostReply -= 1;
           // Saved, then the answer never arrives.
-          await answerWrite(silent(route), table);
+          await answerWrite(silent(route), table, who);
           return route.abort("connectionreset");
         }
         if (t?.drop) {
@@ -287,7 +287,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         }
       }
       if (table === "task_logs") return answerLogs(route, logs);
-      if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks, options.chores);
+      if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks, options.chores, who);
       if (table === "household_tasks" && options.chores) {
         // The simple PostgREST filters the app's chore reads use (eq, neq,
         // lt, lte, gt, gte, is), so each read returns what the real backend
@@ -493,8 +493,38 @@ function organise(
   return { moved };
 }
 
+/**
+ * The proof-photo rule as migrations/104 and 136 enforce it: becoming
+ * completed needs both photos, except an admin finishing their own (or an
+ * unassigned) chore with none at all. Returns the refusal, or null.
+ */
+function photoRefusal(
+  row: Record<string, unknown>,
+  patch: Record<string, unknown>,
+  who: string
+): { code: string; message: string } | null {
+  if (patch.status !== "completed" || row.status === "completed") return null;
+  const before = patch.before_photo_url ?? null;
+  const after = patch.after_photo_url ?? null;
+  if (before && after) return null;
+  const mine = (id: unknown) => id === null || id === undefined || id === OWNER_PROFILE_ID;
+  const ownPhotoFree =
+    !before &&
+    !after &&
+    who === OWNER &&
+    patch.completed_by === OWNER_PROFILE_ID &&
+    mine(row.assigned_to) &&
+    ("assigned_to" in patch ? mine(patch.assigned_to) : true);
+  return ownPhotoFree ? null : { code: "23514", message: "A chore is completed with both a before and an after photo" };
+}
+
 /** household_tasks writes, enough for a chore saved and undone (Kakak). */
-function answerTasks(route: Route, tasks: Record<string, unknown>[], seeded: Record<string, unknown>[] = []) {
+function answerTasks(
+  route: Route,
+  tasks: Record<string, unknown>[],
+  seeded: Record<string, unknown>[] = [],
+  who = ""
+) {
   const request = route.request();
   const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
   const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
@@ -524,7 +554,12 @@ function answerTasks(route: Route, tasks: Record<string, unknown>[], seeded: Rec
   // An edit (PATCH) applies to a chore created here or one the household
   // already had (Phase 158's seeded chores).
   const row = index === -1 ? seeded.find((t) => t.id === id) : tasks[index];
-  if (row && request.method() === "PATCH") Object.assign(row, request.postDataJSON() ?? {});
+  if (row && request.method() === "PATCH") {
+    const patch = request.postDataJSON() ?? {};
+    const refusal = photoRefusal(row, patch, who);
+    if (refusal) return route.fulfill({ status: 400, json: { ...refusal, details: null, hint: null } });
+    Object.assign(row, patch);
+  }
   return reply(row ? [row] : []);
 }
 
