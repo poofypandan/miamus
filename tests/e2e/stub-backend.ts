@@ -370,7 +370,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       }
       if (table === "bill_payments") {
         billPaymentReads.push(who === OWNER ? "owner" : "other");
-        return answerBillPayments(route, billPayments, who === OWNER);
+        return answerBillPayments(route, billPayments, who === OWNER, (id) =>
+          [...tasks, ...(options.chores ?? [])].some((t) => t.id === id && t.status === "completed")
+        );
       }
       if (table === "repair_notes") return answerRepairNotes(route, repairNotes);
       if (table === "rpc/organise_rooms" && options.rooms) {
@@ -715,7 +717,12 @@ function answerRepairCosts(route: Route, costs: Record<string, unknown>[], owner
  * reads nothing and writes nothing. Upsert by task_id, delete by task_id;
  * the server's fields stamped as 138's trigger does.
  */
-function answerBillPayments(route: Route, payments: Record<string, unknown>[], owner: boolean) {
+function answerBillPayments(
+  route: Route,
+  payments: Record<string, unknown>[],
+  owner: boolean,
+  isPaid: (taskId: unknown) => boolean
+) {
   const request = route.request();
   const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
   const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
@@ -731,6 +738,10 @@ function answerBillPayments(route: Route, payments: Record<string, unknown>[], o
   }
   const body = request.postDataJSON();
   const fields = Array.isArray(body) ? body[0] : body;
+  // 138's trigger: only for a day that is done.
+  if (!isPaid(fields.task_id)) {
+    return route.fulfill({ status: 400, json: { code: "23514", message: "bill_payment_needs_paid_day", details: null, hint: null } });
+  }
   const index = payments.findIndex((p) => p.task_id === fields.task_id);
   const now = new Date().toISOString();
   const row =

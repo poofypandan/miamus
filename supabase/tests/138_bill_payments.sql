@@ -68,8 +68,9 @@ insert into public.device_sessions (user_id, household_id) values
 insert into public.household_tasks (id, household_id, title, category, recurrence, due_date, status,
                                     before_photo_url, after_photo_url)
 values
+  -- The repeat's own first day, done (so its row can carry a payment too).
   ('00000000-0000-0000-0000-0000000138d1', '00000000-0000-0000-0000-0000000138f1', 'Electricity (PLN)', 'bill',
-   'monthly', '2026-10-20', 'pending', null, null),
+   'monthly', '2026-10-20', 'completed', 'x/b.jpg', 'x/a.jpg'),
   ('00000000-0000-0000-0000-0000000138d2', '00000000-0000-0000-0000-0000000138f1', 'Electricity (PLN)', 'bill',
    'none', '2026-11-20', 'completed', 'x/b.jpg', 'x/a.jpg'),
   ('00000000-0000-0000-0000-0000000138d3', '00000000-0000-0000-0000-0000000138f1', 'PBB', 'bill',
@@ -97,8 +98,14 @@ select pg_temp.ok((select series_id = '00000000-0000-0000-0000-0000000138d1'
   '... the server stamps the bill (the repeat), who and when, whatever was sent');
 select pg_temp.ok(pg_temp.err_as(:owner, $q$
   insert into public.bill_payments (household_id, task_id, amount_idr)
+  values ('00000000-0000-0000-0000-0000000138f1', '00000000-0000-0000-0000-0000000138d3', 1200000) $q$)
+  like '%bill_payment_needs_paid_day%', 'no payment for a bill that isn''t done');
+update public.household_tasks set status = 'completed', before_photo_url = 'x/b.jpg', after_photo_url = 'x/a.jpg'
+ where id = '00000000-0000-0000-0000-0000000138d3';
+select pg_temp.ok(pg_temp.err_as(:owner, $q$
+  insert into public.bill_payments (household_id, task_id, amount_idr)
   values ('00000000-0000-0000-0000-0000000138f1', '00000000-0000-0000-0000-0000000138d3', 1200000) $q$) = '',
-  'a one-off bill, amount only');
+  'a one-off bill, done, amount only');
 select pg_temp.ok((select series_id = task_id from public.bill_payments
                     where task_id = '00000000-0000-0000-0000-0000000138d3'),
   '... its bill is itself');
@@ -174,11 +181,13 @@ select pg_temp.ok(pg_temp.count_as(:other, $q$ select count(*) from public.bill_
 select pg_temp.ok(pg_temp.err_as(:other, $q$
   insert into public.bill_payments (household_id, task_id, amount_idr) values
     ('00000000-0000-0000-0000-0000000138f1', '00000000-0000-0000-0000-0000000138d1', 1) $q$)
-  like '%row-level security%', 'another household''s owner can''t write into this one');
+  similar to '%(row-level security|bill_payment_needs_paid_day)%',
+  'another household''s owner can''t write into this one (refused before the policy: they can''t see the chore)');
 select pg_temp.ok(pg_temp.err_as(:other, $q$
   insert into public.bill_payments (household_id, task_id, amount_idr) values
     ('00000000-0000-0000-0000-0000000138f2', '00000000-0000-0000-0000-0000000138d1', 1) $q$)
-  like '%bill_payments_task_fkey%', '... nor point their own payment at this household''s chore');
+  similar to '%(bill_payments_task_fkey|bill_payment_needs_paid_day)%',
+  '... nor point their own payment at this household''s chore');
 select pg_temp.ok(pg_temp.err_as(null, $q$ select count(*) from public.bill_payments $q$) like '%permission denied%',
   'logged out: no access at all');
 

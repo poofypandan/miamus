@@ -131,6 +131,9 @@ function OwnerFinishBody({
   const [amountText, setAmountText] = useState("");
   const [receipt, setReceipt] = useState<File | string | null>(null);
   const [receiptBusy, setReceiptBusy] = useState(false);
+  // A payment edit being saved: Mark not done waits for it, so a late save
+  // can't land on a bill no longer paid (the database refuses it anyway).
+  const [paymentSaving, setPaymentSaving] = useState(false);
   const parsedAmount = parseIdr(amountText);
   const amountInvalid = amountText.trim() !== "" && parsedAmount === null;
   const hasPaymentInput = parsedAmount !== null || !!receipt;
@@ -247,7 +250,9 @@ function OwnerFinishBody({
                 </p>
               )}
               {occurrence.row && !bill && <ChoreProofPhotos row={occurrence.row} locale={locale} interactive />}
-              {bill && occurrence.row && <BillPaymentEditor row={occurrence.row} seriesId={seriesId} />}
+              {bill && occurrence.row && (
+                <BillPaymentEditor row={occurrence.row} seriesId={seriesId} onBusyChange={setPaymentSaving} />
+              )}
             </>
           ) : canFinish && bill && !photosRequired ? (
             <section className="flex flex-col gap-3">
@@ -372,7 +377,7 @@ function OwnerFinishBody({
               today leaves today's list, and its own day is where it can be
               opened again once the Undo toast has gone. */}
           {done && occurrence.row && (
-            <Button variant="outline" onClick={markNotDone} disabled={busy} className="min-h-12 rounded-xl">
+            <Button variant="outline" onClick={markNotDone} disabled={busy || paymentSaving} className="min-h-12 rounded-xl">
               {busy ? <Loader2 className="animate-spin" /> : <RotateCcw />} {t("Mark not done", "Tandai belum selesai")}
             </Button>
           )}

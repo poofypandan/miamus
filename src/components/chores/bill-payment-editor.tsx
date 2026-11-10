@@ -89,7 +89,16 @@ export function BillPaymentFields({
  * that is done, whoever finished it (an owner from My tasks, or staff with
  * their photos; Codex, PR #65). `row` is the paid day's own row.
  */
-export function BillPaymentEditor({ row, seriesId }: { row: HouseholdTask; seriesId: string }) {
+export function BillPaymentEditor({
+  row,
+  seriesId,
+  onBusyChange,
+}: {
+  row: HouseholdTask;
+  seriesId: string;
+  /** While a save is under way: the owner's sheet holds Mark not done (Codex, PR #65). */
+  onBusyChange?: (busy: boolean) => void;
+}) {
   const t = useT();
   const locale = useOwnerLocale();
   const { payments, loaded } = useBillPayments(true);
@@ -99,7 +108,11 @@ export function BillPaymentEditor({ row, seriesId }: { row: HouseholdTask; serie
   const [amountText, setAmountText] = useState("");
   const [receipt, setReceipt] = useState<File | string | null>(null);
   const [receiptBusy, setReceiptBusy] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusyState] = useState(false);
+  const setBusy = (next: boolean) => {
+    setBusyState(next);
+    onBusyChange?.(next);
+  };
   const parsed = parseIdr(amountText);
   const amountInvalid = amountText.trim() !== "" && parsed === null;
 

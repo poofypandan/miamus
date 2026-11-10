@@ -98,6 +98,14 @@ set search_path = ''
 as $$
 begin
   new.updated_at := now();
+  -- A payment belongs to a day that is paid: never written for one that is
+  -- open (a save that lands after the bill was marked not paid; Codex, PR #65).
+  if not exists (
+    select 1 from public.household_tasks t
+     where t.id = new.task_id and t.household_id = new.household_id and t.status = 'completed'
+  ) then
+    raise exception 'bill_payment_needs_paid_day' using errcode = '23514';
+  end if;
   if tg_op = 'INSERT' then
     new.created_by := auth.uid();
     new.paid_at := now();
