@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isOldHost } from "@/config/hosts";
+import { MOVED_PATH } from "@/lib/address-move";
 
 /**
  * The owner-side auth guard, and the session refresh every Supabase SSR app
@@ -22,6 +24,24 @@ import { NextResponse, type NextRequest } from "next/server";
  * visitor (see app/page.tsx).
  */
 export async function middleware(request: NextRequest) {
+  // An old address (config/hosts.ts): every page is the move screen
+  // (AddressMoveGate), served under the page's own URL. Rewritten rather than
+  // left to the client, so the page asked for never runs there — not even
+  // for the moment before the browser knows its host: /join/staff would
+  // spend its invite on the old address (Codex, PR #54). A rewrite, not a
+  // redirect: the phone still loads the app here and sends its queue first.
+  if (isOldHost(requestHost(request))) {
+    const url = request.nextUrl.clone();
+    url.pathname = MOVED_PATH;
+    url.search = "";
+    return NextResponse.rewrite(url);
+  }
+
+  const path = request.nextUrl.pathname;
+  if (!GUARDED.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) {
+    return NextResponse.next({ request });
+  }
+
   // Mock mode (no Supabase configured — local development only) has no
   // accounts to check, and createServerClient throws without a URL and key,
   // which used to take /dashboard down with it. Production always has both.
@@ -54,7 +74,6 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
   const redirect = (to: string) => {
     const url = request.nextUrl.clone();
     url.pathname = to;
@@ -85,7 +104,23 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+/** The owner side. Everything else — "/", /staff, /join, /auth/callback — stays public. */
+const GUARDED = ["/dashboard", "/onboarding"];
+
+/**
+ * The host the phone asked for. Behind Vercel's proxy that is the Host
+ * header; x-forwarded-host is read too (a proxy in front, or the browser
+ * tests). Either could only ever show someone the move screen.
+ */
+function requestHost(request: NextRequest): string | null {
+  const raw = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
+  return raw ? raw.split(",")[0].trim().replace(/:\d+$/, "") : null;
+}
+
 export const config = {
-  // Everything else — "/", /staff, /join, /auth/callback — stays public.
-  matcher: ["/dashboard/:path*", "/onboarding"],
+  // Every page, for the old-address check above; only GUARDED pays for the
+  // auth check. Not API routes, the auth callback, Next's own files, the
+  // generated icons and preview pictures (a pushed notification on the old
+  // address still shows its icon), or anything with a file extension.
+  matcher: ["/((?!api/|auth/|_next/|icon|apple-icon|maskable-icon|opengraph-image|.*\\..*).*)"],
 };

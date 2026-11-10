@@ -11,6 +11,7 @@ import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { dataProvider } from "@/lib/data";
 import type { LinkedPhone } from "@/lib/data/types";
 import { DATE_LOCALE } from "@/lib/owner-locale";
+import { houseCodeMessage, whatsAppShareUrl } from "@/lib/share-text";
 
 /**
  * The house code and the staff phones linked to this household, in Access
@@ -81,11 +82,8 @@ function HouseCodeCard() {
 
   function shareOnWhatsApp() {
     if (!code) return;
-    const message =
-      `Kode rumah Miamus: ${formatCode(code)}\n` +
-      `Kalau HP Anda keluar dari Miamus: buka ${window.location.origin}/join/code, ` +
-      `ketik kode ini, pilih nama Anda, lalu masukkan PIN.`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+    const message = houseCodeMessage(formatCode(code), window.location.origin);
+    window.open(whatsAppShareUrl(message), "_blank", "noopener,noreferrer");
   }
 
   return (
