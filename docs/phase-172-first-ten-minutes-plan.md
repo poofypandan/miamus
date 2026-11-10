@@ -178,19 +178,28 @@ How it works:
 - **`my_household_access()`** gains a sixth answer, **`open`**: no request
   yet and automatic approval is available. `canCreateHousehold()` accepts
   it; `RequestScreen` and `WaitingScreen` remain only for the fallback
-  below.
+  below. **Old builds** (a PWA updates on its next open) map an unknown
+  value to `none` and show Request access; so `request_household_access()`
+  is re-created to approve automatically too, under the same switch and
+  cap, and return `approved`, which old builds already understand. Either
+  path gets an old or a new phone straight to the name form.
 - **`create_household(p_name, p_has_pets)`** (re-created, same signature,
   same advisory lock): for a non-admin with no request row, if
   `signup_config.auto_approve` is on and fewer than
   `signup_config.daily_auto_cap` accounts were approved automatically today
-  (Jakarta day), it writes the request as **approved, automatically**
+  (Jakarta day; counted under a **global** transaction-scoped advisory lock,
+  `pg_advisory_xact_lock(hashtext('auto_approve'))`, taken before the count,
+  as `kakak_begin` does for its global cap, so a burst of sign-ups can't all
+  read "24"), it writes the request as **approved, automatically**
   (`decided_by` null, a new `auto boolean` column true) in the same
   transaction, then creates the household as today. A rejected account is
   still refused. One household per account is unchanged.
-- **Over the cap, or with the switch off**, it files a **pending** request
-  and raises `household_not_approved`, and the screen falls back to today's
-  Request sent screen with the new wording below. Nothing else about
-  today's manual path changes.
+- **Over the cap, or with the switch off**, `create_household` raises
+  `household_not_approved` **without writing anything** (a raise would roll
+  back any row it wrote). The screen then calls `request_household_access()`,
+  a separate call that commits the **pending** request and its push, and
+  shows today's Request sent screen with the new wording below. Nothing else
+  about today's manual path changes.
 - **The operator is told afterwards**: on an automatic approval,
   `create_household` queues **"New household · X just joined"** to the
   platform admins (the same best-effort `queue_push` loop
@@ -434,7 +443,7 @@ own Indonesian titles:
 | Today | For setup |
 | --- | --- |
 | One model for everything: `KAKAK_MODEL` (default Opus), `KAKAK_EFFORT` (`low`) | **Per-job routing**: `KAKAK_MODEL_QUICK` (falls back to `KAKAK_MODEL`; Haiku once the eval passes, recommendation 1) and **`KAKAK_MODEL_SETUP`**, default **`claude-opus-5-5`**, with `KAKAK_EFFORT_SETUP` default `medium`. `cost.ts` already prices all three models |
-| `MAX_TOKENS 4000`, `MAX_CALLS_PER_CONVERSATION 8`, `MAX_QUESTIONS 3`, `MAX_TYPED 500` | A **job profile** in `engine.ts`: setup gets `max_tokens 8000`, **2 calls** (the answer, plus one retry on a validation error), **0 questions** (she guesses and marks the guess), **1,500 typed characters** (a long voice note) |
+| `MAX_TOKENS 4000`, `MAX_CALLS_PER_CONVERSATION 8`, `MAX_QUESTIONS 3`, `MAX_TYPED 500` | A **job profile** in `engine.ts`: setup gets `max_tokens 8000`, **2 calls** (the answer, plus one retry on a validation error), **0 questions** (she guesses and marks the guess), **1,500 typed characters** (a long voice note). `checkHistory()` and `nextUserTurn()` take the job, since they enforce the typed limit on every user message today |
 | Five tools, one card each | `propose_home_setup` only, for this job; the quick tools aren't offered |
 | `/api/kakak` checks `kakak_status` (allowed and enabled, 40 a day) | A sibling route **`/api/kakak/setup`** (same engine, same practice mode, same recording) that calls **`kakak_begin_setup(p_household)`** instead |
 | `kakak_config.max_call_cost_micro_usd` = $0.15 for every call | A separate **`setup_max_call_cost_micro_usd`**, default **500,000 ($0.50)**, so one big setup call isn't cut off |
@@ -446,9 +455,14 @@ migration): allowed when the caller is an admin of the household
 used fewer than **2 setup calls** ever (`kakak_settings.setup_calls`,
 a new counter, so one retry is free too), `kakak_config.setup_enabled` is
 on, and fewer than **`kakak_config.daily_free_setups`** (default **25**)
-setup calls were made today across Miamus. It **doesn't need**
+setup calls were made today across Miamus (counted under the same global
+lock as `kakak_begin`). It **doesn't need**
 `kakak_settings.allowed` or `enabled`: that's what "free once, for everyone"
-means. It shares the global daily call cap (400). `security definer`,
+means. It shares the global daily call cap (400). **`kakak_record` and
+`kakak_set_result` are re-created** so a request started by
+`kakak_begin_setup` (its `job = 'setup'`) is recorded for any admin of the
+household whether or not Kakak is allowed or enabled; quick requests keep
+126's checks. `security definer`,
 `search_path = ''`, `revoke all … from public, anon;` `grant execute … to
 authenticated, service_role;`. Paid plans don't exist yet; when they do, the
 quick-add allowance moves with them and setup stays free.
@@ -472,7 +486,7 @@ chip if they like), then taps **Send one WhatsApp message**. WhatsApp opens
 with one message they can send to the staff group, or to each person:
 
 > Halo! Ini Miamus, aplikasi rumah kita. Buka link ini, pilih nama Anda,
-> lalu buat PIN: https://miamus.app/join/code?c=K7P-M2Q
+> lalu buat PIN: https://miamus.app/join/code#c=K7P-M2Q
 > Video 15 detik: https://miamus.app/tips/staf-mulai
 
 **One line of instruction** and a video link. The owner's screen says one
@@ -502,13 +516,15 @@ Then the usual first chore, with photos.
   hold `authenticated`).
 - **The owner is told** who claimed a name: the claim writes a
   `staff_sign_in_attempts` row with the person (`kind` gains `claim`; kept
-  30 days like every attempt), and the owner gets a quiet Today line "Sari
-  linked her phone" for that day. If it wasn't Sari, the owner's existing
+  30 days like every attempt), and the owner gets a quiet Today line "{name}'s
+  phone is linked" ("Sari's phone is linked") for that day. If it wasn't Sari, the owner's existing
   **let them choose again** (clears the PIN, 110) and **remove the phone**
   (Household → Staff sign-in, 115) put the name back.
-- **Prefilled code:** `/join/code?c=` fills the code box (it is not a
-  secret beyond the household's staff; it's the same code the owner already
-  shares).
+- **Prefilled code:** `/join/code#c=K7P-M2Q` fills the code box. It goes in
+  the **fragment** (`#`), not a query string, so it never reaches server or
+  Vercel request logs; the page reads it on the phone and clears it from the
+  address bar. It isn't secret beyond the household's staff (the owner
+  already shares it), but it shouldn't sit in logs.
 - Per-person invite links keep working for anyone who prefers them.
 
 **Why it's safe enough:** the code reaches only the household's own
@@ -738,7 +754,7 @@ setup should be no different.
 | Kakak button / wait | Make my list · Kakak is making your list… | Buatkan daftar · Kakak sedang membuat daftar… |
 | Kakak result | Kakak's list · 18 rooms · 46 chores · 4 staff · 3 pets · 6 bills · Add all 77 · Change something | Daftar dari Kakak · 18 ruangan · 46 tugas · 4 staf · 3 hewan · 6 tagihan · Tambah semua 77 · Ubah sesuatu |
 | Kakak failed | Kakak couldn't make the list. Pick from the list below instead. | Kakak belum bisa membuat daftar. Pilih dari daftar di bawah saja. |
-| Today line, first day | Sari linked her phone | HP Sari sudah terhubung |
+| Today line, first day | Sari's phone is linked | HP Sari sudah terhubung |
 | Chores button (existing households) | Starter list | Daftar awal |
 | Push to platform admins | New household · {name} just joined | Rumah baru · {name} baru bergabung |
 
@@ -806,8 +822,9 @@ Nothing below is created in this PR.
 - `create_household(text, boolean)` re-created as in section 1, same
   signature, same revoke/grant (`revoke all … from public, anon;` `grant
   execute … to authenticated, service_role;`).
-- `request_household_access()` unchanged; it is now only used on the
-  fallback path.
+- `request_household_access()` re-created: approves automatically under the
+  same switch, cap and lock (for old builds); otherwise files pending and
+  pushes as today. Same revoke/grant.
 - `list_household_access_requests()` re-created to return `auto`.
 - Tests: open → create works and writes an automatic approval; the 26th
   account that day gets pending and `household_not_approved`; switch off →
@@ -837,8 +854,9 @@ Nothing below is created in this PR.
   `daily_free_setups int not null default 25`,
   `setup_max_call_cost_micro_usd bigint not null default 500000`.
 - `kakak_requests.tools` CHECK gains `propose_home_setup`.
-- `kakak_begin_setup(p_household)` as in section 3; `kakak_record` accepts
-  the job.
+- `kakak_begin_setup(p_household)` as in section 3; `kakak_record` and
+  `kakak_set_result` re-created to accept setup requests from households
+  where Kakak is off (same signatures, same revoke/grant).
 - Tests: free once (two calls) without `allowed`/`enabled`; the third
   refused; the daily free cap; a staff phone refused; the global cap still
   applies; grants.
