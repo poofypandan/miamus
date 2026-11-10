@@ -106,6 +106,8 @@ export function ChoreEditorDialog({
     notes?: string | null;
     /** The repair the new chore is a visit for (migrations/130). */
     repairId?: string | null;
+    /** Who it's for: the first-run checklist's "Give them a first task" (audit B1). */
+    assigneeId?: string | null;
   } | null;
 }) {
   const {
@@ -185,7 +187,7 @@ export function ChoreEditorDialog({
       setPlaces(room ? [room] : []);
       setSpot(room ? (preset?.spot?.trim() || null) : null);
       setCategory(preset?.category ?? "cleaning");
-      setAssignee(UNASSIGNED);
+      setAssignee(preset?.assigneeId ?? UNASSIGNED);
       setDate(defaultDate);
       setTime("");
       setNotes(preset?.notes ?? "");

@@ -4,7 +4,16 @@ import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
-import { WHATS_NEW, staffWhatsNewEntry, storageKey, whatsNewEntry } from "@/lib/whats-new";
+import {
+  STAFF_TIP_CLOSED_ON_KEY,
+  STAFF_WHATS_NEW,
+  WHATS_NEW,
+  pickStaffTip,
+  staffWhatsNewEntry,
+  storageKey,
+  whatsNewEntry,
+  type StaffTipCandidate,
+} from "@/lib/whats-new";
 
 function wasSeen(id: string): boolean {
   try {
@@ -90,21 +99,50 @@ export function WhatsNewCard({ id, onTry }: { id: string; onTry?: () => void }) 
   );
 }
 
+function closedOn(): string | null {
+  try {
+    return localStorage.getItem(STAFF_TIP_CLOSED_ON_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 /**
- * A staff phone's one-line tutorial (lib/whats-new.ts STAFF_WHATS_NEW), in
- * Bahasa Indonesia only. Shown once, and only when `show` says the feature is
- * on this household's screens (there's no point explaining floors before the
- * owner has any).
+ * A staff phone's tutorials (lib/whats-new.ts STAFF_WHATS_NEW), in Bahasa
+ * Indonesia only, ONE at a time (audit B1, item 5): the newest that applies
+ * and hasn't been closed. A tip applies when `show` says its feature is on
+ * this household's screens (no point explaining floors before the owner has
+ * any). Once one is closed, the next waits until tomorrow.
+ *
+ * Decided after mount: the server has no storage.
  */
-export function StaffWhatsNewCard({ id, show }: { id: string; show: boolean }) {
-  const entry = staffWhatsNewEntry(id);
-  const [seen, setSeen] = useState(true);
+export function StaffTipCard({ tips }: { tips: StaffTipCandidate[] }) {
+  // null until read on this phone: nothing shows before that.
+  const [state, setState] = useState<{ seen: ReadonlySet<string>; resting: boolean } | null>(null);
 
   useEffect(() => {
-    if (entry) setSeen(wasSeen(id));
-  }, [entry, id]);
+    const seen = new Set(STAFF_WHATS_NEW.map((entry) => entry.id).filter(wasSeen));
+    setState({ seen, resting: closedOn() === todayKey() });
+  }, []);
 
-  if (!entry || !show || seen) return null;
+  const id = state && !state.resting ? pickStaffTip(tips, (tip) => state.seen.has(tip)) : null;
+  const entry = id ? staffWhatsNewEntry(id) : undefined;
+  if (!id || !entry) return null;
+
+  function close() {
+    markSeen(id!);
+    try {
+      localStorage.setItem(STAFF_TIP_CLOSED_ON_KEY, todayKey());
+    } catch {
+      // Storage off: the next tip may show on the next visit, no harm.
+    }
+    setState((prev) => (prev ? { seen: new Set([...prev.seen, id!]), resting: true } : prev));
+  }
 
   return (
     <section
@@ -113,10 +151,7 @@ export function StaffWhatsNewCard({ id, show }: { id: string; show: boolean }) {
     >
       <button
         type="button"
-        onClick={() => {
-          markSeen(id);
-          setSeen(true);
-        }}
+        onClick={close}
         aria-label="Tutup"
         className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-zinc-200"
       >
