@@ -19,7 +19,8 @@ interface Calls {
 async function signUp(
   context: BrowserContext,
   locale: "en" | "id",
-  create: { status: number; json: unknown }
+  create: { status: number; json: unknown } | (() => { status: number; json: unknown }),
+  requestAnswer = "pending"
 ): Promise<Calls> {
   await installStub(context, { stored: freshSession(NEWCOMER, false) });
   await context.addInitScript((lang) => localStorage.setItem("miamus.owner-locale", lang), locale);
@@ -29,8 +30,8 @@ async function signUp(
     calls.rpc.push({ name, body: route.request().postDataJSON() ?? {} });
     if (name === "my_locale") return route.fulfill({ json: locale });
     if (name === "my_household_access") return route.fulfill({ json: "open" });
-    if (name === "create_household") return route.fulfill(create);
-    if (name === "request_household_access") return route.fulfill({ json: "pending" });
+    if (name === "create_household") return route.fulfill(typeof create === "function" ? create() : create);
+    if (name === "request_household_access") return route.fulfill({ json: requestAnswer });
     return route.fallback();
   });
   await context.route(`${STUB_URL}/auth/v1/user*`, (route) =>
@@ -92,4 +93,27 @@ test("Bahasa Indonesia: the email promise and the sharing sentence", async ({ co
   await expect(
     page.getByText("Kami akan mengirim email ke sam@example.test dari support@poofylabs.dev, biasanya dalam sehari.")
   ).toBeVisible();
+});
+
+test("refused, then approved after all: the form works again and the second try creates it", async ({ context, page }) => {
+  let tries = 0;
+  const calls = await signUp(
+    context,
+    "en",
+    () =>
+      ++tries === 1
+        ? { status: 403, json: { code: "42501", message: "household_not_approved", details: null, hint: null } }
+        : { status: 200, json: "00000000-0000-4000-8000-0000000000f1" },
+    "approved"
+  );
+
+  await page.goto("/onboarding");
+  await page.getByLabel("Name your household").fill("The Lee Residence", { timeout: 20_000 });
+  const create = page.getByRole("button", { name: "Create household" });
+  await create.click();
+  await expect.poll(() => calls.rpc.filter((c) => c.name === "request_household_access").length).toBe(1);
+  await expect(create).toBeEnabled();
+  await expect(page.getByLabel("Name your household")).toHaveValue("The Lee Residence");
+  await create.click();
+  await expect.poll(() => calls.rpc.filter((c) => c.name === "create_household").length).toBe(2);
 });

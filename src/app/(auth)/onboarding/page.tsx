@@ -345,8 +345,11 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
         await enterHousehold();
         return;
       case "not_approved":
-        // Approval was withdrawn while this page was open.
+        // Over the day's cap since the page opened, or approval withdrawn.
+        // The screen may stay on this form (the request came back approved:
+        // Codex, PR #84), so the button must work again.
         await onNotApproved();
+        setSaving(false);
         return;
       case "invalid_name":
         setFailed(t("Use a name of up to 60 characters.", "Gunakan nama paling banyak 60 karakter."));
