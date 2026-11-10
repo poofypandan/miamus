@@ -46,6 +46,7 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
         "new_room_name",
         "new_room_floor",
         "notes",
+        "remind_days_before",
       ],
       properties: {
         title: {
@@ -79,6 +80,11 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
           "With new_room_name only: the floor it is on, as a reference marked (whole floor), or null.",
         ),
         notes: nullableString("Max 200 characters."),
+        remind_days_before: {
+          anyOf: [{ type: "integer", enum: [0, 1, 3, 7] }, { type: "null" }],
+          description:
+            "A push reminder to the owners: 0 on the day, or 1, 3 or 7 days before. Null for no reminder.",
+        },
       },
     },
   },

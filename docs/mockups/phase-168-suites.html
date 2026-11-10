@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rooms inside rooms mockups</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --amber:#92400e; --amberbg:rgba(251,191,36,.10); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1100px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0 0 6px; color:var(--muted); max-width:700px; }
+  pre.tree { max-width:700px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 14px; font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--ink2); margin:8px 0 0; overflow:auto; }
+  section.screen { max-width:1100px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:660px; }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:760px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone.tall { height:930px; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:40px; }
+  .brand { font-weight:600; font-size:17px; display:flex; gap:6px; align-items:center; }
+  .mark { width:24px; height:24px; display:block; }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:6px 10px; font-size:13px; color:var(--muted); font-weight:500; white-space:nowrap; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .ic.xs { width:12px; height:12px; }
+  .ic.sm { width:14px; height:14px; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+  /* chips and summary */
+  .scrollchips { display:flex; gap:6px; overflow:hidden; white-space:nowrap; }
+  .chip { border:1px solid var(--line); border-radius:999px; padding:6px 11px; font-size:12.5px; color:var(--ink2); background:#fff; flex:none; display:inline-flex; align-items:center; gap:4px; }
+  .chip.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .chip.on .ic { color:#fff; }
+  .chip.new { border-style:dashed; border-color:#a3a3a3; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .summary { font-size:12.5px; color:var(--ink2); background:#fff; border:1px solid var(--line); border-radius:12px; padding:9px 12px; }
+  .summary b { font-weight:600; }
+  .fl { display:flex; align-items:baseline; justify-content:space-between; margin:2px 2px -4px; }
+  .fl b { font-size:13px; }
+  .fl span { font-size:12px; color:var(--muted); }
+  /* room rows */
+  .group { background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .room { display:flex; flex-direction:column; gap:4px; padding:9px 12px; border-top:1px solid var(--line); }
+  .group > .room:first-child, .group > .suite:first-child > .room:first-child { border-top:0; }
+  .room .top { display:flex; align-items:center; gap:8px; min-height:22px; }
+  .room .top b { flex:1; font-weight:500; font-size:14px; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .room .top .ic { color:#a1a1aa; }
+  .suite .inner { margin-left:14px; border-left:2px solid var(--line); }
+  .suite .inner .room { padding-left:12px; border-top:1px solid var(--line); }
+  .suite .inner .room .top b { font-size:13.5px; }
+  .whole { background:#fafafa; }
+  .whole .top b { font-weight:600; font-size:12.5px; color:var(--ink2); }
+  .jobs { display:flex; flex-wrap:wrap; gap:4px; }
+  .job { background:var(--track); border-radius:999px; padding:3px 8px; font-size:11.5px; color:var(--ink2); }
+  .yes { font-size:12.5px; color:var(--ink2); display:flex; align-items:center; gap:4px; }
+  .yes .ic { color:var(--ok); }
+  .no { display:flex; align-items:center; justify-content:space-between; font-size:12.5px; color:var(--muted); }
+  .addsm { border:1px solid var(--line); border-radius:10px; padding:4px 9px; font-size:12px; color:var(--ink); font-weight:500; background:#fff; display:inline-flex; align-items:center; gap:3px; }
+  .addsm .ic { color:var(--ink); }
+  /* sheets */
+  .faded { opacity:.5; }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:64px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:8px 16px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+  .sheet > * { flex:none; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto 2px; }
+  .sheet h3 { margin:0; font-size:17px; text-align:center; }
+  .sheet .lead { margin:-6px 0 0; font-size:12.5px; color:var(--muted); text-align:center; display:flex; justify-content:center; align-items:center; gap:4px; }
+  .jh { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:4px 2px -4px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:2px 12px; }
+  .ch { display:flex; gap:10px; align-items:center; padding:9px 0; border-top:1px solid var(--line); }
+  .ch:first-child { border-top:0; }
+  .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .t > b { font-weight:500; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .t > span { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; }
+  .t > span.amber { color:var(--amber); }
+  .t > span.amber .ic { color:#b45309; }
+  .lic { width:30px; height:30px; border-radius:8px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
+  .lic .ic { color:var(--ink2); }
+  .btn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; border-radius:12px; font-weight:600; font-size:14px; }
+  .btn.primary { background:var(--primary); color:#fff; }
+  .btn.primary .ic { color:#fff; }
+  .btn.outline { border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:500; }
+  .btn.outline .ic { color:var(--ink); }
+  .link { text-align:center; font-size:13px; color:var(--muted); font-weight:500; display:flex; align-items:center; justify-content:center; gap:4px; }
+  .label { font-size:12.5px; font-weight:600; color:var(--ink2); margin-bottom:-4px; }
+  .label em { font-style:normal; font-weight:400; color:var(--muted); }
+  .field { border:1px solid var(--line); border-radius:12px; min-height:46px; padding:0 12px; font-size:14px; display:flex; gap:8px; align-items:center; background:#fff; }
+  .field > span { flex:1; min-width:0; }
+  .field.focus { border-color:var(--ink); }
+  .field .ph { color:#9ca3af; }
+  .hint { font-size:12px; color:var(--muted); margin-top:-4px; display:flex; gap:5px; align-items:flex-start; }
+  .hint .ic { margin-top:1px; }
+  /* picker */
+  .pick { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+  .ph2 { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; padding:8px 12px 4px; background:#fafafa; border-top:1px solid var(--line); }
+  .pick > .ph2:first-child { border-top:0; }
+  .opt { display:flex; align-items:center; gap:8px; padding:0 12px; min-height:44px; border-top:1px solid var(--line); font-size:13.5px; }
+  .opt .ic { color:#a1a1aa; }
+  .opt.in { padding-left:26px; }
+  .opt.in span.n { color:var(--ink2); }
+  .opt .sub { display:block; font-size:11.5px; color:var(--muted); }
+  .opt.all { background:var(--amberbg); }
+  .opt.all .ic { color:#b45309; }
+  .opt b { font-weight:500; }
+  .opt mark { background:none; font-weight:600; color:var(--ink); }
+  .chosen { display:flex; align-items:center; gap:8px; min-height:44px; border:1px solid var(--line); border-radius:10px; padding:0 4px 0 10px; background:rgba(251,191,36,.08); font-size:13px; font-weight:500; }
+  .chosen > span { flex:1; min-width:0; }
+  .chosen .ic { color:#b45309; }
+  .chosen .x { width:36px; height:36px; display:flex; align-items:center; justify-content:center; }
+  .chosen .x .ic { color:var(--muted); }
+  /* staff */
+  .hdr { font-size:17px; font-weight:600; padding:2px 0; }
+  .tip { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; gap:10px; font-size:12.5px; color:var(--ink2); }
+  .tip .ic { color:#b45309; margin-top:1px; }
+  .tip b { font-weight:600; }
+  .tip .ok { margin-left:auto; font-weight:600; color:var(--ink); align-self:flex-end; white-space:nowrap; }
+  .scard { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+  .scard .top { display:flex; gap:10px; align-items:flex-start; }
+  .scard .circ { width:28px; height:28px; display:flex; align-items:center; justify-content:center; flex:none; }
+  .scard .circ .ic { width:24px; height:24px; color:#9ca3af; }
+  .scard .t > b { white-space:normal; font-size:14.5px; }
+  .ltag { display:flex; gap:4px; align-items:flex-start; font-size:12px; font-weight:500; color:var(--ink2); }
+  .ltag .ic { margin-top:2px; color:var(--ink2); }
+  .badges { display:flex; gap:6px; flex-wrap:wrap; }
+  .bdg { font-size:11.5px; color:var(--ink2); background:var(--track); border-radius:999px; padding:2px 8px; display:inline-flex; align-items:center; gap:3px; }
+  .photo { display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border:1px dashed #d1d5db; border-radius:10px; font-size:13px; color:var(--ink2); }
+  /* manager rows */
+  .mrow { display:flex; align-items:center; gap:8px; min-height:46px; padding:0 12px; border-top:1px solid var(--line); font-size:14px; }
+  .mrow b { flex:1; font-weight:500; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mrow .ic { color:#a1a1aa; }
+  .mrow small { font-size:12px; color:var(--muted); }
+  .group > .mrow:first-child { border-top:0; }
+  .mrow.in { padding-left:26px; }
+  .mrow.in b { font-size:13.5px; color:var(--ink2); }
+  .fh { display:flex; align-items:center; gap:6px; margin:2px 2px -4px; font-size:13px; font-weight:600; }
+  .fh .grow { flex:1; }
+  .arrows { display:flex; gap:2px; }
+  .arrows span { width:30px; height:30px; border:1px solid var(--line); border-radius:8px; display:flex; align-items:center; justify-content:center; background:#fff; }
+  /* sort card */
+  .scard2 { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+  .scard2 h4 { margin:0; font-size:14.5px; display:flex; gap:6px; align-items:center; }
+  .scard2 h4 .ic { color:#b45309; }
+  .scard2 p { margin:-4px 0 0; font-size:12.5px; color:var(--muted); }
+  .mv { display:flex; flex-direction:column; gap:2px; padding:8px 0; border-top:1px solid var(--line); font-size:12.5px; }
+  .mv .from { color:var(--muted); text-decoration:line-through; text-decoration-color:#d4d4d8; }
+  .mv .to { display:flex; align-items:center; gap:5px; color:var(--ink); font-weight:500; }
+  .mv .to .ic { color:var(--muted); }
+  .mv .to small { font-weight:400; color:var(--muted); }
+  .note { font-size:12px; color:var(--muted); }
+  .toast { position:absolute; left:14px; right:14px; bottom:74px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:center; gap:8px; padding:12px; font-size:13.5px; }
+  .toast span { flex:1; }
+  .toast .okc { color:var(--ok); }
+  .toast b { display:flex; align-items:center; gap:4px; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-weight:600; }
+  .toast b .ic { color:var(--ink); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chevron-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></symbol>
+  <symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.05Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol>
+  <symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-cooking-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></symbol>
+  <symbol id="i-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+  <symbol id="i-corner-down-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-door-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+  <symbol id="mark" viewBox="0 0 512 512"><rect width="512" height="512" rx="114.5" fill="#171717"/><polyline points="112,214 256,104 400,214" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,400 152,262 256,354 360,262 360,400" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="page">
+  <h1>Phase 168 — Rooms inside rooms</h1>
+  <p>A room can have rooms inside it, one level deep: floor, room, room inside, spot. The owner's LT2 below. Plan: <code>docs/phase-168-suites-plan.md</code>. Owners see English or Bahasa Indonesia; staff screens are Bahasa Indonesia only.</p>
+<pre class="tree">LT2
+├─ Master Bedroom          (Kamar Utama)
+│   ├─ Bathroom            (Kamar Mandi)    spots: Shower, Toilet, Wastafel
+│   └─ Walk-in closet      (Ruang Ganti)
+├─ GB1                     (Kamar Tamu 1)
+│   └─ Bathroom            (Kamar Mandi)    spots: Toilet, Wastafel
+├─ GB2                     (Kamar Tamu 2)
+│   └─ Bathroom            (Kamar Mandi)    spots: Toilet, Wastafel
+├─ Lounge
+└─ Playroom</pre>
+</header>
+
+<!-- 1. Rooms view -->
+<section class="screen">
+  <h2>1. Chores → Rooms, "Vacuum" picked</h2>
+  <p>Rooms inside sit under their room, always open, with a thin rule on the left. Every room counts once, so LT2 reads "Vacuum in 5 of 9" and the walk-in closet shows it has no vacuum yet (D4). Bathrooms are quiet, not red.</p>
+  <div class="pair">
+    <div class="phone tall"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div>
+        <div class="seg"><span>Today</span><span class="on">Rooms</span><span>Repairs</span></div></div>
+      <div class="body">
+        <div class="scrollchips"><span class="chip">All</span><span class="chip on">Vacuum</span><span class="chip">Mop</span><span class="chip">Dust</span><span class="chip">Toilet</span><span class="chip">Towels</span></div>
+        <div class="summary"><b>Vacuum</b> in 7 of 14 rooms</div>
+        <div class="fl"><b>LT2</b><span>Vacuum in 5 of 9</span></div>
+        <div class="group">
+          <div class="suite">
+            <div class="room"><div class="top"><b>Master Bedroom</b></div><div class="yes"><svg class="ic xs"><use href="#i-check"/></svg>Tue · Sari</div></div>
+            <div class="inner">
+              <div class="room"><div class="top"><b>Bathroom</b></div><div class="no"><span>No vacuum yet</span><span class="addsm"><svg class="ic xs"><use href="#i-plus"/></svg>Add</span></div></div>
+              <div class="room"><div class="top"><b>Walk-in closet</b></div><div class="no"><span>No vacuum yet</span><span class="addsm"><svg class="ic xs"><use href="#i-plus"/></svg>Add</span></div></div>
+            </div>
+          </div>
+          <div class="suite">
+            <div class="room"><div class="top"><b>GB1</b></div><div class="yes"><svg class="ic xs"><use href="#i-check"/></svg>Wed · Ari</div></div>
+            <div class="inner">
+              <div class="room"><div class="top"><b>Bathroom</b></div><div class="no"><span>No vacuum yet</span><span class="addsm"><svg class="ic xs"><use href="#i-plus"/></svg>Add</span></div></div>
+            </div>
+          </div>
+          <div class="suite">
+            <div class="room"><div class="top"><b>GB2</b></div><div class="yes"><svg class="ic xs"><use href="#i-check"/></svg>Wed · Ari</div></div>
+            <div class="inner">
+              <div class="room"><div class="top"><b>Bathroom</b></div><div class="no"><span>No vacuum yet</span><span class="addsm"><svg class="ic xs"><use href="#i-plus"/></svg>Add</span></div></div>
+            </div>
+          </div>
+          <div class="room"><div class="top"><b>Lounge</b></div><div class="yes"><svg class="ic xs"><use href="#i-check"/></svg>Mon, Thu · Ari</div></div>
+          <div class="room"><div class="top"><b>Playroom</b></div><div class="yes"><svg class="ic xs"><use href="#i-check"/></svg>Fri · Sari</div></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Pets</span><span class="on"><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span><svg class="ic"><use href="#i-house"/></svg>Household</span></div>
+    </div>
+
+    <div class="phone tall"><div class="tag">Owner · Indonesia</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div>
+        <div class="seg"><span>Hari ini</span><span class="on">Ruangan</span><span>Perbaikan</span></div></div>
+      <div class="body">
+        <div class="scrollchips"><span class="chip on">Semua</span><span class="chip">Vakum</span><span class="chip">Pel</span><span class="chip">Lap debu</span><span class="chip">Toilet</span><span class="chip">Handuk</span></div>
+        <div class="fl"><b>LT2</b><span>9 ruangan</span></div>
+        <div class="group">
+          <div class="suite">
+            <div class="room"><div class="top"><b>Kamar Utama</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Vakum · Sel</span><span class="job">Seprai · Sab</span></div></div>
+            <div class="inner">
+              <div class="room"><div class="top"><b>Kamar Mandi</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Toilet · Rab</span><span class="job">Handuk · Setiap hari</span></div></div>
+              <div class="room"><div class="top"><b>Ruang Ganti</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Lap debu · Sab</span></div></div>
+            </div>
+          </div>
+          <div class="suite">
+            <div class="room"><div class="top"><b>Kamar Tamu 1</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Vakum · Rab</span><span class="job">Seprai · Jum</span></div></div>
+            <div class="inner">
+              <div class="room"><div class="top"><b>Kamar Mandi</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Toilet · Jum</span></div></div>
+            </div>
+          </div>
+          <div class="suite">
+            <div class="room"><div class="top"><b>Kamar Tamu 2</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Vakum · Rab</span><span class="job">Seprai · Jum</span></div></div>
+            <div class="inner">
+              <div class="room"><div class="top"><b>Kamar Mandi</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Toilet · Jum</span><span class="job">Kaca · Sen</span></div></div>
+            </div>
+          </div>
+          <div class="room"><div class="top"><b>Lounge</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Vakum · Sen, Kam</span><span class="job">Pel · Sen, Kam</span></div></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><svg class="ic"><use href="#i-calendar-days"/></svg>Hari ini</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Hewan</span><span class="on"><svg class="ic"><use href="#i-clipboard-list"/></svg>Tugas</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Dapur</span><span><svg class="ic"><use href="#i-house"/></svg>Rumah</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Room sheet -->
+<section class="screen">
+  <h2>2. Tap a bedroom</h2>
+  <p>The bedroom's own chores by job, as today; then its rooms inside, each with its chores and open repairs counted. Tap one to open its sheet. Repairs stay in their own room.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div>
+        <div class="seg"><span>Today</span><span class="on">Rooms</span><span>Repairs</span></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Master Bedroom</h3>
+        <div class="lead"><svg class="ic xs"><use href="#i-layers"/></svg>LT2</div>
+        <div class="jh">Vacuum · Mop</div>
+        <div class="card">
+          <div class="ch"><div class="t"><b>Vacuum &amp; pel</b><span><svg class="ic xs"><use href="#i-repeat"/></svg>Every Tuesday · 09:00 · Sari</span></div><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="jh">Sheets</div>
+        <div class="card">
+          <div class="ch"><div class="t"><b>Ganti seprai</b><span><svg class="ic xs"><use href="#i-repeat"/></svg>Every Saturday · Sari</span></div><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="jh">Rooms inside</div>
+        <div class="card">
+          <div class="ch"><span class="lic"><svg class="ic"><use href="#i-door-open"/></svg></span><div class="t"><b>Bathroom</b><span>4 chores</span><span class="amber"><svg class="ic xs"><use href="#i-wrench"/></svg>1 open repair · shower leaking</span></div><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="ch"><span class="lic"><svg class="ic"><use href="#i-door-open"/></svg></span><div class="t"><b>Walk-in closet</b><span>1 chore</span></div><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="btn primary"><svg class="ic"><use href="#i-plus"/></svg>Add chore here</div>
+      </div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · Indonesia</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div>
+        <div class="seg"><span>Hari ini</span><span class="on">Ruangan</span><span>Perbaikan</span></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Kamar Tamu 1 · Kamar Mandi</h3>
+        <div class="lead"><svg class="ic xs"><use href="#i-layers"/></svg>LT2</div>
+        <div class="jh">Toilet</div>
+        <div class="card">
+          <div class="ch"><div class="t"><b>Sikat toilet</b><span><svg class="ic xs"><use href="#i-repeat"/></svg>Setiap Jumat · Ari</span></div><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="jh">Wastafel</div>
+        <div class="card">
+          <div class="ch"><div class="t"><b>Lap keran dan wastafel</b><span><svg class="ic xs"><use href="#i-repeat"/></svg>Setiap hari · Ari</span></div><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="jh">Perbaikan</div>
+        <div class="card">
+          <div class="ch"><div class="t"><b>Shower bocor</b><span class="amber"><svg class="ic xs"><use href="#i-wrench"/></svg>Shower · Dijadwalkan Kam 12 Nov</span></div><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="btn primary"><svg class="ic"><use href="#i-plus"/></svg>Tambah tugas di sini</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Picker -->
+<section class="screen">
+  <h2>3. Chore form: the room picker</h2>
+  <p>Rooms inside are indented under their room. When adding, "Whole Master Bedroom" ticks the bedroom and each room inside, one chore each (D5). Search matches the whole path, so "kamar mandi" finds all three bathrooms with their bedroom.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English · adding</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div>
+        <div class="seg"><span class="on">Today</span><span>Rooms</span><span>Repairs</span></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>New chore</h3>
+        <div class="label">Title</div>
+        <div class="field"><span>Vacuum &amp; pel</span></div>
+        <div class="label">Room <em>(optional)</em></div>
+        <div class="field focus"><svg class="ic"><use href="#i-map-pin"/></svg><span class="ph">Search rooms</span></div>
+        <div class="pick">
+          <div class="ph2">LT2</div>
+          <div class="opt"><svg class="ic"><use href="#i-layers"/></svg><b>Whole floor</b></div>
+          <div class="opt"><svg class="ic"><use href="#i-map-pin"/></svg><b>Master Bedroom</b></div>
+          <div class="opt in"><svg class="ic sm"><use href="#i-corner-down-right"/></svg><span class="n">Bathroom</span></div>
+          <div class="opt in"><svg class="ic sm"><use href="#i-corner-down-right"/></svg><span class="n">Walk-in closet</span></div>
+          <div class="opt all in"><svg class="ic sm"><use href="#i-plus"/></svg><span><b>Whole Master Bedroom</b><span class="sub">3 rooms, one chore each</span></span></div>
+          <div class="opt"><svg class="ic"><use href="#i-map-pin"/></svg><b>GB1</b></div>
+          <div class="opt in"><svg class="ic sm"><use href="#i-corner-down-right"/></svg><span class="n">Bathroom</span></div>
+          <div class="opt all in"><svg class="ic sm"><use href="#i-plus"/></svg><span><b>Whole GB1</b><span class="sub">2 rooms, one chore each</span></span></div>
+          <div class="opt"><svg class="ic"><use href="#i-map-pin"/></svg><b>GB2</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · Indonesia · mencari</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div>
+        <div class="seg"><span class="on">Hari ini</span><span>Ruangan</span><span>Perbaikan</span></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Tugas baru</h3>
+        <div class="label">Judul</div>
+        <div class="field"><span>Sikat toilet</span></div>
+        <div class="label">Ruangan <em>(opsional)</em></div>
+        <div class="chosen"><svg class="ic"><use href="#i-map-pin"/></svg><span>LT2 · Kamar Utama · Kamar Mandi</span><span class="x"><svg class="ic"><use href="#i-x"/></svg></span></div>
+        <div class="field focus"><svg class="ic"><use href="#i-search"/></svg><span>kamar mandi</span></div>
+        <div class="pick">
+          <div class="ph2">LT2</div>
+          <div class="opt"><svg class="ic"><use href="#i-map-pin"/></svg><span>Kamar Tamu 1 · <mark>Kamar Mandi</mark></span></div>
+          <div class="opt"><svg class="ic"><use href="#i-map-pin"/></svg><span>Kamar Tamu 2 · <mark>Kamar Mandi</mark></span></div>
+          <div class="ph2">LT1</div>
+          <div class="opt"><svg class="ic"><use href="#i-map-pin"/></svg><span><mark>Kamar Mandi</mark> Tamu</span></div>
+        </div>
+        <div class="note">Satu tugas dibuat untuk setiap ruangan yang dipilih.</div>
+        <div class="label">Bagian <em>(opsional)</em></div>
+        <div class="chips"><span class="chip on">Toilet</span><span class="chip">Wastafel</span><span class="chip">Shower</span><span class="chip new"><svg class="ic xs"><use href="#i-plus"/></svg>Bagian baru</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Staff -->
+<section class="screen">
+  <h2>4. Staff phone: the chore tag</h2>
+  <p>The full path, wrapping to a second line when needed, never cut (D6). Their list keeps its time order. A one-line tip, once.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Staf · Indonesia</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div>
+        <div class="seg"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
+      <div class="body">
+        <div class="tip"><svg class="ic"><use href="#i-info"/></svg><div>Kamar mandi sekarang ditulis bersama kamarnya, misalnya <b>LT2 · Kamar Tamu 2 · Kamar Mandi · Wastafel</b>.<div style="text-align:right;margin-top:4px"><span class="ok">Mengerti</span></div></div></div>
+        <div class="hdr">Pagi</div>
+        <div class="scard">
+          <div class="top"><span class="circ"><svg class="ic"><use href="#i-circle"/></svg></span>
+            <div class="t"><b>Lap keran dan wastafel</b>
+              <span class="ltag"><svg class="ic xs"><use href="#i-map-pin"/></svg>LT2 · Kamar Tamu 2 · Kamar Mandi · Wastafel</span></div></div>
+          <div class="badges"><span class="bdg">08.00</span><span class="bdg"><svg class="ic xs"><use href="#i-repeat"/></svg>Setiap hari</span></div>
+          <div class="photo"><svg class="ic"><use href="#i-camera"/></svg>Foto sesudah</div>
+        </div>
+        <div class="scard">
+          <div class="top"><span class="circ"><svg class="ic"><use href="#i-circle"/></svg></span>
+            <div class="t"><b>Vakum dan pel</b>
+              <span class="ltag"><svg class="ic xs"><use href="#i-map-pin"/></svg>LT2 · Kamar Utama</span></div></div>
+          <div class="badges"><span class="bdg">09.00</span><span class="bdg"><svg class="ic xs"><use href="#i-repeat"/></svg>Setiap Selasa</span></div>
+        </div>
+        <div class="scard">
+          <div class="top"><span class="circ"><svg class="ic"><use href="#i-circle"/></svg></span>
+            <div class="t"><b>Lap debu rak</b>
+              <span class="ltag"><svg class="ic xs"><use href="#i-map-pin"/></svg>LT2 · Kamar Utama · Ruang Ganti</span></div></div>
+          <div class="badges"><span class="bdg">10.00</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Household → Rooms -->
+<section class="screen">
+  <h2>5. Household → Rooms: editing</h2>
+  <p>Rooms inside are listed under their room. A room has a new field, Inside (optional), listing that floor's rooms that aren't inside another. An outer room offers Add a room inside, with quick names.</p>
+  <div class="pair">
+    <div class="phone tall"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div></div>
+      <div class="body">
+        <div style="font-size:16px;font-weight:600">Rooms</div>
+        <div class="fh"><svg class="ic sm"><use href="#i-layers"/></svg><span class="grow">LT2</span><span class="arrows"><span><svg class="ic sm"><use href="#i-chevron-up"/></svg></span><span><svg class="ic sm"><use href="#i-chevron-down"/></svg></span></span></div>
+        <div class="group">
+          <div class="mrow"><b>Master Bedroom</b><small>2 inside</small><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="mrow in"><svg class="ic sm"><use href="#i-corner-down-right"/></svg><b>Bathroom</b><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="mrow in"><svg class="ic sm"><use href="#i-corner-down-right"/></svg><b>Walk-in closet</b><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="mrow"><b>GB1</b><small>1 inside</small><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="mrow in"><svg class="ic sm"><use href="#i-corner-down-right"/></svg><b>Bathroom</b><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="mrow"><b>GB2</b><small>1 inside</small><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="mrow in"><svg class="ic sm"><use href="#i-corner-down-right"/></svg><b>Bathroom</b><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="mrow"><b>Lounge</b><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="mrow"><b>Playroom</b><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="fh"><svg class="ic sm"><use href="#i-layers"/></svg><span class="grow">LT3</span><span class="arrows"><span><svg class="ic sm"><use href="#i-chevron-up"/></svg></span><span><svg class="ic sm"><use href="#i-chevron-down"/></svg></span></span></div>
+        <div class="group">
+          <div class="mrow"><b>Music Room</b><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="mrow"><b>Creative Space</b><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="btn outline"><svg class="ic"><use href="#i-plus"/></svg>Add a room</div>
+        <div class="btn outline"><svg class="ic"><use href="#i-plus"/></svg>Add a floor</div>
+      </div>
+      <div class="tabbar"><span><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Pets</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span class="on"><svg class="ic"><use href="#i-house"/></svg>Household</span></div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · English · edit</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Edit room</h3>
+        <div class="label">Room name</div>
+        <div class="field"><span>Bathroom</span></div>
+        <div class="label">Floor</div>
+        <div class="field"><svg class="ic"><use href="#i-layers"/></svg><span>LT2</span><svg class="ic"><use href="#i-chevron-down"/></svg></div>
+        <div class="label">Inside <em>(optional)</em></div>
+        <div class="field focus"><svg class="ic"><use href="#i-door-open"/></svg><span>GB1</span><svg class="ic"><use href="#i-chevron-down"/></svg></div>
+        <div class="hint"><svg class="ic xs"><use href="#i-info"/></svg><span>A room inside has its own door, like a bathroom. A sink or a shower is a spot.</span></div>
+        <div class="note">Shown as <b style="color:var(--ink2)">LT2 · GB1 · Bathroom</b></div>
+        <div class="btn primary">Save</div>
+        <div class="link"><svg class="ic sm"><use href="#i-trash"/></svg>Delete room</div>
+      </div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · Indonesia · kamar</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div></div>
+      <div class="body faded"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Ubah ruangan</h3>
+        <div class="label">Nama ruangan</div>
+        <div class="field"><span>Kamar Tamu 1</span></div>
+        <div class="label">Lantai</div>
+        <div class="field"><svg class="ic"><use href="#i-layers"/></svg><span>LT2</span><svg class="ic"><use href="#i-chevron-down"/></svg></div>
+        <div class="label">Ruangan di dalamnya</div>
+        <div class="group">
+          <div class="mrow"><svg class="ic sm"><use href="#i-door-open"/></svg><b>Kamar Mandi</b><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="label">Tambah ruangan di dalamnya</div>
+        <div class="chips"><span class="chip"><svg class="ic xs"><use href="#i-plus"/></svg>Ruang ganti</span><span class="chip"><svg class="ic xs"><use href="#i-plus"/></svg>Balkon</span><span class="chip new"><svg class="ic xs"><use href="#i-plus"/></svg>Nama lain</span></div>
+        <div class="btn primary">Simpan</div>
+        <div class="link"><svg class="ic sm"><use href="#i-trash"/></svg>Hapus ruangan</div>
+        <div class="note" style="text-align:center">Kalau dihapus, Kamar Mandi pindah ke LT2 dengan nama "Kamar Tamu 1 Kamar Mandi". Tugasnya tetap ada.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. Group card -->
+<section class="screen">
+  <h2>6. The one-time card for names typed the old way</h2>
+  <p>Owners only, after "Sort your rooms into floors". Previewed, optional, one button and Undo (D7). Chores keep their room; only names and places change. "GB2 Bathroom" with no room called GB2 is left as it is.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div>
+        <div class="seg"><span>Today</span><span class="on">Rooms</span><span>Repairs</span></div></div>
+      <div class="body">
+        <div class="scard2">
+          <h4><svg class="ic"><use href="#i-sparkles"/></svg>Group bathrooms and closets with their bedroom</h4>
+          <p>Bathrooms and closets on LT2 go inside their bedroom. Their chores stay.</p>
+          <div>
+            <div class="mv"><span class="from">LT2 · Master Bathroom</span><span class="to"><svg class="ic xs"><use href="#i-arrow-right"/></svg>Master Bedroom · Bathroom</span></div>
+            <div class="mv"><span class="from">LT2 · Master Closet</span><span class="to"><svg class="ic xs"><use href="#i-arrow-right"/></svg>Master Bedroom · Closet</span></div>
+            <div class="mv"><span class="from">LT2 · GB1 Bathroom</span><span class="to"><svg class="ic xs"><use href="#i-arrow-right"/></svg>GB1 · Bathroom</span></div>
+            <div class="mv"><span class="from">LT2 · GB2 Bathroom Toilet</span><span class="to"><svg class="ic xs"><use href="#i-arrow-right"/></svg>GB2 · Bathroom <small>spot Toilet</small></span></div>
+            <div class="mv"><span class="from">LT2 · GB2 Bathroom Wastafel</span><span class="to"><svg class="ic xs"><use href="#i-arrow-right"/></svg>GB2 · Bathroom <small>spot Wastafel</small></span></div>
+          </div>
+          <div class="note">Rename any of them later on the Rooms page.</div>
+          <div class="btn primary">Group</div>
+          <div class="link">Not now</div>
+        </div>
+      </div>
+      <div class="tabbar"><span><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Pets</span><span class="on"><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span><svg class="ic"><use href="#i-house"/></svg>Household</span></div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · Indonesia · sesudah</div><div class="status"></div>
+      <div class="appbar"><div class="row"><div class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</div></div>
+        <div class="seg"><span>Hari ini</span><span class="on">Ruangan</span><span>Perbaikan</span></div></div>
+      <div class="body">
+        <div class="scrollchips"><span class="chip on">Semua</span><span class="chip">Vakum</span><span class="chip">Pel</span><span class="chip">Toilet</span><span class="chip">Seprai</span></div>
+        <div class="fl"><b>LT2</b><span>9 ruangan</span></div>
+        <div class="group">
+          <div class="suite">
+            <div class="room"><div class="top"><b>Master Bedroom</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Vakum · Sel</span></div></div>
+            <div class="inner">
+              <div class="room"><div class="top"><b>Bathroom</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Toilet · Rab</span></div></div>
+              <div class="room"><div class="top"><b>Closet</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Lap debu · Sab</span></div></div>
+            </div>
+          </div>
+          <div class="suite">
+            <div class="room"><div class="top"><b>GB1</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Vakum · Rab</span></div></div>
+            <div class="inner"><div class="room"><div class="top"><b>Bathroom</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Toilet · Jum</span></div></div></div>
+          </div>
+          <div class="suite">
+            <div class="room"><div class="top"><b>GB2</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Vakum · Rab</span></div></div>
+            <div class="inner"><div class="room"><div class="top"><b>Bathroom</b><svg class="ic"><use href="#i-chevron-right"/></svg></div><div class="jobs"><span class="job">Toilet · Jum</span></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="toast"><svg class="ic okc"><use href="#i-circle-check"/></svg><span>Ruangan sudah dikelompokkan</span><b><svg class="ic xs"><use href="#i-undo"/></svg>Batalkan</b></div>
+      <div class="tabbar"><span><svg class="ic"><use href="#i-calendar-days"/></svg>Hari ini</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Hewan</span><span class="on"><svg class="ic"><use href="#i-clipboard-list"/></svg>Tugas</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Dapur</span><span><svg class="ic"><use href="#i-house"/></svg>Rumah</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <p style="margin-bottom:24px">Names stay as each household types them: the right-hand screen keeps the English names this owner uses, with Indonesian labels around them. The examples in screens 1–5 (Kamar Utama, Kamar Tamu 1, Kamar Mandi, Ruang Ganti) show a household that types its rooms in Indonesian.</p>
+</section>
+</body>
+</html>

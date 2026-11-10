@@ -227,6 +227,7 @@ describe("refineChore (the card's chips)", () => {
     newRoomFloorId: null,
     newRoomFloorName: null,
     notes: null,
+    remindDaysBefore: null,
   };
 
   it("changes how often; one time drops the end date", () => {
@@ -246,9 +247,12 @@ describe("refineChore (the card's chips)", () => {
   it("tells Kakak what the chips changed, and that the owner's words win", () => {
     const daily = refineChore(refineChore(chore, { recurrence: "daily" }), { assignee: { id: id(1), name: "Sari" } });
     expect(refinementNote([daily])).toBe(
-      "(Set on the card with one tap; the owner's words after this win: Siram tanaman: every day, for Sari.)",
+      "(Set on the card with one tap; the owner's words after this win: Siram tanaman: every day, for Sari, no reminder.)",
     );
-    expect(refinementNote([refineChore(chore, { assignee: null })])).toMatch(/Siram tanaman: every monday, for anyone\.\)$/);
+    expect(refinementNote([refineChore(chore, { assignee: null })])).toMatch(/Siram tanaman: every monday, for anyone, no reminder\.\)$/);
+    expect(refinementNote([refineChore(chore, { remindDaysBefore: 1 })])).toMatch(/, remind 1 day before\.\)$/);
+    expect(refinementNote([refineChore(chore, { remindDaysBefore: 0 })])).toMatch(/, remind on the day\.\)$/);
+    expect(refinementNote([refineChore(chore, { remindDaysBefore: 7 })])).toMatch(/, remind 1 week before\.\)$/);
     expect(refinementNote([{ kind: "food" }])).toBe("");
   });
 
@@ -303,5 +307,44 @@ describe("practice mode reads the chips' note under the owner's words", () => {
     const second = card(await runKakakTurn(deps, first.history, `${refinementNote([chipped])} at 10 instead`));
     expect(second.items).toHaveLength(1);
     expect(second.items[0]).toMatchObject({ dueDate: "2026-11-16", dueTime: "10:00", recurrence: "none", assignedTo: null });
+  });
+});
+
+describe("the Remind me chip is a refinement like the others", () => {
+  const built = buildContext(rows, { today: "2026-11-11", now: "08:30", ownerLocale: "en", callerUserId: OWNER });
+  const deps: TurnDeps = {
+    client: practiceClient(built.household),
+    model: "claude-opus-5-5",
+    effort: "low",
+    household: built.household,
+    refs: built.refs,
+    names: built.names,
+    begin: async () => ({ ok: true, requestId: "00000000-0000-4000-8000-0000000000ae", callsLeft: 10 }),
+    record: async () => undefined,
+  };
+  const card = (result: TurnResult) => {
+    if (result.kind !== "suggestions") throw new Error(result.kind);
+    return result;
+  };
+  type Chore = Parameters<typeof refineChore>[0];
+
+  it("sets the reminder, and the result is still saveable", async () => {
+    const first = card(await runKakakTurn(deps, null, "Ari mops the terrace every Monday at 9"));
+    const three = refineChore(first.items[0] as Chore, { remindDaysBefore: 3 });
+    expect(three.remindDaysBefore).toBe(3);
+    expect(isSaveableSuggestion(three)).toBe(true);
+  });
+
+  it("a later typed change keeps the chip's reminder, and 'no reminder' turns off Kakak's", async () => {
+    const first = card(await runKakakTurn(deps, null, "Ari mops the terrace every Monday at 9"));
+    const chipped = refineChore(first.items[0] as Chore, { remindDaysBefore: 1 });
+    const kept = card(await runKakakTurn(deps, first.history, `${refinementNote([chipped])} at 10 instead`));
+    expect(kept.items[0]).toMatchObject({ dueTime: "10:00", remindDaysBefore: 1 });
+
+    const asked = card(await runKakakTurn(deps, null, "Ari mops the terrace every Monday at 9, remind me the day before"));
+    expect(asked.items[0]).toMatchObject({ remindDaysBefore: 1 });
+    const off = refineChore(asked.items[0] as Chore, { remindDaysBefore: null });
+    const after = card(await runKakakTurn(deps, asked.history, `${refinementNote([off])} at 10 instead`));
+    expect(after.items[0]).toMatchObject({ dueTime: "10:00", remindDaysBefore: null });
   });
 });
