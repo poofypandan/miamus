@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Camera, Check, CheckCircle2, CloudOff, CloudUpload, Eye, Hand, Loader2, NotebookPen } from "lucide-react";
+import { AlertTriangle, Camera, Check, CheckCircle2, CircleSlash, CloudOff, CloudUpload, Eye, Hand, Loader2, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -28,6 +28,12 @@ import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
 import { discardPhoto } from "@/lib/photo-queue";
 import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
+import { CouldntDoSheet } from "@/components/staff/couldnt-do-sheet";
+import { CouldntDoNote } from "@/components/staff/couldnt-do-note";
+import { useTaskExceptions } from "@/hooks/use-task-exceptions";
+import { choreException, canFileFor } from "@/lib/couldnt-do";
+import { useToday } from "@/hooks/use-today";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 
 /**
  * A staff member's whole relationship with a chore: read it, take it, prove
@@ -100,6 +106,12 @@ function FinishChoreBody({
   const [uploadingAfter, setUploadingAfter] = useState(false);
   const uploading = uploadingBefore || uploadingAfter;
   const [busy, setBusy] = useState(false);
+  // "Tidak bisa dikerjakan" (Phase 165): the reason sheet, and the record
+  // already filed for this day, if any.
+  const [couldntOpen, setCouldntOpen] = useState(false);
+  const { exceptions } = useTaskExceptions();
+  const exception = choreException(exceptions, occurrence);
+  const todayKey = formatDateLocal(useToday());
 
   const { task } = occurrence;
   const supervised = !!task.requires_supervision;
@@ -306,6 +318,8 @@ function FinishChoreBody({
             </p>
           )}
 
+          {!done && exception && <CouldntDoNote exception={exception} allowWithdraw />}
+
           {done ? (
             <>
               {waitingToSend ? (
@@ -403,6 +417,11 @@ function FinishChoreBody({
 
         {!done && !unassigned && (
           <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            {exception && (
+              <p className="text-center text-xs text-muted-foreground">
+                Ternyata sudah bisa? Selesaikan seperti biasa.
+              </p>
+            )}
             {/* Says what is still missing rather than just greying out:
                 a disabled button with no reason reads as broken. */}
             <Button
@@ -431,10 +450,34 @@ function FinishChoreBody({
                       ? "Ambil foto sesudah dulu"
                       : "Selesaikan"}
             </Button>
+            {!exception && canFileFor(occurrence.date, todayKey) && (
+              <CouldntDoButton onClick={() => setCouldntOpen(true)} disabled={busy} />
+            )}
           </SheetFooter>
         )}
+        {/* Not taken yet: it can still be explained ("Sudah dikerjakan orang lain"). */}
+        {!done && unassigned && !exception && canFileFor(occurrence.date, todayKey) && (
+          <div className="px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <CouldntDoButton onClick={() => setCouldntOpen(true)} disabled={busy} />
+          </div>
+        )}
+        <CouldntDoSheet
+          target={{ kind: "chore", occurrence }}
+          open={couldntOpen}
+          onOpenChange={setCouldntOpen}
+          onFiled={() => onOpenChange(false)}
+        />
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** The quiet second button (Phase 165): outline, under the main action. */
+function CouldntDoButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  return (
+    <Button variant="outline" className="min-h-12 w-full font-medium text-gray-700" disabled={disabled} onClick={onClick}>
+      <CircleSlash /> Tidak bisa dikerjakan
+    </Button>
   );
 }
 

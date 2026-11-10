@@ -3,6 +3,7 @@ import { getActiveHouseholdId } from "@/lib/tenant";
 import type { OrganiseRoomsMoved,
   HouseholdTask,
   BillPayment,
+  NotificationPrefs,
   InventoryAuditLog,
   InventoryAuditWithStaff,
   InventoryItem,
@@ -948,6 +949,57 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client().from("repair_notes").delete().eq("id", id).select("id");
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Note was not deleted.");
+  },
+  async listTaskExceptions(since) {
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("task_exceptions")
+        .select("*")
+        .eq("household_id", household)
+        .gte("occurs_on", since)
+        .order("created_at", { ascending: true })
+        .order("id")
+        .range(from, to)
+    );
+  },
+  async createTaskException(input) {
+    const { data, error } = await client()
+      .from("task_exceptions")
+      .insert({ ...input, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteTaskException(id) {
+    // An RLS-filtered delete succeeds with no rows (past the 5 minutes):
+    // count what actually went.
+    const { data, error } = await client().from("task_exceptions").delete().eq("id", id).select("id");
+    if (error) throw error;
+    return !!data && data.length > 0;
+  },
+  async getNotificationPrefs() {
+    const { data, error } = await client().rpc("my_notification_prefs");
+    if (error) throw error;
+    const row = (Array.isArray(data) ? data[0] : data) as NotificationPrefs | undefined;
+    return row ?? { evening_summary_hour: 19, staff_request_pushes: true };
+  },
+  async setNotificationPrefs(prefs) {
+    const { data, error } = await client().rpc("set_my_notification_prefs", {
+      p_hour: prefs.evening_summary_hour,
+      p_requests: prefs.staff_request_pushes,
+    });
+    if (error) throw error;
+    const row = (Array.isArray(data) ? data[0] : data) as NotificationPrefs | undefined;
+    return row ?? prefs;
+  },
+  async requestsPushOn() {
+    const { data, error } = await client().rpc("household_requests_push_on", {
+      p_household_id: getActiveHouseholdId(),
+    });
+    if (error) throw error;
+    return data === true;
   },
   async createHouseholdTasks(inputs) {
     const household_id = getActiveHouseholdId();

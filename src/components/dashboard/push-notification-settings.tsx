@@ -2,13 +2,17 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { BellOff, BellRing, Loader2, Share } from "lucide-react";
+import { BellOff, BellRing, Lightbulb, Loader2, Moon, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { sendTestPush } from "@/lib/push";
 import type { PushStatus } from "@/lib/push-prompt";
 import { usePushStatus } from "@/hooks/use-push-status";
-import { useT, type Translate } from "@/context/owner-locale-context";
+import { useOwnerLocale, useT, type Translate } from "@/context/owner-locale-context";
+import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
+import { DEFAULT_SUMMARY_HOUR, SUMMARY_HOURS } from "@/lib/couldnt-do";
+import { formatTime } from "@/lib/time";
+import { cn } from "@/lib/utils";
 
 /** One or two words for this device's push state: the badge and the Household row. */
 export function pushStatusLabel(status: PushStatus, t: Translate): string | undefined {
@@ -139,8 +143,8 @@ export function PushNotificationSettings() {
             </div>
             <p className="text-xs text-muted-foreground">
               {t(
-                "An alert on this device the moment staff report something urgent, like a leak, when staff add food, and each morning for food about to expire.",
-                "Peringatan di perangkat ini begitu staf melaporkan hal darurat, misalnya kebocoran, saat staf menambahkan makanan, dan setiap pagi untuk makanan yang hampir kedaluwarsa."
+                "An alert on this device the moment staff report something urgent, like a leak or a pet that wouldn't take its medicine, when staff add food, each morning for food about to expire, and what you choose below.",
+                "Peringatan di perangkat ini begitu staf melaporkan hal darurat, misalnya kebocoran atau hewan yang tidak mau minum obat, saat staf menambahkan makanan, setiap pagi untuk makanan yang hampir kedaluwarsa, dan yang Anda pilih di bawah."
               )}
             </p>
           </div>
@@ -250,6 +254,130 @@ export function PushNotificationSettings() {
           </p>
         </CardContent>
       </Card>
+      <NotificationChoices />
+    </div>
+  );
+}
+
+/**
+ * What this admin is told (Phase 165, migrations/139): the evening summary,
+ * at an hour they pick or off, and pushes when staff ask for leave or
+ * suggest a schedule change. Per account, not per phone: every phone with
+ * notifications on follows it. Both on by default (D6, D8).
+ */
+function NotificationChoices() {
+  const t = useT();
+  const locale = useOwnerLocale();
+  const { prefs, loaded, failed, save } = useNotificationPrefs();
+  const [saving, setSaving] = useState(false);
+  const summaryOn = prefs.evening_summary_hour !== null;
+
+  async function change(next: typeof prefs) {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await save(next);
+    } catch (err) {
+      console.error(err);
+      toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="py-2">
+      <CardContent className="flex flex-col px-4">
+        <ChoiceRow
+          icon={Moon}
+          title={t("Evening summary", "Ringkasan malam")}
+          detail={t("What wasn't done today, only when something is open.", "Yang belum selesai hari ini, hanya kalau ada.")}
+          on={summaryOn}
+          disabled={!loaded || failed || saving}
+          onToggle={() =>
+            void change({ ...prefs, evening_summary_hour: summaryOn ? null : DEFAULT_SUMMARY_HOUR })
+          }
+        />
+        {summaryOn && (
+          <label className="flex min-h-12 items-center justify-between gap-3 border-t pl-8 text-sm">
+            <span>{t("Time", "Jam")}</span>
+            <select
+              value={prefs.evening_summary_hour ?? DEFAULT_SUMMARY_HOUR}
+              disabled={!loaded || failed || saving}
+              onChange={(e) => void change({ ...prefs, evening_summary_hour: Number(e.target.value) })}
+              aria-label={t("Evening summary time", "Jam ringkasan malam")}
+              className="min-h-9 rounded-lg border bg-background px-2 text-sm"
+            >
+              {SUMMARY_HOURS.map((hour) => (
+                <option key={hour} value={hour}>
+                  {formatTime(`${String(hour).padStart(2, "0")}:00`, locale)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="border-t">
+          <ChoiceRow
+            icon={Lightbulb}
+            title={t("Staff requests", "Permintaan staf")}
+            detail={t("Leave and schedule suggestions, when they arrive.", "Cuti dan usulan jadwal, saat masuk.")}
+            on={prefs.staff_request_pushes}
+            disabled={!loaded || failed || saving}
+            onToggle={() => void change({ ...prefs, staff_request_pushes: !prefs.staff_request_pushes })}
+          />
+        </div>
+        <p className="pb-2 text-[11px] text-muted-foreground">
+          {t(
+            "For your account, on every phone where notifications are on.",
+            "Untuk akun Anda, di setiap HP yang notifikasinya aktif."
+          )}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ChoiceRow({
+  icon: Icon,
+  title,
+  detail,
+  on,
+  disabled,
+  onToggle,
+}: {
+  icon: typeof Moon;
+  title: string;
+  detail: string;
+  on: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-muted-foreground">{detail}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={title}
+        disabled={disabled}
+        onClick={onToggle}
+        className={cn(
+          "relative mt-0.5 flex h-7 w-12 shrink-0 items-center rounded-full disabled:opacity-50",
+          on ? "bg-primary" : "bg-muted"
+        )}
+      >
+        <span
+          className={cn(
+            "size-6 rounded-full bg-white shadow-sm transition-transform",
+            on ? "translate-x-[22px]" : "translate-x-0.5"
+          )}
+        />
+      </button>
     </div>
   );
 }

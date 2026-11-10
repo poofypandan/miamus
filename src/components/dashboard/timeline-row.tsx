@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { CheckCircle2, Stethoscope, XCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CheckCircle2, CircleSlash, Stethoscope, XCircle } from "lucide-react";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { LogPhotoThumbnail, logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { useHousehold } from "@/context/household-context";
@@ -19,6 +19,12 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/context/owner-locale-context";
 import { distinct, groupByPhoto } from "@/lib/photos";
 import type { TaskEntity } from "@/types/database";
+import { OwnerCouldntSheet } from "@/components/agenda/owner-couldnt-sheet";
+import { useTaskExceptions } from "@/hooks/use-task-exceptions";
+import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { groupExceptions, ownerCouldntRowLine } from "@/lib/couldnt-do";
+import { formatDateLocal } from "@/lib/scheduleEngine";
+import { useOwnerLocale } from "@/context/owner-locale-context";
 
 /**
  * One minute of the day's pet routines, across every dog.
@@ -30,8 +36,19 @@ import type { TaskEntity } from "@/types/database";
 export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }) {
   const formatTime = useFormatTime();
   const lang = useScreenLang();
-  const { schedules } = useHousehold();
+  const { schedules, selectedDate } = useHousehold();
   const t = useT();
+  const locale = useOwnerLocale();
+  // Couldn't-do records on this block's open pets (Phase 165).
+  const { exceptions } = useTaskExceptions();
+  const { allProfiles } = useStaffProfiles();
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
+  const explained = useMemo(
+    () => groupExceptions(exceptions, formatDateLocal(selectedDate), group),
+    [exceptions, selectedDate, group]
+  );
+  const [couldntOpen, setCouldntOpen] = useState(false);
+  const medicine = group.category === "medication";
   const Icon = categoryIcon(group.category);
 
   // One row is one task at one time across every dog, so its photos are the
@@ -104,17 +121,30 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
   const tint = done
     ? // pl-1.5: the 3px edge less the usual 1px, so text stays in line.
       cn(DONE_TONE.tint, AGENDA_TONES[routineTone(group.category)].doneEdge, "pl-1.5")
-    : categoryCardTint(group.category);
+    : explained.length > 0
+      ? "border-l-[3px] border-l-amber-500 bg-amber-50 pl-1.5"
+      : categoryCardTint(group.category);
   const consolidated = group.category === "medication" && group.titles.length > 1;
+  const couldntLine =
+    explained.length > 0
+      ? ownerCouldntRowLine(
+          explained[0].exception,
+          locale,
+          explained[0].exception.staff_id ? staffName(explained[0].exception.staff_id) : null,
+          medicine
+        )
+      : null;
+  const explainedPets = new Set(explained.map((e) => e.item.entityId));
 
   // Padding and a border on every row, so a tinted row lines up with its
   // neighbours instead of jogging 8px sideways. An untinted routine draws that
   // border (Phase 136): with no card around the list any more, it is what
   // makes the row a row rather than a line of text on the page.
-  return (
+  const row = (
     <div
       className={cn(
         "flex items-center gap-2 rounded-lg border border-border px-2 py-2 text-sm",
+        couldntLine && "rounded-b-none border-b-0",
         tint
       )}
     >
@@ -168,10 +198,45 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
               item={mark.item}
               pets={pets}
               category={group.category}
+              explained={explainedPets.has(mark.item.entityId)}
             />
           )
         )}
       </div>
+    </div>
+  );
+
+  if (!couldntLine) return row;
+  return (
+    <div className="flex flex-col">
+      {row}
+      {/* What staff said (Phase 165): its own line, tappable, so the pets'
+          avatars keep their own taps. */}
+      <button
+        type="button"
+        onClick={() => setCouldntOpen(true)}
+        data-testid="couldnt-line"
+        className="flex min-h-9 items-center gap-1.5 rounded-b-lg border border-t-0 border-border border-l-[3px] border-l-amber-500 bg-amber-50 px-2 pb-2 pl-[4.75rem] text-left text-xs font-medium text-amber-800 active:bg-amber-100"
+      >
+        <CircleSlash className="size-3.5 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1 truncate">
+          {couldntLine}
+          {explained.length > 0 && group.items.length > 1
+            ? ` · ${[...new Set(explained.map((e) => e.item.entityName))].join(", ")}`
+            : ""}
+        </span>
+      </button>
+      <OwnerCouldntSheet
+        open={couldntOpen}
+        onOpenChange={setCouldntOpen}
+        title={consolidated ? t("Medicines", "Obat") : group.title}
+        subtitle={formatTime(group.time)}
+        entries={explained.map(({ item, exception }) => ({
+          exception,
+          petName: item.entityName,
+          medicine,
+        }))}
+      />
     </div>
   );
 }
@@ -186,10 +251,13 @@ function TimelineAvatarStatus({
   item,
   pets,
   category,
+  explained = false,
 }: {
   item: AgendaItem;
   pets: TaskEntity[];
   category: ScheduleCategory;
+  /** Someone said it couldn't be done (Phase 165): amber, not the red cross. */
+  explained?: boolean;
 }) {
   const { setActivePetId } = useHousehold();
   const t = useT();
@@ -224,7 +292,10 @@ function TimelineAvatarStatus({
           {item.status === "completed" && (
             <CheckCircle2 className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-emerald-500" />
           )}
-          {item.status === "overdue" && (
+          {item.status !== "completed" && explained && (
+            <CircleSlash className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-amber-600" />
+          )}
+          {item.status === "overdue" && !explained && (
             <XCircle className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-red-500" />
           )}
         </>

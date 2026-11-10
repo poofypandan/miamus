@@ -157,6 +157,21 @@ people are **staf** and **admin**.
 | Undo (toast action) | **Batalkan** | Already the word in every Undo toast; never "Urungkan". |
 | Add photos (optional), owner sheet | **Tambah foto (opsional)** | Owner-only form, so "opsional" (staff forms say "boleh dikosongkan"). |
 | Both photos, or none | **Dua foto, atau tidak sama sekali** | Phase 163: an admin's own chore takes both photos or neither. |
+| Couldn't be done (button, status) | **Tidak bisa dikerjakan** / short **Tidak bisa** | Phase 165. Staff button and the amber status: "Tidak bisa · Barang habis · 09.10". |
+| Why couldn't it be done? | **Kenapa tidak bisa?** | Phase 165: the reason sheet's title. |
+| Out of stock (reason) | **Barang habis** | Phase 165. "Apa yang habis?" asks which item; **Barang lain** for one not on the list. |
+| Pet wouldn't eat / take medicine | **Hewan tidak mau makan** / **Hewan tidak mau minum obat** | Phase 165. "Hewan", never "anjing". |
+| Already done by someone else | **Sudah dikerjakan orang lain** | Phase 165. |
+| Add to the shopping list | **Masukkan ke daftar belanja** | Phase 165: on by default under "Barang habis". |
+| Turned out you can? Finish as usual. | **Ternyata sudah bisa? Selesaikan seperti biasa.** | Phase 165: a couldn't-do task can still be finished. |
+| The admin has been told | **Admin sudah diberi tahu lewat notifikasi.** | Phase 165: the staff panel after leave or a suggestion, when an admin gets the push. **Kirim WA juga** keeps WhatsApp as a second option. |
+| Evening summary | **Ringkasan malam** | Phase 165: Household → Notifications. |
+| Not done today | **Belum selesai hari ini** | Phase 165: the push title and Today's quiet line ("3 belum selesai hari ini"). |
+| Not done yet (section) | **Belum dikerjakan** | Phase 165: the summary sheet. |
+| To buy (section) | **Perlu dibeli** | Phase 165: the summary sheet; matches "2 barang perlu dibeli". |
+| Staff requests (switch) | **Permintaan staf** | Phase 165. |
+| Leave request / Schedule suggestion (pushes) | **Permintaan cuti** / **Usulan jadwal** | Phase 165. "Usulan jadwal" matches the Lapor sheet. |
+| Medicine not taken (push) | **Obat tidak diminum** | Phase 165. |
 | Set up your home (first-run checklist) | **Siapkan rumah Anda** | Audit B1: the card on a new household's Today. Steps: Beri nama rumah · Tambah staf · Hubungkan HP staf · Beri tugas pertama · Lihat hasilnya. |
 | Not now | **Nanti saja** | Hides a card for good; plainer than "Lain kali". |
 | Your home is set up | **Rumah Anda sudah siap** | The one-time note after the first finished task. |
