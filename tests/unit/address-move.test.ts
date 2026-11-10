@@ -39,7 +39,7 @@ vi.mock("@/lib/tenant", () => ({ getActiveHouseholdId: () => household }));
 
 const queue = await import("@/lib/offline-queue");
 const { isOldHost, OLD_HOSTS, CANONICAL_ORIGIN } = await import("@/config/hosts");
-const { countChoreDrafts, mayMove, movedUrl, sendBeforeMove, SendTally } = await import("@/lib/address-move");
+const { countChoreDrafts, mayMove, movedUrl, sendBeforeMove, SendTally, stopPushForMove } = await import("@/lib/address-move");
 type SendDeps = import("@/lib/address-move").SendDeps;
 
 const NO_ANSWER = { message: "TypeError: Failed to fetch", details: "", hint: "", code: "" };
@@ -277,6 +277,52 @@ describe("when the screen may open miamus.app", () => {
 
   it("counts unfinished chores kept on the phone", () => {
     expect(countChoreDrafts(["miamus_chore_draft:h:t:2026-11-10", "miamus_tenant_id", "miamus_chore_draft:h:u:d"])).toBe(2);
+  });
+});
+
+describe("turning push off at the move", () => {
+  function fakePush(deleteRow: (endpoint: string) => Promise<void>) {
+    const calls: string[] = [];
+    return {
+      calls,
+      deps: {
+        subscription: async () => ({
+          endpoint: "https://push.example/abc",
+          unsubscribe: async () => {
+            calls.push("unsubscribe");
+            return true;
+          },
+        }),
+        deleteRow: async (endpoint: string) => {
+          calls.push(`delete ${endpoint}`);
+          return deleteRow(endpoint);
+        },
+        forget: () => calls.push("forget"),
+        waitMs: 20,
+      },
+    };
+  }
+
+  it("unsubscribes this phone even when the server never answers", async () => {
+    // Codex, PR #54: the move goes ahead after its wait; a browser still
+    // subscribed here would keep getting notifications for the old address.
+    const push = fakePush(() => new Promise(() => {}));
+    await stopPushForMove(push.deps);
+    expect(push.calls).toContain("unsubscribe");
+    expect(push.calls).toContain("forget");
+    expect(push.calls).toContain("delete https://push.example/abc");
+  });
+
+  it("unsubscribes this phone when the server refuses the delete", async () => {
+    const push = fakePush(async () => Promise.reject(new Error("401")));
+    await stopPushForMove(push.deps);
+    expect(push.calls).toContain("unsubscribe");
+  });
+
+  it("does nothing more on a phone with no subscription", async () => {
+    const push = fakePush(async () => undefined);
+    await stopPushForMove({ ...push.deps, subscription: async () => null });
+    expect(push.calls).toEqual(["forget"]);
   });
 });
 

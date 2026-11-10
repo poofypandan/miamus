@@ -209,6 +209,38 @@ export function mayMove(outcome: SendOutcome | null, choseToLeaveWaiting: boolea
   return choseToLeaveWaiting;
 }
 
+/** What turning push off at the move needs; the screen passes the real ones. */
+export interface StopPushDeps {
+  /** This address's browser subscription, if it has one. */
+  subscription(): Promise<{ endpoint: string; unsubscribe(): Promise<boolean> } | null>;
+  /** The server's copy (push_subscriptions), deleted by endpoint. */
+  deleteRow(endpoint: string): Promise<void>;
+  /** Stops the silent re-subscribe (PUSH_WANTED_KEY). */
+  forget(): void;
+  /** How long the move waits for the server. */
+  waitMs?: number;
+}
+
+/**
+ * Turns push off on the old address before the move, as the screen says.
+ *
+ * The phone's own subscription goes first and does not wait for the server:
+ * on a stalled connection the move goes ahead after a few seconds, and a
+ * browser still subscribed here would keep receiving notifications that
+ * open the old address (Codex, PR #54). The server's row is removed alongside,
+ * best-effort; one left behind only fails to deliver, and send-push removes
+ * it the next time it tries (the browser answers 410 Gone).
+ */
+export async function stopPushForMove(deps: StopPushDeps): Promise<void> {
+  deps.forget();
+  const subscription = await deps.subscription().catch(() => null);
+  if (!subscription) return;
+  const { endpoint } = subscription;
+  const server = deps.deleteRow(endpoint).catch(() => undefined);
+  await subscription.unsubscribe().catch(() => false);
+  await Promise.race([server, new Promise((resolve) => setTimeout(resolve, deps.waitMs ?? 4_000))]);
+}
+
 /** Chore drafts kept on this phone (lib/chore-draft.ts): photos taken, not yet finished. */
 export const CHORE_DRAFT_PREFIX = "miamus_chore_draft:";
 

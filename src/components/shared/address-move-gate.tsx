@@ -15,6 +15,7 @@ import {
   movedUrl,
   sendBeforeMove,
   SendTally,
+  stopPushForMove,
   type MoveAudience,
   type SendDeps,
   type SendOutcome,
@@ -23,6 +24,7 @@ import { peekStoredUser, readSessionState } from "@/lib/auth/device-session";
 import { choreDraftKey, clearChoreDraft } from "@/lib/chore-draft";
 import { drainOutbox, getOfflineQueue, type DrainReport } from "@/lib/offline-queue";
 import { getActiveHouseholdId } from "@/lib/tenant";
+import { supabase } from "@/lib/supabase/client";
 import { useHousehold } from "@/context/household-context";
 
 /**
@@ -154,14 +156,21 @@ function draftCount(): number {
 /** Notifications here would keep arriving beside miamus.app's, and open this address. */
 async function stopPushHere(): Promise<void> {
   const push = await import("@/lib/push");
-  const stop = push.disablePush().catch(async () => {
-    await push
-      .currentSubscription()
-      .then((subscription) => subscription?.unsubscribe())
-      .catch(() => undefined);
+  await stopPushForMove({
+    subscription: push.currentSubscription,
+    deleteRow: async (endpoint) => {
+      if (!supabase) return;
+      const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+      if (error) throw error;
+    },
+    forget: () => {
+      try {
+        window.localStorage.removeItem(push.PUSH_WANTED_KEY);
+      } catch {
+        // Storage off: nothing was kept to forget.
+      }
+    },
   });
-  // Never holds the move up for long on a weak signal.
-  await Promise.race([stop, new Promise((resolve) => setTimeout(resolve, 4_000))]);
 }
 
 async function hasPushHere(): Promise<boolean> {
