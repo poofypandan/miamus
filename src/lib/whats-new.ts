@@ -318,6 +318,15 @@ export function pickStaffTip(candidates: StaffTipCandidate[], seen: (id: string)
  */
 export const STAFF_TIP_CLOSED_ON_KEY = "miamus.staff-tip.closed-on";
 
+/**
+ * Whether the staff tip rests: a tip was closed on `today` (both local
+ * YYYY-MM-DD). Checked against the live day, so the next tip comes back
+ * after midnight on a phone that never reloaded.
+ */
+export function staffTipResting(closedOn: string | null, today: string): boolean {
+  return closedOn === today;
+}
+
 export function whatsNewEntry(id: string): WhatsNewEntry | undefined {
   return WHATS_NEW.find((entry) => entry.id === id);
 }

@@ -243,3 +243,26 @@ test("staff Today shows one tip at a time, and readable notes", async ({ context
   await expect(page.getByRole("region", { name: "Baru: aman saat sinyal lemah" })).toBeVisible({ timeout: 20_000 });
   await expect(tips).toHaveCount(1);
 });
+
+test("a staff phone left open overnight gets its next tip after midnight, without a reload", async ({ context, page }) => {
+  // Codex, #62: the "one tip a day" rest used to be read only on mount.
+  await page.clock.install();
+  await installStub(context, { stored: freshSession(), staffPhone: true, chores: [] });
+  await page.goto("/staff");
+
+  const tips = page.getByRole("region", { name: /^Baru:/ });
+  await expect(page.getByRole("region", { name: "Baru: Kirim masukan" })).toBeVisible({ timeout: 20_000 });
+  await tips.getByRole("button", { name: "Tutup" }).click();
+  await expect(tips).toHaveCount(0);
+
+  // Past local midnight, same page: the next newest tip appears.
+  const toMidnight = await page.evaluate(() => {
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    return midnight.getTime() - now.getTime();
+  });
+  await page.clock.fastForward(toMidnight + 5_000);
+  await expect(page.getByRole("region", { name: "Baru: aman saat sinyal lemah" })).toBeVisible({ timeout: 10_000 });
+  await expect(tips).toHaveCount(1);
+});

@@ -10,7 +10,7 @@ import {
   type FirstRunInput,
   type FirstRunPerson,
 } from "@/lib/first-run";
-import { STAFF_WHATS_NEW, WHATS_NEW, pickStaffTip } from "@/lib/whats-new";
+import { STAFF_WHATS_NEW, WHATS_NEW, pickStaffTip, staffTipResting } from "@/lib/whats-new";
 
 // Audit batch B1: the owner's first-run checklist (item 3) and the staff's
 // one tip at a time (item 5).
@@ -138,6 +138,12 @@ describe("staff tips, one at a time", () => {
       { id: "no-such-tip", show: true },
     ];
     expect(pickStaffTip(tips, none)).toBe("staff-repairs-2026-11");
+  });
+
+  it("rests only on the day a tip was closed, so the next comes back after midnight", () => {
+    expect(staffTipResting("2026-11-10", "2026-11-10")).toBe(true);
+    expect(staffTipResting("2026-11-10", "2026-11-11")).toBe(false);
+    expect(staffTipResting(null, "2026-11-10")).toBe(false);
   });
 
   it("nothing left: none", () => {
