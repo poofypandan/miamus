@@ -16,6 +16,7 @@ import {
   topLevelRooms,
   withRoomsInside,
 } from "@/lib/places";
+import { canSortIntoFloors } from "@/lib/organise-rooms";
 import { filterGroups, placeGroups } from "@/lib/room-picker";
 import { allRoomRows, buildRoomsModel, placesWithJob, roomsInsideOf } from "@/lib/rooms-view";
 import type { HouseholdLocation, HouseholdTask } from "@/types/database";
@@ -190,6 +191,15 @@ describe("the Rooms view with rooms inside", () => {
     const model = buildRoomsModel([STUDIO, BALCONY, place("t", "Teras")], [], today);
     expect(model.storedFloors).toBe(true);
     expect(model.otherRooms.map((r) => `${r.depth}:${r.label}`)).toEqual(["0:Studio", "1:Balcony", "0:Teras"]);
+  });
+});
+
+describe("sorting into floors", () => {
+  it("is not offered once a room sits inside another, so nesting is never flattened", () => {
+    const loose = [place("a", "LT2 Bedroom"), place("b", "LT2 Bathroom"), place("c", "LT3 Studio")];
+    expect(canSortIntoFloors(loose)).toBe(true);
+    const nested = [place("a", "LT2 Bedroom"), place("b", "LT2 Bathroom", { parent_id: "a" }), place("c", "LT3 Studio")];
+    expect(canSortIntoFloors(nested)).toBe(false);
   });
 });
 

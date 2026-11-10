@@ -47,9 +47,14 @@ export interface SortPlan {
   preview: SortPreview;
 }
 
-/** Can "Sort your rooms into floors" help? At least two rooms named floor-first, and no floors yet. */
+/**
+ * Can "Sort your rooms into floors" help? At least two rooms named
+ * floor-first, no floors yet, and no room already inside another (Phase
+ * 168): the sorter moves rooms straight onto floors, which would flatten a
+ * bedroom and its bathroom, and its Undo couldn't put them back (Codex, #74).
+ */
 export function canSortIntoFloors(locations: HouseholdLocation[]): boolean {
-  if (locations.some((l) => l.kind === "floor")) return false;
+  if (locations.some((l) => l.kind === "floor" || l.parent_id)) return false;
   return locations.filter((l) => parseRoomName(l.name).floor !== null).length >= 2;
 }
 
