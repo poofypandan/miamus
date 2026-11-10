@@ -58,6 +58,9 @@ function dayInRange(errors: string[], field: string, value: unknown, from: strin
   if (value < from || value > to) errors.push(`${field} ${value} is outside ${from} to ${to}`);
 }
 
+/** "Remind me" (migrations/137): on the day, or 1, 3 or 7 days before. */
+export const REMIND_DAYS = new Set([0, 1, 3, 7]);
+
 export function validateToolCall(
   household: KakakHousehold,
   name: string,
@@ -88,6 +91,10 @@ export function validateToolCall(
       ref(errors, "new_room_floor", input.new_room_floor, refs.floors, true);
       if (input.new_room_floor != null && input.new_room_name == null) errors.push("new_room_floor without new_room_name");
       text(errors, "notes", input.notes, { max: 200, required: false });
+      // Optional, so a call from before migrations/137 (no field) still passes.
+      if (input.remind_days_before != null && !REMIND_DAYS.has(input.remind_days_before as number)) {
+        errors.push("remind_days_before must be 0, 1, 3, 7 or null");
+      }
       break;
     }
     case "add_to_shopping_list": {

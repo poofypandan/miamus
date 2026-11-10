@@ -175,3 +175,68 @@ test("practice mode: the real Kakak route answers with no AI, and saving still w
   expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", assigned_to: STAFF_ID, due_time: "09:00", recurrence: "weekly" });
   expect(stub.seen.realBackend).toEqual([]);
 });
+
+test("Remind me on the card: Kakak's choice shows, a chip changes it, and it is saved", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  const outcomes: string[] = [];
+  await page.route("**/api/kakak", (route) =>
+    route.fulfill({
+      json: {
+        kind: "suggestions",
+        text: "Here's what I'll add:",
+        items: [{ ...chore, recurrence: "none", remindDaysBefore: 1 }],
+        requestId: "00000000-0000-4000-8000-0000000000a5",
+        history: { messages: [] },
+      },
+    }),
+  );
+  await page.route("**/api/kakak/outcome", (route) => {
+    outcomes.push(route.request().postDataJSON().result);
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("Ari mops the terrace Monday at 9, remind me the day before");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  const remind = page.getByRole("group", { name: "Remind me" });
+  await expect(remind.getByRole("button", { name: "1 day before" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("dd").getByText("1 day before", { exact: true })).toBeVisible();
+  await remind.getByRole("button", { name: "3 days before" }).click();
+  await expect(page.locator("dd").getByText("3 days before", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.tasks.length).toBe(1);
+  expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", remind_days_before: 3 });
+  await expect.poll(() => outcomes).toEqual(["confirmed"]);
+});
+
+test("Remind me Off on the card saves no reminder", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
+  await page.route("**/api/kakak", (route) =>
+    route.fulfill({
+      json: {
+        kind: "suggestions",
+        text: "Ini yang akan Kakak tambahkan:",
+        items: [{ ...chore, remindDaysBefore: 0 }],
+        requestId: "00000000-0000-4000-8000-0000000000a6",
+        history: { messages: [] },
+      },
+    }),
+  );
+  await page.route("**/api/kakak/outcome", (route) => route.fulfill({ json: { ok: true } }));
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "Mau Kakak atur apa?" }).fill("Ari pel teras tiap Senin jam 9, ingatkan pada harinya");
+  await page.getByRole("button", { name: "Kirim" }).click();
+  const remind = page.getByRole("group", { name: "Ingatkan saya" });
+  await expect(remind.getByRole("button", { name: "Pada harinya" })).toHaveAttribute("aria-pressed", "true");
+  await remind.getByRole("button", { name: "Mati" }).click();
+  await expect(page.locator("dd").getByText("Pada harinya", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Sudah benar" }).click();
+  await expect.poll(() => stub.tasks.length).toBe(1);
+  expect(stub.tasks[0].remind_days_before ?? null).toBeNull();
+});

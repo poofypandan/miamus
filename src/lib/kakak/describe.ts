@@ -2,6 +2,7 @@
 // (plan, screen 5): one fact per line — What, Who, When, Repeats, Room.
 // Pure, so the wording is unit-tested in both languages.
 
+import { remindLabel } from "@/lib/chore-reminders";
 import type { KakakSuggestion } from "./suggestions";
 
 type Locale = "en" | "id";
@@ -109,6 +110,9 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale): CardI
       }
       if (item.requiresSupervision) rows.push({ label: t("You", "Anda"), value: t("Need to be there", "Harus ada") });
       if (item.notes) rows.push({ label: t("Notes", "Catatan"), value: item.notes });
+      if (item.remindDaysBefore != null) {
+        rows.push({ label: t("Remind me", "Ingatkan saya"), value: remindLabel(item.remindDaysBefore, locale) });
+      }
       return { heading: t("Chore", "Tugas"), rows };
     }
     case "shopping":

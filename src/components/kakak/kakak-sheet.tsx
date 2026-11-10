@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { KakakAvatar } from "@/components/kakak/kakak-avatar";
+import { KakakRemindChips } from "@/components/kakak/kakak-remind-chips";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
@@ -221,6 +222,12 @@ function Conversation({ onClose }: { onClose: () => void }) {
           onDrop={(index) =>
             setScreen({ ...screen, items: screen.items.filter((_, i) => i !== index) })
           }
+          onRemind={(index, days) =>
+            setScreen({
+              ...screen,
+              items: screen.items.map((item, i) => (i === index && item.kind === "chore" ? { ...item, remindDaysBefore: days } : item)),
+            })
+          }
           onConfirm={() => void confirm(screen.items.filter(addsSomething), screen.requestId)}
           onChange={() => {
             reportKakakOutcome(screen.requestId, "changed");
@@ -341,6 +348,7 @@ function SuggestionCard({
   saving,
   changing,
   onDrop,
+  onRemind,
   onConfirm,
   onChange,
   onCancel,
@@ -350,6 +358,7 @@ function SuggestionCard({
   saving: boolean;
   changing: boolean;
   onDrop: (index: number) => void;
+  onRemind: (index: number, days: number | null) => void;
   onConfirm: () => void;
   onChange: () => void;
   onCancel: () => void;
@@ -387,6 +396,9 @@ function SuggestionCard({
                 ))}
               </dl>
               {card.note && <p className="text-xs text-muted-foreground">{card.note}</p>}
+              {item.kind === "chore" && !changing && (
+                <KakakRemindChips value={item.remindDaysBefore ?? null} disabled={saving} onChange={(days) => onRemind(index, days)} />
+              )}
             </div>
           );
         })}
