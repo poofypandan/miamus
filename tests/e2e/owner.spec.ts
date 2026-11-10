@@ -34,7 +34,7 @@ test("Household tab: settings list, and Sign out with its confirmation", async (
     /^Staff \d+$/,
     /^Invite someone$/,
     /^Staff sign-in$/,
-    /^Notifications$/,
+    /^Notifications/,
     /^Language/,
     /^App lock$/,
     /^Activity$/,
