@@ -76,7 +76,8 @@ export const LEGAL = {
   // wasn't done (at a chosen hour, or off), leave requests, schedule
   // suggestions, and a pet refusing medicine; staff notes never in them.
   // Each admin's notification choices are stored (migrations/139). No new
-  // service.
+  // service. Also: Microsoft's push service (Edge on Windows) named beside
+  // Apple, Google and Mozilla; the server already sent to it (migrations/103).
   policyVersion: "2026-11-10.5",
   effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
   /**
