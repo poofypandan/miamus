@@ -173,7 +173,18 @@ table and a change in every path above. Rejected.
 The group id is used only by the owner's editor (edit or remove together) and
 by Kakak's confirm card. The staff card keeps grouping by time and title, so
 two routines the owner made separately with the same title and time still
-show as one card, as today.
+show as one card, as today, **unless their note or person differ**:
+`buildAgenda`'s key becomes time, title, note and `staff_id` for rows with a
+`kind`, so "Jalan-jalan 07:00" for Matcha with Sari and a note, and for Mocha
+with Yanti, stay two cards, each showing its own note and name. Old rows
+(no `kind`, no note, no person) group exactly as now.
+
+**Copy schedule to…** (`CopyScheduleDrawer`) lists the columns it copies.
+PR A adds `kind`, `days_of_week`, `note`, `staff_id` and `needs_photo`, and
+gives the copies a new `routine_group_id` per copied group (copies don't
+join the source's group). Without this, a copied walk would become a meal.
+The same goes for `CreateScheduleInput`, the mock provider and
+`approval-queue.tsx` (approved staff suggestions keep no `kind`, as now).
 
 ## Kinds, and what shows as what
 
@@ -197,7 +208,9 @@ A new column, **`kind`**, settles the meal-by-default problem for new rows:
 ## One tick for all (D4)
 
 - **Tick routines** (proof = tick): the card gets a round button at the
-  right. **One tap logs every pet on the card that's still open**, photo
+  right. **One tap logs every pet on the card that's still open**: not done
+  yet, not admitted (suspended, as the card already skips), and without an
+  open "couldn't do" record for that day (139). Photo
   null, staff id stamped, through the existing save queue. Toast: "Mocha,
   Matcha · Matikan lampu selesai" with **Batalkan** for 5 minutes
   (`UNDO_WINDOW_MS`). Tapping the card itself opens the sheet, where staff
@@ -325,8 +338,10 @@ files as meals. If 173 PR A lands first, 172 sets `kind: 'walk'` on them; if
   change, old app builds keep working):
   - `kind text` with a CHECK of the six kinds (null = old rules);
   - `routine_group_id uuid` (null for every old row);
-  - `days_of_week smallint[]` with a CHECK that every value is 1–7 and the
-    array isn't empty (null = every day);
+  - `days_of_week smallint[]` with `check (days_of_week is null or
+    (days_of_week <@ '{1,2,3,4,5,6,7}'::smallint[] and
+    cardinality(days_of_week) > 0))` (null = every day; a CHECK can't hold
+    a subquery, so no `unnest`);
   - `note text` with a CHECK of up to 120 characters;
   - `staff_id uuid references staff_profiles(id) on delete set null`;
   - `needs_photo boolean not null default true`.
@@ -339,12 +354,23 @@ files as meals. If 173 PR A lands first, 172 sets `kind: 'walk'` on them; if
   routine; an admin can.
 - A trigger checks that `staff_id`, if set, is staff of the pet's household
   and not archived (as 139 does for "couldn't do").
+- **Archiving a person releases their routines**, as 118 does for repeating
+  chores: staff are archived, not deleted, so `on delete set null` never
+  fires. `archive_staff_profile`, re-created from its latest version (119),
+  also sets
+  `master_schedules.staff_id = null` for that person, plus a one-time
+  backfill for anyone already archived (none can hold a routine yet, so it
+  is a no-op today). Otherwise the card would keep an archived name and PR
+  C's reminder would go to nobody.
 - **`routine_slots_open`** (139, the only version) is re-created to skip a
   day not in `days_of_week`, so the evening summary doesn't count Matcha's
   weekday walk on a Sunday. TypeScript's `isScheduleActiveOn` gets the same
   rule, with unit tests (Jakarta weekday at midnight, null days, Once).
 - The Phase 172 walk fix-up above, if 172's rows already exist.
-- No new `SECURITY DEFINER` function in 147.
+- No new `SECURITY DEFINER` function in 147. The one replaced,
+  `archive_staff_profile`, repeats 119's `revoke all … from public, anon` and
+  its `grant execute … to authenticated` in the same migration (AGENTS.md);
+  it keeps its own admin check.
 
 **PR B:** no migration (Kakak and starters are app code).
 
