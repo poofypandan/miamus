@@ -62,6 +62,7 @@ import { EveningSummarySheet } from "@/components/agenda/evening-summary-sheet";
 import { OwnerCouldntSheet } from "@/components/agenda/owner-couldnt-sheet";
 import { useTaskExceptions } from "@/hooks/use-task-exceptions";
 import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
+import { useMinuteClock } from "@/hooks/use-minute-clock";
 import { isAdmitted } from "@/lib/pets";
 import { replaceInPlace } from "@/lib/in-place-navigation";
 import {
@@ -281,9 +282,11 @@ export function AgendaTab() {
   const { prefs } = useNotificationPrefs();
   const summaryHour = prefs.evening_summary_hour ?? DEFAULT_SUMMARY_HOUR;
   const showsToday = range === "day" && dateStr === todayKey;
+  // Ticks each minute, so the line appears when the hour comes.
+  const clock = useMinuteClock(showsToday);
   const notDoneCount = useMemo(() => {
     if (!showsToday) return 0;
-    const now = new Date();
+    const now = new Date(clock);
     if (now.getHours() < summaryHour) return 0;
     return summaryOpenCount(
       buildEveningSummary({
@@ -297,7 +300,7 @@ export function AgendaTab() {
         untilMinutes: now.getHours() * 60 + now.getMinutes(),
       })
     );
-  }, [showsToday, summaryHour, todayKey, allChores, groups, exceptions, leaveRequests, pets]);
+  }, [showsToday, clock, summaryHour, todayKey, allChores, groups, exceptions, leaveRequests, pets]);
 
   function switchToFood(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;

@@ -20,6 +20,7 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTaskExceptions } from "@/hooks/use-task-exceptions";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
+import { useMinuteClock } from "@/hooks/use-minute-clock";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { applyLeaveTriage, formatLeaveRange, leaveApprovalPath } from "@/lib/leave";
 import { expandChores, type ChoreOccurrence } from "@/lib/chore-recurrence";
@@ -102,9 +103,11 @@ function SummaryBody({
   const today = useToday();
   const todayKey = formatDateLocal(today);
   const [routineOpen, setRoutineOpen] = useState<SummaryRow | null>(null);
+  // Today's "due by now" moves with the clock while the sheet is open.
+  const clock = useMinuteClock(date === todayKey);
 
   const summary = useMemo(() => {
-    const now = new Date();
+    const now = new Date(clock);
     return buildEveningSummary({
       date,
       chores: applyLeaveTriage(expandChores({ rows: householdTasks, date, today: todayKey }), leaveRequests),
@@ -116,7 +119,7 @@ function SummaryBody({
       // Today: due by now, as the push counts. An earlier day: all of it.
       untilMinutes: date === todayKey ? now.getHours() * 60 + now.getMinutes() : null,
     });
-  }, [date, householdTasks, todayKey, leaveRequests, pets, schedules, logs, exceptions, routineProposals]);
+  }, [date, clock, householdTasks, todayKey, leaveRequests, pets, schedules, logs, exceptions, routineProposals]);
 
   const heading = new Date(`${date}T00:00:00`).toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
     weekday: "long",
