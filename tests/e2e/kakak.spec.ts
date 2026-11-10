@@ -74,8 +74,11 @@ test("an admin tells Kakak, answers her question, confirms the card, and can und
   await page.goto("/dashboard");
 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
-  await page.getByRole("button", { name: /Sari mops the terrace/ }).click();
-  await expect(page.getByRole("textbox", { name: "What should I set up?" })).toHaveValue(/terrace/);
+  // The examples use this household's own names, and fill the box when tapped.
+  await expect(page.getByText("Try saying")).toBeVisible();
+  await page.getByRole("button", { name: "Ari waters the plants every Monday at 8" }).click();
+  await expect(page.getByRole("textbox", { name: "What should I set up?" })).toHaveValue("Ari waters the plants every Monday at 8");
+  await expect(page.getByRole("textbox", { name: "What should I set up?" })).toBeFocused();
   await page.getByRole("textbox", { name: "What should I set up?" }).fill("Ari mops the terrace at 9");
   await page.getByRole("button", { name: "Send" }).click();
 
@@ -120,6 +123,55 @@ test("Kakak's limit and errors read as plain sentences, and nothing is saved", a
   await page.getByRole("button", { name: "Kirim" }).click();
   await expect(page.getByText("Kakak sudah banyak membantu hari ini — coba lagi besok, atau tambahkan sendiri.")).toBeVisible();
   expect(stub.tasks).toHaveLength(0);
+});
+
+test("a busy Kakak or a dropped connection offers Try again with the same words", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  const asked: { reply: string; history: unknown }[] = [];
+  await page.route("**/api/kakak", (route) => {
+    asked.push(route.request().postDataJSON());
+    if (asked.length === 1) return route.fulfill({ status: 429, json: { kind: "refused", reason: "busy" } });
+    if (asked.length === 2) return route.abort("internetdisconnected");
+    return route.fulfill({
+      json: {
+        kind: "suggestions",
+        text: "Here's what I'll add:",
+        items: [chore],
+        requestId: "00000000-0000-4000-8000-0000000000a3",
+        history: { messages: [] },
+      },
+    });
+  });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("Ari mops the terrace every Monday at 9");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByText("Kakak is busy right now — try again in a minute, or add it yourself.")).toBeVisible();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText("Kakak needs the internet. Check your connection and try again.")).toBeVisible();
+  await page.getByRole("button", { name: "Try again" }).click();
+
+  await expect(page.getByRole("button", { name: "Looks right" })).toBeVisible();
+  await expect(page.getByText("You can undo it straight after saving.")).toBeVisible();
+  // Each try sent the same words, and the owner's line shows once.
+  expect(asked.map((a) => a.reply)).toEqual(Array(3).fill("Ari mops the terrace every Monday at 9"));
+  await expect(page.getByText("Ari mops the terrace every Monday at 9", { exact: true })).toHaveCount(1);
+});
+
+test("the monthly spend limit reads as a plain sentence, with no Try again", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
+  await page.route("**/api/kakak", (route) => route.fulfill({ json: { kind: "failed", reason: "cap" } }));
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
+  await expect(page.getByText("Coba bilang")).toBeVisible();
+  await page.getByRole("textbox", { name: "Mau Kakak atur apa?" }).fill("Beli telur");
+  await page.getByRole("button", { name: "Kirim" }).click();
+  await expect(page.getByText("Kakak sudah mencapai batas bulan ini. Anda tetap bisa menambahkan semuanya sendiri.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Coba lagi" })).toHaveCount(0);
+  // No typing box either: trying again can't help until next month.
+  await expect(page.getByRole("textbox", { name: "Mau Kakak atur apa?" })).toHaveCount(0);
 });
 
 test("Kakak is off until an admin turns her on in the Household tab", async ({ context, page }) => {
@@ -168,10 +220,27 @@ test("practice mode: the real Kakak route answers with no AI, and saving still w
   await page.getByRole("button", { name: "Kirim" }).click();
 
   await expect(page.getByText(/^Mode latihan:/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Ari pel teras setiap Senin jam 9", { exact: true })).toBeVisible();
   await expect(page.getByText("Pel teras", { exact: true })).toBeVisible();
   await expect(page.getByText("Setiap Senin").first()).toBeVisible();
   await page.getByRole("button", { name: "Sudah benar" }).click();
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", assigned_to: STAFF_ID, due_time: "09:00", recurrence: "weekly" });
   expect(stub.seen.realBackend).toEqual([]);
+});
+
+test("practice mode: a tapped example becomes a card in one go", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Ari waters the plants every Monday at 8" }).click();
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText(/^Practice mode:/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Siram tanaman (Waters the plants)")).toBeVisible();
+  await expect(page.getByText("Every Monday", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.tasks.length).toBe(1);
+  expect(stub.tasks[0]).toMatchObject({ title: "Siram tanaman", assigned_to: STAFF_ID, due_time: "08:00", recurrence: "weekly" });
 });

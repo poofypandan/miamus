@@ -2,17 +2,34 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, X } from "lucide-react";
+import {
+  Check,
+  CircleAlert,
+  Gauge,
+  Hourglass,
+  ListChecks,
+  Loader2,
+  PawPrint,
+  Refrigerator,
+  RotateCcw,
+  Send,
+  ShoppingCart,
+  WifiOff,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { KakakAvatar } from "@/components/kakak/kakak-avatar";
+import { KakakExamples } from "@/components/kakak/kakak-examples";
+import { KakakThinking } from "@/components/kakak/kakak-thinking";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
-import { askKakak, reportKakakOutcome, type KakakReply } from "@/lib/kakak/client";
+import { askKakak, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
 import { addsSomething, describeSuggestion, savedSummary } from "@/lib/kakak/describe";
-import { MAX_TYPED, type KakakHistory } from "@/lib/kakak/engine";
+import { MAX_TYPED, type KakakHistory, type RefusalReason } from "@/lib/kakak/engine";
 import type { KakakSuggestion } from "@/lib/kakak/suggestions";
 import { useKakakSave } from "@/lib/kakak/use-kakak-save";
 import { cn } from "@/lib/utils";
@@ -22,7 +39,20 @@ type Screen =
   | { kind: "waiting" }
   | { kind: "question"; question: string; answers: string[]; allowTyping: boolean }
   | { kind: "card"; text: string; items: KakakSuggestion[]; requestId: string }
-  | { kind: "message"; text: string };
+  | { kind: "message"; text: string; problem?: Problem };
+
+/**
+ * When a turn could not be answered: what to show and what the owner can do
+ * next — try the same words again (no internet, busy, too slow), say it
+ * another way, start a new conversation, or nothing but add it by hand.
+ */
+interface Problem {
+  icon: LucideIcon;
+  next: "retry" | "rephrase" | "restart" | "none";
+}
+
+/** Saved — Undo stays on screen long enough to read the toast and reach it. */
+const UNDO_TOAST_MS = 8000;
 
 /**
  * Tell Kakak (Phase 156 step 2; plan screens 2–8). One typing box, then
@@ -68,13 +98,10 @@ function Conversation({ onClose }: { onClose: () => void }) {
   /** The server answered in practice mode (scripted, no AI): say so. */
   const [practice, setPractice] = useState(false);
   const abort = useRef<AbortController | null>(null);
+  /** The last words sent and the history they went with, for "Try again". */
+  const lastTurn = useRef<{ words: string; history: KakakHistory | null } | null>(null);
 
   useEffect(() => () => abort.current?.abort(), []);
-
-  const examples =
-    locale === "id"
-      ? ["Mbak Sari pel teras tiap Senin jam 9", "Beli telur dan gula 2 kg", "Mochi makan jam 7 dan jam 5 sore"]
-      : ["Sari mops the terrace every Monday at 9", "Buy eggs and 2 kg of sugar", "Feed Mochi at 7 and 5 pm"];
 
   async function send(text: string) {
     const words = text.trim().slice(0, MAX_TYPED);
@@ -82,13 +109,33 @@ function Conversation({ onClose }: { onClose: () => void }) {
     setSaid((list) => [...list, words]);
     setDraft("");
     setTypingAnswer(false);
+    await ask(words, history);
+  }
+
+  /** The same words again, after no internet, a busy Kakak or a timeout. */
+  function retry() {
+    if (lastTurn.current) void ask(lastTurn.current.words, lastTurn.current.history);
+  }
+
+  function restart() {
+    abort.current?.abort();
+    lastTurn.current = null;
+    setHistory(null);
+    setSaid([]);
+    setDraft("");
+    setTypingAnswer(false);
+    setScreen({ kind: "typing" });
+  }
+
+  async function ask(words: string, from: KakakHistory | null) {
+    lastTurn.current = { words, history: from };
     setScreen({ kind: "waiting" });
     abort.current?.abort();
     const controller = new AbortController();
     abort.current = controller;
     let reply: KakakReply;
     try {
-      reply = await askKakak(activeHouseholdId, history, words, locale, controller.signal);
+      reply = await askKakak(activeHouseholdId, from, words, locale, controller.signal);
     } catch {
       return; // the sheet was closed
     }
@@ -111,11 +158,11 @@ function Conversation({ onClose }: { onClose: () => void }) {
         setScreen({ kind: "message", text: reply.text || t("Sorry, I didn't catch that.", "Maaf, Kakak belum paham.") });
         return;
       case "refused":
-        setScreen({ kind: "message", text: refusalText(reply.reason, t) });
+        setScreen({ kind: "message", ...refusal(reply.reason, t) });
         setHistory(null);
         return;
       case "failed":
-        setScreen({ kind: "message", text: failureText(reply.reason, t) });
+        setScreen({ kind: "message", ...failure(reply.reason, t) });
         setHistory(null);
         return;
     }
@@ -128,11 +175,12 @@ function Conversation({ onClose }: { onClose: () => void }) {
       const { undo } = await save(items);
       reportKakakOutcome(requestId, "confirmed");
       toast.success(savedSummary(items, locale), {
+        duration: UNDO_TOAST_MS,
         action: {
           label: t("Undo", "Batalkan"),
           onClick: () => {
             reportKakakOutcome(requestId, "undone");
-            void undo();
+            void undo().then(() => toast(t("Undone.", "Dibatalkan.")));
           },
         },
       });
@@ -170,20 +218,7 @@ function Conversation({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      {screen.kind === "waiting" && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-          <span className="flex gap-1" aria-hidden="true">
-            {[0, 1, 2].map((dot) => (
-              <span
-                key={dot}
-                className="size-1.5 animate-bounce rounded-full bg-slate-400"
-                style={{ animationDelay: `${dot * 150}ms` }}
-              />
-            ))}
-          </span>
-          {t("One moment…", "Sebentar…")}
-        </div>
-      )}
+      {screen.kind === "waiting" && <KakakThinking />}
 
       {screen.kind === "question" && (
         <div className="flex flex-col gap-3">
@@ -231,10 +266,28 @@ function Conversation({ onClose }: { onClose: () => void }) {
         />
       )}
 
-      {screen.kind === "message" && <KakakBubble>{screen.text}</KakakBubble>}
+      {screen.kind === "message" &&
+        (screen.problem ? (
+          <ProblemBubble icon={screen.problem.icon}>{screen.text}</ProblemBubble>
+        ) : (
+          <KakakBubble>{screen.text}</KakakBubble>
+        ))}
+
+      {screen.kind === "message" && screen.problem?.next === "retry" && (
+        <Button type="button" className="min-h-12 rounded-xl text-base" onClick={retry}>
+          <RotateCcw className="size-4" aria-hidden="true" />
+          {t("Try again", "Coba lagi")}
+        </Button>
+      )}
+      {screen.kind === "message" && screen.problem?.next === "restart" && (
+        <Button type="button" className="min-h-12 rounded-xl text-base" onClick={restart}>
+          <RotateCcw className="size-4" aria-hidden="true" />
+          {t("Start again", "Mulai lagi")}
+        </Button>
+      )}
 
       {(screen.kind === "typing" ||
-        screen.kind === "message" ||
+        (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||
         ((screen.kind === "question" || screen.kind === "card") && typingAnswer)) && (
         <TypingBox
           draft={draft}
@@ -247,7 +300,7 @@ function Conversation({ onClose }: { onClose: () => void }) {
                 ? t("Type your answer", "Ketik jawaban Anda")
                 : t("What should I set up?", "Mau Kakak atur apa?")
           }
-          examples={screen.kind === "typing" && said.length === 0 ? examples : []}
+          showExamples={screen.kind === "typing" && said.length === 0}
         />
       )}
 
@@ -269,20 +322,34 @@ function KakakBubble({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Kakak couldn't answer: the same bubble, with a quiet icon saying why. Calm, not red. */
+function ProblemBubble({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2" role="alert">
+      <KakakAvatar className="size-7" />
+      <div className="flex max-w-[85%] items-start gap-2 rounded-2xl rounded-tl-md border bg-card px-3 py-2 text-sm text-gray-900">
+        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <p>{children}</p>
+      </div>
+    </div>
+  );
+}
+
 function TypingBox({
   draft,
   setDraft,
   onSend,
   placeholder,
-  examples,
+  showExamples,
 }: {
   draft: string;
   setDraft: (value: string) => void;
   onSend: (text: string) => void;
   placeholder: string;
-  examples: string[];
+  showExamples: boolean;
 }) {
   const t = useT();
+  const box = useRef<HTMLTextAreaElement>(null);
   function submit(event: FormEvent) {
     event.preventDefault();
     onSend(draft);
@@ -291,6 +358,7 @@ function TypingBox({
     <form onSubmit={submit} className="flex flex-col gap-3">
       <div className="flex items-end gap-2">
         <Textarea
+          ref={box}
           autoFocus
           value={draft}
           maxLength={MAX_TYPED}
@@ -317,19 +385,13 @@ function TypingBox({
           <Send className="size-5" />
         </Button>
       </div>
-      {examples.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {examples.map((example) => (
-            <button
-              key={example}
-              type="button"
-              onClick={() => setDraft(example)}
-              className="rounded-xl border border-dashed px-3 py-2 text-left text-sm text-muted-foreground active:bg-muted"
-            >
-              {example}
-            </button>
-          ))}
-        </div>
+      {showExamples && (
+        <KakakExamples
+          onPick={(example) => {
+            setDraft(example);
+            box.current?.focus();
+          }}
+        />
       )}
     </form>
   );
@@ -360,13 +422,17 @@ function SuggestionCard({
   return (
     <div className="flex flex-col gap-3">
       <KakakBubble>{text || t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:")}</KakakBubble>
-      <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
+      <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card shadow-sm">
         {items.map((item, index) => {
           const card = describeSuggestion(item, locale);
+          const Icon = KIND_ICONS[item.kind];
           return (
             <div key={index} className="flex flex-col gap-1.5 px-4 py-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{card.heading}</p>
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Icon className="size-3.5" aria-hidden="true" />
+                  {card.heading}
+                </p>
                 {items.length > 1 && (
                   <button
                     type="button"
@@ -400,11 +466,12 @@ function SuggestionCard({
             onClick={onConfirm}
           >
             {saving ? (
-              <Loader2 className="size-5 animate-spin" />
-            ) : saveable > 1 ? (
-              t(`Save ${saveable}`, `Simpan ${saveable}`)
+              <Loader2 className="size-5 animate-spin" aria-label={t("Saving", "Menyimpan")} />
             ) : (
-              t("Looks right", "Sudah benar")
+              <>
+                <Check className="size-5" aria-hidden="true" />
+                {saveable > 1 ? t(`Save ${saveable}`, `Simpan ${saveable}`) : t("Looks right", "Sudah benar")}
+              </>
             )}
           </Button>
           <div className="flex gap-2">
@@ -415,40 +482,103 @@ function SuggestionCard({
               {t("Cancel", "Batal")}
             </Button>
           </div>
+          <p className="text-center text-xs text-muted-foreground">
+            {t("You can undo it straight after saving.", "Setelah disimpan, masih bisa dibatalkan.")}
+          </p>
         </>
       )}
     </div>
   );
 }
 
-function refusalText(reason: string, t: (en: string, id: string) => string): string {
+const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
+  chore: ListChecks,
+  shopping: ShoppingCart,
+  pet_routine: PawPrint,
+  food: Refrigerator,
+};
+
+type T = (en: string, id: string) => string;
+
+function refusal(reason: RefusalReason | "unavailable", t: T): { text: string; problem: Problem } {
   switch (reason) {
     case "limit":
-      return t(
-        "Kakak has helped a lot today — try again tomorrow, or add it yourself.",
-        "Kakak sudah banyak membantu hari ini — coba lagi besok, atau tambahkan sendiri."
-      );
+      return {
+        text: t(
+          "Kakak has helped a lot today — try again tomorrow, or add it yourself.",
+          "Kakak sudah banyak membantu hari ini — coba lagi besok, atau tambahkan sendiri."
+        ),
+        problem: { icon: Gauge, next: "none" },
+      };
     case "busy":
-      return t("Kakak is busy right now — try again later, or add it yourself.", "Kakak sedang sibuk — coba lagi nanti, atau tambahkan sendiri.");
+      return {
+        text: t(
+          "Kakak is busy right now — try again in a minute, or add it yourself.",
+          "Kakak sedang sibuk — coba lagi sebentar lagi, atau tambahkan sendiri."
+        ),
+        problem: { icon: Hourglass, next: "retry" },
+      };
     case "off":
     case "not_allowed":
-      return t("Kakak is turned off for this household.", "Kakak sedang dimatikan untuk rumah ini.");
+      return {
+        text: t("Kakak is turned off for this household.", "Kakak sedang dimatikan untuk rumah ini."),
+        problem: { icon: CircleAlert, next: "none" },
+      };
     case "unavailable":
-      return t("Kakak isn't available right now. You can add it yourself.", "Kakak sedang tidak tersedia. Anda bisa menambahkannya sendiri.");
+      return {
+        text: t(
+          "Kakak isn't available right now. You can still add everything yourself.",
+          "Kakak sedang tidak tersedia. Anda tetap bisa menambahkan semuanya sendiri."
+        ),
+        problem: { icon: CircleAlert, next: "none" },
+      };
     default:
-      return t("Only an admin of this household can use Kakak.", "Hanya admin rumah ini yang bisa memakai Kakak.");
+      return {
+        text: t("Only an admin of this household can use Kakak.", "Hanya admin rumah ini yang bisa memakai Kakak."),
+        problem: { icon: CircleAlert, next: "none" },
+      };
   }
 }
 
-function failureText(reason: string, t: (en: string, id: string) => string): string {
+function failure(reason: KakakFailure, t: T): { text: string; problem: Problem } {
   switch (reason) {
     case "offline":
-      return t("Kakak needs the internet.", "Kakak perlu internet.");
+      return {
+        text: t("Kakak needs the internet. Check your connection and try again.", "Kakak perlu internet. Cek internet Anda lalu coba lagi."),
+        problem: { icon: WifiOff, next: "retry" },
+      };
+    case "slow":
+      return {
+        text: t("Kakak took too long. Nothing was saved — try again.", "Kakak terlalu lama menjawab. Tidak ada yang disimpan — coba lagi."),
+        problem: { icon: Hourglass, next: "retry" },
+      };
+    case "cap":
+      return {
+        text: t(
+          "Kakak has reached this month's limit. You can still add everything yourself.",
+          "Kakak sudah mencapai batas bulan ini. Anda tetap bisa menambahkan semuanya sendiri."
+        ),
+        problem: { icon: Gauge, next: "none" },
+      };
+    case "stale":
+      return {
+        text: t("This conversation is a few hours old. Start again to tell Kakak.", "Percakapan ini sudah beberapa jam. Mulai lagi untuk bilang ke Kakak."),
+        problem: { icon: RotateCcw, next: "restart" },
+      };
     case "invalid":
     case "too_long":
     case "refusal":
-      return t("Kakak couldn't work that out — you can add it yourself.", "Kakak belum bisa mengaturnya — Anda bisa menambahkannya sendiri.");
+      return {
+        text: t(
+          "Kakak couldn't work that out — try saying it another way, or add it yourself.",
+          "Kakak belum bisa mengaturnya — coba dengan kata lain, atau tambahkan sendiri."
+        ),
+        problem: { icon: CircleAlert, next: "rephrase" },
+      };
     default:
-      return t("Something went wrong. Nothing was saved.", "Ada yang salah. Tidak ada yang disimpan.");
+      return {
+        text: t("Something went wrong. Nothing was saved.", "Ada yang salah. Tidak ada yang disimpan."),
+        problem: { icon: CircleAlert, next: "retry" },
+      };
   }
 }
