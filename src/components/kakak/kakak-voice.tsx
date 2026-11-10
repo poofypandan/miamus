@@ -308,8 +308,17 @@ const speakListeners = new Set<() => void>();
 let speakOn: boolean | null = null;
 let speechUnlocked = false;
 
+/** This phone's storage, or undefined where even touching it throws (storage blocked). */
+function phoneStorage(): Storage | undefined {
+  try {
+    return typeof localStorage === "undefined" ? undefined : localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 function speakSnapshot(): boolean {
-  if (speakOn === null) speakOn = readSpeakChoice(typeof localStorage === "undefined" ? undefined : localStorage);
+  if (speakOn === null) speakOn = readSpeakChoice(phoneStorage());
   return speakOn;
 }
 
@@ -320,7 +329,7 @@ function subscribeSpeak(listener: () => void) {
 
 function setSpeak(on: boolean) {
   speakOn = on;
-  writeSpeakChoice(typeof localStorage === "undefined" ? undefined : localStorage, on);
+  writeSpeakChoice(phoneStorage(), on);
   speakListeners.forEach((listener) => listener());
 }
 
