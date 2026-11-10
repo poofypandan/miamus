@@ -86,6 +86,8 @@ export interface StubOptions {
    * household has its two pets (default) or none at all.
    */
   household?: { hasPets: boolean | null; pets?: boolean };
+  /** The VAPID public key get_push_public_key returns to the admin (push set up on the server). */
+  pushKey?: string;
 }
 
 /**
@@ -247,6 +249,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         return route.fulfill({
           json: [{ ...kakak, enabled_by: kakak.enabled ? OWNER : null, enabled_at: kakak.enabled ? "2026-11-08T03:00:00Z" : null, daily_limit: 40, calls_left: kakak.allowed ? 40 : 0 }],
         });
+      }
+      if (options.owner && who === OWNER && table === "rpc/get_push_public_key" && options.pushKey) {
+        return route.fulfill({ json: options.pushKey });
       }
       if (options.owner && who === OWNER && table === "rpc/set_household_has_pets") {
         household.hasPets = Boolean(request.postDataJSON()?.p_on);

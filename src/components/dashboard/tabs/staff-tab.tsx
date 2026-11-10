@@ -49,7 +49,8 @@ import { InvitePanel } from "@/components/dashboard/invite-panel";
 import { HouseCodePanel } from "@/components/dashboard/house-code-panel";
 import { HouseholdMembersPanel } from "@/components/dashboard/household-members-panel";
 import { SecuritySettings } from "@/components/dashboard/security-settings";
-import { PushNotificationSettings } from "@/components/dashboard/push-notification-settings";
+import { PushNotificationSettings, pushStatusLabel } from "@/components/dashboard/push-notification-settings";
+import { usePushStatus } from "@/hooks/use-push-status";
 import { LanguageSettings } from "@/components/dashboard/language-settings";
 import { KakakSettings } from "@/components/kakak/kakak-settings";
 import { KakakAvatar } from "@/components/kakak/kakak-avatar";
@@ -208,6 +209,8 @@ export function StaffTab() {
   // Scheduled deletion (R7): shown at the top of the list, managed on the
   // Your data page. One instance, passed down, so both agree.
   const deletion = useHouseholdDeletion();
+  // This device's notifications, on the row (On / Off / Blocked).
+  const { status: pushStatus } = usePushStatus();
 
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
 
@@ -323,7 +326,13 @@ export function StaffTab() {
           <SettingsRow icon={KeyRound} label={t("Staff sign-in", "Masuk staf")} onPress={() => open("sign-in")} />
         </SettingsGroup>
         <SettingsGroup>
-          <SettingsRow icon={Bell} label={t("Notifications", "Notifikasi")} onPress={() => open("notifications")} />
+          <SettingsRow
+            icon={Bell}
+            label={t("Notifications", "Notifikasi")}
+            detail={pushStatusLabel(pushStatus, t)}
+            waiting={pushStatus === "off" || pushStatus === "denied"}
+            onPress={() => open("notifications")}
+          />
           <SettingsRow
             icon={Languages}
             label={t("Language", "Bahasa")}

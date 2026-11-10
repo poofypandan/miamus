@@ -1,90 +1,80 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { BellOff, BellRing, Loader2, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useHousehold } from "@/context/household-context";
-import {
-  currentSubscription,
-  disablePush,
-  enablePush,
-  fetchPushPublicKey,
-  pushAvailability,
-  sendTestPush,
-} from "@/lib/push";
-import { useT } from "@/context/owner-locale-context";
+import { sendTestPush } from "@/lib/push";
+import type { PushStatus } from "@/lib/push-prompt";
+import { usePushStatus } from "@/hooks/use-push-status";
+import { useT, type Translate } from "@/context/owner-locale-context";
 
-type Status =
-  | "loading"
-  | "unsupported"
-  | "ios-install-first"
-  | "unconfigured"
-  | "denied"
-  | "off"
-  | "on";
+/** One or two words for this device's push state: the badge and the Household row. */
+export function pushStatusLabel(status: PushStatus, t: Translate): string | undefined {
+  switch (status) {
+    case "on":
+      return t("On", "Aktif");
+    case "off":
+      return t("Off", "Mati");
+    case "denied":
+      return t("Blocked", "Diblokir");
+    case "ios-install-first":
+      return t("Needs Home Screen", "Perlu Layar Utama");
+    case "unsupported":
+    case "unconfigured":
+      return t("Not available", "Tidak tersedia");
+    default:
+      return undefined;
+  }
+}
+
+const BADGE_CLASS: Partial<Record<PushStatus, string>> = {
+  on: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  denied: "bg-amber-50 text-amber-800 border-amber-200",
+};
+
+function PushStatusBadge({ status, t }: { status: PushStatus; t: Translate }) {
+  const label = pushStatusLabel(status, t);
+  if (!label) return null;
+  return (
+    <span
+      className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+        BADGE_CLASS[status] ?? "border-zinc-200 bg-zinc-50 text-zinc-600"
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
 
 /**
  * Push notifications on this device (Phase 119).
  *
  * Per device, like the app lock beside it: a co-owner's phone decides for
- * itself, and turning it on here says nothing about any other phone. What it
- * delivers today is the sick-report alert (migrations/103).
+ * itself, and turning it on here says nothing about any other phone. It
+ * delivers what staff report as urgent (repairs, a sick pet), food from
+ * staff and the morning food reminder.
  *
  * Owner-facing, in the language the owner chose (Phase 149).
  */
 export function PushNotificationSettings() {
-  const { activeHouseholdId, tenantReady } = useHousehold();
   const t = useT();
-  const [status, setStatus] = useState<Status>("loading");
-  // Fetched before any tap, so enabling can ask for permission first thing
-  // (see enablePush on why Safari needs that).
-  const [publicKey, setPublicKey] = useState<string | null>(null);
+  const { status, canEnable, enable: enablePush, disable: disablePush, markOff } = usePushStatus();
   const [busy, setBusy] = useState<"enable" | "disable" | "test" | null>(null);
 
-  const check = useCallback(async () => {
-    const availability = pushAvailability();
-    if (availability !== "supported") {
-      setStatus(availability);
-      return;
-    }
-    try {
-      const [key, subscription] = await Promise.all([fetchPushPublicKey(), currentSubscription()]);
-      setPublicKey(key);
-      if (!key) setStatus("unconfigured");
-      else if (Notification.permission === "denied") setStatus("denied");
-      else if (subscription && Notification.permission === "granted") setStatus("on");
-      else setStatus("off");
-    } catch (err) {
-      console.error(err);
-      setStatus("unconfigured");
-    }
-  }, []);
-
-  useEffect(() => {
-    void check();
-    // Coming back from the system settings after unblocking notifications
-    // should update this card without a reload.
-    function onVisible() {
-      if (document.visibilityState === "visible") void check();
-    }
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [check]);
-
   async function enable() {
-    if (!publicKey || !tenantReady || busy) return;
+    if (!canEnable || busy) return;
     setBusy("enable");
     try {
-      const result = await enablePush(activeHouseholdId, publicKey);
+      const result = await enablePush();
       if (result === "denied") {
-        setStatus(Notification.permission === "denied" ? "denied" : "off");
         toast.error(t("Notifications weren't allowed", "Notifikasi tidak diizinkan"));
         return;
       }
-      setStatus("on");
-      toast.success(t("Notifications on for this device", "Notifikasi aktif di perangkat ini"));
+      if (result === "enabled") {
+        toast.success(t("Notifications on for this device", "Notifikasi aktif di perangkat ini"));
+      }
     } catch (err) {
       console.error(err);
       toast.error(t("Couldn't turn on notifications", "Notifikasi gagal diaktifkan"));
@@ -98,7 +88,6 @@ export function PushNotificationSettings() {
     setBusy("disable");
     try {
       await disablePush();
-      setStatus("off");
       toast.success(t("Notifications off for this device", "Notifikasi mati di perangkat ini"));
     } catch (err) {
       console.error(err);
@@ -116,7 +105,7 @@ export function PushNotificationSettings() {
       if (devices === 0) {
         // The browser still holds a subscription the server no longer has —
         // say so plainly and offer the way back.
-        setStatus("off");
+        markOff();
         toast.error(
           t(
             "This device isn't registered any more. Turn notifications on again.",
@@ -144,11 +133,14 @@ export function PushNotificationSettings() {
       <Card className="py-4">
         <CardContent className="flex flex-col gap-3 px-4">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <p className="text-sm font-medium">{t("Notifications on this phone", "Notifikasi di HP ini")}</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">{t("Notifications on this phone", "Notifikasi di HP ini")}</p>
+              <PushStatusBadge status={status} t={t} />
+            </div>
             <p className="text-xs text-muted-foreground">
               {t(
-                "Get an alert on this device the moment someone reports a sick pet.",
-                "Dapatkan peringatan di perangkat ini begitu ada yang melaporkan hewan sakit."
+                "An alert on this device the moment staff report something urgent, like a leak, when staff add food, and each morning for food about to expire.",
+                "Peringatan di perangkat ini begitu staf melaporkan hal darurat, misalnya kebocoran, saat staf menambahkan makanan, dan setiap pagi untuk makanan yang hampir kedaluwarsa."
               )}
             </p>
           </div>
@@ -214,7 +206,7 @@ export function PushNotificationSettings() {
             <Button
               className="min-h-[44px] w-full"
               onClick={enable}
-              disabled={busy !== null || !tenantReady}
+              disabled={busy !== null || !canEnable}
             >
               {busy === "enable" ? <Loader2 className="animate-spin" /> : <BellRing />}
               {t("Enable Notifications on this Device", "Aktifkan Notifikasi di Perangkat Ini")}
