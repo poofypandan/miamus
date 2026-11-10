@@ -116,7 +116,7 @@ test("Bahasa Indonesia: Coming up on Today, the tutorial, and a yearly bill's fo
   // Two days out, inside its 3-day window; the yearly one isn't yet.
   const line = page.getByRole("button", { name: /^Segera: PBB · / });
   await expect(line).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText(/Segera: .*STNK/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Segera:.*STNK/ })).toHaveCount(0);
   await line.click();
   await expect(page.getByText("PBB").first()).toBeVisible();
 
@@ -151,4 +151,48 @@ test("Bahasa Indonesia: Coming up on Today, the tutorial, and a yearly bill's fo
     remind_days_before: 1,
   });
   expect(stub.seen.realBackend).toEqual([]);
+});
+
+test("electricity on token: its own date and reminder are the ones saved (Codex, PR #60)", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, chores: [] });
+  await page.goto("/dashboard?module=chores");
+  await page.getByRole("button", { name: "Bills and upkeep" }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("checkbox", { name: "Electricity (PLN)" }).click();
+  await sheet.getByRole("button", { name: /^Electricity \(PLN\)/ }).click();
+  await sheet.getByRole("button", { name: "Token" }).click();
+  await expect(sheet.getByText("A monthly nudge to check the meter")).toBeVisible();
+
+  await sheet.locator('input[type="date"]').fill(ymd(dateIn(5)));
+  await sheet.getByRole("combobox").last().click();
+  await page.getByRole("option", { name: "1 day before" }).click();
+  await sheet.getByRole("button", { name: "Add 1" }).click();
+  await expect(page.getByText("Added 1")).toBeVisible();
+
+  expect(stub.tasks).toEqual([
+    expect.objectContaining({
+      title: "Electricity token (PLN)",
+      due_date: ymd(dateIn(5)),
+      remind_days_before: 1,
+      assigned_to: OWNER_PROFILE_ID,
+    }),
+  ]);
+});
+
+test("Coming up leaves out a day ahead that's already done (Codex, PR #60)", async ({ context, page }) => {
+  const due = ymd(dateIn(2));
+  const internet = chore({ title: "Internet", recurrence: "weekly", due_date: ymd(dateIn(-5)), remind_days_before: 3 });
+  const water = chore({ title: "Water (PDAM)", due_date: due, remind_days_before: 3 });
+  // Internet's day two days out, paid early.
+  const paidEarly = chore({
+    title: "Internet",
+    parent_task_id: internet.id,
+    due_date: due,
+    status: "completed",
+    completed_by: OWNER_PROFILE_ID,
+  });
+  await installStub(context, { owner: { locale: "en" }, chores: [internet, water, paidEarly] });
+  await page.goto("/dashboard");
+  await expect(page.getByRole("button", { name: /^Coming up: Water \(PDAM\) · / })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: /^Coming up:.*Internet/ })).toHaveCount(0);
 });

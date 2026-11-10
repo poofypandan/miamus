@@ -34,7 +34,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { useRepairs } from "@/hooks/use-repairs";
-import { useSetUpChores } from "@/hooks/use-set-up-chores";
+import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores";
 import { comingUpLabel, comingUpReminders } from "@/lib/chore-reminders";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
@@ -186,6 +186,10 @@ export function AgendaTab() {
   // not just the week on screen: a yearly bill can be a week out.
   const todayKey = formatDateLocal(today);
   const { rows: setUpRows } = useSetUpChores(todayKey);
+  // The days ahead already written (finished early, skipped, given to
+  // someone else), up to the longest reminder: past the week the cache holds.
+  const horizonKey = formatDateLocal(addDays(today, 7));
+  const writtenAhead = useWrittenOccurrences(todayKey, horizonKey);
   const ownerRows = useMemo(
     () => new Set((allProfiles ?? []).filter((p) => !!p.user_id).map((p) => p.id)),
     [allProfiles]
@@ -193,12 +197,17 @@ export function AgendaTab() {
   const comingUp = useMemo(
     () =>
       comingUpReminders({
-        rows: setUpRows ?? householdTasks,
+        // The cache's copy of a row wins over the separate read's.
+        rows: [
+          ...new Map(
+            [...writtenAhead, ...(setUpRows ?? householdTasks)].map((row) => [row.id, row] as const)
+          ).values(),
+        ],
         today: todayKey,
         memberId: memberProfile?.id ?? null,
         ownerRows,
       }),
-    [setUpRows, householdTasks, todayKey, memberProfile?.id, ownerRows]
+    [writtenAhead, setUpRows, householdTasks, todayKey, memberProfile?.id, ownerRows]
   );
   function showComingUp() {
     if (comingUp.length === 0) return;

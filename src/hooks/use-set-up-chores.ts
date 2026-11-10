@@ -44,3 +44,30 @@ export function useSetUpChores(today: string): { rows: HouseholdTask[] | null; f
 
   return { rows, failed: state.failed && !state.rows };
 }
+
+/**
+ * The repeats' days already written from `from` to `to`: finished, skipped,
+ * or given to someone else ahead of time (Phase 164). Today's Coming up line
+ * reaches up to a week ahead, past the week the household's cache holds
+ * (Codex, PR #60). Read again whenever the household's chores change; until
+ * it lands, and if it fails, nothing (the line then reads from the cache).
+ */
+export function useWrittenOccurrences(from: string, to: string): HouseholdTask[] {
+  const { householdTasks } = useHousehold();
+  const [rows, setRows] = useState<HouseholdTask[]>([]);
+
+  useEffect(() => {
+    let live = true;
+    dataProvider.listWrittenOccurrences(from, to).then(
+      (next) => {
+        if (live) setRows(next);
+      },
+      (err) => console.error("Written days ahead", err)
+    );
+    return () => {
+      live = false;
+    };
+  }, [from, to, householdTasks]);
+
+  return rows;
+}

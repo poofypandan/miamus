@@ -310,12 +310,12 @@ export function BillsUpkeepSheet({
                 type="date"
                 value={choice.first ?? ""}
                 min={today}
-                onChange={(e) => setChoice(base.key, { first: e.target.value || null })}
+                onChange={(e) => setChoice(item.key, { first: e.target.value || null })}
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs">{t("Assignee", "Ditugaskan ke")}</Label>
-              <Select value={choice.who} onValueChange={(who) => setChoice(base.key, { who })}>
+              <Select value={choice.who} onValueChange={(who) => setChoice(item.key, { who })}>
                 <SelectTrigger className="min-h-11 w-full bg-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -333,7 +333,7 @@ export function BillsUpkeepSheet({
               <Label className="text-xs">{t("Remind me", "Ingatkan saya")}</Label>
               <Select
                 value={choice.remind === null ? OFF : String(choice.remind)}
-                onValueChange={(v) => setChoice(base.key, { remind: v === OFF ? null : Number(v) })}
+                onValueChange={(v) => setChoice(item.key, { remind: v === OFF ? null : Number(v) })}
               >
                 <SelectTrigger className="min-h-11 w-full bg-white">
                   <SelectValue />

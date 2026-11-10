@@ -647,6 +647,17 @@ export const supabaseProvider: DataProvider = {
     }
     return [...byId.values()];
   },
+  async listWrittenOccurrences(from, to) {
+    const { data, error } = await client()
+      .from("household_tasks")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .not("parent_task_id", "is", null)
+      .gte("due_date", from)
+      .lte("due_date", to);
+    if (error) throw error;
+    return data ?? [];
+  },
   async listSetUpChores(today) {
     // Two narrow reads, like listHouseholdTasks: the repeats that haven't
     // ended, and the one-offs still to do. A row with no recurrence is a

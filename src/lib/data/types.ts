@@ -403,6 +403,12 @@ export interface DataProvider {
    * Never materialised days of a repeat.
    */
   listSetUpChores(today: string): Promise<HouseholdTask[]>;
+  /**
+   * The written days of repeats from `from` to `to` (Phase 164): what Today's
+   * Coming up line needs to know a day ahead was already finished, skipped
+   * or given to someone else, outside the week on screen (Codex, PR #60).
+   */
+  listWrittenOccurrences(from: string, to: string): Promise<HouseholdTask[]>;
   createHouseholdTask(input: CreateHouseholdTaskInput): Promise<HouseholdTask>;
   /**
    * Owner-only. Several chores in one insert, all or none: the chore form's

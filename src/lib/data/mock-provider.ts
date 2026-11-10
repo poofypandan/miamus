@@ -538,6 +538,11 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(updated);
   },
+  async listWrittenOccurrences(from, to) {
+    return delay(
+      loadDB().householdTasks.filter((t) => !!t.parent_task_id && t.due_date >= from && t.due_date <= to)
+    );
+  },
   async listSetUpChores(today) {
     // Same rows listHouseholdTasks reads from, filtered the way the Rooms
     // view's isSetUp does.
