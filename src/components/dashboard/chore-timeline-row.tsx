@@ -33,11 +33,17 @@ import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 export function ChoreTimelineRow({
   occurrence,
   assigneeName,
+  completedByName,
   locationName,
   onPress,
 }: {
   occurrence: ChoreOccurrence;
   assigneeName?: string | null;
+  /**
+   * Who finished it, for a done chore with no photos: since Phase 163 an
+   * admin may finish their own chore without them (migrations/136).
+   */
+  completedByName?: string | null;
   /** The chore's room (Phase 135), or none. */
   locationName?: string | null;
   onPress: () => void;
@@ -65,7 +71,11 @@ export function ChoreTimelineRow({
     // Never the editor for a finished chore, even one with nothing to show:
     // completions from before photos existed simply have none.
     if (shots.length === 0) {
-      toast(t("No photos were saved for this chore", "Tidak ada foto tersimpan untuk tugas ini"));
+      toast(
+        completedByName
+          ? t(`Done by ${completedByName}, no photos`, `Diselesaikan ${completedByName}, tanpa foto`)
+          : t("No photos were saved for this chore", "Tidak ada foto tersimpan untuk tugas ini")
+      );
       return;
     }
     setReviewing(true);

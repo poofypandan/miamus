@@ -23,6 +23,26 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Shown on Today only to an admin who has a chore of their own (Phase 163, D5).
+    id: "my-tasks-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: finish your own chores on Today", id: "Baru: selesaikan tugas Anda di Hari ini" },
+    steps: {
+      en: [
+        "Chores given to you show under My tasks. Tap the circle when it's done; photos are optional.",
+        "Tapped by mistake? Tap Undo, or open the chore and tap Mark not done.",
+        "No need to switch to the Staff view. Staff still take both photos, as before.",
+      ],
+      id: [
+        "Tugas untuk Anda muncul di Tugas saya. Ketuk lingkarannya kalau sudah selesai; foto boleh tidak.",
+        "Salah ketuk? Ketuk Batalkan, atau buka tugasnya lalu ketuk Tandai belum selesai.",
+        "Tidak perlu pindah ke tampilan Staf. Staf tetap mengambil dua foto, seperti biasa.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     id: "feedback-2026-11",
     date: "2026-11-10",
     audience: "owner",
