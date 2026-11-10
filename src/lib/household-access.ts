@@ -8,10 +8,16 @@
  * and both refuse anonymous (staff phone) sessions on their own.
  */
 
-/** What /onboarding shows. "admin" and "approved" both get the name form. */
-export type HouseholdAccess = "admin" | "approved" | "pending" | "rejected" | "none";
+/**
+ * What /onboarding shows. "admin", "approved" and "open" all get the name
+ * form. "open" (Phase 172, migrations/143): no request yet, and the account
+ * is approved automatically when it creates its household, so there is no
+ * wait. Over the day's cap, or with the switch off, it reads "none" and the
+ * old Request access screen shows.
+ */
+export type HouseholdAccess = "admin" | "approved" | "open" | "pending" | "rejected" | "none";
 
-const ACCESS_VALUES: readonly HouseholdAccess[] = ["admin", "approved", "pending", "rejected", "none"];
+const ACCESS_VALUES: readonly HouseholdAccess[] = ["admin", "approved", "open", "pending", "rejected", "none"];
 
 /** Anything the server sends that isn't a known state reads as "none": ask, don't assume. */
 export function parseHouseholdAccess(value: unknown): HouseholdAccess {
@@ -19,7 +25,7 @@ export function parseHouseholdAccess(value: unknown): HouseholdAccess {
 }
 
 export function canCreateHousehold(access: HouseholdAccess): boolean {
-  return access === "admin" || access === "approved";
+  return access === "admin" || access === "approved" || access === "open";
 }
 
 export type AccessRequestStatus = "pending" | "approved" | "rejected";
@@ -31,6 +37,10 @@ export interface AccessRequest {
   status: AccessRequestStatus;
   requested_at: string;
   decided_at: string | null;
+  /** Approved automatically at sign-up (migrations/143). */
+  auto?: boolean;
+  /** The account's language, for the Email them text. */
+  locale?: string | null;
 }
 
 /** Pending first (oldest first, so nobody waits longest), then decisions, newest first. */
@@ -67,4 +77,23 @@ export function createHouseholdFailure(error: { message?: string } | null | unde
 /** "Sam Lee" / "sam@…" / "Someone": the name an approvals row leads with. */
 export function requesterLabel(request: Pick<AccessRequest, "full_name" | "email">): string {
   return request.full_name?.trim() || request.email || "Someone";
+}
+
+/**
+ * The "Email them" link on the approvals page (Phase 172, D2): a ready
+ * message in the account's language, sent by hand from the support address.
+ * Miamus has no mail service; this only opens the operator's mail app.
+ * Null when the account has no email.
+ */
+export function emailThemHref(request: Pick<AccessRequest, "email" | "locale" | "full_name">): string | null {
+  const to = request.email?.trim();
+  if (!to) return null;
+  const id = request.locale === "id";
+  const first = request.full_name?.trim().split(/\s+/)[0];
+  const subject = id ? "Miamus: Anda sudah bisa masuk" : "Miamus: you're in";
+  const greeting = first ? (id ? `Halo ${first},` : `Hi ${first},`) : id ? "Halo," : "Hi,";
+  const body = id
+    ? `${greeting}\n\nAnda sudah bisa masuk. Buka miamus.app untuk menyiapkan rumah Anda.\n\nPoofy Labs`
+    : `${greeting}\n\nYou're in. Open miamus.app to set up your household.\n\nPoofy Labs`;
+  return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }

@@ -90,7 +90,15 @@ export const LEGAL = {
   // closed task counts (kept 400 days); numbers only, never content. Read by
   // Poofy Labs as totals across households, without names; kept while the
   // household exists, deleted with it. No new service.
-  policyVersion: "2026-11-10.7",
+  // 2026-11-10.8: signing up without waiting (Phase 172 PR A1,
+  // migrations/143) — most accounts are approved automatically when they
+  // create their household and reviewed afterwards; whether an approval was
+  // automatic is stored; the operator still sees the creator's Google name
+  // and email; on a busy day (a daily cap) or with the switch off, the request
+  // is reviewed first and the person is emailed by hand from the support
+  // address. The 30-day deletion of rejected requests is unchanged. No new
+  // service.
+  policyVersion: "2026-11-10.8",
   effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

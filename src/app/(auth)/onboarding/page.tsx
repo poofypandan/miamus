@@ -32,8 +32,11 @@ import { supabase } from "@/lib/supabase/client";
  *
  * Reached only through the middleware, which sends a signed-in Google account
  * here when it has no household_members row. Since Phase 148 a new household
- * needs the operator's approval first (migrations/113): the account asks, waits,
- * and only then gets the name form.
+ * needs the operator's approval first (migrations/113). Since Phase 172
+ * (migrations/143) that approval is automatic: an "open" account goes
+ * straight to the name form and Create household approves it in the same
+ * call. Only over the day's cap, or with the switch off, does it still ask
+ * and wait (the Request and Waiting screens below).
  *
  * Since Phase 149 the first question is the language (migrations/114), and
  * every screen after it is in the one chosen. The staff hint stays in both:
@@ -117,7 +120,20 @@ function Onboarding() {
   // First, before anything is asked of them in either language.
   if (chosen === false) return <LanguageScreen />;
 
-  if (canCreateHousehold(access)) return <CreateHouseholdForm onNotApproved={load} />;
+  // No wait (Phase 172, D1): over the cap since the screen opened, the
+  // household isn't created and nothing is written; file the request, then
+  // show Request sent. Anything else that refuses re-reads the account.
+  async function notApproved() {
+    if (access !== "open" || !supabase) return load();
+    const { data, error } = await supabase.rpc("request_household_access");
+    if (error) {
+      console.error(error);
+      return load();
+    }
+    setAccess(parseHouseholdAccess(data));
+  }
+
+  if (canCreateHousehold(access)) return <CreateHouseholdForm onNotApproved={notApproved} />;
   if (access === "pending") return <WaitingScreen onCheck={load} />;
   if (access === "rejected") return <RejectedScreen />;
   return <RequestScreen onRequested={setAccess} />;
@@ -209,6 +225,19 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
 function WaitingScreen({ onCheck }: { onCheck: () => Promise<void> }) {
   const t = useT();
   const [checking, setChecking] = useState(false);
+  // The address the operator writes to (D2): the Google account's own, read
+  // on the phone. Null until known, or in mock mode.
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void supabase?.auth.getUser().then(({ data }) => {
+      if (!cancelled) setEmail(data.user?.email ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function check() {
     setChecking(true);
@@ -223,10 +252,15 @@ function WaitingScreen({ onCheck }: { onCheck: () => Promise<void> }) {
     <Screen icon={<Clock className="size-5" />}>
       <Heading>{t("Request sent", "Permintaan terkirim")}</Heading>
       <Body>
-        {t(
-          "We're reviewing your request. Once it's approved, open Miamus again to name your household.",
-          "Kami sedang meninjau permintaan Anda. Setelah disetujui, buka Miamus lagi untuk memberi nama rumah Anda."
-        )}
+        {email
+          ? t(
+              `We'll email you at ${email} from ${LEGAL.contactEmail}, usually within a day.`,
+              `Kami akan mengirim email ke ${email} dari ${LEGAL.contactEmail}, biasanya dalam sehari.`
+            )
+          : t(
+              `We'll email you from ${LEGAL.contactEmail}, usually within a day.`,
+              `Kami akan mengirim email dari ${LEGAL.contactEmail}, biasanya dalam sehari.`
+            )}
       </Body>
       <StaffHint />
       <Button
@@ -363,9 +397,11 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
         </Button>
         {failed && <p className="text-sm text-destructive">{failed}</p>}
         <p className="text-xs leading-relaxed text-muted-foreground">
+          {/* Moved here from the Request screen (Phase 172): creating a
+              household is now what shares it. */}
           {t(
-            "By creating a household, you confirm you've read the ",
-            "Dengan membuat rumah, Anda menyatakan sudah membaca "
+            `Creating a household shares your Google name and email with ${LEGAL.operatorName}, who runs Miamus. By creating it, you confirm you've read the `,
+            `Membuat rumah membagikan nama dan email Google Anda kepada ${LEGAL.operatorName}, pengelola Miamus. Dengan membuatnya, Anda menyatakan sudah membaca `
           )}
           <PrivacyLink />
           {t(

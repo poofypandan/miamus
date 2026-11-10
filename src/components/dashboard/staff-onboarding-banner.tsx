@@ -3,16 +3,24 @@
 import { useEffect, useState } from "react";
 import { Share, X } from "lucide-react";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
-import { useOwnerLocale } from "@/context/owner-locale-context";
+import { useSetupStage } from "@/hooks/use-setup-stage";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { homeScreenTipAllowed } from "@/lib/calm-start";
+import { VideoTip } from "@/components/shared/video-tip";
 
 export const INSTALL_TIP_DISMISSED_KEY = "b11_onboarding_dismissed";
 /** Fired when the tip is closed, so the notifications prompt can take its place (push-prompt.tsx). */
 export const INSTALL_TIP_DISMISSED_EVENT = "miamus:install-tip-dismissed";
 const DISMISSED_KEY = INSTALL_TIP_DISMISSED_KEY;
 
-// First-run hint pointing staff at "Add to Home Screen" — the installed PWA
-// is what gives them the full screen and the offline log queue from Phase 29,
-// so it's worth asking for once. Dismissed permanently on the X.
+// The owner's "Add to Home Screen" tip on the dashboard (the name is
+// historical: it once pointed staff at it too). The installed app is what
+// gives full screen, the offline queue and, on iPhone, notifications.
+// Dismissed permanently on the X.
+//
+// Phase 172 (D11, rules 5 and 7): it waits until the first-run checklist's
+// "first task" step is done, so a new owner's first Today is the checklist
+// alone; and it is one line, plus an optional video tip. The pet tip went.
 export function StaffOnboardingBanner() {
   // Starts hidden and is revealed in a mount effect rather than a lazy
   // useState initializer: localStorage doesn't exist during SSR, so reading
@@ -22,7 +30,9 @@ export function StaffOnboardingBanner() {
   // this never sees it flash back in on every load.
   const [visible, setVisible] = useState(false);
   const { isStandalone } = usePwaInstall();
+  const t = useT();
   const locale = useOwnerLocale();
+  const stage = useSetupStage();
 
   useEffect(() => {
     try {
@@ -47,7 +57,7 @@ export function StaffOnboardingBanner() {
 
   // Already installed: the tip has done its job, so it never shows inside the
   // home-screen app regardless of whether it was ever dismissed.
-  if (!visible || isStandalone) return null;
+  if (!visible || isStandalone || !homeScreenTipAllowed(stage)) return null;
 
   return (
     // standalone:hidden backs up the JS check with a pure CSS guard.
@@ -56,7 +66,7 @@ export function StaffOnboardingBanner() {
         <button
           type="button"
           onClick={dismiss}
-          aria-label={locale === "id" ? "Tutup tips" : "Dismiss tip"}
+          aria-label={t("Dismiss tip", "Tutup tips")}
           className="absolute top-1 right-1 flex size-11 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 active:bg-slate-100"
         >
           <X className="size-4" />
@@ -67,37 +77,15 @@ export function StaffOnboardingBanner() {
             <Share className="size-4" />
           </span>
 
-          {locale === "id" ? (
-            <div className="flex min-w-0 flex-col gap-1">
-              <p className="text-sm leading-snug font-medium text-slate-900">
-                Tambahkan ke Layar Utama
-              </p>
-              <p className="text-[13px] leading-relaxed text-slate-500">
-                Ketuk <span className="font-medium text-slate-700">Bagikan</span> di Safari, atau
-                menu <span className="font-medium text-slate-700">⋮</span> di Chrome, lalu{" "}
-                <span className="font-medium text-slate-700">Tambahkan ke Layar Utama</span> —
-                tampilannya jadi layar penuh, dan pencatatan tetap jalan saat sinyal hilang.
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
-                Tips: ketuk hewan mana saja untuk membuka catatannya. Makan dan Pipis & Pup dicatat
-                di tampilan Staf, dengan kamera, di HP masing-masing.
-              </p>
-            </div>
-          ) : (
-            <div className="flex min-w-0 flex-col gap-1">
-              <p className="text-sm leading-snug font-medium text-slate-900">Add to Home Screen</p>
-              <p className="text-[13px] leading-relaxed text-slate-500">
-                Tap <span className="font-medium text-slate-700">Share</span> in Safari, or the{" "}
-                <span className="font-medium text-slate-700">⋮</span> menu in Chrome, then{" "}
-                <span className="font-medium text-slate-700">Add to Home Screen</span> — you get the
-                full screen, and logging keeps working when the signal drops.
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
-                Tip: tap any pet to open their records. Meals and potty breaks are logged in
-                the Staff view, with the camera, on each person&apos;s own phone.
-              </p>
-            </div>
-          )}
+          <div className="flex min-w-0 flex-col gap-2">
+            <p className="text-sm leading-snug font-medium text-slate-900">
+              {t(
+                "Add Miamus to your Home Screen for notifications.",
+                "Tambahkan Miamus ke Layar Utama agar dapat notifikasi."
+              )}
+            </p>
+            <VideoTip id="owner-home-screen" locale={locale} />
+          </div>
         </div>
       </div>
     </div>

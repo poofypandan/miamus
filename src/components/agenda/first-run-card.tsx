@@ -72,41 +72,24 @@ export function FirstRunCard({
     };
   }
 
-  const copy: Record<FirstRunStepId, { title: string; hint?: string; detail?: string | null }> = {
+  // Step names only, and the open step's one button (Phase 172, D11 rule
+  // 4): about 25 words before the day. What each step means is in its name
+  // and its button.
+  const copy: Record<FirstRunStepId, { title: string; detail?: string | null }> = {
     home: { title: t("Name your home", "Beri nama rumah"), detail: householdName },
     staff: {
       title: t("Add who helps at home", "Tambah staf"),
-      hint: t(
-        "Add each person by name. They can choose their own PIN on their phone.",
-        "Tambahkan setiap orang dengan namanya. Mereka bisa memilih PIN sendiri di HP-nya."
-      ),
       detail: staff.length > 0 ? staff.map((person) => person.name).join(", ") : null,
     },
     phone: {
       title: t("Link their phone", "Hubungkan HP staf"),
-      hint: t(
-        "Make a link and send it on WhatsApp. Opening it connects their phone, with no account needed.",
-        "Buat link lalu kirim lewat WhatsApp. Begitu dibuka, HP-nya terhubung, tanpa akun."
-      ),
       detail:
         linkedPhones > 0
           ? t(`${linkedPhones} phone${linkedPhones === 1 ? "" : "s"}`, `${linkedPhones} HP`)
           : null,
     },
-    task: {
-      title: t("Give them a first task", "Beri tugas pertama"),
-      hint: t(
-        "A chore for today, like Sweep the terrace. It shows on their phone straight away.",
-        "Tugas untuk hari ini, misalnya Sapu teras. Langsung muncul di HP-nya."
-      ),
-    },
-    done: {
-      title: t("See it done", "Lihat hasilnya"),
-      hint: t(
-        "This ticks itself when the task is finished, with photos, on their phone.",
-        "Tercentang sendiri saat tugasnya selesai, dengan foto, di HP mereka."
-      ),
-    },
+    task: { title: t("Give them a first task", "Beri tugas pertama") },
+    done: { title: t("See it done", "Lihat hasilnya") },
   };
 
   function action(id: FirstRunStepId) {
@@ -151,9 +134,6 @@ export function FirstRunCard({
           {t(`${doneCount} of ${steps.length}`, `${doneCount} dari ${steps.length}`)}
         </span>
       </header>
-      <p className="-mt-1 text-[13px] text-muted-foreground">
-        {t("From here to the first task your staff finish.", "Dari sini sampai tugas pertama diselesaikan staf Anda.")}
-      </p>
       <div
         className="h-1 overflow-hidden rounded-full bg-muted"
         role="progressbar"
@@ -170,7 +150,7 @@ export function FirstRunCard({
       <ol className="flex flex-col divide-y divide-gray-100">
         {steps.map((step) => {
           const open = step.id === next;
-          const { title: stepTitle, hint, detail } = copy[step.id];
+          const { title: stepTitle, detail } = copy[step.id];
           return (
             <li
               key={step.id}
@@ -193,7 +173,6 @@ export function FirstRunCard({
                   <span className="sr-only">{step.done ? t("Done: ", "Selesai: ") : ""}</span>
                   {stepTitle}
                 </span>
-                {open && hint && <span className="text-[13px] leading-snug text-gray-700">{hint}</span>}
                 {open && action(step.id)}
               </div>
               {step.done && detail && (

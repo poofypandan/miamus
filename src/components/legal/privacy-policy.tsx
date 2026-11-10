@@ -88,7 +88,7 @@ const COPY: Record<
           { h: "Requests to set up a household" },
           {
             ul: [
-              "If you sign in with Google to set up a new household, we keep your request: when you asked, and whether it was approved or rejected. While we review it, we see your name and email from Google sign-in.",
+              "If you sign in with Google to set up a new household, we keep your request: when you asked, whether it was approved or rejected, and whether it was approved automatically. Most accounts are approved automatically when they create their household, and we review new households afterwards; on a busy day, or if we turn this off, we review the request first and email you when it's approved. Either way, we see your name and email from Google sign-in.",
             ],
           },
           { h: "Staff" },
@@ -160,7 +160,7 @@ const COPY: Record<
           {
             ul: [
               "Running Miamus for your household — showing tasks, recording who did what, reminders, leave and stock. This is needed to provide the service you asked for.",
-              "Keeping it secure — sign-in, keeping each household's data separate, reviewing requests to set up new households, and preventing misuse. This is our legitimate interest.",
+              "Keeping it secure — sign-in, keeping each household's data separate, reviewing new households and requests to set them up, and preventing misuse. This is our legitimate interest.",
               "Sending notifications you've turned on. This is based on your consent, which you can withdraw at any time in your phone or browser settings.",
               "Improving Miamus — reading the feedback you choose to send, and usage counts (numbers only, never what you typed or said) to make Miamus easier to start. This is our legitimate interest.",
               "Kakak, if an admin turns it on — understanding what admins type so it can suggest chores, food and shopping items. This is based on the consent the admin gives by turning Kakak on, which they can withdraw by turning it off.",
@@ -351,7 +351,7 @@ const COPY: Record<
           { h: "Permintaan membuat rumah tangga" },
           {
             ul: [
-              "Jika Anda masuk dengan Google untuk membuat rumah tangga baru, kami menyimpan permintaan Anda: kapan Anda memintanya, dan apakah disetujui atau ditolak. Selama kami meninjaunya, kami melihat nama dan email Anda dari login Google.",
+              "Jika Anda masuk dengan Google untuk membuat rumah tangga baru, kami menyimpan permintaan Anda: kapan Anda memintanya, apakah disetujui atau ditolak, dan apakah disetujui otomatis. Sebagian besar akun disetujui otomatis saat membuat rumah tangganya, dan kami meninjau rumah tangga baru sesudahnya; pada hari yang ramai, atau jika fitur ini kami matikan, kami meninjau permintaannya lebih dulu dan mengirim email kepada Anda setelah disetujui. Bagaimanapun, kami melihat nama dan email Anda dari login Google.",
             ],
           },
           { h: "Staf" },
@@ -423,7 +423,7 @@ const COPY: Record<
           {
             ul: [
               "Menjalankan Miamus untuk rumah tangga Anda — menampilkan tugas, mencatat siapa mengerjakan apa, pengingat, cuti, dan stok. Ini diperlukan untuk memberikan layanan yang Anda minta.",
-              "Menjaga keamanan — login, memisahkan data setiap rumah tangga, meninjau permintaan membuat rumah tangga baru, dan mencegah penyalahgunaan. Ini adalah kepentingan sah kami.",
+              "Menjaga keamanan — login, memisahkan data setiap rumah tangga, meninjau rumah tangga baru dan permintaan membuatnya, dan mencegah penyalahgunaan. Ini adalah kepentingan sah kami.",
               "Mengirim notifikasi yang Anda nyalakan. Ini berdasarkan persetujuan Anda, yang dapat Anda tarik kapan saja lewat pengaturan HP atau browser.",
               "Memperbaiki Miamus — membaca masukan yang Anda pilih untuk dikirim, dan hitungan pemakaian (hanya angka, tidak pernah isi yang Anda ketik atau ucapkan) agar Miamus lebih mudah dimulai. Ini adalah kepentingan sah kami.",
               "Kakak, jika admin menyalakannya — memahami yang diketik admin agar Kakak bisa menyarankan tugas, makanan, dan barang belanja. Ini berdasarkan persetujuan yang diberikan admin saat menyalakan Kakak, yang dapat ditarik dengan mematikannya.",

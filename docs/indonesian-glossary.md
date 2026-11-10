@@ -204,6 +204,10 @@ people are **staf** and **admin**.
 | Usage counts (privacy policy) | **Hitungan pemakaian** | Phase 172 PR 0: numbers about setup and first tasks, never content. |
 | North star (operator page) / North star numbers | **Ukuran utama** / **Angka ukuran utama** | Phase 172 PR 0: the platform admins' page of S1–S5. |
 | Below target · On target · No data yet | **Di bawah target · Sesuai target · Belum ada data** | Phase 172 PR 0, the north-star page. "Target" is the everyday word. |
+| Watch · 15 s (video tip) | **Tonton · 15 detik** | Phase 172 PR A1: the optional video beside a one-line instruction. |
+| Automatic (an approval made at sign-up) / Email them | **Otomatis** / **Kirim email** | Phase 172 PR A1, the approvals page. |
+| New household · {name} just joined (push) | **Rumah baru** · **{name} baru bergabung.** | Phase 172 PR A1, to platform admins. |
+| Tap the mic on your keyboard and speak. | **Ketuk mic di keyboard, lalu bicara.** | Phase 172 PR A1, Kakak's keyboard tip. "Mic" is the everyday word on the keyboard. |
 
 ## Formatting
 

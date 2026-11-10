@@ -1,5 +1,6 @@
 "use client";
 
+import { VideoTip } from "@/components/shared/video-tip";
 import { useState } from "react";
 import { Download, Loader2, Share, SquarePlus } from "lucide-react";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
@@ -65,7 +66,7 @@ function InstallPrompt() {
   return (
     // standalone:hidden is the CSS half of the guard — it holds even if the JS
     // detection above ever disagrees with the browser's actual display mode.
-    <div className="flex w-full justify-center standalone:hidden">
+    <div className="flex w-full flex-col items-center gap-2 standalone:hidden">
       {isInstallable ? (
         <button
           type="button"
@@ -91,6 +92,8 @@ function InstallPrompt() {
           <span className="font-medium text-gray-700">Tambahkan ke Layar Utama</span>.
         </p>
       )}
+      {/* An optional 15-second video (Phase 172, D12); hidden until recorded. */}
+      <VideoTip id="staff-home-screen" locale="id" />
     </div>
   );
 }

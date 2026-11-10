@@ -1001,6 +1001,9 @@ export interface Database {
           status: string;
           requested_at: string;
           decided_at: string | null;
+          // migrations/143
+          auto: boolean;
+          locale: string;
         }[];
       };
       decide_household_access: {

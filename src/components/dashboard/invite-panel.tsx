@@ -31,8 +31,8 @@ export function InvitePanel() {
         icon={UserPlus}
         title={t("Invite family", "Undang keluarga")}
         description={t(
-          "For your partner, family or a housemate. They sign in with Google, can manage everything just like you, and can be given chores.",
-          "Untuk pasangan, keluarga atau teman serumah. Mereka masuk dengan Google, bisa mengelola semuanya seperti Anda, dan bisa diberi tugas."
+          `Send this link to family. It works for ${INVITE_TTL_DAYS} days.`,
+          `Kirim link ini ke keluarga. Berlaku ${INVITE_TTL_DAYS} hari.`
         )}
       />
       <InviteCard
@@ -40,8 +40,8 @@ export function InvitePanel() {
         icon={Smartphone}
         title={t("Link a staff phone", "Hubungkan HP staf")}
         description={t(
-          "For your staff's own phone, or a shared house phone. Opening the link connects that phone to your home — no account or email needed — and each person then signs in with their name and PIN.",
-          "Untuk HP staf, atau HP bersama di rumah. Membuka link-nya menghubungkan HP itu ke rumah Anda — tanpa akun atau email — lalu setiap orang masuk dengan nama dan PIN-nya."
+          `Send this link to a staff phone. It works for ${INVITE_TTL_DAYS} days.`,
+          `Kirim link ini ke HP staf. Berlaku ${INVITE_TTL_DAYS} hari.`
         )}
       />
     </div>

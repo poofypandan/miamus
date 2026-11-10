@@ -1,0 +1,390 @@
+-- ============================================================================
+-- 143 — Sign up without waiting (Phase 172, PR A1)
+-- ============================================================================
+-- docs/phase-172-first-ten-minutes-plan.md, section 1; owner decisions
+-- (2026-11-10): D1 A (approve automatically when someone creates a household,
+-- review afterwards; a daily cap and a switch fall back to today's manual
+-- approval), D2 A (if a wait remains, the screen promises an email and the
+-- approvals page gets an Email them button; no mail service).
+-- Numbered by build order (manager, 10 November): the next free number above
+-- the highest on main when built.
+--
+-- NEW
+--   signup_config              one row: auto_approve (the switch, on) and
+--        daily_auto_cap (25 automatic approvals a Jakarta day across Miamus).
+--        No client access; a platform admin changes it with SQL, like
+--        kakak_config:
+--          update public.signup_config set auto_approve = false;   -- back to manual
+--          update public.signup_config set daily_auto_cap = 10;
+--   household_access_requests.auto   true when the approval was automatic.
+--   signup_auto_open()         internal: switch on and today's automatic
+--        approvals under the cap (a read, for the screen).
+--   signup_auto_approve(uid)   internal: the same check under a GLOBAL
+--        transaction-scoped advisory lock taken before the count (as
+--        kakak_begin does for its global cap), so a burst of sign-ups can't
+--        all read "24"; writes the approved, automatic request. Only for an
+--        account with no request row.
+--   notify_household_joined(uid, name)   internal: "New household · X just
+--        joined" to the platform admins, best-effort.
+--
+-- RE-CREATED, each from its newest definition:
+--   my_household_access (113)        a sixth answer, 'open': no request yet
+--        and automatic approval is available. Anonymous sessions get 'none'.
+--   create_household (133)           same signature, same lock. A non-admin
+--        with no request row is approved automatically in the same
+--        transaction when open; over the cap or switched off it raises
+--        household_not_approved WITHOUT writing anything (the screen then
+--        calls request_household_access, which files the pending request).
+--        A household made by an automatically approved account tells the
+--        platform admins it joined.
+--   request_household_access (113)   approves automatically under the same
+--        switch, cap and lock, and returns 'approved' (old app builds map an
+--        unknown answer to "none" and still call this; 'approved' is what
+--        they understand). Otherwise files pending and pushes, as before.
+--   list_household_access_requests (113)   also returns `auto` and the
+--        account's language (for the Email them text). Return type changes,
+--        so it is dropped first.
+--
+-- NOT CHANGED: a rejected account is refused; one household per account;
+-- pending requests stay manual; decide_household_access; the 30-day prune of
+-- rejected requests; anonymous sessions can never request or create.
+--
+-- Privacy policy and legal.ts updated in the same PR (section 7: accounts
+-- are approved automatically; the operator still sees the creator's Google
+-- name and email). Additive: one table, one column with a default, new
+-- internal functions, four re-created. Every SECURITY DEFINER function
+-- revokes EXECUTE from public and anon; the internal ones from
+-- authenticated too.
+-- ============================================================================
+
+-- --- 1. The switch and the cap ---------------------------------------------------------
+create table if not exists public.signup_config (
+  id boolean primary key default true check (id),
+  auto_approve boolean not null default true,
+  daily_auto_cap int not null default 25 check (daily_auto_cap >= 0)
+);
+insert into public.signup_config (id) values (true) on conflict (id) do nothing;
+
+alter table public.signup_config enable row level security;
+revoke all on public.signup_config from public, anon, authenticated;
+grant select, insert, update, delete on public.signup_config to service_role;
+
+alter table public.household_access_requests add column if not exists auto boolean not null default false;
+
+-- The cap counts automatic approvals by the Jakarta day they were made.
+create index if not exists household_access_requests_auto_decided_idx
+  on public.household_access_requests (decided_at) where auto;
+
+-- --- 2. Is automatic approval available right now? -------------------------------------
+create or replace function public.signup_auto_open()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((
+    select c.auto_approve and (
+      select count(*)
+        from public.household_access_requests r
+       where r.auto
+         and r.decided_at >= ((now() at time zone 'Asia/Jakarta')::date)::timestamp at time zone 'Asia/Jakarta'
+    ) < c.daily_auto_cap
+      from public.signup_config c
+     where c.id
+  ), false);
+$$;
+revoke all on function public.signup_auto_open() from public, anon, authenticated;
+grant execute on function public.signup_auto_open() to service_role;
+
+-- Approves p_uid automatically if it may be: no request row yet, the switch
+-- on, and under today's cap. The global lock is taken BEFORE the count and
+-- held to the end of the transaction, so two sign-ups can't both take the
+-- 25th place. True when this call approved the account.
+create or replace function public.signup_auto_approve(p_uid uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_uid is null then
+    return false;
+  end if;
+  perform pg_advisory_xact_lock(hashtext('auto_approve'));
+  if exists (select 1 from public.household_access_requests r where r.user_id = p_uid) then
+    return false;
+  end if;
+  if not public.signup_auto_open() then
+    return false;
+  end if;
+  insert into public.household_access_requests (user_id, status, requested_at, decided_at, decided_by, auto)
+  values (p_uid, 'approved', now(), now(), null, true);
+  return true;
+end;
+$$;
+revoke all on function public.signup_auto_approve(uuid) from public, anon, authenticated;
+grant execute on function public.signup_auto_approve(uuid) to service_role;
+
+-- "New household · Sam just joined" to every platform admin's devices, in
+-- that admin's language. Best-effort: a push that can't be queued never costs
+-- the household (the caller wraps it too).
+create or replace function public.notify_household_joined(p_uid uuid, p_household_name text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  who text;
+  target record;
+begin
+  who := coalesce(
+    nullif(btrim(left((select u.raw_user_meta_data ->> 'full_name' from auth.users u where u.id = p_uid), 60)), ''),
+    nullif(btrim(left((select u.raw_user_meta_data ->> 'name' from auth.users u where u.id = p_uid), 60)), ''),
+    nullif(btrim(left(p_household_name, 60)), ''),
+    'Someone'
+  );
+  for target in
+    select distinct s.user_id, s.household_id, coalesce(p.locale, 'en') as locale
+      from public.platform_admins pa
+      join public.push_subscriptions s on s.user_id = pa.user_id
+      join public.household_members m on m.household_id = s.household_id and m.user_id = s.user_id
+      left join public.user_preferences p on p.user_id = pa.user_id
+  loop
+    perform public.queue_push(
+      target.household_id, 'owner',
+      case when target.locale = 'id' then 'Rumah baru' else 'New household' end,
+      case when target.locale = 'id' then who || ' baru bergabung.' else who || ' just joined.' end,
+      '/dashboard/approvals', 'household-joined-' || p_uid::text,
+      target.user_id, null
+    );
+  end loop;
+end;
+$$;
+revoke all on function public.notify_household_joined(uuid, text) from public, anon, authenticated;
+grant execute on function public.notify_household_joined(uuid, text) to service_role;
+
+-- --- 3. What /onboarding shows (113, plus 'open') ---------------------------------------
+create or replace function public.my_household_access()
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case
+    when auth.uid() is null then 'none'
+    -- A staff phone never sets up a household.
+    when coalesce((select u.is_anonymous from auth.users u where u.id = auth.uid()), true) then 'none'
+    when public.is_platform_admin() then 'admin'
+    when exists (select 1 from public.household_access_requests r where r.user_id = auth.uid())
+      then (select r.status from public.household_access_requests r where r.user_id = auth.uid())
+    when public.signup_auto_open() then 'open'
+    else 'none'
+  end;
+$$;
+revoke all on function public.my_household_access() from public, anon;
+grant execute on function public.my_household_access() to authenticated, service_role;
+
+-- --- 4. Asking (113, approving automatically when it may) -------------------------------
+create or replace function public.request_household_access()
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+  anonymous boolean;
+  existing text;
+  requester text;
+  target record;
+begin
+  if uid is null then
+    raise exception 'not_authenticated' using errcode = '28000';
+  end if;
+
+  -- No auth.users row counts as anonymous: refuse rather than guess.
+  select u.is_anonymous into anonymous from auth.users u where u.id = uid;
+  if coalesce(anonymous, true) then
+    raise exception 'anonymous_cannot_request_household' using errcode = '42501';
+  end if;
+
+  if public.is_platform_admin() then
+    return 'admin';
+  end if;
+
+  -- An old app build asks first: let it straight through when it may
+  -- (migrations/143). The household itself tells the operator it joined.
+  if public.signup_auto_approve(uid) then
+    return 'approved';
+  end if;
+
+  insert into public.household_access_requests (user_id)
+  values (uid)
+  on conflict (user_id) do nothing;
+
+  if not found then
+    select r.status into existing from public.household_access_requests r where r.user_id = uid;
+    return existing;
+  end if;
+
+  -- Same shape as send_test_push (103): an admin's devices are registered
+  -- under the household they were in at the time, and push_dispatch_plan
+  -- re-checks that membership at send time. Best-effort: a push that cannot
+  -- be queued must never cost the request itself.
+  begin
+    requester := coalesce(
+      nullif(btrim(left((select u.raw_user_meta_data ->> 'full_name' from auth.users u where u.id = uid), 60)), ''),
+      nullif(btrim(left((select u.raw_user_meta_data ->> 'name' from auth.users u where u.id = uid), 60)), ''),
+      'Someone'
+    );
+    for target in
+      select distinct s.user_id, s.household_id
+        from public.platform_admins pa
+        join public.push_subscriptions s on s.user_id = pa.user_id
+        join public.household_members m on m.household_id = s.household_id and m.user_id = s.user_id
+    loop
+      perform public.queue_push(
+        target.household_id, 'owner', 'New household request',
+        requester || ' is waiting for your approval.',
+        '/dashboard/approvals', 'household-request-' || uid::text,
+        target.user_id, null
+      );
+    end loop;
+  exception when others then
+    raise warning 'Household request push not queued for %: %', uid, sqlerrm;
+  end;
+
+  return 'pending';
+end;
+$$;
+revoke all on function public.request_household_access() from public, anon;
+grant execute on function public.request_household_access() to authenticated, service_role;
+
+-- --- 5. The approvals list (113, plus auto and the account's language) ------------------
+drop function if exists public.list_household_access_requests();
+create or replace function public.list_household_access_requests()
+returns table (
+  user_id uuid,
+  full_name text,
+  email text,
+  status text,
+  requested_at timestamptz,
+  decided_at timestamptz,
+  auto boolean,
+  locale text
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_platform_admin() then
+    raise exception 'not_platform_admin' using errcode = '42501';
+  end if;
+
+  return query
+    select
+      r.user_id,
+      coalesce(
+        nullif(btrim(u.raw_user_meta_data ->> 'full_name'), ''),
+        nullif(btrim(u.raw_user_meta_data ->> 'name'), '')
+      )::text,
+      u.email::text,
+      r.status,
+      r.requested_at,
+      r.decided_at,
+      r.auto,
+      coalesce(p.locale, 'en')::text
+    from public.household_access_requests r
+    join auth.users u on u.id = r.user_id
+    left join public.user_preferences p on p.user_id = r.user_id
+    where r.status = 'pending' or r.decided_at > now() - interval '30 days'
+    order by (r.status = 'pending') desc, coalesce(r.decided_at, r.requested_at) desc;
+end;
+$$;
+revoke all on function public.list_household_access_requests() from public, anon;
+grant execute on function public.list_household_access_requests() to authenticated, service_role;
+
+-- --- 6. Creating a household (133, approving automatically when it may) -----------------
+create or replace function public.create_household(p_name text, p_has_pets boolean default null)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+  anonymous boolean;
+  clean text := btrim(coalesce(p_name, ''));
+  new_id uuid;
+  joined_auto boolean := false;
+begin
+  if uid is null then
+    raise exception 'not_authenticated' using errcode = '28000';
+  end if;
+
+  select u.is_anonymous into anonymous from auth.users u where u.id = uid;
+  if coalesce(anonymous, true) then
+    raise exception 'anonymous_cannot_create_household' using errcode = '42501';
+  end if;
+
+  -- The onboarding field's own limit (maxLength 60).
+  if char_length(clean) = 0 or char_length(clean) > 60 then
+    raise exception 'invalid_household_name' using errcode = '22023';
+  end if;
+
+  -- One at a time per account, so a double tap (or two tabs) cannot slip two
+  -- households past the "no household yet" check below.
+  perform pg_advisory_xact_lock(hashtext('create_household:' || uid::text));
+
+  if not public.is_platform_admin() then
+    -- No request yet: approved automatically when the switch is on and
+    -- today's cap isn't reached (migrations/143). Nothing is written
+    -- otherwise; the raise below rolls back nothing that matters.
+    perform public.signup_auto_approve(uid);
+    if not exists (
+      select 1 from public.household_access_requests r
+       where r.user_id = uid and r.status = 'approved'
+    ) then
+      raise exception 'household_not_approved' using errcode = '42501';
+    end if;
+    -- Approval is for one household. More is a conversation, not an API call.
+    if exists (select 1 from public.household_members m where m.user_id = uid) then
+      raise exception 'already_has_household' using errcode = '42501';
+    end if;
+    select r.auto into joined_auto from public.household_access_requests r where r.user_id = uid;
+  end if;
+
+  -- The answer, when given: who answered and when, as the setter records it.
+  insert into public.households (name, owner_auth_id, has_pets, has_pets_set_at, has_pets_set_by)
+  values (
+    clean, uid, p_has_pets,
+    case when p_has_pets is not null then now() end,
+    case when p_has_pets is not null then uid end
+  )
+  returning id into new_id;
+
+  -- Fires household_members_create_profile (106), which gives the new owner
+  -- their roster row, exactly as the client insert did.
+  insert into public.household_members (household_id, user_id, role)
+  values (new_id, uid, 'owner');
+
+  -- Reviewed afterwards: the operator hears who joined (D1). Never at the
+  -- household's cost.
+  if coalesce(joined_auto, false) then
+    begin
+      perform public.notify_household_joined(uid, clean);
+    exception when others then
+      raise warning 'Household joined push not queued for %: %', uid, sqlerrm;
+    end;
+  end if;
+
+  return new_id;
+end;
+$$;
+revoke all on function public.create_household(text, boolean) from public, anon;
+grant execute on function public.create_household(text, boolean) to authenticated, service_role;

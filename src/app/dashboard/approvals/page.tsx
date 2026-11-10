@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, ChartColumn, Check, ChevronRight, Loader2, X } from "lucide-react";
+import { ArrowLeft, ChartColumn, Check, ChevronRight, Loader2, Mail, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { useT } from "@/context/owner-locale-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { moduleHref } from "@/lib/dashboard-modules";
 import {
+  emailThemHref,
   requesterLabel,
   sortAccessRequests,
   type AccessRequest,
@@ -175,6 +176,17 @@ export default function HouseholdApprovalsPage() {
                     <RequestIdentity request={request} />
                   </div>
                   <StatusBadge status={request.status} />
+                  {/* Approved by hand: tell them (Phase 172, D2). Miamus sends
+                      no email; this opens the mail app with a ready text in
+                      their language, sent from the support address. */}
+                  {request.status === "approved" && !request.auto && emailThemHref(request) && (
+                    <a
+                      href={emailThemHref(request) ?? undefined}
+                      className="flex min-h-[36px] shrink-0 items-center gap-1 rounded-lg border px-2.5 text-xs font-medium text-gray-900 active:bg-muted"
+                    >
+                      <Mail className="size-3.5" aria-hidden /> {t("Email them", "Kirim email")}
+                    </a>
+                  )}
                   {/* A mis-tapped Reject is undone here; the database allows
                       changing a decision (migrations/113). */}
                   {request.status === "rejected" && (
@@ -199,6 +211,7 @@ export default function HouseholdApprovalsPage() {
 }
 
 function RequestIdentity({ request }: { request: AccessRequest }) {
+  const t = useT();
   const when = new Date(request.decided_at ?? request.requested_at).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -211,6 +224,8 @@ function RequestIdentity({ request }: { request: AccessRequest }) {
       )}
       <span className="text-xs text-muted-foreground">
         {request.status === "pending" ? `Asked ${when}` : `Decided ${when}`}
+        {/* Approved at sign-up, reviewed afterwards (Phase 172, D1). */}
+        {request.auto && <> · {t("Automatic", "Otomatis")}</>}
       </span>
     </div>
   );
