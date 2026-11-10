@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AGENDA_TONES, routineTone } from "@/lib/agenda-tones";
+import { displayLogNote } from "@/lib/log-notes";
 import type { MasterSchedule, TaskLog } from "@/types/database";
 
 // master_schedules has no dedicated "category" column, so potty/grooming/
@@ -133,7 +134,7 @@ export function describeLog(
     return { title: displayTitle(schedule), category: categorizeSchedule(schedule) };
   }
 
-  const label = (log.notes ?? "").split("—")[0].trim();
+  const label = (displayLogNote(log.notes) ?? "").split("—")[0].trim();
   return {
     title: label || "Catatan Ekstra",
     category: ADHOC_CATEGORIES[label] ?? "temporary",
