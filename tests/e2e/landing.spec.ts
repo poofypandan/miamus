@@ -108,6 +108,20 @@ for (const width of [1024, 1440]) {
   });
 }
 
+test("a tablet gets a wider centred column, still without sideways scroll", async ({ context, page }) => {
+  await installStub(context, { stored: null });
+  await page.setViewportSize({ width: 768, height: 1024 });
+  for (const path of ["/welcome", "/selamat-datang"]) {
+    await page.goto(path);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(768);
+    // Every section's content stays inside the window.
+    const overflow = await page.evaluate(() =>
+      [...document.querySelectorAll("main *")].some((el) => el.getBoundingClientRect().right > window.innerWidth + 0.5)
+    );
+    expect(overflow).toBe(false);
+  }
+});
+
 test("a phone sees one column and nothing scrolls sideways", async ({ context, page }) => {
   await installStub(context, { stored: null });
   await page.setViewportSize({ width: 375, height: 812 });

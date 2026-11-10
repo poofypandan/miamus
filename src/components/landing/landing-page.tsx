@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { LEGAL } from "@/config/legal";
+import { cn } from "@/lib/utils";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { LandingGoogleButton, LandingLanguageSwitch, LocaleLink } from "./landing-actions";
 import {
@@ -143,7 +144,8 @@ export function LandingPage({ locale }: { locale: OwnerLocale }) {
           <div className="relative mt-10 flex w-[78%] justify-center md:w-[320px] lg:mt-0 lg:w-full lg:justify-end lg:pr-6">
             <PhoneShot
               src={shotSrc("staff-today", locale)}
-              alt={t.how.steps.find((step) => step.shot === "staff-today")?.shotAlt ?? ""}
+              // Decorative here: How it works shows and describes this screen.
+              alt=""
               className="absolute top-12 right-[46%] hidden w-[240px] -rotate-6 opacity-95 lg:block xl:w-[260px]"
             />
             <PhoneShot
@@ -303,7 +305,7 @@ function IconTile({ icon: Icon, small = false }: { icon: LucideIcon; small?: boo
 
 function IconList({ points, className }: { points: { icon: LucideIcon; text: string }[]; className?: string }) {
   return (
-    <ul className={`flex flex-col gap-4 ${className ?? ""}`}>
+    <ul className={cn("flex flex-col gap-4", className)}>
       {points.map((point) => (
         <li key={point.text} className="flex items-start gap-3.5">
           <IconTile icon={point.icon} small />
