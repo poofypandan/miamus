@@ -14,12 +14,13 @@ import type {
   LeaveRequest,
   Repair,
   RepairCost,
+  BillPayment,
   RepairNote,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
-import { isTemplate, rolloverFloorFor } from "@/lib/chore-recurrence";
+import { isTemplate, longRepeatFloorFor } from "@/lib/chore-recurrence";
 import { isSetUp } from "@/lib/rooms-view";
 
 const STORAGE_KEY = "maimus_mock_db_v1";
@@ -48,6 +49,8 @@ interface MockDB {
   repairs?: Repair[];
   repairCosts?: RepairCost[];
   repairNotes?: RepairNote[];
+  /** Phase 164 PR B. Optional, as above. */
+  billPayments?: BillPayment[];
 }
 
 function freshDB(): MockDB {
@@ -538,6 +541,11 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(updated);
   },
+  async listWrittenOccurrences(from, to) {
+    return delay(
+      loadDB().householdTasks.filter((t) => !!t.parent_task_id && t.due_date >= from && t.due_date <= to)
+    );
+  },
   async listSetUpChores(today) {
     // Same rows listHouseholdTasks reads from, filtered the way the Rooms
     // view's isSetUp does.
@@ -550,8 +558,11 @@ export const mockProvider: DataProvider = {
     // is still pending from before it (the rollover).
     // Plus, on today, the reads Phase 126 added: repeats that ended within
     // the last month, and the last month's written occurrences of repeats.
+    // Reaching back a year for every repeat's written days is cheap in
+    // memory; the Supabase provider reads that far only for long repeats
+    // (every 3 months, every year; migrations/137).
     const showsToday = from <= today && today <= to;
-    const rolloverFloor = rolloverFloorFor(today);
+    const rolloverFloor = longRepeatFloorFor(today);
     const repeatsFrom = showsToday && rolloverFloor < from ? rolloverFloor : from;
     const tasks = loadDB().householdTasks.filter((task) => {
       if (task.due_date >= from && task.due_date <= to) return true;
@@ -745,6 +756,60 @@ export const mockProvider: DataProvider = {
   async uploadReceipt(file) {
     // Demo mode keeps photos as object URLs, like uploadPhoto.
     return delay(URL.createObjectURL(file));
+  },
+  async listBillPayments() {
+    const household = getActiveHouseholdId();
+    return delay(
+      (loadDB().billPayments ?? [])
+        .filter((p) => p.household_id === household)
+        .sort((a, b) => b.paid_at.localeCompare(a.paid_at))
+    );
+  },
+  async saveBillPayment(taskId, payment) {
+    const db = loadDB();
+    const existing = (db.billPayments ?? []).find((p) => p.task_id === taskId);
+    const task = db.householdTasks.find((t) => t.id === taskId);
+    const now = new Date().toISOString();
+    const row: BillPayment = {
+      id: existing?.id ?? `bill-payment-${Date.now()}`,
+      household_id: getActiveHouseholdId(),
+      task_id: taskId,
+      series_id: existing?.series_id ?? (task ? (task.parent_task_id ?? task.id) : null),
+      amount_idr: payment.amount_idr,
+      receipt_url: payment.receipt_url,
+      paid_at: existing?.paid_at ?? now,
+      created_by: null,
+      updated_at: now,
+    };
+    db.billPayments = [...(db.billPayments ?? []).filter((p) => p.task_id !== taskId), row];
+    saveDB(db);
+    return delay(row);
+  },
+  async reopenBillDay(taskId) {
+    const db = loadDB();
+    const payment = (db.billPayments ?? []).find((p) => p.task_id === taskId) ?? null;
+    const idx = db.householdTasks.findIndex((t) => t.id === taskId);
+    if (idx === -1) throw new Error(`Household task ${taskId} not found`);
+    const task: HouseholdTask = {
+      ...db.householdTasks[idx],
+      status: "pending",
+      completed_at: null,
+      completed_by: null,
+      photo_url: null,
+      before_photo_url: null,
+      after_photo_url: null,
+    };
+    db.householdTasks[idx] = task;
+    db.billPayments = (db.billPayments ?? []).filter((p) => p.task_id !== taskId);
+    saveDB(db);
+    return delay({ task, payment });
+  },
+  async deleteBillPayment(taskId) {
+    const db = loadDB();
+    const existing = (db.billPayments ?? []).find((p) => p.task_id === taskId) ?? null;
+    db.billPayments = (db.billPayments ?? []).filter((p) => p.task_id !== taskId);
+    saveDB(db);
+    return delay(existing);
   },
   async deleteReceipt() {
     return delay(undefined);
@@ -1142,6 +1207,9 @@ export const mockProvider: DataProvider = {
   },
   async listLinkedPhones() {
     return delay([]);
+  },
+  async hasFinishedChore() {
+    return delay(loadDB().householdTasks.some((task) => task.status === "completed"));
   },
   async removeLinkedPhone() {
     return delay(false);

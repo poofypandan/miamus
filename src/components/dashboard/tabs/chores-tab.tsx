@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ClipboardList, Plus } from "lucide-react";
+import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { ClipboardList, Plus, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { OverdueSection } from "@/components/agenda/overdue-section";
@@ -11,6 +12,8 @@ import { dayLabel } from "@/lib/date-label";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ChoreCard } from "@/components/chores/chore-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
+import { BillsUpkeepSheet } from "@/components/chores/bills-upkeep-sheet";
+import { BillPaymentSheet } from "@/components/chores/bill-payment-editor";
 import { RoomsView } from "@/components/chores/rooms-view";
 import { RepairsView } from "@/components/repairs/repairs-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -24,6 +27,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { replaceInPlace } from "@/lib/in-place-navigation";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { HouseholdTask } from "@/types/database";
@@ -64,7 +68,7 @@ export function ChoresTab() {
 
 /** The day's chores: what the house owes on the selected day (Phase 100). */
 function TodayChores() {
-  const { selectedDate, setSelectedDate, householdTasks } = useHousehold();
+  const { selectedDate, setSelectedDate, householdTasks, memberProfile } = useHousehold();
   const locale = useOwnerLocale();
   const t = useT();
   // No chore exists at all, as opposed to none falling on this day: a new
@@ -87,6 +91,24 @@ function TodayChores() {
   // "end the repeat here" act on. Null when adding.
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  // "Other bill" from the checklist: the form, preset as a monthly bill for me.
+  const [editorPreset, setEditorPreset] = useState<ComponentProps<typeof ChoreEditorDialog>["preset"]>(null);
+
+  // Bills and upkeep (Phase 164): the checklist. Today's What's new card
+  // opens it here with ?bills=open, which is then dropped from the URL so
+  // Back and a reload don't reopen it.
+  const [billsOpen, setBillsOpen] = useState(false);
+  const [paymentFor, setPaymentFor] = useState<ChoreOccurrence | null>(null);
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  useEffect(() => {
+    if (searchParams.get("bills") !== "open") return;
+    setBillsOpen(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("bills");
+    const query = params.toString();
+    replaceInPlace(query ? `${pathname}?${query}` : pathname);
+  }, [searchParams, pathname]);
 
   // Rolled-over chores lead the open list under their own header (Phase 113),
   // oldest first; only ever non-empty when browsing today.
@@ -104,6 +126,7 @@ function TodayChores() {
   function edit(occurrence: ChoreOccurrence) {
     // A repeat is edited through its template from whichever day you tapped;
     // an occurrence that already has its own row edits that row.
+    setEditorPreset(null);
     setEditing(occurrence.row ?? occurrence.template);
     setEditingDate(occurrence.date);
     setEditorOpen(true);
@@ -119,19 +142,32 @@ function TodayChores() {
         dayLabel={dayLabel(selectedDate, today, locale)}
       />
 
+      {/* Its tutorial (Phase 164, D9); Show me opens the checklist. */}
+      <WhatsNewCard id="bills-2026-11" onTry={() => setBillsOpen(true)} />
+
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-gray-900">{t("Chores", "Tugas")}</h2>
-        <Button
-          variant="outline"
-          className="min-h-[36px] shrink-0 px-3 text-xs"
-          onClick={() => {
-            setEditing(null);
-            setEditingDate(null);
-            setEditorOpen(true);
-          }}
-        >
-          <Plus className="size-3.5" /> {t("Add Chore", "Tambah Tugas")}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="outline"
+            className="min-h-[36px] shrink-0 px-3 text-xs"
+            onClick={() => setBillsOpen(true)}
+          >
+            <ReceiptText className="size-3.5" /> {t("Bills and upkeep", "Tagihan dan perawatan")}
+          </Button>
+          <Button
+            variant="outline"
+            className="min-h-[36px] shrink-0 px-3 text-xs"
+            onClick={() => {
+              setEditorPreset(null);
+              setEditing(null);
+              setEditingDate(null);
+              setEditorOpen(true);
+            }}
+          >
+            <Plus className="size-3.5" /> {t("Add Chore", "Tambah Tugas")}
+          </Button>
+        </div>
       </div>
 
       {occurrences.length === 0 ? (
@@ -157,6 +193,7 @@ function TodayChores() {
           <Button
             className="min-h-[44px]"
             onClick={() => {
+              setEditorPreset(null);
               setEditing(null);
               setEditingDate(null);
               setEditorOpen(true);
@@ -230,6 +267,7 @@ function TodayChores() {
                       occurrence={occurrence}
                       staffName={staffName}
                       onEdit={() => edit(occurrence)}
+                      onPayment={occurrence.task.category === "bill" ? () => setPaymentFor(occurrence) : undefined}
                     />
                   }
                 />
@@ -248,6 +286,34 @@ function TodayChores() {
         task={editing}
         occurrenceDate={editingDate}
         defaultDate={dateStr}
+        preset={editorPreset}
+      />
+
+      {/* A done bill's amount and receipt, whoever finished it (Codex, PR #65). */}
+      <BillPaymentSheet
+        row={paymentFor?.row ?? null}
+        seriesId={paymentFor?.template.id ?? ""}
+        title={paymentFor?.task.title ?? ""}
+        open={!!paymentFor}
+        onOpenChange={(next) => !next && setPaymentFor(null)}
+      />
+
+      <BillsUpkeepSheet
+        open={billsOpen}
+        onOpenChange={setBillsOpen}
+        onOtherBill={() => {
+          setBillsOpen(false);
+          setEditorPreset({
+            category: "bill",
+            recurrence: "monthly",
+            interval: 1,
+            remindDaysBefore: 3,
+            assigneeId: memberProfile?.id ?? null,
+          });
+          setEditing(null);
+          setEditingDate(null);
+          setEditorOpen(true);
+        }}
       />
     </div>
   );
@@ -263,10 +329,13 @@ function ChoreProof({
   occurrence,
   staffName,
   onEdit,
+  onPayment,
 }: {
   occurrence: ChoreOccurrence;
   staffName: (id: string) => string;
   onEdit: () => void;
+  /** A bill (Phase 164 PR B): its amount and receipt, owners only. */
+  onPayment?: () => void;
 }) {
   const formatTime = useFormatTime();
   const t = useT();
@@ -284,13 +353,24 @@ function ChoreProof({
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={onEdit}
-        className="self-start rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground underline underline-offset-2 active:bg-muted"
-      >
-        {t("Edit chore", "Ubah tugas")}
-      </button>
+      <div className="flex flex-wrap gap-3">
+        {onPayment && (
+          <button
+            type="button"
+            onClick={onPayment}
+            className="self-start rounded-lg px-1 py-1 text-[11px] font-medium text-gray-800 underline underline-offset-2 active:bg-muted"
+          >
+            {t("Payment", "Pembayaran")}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onEdit}
+          className="self-start rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground underline underline-offset-2 active:bg-muted"
+        >
+          {t("Edit chore", "Ubah tugas")}
+        </button>
+      </div>
     </div>
   );
 }

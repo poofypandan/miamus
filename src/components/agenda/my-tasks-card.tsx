@@ -11,6 +11,7 @@ import {
   CloudUpload,
   Loader2,
   MapPin,
+  ReceiptText,
   Repeat,
 } from "lucide-react";
 import { useT } from "@/context/owner-locale-context";
@@ -42,6 +43,7 @@ export function MyTasksCard({
   pendingIds,
   onFinish,
   onOpen,
+  billLine,
 }: {
   /** Already the admin's own, in order (myOccurrences). */
   occurrences: ChoreOccurrence[];
@@ -53,6 +55,8 @@ export function MyTasksCard({
   /** Resolves true when saved (or kept on the phone to send). */
   onFinish: (occurrence: ChoreOccurrence) => Promise<boolean>;
   onOpen: (occurrence: ChoreOccurrence) => void;
+  /** A bill's line (Phase 164 PR B): "Paid · Rp418.500", "Last time Rp412.000". */
+  billLine?: (occurrence: ChoreOccurrence, done: boolean) => string | null;
 }) {
   const t = useT();
   // Rows being saved right now show as done at once, and go back if the
@@ -141,6 +145,7 @@ export function MyTasksCard({
           waiting={!!o.row && pendingIds.has(o.row.id)}
           canFinish={mode === "today"}
           locationName={roomName(o.task.location_id, o.task.spot)}
+          billLine={billLine?.(o, isDone(o)) ?? null}
           onFinish={() => void finish(o)}
           onOpen={() => onOpen(o)}
         />
@@ -156,6 +161,7 @@ function MyTaskRow({
   waiting,
   canFinish,
   locationName,
+  billLine,
   onFinish,
   onOpen,
 }: {
@@ -165,6 +171,7 @@ function MyTaskRow({
   waiting: boolean;
   canFinish: boolean;
   locationName: string | null;
+  billLine: string | null;
   onFinish: () => void;
   onOpen: () => void;
 }) {
@@ -186,7 +193,11 @@ function MyTaskRow({
         <button
           type="button"
           onClick={onFinish}
-          aria-label={t(`Mark done: ${task.title}`, `Tandai selesai: ${task.title}`)}
+          aria-label={
+            task.category === "bill"
+              ? t(`Mark paid: ${task.title}`, `Tandai sudah dibayar: ${task.title}`)
+              : t(`Mark done: ${task.title}`, `Tandai selesai: ${task.title}`)
+          }
           className="flex size-11 shrink-0 items-center justify-center rounded-full text-zinc-400 active:bg-muted"
         >
           <Circle className="size-[22px]" strokeWidth={1.75} />
@@ -231,6 +242,12 @@ function MyTaskRow({
                   {t("Waiting to send", "Menunggu dikirim")}
                 </span>
               )}
+            </span>
+          )}
+          {billLine && (
+            <span className={cn("flex items-center gap-1 truncate text-xs", done ? "text-emerald-700" : "text-muted-foreground")}>
+              <ReceiptText className="size-3 shrink-0" aria-hidden />
+              <span className="truncate">{billLine}</span>
             </span>
           )}
           {carried && (

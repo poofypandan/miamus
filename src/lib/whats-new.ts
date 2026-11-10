@@ -19,9 +19,91 @@ export interface WhatsNewEntry {
   steps: Record<OwnerLocale, string[]>;
   /** The card's button that opens the feature. */
   tryLabel: Record<OwnerLocale, string>;
+  /**
+   * Only for households with Kakak (on the family list): shown as the card in
+   * the Kakak sheet, and left out of Household → What's new for everyone else.
+   */
+  kakakOnly?: boolean;
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    // Shown on Today to an admin with a bill in My tasks (Phase 164 PR B).
+    id: "bill-payments-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: mark a bill paid", id: "Baru: tandai tagihan sudah dibayar" },
+    steps: {
+      en: [
+        "Tap a bill in My tasks: add what it cost and a photo of the receipt, then Mark paid. Both are optional.",
+        "Next time it shows what you paid last. Open the bill to see its last 12 payments.",
+        "Only owners see amounts and receipts. They're kept 2 years.",
+      ],
+      id: [
+        "Ketuk tagihan di Tugas saya: isi jumlahnya dan foto bukti bayar, lalu Tandai sudah dibayar. Keduanya opsional.",
+        "Berikutnya tampil jumlah yang terakhir dibayar. Buka tagihannya untuk melihat 12 pembayaran terakhir.",
+        "Hanya pemilik yang bisa melihat jumlah dan bukti bayar. Disimpan 2 tahun.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
+    // Shown once inside the Kakak sheet, above the mic (voice beta).
+    id: "kakak-voice-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: talk to Kakak", id: "Baru: bicara dengan Kakak" },
+    steps: {
+      en: [
+        "Tap the mic and say what you need. Your words appear as you speak.",
+        "Tap Stop when you're done. Kakak shows her card; nothing is saved until you confirm.",
+        "Want to hear her answers? Turn on Read replies aloud. This phone remembers it.",
+      ],
+      id: [
+        "Ketuk mikrofon lalu sebutkan yang Anda perlukan. Kata-kata Anda muncul saat Anda bicara.",
+        "Ketuk Berhenti kalau sudah. Kakak menunjukkan kartunya; tidak ada yang disimpan sebelum Anda konfirmasi.",
+        "Mau mendengar jawaban Kakak? Nyalakan Bacakan jawaban Kakak. HP ini akan mengingatnya.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
+    // Shown on Chores → Today and on Today; Show me opens the checklist (Phase 164, D9).
+    id: "bills-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: bills and upkeep", id: "Baru: tagihan dan perawatan" },
+    steps: {
+      en: [
+        "Never miss a bill: Chores → Bills and upkeep, tick what your home pays or services, then Add.",
+        "We remind you at 7:00 AM on the day, or a few days before, and Today shows what's coming up.",
+        "Any chore can now repeat every 3 months or every year, and remind you. Bills given to you show in My tasks.",
+      ],
+      id: [
+        "Jangan sampai telat bayar: Tugas → Tagihan dan perawatan, centang yang rutin dibayar atau dirawat, lalu Tambah.",
+        "Kami ingatkan pukul 07.00 saat jatuh tempo, atau beberapa hari sebelumnya, dan Hari ini menampilkan yang segera tiba.",
+        "Setiap tugas kini bisa berulang tiap 3 bulan atau tiap tahun, dan mengingatkan Anda. Tagihan untuk Anda muncul di Tugas saya.",
+      ],
+    },
+    tryLabel: { en: "Show me", id: "Lihat" },
+  },
+  {
+    // Listed in What's new only: the checklist on Today is its own tutorial (audit B1).
+    id: "first-run-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: a setup checklist for new homes", id: "Baru: daftar persiapan rumah baru" },
+    steps: {
+      en: [
+        "New homes see Set up your home on Today: add your staff, link their phone, give them a first task. It ticks itself off and goes away after the first finished task; Not now hides it.",
+      ],
+      id: [
+        "Rumah baru melihat Siapkan rumah Anda di Hari ini: tambah staf, hubungkan HP-nya, beri tugas pertama. Tercentang sendiri dan hilang setelah tugas pertama selesai; Nanti saja menyembunyikannya.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
   {
     // Shown on Today only to an admin who has a chore of their own (Phase 163, D5).
     id: "my-tasks-2026-11",
@@ -270,6 +352,45 @@ export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
 
 export function staffWhatsNewEntry(id: string): StaffWhatsNewEntry | undefined {
   return STAFF_WHATS_NEW.find((entry) => entry.id === id);
+}
+
+/** A staff tip that could show, and whether its feature is on this phone's screens. */
+export interface StaffTipCandidate {
+  id: string;
+  show: boolean;
+}
+
+/**
+ * The one staff tip to show (audit B1, item 5): staff Today used to stack up
+ * to five "Baru" cards above the first task. Now at most one: the newest
+ * that applies and hasn't been closed on this phone. Ties keep
+ * STAFF_WHATS_NEW's order, which is newest first.
+ */
+export function pickStaffTip(candidates: StaffTipCandidate[], seen: (id: string) => boolean): string | null {
+  const order = new Map(STAFF_WHATS_NEW.map((entry, index) => [entry.id, index]));
+  const ranked = candidates
+    .map((candidate) => ({ candidate, entry: staffWhatsNewEntry(candidate.id) }))
+    .filter((item): item is { candidate: StaffTipCandidate; entry: StaffWhatsNewEntry } => !!item.entry)
+    .sort(
+      (a, b) =>
+        b.entry.date.localeCompare(a.entry.date) || (order.get(a.entry.id) ?? 0) - (order.get(b.entry.id) ?? 0)
+    );
+  return ranked.find(({ candidate }) => candidate.show && !seen(candidate.id))?.candidate.id ?? null;
+}
+
+/**
+ * Where a staff phone remembers the day it last closed a tip: after one is
+ * closed, the next waits until tomorrow, so a morning starts with the work.
+ */
+export const STAFF_TIP_CLOSED_ON_KEY = "miamus.staff-tip.closed-on";
+
+/**
+ * Whether the staff tip rests: a tip was closed on `today` (both local
+ * YYYY-MM-DD). Checked against the live day, so the next tip comes back
+ * after midnight on a phone that never reloaded.
+ */
+export function staffTipResting(closedOn: string | null, today: string): boolean {
+  return closedOn === today;
 }
 
 export function whatsNewEntry(id: string): WhatsNewEntry | undefined {

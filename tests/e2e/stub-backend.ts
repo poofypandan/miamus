@@ -75,6 +75,8 @@ export interface StubOptions {
   kakak?: { allowed: boolean; enabled: boolean };
   /** household_locations rows the household already has (Phase 158). */
   rooms?: Record<string, unknown>[];
+  /** bill_payments rows the household already has (Phase 164 PR B). */
+  billPayments?: Record<string, unknown>[];
   /** household_tasks rows the household already has (Phase 158). */
   chores?: Record<string, unknown>[];
   /** Answer the room list with a server error until set back (Phase 158). */
@@ -92,6 +94,17 @@ export interface StubOptions {
   installTip?: boolean;
   /** leave_requests rows the household already has (Phase 163: leave cover). */
   leaves?: Record<string, unknown>[];
+  /**
+   * Leave the first-run checklist to the household's data (audit B1). Owner
+   * phones have it closed by default, like the install tip: not under test.
+   */
+  firstRun?: boolean;
+  /** The roster in place of Ari (audit B1); changed in place, so a reload sees it. */
+  staff?: Record<string, unknown>[];
+  /** What list_linked_phones answers the admin (audit B1); changed in place. */
+  linkedPhones?: Record<string, unknown>[];
+  /** task_logs rows already on record (audit B1: a household past setup). */
+  logs?: Record<string, unknown>[];
 }
 
 /**
@@ -126,6 +139,8 @@ export interface Stub {
   foods: Record<string, unknown>[];
   /** household_tasks rows created on this phone (Kakak's saves). */
   tasks: Record<string, unknown>[];
+  /** inventory_items rows added on this phone (Phase 164: gas and gallons). */
+  supplies: Record<string, unknown>[];
   /** Kakak's switch, as the admin last set it. */
   kakak: { allowed: boolean; enabled: boolean };
   /** households.has_pets as the admin last set it (Phase 162). */
@@ -134,6 +149,12 @@ export interface Stub {
   repairs: Record<string, unknown>[];
   /** repair_costs and repair_notes rows (Phase 159 PR B). */
   repairCosts: Record<string, unknown>[];
+  /** bill_payments rows (Phase 164 PR B), and who asked for them. */
+  billPayments: Record<string, unknown>[];
+  billPaymentReads: string[];
+  /** Storage uploads and removals, as "bucket/path". */
+  uploads: string[];
+  removed: string[];
   repairNotes: Record<string, unknown>[];
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
@@ -163,12 +184,17 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const net = { token: true, rest: true, signup: true };
   const trouble: Record<string, WriteTrouble> = {};
   const writes: [string, string][] = [];
-  const logs: Record<string, unknown>[] = [];
+  const logs: Record<string, unknown>[] = options.logs ?? [];
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [] };
   const foods: Record<string, unknown>[] = [];
   const tasks: Record<string, unknown>[] = [];
+  const supplies: Record<string, unknown>[] = [];
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
   const repairCosts: Record<string, unknown>[] = [];
+  const billPayments: Record<string, unknown>[] = options.billPayments ? [...options.billPayments] : [];
+  const billPaymentReads: string[] = [];
+  const uploads: string[] = [];
+  const removed: string[] = [];
   const repairNotes: Record<string, unknown>[] = [];
   const kakak = { allowed: false, enabled: false, ...options.kakak };
   const household = { hasPets: options.household?.hasPets ?? null };
@@ -177,12 +203,19 @@ export async function installStub(context: BrowserContext, options: StubOptions 
 
   if (options.owner) {
     await context.addInitScript(
-      ({ locale, installTip }) => {
+      ({ locale, installTip, firstRun, firstRunKey }) => {
         // The banner about adding staff, already dismissed: not under test.
         if (!installTip) localStorage.setItem("b11_onboarding_dismissed", "true");
+        // The first-run checklist likewise, unless the test is about it.
+        if (!firstRun) localStorage.setItem(firstRunKey, "finished");
         localStorage.setItem("miamus.owner-locale", locale);
       },
-      { locale: options.owner.locale, installTip: Boolean(options.installTip) }
+      {
+        locale: options.owner.locale,
+        installTip: Boolean(options.installTip),
+        firstRun: Boolean(options.firstRun),
+        firstRunKey: `miamus.first-run.${OWNER_PROFILE_ID}`,
+      }
     );
   }
 
@@ -234,6 +267,19 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       seen.tokenRefreshes += 1;
       return route.fulfill({ json: session(options.stored?.user.id ?? USER, nowSeconds() + 3600) });
     }
+    // Storage (Phase 164 PR B): uploads and removals, recorded.
+    if (path.startsWith("/storage/v1/object/")) {
+      const rest = decodeURIComponent(path.slice("/storage/v1/object/".length));
+      if (request.method() === "POST" || request.method() === "PUT") {
+        uploads.push(rest);
+        return route.fulfill({ json: { Key: rest, Id: rest } });
+      }
+      if (request.method() === "DELETE") {
+        const prefixes: string[] = request.postDataJSON()?.prefixes ?? [];
+        for (const p of prefixes) removed.push(`${rest}/${p}`);
+        return route.fulfill({ json: prefixes.map((name) => ({ name })) });
+      }
+    }
     if (path.startsWith("/rest/v1/")) {
       if (!net.rest) return route.abort("internetdisconnected");
       const who = subOf(request.headers()["authorization"]);
@@ -264,6 +310,13 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         household.hasPets = Boolean(request.postDataJSON()?.p_on);
         return route.fulfill({ status: 204, body: "" });
       }
+      if (options.owner && who === OWNER && table === "rpc/list_linked_phones") {
+        return route.fulfill({ json: options.linkedPhones ?? [] });
+      }
+      if (table === "staff_profiles" && options.staff) {
+        const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: one ? (options.staff[0] ?? null) : options.staff });
+      }
       if (table === "households") {
         const row = { id: HOUSEHOLD_ID, name: "Rumah Uji", has_pets: household.hasPets };
         const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
@@ -289,6 +342,23 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         }
       }
       if (table === "task_logs") return answerLogs(route, logs);
+      // Supplies added here (Phase 164), and read back once there are any.
+      if (table === "inventory_items" && request.method() === "POST") {
+        const body = request.postDataJSON();
+        const row: Record<string, unknown> = {
+          id: `00000000-0000-4000-8000-${String(600 + supplies.length).padStart(12, "0")}`,
+          household_id: HOUSEHOLD_ID,
+          stock_status: "ok",
+          created_at: new Date().toISOString(),
+          ...(Array.isArray(body) ? body[0] : body),
+        };
+        supplies.push(row);
+        const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: object ? row : [row] });
+      }
+      if (table === "inventory_items" && request.method() === "GET" && supplies.length > 0) {
+        return route.fulfill({ json: supplies });
+      }
       if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks, options.chores, who);
       if (table === "household_tasks" && options.chores) {
         // The simple PostgREST filters the app's chore reads use (eq, neq,
@@ -306,6 +376,29 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       if (table === "household_locations" && options.rooms) return answerRooms(route, options.rooms);
       if (table === "repairs") return answerRepairs(route, repairs, who === OWNER);
       if (table === "repair_costs") return answerRepairCosts(route, repairCosts, who === OWNER);
+      // migrations/138: payment removed and day reopened together, owners only.
+      if (table === "rpc/reopen_bill_day") {
+        const taskId = request.postDataJSON()?.p_task_id;
+        const row = [...tasks, ...(options.chores ?? [])].find((t) => t.id === taskId);
+        if (who !== OWNER || !row) return route.fulfill({ status: 403, json: { code: "42501", message: "chore_not_updated" } });
+        const index = billPayments.findIndex((p) => p.task_id === taskId);
+        const payment = index === -1 ? null : billPayments.splice(index, 1)[0];
+        Object.assign(row, {
+          status: "pending",
+          completed_at: null,
+          completed_by: null,
+          photo_url: null,
+          before_photo_url: null,
+          after_photo_url: null,
+        });
+        return route.fulfill({ json: { task: row, payment } });
+      }
+      if (table === "bill_payments") {
+        billPaymentReads.push(who === OWNER ? "owner" : "other");
+        return answerBillPayments(route, billPayments, who === OWNER, (id) =>
+          [...tasks, ...(options.chores ?? [])].some((t) => t.id === id && t.status === "completed")
+        );
+      }
       if (table === "repair_notes") return answerRepairNotes(route, repairNotes);
       if (table === "rpc/organise_rooms" && options.rooms) {
         return route.fulfill({ json: organise(request.postDataJSON()?.p_plan, options.rooms, options.chores ?? []) });
@@ -334,8 +427,13 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     seen,
     foods,
     tasks,
+    supplies,
     repairs,
     repairCosts,
+    billPayments,
+    billPaymentReads,
+    uploads,
+    removed,
     repairNotes,
     kakak,
     household,
@@ -636,6 +734,47 @@ function answerRepairCosts(route: Route, costs: Record<string, unknown>[], owner
   const row = { ...(index === -1 ? {} : costs[index]), ...fields, updated_at: new Date().toISOString() };
   if (index === -1) costs.push(row);
   else costs[index] = row;
+  return reply([row]);
+}
+
+/**
+ * bill_payments (migrations/138): owners only, as its policy; anyone else
+ * reads nothing and writes nothing. Upsert by task_id, delete by task_id;
+ * the server's fields stamped as 138's trigger does.
+ */
+function answerBillPayments(
+  route: Route,
+  payments: Record<string, unknown>[],
+  owner: boolean,
+  isPaid: (taskId: unknown) => boolean
+) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  if (!owner) {
+    if (request.method() === "GET") return reply([]);
+    return route.fulfill({ status: 403, json: { code: "42501", message: "new row violates row-level security policy" } });
+  }
+  if (request.method() === "GET") return reply([...payments].sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at))));
+  const taskId = new URL(request.url()).searchParams.get("task_id")?.replace(/^eq\./, "");
+  if (request.method() === "DELETE") {
+    const index = payments.findIndex((p) => p.task_id === taskId);
+    return reply(index === -1 ? [] : payments.splice(index, 1));
+  }
+  const body = request.postDataJSON();
+  const fields = Array.isArray(body) ? body[0] : body;
+  // 138's trigger: only for a day that is done.
+  if (!isPaid(fields.task_id)) {
+    return route.fulfill({ status: 400, json: { code: "23514", message: "bill_payment_needs_paid_day", details: null, hint: null } });
+  }
+  const index = payments.findIndex((p) => p.task_id === fields.task_id);
+  const now = new Date().toISOString();
+  const row =
+    index === -1
+      ? { id: `00000000-0000-4000-8000-${String(400 + payments.length).padStart(12, "0")}`, series_id: fields.series_id ?? null, paid_at: now, ...fields, updated_at: now }
+      : { ...payments[index], ...fields, updated_at: now };
+  if (index === -1) payments.push(row);
+  else payments[index] = row;
   return reply([row]);
 }
 

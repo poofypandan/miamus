@@ -4,15 +4,19 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildContext, jakartaNow, type ContextRows } from "@/lib/kakak/context";
 import type { KakakModel } from "@/lib/kakak/cost";
 import { PRICES } from "@/lib/kakak/cost";
+import { classifyApiError } from "@/lib/kakak/api-errors";
 import { practiceAllowed, practiceClient } from "@/lib/kakak/practice";
 import {
   BadTurnError,
+  StaleConversationError,
   checkHistory,
+  conversationStart,
   nextUserTurn,
   runKakakTurn,
   type BeginResult,
   type CallRecord,
   type KakakEffort,
+  type KakakHistory,
   type RefusalReason,
 } from "@/lib/kakak/engine";
 
@@ -45,7 +49,7 @@ function refused(reason: RefusalReason | "unavailable", status: number) {
   return NextResponse.json({ kind: "refused", reason }, { status });
 }
 
-function failed(reason: "invalid" | "api" | "too_long" | "refusal", status = 200) {
+function failed(reason: "invalid" | "api" | "too_long" | "refusal" | "stale" | "cap" | "slow", status = 200) {
   return NextResponse.json({ kind: "failed", reason }, { status });
 }
 
@@ -125,9 +129,12 @@ export async function POST(request: NextRequest) {
   const reply = typeof body.reply === "string" ? body.reply : "";
   if (!householdId) return NextResponse.json({ error: "bad request" }, { status: 400 });
   // Check the turn's shape before anything is counted or read.
+  let history: KakakHistory;
   try {
-    nextUserTurn(checkHistory(body.history), reply);
+    history = checkHistory(body.history);
+    nextUserTurn(history, reply);
   } catch (error) {
+    if (error instanceof StaleConversationError) return failed("stale");
     if (error instanceof BadTurnError) return NextResponse.json({ error: "bad request" }, { status: 400 });
     throw error;
   }
@@ -154,7 +161,11 @@ export async function POST(request: NextRequest) {
     console.error("kakak: could not read the household", (error as { code?: string }).code ?? "unknown");
     return failed("api", 500);
   }
-  const { today, now } = jakartaNow();
+  // The conversation's start, not the clock: the household block (and so
+  // the system prompt) must be byte-identical on every turn of one
+  // conversation, or the thinking blocks in the history are refused.
+  const startedAt = conversationStart(history);
+  const { today, now } = jakartaNow(startedAt);
   // The account's own choice (migrations/114), not the phone's word for it.
   const locale = await supabase.rpc("my_locale");
   const ownerLocale = locale.data === "id" ? "id" : locale.data === "en" ? "en" : body.locale === "id" ? "id" : "en";
@@ -219,6 +230,7 @@ export async function POST(request: NextRequest) {
         names: built.names,
         begin: practice ? practiceBegin : begin,
         record: practice ? practiceRecord : record,
+        startedAt: startedAt.toISOString(),
       },
       body.history,
       reply,
@@ -229,9 +241,12 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(practice ? { ...result, practice: true } : result);
   } catch (error) {
+    if (error instanceof StaleConversationError) return failed("stale");
     if (error instanceof BadTurnError) return NextResponse.json({ error: "bad request" }, { status: 400 });
-    const kind = error instanceof Anthropic.APIError ? `${error.status ?? "?"} ${error.name}` : (error as Error)?.name;
-    console.error("kakak: call failed", kind);
-    return failed("api", 502);
+    // The spend limit, a bad key, rate limits and timeouts each get their own
+    // plain sentence on the phone (lib/kakak/api-errors.ts).
+    const { body: failure, status: code, log } = classifyApiError(error);
+    console.error("kakak: call failed", log);
+    return NextResponse.json(failure, { status: code });
   }
 }

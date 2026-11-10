@@ -123,7 +123,14 @@ test("a staff phone claiming a day of a chore with a spot copies the spot (128's
   await page.getByText("Lap keran").first().click({ timeout: 20_000 });
   await page.getByRole("button", { name: /Ambil Tugas/ }).click();
   await expect.poll(() => stub.tasks.length).toBe(1);
+  // Claiming is two writes: the day's copy, then taking it. Wait for the
+  // second rather than reading between them (a race on slower CI runners).
+  await expect.poll(() => stub.tasks[0].assigned_to).toBe(STAFF_ID);
   expect(stub.tasks[0]).toMatchObject({ title: "Lap keran", spot: "Wastafel", location_id: id(20), assigned_to: STAFF_ID });
+  // A plain one-off copy, as 137's guard requires of a staff phone's day: no
+  // interval or reminder sent (the columns' defaults, 1 and none, apply).
+  expect(stub.tasks[0].recurrence_interval ?? 1).toBe(1);
+  expect(stub.tasks[0].remind_days_before ?? null).toBeNull();
 });
 
 test("a staff phone gets the one-line floors tip once a chore shows a floor or spot, and can close it for good", async ({ context, page }) => {
@@ -133,6 +140,12 @@ test("a staff phone gets the one-line floors tip once a chore shows a floor or s
   ];
   const chores = [chore({ title: "Lap keran", assigned_to: null, location_id: id(31), spot: "Wastafel" })];
   await installStub(context, { stored: freshSession(), staffPhone: true, rooms, chores });
+  // One tip at a time, newest first (audit B1): the newer ones already closed.
+  await context.addInitScript(() => {
+    for (const card of ["staff-feedback-2026-11", "staff-weak-signal-2026-11"]) {
+      localStorage.setItem(`miamus.whats-new.${card}`, "seen");
+    }
+  });
   await page.goto("/staff");
 
   const tip = page.getByRole("region", { name: "Baru: lantai dan bagian ruangan" });

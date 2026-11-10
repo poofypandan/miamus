@@ -34,7 +34,7 @@ import { useHousehold } from "@/context/household-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useHouseholdLocations, useLocationName } from "@/hooks/use-household-locations";
-import { StaffWhatsNewCard } from "@/components/shared/whats-new";
+import { StaffTipCard } from "@/components/shared/whats-new";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { LaunchCover } from "@/components/brand/brand-cover";
@@ -322,11 +322,17 @@ function TasksView() {
       >
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
 
-        <StaffWhatsNewCard id="staff-weak-signal-2026-11" show />
-        <StaffWhatsNewCard id="staff-floors-2026-11" show={showFloorsTip} />
-        <StaffWhatsNewCard id="staff-repairs-2026-11" show />
-        <StaffWhatsNewCard id="staff-repair-notes-2026-11" show={showRepairNotesTip} />
-        <StaffWhatsNewCard id="staff-feedback-2026-11" show />
+        {/* One tip at a time, newest first (audit B1, item 5): the work
+            comes first on a busy morning, not a stack of news. */}
+        <StaffTipCard
+          tips={[
+            { id: "staff-feedback-2026-11", show: true },
+            { id: "staff-weak-signal-2026-11", show: true },
+            { id: "staff-floors-2026-11", show: showFloorsTip },
+            { id: "staff-repairs-2026-11", show: true },
+            { id: "staff-repair-notes-2026-11", show: showRepairNotesTip },
+          ]}
+        />
 
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.
@@ -341,7 +347,7 @@ function TasksView() {
                 <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
                   <Stethoscope className="size-4 shrink-0 text-muted-foreground" /> {pet.name} sedang dirawat di klinik
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[13px] text-muted-foreground">
                   Jadwal makan dan Pipis & Pup-nya berhenti dulu sampai pulang.
                 </p>
                 <DischargeButton

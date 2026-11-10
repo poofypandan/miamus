@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, Check, CheckCircle2, CloudUpload, Loader2, Pencil, RotateCcw, UserRound } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { BillPaymentEditor, BillPaymentFields } from "@/components/chores/bill-payment-editor";
+import { useBillPayments } from "@/hooks/use-bill-payments";
+import { isBill, lastAmount, lastTimeLine, savePayment } from "@/lib/bill-payments";
+import { parseIdr } from "@/lib/repairs";
+import { photoTakenAt } from "@/lib/photos";
 import {
   Sheet,
   SheetContent,
@@ -22,13 +28,12 @@ import { useFinishMyChore } from "@/hooks/use-finish-my-chore";
 import { useLocationName } from "@/hooks/use-household-locations";
 import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
 import {
-  RECURRENCE_LABELS_EN,
-  RECURRENCE_LABELS_ID,
   coverTakeover,
   recurrenceOf,
+  taskRepeatLabel,
   type ChoreOccurrence,
 } from "@/lib/chore-recurrence";
-import { photoTakenAt } from "@/lib/photos";
+
 import { cn } from "@/lib/utils";
 
 /**
@@ -117,32 +122,90 @@ function OwnerFinishBody({
     writeChoreDraft(draftKey, { before: beforeUrl, after: afterUrl });
   }, [draftKey, beforeUrl, afterUrl, done]);
 
+  // --- A bill (Phase 164 PR B): Mark paid, with an optional amount and
+  // receipt, owners only. Instead of the chore photos.
+  const bill = isBill(task);
+  const { payments } = useBillPayments(bill);
+  const seriesId = occurrence.template.id;
+  const lastTime = lastTimeLine(lastAmount(payments, seriesId, occurrence.row?.id), locale);
+  const [amountText, setAmountText] = useState("");
+  const [receipt, setReceipt] = useState<File | string | null>(null);
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  // A payment edit being saved: Mark not done waits for it, so a late save
+  // can't land on a bill no longer paid (the database refuses it anyway).
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const parsedAmount = parseIdr(amountText);
+  const amountInvalid = amountText.trim() !== "" && parsedAmount === null;
+  const hasPaymentInput = parsedAmount !== null || !!receipt;
+
+  async function markPaid() {
+    if (amountInvalid || receiptBusy || (photosRequired && (missingPhotos || uploading || photoFailed))) return;
+    setBusy(true);
+    // Covering a repeat's first day for someone on leave needs both photos
+    // (coverTakeover), bill or not (Codex, PR #65).
+    const photos = beforeUrl && afterUrl ? { before: beforeUrl, after: afterUrl } : undefined;
+    // The payment is saved before the Undo toast appears, so an Undo can't
+    // run ahead of it and leave a payment on a bill not paid (Codex, PR #65).
+    const result = await finish(occurrence, photos, {
+      afterSent: hasPaymentInput
+        ? async (saved) => {
+            try {
+              await savePayment({ taskId: saved.id, seriesId, amount: parsedAmount, receipt, previous: null });
+            } catch (err) {
+              console.error(err);
+              toast.error(
+                t(
+                  "Paid, but the amount wasn't saved. Open it to add it again.",
+                  "Sudah dibayar, tapi jumlahnya gagal disimpan. Buka lagi untuk menambahkannya."
+                )
+              );
+            }
+          }
+        : undefined,
+    });
+    if (result?.outcome === "sent" && photos) clearChoreDraft(draftKey);
+    if (result?.outcome === "queued" && hasPaymentInput) {
+      toast.info(
+        t(
+          "The amount and receipt can be added once it has been sent.",
+          "Jumlah dan bukti bayar bisa ditambahkan setelah terkirim."
+        )
+      );
+    }
+    setBusy(false);
+    if (result) onOpenChange(false);
+  }
+
   async function markDone() {
+    if (bill) return markPaid();
     if (missingPhotos || uploading || photoFailed) return;
     setBusy(true);
-    const outcome = await finish(occurrence, beforeUrl && afterUrl ? { before: beforeUrl, after: afterUrl } : undefined);
+    const result = await finish(occurrence, beforeUrl && afterUrl ? { before: beforeUrl, after: afterUrl } : undefined);
     setBusy(false);
-    if (!outcome) return;
+    if (!result) return;
     // Sent: nothing is owed any more. Kept on the phone: the queue clears
     // the draft once it has gone (useOfflineSync).
-    if (outcome === "sent") clearChoreDraft(draftKey);
+    if (result.outcome === "sent") clearChoreDraft(draftKey);
     onOpenChange(false);
   }
 
   async function markNotDone() {
     if (!occurrence.row) return;
     setBusy(true);
-    const ok = await reopen(occurrence.row.id, {
-      before: occurrence.row.before_photo_url ?? null,
-      after: occurrence.row.after_photo_url ?? null,
-    });
+    const ok = await reopen(
+      occurrence.row.id,
+      {
+        before: occurrence.row.before_photo_url ?? null,
+        after: occurrence.row.after_photo_url ?? null,
+      },
+      bill
+    );
     setBusy(false);
     if (ok) onOpenChange(false);
   }
 
   const recurrence = recurrenceOf(occurrence.template);
-  const repeatLabel =
-    recurrence === "none" ? null : (locale === "id" ? RECURRENCE_LABELS_ID : RECURRENCE_LABELS_EN)[recurrence];
+  const repeatLabel = recurrence === "none" ? null : taskRepeatLabel(occurrence.template, locale);
   const where = roomName(task.location_id, task.spot);
   const details = [task.due_time ? formatTime(task.due_time) : t("Anytime", "Kapan saja"), where, repeatLabel]
     .filter(Boolean)
@@ -186,8 +249,24 @@ function OwnerFinishBody({
                   <CheckCircle2 className="size-4 shrink-0" /> {t("This chore is done.", "Tugas ini sudah selesai.")}
                 </p>
               )}
-              {occurrence.row && <ChoreProofPhotos row={occurrence.row} locale={locale} interactive />}
+              {occurrence.row && !bill && <ChoreProofPhotos row={occurrence.row} locale={locale} interactive />}
+              {bill && occurrence.row && (
+                <BillPaymentEditor row={occurrence.row} seriesId={seriesId} onBusyChange={setPaymentSaving} />
+              )}
             </>
+          ) : canFinish && bill && !photosRequired ? (
+            <section className="flex flex-col gap-3">
+              <BillPaymentFields
+                amountText={amountText}
+                onAmountText={setAmountText}
+                amountInvalid={amountInvalid}
+                parsedAmount={parsedAmount}
+                hint={lastTime}
+                receipt={receipt}
+                onReceipt={setReceipt}
+                onReceiptBusy={setReceiptBusy}
+              />
+            </section>
           ) : canFinish ? (
             <>
               <section className="flex flex-col gap-2">
@@ -244,6 +323,20 @@ function OwnerFinishBody({
                       : t("Both photos, or none.", "Dua foto, atau tidak sama sekali.")}
                 </p>
               </section>
+              {bill && (
+                <section className="flex flex-col gap-3">
+                  <BillPaymentFields
+                    amountText={amountText}
+                    onAmountText={setAmountText}
+                    amountInvalid={amountInvalid}
+                    parsedAmount={parsedAmount}
+                    hint={lastTime}
+                    receipt={receipt}
+                    onReceipt={setReceipt}
+                    onReceiptBusy={setReceiptBusy}
+                  />
+                </section>
+              )}
             </>
           ) : mode === "future" ? (
             <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
@@ -254,24 +347,37 @@ function OwnerFinishBody({
 
         <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
           {canFinish && (
-            <Button
-              onClick={markDone}
-              disabled={busy || uploading || missingPhotos || photoFailed}
-              className="min-h-12 rounded-xl"
-            >
-              {busy || uploading ? <Loader2 className="animate-spin" /> : photoFailed ? <AlertTriangle /> : <Check />}
-              {uploading
-                ? t("Saving photo…", "Menyimpan foto…")
-                : photoFailed
-                  ? t("Retake the broken photo", "Ambil ulang foto yang rusak")
-                  : t("Mark done", "Tandai selesai")}
-            </Button>
+            bill ? (
+              <Button
+                onClick={markPaid}
+                disabled={
+                  busy || amountInvalid || receiptBusy || (photosRequired && (missingPhotos || uploading || photoFailed))
+                }
+                className="min-h-12 rounded-xl"
+              >
+                {busy || receiptBusy ? <Loader2 className="animate-spin" /> : <Check />}
+                {t("Mark paid", "Tandai sudah dibayar")}
+              </Button>
+            ) : (
+              <Button
+                onClick={markDone}
+                disabled={busy || uploading || missingPhotos || photoFailed}
+                className="min-h-12 rounded-xl"
+              >
+                {busy || uploading ? <Loader2 className="animate-spin" /> : photoFailed ? <AlertTriangle /> : <Check />}
+                {uploading
+                  ? t("Saving photo…", "Menyimpan foto…")
+                  : photoFailed
+                    ? t("Retake the broken photo", "Ambil ulang foto yang rusak")
+                    : t("Mark done", "Tandai selesai")}
+              </Button>
+            )
           )}
           {/* Past days too (Codex, PR #58): a carried-over chore finished
               today leaves today's list, and its own day is where it can be
               opened again once the Undo toast has gone. */}
           {done && occurrence.row && (
-            <Button variant="outline" onClick={markNotDone} disabled={busy} className="min-h-12 rounded-xl">
+            <Button variant="outline" onClick={markNotDone} disabled={busy || paymentSaving} className="min-h-12 rounded-xl">
               {busy ? <Loader2 className="animate-spin" /> : <RotateCcw />} {t("Mark not done", "Tandai belum selesai")}
             </Button>
           )}
@@ -284,7 +390,7 @@ function OwnerFinishBody({
               }}
               className="min-h-12 rounded-xl"
             >
-              <Pencil /> {t("Edit chore", "Ubah tugas")}
+              <Pencil /> {bill ? t("Edit bill", "Ubah tagihan") : t("Edit chore", "Ubah tugas")}
             </Button>
           )}
         </SheetFooter>
