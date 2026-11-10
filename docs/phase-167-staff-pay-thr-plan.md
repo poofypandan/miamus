@@ -257,8 +257,12 @@ the amounts to what you and your staff agree."
 - **Reminder** (D5): 30 days before *pay by*, in the morning push ("THR for
   Maria is due by Fri 18 Dec (Natal).") and a quiet line on Today from then
   until marked paid; again on *pay by* if not paid. Amber after *pay by*.
+- **Save THR** stores this year's plan (holiday date, amount, pay-by date)
+  in `staff_thr_plans` (below), before anything is paid. The reminder and
+  the staff view read the plan. If there's no plan yet, the reminder uses
+  holiday − 7 days and the staff view shows "Belum diatur pemilik".
 - **Mark THR paid**: the same sheet as Mark paid, kind THR, the holiday and
-  year shown.
+  year shown, prefilled with the plan's amount.
 - **One THR a year per person** by default; a second can be added by hand
   (some households give at both Lebaran and Natal).
 
@@ -382,7 +386,8 @@ Section 3, "What we collect", a new bullet:
 > **EN:** Staff pay (if admins use it): what was agreed with each staff
 > member (pay, payday, how it's paid, when they started, which holiday their
 > THR is for, their weekly day off and leave days), the payments made to them
-> (amount, date, how, an optional receipt photo and an admin's note), THR,
+> (amount, date, how, an optional receipt photo and an admin's note), THR
+> (the amount and date agreed for each holiday, and when it was paid),
 > when a staff member confirmed receiving a payment, the kind of each leave
 > (annual, sick, family, other), and an optional checklist of what was agreed
 > (for example whether it is written down, reported to the RT/RW, and how
@@ -392,7 +397,8 @@ Section 3, "What we collect", a new bullet:
 > staf (gaji, tanggal gajian, cara bayar, tanggal mulai bekerja, hari raya
 > untuk THR-nya, libur mingguan, dan jumlah hari cuti), pembayaran kepada
 > mereka (jumlah, tanggal, cara, foto bukti bayar opsional, dan catatan
-> admin), THR, kapan staf mengonfirmasi sudah menerima pembayaran, jenis tiap
+> admin), THR (jumlah dan tanggal yang disepakati untuk tiap hari raya, dan
+> kapan dibayar), kapan staf mengonfirmasi sudah menerima pembayaran, jenis tiap
 > cuti (tahunan, sakit, keluarga, lainnya), dan daftar periksa opsional
 > tentang yang disepakati (misalnya sudah tertulis atau belum, sudah dilapor
 > ke RT/RW, dan cara pembayaran BPJS). Kami tidak menyimpan nomor KTP, BPJS,
@@ -413,14 +419,14 @@ Section 5, "Who can see it", a new bullet:
 
 Section 7, "How long we keep it", a new bullet:
 
-> **EN:** Staff pay records (pay agreed, payments, receipts, the checklist)
+> **EN:** Staff pay records (pay agreed, THR planned, payments, receipts, the checklist)
 > are kept while the staff member is on the household's list and for 2 years
 > after they are removed, then deleted automatically. A payment is deleted 5
 > years after it was made even if they still work there. Admins can delete
 > a payment at any time.
 >
-> **ID:** Catatan gaji staf (gaji yang disepakati, pembayaran, bukti bayar,
-> daftar periksa) disimpan selama staf masih ada di daftar rumah dan 2 tahun
+> **ID:** Catatan gaji staf (gaji yang disepakati, rencana THR, pembayaran,
+> bukti bayar, daftar periksa) disimpan selama staf masih ada di daftar rumah dan 2 tahun
 > setelah dihapus dari daftar, lalu dihapus otomatis. Pembayaran dihapus 5
 > tahun setelah dibayarkan walaupun staf masih bekerja. Admin dapat menghapus
 > pembayaran kapan saja.
@@ -489,7 +495,27 @@ staff).
 `unique (staff_id, kind, period)` where `kind in ('wage','thr')`: one wage
 per period, one THR per holiday.
 
-RLS on both tables: one policy for all commands, `to authenticated`, via
+**Table `staff_thr_plans`** (owners only): the THR agreed for one person and
+one holiday, **before** it's paid (Codex, PR #73). Without it, an edited
+amount or an earlier pay-by date would have nowhere to live until payment.
+
+| Column | |
+| --- | --- |
+| `id`, `household_id` | household FK, cascade |
+| `staff_id` | composite FK as above, cascade |
+| `holiday` | as `thr_holiday` |
+| `holiday_date` | date: this year's date, copied from `holiday_dates` or the owner's own; `unique (staff_id, holiday_date)` |
+| `amount_idr` | bigint not null, 0 to 10¹³: the rule's result or the owner's own |
+| `pay_by` | date not null, default `holiday_date - 7`, at most `holiday_date` |
+| `remind_days_before` | smallint, default 30; check in (0, 7, 14, 30); null = no reminder |
+| `created_by`, `updated_at` | server-fields trigger; household and staff fixed after insert |
+
+A THR **payment** (`staff_payments`, kind `thr`) has `period =
+holiday_date`, so it matches its plan; once it exists the plan counts as
+paid. Plans are deleted with their payment's retention, or 2 years after
+their holiday if never paid.
+
+RLS on all three tables: one policy for all commands, `to authenticated`, via
 `household_members` of `auth.uid()` against `household_id` (as
 `owner_all_bill_payments`). `revoke all … from anon`.
 
@@ -513,7 +539,8 @@ migration; AGENTS.md):
   household's `staff_see_pay` is on, and `check_pin_internal(...)` says
   `ok` (so wrong PINs count toward the existing lockout and are logged).
   Returns only that person's pay amount, period, payday, weekly days off,
-  THR holiday and the amount of an upcoming THR if set, and their last 12
+  THR holiday, their next unpaid `staff_thr_plans` row (holiday date,
+  amount, pay-by) if there is one, and their last 12
   payments as `{id, kind, period, amount_idr, paid_on, paid_by,
   received_at}`: no receipts, no notes. Granted to `authenticated`.
 - `confirm_pay_received(p_payment_id uuid, p_staff_id uuid, p_pin text)` —
@@ -524,14 +551,19 @@ migration; AGENTS.md):
 - `notify_staff_pay_due()` — not SECURITY DEFINER, cron only (`10 0 * * *`
   UTC, 07:10 WIB, after 164's 07:05). For each household: people whose
   payday is today (or tomorrow, for the Today line only) with no `wage`
-  payment for the period; people whose THR *pay by* date is 30 days away or
-  today with no `thr` payment for that holiday. One push per owner per
+  payment for the period; people whose THR is due, with no `thr` payment for
+  that holiday. The pay-by date and the lead time come from their
+  `staff_thr_plans` row when there is one (`pay_by`, `remind_days_before`).
+  Without a plan, the date is the next `holiday_dates` date (or
+  `thr_other_date`) minus 7 days, with a 30-day lead. It pushes on the lead
+  day and on the pay-by day. One push per owner per
   morning, EN or ID by `locale_of`, names and dates only, tag
   `staff-pay-<date>`, url `/dashboard?module=access&view=pay`. Revoked from
   public, anon, authenticated; `service_role` only.
 - `prune_staff_pay()` — cron, nightly before the photo sweep: deletes pay
-  terms and payments of profiles archived more than 2 years ago, and
-  payments paid more than 5 years ago. Revoked; `service_role` only.
+  terms, THR plans and payments of profiles archived more than 2 years ago;
+  payments paid more than 5 years ago; and THR plans whose holiday is more
+  than 2 years past with no payment. Revoked; `service_role` only.
 
 **Re-created** (copied from their latest definitions in 138):
 
@@ -540,13 +572,14 @@ migration; AGENTS.md):
   grace for uploads).
 - `orphaned_household_photos(p_secret, p_limit)`: never lists a file a
   payment points at.
-- `export_household_data()`: adds `staff_pay` (terms) and `staff_payments`.
+- `export_household_data()`: adds `staff_pay` (terms), `staff_thr_plans`
+  and `staff_payments`.
   Same SECURITY DEFINER, empty `search_path`, `caller_admin_household()`,
   revoked from public and anon, granted to authenticated.
 
 **Tests** (`supabase/tests/141_staff_pay.sql`, rolled back):
 
-- owners read and write both tables; a staff session reads nothing and can't
+- owners read and write all three tables; a staff session reads nothing and can't
   insert, update or delete; another household's owner can't either;
   logged-out gets nothing; a row can't point at another household's person
   or at an admin's profile;
@@ -559,7 +592,11 @@ migration; AGENTS.md):
 - `leave_requests.kind`: staff insert with and without it; old-shape insert
   still works;
 - `notify_staff_pay_due`: payday push, nothing once paid, THR push at 30 days
-  and on the day, no amounts in any text, one push per owner;
+  and on the day; a plan with an earlier `pay_by` or a 14-day lead is
+  honoured; no plan falls back to holiday − 7; no amounts in any text, one
+  push per owner;
+- `my_pay` returns the next unpaid THR plan's amount and pay-by date, and
+  nothing once it's paid;
 - `prune_staff_pay`, the two sweeps keeping and then listing a pay receipt,
   the export including pay; every function's grants.
 
