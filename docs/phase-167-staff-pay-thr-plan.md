@@ -1,6 +1,11 @@
 # Phase 167 — Staff pay, THR and days off
 
-Status: **plan for the owner's decision (D1–D14).** Nothing is built.
+Status: **decided: owner delegated to the recommendations, 2026-11-10
+(D1–D14 all A).** The owner can still change any of them. Nothing is built:
+building waits until migrations 139 and 140 have merged, with **141**
+reserved, and the manager confirms with the owner on the UU PDP impact
+assessment first. The target is mid-January 2027, before the Lebaran THR
+reminder on 1 February.
 Roadmap item 14 (`docs/roadmap-2026-11-09.md`, P2): "Staff pay, THR and
 days off under the new domestic workers law (UU PPRT, April 2026). Legal
 clarity and trust between household and staff; leave already exists.
@@ -672,6 +677,9 @@ dikosongkan)** on staff forms.
 | Reported to the RT/RW | **Sudah dilapor ke RT/RW** |
 
 ## Decisions for the owner
+
+**Decided 2026-11-10: the owner delegated to the recommendations, so D1–D14
+are all A.**
 
 - **D1 — Where it lives.**
   **A (recommended):** a **Pay and days off** row in Household, a page per
