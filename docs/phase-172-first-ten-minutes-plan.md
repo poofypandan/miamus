@@ -7,9 +7,9 @@ it") into one experience. It covers recommendations **2** (starter
 templates), **3** (Kakak setup from one voice note), **4** (no approval
 wait), **6** (calm first screen, video tips) and **7** (usage counts),
 with **8** (delegated setup) designed now and built later. Source:
-`docs/app-evaluation-2026-11-10.md` (PR #79). Migration **145** is reserved
-for this phase's first PR (but see "Migration numbers" below: PR #78 also
-names 145). Mockup:
+`docs/app-evaluation-2026-11-10.md` (PR #79). Migration **145** is
+this phase's, for its first PR (PR 0, measurement): decided by the manager
+on 10 November. Phase 171's PR A takes **146**. Mockup:
 `docs/mockups/phase-172-first-ten-minutes.html` (open in a browser, phone
 width; owner screens English left and Bahasa Indonesia right, staff screens
 Bahasa Indonesia only). Roadmap: item 21 points here, new rows 31–34 (PR #78 uses 26–30).
@@ -791,13 +791,12 @@ Nothing below is created in this PR.
 
 ### Migration numbers
 
-- **145** is reserved for this phase by the manager, for **PR 0
-  (measurement)**. **PR #78 (Phase 171) also names 145** for its PR A. The
-  manager settles which phase keeps 145 (manager question below); whichever
-  doesn't takes the next free number at build time. 141 (staff push), 142
-  (staff pay), 143 (closet) and 144 (kitchen) stay reserved.
-- PR A1, PR A2 and PR B each take the **next free number** when built,
-  reserved by the manager then.
+- **145 is Phase 172's**, for **PR 0 (measurement)** (manager, 10 November:
+  172 builds first). **Phase 171's PR A (PR #78) takes 146.** 141 (staff
+  push), 142 (staff pay), 143 (closet) and 144 (kitchen) stay reserved.
+- PR A1, PR A2 and PR B each take their **own number when built**, reserved
+  by the manager then. A1 builds before 171 PR A but needs a number other
+  than 146, which stays held for 171.
 
 ### PR 0 (migration 145): measurement
 
@@ -811,7 +810,7 @@ Nothing below is created in this PR.
   function reads nothing for a non-platform-admin; it returns no names or
   ids; grants (`anon` executes none).
 
-### PR A1 (next free): no approval wait
+### PR A1 (its own number when built; not 146, which is 171's): no approval wait
 
 - `signup_config` (one row: `auto_approve boolean not null default true`,
   `daily_auto_cap int not null default 25 check (>= 0)`), RLS on, no client
@@ -878,16 +877,26 @@ each PR that changes the text.
 
 | PR | What | Migration | Size |
 | --- | --- | --- | --- |
-| **0** | **Measurement first**, so the before numbers exist: `household_setup` (empty until A2), `platform_north_star()`, `/dashboard/north-star` (platform admins), `kakak_requests.job`, the privacy line, the evening review reads it | **145** (see above) | Small |
-| **A1** | **No approval wait + calm first screen**: `open` access, automatic approval with cap and switch, the fallback email wording and **Email them** button, the new push; What's new rules (14 days, never the backlog, one a week), checklist first, Add to Home Screen after setup, one-line instructions, `<VideoTip>` and the first videos (Playwright recordings in `public/tips/`), the `/tips/<id>` page | next free | Small–medium |
+| **0** | **Measurement first**, so the before numbers exist: `household_setup` (empty until A2), `platform_north_star()`, `/dashboard/north-star` (platform admins), `kakak_requests.job`, the privacy line, the evening review reads it | **145** | Small |
+| **A1** | **No approval wait + calm first screen**: `open` access, automatic approval with cap and switch, the fallback email wording and **Email them** button, the new push; What's new rules (14 days, never the backlog, one a week), checklist first, Add to Home Screen after setup, one-line instructions, `<VideoTip>` and the first videos (Playwright recordings in `public/tips/`), the `/tips/<id>` page | own number (not 146) | Small–medium |
 | **A2** | **Templates + staff in one go**: `setup-templates.ts` and `buildSetupDraft()`, `/setup` (review, staff, pets), `apply_household_setup`, the house-code claim and prefilled link, the one WhatsApp message, **Starter list** on Chores for existing households, `household_setup` written, 171's home-type screen switched on, the What's new entry for existing households | next free | Medium–large |
 | **B** | **Kakak setup**: per-job routing, the job profile, `propose_home_setup`, `/api/kakak/setup`, `kakak_begin_setup`, the free allowance and caps, the voice sheet and the **Add all** card, practice-mode script, the eval cases for setup (10 voice notes, scored on rooms, chores and names), privacy line | next free | Medium |
 | **later** | **Delegated setup** (section 7): `setup_proposals`, the staff screen, the owner's review in Waiting for you; concierge on the paid plan | next free | Medium |
 
-A1 can ship before or alongside 171 PR A. A2 needs 164 (built) and is best
-after 171 PR A (the home-type screen). B needs A2 (it fills the same
-review) and Kakak's go-live (recommendation 1); it doesn't need the eval,
-since setup uses Opus.
+**Build order (decided by the manager, 10 November):**
+
+1. **172 PR 0**: measurement, migration **145**.
+2. **172 PR A1**: no approval wait and the calm first screen (its own number
+   when built).
+3. **171 PR A** (PR #78): feature switches and the sign-up screens, migration
+   **146**.
+4. **172 PR A2**: templates and staff in one go. It needs 164 (built) and 171
+   PR A (the home-type screen), so it comes after step 3.
+5. **172 PR B**: Kakak setup (its own number when built). It needs A2 (it
+   fills the same review) and Kakak's go-live (recommendation 1); it doesn't
+   need the eval, since setup uses Opus.
+
+Delegated setup comes later.
 
 Each PR: `tsc`, `next build`, unit tests (`buildSetupDraft` counts and
 titles per shape, dedupe against an existing household, the What's new
