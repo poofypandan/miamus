@@ -53,8 +53,10 @@ create or replace function public.queue_push(
   p_url text default '/', p_tag text default null, p_user_id uuid default null, p_exclude_user_id uuid default null
 ) returns boolean language plpgsql as $$ begin return true; end $$;
 
--- The report reads every household: start from none but ours.
+-- The report reads every household: start from none but ours, and with no
+-- day recorded yet, so every day is read live until the checks record some.
 delete from public.households;
+delete from public.north_star_recorded_days;
 
 create temp table d as select (now() at time zone 'Asia/Jakarta')::date as today;
 create function pg_temp.today() returns date language sql as $$ select today from pg_temp.d $$;
@@ -289,6 +291,41 @@ select pg_temp.ok((select (public.north_star_report(8) #>> '{summary,same_day}')
   'checking out of the vet is: f2 now finished on day one too');
 
 
+-- ---- Ended days, frozen (Codex, PR #82) ------------------------------------------------------
+create temp table s3_before as
+  select (j #>> '{summary,s3_due}')::int as due, (j #>> '{summary,s3_closed}')::int as closed,
+         j -> 'weeks' as weeks
+    from (select public.north_star_report(8) as j) x;
+select pg_temp.ok(public.record_north_star_days() = 14, 'the nightly job records the last 14 ended days');
+select pg_temp.ok(public.record_north_star_days() = 0, '... and never records a day twice');
+select pg_temp.ok((select due = 5 and closed = 3 from public.north_star_days
+                    where household_id = :f1::uuid and day = pg_temp.today() - 1),
+  'yesterday is kept as it ended: 5 due, 3 closed');
+select pg_temp.ok(not exists (select 1 from public.north_star_recorded_days where day >= pg_temp.today()),
+  'today is never recorded');
+-- Mochi is archived today: her slots leave Today from now on...
+update public.task_entities set metadata = metadata || '{"archived": "true"}'::jsonb
+ where id = '00000000-0000-0000-0000-0000000142e1';
+select pg_temp.ok((select due = 3 from public.north_star_day(pg_temp.today() - 1) where household_id = :f1::uuid),
+  'read live, yesterday would lose her two slots');
+select pg_temp.ok((select (j #>> '{summary,s3_due}')::int = b.due and (j #>> '{summary,s3_closed}')::int = b.closed
+                          and j -> 'weeks' = b.weeks
+                     from (select public.north_star_report(8) as j) x, s3_before b),
+  '... but the report keeps past days as recorded');
+update public.task_entities set metadata = metadata - 'archived' where id = '00000000-0000-0000-0000-0000000142e1';
+select pg_temp.ok(pg_temp.err_as(:pa, 'select public.record_north_star_days()') like '%permission denied%',
+  'no client runs the recorder, not even a platform admin');
+select pg_temp.ok(pg_temp.err_as(:a1, 'select * from public.north_star_days') like '%permission denied%'
+                  and not has_table_privilege('authenticated', 'public.north_star_recorded_days', 'select'),
+  'no client reads the recorded days');
+select pg_temp.ok((select jsonb_array_length(j -> 'task_day_counts') > 0
+                          and j -> 'task_day_counts' @> jsonb_build_array(jsonb_build_object('day', pg_temp.today() - 1, 'due', 5, 'closed', 3))
+                     from (select pg_temp.json_as(:a1, 'select public.export_household_data()') as j) x),
+  'the household''s export carries its day counts');
+select pg_temp.ok(not exists (select 1 from pg_extension where extname = 'pg_cron')
+                  or exists (select 1 from cron.job where jobname = 'record-north-star-days' and schedule = '0 20 * * *'),
+  'the job runs at 03.00 Jakarta');
+
 -- ---- Who may read it --------------------------------------------------------------------
 select pg_temp.ok((select (pg_temp.json_as(:pa, 'select public.platform_north_star(8)') #>> '{summary,households}')::int = 2),
   'a platform admin reads the report');
@@ -334,6 +371,7 @@ select pg_temp.ok(not has_function_privilege('anon', 'public.record_household_se
                   and not has_function_privilege('anon', 'public.platform_north_star(integer)', 'execute')
                   and not has_function_privilege('anon', 'public.north_star_report(integer)', 'execute')
                   and not has_function_privilege('anon', 'public.north_star_day(date)', 'execute')
+                  and not has_function_privilege('anon', 'public.record_north_star_days(date, date)', 'execute')
                   and not has_function_privilege('anon', 'public.export_household_data()', 'execute'),
   'anon executes none of them');
 select pg_temp.ok(has_function_privilege('authenticated', 'public.record_household_setup(uuid, jsonb)', 'execute')

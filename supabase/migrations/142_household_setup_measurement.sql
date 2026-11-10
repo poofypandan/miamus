@@ -29,6 +29,12 @@
 --        routine slots due that day and how many ended done or "couldn't".
 --        The same rules as 139's evening summary (chore_days_open,
 --        routine_slots_open), so S3 reads what Today showed.
+--   north_star_days / north_star_recorded_days   each ended day's due and
+--        closed counts per household, frozen by a nightly job at 03.00
+--        Jakarta (record_north_star_days). The report reads a recorded day
+--        as it was, so admitting or archiving a pet later can't change past
+--        S3 (its routine slots leave Today from then on; Codex, PR #82).
+--        Numbers only; kept 400 days, and deleted with the household.
 --   north_star_report(weeks)   internal: S1–S5 per sign-up week (Monday,
 --        Jakarta) and a summary. Counts, medians and shares only: no names,
 --        emails or household ids. For the evening and Sunday reviews, which
@@ -318,6 +324,86 @@ $$;
 revoke all on function public.north_star_day(date) from public, anon, authenticated;
 grant execute on function public.north_star_day(date) to service_role;
 
+-- --- 3b. Ended days, frozen ------------------------------------------------------------
+-- north_star_day reads pets and schedules as they are now: a pet admitted to
+-- the clinic or archived today would drop its routine slots from every past
+-- day (Codex, PR #82). Neither change keeps a history to read "as of" a day,
+-- so each ended day is recorded once, the night after, and read from here.
+-- A day not recorded yet (before the first run, or a missed night) is read
+-- live as before.
+create table if not exists public.north_star_days (
+  day date not null,
+  household_id uuid not null references public.households (id) on delete cascade,
+  due integer not null check (due >= 0),
+  closed integer not null check (closed >= 0),
+  recorded_at timestamptz not null default now(),
+  primary key (day, household_id)
+);
+create index if not exists north_star_days_household_idx on public.north_star_days (household_id);
+
+-- Which days are recorded at all, so a day with nothing due anywhere isn't
+-- read live again.
+create table if not exists public.north_star_recorded_days (
+  day date primary key,
+  recorded_at timestamptz not null default now()
+);
+
+alter table public.north_star_days enable row level security;
+alter table public.north_star_recorded_days enable row level security;
+revoke all on public.north_star_days from public, anon, authenticated;
+revoke all on public.north_star_recorded_days from public, anon, authenticated;
+grant select, insert, update, delete on public.north_star_days to service_role;
+grant select, insert, update, delete on public.north_star_recorded_days to service_role;
+
+-- Records every ended day from p_from to p_through not recorded yet (default:
+-- the last 14 days, so a missed night catches up), and forgets days older
+-- than 400. Never today or later. A recorded day is never recomputed. Returns
+-- how many days it recorded.
+create or replace function public.record_north_star_days(p_from date default null, p_through date default null)
+returns integer
+language plpgsql
+set search_path = ''
+as $$
+declare
+  today date := (now() at time zone 'Asia/Jakarta')::date;
+  last_day date := least(coalesce(p_through, today - 1), today - 1);
+  first_day date := coalesce(p_from, last_day - 13);
+  d date;
+  n integer := 0;
+begin
+  for d in select g::date from generate_series(first_day, last_day, interval '1 day') as g loop
+    if not exists (select 1 from public.north_star_recorded_days r where r.day = d) then
+      insert into public.north_star_days (day, household_id, due, closed)
+      select d, x.household_id, x.due, x.closed
+        from public.north_star_day(d) x
+       where x.household_id is not null
+      on conflict (day, household_id) do nothing;
+      insert into public.north_star_recorded_days (day) values (d) on conflict (day) do nothing;
+      n := n + 1;
+    end if;
+  end loop;
+  delete from public.north_star_days where day < today - 400;
+  delete from public.north_star_recorded_days where day < today - 400;
+  return n;
+end;
+$$;
+revoke all on function public.record_north_star_days(date, date) from public, anon, authenticated;
+grant execute on function public.record_north_star_days(date, date) to service_role;
+
+-- 20:00 UTC is 03.00 in Jakarta: yesterday, once offline phones have mostly
+-- caught up. Skipped with a warning where pg_cron isn't installed.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule('record-north-star-days')
+      where exists (select 1 from cron.job where jobname = 'record-north-star-days');
+    perform cron.schedule('record-north-star-days', '0 20 * * *', 'select public.record_north_star_days();');
+  else
+    raise warning 'pg_cron is not installed: north-star days will be read live';
+  end if;
+end;
+$$;
+
 -- --- 4. The north star, per sign-up week ----------------------------------------------
 -- p_weeks (1–26, default 8) weeks back from this one, Monday to Sunday in
 -- Jakarta, newest first. Per week, for the households made that week:
@@ -453,10 +539,18 @@ begin
     select g::date as d
       from generate_series(least(first_week, today - 7), today - 1, interval '1 day') as g
   ),
+  -- A recorded day as it was recorded (3b); otherwise read live.
   day_totals as (
-    select days.d, coalesce(sum(n.due), 0)::int as due, coalesce(sum(n.closed), 0)::int as closed
+    select days.d, coalesce(sum(x.due), 0)::int as due, coalesce(sum(x.closed), 0)::int as closed
       from days
-      left join lateral public.north_star_day(days.d) n on true
+      left join public.north_star_recorded_days rec on rec.day = days.d
+      left join lateral (
+        select s.due, s.closed from public.north_star_days s
+         where rec.day is not null and s.day = days.d
+        union all
+        select n.due, n.closed from public.north_star_day(days.d) n
+         where rec.day is null
+      ) x on true
      group by days.d
   ),
   weeks as (
@@ -756,6 +850,11 @@ begin
       select to_jsonb(su) - 'household_id'
       from public.household_setup su where su.household_id = hh
     ),
+    -- Each ended day's due and closed task counts (migrations/142).
+    'task_day_counts', coalesce((
+      select jsonb_agg(jsonb_build_object('day', nd.day, 'due', nd.due, 'closed', nd.closed) order by nd.day)
+      from public.north_star_days nd where nd.household_id = hh
+    ), '[]'::jsonb),
     'my_language', (select p.locale from public.user_preferences p where p.user_id = uid),
     'my_notifications', (
       select jsonb_build_object('evening_summary_hour', pr.evening_summary_hour,
@@ -767,3 +866,10 @@ end;
 $$;
 revoke all on function public.export_household_data() from public, anon;
 grant execute on function public.export_household_data() to authenticated;
+
+-- --- 6. The first record: the last 26 weeks, as they read today ---------------------
+do $$
+begin
+  perform public.record_north_star_days((now() at time zone 'Asia/Jakarta')::date - 183, null);
+end;
+$$;

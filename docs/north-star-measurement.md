@@ -66,9 +66,14 @@ there, and the prompt says to skip it.
   sends; a retried call counts twice. Fine for counts.
 - **Only finished setups** (`finished_at` set by Add all, the last step or
   Skip) count in the setup medians; a setup left half-way doesn't.
-- **Cost.** The report reads every household's chores for each day of the
-  window (8 weeks: 56 days) on every call. Fine at today's size; past a few
-  hundred households, keep ended days in a small table filled nightly.
+- **Ended days are frozen.** A nightly job at 03.00 Jakarta
+  (`record_north_star_days`) records each ended day's due and closed counts
+  per household in `north_star_days`; the report reads a recorded day as it
+  was, so admitting or archiving a pet later can't change past S3 (Codex,
+  PR #82). A day not recorded yet is read live. A finish that reaches the
+  server after 03.00 the next day (a phone offline that long) isn't in that
+  day's count. Recorded days are kept 400 days. The migration records the
+  last 26 weeks once, as they read when it runs.
 - **Two copies of the chore-day rules.** `north_star_day` repeats 139's
   `chore_days_open` rules (written days, leave that pauses). A change to one
   must be made to the other; a later migration could fold both into one
