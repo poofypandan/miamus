@@ -17,7 +17,7 @@ import {
   summaryOpenCount,
 } from "@/lib/couldnt-do";
 import { jobPhotos } from "@/lib/offline-queue";
-import { pendingException } from "@/lib/task-exceptions-store";
+import { isMissingTable, pendingException, photoStillUsed } from "@/lib/task-exceptions-store";
 import type {
   HouseholdTask,
   LeaveRequest,
@@ -181,6 +181,20 @@ describe("filing and withdrawing", () => {
     const row = pendingException({ id: "q1", job: { kind: "couldnt", input }, householdId: "h", timestamp: Date.parse("2026-11-10T02:10:00Z") }, "h");
     expect(row).toMatchObject({ id: "x-new", household_id: "h", chore_id: "t1", note: "Kamar dikunci", created_at: "2026-11-10T02:10:00.000Z" });
     expect(pendingException({ id: "q2", job: { kind: "couldnt", input }, householdId: "other", timestamp: 0 }, "h")).toBeNull();
+  });
+});
+
+describe("the cache", () => {
+  it("treats only a missing table as 'nothing yet'; a dropped connection keeps what was shown", () => {
+    expect(isMissingTable({ code: "PGRST205" })).toBe(true);
+    expect(isMissingTable({ code: "42P01" })).toBe(true);
+    expect(isMissingTable(new TypeError("Failed to fetch"))).toBe(false);
+    expect(isMissingTable(null)).toBe(false);
+  });
+
+  it("keeps a photo nothing else points at only until the last record goes", () => {
+    // Empty cache and queue: nothing else uses it.
+    expect(photoStillUsed("http://p/shared.webp", "x1")).toBe(false);
   });
 });
 

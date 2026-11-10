@@ -72,15 +72,18 @@ export async function loadTaskExceptions(force = false): Promise<void> {
   if (inflight) {
     if (!force) return inflight;
     await inflight.catch(() => undefined);
-  } else if (!force && snapshot.household === household && snapshot.loaded) {
+  } else if (!force && snapshot.household === household && snapshot.loaded && !snapshot.failed) {
     return;
   }
   if (inflight) return inflight;
   inflight = (async () => {
     try {
       await waitForSession();
-      // A database before migrations/139 has no table: nothing to show, not a failure.
+      // A database before migrations/139 has no table: nothing to show, not
+      // a failure. Anything else (a weak signal) goes to the catch below,
+      // which keeps what was already on screen (Codex, PR #71).
       const rows = await dataProvider.listTaskExceptions(exceptionSince()).catch((err) => {
+        if (!isMissingTable(err)) throw err;
         console.warn("task_exceptions unavailable — run migrations/139", err);
         return [] as TaskException[];
       });
@@ -95,6 +98,24 @@ export async function loadTaskExceptions(force = false): Promise<void> {
     }
   })();
   return inflight;
+}
+
+/** PostgREST's "no such table" (before migrations/139), not a dropped connection. */
+export function isMissingTable(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  return code === "PGRST205" || code === "42P01";
+}
+
+/**
+ * True when another saved or waiting record still points at this photo: one
+ * report about several pets files one record per pet, sharing the photo
+ * (Codex, PR #71). The file goes only with the last of them.
+ */
+export function photoStillUsed(url: string, withdrawnId: string): boolean {
+  if (snapshot.rows.some((r) => r.id !== withdrawnId && r.photo_url === url)) return true;
+  return outboxItems().some(
+    (item) => item.job.kind === "couldnt" && item.job.input.id !== withdrawnId && item.job.input.photo_url === url
+  );
 }
 
 /** Reload, if any screen shows them. Called by HouseholdProvider's refresh. */
@@ -161,12 +182,12 @@ export async function withdrawTaskException(id: string): Promise<boolean> {
     // An earlier try may have landed with its reply lost: remove that copy too.
     await dataProvider.deleteTaskException(id).catch(() => false);
     const photo = queued.job.kind === "couldnt" ? queued.job.input.photo_url : null;
-    if (photo) {
+    forget(id);
+    if (photo && !photoStillUsed(photo, id)) {
       // Off the phone, and out of storage if it had already gone up.
       void discardPhoto(photo);
       void dataProvider.deletePhoto(photo).catch(() => undefined);
     }
-    forget(id);
     return true;
   }
   const photo = snapshot.rows.find((r) => r.id === id)?.photo_url ?? null;
@@ -174,7 +195,9 @@ export async function withdrawTaskException(id: string): Promise<boolean> {
   if (removed) {
     forget(id);
     // Nothing points at it any more, and nothing else would ever delete it.
-    if (photo) void dataProvider.deletePhoto(photo).catch((err) => console.error("Withdrawn photo not removed", err));
+    if (photo && !photoStillUsed(photo, id)) {
+      void dataProvider.deletePhoto(photo).catch((err) => console.error("Withdrawn photo not removed", err));
+    }
   }
   return removed;
 }
