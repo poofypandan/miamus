@@ -132,6 +132,17 @@ people are **staf** and **admin**.
 | Kids · Elders | **Anak · Lansia** | Shown greyed as "Soon" until the Care tab. "Lansia" is the everyday word; "orang tua" also means parents. |
 | Soon (a greyed choice) | **Segera** | |
 | Any pets at home? / We have pets · No pets | **Ada hewan di rumah?** / **Ada hewan · Tidak ada** | The one-time card on Today. |
+| Bills (chore category) / Bill | **Tagihan** | Phase 164. |
+| Upkeep / Bills and upkeep | **Perawatan rumah** / **Tagihan dan perawatan** | Phase 164: the checklist on Tugas → Hari ini. The Maintenance category stays **Perbaikan**. |
+| Runs out by use (gas, gallons) | **Habis karena dipakai** | Phase 164: the checklist's third group; these go to Stok di rumah. |
+| Remind me / Reminder (push title) | **Ingatkan saya** / **Pengingat** | Phase 164. Choices: **Mati · Pada harinya · 1 hari sebelumnya · 3 hari sebelumnya · 1 minggu sebelumnya**. |
+| Coming up (Today line) | **Segera** | "Segera: PBB · Kam, 26 Nov". |
+| Due today / Next due | **Jatuh tempo hari ini** / **Jatuh tempo berikutnya** | Phase 164. In the push: "Hari ini: …. Besok: …. 3 hari lagi: …." |
+| Every 2 weeks · Every 3 months · Every 6 months · Every year | **Setiap 2 minggu · Setiap 3 bulan · Setiap 6 bulan · Setiap tahun** | Phase 164 repeats. |
+| Postpaid / Token (electricity) | **Pascabayar** / **Token** | |
+| Clean the water tank | **Kuras toren** | Saved in Indonesian when staff or anyone may do it. |
+| Pest control | **Basmi hama** | Phase 164 checklist; staff read it, so not the English loanword. |
+| Mark paid / Paid · Amount · Receipt (of a bill) | **Tandai sudah dibayar** / **Sudah dibayar** · **Jumlah** · **Bukti bayar** | Phase 164 PR B (payments). Not "Lunas", which reads as a loan paid off; a repair's paper receipt stays **Nota**. |
 | My tasks (admin's own chores on Today) | **Tugas saya** | Phase 163. |
 | Mark done / Mark not done | **Tandai selesai** / **Tandai belum selesai** | Phase 163: an admin finishing their own chore. |
 | Undo (toast action) | **Batalkan** | Already the word in every Undo toast; never "Urungkan". |

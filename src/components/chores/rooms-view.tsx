@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, ChevronRight, DoorOpen, Plus, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { dataProvider } from "@/lib/data";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FilterPill } from "@/components/shared/filter-pill";
 import {
@@ -21,15 +20,15 @@ import { WhatsNewCard } from "@/components/shared/whats-new";
 import { RoomRepairs } from "@/components/repairs/room-repairs";
 import { useRepairs } from "@/hooks/use-repairs";
 import { canSortIntoFloors } from "@/lib/organise-rooms";
-import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useChoresView } from "@/hooks/use-chores-view";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
+import { useSetUpChores } from "@/hooks/use-set-up-chores";
 import { CHORE_JOBS, choreJobLabel, type ChoreJob } from "@/lib/chore-jobs";
-import { recurrenceOf } from "@/lib/chore-recurrence";
+import { intervalOf, recurrenceOf } from "@/lib/chore-recurrence";
 import {
   allRoomRows,
   placesWithJob,
@@ -54,46 +53,6 @@ import type { HouseholdTask } from "@/types/database";
  * Today; adds and edits go through the same ChoreEditorDialog. No database
  * change: floors come from the room names (lib/rooms-view.ts).
  */
-/**
- * Every set-up chore, whatever week the Agenda is on (Codex, PR #30): the
- * household's chore cache only holds the week on screen, so a chore set up
- * for later would look missing and invite a duplicate. Read on its own, and
- * read again whenever the household's chores change, so an edit made here
- * shows; until that read lands, the cache's fresher copy of any row wins.
- */
-function useSetUpChores(today: string): { rows: HouseholdTask[] | null; failed: boolean } {
-  const { householdTasks } = useHousehold();
-  const [state, setState] = useState<{ rows: HouseholdTask[] | null; failed: boolean }>({
-    rows: null,
-    failed: false,
-  });
-
-  useEffect(() => {
-    let live = true;
-    dataProvider.listSetUpChores(today).then(
-      (rows) => {
-        if (live) setState({ rows, failed: false });
-      },
-      (err) => {
-        console.error("Rooms: set-up chores", err);
-        if (live) setState((previous) => ({ rows: previous.rows, failed: true }));
-      }
-    );
-    return () => {
-      live = false;
-    };
-  }, [today, householdTasks]);
-
-  const rows = useMemo(() => {
-    if (!state.rows) return state.failed ? householdTasks : null;
-    const byId = new Map(state.rows.map((row) => [row.id, row]));
-    for (const row of householdTasks) byId.set(row.id, row);
-    return [...byId.values()];
-  }, [state, householdTasks]);
-
-  return { rows, failed: state.failed && !state.rows };
-}
-
 export function RoomsView() {
   const { locations, failed: roomsFailed, reload: reloadRooms } = useHouseholdLocations();
   const { allProfiles } = useStaffProfiles();
@@ -590,6 +549,8 @@ function repeatPhrase(task: HouseholdTask, locale: OwnerLocale): string {
   const day = new Intl.DateTimeFormat(locale === "id" ? "id-ID" : "en-GB", { weekday: "long" }).format(
     new Date(`${task.due_date}T00:00:00`)
   );
+  const every = intervalOf(task);
+  if (every > 1) return locale === "id" ? `Setiap ${every} minggu, hari ${day}` : `Every ${every} weeks on ${day}`;
   return locale === "id" ? `Setiap ${day}` : `Every ${day}`;
 }
 

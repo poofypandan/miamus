@@ -23,6 +23,26 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Shown on Chores → Today and on Today; Show me opens the checklist (Phase 164, D9).
+    id: "bills-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: bills and upkeep", id: "Baru: tagihan dan perawatan" },
+    steps: {
+      en: [
+        "Never miss a bill: Chores → Bills and upkeep, tick what your home pays or services, then Add.",
+        "We remind you at 7:00 AM on the day, or a few days before, and Today shows what's coming up.",
+        "Any chore can now repeat every 3 months or every year, and remind you. Bills given to you show in My tasks.",
+      ],
+      id: [
+        "Jangan sampai telat bayar: Tugas → Tagihan dan perawatan, centang yang rutin dibayar atau dirawat, lalu Tambah.",
+        "Kami ingatkan pukul 07.00 saat jatuh tempo, atau beberapa hari sebelumnya, dan Hari ini menampilkan yang segera tiba.",
+        "Setiap tugas kini bisa berulang tiap 3 bulan atau tiap tahun, dan mengingatkan Anda. Tagihan untuk Anda muncul di Tugas saya.",
+      ],
+    },
+    tryLabel: { en: "Show me", id: "Lihat" },
+  },
+  {
     // Listed in What's new only: the checklist on Today is its own tutorial (audit B1).
     id: "first-run-2026-11",
     date: "2026-11-10",

@@ -24,9 +24,8 @@ import {
   categoryLabel,
 } from "@/lib/household-tasks";
 import {
-  RECURRENCE_LABELS_EN,
-  RECURRENCE_LABELS_ID,
   recurrenceOf,
+  taskRepeatLabel,
   type ChoreOccurrence,
 } from "@/lib/chore-recurrence";
 import { dayKeyLabel } from "@/lib/date-label";
@@ -199,7 +198,7 @@ export function ChoreCard({
         {recurrence !== "none" && (
           <Badge variant="outline" className="h-5 gap-1 px-1.5 text-[10px] font-normal">
             <Repeat className="size-3" />
-            {(locale === "en" ? RECURRENCE_LABELS_EN : RECURRENCE_LABELS_ID)[recurrence]}
+            {taskRepeatLabel(occurrence.template, locale)}
           </Badge>
         )}
 

@@ -137,6 +137,8 @@ export interface Stub {
   foods: Record<string, unknown>[];
   /** household_tasks rows created on this phone (Kakak's saves). */
   tasks: Record<string, unknown>[];
+  /** inventory_items rows added on this phone (Phase 164: gas and gallons). */
+  supplies: Record<string, unknown>[];
   /** Kakak's switch, as the admin last set it. */
   kakak: { allowed: boolean; enabled: boolean };
   /** households.has_pets as the admin last set it (Phase 162). */
@@ -181,6 +183,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [] };
   const foods: Record<string, unknown>[] = [];
   const tasks: Record<string, unknown>[] = [];
+  const supplies: Record<string, unknown>[] = [];
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
   const repairCosts: Record<string, unknown>[] = [];
   const uploads: string[] = [];
@@ -332,6 +335,23 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         }
       }
       if (table === "task_logs") return answerLogs(route, logs);
+      // Supplies added here (Phase 164), and read back once there are any.
+      if (table === "inventory_items" && request.method() === "POST") {
+        const body = request.postDataJSON();
+        const row: Record<string, unknown> = {
+          id: `00000000-0000-4000-8000-${String(600 + supplies.length).padStart(12, "0")}`,
+          household_id: HOUSEHOLD_ID,
+          stock_status: "ok",
+          created_at: new Date().toISOString(),
+          ...(Array.isArray(body) ? body[0] : body),
+        };
+        supplies.push(row);
+        const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: object ? row : [row] });
+      }
+      if (table === "inventory_items" && request.method() === "GET" && supplies.length > 0) {
+        return route.fulfill({ json: supplies });
+      }
       if (table === "household_tasks" && request.method() !== "GET") return answerTasks(route, tasks, options.chores, who);
       if (table === "household_tasks" && options.chores) {
         // The simple PostgREST filters the app's chore reads use (eq, neq,
@@ -377,6 +397,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     seen,
     foods,
     tasks,
+    supplies,
     repairs,
     repairCosts,
     uploads,

@@ -8,7 +8,7 @@ import type { OrganiseRoomsMoved,
   StaffProfile,
 } from "@/types/database";
 import type { CreateHouseholdTaskInput, DataProvider, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
-import { rolloverFloorFor } from "@/lib/chore-recurrence";
+import { longRepeatFloorFor, longestGapDays, LONGEST_REPEAT_GAP_DAYS, rolloverFloorFor } from "@/lib/chore-recurrence";
 
 function client() {
   if (!supabase) throw new Error("Supabase client is not configured");
@@ -556,7 +556,12 @@ export const supabaseProvider: DataProvider = {
     // reads below have to reach.
     const showsToday = from <= today && today <= to;
     const rolloverFloor = rolloverFloorFor(today);
-    const repeatsFrom = showsToday && rolloverFloor < from ? rolloverFloor : from;
+    // A repeat every 3 months or every year (migrations/137) can owe a day
+    // from further back still, so with today on screen the repeats read
+    // reaches back a year. Templates are few; their written days are read
+    // that far back only for the long repeats, below.
+    const longFloor = longRepeatFloorFor(today);
+    const repeatsFrom = showsToday && longFloor < from ? longFloor : from;
 
     const [onDay, templates, carriedOver, recentOccurrences] = await Promise.all([
       // 1. Rows that belong to these days outright: one-offs, a template's own
@@ -575,7 +580,7 @@ export const supabaseProvider: DataProvider = {
       //    actually lands on a given day is a question for occursOn, not for
       //    Postgres.
       //    With today on screen this also takes repeats that ended within the
-      //    last month: one may still owe its final, missed day.
+      //    last year: one may still owe its final, missed day.
       base()
         .neq("recurrence", "none")
         .lte("due_date", to)
@@ -611,6 +616,22 @@ export const supabaseProvider: DataProvider = {
       if (result.error) throw result.error;
     }
 
+    // 5. The long repeats' written days from before the last month
+    //    (migrations/137): without them a yearly bill paid in August would be
+    //    shown as missed again from September. Only when there are any.
+    const longIds = showsToday
+      ? (templates.data ?? []).filter((t) => longestGapDays(t) > LONGEST_REPEAT_GAP_DAYS).map((t) => t.id)
+      : [];
+    let olderOccurrences: HouseholdTask[] = [];
+    if (longIds.length > 0) {
+      const older = await base()
+        .in("parent_task_id", longIds)
+        .gte("due_date", longFloor)
+        .lt("due_date", rolloverFloor);
+      if (older.error) throw older.error;
+      olderOccurrences = older.data ?? [];
+    }
+
     // Deduplicated by id: a template that started today is returned by the
     // first two queries, and a pending one-off from last week by the first and
     // third. expandChores decides what each row means for the date on screen.
@@ -620,10 +641,22 @@ export const supabaseProvider: DataProvider = {
       ...(templates.data ?? []),
       ...(carriedOver.data ?? []),
       ...(recentOccurrences.data ?? []),
+      ...olderOccurrences,
     ]) {
       byId.set(row.id, row);
     }
     return [...byId.values()];
+  },
+  async listWrittenOccurrences(from, to) {
+    const { data, error } = await client()
+      .from("household_tasks")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .not("parent_task_id", "is", null)
+      .gte("due_date", from)
+      .lte("due_date", to);
+    if (error) throw error;
+    return data ?? [];
   },
   async listSetUpChores(today) {
     // Two narrow reads, like listHouseholdTasks: the repeats that haven't
@@ -1238,5 +1271,8 @@ function taskRow(household_id: string, input: CreateHouseholdTaskInput) {
     ...(input.spot !== undefined ? { spot: input.spot } : {}),
     // Likewise repair_id (migrations/130).
     ...(input.repair_id ? { repair_id: input.repair_id } : {}),
+    // And the repeat interval and reminder (migrations/137).
+    ...(input.recurrence_interval !== undefined ? { recurrence_interval: input.recurrence_interval ?? 1 } : {}),
+    ...(input.remind_days_before !== undefined ? { remind_days_before: input.remind_days_before } : {}),
   };
 }

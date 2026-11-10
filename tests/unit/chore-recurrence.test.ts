@@ -4,6 +4,7 @@ import {
   nextOccurrence,
   occursOn,
   previousOccurrence,
+  repeatLabel,
   startAfterSkippingFirst,
 } from "@/lib/chore-recurrence";
 import type { ChoreRecurrence, HouseholdTask } from "@/types/database";
@@ -134,5 +135,78 @@ describe("a day's own row wins over the repeat's first day", () => {
   it("a first day with no row of its own still shows and carries over", () => {
     expect(show([template], "2027-03-31")).toEqual(["T:2027-03-31:pending"]);
     expect(show([template], "2027-04-02")).toEqual(["T:2027-03-31:pending"]);
+  });
+});
+
+// Phase 164 (migrations/137): every N weeks or months. Mirrors the SQL
+// twin's checks in supabase/tests/137_chore_repeats_and_reminders.sql.
+describe("every N weeks or months", () => {
+  const every = (due: string, recurrence: ChoreRecurrence, n: number) =>
+    ({ ...task(due, recurrence), recurrence_interval: n }) as HouseholdTask;
+
+  it.each([
+    ["2027-04-30", true],
+    ["2027-07-31", true],
+    ["2027-10-31", true],
+    ["2027-02-28", false],
+    ["2027-03-31", false],
+  ])("every 3 months from 31 Jan: %s is %s", (day, expected) => {
+    expect(occursOn(every("2027-01-31", "monthly", 3), day)).toBe(expected);
+  });
+
+  it("every year from 29 Feb lands on 28 Feb, then 29 Feb in a leap year", () => {
+    const pbb = every("2028-02-29", "monthly", 12);
+    expect(nextOccurrence(pbb, "2028-02-29")).toBe("2029-02-28");
+    expect(occursOn(pbb, "2032-02-29")).toBe(true);
+    expect(occursOn(pbb, "2028-03-29")).toBe(false);
+  });
+
+  it("every 2 weeks across a year end", () => {
+    const gardener = every("2026-12-30", "weekly", 2);
+    expect(nextOccurrence(gardener, "2026-12-30")).toBe("2027-01-13");
+    expect(occursOn(gardener, "2027-01-06")).toBe(false);
+  });
+
+  it("daily ignores the interval; an out-of-range interval reads as 1", () => {
+    expect(occursOn(every("2026-12-30", "daily", 3), "2026-12-31")).toBe(true);
+    expect(occursOn(every("2026-11-14", "monthly", 40), "2026-12-14")).toBe(true);
+  });
+
+  it("previousOccurrence reaches back a year for a yearly chore", () => {
+    expect(previousOccurrence(every("2025-08-31", "monthly", 12), "2026-08-30")).toBe("2025-08-31");
+    expect(previousOccurrence(every("2026-08-31", "monthly", 12), "2026-10-15")).toBe("2026-08-31");
+  });
+
+  it("a missed 3-monthly day is carried over until the next one, then not", () => {
+    const ac = { ...every("2026-09-21", "monthly", 3), id: "AC", status: "pending", parent_task_id: null } as HouseholdTask;
+    const show = (rows: HouseholdTask[], today: string) =>
+      expandChores({ rows, date: today, today }).map((o) => `${o.task.id}:${o.date}`);
+    expect(show([ac], "2026-11-10")).toEqual(["AC:2026-09-21"]);
+    expect(show([ac], "2026-12-21")).toEqual(["AC:2026-12-21"]);
+    // Done on its day: not shown as missed two months later.
+    const done = { ...task("2026-12-21", "none"), id: "D", status: "completed", parent_task_id: "AC" } as HouseholdTask;
+    expect(show([ac, done], "2027-02-15")).toEqual([]);
+  });
+
+  it("skipping a 3-monthly chore's first day keeps the 31st", () => {
+    const { start, clampedDays } = startAfterSkippingFirst(every("2027-01-31", "monthly", 3));
+    expect(clampedDays).toEqual(["2027-04-30"]);
+    expect(start).toBe("2027-07-31");
+  });
+});
+
+describe("repeatLabel", () => {
+  it.each([
+    ["monthly", 1, "en", "Monthly"],
+    ["monthly", 3, "en", "Every 3 months"],
+    ["monthly", 6, "id", "Setiap 6 bulan"],
+    ["monthly", 12, "en", "Every year"],
+    ["monthly", 12, "id", "Setiap tahun"],
+    ["weekly", 2, "en", "Every 2 weeks"],
+    ["weekly", 2, "id", "Setiap 2 minggu"],
+    ["daily", 3, "en", "Daily"],
+    ["none", 1, "id", "Sekali saja"],
+  ] as const)("%s ×%i in %s is %s", (recurrence, n, locale, label) => {
+    expect(repeatLabel(recurrence, n, locale)).toBe(label);
   });
 });
