@@ -181,6 +181,10 @@ export function BillsUpkeepSheet({
   async function add() {
     if (picked.length === 0 || missingDate) return;
     setSaving(true);
+    // What has been saved so far: if a later write fails, a retry sends only
+    // the rest, never the same chore twice (Codex, PR #60).
+    const saved = new Set<QuickKey>();
+    const keyOf = (item: QuickItem) => (item.key === "electricity-token" ? "electricity" : item.key);
     try {
       const inputs: CreateHouseholdTaskInput[] = [];
       for (const item of picked) {
@@ -201,6 +205,7 @@ export function BillsUpkeepSheet({
         });
       }
       if (inputs.length > 0) await createHouseholdTasks(inputs);
+      for (const item of picked) if (item.kind === "chore") saved.add(keyOf(item));
       for (const item of picked) {
         if (item.kind !== "supply") continue;
         // As the supply form adds one (Phase 154): no counts, neutral values.
@@ -214,12 +219,21 @@ export function BillsUpkeepSheet({
           min_threshold: 0,
           audit_frequency_days: 30,
         });
+        saved.add(keyOf(item));
       }
       toast.success(t(`Added ${picked.length}`, `${picked.length} ditambahkan`));
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      toast.error(t("Couldn't add them. Try again.", "Gagal menambahkan. Coba lagi."));
+      setSelected((previous) => new Set([...previous].filter((key) => !saved.has(key))));
+      toast.error(
+        saved.size > 0
+          ? t(
+              `Added ${saved.size}, but not the rest. Try again.`,
+              `${saved.size} ditambahkan, sisanya belum. Coba lagi.`
+            )
+          : t("Couldn't add them. Try again.", "Gagal menambahkan. Coba lagi.")
+      );
     } finally {
       setSaving(false);
     }

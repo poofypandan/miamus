@@ -188,7 +188,9 @@ export function ChoreEditorDialog({
       setNotes(task.notes ?? "");
       setRecurrence(recurrenceOf(task));
       setRepeatEvery(intervalOf(task));
-      setRemind(task.remind_days_before ?? null);
+      // A repeat's written day reminds through its repeat: that's what the
+      // push and Today read (Codex, PR #60).
+      setRemind((task.parent_task_id ? reminderSource?.remind_days_before : task.remind_days_before) ?? null);
       setUntil(task.recurrence_until ?? "");
       setSupervision(!!task.requires_supervision);
     } else {
@@ -213,6 +215,11 @@ export function ChoreEditorDialog({
   }, [open, task, defaultDate]);
 
   const untilBeforeStart = !!until && until < date;
+  // Editing one written day of a repeat: its reminder is the repeat's.
+  const dayOfRepeat = !!task?.parent_task_id;
+  const reminderSource = dayOfRepeat
+    ? (householdTasks.find((row) => row.id === task?.parent_task_id) ?? null)
+    : task;
   // A visit for a repair: one place, linked on save (adding only).
   const repairId = !editing ? (preset?.repairId ?? null) : null;
   const placeIds = useMemo(() => places.map((place) => place.id), [places]);
@@ -246,7 +253,9 @@ export function ChoreEditorDialog({
         // Sent when set, or to clear one this chore has; otherwise left out,
         // so a database before migrations/137 still takes the chore.
         ...(every !== 1 || intervalOf(task ?? {}) !== 1 ? { recurrence_interval: every } : {}),
-        ...(remind !== null || (task?.remind_days_before ?? null) !== null ? { remind_days_before: remind } : {}),
+        ...(!dayOfRepeat && (remind !== null || (task?.remind_days_before ?? null) !== null)
+          ? { remind_days_before: remind }
+          : {}),
         requires_supervision: supervision,
         location_id: places[0]?.id ?? null,
         // The spot goes only with a room. Sent when there is one, or to clear
@@ -260,6 +269,10 @@ export function ChoreEditorDialog({
       };
       if (task) {
         await updateHouseholdTask(task.id, fields);
+        // A written day's reminder lives on its repeat.
+        if (dayOfRepeat && reminderSource && (reminderSource.remind_days_before ?? null) !== remind) {
+          await updateHouseholdTask(reminderSource.id, { remind_days_before: remind });
+        }
         toast.success(t(`Saved "${fields.title}"`, `"${fields.title}" disimpan`));
       } else if (places.length > 1) {
         // One chore per room, saved together or not at all, so staff tick
@@ -607,7 +620,15 @@ export function ChoreEditorDialog({
 
           {/* Remind me (Phase 164, D3): any chore, off by default. */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t("Remind me", "Ingatkan saya")}</Label>
+            <Label className="text-xs">
+              {t("Remind me", "Ingatkan saya")}
+              {dayOfRepeat && (
+                <span className="font-normal text-muted-foreground">
+                  {" "}
+                  {t("(for the whole repeat)", "(untuk seluruh pengulangan)")}
+                </span>
+              )}
+            </Label>
             <div className="flex flex-wrap gap-2">
               {REMIND_CHOICES.map((days) => (
                 <Button

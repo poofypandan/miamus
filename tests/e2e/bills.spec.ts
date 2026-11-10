@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { HOUSEHOLD_ID } from "../fixtures/household";
-import { OWNER_PROFILE_ID, installStub } from "./stub-backend";
+import { OWNER_PROFILE_ID, STAFF_ID, installStub } from "./stub-backend";
 
 // Bills and upkeep (Phase 164, PR A; migrations/137): the checklist on
 // Chores → Today makes owner bills with a reminder, upkeep for anyone in
@@ -195,4 +195,46 @@ test("Coming up leaves out a day ahead that's already done (Codex, PR #60)", asy
   await page.goto("/dashboard");
   await expect(page.getByRole("button", { name: /^Coming up: Water \(PDAM\) · / })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: /^Coming up:.*Internet/ })).toHaveCount(0);
+});
+
+test("a failed supply after saved chores: the retry sends only the rest (Codex, PR #60)", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, chores: [] });
+  await page.goto("/dashboard?module=chores");
+  await page.getByRole("button", { name: "Bills and upkeep" }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("checkbox", { name: "Water (PDAM)" }).click();
+  await sheet.getByRole("checkbox", { name: "Gas (LPG)" }).click();
+
+  stub.trouble.inventory_items = { drop: 1 };
+  await sheet.getByRole("button", { name: "Add 2" }).click();
+  await expect(page.getByText("Added 1, but not the rest. Try again.")).toBeVisible();
+  await sheet.getByRole("button", { name: "Add 1" }).click();
+  await expect(page.getByText("Added 1", { exact: true })).toBeVisible();
+
+  expect(stub.tasks.filter((t) => t.title === "Water (PDAM)")).toHaveLength(1);
+  expect(stub.supplies.filter((s) => s.name === "Gas LPG")).toHaveLength(1);
+});
+
+test("editing one written day of a repeat changes the repeat's reminder (Codex, PR #60)", async ({ context, page }) => {
+  const ac = chore({
+    title: "Servis AC",
+    category: "maintenance",
+    recurrence: "weekly",
+    due_date: ymd(dateIn(-7)),
+    remind_days_before: 3,
+    assigned_to: STAFF_ID,
+  });
+  const claimed = chore({ title: "Servis AC", category: "maintenance", parent_task_id: ac.id, assigned_to: STAFF_ID });
+  const stub = await installStub(context, { owner: { locale: "en" }, chores: [ac, claimed] });
+  await page.goto("/dashboard?module=chores");
+  await page.getByText("Servis AC").first().click();
+  const form = page.getByRole("dialog");
+  await expect(form.getByText("(for the whole repeat)")).toBeVisible({ timeout: 20_000 });
+  await expect(form.getByRole("button", { name: "3 days before" })).toHaveAttribute("aria-pressed", "true");
+  await form.getByRole("button", { name: "Off" }).click();
+  await form.getByRole("button", { name: "Save Changes" }).click();
+  await expect(page.getByText('Saved "Servis AC"')).toBeVisible();
+  expect(ac.remind_days_before).toBeNull();
+  expect(claimed.remind_days_before).toBeNull();
+  expect(stub.seen.realBackend).toEqual([]);
 });
