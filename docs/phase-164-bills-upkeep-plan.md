@@ -255,7 +255,7 @@ code beyond creating the supply item; the row shows "Added to Stok di rumah".
 | Vehicle tax (STNK) | Bills | Every year · date you pick | Me | 1 week before | Vehicle tax (STNK) / Pajak kendaraan (STNK) |
 | AC service | Maintenance | Every 3 months | Anyone | 1 day before | AC service / Servis AC |
 | Toren cleaning | Maintenance | Every 6 months | Anyone | Off | Clean the water tank (toren) / Kuras toren |
-| Pest control | Maintenance | Every 3 months | Me | 1 day before | Pest control / Pest control |
+| Pest control | Maintenance | Every 3 months | Me | 1 day before | Pest control / Basmi hama |
 | Gas (LPG) | Supply | — (Stok di rumah) | — | — | Gas LPG |
 | Drinking water (gallon) | Supply | — (Stok di rumah) | — | — | Air galon |
 
