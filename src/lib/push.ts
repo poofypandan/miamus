@@ -21,6 +21,17 @@ export const SERVICE_WORKER_URL = "/sw.js";
  */
 export const PUSH_WANTED_KEY = "miamus.push.wanted";
 
+/**
+ * Fired whenever this device's subscription is made, renewed or removed, so
+ * every status display re-checks (use-push-status) — including after a silent
+ * resyncPush, which no button started (Codex, #50).
+ */
+export const PUSH_CHANGED_EVENT = "miamus:push-changed";
+
+function announceChange(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(PUSH_CHANGED_EVENT));
+}
+
 function wantedBy(): string | null {
   try {
     return localStorage.getItem(PUSH_WANTED_KEY);
@@ -166,10 +177,14 @@ export async function enablePush(
   publicKey: string
 ): Promise<"enabled" | "denied"> {
   const permission = await Notification.requestPermission();
-  if (permission !== "granted") return "denied";
+  if (permission !== "granted") {
+    announceChange();
+    return "denied";
+  }
   const registration = await activeRegistration();
   await save(await subscribe(registration, keyBytes(publicKey)), householdId);
   setWantedBy(await signedInUserId());
+  announceChange();
   return "enabled";
 }
 
@@ -188,6 +203,7 @@ export async function disablePush(): Promise<void> {
     if (error) throw error;
   }
   await subscription.unsubscribe();
+  announceChange();
 }
 
 /**
@@ -217,6 +233,7 @@ export async function resyncPush(householdId: string): Promise<void> {
   const publicKey = await fetchPushPublicKey();
   if (!publicKey) return;
   await save(await subscribe(registration, keyBytes(publicKey)), householdId);
+  announceChange();
 }
 
 /** Queues a test to every device of this account's; resolves to how many. */

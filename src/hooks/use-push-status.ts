@@ -8,18 +8,16 @@ import {
   enablePush,
   fetchPushPublicKey,
   pushAvailability,
+  PUSH_CHANGED_EVENT,
 } from "@/lib/push";
 import type { PushStatus } from "@/lib/push-prompt";
-
-/** Fired when this device's push state changes, so every card agrees. */
-const CHANGED_EVENT = "miamus:push-changed";
 
 /**
  * This device's push status, and turning it on or off (2026-11-10).
  *
  * Shared by the Household → Notifications card, its row in the Household
- * list and the dashboard prompt. Each holds its own copy; a change made
- * through any of them is broadcast so the others re-check.
+ * list and the dashboard prompt. Each holds its own copy; lib/push announces
+ * every change (from any of them, or a silent re-sync) so all re-check.
  */
 export function usePushStatus() {
   const { activeHouseholdId, tenantReady } = useHousehold();
@@ -58,10 +56,10 @@ export function usePushStatus() {
       void check();
     }
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener(CHANGED_EVENT, onChanged);
+    window.addEventListener(PUSH_CHANGED_EVENT, onChanged);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener(CHANGED_EVENT, onChanged);
+      window.removeEventListener(PUSH_CHANGED_EVENT, onChanged);
     };
   }, [check]);
 
@@ -74,14 +72,12 @@ export function usePushStatus() {
     } else {
       setStatus("on");
     }
-    window.dispatchEvent(new Event(CHANGED_EVENT));
     return result;
   }, [activeHouseholdId, publicKey, tenantReady]);
 
   const disable = useCallback(async () => {
     await disablePush();
     setStatus("off");
-    window.dispatchEvent(new Event(CHANGED_EVENT));
   }, []);
 
   /** The server lost this device (Send test found none): show it as off. */
