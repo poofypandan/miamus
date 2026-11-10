@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bills and upkeep mockups</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --okbg:rgba(16,185,129,.06); --okline:rgba(16,185,129,.3); --red:#b91c1c; --amber:#92400e; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1100px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0; color:var(--muted); max-width:680px; }
+  section.screen { max-width:1100px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:640px; }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:740px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone.tall { height:1150px; }
+  .phone.mid { height:1000px; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:40px; }
+  .brand { font-weight:600; font-size:17px; display:flex; gap:6px; align-items:center; }
+  .mark { width:24px; height:24px; display:block; }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:6px 12px; font-size:13px; color:var(--muted); font-weight:500; white-space:nowrap; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .seg.sm span { padding:4px 10px; font-size:12px; }
+  .seg.xs { display:inline-flex; padding:2px; }
+  .seg.xs span { padding:3px 9px; font-size:11.5px; flex:none; }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .dates { display:flex; gap:4px; }
+  .dates span { flex:1; text-align:center; padding:5px 0; border-radius:12px; font-size:11px; color:var(--muted); }
+  .dates span b { display:block; font-size:15px; color:var(--ink); }
+  .dates span.on { background:var(--primary); color:#fff; }
+  .dates span.on b { color:#fff; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .ic.xs { width:12px; height:12px; }
+  .ic.lg { width:22px; height:22px; }
+  .quiet { display:flex; align-items:center; gap:8px; min-height:36px; padding:0 4px; font-size:13.5px; color:var(--ink2); }
+  .quiet span { flex:1; }
+  .quiet.amber { color:var(--amber); font-weight:500; }
+  .quiet.amber .ic { color:#b45309; }
+  .mycard { background:#fff; border:1px solid var(--line); border-radius:12px; padding:6px; display:flex; flex-direction:column; gap:2px; }
+  .mycard header { display:flex; align-items:baseline; justify-content:space-between; padding:4px 6px; }
+  .mycard h3 { margin:0; font-size:14px; font-weight:600; }
+  .mycard header span { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .mrow { display:flex; align-items:center; gap:8px; border-radius:8px; padding:6px; min-height:52px; border:1px solid transparent; }
+  .mrow .circ { width:32px; height:32px; display:flex; align-items:center; justify-content:center; flex:none; }
+  .mrow .circ .ic { color:#9ca3af; }
+  .mrow.done { background:var(--okbg); border-color:var(--okline); }
+  .mrow.done .circ .ic { color:var(--ok); }
+  .mrow.done .t > b { color:var(--muted); }
+  .mrow.flash { box-shadow:0 0 0 3px rgba(16,185,129,.18); }
+  .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .t > b { font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .t > span { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; }
+  .t > span.paid { color:var(--ok); font-weight:500; }
+  .t > span.paid .ic { color:var(--ok); }
+  .dayh { margin:4px 0 0; font-size:14px; font-weight:600; }
+  .trow { display:flex; align-items:center; gap:10px; padding:8px 10px; min-height:52px; background:#fff; border:1px solid var(--line); border-radius:12px; }
+  .time { width:52px; flex:none; font-size:11.5px; color:#52525b; font-variant-numeric:tabular-nums; }
+  .badge { width:28px; height:28px; border-radius:8px; background:#fffbeb; display:flex; align-items:center; justify-content:center; flex:none; }
+  .badge .ic { color:#b45309; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:56px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:8px 16px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+  .sheet.low { top:150px; gap:12px; }
+  .sheet > * { flex:none; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto 2px; }
+  .sheet h3 { margin:0; font-size:17px; text-align:center; }
+  .sheet .lead { margin:-4px 0 0; font-size:13px; color:var(--muted); text-align:center; display:flex; justify-content:center; align-items:center; gap:4px; }
+  .grp { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:2px 2px -4px; }
+  .list { border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .li { display:flex; align-items:center; gap:10px; padding:8px 12px; border-top:1px solid var(--line); min-height:50px; }
+  .li:first-child { border-top:0; }
+  .li .lic { width:30px; height:30px; border-radius:8px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
+  .li .lic .ic { color:var(--ink2); }
+  .li .t > b { font-size:13.5px; }
+  .li .t > span { font-size:11.5px; }
+  .box { width:22px; height:22px; border-radius:6px; border:1.5px solid #9ca3af; flex:none; display:flex; align-items:center; justify-content:center; }
+  .box.on { background:var(--primary); border-color:var(--primary); }
+  .box.on .ic { color:#fff; width:14px; height:14px; }
+  .added { font-size:11.5px; color:var(--ok); display:flex; align-items:center; gap:3px; font-weight:500; white-space:nowrap; }
+  .added .ic { color:var(--ok); }
+  .li.open { background:#fafafa; }
+  .panel { background:#fafafa; border-top:1px dashed var(--line); padding:4px 12px 10px 52px; display:flex; flex-direction:column; gap:6px; }
+  .prow { display:flex; align-items:center; justify-content:space-between; font-size:12.5px; color:var(--ink2); min-height:30px; }
+  .prow b { font-weight:500; color:var(--ink); display:flex; align-items:center; gap:2px; }
+  .hint { font-size:11.5px; color:var(--muted); }
+  .btn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; border-radius:12px; font-weight:600; font-size:14px; }
+  .btn.primary { background:var(--primary); color:#fff; }
+  .btn.primary .ic { color:#fff; }
+  .btn.outline { border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:500; }
+  .link { text-align:center; font-size:13px; color:var(--ink2); font-weight:500; display:flex; align-items:center; justify-content:center; gap:4px; }
+  .foryou { align-self:center; display:flex; align-items:center; gap:4px; font-size:12px; color:var(--ink2); background:var(--track); border-radius:999px; padding:3px 10px; margin-top:-4px; }
+  .label { font-size:12.5px; font-weight:600; color:var(--ink2); margin-bottom:-4px; }
+  .label em { font-style:normal; font-weight:400; color:var(--muted); }
+  .money { display:flex; align-items:center; gap:8px; border:1px solid var(--ink); border-radius:12px; min-height:48px; padding:0 12px; font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .money i { font-style:normal; color:var(--muted); font-weight:500; font-size:15px; }
+  .money .caret { width:1.5px; height:20px; background:var(--ink); margin-left:-6px; }
+  .shot { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .shot span { display:flex; align-items:center; justify-content:center; gap:6px; border:1px dashed #d1d5db; border-radius:12px; min-height:48px; font-size:12.5px; color:var(--ink2); }
+  .lockline { display:flex; align-items:center; justify-content:center; gap:5px; font-size:12px; color:var(--muted); margin-top:-2px; }
+  .hist { display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink2); border-top:1px solid var(--line); padding-top:10px; }
+  .hist span { color:var(--muted); }
+  .toast { position:absolute; left:14px; right:14px; bottom:74px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:center; gap:8px; padding:12px; font-size:13.5px; }
+  .toast span { flex:1; }
+  .toast .ok { color:var(--ok); flex:none; display:flex; }
+  .toast b { display:flex; align-items:center; gap:4px; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-weight:600; }
+  .push { position:absolute; left:10px; right:10px; top:28px; z-index:5; background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 30px -10px rgba(17,24,39,.35); padding:10px 12px; display:flex; gap:10px; }
+  .push .mark { width:34px; height:34px; flex:none; }
+  .push .pt { flex:1; min-width:0; font-size:13px; }
+  .push .pt div { display:flex; justify-content:space-between; color:var(--muted); font-size:11.5px; }
+  .push .pt b { display:block; font-size:13.5px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { border:1px solid var(--line); border-radius:999px; padding:6px 11px; font-size:12.5px; color:var(--ink2); background:#fff; }
+  .chip.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .chip.new { border-style:dashed; border-color:#a3a3a3; }
+  .field { border:1px solid var(--line); border-radius:12px; min-height:44px; padding:11px 12px; font-size:14px; display:flex; justify-content:space-between; align-items:center; }
+  .field span { color:var(--muted); font-size:13px; display:flex; align-items:center; gap:4px; }
+  .legend { font-size:12px; color:var(--muted); margin:-4px 2px 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+  <symbol id="i-droplets" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.86a10 10 0 0 1 14 0"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-landmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/></symbol>
+  <symbol id="i-heart-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></symbol>
+  <symbol id="i-air-vent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 8h12"/><path d="M18.3 17.7a2.5 2.5 0 0 1-3.16 3.83 2.53 2.53 0 0 1-1.14-2V12"/><path d="M6.6 15.6A2 2 0 1 0 10 17v-5"/></symbol>
+  <symbol id="i-cylinder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/></symbol>
+  <symbol id="i-bug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-glass-water" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5.12 4.1A1 1 0 0 1 6.11 3h11.78a1 1 0 0 1 .99 1.1L17.19 20.21A2 2 0 0 1 15.2 22H8.8a2 2 0 0 1-2-1.79z"/><path d="M6 12a5 5 0 0 1 6 0 5 5 0 0 0 6 0"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></symbol>
+  <symbol id="i-calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></symbol>
+  <symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.05Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol>
+  <symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-cooking-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></symbol>
+  <symbol id="i-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="M3.3 7 12 12l8.7-5"/></symbol>
+  <!-- The Miamus mark (src/components/brand/brand-mark.tsx): a roofline over an M, on an ink tile. -->
+  <symbol id="mark" viewBox="0 0 512 512"><rect width="512" height="512" rx="114.5" fill="#171717"/><polyline points="112,214 256,104 400,214" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,400 152,262 256,354 360,262 360,400" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="page">
+  <h1>Phase 164 — Bills and upkeep reminders</h1>
+  <p>Phone-width mockups for <code>docs/phase-164-bills-upkeep-plan.md</code>, drawn with the chosen options (D1–D9 A). Decided 2026-11-10: the owner delegated to the recommendations. Left: English. Right: Bahasa Indonesia. The owner's own bills sit in Phase 163's "My tasks" card.</p>
+</header>
+
+<main id="screens"></main>
+
+<script>
+// Each screen is drawn twice from the same markup: once per owner language.
+const T = {
+  en: {
+    overview: "Overview", staff: "Staff",
+    tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    day: "Day", week: "Week",
+    choresPills: ["Today", "Rooms", "Repairs"],
+    week7: [["Mon", 16], ["Tue", 17], ["Wed", 18], ["Thu", 19], ["Fri", 20], ["Sat", 21], ["Sun", 22]],
+    addChore: "Add chore", billsBtn: "Bills and upkeep",
+    sheetTitle: "Bills and upkeep",
+    sheetLead: "Pick what your home pays or services regularly. You can change each one later.",
+    gBills: "Bills", gUpkeep: "Upkeep", gSupplies: "Runs out by use",
+    electricity: "Electricity (PLN)", postpaid: "Postpaid", token: "Token",
+    eSub: "Every month · 20th",
+    water: "Water (PDAM)", waterSub: "Every month · 20th",
+    internet: "Internet", internetSub: "Every month · pick your day",
+    iuran: "Iuran RT/RW", added: "Added",
+    bpjs: "BPJS Kesehatan", bpjsSub: "Every month · 10th",
+    pbb: "PBB (land and building tax)", pbbSub: "Every year · 31 Aug",
+    pDate: "Date", pDateV: "31 Aug", pWho: "Who", pWhoV: "Me", pRemind: "Remind me", pRemindV: "1 week before",
+    pbbHint: "Deadlines differ by region: check your SPPT.",
+    stnk: "Vehicle tax (STNK)", stnkSub: "Every year · pick the date",
+    ac: "AC service", acSub: "Every 3 months · Anyone",
+    toren: "Clean the water tank (toren)", torenSub: "Every 6 months · Anyone",
+    pest: "Pest control", pestSub: "Every 3 months · Me",
+    gas: "Gas (LPG)", gasSub: "Goes to Supplies at home",
+    gallon: "Drinking water (gallon)", gallonSub: "Goes to Supplies at home",
+    addN: "Add 5", otherBill: "Other bill",
+    pushApp: "Miamus", pushNow: "now", pushTitle: "Reminder",
+    pushBody: "Due today: Electricity (PLN) and Water (PDAM). Tomorrow: AC service.",
+    comingUp: "Coming up: Vehicle tax (STNK) · Thu 26 Nov",
+    myTasks: "My tasks", of: (a, b) => `${a} of ${b} done`,
+    dueToday: "Due today · last Rp 412.000", dueTodayW: "Due today · last Rp 186.000",
+    todayH: "Today", anytime: "Anytime",
+    rows: [["8:00 AM", "Mop the terrace", "Sari"], ["Anytime", "Change the sheets", "Wati"]],
+    forYou: "For you", dueLine: "Due today · every month on the 20th",
+    amount: "Amount", optional: "(optional)", lastTime: "Last time Rp 412.000",
+    receipt: "Receipt", takePhoto: "Take a photo", choose: "Screenshot",
+    ownersOnly: "Only owners see amounts and receipts.",
+    markPaid: "Mark paid", editBill: "Edit bill",
+    lastPaid: "Last paid", lastPaidV: "Rp 412.000 · 18 Oct",
+    paidLine: "Paid · Rp 418.500", toast: "Paid: Electricity (PLN)", undo: "Undo",
+    editTitle: "Edit bill", fTitle: "Title", fCategory: "Category", fBills: "Bills",
+    fRepeat: "Repeat",
+    repeats: ["Does not repeat", "Daily", "Weekly", "Every 2 weeks", "Monthly", "Every 3 months", "Every 6 months", "Every year"],
+    fFirst: "Due on", fFirstV: "Fri, 20 Nov 2026", fWho: "Who", fWhoV: "Me (Rina)",
+    remindOpts: ["Off", "On the day", "1 day before", "3 days before", "1 week before"],
+    remindHint: "07:00 push on that day, and again on the due day if it isn't done.",
+    payments: "Payments", pay1: ["18 Oct", "Rp 412.000"], pay2: ["19 Sep", "Rp 398.000"], save: "Save",
+  },
+  id: {
+    overview: "Ringkasan", staff: "Staf",
+    tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    day: "Hari", week: "Minggu",
+    choresPills: ["Hari ini", "Ruangan", "Perbaikan"],
+    week7: [["Sen", 16], ["Sel", 17], ["Rab", 18], ["Kam", 19], ["Jum", 20], ["Sab", 21], ["Min", 22]],
+    addChore: "Tambah tugas", billsBtn: "Tagihan dan perawatan",
+    sheetTitle: "Tagihan dan perawatan",
+    sheetLead: "Pilih yang rutin dibayar atau dirawat di rumah Anda. Semua bisa diubah nanti.",
+    gBills: "Tagihan", gUpkeep: "Perawatan rumah", gSupplies: "Habis karena dipakai",
+    electricity: "Listrik PLN", postpaid: "Pascabayar", token: "Token",
+    eSub: "Setiap bulan · tgl 20",
+    water: "Air PDAM", waterSub: "Setiap bulan · tgl 20",
+    internet: "Internet", internetSub: "Setiap bulan · pilih tanggalnya",
+    iuran: "Iuran RT/RW", added: "Sudah ditambahkan",
+    bpjs: "BPJS Kesehatan", bpjsSub: "Setiap bulan · tgl 10",
+    pbb: "PBB (pajak bumi dan bangunan)", pbbSub: "Setiap tahun · 31 Agu",
+    pDate: "Tanggal", pDateV: "31 Agu", pWho: "Siapa", pWhoV: "Saya", pRemind: "Ingatkan saya", pRemindV: "1 minggu sebelumnya",
+    pbbHint: "Batas bayar tiap daerah berbeda: cek SPPT Anda.",
+    stnk: "Pajak kendaraan (STNK)", stnkSub: "Setiap tahun · pilih tanggalnya",
+    ac: "Servis AC", acSub: "Setiap 3 bulan · Siapa saja",
+    toren: "Kuras toren", torenSub: "Setiap 6 bulan · Siapa saja",
+    pest: "Pest control", pestSub: "Setiap 3 bulan · Saya",
+    gas: "Gas LPG", gasSub: "Masuk ke Stok di rumah",
+    gallon: "Air galon", gallonSub: "Masuk ke Stok di rumah",
+    addN: "Tambah 5", otherBill: "Tagihan lain",
+    pushApp: "Miamus", pushNow: "sekarang", pushTitle: "Pengingat",
+    pushBody: "Hari ini: Listrik PLN dan Air PDAM. Besok: Servis AC.",
+    comingUp: "Segera: Pajak kendaraan (STNK) · Kam 26 Nov",
+    myTasks: "Tugas saya", of: (a, b) => `${a} dari ${b} selesai`,
+    dueToday: "Jatuh tempo · terakhir Rp 412.000", dueTodayW: "Jatuh tempo · terakhir Rp 186.000",
+    todayH: "Hari ini", anytime: "Kapan saja",
+    rows: [["08.00", "Pel teras", "Sari"], ["Kapan saja", "Ganti seprai", "Wati"]],
+    forYou: "Untuk Anda", dueLine: "Jatuh tempo hari ini · setiap bulan tgl 20",
+    amount: "Jumlah", optional: "(opsional)", lastTime: "Terakhir Rp 412.000",
+    receipt: "Bukti bayar", takePhoto: "Ambil foto", choose: "Screenshot",
+    ownersOnly: "Hanya pemilik yang bisa melihat jumlah dan bukti bayar.",
+    markPaid: "Tandai sudah dibayar", editBill: "Ubah tagihan",
+    lastPaid: "Terakhir dibayar", lastPaidV: "Rp 412.000 · 18 Okt",
+    paidLine: "Sudah dibayar · Rp 418.500", toast: "Sudah dibayar: Listrik PLN", undo: "Batalkan",
+    editTitle: "Ubah tagihan", fTitle: "Judul", fCategory: "Kategori", fBills: "Tagihan",
+    fRepeat: "Ulangi",
+    repeats: ["Sekali saja", "Setiap hari", "Setiap minggu", "Setiap 2 minggu", "Setiap bulan", "Setiap 3 bulan", "Setiap 6 bulan", "Setiap tahun"],
+    fFirst: "Jatuh tempo", fFirstV: "Jum, 20 Nov 2026", fWho: "Siapa", fWhoV: "Saya (Rina)",
+    remindOpts: ["Mati", "Pada harinya", "1 hari sebelumnya", "3 hari sebelumnya", "1 minggu sebelumnya"],
+    remindHint: "Notifikasi pukul 07.00 pada hari itu, dan lagi saat jatuh tempo kalau belum selesai.",
+    payments: "Riwayat bayar", pay1: ["18 Okt", "Rp 412.000"], pay2: ["19 Sep", "Rp 398.000"], save: "Simpan",
+  },
+};
+
+const ic = (id, cls = "") => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const mark = (cls = "mark") => `<svg class="${cls}" viewBox="0 0 512 512" aria-hidden="true"><use href="#mark"/></svg>`;
+
+function frame(lang, t, inner, { tab = 0, size = "", overlay = "" } = {}) {
+  const icons = ["calendar-days", "paw-print", "clipboard-list", "cooking-pot", "users"];
+  return `<div class="phone ${size}"><div class="tag">${lang.toUpperCase()}</div><div class="status"></div>
+    <div class="appbar"><div class="row"><span class="brand">${mark()}Miamus</span>
+    <span class="seg sm"><span class="on">${t.overview}</span><span>${t.staff}</span></span></div></div>
+    <div class="body">${inner}</div>
+    <div class="tabbar">${t.tabs.map((n, i) => `<span class="${i === tab ? "on" : ""}">${ic(icons[i])}${n}</span>`).join("")}</div>
+    ${overlay}</div>`;
+}
+
+const dates = (t) => `<div class="dates">${t.week7.map(([d, n]) => `<span class="${n === 20 ? "on" : ""}">${d}<b>${n}</b></span>`).join("")}</div>`;
+
+function li(icon, name, sub, right, cls = "") {
+  return `<div class="li ${cls}"><span class="lic">${ic(icon)}</span><span class="t"><b>${name}</b><span>${sub}</span></span>${right}</div>`;
+}
+const on = `<span class="box on">${ic("check")}</span>`;
+const off = `<span class="box"></span>`;
+
+// 1. The quick-add sheet, over Chores -> Today.
+function s1(lang) {
+  const t = T[lang];
+  const behind = `<div class="seg"><span class="on">${t.choresPills[0]}</span><span>${t.choresPills[1]}</span><span>${t.choresPills[2]}</span></div>`;
+  const sheet = `<div class="dim"></div><div class="sheet"><div class="grab"></div><h3>${t.sheetTitle}</h3><p class="lead">${t.sheetLead}</p>
+    <div class="grp">${t.gBills}</div>
+    <div class="list">
+      ${li("zap", t.electricity, t.eSub, on)}
+      <div class="panel" style="padding-top:2px"><div class="seg xs"><span class="on">${t.postpaid}</span><span>${t.token}</span></div></div>
+      ${li("droplets", t.water, t.waterSub, on)}
+      ${li("wifi", t.internet, t.internetSub, off)}
+      ${li("house", t.iuran, `${t.added}`, `<span class="added">${ic("check", "xs")}</span>`)}
+      ${li("heart-pulse", t.bpjs, t.bpjsSub, off)}
+      ${li("landmark", t.pbb, t.pbbSub, on, "open")}
+      <div class="panel">
+        <div class="prow">${t.pDate}<b>${t.pDateV} ${ic("chevron-down", "xs")}</b></div>
+        <div class="prow">${t.pWho}<b>${t.pWhoV} ${ic("chevron-down", "xs")}</b></div>
+        <div class="prow">${t.pRemind}<b>${t.pRemindV} ${ic("chevron-down", "xs")}</b></div>
+        <div class="hint">${t.pbbHint}</div>
+      </div>
+      ${li("car", t.stnk, t.stnkSub, off)}
+    </div>
+    <div class="grp">${t.gUpkeep}</div>
+    <div class="list">
+      ${li("air-vent", t.ac, t.acSub, on)}
+      ${li("cylinder", t.toren, t.torenSub, off)}
+      ${li("bug", t.pest, t.pestSub, off)}
+    </div>
+    <div class="grp">${t.gSupplies}</div>
+    <div class="list">
+      ${li("flame", t.gas, t.gasSub, on)}
+      ${li("glass-water", t.gallon, t.gallonSub, off)}
+    </div>
+    <div class="btn primary">${ic("plus")}${t.addN}</div>
+    <div class="link">${ic("receipt")}${t.otherBill}</div></div>`;
+  return frame(lang, t, behind, { tab: 2, size: "tall", overlay: sheet });
+}
+
+// 2. Today: the morning push, the Coming up line, the bills in My tasks.
+function s2(lang) {
+  const t = T[lang];
+  const push = `<div class="push">${mark("mark")}<div class="pt"><div><span>${t.pushApp}</span><span>${t.pushNow}</span></div><b>${t.pushTitle}</b>${t.pushBody}</div></div>`;
+  const inner = `<div class="seg"><span class="on">${t.day}</span><span>${t.week}</span></div>${dates(t)}
+    <div class="quiet amber">${ic("bell")}<span>${t.comingUp}</span>${ic("chevron-right")}</div>
+    <section class="mycard"><header><h3>${t.myTasks}</h3><span>${t.of(0, 2)}</span></header>
+      <div class="mrow"><span class="circ">${ic("circle", "lg")}</span><span class="t"><b>${t.electricity}</b><span>${ic("receipt", "xs")} ${t.dueToday}</span></span></div>
+      <div class="mrow"><span class="circ">${ic("circle", "lg")}</span><span class="t"><b>${t.water}</b><span>${ic("receipt", "xs")} ${t.dueTodayW}</span></span></div>
+    </section>
+    <h4 class="dayh">${t.todayH}</h4>
+    ${t.rows.map(([time, title, who]) => `<div class="trow"><span class="badge">${ic("sparkles")}</span><span class="time">${time}</span><span class="t"><b>${title}</b><span>${ic("user", "xs")} ${who}</span></span></div>`).join("")}`;
+  return frame(lang, t, inner, { overlay: push });
+}
+
+// 3. Mark paid: the owner's sheet for a bill.
+function s3(lang) {
+  const t = T[lang];
+  const behind = `<div class="seg"><span class="on">${t.day}</span><span>${t.week}</span></div>${dates(t)}`;
+  const sheet = `<div class="dim"></div><div class="sheet low"><div class="grab"></div><h3>${t.electricity}</h3>
+    <p class="lead">${ic("receipt", "xs")} ${t.dueLine}</p>
+    <span class="foryou">${ic("user", "xs")} ${t.forYou}</span>
+    <div class="label">${t.amount} <em>${t.optional}</em></div>
+    <div class="money"><i>Rp</i>418.500<span class="caret"></span></div>
+    <div class="legend">${t.lastTime}</div>
+    <div class="label">${t.receipt} <em>${t.optional}</em></div>
+    <div class="shot"><span>${ic("camera")}${t.takePhoto}</span><span>${ic("image")}${t.choose}</span></div>
+    <div class="lockline">${ic("lock", "xs")} ${t.ownersOnly}</div>
+    <div class="btn primary">${ic("check")}${t.markPaid}</div>
+    <div class="link">${ic("pencil", "xs")}${t.editBill}</div>
+    <div class="hist">${t.lastPaid}<span>${t.lastPaidV}</span></div></div>`;
+  return frame(lang, t, behind, { overlay: sheet });
+}
+
+// 4. After: the row is green with the amount; Undo for 5 seconds.
+function s4(lang) {
+  const t = T[lang];
+  const inner = `<div class="seg"><span class="on">${t.day}</span><span>${t.week}</span></div>${dates(t)}
+    <div class="quiet amber">${ic("bell")}<span>${t.comingUp}</span>${ic("chevron-right")}</div>
+    <section class="mycard"><header><h3>${t.myTasks}</h3><span>${t.of(1, 2)}</span></header>
+      <div class="mrow"><span class="circ">${ic("circle", "lg")}</span><span class="t"><b>${t.water}</b><span>${ic("receipt", "xs")} ${t.dueTodayW}</span></span></div>
+      <div class="mrow done flash"><span class="circ">${ic("circle-check", "lg")}</span><span class="t"><b>${t.electricity}</b><span class="paid">${ic("receipt", "xs")} ${t.paidLine}</span></span></div>
+    </section>
+    <h4 class="dayh">${t.todayH}</h4>
+    ${t.rows.map(([time, title, who]) => `<div class="trow"><span class="badge">${ic("sparkles")}</span><span class="time">${time}</span><span class="t"><b>${title}</b><span>${ic("user", "xs")} ${who}</span></span></div>`).join("")}`;
+  const toast = `<div class="toast"><span class="ok">${ic("circle-check")}</span><span>${t.toast}</span><b>${ic("undo", "xs")}${t.undo}</b></div>`;
+  return frame(lang, t, inner, { overlay: toast });
+}
+
+// 5. The chore form for a bill: the new repeats, Remind me, the payments.
+function s5(lang) {
+  const t = T[lang];
+  const sheet = `<div class="dim"></div><div class="sheet"><div class="grab"></div><h3>${t.editTitle}</h3>
+    <div class="label">${t.fTitle}</div><div class="field">${t.electricity}</div>
+    <div class="label">${t.fCategory}</div><div class="field">${t.fBills}<span>${ic("receipt")}${ic("chevron-down", "xs")}</span></div>
+    <div class="label">${t.fRepeat}</div>
+    <div class="chips">${t.repeats.map((r, i) => `<span class="chip${i === 4 ? " on" : ""}${i === 3 || i >= 5 ? " new" : ""}">${r}</span>`).join("")}</div>
+    <div class="label">${t.fFirst}</div><div class="field">${t.fFirstV}<span>${ic("calendar-days")}</span></div>
+    <div class="label">${t.fWho}</div><div class="field">${t.fWhoV}<span>${ic("chevron-down", "xs")}</span></div>
+    <div class="label">${t.pRemind}</div>
+    <div class="chips">${t.remindOpts.map((r, i) => `<span class="chip${i === 3 ? " on" : ""}">${r}</span>`).join("")}</div>
+    <div class="legend">${t.remindHint}</div>
+    <div class="label">${t.payments} <em>${ic("lock", "xs")}</em></div>
+    <div class="list">
+      ${li("receipt", t.pay1[1], t.pay1[0], ic("image"))}
+      ${li("receipt", t.pay2[1], t.pay2[0], "")}
+    </div>
+    <div class="btn primary">${t.save}</div></div>`;
+  return frame(lang, t, "", { tab: 2, size: "mid", overlay: sheet });
+}
+
+const SCREENS = [
+  ["1. Add bills and upkeep", "Chores → Today → Bills and upkeep (D2 A), or the What's new card. Tick what applies; tap a row to change its day, who and reminder (PBB open here). Already added shows a green check. Gas and gallons go to Stok di rumah (D6 A). The button counts what's ticked.", s1],
+  ["2. A bill due today", "The 07:00 push lists everything due for this owner (D3 A, D4 A). On Today, the Coming up line shows a bill inside its reminder window; today's bills sit in My tasks (Phase 163) with the receipt icon and the last amount paid.", s2],
+  ["3. Mark paid", "Tap the bill's row (the circle alone marks it paid with no amount). Amount and receipt are optional and owners only (D5 A); the last amount is the hint, not a prefilled value.", s3],
+  ["4. Paid", "The row turns green with the amount; Undo for 5 seconds removes the payment and its receipt too.", s4],
+  ["5. Edit bill", "The usual chore form. New: the Bills category, four repeats (dashed here: every 2 weeks, 3 months, 6 months, every year; D1 A), Remind me (D3 A) and, for a bill, the last payments (owners only).", s5],
+];
+
+document.getElementById("screens").innerHTML = SCREENS.map(([h, p, fn]) =>
+  `<section class="screen"><h2>${h}</h2><p>${p}</p><div class="pair">${fn("en")}${fn("id")}</div></section>`
+).join("");
+</script>
+</body>
+</html>
