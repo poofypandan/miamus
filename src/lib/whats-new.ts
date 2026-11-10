@@ -23,6 +23,23 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "feedback-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: send us feedback", id: "Baru: kirim masukan" },
+    steps: {
+      en: [
+        "Household → Send feedback (also in About Miamus): an idea, or something that went wrong. A few words are enough.",
+        "Staff can send too, from Lapor → Kirim masukan. It goes to the Miamus team; staff can't read anyone else's.",
+      ],
+      id: [
+        "Rumah → Kirim masukan (juga di Tentang Miamus): ide, atau sesuatu yang tidak beres. Beberapa kata sudah cukup.",
+        "Staf juga bisa mengirim, lewat Lapor → Kirim masukan. Masukan sampai ke tim Miamus; staf tidak bisa membaca masukan orang lain.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     id: "notifications-2026-11",
     date: "2026-11-10",
     audience: "owner",
@@ -190,6 +207,12 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    id: "staff-feedback-2026-11",
+    date: "2026-11-10",
+    title: "Baru: Kirim masukan",
+    lines: ["Ada ide atau masalah di aplikasi? Ketuk Lapor → Kirim masukan. Dibaca tim Miamus dan pemilik rumah."],
+  },
   {
     id: "staff-weak-signal-2026-11",
     date: "2026-11-09",
