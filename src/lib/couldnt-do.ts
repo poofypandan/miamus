@@ -3,7 +3,8 @@ import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { ScheduleCategory } from "@/lib/schedule-categories";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { formatTime } from "@/lib/time";
-import type { LeaveRequest, RoutineProposal, TaskException, TaskExceptionReason } from "@/types/database";
+import type { LeaveRequest, RoutineProposal, TaskException, TaskExceptionReason, TaskLog } from "@/types/database";
+import { vetVisitState } from "@/lib/staff-agenda";
 
 /**
  * "Tidak bisa dikerjakan" and the evening summary (Phase 165,
@@ -211,8 +212,10 @@ export function buildEveningSummary(params: {
   proposals: readonly RoutineProposal[];
   admittedIds: ReadonlySet<string>;
   untilMinutes: number | null;
+  /** The day's logs: a vet visit checked in but not closed is still open. */
+  logs?: readonly TaskLog[];
 }): EveningSummary {
-  const { date, chores, groups, exceptions, leaves, proposals, admittedIds, untilMinutes } = params;
+  const { date, chores, groups, exceptions, leaves, proposals, admittedIds, untilMinutes, logs = [] } = params;
   const due = (time: string | null) => untilMinutes === null || time === null || minutesOf(time) <= untilMinutes;
   const couldnt: SummaryRow[] = [];
   const notDone: SummaryRow[] = [];
@@ -241,9 +244,17 @@ export function buildEveningSummary(params: {
   }
 
   for (const group of groups) {
+    // A vet visit logs "complete" at check-in, but stays open until it is
+    // closed (vetVisitState; Codex, PR #71).
+    const visitOpen =
+      group.category === "vet" &&
+      (() => {
+        const visit = vetVisitState(group.items, logs as TaskLog[]);
+        return visit.checkedIn && !visit.closed;
+      })();
     for (const item of group.items) {
       if (admittedIds.has(item.entityId) && group.category !== "vet") continue;
-      if (item.status === "completed") {
+      if (item.status === "completed" && !visitOpen) {
         done += 1;
         continue;
       }

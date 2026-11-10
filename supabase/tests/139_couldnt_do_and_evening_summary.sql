@@ -397,6 +397,24 @@ select pg_temp.ok((select array_agg(slot_time order by slot_time) from public.ro
                     where schedule_id = '00000000-0000-0000-0000-000000013904') = array['16:00'::time],
   '... and a 07:50 log settles 08:00');
 delete from public.master_schedules where id = '00000000-0000-0000-0000-000000013904';
+-- A vet visit checked in but not closed is still open; checked out, it's done.
+insert into public.master_schedules (id, entity_id, title, module, frequency_type, fixed_times, is_active, expires_at, created_at)
+values ('00000000-0000-0000-0000-000000013905', '00000000-0000-0000-0000-0000000139e1', 'Vet: Vaksin', 'pet', 'fixed_time',
+        array['10:00'::time], true, pg_temp.today(), now() - interval '1 day');
+insert into public.task_logs (schedule_id, entity_id, module, completed_at, sub_type)
+values ('00000000-0000-0000-0000-000000013905', '00000000-0000-0000-0000-0000000139e1', 'pet',
+        (pg_temp.today() + time '10:05') at time zone 'Asia/Jakarta', 'check_in');
+select pg_temp.ok(exists (select 1 from public.routine_slots_open(pg_temp.today())
+                           where schedule_id = '00000000-0000-0000-0000-000000013905'),
+  'a vet visit checked in but not closed is still open');
+insert into public.task_logs (schedule_id, entity_id, module, completed_at, sub_type)
+values ('00000000-0000-0000-0000-000000013905', '00000000-0000-0000-0000-0000000139e1', 'pet',
+        (pg_temp.today() + time '11:30') at time zone 'Asia/Jakarta', 'check_out');
+select pg_temp.ok(not exists (select 1 from public.routine_slots_open(pg_temp.today())
+                               where schedule_id = '00000000-0000-0000-0000-000000013905'),
+  '... and done once checked out');
+delete from public.master_schedules where id = '00000000-0000-0000-0000-000000013905';
+
 -- An archived pet's routines leave the summary, as they leave Today.
 update public.task_entities set metadata = '{"archived": true}' where id = '00000000-0000-0000-0000-0000000139e1';
 update public.master_schedules set is_active = true where id = '00000000-0000-0000-0000-000000013901';

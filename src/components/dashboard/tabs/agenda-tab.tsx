@@ -298,9 +298,10 @@ export function AgendaTab() {
         proposals: [],
         admittedIds: new Set(pets.filter(isAdmitted).map((p) => p.id)),
         untilMinutes: now.getHours() * 60 + now.getMinutes(),
+        logs,
       })
     );
-  }, [showsToday, clock, summaryHour, todayKey, allChores, groups, exceptions, leaveRequests, pets]);
+  }, [showsToday, clock, summaryHour, todayKey, allChores, groups, exceptions, leaveRequests, pets, logs]);
 
   function switchToFood(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;

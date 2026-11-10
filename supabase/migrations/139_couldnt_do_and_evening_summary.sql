@@ -725,6 +725,10 @@ begin
        where l.schedule_id = s.id
          and l.entity_id = s.entity_id
          and (l.completed_at at time zone 'Asia/Jakarta')::date = p_day
+         -- A vet visit is open until it is closed: checked out or admitted,
+         -- not just checked in (vetVisitState, src/lib/staff-agenda.ts;
+         -- Codex, PR #71).
+         and (s.title not like 'Vet: %' or l.sub_type in ('check_out', 'admitted'))
        order by 1
     );
 

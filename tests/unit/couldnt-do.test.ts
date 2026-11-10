@@ -261,6 +261,24 @@ describe("the evening summary", () => {
     expect(at(null).notDone.map((r) => r.title)).toContain("Sweep");
   });
 
+  it("keeps a vet visit checked in but not closed as not done", () => {
+    const vet = schedule({ title: "Vet: Vaksin", fixed_times: ["10:00:00"], expires_at: TODAY });
+    const checkIn = { id: "v1", schedule_id: vet.id, entity_id: MOCHI.id, module: "pet", photo_url: null, notes: null,
+      completed_at: "2026-11-10T03:05:00Z", staff_id: null, sub_type: "check_in" } as TaskLog;
+    const vetGroups = buildAgenda({ date: TODAY, entities: [MOCHI], schedules: [vet], logs: [checkIn], now: new Date("2026-11-10T12:00:00Z") });
+    const summary = buildEveningSummary({
+      date: TODAY, chores: [], groups: vetGroups, exceptions: [], leaves: [], proposals: [],
+      admittedIds: new Set(), untilMinutes: 19 * 60, logs: [checkIn],
+    });
+    expect(summary.notDone.map((r) => r.title)).toEqual(["Vaksin"]);
+    const closed = { ...checkIn, id: "v2", sub_type: "check_out", completed_at: "2026-11-10T04:30:00Z" } as TaskLog;
+    const after = buildEveningSummary({
+      date: TODAY, chores: [], groups: vetGroups, exceptions: [], leaves: [], proposals: [],
+      admittedIds: new Set(), untilMinutes: 19 * 60, logs: [checkIn, closed],
+    });
+    expect(after.notDone).toEqual([]);
+  });
+
   it("links to the summary for a day", () => {
     expect(summaryHref(TODAY)).toBe("/dashboard?module=agenda&summary=2026-11-10");
   });

@@ -148,6 +148,7 @@ function SummaryBody({
       leaves: leaveRequests,
       proposals: routineProposals,
       admittedIds: new Set(pets.filter(isAdmitted).map((p) => p.id)),
+      logs,
       // Today: due by now, as the push counts. An earlier day: all of it.
       untilMinutes: date === todayKey ? now.getHours() * 60 + now.getMinutes() : null,
     });
