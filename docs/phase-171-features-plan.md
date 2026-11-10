@@ -3,7 +3,7 @@
 Status: **decided: owner chose all recommendations (D1–D15 A),
 2026-11-10; PR A (146) builds after Phase 172 PR A1.** The three open
 questions below stay open. Nothing is built, nothing
-is applied anywhere. Migration **146** is reserved for PR A (feature
+is applied anywhere. Migration **146** is a placeholder for PR A (feature
 switches and the "What kind of home?" answer). People records, elders'
 routines and the Care tab are **later, behind an optional switch, after
 interviews with target households**; health and workouts are **dropped for
@@ -333,6 +333,9 @@ Household tab, **Hewan**, **Batalkan** for Undo.
 
 ## The database: migration 146 (PR A)
 
+**146 is a placeholder:** migration numbers are assigned at build time,
+the next free number above `main` (manager rule, 10 Nov).
+
 All additive. Follows `AGENTS.md`: every `security definer` function
 revokes `EXECUTE` from `public, anon` and grants only what's needed;
 admin-only writes check `household_members` for that household (never
@@ -401,8 +404,14 @@ execute neither function).
 - **PR A, one line** in section 3 ("Admins"): "Which features your
   household has switched on, and the kind of home you picked when you set
   it up." / "Fitur yang dinyalakan di rumah Anda, dan jenis rumah yang Anda
-  pilih saat menyiapkannya." No new service, no change in where data lives,
-  nothing in `src/config/legal.ts`. Reviewers please confirm.
+  pilih saat menyiapkannya." No new service and no change in where data
+  lives, but it is a change in what's stored, so PR A also bumps
+  `policyVersion` (next after the version on `main` at build time, today
+  `2026-11-10.5`) and `effectiveDate` in `src/config/legal.ts`, with a dated
+  comment like the others ("feature switches and the kind of home picked at
+  sign-up; no new service"). If Phase 172 PR A1 already adds the kind-of-home
+  line, PR A adds only the feature-switch half and still bumps the
+  version.
 - **People records (later)**: the lines in the sketch above, before that
   PR ships.
 - **Health (dropped)**: nothing.
@@ -411,7 +420,7 @@ execute neither function).
 
 | PR | What | Migration | Size |
 | --- | --- | --- | --- |
-| **A, build now** | `src/lib/features.ts` (rows, defaults, which pill and staff button each hides); a `useHouseholdFeatures()` hook beside `useHouseholdProfile()` (cache on device, no flash); Household → **Features** replaces Who lives here; switches wired for Repairs, Bills and upkeep, Food at home and Pets; staff hides; Kakak's tool list respects the switches; the four push functions respect them; the Chores and Kitchen view fallbacks; privacy line; glossary rows; one What's new entry (screen 2 is built by Phase 172 PR A1) | **146** | Small–medium |
+| **A, build now** | `src/lib/features.ts` (rows, defaults, which pill and staff button each hides); a `useHouseholdFeatures()` hook beside `useHouseholdProfile()` (cache on device, no flash); Household → **Features** replaces Who lives here; switches wired for Repairs, Bills and upkeep, Food at home and Pets; staff hides; Kakak's tool list respects the switches; the four push functions respect them; the Chores and Kitchen view fallbacks; privacy-policy line (EN and ID) and the `policyVersion` / `effectiveDate` bump in `src/config/legal.ts`; glossary rows; one What's new entry (screen 2 is built by Phase 172 PR A1) | **146** (placeholder) | Small–medium |
 | later | each optional feature (closet, kitchen amounts, recipes, menu) joins Features off, with the offer component built by the first | its own | — |
 | later, after interviews | people records, Elders in Care, their routines; Kids after parent interviews | its own | Large |
 | dropped for now | health, workouts, nutrition per person, basic nutrition | — | — |
