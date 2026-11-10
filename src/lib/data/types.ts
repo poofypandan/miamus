@@ -36,6 +36,9 @@ import type {
   RepairCost,
   BillPayment,
   RepairNote,
+  TaskException,
+  TaskExceptionReason,
+  NotificationPrefs,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -301,6 +304,25 @@ export interface CreateInventoryAuditInput {
  * completed it — see migrations/100. `staffId` null is the work nobody's
  * name is on.
  */
+/**
+ * "Tidak bisa dikerjakan" (Phase 165): a chore day (chore_id = the repeat or
+ * the one-off) or a routine slot (schedule_id, entity_id, slot_time). The id
+ * is made on the phone, so a resend from the save queue is "already saved".
+ */
+export interface CreateTaskExceptionInput {
+  id: string;
+  chore_id?: string | null;
+  schedule_id?: string | null;
+  entity_id?: string | null;
+  occurs_on: string;
+  slot_time?: string | null;
+  reason: TaskExceptionReason;
+  note?: string | null;
+  photo_url?: string | null;
+  inventory_item_id?: string | null;
+  staff_id?: string | null;
+}
+
 export interface StaffWorkload {
   staffId: string | null;
   name: string | null;
@@ -460,6 +482,16 @@ export interface DataProvider {
   addRepairNote(note: { repair_id: string; body: string; photo_url?: string | null; staff_id?: string | null }): Promise<RepairNote>;
   /** Owners, or the note's author within 5 minutes. */
   deleteRepairNote(id: string): Promise<void>;
+  /** Couldn't-do records with occurs_on on or after `since` (YYYY-MM-DD). */
+  listTaskExceptions(since: string): Promise<TaskException[]>;
+  createTaskException(input: CreateTaskExceptionInput): Promise<TaskException>;
+  /** Batalkan: within 5 minutes of saving (migrations/139). False when nothing went. */
+  deleteTaskException(id: string): Promise<boolean>;
+  /** The signed-in admin's notification switches. */
+  getNotificationPrefs(): Promise<NotificationPrefs>;
+  setNotificationPrefs(prefs: NotificationPrefs): Promise<NotificationPrefs>;
+  /** Will an admin of this household get a push about a staff request? */
+  requestsPushOn(): Promise<boolean>;
   /** Owner-only edit of a chore's own fields. */
   updateHouseholdTask(id: string, patch: UpdateHouseholdTaskInput): Promise<HouseholdTask>;
   /**

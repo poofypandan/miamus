@@ -10,6 +10,7 @@ import {
   Loader2,
   Stethoscope,
   Trash2,
+  CircleSlash,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
@@ -47,6 +48,12 @@ import { cn } from "@/lib/utils";
 import { SyncedImg } from "@/components/shared/synced-img";
 import { discardPhoto, enqueuePhoto } from "@/lib/photo-queue";
 import { usePrefetchHighRes } from "@/hooks/use-prefetch-high-res";
+import { CouldntDoSheet } from "@/components/staff/couldnt-do-sheet";
+import { CouldntDoNote } from "@/components/staff/couldnt-do-note";
+import { useTaskExceptions } from "@/hooks/use-task-exceptions";
+import { canFileFor, groupExceptions, staffCouldntLine } from "@/lib/couldnt-do";
+import { formatDateLocal } from "@/lib/scheduleEngine";
+import { useToday } from "@/hooks/use-today";
 
 interface PendingCapture {
   photoUrl: string;
@@ -66,8 +73,13 @@ function deletableUntil(completedAt: string): number {
 
 export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const formatTime = useFormatTime();
-  const { logTasksBatch, pets, deleteLogWithPhoto, logs, updateEntity, pendingIds } =
+  const { logTasksBatch, pets, deleteLogWithPhoto, logs, updateEntity, pendingIds, selectedDate } =
     useHousehold();
+  // "Tidak bisa dikerjakan" (Phase 165): this block's day, its records, and the sheet.
+  const date = formatDateLocal(selectedDate);
+  const todayKey = formatDateLocal(useToday());
+  const { exceptions } = useTaskExceptions();
+  const [couldntOpen, setCouldntOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   // The photo a pressed Simpan handed to the save queue (see dropCapture).
@@ -391,6 +403,12 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // affordance costs width, never height.
   const finished = allDone && !visitOpen && !wholeCardSuspended;
   const dogs = dogsIn(group.items);
+  // Open pets someone said couldn't be done; the rest still to do.
+  const explained = groupExceptions(exceptions, date, { ...group, items: pendingItems });
+  const unexplained = pendingItems.filter((i) => !explained.some((e) => e.item.key === i.key && e.item.entityId === i.entityId));
+  const medicine = group.category === "medication";
+  const couldntLine = explained.length > 0 ? staffCouldntLine(explained[0].exception, medicine) : null;
+  const allExplained = !finished && explained.length > 0 && unexplained.length === 0;
   const rowHint = wholeCardSuspended ? (
     <span className="flex items-center gap-1 text-[10px] font-medium text-indigo-900">
       <Stethoscope className="size-3" /> Rawat inap · dijeda
@@ -418,7 +436,11 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       aria-label={`${formatTime(group.time)} ${cardTitle}`}
       className={cn(
         "flex w-full flex-col gap-2 rounded-xl border p-3 text-left active:bg-muted/60",
-        finished ? DONE_TONE.tint : cn("bg-card", categoryCardTint(group.category)),
+        finished
+          ? DONE_TONE.tint
+          : allExplained
+            ? "border-amber-300 border-l-[3px] border-l-amber-500 bg-amber-50"
+            : cn("bg-card", categoryCardTint(group.category)),
         wholeCardSuspended && "opacity-50"
       )}
     >
@@ -478,6 +500,14 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         })}
         <span className="ml-auto">{rowHint}</span>
       </span>
+      {couldntLine && !finished && (
+        <span className="flex items-center gap-1 text-[13px] font-medium text-amber-800" data-testid="couldnt-line">
+          <CircleSlash className="size-3.5 shrink-0" aria-hidden />
+          {explained.length < pendingItems.length || dogs.length > 1
+            ? `${couldntLine} · ${[...new Set(explained.map((e) => e.item.entityName))].join(", ")}`
+            : couldntLine}
+        </span>
+      )}
     </button>
   );
 
@@ -595,6 +625,19 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             </div>
           )}
 
+          {!finished &&
+            explained.map(({ item, exception }) => (
+              <CouldntDoNote
+                key={exception.id}
+                exception={exception}
+                medicine={medicine}
+                petName={dogs.length > 1 ? item.entityName : undefined}
+              />
+            ))}
+          {allExplained && (
+            <p className="text-center text-xs text-muted-foreground">Ternyata sudah bisa? Selesaikan seperti biasa.</p>
+          )}
+
           {/* A completed group's footer is a status line — the sheet closes
               by swipe or Back, so it has nothing to collapse (Phase 130). */}
           {/* Nothing to photograph when every dog on this card is at the
@@ -651,9 +694,33 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               )}
             </label>
           )}
+          {!wholeCardSuspended && !visitOpen && !isVet && unexplained.length > 0 && canFileFor(date, todayKey) && (
+            <Button
+              variant="outline"
+              className="min-h-12 w-full font-medium text-gray-700"
+              disabled={busy}
+              onClick={() => setCouldntOpen(true)}
+            >
+              <CircleSlash /> Tidak bisa dikerjakan
+            </Button>
+          )}
         </div>
         </SheetContent>
       </Sheet>
+
+      <CouldntDoSheet
+        target={{
+          kind: "routine",
+          date,
+          title: cardTitle,
+          time: group.time,
+          category: group.category,
+          items: unexplained,
+        }}
+        open={couldntOpen}
+        onOpenChange={setCouldntOpen}
+        onFiled={() => setSheetOpen(false)}
+      />
 
       {/* How the visit ended. Both answers still take a photo — the difference
           is what the photo is filed as, and whether the dog's daily routine is

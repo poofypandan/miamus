@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
+  CircleSlash,
   Clock,
   CloudUpload,
   Eye,
@@ -80,6 +81,7 @@ export function ChoreCard({
   editable = false,
   today,
   waitingToSend = false,
+  couldnt = null,
 }: {
   occurrence: ChoreOccurrence;
   locale: "en" | "id";
@@ -115,6 +117,12 @@ export function ChoreCard({
    * the phone and goes by itself.
    */
   waitingToSend?: boolean;
+  /**
+   * Someone said it couldn't be done (Phase 165): the line to show, already
+   * in the screen's language ("Tidak bisa · Barang habis · 09.10"). The card
+   * turns amber instead of reading as forgotten.
+   */
+  couldnt?: string | null;
 }) {
   const formatTime = useFormatTime();
   const t = COPY[locale];
@@ -228,6 +236,13 @@ export function ChoreCard({
         )}
       </div>
 
+      {couldnt && !done && (
+        <p className="flex items-center gap-1 text-[13px] font-medium text-amber-800" data-testid="couldnt-line">
+          <CircleSlash className="size-3.5 shrink-0" aria-hidden />
+          {couldnt}
+        </p>
+      )}
+
       {/* Only ever shown on today's list, where it is the explanation for a
           chore whose own date has passed (see expandChores). */}
       {overdue && !done && (
@@ -252,7 +267,12 @@ export function ChoreCard({
     // A plain card for an open chore (Phase 153; amber since Phase 112), white
     // even inside the red "Belum selesai" frame. Done turns green, like a
     // finished routine (Phase 114).
-    done ? DONE_TONE.tint : cn("bg-card", AGENDA_TONES.chore.tint)
+    done
+      ? DONE_TONE.tint
+      : couldnt
+        ? // Amber with an edge (Phase 165): explained, not forgotten.
+          "border-amber-300 border-l-[3px] border-l-amber-500 bg-amber-50"
+        : cn("bg-card", AGENDA_TONES.chore.tint)
   );
 
   if (!onPress) return <div className={className}>{body}</div>;

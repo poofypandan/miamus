@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, Eye, MapPin, Repeat } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleSlash, Eye, MapPin, Repeat } from "lucide-react";
 import { ChoreReviewLightbox, choreProofShots } from "@/components/chores/chore-proof-photos";
 import { photoSrc } from "@/lib/photos";
 import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
@@ -36,6 +36,7 @@ export function ChoreTimelineRow({
   completedByName,
   locationName,
   onPress,
+  couldnt = null,
 }: {
   occurrence: ChoreOccurrence;
   assigneeName?: string | null;
@@ -47,6 +48,11 @@ export function ChoreTimelineRow({
   /** The chore's room (Phase 135), or none. */
   locationName?: string | null;
   onPress: () => void;
+  /**
+   * Someone said it couldn't be done (Phase 165): the line, in the owner's
+   * language ("Couldn't: out of stock · Sari · 9:10 AM"). Amber, not forgotten.
+   */
+  couldnt?: string | null;
 }) {
   const formatTime = useFormatTime();
   const { task, status, overdue } = occurrence;
@@ -93,7 +99,11 @@ export function ChoreTimelineRow({
         // reads apart from the dogs at a glance. A finished one turns the
         // staff view's green (Phase 114) and sinks to the bottom of the day.
         // pl-1.5: the 3px edge less the usual 1px, so text stays in line.
-        done ? cn(DONE_TONE.tint, AGENDA_TONES.chore.doneEdge, "pl-1.5") : AGENDA_TONES.chore.tint
+        done
+          ? cn(DONE_TONE.tint, AGENDA_TONES.chore.doneEdge, "pl-1.5")
+          : couldnt
+            ? "border-amber-300 border-l-[3px] border-l-amber-500 bg-amber-50 pl-1.5"
+            : AGENDA_TONES.chore.tint
       )}
     >
       <span
@@ -136,6 +146,12 @@ export function ChoreTimelineRow({
         </span>
         {/* Its own line: sharing the one above, the Indonesian label pushed
             the room off a 360px screen (narrow-phone sweep, Phase 149). */}
+        {couldnt && !done && (
+          <span className="flex items-center gap-1 truncate text-xs font-medium text-amber-800" data-testid="couldnt-line">
+            <CircleSlash className="size-3 shrink-0" aria-hidden />
+            <span className="truncate">{couldnt}</span>
+          </span>
+        )}
         {overdue && !done && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <AlertTriangle className="size-3 shrink-0" />

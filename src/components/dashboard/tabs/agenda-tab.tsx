@@ -3,7 +3,8 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { Bell, CalendarDays, ChevronRight, CookingPot, PawPrint, Plus, ShoppingBasket, Sparkles, Wrench } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Sparkles, Wrench } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -57,6 +58,20 @@ import {
   type UnifiedAgendaEntry,
 } from "@/lib/unified-agenda";
 import type { HouseholdTask } from "@/types/database";
+import { EveningSummarySheet } from "@/components/agenda/evening-summary-sheet";
+import { OwnerCouldntSheet } from "@/components/agenda/owner-couldnt-sheet";
+import { useTaskExceptions } from "@/hooks/use-task-exceptions";
+import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
+import { isAdmitted } from "@/lib/pets";
+import { replaceInPlace } from "@/lib/in-place-navigation";
+import {
+  DEFAULT_SUMMARY_HOUR,
+  buildEveningSummary,
+  choreException,
+  ownerCouldntRowLine,
+  summaryHref,
+  summaryOpenCount,
+} from "@/lib/couldnt-do";
 
 /**
  * The Agenda: everything this household owes on one day, dogs and house
@@ -107,6 +122,8 @@ export function AgendaTab() {
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const roomName = useLocationName();
   const allChores = useChoreOccurrences();
+  // Couldn't-do records (Phase 165), for the rows and the evening summary.
+  const { exceptions } = useTaskExceptions();
   const today = useToday();
   const dateStr = formatDateLocal(selectedDate);
   const label = dayLabel(selectedDate, today, locale);
@@ -245,6 +262,43 @@ export function AgendaTab() {
     startTransition(() => pushInPlace(toBuyHref));
   }
 
+  // The evening summary (Phase 165): open while ?summary=<day> is in the URL
+  // (the push links there), so Back and a reload agree with the screen.
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const summaryDate = searchParams.get("summary");
+  const summaryOpen = summaryDate && /^\d{4}-\d{2}-\d{2}$/.test(summaryDate) ? summaryDate : null;
+  function openSummary() {
+    startTransition(() => pushInPlace(summaryHref(todayKey)));
+  }
+  function closeSummary() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("summary");
+    const query = params.toString();
+    replaceInPlace(query ? `${pathname}?${query}` : pathname);
+  }
+  // Today's quiet line, from this admin's summary hour (19.00 when off).
+  const { prefs } = useNotificationPrefs();
+  const summaryHour = prefs.evening_summary_hour ?? DEFAULT_SUMMARY_HOUR;
+  const showsToday = range === "day" && dateStr === todayKey;
+  const notDoneCount = useMemo(() => {
+    if (!showsToday) return 0;
+    const now = new Date();
+    if (now.getHours() < summaryHour) return 0;
+    return summaryOpenCount(
+      buildEveningSummary({
+        date: todayKey,
+        chores: allChores,
+        groups,
+        exceptions,
+        leaves: leaveRequests,
+        proposals: [],
+        admittedIds: new Set(pets.filter(isAdmitted).map((p) => p.id)),
+        untilMinutes: now.getHours() * 60 + now.getMinutes(),
+      })
+    );
+  }, [showsToday, summaryHour, todayKey, allChores, groups, exceptions, leaveRequests, pets]);
+
   function switchToFood(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;
     event.preventDefault();
@@ -265,6 +319,28 @@ export function AgendaTab() {
     setSelectedDate(addDays(selectedDate, weeks * 7));
   }
 
+  // Couldn't-do records (Phase 165): amber rows, and the owner's sheet for one.
+  const [couldntChore, setCouldntChore] = useState<ChoreOccurrence | null>(null);
+  function couldntLineFor(occurrence: ChoreOccurrence): string | null {
+    const exception = choreException(exceptions, occurrence);
+    return exception
+      ? ownerCouldntRowLine(exception, locale, exception.staff_id ? staffName(exception.staff_id) : null)
+      : null;
+  }
+  function openEditorFor(occurrence: ChoreOccurrence) {
+    // The template, not the occurrence: editing a repeat from any of its
+    // days edits the repeat. A materialised occurrence has its own row
+    // and edits that.
+    setEditing(occurrence.row ?? occurrence.template);
+    setEditingDate(occurrence.date);
+    setEditorPreset(null);
+    setEditorOpen(true);
+  }
+  function openChore(occurrence: ChoreOccurrence) {
+    if (choreException(exceptions, occurrence)) setCouldntChore(occurrence);
+    else openEditorFor(occurrence);
+  }
+
   function renderEntry(entry: UnifiedAgendaEntry) {
     return entry.kind === "routine" ? (
       <TimelineRow key={entry.key} group={entry.group} pets={pets} />
@@ -279,15 +355,8 @@ export function AgendaTab() {
         completedByName={
           entry.occurrence.task.completed_by ? staffName(entry.occurrence.task.completed_by) : null
         }
-        onPress={() => {
-          // The template, not the occurrence: editing a repeat from any of its
-          // days edits the repeat. A materialised occurrence has its own row
-          // and edits that.
-          setEditing(entry.occurrence.row ?? entry.occurrence.template);
-          setEditingDate(entry.occurrence.date);
-          setEditorPreset(null);
-          setEditorOpen(true);
-        }}
+        couldnt={couldntLineFor(entry.occurrence)}
+        onPress={() => openChore(entry.occurrence)}
       />
     );
   }
@@ -347,8 +416,21 @@ export function AgendaTab() {
             pet (Phase 162, D3). Renders nothing otherwise. */}
         <PetsQuestionCard />
 
-        {(comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
+        {(notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
           <div className="-my-1 flex flex-col">
+            {notDoneCount > 0 && (
+              <button
+                type="button"
+                onClick={openSummary}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-left text-sm text-gray-700 active:bg-muted"
+              >
+                <Moon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  {t(`${notDoneCount} not done today`, `${notDoneCount} belum selesai hari ini`)}
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              </button>
+            )}
             {comingUp.length > 0 && (
               <button
                 type="button"
@@ -462,6 +544,7 @@ export function AgendaTab() {
                   : lastTimeLine(lastAmount(billPayments, occurrence.template.id, occurrence.row?.id), locale)
             }
             occurrences={mine}
+            couldntLine={couldntLineFor}
             mode={myMode}
             dayLabel={label}
             roomName={roomName}
@@ -658,6 +741,40 @@ export function AgendaTab() {
           setEditorPreset(null);
           setEditorOpen(true);
         }}
+      />
+
+      <EveningSummarySheet
+        date={summaryOpen}
+        onClose={closeSummary}
+        onOpenChore={openChore}
+        toBuy={toBuy}
+        toBuyHref={toBuyHref}
+        onToBuy={switchToShopping}
+      />
+      <OwnerCouldntSheet
+        open={!!couldntChore}
+        onOpenChange={(next) => !next && setCouldntChore(null)}
+        title={couldntChore?.task.title ?? ""}
+        subtitle={
+          couldntChore
+            ? [
+                couldntChore.task.assigned_to
+                  ? t(`for ${staffName(couldntChore.task.assigned_to)}`, `untuk ${staffName(couldntChore.task.assigned_to)}`)
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ") || null
+            : null
+        }
+        entries={
+          couldntChore
+            ? (() => {
+                const exception = choreException(exceptions, couldntChore);
+                return exception ? [{ exception }] : [];
+              })()
+            : []
+        }
+        onEdit={couldntChore ? () => openEditorFor(couldntChore) : undefined}
       />
 
       <ChoreEditorDialog

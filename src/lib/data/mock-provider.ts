@@ -15,6 +15,8 @@ import type {
   Repair,
   RepairCost,
   BillPayment,
+  TaskException,
+  NotificationPrefs,
   RepairNote,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
@@ -51,6 +53,9 @@ interface MockDB {
   repairNotes?: RepairNote[];
   /** Phase 164 PR B. Optional, as above. */
   billPayments?: BillPayment[];
+  /** Phase 165. Optional, as above. */
+  taskExceptions?: TaskException[];
+  notificationPrefs?: NotificationPrefs;
 }
 
 function freshDB(): MockDB {
@@ -839,6 +844,50 @@ export const mockProvider: DataProvider = {
     db.repairNotes = (db.repairNotes ?? []).filter((n) => n.id !== id);
     saveDB(db);
     return delay(undefined);
+  },
+  async listTaskExceptions(since) {
+    const household = getActiveHouseholdId();
+    return delay(
+      (loadDB().taskExceptions ?? []).filter((x) => x.household_id === household && x.occurs_on >= since)
+    );
+  },
+  async createTaskException(input) {
+    const db = loadDB();
+    const row: TaskException = {
+      chore_id: null,
+      schedule_id: null,
+      entity_id: null,
+      slot_time: null,
+      note: null,
+      photo_url: null,
+      inventory_item_id: null,
+      staff_id: null,
+      ...input,
+      household_id: getActiveHouseholdId(),
+      created_at: new Date().toISOString(),
+    };
+    db.taskExceptions = [...(db.taskExceptions ?? []).filter((x) => x.id !== row.id), row];
+    saveDB(db);
+    return delay(row);
+  },
+  async deleteTaskException(id) {
+    const db = loadDB();
+    const before = (db.taskExceptions ?? []).length;
+    db.taskExceptions = (db.taskExceptions ?? []).filter((x) => x.id !== id);
+    saveDB(db);
+    return delay(db.taskExceptions.length < before);
+  },
+  async getNotificationPrefs() {
+    return delay(loadDB().notificationPrefs ?? { evening_summary_hour: 19, staff_request_pushes: true });
+  },
+  async setNotificationPrefs(prefs) {
+    const db = loadDB();
+    db.notificationPrefs = prefs;
+    saveDB(db);
+    return delay(prefs);
+  },
+  async requestsPushOn() {
+    return delay(false);
   },
   async createHouseholdTasks(inputs) {
     const db = loadDB();

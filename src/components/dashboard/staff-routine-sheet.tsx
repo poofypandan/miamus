@@ -81,6 +81,7 @@ export function StaffRoutineSheet({
                 <WhatsAppNotifyPanel
                   title="Usulan berhasil dikirim"
                   message={`Halo! Ada usulan jadwal baru untuk ${entity.name}. Cek di sini:`}
+                  checkAdminPush
                   onDone={close}
                   secondaryLabel="Usulkan Jadwal Lain"
                   onSecondary={() => setSentFor(null)}

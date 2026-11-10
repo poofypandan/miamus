@@ -24,4 +24,5 @@ export type {
   FoodItemInput,
   FoodItemPatch,
   LeaveDecision,
+  CreateTaskExceptionInput,
 } from "./types";
