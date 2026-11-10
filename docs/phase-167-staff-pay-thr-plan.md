@@ -285,6 +285,18 @@ the amounts to what you and your staff agree."
   early, up to `ended_on`) and **isn't the person's weekly day off**. Shown
   as "8 of 12 days left · year from 14 Jul". Below: this year's leave, each
   with its kind and days, Sick and Family marked "not counted".
+- **Loading the year's leave** (Codex, PR #73): the household's leave list
+  only goes back 180 days (`LEAVE_LOOKBACK_DAYS`, `household-context.tsx`
+  and `supabase-provider.ts`). That's right for chore triage, but a work year
+  is up to 366 days. So the balance uses its own query: that person's
+  requests with `end_date >=` the current work-year start, run when the
+  person's page or **Gaji & cuti saya** opens. The 180-day list used for
+  chores stays as it is. The count is a pure function, `leaveBalance(terms,
+  leaves, today)` in `src/lib/leave.ts`, with unit tests that include annual
+  leave more than 180 days ago but inside the current work year, a work year
+  starting on 29 Feb, leave crossing the year boundary (only the days inside
+  the year count), weekly days off inside a leave, and an early return
+  (`ended_on`).
 - Going below zero is allowed (shown "2 days over"); the app never refuses
   leave because of the balance.
 - **No carry-over** in this phase; the balance resets each work year. The
@@ -323,8 +335,9 @@ photos are stored (D10). The checklist is a guide, not proof: the page says
   allowance is not money. The phone reads the three settings this needs
   (weekly days off, leave days a year, start date) through `my_leave`
   (below), which returns nothing about pay and works even when pay is
-  turned off. The balance itself is worked out on the phone from those
-  settings and the leave requests it already loads (Codex, PR #73).
+  turned off. The balance is worked out on the phone from those settings
+  and that person's leave since the start of the current work year (see
+  "Balance" above for how it's loaded).
 - **Pay, behind the PIN** (D8): a card "Gaji dan THR" with amounts shown as
   **Rp ••••••** and **Lihat dengan PIN**. The PIN pad is the existing staff
   PIN screen, worded "Masukkan PIN Anda untuk melihat gaji". Then: agreed pay
