@@ -113,11 +113,13 @@ function Conversation({ onClose }: { onClose: () => void }) {
     const typed = text.trim();
     if (!typed) return;
     // A correction after the card's chips carries what they changed, so
-    // Kakak's next card keeps it (Codex, PR #68). The owner's line shows
-    // only what they typed.
-    const note = screen.kind === "card" && screen.refined ? refinementNote(screen.items) : "";
-    const words = note ? `${note} ${typed.slice(0, MAX_TYPED - note.length - 1)}` : typed.slice(0, MAX_TYPED);
-    setSaid((list) => [...list, typed.slice(0, MAX_TYPED)]);
+    // Kakak's next card keeps it (Codex, PR #68). The owner's words are
+    // never cut for it: the note shrinks to the room left, or is left out.
+    // The owner's line shows only what they typed.
+    const own = typed.slice(0, MAX_TYPED);
+    const note = screen.kind === "card" && screen.refined ? refinementNote(screen.items, MAX_TYPED - own.length - 1) : "";
+    const words = note ? `${note} ${own}` : own;
+    setSaid((list) => [...list, own]);
     setDraft("");
     setTypingAnswer(false);
     await ask(words, history);

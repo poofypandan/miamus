@@ -22,10 +22,9 @@ import { useFinishMyChore } from "@/hooks/use-finish-my-chore";
 import { useLocationName } from "@/hooks/use-household-locations";
 import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
 import {
-  RECURRENCE_LABELS_EN,
-  RECURRENCE_LABELS_ID,
   coverTakeover,
   recurrenceOf,
+  taskRepeatLabel,
   type ChoreOccurrence,
 } from "@/lib/chore-recurrence";
 import { photoTakenAt } from "@/lib/photos";
@@ -141,8 +140,7 @@ function OwnerFinishBody({
   }
 
   const recurrence = recurrenceOf(occurrence.template);
-  const repeatLabel =
-    recurrence === "none" ? null : (locale === "id" ? RECURRENCE_LABELS_ID : RECURRENCE_LABELS_EN)[recurrence];
+  const repeatLabel = recurrence === "none" ? null : taskRepeatLabel(occurrence.template, locale);
   const where = roomName(task.location_id, task.spot);
   const details = [task.due_time ? formatTime(task.due_time) : t("Anytime", "Kapan saja"), where, repeatLabel]
     .filter(Boolean)

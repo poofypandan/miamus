@@ -17,7 +17,8 @@ import {
 } from "@/lib/kakak/engine";
 import { kakakExamples } from "@/lib/kakak/examples";
 import { practiceClient } from "@/lib/kakak/practice";
-import { MAX_REFINEMENT_NOTE, REPEAT_CHOICES, refineChore, refinementNote, repeatLabel } from "@/lib/kakak/refine";
+import { MAX_REFINEMENT_NOTE, REPEAT_CHOICES, refineChore, refinementNote, repeatLabel, splitRefinementNote } from "@/lib/kakak/refine";
+import { MAX_TYPED, type TurnResult } from "@/lib/kakak/engine";
 import { isSaveableSuggestion } from "@/lib/kakak/suggestions";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -151,6 +152,10 @@ describe("kakakExamples", () => {
     expect(id[2].text).toMatch(/^Ingatkan saya/);
   });
 
+  it("keeps a pet's whole name, as the household block does", () => {
+    expect(kakakExamples({ locale: "en", staffNames: [], petNames: ["Kopi  Susu"] })[3].text).toBe("Feed Kopi Susu at 7 am and 5 pm");
+  });
+
   it("drops honorifics, as Kakak's household block does", () => {
     expect(kakakExamples({ locale: "id", staffNames: ["Bik Nah"], petNames: [] })[0].text).toBe("Nah siram tanaman setiap Senin jam 8");
     expect(kakakExamples({ locale: "en", staffNames: ["Mbak Sari Wulandari"], petNames: [] })[0].text).toBe("Sari waters the plants every Monday at 8");
@@ -238,17 +243,65 @@ describe("refineChore (the card's chips)", () => {
     expect(isSaveableSuggestion(anyone)).toBe(true);
   });
 
-  it("tells Kakak what the chips changed, short enough for one turn", () => {
+  it("tells Kakak what the chips changed, and that the owner's words win", () => {
     const daily = refineChore(refineChore(chore, { recurrence: "daily" }), { assignee: { id: id(1), name: "Sari" } });
-    expect(refinementNote([daily])).toBe("(Already set on the card: Siram tanaman: every day, for Sari.)");
-    expect(refinementNote([refineChore(chore, { assignee: null })])).toBe("(Already set on the card: Siram tanaman: every monday, for anyone.)");
+    expect(refinementNote([daily])).toBe(
+      "(Set on the card with one tap; the owner's words after this win: Siram tanaman: every day, for Sari.)",
+    );
+    expect(refinementNote([refineChore(chore, { assignee: null })])).toMatch(/Siram tanaman: every monday, for anyone\.\)$/);
     expect(refinementNote([{ kind: "food" }])).toBe("");
-    const many = Array(10).fill(daily);
-    expect(refinementNote(many).length).toBeLessThanOrEqual(MAX_REFINEMENT_NOTE);
+  });
+
+  it("shrinks to the room left by the owner's words, whole parts only, and never cuts their text", () => {
+    const daily = refineChore(chore, { recurrence: "daily" });
+    const one = refinementNote([daily]);
+    expect(refinementNote(Array(10).fill(daily)).length).toBeLessThanOrEqual(MAX_REFINEMENT_NOTE);
+    expect(refinementNote([daily, daily], one.length)).toBe(one); // room for one part: one part
+    expect(refinementNote([daily], one.length - 1)).toBe(""); // no room: no note
+    // The sheet: a long correction stays whole and the note gives way.
+    const own = "x".repeat(MAX_TYPED - 20);
+    const note = refinementNote([daily], MAX_TYPED - own.length - 1);
+    expect(note).toBe("");
+    expect(splitRefinementNote(`${one} at 9 instead`)).toEqual({ note: one.slice(one.indexOf(": ") + 2, -2), words: "at 9 instead" });
+    expect(splitRefinementNote("Tuesday instead")).toEqual({ note: null, words: "Tuesday instead" });
   });
 
   it("words each choice like the card does", () => {
     expect(REPEAT_CHOICES.map((r) => repeatLabel(r, "2026-11-16", "en"))).toEqual(["One time", "Every day", "Every Monday", "Monthly on the 16th"]);
     expect(REPEAT_CHOICES.map((r) => repeatLabel(r, "2026-11-16", "id"))).toEqual(["Sekali saja", "Setiap hari", "Setiap Senin", "Setiap tanggal 16"]);
+  });
+});
+
+describe("practice mode reads the chips' note under the owner's words", () => {
+  const built = buildContext(rows, { today: "2026-11-11", now: "08:30", ownerLocale: "en", callerUserId: OWNER });
+  const deps: TurnDeps = {
+    client: practiceClient(built.household),
+    model: "claude-opus-5-5",
+    effort: "low",
+    household: built.household,
+    refs: built.refs,
+    names: built.names,
+    begin: async () => ({ ok: true, requestId: "00000000-0000-4000-8000-0000000000ac", callsLeft: 10 }),
+    record: async () => undefined,
+  };
+  const card = (result: TurnResult) => {
+    if (result.kind !== "suggestions") throw new Error(result.kind);
+    return result;
+  };
+
+  it("a typed 'Tuesday instead' beats the chips' 'every monday': one chore, on Tuesday", async () => {
+    const first = card(await runKakakTurn(deps, null, "Ari mops the terrace every Monday at 9"));
+    const chipped = refineChore(first.items[0] as Parameters<typeof refineChore>[0], { assignee: null });
+    const second = card(await runKakakTurn(deps, first.history, `${refinementNote([chipped])} Tuesday instead`));
+    expect(second.items).toHaveLength(1);
+    expect(second.items[0]).toMatchObject({ kind: "chore", dueDate: "2026-11-17", dueTime: "09:00", assignedTo: null });
+  });
+
+  it("keeps the chips' 'one time' and 'for anyone' when the owner only changes the time", async () => {
+    const first = card(await runKakakTurn(deps, null, "Ari mops the terrace every Monday at 9"));
+    const chipped = refineChore(refineChore(first.items[0] as Parameters<typeof refineChore>[0], { recurrence: "none" }), { assignee: null });
+    const second = card(await runKakakTurn(deps, first.history, `${refinementNote([chipped])} at 10 instead`));
+    expect(second.items).toHaveLength(1);
+    expect(second.items[0]).toMatchObject({ dueDate: "2026-11-16", dueTime: "10:00", recurrence: "none", assignedTo: null });
   });
 });

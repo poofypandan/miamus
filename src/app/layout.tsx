@@ -93,8 +93,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             overflow-x: clip, not hidden: `hidden` makes this a scroll
             container, and position: sticky inside one sticks to it instead of
             the viewport — which would silently unstick the header and the tab
-            bar. clip trims sideways overflow without that side effect. */}
-        <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col overflow-x-clip bg-background md:shadow-xl">
+            bar. clip trims sideways overflow without that side effect.
+
+            The one exception is the public landing page (/welcome,
+            /selamat-datang): it marks itself data-wide-page and lays itself out
+            for a laptop too, so the frame lets go of its width there. */}
+        <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col overflow-x-clip bg-background md:shadow-xl has-[[data-wide-page]]:max-w-none md:has-[[data-wide-page]]:shadow-none">
           <Providers>{children}</Providers>
         </div>
         <AppToaster />

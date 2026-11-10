@@ -36,9 +36,20 @@ function cleanName(name: string | undefined): string | null {
   return first.length >= 2 && first.length <= 20 ? first : null;
 }
 
+/**
+ * A pet's whole name, as Kakak's household block keeps it ("Kopi Susu", so
+ * she can tell it from "Kopi Hitam"; Codex, PR #68): spaces tidied, or null
+ * when it's too long or odd for an example.
+ */
+function cleanPetName(name: string | undefined): string | null {
+  if (!name) return null;
+  const whole = name.replace(/[^\p{L}\p{N}' -]/gu, "").replace(/\s+/g, " ").trim();
+  return whole.length >= 2 && whole.length <= 30 ? whole : null;
+}
+
 export function kakakExamples({ locale, staffNames, petNames }: ExampleHousehold): KakakExample[] {
   const staff = cleanName(staffNames[0]);
-  const pet = cleanName(petNames[0]);
+  const pet = cleanPetName(petNames[0]);
   const id = locale === "id";
   const list: KakakExample[] = [];
 

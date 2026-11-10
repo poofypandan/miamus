@@ -33,12 +33,13 @@ import { SpotField } from "@/components/chores/spot-field";
 import { dayKeyLabel } from "@/lib/date-label";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import {
-  CHORE_RECURRENCES,
-  RECURRENCE_LABELS_EN,
-  RECURRENCE_LABELS_ID,
+  REPEAT_CHOICES,
+  intervalOf,
+  repeatLabel,
   startAfterSkippingFirst,
   recurrenceOf,
 } from "@/lib/chore-recurrence";
+import { REMIND_CHOICES, remindLabel } from "@/lib/chore-reminders";
 import {
   HOUSEHOLD_TASK_CATEGORIES,
   categoryIcon,
@@ -106,6 +107,15 @@ export function ChoreEditorDialog({
     notes?: string | null;
     /** The repair the new chore is a visit for (migrations/130). */
     repairId?: string | null;
+    /** Phase 164: "Other bill" starts a monthly bill with a reminder. */
+    recurrence?: ChoreRecurrence;
+    interval?: number;
+    remindDaysBefore?: number | null;
+    /**
+     * Who it's for: the first-run checklist's "Give them a first task" (audit
+     * B1); a bill starts with the owner adding it (Phase 164).
+     */
+    assigneeId?: string | null;
   } | null;
 }) {
   const {
@@ -136,6 +146,9 @@ export function ChoreEditorDialog({
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
   const [recurrence, setRecurrence] = useState<ChoreRecurrence>("none");
+  // Every N weeks or months, and "Remind me" (Phase 164, migrations/137).
+  const [repeatEvery, setRepeatEvery] = useState(1);
+  const [remind, setRemind] = useState<number | null>(null);
   const [until, setUntil] = useState("");
   const [supervision, setSupervision] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -177,6 +190,10 @@ export function ChoreEditorDialog({
       setTime(task.due_time ?? "");
       setNotes(task.notes ?? "");
       setRecurrence(recurrenceOf(task));
+      setRepeatEvery(intervalOf(task));
+      // A repeat's written day reminds through its repeat: that's what the
+      // push and Today read (Codex, PR #60).
+      setRemind((task.parent_task_id ? reminderSource?.remind_days_before : task.remind_days_before) ?? null);
       setUntil(task.recurrence_until ?? "");
       setSupervision(!!task.requires_supervision);
     } else {
@@ -185,11 +202,13 @@ export function ChoreEditorDialog({
       setPlaces(room ? [room] : []);
       setSpot(room ? (preset?.spot?.trim() || null) : null);
       setCategory(preset?.category ?? "cleaning");
-      setAssignee(UNASSIGNED);
+      setAssignee(preset?.assigneeId ?? UNASSIGNED);
       setDate(defaultDate);
       setTime("");
       setNotes(preset?.notes ?? "");
-      setRecurrence("none");
+      setRecurrence(preset?.recurrence ?? "none");
+      setRepeatEvery(preset?.interval ?? 1);
+      setRemind(preset?.remindDaysBefore ?? null);
       setUntil("");
       setSupervision(false);
     }
@@ -199,6 +218,11 @@ export function ChoreEditorDialog({
   }, [open, task, defaultDate]);
 
   const untilBeforeStart = !!until && until < date;
+  // Editing one written day of a repeat: its reminder is the repeat's.
+  const dayOfRepeat = !!task?.parent_task_id;
+  const reminderSource = dayOfRepeat
+    ? (householdTasks.find((row) => row.id === task?.parent_task_id) ?? null)
+    : task;
   // A visit for a repair: one place, linked on save (adding only).
   const repairId = !editing ? (preset?.repairId ?? null) : null;
   const placeIds = useMemo(() => places.map((place) => place.id), [places]);
@@ -214,6 +238,8 @@ export function ChoreEditorDialog({
     }
     setSaving(true);
     try {
+      // The interval belongs to weekly and monthly repeats only.
+      const every = recurrence === "weekly" || recurrence === "monthly" ? repeatEvery : 1;
       const fields = {
         title: title.trim(),
         category,
@@ -227,6 +253,12 @@ export function ChoreEditorDialog({
         // A one-off has no end date to carry; leaving a stale one behind would
         // quietly cap the repeat if it were ever turned back on.
         recurrence_until: recurrence === "none" ? null : until || null,
+        // Sent when set, or to clear one this chore has; otherwise left out,
+        // so a database before migrations/137 still takes the chore.
+        ...(every !== 1 || intervalOf(task ?? {}) !== 1 ? { recurrence_interval: every } : {}),
+        ...(!dayOfRepeat && (remind !== null || (task?.remind_days_before ?? null) !== null)
+          ? { remind_days_before: remind }
+          : {}),
         requires_supervision: supervision,
         location_id: places[0]?.id ?? null,
         // The spot goes only with a room. Sent when there is one, or to clear
@@ -240,6 +272,10 @@ export function ChoreEditorDialog({
       };
       if (task) {
         await updateHouseholdTask(task.id, fields);
+        // A written day's reminder lives on its repeat.
+        if (dayOfRepeat && reminderSource && (reminderSource.remind_days_before ?? null) !== remind) {
+          await updateHouseholdTask(reminderSource.id, { remind_days_before: remind });
+        }
         toast.success(t(`Saved "${fields.title}"`, `"${fields.title}" disimpan`));
       } else if (places.length > 1) {
         // One chore per room, saved together or not at all, so staff tick
@@ -410,6 +446,14 @@ export function ChoreEditorDialog({
   }
 
   const repeats = recurrence !== "none";
+  // The form's repeats, plus this chore's own if it's one the form doesn't
+  // offer (an interval set some other way), so opening it never changes it.
+  const sameRepeat = (choice: { recurrence: ChoreRecurrence; interval: number }) =>
+    choice.recurrence === recurrence &&
+    (choice.recurrence === "weekly" || choice.recurrence === "monthly" ? choice.interval === repeatEvery : true);
+  const repeatOptions: { key: string; recurrence: ChoreRecurrence; interval: number }[] = REPEAT_CHOICES.some(sameRepeat)
+    ? [...REPEAT_CHOICES]
+    : [...REPEAT_CHOICES, { key: "current", recurrence, interval: repeatEvery }];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -536,15 +580,18 @@ export function ChoreEditorDialog({
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">{t("Repeat", "Ulangi")}</Label>
             <div className="grid grid-cols-2 gap-2">
-              {CHORE_RECURRENCES.map((r) => (
+              {repeatOptions.map((choice) => (
                 <Button
-                  key={r}
+                  key={choice.key}
                   type="button"
-                  variant={recurrence === r ? "default" : "outline"}
+                  variant={sameRepeat(choice) ? "default" : "outline"}
                   className="min-h-[44px]"
-                  onClick={() => setRecurrence(r)}
+                  onClick={() => {
+                    setRecurrence(choice.recurrence);
+                    setRepeatEvery(choice.interval);
+                  }}
                 >
-                  {(locale === "id" ? RECURRENCE_LABELS_ID : RECURRENCE_LABELS_EN)[r]}
+                  {repeatLabel(choice.recurrence, choice.interval, locale)}
                 </Button>
               ))}
             </div>
@@ -573,6 +620,45 @@ export function ChoreEditorDialog({
               )}
             </div>
           )}
+
+          {/* Remind me (Phase 164, D3): any chore, off by default. */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">
+              {t("Remind me", "Ingatkan saya")}
+              {dayOfRepeat && (
+                <span className="font-normal text-muted-foreground">
+                  {" "}
+                  {t("(for the whole repeat)", "(untuk seluruh pengulangan)")}
+                </span>
+              )}
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {REMIND_CHOICES.map((days) => (
+                <Button
+                  key={days ?? "off"}
+                  type="button"
+                  size="sm"
+                  variant={remind === days ? "default" : "outline"}
+                  className="min-h-[40px]"
+                  aria-pressed={remind === days}
+                  onClick={() => setRemind(days)}
+                >
+                  {remindLabel(days, locale)}
+                </Button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {remind === null
+                ? t(
+                    "No reminder. Turn one on for bills and visits someone has to be home for.",
+                    "Tanpa pengingat. Nyalakan untuk tagihan dan kunjungan yang perlu ditunggu di rumah."
+                  )
+                : t(
+                    "A notification at 7:00 AM that day, and again on the day itself if it isn't done. It also shows on Today.",
+                    "Notifikasi pukul 07.00 pada hari itu, dan lagi saat jatuh tempo kalau belum selesai. Juga tampil di Hari ini."
+                  )}
+            </p>
+          </div>
 
           <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
             <input

@@ -3,8 +3,20 @@
 import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDateLocal } from "@/lib/scheduleEngine";
+import { useToday } from "@/hooks/use-today";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
-import { WHATS_NEW, staffWhatsNewEntry, storageKey, whatsNewEntry } from "@/lib/whats-new";
+import {
+  STAFF_TIP_CLOSED_ON_KEY,
+  STAFF_WHATS_NEW,
+  WHATS_NEW,
+  pickStaffTip,
+  staffTipResting,
+  staffWhatsNewEntry,
+  storageKey,
+  whatsNewEntry,
+  type StaffTipCandidate,
+} from "@/lib/whats-new";
 
 function wasSeen(id: string): boolean {
   try {
@@ -90,21 +102,52 @@ export function WhatsNewCard({ id, onTry }: { id: string; onTry?: () => void }) 
   );
 }
 
+function closedOn(): string | null {
+  try {
+    return localStorage.getItem(STAFF_TIP_CLOSED_ON_KEY);
+  } catch {
+    return null;
+  }
+}
+
+
 /**
- * A staff phone's one-line tutorial (lib/whats-new.ts STAFF_WHATS_NEW), in
- * Bahasa Indonesia only. Shown once, and only when `show` says the feature is
- * on this household's screens (there's no point explaining floors before the
- * owner has any).
+ * A staff phone's tutorials (lib/whats-new.ts STAFF_WHATS_NEW), in Bahasa
+ * Indonesia only, ONE at a time (audit B1, item 5): the newest that applies
+ * and hasn't been closed. A tip applies when `show` says its feature is on
+ * this household's screens (no point explaining floors before the owner has
+ * any). Once one is closed, the next waits until tomorrow: "tomorrow" read
+ * from useToday, so a phone left open overnight gets its next tip in the
+ * morning without a reload (Codex, #62).
+ *
+ * Decided after mount: the server has no storage.
  */
-export function StaffWhatsNewCard({ id, show }: { id: string; show: boolean }) {
-  const entry = staffWhatsNewEntry(id);
-  const [seen, setSeen] = useState(true);
+export function StaffTipCard({ tips }: { tips: StaffTipCandidate[] }) {
+  const today = formatDateLocal(useToday());
+  // null until read on this phone: nothing shows before that. `closedOn` is
+  // the day a tip was last closed; whether that rests the card is decided
+  // against today on every render, never frozen at mount.
+  const [state, setState] = useState<{ seen: ReadonlySet<string>; closedOn: string | null } | null>(null);
 
   useEffect(() => {
-    if (entry) setSeen(wasSeen(id));
-  }, [entry, id]);
+    const seen = new Set(STAFF_WHATS_NEW.map((entry) => entry.id).filter(wasSeen));
+    setState({ seen, closedOn: closedOn() });
+  }, []);
 
-  if (!entry || !show || seen) return null;
+  const id =
+    state && !staffTipResting(state.closedOn, today) ? pickStaffTip(tips, (tip) => state.seen.has(tip)) : null;
+  const entry = id ? staffWhatsNewEntry(id) : undefined;
+  if (!id || !entry) return null;
+
+  function close() {
+    markSeen(id!);
+    try {
+      localStorage.setItem(STAFF_TIP_CLOSED_ON_KEY, today);
+    } catch {
+      // Storage off: the next tip may show on the next visit, no harm.
+    }
+    setState((prev) => (prev ? { seen: new Set([...prev.seen, id!]), closedOn: today } : prev));
+  }
 
   return (
     <section
@@ -113,10 +156,7 @@ export function StaffWhatsNewCard({ id, show }: { id: string; show: boolean }) {
     >
       <button
         type="button"
-        onClick={() => {
-          markSeen(id);
-          setSeen(true);
-        }}
+        onClick={close}
         aria-label="Tutup"
         className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-zinc-200"
       >
