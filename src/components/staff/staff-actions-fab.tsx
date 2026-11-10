@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronRight, CookingPot, Plus } from "lucide-react";
+import { ChevronRight, CookingPot, MessageSquareText, Plus } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -18,6 +18,7 @@ import {
 import { FoodFormSheet } from "@/components/kitchen/food-form-sheet";
 import { MyRepairReports, StaffReportRepairButton } from "@/components/staff/staff-repairs";
 import { RepairReportSheet } from "@/components/repairs/repair-report-sheet";
+import { FeedbackSheet } from "@/components/shared/feedback-sheet";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 
@@ -36,6 +37,8 @@ export function StaffActionsFab() {
   const [addingFood, setAddingFood] = useState(false);
   // Something broken (Phase 159): the repair report, straight from here.
   const [reportingRepair, setReportingRepair] = useState(false);
+  // About the app itself (roadmap item 9): last and quiet, below the reports.
+  const [sendingFeedback, setSendingFeedback] = useState(false);
   useBackToClose(open, () => setOpen(false));
 
   // Owned here rather than in the panel: the badge below and the drawer's
@@ -130,12 +133,28 @@ export function StaffActionsFab() {
             />
             <MyRepairReports />
             <StaffReportsPanel dismissed={dismissed} dismiss={dismiss} now={now} />
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setSendingFeedback(true);
+              }}
+              className="mt-4 flex min-h-12 w-full items-center gap-3 rounded-xl px-1 text-left text-sm active:bg-muted"
+            >
+              <MessageSquareText className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="font-medium">Kirim masukan</span>
+                <span className="text-xs text-muted-foreground">Ide atau masalah di aplikasi</span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </button>
           </div>
         </SheetContent>
       </Sheet>
 
       <FoodFormSheet open={addingFood} item={null} locale="id" onClose={() => setAddingFood(false)} />
       <RepairReportSheet open={reportingRepair} onClose={() => setReportingRepair(false)} locale="id" asStaff />
+      <FeedbackSheet open={sendingFeedback} onClose={() => setSendingFeedback(false)} locale="id" asStaff />
     </>
   );
 }
