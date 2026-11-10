@@ -238,3 +238,18 @@ test("editing one written day of a repeat changes the repeat's reminder (Codex, 
   expect(claimed.remind_days_before).toBeNull();
   expect(stub.seen.realBackend).toEqual([]);
 });
+
+test("a bill set up for later, outside the week on screen, shows as added (Codex, PR #60)", async ({ context, page }) => {
+  const pbb = chore({ title: "PBB", due_date: ymd(dateIn(40)), remind_days_before: 7 });
+  const stub = await installStub(context, { owner: { locale: "en" }, chores: [pbb] });
+  await page.goto("/dashboard?module=chores");
+  await page.getByRole("button", { name: "Bills and upkeep" }).click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("button", { name: /^PBB \(land and building tax\) Added/ })).toBeVisible({ timeout: 20_000 });
+  await expect(sheet.getByRole("checkbox", { name: "PBB (land and building tax)" })).toHaveCount(0);
+  await expect(sheet.getByText("Checking what's already set up…")).toHaveCount(0);
+  await sheet.getByRole("checkbox", { name: "Internet" }).click();
+  await sheet.getByRole("button", { name: "Add 1" }).click();
+  await expect(page.getByText("Added 1")).toBeVisible();
+  expect(stub.tasks.map((t) => t.title)).toEqual(["Internet"]);
+});

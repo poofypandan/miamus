@@ -12,12 +12,20 @@ import type { HouseholdTask } from "@/types/database";
  * read again whenever the household's chores change, so an edit made here
  * shows; until that read lands, the cache's fresher copy of any row wins.
  */
-export function useSetUpChores(today: string): { rows: HouseholdTask[] | null; failed: boolean } {
+export function useSetUpChores(today: string): {
+  rows: HouseholdTask[] | null;
+  failed: boolean;
+  /** A full read has landed at least once: rows is every set-up chore, not just the cache. */
+  loaded: boolean;
+  /** Read again (after a failure). */
+  reload: () => void;
+} {
   const { householdTasks } = useHousehold();
   const [state, setState] = useState<{ rows: HouseholdTask[] | null; failed: boolean }>({
     rows: null,
     failed: false,
   });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -33,7 +41,7 @@ export function useSetUpChores(today: string): { rows: HouseholdTask[] | null; f
     return () => {
       live = false;
     };
-  }, [today, householdTasks]);
+  }, [today, householdTasks, attempt]);
 
   const rows = useMemo(() => {
     if (!state.rows) return state.failed ? householdTasks : null;
@@ -42,7 +50,12 @@ export function useSetUpChores(today: string): { rows: HouseholdTask[] | null; f
     return [...byId.values()];
   }, [state, householdTasks]);
 
-  return { rows, failed: state.failed && !state.rows };
+  return {
+    rows,
+    failed: state.failed && !state.rows,
+    loaded: !!state.rows,
+    reload: () => setAttempt((n) => n + 1),
+  };
 }
 
 /**

@@ -109,7 +109,10 @@ export function BillsUpkeepSheet({
   const today = formatDateLocal(useToday());
   const { memberProfile, createHouseholdTasks, addInventoryItem, inventoryItems } = useHousehold();
   const { profiles } = useStaffProfiles();
-  const { rows } = useSetUpChores(today);
+  // Every set-up chore, not just the week the cache holds: until that read
+  // has landed, Add waits, so a bill set up for later isn't added twice
+  // (Codex, PR #60).
+  const { rows, loaded, failed: checkFailed, reload } = useSetUpChores(today);
   const { householdTasks } = useHousehold();
   const chores = rows ?? householdTasks;
 
@@ -175,11 +178,14 @@ export function BillsUpkeepSheet({
     QUICK_ITEMS.filter((item) => item.group === group && !(item.kind === "chore" && item.variantOf));
   const actual = (item: QuickItem): QuickItem => (item.key === "electricity" ? quickItem(electricity) : item);
 
-  const picked = [...selected].map((key) => actual(quickItem(key)));
+  // Never one that is already set up, even if it was ticked before that was known.
+  const picked = [...selected]
+    .map((key) => actual(quickItem(key)))
+    .filter((item) => !alreadyAdded(item, chores, inventoryItems));
   const missingDate = picked.find((item) => item.kind === "chore" && !choiceFor(item).first);
 
   async function add() {
-    if (picked.length === 0 || missingDate) return;
+    if (picked.length === 0 || missingDate || !loaded) return;
     setSaving(true);
     // What has been saved so far: if a later write fails, a retry sends only
     // the rest, never the same chore twice (Codex, PR #60).
@@ -394,6 +400,23 @@ export function BillsUpkeepSheet({
               <ul className="overflow-hidden rounded-xl border bg-white">{rowsOf(group).map(row)}</ul>
             </section>
           ))}
+          {!loaded && (
+            <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
+              {checkFailed ? (
+                <>
+                  {t("Couldn't check what's already set up.", "Gagal mengecek yang sudah ada.")}
+                  <Button variant="outline" size="sm" className="min-h-9 rounded-lg" onClick={reload}>
+                    {t("Try again", "Coba lagi")}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                  {t("Checking what's already set up…", "Mengecek yang sudah ada…")}
+                </>
+              )}
+            </p>
+          )}
           {missingDate && missingDate.kind === "chore" && (
             <p className="text-xs font-medium text-amber-800">
               {t(`Pick the date for ${missingDate.name.en}.`, `Pilih tanggal untuk ${missingDate.name.id}.`)}
@@ -404,7 +427,7 @@ export function BillsUpkeepSheet({
         <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <Button
             onClick={add}
-            disabled={saving || picked.length === 0 || !!missingDate}
+            disabled={saving || !loaded || picked.length === 0 || !!missingDate}
             className="min-h-12 rounded-xl"
           >
             {saving ? <Loader2 className="animate-spin" /> : <Plus />}
