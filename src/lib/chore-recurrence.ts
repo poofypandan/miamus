@@ -419,3 +419,79 @@ export function occurrencesForStaff(
     (o) => !o.task.assigned_to || o.task.assigned_to === staffId
   );
 }
+
+/**
+ * An admin's own chores on the day being viewed: "My tasks" on Today (Phase
+ * 163, D2 A).
+ *
+ * Assigned to their roster row (migrations/106), plus any chore they
+ * finished themselves, so finishing never makes a row leave the card: an
+ * unassigned one, or one covered for someone on leave and finished with
+ * photos, which stays stored under the absent person (Codex, PR #58).
+ * Unclaimed chores nobody has done stay in the household's list. Cancelled
+ * days are left out.
+ *
+ * Carried-over first (oldest first), then the day's open ones in the order
+ * given (the agenda's own: untimed, then by time), then the finished ones.
+ * Empty without a roster row: an admin still being looked up is nobody yet,
+ * rather than briefly everybody.
+ */
+export function myOccurrences(
+  occurrences: ChoreOccurrence[],
+  memberId: string | null | undefined
+): ChoreOccurrence[] {
+  if (!memberId) return [];
+  const mine = occurrences.filter(
+    (o) =>
+      o.status !== "cancelled" &&
+      (o.task.assigned_to === memberId || (o.status === "completed" && o.task.completed_by === memberId))
+  );
+  const carried = mine.filter((o) => o.overdue && o.status !== "completed").sort((a, b) => a.date.localeCompare(b.date));
+  const open = mine.filter((o) => !o.overdue && o.status !== "completed");
+  const done = mine.filter((o) => o.status === "completed");
+  return [...carried, ...open, ...done];
+}
+
+/**
+ * Whether "My tasks" may finish chores on the day being viewed (D4 A): today
+ * (and the carried-over chores it shows) yes; a future day is read-only so a
+ * chore isn't ticked off before it's due; on a past day nothing new is
+ * finished, but a done chore can still be marked not done (a carried-over
+ * chore finished today is only found on its own day).
+ */
+export function myTasksMode(viewing: string, today: string): "today" | "future" | "past" {
+  return viewing === today ? "today" : viewing > today ? "future" : "past";
+}
+
+/**
+ * What a photo-free finish needs first when leave cover is involved (Phase
+ * 163; Codex, PR #58).
+ *
+ * Leave cover (lib/leave.ts) shows an absent staff member's chore as the
+ * cover person's, but only on screen: the stored row still names the absent
+ * person, and migrations/136 lets an admin skip the photos only on a chore
+ * stored as theirs or nobody's.
+ *
+ *   none        stored as mine or nobody's, or not written yet (it is
+ *               written as mine): finish as is.
+ *   takeover    a one-off, or one day of a repeat: assign that row to me
+ *               first, as its own edit (the two-step path 136 allows).
+ *   needsPhotos the row is the repeat itself (its first day lives on the
+ *               template): assigning it would hand me every future day, so
+ *               this one is finished with both photos instead.
+ */
+export type CoverTakeover =
+  | { kind: "none" }
+  | { kind: "takeover"; rowId: string }
+  | { kind: "needsPhotos" };
+
+export function coverTakeover(
+  occurrence: ChoreOccurrence,
+  memberId: string | null | undefined
+): CoverTakeover {
+  const row = occurrence.row;
+  if (!memberId || !row || occurrence.task.assigned_to !== memberId) return { kind: "none" };
+  const stored = row.assigned_to ?? null;
+  if (!stored || stored === memberId) return { kind: "none" };
+  return recurrenceOf(row) === "none" ? { kind: "takeover", rowId: row.id } : { kind: "needsPhotos" };
+}

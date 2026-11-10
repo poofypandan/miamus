@@ -54,6 +54,7 @@ function finishedChore(row: HouseholdTask, job: ChoreFinishJob): HouseholdTask {
   return {
     ...row,
     status: "completed",
+    ...(job.takeOverAs ? { assigned_to: job.takeOverAs } : {}),
     completed_at: job.completedAt,
     completed_by: job.completedBy,
     photo_url: job.after,

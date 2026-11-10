@@ -229,19 +229,24 @@ interface HouseholdContextValue {
   outboxCount: number;
   pendingIds: ReadonlySet<string>;
   /**
-   * A staff member finishing a chore (Phase 161): kept on the phone and sent,
-   * or left waiting when there is no answer. `queued` says which. Throws only
-   * when the server refuses it.
+   * Finishing a chore (Phase 161): kept on the phone and sent, or left
+   * waiting when there is no answer. `queued` says which; `task` is the saved
+   * row when it was sent. Throws only when the server refuses it.
+   *
+   * Photos are both or none. None is for an admin finishing their own chore
+   * from Today (Phase 163; migrations/136); staff always send both.
    */
   finishChore: (input: {
     templateId: string;
     date: string;
     rowId: string | null;
     assignedTo: string | null;
-    before: string;
-    after: string;
+    before: string | null;
+    after: string | null;
     title: string;
-  }) => Promise<{ queued: boolean }>;
+    /** Leave cover: take the stored row over first (see ChoreFinishJob). */
+    takeOverAs?: string | null;
+  }) => Promise<{ queued: boolean; task?: HouseholdTask }>;
   deleteLogWithPhoto: (log: TaskLog) => Promise<void>;
   createSchedule: (input: CreateScheduleInput) => Promise<MasterSchedule>;
   createSchedulesBatch: (entries: CreateScheduleInput[]) => Promise<MasterSchedule[]>;
@@ -969,9 +974,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       date: string;
       rowId: string | null;
       assignedTo: string | null;
-      before: string;
-      after: string;
+      before: string | null;
+      after: string | null;
       title: string;
+      takeOverAs?: string | null;
     }) => {
       const outcome = await submitJob<Extract<SendResult, { kind: "chore" }>>(
         {
@@ -987,7 +993,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
             prev.some((t) => t.id === task.id) ? prev.map((t) => (t.id === task.id ? task : t)) : [...prev, task]
           )
       );
-      return { queued: outcome.status === "waiting" };
+      return outcome.status === "waiting"
+        ? { queued: true }
+        : { queued: false, task: outcome.result.task };
     },
     []
   );
