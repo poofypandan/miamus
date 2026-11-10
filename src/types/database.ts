@@ -506,6 +506,27 @@ export type RepairCost = {
   updated_at: string;
 };
 
+/**
+ * What a bill cost and its receipt, for one paid day (Phase 164 PR B,
+ * migrations/138). OWNERS ONLY: staff phones can't read the table, and the
+ * receipt is in the owner-only owner-receipts bucket. Kept 2 years.
+ */
+export type BillPayment = {
+  id: string;
+  household_id: string;
+  /** The paid day's row: a repeat's written day, or a one-off bill. */
+  task_id: string;
+  /** The bill it belongs to (the repeat, or the one-off itself); set by the server. */
+  series_id: string | null;
+  amount_idr: number | null;
+  /** owner-receipts bucket, readable by the household's owners only. */
+  receipt_url: string | null;
+  /** When it was recorded, by the server's clock. */
+  paid_at: string;
+  created_by: string | null;
+  updated_at: string;
+};
+
 /** A short note on a repair, by an owner or a staff phone (migrations/131). */
 export type RepairNote = {
   id: string;
@@ -684,6 +705,12 @@ export interface Database {
         Row: RepairCost;
         Insert: Partial<RepairCost> & Pick<RepairCost, "repair_id" | "household_id">;
         Update: Partial<RepairCost>;
+        Relationships: [];
+      };
+      bill_payments: {
+        Row: BillPayment;
+        Insert: Partial<BillPayment> & Pick<BillPayment, "task_id" | "household_id">;
+        Update: Partial<BillPayment>;
         Relationships: [];
       };
       repair_notes: {
@@ -966,6 +993,12 @@ export interface Database {
       rotate_house_code: {
         Args: { p_household_id: string };
         Returns: string;
+      };
+      // Marks a paid bill's day not paid: payment removed and day reopened in
+      // one transaction (migrations/138).
+      reopen_bill_day: {
+        Args: { p_task_id: string };
+        Returns: { task: HouseholdTask; payment: BillPayment | null };
       };
       list_linked_phones: {
         Args: { p_household_id: string };

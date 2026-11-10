@@ -14,7 +14,8 @@ import { LEGAL, isLegalDraft } from "@/config/legal";
  * actually stores — see the tables in supabase/migrations and the retention
  * window in task_photo_retention_cutoff() (migrations/102), and food photos
  * and finished food (migrations/123), repairs (kept 2 years after closing,
- * migrations/130), feedback (kept 2 years, migrations/135), and Kakak's request counts (kept 13
+ * migrations/130), feedback (kept 2 years, migrations/135), bill payments (kept 2 years,
+ * migrations/138), and Kakak's request counts (kept 13
  * months; the text itself goes to Anthropic, not our database). Talking to
  * Kakak uses the browser's own speech recognition: no audio reaches Miamus. If either changes,
  * this has to change with it. Not legal advice: have it reviewed before a
@@ -107,6 +108,7 @@ const COPY: Record<
               "The household's shopping list: which supplies are running low or out, and who said so.",
               "Food the household lists: what it is, an optional photo, where it came from (cooked at home, from someone, or bought), where it is kept, when it expires (or that nobody knows yet), who gave it (a name you type in), notes, who added it, and whether it was eaten, given away or thrown away. When staff add food, the household's admins get a notification saying so, and each morning a notification lists food that expires today or tomorrow.",
               "Repairs: what broke and where (room and part of the room), details, a photo of the problem, whether it is urgent, who reported it, the visits to fix it with their before and after photos, who fixed it (a name you type in, for example the repair person), when its warranty ends, and whether it was fixed or not needed (with the reason, which staff can see). Short notes on a repair, with an optional photo, written by admins or staff. For admins only, never shown to staff: what a repair cost, its receipt photo and a note. When staff report something urgent, the household's admins get a notification.",
+              "Bills and upkeep: the household's bills (for example electricity, water or land tax) and upkeep, set up as chores with a date and an optional reminder; on the reminder day the admin it's for (or every admin, for staff chores) gets a morning notification listing what's due. For admins only, never shown to staff: when a bill is marked paid, what it cost and a photo of its receipt (or the bank app's proof), in storage only admins can open.",
               "Feedback you send from the app (Send feedback): your message, its type if you pick one (idea, problem or other), who sent it, the household, the screen it was sent from and the app version. Nothing else about your phone.",
             ],
           },
@@ -208,6 +210,7 @@ const COPY: Record<
               "A repair, its photo, its notes and their photos, its cost and receipt, and the photos of its visits are kept while the repair is open, and for 2 years after it is closed (fixed or not needed), then deleted automatically. If a repair is deleted, its photo, notes, cost and receipt are deleted too, and its visits' photos follow the 30-day rule.",
               "Records of staff sign-in attempts are deleted automatically after 30 days.",
               "Feedback is kept 2 years from when it was sent, then deleted automatically.",
+              "A bill's payment (its amount and receipt photo) is kept 2 years from when it was recorded, then deleted automatically. If the bill is deleted, or marked not paid, its payments and receipts are deleted too.",
               "A food photo is kept while the food is on the list, and deleted once it is marked eaten, given away or thrown away, or deleted. Finished food is kept 90 days without its photo, then deleted automatically.",
               "A staff phone's ID is deleted 7 days after it was last used, once the phone is no longer linked to a household.",
               "Counts of Kakak requests and their cost (without anything that was typed) are kept 13 months, then deleted.",
@@ -359,6 +362,7 @@ const COPY: Record<
               "Daftar belanja rumah: barang yang hampir habis atau habis, dan siapa yang memberi tahu.",
               "Makanan yang dicatat rumah tangga: makanan apa, foto (boleh tidak ada), dari mana (dimasak di rumah, dari orang, atau dibeli), disimpan di mana, kapan kedaluwarsa (atau belum ada yang tahu), dari siapa (nama yang Anda ketik), catatan, siapa yang menambahkan, dan apakah sudah dimakan, diberikan, atau dibuang. Kalau staf menambahkan makanan, admin rumah tangga mendapat notifikasi, dan setiap pagi ada notifikasi berisi makanan yang kedaluwarsa hari ini atau besok.",
               "Perbaikan: apa yang rusak dan di mana (ruangan dan bagiannya), keterangan, foto kerusakannya, apakah darurat, siapa yang melapor, kunjungan untuk memperbaikinya beserta foto sebelum dan sesudah, siapa yang memperbaiki (nama yang Anda ketik, misalnya tukangnya), kapan garansinya berakhir, dan apakah sudah diperbaiki atau tidak perlu (dengan alasannya, yang bisa dibaca staf). Catatan singkat tentang perbaikan, dengan foto (boleh tidak ada), yang ditulis admin atau staf. Hanya untuk admin, tidak pernah ditampilkan ke staf: biaya perbaikan, foto notanya, dan catatannya. Kalau staf melaporkan kerusakan darurat, admin rumah tangga mendapat notifikasi.",
+              "Tagihan dan perawatan rumah: tagihan rumah tangga (misalnya listrik, air, atau PBB) dan perawatan rumah, dicatat sebagai tugas dengan tanggal dan pengingat (boleh tidak ada); pada hari pengingat, admin yang ditugaskan (atau semua admin, untuk tugas staf) mendapat notifikasi pagi berisi yang jatuh tempo. Hanya untuk admin, tidak pernah ditampilkan ke staf: saat tagihan ditandai sudah dibayar, jumlahnya dan foto bukti bayarnya (atau bukti dari aplikasi bank), di penyimpanan yang hanya bisa dibuka admin.",
               "Masukan yang Anda kirim dari aplikasi (Kirim masukan): pesan Anda, jenisnya jika dipilih (ide, masalah, atau lainnya), siapa yang mengirim, rumah tangganya, halaman tempat pesan dikirim, dan versi aplikasi. Tidak ada data lain dari HP Anda.",
             ],
           },
@@ -460,6 +464,7 @@ const COPY: Record<
               "Perbaikan, fotonya, catatan beserta fotonya, biaya dan notanya, serta foto kunjungannya disimpan selama perbaikan masih berjalan, dan 2 tahun setelah ditutup (sudah diperbaiki atau tidak perlu), lalu dihapus otomatis. Jika perbaikan dihapus, foto, catatan, biaya, dan notanya ikut dihapus, dan foto kunjungannya mengikuti aturan 30 hari.",
               "Catatan percobaan masuk staf dihapus otomatis setelah 30 hari.",
               "Masukan disimpan 2 tahun sejak dikirim, lalu dihapus otomatis.",
+              "Pembayaran tagihan (jumlah dan foto bukti bayarnya) disimpan 2 tahun sejak dicatat, lalu dihapus otomatis. Jika tagihannya dihapus, atau ditandai belum dibayar, pembayaran dan bukti bayarnya ikut dihapus.",
               "Foto makanan disimpan selama makanannya masih ada di daftar, dan dihapus setelah ditandai dimakan, diberikan, atau dibuang, atau setelah dihapus. Makanan yang sudah habis disimpan 90 hari tanpa fotonya, lalu dihapus otomatis.",
               "ID HP staf dihapus 7 hari setelah terakhir dipakai, jika HP itu tidak lagi terhubung ke rumah tangga.",
               "Jumlah permintaan ke Kakak dan biayanya (tanpa isi yang diketik) disimpan 13 bulan, lalu dihapus.",

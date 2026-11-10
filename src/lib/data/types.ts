@@ -34,6 +34,7 @@ import type {
   LeaveRequest,
   Repair,
   RepairCost,
+  BillPayment,
   RepairNote,
 } from "@/types/database";
 
@@ -432,8 +433,27 @@ export interface DataProvider {
     repairId: string,
     cost: { amount_idr: number | null; receipt_url: string | null; note: string | null }
   ): Promise<RepairCost>;
-  /** Uploads a receipt to the owner-only owner-receipts bucket; returns its stored URL. */
-  uploadReceipt(file: File, repairId: string): Promise<string>;
+  /**
+   * Uploads a receipt to the owner-only owner-receipts bucket under
+   * <household>/<folder>/ (a repair's id, or "bills/<bill>"); returns its
+   * stored URL.
+   */
+  uploadReceipt(file: File, folder: string): Promise<string>;
+  /** The household's bill payments, newest first (owners only; migrations/138). */
+  listBillPayments(): Promise<BillPayment[]>;
+  /** Owners only: the paid day's payment, written or replaced (one per day). */
+  saveBillPayment(
+    taskId: string,
+    payment: { amount_idr: number | null; receipt_url: string | null }
+  ): Promise<BillPayment>;
+  /** Owners only: removes a day's payment; returns what was removed, if any. */
+  deleteBillPayment(taskId: string): Promise<BillPayment | null>;
+  /**
+   * A paid bill's day marked not paid: its payment removed and the day
+   * reopened in one transaction (migrations/138); the removed payment, if
+   * any, comes back so its receipt file can go.
+   */
+  reopenBillDay(taskId: string): Promise<{ task: HouseholdTask; payment: BillPayment | null }>;
   deleteReceipt(url: string): Promise<void>;
   /** Every note on the household's repairs, oldest first. */
   listRepairNotes(): Promise<RepairNote[]>;
