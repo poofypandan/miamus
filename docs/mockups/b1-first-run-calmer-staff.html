@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B1 first-run and calmer staff</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --okbg:rgba(16,185,129,.07); --okline:rgba(16,185,129,.3); --red:#b91c1c; --amber:#b45309; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1100px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0 0 6px; color:var(--muted); max-width:720px; }
+  section.screen { max-width:1100px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:680px; }
+  .rules { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 16px; max-width:720px; }
+  .rules li { margin:3px 0; color:var(--ink2); }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:740px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:5; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; display:flex; flex-direction:column; gap:6px; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:36px; }
+  .brand { font-weight:600; font-size:17px; }
+  .badge-id { display:flex; align-items:center; gap:5px; border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px; color:var(--muted); }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:6px 12px; font-size:13px; color:var(--muted); font-weight:500; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .seg.sm span { padding:4px 10px; font-size:12px; flex:none; }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .dates { display:flex; gap:4px; }
+  .dates span { flex:1; text-align:center; padding:5px 0; border-radius:12px; font-size:11px; color:var(--muted); border:1px solid var(--line); background:#fff; }
+  .dates span b { display:block; font-size:15px; color:var(--ink); }
+  .dates span.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .dates span.on b { color:#fff; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .ic.xs { width:12px; height:12px; }
+  .ic.sm { width:14px; height:14px; }
+  .ic.lg { width:22px; height:22px; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+
+  /* The first-run card */
+  .fr { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 12px 6px; display:flex; flex-direction:column; gap:8px; }
+  .fr header { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .fr h3 { margin:0; font-size:15px; font-weight:600; }
+  .fr header span { font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .fr .lead { margin:-4px 0 0; font-size:13px; color:var(--muted); }
+  .bar { height:4px; background:var(--track); border-radius:9px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--ok); border-radius:9px; }
+  .steps { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+  .step { display:flex; gap:10px; padding:7px 0; align-items:flex-start; }
+  .step + .step { border-top:1px solid #f1f2f4; }
+  .step .mark { width:22px; height:22px; flex:none; display:flex; align-items:center; justify-content:center; }
+  .step .mark .ic { width:20px; height:20px; color:#c4c7cc; }
+  .step.done .mark .ic { color:var(--ok); }
+  .step .txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .step .txt b { font-weight:500; font-size:14px; }
+  .step.done .txt b { color:var(--muted); font-weight:400; }
+  .step .txt small { font-size:13px; color:var(--muted); }
+  .step .detail { font-size:12.5px; color:var(--muted); white-space:nowrap; margin-left:auto; padding-top:2px; }
+  .step.next .txt b { font-weight:600; }
+  .step.next .txt small { color:var(--ink2); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:40px; border-radius:10px; font-weight:600; font-size:13.5px; padding:0 14px; }
+  .btn.primary { background:var(--primary); color:#fff; }
+  .btn.primary .ic { color:#fff; }
+  .btn.outline { border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:500; }
+  .step .btn { align-self:flex-start; margin-top:6px; }
+  .fr footer { display:flex; justify-content:flex-end; }
+  .fr footer span { font-size:13px; color:var(--muted); font-weight:500; padding:8px 6px; }
+  .fr.finished { background:var(--okbg); border-color:var(--okline); padding-bottom:12px; }
+  .fr.finished h3 { display:flex; align-items:center; gap:6px; color:var(--ok); }
+  .fr.finished h3 .ic { color:var(--ok); }
+  .fr.finished p { margin:0; font-size:13.5px; color:var(--ink2); }
+
+  .dayh { margin:2px 0 0; font-size:14px; font-weight:600; }
+  .quietline { font-size:13.5px; color:var(--muted); text-align:center; padding:8px 0; }
+  .trow { display:flex; align-items:center; gap:8px; padding:8px 10px; min-height:48px; border-radius:10px; background:#fff; border:1px solid var(--line); border-left:3px solid #fbbf24; }
+  .trow .time { width:52px; flex:none; font-size:12px; color:#52525b; font-variant-numeric:tabular-nums; }
+  .trow .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .trow .t b { font-weight:500; font-size:14px; }
+  .trow .t span { font-size:12px; color:var(--muted); display:flex; gap:4px; align-items:center; }
+  .callout { position:absolute; left:14px; right:14px; bottom:72px; background:#111827; color:#fff; border-radius:10px; padding:9px 12px; font-size:12.5px; z-index:4; }
+  .toast { position:absolute; left:14px; right:14px; bottom:74px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:center; gap:8px; padding:12px; font-size:13.5px; }
+
+  /* Staff */
+  .tip { position:relative; background:#fafafa; border:1px solid #e4e4e7; border-radius:12px; padding:10px 14px; display:flex; flex-direction:column; gap:3px; }
+  .tip h4 { margin:0; font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; padding-right:28px; }
+  .tip p { margin:0; font-size:13px; color:var(--ink2); line-height:1.35; }
+  .tip .x { position:absolute; top:8px; right:8px; }
+  .card { background:#fff; border:1px solid var(--line); border-left:3px solid #fbbf24; border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:7px; }
+  .card.routine { border-left-color:#f43f5e; background:#fff7f8; }
+  .card .ttl { font-size:14px; font-weight:500; }
+  .card .loc { display:flex; gap:4px; align-items:flex-start; font-size:12px; font-weight:500; color:var(--ink2); }
+  .card .loc.big { font-size:13px; }
+  .card .loc .clip { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card .note-old { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card .note { background:#f4f4f5; border-radius:8px; padding:6px 9px; display:flex; flex-direction:column; gap:1px; }
+  .card .note small { font-size:12px; font-weight:500; color:var(--muted); display:flex; align-items:center; gap:4px; }
+  .card .note span { font-size:14px; color:var(--ink); line-height:1.35; }
+  .badges { display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+  .bd { display:inline-flex; align-items:center; gap:3px; height:20px; padding:0 6px; border-radius:6px; font-size:10px; font-weight:500; background:var(--track); color:var(--ink2); }
+  .bd.outline { background:#fff; border:1px solid var(--line); font-weight:400; }
+  .hint { margin-left:auto; display:inline-flex; align-items:center; gap:3px; height:20px; padding:0 8px; border-radius:999px; font-size:10px; font-weight:600; color:#fff; background:#171717; }
+  .hint .ic { color:#fff; }
+  .rtop { display:flex; gap:8px; align-items:flex-start; }
+  .rtop .clipline { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:14px; font-weight:500; }
+  .rtop .wrapline { flex:1; min-width:0; font-size:14px; font-weight:500; }
+  .meds-old { font-size:12px; color:rgba(127,29,29,.8); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .meds { font-size:13px; color:rgba(127,29,29,.85); }
+  .over { font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; font-weight:500; }
+  .over.big { font-size:13px; }
+  .fab { position:absolute; right:16px; bottom:22px; background:#171717; color:#fff; border-radius:999px; height:52px; padding:0 18px; display:flex; align-items:center; gap:6px; font-weight:600; font-size:14px; }
+  .fab .ic { color:#fff; }
+  .label-before, .label-after { font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+  .label-before { color:var(--red); } .label-after { color:var(--ok); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:150px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:10px 16px 16px; display:flex; flex-direction:column; gap:12px; }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto; }
+  .sheet h3 { margin:0; font-size:17px; }
+  .sheet .sub { margin:-8px 0 0; font-size:13px; color:var(--muted); }
+  .sheet .snote { border:1px solid var(--line); background:#fafafa; border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:2px; }
+  .sheet .snote small { font-size:12px; font-weight:500; color:var(--muted); display:flex; align-items:center; gap:4px; }
+  .sheet .snote span { font-size:14px; color:var(--ink); line-height:1.4; }
+  .pstep { border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; gap:10px; }
+  .pstep .num { width:28px; height:28px; border-radius:99px; background:var(--track); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px; flex:none; }
+  .pstep b { font-size:14px; font-weight:600; }
+  .pstep b i { color:var(--red); font-style:normal; font-weight:400; }
+  .pstep p { margin:1px 0 0; font-size:13px; color:var(--muted); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></symbol><symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/></symbol><symbol id="i-circle-check-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></symbol><symbol id="i-user-round" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol><symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></symbol><symbol id="i-smartphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol><symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol><symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></symbol><symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol><symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol><symbol id="i-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol><symbol id="i-calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></symbol><symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol><symbol id="i-cooking-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol><symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></symbol><symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></symbol><symbol id="i-notebook-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol><symbol id="i-pill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></symbol><symbol id="i-party-popper" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17"/><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/></symbol></svg>
+<header class="page">
+  <h1>B1: first-run checklist and calmer staff Today</h1>
+  <p>Audit batch B1 (<code>docs/product-audit-2026-11-09.md</code>, items 3 and 5). Client only: no migration, no new data, no privacy change. Phone-width mockups; the build matches these.</p>
+  <p>Owner screens in English (left) and Bahasa Indonesia (right). Staff screens are Bahasa Indonesia only: before (left) and after (right).</p>
+</header>
+
+<section class="screen">
+  <h2>When the checklist shows, and when it goes</h2>
+  <div class="rules"><ul>
+    <li><b>Who sees it:</b> owners and family admins, on Today, Day view only. Never on staff phones.</li>
+    <li><b>Each step ticks itself from real data:</b> the home exists; someone on the Staff list; a staff phone linked (Household, Staff sign-in, Linked phones); a chore for them (or a pet routine); a first finished task.</li>
+    <li><b>Existing households never see it:</b> any finished chore or any routine log already on record means the home is past setup.</li>
+    <li><b>It goes away:</b> when the first task is finished (a one-time "set up" note, only if the checklist was seen on this phone), or on <i>Not now</i>, remembered for this owner on this phone.</li>
+    <li><b>Today stays calm:</b> while the checklist shows, the welcome card's Add Pet / Add Chore buttons step aside (the checklist has them), and My tasks keeps its place below it.</li>
+  </ul></div>
+</section>
+
+<section class="screen">
+  <h2>1. A brand-new home: the checklist on Today</h2>
+  <p>Straight after naming the home. One step is open at a time, the next one to do, with its one button. Steps already done stay as a quiet green tick.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">EN</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Rumah Kemang</span><span class="seg sm"><span class="on">Overview</span><span>Staff</span></span></div></div>
+      <div class="body">
+        <div class="seg"><span class="on">Day</span><span>Week</span></div>
+        <div class="dates"><span>Sun<b>8</b></span><span>Mon<b>9</b></span><span class="on">Tue<b>10</b></span><span>Wed<b>11</b></span><span>Thu<b>12</b></span></div>
+        <section class="fr">
+          <header><h3>Set up your home</h3><span>1 of 5</span></header>
+          <p class="lead">From here to the first task your staff finish.</p>
+          <div class="bar"><i style="width:20%"></i></div>
+          <ol class="steps">
+            <li class="step done"><span class="mark"><svg class="ic"><use href="#i-circle-check"/></svg></span><span class="txt"><b>Name your home</b></span><span class="detail">Rumah Kemang</span></li>
+            <li class="step next"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Add who helps at home</b><small>Add each person by name. They can choose their own PIN on their phone.</small><span class="btn primary"><svg class="ic sm"><use href="#i-plus"/></svg>Add a person</span></span></li>
+            <li class="step"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Link their phone</b></span></li>
+            <li class="step"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Give them a first task</b></span></li>
+            <li class="step"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>See it done</b></span></li>
+          </ol>
+          <footer><span>Not now</span></footer>
+        </section>
+        <h4 class="dayh">Today</h4>
+        <p class="quietline">Nothing on this day yet.</p>
+      </div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Pets</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span><svg class="ic"><use href="#i-house"/></svg>Household</span></div>
+    </div>
+    <div class="phone"><div class="tag">ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Rumah Kemang</span><span class="seg sm"><span class="on">Ringkasan</span><span>Staf</span></span></div></div>
+      <div class="body">
+        <div class="seg"><span class="on">Hari</span><span>Minggu</span></div>
+        <div class="dates"><span>Min<b>8</b></span><span>Sen<b>9</b></span><span class="on">Sel<b>10</b></span><span>Rab<b>11</b></span><span>Kam<b>12</b></span></div>
+        <section class="fr">
+          <header><h3>Siapkan rumah Anda</h3><span>1 dari 5</span></header>
+          <p class="lead">Dari sini sampai tugas pertama diselesaikan staf Anda.</p>
+          <div class="bar"><i style="width:20%"></i></div>
+          <ol class="steps">
+            <li class="step done"><span class="mark"><svg class="ic"><use href="#i-circle-check"/></svg></span><span class="txt"><b>Beri nama rumah</b></span><span class="detail">Rumah Kemang</span></li>
+            <li class="step next"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Tambah staf</b><small>Tambahkan setiap orang dengan namanya. Mereka bisa memilih PIN sendiri di HP-nya.</small><span class="btn primary"><svg class="ic sm"><use href="#i-plus"/></svg>Tambah Orang</span></span></li>
+            <li class="step"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Hubungkan HP staf</b></span></li>
+            <li class="step"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Beri tugas pertama</b></span></li>
+            <li class="step"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Lihat hasilnya</b></span></li>
+          </ol>
+          <footer><span>Nanti saja</span></footer>
+        </section>
+        <h4 class="dayh">Hari ini</h4>
+        <p class="quietline">Belum ada apa-apa hari ini.</p>
+      </div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar-days"/></svg>Hari ini</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Hewan</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Tugas</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Dapur</span><span><svg class="ic"><use href="#i-house"/></svg>Rumah</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>2. Steps ticking off</h2>
+  <p>Sari is on the Staff list and her phone opened the link, so both tick. The open step now adds her first task: the chore form opens with Sari already chosen. <i>Get the link</i> (step 3) opens Household, Invite, where Send on WhatsApp writes the message for you.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">EN</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Rumah Kemang</span><span class="seg sm"><span class="on">Overview</span><span>Staff</span></span></div></div>
+      <div class="body">
+        <div class="seg"><span class="on">Day</span><span>Week</span></div>
+        <div class="dates"><span>Sun<b>8</b></span><span>Mon<b>9</b></span><span class="on">Tue<b>10</b></span><span>Wed<b>11</b></span><span>Thu<b>12</b></span></div>
+        <section class="fr">
+          <header><h3>Set up your home</h3><span>3 of 5</span></header>
+          <p class="lead">From here to the first task your staff finish.</p>
+          <div class="bar"><i style="width:60%"></i></div>
+          <ol class="steps">
+            <li class="step done"><span class="mark"><svg class="ic"><use href="#i-circle-check"/></svg></span><span class="txt"><b>Name your home</b></span><span class="detail">Rumah Kemang</span></li>
+            <li class="step done"><span class="mark"><svg class="ic"><use href="#i-circle-check"/></svg></span><span class="txt"><b>Add who helps at home</b></span><span class="detail">Sari</span></li>
+            <li class="step done"><span class="mark"><svg class="ic"><use href="#i-circle-check"/></svg></span><span class="txt"><b>Link their phone</b></span><span class="detail">1 phone</span></li>
+            <li class="step next"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Give them a first task</b><small>A chore for today, like Sweep the terrace. It shows on their phone straight away.</small><span class="btn primary"><svg class="ic sm"><use href="#i-plus"/></svg>Add a task</span></span></li>
+            <li class="step"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>See it done</b></span></li>
+          </ol>
+          <footer><span>Not now</span></footer>
+        </section>
+      </div>
+      <div class="callout">Add a task opens the chore form with Who: Sari.</div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Pets</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span><svg class="ic"><use href="#i-house"/></svg>Household</span></div>
+    </div>
+    <div class="phone"><div class="tag">ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Rumah Kemang</span><span class="seg sm"><span class="on">Ringkasan</span><span>Staf</span></span></div></div>
+      <div class="body">
+        <div class="seg"><span class="on">Hari</span><span>Minggu</span></div>
+        <div class="dates"><span>Min<b>8</b></span><span>Sen<b>9</b></span><span class="on">Sel<b>10</b></span><span>Rab<b>11</b></span><span>Kam<b>12</b></span></div>
+        <section class="fr">
+          <header><h3>Siapkan rumah Anda</h3><span>3 dari 5</span></header>
+          <p class="lead">Dari sini sampai tugas pertama diselesaikan staf Anda.</p>
+          <div class="bar"><i style="width:60%"></i></div>
+          <ol class="steps">
+            <li class="step done"><span class="mark"><svg class="ic"><use href="#i-circle-check"/></svg></span><span class="txt"><b>Beri nama rumah</b></span><span class="detail">Rumah Kemang</span></li>
+            <li class="step done"><span class="mark"><svg class="ic"><use href="#i-circle-check"/></svg></span><span class="txt"><b>Tambah staf</b></span><span class="detail">Sari</span></li>
+            <li class="step done"><span class="mark"><svg class="ic"><use href="#i-circle-check"/></svg></span><span class="txt"><b>Hubungkan HP staf</b></span><span class="detail">1 HP</span></li>
+            <li class="step next"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Beri tugas pertama</b><small>Tugas untuk hari ini, misalnya Sapu teras. Langsung muncul di HP-nya.</small><span class="btn primary"><svg class="ic sm"><use href="#i-plus"/></svg>Tambah Tugas</span></span></li>
+            <li class="step"><span class="mark"><svg class="ic"><use href="#i-circle"/></svg></span><span class="txt"><b>Lihat hasilnya</b></span></li>
+          </ol>
+          <footer><span>Nanti saja</span></footer>
+        </section>
+      </div>
+      <div class="callout">Tambah Tugas membuka form tugas dengan Siapa: Sari.</div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar-days"/></svg>Hari ini</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Hewan</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Tugas</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Dapur</span><span><svg class="ic"><use href="#i-house"/></svg>Rumah</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>3. The first finished task, and Not now</h2>
+  <p>When Sari finishes her first task, the card turns green once and says so; Done closes it for good. Not now hides it straight away, with a toast that says where the steps live.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">EN</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Rumah Kemang</span><span class="seg sm"><span class="on">Overview</span><span>Staff</span></span></div></div>
+      <div class="body">
+        <div class="seg"><span class="on">Day</span><span>Week</span></div>
+        <div class="dates"><span>Sun<b>8</b></span><span>Mon<b>9</b></span><span class="on">Tue<b>10</b></span><span>Wed<b>11</b></span><span>Thu<b>12</b></span></div>
+        <section class="fr finished">
+          <h3><svg class="ic"><use href="#i-circle-check-big"/></svg>Your home is set up</h3>
+          <p>The first task is done. Today shows who did what, as it happens.</p>
+          <span class="btn outline" style="align-self:flex-start">Done</span>
+        </section>
+        <h4 class="dayh">Today</h4>
+        <div class="trow" style="border-left-color:#10b981;background:var(--okbg)"><span class="time">Anytime</span><span class="t"><b>Sweep the terrace</b><span><svg class="ic xs"><use href="#i-user-round"/></svg>Sari · Done 09:12</span></span><svg class="ic" style="color:var(--ok)"><use href="#i-circle-check"/></svg></div>
+      </div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar-days"/></svg>Today</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Pets</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Chores</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Kitchen</span><span><svg class="ic"><use href="#i-house"/></svg>Household</span></div>
+    </div>
+    <div class="phone"><div class="tag">ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Rumah Kemang</span><span class="seg sm"><span class="on">Ringkasan</span><span>Staf</span></span></div></div>
+      <div class="body">
+        <div class="seg"><span class="on">Hari</span><span>Minggu</span></div>
+        <div class="dates"><span>Min<b>8</b></span><span>Sen<b>9</b></span><span class="on">Sel<b>10</b></span><span>Rab<b>11</b></span><span>Kam<b>12</b></span></div>
+        <h4 class="dayh">Hari ini</h4>
+        <p class="quietline">Belum ada apa-apa hari ini.</p>
+      </div>
+      <div class="toast"><svg class="ic"><use href="#i-check"/></svg><span>Disembunyikan. Staf dan undangan ada di tab Rumah.</span></div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar-days"/></svg>Hari ini</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Hewan</span><span><svg class="ic"><use href="#i-clipboard-list"/></svg>Tugas</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Dapur</span><span><svg class="ic"><use href="#i-house"/></svg>Rumah</span></div>
+    </div>
+  </div>
+  <p style="margin-top:10px;color:var(--muted);max-width:680px">Left: Rumah Anda sudah siap / Tugas pertama sudah selesai. Hari ini menunjukkan siapa mengerjakan apa, saat itu juga. / Selesai. Right, in English: "Hidden. Staff and invites are in the Household tab."</p>
+</section>
+
+<section class="screen">
+  <h2>4. Staff Today, calmer (Bahasa Indonesia only)</h2>
+  <p>Before: up to five "Baru" cards stacked above the first task, notes in small grey on one line, room names and medicine lists cut off. After: one tip at a time (the newest not yet closed, and none again that day once one is closed); notes at 14 px in normal ink under a small Catatan label; room, carried-over and medicine lines at 13 px and never cut off. Nothing else moves.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Sebelum</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Miamus</span><span class="badge-id"><svg class="ic xs"><use href="#i-user-round"/></svg>Sari</span></div><div class="seg"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
+      <div class="body">
+        <div class="dates"><span>Min<b>8</b></span><span>Sen<b>9</b></span><span class="on">Sel<b>10</b></span><span>Rab<b>11</b></span><span>Kam<b>12</b></span></div>
+        <div class="tip"><h4><svg class="ic sm"><use href="#i-sparkles"/></svg>Baru: aman saat sinyal lemah</h4><p>Kalau sinyal lemah, catatan dan foto disimpan di HP dulu.</p><span class="x"><svg class="ic sm"><use href="#i-x"/></svg></span></div>
+        <div class="tip"><h4><svg class="ic sm"><use href="#i-sparkles"/></svg>Baru: lantai dan bagian ruangan</h4><p>Nama ruangan sekarang ada lantai dan bagiannya...</p><span class="x"><svg class="ic sm"><use href="#i-x"/></svg></span></div>
+        <div class="tip"><h4><svg class="ic sm"><use href="#i-sparkles"/></svg>Baru: Lapor kerusakan</h4><p>Lihat ada yang rusak? Ketuk Lapor...</p><span class="x"><svg class="ic sm"><use href="#i-x"/></svg></span></div>
+        <div class="tip"><h4><svg class="ic sm"><use href="#i-sparkles"/></svg>Baru: Kirim masukan</h4><p>Ada ide atau masalah di aplikasi?...</p><span class="x"><svg class="ic sm"><use href="#i-x"/></svg></span></div>
+        <div class="card"><div class="ttl">Pel lantai</div><div class="loc"><svg class="ic xs"><use href="#i-map-pin"/></svg><span class="clip">LT2 · GB2 Bathroom · Wastafel dan l…</span></div><div class="note-old">Pakai pembersih yang biru, jangan yang…</div><div class="badges"><span class="bd"><svg class="ic xs"><use href="#i-sparkles"/></svg>Bersih-bersih</span><span class="bd"><svg class="ic xs"><use href="#i-clock"/></svg>09.00</span><span class="hint"><svg class="ic xs"><use href="#i-camera"/></svg>Ketuk untuk foto</span></div></div>
+      </div>
+      <div class="fab"><svg class="ic"><use href="#i-plus"/></svg>Lapor</div>
+    </div>
+    <div class="phone"><div class="tag">Sesudah</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Miamus</span><span class="badge-id"><svg class="ic xs"><use href="#i-user-round"/></svg>Sari</span></div><div class="seg"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
+      <div class="body">
+        <div class="dates"><span>Min<b>8</b></span><span>Sen<b>9</b></span><span class="on">Sel<b>10</b></span><span>Rab<b>11</b></span><span>Kam<b>12</b></span></div>
+        <div class="tip"><h4><svg class="ic sm"><use href="#i-sparkles"/></svg>Baru: Kirim masukan</h4><p>Ada ide atau masalah di aplikasi? Ketuk Lapor → Kirim masukan. Dibaca tim Miamus dan pemilik rumah.</p><span class="x"><svg class="ic sm"><use href="#i-x"/></svg></span></div>
+        <div class="card"><div class="ttl">Pel lantai</div><div class="loc big"><svg class="ic xs" style="margin-top:3px"><use href="#i-map-pin"/></svg><span>LT2 · GB2 Bathroom · Wastafel dan lantai</span></div><div class="note"><small><svg class="ic xs"><use href="#i-notebook-pen"/></svg>Catatan</small><span>Pakai pembersih yang biru, jangan yang hijau. Keringkan pakai lap kering.</span></div><div class="badges"><span class="bd"><svg class="ic xs"><use href="#i-sparkles"/></svg>Bersih-bersih</span><span class="bd"><svg class="ic xs"><use href="#i-clock"/></svg>09.00</span><span class="hint"><svg class="ic xs"><use href="#i-camera"/></svg>Ketuk untuk foto</span></div><div class="over big"><svg class="ic xs"><use href="#i-triangle-alert"/></svg>Belum selesai dari kemarin</div></div>
+        <div class="card routine"><div class="rtop"><svg class="ic" style="color:#e11d48"><use href="#i-pill"/></svg><span style="font-size:14px;font-weight:500">19.00</span><span class="wrapline">Obat malam (3)</span></div><div class="meds">Obat jantung Mochi · Vitamin kulit Bento · Tetes telinga Mochi</div><div class="badges"><span class="bd">Mochi</span><span class="bd">Bento</span><span class="hint"><svg class="ic xs"><use href="#i-camera"/></svg>Ketuk untuk foto</span></div></div>
+      </div>
+      <div class="fab"><svg class="ic"><use href="#i-plus"/></svg>Lapor</div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>5. A chore's sheet on a staff phone</h2>
+  <p>The same note in the sheet: normal ink under Catatan, line breaks kept as the owner typed them. The photo steps' hints go from 12 to 13 px.</p>
+  <div class="pair">
+    <div class="phone"><div class="tag">Sesudah</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Miamus</span><span class="badge-id"><svg class="ic xs"><use href="#i-user-round"/></svg>Sari</span></div><div class="seg"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Pel lantai</h3>
+        <p class="sub">Bersih-bersih · 09.00</p>
+        <div class="snote"><small><svg class="ic xs"><use href="#i-notebook-pen"/></svg>Catatan</small><span>Pakai pembersih yang biru, jangan yang hijau.<br>Keringkan pakai lap kering.</span></div>
+        <div class="pstep"><span class="num">1</span><span><b>Foto Sebelum <i>· wajib</i></b><p>Foto lantai sebelum dipel.</p></span></div>
+        <div class="pstep"><span class="num">2</span><span><b>Foto Sesudah <i>· wajib</i></b><p>Foto lantai setelah selesai.</p></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen">
+  <h2>6. What's new (owners only)</h2>
+  <p>One line in Household, What's new. Nothing new for staff.</p>
+  <div class="rules"><ul>
+    <li><b>EN:</b> New: a setup checklist for new homes. New homes see Set up your home on Today: add your staff, link their phone, give them a first task. It ticks itself off and goes away after the first finished task; Not now hides it.</li>
+    <li><b>ID:</b> Baru: daftar persiapan rumah baru. Rumah baru melihat Siapkan rumah Anda di Hari ini: tambah staf, hubungkan HP-nya, beri tugas pertama. Tercentang sendiri dan hilang setelah tugas pertama selesai; Nanti saja menyembunyikannya.</li>
+  </ul></div>
+</section>
+</body>
+</html>
