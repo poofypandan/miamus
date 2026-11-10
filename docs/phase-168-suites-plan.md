@@ -2,12 +2,13 @@
 
 Status: **decided: D1–D9 all A. The owner delegated to the recommendations,
 2026-11-10** (the owner can still change any of them). D9 was added the same
-day from the owner's input on English abbreviations. PR A (migration 142,
+day from the owner's input on English abbreviations. PR A (migration 140,
 by-hand editing, every label) is being built.
 Mockups: `docs/mockups/phase-168-suites.html` (open in a browser, phone
 width). Builds on Phase 158 (`docs/phase-158-rooms-plan.md`, migration 129)
-and Phase 159 (repairs, migration 130). Migration **142** would be next
-(139 couldn't-do, 140 staff push, 141 staff pay are reserved).
+and Phase 159 (repairs, migration 130). Migration **140** (renumbered
+2026-11-10: 139 couldn't-do is live; staff push and staff pay move to 141 and
+142).
 
 ## The problem
 
@@ -161,7 +162,7 @@ mockup: **Kamar Utama** (Master Bedroom), **Kamar Tamu 1 / 2** (GB1, GB2),
 - The staff report form (`room-select.tsx`, native list): options under the
   floor heading read "GB1", "GB1 · Bathroom", in that order.
 - Pushes about urgent repairs say the full path:
-  `repair_place_label()` walks up two parents (migration 142).
+  `repair_place_label()` walks up two parents (migration 140).
 
 ### Staff phones (D6)
 
@@ -262,7 +263,7 @@ already in that room (or on that floor) isn't offered. Accepted renames go in
 the same `organise_rooms` call as the grouping, so one Undo puts both back.
 No new column: the name is the name.
 
-## The database — migration 142 (described, not written)
+## The database — migration 140
 
 Additive, no new column and no new table.
 
@@ -292,7 +293,8 @@ Additive, no new column and no new table.
   bedroom can have a "Bathroom".
 - **`repair_place_label()`** (130): walks up two parents, so a push reads
   "LT2 · GB1 · Bathroom · Shower". Same grants as 130 (`service_role` only).
-  Any place label added by 139–141 gets the same change in 142.
+  Any place label added by a migration that lands first gets the same change
+  in 140.
 - **`organise_rooms(jsonb)`**: unchanged; the trigger enforces the cap on
   every row it writes. The card orders `places` outer rooms before rooms
   inside, and Undo takes rooms out before their outer room changes.
@@ -301,9 +303,9 @@ Additive, no new column and no new table.
 - **RLS:** unchanged (everyone in the household reads; only
   `household_members` write). No new `SECURITY DEFINER` function.
 - **Older app versions:** nothing nests until an owner nests, which only
-  the new app offers, so 142 can go to staging and production before the
+  the new app offers, so 140 can go to staging and production before the
   app ships (as every migration does).
-- **Tests** (`supabase/tests/142_rooms_inside_rooms.sql`, rolled back): a
+- **Tests** (`supabase/tests/140_rooms_inside_rooms.sql`, rolled back): a
   room inside a room is accepted; a third level is refused; a room with
   rooms inside can't go inside another; a cross-household parent is
   refused; three bedrooms can each hold "Bathroom"; deleting an outer room
@@ -320,9 +322,9 @@ Additive, no new column and no new table.
 
 ## Two PRs
 
-**PR A — rooms inside rooms, by hand** (migration 142)
+**PR A — rooms inside rooms, by hand** (migration 140)
 
-- Migration 142 and its SQL tests.
+- Migration 140 and its SQL tests.
 - One shared helper for a place's path (`placePath(locations, id)` →
   "LT2 · GB1 · Bathroom"), used by `useLocationName`, the picker,
   `room-select.tsx`, the Rooms view and Kakak's context, so the path is

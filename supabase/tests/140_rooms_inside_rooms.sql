@@ -1,11 +1,11 @@
--- Migration 142 checks: a room may sit inside a top-level room, one level
+-- Migration 140 checks: a room may sit inside a top-level room, one level
 -- deep; names unique per parent; deleting a room moves its rooms inside out
 -- as "GB1 Bathroom"; deleting a floor keeps rooms inside their room; deleting
 -- a household with floors works; repair_place_label gives the whole path;
 -- organise_rooms nests and undoes; staff phones can't nest; grants.
 -- LOCAL DATABASE ONLY. One transaction, rolled back:
 --   PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -X -q -t \
---     -f supabase/tests/142_rooms_inside_rooms.sql
+--     -f supabase/tests/140_rooms_inside_rooms.sql
 \set ON_ERROR_STOP on
 \pset footer off
 begin;

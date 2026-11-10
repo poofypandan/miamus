@@ -1,5 +1,5 @@
 -- ============================================================================
--- 142 — Rooms inside rooms (Phase 168, PR A; docs/phase-168-suites-plan.md)
+-- 140 — Rooms inside rooms (Phase 168, PR A; docs/phase-168-suites-plan.md)
 -- ============================================================================
 -- Owner decisions (2026-11-10): D1–D8 all A (delegated to the
 -- recommendations).
