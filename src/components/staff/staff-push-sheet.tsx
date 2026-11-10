@@ -4,10 +4,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Bell, BellOff, ChevronRight, Loader2, Moon, Send, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
-import { useStaffPush, type StaffPush } from "@/hooks/use-staff-push";
+import type { StaffPush } from "@/hooks/use-staff-push";
 import { staffPushStatusLabel } from "@/lib/staff-push";
 import { cn } from "@/lib/utils";
 
@@ -15,9 +16,8 @@ import { cn } from "@/lib/utils";
  * "Notifikasi di HP ini", the last row of the Lapor sheet (D7). Not for an
  * admin in staff view, and not on a database without migrations/141.
  */
-export function StaffPushRow({ onPress }: { onPress: () => void }) {
+export function StaffPushRow({ staffPush, onPress }: { staffPush: StaffPush; onPress: () => void }) {
   const { isHouseholdMember } = useHousehold();
-  const staffPush = useStaffPush();
   if (isHouseholdMember || !staffPush.available) return null;
   const label = staffPushStatusLabel(staffPush.status, staffPush.onForMe);
   return (
@@ -55,8 +55,15 @@ const WHAT_IS_SENT = [
 ];
 
 /** The sheet itself (Bahasa Indonesia only): one switch per person, no per-event options. */
-export function StaffPushSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const staffPush = useStaffPush();
+export function StaffPushSheet({
+  staffPush,
+  open,
+  onClose,
+}: {
+  staffPush: StaffPush;
+  open: boolean;
+  onClose: () => void;
+}) {
   useBackToClose(open, onClose);
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
@@ -165,29 +172,13 @@ function StaffPushSettings({ staffPush, onClose }: { staffPush: StaffPush; onClo
           <div className="flex min-w-0 flex-1 flex-col">
             <p className="text-sm font-medium">Untuk saya ({staffName})</p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={onForMe}
-            aria-label={`Untuk saya (${staffName})`}
+          <Switch
+            on={onForMe}
+            label={`Untuk saya (${staffName})`}
             disabled={busy !== null || (status === "off" && !staffPush.canEnable)}
-            onClick={toggleMine}
-            className={cn(
-              "relative flex h-7 w-12 shrink-0 items-center rounded-full disabled:opacity-50",
-              onForMe ? "bg-primary" : "bg-muted"
-            )}
-          >
-            {busy === "switch" ? (
-              <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
-            ) : (
-              <span
-                className={cn(
-                  "size-6 rounded-full bg-white shadow-sm transition-transform",
-                  onForMe ? "translate-x-[22px]" : "translate-x-0.5"
-                )}
-              />
-            )}
-          </button>
+            onToggle={toggleMine}
+            busy={busy === "switch" ? <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" /> : undefined}
+          />
         </div>
       )}
 

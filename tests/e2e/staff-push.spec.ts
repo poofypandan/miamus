@@ -91,6 +91,22 @@ test("a notification for Budi, opened on Ari's turn: says whose, and offers the 
   await expect(strip).toBeVisible();
 });
 
+test("the phone's Back closes the PIN screen and stays on Today (review fix)", async ({ context, page }) => {
+  await installStub(context, { stored: freshSession(), staffPhone: true, staff: ROSTER });
+  await page.goto(`/staff?untuk=${BUDI}`);
+  const strip = page.getByRole("region", { name: "Notifikasi ini untuk Budi" });
+  await expect(strip).toBeVisible({ timeout: 20_000 });
+  await strip.getByRole("button", { name: "Ganti ke Budi" }).click();
+  await expect(page.getByText("Masukkan PIN")).toBeVisible();
+  await page.goBack();
+  await expect(page.getByText("Masukkan PIN")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/staff\?untuk=/);
+  await expect(strip).toBeVisible();
+  // And it opens again, so the waiting caller was released.
+  await strip.getByRole("button", { name: "Ganti ke Budi" }).click();
+  await expect(page.getByText("Masukkan PIN")).toBeVisible();
+});
+
 test("a notification for the person on duty: no strip", async ({ context, page }) => {
   await installStub(context, { stored: freshSession(), staffPhone: true, staff: ROSTER });
   await page.goto(`/staff?untuk=${STAFF_ID}`);

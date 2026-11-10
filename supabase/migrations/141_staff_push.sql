@@ -340,9 +340,14 @@ begin
        and t.household_id = p_household_id
        and not (t.id = any (p_ids))
        and t.parent_task_id is null
-       and t.assigned_to is not distinct from p_staff_id
        and t.created_at > now() - interval '30 minutes'
        and public.staff_push_chore_today(t, p_day)
+       -- Who it's for after leave, as the push itself is addressed: a person
+       -- covering hears about the chores they cover.
+       and exists (
+         select 1 from public.staff_push_assignee(p_household_id, t.assigned_to, p_day) c
+          where c.push and c.assignee is not distinct from p_staff_id
+       )
   )
   select array_agg(l.title order by l.rank, l.due_time nulls first, l.created_at desc, l.title),
          count(*),
@@ -582,10 +587,12 @@ end;
 $$;
 
 -- Which of these people a push would reach now: the switch is on, it isn't
--- quiet hours, and a linked phone with a subscription notifies them. Admin
--- only. (The 5-minute rule isn't applied: this is asked right after the save
--- whose push just set it.)
-create or replace function public.staff_will_be_notified(p_staff_ids uuid[])
+-- quiet hours, and a linked phone with a subscription notifies them. With
+-- p_today_task, also that a chore for them today really reaches them, after
+-- leave (away with "pause": nobody; "reassign": the person covering, not
+-- them). Admin only. (The 5-minute rule isn't applied: this is asked right
+-- after the save whose push just set it.)
+create or replace function public.staff_will_be_notified(p_staff_ids uuid[], p_today_task boolean default false)
 returns uuid[]
 language plpgsql
 stable
@@ -613,6 +620,14 @@ begin
         on s.id = p.staff_id and s.household_id = household and s.user_id is null and s.archived_at is null
      where p.household_id = household
        and p.staff_id = any (p_staff_ids)
+       and (
+         not coalesce(p_today_task, false)
+         or exists (
+           select 1
+             from public.staff_push_assignee(household, p.staff_id, (now() at time zone 'Asia/Jakarta')::date) c
+            where c.push and c.assignee = p.staff_id
+         )
+       )
        and exists (
          select 1 from public.push_subscriptions ps
           where ps.user_id = p.device_user_id and ps.household_id = household
@@ -623,10 +638,10 @@ $$;
 
 revoke all on function public.staff_push_overview() from public, anon;
 revoke all on function public.set_household_staff_push(boolean) from public, anon;
-revoke all on function public.staff_will_be_notified(uuid[]) from public, anon;
+revoke all on function public.staff_will_be_notified(uuid[], boolean) from public, anon;
 grant execute on function public.staff_push_overview() to authenticated;
 grant execute on function public.set_household_staff_push(boolean) to authenticated;
-grant execute on function public.staff_will_be_notified(uuid[]) to authenticated;
+grant execute on function public.staff_will_be_notified(uuid[], boolean) to authenticated;
 
 -- --- 6. The triggers ------------------------------------------------------------------
 -- A failure never costs the record: each push is wrapped and only warns.
@@ -1103,10 +1118,17 @@ begin
       left join public.staff_profiles s on s.id = fb.staff_id
       where fb.household_id = hh
     ), '[]'::jsonb),
+    -- Numbered as Household → Linked staff phones lists them (last sign-in
+    -- first), so "HP 1" here is "Phone 1" on screen (migrations/141).
     'linked_phones', coalesce((
-      select jsonb_agg(jsonb_build_object('linked_at', d.created_at, 'last_seen_at', d.last_seen_at)
-                       order by d.created_at)
-      from public.device_sessions d where d.household_id = hh
+      select jsonb_agg(jsonb_build_object('phone', 'HP ' || ph.n, 'linked_at', ph.created_at,
+                                          'last_seen_at', ph.last_seen_at)
+                       order by ph.n)
+      from (
+        select d.created_at, d.last_seen_at,
+               row_number() over (order by d.last_seen_at desc, d.created_at) as n
+          from public.device_sessions d where d.household_id = hh
+      ) ph
     ), '[]'::jsonb),
     -- Who gets notifications on which linked phone (migrations/141): the
     -- phone as linked_phones above numbers it, never an endpoint.
@@ -1116,7 +1138,7 @@ begin
       ) order by ph.n, p.created_at)
       from public.staff_push_people p
       join (
-        select d.user_id, row_number() over (order by d.created_at) as n
+        select d.user_id, row_number() over (order by d.last_seen_at desc, d.created_at) as n
           from public.device_sessions d where d.household_id = hh
       ) ph on ph.user_id = p.device_user_id
       join public.staff_profiles s on s.id = p.staff_id

@@ -176,15 +176,23 @@ function LeaveApproval() {
   async function decide(kind: "approve" | "reject") {
     if (!leave) return;
     setSaving(kind);
-    // The answer reaches their phone (Phase 166) when it has notifications on.
-    const notified = async () =>
-      (await staffWillBeNotified([leave.staff_id])).includes(leave.staff_id)
-        ? { description: t(`${name} will get a notification.`, `${name} akan mendapat notifikasi.`) }
-        : undefined;
+    // The answer reaches their phone (Phase 166) when it has notifications
+    // on: said under the toast once known, never holding the page up.
+    const staffId = leave.staff_id;
+    const announce = (message: string) => {
+      const id = toast.success(message);
+      void staffWillBeNotified([staffId]).then((reached) => {
+        if (!reached.includes(staffId)) return;
+        toast.success(message, {
+          id,
+          description: t(`${name} will get a notification.`, `${name} akan mendapat notifikasi.`),
+        });
+      });
+    };
     try {
       if (kind === "reject") {
         await decideLeave(leave.id, { status: "rejected" });
-        toast.success(t(`Leave for ${name} rejected`, `Cuti ${name} ditolak`), await notified());
+        announce(t(`Leave for ${name} rejected`, `Cuti ${name} ditolak`));
       } else {
         if (!action) return;
         await decideLeave(leave.id, {
@@ -192,7 +200,7 @@ function LeaveApproval() {
           fallback_action: action,
           fallback_assignee_id: action === "reassign" ? cover : null,
         });
-        toast.success(t(`Leave for ${name} approved`, `Cuti ${name} disetujui`), await notified());
+        announce(t(`Leave for ${name} approved`, `Cuti ${name} disetujui`));
       }
       router.push(moduleHref("access"));
     } catch (err) {

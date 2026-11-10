@@ -970,7 +970,7 @@ export interface Database {
         Returns: boolean;
       };
       staff_will_be_notified: {
-        Args: { p_staff_ids: string[] };
+        Args: { p_staff_ids: string[]; p_today_task?: boolean };
         Returns: string[];
       };
       // Every RLS policy's question: which households may auth.uid() touch.

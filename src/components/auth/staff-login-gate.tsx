@@ -16,6 +16,7 @@ import { ChevronLeft, Delete, Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import { StaffSplash } from "@/components/staff/staff-splash";
 import { StaffLoadingScreen } from "@/components/brand/loading-screens";
 import { dataProvider } from "@/lib/data";
@@ -152,6 +153,15 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
       }),
     []
   );
+  // Kembali, or the phone's Back: nobody switches, and whoever asked is told.
+  const cancelConfirm = useCallback(() => {
+    waiting.current?.(false);
+    waiting.current = null;
+    setConfirming(null);
+  }, []);
+  // Back closes the PIN screen rather than leaving the page (the sheets'
+  // own rule, use-back-to-close).
+  useBackToClose(confirming !== null && userRole !== "owner", cancelConfirm);
 
   // An admin never meets the PIN screen: they signed in with Google, and
   // their roster row is linked to that account (Phase 139, migrations/106).
@@ -207,11 +217,7 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-50">
           <PinStep
             step={{ kind: "enter", profile: confirming.profile }}
-            onBack={() => {
-              waiting.current = null;
-              confirming.resolve(false);
-              setConfirming(null);
-            }}
+            onBack={cancelConfirm}
             onDone={(profile) => {
               identify(profile);
               waiting.current = null;

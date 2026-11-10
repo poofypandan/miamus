@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { BellOff, BellRing, Lightbulb, Loader2, Moon, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { sendTestPush } from "@/lib/push";
 import type { PushStatus } from "@/lib/push-prompt";
 import { usePushStatus } from "@/hooks/use-push-status";
@@ -14,7 +15,6 @@ import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { DEFAULT_SUMMARY_HOUR, SUMMARY_HOURS } from "@/lib/couldnt-do";
 import { formatTime } from "@/lib/time";
-import { cn } from "@/lib/utils";
 
 /** One or two words for this device's push state: the badge and the Household row. */
 export function pushStatusLabel(status: PushStatus, t: Translate): string | undefined {
@@ -412,25 +412,7 @@ function ChoiceRow({
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs text-muted-foreground">{detail}</p>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label={switchLabel ?? title}
-        disabled={disabled}
-        onClick={onToggle}
-        className={cn(
-          "relative mt-0.5 flex h-7 w-12 shrink-0 items-center rounded-full disabled:opacity-50",
-          on ? "bg-primary" : "bg-muted"
-        )}
-      >
-        <span
-          className={cn(
-            "size-6 rounded-full bg-white shadow-sm transition-transform",
-            on ? "translate-x-[22px]" : "translate-x-0.5"
-          )}
-        />
-      </button>
+      <Switch on={on} label={switchLabel ?? title} disabled={disabled} onToggle={onToggle} className="mt-0.5" />
     </div>
   );
 }

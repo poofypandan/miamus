@@ -362,6 +362,52 @@ select pg_temp.ok(pg_temp.err_as(:a1, format($q$
   values ('00000000-0000-0000-0000-0000000141f1', 'Cuti', %L, '00000000-0000-0000-0000-0000000141c3') $q$,
   pg_temp.today())) = '', 'a chore for Dewi, who is on leave today (pause)');
 select pg_temp.ok((select count(*) = 0 from pushes), '... no push');
+select pg_temp.ok(jsonb_array_length(pg_temp.json_as(:a1, format(
+                    'select to_jsonb(public.staff_will_be_notified(array[%L]::uuid[], true))', :dewi))) = 0,
+  '... and the toast doesn''t claim she''ll be told (review fix)');
+select pg_temp.ok(pg_temp.json_as(:a1, format('select to_jsonb(public.staff_will_be_notified(array[%L]::uuid[]))', :dewi))
+                  @> jsonb_build_array(:dewi),
+  '... while an answer to her own request still reaches her');
+
+-- Covering: Tono away today, his chores to Rina (her own phone, p3). The
+-- list of recent chores follows the cover too (review fix).
+insert into auth.users (id, instance_id, aud, role, is_anonymous, created_at, updated_at)
+values ('00000000-0000-0000-0000-0000000141b3', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', true, now(), now());
+insert into public.device_sessions (user_id, household_id, last_seen_at)
+values ('00000000-0000-0000-0000-0000000141b3', '00000000-0000-0000-0000-0000000141f1', now() - interval '3 days');
+insert into public.staff_profiles (id, household_id, name) values
+  ('00000000-0000-0000-0000-0000000141c5', '00000000-0000-0000-0000-0000000141f1', 'Rina'),
+  ('00000000-0000-0000-0000-0000000141c6', '00000000-0000-0000-0000-0000000141f1', 'Tono');
+insert into public.push_subscriptions (user_id, household_id, subscription)
+values ('00000000-0000-0000-0000-0000000141b3', '00000000-0000-0000-0000-0000000141f1',
+        jsonb_build_object('endpoint', 'https://fcm.googleapis.com/fcm/send/p3', 'keys', jsonb_build_object('p256dh', 'k', 'auth', 'a')));
+insert into public.staff_sign_in_attempts (user_id, household_id, staff_id, kind, success)
+values ('00000000-0000-0000-0000-0000000141b3', '00000000-0000-0000-0000-0000000141f1', '00000000-0000-0000-0000-0000000141c5', 'pin', true);
+select pg_temp.ok(pg_temp.json_as('00000000-0000-0000-0000-0000000141b3',
+                    $q$ select public.set_my_push_person('00000000-0000-0000-0000-0000000141c5', true) $q$) ->> 'status' = 'ok',
+  'Rina turns notifications on, on her own phone');
+insert into public.leave_requests (household_id, staff_id, start_date, end_date, status, fallback_action, fallback_assignee_id)
+values ('00000000-0000-0000-0000-0000000141f1', '00000000-0000-0000-0000-0000000141c6', pg_temp.today(), pg_temp.today(),
+        'approved', 'reassign', '00000000-0000-0000-0000-0000000141c5');
+select pg_temp.fresh();
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$
+  insert into public.household_tasks (household_id, title, due_date, assigned_to)
+  values ('00000000-0000-0000-0000-0000000141f1', 'Tutup gorden', %L, '00000000-0000-0000-0000-0000000141c6') $q$,
+  pg_temp.today())) = '', 'a chore for Tono, who is away with Rina covering');
+select pg_temp.ok((select count(*) = 1 and bool_and(user_id = '00000000-0000-0000-0000-0000000141b3'::uuid
+                          and title = 'Tugas baru' and body = 'Tutup gorden') from pushes),
+  '... Rina hears it');
+select pg_temp.fresh();
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$
+  insert into public.household_tasks (household_id, title, due_date, assigned_to)
+  values ('00000000-0000-0000-0000-0000000141f1', 'Buka jendela', %L, '00000000-0000-0000-0000-0000000141c6') $q$,
+  pg_temp.today())) = '', 'another chore for Tono');
+select pg_temp.ok((select count(*) = 1 and bool_and(body = 'Buka jendela dan Tutup gorden') from pushes),
+  '... Rina''s push lists the one before it too');
+select pg_temp.ok(jsonb_array_length(pg_temp.json_as(:a1, format(
+                    'select to_jsonb(public.staff_will_be_notified(array[%L, %L]::uuid[], true))',
+                    '00000000-0000-0000-0000-0000000141c5', '00000000-0000-0000-0000-0000000141c6'))) = 1,
+  '... and the toast check counts Rina, not Tono');
 
 -- ---- Leave answered ------------------------------------------------------------------------
 insert into public.leave_requests (id, household_id, staff_id, start_date, end_date) values
@@ -453,11 +499,18 @@ select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.set_my_push_person('000
 select pg_temp.ok(jsonb_array_length(pg_temp.json_as(:p2, 'select public.my_phone_push_people()') -> 'people') = 1,
   '... p2 now notifies only Wati');
 
+update public.device_sessions set last_seen_at = now() - interval '1 day' where user_id = :p2::uuid;
 select pg_temp.ok((select e -> 'staff_notifications' @> jsonb_build_array(jsonb_build_object('phone', 'HP 1', 'staff', 'Sari'))
+                          and e -> 'linked_phones' -> 0 ->> 'phone' = 'HP 1'
                           and e::text not like '%fcm.googleapis.com%'
                           and (e -> 'household' ->> 'staff_push')::boolean
                      from (select pg_temp.json_as(:a1, 'select public.export_household_data()') as e) x),
   'the export lists who gets notifications on which phone, never an endpoint');
+update public.device_sessions set last_seen_at = now() - interval '2 days' where user_id = :p1::uuid;
+select pg_temp.ok((select e -> 'staff_notifications' @> jsonb_build_array(jsonb_build_object('phone', 'HP 2', 'staff', 'Sari'))
+                          and e -> 'staff_notifications' @> jsonb_build_array(jsonb_build_object('phone', 'HP 1', 'staff', 'Wati'))
+                     from (select pg_temp.json_as(:a1, 'select public.export_household_data()') as e) x),
+  '... numbered as Linked staff phones lists them, last sign-in first (review fix)');
 
 delete from public.device_sessions where user_id = :p1::uuid;
 select pg_temp.ok((select count(*) = 0 from public.staff_push_people where device_user_id = :p1::uuid),
@@ -474,7 +527,7 @@ select pg_temp.ok(not has_function_privilege('anon', 'public.my_phone_push_peopl
                   and not has_function_privilege('anon', 'public.set_my_push_person(uuid, boolean, text)', 'execute')
                   and not has_function_privilege('anon', 'public.staff_push_overview()', 'execute')
                   and not has_function_privilege('anon', 'public.set_household_staff_push(boolean)', 'execute')
-                  and not has_function_privilege('anon', 'public.staff_will_be_notified(uuid[])', 'execute'),
+                  and not has_function_privilege('anon', 'public.staff_will_be_notified(uuid[], boolean)', 'execute'),
   'logged-out callers reach none of the new functions');
 select pg_temp.ok(has_function_privilege('authenticated', 'public.my_phone_push_people()', 'execute')
                   and has_function_privilege('authenticated', 'public.set_my_push_person(uuid, boolean, text)', 'execute')

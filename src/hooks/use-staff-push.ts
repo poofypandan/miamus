@@ -9,7 +9,9 @@ import { readSessionState } from "@/lib/auth/device-session";
 import {
   STAFF_PUSH_CHANGED_EVENT,
   myPhonePushPeople,
+  peopleLeftAfterTurningOff,
   setMyPushPerson,
+  shouldUndoSubscription,
   type PhonePushPeople,
 } from "@/lib/staff-push";
 
@@ -91,30 +93,51 @@ export function useStaffPush() {
    */
   const turnOnForMe = useCallback(async (beforePin?: () => void): Promise<StaffPushTurnOn> => {
     if (!staffId || !staffName) return "failed";
-    if (push.status !== "on") {
+    const subscribedNow = push.status !== "on";
+    if (subscribedNow) {
       const result = await push.enable();
       if (result === "denied") return "denied";
       if (result === "unavailable") return "failed";
     }
-    let added = await setMyPushPerson(staffId, true);
-    if (added.status === "pin_required") {
-      beforePin?.();
-      if (!(await confirmPerson({ id: staffId, name: staffName }))) return "cancelled";
-      added = await setMyPushPerson(staffId, true);
+    // A subscription made just now that ends up notifying nobody (the PIN
+    // screen closed, a refused PIN, an error) is taken back: the phone keeps
+    // push details only for someone who turned notifications on.
+    const undo = async () => {
+      if (shouldUndoSubscription(subscribedNow, people)) await push.disable().catch(() => {});
+    };
+    try {
+      let added = await setMyPushPerson(staffId, true);
+      if (added.status === "pin_required") {
+        beforePin?.();
+        if (!(await confirmPerson({ id: staffId, name: staffName }))) {
+          await undo();
+          return "cancelled";
+        }
+        added = await setMyPushPerson(staffId, true);
+      }
+      if (added.status !== "ok") {
+        await undo();
+        return "failed";
+      }
+    } catch (err) {
+      await undo();
+      throw err;
     }
-    if (added.status !== "ok") return "failed";
     await load();
     return "on";
-  }, [confirmPerson, load, push, staffId, staffName]);
+  }, [confirmPerson, load, people, push, staffId, staffName]);
 
   /** Only me. The last person off unsubscribes the phone too. */
   const turnOffForMe = useCallback(async () => {
     if (!staffId) return;
     await setMyPushPerson(staffId, false);
+    // Who is left, from the server, or from the list already here when that
+    // read fails: an unreadable list must never switch everyone off.
     const after = await myPhonePushPeople().catch(() => null);
-    if (!after || after.people.length === 0) await push.disable();
+    const left = peopleLeftAfterTurningOff(after, people, staffId);
+    if (left.length === 0) await push.disable();
     await load();
-  }, [load, push, staffId]);
+  }, [load, people, push, staffId]);
 
   /** "Matikan di HP ini (untuk semua)": everyone's names off, then the subscription. */
   const turnOffForEveryone = useCallback(async () => {

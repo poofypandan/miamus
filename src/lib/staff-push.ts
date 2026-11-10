@@ -94,13 +94,18 @@ export async function setHouseholdStaffPush(on: boolean): Promise<void> {
 
 /**
  * Admins, right after a save: which of these people a push reaches now.
- * Never throws: a failed check only means the plain "Saved" toast.
+ * `todayTask`: about a chore for them today, so leave applies (away with
+ * "pause" or covered by someone else: not them). Never throws: a failed
+ * check only means the plain "Saved" toast.
  */
-export async function staffWillBeNotified(staffIds: string[]): Promise<string[]> {
+export async function staffWillBeNotified(staffIds: string[], todayTask = false): Promise<string[]> {
   const ids = [...new Set(staffIds.filter(Boolean))];
   if (!supabase || ids.length === 0) return [];
   try {
-    const { data, error } = await supabase.rpc("staff_will_be_notified", { p_staff_ids: ids });
+    const { data, error } = await supabase.rpc("staff_will_be_notified", {
+      p_staff_ids: ids,
+      ...(todayTask ? { p_today_task: true } : {}),
+    });
     if (error) throw error;
     return Array.isArray(data) ? data : [];
   } catch (err) {
@@ -206,4 +211,56 @@ export function staffPushStatusLabel(status: PushStatus, onForMe: boolean): stri
   if (status === "denied") return "Diblokir";
   if (status === "on" && onForMe) return "Aktif";
   return "Mati";
+}
+
+// --- Pure rules the hooks and the chore editor use (unit-tested) -------------------
+
+/**
+ * Who this phone still notifies after `staffId` turned theirs off: the
+ * server's answer, or, when that read failed, the list already on screen
+ * without them. Never "nobody" just because the read failed: that would
+ * switch the phone off for everyone else (review, #81).
+ */
+export function peopleLeftAfterTurningOff(
+  fromServer: PhonePushPeople | null,
+  before: PhonePushPeople | null | undefined,
+  staffId: string
+): { staff_id: string; name: string }[] {
+  if (fromServer) return fromServer.people;
+  return (before?.people ?? []).filter((p) => p.staff_id !== staffId);
+}
+
+/**
+ * Whether a subscription made during this turn-on should be taken back
+ * because it ended up notifying nobody (the PIN screen closed, a refused
+ * PIN, an error): push details are kept only for someone who turned
+ * notifications on (review, #81).
+ */
+export function shouldUndoSubscription(subscribedNow: boolean, before: PhonePushPeople | null | undefined): boolean {
+  return subscribedNow && (before?.people.length ?? 0) === 0;
+}
+
+/** The fields of a chore this rule reads. */
+export interface ChoreForToday {
+  id?: string;
+  parent_task_id?: string | null;
+  assigned_to: string | null;
+  due_time: string | null;
+}
+
+/**
+ * Whether saving this chore tells someone's phone (migrations/141's
+ * triggers, as the owner's toast words it): it is for someone, still to do
+ * today, and new, newly theirs, newly on today, or re-timed. `isToday` says
+ * whether a version of the chore falls on today (a repeat's day with its own
+ * row counts as not: that row governs it).
+ */
+export function choreSaveTellsStaff<T extends ChoreForToday>(
+  before: T | null,
+  after: T,
+  isToday: (row: T) => boolean
+): boolean {
+  if (!after.assigned_to || !isToday(after)) return false;
+  if (!before || !isToday(before)) return true;
+  return before.assigned_to !== after.assigned_to || (before.due_time ?? null) !== (after.due_time ?? null);
 }
