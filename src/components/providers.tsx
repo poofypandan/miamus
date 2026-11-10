@@ -3,6 +3,7 @@
 import { HouseholdProvider } from "@/context/household-context";
 import { AutoRefresh } from "@/components/shared/auto-refresh";
 import { PhotoSync } from "@/components/shared/photo-sync";
+import { AddressMoveGate } from "@/components/shared/address-move-gate";
 // Side-effect import: registers the beforeinstallprompt listener at app start,
 // on whichever route loads first, so the event is never missed.
 import "@/hooks/use-pwa-install";
@@ -15,7 +16,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AutoRefresh />
       {/* Uploads proof photos taken without signal (Phase 138). */}
       <PhotoSync />
-      {children}
+      {/* On an old address (config/hosts.ts): sends what is waiting on this
+          phone, then shows the way to miamus.app, in place of every screen. */}
+      <AddressMoveGate>{children}</AddressMoveGate>
     </HouseholdProvider>
   );
 }
