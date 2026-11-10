@@ -10,6 +10,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterPill } from "@/components/shared/filter-pill";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { MyTasksCard } from "@/components/agenda/my-tasks-card";
+import { WhatsNewCard } from "@/components/shared/whats-new";
 import { OwnerFinishSheet } from "@/components/chores/owner-finish-sheet";
 import { WeekPager } from "@/components/agenda/week-pager";
 import { WeekSummaryView } from "@/components/agenda/week-summary-view";
@@ -113,6 +114,10 @@ export function AgendaTab() {
     return allChores.filter((o) => !keys.has(o.key));
   }, [allChores, mine]);
   const myMode = myTasksMode(dateStr, formatDateLocal(today));
+  const hasOwnChores = useMemo(
+    () => !!memberProfile && householdTasks.some((task) => task.assigned_to === memberProfile.id),
+    [householdTasks, memberProfile]
+  );
   const { finish } = useFinishMyChore();
   // Held as a key, as the staff list does: occurrences are rebuilt on every
   // write, so a captured one would go stale the moment the chore is saved.
@@ -355,6 +360,8 @@ export function AgendaTab() {
 
         {/* My tasks (Phase 163): below what waits on a decision, above the
             household's day. Renders nothing on a day with none of mine. */}
+        {/* Its tutorial, only for an admin who has a chore of their own (D5). */}
+        {range === "day" && hasOwnChores && <WhatsNewCard id="my-tasks-2026-11" />}
         {range === "day" && (
           <MyTasksCard
             occurrences={mine}
