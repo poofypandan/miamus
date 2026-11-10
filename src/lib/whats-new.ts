@@ -28,6 +28,26 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Shown in Chores → Rooms (Phase 168 PR A, docs/phase-168-suites-plan.md).
+    id: "rooms-inside-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: a bathroom inside its bedroom", id: "Baru: kamar mandi di dalam kamarnya" },
+    steps: {
+      en: [
+        "A room can now have rooms inside it. Put each bathroom inside its bedroom in Household → Rooms.",
+        "They show under their room everywhere, like GB1 · Bathroom.",
+        "A spot is still a thing in a room, like the sink.",
+      ],
+      id: [
+        "Ruangan sekarang bisa punya ruangan di dalamnya. Masukkan kamar mandi ke kamarnya di Rumah → Ruangan.",
+        "Ruangan itu tampil di bawah kamarnya, misalnya Kamar Tamu 1 · Kamar Mandi.",
+        "Bagian tetap untuk benda di ruangan, seperti wastafel.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown on Today to an admin with a bill in My tasks (Phase 164 PR B).
     id: "bill-payments-2026-11",
     date: "2026-11-10",
@@ -314,6 +334,13 @@ export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
     date: "2026-11-10",
     title: "Baru: Kirim masukan",
     lines: ["Ada ide atau masalah di aplikasi? Ketuk Lapor → Kirim masukan. Dibaca tim Miamus dan pemilik rumah."],
+  },
+  {
+    // Phase 168: once a chore on this phone is in a room inside a room.
+    id: "staff-rooms-inside-2026-11",
+    date: "2026-11-10",
+    title: "Baru: kamar mandi bersama kamarnya",
+    lines: ["Kamar mandi sekarang ditulis bersama kamarnya, misalnya LT2 · Kamar Tamu 2 · Kamar Mandi · Wastafel."],
   },
   {
     id: "staff-weak-signal-2026-11",

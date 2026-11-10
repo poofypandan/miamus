@@ -172,8 +172,8 @@ insert into public.household_locations (id, household_id, name, parent_id) value
   ('00000000-0000-0000-0000-0000000129c7', '00000000-0000-0000-0000-0000000129f1', 'Music Room', '00000000-0000-0000-0000-0000000129e2');
 select pg_temp.ok(pg_temp.err($q$ update public.household_locations set parent_id = '00000000-0000-0000-0000-0000000129e2'
   where id = '00000000-0000-0000-0000-0000000129e3' $q$) = 'floor_has_no_floor', 'a floor cannot sit on a floor');
-select pg_temp.ok(pg_temp.err($q$ update public.household_locations set parent_id = '00000000-0000-0000-0000-0000000129c7'
-  where id = '00000000-0000-0000-0000-0000000129c2' $q$) = 'parent_must_be_floor', 'a room cannot sit in a room');
+-- "A room cannot sit in a room" was checked here until Phase 168's migration, which
+-- lets a room sit inside a room one level deep (its own test covers that).
 select pg_temp.ok(pg_temp.err($q$ update public.household_locations set kind = 'room'
   where id = '00000000-0000-0000-0000-0000000129e2' $q$) = 'floor_still_has_rooms', 'a floor with rooms cannot become a room');
 select pg_temp.ok(pg_temp.err($q$ insert into public.household_locations (household_id, name, parent_id)

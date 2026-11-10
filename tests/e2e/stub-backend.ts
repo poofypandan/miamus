@@ -527,7 +527,8 @@ function filterRows(rows: Record<string, unknown>[], params: URLSearchParams): R
 /**
  * household_locations reads and owner writes (Phase 158): the stub's rooms
  * array is changed in place, so later reads see it. Deleting a floor moves
- * its rooms to "no floor", as migrations/129 does.
+ * its rooms to "no floor", as migrations/129 does; deleting a room moves its
+ * rooms inside out (Phase 168).
  */
 function answerRooms(route: Route, rooms: Record<string, unknown>[]) {
   const request = route.request();
@@ -551,7 +552,18 @@ function answerRooms(route: Route, rooms: Record<string, unknown>[]) {
   const index = rooms.findIndex((r) => r.id === id);
   if (index === -1) return reply([]);
   if (request.method() === "DELETE") {
-    for (const r of rooms) if (r.parent_id === id) r.parent_id = null;
+    // A room's rooms inside move to where it was, with its name in front
+    // ("GB1 Bathroom"), as the rooms-inside-rooms migration does.
+    const gone = rooms[index];
+    for (const r of rooms) {
+      if (r.parent_id !== id) continue;
+      if (gone.kind === "floor") {
+        r.parent_id = null;
+      } else {
+        r.parent_id = gone.parent_id ?? null;
+        r.name = `${String(gone.name).trim()} ${String(r.name).trim()}`.slice(0, 60).trim();
+      }
+    }
     return reply(rooms.splice(index, 1));
   }
   Object.assign(rooms[index], request.postDataJSON() ?? {});

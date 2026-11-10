@@ -2,10 +2,11 @@
 
 import { useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Layers, Loader2, MapPin, Plus, X } from "lucide-react";
+import { CornerDownRight, Layers, Loader2, MapPin, Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { dataProvider } from "@/lib/data";
+import { outerRoomOf, placeLabel, placeMap } from "@/lib/places";
 import { MAX_ROOMS_AT_ONCE, filterGroups, placeGroups } from "@/lib/room-picker";
 import { cn } from "@/lib/utils";
 import type { HouseholdLocation } from "@/types/database";
@@ -52,17 +53,28 @@ export function LocationCombobox({
 
   const typed = query.trim();
   const all = useMemo(() => locations ?? [], [locations]);
-  const byId = useMemo(() => new Map(all.map((place) => [place.id, place])), [all]);
+  const byId = useMemo(() => placeMap(all), [all]);
   // "LT2 · Lounge" for a room on a floor (migrations/129), so two rooms with
-  // one name on two floors can be told apart; "LT2 · Whole floor" for a floor.
+  // one name on two floors can be told apart; "LT2 · GB1 · Bathroom" for a
+  // room inside a room (Phase 168); "LT2 · Whole floor" for a floor.
   const label = useMemo(() => {
     return (place: HouseholdLocation) => {
       if (place.kind === "floor") return `${place.name} · ${t("Whole floor", "Seluruh lantai")}`;
-      const floor = place.parent_id ? byId.get(place.parent_id) : undefined;
-      return floor ? `${floor.name} · ${place.name}` : place.name;
+      return placeLabel(place, byId);
     };
   }, [byId, t]);
   const chosenIds = useMemo(() => new Set(values.map((place) => place.id)), [values]);
+  // A room inside reads as just "Bathroom" only right under its own room, or
+  // under another room inside that room; anywhere else it says whose it is
+  // (Codex, #74), so three bedrooms' bathrooms are never mixed up.
+  const underItsRoom = (places: HouseholdLocation[], index: number): boolean => {
+    const outer = outerRoomOf(places[index], byId);
+    const above = places[index - 1];
+    if (!outer || !above) return false;
+    if (above.id === outer.id) return true;
+    // A room beside it in the same room counts only if that one is indented too.
+    return outerRoomOf(above, byId)?.id === outer.id && underItsRoom(places, index - 1);
+  };
   const groups = useMemo(
     () => filterGroups(placeGroups(all), typed, label, chosenIds),
     [all, typed, label, chosenIds]
@@ -211,12 +223,14 @@ export function LocationCombobox({
                   {group.floor ? group.floor.name : t("No floor yet", "Belum ada lantai")}
                 </p>
               )}
-              {group.places.map((place) => (
+              {group.places.map((place, index) => (
                 <button
                   key={place.id}
                   type="button"
                   role="option"
                   aria-selected={false}
+                  // A room inside shows "Bathroom"; it is read as "LT2 · GB1 · Bathroom".
+                  aria-label={outerRoomOf(place, byId) ? label(place) : undefined}
                   // mousedown, not click: the input's blur would close the list
                   // before a click could land.
                   onMouseDown={(e) => e.preventDefault()}
@@ -228,10 +242,21 @@ export function LocationCombobox({
                       <Layers className="size-3.5 shrink-0 text-amber-700" />
                       <span className="truncate font-medium">{t("Whole floor", "Seluruh lantai")}</span>
                     </>
+                  ) : underItsRoom(group.places, index) ? (
+                    // A room inside, straight under its room (or a room
+                    // beside it in there): indented, by its own name.
+                    <>
+                      <CornerDownRight className="ml-3 size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="truncate text-gray-700">{place.name}</span>
+                    </>
                   ) : (
                     <>
                       <MapPin className="size-3.5 shrink-0 text-amber-700" />
-                      <span className="truncate">{place.name}</span>
+                      <span className="truncate">
+                        {/* Its room isn't just above (filtered out by a search, or
+                            already picked): it says whose it is. */}
+                        {outerRoomOf(place, byId) ? `${outerRoomOf(place, byId)!.name} · ${place.name}` : place.name}
+                      </span>
                     </>
                   )}
                 </button>

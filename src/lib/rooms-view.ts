@@ -1,6 +1,7 @@
 import { CHORE_JOBS, choreJobsIn, type ChoreJob } from "@/lib/chore-jobs";
 import { intervalOf, recurrenceOf } from "@/lib/chore-recurrence";
 import type { OwnerLocale } from "@/lib/owner-locale";
+import { placeLabel, placeMap, topLevelRooms, withRoomsInside } from "@/lib/places";
 import type { HouseholdLocation, HouseholdTask } from "@/types/database";
 
 /**
@@ -75,9 +76,16 @@ export interface RoomEntry {
   id: string;
   /** The name shown in the floor's section: the room without its floor. */
   label: string;
-  /** The room's full name as stored, for the sheet's title. */
+  /** Where the room is, for the sheet's title: "LT2 · GB1 · Bathroom". */
   fullName: string;
   chores: RoomChore[];
+  /**
+   * 1 for a room inside a room (Phase 168), listed straight under it; 0 (or
+   * absent) otherwise. Every row counts as one room, inside or not (D4).
+   */
+  depth?: 0 | 1;
+  /** The room a room inside sits in. */
+  outerId?: string | null;
 }
 
 export interface FloorSection {
@@ -130,13 +138,21 @@ export function buildRoomsModel(
   const jobs = CHORE_JOBS.filter((job) => jobsSeen.has(job));
 
   // Stored floors (migrations/129): rooms sit under them; a floor's own
-  // chores are its "Whole floor" row, shown only when it has some.
-  if (locations.some((l) => l.kind === "floor")) {
-    const order = (a: HouseholdLocation, b: HouseholdLocation) =>
-      (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
-      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
-    const floorRows = locations.filter((l) => l.kind === "floor").sort(order);
-    const floorIds = new Set(floorRows.map((f) => f.id));
+  // chores are its "Whole floor" row, shown only when it has some. A room's
+  // rooms inside (Phase 168) follow it, so a household with rooms inside but
+  // no floors is read from what's stored too, not from the names.
+  if (locations.some((l) => l.kind === "floor" || (l.parent_id && known.has(l.parent_id)))) {
+    const byId = placeMap(locations);
+    const { floors: floorRows, onFloor, loose } = topLevelRooms(locations);
+    const entries = (rooms: HouseholdLocation[]): RoomEntry[] =>
+      withRoomsInside(rooms, locations).map(({ place, depth }) => ({
+        id: place.id,
+        label: place.name,
+        fullName: placeLabel(place, byId),
+        chores: choresByRoom.get(place.id) ?? [],
+        depth,
+        outerId: depth === 1 ? (place.parent_id ?? null) : null,
+      }));
     const sections: FloorSection[] = floorRows.map((floor) => {
       const wholeChores = choresByRoom.get(floor.id) ?? [];
       return {
@@ -145,22 +161,10 @@ export function buildRoomsModel(
         whole: wholeChores.length
           ? { id: floor.id, label: floor.name, fullName: floor.name, chores: wholeChores }
           : null,
-        rooms: locations
-          .filter((r) => r.kind !== "floor" && r.parent_id === floor.id)
-          .sort(order)
-          .map((r) => ({
-            id: r.id,
-            label: r.name,
-            fullName: `${floor.name} · ${r.name}`,
-            chores: choresByRoom.get(r.id) ?? [],
-          })),
+        rooms: entries(onFloor(floor.id)),
       };
     });
-    const loose = locations
-      .filter((r) => r.kind !== "floor" && (!r.parent_id || !floorIds.has(r.parent_id)))
-      .sort(order)
-      .map((r) => ({ id: r.id, label: r.name, fullName: r.name, chores: choresByRoom.get(r.id) ?? [] }));
-    return { floors: sections, otherRooms: loose, storedFloors: true, noRoom, jobs };
+    return { floors: sections, otherRooms: entries(loose), storedFloors: true, noRoom, jobs };
   }
 
   const floors = new Map<number, FloorSection>();
@@ -203,6 +207,11 @@ export function buildRoomsModel(
   };
 }
 
+/** A room's rooms inside, from the model (empty for most rooms). */
+export function roomsInsideOf(model: RoomsModel, roomId: string): RoomEntry[] {
+  return allRoomRows(model).filter((room) => room.outerId === roomId);
+}
+
 /** Does a room have this job set up? */
 export function roomHasJob(entry: RoomEntry, job: ChoreJob): boolean {
   return entry.chores.some((chore) => chore.jobs.includes(job));
@@ -218,7 +227,10 @@ export function placesWithJob(model: RoomsModel, job: ChoreJob): number {
   return allRoomRows(model).filter((room) => roomHasJob(room, job)).length + wholeFloors;
 }
 
-/** Every room row, whole-floor rows excluded: what "9 of 19 rooms" counts. */
+/**
+ * Every room row, whole-floor rows excluded: what "9 of 19 rooms" counts.
+ * Rooms inside a room are rows of their own (Phase 168, D4).
+ */
 export function allRoomRows(model: RoomsModel): RoomEntry[] {
   return [...model.floors.flatMap((f) => f.rooms), ...model.otherRooms];
 }
