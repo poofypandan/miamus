@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kitchen: cooking and planning mockups</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --faint:#9ca3af; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --okbg:rgba(16,185,129,.06); --okline:rgba(16,185,129,.3); --red:#b91c1c; --amber:#92400e; --amberbg:#fffbeb; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1140px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0 0 6px; color:var(--muted); max-width:720px; }
+  section.screen { max-width:1140px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:680px; }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:760px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone.tall { height:900px; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; display:flex; flex-direction:column; gap:6px; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:40px; }
+  .brand { font-weight:600; font-size:17px; display:flex; gap:6px; align-items:center; }
+  .mark { width:24px; height:24px; display:block; }
+  .who { display:flex; align-items:center; gap:4px; font-size:12.5px; color:var(--ink2); background:var(--track); border-radius:999px; padding:4px 10px; }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:6px 10px; font-size:13px; color:var(--muted); font-weight:500; white-space:nowrap; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .seg.sm span { padding:4px 10px; font-size:12px; }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .ic.xs { width:12px; height:12px; }
+  .ic.lg { width:22px; height:22px; }
+  .grp { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:4px 2px -4px; display:flex; justify-content:space-between; }
+  .grp i { font-style:normal; text-transform:none; letter-spacing:0; font-weight:500; }
+  .list { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+  .li { display:flex; align-items:center; gap:10px; padding:8px 12px; border-top:1px solid var(--line); min-height:52px; }
+  .li:first-child { border-top:0; }
+  .lic { width:32px; height:32px; border-radius:8px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
+  .lic .ic { color:var(--ink2); }
+  .lic.photo { background:linear-gradient(135deg,#d6c3a5,#a47e55); }
+  .lic.photo .ic { color:#fff; }
+  .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .t > b { font-weight:500; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .t > span { font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; }
+  .amt { font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+  .amt small { display:block; font-size:11px; font-weight:500; color:var(--muted); }
+  .amt.low { color:var(--amber); }
+  .amt.stale { color:var(--faint); font-weight:500; }
+  .pill { font-size:11.5px; border-radius:999px; padding:3px 9px; white-space:nowrap; font-weight:500; }
+  .pill.ok { background:var(--track); color:var(--ink2); }
+  .pill.low { background:var(--amberbg); color:var(--amber); }
+  .days { font-size:12px; color:var(--ink2); white-space:nowrap; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:96px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:8px 16px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+  .sheet.low { top:230px; gap:12px; }
+  .sheet.mid { top:150px; }
+  .sheet > * { flex:none; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto 2px; }
+  .sheet h3 { margin:0; font-size:17px; text-align:center; }
+  .sheet .lead { margin:-4px 0 0; font-size:13px; color:var(--muted); text-align:center; display:flex; justify-content:center; align-items:center; gap:4px; }
+  .label { font-size:12.5px; font-weight:600; color:var(--ink2); margin-bottom:-4px; display:flex; justify-content:space-between; align-items:baseline; }
+  .label em { font-style:normal; font-weight:400; color:var(--muted); }
+  .hint { font-size:11.5px; color:var(--muted); margin-top:-4px; }
+  .hint.old { display:flex; align-items:center; gap:4px; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; border-radius:12px; font-weight:600; font-size:14px; }
+  .btn.primary { background:var(--primary); color:#fff; }
+  .btn.primary .ic { color:#fff; }
+  .btn.outline { border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:500; }
+  .btn.sm { min-height:40px; font-size:13px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .link { text-align:center; font-size:13px; color:var(--ink2); font-weight:500; display:flex; align-items:center; justify-content:center; gap:4px; }
+  .switchrow { display:flex; align-items:center; justify-content:space-between; border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+  .switchrow b { font-weight:600; font-size:14px; display:block; }
+  .switchrow span { font-size:11.5px; color:var(--muted); display:block; max-width:230px; }
+  .switch { width:44px; height:26px; border-radius:999px; background:var(--primary); position:relative; flex:none; }
+  .switch::after { content:""; position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%; background:#fff; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { border:1px solid var(--line); border-radius:999px; padding:5px 11px; font-size:12.5px; color:var(--ink2); background:#fff; }
+  .chip.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .stepper { display:flex; align-items:center; gap:8px; }
+  .stepper .sb { width:48px; height:48px; border-radius:12px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:#fff; flex:none; }
+  .stepper .sb .ic { color:var(--ink); width:18px; height:18px; }
+  .stepper .val { flex:1; min-height:48px; border:1px solid var(--ink); border-radius:12px; display:flex; align-items:center; justify-content:center; gap:6px; font-size:19px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .stepper .val i { font-style:normal; color:var(--muted); font-size:15px; font-weight:500; }
+  .stepper.small .sb { width:34px; height:34px; border-radius:9px; }
+  .stepper.small .val { min-height:34px; font-size:14px; border-color:var(--line); border-radius:9px; min-width:96px; flex:none; padding:0 6px; }
+  .field { border:1px solid var(--line); border-radius:12px; min-height:44px; padding:11px 12px; font-size:14px; display:flex; justify-content:space-between; align-items:center; }
+  .field span { color:var(--muted); font-size:13px; }
+  .sum { background:var(--track); border-radius:10px; padding:8px 12px; font-size:12.5px; color:var(--ink2); display:flex; justify-content:space-between; }
+  .sum b { font-variant-numeric:tabular-nums; }
+  .box { width:22px; height:22px; border-radius:6px; border:1.5px solid #9ca3af; flex:none; display:flex; align-items:center; justify-content:center; }
+  .box.on { background:var(--primary); border-color:var(--primary); }
+  .box.on .ic { color:#fff; width:14px; height:14px; }
+  .toast { position:absolute; left:14px; right:14px; bottom:74px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:center; gap:8px; padding:12px; font-size:13.5px; }
+  .toast.top { bottom:auto; top:110px; }
+  .toast span { flex:1; }
+  .toast .ok { color:var(--ok); flex:none; display:flex; }
+  .toast .ok .ic { color:var(--ok); }
+  .toast b { display:flex; align-items:center; gap:4px; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-weight:600; }
+  .week { display:flex; gap:4px; }
+  .week span { flex:1; text-align:center; padding:5px 0; border-radius:12px; font-size:11px; color:var(--muted); position:relative; }
+  .week span b { display:block; font-size:15px; color:var(--ink); }
+  .week span.on { background:var(--primary); color:#fff; }
+  .week span.on b { color:#fff; }
+  .week span.has::after { content:""; position:absolute; bottom:2px; left:50%; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:#a3a3a3; }
+  .week span.on.has::after { background:#fff; }
+  .meal { background:#fff; border:1px solid var(--line); border-radius:12px; padding:4px 0; }
+  .meal h4 { margin:0; padding:6px 12px 2px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .dish { display:flex; align-items:center; gap:10px; padding:7px 12px; min-height:46px; }
+  .dish .t > b { font-size:14px; }
+  .dish.done .t > b { color:var(--muted); }
+  .addline { display:flex; align-items:center; gap:6px; padding:6px 12px 8px; font-size:12.5px; color:var(--muted); }
+  .note { display:flex; gap:8px; align-items:flex-start; background:var(--amberbg); border:1px solid #fde68a; border-radius:12px; padding:9px 12px; font-size:12.5px; color:var(--amber); }
+  .note .ic { color:#b45309; margin-top:1px; }
+  .note b { font-weight:600; }
+  .note .t2 { flex:1; }
+  .quiet { display:flex; align-items:center; gap:8px; min-height:36px; padding:0 4px; font-size:13.5px; color:var(--ink2); }
+  .quiet span { flex:1; }
+  .t > span:has(.need) { white-space:normal; }
+  .need { font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .need b { color:var(--ink); font-weight:600; }
+  .hero { height:100px; border-radius:12px; background:linear-gradient(135deg,#8a5a35,#5b3a22); display:flex; align-items:flex-end; padding:10px; color:#fff; font-size:11.5px; gap:4px; }
+  .hero .ic { color:#fff; }
+  .ing { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13.5px; }
+  .ing:first-child { border-top:0; }
+  .ing span { color:var(--ink2); }
+  .ing b { font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .ing b.taste { color:var(--muted); font-weight:500; }
+  .steps { margin:0; padding-left:18px; font-size:13px; color:var(--ink2); display:flex; flex-direction:column; gap:4px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:6px; display:flex; flex-direction:column; gap:2px; }
+  .card header { display:flex; align-items:center; justify-content:space-between; padding:4px 6px; gap:6px; }
+  .card h3 { margin:0; font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; }
+  .card header span { font-size:12px; color:var(--muted); }
+  .crow { display:flex; align-items:center; gap:10px; padding:6px; min-height:50px; border-radius:8px; }
+  .crow .when { width:44px; flex:none; font-size:11.5px; color:#52525b; }
+  .cnote { font-size:12px; color:var(--amber); padding:2px 6px 6px; display:flex; gap:5px; align-items:flex-start; }
+  .cnote .ic { color:#b45309; }
+  .trow { display:flex; align-items:center; gap:10px; padding:8px 10px; min-height:52px; background:#fff; border:1px solid var(--line); border-radius:12px; }
+  .time { width:44px; flex:none; font-size:11.5px; color:#52525b; font-variant-numeric:tabular-nums; }
+  .badge { width:28px; height:28px; border-radius:8px; background:#fffbeb; display:flex; align-items:center; justify-content:center; flex:none; }
+  .badge .ic { color:#b45309; }
+  .use { display:flex; align-items:center; gap:10px; padding:8px 12px; border-top:1px solid var(--line); min-height:54px; }
+  .use:first-child { border-top:0; }
+  .use { flex-wrap:wrap; row-gap:6px; }
+  .use .t { flex:1 1 60%; }
+  .use .stepper { flex-basis:100%; padding-left:32px; }
+  .muted-list { font-size:12.5px; color:var(--muted); line-height:1.6; padding:0 2px; }
+  .three { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .three span { border:1px solid var(--line); border-radius:12px; min-height:44px; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:500; color:var(--ink2); text-align:center; padding:0 4px; }
+  .three span.on { border-color:var(--primary); box-shadow:inset 0 0 0 1px var(--primary); color:var(--ink); }
+  .legend { font-size:12px; color:var(--muted); margin:-4px 2px 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="i-calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></symbol>
+  <symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.05Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol>
+  <symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-cooking-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></symbol>
+  <symbol id="i-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="M3.3 7 12 12l8.7-5"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></symbol>
+  <symbol id="i-book-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="i-chef-hat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></symbol>
+  <symbol id="i-refrigerator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Z"/><path d="M5 10h14"/><path d="M15 7v6"/></symbol>
+  <symbol id="i-egg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8 2 4 8 4 14a8 8 0 0 0 16 0c0-6-4-12-8-12"/></symbol>
+  <symbol id="i-droplet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+  <symbol id="i-soup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/><path d="M7 21h10"/><path d="M19.5 12 22 6"/><path d="M16.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.73 1.62"/><path d="M11.25 3c.27.1.8.53.74 1.36-.05.83-.93 1.2-.98 2.02-.06.78.33 1.24.72 1.62"/><path d="M6.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.74 1.62"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <!-- The Miamus mark (src/components/brand/brand-mark.tsx): a roofline over an M, on an ink tile. -->
+  <symbol id="mark" viewBox="0 0 512 512"><rect width="512" height="512" rx="114.5" fill="#171717"/><polyline points="112,214 256,104 400,214" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,400 152,262 256,354 360,262 360,400" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="page">
+  <h1>Phase 170: cooking, groceries and planning under Kitchen</h1>
+  <p>Phone-width mockups for <code>docs/phase-170-kitchen-plan.md</code>, drawn with the recommended options (D1–D16 A). Not decided yet. Owner screens: English left, Bahasa Indonesia right. Staff screens: Bahasa Indonesia only.</p>
+  <p>Amounts are opt-in per item and change only when someone buys, cooks or glances in the cupboard. Items without "Track amount" stay Enough, Running low, Out.</p>
+</header>
+
+<main id="screens"></main>
+
+<script>
+const T = {
+  en: {
+    overview: "Overview", staff: "Staff",
+    tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    pills: ["Food", "Shopping", "Menu"],
+    addFood: "Add food",
+    ready: "Ready to eat", ingredients: "Ingredients", ingHint: "Fresh food and pantry",
+    rendang: "Rendang", rendangSub: "Cooked at home · Fridge", portions3: "3 portions", days2: "2 days left",
+    cake: "Lapis legit", cakeSub: "From Tante Rina · Counter", days5: "5 days left",
+    rice: "Rice", riceSub: "Pantry", left: (v) => `${v} left`,
+    eggs: "Eggs", chicken: "Chicken", chickenSub: "Freezer",
+    oil: "Cooking oil", lowWord: "Running low",
+    shallots: "Shallots", enough: "Enough",
+    flour: "Flour", about: (v, ago) => `about ${v}`, ago: "3 weeks ago",
+    // Track amount sheet
+    trackTitle: "Rice", trackLead: "Pantry · bought by the 5 kg bag",
+    trackSwitch: "Track amount", trackSwitchSub: "Shows exactly how much is left. It changes when you buy or cook, never on a schedule.",
+    unit: "Unit", howMuch: "How much is there now?", guess: "A guess is fine; it corrects itself next time you buy.",
+    lowAt: "Running low at", optional: "(optional)",
+    oldCount: "Old count: 2 kg on 3 Oct, not used",
+    save: "Save",
+    // Bought
+    toBuy: "To buy", buyTitle: "How much did you buy?", buyLead: "Rice · usually 5 kg",
+    nowAfter: ["Now 4.5 kg", "After 9.5 kg"], skip: "Skip amount", bought: "Bought",
+    sendWa: "Send on WhatsApp",
+    chicken500: "Chicken", chicken500Sub: "500 g · for this week's menu",
+    coconut: "Coconut milk", coconutSub: "2 bungkus",
+    limeNote: "Lime leaves", noteSub: "Note",
+    // Menu
+    weekDays: [["Mon", 9], ["Tue", 10], ["Wed", 11], ["Thu", 12], ["Fri", 13], ["Sat", 14], ["Sun", 15]],
+    kitchenNotes: "Kitchen notes", notesText: "No pork. Raka is allergic to peanuts.",
+    breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner",
+    nasi: "Nasi uduk", noRecipe: "No recipe", soto: "Soto ayam", serv: (n) => `${n} servings`,
+    cooked: "Cooked", addDish: "Add a dish",
+    copyWeek: "Copy last week", addMissing: "Add missing to Shopping", recipes: "Recipes", recipesN: "12",
+    // Add missing
+    amTitle: "Add missing to Shopping", amLead: "Tue 10 to Sun 15 · 9 dishes not cooked yet",
+    amToBuy: "To buy", amCheck: "Check these", amCheckSub: "Not tracked", amNotList: "Not on your list",
+    need: (n, h, b) => `Need <b>${n}</b> · have ${h} · buy <b>${b}</b>`,
+    sh: "Shallots", lemongrass: "Lemongrass", lime: "Lime leaves", limeSub: "Added as a note",
+    eggsNeed: "Eggs", eggsEnough: "Need 6 butir · have 8 · enough",
+    addN: "Add 3 to Shopping",
+    // Recipe
+    recipeName: "Rendang", recipeMeta: "Written by Dewi · photo", servings: "Servings",
+    ingTitle: "Ingredients", stepsTitle: "Steps",
+    ings: [["Beef", "2 kg"], ["Coconut milk", "4 bungkus"], ["Shallots", "24 siung"], ["Lemongrass", "4 batang"], ["Sweet soy sauce", "4 sdm"], ["Salt", "to taste"]],
+    steps: ["Blend the spices until smooth.", "Fry the spices until fragrant, add the beef.", "Pour in the coconut milk; cook on low heat 3 hours, stirring."],
+    scaled: "Scaled from 6 servings", edit: "Edit recipe", plan: "Plan this",
+  },
+  id: {
+    overview: "Ringkasan", staff: "Staf",
+    tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    pills: ["Makanan", "Belanja", "Menu"],
+    addFood: "Tambah makanan",
+    ready: "Siap dimakan", ingredients: "Bahan masakan", ingHint: "Makanan segar dan bahan pokok",
+    rendang: "Rendang", rendangSub: "Masak di rumah · Kulkas", portions3: "3 porsi", days2: "2 hari lagi",
+    cake: "Lapis legit", cakeSub: "Dari Tante Rina · Meja", days5: "5 hari lagi",
+    rice: "Beras", riceSub: "Bahan pokok", left: (v) => `Sisa ${v}`,
+    eggs: "Telur", chicken: "Ayam", chickenSub: "Freezer",
+    oil: "Minyak goreng", lowWord: "Hampir habis",
+    shallots: "Bawang merah", enough: "Masih ada",
+    flour: "Tepung terigu", about: (v) => `sekitar ${v}`, ago: "3 minggu lalu",
+    trackTitle: "Beras", trackLead: "Bahan pokok · dibeli per karung 5 kg",
+    trackSwitch: "Catat jumlah", trackSwitchSub: "Menunjukkan sisa yang pasti. Berubah saat belanja atau memasak, tidak perlu dihitung rutin.",
+    unit: "Satuan", howMuch: "Berapa yang ada sekarang?", guess: "Perkiraan juga boleh; nanti terkoreksi saat belanja.",
+    lowAt: "Hampir habis kalau tinggal", optional: "(opsional)",
+    oldCount: "Hitungan lama: 2 kg pada 3 Okt, tidak dipakai",
+    save: "Simpan",
+    toBuy: "Perlu dibeli", buyTitle: "Beli berapa?", buyLead: "Beras · biasanya 5 kg",
+    nowAfter: ["Sekarang 4,5 kg", "Setelah 9,5 kg"], skip: "Lewati jumlah", bought: "Sudah dibeli",
+    sendWa: "Kirim lewat WhatsApp",
+    chicken500: "Ayam", chicken500Sub: "500 g · untuk menu minggu ini",
+    coconut: "Santan", coconutSub: "2 bungkus",
+    limeNote: "Daun jeruk", noteSub: "Catatan",
+    weekDays: [["Sen", 9], ["Sel", 10], ["Rab", 11], ["Kam", 12], ["Jum", 13], ["Sab", 14], ["Min", 15]],
+    kitchenNotes: "Catatan dapur", notesText: "Tanpa babi. Raka alergi kacang.",
+    breakfast: "Sarapan", lunch: "Makan siang", dinner: "Makan malam",
+    nasi: "Nasi uduk", noRecipe: "Tanpa resep", soto: "Soto ayam", serv: (n) => `${n} porsi`,
+    cooked: "Sudah dimasak", addDish: "Tambah masakan",
+    copyWeek: "Salin minggu lalu", addMissing: "Tambahkan yang kurang ke Belanja", recipes: "Resep", recipesN: "12",
+    amTitle: "Tambahkan yang kurang ke Belanja", amLead: "Sel 10 sampai Min 15 · 9 masakan belum dimasak",
+    amToBuy: "Perlu dibeli", amCheck: "Cek dulu", amCheckSub: "Tidak dicatat jumlahnya", amNotList: "Belum ada di daftar",
+    need: (n, h, b) => `Perlu <b>${n}</b> · ada ${h} · beli <b>${b}</b>`,
+    sh: "Bawang merah", lemongrass: "Serai", lime: "Daun jeruk", limeSub: "Ditambahkan sebagai catatan",
+    eggsNeed: "Telur", eggsEnough: "Perlu 6 butir · ada 8 · cukup",
+    addN: "Tambah 3 ke Belanja",
+    recipeName: "Rendang", recipeMeta: "Ditulis Dewi · foto", servings: "Porsi",
+    ingTitle: "Bahan", stepsTitle: "Cara membuat",
+    ings: [["Daging sapi", "2 kg"], ["Santan", "4 bungkus"], ["Bawang merah", "24 siung"], ["Serai", "4 batang"], ["Kecap manis", "4 sdm"], ["Garam", "secukupnya"]],
+    steps: ["Haluskan bumbu.", "Tumis bumbu sampai harum, masukkan daging.", "Tuang santan; masak dengan api kecil 3 jam sambil diaduk."],
+    scaled: "Dihitung dari 6 porsi", edit: "Ubah resep", plan: "Masukkan ke menu",
+  },
+};
+const ic = (id, cls = "") => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const mark = () => `<svg class="mark" viewBox="0 0 512 512" aria-hidden="true"><use href="#mark"/></svg>`;
+const fmt = (lang, s) => lang === "id" ? s.replace(/(\d)\.(\d)/g, "$1,$2") : s;
+
+function ownerFrame(lang, t, inner, { tab = 3, pill = null, size = "", overlay = "" } = {}) {
+  const icons = ["calendar-days", "paw-print", "clipboard-list", "cooking-pot", "users"];
+  const pills = pill === null ? "" : `<div class="seg">${t.pills.map((p, i) => `<span class="${i === pill ? "on" : ""}">${p}</span>`).join("")}</div>`;
+  return `<div class="phone ${size}"><div class="tag">${lang.toUpperCase()}</div><div class="status"></div>
+    <div class="appbar"><div class="row"><span class="brand">${mark()}Miamus</span>
+    <span class="seg sm"><span class="on">${t.overview}</span><span>${t.staff}</span></span></div></div>
+    <div class="body">${pills}${inner}</div>
+    <div class="tabbar">${t.tabs.map((n, i) => `<span class="${i === tab ? "on" : ""}">${ic(icons[i])}${n}</span>`).join("")}</div>
+    ${overlay}</div>`;
+}
+function staffFrame(inner, { view = 0, size = "", overlay = "", pill = null } = {}) {
+  const pills = pill === null ? "" : `<div class="seg">${["Makanan", "Belanja", "Menu"].map((p, i) => `<span class="${i === pill ? "on" : ""}">${p}</span>`).join("")}</div>`;
+  return `<div class="phone ${size}"><div class="tag">STAF · ID</div><div class="status"></div>
+    <div class="appbar"><div class="row"><span class="brand">${mark()}Miamus</span><span class="who">${ic("user", "xs")}Sari</span></div>
+    <div class="seg"><span class="${view === 0 ? "on" : ""}">Tugas Hari Ini</span><span class="${view === 1 ? "on" : ""}">Dapur</span></div></div>
+    <div class="body">${pills}${inner}</div>${overlay}</div>`;
+}
+const row = (icon, name, sub, right, cls = "") =>
+  `<div class="li"><span class="lic ${cls}">${ic(icon)}</span><span class="t"><b>${name}</b><span>${sub}</span></span>${right}</div>`;
+const on = `<span class="box on">${ic("check")}</span>`;
+const off = `<span class="box"></span>`;
+const stepper = (val, unit, small = false) =>
+  `<div class="stepper${small ? " small" : ""}"><span class="sb">${ic("minus")}</span><span class="val">${val}<i>${unit}</i></span><span class="sb">${ic("plus")}</span></div>`;
+
+// 1. Kitchen, Food: ready to eat, then ingredients with amounts.
+function s1(lang) {
+  const t = T[lang];
+  const inner = `<div class="btn primary sm">${ic("plus")}${t.addFood}</div>
+    <div class="grp">${t.ready}</div>
+    <div class="list">
+      ${row("soup", t.rendang, t.rendangSub, `<span class="amt">${t.portions3}<small>${t.days2}</small></span>`, "photo")}
+      ${row("image", t.cake, t.cakeSub, `<span class="days">${t.days5}</span>`)}
+    </div>
+    <div class="grp">${t.ingredients}<i>${t.ingHint}</i></div>
+    <div class="list">
+      ${row("package", t.rice, t.riceSub, `<span class="amt">${fmt(lang, t.left("4.5 kg"))}</span>`)}
+      ${row("egg", t.eggs, t.riceSub, `<span class="amt">${t.left("8 butir")}</span>`)}
+      ${row("refrigerator", t.chicken, t.chickenSub, `<span class="amt">${t.left("1 kg")}</span>`)}
+      ${row("droplet", t.oil, t.riceSub, `<span class="amt low">${fmt(lang, t.left("0.4 L"))}<small>${t.lowWord}</small></span>`)}
+      ${row("leaf", t.shallots, t.riceSub, `<span class="pill ok">${t.enough}</span>`)}
+      ${row("package", t.flour, t.riceSub, `<span class="amt stale">${t.about("1 kg")}<small>${t.ago}</small></span>`)}
+    </div>`;
+  return ownerFrame(lang, t, inner, { pill: 0 });
+}
+// 2. Track amount, owner only.
+function s2(lang) {
+  const t = T[lang];
+  const units = ["g", "kg", "pcs", "butir", "ikat", "bungkus", "L"];
+  const sheet = `<div class="dim"></div><div class="sheet"><div class="grab"></div><h3>${t.trackTitle}</h3>
+    <p class="lead">${t.trackLead}</p>
+    <div class="switchrow"><div><b>${t.trackSwitch}</b><span>${t.trackSwitchSub}</span></div><span class="switch"></span></div>
+    <div class="label">${t.unit}</div>
+    <div class="chips">${units.map((u) => `<span class="chip${u === "kg" ? " on" : ""}">${u}</span>`).join("")}</div>
+    <div class="label">${t.howMuch}</div>
+    ${stepper(fmt(lang, "4.5"), "kg")}
+    <div class="hint">${t.guess}</div>
+    <div class="hint old">${ic("history", "xs")} ${t.oldCount}</div>
+    <div class="label">${t.lowAt} <em>${t.optional}</em></div>
+    <div class="field">1<span>kg</span></div>
+    <div class="btn primary">${t.save}</div></div>`;
+  return ownerFrame(lang, t, "", { pill: 0, overlay: sheet });
+}
+// 3. Bought: how much?
+function s3(lang) {
+  const t = T[lang];
+  const behind = `<div class="grp">${t.toBuy}</div>`;
+  const sheet = `<div class="dim"></div><div class="sheet low"><div class="grab"></div><h3>${t.buyTitle}</h3>
+    <p class="lead">${t.buyLead}</p>
+    ${stepper("5", "kg")}
+    <div class="sum"><span>${t.nowAfter[0]}</span><b>${t.nowAfter[1]}</b></div>
+    <div class="btn primary">${ic("check")}${t.bought}</div>
+    <div class="link">${t.skip}</div></div>`;
+  return ownerFrame(lang, t, behind, { pill: 1, overlay: sheet });
+}
+// 4. Menu: the week.
+function s4(lang) {
+  const t = T[lang];
+  const inner = `<div class="week">${t.weekDays.map(([d, n]) => `<span class="${n === 10 ? "on" : ""}${n <= 13 ? " has" : ""}">${d}<b>${n}</b></span>`).join("")}</div>
+    <div class="note">${ic("note")}<span class="t2"><b>${t.kitchenNotes}:</b> ${t.notesText}</span>${ic("pencil", "xs")}</div>
+    <div class="meal"><h4>${t.breakfast}</h4>
+      <div class="dish done"><span class="lic">${ic("circle-check")}</span><span class="t"><b>${t.nasi}</b><span>${t.noRecipe} · ${t.cooked}</span></span></div></div>
+    <div class="meal"><h4>${t.lunch}</h4>
+      <div class="dish"><span class="lic">${ic("book-open")}</span><span class="t"><b>${t.soto}</b><span>${t.serv(4)}</span></span>${ic("chevron-right")}</div></div>
+    <div class="meal"><h4>${t.dinner}</h4>
+      <div class="dish"><span class="lic photo">${ic("soup")}</span><span class="t"><b>${t.rendang}</b><span>${t.serv(6)}</span></span>${ic("chevron-right")}</div>
+      <div class="addline">${ic("plus", "xs")}${t.addDish}</div></div>
+    <div class="row2"><div class="btn outline sm">${ic("copy")}${t.copyWeek}</div><div class="btn outline sm">${ic("book-open")}${t.recipes} · ${t.recipesN}</div></div>
+    <div class="btn primary">${ic("cart")}${t.addMissing}</div>`;
+  return ownerFrame(lang, t, inner, { pill: 2, size: "tall" });
+}
+// 5. Add missing to Shopping: the review.
+function s5(lang) {
+  const t = T[lang];
+  const sheet = `<div class="dim"></div><div class="sheet"><div class="grab"></div><h3>${t.amTitle}</h3>
+    <p class="lead">${t.amLead}</p>
+    <div class="grp">${t.amToBuy}</div>
+    <div class="list">
+      ${row("refrigerator", t.chicken, `<span class="need">${fmt(lang, t.need("1.5 kg", "1 kg", "500 g"))}</span>`, on)}
+      ${row("package", t.coconut, `<span class="need">${t.need("6 bungkus", "4", "2 bungkus")}</span>`, on)}
+      ${row("egg", t.eggsNeed, `<span class="need">${t.eggsEnough}</span>`, `<span class="pill ok">${t.enough}</span>`)}
+    </div>
+    <div class="grp">${t.amCheck}<i>${t.amCheckSub}</i></div>
+    <div class="list">
+      ${row("leaf", t.sh, t.enough, off)}
+      ${row("leaf", t.lemongrass, t.enough, off)}
+    </div>
+    <div class="grp">${t.amNotList}</div>
+    <div class="list">${row("note", t.lime, t.limeSub, on)}</div>
+    <div class="btn primary">${ic("cart")}${t.addN}</div></div>`;
+  return ownerFrame(lang, t, "", { pill: 2, size: "tall", overlay: sheet });
+}
+// 6. A recipe, scaled.
+function s6(lang) {
+  const t = T[lang];
+  const inner = `<div class="hero">${ic("camera", "xs")} ${t.recipeMeta}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:18px">${t.recipeName}</b><span class="legend" style="margin:0">${t.scaled}</span></div>
+    <div class="label">${t.servings}</div>
+    ${stepper("12", lang === "id" ? "porsi" : "servings", true)}
+    <div class="note">${ic("note")}<span class="t2"><b>${t.kitchenNotes}:</b> ${t.notesText}</span></div>
+    <div class="label">${t.ingTitle}</div>
+    <div class="list" style="padding:4px 12px">${t.ings.map(([n, a], i) => `<div class="ing"><span>${n}</span><b class="${i === 5 ? "taste" : ""}">${a}</b></div>`).join("")}</div>
+    <div class="label">${t.stepsTitle}</div>
+    <ol class="steps">${t.steps.map((s) => `<li>${s}</li>`).join("")}</ol>
+    <div class="row2"><div class="btn outline sm">${ic("pencil", "xs")}${t.edit}</div><div class="btn primary sm">${ic("calendar-days")}${t.plan}</div></div>`;
+  return ownerFrame(lang, t, inner, { pill: 2, size: "tall" });
+}
+
+// Staff screens: Bahasa Indonesia only.
+function st1() {
+  const inner = `<section class="card"><header><h3>${ic("chef-hat")}Menu hari ini</h3><span>Sel, 10 Nov</span></header>
+      <div class="crow"><span class="when">Siang</span><span class="t"><b>Soto ayam</b><span>${ic("book-open", "xs")} 4 porsi</span></span>${ic("chevron-right")}</div>
+      <div class="crow"><span class="when">Malam</span><span class="t"><b>Rendang</b><span>${ic("book-open", "xs")} 6 porsi</span></span>${ic("chevron-right")}</div>
+      <div class="cnote">${ic("note", "xs")}<span>Catatan dapur: Tanpa babi. Raka alergi kacang.</span></div>
+    </section>
+    <div class="grp">Tugas</div>
+    <div class="trow"><span class="badge">${ic("sparkles")}</span><span class="time">08.00</span><span class="t"><b>Pel teras</b><span>${ic("user", "xs")} Sari</span></span></div>
+    <div class="trow"><span class="badge">${ic("sparkles")}</span><span class="time">10.00</span><span class="t"><b>Cuci baju</b><span>${ic("user", "xs")} Sari</span></span></div>
+    <div class="trow"><span class="badge">${ic("sparkles")}</span><span class="time">16.00</span><span class="t"><b>Siram tanaman</b><span>${ic("user", "xs")} Belum ada yang ambil</span></span></div>`;
+  return staffFrame(inner);
+}
+function st2() {
+  const sheet = `<div class="dim"></div><div class="sheet mid"><div class="grab"></div><h3>Bahan yang dipakai</h3>
+    <p class="lead">Rendang · 6 porsi</p>
+    <div class="list">
+      <div class="use">${on}<span class="t"><b>Daging sapi</b><span>Sisa 2,5 kg</span></span>${stepper("1", "kg", true)}</div>
+      <div class="use">${on}<span class="t"><b>Santan</b><span>Sisa 4 bungkus</span></span>${stepper("2", "bungkus", true)}</div>
+      <div class="use">${on}<span class="t"><b>Minyak goreng</b><span>Sisa 0,4 L</span></span>${stepper("0,1", "L", true)}</div>
+    </div>
+    <div class="grp">Tidak dihitung</div>
+    <div class="muted-list">Bawang merah 12 siung · Serai 2 batang · Kecap manis 2 sdm · Garam secukupnya</div>
+    <div class="btn primary">${ic("check")}Pakai bahan ini</div>
+    <div class="link">Batal</div></div>`;
+  return staffFrame("", { overlay: sheet });
+}
+function st3() {
+  const toast = `<div class="toast top"><span class="ok">${ic("circle-check")}</span><span>Rendang sudah dimasak</span><b>${ic("undo", "xs")}Batalkan</b></div>`;
+  const sheet = `<div class="dim"></div>${toast}<div class="sheet low"><div class="grab"></div><h3>Ada sisa?</h3>
+    <p class="lead">Simpan di Makanan supaya tidak lupa dimakan.</p>
+    <div class="list">${row("soup", "Rendang", "Masak di rumah · Kulkas", `<span class="amt">2 porsi</span>`, "photo")}</div>
+    <div class="legend">Tanggal kedaluwarsa dipilih di langkah berikutnya.</div>
+    <div class="btn primary">${ic("refrigerator")}Simpan ke Makanan</div>
+    <div class="btn outline">Tidak ada sisa</div></div>`;
+  return staffFrame("", { overlay: sheet });
+}
+function st4() {
+  const behind = `<div class="grp">Bahan masakan</div>`;
+  const sheet = `<div class="dim"></div><div class="sheet mid"><div class="grab"></div><h3>Minyak goreng</h3>
+    <p class="lead">Sisa 0,4 L · diubah Wati, kemarin</p>
+    <div class="label">Jumlah sekarang</div>
+    ${stepper("0,4", "L")}
+    <div class="link">${ic("pencil", "xs")}Ubah jumlah</div>
+    <div class="label">Atau pilih</div>
+    <div class="three"><span>Masih ada</span><span class="on">Hampir habis</span><span>Habis</span></div>
+    <div class="legend">Habis berarti jumlahnya jadi 0.</div>
+    <div class="btn primary">Simpan</div></div>`;
+  return staffFrame(behind, { view: 1, pill: 0, overlay: sheet });
+}
+function st5() {
+  const behind = `<div class="grp">Perlu dibeli</div>`;
+  const sheet = `<div class="dim"></div><div class="sheet low"><div class="grab"></div><h3>Beli berapa?</h3>
+    <p class="lead">Minyak goreng · biasanya 2 L</p>
+    ${stepper("2", "L")}
+    <div class="sum"><span>Sekarang 0,4 L</span><b>Setelah 2,4 L</b></div>
+    <div class="btn primary">${ic("check")}Sudah dibeli</div>
+    <div class="link">Lewati jumlah</div></div>`;
+  return staffFrame(behind, { view: 1, pill: 1, overlay: sheet });
+}
+
+const OWNER = [
+  ["1. Kitchen, Food: what food is in the house", "Pill Food, Shopping, Menu (D5 A). Ready to eat is today's Food list, with optional portions (D7 A). Ingredients are the fresh-food and pantry items (D6 A): tracked ones show the amount, others their status. An amount untouched for 14 days turns grey with its age. It never turns red or asks anyone to count.", s1],
+  ["2. Track amount (owners only)", "Tap an item and switch on Track amount (D1 A). Unit chips include the kitchen units (D4 A). A starting amount is required; the low level is optional. The old Phase 110 count shows as a hint only, never used silently (D14 A).", s2],
+  ["3. Bought: how much?", "Ticking a tracked item on To buy asks how much, with last time's amount pre-filled, and adds it (D2 A). Skip amount ticks it with no number. Untracked items tick as today, no question.", s3],
+  ["4. Kitchen, Menu: the week", "Days with a plan have a dot. Kitchen notes for the cook on top (D12 A). Meals are breakfast, lunch, dinner; a dish is a recipe with servings or just a name. Copy last week, Recipes inside Menu (D5 A), and Add missing to Shopping.", s4],
+  ["5. Add missing to Shopping", "A review, nothing added without it (D10 A). Tracked shortfalls are ticked with the amount to buy; enough is shown, not added. Untracked items and names not on the list are offered unticked.", s5],
+  ["6. A recipe, scaled", "The servings stepper scales every amount (12 servings here, from a 6-serving recipe). Salt is to taste. Kitchen notes repeat on every recipe. Owners edit; staff read (D8 A).", s6],
+];
+const STAFF = [
+  ["7. Staff: Menu hari ini, then cooking, then leftovers", "Left: the card on top of Tugas Hari Ini when today has a plan (D9 A), with the kitchen notes. Middle: Sudah dimasak lists the tracked ingredients at today's servings, ticked, adjustable; what isn't counted is listed for information. Right: after the toast with Batalkan, Ada sisa? opens the usual Add food sheet with the dish filled in; the expiry is picked by the person, never guessed.", [st1, st2, st3]],
+  ["8. Staff: a tracked item in Dapur", "Left: Makanan, Bahan masakan. A tracked item has minus and plus, Ubah jumlah, and the three states as before; Habis sets the amount to 0 (D3 A). Right: Belanja, ticking a tracked item asks Beli berapa?. Untracked items work exactly as today.", [st4, st5]],
+];
+document.getElementById("screens").innerHTML =
+  OWNER.map(([h, p, fn]) => `<section class="screen"><h2>${h}</h2><p>${p}</p><div class="pair">${fn("en")}${fn("id")}</div></section>`).join("") +
+  STAFF.map(([h, p, fns]) => `<section class="screen"><h2>${h}</h2><p>${p}</p><div class="pair">${fns.map((f) => f()).join("")}</div></section>`).join("");
+</script>
+</body>
+</html>
