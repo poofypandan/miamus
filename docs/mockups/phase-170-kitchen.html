@@ -177,6 +177,15 @@
   .banner span { flex:1; }
   .banner b { font-weight:600; text-decoration:underline; text-underline-offset:2px; }
   .tick { width:24px; height:24px; border-radius:50%; border:1.5px solid #9ca3af; flex:none; }
+  .nut { background:var(--track); border-radius:10px; padding:8px 12px; font-size:12.5px; color:var(--ink2); display:flex; flex-direction:column; gap:2px; }
+  .nut b { font-weight:600; color:var(--ink); }
+  .nut span { font-size:11.5px; color:var(--muted); display:flex; justify-content:space-between; }
+  .nut span u { text-decoration:none; color:var(--ink2); font-weight:500; }
+  .ngrid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+  .ngrid div { border:1px solid var(--line); border-radius:10px; padding:6px 4px; text-align:center; font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .ngrid div small { display:block; font-size:10.5px; font-weight:500; color:var(--muted); }
+  .offer { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--ink2); }
+  .offer b { color:var(--ink); }
   .addh { max-width:1140px; margin:28px auto 0; padding:0 16px; border-top:1px solid #cfd4da; padding-top:18px; }
   .addh h1 { font-size:18px; margin:0 0 4px; }
   .addh p { margin:0; color:var(--muted); max-width:720px; }
@@ -222,7 +231,7 @@
 
 <header class="page">
   <h1>Phase 170: cooking, groceries and planning under Kitchen</h1>
-  <p>Phone-width mockups for <code>docs/phase-170-kitchen-plan.md</code>. Screens 1–8: the decided design (D1–D16 A, owner, 2026-11-10). Screens 9–14: the addendum (D17–D21 A, not decided). Owner screens: English left, Bahasa Indonesia right. Staff screens: Bahasa Indonesia only.</p>
+  <p>Phone-width mockups for <code>docs/phase-170-kitchen-plan.md</code>. Screens 1–8: the decided design (D1–D16 A, owner, 2026-11-10). Screens 9–16: the addendum (D17–D22 A, not decided). Owner screens: English left, Bahasa Indonesia right. Staff screens: Bahasa Indonesia only.</p>
   <p>Amounts are opt-in per item and change only when someone buys, cooks or glances in the cupboard. Items without "Track amount" stay Enough, Running low, Out.</p>
 </header>
 
@@ -283,6 +292,14 @@ const T = {
     groups: ["Wet market", "Supermarket", "Anywhere"], trash: "Trash bags",
     gChicken: ["Chicken", "500 g"], gLemon: ["Lemongrass", ""], gCoconut: ["Coconut milk", "2 packets"], gRice: ["Rice", "1 sack (5 kg)"],
     fromMenu: "For this week's menu", note: "Note",
+    nutLine: "Per serving: <b>520 kcal</b> · protein 32 g · carbs 48 g · fat 18 g · fibre 6 g",
+    nutPartial: "Partial: 1 ingredient without values", wholeDish: "Whole dish", nutNote: "Estimates from the values you entered.",
+    sotoMeta: "Written by Dewi", serv4: "4 servings",
+    sotoIngs: [["Chicken", "500 g"], ["Rice", "300 g"], ["Bean sprouts", "100 g"], ["Eggs", "4 butir"], ["Lemongrass", "2 batang"], ["Salt", "to taste"]],
+    offerQ: "Show calories, protein, carbs, fat and fibre per serving?", turnOn: "Turn on", notNow: "Not now",
+    nutTitle: "Nutrition", per100: "per 100 g", pick: "Pick from the list", source: "Source: USDA FoodData Central",
+    nutFields: ["kcal", "Protein", "Carbs", "Fat", "Fibre"], chickenVals: ["165", "31", "0", "3.6", "0"],
+    chickenTitle: "Chicken", chickenLead: "Fresh food · 1 kg left", dayTotal: "Today, one serving of each: <b>1,480 kcal</b> · protein 78 g · carbs 172 g · fat 49 g · fibre 14 g · partial (leftovers have no values)",
     // Recipe
     recipeName: "Rendang", recipeMeta: "Written by Dewi · photo", servings: "Servings",
     ingTitle: "Ingredients", stepsTitle: "Steps",
@@ -339,6 +356,14 @@ const T = {
     groups: ["Pasar", "Supermarket", "Di mana saja"], trash: "Kantong sampah",
     gChicken: ["Ayam", "500 g"], gLemon: ["Serai", ""], gCoconut: ["Santan", "2 bungkus"], gRice: ["Beras", "1 karung (5 kg)"],
     fromMenu: "Untuk menu minggu ini", note: "Catatan",
+    nutLine: "Per porsi: <b>520 kkal</b> · protein 32 g · karbo 48 g · lemak 18 g · serat 6 g",
+    nutPartial: "Sebagian: 1 bahan belum ada nilai gizinya", wholeDish: "Satu masakan", nutNote: "Perkiraan dari nilai yang Anda isi.",
+    sotoMeta: "Ditulis Dewi", serv4: "4 porsi",
+    sotoIngs: [["Ayam", "500 g"], ["Beras", "300 g"], ["Tauge", "100 g"], ["Telur", "4 butir"], ["Serai", "2 batang"], ["Garam", "secukupnya"]],
+    offerQ: "Tampilkan kalori, protein, karbohidrat, lemak dan serat per porsi?", turnOn: "Nyalakan", notNow: "Nanti saja",
+    nutTitle: "Nilai gizi", per100: "per 100 g", pick: "Pilih dari daftar", source: "Sumber: USDA FoodData Central",
+    nutFields: ["kkal", "Protein", "Karbo", "Lemak", "Serat"], chickenVals: ["165", "31", "0", "3,6", "0"],
+    chickenTitle: "Ayam", chickenLead: "Makanan segar · sisa 1 kg", dayTotal: "Hari ini, satu porsi tiap masakan: <b>1.480 kkal</b> · protein 78 g · karbo 172 g · lemak 49 g · serat 14 g · sebagian (sisa masakan tanpa nilai gizi)",
     recipeName: "Rendang", recipeMeta: "Ditulis Dewi · foto", servings: "Porsi",
     ingTitle: "Bahan", stepsTitle: "Cara membuat",
     ings: [["Daging sapi", "2 kg"], ["Santan", "4 bungkus"], ["Bawang merah", "24 siung"], ["Serai", "4 batang"], ["Kecap manis", "4 sdm"], ["Garam", "secukupnya"]],
@@ -553,14 +578,16 @@ function a1(lang) {
       <div class="dish"><span class="lic">${ic("book-open")}</span><span class="t"><b>${t.soto}</b>${rc("ok", `${t.readyCook} · ${t.serv(4)}`)}</span>${ic("chevron-right")}</div></div>
     <div class="meal"><h4>${t.dinner}</h4>
       <div class="dish"><span class="lic photo">${ic("soup")}</span><span class="t"><b>${t.rendang}</b>${rc("miss", t.missing2)}</span>${ic("chevron-right")}</div></div>
+    <div class="nut"><div>${t.dayTotal}</div></div>
     <div class="banner">${ic("history")}<span>${t.changed}</span><b>${t.review}</b></div>
     <div class="btn primary">${ic("cart")}${t.addMissing}</div>`;
-  return ownerFrame(lang, t, inner, { pill: 2 });
+  return ownerFrame(lang, t, inner, { pill: 2, size: "tall" });
 }
 function a2(lang) {
   const t = T[lang];
   const inner = `<div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:17px">${t.recipesTitle}</b><span class="btn outline sm" style="min-height:34px;padding:0 12px">${ic("plus", "xs")}${t.newRecipe}</span></div>
     <div class="seg"><span class="on">${t.recPills[0]}</span><span>${t.recPills[1]}</span></div>
+    <div class="offer"><span><b>${t.nutTitle}.</b> ${t.offerQ}</span><div class="row2"><span class="btn primary sm">${t.turnOn}</span><span class="btn outline sm">${t.notNow}</span></div></div>
     <div class="list">${t.recs.map(([n, k, b, soon], i) => `<div class="li"><span class="lic ${i === 3 ? "photo" : ""}">${ic(i === 3 ? "soup" : "book-open")}</span><span class="t"><b>${n}</b>${rc(k, b)}${soon ? `<span class="soon">${ic("calendar-days", "xs")} ${soon}</span>` : ""}</span>${ic("chevron-right")}</div>`).join("")}</div>`;
   return ownerFrame(lang, t, inner, { pill: 2 });
 }
@@ -600,6 +627,26 @@ function a5(lang) {
     <div class="list">${item([t.trash, ""], t.note)}</div>
     <div class="btn outline">${t.sendWa}</div>`;
   return ownerFrame(lang, t, inner, { pill: 1 });
+}
+function a6(lang) {
+  const t = T[lang];
+  const inner = `<div class="hero" style="height:110px;background:linear-gradient(135deg,#d9b46a,#a77b2c)">${ic("camera", "xs")} ${t.sotoMeta}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:18px">${t.soto}</b><span class="legend" style="margin:0">${t.serv4}</span></div>
+    <div class="nut"><div>${t.nutLine}</div><span><span>${t.nutPartial}</span><u>${t.wholeDish}</u></span><span>${t.nutNote}</span></div>
+    <div class="label">${t.ingTitle}</div>
+    <div class="list" style="padding:4px 12px">${t.sotoIngs.map(([n, a], i) => `<div class="ing"><span>${n}</span><b class="${i === 5 ? "taste" : ""}">${a}</b></div>`).join("")}</div>`;
+  return ownerFrame(lang, t, inner, { pill: 2, size: "tall" });
+}
+function a7(lang) {
+  const t = T[lang];
+  const sheet = `<div class="dim"></div><div class="sheet mid"><div class="grab"></div><h3>${t.chickenTitle}</h3>
+    <p class="lead">${t.chickenLead}</p>
+    <div class="label">${t.nutTitle} <em>${t.per100}</em></div>
+    <div class="ngrid">${t.nutFields.map((f, i) => `<div>${t.chickenVals[i]}<small>${f}${i ? " (g)" : ""}</small></div>`).join("")}</div>
+    <div class="hint">${t.source}</div>
+    <div class="btn outline sm">${ic("search")}${t.pick}</div>
+    <div class="btn primary">${t.save}</div></div>`;
+  return ownerFrame(lang, t, "", { pill: 0, overlay: sheet });
 }
 function st6() {
   const inner = `<section class="card"><header><h3>${ic("chef-hat")}Menu hari ini</h3><span>Sel, 10 Nov</span></header>
@@ -649,20 +696,22 @@ const STAFF = [
   ["8. Staff: a tracked item in Dapur", "Left: Makanan, Bahan masakan. A tracked item has minus and plus, Ubah jumlah, and the three states as before; Habis sets the amount to 0 (D3 A). Right: Belanja, ticking a tracked item asks Beli berapa?. Untracked items work exactly as today.", [st4, st5]],
 ];
 const ADD_OWNER = [
-  ["9. Menu with Eat soon and Ready to cook", "Eat soon (D17 A) at the top: leftovers with portions and ready food expiring within 2 days, one tap to put one on a day. A leftover dish says Eaten, not Cooked, and counts the portions down. Each dish shows Ready to cook or what's missing, against what's there now (D18 A). The amber line appears when the menu changed after the last Add missing (D20 A).", a1],
-  ["10. Recipes: Ready to cook now", "The shared pill All, Ready to cook now (D18 A). Ready first, then fewest missing. A recipe using a fresh item that expires within 2 days says so quietly (D17 A).", a2],
+  ["9. Menu with Eat soon and Ready to cook", "Eat soon (D17 A) at the top: leftovers with portions and ready food expiring within 2 days, one tap to put one on a day. A leftover dish says Eaten, not Cooked, and counts the portions down. Each dish shows Ready to cook or what's missing, against what's there now (D18 A). The amber line appears when the menu changed after the last Add missing (D20 A). With Nutrition on (D22 A), the day shows a total for one serving of each dish.", a1],
+  ["10. Recipes: Ready to cook now", "The shared pill All, Ready to cook now (D18 A). Ready first, then fewest missing. A recipe using a fresh item that expires within 2 days says so quietly (D17 A). The Nutrition card is D22's one-time offer, shown while Nutrition is off.", a2],
   ["11. Item sheet: pack and where to buy (owners only)", "Under Track amount: Usually bought as, a short list of pack kinds with the size (D19 A), and Where to buy (D21 A). Both optional.", a3],
   ["12. Bought, in packs", "With a pack set, Bought asks how many packs and adds 5 kg each (D19 A). Type an amount instead for a loose buy. Fresh-food items also offer an optional expiry (shown on the staff screen below).", a4],
   ["13. To buy, grouped by where you shop", "Once any item has a tag, To buy and the WhatsApp text group by Wet market, Supermarket, Online, Other, then Anywhere (D21 A). Menu shortfalls show in packs. The Review line re-runs Add missing (D20 A).", a5],
+  ["14. Basic nutrition on a recipe (D22 A)", "Off by default; offered once on the Recipes screen (screen 10), never at sign-up. With it on, a recipe shows one line per serving, owners only: kcal, protein, carbs, fat, fibre. Partial when a counted line has no values; salt to taste is left out. Not advice: no targets, no colours.", a6],
+  ["15. Nutrition values on an item (D22 A)", "Owners only, with Nutrition on. Per 100 g for weight items (per 100 ml, per piece, per bungkus for the others). Typed, or picked from the bundled list built from USDA FoodData Central (public domain), with the source shown. TKPI values only once Kemenkes gives permission.", a7],
 ];
 const ADD_STAFF = [
-  ["14. Staff: Menu hari ini, Perlu dibeli, Beli berapa", "Left: a leftover dish with Sudah dimakan, and Bahan lengkap or Kurang on each dish, so the cook knows before starting (D18 A). Middle: Perlu dibeli grouped by where to buy (D21 A). Right: eggs bought by the tray, with the optional expiry on a fresh item (D17 A, D19 A). Staff forms say boleh dikosongkan.", [st6, st7, st8]],
+  ["16. Staff: Menu hari ini, Perlu dibeli, Beli berapa", "Left: a leftover dish with Sudah dimakan, and Bahan lengkap or Kurang on each dish, so the cook knows before starting (D18 A). Middle: Perlu dibeli grouped by where to buy (D21 A). Right: eggs bought by the tray, with the optional expiry on a fresh item (D17 A, D19 A). Staff forms say boleh dikosongkan.", [st6, st7, st8]],
 ];
 const pairOwner = ([h, p, fn]) => `<section class="screen"><h2>${h}</h2><p>${p}</p><div class="pair">${fn("en")}${fn("id")}</div></section>`;
 const pairStaff = ([h, p, fns]) => `<section class="screen"><h2>${h}</h2><p>${p}</p><div class="pair">${fns.map((f) => f()).join("")}</div></section>`;
 document.getElementById("screens").innerHTML =
   OWNER.map(pairOwner).join("") + STAFF.map(pairStaff).join("") +
-  `<header class="addh"><h1>Addendum: menu, food and shopping as one loop (D17–D21)</h1><p>Drawn with the recommended options (D17–D21 A), not decided yet. Screens 1–8 above are the decided design (D1–D16 A); these add Eat soon, Ready to cook, packs, the Menu changed line and To buy grouped by where you shop.</p></header>` +
+  `<header class="addh"><h1>Addendum: menu, food and shopping as one loop (D17–D22)</h1><p>Drawn with the recommended options (D17–D22 A), not decided yet. Screens 1–8 above are the decided design (D1–D16 A); these add Eat soon, Ready to cook, packs, the Menu changed line and To buy grouped by where you shop, and basic nutrition.</p></header>` +
   ADD_OWNER.map(pairOwner).join("") + ADD_STAFF.map(pairStaff).join("");
 </script>
 </body>

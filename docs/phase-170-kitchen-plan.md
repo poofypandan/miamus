@@ -3,7 +3,7 @@
 Status: **decided: owner chose all recommendations (D1–D16 A), 2026-11-10;
 PR A amounts and units with migration 144.** The four open questions below
 stay open; the owner answers each before the PR it affects.
-**Addendum (2026-11-10, end of this file): Menu ↔ food ↔ shopping, D17–D21,
+**Addendum (2026-11-10, end of this file): Menu ↔ food ↔ shopping, D17–D22,
 waiting for the owner.**
 Nothing is built. Migration **144** is reserved for PR A (amounts and units);
 PR B (recipes) and PR C (menu and the cook's view) each take the next free
@@ -781,7 +781,7 @@ tekan **Sudah dimasak**."
 ## Decisions for the owner
 
 **Decided 2026-11-10: the owner chose all recommendations, so D1–D16 are
-all A.** D17–D21 are in the addendum at the end, not decided yet.
+all A.** D17–D22 are in the addendum at the end, not decided yet.
 
 - **D1 — Exact amounts: for which items?**
   **A (recommended):** opt-in per item; an owner switches on **Track amount**
@@ -904,7 +904,7 @@ all A.** D17–D21 are in the addendum at the end, not decided yet.
 
 ## Addendum (2026-11-10): Menu ↔ food ↔ shopping, the closed loop
 
-Status: **D17–D21 are a plan, waiting for the owner** (each with a
+Status: **D17–D22 are a plan, waiting for the owner** (each with a
 recommended A). D1–D16 above stay decided. The owner asked that the menu
 connect to the food the house already has and to what it should buy. The
 core loop is already in the plan (recipe lines linked to items, *Add
@@ -1076,6 +1076,109 @@ For a recipe at a given number of servings, each ingredient line is:
   Headings and units in the language of the person sending (owners'
   choice; staff always Indonesian), item names as the household typed them.
 
+### Basic nutrition (D22)
+
+The owner asked for basic nutrition, kept simple: **calories, protein,
+carbohydrate, fat and fibre**, nothing else.
+
+- **Off by default, for the household.** One switch, **Nutrition**
+  (**Nilai gizi**, the words on every Indonesian food label), off until an
+  owner turns it on. It's offered in context, once, as a quiet card on the
+  Recipes screen ("Show calories, protein, carbs, fat and fibre per
+  serving?" **Turn on** · **Not now**), and stays in the Recipes screen's
+  menu afterwards. Never at sign-up, never on staff phones. Off, nothing
+  below appears anywhere.
+- **Values live on items, typed once.** With the switch on, the item sheet
+  (tracked or not) gets a small **Nutrition** block: kcal, protein, carbs,
+  fat, fibre, **per 100 g** for weight items, **per 100 ml** for volume
+  items, **per piece** for pcs, buah and butir, and **per one unit** for
+  the other units ("per bungkus"). The basis follows the item's unit; if an
+  owner changes the unit to another group (kg to pcs), the values are
+  cleared, because they would be wrong.
+- **Where values come from.** Typed by hand, or **Pick from the list**: a
+  reference list bundled with the app, searchable in both languages, that
+  fills the five fields (still editable). The list is ours to curate: about
+  200 everyday Indonesian ingredients (beras, ayam, telur, tempe, tahu,
+  santan, kangkung, minyak goreng) with Indonesian and English names, each
+  mapped to its source entry.
+- **Sources and licences (checked 2026-11-10):**
+  - **USDA FoodData Central** (U.S. Department of Agriculture): public
+    domain, published under **CC0 1.0**; no permission needed; USDA asks
+    that apps name FoodData Central as the source. It covers most local
+    staples (rice, tempeh, tofu, coconut milk, water spinach). **This is the
+    default source.** Attribution goes on the About Miamus page and as a
+    small "Source: USDA FoodData Central" under a picked value.
+  - **TKPI** (Tabel Komposisi Pangan Indonesia, Kemenkes; online at
+    panganku.org): the best source for Indonesian dishes and local foods,
+    but **its licence is unclear**. panganku.org states no licence or reuse
+    terms (only a 2018 copyright footer crediting GAIN and a liability
+    disclaimer). So the list **does not bundle TKPI values** until Kemenkes
+    gives written permission; the manager can ask the owner whether to
+    request it. Until then: USDA plus manual entry. An owner may of course
+    type TKPI numbers themselves.
+- **A recipe** shows one line under its title, owners only:
+  **Per serving: 520 kcal · protein 32 g · carbs 48 g · fat 18 g · fibre
+  6 g**, with **Whole dish** one tap away. Computed on the phone from the
+  linked lines whose unit converts exactly to the item's basis (the same
+  rule as amounts: g ↔ kg, ml ↔ L, pieces 1 : 1, the same unit). A counted
+  line without values, an sdm/sdt line, or a free-name line makes the result
+  **partial** ("Partial: 2 ingredients without values"); *to taste* lines
+  are left out and don't make it partial. Per serving = whole dish ÷ the
+  recipe's servings; the stepper doesn't change it.
+- **The menu day** shows, owners only, a day total for **one serving of each
+  dish** that day ("Today, one serving of each: 1,480 kcal · …"), partial
+  when any dish is. Leftover dishes and dishes without a recipe count as
+  partial.
+- **Not health advice.** Under the line: "Estimates from the values you
+  entered." No targets, no colours for good or bad, no "too much".
+- **No per-person tracking in this phase.** No goals, no intake log, no
+  weights or body data, nothing tied to a person. Values describe food, not
+  people, so they aren't personal or health data and need no consent.
+  Per-person intake, goals and full micronutrients come later with the Care
+  tab's people records (item 18) and will need **health-data consent under
+  UU PDP**.
+
+| Where | English | Bahasa Indonesia |
+| --- | --- | --- |
+| Switch, card | Nutrition · Show calories, protein, carbs, fat and fibre per serving? · Turn on · Not now | Nilai gizi · Tampilkan kalori, protein, karbohidrat, lemak dan serat per porsi? · Nyalakan · Nanti saja |
+| Item block | Nutrition · per 100 g · per 100 ml · per piece · per bungkus · Pick from the list · Source: USDA FoodData Central | Nilai gizi · per 100 g · per 100 ml · per buah · per bungkus · Pilih dari daftar · Sumber: USDA FoodData Central |
+| Fields | kcal · Protein · Carbs · Fat · Fibre | kkal · Protein · Karbo · Lemak · Serat |
+| Recipe line | Per serving: 520 kcal · protein 32 g · carbs 48 g · fat 18 g · fibre 6 g · Whole dish | Per porsi: 520 kkal · protein 32 g · karbo 48 g · lemak 18 g · serat 6 g · Satu masakan |
+| Partial | Partial: 2 ingredients without values | Sebagian: 2 bahan belum ada nilai gizinya |
+| Day total | Today, one serving of each: 1,480 kcal | Hari ini, satu porsi tiap masakan: 1.480 kkal |
+| Note | Estimates from the values you entered. | Perkiraan dari nilai yang Anda isi. |
+
+Glossary rows (with PR A): **Nilai gizi** (Nutrition; the label word),
+**kkal** (kcal, the label unit), **Karbohidrat** in full in the switch's
+sentence and **Karbo** in the short line (Carbs), **Lemak** (Fat),
+**Serat** (Fibre), **Protein** (unchanged), **Sebagian** (Partial),
+**per porsi** / **Satu masakan** (per serving / whole dish). Thousands with
+a dot and decimals with a comma in Indonesian (1.480 kkal; 2,5 g), as the
+glossary's formatting rules say.
+
+**Data model (migration 144):**
+
+| Where | Column | |
+| --- | --- | --- |
+| `households` | `nutrition_on` | `boolean not null default false`; owners write. |
+| `inventory_items` | `kcal`, `protein_g`, `carbs_g`, `fat_g`, `fibre_g` | `numeric`, each null or 0–10,000 (per the basis; a whole piece can be large). Owner-only (guard). |
+| `inventory_items` | `nutrition_source` | `text`, null, `manual` or `usda` (`tkpi` added only with permission); `nutrition_ref` `text` (the FoodData Central id), null. Owner-only. |
+
+- The amount rules trigger (144) clears the five values and the source when
+  `unit` changes to another group (weight, volume, pieces, other).
+- The bundled reference list is a static JSON file in the app (no table, no
+  service, no network call); its build script and the source ids live in
+  the repo, with the USDA citation.
+- The household export includes the new columns. Privacy policy: one clause
+  on the PR A shopping line, "…and, if the household turns it on, nutrition
+  values for items" / "…serta, jika rumah tangga menyalakannya, nilai gizi
+  barang"; no personal data, no new service. The About page credits USDA
+  FoodData Central.
+- Tests: the guard refuses a staff phone writing any nutrition column; the
+  unit-group change clears values; unit tests for the per-serving sum, the
+  partial rule (missing values, sdm, free names; *to taste* ignored), the
+  basis per unit group, and Indonesian number formatting.
+
 ### Owner text (EN / ID), addendum
 
 | Where | English | Bahasa Indonesia |
@@ -1188,8 +1291,11 @@ the WhatsApp grouping.
 - **PR C** (menu): the *Eat soon* strip and leftover dishes, *Ready to cook*
   on planned dishes and *Menu hari ini*, the shortfall in packs, the *Menu
   changed* banner and the careful re-run.
+- **Nutrition (D22)** follows the same three PRs: the switch, item values
+  and the bundled list in PR A (144); the recipe line and the offer card in
+  PR B; the menu day total in PR C.
 
-### Decisions for the owner, addendum (D17–D21)
+### Decisions for the owner, addendum (D17–D22)
 
 - **D17 — Use it first.**
   **A (recommended):** an **Eat soon** strip on the Menu (ready food
@@ -1223,12 +1329,22 @@ the WhatsApp grouping.
   Online · Other); *To buy*, staff's *Perlu dibeli* and the WhatsApp text
   group by it once any item has one. B: free-text shop names ("Pasar
   Santa", "Ranch Market"). C: no grouping.
+- **D22 — Basic nutrition.**
+  **A (recommended):** a household **Nutrition** switch, off by default and
+  offered once on the Recipes screen; with it on, items carry kcal,
+  protein, carbs, fat and fibre per 100 g / 100 ml / piece, typed or picked
+  from a bundled list (USDA FoodData Central, public domain; TKPI only once
+  Kemenkes permits it); recipes show per serving and per dish (partial when
+  values are missing), the menu day a total per serving; owners only; no
+  per-person tracking. B: the same, manual values only (no bundled list).
+  C: not now.
 
 ### Considered, not now
 
-- **Per-person portions and nutrition** (who eats how much, calories,
-  macros): needs people records (Care tab, item 18) and edges into health
-  data.
+- **Per-person portions, intake and goals, and full micronutrients**
+  (who eats how much, daily targets, vitamins and minerals): needs people
+  records (Care tab, item 18) and health-data consent under UU PDP. D22 is
+  food-only.
 - **Price per pack**: comes with household cash (item 15), which will store
   what each purchase cost; the pack size added here is what it will price.
 - **Planning a week automatically**: a Kakak idea (the paid extra), built on
