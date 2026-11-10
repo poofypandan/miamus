@@ -127,6 +127,8 @@ people are **staf** and **admin**.
 | Owners only | **Hanya pemilik** | Marks what staff never see. |
 | Who lives here? | **Siapa yang tinggal di sini?** | Phase 162: the sign-up question and the Household row. |
 | Just people (no pets) | **Hanya orang** | The Household row's detail when pets are off. |
+| Send feedback | **Kirim masukan** | Roadmap item 9: owners in Household and About Miamus, staff in the Lapor sheet. Not "umpan balik". |
+| Idea / Problem / Other (feedback type) | **Ide** / **Masalah** / **Lainnya** | The optional type on the feedback form. On staff forms the label is "Jenis (boleh dikosongkan)". |
 | Kids · Elders | **Anak · Lansia** | Shown greyed as "Soon" until the Care tab. "Lansia" is the everyday word; "orang tua" also means parents. |
 | Soon (a greyed choice) | **Segera** | |
 | Any pets at home? / We have pets · No pets | **Ada hewan di rumah?** / **Ada hewan · Tidak ada** | The one-time card on Today. |
