@@ -1,7 +1,9 @@
 # Kakak: turning her on
 
-Phase 156 step 2 (plan: `docs/phase-156-step2-kakak-plan.md`). Kakak is off
-everywhere until all four of these are true, in this order:
+Phase 156 step 2 (plan: `docs/phase-156-step2-kakak-plan.md`). The owner's
+plain-words version, with a smoke test and a demo script, is
+`docs/kakak-weekend-go-live.md`. Kakak is off everywhere until all four of
+these are true, in this order:
 
 1. **Migration 126** is applied (`supabase/migrations/126_kakak.sql`):
    local, then staging, then production, each with the owner's OK.
@@ -81,8 +83,35 @@ select date_trunc('day', created_at) as day, model, count(*) as calls,
 from kakak_requests group by 1, 2 order by 1 desc;
 ```
 
+## When the call to Anthropic fails
+
+The route turns each failure into one plain reason (`src/lib/kakak/api-errors.ts`),
+and the sheet words it:
+
+| Cause | Owner sees | Try again? |
+| --- | --- | --- |
+| Console workspace spend limit, or the tier limit | "Kakak has reached this month's limit…" | No |
+| Wrong, revoked or disabled key (401/403) | "Kakak isn't available right now…" | No |
+| Rate limited or overloaded (429/529) | "Kakak is busy right now…" | Yes |
+| Timed out | "Kakak took too long. Nothing was saved…" | Yes |
+| No internet on the phone | "Kakak needs the internet…" | Yes |
+| Sheet left open for over 6 hours, or past midnight in Jakarta | "This conversation is from earlier…" | Start again |
+
+The server logs the status and error type, never the household's words.
+
+## One conversation, one household block
+
+Every turn of a conversation builds the household block from the moment the
+conversation started (`startedAt` in the history the phone sends back), not
+from the clock. The system prompt must be byte-identical on every turn: the
+thinking blocks Kakak replays are refused by the API otherwise (preserved
+thinking, enforced on Opus 5.5 for Console accounts created from 31 August
+2026), and it keeps the household block cached.
+
 ## Turning her off
 
 - One household: the owner's switch, or `platform_set_kakak_allowed(id, false)`
   (also switches it off).
 - Everyone, at once: `KAKAK_ENABLED` to anything but `true`, then redeploy.
+- Everyone, instantly, with no redeploy: disable the API key in the Claude
+  Console. Kakak then says she isn't available.
