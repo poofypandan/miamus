@@ -25,6 +25,7 @@ import { KakakAvatar } from "@/components/kakak/kakak-avatar";
 import { KakakExamples } from "@/components/kakak/kakak-examples";
 import { KakakThinking } from "@/components/kakak/kakak-thinking";
 import { KakakVoice } from "@/components/kakak/kakak-voice";
+import { KakakRemindChips } from "@/components/kakak/kakak-remind-chips";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
@@ -503,7 +504,14 @@ function SuggestionCard({
               </dl>
               {card.note && <p className="text-xs text-muted-foreground">{card.note}</p>}
               {item.kind === "chore" && !changing && (
-                <ChoreChips item={item} disabled={saving} onRefine={(change) => onRefine(index, change)} />
+                <>
+                  <ChoreChips item={item} disabled={saving} onRefine={(change) => onRefine(index, change)} />
+                  <KakakRemindChips
+                    value={item.remindDaysBefore ?? null}
+                    disabled={saving}
+                    onChange={(days) => onRefine(index, { remindDaysBefore: days })}
+                  />
+                </>
               )}
             </div>
           );

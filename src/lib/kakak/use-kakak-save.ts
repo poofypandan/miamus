@@ -72,6 +72,8 @@ export function useKakakSave() {
                 requires_supervision: item.requiresSupervision,
                 location_id: locationId,
                 notes: item.notes,
+                // Left out when off, as the chore form does (migrations/137).
+                ...(item.remindDaysBefore != null ? { remind_days_before: item.remindDaysBefore } : {}),
               });
               undos.push(() => household.deleteHouseholdTask(task.id));
               break;
