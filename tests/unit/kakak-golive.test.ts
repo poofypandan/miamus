@@ -140,6 +140,11 @@ describe("kakakExamples", () => {
     expect(id[2].text).toMatch(/^Ingatkan saya/);
   });
 
+  it("drops honorifics, as Kakak's household block does", () => {
+    expect(kakakExamples({ locale: "id", staffNames: ["Bik Nah"], petNames: [] })[0].text).toBe("Nah siram tanaman setiap Senin jam 8");
+    expect(kakakExamples({ locale: "en", staffNames: ["Mbak Sari Wulandari"], petNames: [] })[0].text).toBe("Sari waters the plants every Monday at 8");
+  });
+
   it("has no names to invent: no staff means anyone, no pets means another chore", () => {
     const list = kakakExamples({ locale: "en", staffNames: [], petNames: [] });
     expect(list[0].text).toBe("Water the plants every Monday at 8");

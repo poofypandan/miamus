@@ -180,7 +180,17 @@ function Conversation({ onClose }: { onClose: () => void }) {
           label: t("Undo", "Batalkan"),
           onClick: () => {
             reportKakakOutcome(requestId, "undone");
-            void undo().then(() => toast(t("Undone.", "Dibatalkan.")));
+            // "Undone" only when every part came back (Codex, PR #68).
+            void undo().then((allBack) =>
+              allBack
+                ? toast(t("Undone.", "Dibatalkan."))
+                : toast.error(
+                    t(
+                      "Couldn't undo all of it. Check the list and remove what's left.",
+                      "Tidak semua bisa dibatalkan. Cek daftarnya dan hapus yang tersisa."
+                    )
+                  )
+            );
           },
         },
       });

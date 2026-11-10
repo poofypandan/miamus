@@ -8,6 +8,8 @@
 //
 // Pure, so the wording is unit-tested in both languages.
 
+import { firstName } from "./context";
+
 export type KakakExampleKind = "chore" | "reminder" | "shopping" | "pet" | "food" | "sheets";
 
 export interface KakakExample {
@@ -23,11 +25,11 @@ export interface ExampleHousehold {
   petNames: string[];
 }
 
-function firstName(name: string): string {
-  return name.trim().split(/\s+/)[0] ?? "";
-}
-
-/** A usable first name: letters only, short, or null. */
+/**
+ * A usable first name, honorific dropped as in Kakak's household block
+ * ("Bik Nah" is Nah, so Kakak and practice mode both know who is meant):
+ * letters only, short, or null.
+ */
 function cleanName(name: string | undefined): string | null {
   if (!name) return null;
   const first = firstName(name).replace(/[^\p{L}'-]/gu, "");
