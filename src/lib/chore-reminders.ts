@@ -68,9 +68,26 @@ export function comingUpReminders(params: {
     if (row.parent_task_id) written.set(`${row.parent_task_id}|${row.due_date}`, row);
   }
 
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const forSomeoneElse = (assignee: string | null) => !!assignee && ownerRows.has(assignee) && assignee !== memberId;
+
   const items: ComingUp[] = [];
   for (const task of rows) {
-    if (task.parent_task_id || task.status === "cancelled") continue;
+    // A written day off its repeat's pattern, still owed: skipping a chore's
+    // first day on the 31st keeps 28 February as its own row (Codex, PR #60).
+    // It reminds with its repeat's setting. Days on the pattern are read
+    // through the repeat below.
+    if (task.parent_task_id) {
+      const template = byId.get(task.parent_task_id);
+      if (!template || template.status === "cancelled" || task.status !== "pending") continue;
+      const remind = remindOf(template);
+      if (!remind || occursOn(template, task.due_date)) continue;
+      if (task.due_date <= today || task.due_date > addDays(today, remind)) continue;
+      if (forSomeoneElse(task.assigned_to)) continue;
+      items.push({ task, date: task.due_date });
+      continue;
+    }
+    if (task.status === "cancelled") continue;
     const remind = remindOf(task);
     if (!remind) continue;
     const last = addDays(today, remind);
@@ -93,8 +110,7 @@ export function comingUpReminders(params: {
     const status = row ? row.status : date === task.due_date ? task.status : "pending";
     if (status !== "pending") continue;
 
-    const assignee = row ? row.assigned_to : task.assigned_to;
-    if (assignee && ownerRows.has(assignee) && assignee !== memberId) continue;
+    if (forSomeoneElse(row ? row.assigned_to : task.assigned_to)) continue;
 
     items.push({ task: row ?? task, date });
   }

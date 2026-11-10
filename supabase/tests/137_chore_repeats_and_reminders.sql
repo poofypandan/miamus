@@ -255,6 +255,26 @@ select pg_temp.ok(public.notify_chores_due('2026-12-21') >= 0, 'run on 21 Dec ag
 select pg_temp.ok(not exists (select 1 from pg_temp.pushes where body like '%AC service%'),
   'a finished day is not reminded');
 
+-- A preserved short-month day off the pattern (first day skipped on the
+-- 31st: 28 Feb kept as its own row, the start moved to 31 Mar) still reminds.
+delete from pg_temp.pushes;
+insert into public.household_tasks
+  (id, household_id, title, category, recurrence, recurrence_interval, due_date, remind_days_before, assigned_to)
+select '00000000-0000-0000-0000-000000013720', '00000000-0000-0000-0000-0000000137f1', 'Rent', 'bill',
+       'monthly', 1, '2027-03-31', 1, r.a1
+from roster r;
+insert into public.household_tasks (household_id, parent_task_id, title, category, due_date, assigned_to, status)
+select '00000000-0000-0000-0000-0000000137f1', '00000000-0000-0000-0000-000000013720', 'Rent', 'bill',
+       '2027-02-28', r.a1, 'pending'
+from roster r;
+select pg_temp.ok(public.notify_chores_due('2027-02-27') >= 1, 'run on 27 Feb 2027');
+select pg_temp.ok((select body like '%Tomorrow: Rent.%' from pg_temp.pushes where user_id = '00000000-0000-0000-0000-0000000137a1'),
+  'the kept 28 Feb is reminded the day before, though it is off the pattern');
+delete from pg_temp.pushes;
+select pg_temp.ok(public.notify_chores_due('2027-02-28') >= 1, 'run on 28 Feb 2027');
+select pg_temp.ok((select body like '%Due today: Rent.%' from pg_temp.pushes where user_id = '00000000-0000-0000-0000-0000000137a1'),
+  '... and on the day');
+
 -- ---- The list of titles --------------------------------------------------------------
 select pg_temp.ok(public.chore_due_titles(array['A'], 'en') = 'A', 'one title');
 select pg_temp.ok(public.chore_due_titles(array['A', 'B', 'C'], 'en') = 'A, B and C', 'three titles, English');

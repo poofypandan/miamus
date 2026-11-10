@@ -135,6 +135,13 @@ describe("Coming up on Today", () => {
     expect(show([none, onDay, done, template, skipped])).toEqual([]);
   });
 
+  it("a kept short-month day off the pattern still comes up (Codex, PR #60)", () => {
+    const rent = task({ id: "R", title: "Rent", recurrence: "monthly", due_date: "2027-03-31", remind_days_before: 3, assigned_to: me });
+    const feb = task({ id: "F", title: "Rent", parent_task_id: "R", due_date: "2027-02-28", assigned_to: me });
+    expect(show([rent, feb], "2027-02-26")).toEqual(["Rent:2027-02-28"]);
+    expect(show([rent, { ...feb, status: "completed" }], "2027-02-26")).toEqual([]);
+  });
+
   it("a yearly bill a week out", () => {
     const stnk = task({ title: "STNK", recurrence: "monthly", recurrence_interval: 12, due_date: "2025-11-24", remind_days_before: 7, assigned_to: me });
     expect(show([stnk])).toEqual(["STNK:2026-11-24"]);

@@ -28,7 +28,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useToday } from "@/hooks/use-today";
 import { useSetUpChores } from "@/hooks/use-set-up-chores";
 import { CHORE_JOBS, choreJobLabel, type ChoreJob } from "@/lib/chore-jobs";
-import { recurrenceOf } from "@/lib/chore-recurrence";
+import { intervalOf, recurrenceOf } from "@/lib/chore-recurrence";
 import {
   allRoomRows,
   placesWithJob,
@@ -549,6 +549,8 @@ function repeatPhrase(task: HouseholdTask, locale: OwnerLocale): string {
   const day = new Intl.DateTimeFormat(locale === "id" ? "id-ID" : "en-GB", { weekday: "long" }).format(
     new Date(`${task.due_date}T00:00:00`)
   );
+  const every = intervalOf(task);
+  if (every > 1) return locale === "id" ? `Setiap ${every} minggu, hari ${day}` : `Every ${every} weeks on ${day}`;
   return locale === "id" ? `Setiap ${day}` : `Every ${day}`;
 }
 

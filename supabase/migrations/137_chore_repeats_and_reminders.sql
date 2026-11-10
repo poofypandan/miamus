@@ -237,6 +237,25 @@ begin
          and t.status <> 'cancelled'
          and (d.kind = 'due' or t.remind_days_before > 0)
          and public.chore_occurs_on(t, d.day)
+      union all
+      -- A written day off the repeat's pattern, which still shows and is
+      -- owed: skipping a chore's first day on the 31st keeps 28 February as
+      -- its own row and moves the start to 31 March (startAfterSkippingFirst;
+      -- Codex, PR #60). It reminds with its repeat's setting; open_days
+      -- below finds the row itself and reads its state and assignee.
+      select t.id, t.household_id, x.title, x.due_time, t.due_date, t.status, t.assigned_to,
+             d.day, d.ahead
+        from public.household_tasks x
+        join public.household_tasks t
+          on t.id = x.parent_task_id and t.household_id = x.household_id and t.parent_task_id is null
+       cross join lateral (
+         values (today, 0, 'due'), (today + t.remind_days_before, t.remind_days_before::int, 'ahead')
+       ) as d(day, ahead, kind)
+       where t.remind_days_before is not null
+         and t.status <> 'cancelled'
+         and (d.kind = 'due' or t.remind_days_before > 0)
+         and x.due_date = d.day
+         and not public.chore_occurs_on(t, d.day)
     ),
     open_days as (
       -- That day's state, as expandChores reads it: a written row governs
