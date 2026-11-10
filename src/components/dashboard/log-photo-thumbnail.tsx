@@ -30,6 +30,7 @@ import { useScreenLang } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
 import type { MasterSchedule, TaskLog } from "@/types/database";
 import { photoSrc } from "@/lib/photos";
+import { displayLogNote } from "@/lib/log-notes";
 import { usePrefetchHighRes } from "@/hooks/use-prefetch-high-res";
 
 /**
@@ -74,7 +75,7 @@ export function logLightboxItem({
         )}
       </>
     ),
-    footer: log.notes ? <p className="text-sm text-muted-foreground">{log.notes}</p> : null,
+    footer: log.notes ? <p className="text-sm text-muted-foreground">{displayLogNote(log.notes)}</p> : null,
   };
 }
 

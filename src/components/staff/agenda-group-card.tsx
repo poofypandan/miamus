@@ -308,12 +308,12 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       const names = [...new Set(chosen.map((i) => i.entityName))].join(", ");
       toast.success(
         subType === "check_in"
-          ? `${names} · sudah di klinik 🏥`
+          ? `${names} · sudah di klinik`
           : subType === "admitted"
             ? `${names} · rawat inap — jadwal harian dihentikan sementara`
             : subType === "check_out"
-              ? `${names} · sudah pulang 🏠`
-              : `${names} · ${cardTitle} selesai ✅`
+              ? `${names} · sudah pulang`
+              : `${names} · ${cardTitle} selesai`
       );
       setFinishChoice("check_out");
       // Back to the list once nothing is left on this card: every dog done,

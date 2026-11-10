@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Layers, Loader2 } from "lucide-react";
+import { ArrowRight, Layers, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
@@ -111,7 +111,7 @@ export function SortRoomsCard({ locations, chores, today }: { locations: Househo
         {shown.map((move) => (
           <li key={move.from} className="flex items-center gap-2 px-3 py-1.5">
             <span className="min-w-0 flex-1 truncate text-muted-foreground">{move.from}</span>
-            <span aria-hidden className="text-muted-foreground">→</span>
+            <ArrowRight aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-[1.3] truncate font-medium text-gray-900">
               {move.room === null
                 ? t(`Floor ${move.floor}`, `Lantai ${move.floor}`)

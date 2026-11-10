@@ -15,6 +15,7 @@ import { useFormatTime } from "@/components/ui/ui-labels";
 import { isActiveAlert } from "@/lib/inventory-status";
 import { groupProposals, batchCreatedAt, type ProposalBatch } from "@/lib/proposal-batches";
 import { isWithinUndoWindow } from "@/lib/undo-window";
+import { displayLogNote } from "@/lib/log-notes";
 import type { ItemType, ProposalStatus, RoutineProposal } from "@/types/database";
 
 const DISMISSED_KEY = "dismissed_proposals";
@@ -209,7 +210,7 @@ export function StaffReportsPanel({
           {extraLogs.map((log) => (
             <ReportRow
               key={log.id}
-              label={`${log.notes ?? "Catatan"} · ${petName(log.entity_id)}`}
+              label={`${displayLogNote(log.notes) ?? "Catatan"} · ${petName(log.entity_id)}`}
               detail={formatTime(new Date(log.completed_at))}
               undoable={isWithinUndoWindow(log.completed_at, now)}
               onUndo={() => deleteLogWithPhoto(log)}
