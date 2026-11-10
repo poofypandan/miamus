@@ -8,7 +8,9 @@ import { UiLabelsProvider } from "@/components/ui/ui-labels";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { CANONICAL_HOST, CANONICAL_ORIGIN, isOldHost } from "@/config/hosts";
 import { OwnerLocaleProvider, translator, useT, type Translate } from "@/context/owner-locale-context";
-import { initialPublicLocale } from "@/hooks/use-public-locale";
+import { readPublicLocale } from "@/hooks/use-public-locale";
+import { PublicLanguageSwitch } from "@/components/shared/public-language-switch";
+import { PUBLIC_LOCALE_KEY, type OwnerLocale } from "@/lib/owner-locale";
 import {
   countChoreDrafts,
   mayMove,
@@ -47,7 +49,7 @@ import { useHousehold } from "@/context/household-context";
  * Nothing secret goes in the link.
  *
  * Owners read their own language (useT); staff Bahasa Indonesia only; a
- * phone with nobody signed in, the start screen's language.
+ * phone with nobody signed in, Bahasa Indonesia with an EN | ID switch.
  */
 
 const noSubscribe = () => () => {};
@@ -95,10 +97,34 @@ function MoveScreen() {
       </OwnerLocaleProvider>
     );
   }
-  const locale = audience === "staff" ? "id" : initialPublicLocale();
+  if (audience === "visitor") return <VisitorMoveView />;
+  return (
+    <UiLabelsProvider locale="id">
+      <MoveView audience="staff" t={translator("id")} />
+    </UiLabelsProvider>
+  );
+}
+
+/**
+ * Nobody signed in on this phone. Those still on the old address are mostly
+ * staff, so Bahasa Indonesia unless this phone chose English on a public
+ * screen before — not the phone's own language, as the start screen does —
+ * with the start screen's EN | ID switch for anyone else (Manager, 2026-11-10).
+ */
+function VisitorMoveView() {
+  const [locale, setLocale] = useState<OwnerLocale>(() => readPublicLocale() ?? "id");
+  function choose(next: OwnerLocale) {
+    setLocale(next);
+    try {
+      window.localStorage.setItem(PUBLIC_LOCALE_KEY, next);
+    } catch {
+      // Private mode: the switch still works for this visit.
+    }
+  }
   return (
     <UiLabelsProvider locale={locale}>
-      <MoveView audience={audience} t={translator(locale)} />
+      <PublicLanguageSwitch locale={locale} onChange={choose} />
+      <MoveView audience="visitor" t={translator(locale)} />
     </UiLabelsProvider>
   );
 }

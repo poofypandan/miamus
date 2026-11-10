@@ -224,6 +224,25 @@ test("the old address never renders the page asked for, only the empty page unde
   expect(icon.headers()["content-type"]).toContain("image/png");
 });
 
+test.describe("a phone with nobody signed in, set to English", () => {
+  test.use({ locale: "en-US" });
+
+  test("reads the move in Bahasa Indonesia, and can switch to English", async ({ context, page, baseURL }) => {
+    // Those still on the old address are mostly staff: Indonesian unless the
+    // phone chose otherwise, whatever the phone's own language.
+    await installStub(context);
+    await onOldAddress(context, baseURL);
+
+    await page.goto(`${OLD}/`);
+
+    await expect(page.getByRole("heading", { name: "Aplikasi ini sudah tidak dipakai" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Masuk lagi: pemilik dengan Google, staf pakai kode rumah dari admin.")).toBeVisible();
+    await page.getByRole("tab", { name: "EN" }).click();
+    await expect(page.getByRole("heading", { name: "This app is no longer in use" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open the new Miamus" })).toBeVisible();
+  });
+});
+
 test("the current address shows the app as before", async ({ context, page }) => {
   await installStub(context, { stored: freshSession(), staffPhone: true });
   await page.goto("/staff");
