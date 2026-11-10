@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { KakakAvatar } from "@/components/kakak/kakak-avatar";
+import { KakakVoice } from "@/components/kakak/kakak-voice";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
@@ -150,6 +151,12 @@ function Conversation({ onClose }: { onClose: () => void }) {
     onClose();
   }
 
+  /** The typing box is on screen (the same test as where it renders below). */
+  const showTyping =
+    screen.kind === "typing" ||
+    screen.kind === "message" ||
+    ((screen.kind === "question" || screen.kind === "card") && typingAnswer);
+
   return (
     <div className="flex flex-col gap-4 px-4 pb-4">
       {practice && (
@@ -232,6 +239,15 @@ function Conversation({ onClose }: { onClose: () => void }) {
       )}
 
       {screen.kind === "message" && <KakakBubble>{screen.text}</KakakBubble>}
+
+      {/* Talk to Kakak (voice beta): spoken words go through send() like typed ones. */}
+      <KakakVoice
+        screen={screen}
+        listenHere={screen.kind !== "waiting" && (screen.kind !== "card" || typingAnswer)}
+        inputShown={showTyping}
+        onHeard={setDraft}
+        onSpoken={(text) => void send(text)}
+      />
 
       {(screen.kind === "typing" ||
         screen.kind === "message" ||
