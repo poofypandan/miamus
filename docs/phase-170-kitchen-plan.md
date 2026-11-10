@@ -233,8 +233,14 @@ Staff phones may: change the amount (minus/plus, set), record a purchase
 with an amount, tap the three states, mark a planned dish cooked with its
 ingredients, save leftovers to Food. They may **not**: switch tracking on or
 off, change the unit or the low level, write recipes, or plan the menu. The
-guard (099) gets the new owner-only columns; no new staff powers beyond what
-they already have on `quantity` and `stock_status`.
+guard (099) gets the new owner-only column; staff gain no power over an
+item beyond what they already have on `quantity` and `stock_status`.
+
+**One new staff screen piece:** staff's *Belanja* today only marks items.
+Staff often do the shopping at the pasar, so it gains the same **Perlu
+dibeli** list at the top that owners have, with a tick per item (bought,
+with Undo, and *Beli berapa?* on tracked items). Without it, amounts would
+only grow when an owner ticks.
 
 ## Food and ingredients as one Kitchen (D6, D7)
 
@@ -339,8 +345,9 @@ amount. A per-batch expiry on stock is out of scope.
 5. In **Dapur → Makanan → Bahan** or **Belanja**, a tracked item shows "Sisa
    1,2 kg"; tapping it shows minus/plus, **Ubah jumlah**, and *Masih ada ·
    Hampir habis · Habis* as before. Untracked items work exactly as today.
-6. On *Belanja*, ticking a tracked item bought asks **Beli berapa?** (last
-   time pre-filled).
+6. On *Belanja*, a new **Perlu dibeli** list at the top (the owners' To
+   buy) with a tick per item; ticking a tracked item asks **Beli berapa?**
+   (last time pre-filled). Untracked items tick straight to *Masih ada*.
 
 Staff never plan, write recipes or switch tracking. No staff screen has
 English.
@@ -451,7 +458,7 @@ closet) and 143 also re-creates the photo clean-up functions.
 | Column | |
 | --- | --- |
 | `track_amount` | `boolean not null default false`. Owner-only (guard). |
-| `amount_set_at` | `timestamptz`, stamped by the server when a tracked item's `quantity` changes or tracking turns on. Drives "about … · 3 weeks ago". |
+| `amount_set_at` | `timestamptz`, stamped by the server when a tracked item's `quantity` changes or tracking turns on; any value a client sends is ignored (the trigger keeps the old one otherwise). Drives "about … · 3 weeks ago". |
 | `amount_set_by` | `uuid` → `staff_profiles (id) on delete set null`, self-declared like every staff id; 119's refusal extended to it. |
 | `last_bought_amount` | `numeric`, null or > 0; written by `record_purchase`; the pre-fill. |
 
@@ -496,8 +503,10 @@ may set it (food is already editable by staff).
   `stock_status = 'ok'` (the trigger re-derives when the amount changed);
   `stock_status_by`, `amount_set_by` = `p_staff_id`. Rejects amounts ≤ 0 or
   over 100,000. `security invoker`; revoked from public, anon; granted to
-  authenticated. The tick's Undo calls it back with a negative adjustment
-  through `adjust_inventory_quantity` and restores the previous status.
+  authenticated. The tick's Undo takes the amount back off through
+  `adjust_inventory_quantity` and writes back the previous `stock_status`,
+  `last_bought_amount` and `to_buy_amount` (all staff-writable columns), so
+  an undone purchase leaves the item exactly as it was.
 
 **Export**: `export_household_data()` (138) re-created to include the new
 columns (it selects whole rows, so likely only a re-check). Same `security
@@ -558,9 +567,9 @@ anon, authenticated, `service_role` only. Export includes both tables.
 | `servings` | smallint 1–50, nullable (dishes without a recipe) |
 | `notes` | up to 200, nullable |
 | `position` | smallint |
-| `cooked_at` | timestamptz, stamped by the server |
+| `cooked_at` | timestamptz, written only by `cook_menu_dish` (server clock) |
 | `cooked_by` | staff FK, `on delete set null`, self-declared; 119's refusal |
-| `cooked_uses` | jsonb, what was taken off: `[{item_id, amount}]` in each item's unit; for Undo |
+| `cooked_uses` | jsonb, what was actually taken off: `[{item_id, amount}]` in each item's unit; written only by `cook_menu_dish`, read by `uncook_menu_dish` |
 | `created_by`, `created_at` | |
 
 **`households`, three columns**: `kitchen_notes text` (up to 300), and
@@ -573,26 +582,36 @@ at build); every session of the household reads.
 shortfall from *Add missing*; cleared by `record_purchase` and by setting the
 status back to *Enough*. Not owner-only (a staff purchase clears it).
 
-RLS on `menu_dishes`: select for any household session; insert and delete
-owners only (`household_members`); update for any household session, with a
-guard trigger `menu_dishes_staff_guard` (`security definer`, empty
-`search_path`, revoked from public, anon, authenticated) that lets a session
-without a `household_members` row change only `cooked_at`, `cooked_by` and
-`cooked_uses`.
+RLS on `menu_dishes`, `to authenticated`: **select** for any household
+session; **insert, update, delete** owners only (`household_members`).
+**Staff phones never write `menu_dishes` directly**; they cook only through
+the two functions below. (If staff could write `cooked_uses` and then undo,
+they could add stock that was never taken; with the columns written only by
+the functions, Undo returns exactly what cooking took.) A trigger stops
+owners' direct updates from changing the three `cooked_*` columns too, so
+the functions are the only path.
 
 **Functions**
 
 - `cook_menu_dish(p_dish_id uuid, p_uses jsonb, p_staff_id uuid default null)`:
-  one transaction: refuses `already_cooked` if `cooked_at` is set (so an
-  offline retry can't take things off twice); for each `{item_id, amount}`
-  of the same household, `quantity = greatest(quantity - amount, 0)`
-  (the trigger re-derives the status); stores what was actually taken in
-  `cooked_uses`; stamps `cooked_at`, `cooked_by`. `security invoker` (RLS
-  and both guards apply); revoked from public, anon; granted to
+  `security definer`, empty `search_path`. **Deliberately open to staff
+  phones** (cooking is staff work), so the check is household membership,
+  not admin: the dish's household must be in `get_user_household_ids()`.
+  It is not an admin action and changes nothing an owner-only guard
+  protects. One transaction: locks the dish row; refuses `already_cooked` if
+  `cooked_at` is set (an offline retry can't take things off twice);
+  checks every `item_id` is a **tracked item of the same household** and
+  every amount is > 0 and ≤ 100,000, and that `p_staff_id` is null or a
+  non-archived staff member of that household; for each,
+  `quantity = greatest(quantity - amount, 0)` (the amount rules trigger
+  re-derives the status and stamps `amount_set_at`); stores what was
+  actually taken (after the floor at 0) in `cooked_uses`; stamps
+  `cooked_at = now()`, `cooked_by`. Revoked from public, anon; granted to
   authenticated.
-- `uncook_menu_dish(p_dish_id uuid)`: adds `cooked_uses` back, clears the
-  three columns. Same security and grants. Used by the toast's Undo and by
-  an owner's **Mark not cooked**.
+- `uncook_menu_dish(p_dish_id uuid)`: same security, same household check;
+  adds `cooked_uses` back, clears the three columns; does nothing on a dish
+  that isn't cooked. Used by the toast's Undo and an owner's **Mark not
+  cooked**. Revoked from public, anon; granted to authenticated.
 
 *Add missing to Shopping* needs no function of its own: the review sheet
 writes ordinary updates (owners may set the status and `to_buy_amount`) and
@@ -623,8 +642,10 @@ the 122 style:
   a line can't point at another household's item, deleting an item leaves
   the line's name; the clean-up keeps a recipe photo and removes an orphan;
 - (PR C) staff mark a dish cooked and the amounts drop; a second call is
-  refused; Undo restores exactly; staff can't insert, delete or retitle a
-  dish; old dishes are deleted by the job; the export includes everything;
+  refused; Undo restores exactly; a staff phone can't insert, update or
+  delete a dish directly, can't cook another household's dish or take off an
+  untracked or foreign item, and an owner's direct update can't set the
+  `cooked_*` columns; old dishes are deleted by the job; the export includes everything;
 - every new or re-created function's grants (public, anon, authenticated,
   service_role as listed above).
 
