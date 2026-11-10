@@ -16,7 +16,11 @@ Builds on **Phase 162** ("Who lives here?", migration 133, live:
 `src/lib/dashboard-modules.ts`), the **first-run checklist** (audit batch
 B1, PR #62, `src/lib/first-run.ts`), and fits beside the decided **closet**
 (Phase 169, PR #75, migration 143) and **kitchen** (Phase 170, PR #76,
-migration 144, with its optional Nutrition switch) plans.
+migration 144) plans. The kitchen's optional **Nutrition** switch
+(calories and protein per recipe and serving) was agreed after PR #76 and
+is not yet written into `docs/phase-170-kitchen-plan.md`, which still lists
+nutrition under "Not in this phase"; this plan only gives it a row in
+Features and an offer, and leaves its design to that addendum.
 
 ## The problem
 
@@ -139,7 +143,7 @@ off (only Care can be: no pets, kids or elders). The map:
 | | Bills and upkeep (checklist on Chores → Today) | when on | Home: Bills and upkeep |
 | | Closet (inside a room's sheet, Phase 169) | the room's Closet switch and the Out now line show only when on | Home: Closet |
 | **Kitchen** | Food · Shopping · Menu | **Shopping** always; **Food** when Food at home is on; **Menu** (with Recipes inside) when Menu and recipes is on; one pill left means no pills | Kitchen: Food at home, Menu and recipes |
-| | Nutrition (calories and protein on recipes and the menu, Phase 170 addendum) | only inside Menu, only when on | Kitchen: Nutrition (needs Menu and recipes) |
+| | Nutrition (calories and protein on recipes and the menu; the kitchen addendum, not yet written) | only inside Menu, only when on | Kitchen: Nutrition (needs Menu and recipes) |
 | **Household** | settings list | always; **Features** row replaces **Who lives here** | — |
 | *(later)* **Me** | under the owner's own name, not a tab | only for an owner who switched it on for themself | Health (later, per owner, not in Features) |
 
@@ -464,7 +468,7 @@ Wording follows `docs/indonesian-glossary.md`: **Anda**, **HP**, **tugas**,
 | Relations | **Pasangan · Anak · Orang tua · Kakek/Nenek · Keluarga lain** | |
 | Routine (for a person) | **Rutinitas** | as for pets |
 | Morning walk / leg exercises | **Jalan pagi / latihan kaki** | examples only |
-| Nutrition | **Gizi** | Phase 170 addendum may already add it; one row, not two |
+| Nutrition | **Gizi** | the kitchen addendum may add it first; one row, not two |
 | No thanks (offer) | **Tidak, terima kasih** | |
 
 ## The database
