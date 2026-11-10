@@ -190,7 +190,7 @@ them (9:10 AM / 09.10).
 
 | Event | Push? | Text (EN / ID) | Spam guard |
 | --- | --- | --- | --- |
-| Leave request filed (pending) | **Yes, on arrival** | **Leave request**: "Sari asked for 12–14 Nov off." / **Permintaan cuti**: "Sari minta cuti 12–14 Nov." Opens `/dashboard/leave/{id}`. | One per request; not for one an admin files. |
+| Leave request filed (pending) | **Yes, on arrival** | **Leave request**: "Sari asked for 12–14 Nov off." / **Permintaan cuti**: "Sari minta cuti 12–14 Nov." Opens `/dashboard/leave/{id}`. | One per request; never to the phone that filed it. |
 | Schedule suggestion | **Yes, on arrival** | **Schedule suggestion**: "Sari suggested 3 schedule changes." / **Usulan jadwal**: "Sari mengusulkan 3 perubahan jadwal." Opens Today's Waiting for you. | One per suggestion, however many rows: a statement-level trigger sees the whole insert at once. |
 | Pet wouldn't take medicine | **Yes, on arrival** | **Medicine not taken**: "Mochi wouldn't take Amoxicillin (6:00 PM). Reported by Sari." / **Obat tidak diminum**: "Mochi tidak mau minum obat Amoxicillin (18.00). Dilaporkan Sari." | Like the sick report: skipped if older than a day (offline queue), not to the reporter's own phone. |
 | Any other couldn't-do | No | In the evening summary. | |
@@ -198,7 +198,8 @@ them (9:10 AM / 09.10).
 | Non-urgent repair report | No (urgent already pushes) | Unchanged. | |
 
 One switch per admin for the on-arrival pushes: **Staff requests** /
-**Permintaan staf** (on by default). The medicine push follows it too.
+**Permintaan staf** (on by default). The medicine push has no switch, like
+the sick report: it's about a pet's health.
 Sick-pet, urgent-repair and PIN-locked pushes stay as they are, with no
 switch.
 
@@ -282,7 +283,7 @@ clean-up): 139 starts from whichever version is newest on `main`.
 | `schedule_id` | uuid → master_schedules, on delete cascade | Routines. |
 | `entity_id` | uuid → task_entities, on delete cascade | The pet, for routines. |
 | `occurs_on` | date not null | The task's day. |
-| `slot_time` | time | The routine slot (e.g. 18:00); null for chores. |
+| `slot_time` | time | The routine slot (e.g. 18:00); required for routines, null for chores (a null would slip past the unique index). |
 | `reason` | text not null | `out_of_stock`, `pet_refused`, `done_by_other`, `other`. |
 | `note` | text | ≤ 280 characters; required (3+ characters) for `other`. |
 | `photo_url` | text | Optional (D4); a storage path under the household's prefix. |
@@ -339,10 +340,12 @@ the photo rule (104/136).
 
 All `security definer`, empty `search_path`, EXECUTE revoked from `public,
 anon, authenticated`, failures swallowed with a warning (a push must never
-cost the record), and the caller's own devices excluded. Each loops the
-household's admins with a device and `staff_request_pushes` on, and calls
-`queue_push` once per admin in that admin's language (the shape of 137's
-`notify_chores_due`; `queue_owner_push` has no per-admin filter).
+cost the record), and the caller's own devices excluded. The two request
+pushes loop the household's admins with a device and `staff_request_pushes`
+on, and call `queue_push` once per admin in that admin's language (the shape
+of 137's `notify_chores_due`; `queue_owner_push` has no per-admin filter).
+The medicine push goes to every admin through `queue_owner_push`, like the
+sick report.
 
 - `notify_task_exception()`, after insert on `task_exceptions`: only
   `pet_refused` on a schedule whose title starts with `Medication: `
