@@ -129,6 +129,18 @@ test("Rooms view and picker: rooms inside under their room, counted once each, w
   await expect(list.getByRole("group", { name: "LT2" }).getByRole("option")).toHaveText(["Kamar Tamu 1 · Kamar Mandi"]);
   await list.getByRole("group", { name: "LT2" }).getByRole("option").click();
   await expect(dialog.getByText("LT2 · Kamar Tamu 1 · Kamar Mandi")).toBeVisible();
+
+  // With a bedroom already picked, its rooms inside say whose they are, never
+  // a bare "Kamar Mandi" under the wrong heading (Codex, #74).
+  await dialog.getByRole("button", { name: "Pilih ruangan lain" }).click();
+  await list.getByRole("option", { name: "Kamar Utama", exact: true }).click();
+  await dialog.getByRole("button", { name: "Pilih ruangan lain" }).click();
+  await expect(list.getByRole("group", { name: "LT2" }).getByRole("option")).toHaveText([
+    "Seluruh lantai",
+    "Kamar Utama · Kamar Mandi",
+    "Kamar Utama · Ruang Ganti",
+    "Kamar Tamu 1",
+  ]);
 });
 
 test("a staff phone reads the full path and gets the one-line tip", async ({ context, page }) => {

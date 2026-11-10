@@ -64,6 +64,17 @@ export function LocationCombobox({
     };
   }, [byId, t]);
   const chosenIds = useMemo(() => new Set(values.map((place) => place.id)), [values]);
+  // A room inside reads as just "Bathroom" only right under its own room, or
+  // under another room inside that room; anywhere else it says whose it is
+  // (Codex, #74), so three bedrooms' bathrooms are never mixed up.
+  const underItsRoom = (places: HouseholdLocation[], index: number): boolean => {
+    const outer = outerRoomOf(places[index], byId);
+    const above = places[index - 1];
+    if (!outer || !above) return false;
+    if (above.id === outer.id) return true;
+    // A room beside it in the same room counts only if that one is indented too.
+    return outerRoomOf(above, byId)?.id === outer.id && underItsRoom(places, index - 1);
+  };
   const groups = useMemo(
     () => filterGroups(placeGroups(all), typed, label, chosenIds),
     [all, typed, label, chosenIds]
@@ -212,7 +223,7 @@ export function LocationCombobox({
                   {group.floor ? group.floor.name : t("No floor yet", "Belum ada lantai")}
                 </p>
               )}
-              {group.places.map((place) => (
+              {group.places.map((place, index) => (
                 <button
                   key={place.id}
                   type="button"
@@ -231,9 +242,9 @@ export function LocationCombobox({
                       <Layers className="size-3.5 shrink-0 text-amber-700" />
                       <span className="truncate font-medium">{t("Whole floor", "Seluruh lantai")}</span>
                     </>
-                  ) : outerRoomOf(place, byId) && !typed ? (
-                    // A room inside, straight under its room: indented, by
-                    // its own name ("Bathroom" under GB1).
+                  ) : underItsRoom(group.places, index) ? (
+                    // A room inside, straight under its room (or a room
+                    // beside it in there): indented, by its own name.
                     <>
                       <CornerDownRight className="ml-3 size-3.5 shrink-0 text-muted-foreground" />
                       <span className="truncate text-gray-700">{place.name}</span>
@@ -242,7 +253,8 @@ export function LocationCombobox({
                     <>
                       <MapPin className="size-3.5 shrink-0 text-amber-700" />
                       <span className="truncate">
-                        {/* While searching its room may be filtered out, so it says whose it is. */}
+                        {/* Its room isn't just above (filtered out by a search, or
+                            already picked): it says whose it is. */}
                         {outerRoomOf(place, byId) ? `${outerRoomOf(place, byId)!.name} · ${place.name}` : place.name}
                       </span>
                     </>
