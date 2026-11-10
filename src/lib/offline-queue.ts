@@ -1,6 +1,6 @@
 import { get, update } from "idb-keyval";
-import type { CreateBatchLogInput, FoodItemInput } from "@/lib/data";
-import type { FoodItem, HouseholdTask, TaskLog } from "@/types/database";
+import type { CreateBatchLogInput, CreateTaskExceptionInput, FoodItemInput } from "@/lib/data";
+import type { FoodItem, HouseholdTask, TaskException, TaskLog } from "@/types/database";
 import { dataProvider } from "@/lib/data";
 import { isConnectionError } from "@/lib/network-errors";
 import { ensureUploaded, PhotoNotUploadedError } from "@/lib/photo-queue";
@@ -79,7 +79,22 @@ export type OutboxJob =
       ids?: string[];
     }
   | ChoreFinishJob
-  | { kind: "food"; id: string; input: FoodItemInput; addedBy: string | null };
+  | { kind: "food"; id: string; input: FoodItemInput; addedBy: string | null }
+  /**
+   * "Tidak bisa dikerjakan" (Phase 165): its id is made on the phone, so a
+   * resend is told "already saved" by the primary key.
+   */
+  | {
+      kind: "couldnt";
+      input: CreateTaskExceptionInput;
+      /**
+       * "Masukkan ke daftar belanja" (Phase 165): sent with the record, so
+       * it isn't lost on a weak signal (Codex, PR #71). The item marked out
+       * (the same answer however often), or a note under an id made here
+       * (a resend is "already saved").
+       */
+      shopping?: { itemId?: string | null; noteId?: string; note?: string } | null;
+    };
 
 export interface OfflineQueueItem {
   id: string;
@@ -260,7 +275,8 @@ export async function clearFromQueue(id: string): Promise<void> {
 export type SendResult =
   | { kind: "logs"; logs: TaskLog[] }
   | { kind: "chore"; task: HouseholdTask }
-  | { kind: "food"; food: FoodItem | null };
+  | { kind: "food"; food: FoodItem | null }
+  | { kind: "couldnt"; exception: TaskException | null };
 
 /**
  * Thrown when something asks to delete a row that is still waiting in the
@@ -284,6 +300,8 @@ export function jobPhotos(job: OutboxJob): string[] {
       return job.input.photo_url ? [job.input.photo_url] : [];
     case "chore":
       return [job.before, job.after].filter((url): url is string => !!url);
+    case "couldnt":
+      return job.input.photo_url ? [job.input.photo_url] : [];
   }
 }
 
@@ -301,6 +319,8 @@ async function settlePhotos(job: OutboxJob): Promise<OutboxJob> {
     if (!(err instanceof PhotoNotUploadedError) || err.reason !== "failed") throw err;
     if (job.kind === "logs") return { ...job, payload: { ...job.payload, photo_url: null } };
     if (job.kind === "food" && job.input.name) return { ...job, input: { ...job.input, photo_url: null } };
+    // The reason still counts without its picture.
+    if (job.kind === "couldnt") return { ...job, input: { ...job.input, photo_url: null } };
     throw err;
   }
 }
@@ -326,6 +346,33 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
         if (isAlreadySaved(err)) return { kind: "food", food: null };
         throw err;
       }
+    case "couldnt": {
+      let exception: TaskException | null = null;
+      try {
+        exception = await dataProvider.createTaskException(ready.input);
+      } catch (err) {
+        if (!isAlreadySaved(err)) throw err;
+      }
+      // Then the shopping list. A failure here leaves the job queued, and the
+      // resend finds the record "already saved" and tries only this again.
+      const shopping = ready.shopping;
+      if (shopping?.itemId) {
+        await dataProvider.setInventoryStatus(shopping.itemId, "out", ready.input.staff_id ?? null);
+      } else if (shopping?.note && shopping.noteId) {
+        try {
+          await dataProvider.createInventoryAlert({
+            id: shopping.noteId,
+            pet_id: null,
+            item_type: "other",
+            note: shopping.note,
+            staff_id: ready.input.staff_id ?? null,
+          });
+        } catch (err) {
+          if (!isAlreadySaved(err)) throw err;
+        }
+      }
+      return { kind: "couldnt", exception };
+    }
     case "chore": {
       const rowId =
         ready.rowId ?? (await dataProvider.materialiseChoreOccurrence(ready.templateId, ready.date, ready.assignedTo)).id;
@@ -344,6 +391,11 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
 
 /** Items being sent right now from this page, so a drain does not double up. */
 const inFlight = new Set<string>();
+
+/** True while this page is sending that queued item (it may land any moment). */
+export function isSending(itemId: string): boolean {
+  return inFlight.has(itemId);
+}
 
 /**
  * The longest a save button spins. A photo upload has no deadline of its own

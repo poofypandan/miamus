@@ -1,13 +1,14 @@
 # Phase 165: "Tidak bisa dikerjakan" and the evening summary
 
 Status: **decided: owner delegated to the recommendations, 2026-11-10
-(D1 A to D10 A). Not built yet**: the build waits for 137 (PR #60) and 138
-(bill payments) to merge.
+(D1 A to D10 A). Built 2026-11-10** on `claude/phase-165-couldnt-do`
+(migration 139, local only until the owner OKs staging and production), as
+one PR rather than the two sketched below.
 Audit batch **B2** (`docs/product-audit-2026-11-09.md`, items 1 and 2, "one
 plan with mockups, they share the evening summary"). Mockup:
 `docs/mockups/phase-165-couldnt-do.html` (open in a browser, phone width).
 Migration **139** is reserved for it (137 is bills reminders, PR #60; 138 is
-bill payments). Nothing here is created yet.
+bill payments).
 
 ## The problem
 
@@ -129,8 +130,9 @@ them (9:10 AM / 09.10).
   and the subtitle **Couldn't: out of stock · Sari · 9:10 AM** /
   **Tidak bisa: barang habis · Sari · 09.10**.
 - Tapping it opens the usual sheet with a short block on top: the reason,
-  Sari's note in quotes, the photo, and for Barang habis **Detergent is on
-  the shopping list** / **Deterjen sudah masuk daftar belanja**. The owner's
+  Sari's note in quotes, the photo, and for Barang habis **Ran out:
+  Detergent** / **Yang habis: Deterjen** (it went on the shopping list only if
+  staff left that on). The owner's
   existing actions are unchanged (the chore editor: change it, skip a day,
   give it to someone else). No new owner action in this phase.
 - On later days it sits in "From earlier" like any missed chore, still amber
@@ -229,7 +231,7 @@ today. The panel's out-of-date comment is fixed in the same change.
 | --- | --- | --- |
 | Row subtitle | Couldn't: out of stock · Sari · 9:10 AM | Tidak bisa: barang habis · Sari · 09.10 |
 | Reasons | Out of stock · Pet wouldn't eat · Pet wouldn't take medicine · Already done by someone else · Other | Barang habis · Hewan tidak mau makan · Hewan tidak mau minum obat · Sudah dikerjakan orang lain · Lainnya |
-| Sheet block | Couldn't be done · Sari's note · Detergent is on the shopping list | Tidak bisa dikerjakan · Catatan Sari · Deterjen sudah masuk daftar belanja |
+| Sheet block | Couldn't be done · Sari's note · Ran out: Detergent | Tidak bisa dikerjakan · Catatan Sari · Yang habis: Deterjen |
 | My tasks | 1 of 3 done · 1 couldn't | 1 dari 3 selesai · 1 tidak bisa |
 | Evening push title | Not done today | Belum selesai hari ini |
 | Push parts | Couldn't: · Not done: · Waiting for you: | Tidak bisa: · Belum: · Menunggu Anda: |
