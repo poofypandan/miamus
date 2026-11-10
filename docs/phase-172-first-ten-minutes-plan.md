@@ -191,10 +191,12 @@ How it works:
   and raises `household_not_approved`, and the screen falls back to today's
   Request sent screen with the new wording below. Nothing else about
   today's manual path changes.
-- **The operator is told afterwards**: the existing push to platform admins
-  changes from "New household request · X is waiting for your approval" to
-  **"New household · X just joined"** (in each admin's language via
-  `queue_owner_push`-style wording). The approvals page lists automatic
+- **The operator is told afterwards**: on an automatic approval,
+  `create_household` queues **"New household · X just joined"** to the
+  platform admins (the same best-effort `queue_push` loop
+  `request_household_access` uses today, inside its own exception block so a
+  push can never cost the household). The fallback request keeps today's
+  "waiting for your approval" push. The approvals page lists automatic
   approvals with an **Automatic** label beside the date.
 - **The privacy sentence** on the Request screen ("Your request shares your
   Google name and email with Poofy Labs…") moves under **Create household**,
@@ -485,18 +487,25 @@ Then the usual first chore, with photos.
 
 - **`house_code_roster(p_code)`** already lists staff with `has_pin`.
 - **New: `claim_staff_with_house_code(p_code, p_staff_id, p_new_pin)`**:
-  links this phone and sets the PIN, **only** for a staff profile that has
-  no PIN, has never had a linked phone, isn't archived, and was created
-  less than **7 days** ago (the claim window). After that, or once claimed,
-  the profile signs in with its PIN only (115 as today). Same limits as the
+  links this phone to the household (`device_sessions`, as the house code
+  does today) and sets the PIN, **only** for a staff profile that has no PIN
+  yet (`has_pin` false), isn't archived, and was created less than **7
+  days** ago (the claim window). Phones are linked to the household, not to
+  a person, so "not claimed yet" means "no PIN yet". Once claimed, or after
+  the window, the profile signs in with its PIN only (115 as today). This is
+  the rule 110 already applies to a linked phone ("staff may claim an empty
+  name, never take one"), now reachable from the house code, and narrowed
+  to 7 days. Same limits as the
   house code (10 wrong codes a phone session an hour, 200 overall), anonymous
   sessions only, `security definer`, `search_path = ''`, `revoke all … from
   public, anon;` `grant execute … to authenticated;` (anonymous staff phones
   hold `authenticated`).
-- **The owner is told** who linked: the existing "linked phones" list in
-  Household → Staff shows the person and the time, and the owner gets a quiet
-  Today line "Sari linked her phone" for the first day. If it wasn't Sari,
-  **Unlink** (119) frees the name again.
+- **The owner is told** who claimed a name: the claim writes a
+  `staff_sign_in_attempts` row with the person (`kind` gains `claim`; kept
+  30 days like every attempt), and the owner gets a quiet Today line "Sari
+  linked her phone" for that day. If it wasn't Sari, the owner's existing
+  **let them choose again** (clears the PIN, 110) and **remove the phone**
+  (Household → Staff sign-in, 115) put the name back.
 - **Prefilled code:** `/join/code?c=` fills the code box (it is not a
   secret beyond the household's staff; it's the same code the owner already
   shares).
@@ -797,8 +806,8 @@ Nothing below is created in this PR.
 - `create_household(text, boolean)` re-created as in section 1, same
   signature, same revoke/grant (`revoke all … from public, anon;` `grant
   execute … to authenticated, service_role;`).
-- `request_household_access()` re-created: the push text changes; it is
-  now only used on the fallback path.
+- `request_household_access()` unchanged; it is now only used on the
+  fallback path.
 - `list_household_access_requests()` re-created to return `auto`.
 - Tests: open → create works and writes an automatic approval; the 26th
   account that day gets pending and `household_not_approved`; switch off →
@@ -811,11 +820,13 @@ Nothing below is created in this PR.
 - `claim_staff_with_house_code(p_code, p_staff_id, p_new_pin)` as in
   section 4.
 - `staff_profiles` gains nothing: "created less than 7 days ago" reads the
-  existing `created_at`; "never linked" reads `device_sessions`.
+  existing `created_at`; "not claimed" is `has_pin` false.
+- `staff_sign_in_attempts.kind` check gains `claim` (a check change,
+  additive).
 - Tests: a draft applies all or nothing; a staff phone and another
   household's owner are refused; duplicates are skipped (room by unique
   index, chore by title, room and repeat); counts are capped; a claim works
-  once, inside the window, for a profile with no PIN and no phone; refused
+  once, inside the window, for a profile with no PIN; refused
   after 7 days, for an archived profile, a profile with a PIN, or a Google
   account; the code limits still apply; grants.
 
