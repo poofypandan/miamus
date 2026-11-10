@@ -29,9 +29,10 @@ export interface KakakHousehold {
   /**
    * Places (migrations/129): `name` is the place's own name; a room on a
    * floor carries the floor's name, and a floor itself is `wholeFloor`, for
-   * a chore on the whole floor.
+   * a chore on the whole floor. A room inside a room (Phase 168) carries the
+   * room it is in as `inside`.
    */
-  rooms: { ref: string; name: string; floor?: string | null; wholeFloor?: boolean }[];
+  rooms: { ref: string; name: string; floor?: string | null; inside?: string | null; wholeFloor?: boolean }[];
   items: { ref: string; name: string; pet: boolean }[];
   /**
    * "Who lives here?" (Phase 162, migrations/133): true only when the owner
@@ -157,8 +158,12 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   return lines.join("\n");
 }
 
-/** "LT2 (whole floor)", "LT2 · Lounge", or a room with no floor by its name. */
+/**
+ * "LT2 (whole floor)", "LT2 · Lounge", "LT2 · GB1 · Bathroom (inside GB1)",
+ * or a room with no floor by its name.
+ */
 function roomLine(room: KakakHousehold["rooms"][number]): string {
   if (room.wholeFloor) return `${room.name} (whole floor)`;
-  return room.floor ? `${room.floor} · ${room.name}` : room.name;
+  const path = [room.floor, room.inside, room.name].filter(Boolean).join(" · ");
+  return room.inside ? `${path} (inside ${room.inside})` : path;
 }

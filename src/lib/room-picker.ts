@@ -1,4 +1,7 @@
+import { byPlaceOrder, topLevelRooms, withRoomsInside } from "@/lib/places";
 import type { HouseholdLocation, HouseholdTask } from "@/types/database";
+
+export { byPlaceOrder };
 
 /**
  * The chore form's room picker and spot field (Phase 158 PR B2,
@@ -12,51 +15,40 @@ export const MAX_ROOMS_AT_ONCE = 12;
 /** A spot is short: "Wastafel", "AC". migrations/129 checks 1–40 after trimming. */
 export const MAX_SPOT_LENGTH = 40;
 
-/** Floors and rooms in the order the Rooms page keeps: its arrows, then name. */
-export function byPlaceOrder(a: HouseholdLocation, b: HouseholdLocation): number {
-  return (
-    (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
-    a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
-  );
-}
-
 export interface PlaceGroup {
   /** The floor, or null for rooms with no floor. */
   floor: HouseholdLocation | null;
-  /** The floor itself first ("Whole floor"), then its rooms. */
+  /**
+   * The floor itself first ("Whole floor"), then its rooms, each followed by
+   * its rooms inside (Phase 168).
+   */
   places: HouseholdLocation[];
 }
 
 /**
  * Floors in order, each offering itself (a whole-floor chore) and then its
- * rooms; rooms with no floor last. A household with no floors gets one group
- * with no heading, which reads as the plain list it had before floors.
+ * rooms, a room's rooms inside straight after it; rooms with no floor last.
+ * A household with no floors gets one group with no heading, which reads as
+ * the plain list it had before floors.
  */
 export function placeGroups(locations: HouseholdLocation[]): PlaceGroup[] {
-  const floors = locations.filter((place) => place.kind === "floor").sort(byPlaceOrder);
-  const floorIds = new Set(floors.map((floor) => floor.id));
+  const { floors, onFloor, loose } = topLevelRooms(locations);
   const groups: PlaceGroup[] = floors.map((floor) => ({
     floor,
-    places: [
-      floor,
-      ...locations
-        .filter((place) => place.kind !== "floor" && place.parent_id === floor.id)
-        .sort(byPlaceOrder),
-    ],
+    places: [floor, ...withRoomsInside(onFloor(floor.id), locations).map((row) => row.place)],
   }));
   // A room whose floor isn't in the list (deleted on another phone) counts as
   // having none, rather than vanishing from the picker.
-  const loose = locations
-    .filter((place) => place.kind !== "floor" && !(place.parent_id && floorIds.has(place.parent_id)))
-    .sort(byPlaceOrder);
-  if (loose.length > 0) groups.push({ floor: null, places: loose });
+  const looseRows = withRoomsInside(loose, locations).map((row) => row.place);
+  if (looseRows.length > 0) groups.push({ floor: null, places: looseRows });
   return groups;
 }
 
 /**
- * Narrows the groups to places whose label ("LT2 · Lounge", or "LT2 · Whole
- * floor" in the owner's words) contains every word typed, so "lt2 bed"
- * finds the LT2 bedrooms; places already picked are left out, and empty
+ * Narrows the groups to places whose label ("LT2 · Lounge", "LT2 · GB1 ·
+ * Bathroom", or "LT2 · Whole floor" in the owner's words) contains every
+ * word typed, so "lt2 bed" finds the LT2 bedrooms and "gb1 bath" GB1's
+ * bathroom; places already picked are left out, and empty
  * groups go.
  */
 export function filterGroups(

@@ -34,6 +34,7 @@ import {
   placesWithJob,
   buildRoomsModel,
   roomHasJob,
+  roomsInsideOf,
   scheduleLabel,
   scheduleSummary,
   type RoomChore,
@@ -50,8 +51,9 @@ import type { HouseholdTask } from "@/types/database";
  * which don't ("which rooms get vacuumed?").
  *
  * Owner-facing, in the owner's language. Reads the same chores and rooms as
- * Today; adds and edits go through the same ChoreEditorDialog. No database
- * change: floors come from the room names (lib/rooms-view.ts).
+ * Today; adds and edits go through the same ChoreEditorDialog. Floors and
+ * rooms are stored (migrations/129); a room's rooms inside (Phase 168) are
+ * listed straight under it, indented, and each counts as a room.
  */
 export function RoomsView() {
   const { locations, failed: roomsFailed, reload: reloadRooms } = useHouseholdLocations();
@@ -150,8 +152,9 @@ export function RoomsView() {
           )}
         </p>
       )}
+      <WhatsNewCard id="rooms-inside-2026-11" />
       <WhatsNewCard id="floors-2026-11" />
-      {!model.storedFloors && canSortIntoFloors(locations) && (
+      {canSortIntoFloors(locations) && (
         <SortRoomsCard locations={locations} chores={chores} today={today} />
       )}
       {model.jobs.length > 0 && (
@@ -220,6 +223,7 @@ export function RoomsView() {
                 key={entry.id}
                 entry={entry}
                 label={entry.label}
+                fullLabel={entry.fullName}
                 job={job}
                 locale={locale}
                 staffName={staffName}
@@ -234,15 +238,21 @@ export function RoomsView() {
       {model.otherRooms.length > 0 && (
         <section
           className="flex flex-col gap-1.5"
-          aria-label={model.storedFloors ? t("No floor yet", "Belum ada lantai") : t("Other rooms", "Ruangan lain")}
+          aria-label={
+            model.floors.length === 0
+              ? t("Rooms", "Ruangan")
+              : model.storedFloors
+                ? t("No floor yet", "Belum ada lantai")
+                : t("Other rooms", "Ruangan lain")
+          }
         >
           <SectionHeader
             title={
-              model.storedFloors
-                ? t("No floor yet", "Belum ada lantai")
-                : model.floors.length > 0
-                  ? t("Other rooms", "Ruangan lain")
-                  : t("Rooms", "Ruangan")
+              model.floors.length === 0
+                ? t("Rooms", "Ruangan")
+                : model.storedFloors
+                  ? t("No floor yet", "Belum ada lantai")
+                  : t("Other rooms", "Ruangan lain")
             }
             detail={
               job
@@ -262,6 +272,7 @@ export function RoomsView() {
                 key={entry.id}
                 entry={entry}
                 label={entry.label}
+                fullLabel={entry.fullName}
                 job={job}
                 locale={locale}
                 staffName={staffName}
@@ -292,6 +303,8 @@ export function RoomsView() {
         title={sheet === "none" ? t("No room", "Tanpa ruangan") : (sheetEntry?.fullName ?? "")}
         locationId={sheet && sheet !== "none" ? sheet : null}
         chores={sheet === "none" ? model.noRoom : (sheetEntry?.chores ?? [])}
+        inside={sheetEntry ? roomsInsideOf(model, sheetEntry.id) : []}
+        onOpenRoom={(id) => setSheet(id)}
         locale={locale}
         staffName={staffName}
         onClose={() => setSheet(null)}
@@ -363,6 +376,7 @@ function groupByJobs(chores: RoomChore[], locale: OwnerLocale, other: string) {
 function RoomRow({
   entry,
   label,
+  fullLabel,
   whole = false,
   job,
   locale,
@@ -372,6 +386,8 @@ function RoomRow({
 }: {
   entry: RoomEntry;
   label: string;
+  /** Where it is, for screen readers: "LT2 · GB1 · Bathroom" for a row that shows "Bathroom". */
+  fullLabel?: string;
   whole?: boolean;
   job: ChoreJob | null;
   locale: OwnerLocale;
@@ -390,11 +406,21 @@ function RoomRow({
     (r) => r.location_id === entry.id && (r.status === "reported" || r.status === "open")
   ).length;
 
+  const inside = entry.depth === 1;
   return (
-    <div className={cn("flex items-center gap-2 border-t first:border-t-0", whole && "bg-zinc-50")}>
+    <div
+      className={cn(
+        "flex items-center gap-2 border-t first:border-t-0",
+        whole && "bg-zinc-50",
+        // A room inside (Phase 168): under its room, with a thin rule on the
+        // left so the bedroom and its bathroom read as one.
+        inside && "ml-4 border-l-2 border-l-zinc-200"
+      )}
+    >
       <button
         type="button"
         onClick={onOpen}
+        aria-label={inside && fullLabel ? fullLabel : undefined}
         className="flex min-h-[52px] min-w-0 flex-1 flex-col items-start gap-1 px-3 py-2.5 text-left active:bg-muted"
       >
         <span className="flex w-full items-center gap-2">
@@ -454,7 +480,10 @@ function RoomRow({
           // The title starts as the job's Indonesian name: chore titles are
           // what staff read, and staff screens are Indonesian. Editable.
           onClick={() => onAdd(choreJobLabel(job, "id"))}
-          aria-label={t(`Add ${choreJobLabel(job, "en").toLowerCase()} in ${label}`, `Tambah ${choreJobLabel(job, "id").toLowerCase()} di ${label}`)}
+          aria-label={t(
+            `Add ${choreJobLabel(job, "en").toLowerCase()} in ${inside && fullLabel ? fullLabel : label}`,
+            `Tambah ${choreJobLabel(job, "id").toLowerCase()} di ${inside && fullLabel ? fullLabel : label}`
+          )}
         >
           <Plus className="size-3.5" /> {t("Add", "Tambah")}
         </Button>
@@ -468,6 +497,8 @@ function RoomSheet({
   title,
   locationId,
   chores,
+  inside,
+  onOpenRoom,
   locale,
   staffName,
   onClose,
@@ -479,6 +510,9 @@ function RoomSheet({
   /** The room, or null for "No room" (no repairs section then). */
   locationId: string | null;
   chores: RoomChore[];
+  /** A bedroom's rooms inside (Phase 168): listed after its own chores. */
+  inside: RoomEntry[];
+  onOpenRoom: (id: string) => void;
   locale: OwnerLocale;
   staffName: (id: string | null | undefined) => string;
   onClose: () => void;
@@ -530,6 +564,7 @@ function RoomSheet({
               </div>
             </div>
           ))}
+          {inside.length > 0 && <RoomsInsideList rooms={inside} onOpen={onOpenRoom} />}
           {/* Phase 159: what's broken here, and what was fixed. */}
           {locationId && <RoomRepairs locationId={locationId} />}
         </div>
@@ -540,6 +575,58 @@ function RoomSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/**
+ * A bedroom's rooms inside, in its sheet (Phase 168): each with how many
+ * chores are set up there and any open repairs, opening that room's own
+ * sheet. Repairs stay listed in their own room.
+ */
+function RoomsInsideList({ rooms, onOpen }: { rooms: RoomEntry[]; onOpen: (id: string) => void }) {
+  const t = useT();
+  const { repairs } = useRepairs();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <h4 className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+        {t("Rooms inside", "Ruangan di dalamnya")}
+      </h4>
+      <div className="overflow-hidden rounded-xl border bg-card">
+        {rooms.map((room) => {
+          const open = repairs.filter(
+            (r) => r.location_id === room.id && (r.status === "reported" || r.status === "open")
+          ).length;
+          const count = room.chores.length;
+          return (
+            <button
+              key={room.id}
+              type="button"
+              onClick={() => onOpen(room.id)}
+              className="flex min-h-[52px] w-full items-center gap-3 border-t px-3 py-2.5 text-left first:border-t-0 active:bg-muted"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <DoorOpen className="size-4 text-gray-700" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-gray-900">{room.label}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {count === 0
+                    ? t("Nothing set up", "Belum ada tugas")
+                    : t(`${count} ${count === 1 ? "chore" : "chores"}`, `${count} tugas`)}
+                </span>
+                {open > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-amber-800">
+                    <Wrench className="size-3" aria-hidden />
+                    {t(`${open} open repair${open === 1 ? "" : "s"}`, `${open} perbaikan berjalan`)}
+                  </span>
+                )}
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
