@@ -3,6 +3,8 @@
 Status: **decided: owner chose all recommendations (D1–D16 A), 2026-11-10;
 PR A amounts and units with migration 144.** The four open questions below
 stay open; the owner answers each before the PR it affects.
+**Addendum (2026-11-10, end of this file): Menu ↔ food ↔ shopping, D17–D21,
+waiting for the owner.**
 Nothing is built. Migration **144** is reserved for PR A (amounts and units);
 PR B (recipes) and PR C (menu and the cook's view) each take the next free
 number when they're built, and the manager reserves it then. Roadmap item 20
@@ -468,6 +470,8 @@ Reused as they are: `quantity` (the amount), `unit`, `min_threshold`
 (*Running low at*; 0 = none). `inventory_items_unit_check` is replaced with
 the old ten plus `buah`, `butir`, `ikat`, `siung`, `lembar`, `batang`,
 `bungkus`, `sachet` (sdm and sdt are recipe-only and not allowed here).
+The addendum adds `pack_kind`, `pack_size`, `buy_at` and `use_by` here
+(D19, D21, D17).
 `unique (id, household_id)` added for the composite keys in PR B.
 
 **`food_items`, one column**: `portions smallint`, null or 0–99. Any session
@@ -625,6 +629,9 @@ year (a cron beside the existing ones, `service_role` only). Long enough for
 Recipes are kept until deleted. Export includes `menu_dishes` and
 `kitchen_notes`.
 
+The addendum adds leftover dishes (`menu_dishes.food_item_id`) and the
+*Menu changed* bookkeeping to this migration (D17, D20).
+
 ### Tests
 
 `supabase/tests/144_kitchen_amounts.sql` (and one per later PR), rolled back,
@@ -774,7 +781,7 @@ tekan **Sudah dimasak**."
 ## Decisions for the owner
 
 **Decided 2026-11-10: the owner chose all recommendations, so D1–D16 are
-all A.**
+all A.** D17–D21 are in the addendum at the end, not decided yet.
 
 - **D1 — Exact amounts: for which items?**
   **A (recommended):** opt-in per item; an owner switches on **Track amount**
@@ -892,3 +899,339 @@ all A.**
 - History of amount changes (only the latest amount is kept).
 - Push notifications for the menu (the Today card is enough; staff phones
   get no pushes today).
+
+---
+
+## Addendum (2026-11-10): Menu ↔ food ↔ shopping, the closed loop
+
+Status: **D17–D21 are a plan, waiting for the owner** (each with a
+recommended A). D1–D16 above stay decided. The owner asked that the menu
+connect to the food the house already has and to what it should buy. The
+core loop is already in the plan (recipe lines linked to items, *Add
+missing to Shopping* with the shortfall, *Sudah dimasak* takes things off,
+*Ada sisa?* saves leftovers to Food). This addendum closes the rest: eat
+what's about to go off first, see at a glance whether a dish can be cooked,
+buy in real packs, notice when the plan changed after the list was made,
+and group the list by where the shopper goes. Everything here works by
+hand; none of it is Kakak.
+
+### The loop at a glance
+
+```
+            +------------------------------------------------+
+            |                                                |
+            v                                                |
+   FOOD (what's in the house)                                |
+   Ready to eat: leftovers, gifts (expiry, portions)         |
+   Ingredients: tracked amounts, use-by on fresh items       |
+            |                                                |
+            | Eat soon strip (D17)       Ready to cook /     |
+            | "Sisa rendang" onto a day  Missing 2 (D18)     |
+            v                                                |
+   MENU (the week)  ----- Add missing to Shopping ----->  SHOPPING (To buy)
+   dishes from recipes     shortfall in packs (D19),      grouped by Pasar,
+   or leftovers            re-check if the menu           Supermarket, Online
+            |              changed (D20)                  (D21)
+            |                                                |
+            | Sudah dimasak: ingredients come off            | Bought: N packs,
+            | Sudah dimakan: leftover portions count down    | adds the amount,
+            | Ada sisa?: new leftovers go to Food            | optional use-by
+            v                                                |
+   FOOD again  <---------------------------------------------+
+```
+
+Each arrow is a tap someone already makes (planning, cooking, eating,
+buying). No arrow is a count, a reminder or a scheduled check.
+
+### Eat soon: use it first (D17)
+
+- **The strip.** At the top of **Kitchen → Menu**, a horizontal row titled
+  **Eat soon** (**Perlu segera dimakan**, the glossary's wording for the
+  Today line and the morning push, so one idea has one name). It shows:
+  ready-to-eat food past its date or expiring today, tomorrow or the day
+  after (the Today line's window plus one day), and every leftover that
+  has portions, soonest first. Each chip: the name, "3 portions" or "expires
+  Thu", and a plus. Shown only when there's something in it.
+- **Put it on a day.** Tapping a chip's plus picks the day and meal (today's
+  next meal preselected) and adds a dish titled **Leftover rendang**
+  (**Sisa rendang**), servings = the portions left (adjustable), linked to
+  that food item. On the Menu and on staff's *Menu hari ini* it reads like
+  any dish, with the fridge icon instead of the recipe icon.
+- **Eating it counts the portion down.** A leftover dish's button is
+  **Eaten** (**Sudah dimakan**), not *Cooked*. It takes the dish's servings
+  off the food's portions; at 0 the food is finished as *Eaten* (Phase 156's
+  outcome, so it leaves the list and keeps its 90-day record). A leftover
+  without portions is finished as *Eaten* in one go. Undo puts the portions
+  (and the food) back. Nothing comes off stock.
+- **Recipes that would use something soon.** Raw ingredients have no expiry
+  today, so the plan adds one optional **Expires** date to tracked items on
+  the **Fresh food** shelf (chicken, fish, vegetables). It's asked in the
+  *How much did you buy?* sheet only, collapsed, with Food's quick picks
+  (Tomorrow, 3 days, 1 week, Pick a date). It's the earliest date of what's
+  there: a new purchase keeps the older date while old stock remains, and
+  the date clears when the amount reaches 0. A recipe whose linked items
+  include one expiring within 2 days gets a quiet line, **Uses chicken ·
+  expires Thu** (**Pakai ayam · kedaluwarsa Kam**), and sorts first in the
+  dish picker. Not red; not a push.
+
+### Can we cook it? (D18)
+
+Worked out on the phone from what's already stored. No AI, no new data.
+For a recipe at a given number of servings, each ingredient line is:
+
+| Line | Available when |
+| --- | --- |
+| Linked to a tracked item, unit converts | the amount there ≥ the scaled amount |
+| Linked to a tracked item, unit doesn't convert (sdm, sdt, a different group) | its status is *Enough* |
+| Linked to an untracked item | its status is *Enough* (*Running low* and *Out* count as missing) |
+| Free name, or *to taste* | not checked (counted as available, listed as "not checked") |
+
+- A recipe or planned dish then shows **Ready to cook** (**Bahan lengkap**)
+  or **Missing 2: coconut milk, lemongrass** (**Kurang 2: santan, serai**).
+  A tracked item that has enough but a person marked *Running low* counts
+  as available for that dish (the amount says so) and keeps its status on
+  the shopping list.
+- **Per dish, against what's there now.** A dish later in the week doesn't
+  subtract the dishes before it; *Add missing to Shopping* is the place that
+  adds up the week. On a future day the badge reads **Ready to cook now**,
+  so nobody takes it as a promise for Friday.
+- **Recipes** get a pill **All · Ready to cook now** (**Semua · Bahan
+  lengkap**), the shared `<SegmentedControl />`, in the URL as
+  `&recipes=ready`. Ready ones first, then by fewest missing.
+- **Staff** see the same line on *Menu hari ini* ("Kurang 1: serai"), so the
+  cook knows before starting. Staff can tap the missing item to mark it
+  *Hampir habis* (their existing one tap).
+- This is the hand-made version of the later Kakak idea "what can I cook
+  with what we have".
+
+### Pack sizes (D19)
+
+- **Optional, per tracked item, owner only**: a pack kind and its size in
+  the item's unit. **Rice · 1 sack = 5 kg** (**Beras · 1 karung = 5 kg**).
+  Pack kinds, a short list so both languages stay consistent:
+
+  | Key | English | Bahasa Indonesia | Typical |
+  | --- | --- | --- | --- |
+  | `sack` | sack | karung | rice 5 kg, 10 kg |
+  | `pack` | pack | pak | noodles, butter |
+  | `packet` | packet | bungkus | santan, spices |
+  | `bottle` | bottle | botol | kecap, oil 1 L |
+  | `jerrycan` | jerry can | jeriken | oil 5 L |
+  | `tray` | tray | rak | eggs, 30 butir |
+  | `box` | box | kotak | tea, milk |
+
+- **Bought** on an item with a pack asks **How many?** with a pack stepper:
+  **1 sack (5 kg)**, the sum line "Now 4.5 kg · after 9.5 kg", and **Type an
+  amount instead** for a loose purchase. Without a pack, it asks the amount
+  as in the main plan.
+- **The shortfall rounds up to whole packs**: "Rice · need 6 kg · have
+  4.5 kg · buy 1 sack (5 kg)"; the WhatsApp text says "Beras 1 karung
+  (5 kg)". Items without a pack keep the exact amount ("Chicken 500 g").
+- The pack is set in the item sheet, under *Track amount*: **Usually bought
+  as** (optional): kind chips and the size. Turning tracking off hides it
+  but keeps it.
+
+### The plan changed after the list (D20)
+
+- **When.** *Add missing to Shopping* remembers what it looked at: the days
+  it covered and a fingerprint of their dishes (each dish's id, recipe or
+  leftover, servings, and its recipe's last edit). Cooking a dish doesn't
+  change the fingerprint; adding, removing or changing a dish, or editing
+  its recipe, does.
+- **What people see.** If the fingerprint no longer matches, the Menu shows
+  **Menu changed since your list · Review** (**Menu berubah sejak daftar
+  belanja dibuat · Cek lagi**), and the *To buy* header shows the same line
+  for owners. Tapping it opens the same review sheet.
+- **Re-running only touches what the review added.** Items the review put
+  on the list are marked as such. On a re-run: their amounts are updated
+  to the new shortfall; one that no longer has a shortfall comes off the
+  list, **but only if nobody touched its status since** (a staff "Hampir
+  habis" afterwards keeps it on). An item someone put on the list by hand is
+  never removed; the review may only update the amount shown next to it.
+  Notes the review added (free-name ingredients) follow the same rule.
+- Staff phones see no banner (they don't plan); the list they see is simply
+  the updated one.
+
+### Where to buy (D21)
+
+- **Optional tag per item, owner only**: **Wet market · Supermarket ·
+  Online · Other** (**Pasar · Supermarket · Online · Lainnya**), in the item
+  sheet as **Where to buy** (**Beli di**).
+- **Grouping only when it helps.** While no item on *To buy* has a tag, the
+  list looks exactly as today. Once one does, *To buy* groups by tag in that
+  order, then **Anywhere** (**Di mana saja**) for untagged items and notes.
+  Staff's *Perlu dibeli* groups the same way.
+- **WhatsApp / Copy** follows the groups:
+
+  ```
+  Belanja
+  Pasar
+  - Ayam 500 g
+  - Serai
+  Supermarket
+  - Santan 2 bungkus
+  - Beras 1 karung (5 kg)
+  ```
+
+  Headings and units in the language of the person sending (owners'
+  choice; staff always Indonesian), item names as the household typed them.
+
+### Owner text (EN / ID), addendum
+
+| Where | English | Bahasa Indonesia |
+| --- | --- | --- |
+| Menu strip | Eat soon | Perlu segera dimakan |
+| Strip chip | 3 portions · expires Thu · Add to a day | 3 porsi · kedaluwarsa Kam · Masukkan ke menu |
+| Leftover dish | Leftover rendang · Eaten | Sisa rendang · Sudah dimakan |
+| Recipe hint | Uses chicken · expires Thu | Pakai ayam · kedaluwarsa Kam |
+| Bought sheet, fresh items | Expires (optional) | Kedaluwarsa (opsional) |
+| Badge | Ready to cook · Ready to cook now · Missing 2: coconut milk, lemongrass · 1 not checked | Bahan lengkap · Bahan lengkap · Kurang 2: santan, serai · 1 tidak dicek |
+| Recipes pill | All · Ready to cook now | Semua · Bahan lengkap |
+| Item sheet | Usually bought as (optional) · 1 sack (5 kg) | Biasa dibeli per (opsional) · 1 karung (5 kg) |
+| Pack kinds | sack · pack · packet · bottle · jerry can · tray · box | karung · pak · bungkus · botol · jeriken · rak · kotak |
+| Bought sheet | How many? · Type an amount instead | Beli berapa? · Ketik jumlahnya saja |
+| Shortfall | buy 1 sack (5 kg) | beli 1 karung (5 kg) |
+| Banner | Menu changed since your list · Review | Menu berubah sejak daftar belanja dibuat · Cek lagi |
+| Item sheet | Where to buy | Beli di |
+| Where | Wet market · Supermarket · Online · Other · Anywhere | Pasar · Supermarket · Online · Lainnya · Di mana saja |
+
+### Staff text (Bahasa Indonesia only), addendum
+
+| Where | Text |
+| --- | --- |
+| Menu hari ini | Bahan lengkap · Kurang 1: serai · Sisa rendang · 2 porsi |
+| Leftover dish button | Sudah dimakan |
+| Beli berapa? | 1 karung (5 kg) · Ketik jumlahnya saja · Kedaluwarsa (boleh dikosongkan) |
+| Perlu dibeli groups | Pasar · Supermarket · Online · Lainnya · Di mana saja |
+
+Staff forms say **(boleh dikosongkan)**, never "(opsional)", as the glossary
+asks.
+
+### Glossary rows (with PR A and PR C, as above)
+
+| English | Bahasa Indonesia | Why |
+| --- | --- | --- |
+| Eat soon (Menu strip) | **Perlu segera dimakan** | Already the Today line's and the push's words. |
+| Leftover {dish} / Eaten (leftover dish) | **Sisa {masakan}** / **Sudah dimakan** | "Sisa rendang". |
+| Ready to cook / Missing N | **Bahan lengkap** / **Kurang N** | "Siap dimasak" reads as "prepped"; "bahan lengkap" says what's checked. |
+| Not checked | **Tidak dicek** | |
+| Usually bought as | **Biasa dibeli per** | "Biasa dibeli per karung". |
+| Sack · jerry can · tray (packs) | **Karung · Jeriken · Rak** | KBBI spellings; "rak telur" is how eggs are sold. pak, bungkus, botol, kotak are already in the units row. |
+| Type an amount instead | **Ketik jumlahnya saja** | |
+| Menu changed since your list · Review | **Menu berubah sejak daftar belanja dibuat · Cek lagi** | |
+| Where to buy / Anywhere | **Beli di** / **Di mana saja** | |
+| Wet market · Supermarket · Online · Other | **Pasar · Supermarket · Online · Lainnya** | Everyday words; "swalayan" reads dated. |
+
+### Data model, addendum
+
+**Migration 144 (PR A) gains four `inventory_items` columns:**
+
+| Column | |
+| --- | --- |
+| `pack_kind` | `text`, null or one of `sack`, `pack`, `packet`, `bottle`, `jerrycan`, `tray`, `box`. Owner-only (guard). |
+| `pack_size` | `numeric`, null or > 0 and ≤ 100,000, in the item's `unit`; a check that `pack_kind` and `pack_size` are both set or both null. Owner-only. |
+| `buy_at` | `text`, null or one of `market`, `supermarket`, `online`, `other`. Owner-only. |
+| `use_by` | `date`, null; only meaningful on tracked Fresh food items. Staff-writable (staff buy). Cleared by the amount rules trigger when `quantity` reaches 0; ignored when tracking is off. |
+
+- `inventory_items_owner_guard()` (re-created in 144 anyway) adds
+  `pack_kind`, `pack_size`, `buy_at` to its owner-only list.
+- `record_purchase` gains `p_use_by date default null` (the function is new
+  in 144, so no overload issue): when given, `use_by` becomes the earlier of
+  the current date and `p_use_by` while the old amount is above 0, else
+  `p_use_by`. Packs are multiplied on the phone; the function still takes
+  the amount in the item's unit. Undo writes back the previous `use_by` too.
+- The privacy line for PR A (above) gains: "…and, where an admin sets them,
+  the usual pack size, where it's usually bought and when fresh stock
+  expires." / "…serta, jika admin mengisinya, ukuran kemasan yang biasa
+  dibeli, tempat biasa membelinya dan tanggal kedaluwarsa bahan segar." No
+  personal data; no new service.
+
+**PR C's migration gains:**
+
+| Where | Column | |
+| --- | --- | --- |
+| `menu_dishes` | `food_item_id` | nullable; composite FK `(food_item_id, household_id)` → `food_items (id, household_id)` (needs `unique (id, household_id)` on `food_items`), `on delete set null`. A leftover dish. A check that a dish has a recipe, a leftover, or neither, never both. |
+| `menu_dishes` | `updated_at` | server-stamped; part of the fingerprint's inputs. |
+| `inventory_items` | `to_buy_by_menu` | `boolean not null default false`: the review put it on the list. Staff-writable (cleared by a purchase). |
+| `inventory_alerts` | `from_menu` | `boolean not null default false`: a note the review added. |
+| `households` | `menu_list_from`, `menu_list_to`, `menu_list_fingerprint`, `menu_list_at` | what the last review covered. Owners write; every household session reads. |
+
+- `cook_menu_dish` handles a leftover dish: instead of stock, it lowers the
+  food's `portions` by the dish's servings (floored at 0) and sets the food's
+  outcome to `eaten` at 0 (or at once when the food has no portions); what it
+  changed goes into `cooked_uses` as `{food_item_id, portions, finished}`,
+  so `uncook_menu_dish` restores exactly. The food must belong to the same
+  household and still be listed. Same `security definer`, same household
+  check, same revokes and grants.
+- The fingerprint is computed by the phone (a stable hash of the sorted
+  inputs) and only compared, never trusted for anything but showing the
+  banner.
+- *Ready to cook* and *Eat soon* need no database change.
+
+**Tests, addendum**: the guard refuses a staff phone setting `pack_kind`,
+`pack_size` or `buy_at` and allows `use_by`; the pack check refuses a kind
+without a size; `use_by` keeps the earlier date while stock remains and
+clears at 0; a leftover dish counts portions down, finishes the food at 0,
+and Undo restores both; a leftover dish can't point at another household's
+food or a finished one; a re-run of the review removes only items it added
+whose status nobody changed since. Unit tests: availability per line (each
+row of the D18 table), pack rounding ("need 6 kg, have 4.5 kg, pack 5 kg →
+1 pack"), the fingerprint ignoring cooking and noticing an edited recipe,
+the WhatsApp grouping.
+
+### Rollout, addendum
+
+- **PR A** (144): pack size, where to buy, the use-by date in the Bought
+  sheet, packs in *How many?*, the grouped *To buy* and WhatsApp text.
+- **PR B** (recipes): *Ready to cook* on recipes and the **All · Ready to
+  cook now** pill; the *Uses chicken · expires Thu* hint.
+- **PR C** (menu): the *Eat soon* strip and leftover dishes, *Ready to cook*
+  on planned dishes and *Menu hari ini*, the shortfall in packs, the *Menu
+  changed* banner and the careful re-run.
+
+### Decisions for the owner, addendum (D17–D21)
+
+- **D17 — Use it first.**
+  **A (recommended):** an **Eat soon** strip on the Menu (ready food
+  expiring within 2 days, leftovers with portions), one tap to put a
+  leftover on a day as **Sisa rendang**, eating it counts the portions down;
+  plus an optional expiry on fresh tracked items, asked only when buying,
+  so recipes can say "Uses chicken · expires Thu". B: the strip and leftover
+  dishes, but no expiry on stock (no recipe hint). C: no strip; leftovers
+  stay in Food only.
+- **D18 — Can we cook it?**
+  **A (recommended):** by hand, from stored amounts and statuses: **Ready to
+  cook** or **Missing 2: …** on recipes, planned dishes and *Menu hari ini*,
+  per dish against what's there now, and a **Ready to cook now** pill on
+  Recipes. B: the badge on planned dishes only (no filter). C: none until
+  Kakak.
+- **D19 — Pack sizes.**
+  **A (recommended):** an optional pack per tracked item from a short list
+  (sack, pack, packet, bottle, jerry can, tray, box) with its size; *Bought*
+  asks how many packs, the shortfall rounds up to whole packs. B: free-text
+  pack names (the household's own words, but untranslated for staff and
+  owners in the other language). C: no packs; the shopper types the amount.
+- **D20 — The plan changed after the list.**
+  **A (recommended):** remember what the review covered; show **Menu
+  changed since your list · Review** on the Menu and *To buy*; a re-run
+  adjusts only what the review added and never removes an item someone
+  touched or added by hand. B: no banner; the owner re-runs when they
+  remember. C: update the list automatically whenever the menu changes
+  (surprising for whoever is holding the list in the shop).
+- **D21 — Where to buy.**
+  **A (recommended):** an optional tag per item (Wet market · Supermarket ·
+  Online · Other); *To buy*, staff's *Perlu dibeli* and the WhatsApp text
+  group by it once any item has one. B: free-text shop names ("Pasar
+  Santa", "Ranch Market"). C: no grouping.
+
+### Considered, not now
+
+- **Per-person portions and nutrition** (who eats how much, calories,
+  macros): needs people records (Care tab, item 18) and edges into health
+  data.
+- **Price per pack**: comes with household cash (item 15), which will store
+  what each purchase cost; the pack size added here is what it will price.
+- **Planning a week automatically**: a Kakak idea (the paid extra), built on
+  *Eat soon*, *Ready to cook* and the recipe box from this addendum.
+- **Per-batch expiry on stock** (two packs of chicken, two dates): the single
+  earliest date covers the "use it first" need.
