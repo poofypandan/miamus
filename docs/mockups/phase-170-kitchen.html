@@ -231,7 +231,7 @@
 
 <header class="page">
   <h1>Phase 170: cooking, groceries and planning under Kitchen</h1>
-  <p>Phone-width mockups for <code>docs/phase-170-kitchen-plan.md</code>. Screens 1–8: the decided design (D1–D16 A, owner, 2026-11-10). Screens 9–16: the addendum (D17–D22 A, not decided). Owner screens: English left, Bahasa Indonesia right. Staff screens: Bahasa Indonesia only.</p>
+  <p>Phone-width mockups for <code>docs/phase-170-kitchen-plan.md</code>. Screens 1–8: the decided design (D1–D16 A, owner, 2026-11-10). Screens 9–16: the addendum (D17–D22 A, parked, not decided). Owner screens: English left, Bahasa Indonesia right. Staff screens: Bahasa Indonesia only.</p>
   <p>Amounts are opt-in per item and change only when someone buys, cooks or glances in the cupboard. Items without "Track amount" stay Enough, Running low, Out.</p>
 </header>
 
@@ -711,7 +711,7 @@ const pairOwner = ([h, p, fn]) => `<section class="screen"><h2>${h}</h2><p>${p}<
 const pairStaff = ([h, p, fns]) => `<section class="screen"><h2>${h}</h2><p>${p}</p><div class="pair">${fns.map((f) => f()).join("")}</div></section>`;
 document.getElementById("screens").innerHTML =
   OWNER.map(pairOwner).join("") + STAFF.map(pairStaff).join("") +
-  `<header class="addh"><h1>Addendum: menu, food and shopping as one loop (D17–D22)</h1><p>Drawn with the recommended options (D17–D22 A), not decided yet. Screens 1–8 above are the decided design (D1–D16 A); these add Eat soon, Ready to cook, packs, the Menu changed line and To buy grouped by where you shop, and basic nutrition.</p></header>` +
+  `<header class="addh"><h1>Addendum: menu, food and shopping as one loop (D17–D22)</h1><p>Parked after the 10 Nov evaluation (docs/app-evaluation-2026-11-10.md); drawn with the recommended options (D17–D22 A), not decided. Screens 1–8 above are the decided design (D1–D16 A); these add Eat soon, Ready to cook, packs, the Menu changed line and To buy grouped by where you shop, and basic nutrition.</p></header>` +
   ADD_OWNER.map(pairOwner).join("") + ADD_STAFF.map(pairStaff).join("");
 </script>
 </body>

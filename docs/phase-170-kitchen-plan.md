@@ -3,8 +3,8 @@
 Status: **decided: owner chose all recommendations (D1–D16 A), 2026-11-10;
 PR A amounts and units with migration 144.** The four open questions below
 stay open; the owner answers each before the PR it affects.
-**Addendum (2026-11-10, end of this file): Menu ↔ food ↔ shopping, D17–D22,
-waiting for the owner.**
+**Addendum (2026-11-10, end of this file): Menu ↔ food ↔ shopping, D17–D22:
+parked after the 10 Nov evaluation.**
 Nothing is built. Migration **144** is reserved for PR A (amounts and units);
 PR B (recipes) and PR C (menu and the cook's view) each take the next free
 number when they're built, and the manager reserves it then. Roadmap item 20
@@ -781,7 +781,7 @@ tekan **Sudah dimasak**."
 ## Decisions for the owner
 
 **Decided 2026-11-10: the owner chose all recommendations, so D1–D16 are
-all A.** D17–D22 are in the addendum at the end, not decided yet.
+all A.** D17–D22 are in the addendum at the end: parked, not decided.
 
 - **D1 — Exact amounts: for which items?**
   **A (recommended):** opt-in per item; an owner switches on **Track amount**
@@ -904,7 +904,9 @@ all A.** D17–D22 are in the addendum at the end, not decided yet.
 
 ## Addendum (2026-11-10): Menu ↔ food ↔ shopping, the closed loop
 
-Status: **D17–D22 are a plan, waiting for the owner** (each with a
+Status: **Parked after the 10 Nov evaluation (docs/app-evaluation-2026-11-10.md): revisit as optional switches after starter templates and Kakak setup ship and target households ask; D17–D22 not decided.**
+
+Original status (10 Nov): D17–D22 were a plan, waiting for the owner (each with a
 recommended A). D1–D16 above stay decided. The owner asked that the menu
 connect to the food the house already has and to what it should buy. The
 core loop is already in the plan (recipe lines linked to items, *Add
@@ -1338,6 +1340,8 @@ the WhatsApp grouping.
   values are missing), the menu day a total per serving; owners only; no
   per-person tracking. B: the same, manual values only (no bundled list).
   C: not now.
+  Nutrition stays wanted by the owner's household; it returns as an
+  optional switch, Kakak-filled where possible.
 
 ### Considered, not now
 
