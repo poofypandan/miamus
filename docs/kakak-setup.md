@@ -95,7 +95,7 @@ and the sheet words it:
 | Rate limited or overloaded (429/529) | "Kakak is busy right now…" | Yes |
 | Timed out | "Kakak took too long. Nothing was saved…" | Yes |
 | No internet on the phone | "Kakak needs the internet…" | Yes |
-| Sheet left open for over 6 hours | "This conversation is a few hours old…" | Start again |
+| Sheet left open for over 6 hours, or past midnight in Jakarta | "This conversation is from earlier…" | Start again |
 
 The server logs the status and error type, never the household's words.
 

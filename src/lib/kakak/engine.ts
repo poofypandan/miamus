@@ -11,7 +11,7 @@
 
 import type Anthropic from "@anthropic-ai/sdk";
 import { costMicroUsd, type KakakModel } from "./cost";
-import type { RefMap, RefNames } from "./context";
+import { jakartaNow, type RefMap, type RefNames } from "./context";
 import { renderHouseholdBlock, type KakakHousehold } from "./household";
 import { KAKAK_SYSTEM_PROMPT } from "./prompt";
 import { toSuggestion, type KakakSuggestion } from "./suggestions";
@@ -86,7 +86,7 @@ export interface TurnDeps {
 }
 
 export class BadTurnError extends Error {}
-/** The sheet was left open for hours: start a new conversation. */
+/** The sheet was left open for hours, or past midnight in Jakarta: start a new conversation. */
 export class StaleConversationError extends BadTurnError {}
 
 /** The moment this conversation's household block is built from: its start, or now for a new one. */
@@ -114,6 +114,12 @@ export function checkHistory(history: unknown, now: number = Date.now()): KakakH
     if (Number.isNaN(at)) throw new BadTurnError("startedAt is not a date");
     if (at > now + CLOCK_SKEW_MS || at < now - MAX_CONVERSATION_MS) {
       throw new StaleConversationError("the conversation is too old");
+    }
+    // Past midnight in Jakarta, the frozen "today" would be yesterday, and
+    // "besok" or "today" in an answer would land on the wrong date (Codex,
+    // PR #68): start again rather than change the system prompt.
+    if (jakartaNow(new Date(at)).today !== jakartaNow(new Date(now)).today) {
+      throw new StaleConversationError("the day changed during the conversation");
     }
   }
   if (JSON.stringify(history).length > MAX_HISTORY_BYTES) throw new BadTurnError("history is too long");

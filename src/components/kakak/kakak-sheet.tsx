@@ -572,7 +572,7 @@ function failure(reason: KakakFailure, t: T): { text: string; problem: Problem }
       };
     case "stale":
       return {
-        text: t("This conversation is a few hours old. Start again to tell Kakak.", "Percakapan ini sudah beberapa jam. Mulai lagi untuk bilang ke Kakak."),
+        text: t("This conversation is from earlier. Start again to tell Kakak.", "Percakapan ini sudah lewat. Mulai lagi untuk bilang ke Kakak."),
         problem: { icon: RotateCcw, next: "restart" },
       };
     case "invalid":

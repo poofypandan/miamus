@@ -50,6 +50,13 @@ describe("conversation start", () => {
     expect(() => checkHistory({ messages: [], startedAt: future }, now)).toThrow(StaleConversationError);
   });
 
+  it("calls a conversation stale once Jakarta passes midnight, so 'today' is never yesterday", () => {
+    // 23.58 and 00.03 in Jakarta (UTC+7): five minutes apart, different days.
+    const before = "2026-11-13T16:58:00.000Z";
+    expect(() => checkHistory({ messages: [], startedAt: before }, Date.parse("2026-11-13T17:03:00Z"))).toThrow(StaleConversationError);
+    expect(checkHistory({ messages: [], startedAt: before }, Date.parse("2026-11-13T16:59:30Z")).startedAt).toBe(before);
+  });
+
   it("sends the same system prompt on the second turn, minutes later, and hands the start back", async () => {
     // Two turns of one conversation, as the route runs them: each builds the
     // household from the conversation's start, not the clock.
@@ -79,8 +86,10 @@ describe("conversation start", () => {
       };
     }
 
-    // Ten minutes ago (runKakakTurn checks against the real clock).
-    const first = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    // Up to ten minutes ago, but on today's Jakarta date (runKakakTurn checks
+    // against the real clock, and a conversation can't cross midnight).
+    const jakartaMidnight = Date.parse(`${jakartaNow().today}T00:00:00+07:00`);
+    const first = new Date(Math.max(Date.now() - 10 * 60 * 1000, jakartaMidnight)).toISOString();
     const turn1 = await runKakakTurn(depsAt(first), null, "Ari pel teras jam 9");
     if (turn1.kind !== "question") throw new Error(turn1.kind);
     expect(turn1.history.startedAt).toBe(first);
