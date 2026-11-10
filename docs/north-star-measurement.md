@@ -8,9 +8,9 @@ Counts only, never content.
 
 | Signal | Target | Read from |
 | --- | --- | --- |
-| **S1** first staff finish the same day | half or more of new households (the median household) same day; owner setup time under 10 minutes | `households.created_at` → the first chore or routine a staff member finished (`household_tasks.completed_by`, `task_logs.staff_id`, roster rows without a Google account); setup minutes from `household_setup.active_seconds` |
+| **S1** first staff finish the same day | half or more of new households (the median household) same day; owner setup time under 10 minutes | `households.created_at` → the first chore or routine a staff member finished (`household_tasks.completed_by`, `task_logs.staff_id` with `complete`, or a vet visit closed: `check_out` or `admitted`; roster rows without a Google account); setup minutes from `household_setup.active_seconds` |
 | **S2** typed fields to set up | 10 or fewer | `household_setup.typed_fields` (from PR A2). **Before:** rooms, chores, staff, pets and routines added in the first 14 days beyond what setup added (each one is at least one typed field) |
-| **S3** due tasks closed (done or "couldn't") | 90% or more | `north_star_day(day)`: chore-days and routine slots due, the same rules as the evening summary (139); closed = done or a `task_exceptions` row |
+| **S3** due tasks closed (done or "couldn't") | 90% or more | `north_star_day(day)`: chore-days and routine slots due, the same rules as the evening summary (139); closed = done or a `task_exceptions` row **by the end of that day** in Jakarta (a chore finished the next morning doesn't count for its due day) |
 | **S4** weekly active households | 70% of new households | week 4 (days 21–27): at least 3 tasks finished by staff per staff member on the roster |
 | **S5** Kakak repeat use | 50% of households that tried her | 3+ `kakak_requests` with `job = 'quick'` in week 3 (days 14–20) |
 | Approval wait | (none: it should go to zero with PR A1) | `household_access_requests.requested_at` → `households.created_at` |

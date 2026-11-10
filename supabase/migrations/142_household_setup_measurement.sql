@@ -206,21 +206,26 @@ alter table public.kakak_requests add constraint kakak_requests_job_check check 
 -- (a written day governs its own status and person; leave that pauses a
 -- person's chores takes them off the day); routines follow
 -- routine_slots_open's (which schedules count, which slots a log closes).
--- Read for days that have ended.
+-- Read for days that have ended. "Closed" means by the end of that day in
+-- Jakarta: an overdue chore finished the next morning, or a "couldn't" filed
+-- the next day, doesn't count for the day it was due (Codex, PR #82).
 create or replace function public.north_star_day(p_day date)
 returns table (household_id uuid, due integer, closed integer)
 language sql
 stable
 set search_path = ''
 as $$
-  with chore_due as (
-    select t.id, t.household_id, t.due_date, t.status, t.assigned_to
+  with day_end as (
+    select ((p_day + 1)::timestamp at time zone 'Asia/Jakarta') as at
+  ),
+  chore_due as (
+    select t.id, t.household_id, t.due_date, t.status, t.assigned_to, t.completed_at
       from public.household_tasks t
      where t.parent_task_id is null
        and t.status <> 'cancelled'
        and public.chore_occurs_on(t, p_day)
     union all
-    select t.id, t.household_id, t.due_date, t.status, t.assigned_to
+    select t.id, t.household_id, t.due_date, t.status, t.assigned_to, t.completed_at
       from public.household_tasks x
       join public.household_tasks t
         on t.id = x.parent_task_id and t.household_id = x.household_id and t.parent_task_id is null
@@ -231,10 +236,11 @@ as $$
   chore_days as (
     select d.household_id, d.id,
            coalesce(r.status, case when p_day = d.due_date then d.status else 'pending' end) as status,
+           case when r.id is not null then r.completed_at when p_day = d.due_date then d.completed_at end as completed_at,
            case when r.id is not null then r.assigned_to else d.assigned_to end as assignee
       from chore_due d
       left join lateral (
-        select x.id, x.status, x.assigned_to
+        select x.id, x.status, x.assigned_to, x.completed_at
           from public.household_tasks x
          where x.parent_task_id = d.id and x.due_date = p_day
          order by x.created_at
@@ -245,11 +251,13 @@ as $$
     select c.household_id,
            count(*)::int as due,
            count(*) filter (
-             where c.status = 'completed'
+             -- A finish with no time on record (old rows) counts as closed.
+             where (c.status = 'completed' and (c.completed_at is null or c.completed_at < de.at))
                 or exists (select 1 from public.task_exceptions e
-                            where e.chore_id = c.id and e.occurs_on = p_day)
+                            where e.chore_id = c.id and e.occurs_on = p_day and e.created_at < de.at)
            )::int as closed
       from chore_days c
+      cross join day_end de
       left join lateral (
         select l.id, l.fallback_action
           from public.leave_requests l
@@ -292,10 +300,11 @@ as $$
   slots_open as (
     select o.household_id, count(*)::int as open
       from public.routine_slots_open(p_day) o
+      cross join day_end de
      where not exists (
        select 1 from public.task_exceptions e
         where e.schedule_id = o.schedule_id and e.entity_id = o.entity_id
-          and e.occurs_on = p_day and e.slot_time = o.slot_time
+          and e.occurs_on = p_day and e.slot_time = o.slot_time and e.created_at < de.at
      )
      group by o.household_id
   )
@@ -376,7 +385,9 @@ begin
       join public.task_entities e on e.id = l.entity_id
       join hh on hh.id = e.household_id
       join public.staff_profiles s on s.id = l.staff_id and s.user_id is null
-     where l.sub_type = 'complete' and l.completed_at > hh.created_at
+     -- A routine done, or a vet visit closed (checked out or admitted, as
+     -- routine_slots_open reads it); never a check-in (Codex, PR #82).
+     where l.sub_type in ('complete', 'check_out', 'admitted') and l.completed_at > hh.created_at
   ),
   per_hh0 as (
     select hh.id, hh.created_at, hh.day,

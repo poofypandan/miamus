@@ -181,6 +181,8 @@ values (:f1, 'Sapu', '00000000-0000-0000-0000-0000000142d1', pg_temp.today() - 1
         '00000000-0000-0000-0000-0000000142c1', pg_temp.at(1, 9), 'x/b.jpg', 'x/a.jpg', now() - interval '1 day');
 insert into public.task_exceptions (household_id, chore_id, occurs_on, reason)
 values (:f1, '00000000-0000-0000-0000-0000000142d2', pg_temp.today() - 1, 'out_of_stock');
+-- Filed yesterday evening (the guard stamps the server's clock on insert).
+update public.task_exceptions set created_at = pg_temp.at(1, 20) where chore_id = '00000000-0000-0000-0000-0000000142d2';
 insert into public.leave_requests (household_id, staff_id, start_date, end_date, status, fallback_action)
 values (:f1, '00000000-0000-0000-0000-0000000142c1', pg_temp.today() - 1, pg_temp.today() - 1, 'approved', 'pause');
 insert into public.task_entities (id, household_id, entity_type, name, created_at)
@@ -198,6 +200,21 @@ select pg_temp.ok((select due = 3 and closed = 0 from public.north_star_day(pg_t
   'the day before: the daily chore and both slots, none closed');
 select pg_temp.ok(not exists (select 1 from public.north_star_day(pg_temp.today() - 1) where household_id <> :f1::uuid),
   'a household with nothing due isn''t listed');
+-- Closed by the end of the day, not later (Codex, PR #82): k3 finished this
+-- morning and a "couldn't" filed today for yesterday leave yesterday as it was.
+update public.household_tasks set status = 'completed', completed_at = now(), before_photo_url = 'x/b.jpg', after_photo_url = 'x/a.jpg'
+ where id = '00000000-0000-0000-0000-0000000142d3';
+insert into public.household_tasks (id, household_id, title, recurrence, due_date, status, created_at)
+values ('00000000-0000-0000-0000-0000000142d7', :f1, 'Lap meja', 'none', pg_temp.today() - 1, 'pending', now() - interval '2 days');
+insert into public.task_exceptions (household_id, chore_id, occurs_on, reason)
+values (:f1, '00000000-0000-0000-0000-0000000142d7', pg_temp.today() - 1, 'out_of_stock');
+select pg_temp.ok((select due = 6 and closed = 3 from public.north_star_day(pg_temp.today() - 1) where household_id = :f1::uuid),
+  'an overdue chore finished today and a couldn''t filed today don''t close yesterday');
+delete from public.task_exceptions where chore_id = '00000000-0000-0000-0000-0000000142d7';
+delete from public.household_tasks where id = '00000000-0000-0000-0000-0000000142d7';
+update public.household_tasks set status = 'pending', completed_at = null, before_photo_url = null, after_photo_url = null
+ where id = '00000000-0000-0000-0000-0000000142d3';
+
 
 -- ---- Staff finishes, Kakak use --------------------------------------------------------
 -- f1: Sari's first finish 2 hours after the household was made (same day);
@@ -256,6 +273,21 @@ select pg_temp.ok((select j::text !~* '(melati|kenanga|sari|mochi|@test\.local|0
 select pg_temp.ok((select jsonb_array_length(public.north_star_report(99) -> 'weeks') = 26
                           and jsonb_array_length(public.north_star_report(0) -> 'weeks') = 1),
   'weeks are kept between 1 and 26');
+-- A vet visit closed by staff counts as a finish; a check-in doesn't (Codex,
+-- PR #82). f2's first staff member checks Mochi in, then out, on day one.
+insert into public.staff_profiles (id, household_id, name, created_at)
+values ('00000000-0000-0000-0000-0000000142c2', '00000000-0000-0000-0000-0000000142f2', 'Budi', pg_temp.at(25, 9));
+insert into public.task_entities (id, household_id, entity_type, name, created_at)
+values ('00000000-0000-0000-0000-0000000142e2', '00000000-0000-0000-0000-0000000142f2', 'pet', 'Kiko', pg_temp.at(25, 9));
+insert into public.task_logs (entity_id, module, completed_at, staff_id, sub_type) values
+  ('00000000-0000-0000-0000-0000000142e2', 'pet', pg_temp.at(25, 10), '00000000-0000-0000-0000-0000000142c2', 'check_in');
+select pg_temp.ok((select (public.north_star_report(8) #>> '{summary,same_day}')::int = 1),
+  'a vet check-in alone isn''t a finish');
+insert into public.task_logs (entity_id, module, completed_at, staff_id, sub_type) values
+  ('00000000-0000-0000-0000-0000000142e2', 'pet', pg_temp.at(25, 11), '00000000-0000-0000-0000-0000000142c2', 'check_out');
+select pg_temp.ok((select (public.north_star_report(8) #>> '{summary,same_day}')::int = 2),
+  'checking out of the vet is: f2 now finished on day one too');
+
 
 -- ---- Who may read it --------------------------------------------------------------------
 select pg_temp.ok((select (pg_temp.json_as(:pa, 'select public.platform_north_star(8)') #>> '{summary,households}')::int = 2),
@@ -329,9 +361,9 @@ values ('00000000-0000-0000-0000-0000000142c3', '00000000-0000-0000-0000-0000000
 insert into public.household_tasks (household_id, title, due_date, status, completed_by, completed_at, before_photo_url, after_photo_url)
 values ('00000000-0000-0000-0000-0000000142f3', 'Sapu', pg_temp.today(), 'completed', '00000000-0000-0000-0000-0000000142c3',
         now(), 'x/b.jpg', 'x/a.jpg');
-select pg_temp.ok((select (j #>> '{summary,same_day}')::int = 2 and (j #>> '{summary,same_day_of}')::int = 3
+select pg_temp.ok((select (j #>> '{summary,same_day}')::int = 3 and (j #>> '{summary,same_day_of}')::int = 3
                      from (select public.north_star_report(8) as j) x),
-  'a household made today with a first finish counts on both sides: 2 of 3, never more than all');
+  'a household made today with a first finish counts on both sides: 3 of 3, never more than all');
 
 -- ---- Interval routines and an off-pattern written day (review fix) --------------------------
 -- Potty every 4 hours 08.00–16.00 (3 slots), logged at 12.05 yesterday; a
