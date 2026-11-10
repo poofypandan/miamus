@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { BellOff, BellRing, Lightbulb, Loader2, Moon, Share } from "lucide-react";
+import { BellOff, BellRing, Lightbulb, Loader2, Moon, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { sendTestPush } from "@/lib/push";
 import type { PushStatus } from "@/lib/push-prompt";
 import { usePushStatus } from "@/hooks/use-push-status";
 import { useOwnerLocale, useT, type Translate } from "@/context/owner-locale-context";
 import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
+import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
+import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { DEFAULT_SUMMARY_HOUR, SUMMARY_HOURS } from "@/lib/couldnt-do";
 import { formatTime } from "@/lib/time";
-import { cn } from "@/lib/utils";
 
 /** One or two words for this device's push state: the badge and the Household row. */
 export function pushStatusLabel(status: PushStatus, t: Translate): string | undefined {
@@ -255,7 +257,55 @@ export function PushNotificationSettings() {
         </CardContent>
       </Card>
       <NotificationChoices />
+      <StaffPhonesSwitch />
     </div>
+  );
+}
+
+/**
+ * Notifications to staff phones (Phase 166, D8): one switch for the whole
+ * household, on by default. Shown to households with staff, once the
+ * database answers (migrations/141). Owners can't turn notifications on for
+ * staff; each phone does that itself, and Staff shows who has.
+ */
+function StaffPhonesSwitch() {
+  const t = useT();
+  const { overview, setEnabled } = useStaffPushOverview();
+  const { profiles } = useStaffProfiles();
+  const [saving, setSaving] = useState(false);
+  const hasStaff = (profiles ?? []).some((p) => !p.user_id);
+  if (!overview || !hasStaff) return null;
+
+  async function toggle() {
+    if (saving || !overview) return;
+    setSaving(true);
+    try {
+      await setEnabled(!overview.enabled);
+    } catch (err) {
+      console.error(err);
+      toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="py-2">
+      <CardContent className="flex flex-col px-4">
+        <ChoiceRow
+          icon={Smartphone}
+          title={t("Staff phones", "HP staf")}
+          switchLabel={t("Send notifications to staff phones", "Kirim notifikasi ke HP staf")}
+          detail={t(
+            "New tasks for them today, and your answers to their requests. Never between 9:00 PM and 6:00 AM.",
+            "Tugas baru untuk mereka hari ini, dan jawaban Anda atas permintaan mereka. Tidak pernah pukul 21.00–06.00."
+          )}
+          on={overview.enabled}
+          disabled={saving}
+          onToggle={() => void toggle()}
+        />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -340,6 +390,7 @@ function NotificationChoices() {
 function ChoiceRow({
   icon: Icon,
   title,
+  switchLabel,
   detail,
   on,
   disabled,
@@ -347,6 +398,8 @@ function ChoiceRow({
 }: {
   icon: typeof Moon;
   title: string;
+  /** What the switch says to a screen reader, when it's more than the title. */
+  switchLabel?: string;
   detail: string;
   on: boolean;
   disabled: boolean;
@@ -359,25 +412,7 @@ function ChoiceRow({
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs text-muted-foreground">{detail}</p>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label={title}
-        disabled={disabled}
-        onClick={onToggle}
-        className={cn(
-          "relative mt-0.5 flex h-7 w-12 shrink-0 items-center rounded-full disabled:opacity-50",
-          on ? "bg-primary" : "bg-muted"
-        )}
-      >
-        <span
-          className={cn(
-            "size-6 rounded-full bg-white shadow-sm transition-transform",
-            on ? "translate-x-[22px]" : "translate-x-0.5"
-          )}
-        />
-      </button>
+      <Switch on={on} label={switchLabel ?? title} disabled={disabled} onToggle={onToggle} className="mt-0.5" />
     </div>
   );
 }

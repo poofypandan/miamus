@@ -19,7 +19,7 @@ import type { PushStatus } from "@/lib/push-prompt";
  * list and the dashboard prompt. Each holds its own copy; lib/push announces
  * every change (from any of them, or a silent re-sync) so all re-check.
  */
-export function usePushStatus() {
+export function usePushStatus(active = true) {
   const { activeHouseholdId, tenantReady } = useHousehold();
   const [status, setStatus] = useState<PushStatus>("loading");
   // Fetched before any tap, so enabling can ask for permission first thing
@@ -27,6 +27,9 @@ export function usePushStatus() {
   const [publicKey, setPublicKey] = useState<string | null>(null);
 
   const check = useCallback(async () => {
+    // Nothing is asked of the server until the caller says so (a staff
+    // phone waits for its session: a request without one is refused).
+    if (!active) return;
     const availability = pushAvailability();
     if (availability !== "supported") {
       setStatus(availability);
@@ -43,7 +46,7 @@ export function usePushStatus() {
       console.error(err);
       setStatus("unconfigured");
     }
-  }, []);
+  }, [active]);
 
   useEffect(() => {
     void check();

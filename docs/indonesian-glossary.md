@@ -172,6 +172,18 @@ people are **staf** and **admin**.
 | Staff requests (switch) | **Permintaan staf** | Phase 165. |
 | Leave request / Schedule suggestion (pushes) | **Permintaan cuti** / **Usulan jadwal** | Phase 165. "Usulan jadwal" matches the Lapor sheet. |
 | Medicine not taken (push) | **Obat tidak diminum** | Phase 165. |
+| Turn on notifications (owners and staff) | **Aktifkan notifikasi** | Phase 166. Already the owner prompt's wording; not "Nyalakan", so there's one verb everywhere. |
+| On · Off · Blocked (notification status) | **Aktif · Mati · Diblokir** | Phase 166, as in #50's settings card. |
+| Notifications on this phone | **Notifikasi di HP ini** | Phase 166: the staff row in the Lapor sheet. |
+| For (whose push, shared phone) | **Untuk Sari** | Phase 166: the push title on a phone several people use. |
+| Quiet hours | **Jam tenang** | Phase 166: "Tidak ada notifikasi pukul 21.00–06.00." |
+| New task / New task for everyone | **Tugas baru** / **Tugas baru untuk semua** | Phase 166 push titles. |
+| A task for you (moved to you) / Task time changed | **Tugas untuk Anda** / **Jam tugas diubah** | Phase 166 push titles. |
+| Extra task (covering leave) | **Tugas tambahan** | Phase 166. |
+| Leave approved / not approved | **Cuti disetujui** / **Cuti tidak disetujui** | Phase 166 staff pushes. "Ditolak" reads harsh for a person's leave; schedule suggestions keep **ditolak**, the Lapor sheet's word. |
+| Repair fixed / report checked | **Sudah diperbaiki** / **Laporan sudah dicek** | Phase 166 staff pushes. |
+| Switch to Sari | **Ganti ke Sari** | Phase 166: the strip after tapping a push meant for someone else ("Notifikasi ini untuk Sari."). |
+| Staff phones (owner switch) | **HP staf** | Phase 166: "Kirim notifikasi ke HP staf". |
 | Set up your home (first-run checklist) | **Siapkan rumah Anda** | Audit B1: the card on a new household's Today. Steps: Beri nama rumah · Tambah staf · Hubungkan HP staf · Beri tugas pertama · Lihat hasilnya. |
 | Not now | **Nanti saja** | Hides a card for good; plainer than "Lain kali". |
 | Your home is set up | **Rumah Anda sudah siap** | The one-time note after the first finished task. |
