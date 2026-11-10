@@ -77,3 +77,61 @@ test("a staff phone opening / still goes straight to /staff", async ({ context, 
   await page.goto("/");
   await expect(page).toHaveURL(/\/staff$/, { timeout: 15_000 });
 });
+
+// A laptop gets a designed page, not the phone column (the root layout's
+// mobile frame lets go of its width for data-wide-page): the hero splits into
+// words on the left and the app's screens on the right, and nothing scrolls
+// sideways.
+for (const width of [1024, 1440]) {
+  test.describe(`on a laptop, ${width}px`, () => {
+    test.use({ viewport: { width, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
+
+    for (const path of ["/welcome", "/selamat-datang"]) {
+      test(`${path} lays the hero out in two columns`, async ({ context, page }) => {
+        await installStub(context, { stored: null });
+        await page.goto(path);
+        const columns = page.locator("[data-landing-hero] > *");
+        await expect(columns).toHaveCount(2);
+        const words = (await columns.nth(0).boundingBox())!;
+        const screens = (await columns.nth(1).boundingBox())!;
+        // Side by side, words first, sharing a row, both inside the window.
+        expect(words.x).toBeGreaterThan(0);
+        expect(words.x + words.width).toBeLessThanOrEqual(screens.x);
+        expect(screens.x + screens.width).toBeLessThanOrEqual(width);
+        expect(Math.abs(words.y + words.height / 2 - (screens.y + screens.height / 2))).toBeLessThan(200);
+        // The page spans the window (no phone column) and nothing scrolls sideways.
+        expect((await page.locator("main").boundingBox())!.width).toBe(width);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      });
+    }
+  });
+}
+
+test("a tablet gets a wider centred column, still without sideways scroll", async ({ context, page }) => {
+  await installStub(context, { stored: null });
+  await page.setViewportSize({ width: 768, height: 1024 });
+  for (const path of ["/welcome", "/selamat-datang"]) {
+    await page.goto(path);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(768);
+    // Every section's content stays inside the window.
+    const overflow = await page.evaluate(() =>
+      [...document.querySelectorAll("main *")].some((el) => el.getBoundingClientRect().right > window.innerWidth + 0.5)
+    );
+    expect(overflow).toBe(false);
+  }
+});
+
+test("a phone sees one column and nothing scrolls sideways", async ({ context, page }) => {
+  await installStub(context, { stored: null });
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const path of ["/welcome", "/selamat-datang"]) {
+    await page.goto(path);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+    const columns = page.locator("[data-landing-hero] > *");
+    const words = (await columns.nth(0).boundingBox())!;
+    const screens = (await columns.nth(1).boundingBox())!;
+    // Stacked: the screen sits under the words.
+    expect(screens.y).toBeGreaterThanOrEqual(words.y + words.height);
+  }
+});

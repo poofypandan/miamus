@@ -13,23 +13,30 @@ import { cn } from "@/lib/utils";
 export function LocationTag({
   name,
   muted = false,
+  wrap = false,
   className,
 }: {
   name: string;
   /** A finished chore's quieter grey. */
   muted?: boolean;
+  /**
+   * Wrap a long name instead of cutting it off (audit B1): on a chore card,
+   * "LT2 · GB2 Bathroom · Wastafel" is where to go, and every word counts.
+   */
+  wrap?: boolean;
   className?: string;
 }) {
   return (
     <span
       className={cn(
-        "flex min-w-0 items-center gap-1 text-xs font-medium",
+        "flex min-w-0 gap-1 text-xs font-medium",
+        wrap ? "items-start" : "items-center",
         muted ? "text-muted-foreground" : "text-gray-700",
         className
       )}
     >
-      <MapPin className="size-3 shrink-0" />
-      <span className="truncate">{name}</span>
+      <MapPin className={cn("size-3 shrink-0", wrap && "mt-[0.2em]")} />
+      <span className={wrap ? "min-w-0 break-words" : "truncate"}>{name}</span>
     </span>
   );
 }

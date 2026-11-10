@@ -554,6 +554,12 @@ export interface DataProvider {
   rotateHouseCode(): Promise<string>;
   listLinkedPhones(): Promise<LinkedPhone[]>;
   removeLinkedPhone(id: string): Promise<boolean>;
+  /**
+   * Whether the active household has ever finished a chore (audit B1): one
+   * row, any date. Today's own chore read covers only the days around the
+   * one on screen, so it can't answer "is this household past setup?".
+   */
+  hasFinishedChore(): Promise<boolean>;
 }
 
 /** A PIN check's answer (migrations/115). */

@@ -43,6 +43,22 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Show me", id: "Lihat" },
   },
   {
+    // Listed in What's new only: the checklist on Today is its own tutorial (audit B1).
+    id: "first-run-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: a setup checklist for new homes", id: "Baru: daftar persiapan rumah baru" },
+    steps: {
+      en: [
+        "New homes see Set up your home on Today: add your staff, link their phone, give them a first task. It ticks itself off and goes away after the first finished task; Not now hides it.",
+      ],
+      id: [
+        "Rumah baru melihat Siapkan rumah Anda di Hari ini: tambah staf, hubungkan HP-nya, beri tugas pertama. Tercentang sendiri dan hilang setelah tugas pertama selesai; Nanti saja menyembunyikannya.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown on Today only to an admin who has a chore of their own (Phase 163, D5).
     id: "my-tasks-2026-11",
     date: "2026-11-10",
@@ -290,6 +306,45 @@ export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
 
 export function staffWhatsNewEntry(id: string): StaffWhatsNewEntry | undefined {
   return STAFF_WHATS_NEW.find((entry) => entry.id === id);
+}
+
+/** A staff tip that could show, and whether its feature is on this phone's screens. */
+export interface StaffTipCandidate {
+  id: string;
+  show: boolean;
+}
+
+/**
+ * The one staff tip to show (audit B1, item 5): staff Today used to stack up
+ * to five "Baru" cards above the first task. Now at most one: the newest
+ * that applies and hasn't been closed on this phone. Ties keep
+ * STAFF_WHATS_NEW's order, which is newest first.
+ */
+export function pickStaffTip(candidates: StaffTipCandidate[], seen: (id: string) => boolean): string | null {
+  const order = new Map(STAFF_WHATS_NEW.map((entry, index) => [entry.id, index]));
+  const ranked = candidates
+    .map((candidate) => ({ candidate, entry: staffWhatsNewEntry(candidate.id) }))
+    .filter((item): item is { candidate: StaffTipCandidate; entry: StaffWhatsNewEntry } => !!item.entry)
+    .sort(
+      (a, b) =>
+        b.entry.date.localeCompare(a.entry.date) || (order.get(a.entry.id) ?? 0) - (order.get(b.entry.id) ?? 0)
+    );
+  return ranked.find(({ candidate }) => candidate.show && !seen(candidate.id))?.candidate.id ?? null;
+}
+
+/**
+ * Where a staff phone remembers the day it last closed a tip: after one is
+ * closed, the next waits until tomorrow, so a morning starts with the work.
+ */
+export const STAFF_TIP_CLOSED_ON_KEY = "miamus.staff-tip.closed-on";
+
+/**
+ * Whether the staff tip rests: a tip was closed on `today` (both local
+ * YYYY-MM-DD). Checked against the live day, so the next tip comes back
+ * after midnight on a phone that never reloaded.
+ */
+export function staffTipResting(closedOn: string | null, today: string): boolean {
+  return closedOn === today;
 }
 
 export function whatsNewEntry(id: string): WhatsNewEntry | undefined {
