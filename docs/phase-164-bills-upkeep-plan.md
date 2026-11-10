@@ -183,7 +183,8 @@ months, Every 6 months, Every year; nothing else in the form changes.
   tag carries the date, so a rerun replaces it.
 - **Without push**: the **Coming up** quiet line on Today shows the same
   thing for the owner it's for, from the reminder day to the due day:
-  "Coming up: PBB · Mon 31 Aug" or, for several, "3 bills coming up". Tapping
+  "Coming up: PBB · Mon 31 Aug" or, for several, "Coming up: PBB, AC
+  service and 1 more" (built that way: it lists them as the push does). Tapping
   it opens that day on Today. Due today, it's in My tasks instead.
 - Composed in the database in each owner's language, like every push.
 
@@ -353,10 +354,12 @@ icon map (Lucide `ReceiptText`).
 
 - `chore_occurs_on(household_tasks, date)` (128): the interval rule; same
   grants (revoked from public, anon, authenticated; service_role only).
-- `household_tasks_owner_guard()` (128): a day a staff phone writes must
-  carry its template's `recurrence_interval` and a null
-  `remind_days_before`; staff can't change either on any row (they're not
-  in the staff columns, so the existing check already refuses that).
+- `household_tasks_owner_guard()` (128): a day a staff phone writes is a
+  plain one-off copy, so it must have `recurrence_interval` 1 and a null
+  `remind_days_before` (built that way in 137: the app writes day copies
+  without either column, so old builds pass too); staff can't change either
+  on any row (they're not in the staff columns, so the existing check
+  already refuses that).
   Same `security definer`, empty `search_path`, same revokes.
 
 **Table `bill_payments`** (owners only)

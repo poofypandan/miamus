@@ -3,7 +3,7 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, CookingPot, PawPrint, Plus, ShoppingBasket, Sparkles, Wrench } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, CookingPot, PawPrint, Plus, ShoppingBasket, Sparkles, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -34,6 +34,8 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { useRepairs } from "@/hooks/use-repairs";
+import { useSetUpChores } from "@/hooks/use-set-up-chores";
+import { comingUpLabel, comingUpReminders } from "@/lib/chore-reminders";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -178,6 +180,32 @@ export function AgendaTab() {
     startTransition(() => pushInPlace(repairsHref));
   }
 
+  // Bills and upkeep coming up (Phase 164, D3): chores with a reminder whose
+  // day is inside its window, for this owner. The same thing the 07:00 push
+  // says, so it works with notifications off. Read from every set-up chore,
+  // not just the week on screen: a yearly bill can be a week out.
+  const todayKey = formatDateLocal(today);
+  const { rows: setUpRows } = useSetUpChores(todayKey);
+  const ownerRows = useMemo(
+    () => new Set((allProfiles ?? []).filter((p) => !!p.user_id).map((p) => p.id)),
+    [allProfiles]
+  );
+  const comingUp = useMemo(
+    () =>
+      comingUpReminders({
+        rows: setUpRows ?? householdTasks,
+        today: todayKey,
+        memberId: memberProfile?.id ?? null,
+        ownerRows,
+      }),
+    [setUpRows, householdTasks, todayKey, memberProfile?.id, ownerRows]
+  );
+  function showComingUp() {
+    if (comingUp.length === 0) return;
+    setRange("day");
+    setSelectedDate(new Date(`${comingUp[0].date}T00:00:00`));
+  }
+
   // The Kitchen tab opens on Food; the shopping line goes straight to Shopping.
   const toBuyHref = `${moduleHref("inventory")}&kitchen=buy`;
   function switchToShopping(event: React.MouseEvent) {
@@ -287,8 +315,19 @@ export function AgendaTab() {
             pet (Phase 162, D3). Renders nothing otherwise. */}
         <PetsQuestionCard />
 
-        {(needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
+        {(comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
           <div className="-my-1 flex flex-col">
+            {comingUp.length > 0 && (
+              <button
+                type="button"
+                onClick={showComingUp}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-left text-sm font-medium text-amber-800 active:bg-muted"
+              >
+                <Bell className="size-4 shrink-0 text-amber-700" aria-hidden />
+                <span className="min-w-0 flex-1">{comingUpLabel(comingUp, todayKey, locale)}</span>
+                <ChevronRight className="size-4 shrink-0 text-amber-700" aria-hidden />
+              </button>
+            )}
             {repairLines.toReview > 0 && (
               <Link
                 href={repairsHref}
@@ -362,6 +401,13 @@ export function AgendaTab() {
             household's day. Renders nothing on a day with none of mine. */}
         {/* Its tutorial, only for an admin who has a chore of their own (D5). */}
         {range === "day" && hasOwnChores && <WhatsNewCard id="my-tasks-2026-11" />}
+        {/* Bills and upkeep (Phase 164, D9): Show me opens the checklist on Chores. */}
+        {range === "day" && (
+          <WhatsNewCard
+            id="bills-2026-11"
+            onTry={() => startTransition(() => pushInPlace(`${moduleHref("chores")}&bills=open`))}
+          />
+        )}
         {range === "day" && (
           <MyTasksCard
             occurrences={mine}

@@ -168,6 +168,10 @@ export interface CreateHouseholdTaskInput {
   spot?: string | null;
   /** The repair this chore is a visit for (migrations/130). Left out, nothing is sent. */
   repair_id?: string | null;
+  /** Every N weeks or months (migrations/137). Left out, nothing is sent (1). */
+  recurrence_interval?: number | null;
+  /** "Remind me" (migrations/137). Left out, nothing is sent (no reminder). */
+  remind_days_before?: number | null;
 }
 
 /** A new repair (Phase 159). Status: owners 'open', staff phones 'reported'. */
@@ -216,6 +220,8 @@ export interface UpdateHouseholdTaskInput {
   requires_supervision?: boolean | null;
   location_id?: string | null;
   spot?: string | null;
+  recurrence_interval?: number | null;
+  remind_days_before?: number | null;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { AGENDA_TONES } from "@/lib/agenda-tones";
 import {
   ClipboardList,
+  ReceiptText,
   ShoppingBag,
   Sparkles,
   Wrench,
@@ -16,6 +17,7 @@ export const HOUSEHOLD_TASK_CATEGORIES: HouseholdTaskCategory[] = [
   "maintenance",
   "errand",
   "groceries",
+  "bill",
 ];
 
 // Owner-facing, so English per the Phase 46 language boundary.
@@ -24,6 +26,7 @@ export const CATEGORY_LABELS_EN: Record<HouseholdTaskCategory, string> = {
   maintenance: "Maintenance",
   errand: "Errand",
   groceries: "Groceries",
+  bill: "Bills",
 };
 
 // Staff-facing, so Bahasa Indonesia.
@@ -32,6 +35,8 @@ export const CATEGORY_LABELS_ID: Record<HouseholdTaskCategory, string> = {
   maintenance: "Perbaikan",
   errand: "Titipan",
   groceries: "Belanja",
+  // Phase 164; docs/indonesian-glossary.md.
+  bill: "Tagihan",
 };
 
 const CATEGORY_ICONS: Record<HouseholdTaskCategory, LucideIcon> = {
@@ -39,6 +44,7 @@ const CATEGORY_ICONS: Record<HouseholdTaskCategory, LucideIcon> = {
   maintenance: Wrench,
   errand: ClipboardList,
   groceries: ShoppingBag,
+  bill: ReceiptText,
 };
 
 /**
