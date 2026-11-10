@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useHousehold } from "@/context/household-context";
 import { choreDraftKey, clearChoreDraft } from "@/lib/chore-draft";
 import { drainOutbox, onNewWaiting, outboxItems, retryDelayMs, type DrainReport } from "@/lib/offline-queue";
+import { confirmTaskExceptions } from "@/lib/task-exceptions-store";
 import { getActiveHouseholdId } from "@/lib/tenant";
 
 /**
@@ -59,6 +60,9 @@ export function useOfflineSync(lang: "en" | "id") {
       // Before the sent saves leave the queue, so they never drop off the
       // screen between the queue and the server's copy.
       await refreshRef.current({ silent: true });
+      // Couldn't-do records live in their own cache (Phase 165): wait for it
+      // to hold them too. A failed reload throws, and they stay queued.
+      if (report.sent.some((item) => item.job.kind === "couldnt")) await confirmTaskExceptions();
     }
 
     async function drain(): Promise<DrainReport | null> {

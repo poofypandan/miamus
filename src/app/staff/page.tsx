@@ -44,6 +44,8 @@ import { isEntrySettled } from "@/lib/staff-agenda";
 import { PendingBar } from "@/components/shared/pending-bar";
 import { useScrollTopOnChange, useTabNavigation } from "@/hooks/use-tab-navigation";
 import { cn } from "@/lib/utils";
+import { useTaskExceptions } from "@/hooks/use-task-exceptions";
+import { choreException, groupExceptions, staffCouldntLine } from "@/lib/couldnt-do";
 
 export default function StaffPage() {
   const { loading, tenantReady, roleHydrated } = useHousehold();
@@ -223,15 +225,27 @@ function TasksView() {
   // the collapsed Selesai section at the bottom, so the list is only ever as
   // long as what remains. isEntrySettled, not isEntryDone: a vet visit that
   // is checked in but not closed is still today's business.
+  // Couldn't-do records (Phase 165): an explained task sits below what is
+  // still open and above what is done.
+  const { exceptions } = useTaskExceptions();
+  const explained = (entry: UnifiedAgendaEntry) =>
+    entry.kind === "chore"
+      ? !!choreException(exceptions, entry.occurrence)
+      : groupExceptions(exceptions, dateStr, entry.group).length > 0 &&
+        groupExceptions(exceptions, dateStr, entry.group).length ===
+          entry.group.items.filter((i) => i.status !== "completed").length;
   const { open: openEntries, settled } = useMemo(() => {
     const admittedIds = new Set(admittedPets.map((p) => p.id));
     const open: UnifiedAgendaEntry[] = [];
+    const later: UnifiedAgendaEntry[] = [];
     const settled: UnifiedAgendaEntry[] = [];
     for (const entry of rest) {
-      (isEntrySettled(entry, { logs, admittedIds }) ? settled : open).push(entry);
+      if (isEntrySettled(entry, { logs, admittedIds })) settled.push(entry);
+      else (explained(entry) ? later : open).push(entry);
     }
-    return { open, settled };
-  }, [rest, logs, admittedPets]);
+    return { open: [...open, ...later], settled };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `explained` reads exceptions and dateStr, listed.
+  }, [rest, logs, admittedPets, exceptions, dateStr]);
 
   // Which chore the detail sheet is showing, held as a KEY rather than as the
   // occurrence itself. Occurrences are derived fresh whenever the chore rows
@@ -305,6 +319,10 @@ function TasksView() {
         onPress={() => setOpenKey(entry.occurrence.key)}
         compact={compact}
         waitingToSend={!!entry.occurrence.row && pendingIds.has(entry.occurrence.row.id)}
+        couldnt={(() => {
+          const exception = choreException(exceptions, entry.occurrence);
+          return exception ? staffCouldntLine(exception) : null;
+        })()}
         // What the tap leads to (Phase 130): an unclaimed chore is claimed
         // before anything is photographed.
         action={
@@ -340,6 +358,7 @@ function TasksView() {
             comes first on a busy morning, not a stack of news. */}
         <StaffTipCard
           tips={[
+            { id: "staff-couldnt-do-2026-11", show: true },
             { id: "staff-feedback-2026-11", show: true },
             { id: "staff-rooms-inside-2026-11", show: showRoomsInsideTip },
             { id: "staff-weak-signal-2026-11", show: true },

@@ -102,6 +102,7 @@ export function LeaveRequestButton() {
                 ctaLabel="Kirim ke Admin via WhatsApp"
                 message={approvalMessage(staffName, filed)}
                 linkPath={leaveApprovalPath(filed.id)}
+                checkAdminPush
                 onDone={() => setOpen(false)}
               />
             </div>

@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Circle,
   CircleCheck,
+  CircleSlash,
   CloudUpload,
   Loader2,
   MapPin,
@@ -44,6 +45,7 @@ export function MyTasksCard({
   onFinish,
   onOpen,
   billLine,
+  couldntLine,
 }: {
   /** Already the admin's own, in order (myOccurrences). */
   occurrences: ChoreOccurrence[];
@@ -57,6 +59,11 @@ export function MyTasksCard({
   onOpen: (occurrence: ChoreOccurrence) => void;
   /** A bill's line (Phase 164 PR B): "Paid · Rp418.500", "Last time Rp412.000". */
   billLine?: (occurrence: ChoreOccurrence, done: boolean) => string | null;
+  /**
+   * Someone said it couldn't be done (Phase 165): the row's line in the
+   * owner's language ("Couldn't: other · Rina · 4:05 PM"), or null.
+   */
+  couldntLine?: (occurrence: ChoreOccurrence) => string | null;
 }) {
   const t = useT();
   // Rows being saved right now show as done at once, and go back if the
@@ -69,6 +76,7 @@ export function MyTasksCard({
   const isDone = (o: ChoreOccurrence) => o.status === "completed" || finishing.has(o.key);
   const total = occurrences.length;
   const doneCount = occurrences.filter(isDone).length;
+  const couldntCount = couldntLine ? occurrences.filter((o) => !isDone(o) && couldntLine(o)).length : 0;
   const allDone = mode !== "future" && doneCount === total;
 
   async function finish(o: ChoreOccurrence) {
@@ -133,6 +141,7 @@ export function MyTasksCard({
         ) : (
           <span className="text-xs tabular-nums text-muted-foreground">
             {t(`${doneCount} of ${total} done`, `${doneCount} dari ${total} selesai`)}
+            {couldntCount > 0 && t(` · ${couldntCount} couldn't`, ` · ${couldntCount} tidak bisa`)}
           </span>
         )}
       </header>
@@ -146,6 +155,7 @@ export function MyTasksCard({
           canFinish={mode === "today"}
           locationName={roomName(o.task.location_id, o.task.spot)}
           billLine={billLine?.(o, isDone(o)) ?? null}
+          couldntLine={isDone(o) ? null : (couldntLine?.(o) ?? null)}
           onFinish={() => void finish(o)}
           onOpen={() => onOpen(o)}
         />
@@ -162,6 +172,7 @@ function MyTaskRow({
   canFinish,
   locationName,
   billLine,
+  couldntLine,
   onFinish,
   onOpen,
 }: {
@@ -172,6 +183,7 @@ function MyTaskRow({
   canFinish: boolean;
   locationName: string | null;
   billLine: string | null;
+  couldntLine: string | null;
   onFinish: () => void;
   onOpen: () => void;
 }) {
@@ -186,7 +198,9 @@ function MyTaskRow({
       className={cn(
         "flex min-h-12 items-center gap-1 rounded-lg border border-transparent pr-1",
         // The Today rows' done look: green, with the chore tone's thin edge.
-        done && cn(DONE_TONE.tint, AGENDA_TONES.chore.doneEdge)
+        done && cn(DONE_TONE.tint, AGENDA_TONES.chore.doneEdge),
+        // Explained, not forgotten (Phase 165).
+        !done && couldntLine && "border-amber-300 border-l-[3px] border-l-amber-500 bg-amber-50"
       )}
     >
       {canFinish && !done ? (
@@ -248,6 +262,12 @@ function MyTaskRow({
             <span className={cn("flex items-center gap-1 truncate text-xs", done ? "text-emerald-700" : "text-muted-foreground")}>
               <ReceiptText className="size-3 shrink-0" aria-hidden />
               <span className="truncate">{billLine}</span>
+            </span>
+          )}
+          {couldntLine && (
+            <span className="flex items-center gap-1 truncate text-xs font-medium text-amber-800" data-testid="couldnt-line">
+              <CircleSlash className="size-3 shrink-0" aria-hidden />
+              <span className="truncate">{couldntLine}</span>
             </span>
           )}
           {carried && (

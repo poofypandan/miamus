@@ -157,10 +157,38 @@ people are **staf** and **admin**.
 | Undo (toast action) | **Batalkan** | Already the word in every Undo toast; never "Urungkan". |
 | Add photos (optional), owner sheet | **Tambah foto (opsional)** | Owner-only form, so "opsional" (staff forms say "boleh dikosongkan"). |
 | Both photos, or none | **Dua foto, atau tidak sama sekali** | Phase 163: an admin's own chore takes both photos or neither. |
+| Couldn't be done (button, status) | **Tidak bisa dikerjakan** / short **Tidak bisa** | Phase 165. Staff button and the amber status: "Tidak bisa · Barang habis · 09.10". |
+| Why couldn't it be done? | **Kenapa tidak bisa?** | Phase 165: the reason sheet's title. |
+| Out of stock (reason) | **Barang habis** | Phase 165. "Apa yang habis?" asks which item; **Barang lain** for one not on the list. |
+| Pet wouldn't eat / take medicine | **Hewan tidak mau makan** / **Hewan tidak mau minum obat** | Phase 165. "Hewan", never "anjing". |
+| Already done by someone else | **Sudah dikerjakan orang lain** | Phase 165. |
+| Add to the shopping list | **Masukkan ke daftar belanja** | Phase 165: on by default under "Barang habis". |
+| Turned out you can? Finish as usual. | **Ternyata sudah bisa? Selesaikan seperti biasa.** | Phase 165: a couldn't-do task can still be finished. |
+| The admin has been told | **Admin sudah diberi tahu lewat notifikasi.** | Phase 165: the staff panel after leave or a suggestion, when an admin gets the push. **Kirim WA juga** keeps WhatsApp as a second option. |
+| Evening summary | **Ringkasan malam** | Phase 165: Household → Notifications. |
+| Not done today | **Belum selesai hari ini** | Phase 165: the push title and Today's quiet line ("3 belum selesai hari ini"). |
+| Not done yet (section) | **Belum dikerjakan** | Phase 165: the summary sheet. |
+| To buy (section) | **Perlu dibeli** | Phase 165: the summary sheet; matches "2 barang perlu dibeli". |
+| Staff requests (switch) | **Permintaan staf** | Phase 165. |
+| Leave request / Schedule suggestion (pushes) | **Permintaan cuti** / **Usulan jadwal** | Phase 165. "Usulan jadwal" matches the Lapor sheet. |
+| Medicine not taken (push) | **Obat tidak diminum** | Phase 165. |
 | Set up your home (first-run checklist) | **Siapkan rumah Anda** | Audit B1: the card on a new household's Today. Steps: Beri nama rumah · Tambah staf · Hubungkan HP staf · Beri tugas pertama · Lihat hasilnya. |
 | Not now | **Nanti saja** | Hides a card for good; plainer than "Lain kali". |
 | Your home is set up | **Rumah Anda sudah siap** | The one-time note after the first finished task. |
 | Note (on a chore, the label above it) | **Catatan** | Audit B1: staff cards and sheets show the owner's note under this label. |
+| Closet (a room where clothes are kept) | **Lemari pakaian** | Phase 169 (planned): the switch on a room. "Lemari" alone stays Cupboard (Kitchen). |
+| Out now / out (clothes) | **Di luar** | Phase 169 (planned): "Di luar: 2 · 15 pcs"; a closet row says "3 di luar". |
+| Clothes going out (staff button) / Log something going out | **Pakaian keluar** / **Catat pakaian keluar** | Phase 169 (planned): second in the staff's Lapor sheet, after Makanan masuk. |
+| Receive back / Back | **Terima kembali** / **Sudah kembali** | Phase 169 (planned). |
+| Laundry · Dry clean · Tailor · Lent · Other | **Laundry · Dry clean · Penjahit · Dipinjam · Lainnya** | Phase 169 (planned). "Laundry" and "dry clean" are the everyday words; not "binatu", which reads old-fashioned. |
+| Lent to … / Who borrowed it? | **Dipinjam …** / **Dipinjam siapa?** | Phase 169 (planned): "Dipinjam Tante Rina". A name only. |
+| Still out / N short / N extra | **Belum kembali** / **Kurang N** / **Lebih N** | Phase 169 (planned): "1 pcs belum kembali"; "Kurang 1. Sisanya dicatat belum kembali." |
+| Still waiting · N missing · Miscounted · Found N | **Masih ditunggu · Hilang N · Salah hitung · Ketemu N** | Phase 169 (planned): owners settle a bag that came back short. |
+| Usually N days / Overdue | **Biasanya N hari** / **Terlambat** | Phase 169 (planned): "Sudah 6 hari, biasanya 3". |
+| Back by | **Kembali paling lambat** | Phase 169 (planned): owner field on a bag; the row reads "kembali Sab 28 Nov". |
+| Retake photo | **Foto ulang** | Phase 169 (planned): a spot's photo, after tidying. |
+| Rack · Drawer · Hanging rail · Shelf · Shoes · Box (spot quick names) | **Rak · Laci · Gantungan · Ambalan · Rak sepatu · Kotak** | Phase 169 (planned). Households type their own ("Rak A", "Laci Raka"). Still **Bagian** for Spot. |
+| Valuable pieces / Whose | **Pakaian berharga** / **Milik** | Phase 169 PR B (planned): "Milik Ibu". |
 
 ## Formatting
 

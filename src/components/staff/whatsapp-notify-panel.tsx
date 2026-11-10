@@ -1,6 +1,8 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, MessageCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, BellRing, CheckCircle2, MessageCircle } from "lucide-react";
+import { dataProvider } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { cn, generateWhatsAppLink } from "@/lib/utils";
 
@@ -29,9 +31,14 @@ export type NotifyTone = keyof typeof TONES;
 
 /**
  * The success state staff land on after sending something the owner has to act
- * on. The app has no push channel to the owner, so a report that only sits in
- * the database can go unseen for hours — this puts the nudge one tap away,
- * while the staff member still has the phone in hand.
+ * on. A report that only sits in the database can go unseen for hours, so this
+ * puts a WhatsApp nudge one tap away, while the staff member still has the
+ * phone in hand.
+ *
+ * Leave and schedule suggestions push the admins since Phase 165
+ * (migrations/139): with `checkAdminPush`, the panel asks whether an admin
+ * will get that push and, if so, says "Admin sudah diberi tahu" and keeps
+ * WhatsApp as a smaller second option.
  *
  * Staff-facing, so entirely Bahasa Indonesia per the Phase 46 language boundary.
  */
@@ -45,6 +52,7 @@ export function WhatsAppNotifyPanel({
   ctaLabel = DEFAULT_CTA,
   tone = "success",
   linkPath,
+  checkAdminPush = false,
 }: {
   title: string;
   /** Message body; the dashboard link is appended by generateWhatsAppLink. */
@@ -64,8 +72,23 @@ export function WhatsAppNotifyPanel({
   tone?: NotifyTone;
   /** Where the link in the message leads; the dashboard when omitted. */
   linkPath?: string;
+  /** Leave and suggestions: ask whether an admin gets a push (Phase 165). */
+  checkAdminPush?: boolean;
 }) {
   const { icon: ToneIcon, className: toneClass } = TONES[tone];
+  const [pushed, setPushed] = useState(false);
+  useEffect(() => {
+    if (!checkAdminPush) return;
+    let live = true;
+    dataProvider
+      .requestsPushOn()
+      .then((on) => live && setPushed(on))
+      // Unknown: keep the WhatsApp wording, which is never wrong.
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [checkAdminPush]);
 
   return (
     <div className="flex flex-col items-center gap-4 py-6 text-center">
@@ -80,6 +103,12 @@ export function WhatsAppNotifyPanel({
       <div className="flex flex-col gap-1">
         <p className="text-base font-semibold text-gray-900">{title}</p>
         <p className="text-sm text-muted-foreground">{description}</p>
+        {pushed && (
+          <p className="flex items-center justify-center gap-1.5 text-sm font-medium text-emerald-800">
+            <BellRing className="size-4 shrink-0" aria-hidden />
+            Admin sudah diberi tahu lewat notifikasi.
+          </p>
+        )}
       </div>
 
       <div className="flex w-full flex-col gap-2">
@@ -88,14 +117,22 @@ export function WhatsAppNotifyPanel({
             hands straight off to the WhatsApp app. Allowed to wrap: the
             staff proposal sheet is only ~290px wide on a phone, and the base
             Button's nowrap clipped the label and its icon there. */}
-        <Button
-          asChild
-          className="h-auto min-h-[52px] w-full bg-emerald-700 py-3 text-base leading-snug whitespace-normal text-white hover:bg-emerald-800"
-        >
-          <a href={generateWhatsAppLink(message, linkPath)} target="_blank" rel="noopener noreferrer">
-            <MessageCircle className="size-5" /> {ctaLabel}
-          </a>
-        </Button>
+        {pushed ? (
+          <Button asChild variant="outline" className="min-h-[48px] w-full">
+            <a href={generateWhatsAppLink(message, linkPath)} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="size-4" /> Kirim WA juga
+            </a>
+          </Button>
+        ) : (
+          <Button
+            asChild
+            className="h-auto min-h-[52px] w-full bg-emerald-700 py-3 text-base leading-snug whitespace-normal text-white hover:bg-emerald-800"
+          >
+            <a href={generateWhatsAppLink(message, linkPath)} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="size-5" /> {ctaLabel}
+            </a>
+          </Button>
+        )}
         {secondaryLabel && onSecondary && (
           <Button variant="outline" className="min-h-[48px] w-full" onClick={onSecondary}>
             {secondaryLabel}

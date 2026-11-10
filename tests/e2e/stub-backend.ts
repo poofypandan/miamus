@@ -105,6 +105,18 @@ export interface StubOptions {
   linkedPhones?: Record<string, unknown>[];
   /** task_logs rows already on record (audit B1: a household past setup). */
   logs?: Record<string, unknown>[];
+  /** task_exceptions rows already on record (Phase 165); changed in place. */
+  exceptions?: Record<string, unknown>[];
+  /** The admin's notification switches (Phase 165); changed in place. */
+  notificationPrefs?: { evening_summary_hour: number | null; staff_request_pushes: boolean };
+  /** What household_requests_push_on answers a staff phone (Phase 165). */
+  requestsPushOn?: boolean;
+  /**
+   * Leave the staff "Tidak bisa dikerjakan" tip to show (Phase 165). Staff
+   * phones have it closed by default: it is the newest tip, and would take
+   * the one tip slot the older tests look at.
+   */
+  couldntTip?: boolean;
 }
 
 /**
@@ -156,6 +168,10 @@ export interface Stub {
   uploads: string[];
   removed: string[];
   repairNotes: Record<string, unknown>[];
+  /** task_exceptions rows as the stub holds them (Phase 165). */
+  exceptions: Record<string, unknown>[];
+  /** The admin's notification switches as last saved (Phase 165). */
+  notificationPrefs: { evening_summary_hour: number | null; staff_request_pushes: boolean };
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
   sessionUser(): Promise<string | null>;
@@ -196,6 +212,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const uploads: string[] = [];
   const removed: string[] = [];
   const repairNotes: Record<string, unknown>[] = [];
+  const exceptions: Record<string, unknown>[] = options.exceptions ?? [];
+  const notificationPrefs = options.notificationPrefs ?? { evening_summary_hour: 19, staff_request_pushes: true };
   const kakak = { allowed: false, enabled: false, ...options.kakak };
   const household = { hasPets: options.household?.hasPets ?? null };
   const withPets = options.household?.pets !== false;
@@ -226,7 +244,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   }
   if (options.staffPhone) {
     await context.addInitScript(
-      ([household, staff]) => {
+      ([household, staff, couldntTip]) => {
         // Only on the first load of each test: a reload must see what the
         // app itself wrote since.
         if (sessionStorage.getItem("stub-seeded")) return;
@@ -234,8 +252,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         localStorage.setItem("miamus_tenant_id", household);
         localStorage.setItem("banyuwangi11:staffId", staff);
         localStorage.setItem("banyuwangi11:staffName", "Ari");
+        if (!couldntTip) localStorage.setItem("miamus.whats-new.staff-couldnt-do-2026-11", "seen");
       },
-      [HOUSEHOLD_ID, STAFF_ID]
+      [HOUSEHOLD_ID, STAFF_ID, options.couldntTip ? "1" : ""]
     );
   }
 
@@ -244,6 +263,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     if (table === "food_items") return answerFood(route, foods, false);
     if (table === "task_logs") return answerLogs(route, logs);
     if (table === "household_tasks") return answerTasks(route, tasks, options.chores, who);
+    if (table === "task_exceptions") return answerExceptions(route, exceptions);
     return route.fulfill({ json: [] });
   }
 
@@ -400,6 +420,16 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         );
       }
       if (table === "repair_notes") return answerRepairNotes(route, repairNotes);
+      // Phase 165 (migrations/139): couldn't-do records and the admin's switches.
+      if (table === "task_exceptions") return answerExceptions(route, exceptions);
+      if (table === "rpc/my_notification_prefs" && who === OWNER) return route.fulfill({ json: [notificationPrefs] });
+      if (table === "rpc/set_my_notification_prefs" && who === OWNER) {
+        const body = request.postDataJSON() ?? {};
+        notificationPrefs.evening_summary_hour = body.p_hour ?? null;
+        notificationPrefs.staff_request_pushes = Boolean(body.p_requests);
+        return route.fulfill({ json: [notificationPrefs] });
+      }
+      if (table === "rpc/household_requests_push_on") return route.fulfill({ json: Boolean(options.requestsPushOn) });
       if (table === "rpc/organise_rooms" && options.rooms) {
         return route.fulfill({ json: organise(request.postDataJSON()?.p_plan, options.rooms, options.chores ?? []) });
       }
@@ -435,6 +465,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     uploads,
     removed,
     repairNotes,
+    exceptions,
+    notificationPrefs,
     kakak,
     household,
     setNetwork(up: boolean) {
@@ -922,4 +954,46 @@ function answerLogs(route: Route, logs: Record<string, unknown>[]) {
   }));
   logs.push(...saved);
   return route.fulfill({ json: saved });
+}
+
+/**
+ * task_exceptions (Phase 165, migrations/139): reads; inserts that keep the
+ * phone's id, refuse a second copy of it (the primary key) and a second
+ * record for the same task-day; deletes only within 5 minutes, answered with
+ * what went (an RLS-filtered delete returns nothing).
+ */
+function answerExceptions(route: Route, rows: Record<string, unknown>[]) {
+  const request = route.request();
+  const method = request.method();
+  const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  if (method === "GET") return route.fulfill({ json: rows });
+  if (method === "POST") {
+    const body = request.postDataJSON();
+    const row: Record<string, unknown> = {
+      chore_id: null,
+      schedule_id: null,
+      entity_id: null,
+      slot_time: null,
+      note: null,
+      photo_url: null,
+      inventory_item_id: null,
+      staff_id: null,
+      ...(Array.isArray(body) ? body[0] : body),
+      created_at: new Date().toISOString(),
+    };
+    if (rows.some((r) => r.id === row.id)) return duplicateKey(route, "task_exceptions_pkey");
+    if (row.chore_id && rows.some((r) => r.chore_id === row.chore_id && r.occurs_on === row.occurs_on)) {
+      return duplicateKey(route, "task_exceptions_chore_day_key");
+    }
+    rows.push(row);
+    return route.fulfill({ json: one ? row : [row] });
+  }
+  if (method === "DELETE") {
+    const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
+    const index = rows.findIndex(
+      (r) => r.id === id && Date.now() - new Date(String(r.created_at)).getTime() < 5 * 60 * 1000
+    );
+    return route.fulfill({ json: index === -1 ? [] : rows.splice(index, 1).map((r) => ({ id: r.id })) });
+  }
+  return route.fulfill({ json: [] });
 }
