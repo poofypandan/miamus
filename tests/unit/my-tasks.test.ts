@@ -51,12 +51,15 @@ describe("myOccurrences", () => {
     expect(myOccurrences(day(rows), ME).map((o) => o.task.title)).toEqual(["Water the plants"]);
   });
 
-  it("keeps an unassigned chore I finished, so finishing never drops a row", () => {
+  it("keeps any chore I finished, so finishing never drops a row", () => {
     const rows = [
       chore({ title: "Take out the trash", status: "completed", completed_by: ME }),
+      // Covered for Ari on leave and finished with photos: still stored as Ari's.
+      chore({ title: "Covered for Ari", assigned_to: ARI, status: "completed", completed_by: ME }),
       chore({ title: "Done by Ari", status: "completed", completed_by: ARI }),
+      chore({ title: "Ari's, done by Ari", assigned_to: ARI, status: "completed", completed_by: ARI }),
     ];
-    expect(myOccurrences(day(rows), ME).map((o) => o.task.title)).toEqual(["Take out the trash"]);
+    expect(myOccurrences(day(rows), ME).map((o) => o.task.title).sort()).toEqual(["Covered for Ari", "Take out the trash"]);
   });
 
   it("puts carried-over first (oldest first), then open, then done", () => {

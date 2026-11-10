@@ -233,6 +233,22 @@ test("covering the first day of a repeat for someone on leave needs photos, and 
   // Nothing was written: the repeat is still Ari's, and still open.
   expect(water).toMatchObject({ assigned_to: STAFF_ID, status: "pending" });
   expect(stub.writes.filter(([, table]) => table === "household_tasks")).toEqual([]);
+
+  // With both photos it finishes, still stored as Ari's, and stays in My
+  // tasks so it can be opened again (Codex, PR #58).
+  const photo = await photoBuffer();
+  for (let i = 0; i < 2; i++) {
+    const chooser = page.waitForEvent("filechooser");
+    await sheet.getByRole("button", { name: "Take photo" }).first().click();
+    await (await chooser).setFiles({ name: `p${i}.jpg`, mimeType: "image/jpeg", buffer: photo });
+    await expect(sheet.getByRole("button", { name: "Take photo" })).toHaveCount(1 - i, { timeout: 20_000 });
+  }
+  await sheet.getByRole("button", { name: "Mark done" }).click();
+  await expect(page.getByText("Done: Water the garden")).toBeVisible({ timeout: 20_000 });
+  expect(water).toMatchObject({ assigned_to: STAFF_ID, status: "completed", completed_by: OWNER_PROFILE_ID });
+  await page.getByRole("button", { name: "Your task is done" }).click();
+  await card.getByRole("button", { name: /^Anytime Water the garden/ }).click();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Mark not done" })).toBeVisible();
 });
 
 test("a carried-over chore finished today can be marked not done from its own day", async ({ context, page }) => {

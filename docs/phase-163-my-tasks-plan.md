@@ -96,9 +96,11 @@ there, in your own language; no switch to the staff view.
 ## What "mine" means (D2)
 
 **Assigned to me**: chores whose `assigned_to` is my roster row, on the day
-being viewed, plus my carried-over ones on today. Also any unassigned chore I
-finished myself that day (it lands on me, as it does in Chores progress), so
-finishing never makes a row disappear from my card.
+being viewed, plus my carried-over ones on today. Also any chore I finished
+myself that day, so finishing never makes a row disappear from my card: an
+unassigned one, or one I covered for someone on leave and finished with
+photos, which stays stored under them (widened from "unassigned ones I
+finished" while building; Codex, PR #58).
 
 Unclaimed chores ("Anyone") stay in the day's list. Taking one is already
 possible: open it and pick yourself under **Who** in the chore form.
