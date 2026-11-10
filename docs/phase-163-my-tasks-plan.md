@@ -164,7 +164,7 @@ need a decision from the owner, above the household's list.
 | Row, carried over | carried over | terbawa dari kemarin |
 | Circle (aria) | Mark done: {title} | Tandai selesai: {title} |
 | Toast after finishing | Done: {title} | Selesai: {title} |
-| Toast action | Undo | Urungkan |
+| Toast action | Undo | Batalkan |
 | All done line | Your {n} tasks are done · Your task is done | {n} tugas Anda sudah selesai · Tugas Anda sudah selesai |
 | Sheet button | Mark done | Tandai selesai |
 | Sheet, photos | Add photos (optional) | Tambah foto (opsional) |
@@ -192,7 +192,7 @@ not in this plan's PR:
 | --- | --- |
 | My tasks (owner's card on Today) | **Tugas saya** |
 | Mark done / Mark not done | **Tandai selesai** / **Tandai belum selesai** |
-| Undo (toast action) | **Urungkan** |
+| Undo (toast action) | **Batalkan** (already used for Undo in four toasts; never "Urungkan") |
 | Add photos (optional), owner sheet | **Tambah foto (opsional)** |
 
 ## Staff text
