@@ -1,6 +1,6 @@
 # North star measurement (Phase 172 PR 0)
 
-Migration 145 (`supabase/migrations/145_household_setup_measurement.sql`).
+Migration 142 (`supabase/migrations/142_household_setup_measurement.sql`).
 Plan: `docs/phase-172-first-ten-minutes-plan.md`, section 6 (D13 A, D14 A).
 Counts only, never content.
 
@@ -36,7 +36,7 @@ it is 14 days old, S5 at 21, S4 at 28.
 
 ## The evening-review hook
 
-Once migration 145 is on production, add this to "How it's used" in both
+Once migration 142 is on production, add this to "How it's used" in both
 review prompts (`~/.claude/scheduled-tasks/miamus-evening-review/SKILL.md`
 and `miamus-sunday-review/SKILL.md`). Until then the function doesn't exist
 there, and the prompt says to skip it.

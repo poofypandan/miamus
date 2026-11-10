@@ -23,7 +23,7 @@ import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
- * The north star in numbers (Phase 172 PR 0, migrations/145): S1–S5 with
+ * The north star in numbers (Phase 172 PR 0, migrations/142): S1–S5 with
  * their targets, then the same per sign-up week. Platform admins only — the
  * database refuses everyone else (42501) and this page says "Not available".
  * Counts, medians and shares only: the function returns no names, emails or

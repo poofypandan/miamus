@@ -1,11 +1,11 @@
--- Migration 145 checks: the setup row and its writer (members only, known
+-- Migration 142 checks: the setup row and its writer (members only, known
 -- keys, whole numbers added and capped, never negative); what was due on a
 -- day and what was closed (S3); the north-star report per sign-up week
 -- (S1, S2, S4, S5) with no names, emails or household ids; who may read it;
 -- kakak_requests.job; the export; the grants.
 -- LOCAL DATABASE ONLY. One transaction, rolled back:
 --   PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -X -q -t \
---     -f supabase/tests/145_household_setup_measurement.sql
+--     -f supabase/tests/142_household_setup_measurement.sql
 \set ON_ERROR_STOP on
 \pset footer off
 begin;
@@ -70,33 +70,33 @@ create function pg_temp.at(days_back int, h int, m int default 0) returns timest
 insert into auth.users (id, instance_id, aud, role, email, is_anonymous, created_at, updated_at)
 select id::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', email, anon, now(), now()
 from (values
-  ('00000000-0000-0000-0000-0000000145a1', 'one145@test.local', false),
-  ('00000000-0000-0000-0000-0000000145a9', 'nine145@test.local', false),
-  ('00000000-0000-0000-0000-0000000145aa', 'admin145@test.local', false),
-  ('00000000-0000-0000-0000-0000000145b1', null, true)
+  ('00000000-0000-0000-0000-0000000142a1', 'one142@test.local', false),
+  ('00000000-0000-0000-0000-0000000142a9', 'nine142@test.local', false),
+  ('00000000-0000-0000-0000-0000000142aa', 'admin142@test.local', false),
+  ('00000000-0000-0000-0000-0000000142b1', null, true)
 ) as u(id, email, anon);
-insert into public.platform_admins (user_id) values ('00000000-0000-0000-0000-0000000145aa');
+insert into public.platform_admins (user_id) values ('00000000-0000-0000-0000-0000000142aa');
 insert into public.households (id, name, owner_auth_id, created_at) values
-  ('00000000-0000-0000-0000-0000000145f1', 'Rumah Melati', '00000000-0000-0000-0000-0000000145a1', pg_temp.at(30, 8)),
-  ('00000000-0000-0000-0000-0000000145f2', 'Rumah Kenanga', '00000000-0000-0000-0000-0000000145a9', pg_temp.at(25, 9));
+  ('00000000-0000-0000-0000-0000000142f1', 'Rumah Melati', '00000000-0000-0000-0000-0000000142a1', pg_temp.at(30, 8)),
+  ('00000000-0000-0000-0000-0000000142f2', 'Rumah Kenanga', '00000000-0000-0000-0000-0000000142a9', pg_temp.at(25, 9));
 insert into public.household_access_requests (user_id, status, requested_at, decided_at) values
-  ('00000000-0000-0000-0000-0000000145a1', 'approved', pg_temp.at(30, 6), pg_temp.at(30, 7));
+  ('00000000-0000-0000-0000-0000000142a1', 'approved', pg_temp.at(30, 6), pg_temp.at(30, 7));
 insert into public.household_members (household_id, user_id, role) values
-  ('00000000-0000-0000-0000-0000000145f1', '00000000-0000-0000-0000-0000000145a1', 'owner'),
-  ('00000000-0000-0000-0000-0000000145f2', '00000000-0000-0000-0000-0000000145a9', 'owner');
+  ('00000000-0000-0000-0000-0000000142f1', '00000000-0000-0000-0000-0000000142a1', 'owner'),
+  ('00000000-0000-0000-0000-0000000142f2', '00000000-0000-0000-0000-0000000142a9', 'owner');
 insert into public.device_sessions (user_id, household_id) values
-  ('00000000-0000-0000-0000-0000000145b1', '00000000-0000-0000-0000-0000000145f1');
+  ('00000000-0000-0000-0000-0000000142b1', '00000000-0000-0000-0000-0000000142f1');
 insert into public.staff_profiles (id, household_id, name, created_at) values
-  ('00000000-0000-0000-0000-0000000145c1', '00000000-0000-0000-0000-0000000145f1', 'Sari', pg_temp.at(30, 9));
+  ('00000000-0000-0000-0000-0000000142c1', '00000000-0000-0000-0000-0000000142f1', 'Sari', pg_temp.at(30, 9));
 insert into public.household_locations (household_id, name, kind, created_at) values
-  ('00000000-0000-0000-0000-0000000145f1', 'Dapur', 'room', pg_temp.at(30, 9)),
-  ('00000000-0000-0000-0000-0000000145f1', 'Teras', 'room', pg_temp.at(29, 9));
+  ('00000000-0000-0000-0000-0000000142f1', 'Dapur', 'room', pg_temp.at(30, 9)),
+  ('00000000-0000-0000-0000-0000000142f1', 'Teras', 'room', pg_temp.at(29, 9));
 
-\set a1 '''00000000-0000-0000-0000-0000000145a1'''
-\set a9 '''00000000-0000-0000-0000-0000000145a9'''
-\set pa '''00000000-0000-0000-0000-0000000145aa'''
-\set p1 '''00000000-0000-0000-0000-0000000145b1'''
-\set f1 '''00000000-0000-0000-0000-0000000145f1'''
+\set a1 '''00000000-0000-0000-0000-0000000142a1'''
+\set a9 '''00000000-0000-0000-0000-0000000142a9'''
+\set pa '''00000000-0000-0000-0000-0000000142aa'''
+\set p1 '''00000000-0000-0000-0000-0000000142b1'''
+\set f1 '''00000000-0000-0000-0000-0000000142f1'''
 
 -- ---- The writer ----------------------------------------------------------------------
 select pg_temp.ok(pg_temp.err_as(:a1, format(
@@ -169,28 +169,28 @@ select pg_temp.ok((select typed_fields = 4 from public.household_setup where hou
 -- cancelled. k5 Sari's one-off yesterday, while she was on leave with her
 -- chores paused. Mochi: food at 08.00 and 18.00, logged at 08.05 only.
 insert into public.household_tasks (id, household_id, title, recurrence, due_date, status, assigned_to, created_at) values
-  ('00000000-0000-0000-0000-0000000145d1', :f1, 'Sapu', 'daily', pg_temp.today() - 5, 'pending', null, now() - interval '6 days'),
-  ('00000000-0000-0000-0000-0000000145d2', :f1, 'Pel', 'none', pg_temp.today() - 1, 'pending', null, now() - interval '2 days'),
-  ('00000000-0000-0000-0000-0000000145d3', :f1, 'Kaca', 'none', pg_temp.today() - 1, 'pending', null, now() - interval '2 days'),
-  ('00000000-0000-0000-0000-0000000145d4', :f1, 'Batal', 'none', pg_temp.today() - 1, 'cancelled', null, now() - interval '2 days'),
-  ('00000000-0000-0000-0000-0000000145d5', :f1, 'Cuci', 'none', pg_temp.today() - 1, 'pending',
-   '00000000-0000-0000-0000-0000000145c1', now() - interval '2 days');
+  ('00000000-0000-0000-0000-0000000142d1', :f1, 'Sapu', 'daily', pg_temp.today() - 5, 'pending', null, now() - interval '6 days'),
+  ('00000000-0000-0000-0000-0000000142d2', :f1, 'Pel', 'none', pg_temp.today() - 1, 'pending', null, now() - interval '2 days'),
+  ('00000000-0000-0000-0000-0000000142d3', :f1, 'Kaca', 'none', pg_temp.today() - 1, 'pending', null, now() - interval '2 days'),
+  ('00000000-0000-0000-0000-0000000142d4', :f1, 'Batal', 'none', pg_temp.today() - 1, 'cancelled', null, now() - interval '2 days'),
+  ('00000000-0000-0000-0000-0000000142d5', :f1, 'Cuci', 'none', pg_temp.today() - 1, 'pending',
+   '00000000-0000-0000-0000-0000000142c1', now() - interval '2 days');
 insert into public.household_tasks (household_id, title, parent_task_id, due_date, status, completed_by, completed_at,
                                     before_photo_url, after_photo_url, created_at)
-values (:f1, 'Sapu', '00000000-0000-0000-0000-0000000145d1', pg_temp.today() - 1, 'completed',
-        '00000000-0000-0000-0000-0000000145c1', pg_temp.at(1, 9), 'x/b.jpg', 'x/a.jpg', now() - interval '1 day');
+values (:f1, 'Sapu', '00000000-0000-0000-0000-0000000142d1', pg_temp.today() - 1, 'completed',
+        '00000000-0000-0000-0000-0000000142c1', pg_temp.at(1, 9), 'x/b.jpg', 'x/a.jpg', now() - interval '1 day');
 insert into public.task_exceptions (household_id, chore_id, occurs_on, reason)
-values (:f1, '00000000-0000-0000-0000-0000000145d2', pg_temp.today() - 1, 'out_of_stock');
+values (:f1, '00000000-0000-0000-0000-0000000142d2', pg_temp.today() - 1, 'out_of_stock');
 insert into public.leave_requests (household_id, staff_id, start_date, end_date, status, fallback_action)
-values (:f1, '00000000-0000-0000-0000-0000000145c1', pg_temp.today() - 1, pg_temp.today() - 1, 'approved', 'pause');
+values (:f1, '00000000-0000-0000-0000-0000000142c1', pg_temp.today() - 1, pg_temp.today() - 1, 'approved', 'pause');
 insert into public.task_entities (id, household_id, entity_type, name, created_at)
-values ('00000000-0000-0000-0000-0000000145e1', :f1, 'pet', 'Mochi', now() - interval '3 days');
+values ('00000000-0000-0000-0000-0000000142e1', :f1, 'pet', 'Mochi', now() - interval '3 days');
 insert into public.master_schedules (id, entity_id, title, module, frequency_type, fixed_times, is_active, created_at)
-values ('00000000-0000-0000-0000-000000014501', '00000000-0000-0000-0000-0000000145e1', 'Makan', 'pet', 'fixed_time',
+values ('00000000-0000-0000-0000-000000014201', '00000000-0000-0000-0000-0000000142e1', 'Makan', 'pet', 'fixed_time',
         array['08:00'::time, '18:00'::time], true, now() - interval '3 days');
 insert into public.task_logs (schedule_id, entity_id, module, completed_at, staff_id)
-values ('00000000-0000-0000-0000-000000014501', '00000000-0000-0000-0000-0000000145e1', 'pet', pg_temp.at(1, 8, 5),
-        '00000000-0000-0000-0000-0000000145c1');
+values ('00000000-0000-0000-0000-000000014201', '00000000-0000-0000-0000-0000000142e1', 'pet', pg_temp.at(1, 8, 5),
+        '00000000-0000-0000-0000-0000000142c1');
 
 select pg_temp.ok((select due = 5 and closed = 3 from public.north_star_day(pg_temp.today() - 1) where household_id = :f1::uuid),
   'yesterday: 3 chores and 2 routine slots due (not the cancelled one, not Sari''s paused one); 3 closed');
@@ -204,20 +204,20 @@ select pg_temp.ok(not exists (select 1 from public.north_star_day(pg_temp.today(
 -- three more in week 4 (days 21–27): one roster member, three finishes.
 insert into public.household_tasks (household_id, title, due_date, status, completed_by, completed_at,
                                     before_photo_url, after_photo_url, created_at)
-select :f1::uuid, 'Selesai', pg_temp.today() - back, 'completed', '00000000-0000-0000-0000-0000000145c1'::uuid,
+select :f1::uuid, 'Selesai', pg_temp.today() - back, 'completed', '00000000-0000-0000-0000-0000000142c1'::uuid,
        pg_temp.at(back, 10), 'x/b.jpg', 'x/a.jpg', pg_temp.at(back, 9)
 from (values (30), (8), (7), (6)) as v(back);
 -- f1: three quick Kakak requests in week 3 (and earlier, so she was tried).
 -- f2: two quick and one setup request in week 3: tried, not a repeat.
 insert into public.kakak_requests (household_id, user_id, created_at, job) values
   (:f1, :a1, pg_temp.at(15, 9), 'quick'), (:f1, :a1, pg_temp.at(15, 10), 'quick'), (:f1, :a1, pg_temp.at(14, 9), 'quick'),
-  ('00000000-0000-0000-0000-0000000145f2', :a9, pg_temp.at(10, 9), 'quick'),
-  ('00000000-0000-0000-0000-0000000145f2', :a9, pg_temp.at(9, 9), 'quick'),
-  ('00000000-0000-0000-0000-0000000145f2', :a9, pg_temp.at(8, 9), 'setup');
+  ('00000000-0000-0000-0000-0000000142f2', :a9, pg_temp.at(10, 9), 'quick'),
+  ('00000000-0000-0000-0000-0000000142f2', :a9, pg_temp.at(9, 9), 'quick'),
+  ('00000000-0000-0000-0000-0000000142f2', :a9, pg_temp.at(8, 9), 'setup');
 
 -- f2 started setup and left half-way: not counted in the setup medians.
 insert into public.household_setup (household_id, started_at, active_seconds, typed_fields)
-values ('00000000-0000-0000-0000-0000000145f2', pg_temp.at(25, 10), 20, 0);
+values ('00000000-0000-0000-0000-0000000142f2', pg_temp.at(25, 10), 20, 0);
 -- A room stamped before f1 existed (old or imported data) isn't "added by hand".
 insert into public.household_locations (household_id, name, kind, created_at)
 values (:f1, 'Gudang', 'room', pg_temp.at(31, 9));
@@ -251,7 +251,7 @@ select pg_temp.ok((select sum((w ->> 'households')::int) = 2 from r, jsonb_array
 select pg_temp.ok((select (w #>> '{paths,template}')::int = 1 from r, jsonb_array_elements(j -> 'weeks') w
                     where (w ->> 'setup_households')::int = 1),
   'its week shows the template path');
-select pg_temp.ok((select j::text !~* '(melati|kenanga|sari|mochi|@test\.local|0000000145)' from r),
+select pg_temp.ok((select j::text !~* '(melati|kenanga|sari|mochi|@test\.local|0000000142)' from r),
   'no names, emails or ids anywhere in it');
 select pg_temp.ok((select jsonb_array_length(public.north_star_report(99) -> 'weeks') = 26
                           and jsonb_array_length(public.north_star_report(0) -> 'weeks') = 1),
@@ -272,14 +272,14 @@ select pg_temp.ok(pg_temp.err_as(:pa, format('select * from public.north_star_da
                   like '%permission denied%', '... nor the day counts');
 
 -- ---- kakak_requests.job -----------------------------------------------------------------
-insert into public.kakak_requests (id, household_id) values ('00000000-0000-0000-0000-00000014500a', :f1);
-select pg_temp.ok((select job = 'quick' from public.kakak_requests where id = '00000000-0000-0000-0000-00000014500a'),
+insert into public.kakak_requests (id, household_id) values ('00000000-0000-0000-0000-00000014200a', :f1);
+select pg_temp.ok((select job = 'quick' from public.kakak_requests where id = '00000000-0000-0000-0000-00000014200a'),
   'a request is quick unless it says otherwise');
 select pg_temp.ok((select pg_get_constraintdef(oid) like '%quick%setup%' from pg_constraint
                      where conname = 'kakak_requests_job_check' and conrelid = 'public.kakak_requests'::regclass),
   'the job check lists quick and setup');
 do $$ begin
-  insert into public.kakak_requests (household_id, job) values ('00000000-0000-0000-0000-0000000145f1', 'other');
+  insert into public.kakak_requests (household_id, job) values ('00000000-0000-0000-0000-0000000142f1', 'other');
   raise exception 'FAIL: an unknown job was accepted';
 exception when check_violation then null;
 end $$;
@@ -323,11 +323,11 @@ select pg_temp.ok((select prosecdef and proconfig @> array['search_path=""']
 
 -- ---- A household made today that already has a first finish (review fix) -------------------
 insert into public.households (id, name, created_at)
-values ('00000000-0000-0000-0000-0000000145f3', 'Rumah Anggrek', (pg_temp.today() + time '00:00') at time zone 'Asia/Jakarta');
+values ('00000000-0000-0000-0000-0000000142f3', 'Rumah Anggrek', (pg_temp.today() + time '00:00') at time zone 'Asia/Jakarta');
 insert into public.staff_profiles (id, household_id, name)
-values ('00000000-0000-0000-0000-0000000145c3', '00000000-0000-0000-0000-0000000145f3', 'Wati');
+values ('00000000-0000-0000-0000-0000000142c3', '00000000-0000-0000-0000-0000000142f3', 'Wati');
 insert into public.household_tasks (household_id, title, due_date, status, completed_by, completed_at, before_photo_url, after_photo_url)
-values ('00000000-0000-0000-0000-0000000145f3', 'Sapu', pg_temp.today(), 'completed', '00000000-0000-0000-0000-0000000145c3',
+values ('00000000-0000-0000-0000-0000000142f3', 'Sapu', pg_temp.today(), 'completed', '00000000-0000-0000-0000-0000000142c3',
         now(), 'x/b.jpg', 'x/a.jpg');
 select pg_temp.ok((select (j #>> '{summary,same_day}')::int = 2 and (j #>> '{summary,same_day_of}')::int = 3
                      from (select public.north_star_report(8) as j) x),
@@ -339,15 +339,15 @@ select pg_temp.ok((select (j #>> '{summary,same_day}')::int = 2 and (j #>> '{sum
 -- chore from 8 days ago (due yesterday, open) with a written day 2 days
 -- ago, off its pattern, done.
 insert into public.master_schedules (entity_id, title, module, frequency_type, start_time, end_time, interval_hours, is_active, created_at)
-values ('00000000-0000-0000-0000-0000000145e1', 'Pipis', 'pet', 'interval', '08:00', '16:00', 4, true, now() - interval '3 days'),
-       ('00000000-0000-0000-0000-0000000145e1', 'Rusak', 'pet', 'interval', '08:00', '16:00', 0, true, now() - interval '3 days');
+values ('00000000-0000-0000-0000-0000000142e1', 'Pipis', 'pet', 'interval', '08:00', '16:00', 4, true, now() - interval '3 days'),
+       ('00000000-0000-0000-0000-0000000142e1', 'Rusak', 'pet', 'interval', '08:00', '16:00', 0, true, now() - interval '3 days');
 insert into public.task_logs (schedule_id, entity_id, module, completed_at)
 select id, entity_id, 'pet', pg_temp.at(1, 12, 5) from public.master_schedules where title = 'Pipis'
-   and entity_id = '00000000-0000-0000-0000-0000000145e1';
+   and entity_id = '00000000-0000-0000-0000-0000000142e1';
 insert into public.household_tasks (id, household_id, title, recurrence, due_date, status, created_at)
-values ('00000000-0000-0000-0000-0000000145d6', :f1, 'Kaca jendela', 'weekly', pg_temp.today() - 8, 'pending', now() - interval '9 days');
+values ('00000000-0000-0000-0000-0000000142d6', :f1, 'Kaca jendela', 'weekly', pg_temp.today() - 8, 'pending', now() - interval '9 days');
 insert into public.household_tasks (household_id, title, parent_task_id, due_date, status, completed_at, before_photo_url, after_photo_url)
-values (:f1, 'Kaca jendela', '00000000-0000-0000-0000-0000000145d6', pg_temp.today() - 2, 'completed', pg_temp.at(2, 9),
+values (:f1, 'Kaca jendela', '00000000-0000-0000-0000-0000000142d6', pg_temp.today() - 2, 'completed', pg_temp.at(2, 9),
         'x/b.jpg', 'x/a.jpg');
 select pg_temp.ok((select due = 9 and closed = 4 from public.north_star_day(pg_temp.today() - 1) where household_id = :f1::uuid),
   'yesterday adds 3 interval slots (1 closed) and the weekly chore (open): 9 due, 4 closed');

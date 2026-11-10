@@ -1,7 +1,7 @@
 import { expect, test, type BrowserContext } from "@playwright/test";
 import { STUB_URL, installStub } from "./stub-backend";
 
-// The north star in numbers (Phase 172 PR 0, migrations/145): platform
+// The north star in numbers (Phase 172 PR 0, migrations/142): platform
 // admins reach it from Household requests and read S1–S5 with their targets
 // and a card per sign-up week; anyone else gets "Not available". The
 // database decides who may read it (platform_north_star() raises 42501);

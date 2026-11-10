@@ -84,7 +84,7 @@ export const LEGAL = {
   // notification says only whose it is; none 21.00–06.00. Deleted with the
   // phone, when turned off, or when the push service drops the phone. No new
   // service (the same Apple, Google, Microsoft and Mozilla push services).
-  // 2026-11-10.7: usage counts (Phase 172 PR 0, migrations/145) — how long
+  // 2026-11-10.7: usage counts (Phase 172 PR 0, migrations/142) — how long
   // setting up a household took, how many things it added, how many fields
   // were typed, and when tasks are first finished; numbers only, never
   // content. Read by Poofy Labs as totals across households, without names;

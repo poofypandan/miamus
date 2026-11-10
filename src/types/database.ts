@@ -1007,7 +1007,7 @@ export interface Database {
         Args: { p_user_id: string; p_approve: boolean };
         Returns: undefined;
       };
-      // Setup counts and the north star (migrations/145, Phase 172 PR 0).
+      // Setup counts and the north star (migrations/142, Phase 172 PR 0).
       // Members of the household only; numbers are added, never negative.
       record_household_setup: {
         Args: { p_household: string; p_fields: Record<string, string | number> };

@@ -1,5 +1,5 @@
 /**
- * The north star in numbers (Phase 172 PR 0, migrations/145).
+ * The north star in numbers (Phase 172 PR 0, migrations/142).
  *
  * platform_north_star() returns S1–S5 per sign-up week plus a summary, as
  * counts, medians and shares only: no names, emails or household ids. This

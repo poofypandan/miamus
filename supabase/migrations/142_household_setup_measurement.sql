@@ -1,11 +1,16 @@
 -- ============================================================================
--- 145 — Measurement first: setup counts and the north star (Phase 172, PR 0)
+-- 142 — Measurement first: setup counts and the north star (Phase 172, PR 0)
 -- ============================================================================
 -- docs/phase-172-first-ten-minutes-plan.md, section 6; owner decisions
 -- (2026-11-10): A for D1–D15. D13 A: one row of numbers per household plus
 -- what can be derived from data Miamus already stores. D14 A: measurement
 -- ships first, so the "before" numbers exist before the new first run does.
 -- Counts only, never content.
+--
+-- Numbered 142, not the 145 first reserved: from 10 November each migration
+-- takes the next free number above the highest on main when it is built
+-- (manager), so a file re-creating export_household_data never sorts before
+-- an older one. 142–144 are no longer held for staff pay, closet and kitchen.
 --
 -- NEW
 --   household_setup            one row per household: home type, path, who
@@ -734,7 +739,7 @@ begin
       left join public.staff_profiles s on s.id = a.staff_id
       where a.household_id = hh
     ), '[]'::jsonb),
-    -- Setting up the household, as numbers only (migrations/145); null until
+    -- Setting up the household, as numbers only (migrations/142); null until
     -- the setup screens record it.
     'setup', (
       select to_jsonb(su) - 'household_id'

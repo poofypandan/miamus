@@ -60,7 +60,7 @@ select pg_temp.ok((select array_agg(table_name || '.' || column_name order by ta
                      from information_schema.columns
                     where table_schema = 'public' and table_name like 'kakak\_%'
                       and data_type in ('text', 'character varying', 'character', 'ARRAY', 'json', 'jsonb', 'bytea', 'USER-DEFINED'))
-                  -- job: 'quick' or 'setup', a checked value (migrations/145).
+                  -- job: 'quick' or 'setup', a checked value (migrations/142).
                   = array['kakak_requests.job', 'kakak_requests.model', 'kakak_requests.outcome', 'kakak_requests.result', 'kakak_requests.tools'],
   'the only text columns are job, model, outcome, result and tools');
 select pg_temp.ok((select bool_and(exists (

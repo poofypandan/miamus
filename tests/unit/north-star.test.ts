@@ -10,7 +10,7 @@ import {
   signalTiles,
 } from "@/lib/north-star";
 
-// What platform_north_star() answers (migrations/145), trimmed to two weeks.
+// What platform_north_star() answers (migrations/142), trimmed to two weeks.
 const answer = {
   as_of: "2026-11-10",
   weeks_requested: 2,
