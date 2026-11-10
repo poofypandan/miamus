@@ -15,6 +15,7 @@
 // Never on production: practiceAllowed() refuses when Vercel says so.
 import type Anthropic from "@anthropic-ai/sdk";
 import { addDays, weekdayIndex, type KakakHousehold } from "./household";
+import { splitRefinementNote } from "./refine";
 
 /** Practice mode is on only when asked for, and never on production. */
 export function practiceAllowed(env: Record<string, string | undefined>): boolean {
@@ -128,10 +129,35 @@ function clip(text: string, max: number): string {
   return trimmed.length > max ? `${trimmed.slice(0, max - 1).trimEnd()}…` : trimmed;
 }
 
+/**
+ * "Remind me the day before" / "ingatkan sehari sebelumnya" (migrations/137):
+ * the days of warning asked for, longest phrase first, or null. "Remind me"
+ * with no lead time is on the day, as the real Kakak is told.
+ */
+const REMIND_LEADS: [RegExp, number][] = [
+  [/\b(?:a|1|one) week before\b|\b(?:seminggu|1 minggu) sebelum(?:nya)?\b|\bh-7\b/i, 7],
+  [/\b(?:3|three) days before\b|\b3 hari sebelum(?:nya)?\b|\bh-3\b/i, 3],
+  [/\bthe day before\b|\b(?:1|one) day before\b|\b(?:sehari|1 hari) sebelum(?:nya)?\b|\bh-1\b/i, 1],
+  [/\bon the day\b|\bpada harinya\b|\bremind me\b|\bingatkan saya\b/i, 0],
+];
+
+/** -1: the card chips' note turned the reminder off ("no reminder"). */
+function remindFrom(text: string): number | null {
+  if (/\bno reminder\b/i.test(text)) return -1;
+  return REMIND_LEADS.find(([pattern]) => pattern.test(text))?.[1] ?? null;
+}
+
+/** "Ingatkan saya …" / "Remind me to …": a chore for the owner (M1), as the real Kakak does. */
+const REMIND_ME = /\b(?:ingatkan saya(?: untuk)?|remind me(?: to)?)\b/i;
+
 /** The chore's own words: the sentence without who, when and what time. */
 function choreTitle(household: KakakHousehold, sentence: string): string {
   const people = [...household.people, household.owner].map((p) => p.name.toLowerCase().split(/\s+/)[0]);
   return sentence
+    .replace(/,?\s*(?:remind me|ingatkan saya)\s+(?:a week|one week|1 week|3 days|three days|the day|1 day|one day)\s+before\b/gi, " ")
+    .replace(/,?\s*ingatkan saya\s+(?:seminggu|1 minggu|3 hari|sehari|1 hari)\s+sebelum(?:nya)?\b/gi, " ")
+    .replace(/,?\s*(?:remind me|ingatkan saya)\s+(?:on the day|pada harinya)\b/gi, " ")
+    .replace(REMIND_ME, " ")
     .replace(/\b(?:jam|pukul|at)\s+\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?\b/gi, " ")
     .replace(/\b\d{1,2}[:.]\d{2}\s*(?:am|pm)?\b/gi, " ")
     .replace(/\b\d{1,2}\s*(?:am|pm)\b/gi, " ")
@@ -167,6 +193,7 @@ const EN_TASKS: [RegExp, string, boolean][] = [
   [/\b(?:fix(?:es)?|repairs?)\b/, "Perbaiki", true],
 ];
 const EN_THINGS: [RegExp, string][] = [
+  [/\b(?:ac|air ?con(?:ditioner)?)(?: filters?)?\b/, "filter AC"],
   [/\bliving room\b/, "ruang tamu"],
   [/\bbathroom\b/, "kamar mandi"],
   [/\bbedroom\b/, "kamar tidur"],
@@ -301,6 +328,17 @@ interface Conversation {
   changed: boolean;
 }
 
+/**
+ * The owner's words, after the card chips' note when there is one: the note
+ * goes in first, as if said earlier, so the newest-words-win reading below
+ * lets "Tuesday instead" beat the chips' "every monday" (Codex, PR #68).
+ */
+function pushOwner(said: string[], text: string) {
+  const { note, words } = splitRefinementNote(text);
+  if (note) said.push(note);
+  if (words) said.push(words);
+}
+
 function readConversation(messages: Anthropic.MessageParam[]): Conversation {
   const said: string[] = [];
   let asked = 0;
@@ -313,7 +351,7 @@ function readConversation(messages: Anthropic.MessageParam[]): Conversation {
       return;
     }
     if (typeof message.content === "string") {
-      said.push(message.content);
+      pushOwner(said, message.content);
       return;
     }
     for (const block of message.content) {
@@ -325,7 +363,7 @@ function readConversation(messages: Anthropic.MessageParam[]): Conversation {
       }
       if (content.startsWith("Not saved. The owner says: ")) changed = true;
       const owner = content.replace(/^Not saved\. The owner says: /, "").replace(/\n\(That was the third question[\s\S]*$/, "");
-      if (owner && owner !== "Not saved.") said.push(owner);
+      if (owner && owner !== "Not saved.") pushOwner(said, owner);
     }
   });
   return { said, asked, corrected, changed };
@@ -491,7 +529,16 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
     }
     return null;
   };
-  const plan = latest((w) => whenFrom(w, household.today)) ?? when ?? { days: [household.today], recurrence: "none" as const };
+  // The card chips' note says "one time" or "for anyone" (lib/kakak/refine.ts):
+  // those count too, unless the owner's newer words name a day or a person.
+  const ONE_TIME = /\bone time\b/i;
+  const ANYONE = /\bfor anyone\b/i;
+  const firstDay = (when ?? { days: [household.today] }).days[0];
+  const plan =
+    latest((w) => whenFrom(w, household.today) ?? (ONE_TIME.test(w) ? { days: [firstDay], recurrence: "none" as const } : null)) ??
+    when ?? { days: [household.today], recurrence: "none" as const };
+  const remind = latest((w) => remindFrom(w));
+  const person = latest((w) => findPerson(household, w) ?? (ANYONE.test(w) ? "anyone" : null));
   const time = latest((w) => timesFrom(w)[0] ?? null);
   const room = latest((w) => findRef(household.rooms, w));
   const typed = clip(capitalise(choreTitle(household, first)), 80) || clip(capitalise(first), 80);
@@ -505,7 +552,7 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
       // The owner's English, when they typed it; the title itself is Indonesian.
       title_en: englishTyped ? typed : household.ownerLocale === "en" ? title : null,
       category: has(first, /\b(perbaiki|benerin|repair|fix|servis|service)\b/) ? "maintenance" : "cleaning",
-      assignee: latest((w) => findPerson(household, w)),
+      assignee: person === "anyone" ? null : (person ?? (REMIND_ME.test(first) ? household.owner.ref : null)),
       due_date: day,
       due_time: time,
       recurrence: plan.recurrence,
@@ -515,6 +562,7 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
       new_room_name: null,
       new_room_floor: null,
       notes: null,
+      remind_days_before: remind === -1 ? null : remind,
     }),
   );
   return message(model, [text(copy.here), ...calls]);

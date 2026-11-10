@@ -11,7 +11,9 @@ export type ProposalStatus = "pending" | "approved" | "rejected";
 // What a household chore is about (migrations/082). Distinct from Module and
 // from ScheduleCategoryName: those describe work on a dog, these describe work
 // on the house.
-export type HouseholdTaskCategory = "cleaning" | "maintenance" | "errand" | "groceries";
+// "bill" (Phase 164, migrations/137): something the house pays on a date,
+// usually an owner's own task. No database CHECK, so no migration was needed.
+export type HouseholdTaskCategory = "cleaning" | "maintenance" | "errand" | "groceries" | "bill";
 // "cancelled" is in the vocabulary but written by nothing yet — it is here so
 // retiring a chore later needs no migration. Every read path must still handle
 // it rather than assuming pending-or-completed.
@@ -425,6 +427,18 @@ export type HouseholdTask = {
    * until that migration.
    */
   repair_id?: string | null;
+  /**
+   * Every N weeks or months (migrations/137), read with "weekly" and
+   * "monthly"; 1–12, default 1. A year is monthly with 12. Optional: absent
+   * until that migration, and then 1.
+   */
+  recurrence_interval?: number | null;
+  /**
+   * "Remind me" (migrations/137): null for none, 0 on the day, or 1, 3 or 7
+   * days before. A 07:00 push to the owner it's for, and the Coming up line
+   * on Today. Optional: absent until that migration.
+   */
+  remind_days_before?: number | null;
 };
 
 /** Where a repair stands (migrations/130). "Scheduled" and "work done" are read from its visits. */
@@ -488,6 +502,27 @@ export type RepairCost = {
   /** owner-receipts bucket, readable by the household's owners only. */
   receipt_url: string | null;
   note: string | null;
+  created_by: string | null;
+  updated_at: string;
+};
+
+/**
+ * What a bill cost and its receipt, for one paid day (Phase 164 PR B,
+ * migrations/138). OWNERS ONLY: staff phones can't read the table, and the
+ * receipt is in the owner-only owner-receipts bucket. Kept 2 years.
+ */
+export type BillPayment = {
+  id: string;
+  household_id: string;
+  /** The paid day's row: a repeat's written day, or a one-off bill. */
+  task_id: string;
+  /** The bill it belongs to (the repeat, or the one-off itself); set by the server. */
+  series_id: string | null;
+  amount_idr: number | null;
+  /** owner-receipts bucket, readable by the household's owners only. */
+  receipt_url: string | null;
+  /** When it was recorded, by the server's clock. */
+  paid_at: string;
   created_by: string | null;
   updated_at: string;
 };
@@ -670,6 +705,12 @@ export interface Database {
         Row: RepairCost;
         Insert: Partial<RepairCost> & Pick<RepairCost, "repair_id" | "household_id">;
         Update: Partial<RepairCost>;
+        Relationships: [];
+      };
+      bill_payments: {
+        Row: BillPayment;
+        Insert: Partial<BillPayment> & Pick<BillPayment, "task_id" | "household_id">;
+        Update: Partial<BillPayment>;
         Relationships: [];
       };
       repair_notes: {
@@ -952,6 +993,12 @@ export interface Database {
       rotate_house_code: {
         Args: { p_household_id: string };
         Returns: string;
+      };
+      // Marks a paid bill's day not paid: payment removed and day reopened in
+      // one transaction (migrations/138).
+      reopen_bill_day: {
+        Args: { p_task_id: string };
+        Returns: { task: HouseholdTask; payment: BillPayment | null };
       };
       list_linked_phones: {
         Args: { p_household_id: string };

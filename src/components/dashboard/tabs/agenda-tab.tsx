@@ -3,13 +3,14 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, CookingPot, PawPrint, Plus, ShoppingBasket, Sparkles, Wrench } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, CookingPot, PawPrint, Plus, ShoppingBasket, Sparkles, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterPill } from "@/components/shared/filter-pill";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { MyTasksCard } from "@/components/agenda/my-tasks-card";
+import { FirstRunCard } from "@/components/agenda/first-run-card";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { OwnerFinishSheet } from "@/components/chores/owner-finish-sheet";
 import { WeekPager } from "@/components/agenda/week-pager";
@@ -29,11 +30,16 @@ import { applyAgendaFilter, useAgendaFilter, type AgendaFilter } from "@/hooks/u
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useFinishMyChore } from "@/hooks/use-finish-my-chore";
+import { useFirstRun } from "@/hooks/use-first-run";
 import { coverTakeover, myOccurrences, myTasksMode, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { useRepairs } from "@/hooks/use-repairs";
+import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores";
+import { useBillPayments } from "@/hooks/use-bill-payments";
+import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
+import { comingUpLabel, comingUpReminders } from "@/lib/chore-reminders";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -86,6 +92,7 @@ export function AgendaTab() {
     inventoryAlerts,
     memberProfile,
     pendingIds,
+    leaveRequests,
   } = useHousehold();
   const householdName = useHouseholdName();
   // "Who lives here?" (Phase 162): with pets off, Today says nothing about
@@ -108,6 +115,9 @@ export function AgendaTab() {
   // the household's list so none shows twice (D1 A). Without a roster row
   // (still loading, or none) the card is empty and the list is as before.
   const mine = useMemo(() => myOccurrences(allChores, memberProfile?.id), [allChores, memberProfile?.id]);
+  // Bills among mine (Phase 164 PR B): their payments, owners only, read
+  // only when there is one.
+  const { payments: billPayments } = useBillPayments(mine.some((o) => isBill(o.task)));
   const chores = useMemo(() => {
     if (mine.length === 0) return allChores;
     const keys = new Set(mine.map((o) => o.key));
@@ -132,6 +142,19 @@ export function AgendaTab() {
   // "end the repeat here" act on. Null when adding.
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  // What a new chore starts with: the first-run checklist's "Add a task"
+  // fills in the staff member (audit B1). Null from every other Add.
+  const [editorPreset, setEditorPreset] = useState<{ assigneeId: string | null } | null>(null);
+  function addChore(preset: { assigneeId: string | null } | null = null) {
+    setEditing(null);
+    setEditingDate(null);
+    setEditorPreset(preset);
+    setEditorOpen(true);
+  }
+
+  // "Set up your home" (audit B1, item 3): until the first task is finished.
+  // Reads only on the Day view, where the card lives.
+  const firstRun = useFirstRun(range === "day");
   // The Week view's every-day matrix (Phase 143). Held here rather than in the
   // view, which remounts on every page-turn: paging back through weeks to
   // check whether evening doses were missed should not fold it up each time.
@@ -176,6 +199,42 @@ export function AgendaTab() {
     if (!isPlainClick(event)) return;
     event.preventDefault();
     startTransition(() => pushInPlace(repairsHref));
+  }
+
+  // Bills and upkeep coming up (Phase 164, D3): chores with a reminder whose
+  // day is inside its window, for this owner. The same thing the 07:00 push
+  // says, so it works with notifications off. Read from every set-up chore,
+  // not just the week on screen: a yearly bill can be a week out.
+  const todayKey = formatDateLocal(today);
+  const { rows: setUpRows } = useSetUpChores(todayKey);
+  // The days ahead already written (finished early, skipped, given to
+  // someone else), up to the longest reminder: past the week the cache holds.
+  const horizonKey = formatDateLocal(addDays(today, 7));
+  const writtenAhead = useWrittenOccurrences(todayKey, horizonKey);
+  const ownerRows = useMemo(
+    () => new Set((allProfiles ?? []).filter((p) => !!p.user_id).map((p) => p.id)),
+    [allProfiles]
+  );
+  const comingUp = useMemo(
+    () =>
+      comingUpReminders({
+        // The cache's copy of a row wins over the separate read's.
+        rows: [
+          ...new Map(
+            [...writtenAhead, ...(setUpRows ?? householdTasks)].map((row) => [row.id, row] as const)
+          ).values(),
+        ],
+        today: todayKey,
+        memberId: memberProfile?.id ?? null,
+        ownerRows,
+        leaves: leaveRequests,
+      }),
+    [writtenAhead, setUpRows, householdTasks, todayKey, memberProfile?.id, ownerRows, leaveRequests]
+  );
+  function showComingUp() {
+    if (comingUp.length === 0) return;
+    setRange("day");
+    setSelectedDate(new Date(`${comingUp[0].date}T00:00:00`));
   }
 
   // The Kitchen tab opens on Food; the shopping line goes straight to Shopping.
@@ -226,6 +285,7 @@ export function AgendaTab() {
           // and edits that.
           setEditing(entry.occurrence.row ?? entry.occurrence.template);
           setEditingDate(entry.occurrence.date);
+          setEditorPreset(null);
           setEditorOpen(true);
         }}
       />
@@ -287,8 +347,19 @@ export function AgendaTab() {
             pet (Phase 162, D3). Renders nothing otherwise. */}
         <PetsQuestionCard />
 
-        {(needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
+        {(comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
           <div className="-my-1 flex flex-col">
+            {comingUp.length > 0 && (
+              <button
+                type="button"
+                onClick={showComingUp}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-left text-sm font-medium text-amber-800 active:bg-muted"
+              >
+                <Bell className="size-4 shrink-0 text-amber-700" aria-hidden />
+                <span className="min-w-0 flex-1">{comingUpLabel(comingUp, todayKey, locale)}</span>
+                <ChevronRight className="size-4 shrink-0 text-amber-700" aria-hidden />
+              </button>
+            )}
             {repairLines.toReview > 0 && (
               <Link
                 href={repairsHref}
@@ -358,12 +429,38 @@ export function AgendaTab() {
           </div>
         )}
 
+        {/* Set up your home (audit B1): a new household's steps to its first
+            finished task, above My tasks. Renders nothing once past it. */}
+        {range === "day" && (
+          <FirstRunCard
+            firstRun={firstRun}
+            householdName={householdName}
+            onAddTask={() => addChore({ assigneeId: firstRun.staff[0]?.id ?? null })}
+          />
+        )}
+
         {/* My tasks (Phase 163): below what waits on a decision, above the
             household's day. Renders nothing on a day with none of mine. */}
         {/* Its tutorial, only for an admin who has a chore of their own (D5). */}
         {range === "day" && hasOwnChores && <WhatsNewCard id="my-tasks-2026-11" />}
+        {/* Marking a bill paid (Phase 164 PR B): for an admin with a bill of their own. */}
+        {range === "day" && mine.some((o) => isBill(o.task)) && <WhatsNewCard id="bill-payments-2026-11" />}
+        {/* Bills and upkeep (Phase 164, D9): Show me opens the checklist on Chores. */}
+        {range === "day" && (
+          <WhatsNewCard
+            id="bills-2026-11"
+            onTry={() => startTransition(() => pushInPlace(`${moduleHref("chores")}&bills=open`))}
+          />
+        )}
         {range === "day" && (
           <MyTasksCard
+            billLine={(occurrence, done) =>
+              !isBill(occurrence.task)
+                ? null
+                : done
+                  ? paidLine(paymentFor(billPayments, occurrence.row?.id), locale)
+                  : lastTimeLine(lastAmount(billPayments, occurrence.template.id, occurrence.row?.id), locale)
+            }
             occurrences={mine}
             mode={myMode}
             dayLabel={label}
@@ -398,7 +495,23 @@ export function AgendaTab() {
               />
             )}
 
-            {allEntries.length === 0 && brandNew ? (
+            {allEntries.length === 0 && brandNew && firstRun.view === "checklist" ? (
+              // The checklist above already holds the way in (audit B1): the
+              // welcome's Add Chore would say it twice. Add Pet stays for a
+              // home with pets, which the checklist doesn't cover.
+              <div className="flex flex-col items-center gap-3 py-4">
+                <p className="text-center text-sm text-muted-foreground">
+                  {t("Nothing on this day yet.", "Belum ada apa-apa hari ini.")}
+                </p>
+                {petsOn && (
+                  <Button variant="outline" className="min-h-[44px]" asChild>
+                    <Link href={moduleHref("pets")} scroll={false} onClick={switchToPets}>
+                      <PawPrint /> {t("Add Pet", "Tambah Hewan")}
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            ) : allEntries.length === 0 && brandNew ? (
               // The first screen a new household sees (Phase 120). A pet first:
               // its routines are what fill most of an Agenda, and a chore is
               // one tap from here either way.
@@ -436,11 +549,7 @@ export function AgendaTab() {
                   // The only button when pets are off, so the primary one.
                   variant={petsOn ? "outline" : "default"}
                   className="min-h-[44px]"
-                  onClick={() => {
-                    setEditing(null);
-                    setEditingDate(null);
-                    setEditorOpen(true);
-                  }}
+                  onClick={() => addChore()}
                 >
                   <Plus /> {t("Add Chore", "Tambah Tugas")}
                 </Button>
@@ -478,11 +587,7 @@ export function AgendaTab() {
               >
                 <Button
                   className="min-h-[44px]"
-                  onClick={() => {
-                    setEditing(null);
-                    setEditingDate(null);
-                    setEditorOpen(true);
-                  }}
+                  onClick={() => addChore()}
                 >
                   <Plus /> {t("Add Chore", "Tambah Tugas")}
                 </Button>
@@ -550,6 +655,7 @@ export function AgendaTab() {
         onEdit={(occurrence: ChoreOccurrence) => {
           setEditing(occurrence.row ?? occurrence.template);
           setEditingDate(occurrence.date);
+          setEditorPreset(null);
           setEditorOpen(true);
         }}
       />
@@ -560,6 +666,7 @@ export function AgendaTab() {
         task={editing}
         occurrenceDate={editingDate}
         defaultDate={dateStr}
+        preset={editorPreset}
       />
     </div>
   );

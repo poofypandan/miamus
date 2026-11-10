@@ -1,7 +1,9 @@
 # Kakak: turning her on
 
-Phase 156 step 2 (plan: `docs/phase-156-step2-kakak-plan.md`). Kakak is off
-everywhere until all four of these are true, in this order:
+Phase 156 step 2 (plan: `docs/phase-156-step2-kakak-plan.md`). The owner's
+plain-words version, with a smoke test and a demo script, is
+`docs/kakak-weekend-go-live.md`. Kakak is off everywhere until all four of
+these are true, in this order:
 
 1. **Migration 126** is applied (`supabase/migrations/126_kakak.sql`):
    local, then staging, then production, each with the owner's OK.
@@ -55,6 +57,46 @@ an Anthropic key: set `KAKAK_PRACTICE=true` on that server (no
 It tests the app around Kakak, not her judgement. Whether she understands
 real sentences is what the eval (`tests/kakak`) is for, against the real API.
 
+## Talk to Kakak (voice beta)
+
+The first, lightweight step towards roadmap item 23 ("Call Kakak"). A large
+mic in the Kakak sheet: tap, talk, and the words appear live in the typing
+box; tap **Stop** (or just stop talking) and they go to `/api/kakak` exactly
+as if typed. **Read replies aloud** reads her question, message or card
+aloud with the phone's own voice; the choice is remembered on that phone.
+Code: `src/components/kakak/kakak-voice.tsx` (UI) and
+`src/lib/kakak/voice.ts` (state machine, unit-tested).
+
+- **No new service or key.** It uses the browser's Web Speech API:
+  `SpeechRecognition` (prefixed `webkitSpeechRecognition`) to listen, in
+  `id-ID` or `en-US` from the owner's language, and `speechSynthesis` to
+  speak, choosing an Indonesian or English voice the phone has.
+- **Privacy.** The browser may send the audio to its maker (Apple for
+  Safari, Google for Chrome) to turn it into text, under their terms with
+  the owner. Miamus never receives or stores audio, only the text, as typed
+  Kakak already does. Said on the Kakak settings page and in the privacy
+  policy (policy version 2026-11-10.3).
+- **Where it works** (from the vendors' documentation and bug trackers,
+  2026-11-10; not yet tried on a real phone):
+  | Where | Listening | Reading aloud |
+  | --- | --- | --- |
+  | Android, Chrome (tab or installed app) | Yes. Chrome asks for the mic once. | Yes (Google voices) |
+  | iPhone, Safari tab (iOS 14.5+) | Yes, if Siri and Dictation are on | Yes |
+  | iPhone, Miamus on the Home Screen | No: WebKit doesn't offer it to Home Screen apps (bug 225298). The sheet shows the tip to use the keyboard's mic key. | Yes |
+  | Firefox, older browsers | No: keyboard-mic tip | Usually yes |
+- **Practice mode** works as usual: speech becomes text on the phone, and
+  the scripted Kakak answers it.
+- **Turning it off**: `NEXT_PUBLIC_KAKAK_VOICE=false` on the server, then
+  redeploy (a build-time flag), hides the mic and the speaker switch. It
+  only ever shows where Kakak itself does.
+
+**Tutorial** (shown once as a card above the mic, `kakak-voice-2026-11` in
+`src/lib/whats-new.ts`; owners only, since staff never see Kakak):
+
+1. Tap the mic and say what you need. Your words appear as you speak.
+2. Tap Stop when you're done. Kakak shows her card; nothing is saved until you confirm.
+3. Want to hear her answers? Turn on Read replies aloud. This phone remembers it.
+
 ## Limits (migration 126)
 
 - 40 calls per household per Jakarta day (`kakak_settings.daily_limit`).
@@ -81,8 +123,35 @@ select date_trunc('day', created_at) as day, model, count(*) as calls,
 from kakak_requests group by 1, 2 order by 1 desc;
 ```
 
+## When the call to Anthropic fails
+
+The route turns each failure into one plain reason (`src/lib/kakak/api-errors.ts`),
+and the sheet words it:
+
+| Cause | Owner sees | Try again? |
+| --- | --- | --- |
+| Console workspace spend limit, or the tier limit | "Kakak has reached this month's limit…" | No |
+| Wrong, revoked or disabled key (401/403) | "Kakak isn't available right now…" | No |
+| Rate limited or overloaded (429/529) | "Kakak is busy right now…" | Yes |
+| Timed out | "Kakak took too long. Nothing was saved…" | Yes |
+| No internet on the phone | "Kakak needs the internet…" | Yes |
+| Sheet left open for over 6 hours, or past midnight in Jakarta | "This conversation is from earlier…" | Start again |
+
+The server logs the status and error type, never the household's words.
+
+## One conversation, one household block
+
+Every turn of a conversation builds the household block from the moment the
+conversation started (`startedAt` in the history the phone sends back), not
+from the clock. The system prompt must be byte-identical on every turn: the
+thinking blocks Kakak replays are refused by the API otherwise (preserved
+thinking, enforced on Opus 5.5 for Console accounts created from 31 August
+2026), and it keeps the household block cached.
+
 ## Turning her off
 
 - One household: the owner's switch, or `platform_set_kakak_allowed(id, false)`
   (also switches it off).
 - Everyone, at once: `KAKAK_ENABLED` to anything but `true`, then redeploy.
+- Everyone, instantly, with no redeploy: disable the API key in the Claude
+  Console. Kakak then says she isn't available.

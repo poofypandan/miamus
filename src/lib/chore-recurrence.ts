@@ -1,3 +1,4 @@
+import type { OwnerLocale } from "@/lib/owner-locale";
 import type { ChoreRecurrence, HouseholdTask, HouseholdTaskStatus } from "@/types/database";
 
 
@@ -37,6 +38,65 @@ export function isTemplate(task: HouseholdTask): boolean {
   return recurrenceOf(task) !== "none";
 }
 
+/**
+ * Every how many weeks or months (migrations/137): 1–12, read with weekly
+ * and monthly only. Anything else (absent before that migration, or a value
+ * out of range) is 1, the plain repeat.
+ */
+export function intervalOf(task: Pick<HouseholdTask, "recurrence_interval">): number {
+  const n = task.recurrence_interval;
+  return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 12 ? n : 1;
+}
+
+/**
+ * The repeats the chore form offers (Phase 164, D1): a cadence and an
+ * interval each. "Every year" is monthly with 12.
+ */
+export const REPEAT_CHOICES = [
+  { key: "none", recurrence: "none", interval: 1 },
+  { key: "daily", recurrence: "daily", interval: 1 },
+  { key: "weekly", recurrence: "weekly", interval: 1 },
+  { key: "biweekly", recurrence: "weekly", interval: 2 },
+  { key: "monthly", recurrence: "monthly", interval: 1 },
+  { key: "quarterly", recurrence: "monthly", interval: 3 },
+  { key: "half-yearly", recurrence: "monthly", interval: 6 },
+  { key: "yearly", recurrence: "monthly", interval: 12 },
+] as const satisfies readonly { key: string; recurrence: ChoreRecurrence; interval: number }[];
+
+/**
+ * How a repeat reads, owner side in either language and on staff screens in
+ * Indonesian: "Every 3 months" / "Setiap 3 bulan", "Every year" /
+ * "Setiap tahun". Any interval reads sensibly, not only the form's choices.
+ */
+export function repeatLabel(
+  recurrence: ChoreRecurrence,
+  interval: number,
+  locale: OwnerLocale
+): string {
+  const n = recurrence === "weekly" || recurrence === "monthly" ? interval : 1;
+  if (n <= 1) return (locale === "id" ? RECURRENCE_LABELS_ID : RECURRENCE_LABELS_EN)[recurrence];
+  if (recurrence === "monthly" && n === 12) return locale === "id" ? "Setiap tahun" : "Every year";
+  if (recurrence === "weekly") return locale === "id" ? `Setiap ${n} minggu` : `Every ${n} weeks`;
+  return locale === "id" ? `Setiap ${n} bulan` : `Every ${n} months`;
+}
+
+/** repeatLabel for a chore's own row. */
+export function taskRepeatLabel(task: HouseholdTask, locale: OwnerLocale): string {
+  return repeatLabel(recurrenceOf(task), intervalOf(task), locale);
+}
+
+/**
+ * The longest a repeat can go between two of its days: a week or a month
+ * (31 days) times its interval. What previousOccurrence and nextOccurrence
+ * look across, so a yearly chore still finds last year's day.
+ */
+export function longestGapDays(task: HouseholdTask): number {
+  const recurrence = recurrenceOf(task);
+  if (recurrence === "weekly") return 7 * intervalOf(task);
+  if (recurrence === "monthly") return 31 * intervalOf(task);
+  return 1;
+}
+
 // "YYYY-MM-DD" at local midnight. `new Date("2026-10-01")` is parsed as UTC by
 // the spec, which lands on the previous day east of Greenwich.
 function parseDayKey(key: string): Date {
@@ -72,16 +132,42 @@ export function occursOn(task: HouseholdTask, dateStr: string): boolean {
   const start = parseDayKey(task.due_date);
   const target = parseDayKey(dateStr);
 
-  if (recurrence === "weekly") return start.getDay() === target.getDay();
+  if (recurrence === "weekly") {
+    if (start.getDay() !== target.getDay()) return false;
+    // Whole weeks since the first day; rounded, as a daylight-saving change
+    // can make the millisecond gap a little off a multiple of 7 days.
+    const weeks = Math.round((target.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+    return weeks % intervalOf(task) === 0;
+  }
 
-  // monthly
+  // monthly: every N months from the first day's month (migrations/137).
+  const months = (target.getFullYear() - start.getFullYear()) * 12 + target.getMonth() - start.getMonth();
+  if (months % intervalOf(task) !== 0) return false;
   const anchorDay = start.getDate();
   const lastDayOfTargetMonth = daysInMonth(target.getFullYear(), target.getMonth());
   return target.getDate() === Math.min(anchorDay, lastDayOfTargetMonth);
 }
 
-/** The longest gap a repeat can leave between two of its days (monthly). */
+/**
+ * The longest gap a plain repeat (interval 1) leaves between two of its days
+ * (monthly). Longer repeats (every 3 months, every year; migrations/137) are
+ * read further back on their own: see longRepeatFloorFor.
+ */
 export const LONGEST_REPEAT_GAP_DAYS = 31;
+
+/** The longest any repeat can go: every 12 months. */
+export const LONGEST_POSSIBLE_GAP_DAYS = 31 * 12;
+
+/**
+ * How far back a long repeat's missed day can be (every 3 months, every
+ * year): what the providers read, for those repeats only, so a yearly bill
+ * paid in August isn't shown as missed again in October.
+ */
+export function longRepeatFloorFor(today: string): string {
+  const floor = parseDayKey(today);
+  floor.setDate(floor.getDate() - LONGEST_POSSIBLE_GAP_DAYS);
+  return dayKey(floor);
+}
 
 /**
  * How far back a repeat's missed day can be: what the providers must read
@@ -102,13 +188,14 @@ function dayKey(d: Date): string {
 
 /**
  * The last day before `beforeDate` on which a repeat falls, within its run —
- * or null if it had not started yet (Phase 126). Looks back at most
- * LONGEST_REPEAT_GAP_DAYS, which always reaches the previous occurrence of a
- * daily, weekly or monthly chore.
+ * or null if it had not started yet (Phase 126). Looks back at most the
+ * repeat's longest gap (a month, or its interval's worth: a year for a yearly
+ * chore), which always reaches its previous occurrence.
  */
 export function previousOccurrence(task: HouseholdTask, beforeDate: string): string | null {
   const cursor = parseDayKey(beforeDate);
-  for (let i = 0; i < LONGEST_REPEAT_GAP_DAYS; i++) {
+  const reach = Math.max(LONGEST_REPEAT_GAP_DAYS, longestGapDays(task));
+  for (let i = 0; i < reach; i++) {
     cursor.setDate(cursor.getDate() - 1);
     const key = dayKey(cursor);
     if (key < task.due_date) return null;
@@ -122,14 +209,15 @@ export function previousOccurrence(task: HouseholdTask, beforeDate: string): str
  * within its run — or null if it has none left, which happens when
  * recurrence_until cuts the series short.
  *
- * The mirror of previousOccurrence, and bounded the same way: a daily, weekly
- * or monthly chore always has its next day within LONGEST_REPEAT_GAP_DAYS, so
+ * The mirror of previousOccurrence, and bounded the same way: a repeat always
+ * has its next day within its longest gap (longestGapDays), so
  * running out of road means the repeat is genuinely over rather than that the
  * search gave up.
  */
 export function nextOccurrence(task: HouseholdTask, afterDate: string): string | null {
   const cursor = parseDayKey(afterDate);
-  for (let i = 0; i < LONGEST_REPEAT_GAP_DAYS; i++) {
+  const reach = Math.max(LONGEST_REPEAT_GAP_DAYS, longestGapDays(task));
+  for (let i = 0; i < reach; i++) {
     cursor.setDate(cursor.getDate() + 1);
     const key = dayKey(cursor);
     if (task.recurrence_until && key > task.recurrence_until) return null;
@@ -170,8 +258,9 @@ export function startAfterSkippingFirst(task: HouseholdTask): {
   const anchorDay = parseDayKey(task.due_date).getDate();
   const clampedDays: string[] = [];
   let cursor: string | null = first;
-  // A day of the month up to 31 comes round again within two months (the
-  // 29th–30th within a year); twelve months always reaches it.
+  // A day of the month up to 31 comes round again within two occurrences
+  // (the 29th–30th within a year, a 29 February within four); twelve
+  // occurrences always reach it, whatever the interval.
   for (let i = 0; cursor && i < 12; i++) {
     if (parseDayKey(cursor).getDate() === anchorDay) return { start: cursor, clampedDays };
     clampedDays.push(cursor);

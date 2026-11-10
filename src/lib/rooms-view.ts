@@ -1,5 +1,5 @@
 import { CHORE_JOBS, choreJobsIn, type ChoreJob } from "@/lib/chore-jobs";
-import { recurrenceOf } from "@/lib/chore-recurrence";
+import { intervalOf, recurrenceOf } from "@/lib/chore-recurrence";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import type { HouseholdLocation, HouseholdTask } from "@/types/database";
 
@@ -234,12 +234,26 @@ function localDate(key: string): Date {
 export function scheduleLabel(task: HouseholdTask, locale: OwnerLocale): string {
   const tag = locale === "id" ? "id-ID" : "en-GB";
   const date = localDate(task.due_date);
+  // Every N weeks or months (migrations/137), as the chore cards say it.
+  const every = intervalOf(task);
   switch (recurrenceOf(task)) {
     case "daily":
       return locale === "id" ? "Setiap hari" : "Daily";
-    case "weekly":
-      return new Intl.DateTimeFormat(tag, { weekday: "short" }).format(date);
+    case "weekly": {
+      const day = new Intl.DateTimeFormat(tag, { weekday: "short" }).format(date);
+      if (every === 1) return day;
+      return locale === "id" ? `Tiap ${every} minggu, ${day}` : `Every ${every} weeks, ${day}`;
+    }
     case "monthly":
+      if (every === 12) {
+        const day = new Intl.DateTimeFormat(tag, { day: "numeric", month: "short" }).format(date);
+        return locale === "id" ? `Tiap tahun, ${day}` : `Every year, ${day}`;
+      }
+      if (every > 1) {
+        return locale === "id"
+          ? `Tiap ${every} bulan, tgl ${date.getDate()}`
+          : `Every ${every} months, ${ordinal(date.getDate())}`;
+      }
       return locale === "id" ? `Tiap bulan, tgl ${date.getDate()}` : `Monthly, ${ordinal(date.getDate())}`;
     default:
       return new Intl.DateTimeFormat(tag, { weekday: "short", day: "numeric", month: "short" }).format(date);

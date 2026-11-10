@@ -5,6 +5,7 @@ import { addDays } from "date-fns";
 import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
 import { forgetDeletedChore, refreshRepairs } from "@/lib/repairs-store";
+import { refreshBillPayments } from "@/lib/bill-payments";
 import { screenLocale } from "@/lib/owner-locale";
 import type {
   CreateEntityInput,
@@ -69,6 +70,7 @@ import type {
   InventoryAuditWithStaff,
   ProposalStatus,
   HouseholdTask,
+  BillPayment,
   HouseholdTaskStatus,
   LeaveRequest,
 } from "@/types/database";
@@ -334,6 +336,11 @@ interface HouseholdContextValue {
       after_photo_url?: string | null;
     }
   ) => Promise<HouseholdTask>;
+  /**
+   * Owner-only. A paid bill's day marked not paid: payment and completion go
+   * together (migrations/138). Returns the removed payment, if any.
+   */
+  reopenBillDay: (id: string) => Promise<BillPayment | null>;
   /** Owner-only. Edits a chore's own fields; never its completion state. */
   updateHouseholdTask: (id: string, patch: UpdateHouseholdTaskInput) => Promise<HouseholdTask>;
   /** Owner-only. Skips a repeat's first day; null if it was finished or moved meanwhile. */
@@ -654,6 +661,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     // Repairs live in their own cache (src/lib/repairs-store.ts); catch it
     // up with everything else (Codex, PR #37).
     refreshRepairs();
+    // Bill payments too (owners only; only while a screen shows them).
+    refreshBillPayments();
     // A silent pass never *puts up* skeletons. It matters more than it looks:
     // flipping `loading` on re-renders the staff list as skeletons, which
     // unmounts the card holding an open photo-tagging dialog — exactly what a
@@ -1476,6 +1485,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const reopenBillDay = useCallback(async (id: string) => {
+    const { task, payment } = await dataProvider.reopenBillDay(id);
+    setHouseholdTasks((prev) => prev.map((row) => (row.id === id ? task : row)));
+    return payment;
+  }, []);
+
   const updateHouseholdTask = useCallback(
     async (id: string, patch: UpdateHouseholdTaskInput) => {
       const updated = await dataProvider.updateHouseholdTask(id, patch);
@@ -1701,6 +1716,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteHouseholdTask,
       materialiseChoreOccurrence,
       updateHouseholdTaskStatus,
+      reopenBillDay,
       claimHouseholdTask,
       undoInventoryAlert,
       undoRoutineProposal,
@@ -1782,6 +1798,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteHouseholdTask,
       materialiseChoreOccurrence,
       updateHouseholdTaskStatus,
+      reopenBillDay,
       claimHouseholdTask,
       undoInventoryAlert,
       undoRoutineProposal,

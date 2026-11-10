@@ -7,6 +7,11 @@ import { useT } from "@/context/owner-locale-context";
 import { dataProvider } from "@/lib/data";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
 import { coverTakeover, type ChoreOccurrence } from "@/lib/chore-recurrence";
+import { isBill, loadBillPayments } from "@/lib/bill-payments";
+import type { HouseholdTask } from "@/types/database";
+
+/** Sent (with the saved row), kept on the phone to send, or not saved. */
+export type FinishOutcome = { outcome: "sent"; task: HouseholdTask } | { outcome: "queued" } | null;
 
 /** Both photos, or none (migrations/136). */
 export interface MyChorePhotos {
@@ -30,7 +35,7 @@ export interface MyChorePhotos {
  * queue's retry.
  */
 export function useFinishMyChore() {
-  const { finishChore, updateHouseholdTaskStatus, pendingIds, memberProfile } = useHousehold();
+  const { finishChore, reopenBillDay, pendingIds, memberProfile } = useHousehold();
   const t = useT();
   // Read at the moment of a tap, not from the render that made the toast.
   const pendingRef = useRef(pendingIds);
@@ -58,13 +63,26 @@ export function useFinishMyChore() {
   );
 
   const reopen = useCallback(
-    async (rowId: string, photos?: { before: string | null; after: string | null }): Promise<boolean> => {
+    async (
+      rowId: string,
+      photos?: { before: string | null; after: string | null },
+      bill = false
+    ): Promise<boolean> => {
       if (pendingRef.current.has(rowId)) {
         toast.info(t("Still sending. Try again in a moment.", "Masih dikirim. Coba lagi sebentar lagi."));
         return false;
       }
+      // Not done after all: any payment of the day and the completion go
+      // together, in one transaction (reopen_bill_day, migrations/138), for
+      // every chore, not only one still in Bills: its category may have
+      // changed since it was paid (Codex, PR #65). The receipt file goes
+      // after, best effort; the nightly sweep is the safety net.
       try {
-        await updateHouseholdTaskStatus(rowId, "pending");
+        const removed = await reopenBillDay(rowId);
+        if (removed?.receipt_url) {
+          void dataProvider.deleteReceipt(removed.receipt_url).catch((err) => console.error("Could not delete a receipt", err));
+        }
+        if (removed || bill) void loadBillPayments(true);
       } catch (err) {
         explain(err);
         return false;
@@ -76,12 +94,24 @@ export function useFinishMyChore() {
       }
       return true;
     },
-    [updateHouseholdTaskStatus, explain, t]
+    [reopenBillDay, explain, t]
   );
 
   const finish = useCallback(
-    async (occurrence: ChoreOccurrence, photos?: MyChorePhotos): Promise<"sent" | "queued" | null> => {
+    async (
+      occurrence: ChoreOccurrence,
+      photos?: MyChorePhotos,
+      options?: {
+        /**
+         * Runs once the day is saved and before the Undo toast appears, so
+         * Undo can't overtake it (a bill's payment, Codex PR #65). Its own
+         * failures are its own: it should catch them.
+         */
+        afterSent?: (task: HouseholdTask) => Promise<void>;
+      }
+    ): Promise<FinishOutcome> => {
       const title = occurrence.task.title;
+      const bill = isBill(occurrence.task);
       try {
         // A chore covered for someone on leave is mine on screen but still
         // theirs in the database: take that day over first, as its own edit,
@@ -111,18 +141,19 @@ export function useFinishMyChore() {
               "Selesai, tersimpan di HP. Akan dikirim otomatis saat sinyal bagus."
             )
           );
-          return "queued";
+          return { outcome: "queued" };
         }
-        toast.success(t(`Done: ${title}`, `Selesai: ${title}`), {
+        if (options?.afterSent) await options.afterSent(task);
+        toast.success(bill ? t(`Paid: ${title}`, `Sudah dibayar: ${title}`) : t(`Done: ${title}`, `Selesai: ${title}`), {
           duration: 5000,
           action: {
             label: t("Undo", "Batalkan"),
             onClick: () => {
-              void reopen(task.id, { before: task.before_photo_url ?? null, after: task.after_photo_url ?? null });
+              void reopen(task.id, { before: task.before_photo_url ?? null, after: task.after_photo_url ?? null }, bill);
             },
           },
         });
-        return "sent";
+        return { outcome: "sent", task };
       } catch (err) {
         explain(err);
         return null;

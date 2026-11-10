@@ -34,6 +34,7 @@ import type {
   LeaveRequest,
   Repair,
   RepairCost,
+  BillPayment,
   RepairNote,
 } from "@/types/database";
 
@@ -168,6 +169,10 @@ export interface CreateHouseholdTaskInput {
   spot?: string | null;
   /** The repair this chore is a visit for (migrations/130). Left out, nothing is sent. */
   repair_id?: string | null;
+  /** Every N weeks or months (migrations/137). Left out, nothing is sent (1). */
+  recurrence_interval?: number | null;
+  /** "Remind me" (migrations/137). Left out, nothing is sent (no reminder). */
+  remind_days_before?: number | null;
 }
 
 /** A new repair (Phase 159). Status: owners 'open', staff phones 'reported'. */
@@ -216,6 +221,8 @@ export interface UpdateHouseholdTaskInput {
   requires_supervision?: boolean | null;
   location_id?: string | null;
   spot?: string | null;
+  recurrence_interval?: number | null;
+  remind_days_before?: number | null;
 }
 
 /**
@@ -397,6 +404,12 @@ export interface DataProvider {
    * Never materialised days of a repeat.
    */
   listSetUpChores(today: string): Promise<HouseholdTask[]>;
+  /**
+   * The written days of repeats from `from` to `to` (Phase 164): what Today's
+   * Coming up line needs to know a day ahead was already finished, skipped
+   * or given to someone else, outside the week on screen (Codex, PR #60).
+   */
+  listWrittenOccurrences(from: string, to: string): Promise<HouseholdTask[]>;
   createHouseholdTask(input: CreateHouseholdTaskInput): Promise<HouseholdTask>;
   /**
    * Owner-only. Several chores in one insert, all or none: the chore form's
@@ -420,8 +433,27 @@ export interface DataProvider {
     repairId: string,
     cost: { amount_idr: number | null; receipt_url: string | null; note: string | null }
   ): Promise<RepairCost>;
-  /** Uploads a receipt to the owner-only owner-receipts bucket; returns its stored URL. */
-  uploadReceipt(file: File, repairId: string): Promise<string>;
+  /**
+   * Uploads a receipt to the owner-only owner-receipts bucket under
+   * <household>/<folder>/ (a repair's id, or "bills/<bill>"); returns its
+   * stored URL.
+   */
+  uploadReceipt(file: File, folder: string): Promise<string>;
+  /** The household's bill payments, newest first (owners only; migrations/138). */
+  listBillPayments(): Promise<BillPayment[]>;
+  /** Owners only: the paid day's payment, written or replaced (one per day). */
+  saveBillPayment(
+    taskId: string,
+    payment: { amount_idr: number | null; receipt_url: string | null }
+  ): Promise<BillPayment>;
+  /** Owners only: removes a day's payment; returns what was removed, if any. */
+  deleteBillPayment(taskId: string): Promise<BillPayment | null>;
+  /**
+   * A paid bill's day marked not paid: its payment removed and the day
+   * reopened in one transaction (migrations/138); the removed payment, if
+   * any, comes back so its receipt file can go.
+   */
+  reopenBillDay(taskId: string): Promise<{ task: HouseholdTask; payment: BillPayment | null }>;
   deleteReceipt(url: string): Promise<void>;
   /** Every note on the household's repairs, oldest first. */
   listRepairNotes(): Promise<RepairNote[]>;
@@ -542,6 +574,12 @@ export interface DataProvider {
   rotateHouseCode(): Promise<string>;
   listLinkedPhones(): Promise<LinkedPhone[]>;
   removeLinkedPhone(id: string): Promise<boolean>;
+  /**
+   * Whether the active household has ever finished a chore (audit B1): one
+   * row, any date. Today's own chore read covers only the days around the
+   * one on screen, so it can't answer "is this household past setup?".
+   */
+  hasFinishedChore(): Promise<boolean>;
 }
 
 /** A PIN check's answer (migrations/115). */

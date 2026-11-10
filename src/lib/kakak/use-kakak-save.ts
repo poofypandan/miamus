@@ -16,7 +16,8 @@ import { isSaveableSuggestion, type KakakSuggestion } from "./suggestions";
 import type { StockStatus } from "@/types/database";
 
 export interface SaveResult {
-  undo: () => Promise<void>;
+  /** Resolves true when everything came back; false when a reversal failed (the rest still ran). */
+  undo: () => Promise<boolean>;
   /** How many suggestions were saved (all of them, or an error was thrown). */
   saved: number;
 }
@@ -31,9 +32,16 @@ export function useKakakSave() {
         if (!isSaveableSuggestion(item)) throw new Error("Kakak's suggestion did not pass the phone's check");
       }
       const undos: (() => Promise<unknown>)[] = [];
-      const undoAll = async () => {
+      const undoAll = async (): Promise<boolean> => {
         // Newest first, and keep going if one fails: the rest still come back.
-        for (const undo of [...undos].reverse()) await undo().catch((err) => console.error("Kakak undo", err));
+        let allBack = true;
+        for (const undo of [...undos].reverse()) {
+          await undo().catch((err) => {
+            allBack = false;
+            console.error("Kakak undo", err);
+          });
+        }
+        return allBack;
       };
       try {
         for (const item of items) {
@@ -64,6 +72,8 @@ export function useKakakSave() {
                 requires_supervision: item.requiresSupervision,
                 location_id: locationId,
                 notes: item.notes,
+                // Left out when off, as the chore form does (migrations/137).
+                ...(item.remindDaysBefore != null ? { remind_days_before: item.remindDaysBefore } : {}),
               });
               undos.push(() => household.deleteHouseholdTask(task.id));
               break;

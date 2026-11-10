@@ -9,7 +9,7 @@
 
 import type { RefMap, RefNames } from "./context";
 import type { KakakHousehold } from "./household";
-import { isDay, isTime, newPetTimes } from "./validate";
+import { REMIND_DAYS, isDay, isTime, newPetTimes } from "./validate";
 
 export type ChoreCategory = "cleaning" | "maintenance" | "errand" | "groceries";
 export type ChoreRecurrence = "none" | "daily" | "weekly" | "monthly";
@@ -39,6 +39,8 @@ export interface ChoreSuggestion {
   newRoomFloorId: string | null;
   newRoomFloorName: string | null;
   notes: string | null;
+  /** "Remind me" (migrations/137): 0 on the day, 1, 3 or 7 days before, or null for none. */
+  remindDaysBefore: number | null;
 }
 
 export interface ShoppingSuggestion {
@@ -129,6 +131,8 @@ export function toSuggestion(
         newRoomFloorId: newRoomFloor ? (refs.rooms[newRoomFloor] ?? null) : null,
         newRoomFloorName: newRoomFloor ? (names.rooms[newRoomFloor] ?? null) : null,
         notes: str(input.notes),
+        remindDaysBefore:
+          typeof input.remind_days_before === "number" && REMIND_DAYS.has(input.remind_days_before) ? input.remind_days_before : null,
       };
     }
     case "add_to_shopping_list": {
@@ -231,7 +235,8 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         !(s.locationId !== null && s.newRoomName !== null) &&
         okId(s.newRoomFloorId ?? null, true) &&
         !((s.newRoomFloorId ?? null) !== null && s.newRoomName === null) &&
-        okText(s.notes, 200, true)
+        okText(s.notes, 200, true) &&
+        ((s.remindDaysBefore ?? null) === null || REMIND_DAYS.has(s.remindDaysBefore as number))
       );
     case "shopping":
       return (
