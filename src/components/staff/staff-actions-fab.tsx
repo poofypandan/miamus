@@ -19,6 +19,7 @@ import { FoodFormSheet } from "@/components/kitchen/food-form-sheet";
 import { MyRepairReports, StaffReportRepairButton } from "@/components/staff/staff-repairs";
 import { RepairReportSheet } from "@/components/repairs/repair-report-sheet";
 import { FeedbackSheet } from "@/components/shared/feedback-sheet";
+import { StaffPushRow, StaffPushSheet } from "@/components/staff/staff-push-sheet";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 
@@ -39,6 +40,8 @@ export function StaffActionsFab() {
   const [reportingRepair, setReportingRepair] = useState(false);
   // About the app itself (roadmap item 9): last and quiet, below the reports.
   const [sendingFeedback, setSendingFeedback] = useState(false);
+  // Notifications on this phone (Phase 166, D7): the very last row.
+  const [pushSettings, setPushSettings] = useState(false);
   useBackToClose(open, () => setOpen(false));
 
   // Owned here rather than in the panel: the badge below and the drawer's
@@ -148,6 +151,12 @@ export function StaffActionsFab() {
               </span>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
             </button>
+            <StaffPushRow
+              onPress={() => {
+                setOpen(false);
+                setPushSettings(true);
+              }}
+            />
           </div>
         </SheetContent>
       </Sheet>
@@ -155,6 +164,7 @@ export function StaffActionsFab() {
       <FoodFormSheet open={addingFood} item={null} locale="id" onClose={() => setAddingFood(false)} />
       <RepairReportSheet open={reportingRepair} onClose={() => setReportingRepair(false)} locale="id" asStaff />
       <FeedbackSheet open={sendingFeedback} onClose={() => setSendingFeedback(false)} locale="id" asStaff />
+      <StaffPushSheet open={pushSettings} onClose={() => setPushSettings(false)} />
     </>
   );
 }

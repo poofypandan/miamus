@@ -25,6 +25,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { expandChores } from "@/lib/chore-recurrence";
 import { dataProvider } from "@/lib/data";
 import { moduleHref } from "@/lib/dashboard-modules";
+import { staffWillBeNotified } from "@/lib/staff-push";
 import { assigneeOptions, formatLeaveRange, leaveDays } from "@/lib/leave";
 import { cn } from "@/lib/utils";
 import type { LeaveFallbackAction, LeaveRequest } from "@/types/database";
@@ -175,10 +176,15 @@ function LeaveApproval() {
   async function decide(kind: "approve" | "reject") {
     if (!leave) return;
     setSaving(kind);
+    // The answer reaches their phone (Phase 166) when it has notifications on.
+    const notified = async () =>
+      (await staffWillBeNotified([leave.staff_id])).includes(leave.staff_id)
+        ? { description: t(`${name} will get a notification.`, `${name} akan mendapat notifikasi.`) }
+        : undefined;
     try {
       if (kind === "reject") {
         await decideLeave(leave.id, { status: "rejected" });
-        toast.success(t(`Leave for ${name} rejected`, `Cuti ${name} ditolak`));
+        toast.success(t(`Leave for ${name} rejected`, `Cuti ${name} ditolak`), await notified());
       } else {
         if (!action) return;
         await decideLeave(leave.id, {
@@ -186,7 +192,7 @@ function LeaveApproval() {
           fallback_action: action,
           fallback_assignee_id: action === "reassign" ? cover : null,
         });
-        toast.success(t(`Leave for ${name} approved`, `Cuti ${name} disetujui`));
+        toast.success(t(`Leave for ${name} approved`, `Cuti ${name} disetujui`), await notified());
       }
       router.push(moduleHref("access"));
     } catch (err) {

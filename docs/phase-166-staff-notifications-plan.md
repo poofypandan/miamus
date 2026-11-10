@@ -1,13 +1,39 @@
 # Phase 166: Notifications on staff phones
 
 Status: **decided: owner delegated to the recommendations, 2026-11-10
-(D1 A to D11 A). Not built yet**: per D11, the build waits for Phase 165
-PR A (migration 139) to merge.
+(D1 A to D11 A). Built as migration 141** (`supabase/migrations/141_staff_push.sql`,
+test `supabase/tests/141_staff_push.sql`), database, staff and owner side in
+one PR. Staging and production are applied by the manager with the owner's OK.
 Audit item **4** (`docs/product-audit-2026-11-09.md`, "Notifications on staff
 phones"). Decision **B3** says this comes before any WhatsApp work.
 Mockup: `docs/mockups/phase-166-staff-notifications.html` (open it in a browser at phone width).
-Migration **140** is reserved for it. 139 is the couldn't-do and evening
-summary work (Phase 165, PR #64). Nothing here exists yet.
+Migration **141** (the plan first reserved 140, which became rooms inside
+rooms). 139 is the couldn't-do and evening summary work (Phase 165, PR #64).
+
+## Built (2026-11-10): where the build differs from this plan
+
+- **Migration 141**, not 140. Database, staff screens and owner side ship in
+  one PR instead of two.
+- `set_my_push_person` **answers** instead of raising: `{"status":"ok"}`,
+  `{"status":"pin_required"}`, or the PIN screen's own answers (`wrong_pin`,
+  `locked`), so a wrong PIN's recorded try survives. The PIN is asked on the
+  usual full-screen PIN pad.
+- `my_phone_push_people()` returns `{people, shared, household_on}` (the card
+  needs the shared line and the switch).
+- `queue_staff_push` takes **one** person (null for everyone), since every
+  named push is about one person; the triggers call it once per person.
+- `staff_push_overview()` returns `{enabled, people, phones}` and carries the
+  switch, so the owner screens need one call.
+- A written day of a repeat inserted by an admin (skipping or finishing a
+  day writes one) is never a "new task": it already showed.
+- A schedule suggestion pushes once **none of its rows is pending**, so
+  approving row by row and all at once both give one push.
+- Leave applies to task pushes as Today applies it: "pause" sends nothing,
+  "reassign" tells the person covering, "unassign" tells everyone only for a
+  new task.
+- The owner **What's new** entry is listed in Household → What's new only, not
+  shown as a card: Phase 165's card already went to the same admins this
+  week, and the adopted rule is at most one card a week.
 
 ## The problem
 
@@ -274,7 +300,7 @@ Miamus, so they don't send a WhatsApp as well.
 | Switch to Sari | **Ganti ke Sari** | The strip after tapping a push meant for someone else. |
 | Staff phones (owner switch) | **HP staf** | |
 
-## Database: migration 140 (described, not created)
+## Database: migration 141
 
 Additive only. Old app builds keep working: they never call the new
 functions, and the triggers only add pushes.
@@ -396,7 +422,7 @@ never cost the record. Each one does nothing unless `auth.uid()` is a
 - `export_household_data()` (127) gains `staff_notifications`: phone number
   as the list shows it (HP 1, HP 2), names, since when. No endpoints.
 
-### SQL tests (`supabase/tests/140_…`)
+### SQL tests (`supabase/tests/141_staff_push.sql`)
 
 - **Admin adds today's chore for Sari**: queues one push to her phone. Three
   rooms in one insert: still one. A chore for tomorrow: none. An unassigned one:
@@ -485,10 +511,10 @@ there.
 
 ## How it's built (after the owner's OK)
 
-It's built **after Phase 165 PR A** (139), so 140 follows it in order. They
+It's built **after Phase 165 PR A** (139) and rooms inside rooms (140), so 141 follows them in order. They
 touch no shared functions: 165 adds owner pushes, and this adds staff ones.
 
-**PR A: database and staff turn-on.** Migration 140, the SQL tests,
+**PR A: database and staff turn-on.** Migration 141, the SQL tests,
 `src/components/staff/staff-push-card.tsx` and `staff-push-sheet.tsx` (ID
 only). It also adds the `push.ts` helpers `setMyPushPerson` and `myPhonePushPeople`,
 `usePushResync` on staff Today, the strip for a push meant for someone else, the glossary rows, the privacy
@@ -572,7 +598,7 @@ are all A.**
   line), plus one owner What's new card (EN/ID). B: an extra staff Yang baru
   card as well (two cards about one thing).
 - **D11: Order against Phase 165.**
-  **A (recommended):** build after 165 PR A, as migration 140, in two PRs
+  **A (recommended):** build after 165 PR A, as migration 141 (planned as 140), in two PRs
   (database and staff first, then the owner side). B: build it before 165
   (165 would then move to 140, and its plan and mockup would need renumbering).
 

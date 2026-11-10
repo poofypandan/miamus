@@ -117,6 +117,16 @@ export interface StubOptions {
    * the one tip slot the older tests look at.
    */
   couldntTip?: boolean;
+  /**
+   * Notifications on a staff phone (Phase 166, migrations/141): what
+   * my_phone_push_people answers the phone; with pushKey, the phone also
+   * gets the VAPID key. set_my_push_person calls are recorded in seen.
+   */
+  staffPush?: {
+    people: { staff_id: string; name: string }[];
+    shared: boolean;
+    household_on: boolean;
+  };
 }
 
 /**
@@ -146,6 +156,8 @@ export interface Stub {
     /** Tables queried with only the public key. */
     anonTables: string[];
     realBackend: string[];
+    /** set_my_push_person calls from a staff phone (Phase 166). */
+    pushPeople: Record<string, unknown>[];
   };
   /** food_items rows as the stub holds them (Phase 156). */
   foods: Record<string, unknown>[];
@@ -201,7 +213,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const trouble: Record<string, WriteTrouble> = {};
   const writes: [string, string][] = [];
   const logs: Record<string, unknown>[] = options.logs ?? [];
-  const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [] };
+  const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [] };
   const foods: Record<string, unknown>[] = [];
   const tasks: Record<string, unknown>[] = [];
   const supplies: Record<string, unknown>[] = [];
@@ -325,6 +337,14 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       }
       if (options.owner && who === OWNER && table === "rpc/get_push_public_key" && options.pushKey) {
         return route.fulfill({ json: options.pushKey });
+      }
+      if (options.staffPush && who !== OWNER) {
+        if (table === "rpc/get_push_public_key" && options.pushKey) return route.fulfill({ json: options.pushKey });
+        if (table === "rpc/my_phone_push_people") return route.fulfill({ json: options.staffPush });
+        if (table === "rpc/set_my_push_person") {
+          seen.pushPeople.push(request.postDataJSON());
+          return route.fulfill({ json: { status: "ok" } });
+        }
       }
       if (options.owner && who === OWNER && table === "rpc/set_household_has_pets") {
         household.hasPets = Boolean(request.postDataJSON()?.p_on);

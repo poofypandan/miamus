@@ -35,6 +35,9 @@ import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useHouseholdLocations, useLocationName } from "@/hooks/use-household-locations";
 import { StaffTipCard } from "@/components/shared/whats-new";
+import { StaffPushCard, StaffPushForSomeoneElse, useStaffPushCard } from "@/components/staff/staff-push-card";
+import { useStaffPush } from "@/hooks/use-staff-push";
+import { usePushResync } from "@/hooks/use-push-resync";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { LaunchCover } from "@/components/brand/brand-cover";
@@ -97,6 +100,9 @@ function StaffTasks() {
 
 
   useOfflineSync("id");
+  // A staff phone with notifications on keeps its subscription fresh, as the
+  // dashboard does for owners (Phase 166).
+  usePushResync("staff");
 
 
   // The same shell as dashboard/layout.tsx — column, shared AppHeader outside
@@ -178,6 +184,9 @@ function TasksView() {
     pendingIds,
   } = useHousehold();
   const { staffId } = useStaffIdentity();
+  // Notifications on this phone (Phase 166): the card takes the tip slot.
+  const staffPush = useStaffPush();
+  const pushCard = useStaffPushCard(staffPush);
   const dateStr = formatDateLocal(selectedDate);
   const today = useToday();
 
@@ -338,6 +347,9 @@ function TasksView() {
 
   return (
     <>
+      {/* A notification meant for someone else on this phone (Phase 166). */}
+      <StaffPushForSomeoneElse />
+
       {/* The person's own leave, pending or under way (Phase 140). */}
       <LeaveStatusBanner />
 
@@ -355,7 +367,12 @@ function TasksView() {
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
 
         {/* One tip at a time, newest first (audit B1, item 5): the work
-            comes first on a busy morning, not a stack of news. */}
+            comes first on a busy morning, not a stack of news. The
+            notifications card goes first in that slot (Phase 166, D9), and
+            nothing shows until it is known whether it will. */}
+        {pushCard.kind ? (
+          <StaffPushCard staffPush={staffPush} kind={pushCard.kind} onRest={pushCard.rest} />
+        ) : pushCard.ready ? (
         <StaffTipCard
           tips={[
             { id: "staff-couldnt-do-2026-11", show: true },
@@ -367,6 +384,7 @@ function TasksView() {
             { id: "staff-repair-notes-2026-11", show: showRepairNotesTip },
           ]}
         />
+        ) : null}
 
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.

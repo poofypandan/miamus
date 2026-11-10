@@ -34,11 +34,20 @@ const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"] 
 interface StaffIdentity {
   staffId: string | null;
   staffName: string | null;
+  /**
+   * The usual PIN screen for one person, over the page (Phase 166): "Ganti
+   * ke Sari" after a notification meant for her, or when the server wants
+   * the PIN before adding her to this phone's notifications. Resolves true
+   * once the PIN is right, and that person is then on duty here; false if
+   * they go back. Never offered to an admin.
+   */
+  confirmPerson: (person: Pick<StaffProfile, "id" | "name">) => Promise<boolean>;
 }
 
 const StaffIdentityContext = createContext<StaffIdentity>({
   staffId: null,
   staffName: null,
+  confirmPerson: async () => false,
 });
 
 /** Who is currently on duty on this device. Null before anyone has chosen. */
@@ -125,6 +134,25 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Who the PIN screen is open for over the page, and who is waiting on it.
+  const [confirming, setConfirming] = useState<{
+    profile: StaffProfile;
+    resolve: (ok: boolean) => void;
+  } | null>(null);
+  const waiting = useRef<((ok: boolean) => void) | null>(null);
+  const confirmPerson = useCallback(
+    (person: Pick<StaffProfile, "id" | "name">) =>
+      new Promise<boolean>((resolve) => {
+        // A second request replaces the first, which is told "no".
+        waiting.current?.(false);
+        waiting.current = resolve;
+        // The PIN screen reads only the id and the name (and has_pin, which
+        // "enter" implies).
+        setConfirming({ profile: { ...person, has_pin: true } as StaffProfile, resolve });
+      }),
+    []
+  );
+
   // An admin never meets the PIN screen: they signed in with Google, and
   // their roster row is linked to that account (Phase 139, migrations/106).
   // They pass straight through as themselves — so Action Mode shows their own
@@ -161,8 +189,8 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
     <StaffIdentityContext.Provider
       value={
         ownerBypass
-          ? { staffId: memberProfile?.id ?? null, staffName: memberProfile?.name ?? null }
-          : { staffId, staffName }
+          ? { staffId: memberProfile?.id ?? null, staffName: memberProfile?.name ?? null, confirmPerson: async () => false }
+          : { staffId, staffName, confirmPerson }
       }
     >
       {!ownerBypass && staffId && (
@@ -173,6 +201,27 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
         </Suspense>
       )}
       {children}
+      {confirming && !ownerBypass && (
+        // Over the page rather than instead of it, so what was open stays
+        // as it was when they come back.
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-50">
+          <PinStep
+            step={{ kind: "enter", profile: confirming.profile }}
+            onBack={() => {
+              waiting.current = null;
+              confirming.resolve(false);
+              setConfirming(null);
+            }}
+            onDone={(profile) => {
+              identify(profile);
+              waiting.current = null;
+              confirming.resolve(true);
+              setConfirming(null);
+            }}
+            setStep={() => {}}
+          />
+        </div>
+      )}
     </StaffIdentityContext.Provider>
   );
 }

@@ -32,6 +32,7 @@ import { LocationCombobox } from "@/components/chores/location-combobox";
 import { SpotField } from "@/components/chores/spot-field";
 import { dayKeyLabel } from "@/lib/date-label";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { staffWillBeNotified } from "@/lib/staff-push";
 import {
   REPEAT_CHOICES,
   intervalOf,
@@ -274,13 +275,32 @@ export function ChoreEditorDialog({
             ? { spot: null }
             : {}),
       };
+      // Whether this save tells a staff phone (Phase 166, migrations/141):
+      // a chore for someone, today, that is new or newly theirs, moved onto
+      // today or re-timed. The server decides; this only words the toast.
+      const forToday = !!fields.assigned_to && fields.due_date === formatDateLocal(new Date());
+      const tellsStaff =
+        forToday &&
+        (!task ||
+          task.assigned_to !== fields.assigned_to ||
+          task.due_date !== fields.due_date ||
+          (task.due_time ?? null) !== fields.due_time);
+      const notified = async () => {
+        if (!tellsStaff || !fields.assigned_to) return undefined;
+        const reached = await staffWillBeNotified([fields.assigned_to]);
+        if (!reached.includes(fields.assigned_to)) return undefined;
+        const who = (profiles ?? []).find((p) => p.id === fields.assigned_to)?.name;
+        return who
+          ? { description: t(`${who} will get a notification.`, `${who} akan mendapat notifikasi.`) }
+          : undefined;
+      };
       if (task) {
         await updateHouseholdTask(task.id, fields);
         // A written day's reminder lives on its repeat.
         if (dayOfRepeat && reminderSource && (reminderSource.remind_days_before ?? null) !== remind) {
           await updateHouseholdTask(reminderSource.id, { remind_days_before: remind });
         }
-        toast.success(t(`Saved "${fields.title}"`, `"${fields.title}" disimpan`));
+        toast.success(t(`Saved "${fields.title}"`, `"${fields.title}" disimpan`), await notified());
       } else if (places.length > 1) {
         // One chore per room, saved together or not at all, so staff tick
         // each room off and the Rooms view counts each one.
@@ -289,11 +309,12 @@ export function ChoreEditorDialog({
           t(
             `Added "${fields.title}" to ${places.length} rooms`,
             `"${fields.title}" ditambahkan ke ${places.length} ruangan`
-          )
+          ),
+          await notified()
         );
       } else {
         await createHouseholdTask(repairId ? { ...fields, repair_id: repairId } : fields);
-        toast.success(t(`Added "${fields.title}"`, `"${fields.title}" ditambahkan`));
+        toast.success(t(`Added "${fields.title}"`, `"${fields.title}" ditambahkan`), await notified());
       }
       onOpenChange(false);
     } catch (err) {
