@@ -133,6 +133,7 @@
   .map th, .map td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
   .map th { background: var(--track); font-weight: 600; border-top: 0; }
   .wrapmap { overflow-x: auto; }
+  .handoff { font-size: 12px; color: var(--muted); text-align: center; border: 1px dashed #d1d5db; border-radius: 12px; padding: 10px; }
   .note { font-size: 12px; color: var(--muted); text-align: center; }
   footer { max-width: 1100px; margin: 0 auto; padding: 18px 16px 40px; color: var(--muted); font-size: 12px; }
 </style>
@@ -175,67 +176,70 @@
 <symbol id="i-chef-hat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></symbol>
 <symbol id="i-smartphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol>
 <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+<symbol id="i-trees" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/></symbol>
+<symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M12 6h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/><path d="M8 6h.01"/><path d="M9 22v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><rect x="4" y="2" width="16" height="20" rx="2"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></symbol>
+<symbol id="i-sliders-horizontal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></symbol>
 <symbol id="mark" viewBox="0 0 512 512"><rect width="512" height="512" rx="114.5" fill="#171717"/><polyline points="112,214 256,104 400,214" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,400 152,262 256,354 360,262 360,400" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
 <header class="page">
-  <h1>Phase 171: features you switch on, a simple sign-up, and the people Care is for</h1>
-  <p>Phone-width mockups for <code>docs/phase-171-features-plan.md</code>. Owner screens: English left, Bahasa Indonesia right. Staff screen: Bahasa Indonesia only. Plan only, nothing built. Every icon is a lucide line icon drawn from the app's own package.</p>
+  <h1>Phase 171: features you switch on, and a simple sign-up</h1>
+  <p>Revised after the 10 November evaluation. Phone-width mockups for <code>docs/phase-171-features-plan.md</code>. Screens 1 to 3 are PR A (build now); screens 4 to 6 are later and drawn only to fix the look. Owner screens: English left, Bahasa Indonesia right. Staff screen: Bahasa Indonesia only. Plan only, nothing built. Every icon is a lucide line icon drawn from the app's own package.</p>
 </header>
 
 <section class="screen">
-  <h2>The map: tab, pills, and the switch that shows each</h2>
-  <p>Still five tabs. Only Care can disappear (no pets, kids or elders). One pill left means no pills.</p>
+  <h2>The map: tab, pills, and the switch that shows each (PR A)</h2>
+  <p>Still five tabs. Only Pets can disappear. One pill left means no pills. Later features join Features switched off when they are built.</p>
   <div class="wrapmap">
   <table class="map">
     <tr><th>Tab</th><th>Pills</th><th>Shown by</th></tr>
     <tr><td>Today</td><td>Day, Week</td><td>Always. Each feature adds its lines only when it is on.</td></tr>
-    <tr><td>Care (now Pets)</td><td>Pets, Kids, Elders</td><td>Care switches: Pets, Kids (PR C), Elders (PR B). With only pets, the tab stays "Pets" with no pills.</td></tr>
-    <tr><td>Chores</td><td>Today, Rooms, Repairs</td><td>Repairs pill: Repairs. Bills checklist: Bills and upkeep. A room's Closet: Closet.</td></tr>
-    <tr><td>Kitchen</td><td>Food, Shopping, Menu</td><td>Shopping always. Food: Food at home. Menu (Recipes inside): Menu and recipes. Calories and protein: Nutrition.</td></tr>
+    <tr><td>Pets (Care later)</td><td>none now</td><td>Pets (from sign-up, as built). Kids and Elders only if people records are built after interviews.</td></tr>
+    <tr><td>Chores</td><td>Today, Rooms, Repairs</td><td>Repairs pill: Repairs. Bills checklist: Bills and upkeep.</td></tr>
+    <tr><td>Kitchen</td><td>Food, Shopping</td><td>Shopping always. Food: Food at home. With Food off, Shopping alone and no pills.</td></tr>
     <tr><td>Household</td><td>settings list</td><td>Always. Features replaces Who lives here.</td></tr>
-    <tr><td>Me (later, not a tab)</td><td>under the owner's own name</td><td>That owner's own choice, with its own consent. Never on staff phones.</td></tr>
   </table>
   </div>
 </section>
 
 <section class="screen">
-  <h2>1. Sign-up: the name screen (as today, Elders live in PR B)</h2>
-  <p>One field and one question. Kids stays greyed until PR C. Nothing is pre-selected.</p>
+  <h2>1. Sign-up: the name screen (unchanged, as built)</h2>
+  <p>One field and one optional question. Pets is live; Kids and Elders stay greyed "Soon". Nothing is pre-selected.</p>
   <div class="pair" id="s1"></div>
 </section>
 
 <section class="screen">
-  <h2>2. Sign-up: "Where would you like to start?"</h2>
-  <p>After the household exists, so Skip loses nothing. It orders the first-run checklist and Today's greeting; it hides nothing. The Care chip is named for who lives here.</p>
+  <h2>2. Sign-up: "What kind of home?"</h2>
+  <p>After the household exists, so Skip loses nothing. One choice, optional. Continue stores it and opens Phase 172's starter template for that kind of home (172 designs that step and settles the final list).</p>
   <div class="pair" id="s2"></div>
 </section>
 
 <section class="screen">
   <h2>3. Household, Features</h2>
-  <p>Drawn taller to show the whole list; on a phone the sheet scrolls. One list, three groups, one plain line per row. Off rows look the same as on rows, just with the switch off. Rows appear only for features that are built.</p>
+  <p>Only modules that exist, all on for existing households. One plain line per row. Later features (closet, kitchen amounts, recipes, menu) join here switched off when built; nothing greyed, nothing locked.</p>
   <div class="pair" id="s3"></div>
 </section>
 
 <section class="screen">
-  <h2>4. An offer at the moment of need: Nutrition on Recipes</h2>
-  <p>One quiet card, in place. No thanks hides it for this owner for good, on every phone. At most one new offer a day. Never on staff phones.</p>
+  <h2>4. Later: an offer at the moment of need, when the Closet ships</h2>
+  <p>Not in PR A (every PR A switch starts on). One quiet card on the room's sheet. No thanks hides it for this owner for good, on every phone. At most one new offer a day. Never on staff phones, never for something an owner switched off.</p>
   <div class="pair" id="s4"></div>
 </section>
 
 <section class="screen">
-  <h2>5. Care, Elders: Oma Lina (owner, PR B)</h2>
-  <p>Drawn a little taller to show the whole page. Her routines and who does each, and a gentle week summary. Grey, no red, no streaks, nothing measured.</p>
+  <h2>5. Later, after interviews (sketch): Care, Elders, Oma Lina</h2>
+  <p>Only if target households ask for it. Drawn a little taller to show the whole page. Her routines and who does each, and a gentle week summary. Grey, no red, no streaks, nothing measured.</p>
   <div class="pair" id="s5"></div>
 </section>
 
 <section class="screen">
-  <h2>6. Staff: Oma's morning walk on Tugas Hari Ini (Bahasa Indonesia only)</h2>
-  <p>Only on the phones the routine is for. Ticked with Selesai, an optional note, no photo. Nothing appears here because an owner switched on a personal feature.</p>
+  <h2>6. Later, after interviews (sketch): Oma's morning walk on staff Tugas Hari Ini (Bahasa Indonesia only)</h2>
+  <p>Only on the phones the routine is for. Ticked with Selesai, an optional note, no photo. No staff tip: no new reading for staff.</p>
   <div class="pair" id="s6"></div>
 </section>
 
-<footer>Mockup for review only. Wording follows docs/indonesian-glossary.md; "Rawat" for Care is a proposal (owner question 4).</footer>
+<footer>Mockup for review only. Wording follows docs/indonesian-glossary.md. In the later sketches, "Rawat" for Care is only a placeholder; "Perawatan" already means upkeep.</footer>
 
 <script>
 const ic = (n, cls = "ic") => `<svg class="${cls}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
@@ -252,94 +256,95 @@ const tabbar = (l, on, care = true) => {
 };
 const appbar = (title) => `<div class="appbar"><div class="row"><span class="brand">${mark()}${title}</span>${ic("bell")}</div></div>`;
 
-// 1. Name screen
+// 1. Name screen (as built, Phase 162)
 const s1 = (l) => {
   const T = l === "en" ? {
     h: "Welcome to Miamus", sub: "Let's set up your household. Then you can add your chores, staff and family.",
-    name: "Name your household", ph: "e.g. The Smith Residence", hint: "Shown at the top of every screen, for everyone in the house.",
-    who: "Who lives here?", whoh: "Miamus shows only what fits your home. Change it any time in Household.",
+    name: "Name your household", hint: "Shown at the top of every screen, for everyone in the house.",
+    who: "Who lives here?", whoh: "Miamus shows only what fits your home. Change it any time under Household.",
     pets: "Pets", kids: "Kids", soon: "Soon", elders: "Elders",
-    line: "Kids and elders get their own routines in Care. Only you and the staff you choose see them.",
     btn: "Create household", fine: "By creating a household, you confirm you've read the <u>privacy policy</u> and will let the people who work in your home know that Miamus records their tasks, photos and leave.",
   } : {
     h: "Selamat datang di Miamus", sub: "Mari siapkan rumah Anda. Lalu Anda bisa menambahkan tugas, staf dan keluarga.",
-    name: "Beri nama rumah Anda", ph: "mis. Rumah Keluarga Wijaya", hint: "Ditampilkan di bagian atas setiap layar, untuk semua orang di rumah.",
+    name: "Beri nama rumah Anda", hint: "Ditampilkan di bagian atas setiap layar, untuk semua orang di rumah.",
     who: "Siapa yang tinggal di sini?", whoh: "Miamus hanya menampilkan yang sesuai dengan rumah Anda. Bisa diubah kapan saja di tab Rumah.",
     pets: "Hewan", kids: "Anak", soon: "Segera", elders: "Lansia",
-    line: "Anak dan lansia punya rutinitas sendiri di Rawat. Hanya Anda dan staf yang Anda pilih yang melihatnya.",
     btn: "Buat rumah", fine: "Dengan membuat rumah, Anda menyatakan sudah membaca <u>kebijakan privasi</u> dan akan memberi tahu orang yang bekerja di rumah Anda bahwa Miamus mencatat tugas, foto dan cuti mereka.",
   };
   return phone(L[l].tag, `<div class="body form">
     ${mark("logo")}
     <div class="title">${T.h}</div><p class="sub">${T.sub}</p>
-    <div class="label">${T.name}</div><div class="input">${l === "en" ? "Rumah Kemang" : "Rumah Kemang"}</div><div class="hint">${T.hint}</div>
+    <div class="label">${T.name}</div><div class="input">Rumah Kemang</div><div class="hint">${T.hint}</div>
     <div class="label">${T.who}</div><div class="hint">${T.whoh}</div>
-    <div class="chips"><span class="chip on">${ic("paw-print")}${T.pets}</span><span class="chip on">${ic("person-standing")}${T.elders}</span><span class="chip soon">${ic("baby")}${T.kids} <small>${T.soon}</small></span></div>
-    <div class="hint" style="margin-top:0">${T.line}</div>
+    <div class="chips"><span class="chip on">${ic("paw-print")}${T.pets}</span><span class="chip soon">${T.kids} <small>${T.soon}</small></span><span class="chip soon">${T.elders} <small>${T.soon}</small></span></div>
     <div class="btn primary">${T.btn}</div>
     <div class="fine">${T.fine}</div>
   </div>`);
 };
 
-// 2. Where to start
+// 2. What kind of home?
 const s2 = (l) => {
   const T = l === "en" ? {
-    skip: "Skip", h: "Where would you like to start?", sub: "Pick any. It only changes what Today shows first; nothing is hidden.",
-    c: [["clipboard-list", "Chores", "Daily tasks for staff, room by room", true], ["cooking-pot", "Kitchen", "Food at home and the shopping list", false], ["wrench", "Repairs and bills", "What's broken, and dates nobody writes down", false], ["hand-heart", "Care", "Routines for your pets and Oma", true]],
-    btn: "Continue",
+    skip: "Skip", h: "What kind of home?", sub: "Miamus sets up the usual rooms, chores and bills for you to tick.",
+    c: [["trees", "House with garden and pool", "Garden, pool, terrace and the usual rooms", false], ["layers", "Big house with several floors", "Rooms by floor, staff rooms, a laundry", true], ["building", "Apartment", "Fewer rooms, no garden", false]],
+    btn: "Continue", next: "Next: the starter list for this kind of home (Phase 172)",
   } : {
-    skip: "Lewati", h: "Mau mulai dari mana?", sub: "Pilih satu atau lebih. Ini hanya mengatur yang muncul dulu di Hari ini; tidak ada yang disembunyikan.",
-    c: [["clipboard-list", "Tugas", "Tugas harian staf, per ruangan", true], ["cooking-pot", "Dapur", "Makanan di rumah dan daftar belanja", false], ["wrench", "Perbaikan dan tagihan", "Yang rusak, dan tanggal yang sering terlupa", false], ["hand-heart", "Rawat", "Rutinitas hewan dan Oma", true]],
-    btn: "Lanjut",
+    skip: "Lewati", h: "Rumah seperti apa?", sub: "Miamus menyiapkan ruangan, tugas dan tagihan yang biasa; Anda tinggal mencentang.",
+    c: [["trees", "Rumah dengan taman dan kolam renang", "Taman, kolam, teras dan ruangan yang biasa", false], ["layers", "Rumah besar bertingkat", "Ruangan per lantai, kamar staf, ruang cuci", true], ["building", "Apartemen", "Ruangan lebih sedikit, tanpa taman", false]],
+    btn: "Lanjut", next: "Berikutnya: daftar awal untuk jenis rumah ini (Phase 172)",
   };
   return phone(L[l].tag, `<div class="body form">
     <div class="topline"><div class="steps"><i class="on"></i><i class="on"></i></div><span class="skip">${T.skip}</span></div>
     <div class="title">${T.h}</div><p class="sub">${T.sub}</p>
     <div class="chips big">${T.c.map(([i, n, d, on]) => `<span class="chip ${on ? "on" : ""}">${ic(i)}<span><b>${n}</b><span class="d">${d}</span></span></span>`).join("")}</div>
     <div class="spacer"></div>
+    <div class="handoff">${T.next}</div>
     <div class="btn primary">${T.btn}</div>
   </div>`);
 };
 
-// 3. Features sheet
+// 3. Features sheet (PR A: only modules that exist)
 const s3 = (l) => {
   const T = l === "en" ? {
     title: "Features", lead: "Turn on what your home needs. Turning something off hides it; nothing is deleted.",
-    g: [["Home", [["wrench", "Repairs", "Staff report what's broken with a photo; you plan the fix.", true], ["receipt", "Bills and upkeep", "Reminders for electricity, water, PBB, AC service and the like.", true], ["shirt", "Closet", "What's at the laundry, the tailor or lent out, with photos.", false]]],
-         ["Kitchen", [["cooking-pot", "Food at home", "Leftovers and food from others, where it's kept and until when.", true], ["book-open", "Menu and recipes", "Plan the week's meals; the cook sees today's menu.", true], ["salad", "Nutrition", "Calories and protein on recipes and the menu.", false]]],
-         ["Care", [["paw-print", "Pets", "Routines, meals, medicine, vet visits and photos.", true], ["person-standing", "Elders", "Daily routines and exercises, ticked by whoever helps.", true]]]],
+    g: [["Home", [["wrench", "Repairs", "Staff report what's broken with a photo; you plan the fix.", true], ["receipt", "Bills and upkeep", "Reminders for electricity, water, PBB, AC service and the like.", true]]],
+        ["Kitchen", [["cooking-pot", "Food at home", "Leftovers and food from others, where it's kept and until when.", true]]],
+        ["Pets", [["paw-print", "Pets", "Routines, meals, medicine, vet visits and photos.", true]]]],
+    foot: "More features appear here, switched off, as Miamus adds them.",
   } : {
     title: "Fitur", lead: "Nyalakan yang dibutuhkan rumah Anda. Kalau dimatikan, fitur hanya disembunyikan; tidak ada yang dihapus.",
-    g: [["Rumah", [["wrench", "Perbaikan", "Staf melaporkan yang rusak dengan foto; Anda atur perbaikannya.", true], ["receipt", "Tagihan dan perawatan", "Pengingat listrik, air, PBB, servis AC dan lainnya.", true], ["shirt", "Lemari pakaian", "Pakaian yang di laundry, penjahit atau dipinjam, dengan foto.", false]]],
-         ["Dapur", [["cooking-pot", "Makanan di rumah", "Sisa masakan dan makanan dari orang, di mana disimpan dan sampai kapan.", true], ["book-open", "Menu dan resep", "Rencanakan menu seminggu; yang memasak melihat menu hari ini.", true], ["salad", "Gizi", "Kalori dan protein di resep dan menu.", false]]],
-         ["Rawat", [["paw-print", "Hewan", "Rutinitas, makan, obat, dokter hewan dan foto.", true], ["person-standing", "Lansia", "Rutinitas dan latihan harian, dicentang oleh yang membantu.", true]]]],
+    g: [["Rumah", [["wrench", "Perbaikan", "Staf melaporkan yang rusak dengan foto; Anda atur perbaikannya.", true], ["receipt", "Tagihan dan perawatan", "Pengingat listrik, air, PBB, servis AC dan lainnya.", true]]],
+        ["Dapur", [["cooking-pot", "Makanan di rumah", "Sisa masakan dan makanan dari orang, di mana disimpan dan sampai kapan.", true]]],
+        ["Hewan", [["paw-print", "Hewan", "Rutinitas, makan, obat, dokter hewan dan foto.", true]]]],
+    foot: "Fitur baru muncul di sini dalam keadaan mati saat Miamus menambahkannya.",
   };
-  return phone(L[l].tag, `${appbar("Miamus")}<div class="body"></div>${tabbar(l, "house")}
+  return phone(L[l].tag, `${appbar("Miamus")}<div class="body"></div>${tabbar(l, "house", false)}
     <div class="dim"></div>
     <div class="sheet"><div class="grab"></div><h3>${T.title}</h3><p class="lead">${T.lead}</p>
     ${T.g.map(([h, rows]) => `<div class="h">${h}</div><div class="group">${rows.map(([i, n, d, on]) => `<div class="frow"><span class="ico">${ic(i)}</span><span class="t"><b>${n}</b><span>${d}</span></span><span class="sw ${on ? "on" : ""}"></span></div>`).join("")}</div>`).join("")}
-    </div>`, "tall");
+    <p class="note">${T.foot}</p>
+    </div>`);
 };
 
-// 4. Offer on Recipes
+// 4. Later: an offer when the Closet ships
 const s4 = (l) => {
   const T = l === "en" ? {
-    seg: ["Food", "Shopping", "Menu"], back: "Recipes", count: "3 recipes",
-    oq: "Track calories and protein?", ol: "Miamus can add them to your recipes and the week's menu.", on: "Turn on", no: "No thanks",
-    r: [["Soto ayam", "Serves 4 · 9 ingredients"], ["Rendang", "Serves 6 · 14 ingredients"], ["Sayur asem", "Serves 4 · 11 ingredients"]], add: "Add recipe",
+    room: "Walk-in closet", where: "LT2 · Master bedroom",
+    oq: "Is this a closet?", ol: "Keep track of clothes at the laundry or lent out.", on: "Turn on", no: "No thanks",
+    ch: "Chores in this room", c: [["Vacuum and dust", "Every Monday · Siti"], ["Air out the wardrobe", "Every 2 weeks · Anyone"]],
   } : {
-    seg: ["Makanan", "Belanja", "Menu"], back: "Resep", count: "3 resep",
-    oq: "Catat kalori dan protein?", ol: "Miamus bisa menambahkannya di resep dan menu mingguan.", on: "Nyalakan", no: "Tidak, terima kasih",
-    r: [["Soto ayam", "Untuk 4 orang · 9 bahan"], ["Rendang", "Untuk 6 orang · 14 bahan"], ["Sayur asem", "Untuk 4 orang · 11 bahan"]], add: "Tambah resep",
+    room: "Walk-in closet", where: "LT2 · Kamar utama",
+    oq: "Ini lemari pakaian?", ol: "Catat pakaian yang di laundry atau dipinjam.", on: "Nyalakan", no: "Tidak, terima kasih",
+    ch: "Tugas di ruangan ini", c: [["Vakum dan lap debu", "Setiap Senin · Siti"], ["Angin-anginkan lemari", "Setiap 2 minggu · Siapa saja"]],
   };
-  return phone(L[l].tag, `${appbar("Miamus")}<div class="body">
-    <div class="seg">${T.seg.map((s, i) => `<span class="${i === 2 ? "on" : ""}">${s}</span>`).join("")}</div>
-    <div class="topline"><b style="font-size:16px">${T.back}</b><span class="sub">${T.count}</span></div>
-    <div class="offer"><div class="top"><span class="ico">${ic("salad")}</span><span><b>${T.oq}</b><span>${T.ol}</span></span></div>
+  return phone(L[l].tag, `${appbar("Miamus")}<div class="body"></div>${tabbar(l, "house", false)}
+    <div class="dim"></div>
+    <div class="sheet"><div class="grab"></div><h3>${T.room}</h3><p class="lead">${T.where}</p>
+    <div class="offer"><div class="top"><span class="ico">${ic("shirt")}</span><span><b>${T.oq}</b><span>${T.ol}</span></span></div>
       <div class="two"><span class="btn sm primary">${T.on}</span><span class="btn sm outline">${T.no}</span></div></div>
-    ${T.r.map(([n, d]) => `<div class="item"><span class="thumb">${ic("chef-hat")}</span><span class="t"><b>${n}</b><span>${d}</span></span>${ic("chevron-right", "chev")}</div>`).join("")}
-    <div class="btn outline">${ic("plus")}${T.add}</div>
-  </div>${tabbar(l, "kitchen")}`);
+    <div class="h">${T.ch}</div>
+    ${T.c.map(([n, d]) => `<div class="item"><span class="thumb">${ic("door-open")}</span><span class="t"><b>${n}</b><span>${d}</span></span>${ic("chevron-right", "chev")}</div>`).join("")}
+    </div>`);
 };
 
 // 5. Elder page
@@ -372,7 +377,6 @@ const s5 = (l) => {
 const s6 = () => phone("Staf, Bahasa Indonesia", `<div class="shead"><div class="row" style="display:flex;justify-content:space-between;align-items:center;height:40px"><span class="brand">${mark()}Tugas Hari Ini</span><span class="who-s">Siti</span></div>
     <div class="seg" style="margin-top:6px"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
   <div class="body">
-    <div class="tip">${ic("sparkles")}<span><b>Baru: rutinitas untuk Oma Lina.</b> Centang Selesai setelah dikerjakan; tambahkan catatan kalau perlu.</span></div>
     <div class="gh">${ic("person-standing")}Oma Lina <small>2 rutinitas</small></div>
     <div class="scard"><div class="top"><span class="ico">${ic("footprints")}</span><span class="t"><b>Jalan pagi 15 menit</b><span>07.00 · untuk Siti</span></span></div>
       <div class="two"><span class="btn sm primary">${ic("check")}Selesai</span><span class="btn sm outline">${ic("notebook-pen")}Tambah catatan</span></div>
