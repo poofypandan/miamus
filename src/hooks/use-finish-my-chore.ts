@@ -91,7 +91,18 @@ export function useFinishMyChore() {
   );
 
   const finish = useCallback(
-    async (occurrence: ChoreOccurrence, photos?: MyChorePhotos): Promise<FinishOutcome> => {
+    async (
+      occurrence: ChoreOccurrence,
+      photos?: MyChorePhotos,
+      options?: {
+        /**
+         * Runs once the day is saved and before the Undo toast appears, so
+         * Undo can't overtake it (a bill's payment, Codex PR #65). Its own
+         * failures are its own: it should catch them.
+         */
+        afterSent?: (task: HouseholdTask) => Promise<void>;
+      }
+    ): Promise<FinishOutcome> => {
       const title = occurrence.task.title;
       const bill = isBill(occurrence.task);
       try {
@@ -125,6 +136,7 @@ export function useFinishMyChore() {
           );
           return { outcome: "queued" };
         }
+        if (options?.afterSent) await options.afterSent(task);
         toast.success(bill ? t(`Paid: ${title}`, `Sudah dibayar: ${title}`) : t(`Done: ${title}`, `Selesai: ${title}`), {
           duration: 5000,
           action: {

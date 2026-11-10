@@ -185,3 +185,49 @@ test("a staff phone never asks for payments and never sees one", async ({ contex
   await expect(page.getByText(/50\.000/)).toHaveCount(0);
   expect(stub.billPaymentReads).toEqual([]);
 });
+
+test("Undo right after Mark paid removes the payment too (Codex, PR #65)", async ({ context, page }) => {
+  const water = chore({ title: "Water (PDAM)" });
+  const stub = await installStub(context, { owner: { locale: "en" }, chores: [water] });
+  await page.goto("/dashboard");
+  const card = page.getByRole("region", { name: "My tasks" });
+  await card.getByRole("button", { name: /^Anytime Water \(PDAM\)/ }).click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+  await sheet.getByLabel("Amount (optional)").fill("186000");
+  await sheet.getByRole("button", { name: "Mark paid" }).click();
+  // The payment is saved before Undo is offered.
+  await expect(page.getByText("Paid: Water (PDAM)")).toBeVisible();
+  expect(stub.billPayments.find((p) => p.task_id === water.id)).toMatchObject({ amount_idr: 186000 });
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => water.status).toBe("pending");
+  await expect.poll(() => stub.billPayments.some((p) => p.task_id === water.id)).toBe(false);
+});
+
+test("a bill covered for someone on leave on its first day still asks for both photos (Codex, PR #65)", async ({
+  context,
+  page,
+}) => {
+  const today = ymd(dateIn(0));
+  const iuran = chore({ title: "Iuran RT/RW", assigned_to: STAFF_ID, recurrence: "monthly" });
+  const leave = {
+    id: "00000000-0000-4000-8000-000000013890",
+    household_id: HOUSEHOLD_ID,
+    staff_id: STAFF_ID,
+    start_date: today,
+    end_date: today,
+    status: "approved",
+    fallback_action: "reassign",
+    fallback_assignee_id: OWNER_PROFILE_ID,
+    ended_on: null,
+    created_at: "2026-11-01T00:00:00Z",
+  };
+  await installStub(context, { owner: { locale: "en" }, chores: [iuran], leaves: [leave] });
+  await page.goto("/dashboard");
+  const card = page.getByRole("region", { name: "My tasks" });
+  await card.getByRole("button", { name: "Mark paid: Iuran RT/RW" }).click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByText("You're covering this for someone on leave, so it needs both photos.")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Take photo" })).toHaveCount(2);
+  await expect(sheet.getByLabel("Amount (optional)")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Mark paid" })).toBeDisabled();
+});

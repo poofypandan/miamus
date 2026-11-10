@@ -140,22 +140,32 @@ function OwnerFinishBody({
   const hasPaymentInput = parsedAmount !== null || !!receipt;
 
   async function markPaid() {
-    if (amountInvalid || receiptBusy) return;
+    if (amountInvalid || receiptBusy || (photosRequired && (missingPhotos || uploading || photoFailed))) return;
     setBusy(true);
-    const result = await finish(occurrence);
-    if (result?.outcome === "sent" && hasPaymentInput) {
-      try {
-        await savePayment({ taskId: result.task.id, seriesId, amount: parsedAmount, receipt, previous: null });
-      } catch (err) {
-        console.error(err);
-        toast.error(
-          t(
-            "Paid, but the amount wasn't saved. Open it to add it again.",
-            "Sudah dibayar, tapi jumlahnya gagal disimpan. Buka lagi untuk menambahkannya."
-          )
-        );
-      }
-    } else if (result?.outcome === "queued" && hasPaymentInput) {
+    // Covering a repeat's first day for someone on leave needs both photos
+    // (coverTakeover), bill or not (Codex, PR #65).
+    const photos = beforeUrl && afterUrl ? { before: beforeUrl, after: afterUrl } : undefined;
+    // The payment is saved before the Undo toast appears, so an Undo can't
+    // run ahead of it and leave a payment on a bill not paid (Codex, PR #65).
+    const result = await finish(occurrence, photos, {
+      afterSent: hasPaymentInput
+        ? async (saved) => {
+            try {
+              await savePayment({ taskId: saved.id, seriesId, amount: parsedAmount, receipt, previous: null });
+            } catch (err) {
+              console.error(err);
+              toast.error(
+                t(
+                  "Paid, but the amount wasn't saved. Open it to add it again.",
+                  "Sudah dibayar, tapi jumlahnya gagal disimpan. Buka lagi untuk menambahkannya."
+                )
+              );
+            }
+          }
+        : undefined,
+    });
+    if (result?.outcome === "sent" && photos) clearChoreDraft(draftKey);
+    if (result?.outcome === "queued" && hasPaymentInput) {
       toast.info(
         t(
           "The amount and receipt can be added once it has been sent.",
@@ -320,7 +330,7 @@ function OwnerFinishBody({
                 </section>
               )}
             </>
-          ) : canFinish && bill ? (
+          ) : canFinish && bill && !photosRequired ? (
             <section className="flex flex-col gap-3">
               <BillPaymentFields
                 amountText={amountText}
@@ -389,6 +399,20 @@ function OwnerFinishBody({
                       : t("Both photos, or none.", "Dua foto, atau tidak sama sekali.")}
                 </p>
               </section>
+              {bill && (
+                <section className="flex flex-col gap-3">
+                  <BillPaymentFields
+                    amountText={amountText}
+                    onAmountText={setAmountText}
+                    amountInvalid={amountInvalid}
+                    parsedAmount={parsedAmount}
+                    hint={lastTime}
+                    receipt={receipt}
+                    onReceipt={setReceipt}
+                    onReceiptBusy={setReceiptBusy}
+                  />
+                </section>
+              )}
             </>
           ) : mode === "future" ? (
             <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
@@ -402,7 +426,9 @@ function OwnerFinishBody({
             bill ? (
               <Button
                 onClick={markPaid}
-                disabled={busy || amountInvalid || receiptBusy}
+                disabled={
+                  busy || amountInvalid || receiptBusy || (photosRequired && (missingPhotos || uploading || photoFailed))
+                }
                 className="min-h-12 rounded-xl"
               >
                 {busy || receiptBusy ? <Loader2 className="animate-spin" /> : <Check />}
