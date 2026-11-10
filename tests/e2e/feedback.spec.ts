@@ -70,6 +70,22 @@ test("an owner sends feedback from About Miamus", async ({ context, page }) => {
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
+test("the Household list opens it too, over the list", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" } });
+  const sent = await catchFeedback(context);
+
+  await page.goto("/dashboard?module=access");
+  await page.getByRole("button", { name: "Send feedback" }).click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("heading", { name: "Send feedback" })).toBeVisible();
+  // A sheet, not a page: the list stays where it was.
+  await expect(page).not.toHaveURL(/page=/);
+  await sheet.getByLabel("Your message").fill("Love the Rooms view");
+  await sheet.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(sheet.getByText("Thank you")).toBeVisible();
+  expect(sent[0].body).toMatchObject({ message: "Love the Rooms view", page: "/dashboard?module=access" });
+});
+
 test("an owner who reads Indonesian sends it in Indonesian", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "id" } });
   const sent = await catchFeedback(context);
@@ -89,7 +105,10 @@ test("a staff phone sends feedback as the person on duty", async ({ context, pag
   const sent = await catchFeedback(context);
   await page.goto("/staff");
 
-  await page.getByRole("button", { name: /^Lapor/ }).click({ timeout: 20_000 });
+  // The one-time tip, in Indonesian.
+  await expect(page.getByRole("region", { name: "Baru: Kirim masukan" })).toBeVisible({ timeout: 20_000 });
+
+  await page.getByRole("button", { name: /^Lapor/ }).click();
   await page.getByRole("button", { name: /Kirim masukan/ }).click();
 
   const sheet = page.getByRole("dialog");

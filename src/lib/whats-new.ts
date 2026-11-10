@@ -29,11 +29,11 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: send us feedback", id: "Baru: kirim masukan" },
     steps: {
       en: [
-        "Household → About Miamus → Send feedback: an idea, or something that went wrong. A few words are enough.",
+        "Household → Send feedback (also in About Miamus): an idea, or something that went wrong. A few words are enough.",
         "Staff can send too, from Lapor → Kirim masukan. It goes to the Miamus team; staff can't read anyone else's.",
       ],
       id: [
-        "Rumah → Tentang Miamus → Kirim masukan: ide, atau sesuatu yang tidak beres. Beberapa kata sudah cukup.",
+        "Rumah → Kirim masukan (juga di Tentang Miamus): ide, atau sesuatu yang tidak beres. Beberapa kata sudah cukup.",
         "Staf juga bisa mengirim, lewat Lapor → Kirim masukan. Masukan sampai ke tim Miamus; staf tidak bisa membaca masukan orang lain.",
       ],
     },

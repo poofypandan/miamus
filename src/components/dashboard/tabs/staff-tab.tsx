@@ -14,6 +14,7 @@ import {
   History,
   House,
   Info,
+  MessageSquareText,
   KeyRound,
   Languages,
   Loader2,
@@ -73,6 +74,7 @@ import { HouseholdDataPanel } from "@/components/dashboard/household-data-panel"
 import { useHouseholdDeletion } from "@/hooks/use-household-deletion";
 import { AboutMiamus } from "@/components/dashboard/about-miamus";
 import { WhatsNewCard, WhatsNewList } from "@/components/shared/whats-new";
+import { FeedbackSheet } from "@/components/shared/feedback-sheet";
 import { RoomsManager } from "@/components/dashboard/rooms-manager";
 import { WhoLivesHerePanel } from "@/components/dashboard/who-lives-here-panel";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -211,6 +213,8 @@ export function StaffTab() {
   const deletion = useHouseholdDeletion();
   // This device's notifications, on the row (On / Off / Blocked).
   const { status: pushStatus } = usePushStatus();
+  // Feedback (roadmap item 9): a sheet over the list, not a page of its own.
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
 
@@ -358,8 +362,14 @@ export function StaffTab() {
         <SettingsGroup>
           <SettingsRow icon={Sparkles} label={t("What's new", "Yang baru")} onPress={() => open("whats-new")} />
           <SettingsRow icon={Info} label={t("About Miamus", "Tentang Miamus")} onPress={() => open("about")} />
+          <SettingsRow
+            icon={MessageSquareText}
+            label={t("Send feedback", "Kirim masukan")}
+            onPress={() => setFeedbackOpen(true)}
+          />
         </SettingsGroup>
         <SignOutRow locale={locale} />
+        <FeedbackSheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} locale={locale} />
       </div>
     );
   }
