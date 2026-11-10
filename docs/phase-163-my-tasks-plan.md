@@ -213,7 +213,15 @@ before building. Not created in this PR.
    `get_user_household_ids()`, which staff phones pass);
 2. `new.completed_by` is the caller's **own** roster row
    (`staff_profiles.user_id = auth.uid()`, same household);
-3. both photos are null (one photo alone is still refused: "both, or none").
+3. the chore is the caller's or nobody's, matching D2: `new.assigned_to` is
+   null or that same row, and on an update `old.assigned_to` is too. Who
+   records the completion alone doesn't say whose chore it is (Codex, PR
+   #56): without this, an admin could finish a staff member's chore with
+   `completed_by` set to themselves and skip the photos. Checking the old
+   value as well means a staff chore can't be reassigned and finished
+   photo-free in one write; taking it over is a separate edit in the chore
+   form first, which is the owner's call and shows on the chore;
+4. both photos are null (one photo alone is still refused: "both, or none").
 
 Everything else is unchanged: staff phones, the service role, and an admin
 marking **someone else's** chore done still need both photos. Notes for the
@@ -228,8 +236,11 @@ migration:
   admins.
 - Tests in `supabase/tests/136_admin_finish_without_photos.sql` (rolled
   back): an admin finishes their own chore with no photos (allowed); with one
-  photo (refused); with both (allowed); an admin finishes a staff member's
-  chore with no photos (refused); a staff phone with no photos (refused);
+  photo (refused); with both (allowed); an unassigned chore with no photos
+  (allowed); an admin finishes a staff member's chore with no photos and
+  `completed_by` set to themselves (refused); reassigns a staff chore to
+  themselves and finishes it photo-free in the same update (refused), then
+  in two separate updates (allowed); a staff phone with no photos (refused);
   a logged-out caller (refused); grants checked.
 - Applied local first, then staging, then production with the owner's OK,
   before the PR merges (`main` deploys to production).
