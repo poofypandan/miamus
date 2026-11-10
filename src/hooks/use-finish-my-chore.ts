@@ -30,7 +30,7 @@ export interface MyChorePhotos {
  * queue's retry.
  */
 export function useFinishMyChore() {
-  const { finishChore, updateHouseholdTask, updateHouseholdTaskStatus, pendingIds, memberProfile } = useHousehold();
+  const { finishChore, updateHouseholdTaskStatus, pendingIds, memberProfile } = useHousehold();
   const t = useT();
   // Read at the moment of a tap, not from the render that made the toast.
   const pendingRef = useRef(pendingIds);
@@ -93,9 +93,6 @@ export function useFinishMyChore() {
           toast.error(t("This one needs both photos.", "Tugas ini perlu dua foto."));
           return null;
         }
-        if (cover.kind === "takeover" && memberProfile) {
-          await updateHouseholdTask(cover.rowId, { assigned_to: memberProfile.id });
-        }
         const { queued, task } = await finishChore({
           templateId: occurrence.template.id,
           date: occurrence.date,
@@ -104,6 +101,8 @@ export function useFinishMyChore() {
           before: photos?.before ?? null,
           after: photos?.after ?? null,
           title,
+          // Queued with the completion, so a weak signal keeps both (Codex, PR #58).
+          takeOverAs: cover.kind === "takeover" && memberProfile ? memberProfile.id : null,
         });
         if (queued || !task) {
           toast.info(
@@ -129,7 +128,7 @@ export function useFinishMyChore() {
         return null;
       }
     },
-    [finishChore, updateHouseholdTask, memberProfile, reopen, explain, t]
+    [finishChore, memberProfile, reopen, explain, t]
   );
 
   return { finish, reopen };

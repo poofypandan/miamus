@@ -244,6 +244,8 @@ interface HouseholdContextValue {
     before: string | null;
     after: string | null;
     title: string;
+    /** Leave cover: take the stored row over first (see ChoreFinishJob). */
+    takeOverAs?: string | null;
   }) => Promise<{ queued: boolean; task?: HouseholdTask }>;
   deleteLogWithPhoto: (log: TaskLog) => Promise<void>;
   createSchedule: (input: CreateScheduleInput) => Promise<MasterSchedule>;
@@ -975,6 +977,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       before: string | null;
       after: string | null;
       title: string;
+      takeOverAs?: string | null;
     }) => {
       const outcome = await submitJob<Extract<SendResult, { kind: "chore" }>>(
         {

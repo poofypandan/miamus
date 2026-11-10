@@ -187,13 +187,18 @@ test("a chore covered for someone on leave is taken over, then finished without 
 
   const card = myTasks(page);
   await expect(card).toContainText("Sweep the terrace", { timeout: 20_000 });
+  // A weak signal on the first try: the takeover times out, and both it and
+  // the completion wait on the phone together (Codex, PR #58).
+  stub.trouble.household_tasks = { drop: 1 };
   await card.getByRole("button", { name: "Mark done: Sweep the terrace" }).click();
-  await expect(page.getByText("Done: Sweep the terrace")).toBeVisible();
-  // Taken over first (its own edit), then completed photo-free: the stub
-  // applies migrations/136's rule and would refuse it the other way round.
-  expect(sweep).toMatchObject({ status: "completed", assigned_to: OWNER_PROFILE_ID, completed_by: OWNER_PROFILE_ID });
-  const patches = stub.writes.filter(([method, table]) => method === "PATCH" && table === "household_tasks");
-  expect(patches).toHaveLength(2);
+  await expect(page.getByText("Done, saved on this phone. It will be sent when the signal is back.")).toBeVisible({
+    timeout: 30_000,
+  });
+  // Sent by itself: taken over first (its own edit), then completed
+  // photo-free. The stub applies migrations/136's rule and would refuse it
+  // the other way round.
+  await expect.poll(() => sweep.status, { timeout: 45_000 }).toBe("completed");
+  expect(sweep).toMatchObject({ assigned_to: OWNER_PROFILE_ID, completed_by: OWNER_PROFILE_ID, before_photo_url: null });
 });
 
 test("covering the first day of a repeat for someone on leave needs photos, and never reassigns the repeat", async ({
