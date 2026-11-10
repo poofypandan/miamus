@@ -136,6 +136,9 @@ export interface Stub {
   repairs: Record<string, unknown>[];
   /** repair_costs and repair_notes rows (Phase 159 PR B). */
   repairCosts: Record<string, unknown>[];
+  /** Storage uploads and removals, as "bucket/path". */
+  uploads: string[];
+  removed: string[];
   repairNotes: Record<string, unknown>[];
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
@@ -172,6 +175,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const supplies: Record<string, unknown>[] = [];
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
   const repairCosts: Record<string, unknown>[] = [];
+  const uploads: string[] = [];
+  const removed: string[] = [];
   const repairNotes: Record<string, unknown>[] = [];
   const kakak = { allowed: false, enabled: false, ...options.kakak };
   const household = { hasPets: options.household?.hasPets ?? null };
@@ -236,6 +241,19 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       if (!net.token) return route.abort("internetdisconnected");
       seen.tokenRefreshes += 1;
       return route.fulfill({ json: session(options.stored?.user.id ?? USER, nowSeconds() + 3600) });
+    }
+    // Storage: uploads and removals, recorded.
+    if (path.startsWith("/storage/v1/object/")) {
+      const rest = decodeURIComponent(path.slice("/storage/v1/object/".length));
+      if (request.method() === "POST" || request.method() === "PUT") {
+        uploads.push(rest);
+        return route.fulfill({ json: { Key: rest, Id: rest } });
+      }
+      if (request.method() === "DELETE") {
+        const prefixes: string[] = request.postDataJSON()?.prefixes ?? [];
+        for (const p of prefixes) removed.push(`${rest}/${p}`);
+        return route.fulfill({ json: prefixes.map((name) => ({ name })) });
+      }
     }
     if (path.startsWith("/rest/v1/")) {
       if (!net.rest) return route.abort("internetdisconnected");
@@ -357,6 +375,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     supplies,
     repairs,
     repairCosts,
+    uploads,
+    removed,
     repairNotes,
     kakak,
     household,
