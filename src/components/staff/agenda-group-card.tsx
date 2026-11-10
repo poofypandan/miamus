@@ -422,33 +422,35 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         wholeCardSuspended && "opacity-50"
       )}
     >
-      <span className="flex items-center gap-2">
+      <span className="flex items-start gap-2">
         <CategoryIcon
           className={cn(
-            "size-4 shrink-0",
+            "mt-0.5 size-4 shrink-0",
             finished ? DONE_TONE.icon : categoryIconColor(group.category)
           )}
         />
         <span className="shrink-0 text-sm font-medium tabular-nums">{formatTime(group.time)}</span>
         <span
           className={cn(
-            "min-w-0 flex-1 truncate text-sm font-medium",
+            // Wrapped, not cut off (audit B1): the title is what to do.
+            "min-w-0 flex-1 text-sm font-medium break-words",
             finished && "text-muted-foreground"
           )}
         >
           {consolidated ? `${cardTitle} (${group.titles.length})` : cardTitle}
         </span>
-        {finished && <CheckCircle2 className={cn("size-4 shrink-0", DONE_TONE.check)} />}
+        {finished && <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", DONE_TONE.check)} />}
       </span>
       {/* What the block actually is, on the card itself (Phase 132): a
           consolidated medicine round lists its medicines, so staff can see
-          what to prepare without opening the sheet. Two lines at most; the
-          sheet still has the full list. Routines carry no other notes — a
-          schedule has no instructions field — so this is the detail there is. */}
+          what to prepare without opening the sheet. The whole list, at 13px
+          (audit B1): a medicine left off by a two-line cut is a medicine
+          missed. Routines carry no other notes — a schedule has no
+          instructions field — so this is the detail there is. */}
       {consolidated && (
         <span
           className={cn(
-            "line-clamp-2 text-xs",
+            "text-[13px] leading-snug",
             finished ? "text-muted-foreground" : "text-red-900/80"
           )}
         >

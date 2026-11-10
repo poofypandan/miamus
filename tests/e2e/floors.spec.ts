@@ -140,6 +140,12 @@ test("a staff phone gets the one-line floors tip once a chore shows a floor or s
   ];
   const chores = [chore({ title: "Lap keran", assigned_to: null, location_id: id(31), spot: "Wastafel" })];
   await installStub(context, { stored: freshSession(), staffPhone: true, rooms, chores });
+  // One tip at a time, newest first (audit B1): the newer ones already closed.
+  await context.addInitScript(() => {
+    for (const card of ["staff-feedback-2026-11", "staff-weak-signal-2026-11"]) {
+      localStorage.setItem(`miamus.whats-new.${card}`, "seen");
+    }
+  });
   await page.goto("/staff");
 
   const tip = page.getByRole("region", { name: "Baru: lantai dan bagian ruangan" });

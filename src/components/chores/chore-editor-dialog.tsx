@@ -115,8 +115,11 @@ export function ChoreEditorDialog({
     recurrence?: ChoreRecurrence;
     interval?: number;
     remindDaysBefore?: number | null;
-    /** Who it's for; a bill starts with the owner adding it. */
-    assignedTo?: string | null;
+    /**
+     * Who it's for: the first-run checklist's "Give them a first task" (audit
+     * B1); a bill starts with the owner adding it (Phase 164).
+     */
+    assigneeId?: string | null;
   } | null;
 }) {
   const {
@@ -203,7 +206,7 @@ export function ChoreEditorDialog({
       setPlaces(room ? [room] : []);
       setSpot(room ? (preset?.spot?.trim() || null) : null);
       setCategory(preset?.category ?? "cleaning");
-      setAssignee(preset?.assignedTo ?? UNASSIGNED);
+      setAssignee(preset?.assigneeId ?? UNASSIGNED);
       setDate(defaultDate);
       setTime("");
       setNotes(preset?.notes ?? "");

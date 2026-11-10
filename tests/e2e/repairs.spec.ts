@@ -119,6 +119,13 @@ test("an owner reviews a staff report, schedules a visit, and reports a problem"
 
 test("a staff phone reports a problem and sees it waiting for the owners", async ({ context, page }) => {
   const stub = await installStub(context, { stored: freshSession(), staffPhone: true, rooms: [LT3, MUSIC], chores: [] });
+  // Staff see one tip at a time, newest first (audit B1): the newer ones
+  // already closed, so this one is up.
+  await context.addInitScript(() => {
+    for (const card of ["staff-feedback-2026-11", "staff-weak-signal-2026-11"]) {
+      localStorage.setItem(`miamus.whats-new.${card}`, "seen");
+    }
+  });
   await page.goto("/staff");
 
   // The one-time tip, in Indonesian.

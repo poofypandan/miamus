@@ -308,7 +308,7 @@ function TodayChores() {
             recurrence: "monthly",
             interval: 1,
             remindDaysBefore: 3,
-            assignedTo: memberProfile?.id ?? null,
+            assigneeId: memberProfile?.id ?? null,
           });
           setEditing(null);
           setEditingDate(null);

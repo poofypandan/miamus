@@ -1208,6 +1208,9 @@ export const mockProvider: DataProvider = {
   async listLinkedPhones() {
     return delay([]);
   },
+  async hasFinishedChore() {
+    return delay(loadDB().householdTasks.some((task) => task.status === "completed"));
+  },
   async removeLinkedPhone() {
     return delay(false);
   },
