@@ -1,7 +1,8 @@
 # Phase 171 — Features you switch on, and a simple sign-up
 
-Status: **revised after the 10 Nov evaluation; awaiting the owner's
-decision (D1–D15, each with a recommended A).** Nothing is built, nothing
+Status: **decided: owner chose all recommendations (D1–D15 A),
+2026-11-10; PR A (146) builds after Phase 172 PR A1.** The three open
+questions below stay open. Nothing is built, nothing
 is applied anywhere. Migration **146** is reserved for PR A (feature
 switches and the "What kind of home?" answer). People records, elders'
 routines and the Care tab are **later, behind an optional switch, after
@@ -450,6 +451,9 @@ on: they're back; no reload), Codex until clean, migration local → staging
 | D15 order | — | — | — |
 
 ## Decisions for the owner
+
+**Decided 2026-11-10: the owner chose all recommendations, so D1–D15 are
+all A.**
 
 - **D1 — Sign-up questions.**
   **A (recommended):** two, both optional: *Who lives here?* on the name
