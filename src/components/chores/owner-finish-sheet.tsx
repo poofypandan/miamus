@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, Check, CheckCircle2, CloudUpload, Loader2, Lock, Pencil, RotateCcw, UserRound } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, CloudUpload, Loader2, Pencil, RotateCcw, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { FoodPhotoField } from "@/components/kitchen/food-photo-field";
+import { BillPaymentEditor, BillPaymentFields } from "@/components/chores/bill-payment-editor";
 import { useBillPayments } from "@/hooks/use-bill-payments";
-import { isBill, lastAmount, lastTimeLine, paymentFor, savePayment } from "@/lib/bill-payments";
-import { formatIdr, parseIdr } from "@/lib/repairs";
-import { photoSrc, photoTakenAt } from "@/lib/photos";
+import { isBill, lastAmount, lastTimeLine, savePayment } from "@/lib/bill-payments";
+import { parseIdr } from "@/lib/repairs";
+import { photoTakenAt } from "@/lib/photos";
 import {
   Sheet,
   SheetContent,
@@ -127,14 +125,12 @@ function OwnerFinishBody({
   // --- A bill (Phase 164 PR B): Mark paid, with an optional amount and
   // receipt, owners only. Instead of the chore photos.
   const bill = isBill(task);
-  const { payments, loaded: paymentsLoaded } = useBillPayments(bill);
+  const { payments } = useBillPayments(bill);
   const seriesId = occurrence.template.id;
-  const payment = paymentFor(payments, occurrence.row?.id);
   const lastTime = lastTimeLine(lastAmount(payments, seriesId, occurrence.row?.id), locale);
   const [amountText, setAmountText] = useState("");
   const [receipt, setReceipt] = useState<File | string | null>(null);
   const [receiptBusy, setReceiptBusy] = useState(false);
-  const [editingPayment, setEditingPayment] = useState(false);
   const parsedAmount = parseIdr(amountText);
   const amountInvalid = amountText.trim() !== "" && parsedAmount === null;
   const hasPaymentInput = parsedAmount !== null || !!receipt;
@@ -175,27 +171,6 @@ function OwnerFinishBody({
     }
     setBusy(false);
     if (result) onOpenChange(false);
-  }
-
-  function startEditingPayment() {
-    setAmountText(payment?.amount_idr != null ? formatIdr(payment.amount_idr) : "");
-    setReceipt(payment?.receipt_url ?? null);
-    setEditingPayment(true);
-  }
-
-  async function savePaymentEdit() {
-    if (!occurrence.row || amountInvalid || receiptBusy) return;
-    setBusy(true);
-    try {
-      await savePayment({ taskId: occurrence.row.id, seriesId, amount: parsedAmount, receipt, previous: payment });
-      setEditingPayment(false);
-      toast.success(t("Saved", "Disimpan"));
-    } catch (err) {
-      console.error(err);
-      toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function markDone() {
@@ -272,63 +247,7 @@ function OwnerFinishBody({
                 </p>
               )}
               {occurrence.row && !bill && <ChoreProofPhotos row={occurrence.row} locale={locale} interactive />}
-              {bill && occurrence.row && paymentsLoaded && (
-                <section aria-label={t("Payment", "Pembayaran")} className="flex flex-col gap-2 rounded-xl border p-3">
-                  <h4 className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                    <Lock className="size-3.5" aria-hidden /> {t("Payment · owners only", "Pembayaran · hanya pemilik")}
-                  </h4>
-                  {editingPayment ? (
-                    <>
-                      <BillPaymentFields
-                        amountText={amountText}
-                        onAmountText={setAmountText}
-                        amountInvalid={amountInvalid}
-                        parsedAmount={parsedAmount}
-                        hint={lastTime}
-                        receipt={receipt}
-                        onReceipt={setReceipt}
-                        onReceiptBusy={setReceiptBusy}
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          className="min-h-11 flex-1 rounded-xl"
-                          disabled={busy}
-                          onClick={() => setEditingPayment(false)}
-                        >
-                          {t("Cancel", "Batal")}
-                        </Button>
-                        <Button
-                          className="min-h-11 flex-1 rounded-xl"
-                          disabled={busy || amountInvalid || receiptBusy}
-                          onClick={savePaymentEdit}
-                        >
-                          {busy && <Loader2 className="animate-spin" />} {t("Save", "Simpan")}
-                        </Button>
-                      </div>
-                    </>
-                  ) : payment ? (
-                    <>
-                      {payment.amount_idr != null && <p className="text-base font-semibold">{formatIdr(payment.amount_idr)}</p>}
-                      {payment.receipt_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={photoSrc(payment.receipt_url, 640)}
-                          alt={t("Receipt", "Bukti bayar")}
-                          className="max-h-56 w-full rounded-lg bg-muted object-contain"
-                        />
-                      )}
-                      <Button variant="outline" className="min-h-11 self-start rounded-xl" onClick={startEditingPayment}>
-                        {t("Change", "Ubah")}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button variant="outline" className="min-h-11 self-start rounded-xl" onClick={startEditingPayment}>
-                      {t("Add amount or receipt", "Tambah jumlah atau bukti bayar")}
-                    </Button>
-                  )}
-                </section>
-              )}
+              {bill && occurrence.row && <BillPaymentEditor row={occurrence.row} seriesId={seriesId} />}
             </>
           ) : canFinish && bill && !photosRequired ? (
             <section className="flex flex-col gap-3">
@@ -472,68 +391,6 @@ function OwnerFinishBody({
         </SheetFooter>
       </SheetContent>
     </Sheet>
-  );
-}
-
-/**
- * A bill's amount and receipt, both optional (Phase 164 PR B). The amount is
- * typed with dots as you go or not ("418.500", "418500", "418rb"); the
- * receipt is a photo or a screenshot of the bank app's proof.
- */
-function BillPaymentFields({
-  amountText,
-  onAmountText,
-  amountInvalid,
-  parsedAmount,
-  hint,
-  receipt,
-  onReceipt,
-  onReceiptBusy,
-}: {
-  amountText: string;
-  onAmountText: (text: string) => void;
-  amountInvalid: boolean;
-  parsedAmount: number | null;
-  hint: string | null;
-  receipt: File | string | null;
-  onReceipt: (next: File | null) => void;
-  onReceiptBusy: (busy: boolean) => void;
-}) {
-  const t = useT();
-  const locale = useOwnerLocale();
-  return (
-    <>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="bill-amount" className="text-xs">
-          {t("Amount (optional)", "Jumlah (opsional)")}
-        </Label>
-        <Input
-          id="bill-amount"
-          inputMode="numeric"
-          value={amountText}
-          onChange={(e) => onAmountText(e.target.value)}
-          placeholder={hint ?? t("e.g. 418.500", "mis. 418.500")}
-          className="min-h-12"
-        />
-        {amountInvalid ? (
-          <p className="text-[11px] font-medium text-destructive">
-            {t("Write it as a number, e.g. 418.500", "Tulis angkanya, mis. 418.500")}
-          </p>
-        ) : parsedAmount !== null ? (
-          <p className="text-[11px] text-muted-foreground">{formatIdr(parsedAmount)}</p>
-        ) : (
-          hint && <p className="text-[11px] text-muted-foreground">{hint}</p>
-        )}
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium">{t("Receipt (optional)", "Bukti bayar (opsional)")}</span>
-        <FoodPhotoField value={receipt} onChange={onReceipt} onBusyChange={onReceiptBusy} locale={locale} />
-      </div>
-      <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <Lock className="size-3 shrink-0" aria-hidden />
-        {t("Only owners see amounts and receipts.", "Hanya pemilik yang bisa melihat jumlah dan bukti bayar.")}
-      </p>
-    </>
   );
 }
 

@@ -13,6 +13,7 @@ import { DateRibbon } from "@/components/date-ribbon";
 import { ChoreCard } from "@/components/chores/chore-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { BillsUpkeepSheet } from "@/components/chores/bills-upkeep-sheet";
+import { BillPaymentSheet } from "@/components/chores/bill-payment-editor";
 import { RoomsView } from "@/components/chores/rooms-view";
 import { RepairsView } from "@/components/repairs/repairs-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -97,6 +98,7 @@ function TodayChores() {
   // opens it here with ?bills=open, which is then dropped from the URL so
   // Back and a reload don't reopen it.
   const [billsOpen, setBillsOpen] = useState(false);
+  const [paymentFor, setPaymentFor] = useState<ChoreOccurrence | null>(null);
   const searchParams = useSearchParams();
   const pathname = usePathname();
   useEffect(() => {
@@ -265,6 +267,7 @@ function TodayChores() {
                       occurrence={occurrence}
                       staffName={staffName}
                       onEdit={() => edit(occurrence)}
+                      onPayment={occurrence.task.category === "bill" ? () => setPaymentFor(occurrence) : undefined}
                     />
                   }
                 />
@@ -284,6 +287,15 @@ function TodayChores() {
         occurrenceDate={editingDate}
         defaultDate={dateStr}
         preset={editorPreset}
+      />
+
+      {/* A done bill's amount and receipt, whoever finished it (Codex, PR #65). */}
+      <BillPaymentSheet
+        row={paymentFor?.row ?? null}
+        seriesId={paymentFor?.template.id ?? ""}
+        title={paymentFor?.task.title ?? ""}
+        open={!!paymentFor}
+        onOpenChange={(next) => !next && setPaymentFor(null)}
       />
 
       <BillsUpkeepSheet
@@ -317,10 +329,13 @@ function ChoreProof({
   occurrence,
   staffName,
   onEdit,
+  onPayment,
 }: {
   occurrence: ChoreOccurrence;
   staffName: (id: string) => string;
   onEdit: () => void;
+  /** A bill (Phase 164 PR B): its amount and receipt, owners only. */
+  onPayment?: () => void;
 }) {
   const formatTime = useFormatTime();
   const t = useT();
@@ -338,13 +353,24 @@ function ChoreProof({
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={onEdit}
-        className="self-start rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground underline underline-offset-2 active:bg-muted"
-      >
-        {t("Edit chore", "Ubah tugas")}
-      </button>
+      <div className="flex flex-wrap gap-3">
+        {onPayment && (
+          <button
+            type="button"
+            onClick={onPayment}
+            className="self-start rounded-lg px-1 py-1 text-[11px] font-medium text-gray-800 underline underline-offset-2 active:bg-muted"
+          >
+            {t("Payment", "Pembayaran")}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onEdit}
+          className="self-start rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground underline underline-offset-2 active:bg-muted"
+        >
+          {t("Edit chore", "Ubah tugas")}
+        </button>
+      </div>
     </div>
   );
 }

@@ -270,3 +270,25 @@ test("marking a bill not paid is all or nothing: a dropped call changes neither 
   await expect.poll(() => pbb.status).toBe("pending");
   await expect.poll(() => stub.billPayments.length).toBe(0);
 });
+
+test("a bill staff paid: an owner adds its amount from Chores (Codex, PR #65)", async ({ context, page }) => {
+  const iuran = chore({
+    title: "Iuran RT/RW",
+    assigned_to: STAFF_ID,
+    status: "completed",
+    completed_by: STAFF_ID,
+    completed_at: new Date().toISOString(),
+    before_photo_url: "x/b.jpg",
+    after_photo_url: "x/a.jpg",
+  });
+  const stub = await installStub(context, { owner: { locale: "id" }, chores: [iuran] });
+  await page.goto("/dashboard?module=chores");
+  await page.getByRole("button", { name: "Pembayaran" }).click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("button", { name: "Tambah jumlah atau bukti bayar" }).click();
+  await sheet.getByLabel("Jumlah (opsional)").fill("50rb");
+  await expect(sheet.getByText("Rp50.000")).toBeVisible();
+  await sheet.getByRole("button", { name: "Simpan" }).click();
+  await expect(page.getByText("Disimpan", { exact: true })).toBeVisible();
+  expect(stub.billPayments).toEqual([expect.objectContaining({ task_id: iuran.id, amount_idr: 50000 })]);
+});
