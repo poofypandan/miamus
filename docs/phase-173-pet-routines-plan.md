@@ -245,8 +245,8 @@ The owner asked for routines, not reminders; this is optional. But
   household switch and each person's switch from 166 apply.
 - **Quiet hours:** 166 says nothing between 21:00 and 06:00, which would
   silence the very example. Recommended: **a reminder the owner turned on may
-  ring until 22:00** (and from 05:00); after 22:00 the switch is greyed with
-  "Too late for a reminder". This changes a decision the owner made in 166,
+  ring until 22:00** (mornings unchanged: from 06:00). For a time from 22:00
+  to 05:59 the switch is greyed with "Too late for a reminder". This changes a decision the owner made in 166,
   so it's an owner question (Q2), and the privacy policy changes with it.
 - Built as a 5-minute cron job, `notify_routines_due()`, using 141's
   `queue_staff_push`. Because that function returns early in quiet hours, PR
@@ -280,8 +280,8 @@ New input (strict schema, nullable fields as today):
 - Still never saves without the card. Meals and potty behave as now
   (per-pet new-time check, `newPetTimes`); other kinds skip a time the pet
   already has with the same title.
-- Proof from Kakak is always the kind's default (tick); the owner changes it
-  in the sheet.
+- Proof from Kakak is the kind's default: a photo for meals and potty (as
+  now), a tick for the new kinds. The owner changes it in the sheet.
 - Updated with it: the prompt's pet line, `validate.ts`, `suggestions.ts`,
   `describe.ts` (the card), `practice.ts`, and eval cases for both of the
   owner's sentences, "Matcha only", weekdays and "until Friday". The schema
