@@ -287,7 +287,8 @@ kebaya, a suit, a handbag.
 - **Status** comes from the bags: "In place · Rack B", "At the dry cleaner
   since Tue 17 Nov", "Lent to Tante Rina since 2 Nov". A piece that was in a
   bag closed as missing shows "Missing since 20 Nov" until an owner marks it
-  found or deletes it.
+  found or deletes it. That state is stored on the piece (`missing_since`),
+  not read from the bag, so it stays after the bag is deleted 90 days later.
 - Kept until an owner deletes it.
 
 ## Staff flow (Bahasa Indonesia only)
@@ -485,6 +486,7 @@ staff push, 141 staff pay, 142 suites are taken).
 | `belongs_to` | nullable, up to 40 characters (free text: "Ibu", "Raka") |
 | `location_id`, `spot_id` | nullable; composite FKs, `on delete set null` |
 | `notes` | nullable, up to 200 characters |
+| `missing_since` | `timestamptz`, nullable: set when an owner settles a bag as missing while this piece hadn't been ticked back; cleared when the piece is found (ticked back by a return, or **Mark found** by an owner). Stored on the piece so it outlives the bag, which is pruned after 90 days |
 | `created_at`, `updated_at` | |
 
 **Table `closet_trip_items`** (pieces in a bag, PR B)
@@ -527,12 +529,13 @@ staff push, 141 staff pay, 142 suites are taken).
   `out` if a return is deleted), refuses a return to a `closed` bag from a
   non-member session (an owner's return to a closed bag lowers
   `missing_count`, and a bag whose missing count reaches 0 reads as back),
-  and sets `back_at` on the ticked pieces. Definer
+  and sets `back_at` on the ticked pieces and clears their `missing_since`. Definer
   because staff sessions can't update `closet_trips`; it writes only those
   columns.
 - `closet_trips_guard()`: `security definer`, trigger only, same revokes:
-  stamps `created_by`, `closed_at`, `closed_by`; refuses client writes to
-  `count_back`; refuses `closed_*`, `back_by` and `quiet_until` from non-members.
+  stamps `created_by`, `closed_at`, `closed_by`; when an owner settles a bag
+  as missing, sets `missing_since` (if empty) on the bag's pieces that have
+  no `back_at`; refuses client writes to `count_back`; refuses `closed_*`, `back_by` and `quiet_until` from non-members.
 - `location_spots_staff_guard()`: above.
 - `rename_location_spot(uuid, text)`: `security invoker`, granted to
   `authenticated`, owner check inside.
@@ -564,7 +567,8 @@ only):
 - Saved spots and valuable pieces: until an owner deletes them (or the
   room). Their photos with them.
 - A bag closed as **missing** follows the same 90 days; the piece's
-  "Missing since" (PR B) stays while the piece exists.
+  "Missing since" (PR B) is its own column on `closet_items`, so it stays
+  until the piece is found or deleted, whatever happens to the bag.
 
 **Export** (`export_household_data()`, as the latest migration before 143 left it; 138 today): re-created to
 include the four tables (owners-only export, `caller_admin_household()`,
@@ -586,7 +590,9 @@ deletion cascades through `household_id`.
   room refused; `rename_location_spot` renames the chores' and repairs'
   spots and refuses non-owners and other households;
 - `closet_items`: staff read, can't write; a bag's pieces ticked back set
-  `back_at`; a piece from another household or not in the bag refused;
+  `back_at`; settling a bag as missing sets `missing_since` on its unticked
+  pieces, and it survives `prune_old_closet_trips` deleting that bag; a
+  later return or Mark found clears it; a piece from another household or not in the bag refused;
 - other households see nothing; logged-out callers get nothing; a removed
   staff member's id refused;
 - the clean-up keeps an open bag's photos, keeps a closed bag's for 90 days
