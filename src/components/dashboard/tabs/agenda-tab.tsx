@@ -29,7 +29,7 @@ import { applyAgendaFilter, useAgendaFilter, type AgendaFilter } from "@/hooks/u
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
 import { useFinishMyChore } from "@/hooks/use-finish-my-chore";
-import { myOccurrences, myTasksMode, type ChoreOccurrence } from "@/lib/chore-recurrence";
+import { coverTakeover, myOccurrences, myTasksMode, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
@@ -369,7 +369,15 @@ export function AgendaTab() {
             dayLabel={label}
             roomName={roomName}
             pendingIds={pendingIds}
-            onFinish={async (occurrence) => (await finish(occurrence)) !== null}
+            onFinish={async (occurrence) => {
+              // Covering a repeat's first day for someone on leave: that one
+              // needs both photos, so the circle opens the sheet.
+              if (coverTakeover(occurrence, memberProfile?.id).kind === "needsPhotos") {
+                setMyOpenKey(occurrence.key);
+                return false;
+              }
+              return (await finish(occurrence)) !== null;
+            }}
             onOpen={(occurrence) => setMyOpenKey(occurrence.key)}
           />
         )}

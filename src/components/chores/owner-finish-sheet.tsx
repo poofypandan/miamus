@@ -24,6 +24,7 @@ import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from 
 import {
   RECURRENCE_LABELS_EN,
   RECURRENCE_LABELS_ID,
+  coverTakeover,
   recurrenceOf,
   type ChoreOccurrence,
 } from "@/lib/chore-recurrence";
@@ -106,6 +107,10 @@ function OwnerFinishBody({
   const afterState = useQueuedPhoto(afterUrl).state;
   const photoFailed = beforeState === "failed" || afterState === "failed";
   const onePhoto = !!beforeUrl !== !!afterUrl;
+  // Covering a repeat's first day for someone on leave (coverTakeover):
+  // photos are required for this one.
+  const photosRequired = coverTakeover(occurrence, memberProfile?.id).kind === "needsPhotos";
+  const missingPhotos = onePhoto || (photosRequired && !(beforeUrl && afterUrl));
 
   useEffect(() => {
     if (done) return;
@@ -113,7 +118,7 @@ function OwnerFinishBody({
   }, [draftKey, beforeUrl, afterUrl, done]);
 
   async function markDone() {
-    if (onePhoto || uploading || photoFailed) return;
+    if (missingPhotos || uploading || photoFailed) return;
     setBusy(true);
     const outcome = await finish(occurrence, beforeUrl && afterUrl ? { before: beforeUrl, after: afterUrl } : undefined);
     setBusy(false);
@@ -186,8 +191,16 @@ function OwnerFinishBody({
           ) : canFinish ? (
             <>
               <section className="flex flex-col gap-2">
+                {photosRequired && (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    {t(
+                      "You're covering this for someone on leave, so it needs both photos.",
+                      "Anda menggantikan staf yang sedang cuti, jadi tugas ini perlu dua foto."
+                    )}
+                  </p>
+                )}
                 <h4 className="text-sm font-semibold text-gray-800">
-                  {t("Add photos (optional)", "Tambah foto (opsional)")}
+                  {photosRequired ? t("Photos", "Foto") : t("Add photos (optional)", "Tambah foto (opsional)")}
                 </h4>
                 <div className="grid grid-cols-2 gap-2">
                   <PhotoStep step={1} title={t("Before photo", "Foto sebelum")} url={beforeUrl}>
@@ -226,7 +239,9 @@ function OwnerFinishBody({
                     ? beforeUrl
                       ? t("Add the after photo too, or remove this one.", "Tambahkan foto sesudah, atau hapus foto ini.")
                       : t("Add the before photo too, or remove this one.", "Tambahkan foto sebelum, atau hapus foto ini.")
-                    : t("Both photos, or none.", "Dua foto, atau tidak sama sekali.")}
+                    : photosRequired
+                      ? t("Both photos are needed.", "Perlu dua foto.")
+                      : t("Both photos, or none.", "Dua foto, atau tidak sama sekali.")}
                 </p>
               </section>
             </>
@@ -241,7 +256,7 @@ function OwnerFinishBody({
           {canFinish && (
             <Button
               onClick={markDone}
-              disabled={busy || uploading || onePhoto || photoFailed}
+              disabled={busy || uploading || missingPhotos || photoFailed}
               className="min-h-12 rounded-xl"
             >
               {busy || uploading ? <Loader2 className="animate-spin" /> : photoFailed ? <AlertTriangle /> : <Check />}

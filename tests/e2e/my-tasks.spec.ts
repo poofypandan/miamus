@@ -196,6 +196,40 @@ test("a chore covered for someone on leave is taken over, then finished without 
   expect(patches).toHaveLength(2);
 });
 
+test("covering the first day of a repeat for someone on leave needs photos, and never reassigns the repeat", async ({
+  context,
+  page,
+}) => {
+  const today = ymd(dateIn(0));
+  // A weekly chore whose first day is today: that day lives on the repeat itself.
+  const water = chore({ title: "Water the garden", assigned_to: STAFF_ID, recurrence: "weekly" });
+  const leave = {
+    id: "00000000-0000-4000-8000-000000016381",
+    household_id: HOUSEHOLD_ID,
+    staff_id: STAFF_ID,
+    start_date: today,
+    end_date: today,
+    status: "approved",
+    fallback_action: "reassign",
+    fallback_assignee_id: OWNER_PROFILE_ID,
+    ended_on: null,
+    created_at: "2026-11-01T00:00:00Z",
+  };
+  const stub = await installStub(context, { owner: { locale: "en" }, chores: [water], leaves: [leave] });
+  await page.goto("/dashboard");
+
+  const card = myTasks(page);
+  await expect(card).toContainText("Water the garden", { timeout: 20_000 });
+  // The circle opens the sheet instead, which asks for both photos.
+  await card.getByRole("button", { name: "Mark done: Water the garden" }).click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByText("You're covering this for someone on leave, so it needs both photos.")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Mark done" })).toBeDisabled();
+  // Nothing was written: the repeat is still Ari's, and still open.
+  expect(water).toMatchObject({ assigned_to: STAFF_ID, status: "pending" });
+  expect(stub.writes.filter(([, table]) => table === "household_tasks")).toEqual([]);
+});
+
 test("a carried-over chore finished today can be marked not done from its own day", async ({ context, page }) => {
   const yesterday = dateIn(-1);
   const bill = chore({ title: "Pay the electricity bill", due_date: ymd(yesterday) });

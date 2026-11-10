@@ -6,7 +6,7 @@ import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
 import { dataProvider } from "@/lib/data";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
-import { storedTakeoverRowId, type ChoreOccurrence } from "@/lib/chore-recurrence";
+import { coverTakeover, type ChoreOccurrence } from "@/lib/chore-recurrence";
 
 /** Both photos, or none (migrations/136). */
 export interface MyChorePhotos {
@@ -84,10 +84,18 @@ export function useFinishMyChore() {
       const title = occurrence.task.title;
       try {
         // A chore covered for someone on leave is mine on screen but still
-        // theirs in the database: take it over first, as its own edit, or
-        // the photo-free completion is refused (migrations/136).
-        const takeover = photos ? null : storedTakeoverRowId(occurrence, memberProfile?.id);
-        if (takeover && memberProfile) await updateHouseholdTask(takeover, { assigned_to: memberProfile.id });
+        // theirs in the database: take that day over first, as its own edit,
+        // or the photo-free completion is refused (migrations/136). A repeat
+        // whose first day lives on the template is finished with photos
+        // instead; the sheet says so and the circle opens it.
+        const cover = photos ? { kind: "none" as const } : coverTakeover(occurrence, memberProfile?.id);
+        if (cover.kind === "needsPhotos") {
+          toast.error(t("This one needs both photos.", "Tugas ini perlu dua foto."));
+          return null;
+        }
+        if (cover.kind === "takeover" && memberProfile) {
+          await updateHouseholdTask(cover.rowId, { assigned_to: memberProfile.id });
+        }
         const { queued, task } = await finishChore({
           templateId: occurrence.template.id,
           date: occurrence.date,

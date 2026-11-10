@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expandChores, myOccurrences, myTasksMode, storedTakeoverRowId } from "@/lib/chore-recurrence";
+import { expandChores, myOccurrences, myTasksMode, coverTakeover } from "@/lib/chore-recurrence";
 import { jobPhotos, type ChoreFinishJob } from "@/lib/offline-queue";
 import type { HouseholdTask } from "@/types/database";
 
@@ -122,31 +122,44 @@ describe("a chore save with no photos", () => {
   });
 });
 
-describe("storedTakeoverRowId", () => {
-  it("names the row when leave cover shows it as mine but it is stored as someone else's", () => {
+describe("coverTakeover", () => {
+  it("takes over a one-off that leave cover shows as mine but is stored as someone else's", () => {
     const row = chore({ assigned_to: ARI });
     const [occurrence] = day([row]);
     const covered = { ...occurrence, task: { ...occurrence.task, assigned_to: ME } };
-    expect(storedTakeoverRowId(covered, ME)).toBe(row.id);
+    expect(coverTakeover(covered, ME)).toEqual({ kind: "takeover", rowId: row.id });
   });
 
-  it("is null when it is already stored as mine or nobody's", () => {
-    const [mine] = day([chore({ assigned_to: ME })]);
-    expect(storedTakeoverRowId(mine, ME)).toBeNull();
-    const [nobody] = day([chore({ assigned_to: null })]);
-    expect(storedTakeoverRowId({ ...nobody, task: { ...nobody.task, assigned_to: ME } }, ME)).toBeNull();
-  });
-
-  it("is null for a day not written yet (it is written as mine)", () => {
+  it("takes over one written day of a repeat", () => {
     const template = chore({ assigned_to: ARI, recurrence: "daily", due_date: "2026-11-01" });
-    const [virtual] = day([template]);
-    expect(virtual.row).toBeNull();
-    expect(storedTakeoverRowId({ ...virtual, task: { ...virtual.task, assigned_to: ME } }, ME)).toBeNull();
+    const dayRow = chore({ assigned_to: ARI, parent_task_id: template.id, due_date: TODAY });
+    const occurrence = day([template, dayRow]).find((o) => o.row?.id === dayRow.id)!;
+    expect(coverTakeover({ ...occurrence, task: { ...occurrence.task, assigned_to: ME } }, ME)).toEqual({
+      kind: "takeover",
+      rowId: dayRow.id,
+    });
   });
 
-  it("is null without a roster row, or when it isn't shown as mine", () => {
+  it("never reassigns a whole repeat: its first day needs photos instead", () => {
+    const template = chore({ assigned_to: ARI, recurrence: "weekly", due_date: TODAY });
+    const [first] = day([template]);
+    expect(first.row?.id).toBe(template.id);
+    expect(coverTakeover({ ...first, task: { ...first.task, assigned_to: ME } }, ME)).toEqual({ kind: "needsPhotos" });
+  });
+
+  it("needs nothing when stored as mine or nobody's, or not written yet", () => {
+    const [mine] = day([chore({ assigned_to: ME })]);
+    expect(coverTakeover(mine, ME)).toEqual({ kind: "none" });
+    const [nobody] = day([chore({ assigned_to: null })]);
+    expect(coverTakeover({ ...nobody, task: { ...nobody.task, assigned_to: ME } }, ME)).toEqual({ kind: "none" });
+    const [virtual] = day([chore({ assigned_to: ARI, recurrence: "daily", due_date: "2026-11-01" })]);
+    expect(virtual.row).toBeNull();
+    expect(coverTakeover({ ...virtual, task: { ...virtual.task, assigned_to: ME } }, ME)).toEqual({ kind: "none" });
+  });
+
+  it("needs nothing without a roster row, or when it isn't shown as mine", () => {
     const [occurrence] = day([chore({ assigned_to: ARI })]);
-    expect(storedTakeoverRowId(occurrence, null)).toBeNull();
-    expect(storedTakeoverRowId(occurrence, ME)).toBeNull();
+    expect(coverTakeover(occurrence, null)).toEqual({ kind: "none" });
+    expect(coverTakeover(occurrence, ME)).toEqual({ kind: "none" });
   });
 });

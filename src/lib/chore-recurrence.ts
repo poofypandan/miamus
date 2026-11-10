@@ -463,21 +463,34 @@ export function myTasksMode(viewing: string, today: string): "today" | "future" 
 }
 
 /**
- * The stored row an admin has to take over before finishing it photo-free,
- * or null (Phase 163; Codex, PR #58).
+ * What a photo-free finish needs first when leave cover is involved (Phase
+ * 163; Codex, PR #58).
  *
  * Leave cover (lib/leave.ts) shows an absent staff member's chore as the
- * cover person's, but only on screen: the row itself still names the absent
+ * cover person's, but only on screen: the stored row still names the absent
  * person, and migrations/136 lets an admin skip the photos only on a chore
- * stored as theirs or nobody's. So when what My tasks shows and what is
- * stored disagree, the takeover is written first, as its own edit (the
- * two-step path 136 allows), and then the completion.
+ * stored as theirs or nobody's.
+ *
+ *   none        stored as mine or nobody's, or not written yet (it is
+ *               written as mine): finish as is.
+ *   takeover    a one-off, or one day of a repeat: assign that row to me
+ *               first, as its own edit (the two-step path 136 allows).
+ *   needsPhotos the row is the repeat itself (its first day lives on the
+ *               template): assigning it would hand me every future day, so
+ *               this one is finished with both photos instead.
  */
-export function storedTakeoverRowId(
+export type CoverTakeover =
+  | { kind: "none" }
+  | { kind: "takeover"; rowId: string }
+  | { kind: "needsPhotos" };
+
+export function coverTakeover(
   occurrence: ChoreOccurrence,
   memberId: string | null | undefined
-): string | null {
-  if (!memberId || !occurrence.row || occurrence.task.assigned_to !== memberId) return null;
-  const stored = occurrence.row.assigned_to ?? null;
-  return stored && stored !== memberId ? occurrence.row.id : null;
+): CoverTakeover {
+  const row = occurrence.row;
+  if (!memberId || !row || occurrence.task.assigned_to !== memberId) return { kind: "none" };
+  const stored = row.assigned_to ?? null;
+  if (!stored || stored === memberId) return { kind: "none" };
+  return recurrenceOf(row) === "none" ? { kind: "takeover", rowId: row.id } : { kind: "needsPhotos" };
 }

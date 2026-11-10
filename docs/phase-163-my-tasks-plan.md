@@ -126,8 +126,11 @@ own chores**, and keeps them required for staff exactly as now:
   own day (Codex, PR #58).
 - **Covering for someone on leave:** a chore shown in My tasks because I
   cover a staff member's leave is still stored under them. Finishing it
-  photo-free first takes it over (assigned to me, its own edit), then
-  completes it: the two-step path migration 136 allows (Codex, PR #58).
+  photo-free first takes that day over (assigned to me, its own edit), then
+  completes it: the two-step path migration 136 allows (Codex, PR #58). On
+  a repeat's first day, which is stored on the repeat itself, taking over
+  would hand me every future day, so that one needs both photos instead,
+  and the sheet says why.
 - **The staff view is unchanged.** An owner who switches to Staff still sees
   the staff experience, photos and all; it remains the way to see what a
   staff phone sees.
