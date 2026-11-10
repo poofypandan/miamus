@@ -14,7 +14,14 @@ export type KakakReply =
   | { kind: "suggestions"; text: string; items: KakakSuggestion[]; requestId: string; history: KakakHistory; practice?: boolean }
   | { kind: "message"; text: string; requestId: string; history: KakakHistory; practice?: boolean }
   | { kind: "refused"; reason: RefusalReason | "unavailable" }
-  | { kind: "failed"; reason: "invalid" | "api" | "too_long" | "refusal" | "offline" };
+  | { kind: "failed"; reason: KakakFailure };
+
+/**
+ * Why a turn failed, as the sheet words it. `cap`: the monthly spend limit;
+ * `slow`: timed out; `stale`: the sheet was open for hours; `offline`: no
+ * internet on the phone.
+ */
+export type KakakFailure = "invalid" | "api" | "too_long" | "refusal" | "offline" | "cap" | "slow" | "stale";
 
 export async function askKakak(
   householdId: string,

@@ -128,10 +128,14 @@ function clip(text: string, max: number): string {
   return trimmed.length > max ? `${trimmed.slice(0, max - 1).trimEnd()}…` : trimmed;
 }
 
+/** "Ingatkan saya …" / "Remind me to …": a chore for the owner (M1), as the real Kakak does. */
+const REMIND_ME = /\b(?:ingatkan saya(?: untuk)?|remind me(?: to)?)\b/i;
+
 /** The chore's own words: the sentence without who, when and what time. */
 function choreTitle(household: KakakHousehold, sentence: string): string {
   const people = [...household.people, household.owner].map((p) => p.name.toLowerCase().split(/\s+/)[0]);
   return sentence
+    .replace(REMIND_ME, " ")
     .replace(/\b(?:jam|pukul|at)\s+\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?\b/gi, " ")
     .replace(/\b\d{1,2}[:.]\d{2}\s*(?:am|pm)?\b/gi, " ")
     .replace(/\b\d{1,2}\s*(?:am|pm)\b/gi, " ")
@@ -167,6 +171,7 @@ const EN_TASKS: [RegExp, string, boolean][] = [
   [/\b(?:fix(?:es)?|repairs?)\b/, "Perbaiki", true],
 ];
 const EN_THINGS: [RegExp, string][] = [
+  [/\b(?:ac|air ?con(?:ditioner)?)(?: filters?)?\b/, "filter AC"],
   [/\bliving room\b/, "ruang tamu"],
   [/\bbathroom\b/, "kamar mandi"],
   [/\bbedroom\b/, "kamar tidur"],
@@ -505,7 +510,7 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
       // The owner's English, when they typed it; the title itself is Indonesian.
       title_en: englishTyped ? typed : household.ownerLocale === "en" ? title : null,
       category: has(first, /\b(perbaiki|benerin|repair|fix|servis|service)\b/) ? "maintenance" : "cleaning",
-      assignee: latest((w) => findPerson(household, w)),
+      assignee: latest((w) => findPerson(household, w)) ?? (REMIND_ME.test(first) ? household.owner.ref : null),
       due_date: day,
       due_time: time,
       recurrence: plan.recurrence,
