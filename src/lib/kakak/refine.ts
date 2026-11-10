@@ -57,17 +57,25 @@ function ordinal(n: number): string {
   return ["th", "st", "nd", "rd"][n % 10] ?? "th";
 }
 
-/** Room the note may take in the owner's next turn (MAX_TYPED is 500). */
+/** The most room the note takes in the owner's next turn (MAX_TYPED is 500). */
 export const MAX_REFINEMENT_NOTE = 200;
 
+const NOTE_OPEN = "(Set on the card with one tap; the owner's words after this win: ";
+const NOTE_CLOSE = ".)";
+
 /**
- * What the chips already changed, for Kakak, sent with the owner's next
+ * What the chips already changed, for Kakak, sent before the owner's next
  * correction ("at 9 instead") so her new card keeps it (Codex, PR #68). The
- * history itself is never rewritten: it must stay byte-identical. English,
- * like the rest of what the route tells her; she still answers in the
- * owner's language.
+ * history itself is never rewritten: it must stay byte-identical. The owner's
+ * own words come after it and win where they differ ("Tuesday instead").
+ *
+ * `room` is what is left after the owner's words: the note shrinks to fit,
+ * the owner's text is never cut for it, and with too little room there is
+ * no note at all. English, like the rest of what the route tells Kakak; she
+ * still answers in the owner's language.
  */
-export function refinementNote(items: { kind: string }[]): string {
+export function refinementNote(items: { kind: string }[], room: number = MAX_REFINEMENT_NOTE): string {
+  const max = Math.min(room, MAX_REFINEMENT_NOTE);
   const parts = items
     .filter((item): item is ChoreSuggestion => item.kind === "chore")
     .map((item) => {
@@ -75,7 +83,20 @@ export function refinementNote(items: { kind: string }[]): string {
       const who = item.assigneeName ? `for ${item.assigneeName}` : "for anyone";
       return `${item.title}: ${how}, ${who}`;
     });
-  if (parts.length === 0) return "";
-  const note = `(Already set on the card: ${parts.join("; ")}.)`;
-  return note.length <= MAX_REFINEMENT_NOTE ? note : `${note.slice(0, MAX_REFINEMENT_NOTE - 2).trimEnd()}…)`;
+  // Whole parts only, as many as fit: a half-cut "every Mon…" would mislead.
+  const kept: string[] = [];
+  for (const part of parts) {
+    const next = `${NOTE_OPEN}${[...kept, part].join("; ")}${NOTE_CLOSE}`;
+    if (next.length > max) break;
+    kept.push(part);
+  }
+  return kept.length ? `${NOTE_OPEN}${kept.join("; ")}${NOTE_CLOSE}` : "";
+}
+
+/** The note and the owner's own words, apart (practice mode reads them separately). */
+export function splitRefinementNote(text: string): { note: string | null; words: string } {
+  if (!text.startsWith(NOTE_OPEN)) return { note: null, words: text };
+  const end = text.indexOf(NOTE_CLOSE, NOTE_OPEN.length);
+  if (end === -1) return { note: null, words: text };
+  return { note: text.slice(NOTE_OPEN.length, end), words: text.slice(end + NOTE_CLOSE.length).trim() };
 }

@@ -269,7 +269,9 @@ test("the card's chips change how often and who, with no call to Kakak", async (
   await page.getByRole("textbox", { name: "What should change?" }).fill("at 10 instead");
   await page.getByRole("button", { name: "Send" }).click();
   await expect.poll(() => kakak.asked.length).toBe(3);
-  expect(kakak.asked[2].reply).toBe("(Already set on the card: Pel teras: one time, for anyone.) at 10 instead");
+  expect(kakak.asked[2].reply).toBe(
+    "(Set on the card with one tap; the owner's words after this win: Pel teras: one time, for anyone.) at 10 instead",
+  );
   await expect(page.getByText("at 10 instead", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Looks right" })).toBeVisible();
 
