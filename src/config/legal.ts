@@ -58,13 +58,18 @@ export const LEGAL = {
   // the screen and the app version; read by the operator and the
   // household's admins, never by staff; kept 2 years (migrations/135). No new
   // service.
-  // 2026-11-10.3: bills and upkeep — chores with an optional reminder, and
+  // 2026-11-10.3: talking to Kakak (voice beta). The browser's own speech
+  // recognition turns the owner's voice into text and may send the audio to
+  // its maker (Apple, Google) under their terms with the owner; Miamus never
+  // receives or stores audio, only the text, as typed Kakak. Whether replies
+  // are read aloud is kept on the phone. No new processor.
+  // 2026-11-10.4: bills and upkeep — chores with an optional reminder, and
   // a morning notification to the admin a chore is for (every admin for
   // staff chores), from chore titles already stored (migrations/137); for
   // admins only, a paid bill's amount and receipt photo, in storage only
   // admins can open, kept 2 years from the payment (migrations/138). No new
   // service.
-  policyVersion: "2026-11-10.3",
+  policyVersion: "2026-11-10.4",
   effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

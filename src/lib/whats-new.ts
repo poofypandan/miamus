@@ -19,6 +19,11 @@ export interface WhatsNewEntry {
   steps: Record<OwnerLocale, string[]>;
   /** The card's button that opens the feature. */
   tryLabel: Record<OwnerLocale, string>;
+  /**
+   * Only for households with Kakak (on the family list): shown as the card in
+   * the Kakak sheet, and left out of Household → What's new for everyone else.
+   */
+  kakakOnly?: boolean;
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
@@ -38,6 +43,27 @@ export const WHATS_NEW: WhatsNewEntry[] = [
         "Ketuk tagihan di Tugas saya: isi jumlahnya dan foto bukti bayar, lalu Tandai sudah dibayar. Keduanya opsional.",
         "Berikutnya tampil jumlah yang terakhir dibayar. Buka tagihannya untuk melihat 12 pembayaran terakhir.",
         "Hanya pemilik yang bisa melihat jumlah dan bukti bayar. Disimpan 2 tahun.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
+    // Shown once inside the Kakak sheet, above the mic (voice beta).
+    id: "kakak-voice-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: talk to Kakak", id: "Baru: bicara dengan Kakak" },
+    steps: {
+      en: [
+        "Tap the mic and say what you need. Your words appear as you speak.",
+        "Tap Stop when you're done. Kakak shows her card; nothing is saved until you confirm.",
+        "Want to hear her answers? Turn on Read replies aloud. This phone remembers it.",
+      ],
+      id: [
+        "Ketuk mikrofon lalu sebutkan yang Anda perlukan. Kata-kata Anda muncul saat Anda bicara.",
+        "Ketuk Berhenti kalau sudah. Kakak menunjukkan kartunya; tidak ada yang disimpan sebelum Anda konfirmasi.",
+        "Mau mendengar jawaban Kakak? Nyalakan Bacakan jawaban Kakak. HP ini akan mengingatnya.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },

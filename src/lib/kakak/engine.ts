@@ -11,7 +11,7 @@
 
 import type Anthropic from "@anthropic-ai/sdk";
 import { costMicroUsd, type KakakModel } from "./cost";
-import type { RefMap, RefNames } from "./context";
+import { jakartaNow, type RefMap, type RefNames } from "./context";
 import { renderHouseholdBlock, type KakakHousehold } from "./household";
 import { KAKAK_SYSTEM_PROMPT } from "./prompt";
 import { toSuggestion, type KakakSuggestion } from "./suggestions";
@@ -29,7 +29,22 @@ export type KakakEffort = "low" | "medium" | "high";
 
 export interface KakakHistory {
   messages: Anthropic.MessageParam[];
+  /**
+   * When the conversation began (ISO 8601). Every turn builds the household
+   * block, with its "Today … 08.30" line, from this moment rather than from
+   * the clock, so the system prompt stays byte-identical across turns. The
+   * API requires that for the thinking blocks Kakak replays ("preserved
+   * thinking" on Opus 5.5, enforced for accounts created from 2026-08-31),
+   * and it keeps the household block cached for the whole conversation.
+   * Without it, answering Kakak's question a minute later is a 400.
+   */
+  startedAt?: string;
 }
+
+/** How long one conversation may last before the owner starts again. */
+export const MAX_CONVERSATION_MS = 6 * 60 * 60 * 1000;
+/** A phone clock a little ahead of the server's is fine; more is not. */
+const CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 export type RefusalReason = "not_admin" | "not_allowed" | "off" | "limit" | "busy";
 
@@ -66,9 +81,18 @@ export interface TurnDeps {
   names: RefNames;
   begin: () => Promise<BeginResult>;
   record: (requestId: string, call: CallRecord) => Promise<void>;
+  /** The conversation's start (KakakHistory.startedAt), handed back with the history. */
+  startedAt?: string;
 }
 
 export class BadTurnError extends Error {}
+/** The sheet was left open for hours, or past midnight in Jakarta: start a new conversation. */
+export class StaleConversationError extends BadTurnError {}
+
+/** The moment this conversation's household block is built from: its start, or now for a new one. */
+export function conversationStart(history: KakakHistory, now: number = Date.now()): Date {
+  return history.startedAt ? new Date(history.startedAt) : new Date(now);
+}
 
 const ASSISTANT_BLOCKS = new Set(["thinking", "redacted_thinking", "text", "tool_use"]);
 
@@ -79,10 +103,24 @@ const ASSISTANT_BLOCKS = new Set(["thinking", "redacted_thinking", "text", "tool
  * owner could still forge earlier turns; that only steers their own
  * suggestions, which are checked again like any other (plan, section 5).
  */
-export function checkHistory(history: unknown): KakakHistory {
+export function checkHistory(history: unknown, now: number = Date.now()): KakakHistory {
   if (history === null || history === undefined) return { messages: [] };
   if (typeof history !== "object" || !Array.isArray((history as KakakHistory).messages)) {
     throw new BadTurnError("history is not a list of messages");
+  }
+  const startedAt = (history as KakakHistory).startedAt;
+  if (startedAt !== undefined) {
+    const at = typeof startedAt === "string" ? Date.parse(startedAt) : NaN;
+    if (Number.isNaN(at)) throw new BadTurnError("startedAt is not a date");
+    if (at > now + CLOCK_SKEW_MS || at < now - MAX_CONVERSATION_MS) {
+      throw new StaleConversationError("the conversation is too old");
+    }
+    // Past midnight in Jakarta, the frozen "today" would be yesterday, and
+    // "besok" or "today" in an answer would land on the wrong date (Codex,
+    // PR #68): start again rather than change the system prompt.
+    if (jakartaNow(new Date(at)).today !== jakartaNow(new Date(now)).today) {
+      throw new StaleConversationError("the day changed during the conversation");
+    }
   }
   if (JSON.stringify(history).length > MAX_HISTORY_BYTES) throw new BadTurnError("history is too long");
   const messages = (history as KakakHistory).messages;
@@ -117,7 +155,7 @@ export function checkHistory(history: unknown): KakakHistory {
     }
   });
   if (messages.length > 0 && messages.length % 2 !== 0) throw new BadTurnError("history must end with Kakak's turn");
-  return { messages };
+  return startedAt === undefined ? { messages } : { messages, startedAt };
 }
 
 function toolUses(message: Anthropic.MessageParam | undefined): Anthropic.ToolUseBlockParam[] {
@@ -271,7 +309,7 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
     }
 
     messages.push({ role: "assistant", content: response.content });
-    const out: KakakHistory = { messages };
+    const out: KakakHistory = deps.startedAt ? { messages, startedAt: deps.startedAt } : { messages };
 
     if (calls.length === 1 && calls[0].name === "ask_question") {
       record.outcome = "question";

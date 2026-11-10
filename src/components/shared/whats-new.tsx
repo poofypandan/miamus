@@ -182,7 +182,7 @@ export function StaffTipCard({ tips }: { tips: StaffTipCandidate[] }) {
 /** Household → What's new: every tutorial, newest first, always readable. */
 export function WhatsNewList() {
   const locale = useOwnerLocale();
-  const owner = WHATS_NEW.filter((entry) => entry.audience === "owner");
+  const owner = WHATS_NEW.filter((entry) => entry.audience === "owner" && !entry.kakakOnly);
   const dateFormat = new Intl.DateTimeFormat(locale === "id" ? "id-ID" : "en-GB", {
     day: "numeric",
     month: "long",
