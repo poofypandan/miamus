@@ -106,9 +106,10 @@ and WhatsApp becomes the extra option it should be.
    per statement (`referencing new table`), so adding a chore to three rooms
    at once ("Pilih ruangan lain") gives Sari one push listing all three, not three.
 3. Task pushes **replace each other** for the day (tag `tugas-{staff}-{date}`).
-   The body lists every task an admin gave this person for today in the last
-   30 minutes that is still open, so the newest push on the lock screen covers
-   what came just before it.
+   The body lists the tasks in this save, plus this person's other open
+   tasks for today created in the last 30 minutes (`created_at`; chores don't
+   record who created them, and only admins create chores for staff). So the
+   newest push on the lock screen covers what came just before it.
 4. **At most one buzz per person per phone every 5 minutes** for task pushes.
    An owner who saves five chores one after another buzzes Sari once. A task
    push skipped by this rule is covered by the next one's list, or by Today.
@@ -362,9 +363,11 @@ never cost the record. Each one does nothing unless `auth.uid()` is a
   - Rows count when they're pending, for today in Jakarta, and are a one-off or
     a template with `chore_occurs_on(row, today)`. They're grouped by
     `assigned_to`; null means everyone.
-  - The body is the open tasks an admin gave that person today in the last 30
-    minutes, through `chore_due_titles(…, 'id')` (137), with the time when
-    there is just one.
+  - The body is the tasks in this statement plus that person's other open
+    tasks for today created in the last 30 minutes, through
+    `chore_due_titles(…, 'id')` (137), with the time when there is just one.
+    Staff phones can only insert a day copy of an existing repeat (the 128
+    guard), and the admin check above skips those statements anyway.
 - `notify_staff_tasks_changed()`: after update on `household_tasks`, for each
   statement, `referencing old table as before new table as after`. It covers
   `assigned_to` changed to a staff person on today's chore, `due_date` moved
