@@ -120,9 +120,22 @@ async function clearSentDrafts(report: DrainReport): Promise<void> {
   }
 }
 
+/**
+ * The pass still running, if one outlived the screen's wait (a slow photo):
+ * Coba lagi waits on it again rather than starting a second one.
+ */
+let drainInFlight: Promise<DrainReport> | null = null;
+
+function drainOnce(): Promise<DrainReport> {
+  drainInFlight ??= withDrainLock(() => drainOutbox(clearSentDrafts)).finally(() => {
+    drainInFlight = null;
+  });
+  return drainInFlight;
+}
+
 const deps: SendDeps = {
   readQueue: getOfflineQueue,
-  drain: () => withDrainLock(() => drainOutbox(clearSentDrafts)),
+  drain: drainOnce,
   online: () => typeof navigator === "undefined" || navigator.onLine !== false,
   signedOut: async () => (await readSessionState()) === "none",
 };
@@ -177,7 +190,12 @@ function MoveView({ audience, t }: { audience: MoveAudience; t: Translate }) {
     running.current = true;
     setBusy(true);
     try {
-      setOutcome(await sendBeforeMove(deps, setSending));
+      const result = await sendBeforeMove(deps, setSending);
+      setOutcome(result);
+      // Gave up waiting on a slow pass: look again the moment it ends.
+      if (result.status === "waiting" && drainInFlight) {
+        void drainInFlight.catch(() => undefined).finally(() => void run());
+      }
     } finally {
       running.current = false;
       setSending(null);

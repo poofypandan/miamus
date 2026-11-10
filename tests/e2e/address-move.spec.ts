@@ -26,7 +26,12 @@ async function onOldAddress(context: BrowserContext, baseURL: string | undefined
     const url = new URL(route.request().url());
     // A blank page on the old address, to put saves in its storage.
     if (url.pathname === "/__seed") return route.fulfill({ contentType: "text/html", body: "<html><body></body></html>" });
-    const response = await route.fetch({ url: `${local}${url.pathname}${url.search}`, maxRedirects: 0 });
+    // The host the phone asked for, as Vercel's proxy passes it on.
+    const response = await route.fetch({
+      url: `${local}${url.pathname}${url.search}`,
+      headers: { ...route.request().headers(), "x-forwarded-host": "miamus.vercel.app" },
+      maxRedirects: 0,
+    });
     return route.fulfill({ response });
   });
   await context.route(`${NEW}/**`, (route) =>
@@ -181,6 +186,42 @@ test("an owner on the old address reads the move in their own language", async (
   await expect(page.getByText(/Sign in again with Google/)).toBeVisible();
   await page.getByRole("button", { name: "Open the new Miamus" }).click();
   await expect(page).toHaveURL(`${NEW}/dashboard`);
+});
+
+test("an invite link opened on the old address is not spent there, and carries over as it was", async ({
+  context,
+  page,
+  baseURL,
+}) => {
+  const stub = await installStub(context, { redeem: "ok" });
+  await onOldAddress(context, baseURL);
+
+  await page.goto(`${OLD}/join/staff?token=invite-abc`);
+
+  await expect(page.getByRole("heading", { name: "Aplikasi ini sudah tidak dipakai" })).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Buka Miamus yang baru" }).click();
+  await expect(page).toHaveURL(`${NEW}/join/staff?token=invite-abc`);
+  // The old address never ran the invite page: the link is still good.
+  expect(stub.seen.redeemedAs).toEqual([]);
+  expect(stub.seen.signups).toBe(0);
+});
+
+test("the old address never renders the page asked for, only the empty page under the move screen", async ({
+  request,
+}) => {
+  // The server itself serves the move (middleware.ts), so no page's own code
+  // runs on the old address, not even before the browser knows its host
+  // (Codex, PR #54). The landing page is fully rendered on the server, which
+  // makes it easy to see.
+  const headline = "Tahu apa yang sudah beres di rumah, tanpa perlu tanya lagi.";
+  const current = await (await request.get("/selamat-datang")).text();
+  expect(current).toContain(headline);
+  const old = await (await request.get("/selamat-datang", { headers: { "x-forwarded-host": "miamus.vercel.app" } })).text();
+  expect(old).not.toContain(headline);
+  // Its files and the icons still come from the old address as they are.
+  expect((await request.get("/sw.js", { headers: { "x-forwarded-host": "miamus.vercel.app" } })).ok()).toBe(true);
+  const icon = await request.get("/icon/192", { headers: { "x-forwarded-host": "miamus.vercel.app" } });
+  expect(icon.headers()["content-type"]).toContain("image/png");
 });
 
 test("the current address shows the app as before", async ({ context, page }) => {

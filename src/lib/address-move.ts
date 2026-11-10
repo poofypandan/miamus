@@ -18,6 +18,12 @@ import type { DrainReport, OfflineQueueItem } from "@/lib/offline-queue";
  * server has refused it.
  */
 
+/**
+ * What the middleware serves every page as on an old address: an empty page,
+ * so the page asked for never runs there; AddressMoveGate draws the screen.
+ */
+export const MOVED_PATH = "/moved";
+
 /** Who is holding the phone, as far as the old address can tell. */
 export type MoveAudience = "owner" | "staff" | "visitor";
 
@@ -81,7 +87,19 @@ export interface SendDeps {
   online(): boolean;
   /** True when the old address has no session to send with. */
   signedOut(): Promise<boolean>;
+  /**
+   * The longest the screen waits for one pass. A photo upload has no deadline
+   * of its own (lib/photo-queue.ts), so on weak Wi-Fi a pass can take
+   * minutes; past this the screen says "still waiting" and offers Coba lagi
+   * and Pindah sekarang while the pass carries on (Codex, PR #54).
+   */
+  waitMs?: number;
 }
+
+/** As long as a save button spins (lib/offline-queue.ts UI_WAIT_MS). */
+export const SEND_WAIT_MS = 25_000;
+
+const TIMED_OUT = Symbol("timed out");
 
 /**
  * Sends what is waiting, once, and says what is left. `onSending` is called
@@ -108,13 +126,28 @@ export async function sendBeforeMove(deps: SendDeps, onSending?: (count: number)
   if (await deps.signedOut().catch(() => false)) return waiting("signed-out", before.length);
 
   onSending?.(before.length);
-  let report: DrainReport;
+  let report: DrainReport | typeof TIMED_OUT;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    report = await deps.drain();
+    report = await Promise.race([
+      deps.drain(),
+      new Promise<typeof TIMED_OUT>((resolve) => {
+        timer = setTimeout(() => resolve(TIMED_OUT), deps.waitMs ?? SEND_WAIT_MS);
+      }),
+    ]);
   } catch {
     const left = await deps.readQueue().catch(() => null);
     if (left && left.length === 0) return { status: "empty", sent: 0, refused: 0 };
     return waiting("error", left ? left.length : before.length);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (report === TIMED_OUT) {
+    // Still sending. The queue says what is left; the pass carries on.
+    const left = await deps.readQueue().catch(() => null);
+    if (left && left.length === 0) return { status: "empty", sent: before.length, refused: 0 };
+    return waiting("no-answer", left ? left.length : before.length);
   }
 
   let after: readonly OfflineQueueItem[];

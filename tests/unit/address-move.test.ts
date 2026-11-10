@@ -207,6 +207,22 @@ describe("sending before the move", () => {
     expect(outcome).toEqual({ status: "empty", sent: 0, refused: 1 });
   });
 
+  it("stops waiting on a pass that hangs (a slow photo), keeps the saves, and offers the choices", async () => {
+    await seed(logItem("a"), logItem("b"));
+    let finish: () => void = () => {};
+    const hanging = new Promise<import("@/lib/offline-queue").DrainReport>((resolve) => {
+      finish = () => resolve({ sent: [], refused: [], waiting: 2, confirmed: true });
+    });
+
+    const outcome = await sendBeforeMove(deps({ drain: () => hanging, waitMs: 20 }));
+
+    expect(outcome).toEqual({ status: "waiting", waiting: 2, sent: 0, refused: 0, reason: "no-answer" });
+    expect(mayMove(outcome, false)).toBe(false);
+    expect(mayMove(outcome, true)).toBe(true);
+    expect(await ids()).toEqual(["a", "b"]);
+    finish();
+  });
+
   it("with nothing waiting, sends nothing and may move at once", async () => {
     const sending: number[] = [];
     const outcome = await sendBeforeMove(deps(), (n) => sending.push(n));
