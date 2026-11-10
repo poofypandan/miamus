@@ -2,7 +2,7 @@
 
 Status: **revised after the 10 Nov evaluation; awaiting the owner's
 decision (D1–D15, each with a recommended A).** Nothing is built, nothing
-is applied anywhere. Migration **145** is reserved for PR A (feature
+is applied anywhere. Migration **146** is reserved for PR A (feature
 switches and the "What kind of home?" answer). People records, elders'
 routines and the Care tab are **later, behind an optional switch, after
 interviews with target households**; health and workouts are **dropped for
@@ -179,9 +179,10 @@ loses nothing.
   goes where 172 says a skipped template goes (Today with the first-run
   checklist, as now, until 172 decides).
 - The three kinds are the evaluation's examples. **The final list, and what
-  each template holds, are Phase 172's.** 171 builds the screen and the
-  column with whatever list 172 settles; if 172 ships its step first, 172
-  can own this screen and 171 PR A drops it.
+  each template holds, are Phase 172's.** Phase 172 PR A1 builds first
+  (#80, migration 145), so it builds this screen and stores the answer;
+  171 PR A builds after it and reuses the screen as designed here, adding
+  nothing to it.
 
 No new required field: both questions are optional, and an owner who skips
 both lands where they land today.
@@ -329,7 +330,7 @@ Household tab, **Hewan**, **Batalkan** for Undo.
 | What kind of home? | **Rumah seperti apa?** | sign-up screen 2; choices follow Phase 172 |
 | No thanks (offer, later) | **Tidak, terima kasih** | |
 
-## The database: migration 145 (PR A)
+## The database: migration 146 (PR A)
 
 All additive. Follows `AGENTS.md`: every `security definer` function
 revokes `EXECUTE` from `public, anon` and grants only what's needed;
@@ -337,8 +338,8 @@ admin-only writes check `household_members` for that household (never
 `get_user_household_ids()`, which staff phones pass); applied local →
 staging → production with the owner's OK, before the PR merges (`main`
 deploys to production). Re-check `supabase/migrations` and open PRs before
-building (141 staff push, 142 staff pay, 143 closet, 144 kitchen are
-reserved; 172 may reserve its own).
+building (141 staff push, 142 staff pay, 143 closet, 144 kitchen, 145
+Phase 172 PR A1 are reserved; 172 builds first).
 
 **`household_features`**
 
@@ -383,12 +384,13 @@ reserved; 172 may reserve its own).
 of the values Phase 172 settles. Written by **`set_household_home_type(p_household
 uuid, p_type text)`** (same owner check, revoke/grant as above); not added
 to `create_household`, because screen 2 comes after the household exists.
-If Phase 172 builds first and owns this column, 145 leaves it out.
+Phase 172 PR A1 builds first (migration 145) and owns screen 2; if its 145
+adds this column, 146 leaves it out and only reads it.
 
-No dismissed-offers table in 145: it comes with the first feature that has
+No dismissed-offers table in 146: it comes with the first feature that has
 an offer (D7).
 
-Tests: `supabase/tests/145_household_features.sql` (rolled back): no rows
+Tests: `supabase/tests/146_household_features.sql` (rolled back): no rows
 = on; set and unset; staff phone, another household's owner and `anon`
 refused; unknown feature refused; `home_type` check; grants (`anon` can
 execute neither function).
@@ -408,13 +410,13 @@ execute neither function).
 
 | PR | What | Migration | Size |
 | --- | --- | --- | --- |
-| **A, build now** | `src/lib/features.ts` (rows, defaults, which pill and staff button each hides); a `useHouseholdFeatures()` hook beside `useHouseholdProfile()` (cache on device, no flash); Household → **Features** replaces Who lives here; switches wired for Repairs, Bills and upkeep, Food at home and Pets; staff hides; Kakak's tool list respects the switches; the four push functions respect them; the Chores and Kitchen view fallbacks; sign-up screen 2 handing off to 172; privacy line; glossary rows; one What's new entry | **145** | Small–medium |
+| **A, build now** | `src/lib/features.ts` (rows, defaults, which pill and staff button each hides); a `useHouseholdFeatures()` hook beside `useHouseholdProfile()` (cache on device, no flash); Household → **Features** replaces Who lives here; switches wired for Repairs, Bills and upkeep, Food at home and Pets; staff hides; Kakak's tool list respects the switches; the four push functions respect them; the Chores and Kitchen view fallbacks; privacy line; glossary rows; one What's new entry (screen 2 is built by Phase 172 PR A1) | **146** | Small–medium |
 | later | each optional feature (closet, kitchen amounts, recipes, menu) joins Features off, with the offer component built by the first | its own | — |
 | later, after interviews | people records, Elders in Care, their routines; Kids after parent interviews | its own | Large |
 | dropped for now | health, workouts, nutrition per person, basic nutrition | — | — |
 
-PR A coordinates with Phase 172 on screen 2 (whichever builds first owns
-it). Each PR: `tsc`, `next build`, unit tests (defaults agree with SQL;
+PR A builds after Phase 172 PR A1 (#80, migration 145), which builds
+screen 2 as designed here; 171 PR A reuses it. Each PR: `tsc`, `next build`, unit tests (defaults agree with SQL;
 which pills and staff buttons hide), a Playwright test on the stub (sign up,
 skip screen 2, turn Repairs off: the pill and the staff button go; turn it
 on: they're back; no reload), Codex until clean, migration local → staging
@@ -510,9 +512,10 @@ on: they're back; no reload), Codex until clean, migration local → staging
   for that phone; PR A only removes, adds no text. B: every staff phone sees
   everything that's on.
 - **D15 — Order.**
-  **A (recommended):** PR A now (145), coordinated with Phase 172 on screen
-  2; optional features join off as they're built; people and elders after
-  interviews; health dropped. B: wait for 172 and build both together.
+  **A (recommended):** PR A (146) right after Phase 172 PR A1 (145), which
+  builds the shared screen 2; optional features join off as they're built;
+  people and elders after interviews; health dropped. B: build 171 PR A
+  and 172 PR A1 together in one PR.
 
 ## Open questions only the owner can answer
 
