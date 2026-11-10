@@ -35,6 +35,8 @@ import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { useRepairs } from "@/hooks/use-repairs";
 import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores";
+import { useBillPayments } from "@/hooks/use-bill-payments";
+import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
 import { comingUpLabel, comingUpReminders } from "@/lib/chore-reminders";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
@@ -111,6 +113,9 @@ export function AgendaTab() {
   // the household's list so none shows twice (D1 A). Without a roster row
   // (still loading, or none) the card is empty and the list is as before.
   const mine = useMemo(() => myOccurrences(allChores, memberProfile?.id), [allChores, memberProfile?.id]);
+  // Bills among mine (Phase 164 PR B): their payments, owners only, read
+  // only when there is one.
+  const { payments: billPayments } = useBillPayments(mine.some((o) => isBill(o.task)));
   const chores = useMemo(() => {
     if (mine.length === 0) return allChores;
     const keys = new Set(mine.map((o) => o.key));
@@ -412,6 +417,8 @@ export function AgendaTab() {
             household's day. Renders nothing on a day with none of mine. */}
         {/* Its tutorial, only for an admin who has a chore of their own (D5). */}
         {range === "day" && hasOwnChores && <WhatsNewCard id="my-tasks-2026-11" />}
+        {/* Marking a bill paid (Phase 164 PR B): for an admin with a bill of their own. */}
+        {range === "day" && mine.some((o) => isBill(o.task)) && <WhatsNewCard id="bill-payments-2026-11" />}
         {/* Bills and upkeep (Phase 164, D9): Show me opens the checklist on Chores. */}
         {range === "day" && (
           <WhatsNewCard
@@ -421,6 +428,13 @@ export function AgendaTab() {
         )}
         {range === "day" && (
           <MyTasksCard
+            billLine={(occurrence, done) =>
+              !isBill(occurrence.task)
+                ? null
+                : done
+                  ? paidLine(paymentFor(billPayments, occurrence.row?.id), locale)
+                  : lastTimeLine(lastAmount(billPayments, occurrence.template.id, occurrence.row?.id), locale)
+            }
             occurrences={mine}
             mode={myMode}
             dayLabel={label}

@@ -75,6 +75,8 @@ export interface StubOptions {
   kakak?: { allowed: boolean; enabled: boolean };
   /** household_locations rows the household already has (Phase 158). */
   rooms?: Record<string, unknown>[];
+  /** bill_payments rows the household already has (Phase 164 PR B). */
+  billPayments?: Record<string, unknown>[];
   /** household_tasks rows the household already has (Phase 158). */
   chores?: Record<string, unknown>[];
   /** Answer the room list with a server error until set back (Phase 158). */
@@ -136,6 +138,12 @@ export interface Stub {
   repairs: Record<string, unknown>[];
   /** repair_costs and repair_notes rows (Phase 159 PR B). */
   repairCosts: Record<string, unknown>[];
+  /** bill_payments rows (Phase 164 PR B), and who asked for them. */
+  billPayments: Record<string, unknown>[];
+  billPaymentReads: string[];
+  /** Storage uploads and removals, as "bucket/path". */
+  uploads: string[];
+  removed: string[];
   repairNotes: Record<string, unknown>[];
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
@@ -172,6 +180,10 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const supplies: Record<string, unknown>[] = [];
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
   const repairCosts: Record<string, unknown>[] = [];
+  const billPayments: Record<string, unknown>[] = options.billPayments ? [...options.billPayments] : [];
+  const billPaymentReads: string[] = [];
+  const uploads: string[] = [];
+  const removed: string[] = [];
   const repairNotes: Record<string, unknown>[] = [];
   const kakak = { allowed: false, enabled: false, ...options.kakak };
   const household = { hasPets: options.household?.hasPets ?? null };
@@ -236,6 +248,19 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       if (!net.token) return route.abort("internetdisconnected");
       seen.tokenRefreshes += 1;
       return route.fulfill({ json: session(options.stored?.user.id ?? USER, nowSeconds() + 3600) });
+    }
+    // Storage (Phase 164 PR B): uploads and removals, recorded.
+    if (path.startsWith("/storage/v1/object/")) {
+      const rest = decodeURIComponent(path.slice("/storage/v1/object/".length));
+      if (request.method() === "POST" || request.method() === "PUT") {
+        uploads.push(rest);
+        return route.fulfill({ json: { Key: rest, Id: rest } });
+      }
+      if (request.method() === "DELETE") {
+        const prefixes: string[] = request.postDataJSON()?.prefixes ?? [];
+        for (const p of prefixes) removed.push(`${rest}/${p}`);
+        return route.fulfill({ json: prefixes.map((name) => ({ name })) });
+      }
     }
     if (path.startsWith("/rest/v1/")) {
       if (!net.rest) return route.abort("internetdisconnected");
@@ -326,6 +351,10 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       if (table === "household_locations" && options.rooms) return answerRooms(route, options.rooms);
       if (table === "repairs") return answerRepairs(route, repairs, who === OWNER);
       if (table === "repair_costs") return answerRepairCosts(route, repairCosts, who === OWNER);
+      if (table === "bill_payments") {
+        billPaymentReads.push(who === OWNER ? "owner" : "other");
+        return answerBillPayments(route, billPayments, who === OWNER);
+      }
       if (table === "repair_notes") return answerRepairNotes(route, repairNotes);
       if (table === "rpc/organise_rooms" && options.rooms) {
         return route.fulfill({ json: organise(request.postDataJSON()?.p_plan, options.rooms, options.chores ?? []) });
@@ -357,6 +386,10 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     supplies,
     repairs,
     repairCosts,
+    billPayments,
+    billPaymentReads,
+    uploads,
+    removed,
     repairNotes,
     kakak,
     household,
@@ -657,6 +690,38 @@ function answerRepairCosts(route: Route, costs: Record<string, unknown>[], owner
   const row = { ...(index === -1 ? {} : costs[index]), ...fields, updated_at: new Date().toISOString() };
   if (index === -1) costs.push(row);
   else costs[index] = row;
+  return reply([row]);
+}
+
+/**
+ * bill_payments (migrations/138): owners only, as its policy; anyone else
+ * reads nothing and writes nothing. Upsert by task_id, delete by task_id;
+ * the server's fields stamped as 138's trigger does.
+ */
+function answerBillPayments(route: Route, payments: Record<string, unknown>[], owner: boolean) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  if (!owner) {
+    if (request.method() === "GET") return reply([]);
+    return route.fulfill({ status: 403, json: { code: "42501", message: "new row violates row-level security policy" } });
+  }
+  if (request.method() === "GET") return reply([...payments].sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at))));
+  const taskId = new URL(request.url()).searchParams.get("task_id")?.replace(/^eq\./, "");
+  if (request.method() === "DELETE") {
+    const index = payments.findIndex((p) => p.task_id === taskId);
+    return reply(index === -1 ? [] : payments.splice(index, 1));
+  }
+  const body = request.postDataJSON();
+  const fields = Array.isArray(body) ? body[0] : body;
+  const index = payments.findIndex((p) => p.task_id === fields.task_id);
+  const now = new Date().toISOString();
+  const row =
+    index === -1
+      ? { id: `00000000-0000-4000-8000-${String(400 + payments.length).padStart(12, "0")}`, series_id: fields.series_id ?? null, paid_at: now, ...fields, updated_at: now }
+      : { ...payments[index], ...fields, updated_at: now };
+  if (index === -1) payments.push(row);
+  else payments[index] = row;
   return reply([row]);
 }
 

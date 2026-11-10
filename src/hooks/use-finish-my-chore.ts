@@ -7,6 +7,11 @@ import { useT } from "@/context/owner-locale-context";
 import { dataProvider } from "@/lib/data";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
 import { coverTakeover, type ChoreOccurrence } from "@/lib/chore-recurrence";
+import { isBill, removePayment } from "@/lib/bill-payments";
+import type { HouseholdTask } from "@/types/database";
+
+/** Sent (with the saved row), kept on the phone to send, or not saved. */
+export type FinishOutcome = { outcome: "sent"; task: HouseholdTask } | { outcome: "queued" } | null;
 
 /** Both photos, or none (migrations/136). */
 export interface MyChorePhotos {
@@ -58,7 +63,11 @@ export function useFinishMyChore() {
   );
 
   const reopen = useCallback(
-    async (rowId: string, photos?: { before: string | null; after: string | null }): Promise<boolean> => {
+    async (
+      rowId: string,
+      photos?: { before: string | null; after: string | null },
+      bill = false
+    ): Promise<boolean> => {
       if (pendingRef.current.has(rowId)) {
         toast.info(t("Still sending. Try again in a moment.", "Masih dikirim. Coba lagi sebentar lagi."));
         return false;
@@ -74,14 +83,17 @@ export function useFinishMyChore() {
       for (const url of [photos?.before, photos?.after]) {
         if (url) void dataProvider.deletePhoto(url).catch((err) => console.error("Could not delete a chore photo", err));
       }
+      // A bill not paid after all: its amount and receipt go too (Phase 164 PR B).
+      if (bill) void removePayment(rowId).catch((err) => console.error("Could not remove a bill payment", err));
       return true;
     },
     [updateHouseholdTaskStatus, explain, t]
   );
 
   const finish = useCallback(
-    async (occurrence: ChoreOccurrence, photos?: MyChorePhotos): Promise<"sent" | "queued" | null> => {
+    async (occurrence: ChoreOccurrence, photos?: MyChorePhotos): Promise<FinishOutcome> => {
       const title = occurrence.task.title;
+      const bill = isBill(occurrence.task);
       try {
         // A chore covered for someone on leave is mine on screen but still
         // theirs in the database: take that day over first, as its own edit,
@@ -111,18 +123,18 @@ export function useFinishMyChore() {
               "Selesai, tersimpan di HP. Akan dikirim otomatis saat sinyal bagus."
             )
           );
-          return "queued";
+          return { outcome: "queued" };
         }
-        toast.success(t(`Done: ${title}`, `Selesai: ${title}`), {
+        toast.success(bill ? t(`Paid: ${title}`, `Sudah dibayar: ${title}`) : t(`Done: ${title}`, `Selesai: ${title}`), {
           duration: 5000,
           action: {
             label: t("Undo", "Batalkan"),
             onClick: () => {
-              void reopen(task.id, { before: task.before_photo_url ?? null, after: task.after_photo_url ?? null });
+              void reopen(task.id, { before: task.before_photo_url ?? null, after: task.after_photo_url ?? null }, bill);
             },
           },
         });
-        return "sent";
+        return { outcome: "sent", task };
       } catch (err) {
         explain(err);
         return null;

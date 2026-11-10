@@ -14,6 +14,7 @@ import type {
   LeaveRequest,
   Repair,
   RepairCost,
+  BillPayment,
   RepairNote,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
@@ -48,6 +49,8 @@ interface MockDB {
   repairs?: Repair[];
   repairCosts?: RepairCost[];
   repairNotes?: RepairNote[];
+  /** Phase 164 PR B. Optional, as above. */
+  billPayments?: BillPayment[];
 }
 
 function freshDB(): MockDB {
@@ -753,6 +756,41 @@ export const mockProvider: DataProvider = {
   async uploadReceipt(file) {
     // Demo mode keeps photos as object URLs, like uploadPhoto.
     return delay(URL.createObjectURL(file));
+  },
+  async listBillPayments() {
+    const household = getActiveHouseholdId();
+    return delay(
+      (loadDB().billPayments ?? [])
+        .filter((p) => p.household_id === household)
+        .sort((a, b) => b.paid_at.localeCompare(a.paid_at))
+    );
+  },
+  async saveBillPayment(taskId, payment) {
+    const db = loadDB();
+    const existing = (db.billPayments ?? []).find((p) => p.task_id === taskId);
+    const task = db.householdTasks.find((t) => t.id === taskId);
+    const now = new Date().toISOString();
+    const row: BillPayment = {
+      id: existing?.id ?? `bill-payment-${Date.now()}`,
+      household_id: getActiveHouseholdId(),
+      task_id: taskId,
+      series_id: existing?.series_id ?? (task ? (task.parent_task_id ?? task.id) : null),
+      amount_idr: payment.amount_idr,
+      receipt_url: payment.receipt_url,
+      paid_at: existing?.paid_at ?? now,
+      created_by: null,
+      updated_at: now,
+    };
+    db.billPayments = [...(db.billPayments ?? []).filter((p) => p.task_id !== taskId), row];
+    saveDB(db);
+    return delay(row);
+  },
+  async deleteBillPayment(taskId) {
+    const db = loadDB();
+    const existing = (db.billPayments ?? []).find((p) => p.task_id === taskId) ?? null;
+    db.billPayments = (db.billPayments ?? []).filter((p) => p.task_id !== taskId);
+    saveDB(db);
+    return delay(existing);
   },
   async deleteReceipt() {
     return delay(undefined);

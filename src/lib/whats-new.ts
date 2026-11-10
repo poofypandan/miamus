@@ -23,6 +23,26 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Shown on Today to an admin with a bill in My tasks (Phase 164 PR B).
+    id: "bill-payments-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: mark a bill paid", id: "Baru: tandai tagihan sudah dibayar" },
+    steps: {
+      en: [
+        "Tap a bill in My tasks: add what it cost and a photo of the receipt, then Mark paid. Both are optional.",
+        "Next time it shows what you paid last. Open the bill to see its last 12 payments.",
+        "Only owners see amounts and receipts. They're kept 2 years.",
+      ],
+      id: [
+        "Ketuk tagihan di Tugas saya: isi jumlahnya dan foto bukti bayar, lalu Tandai sudah dibayar. Keduanya opsional.",
+        "Berikutnya tampil jumlah yang terakhir dibayar. Buka tagihannya untuk melihat 12 pembayaran terakhir.",
+        "Hanya pemilik yang bisa melihat jumlah dan bukti bayar. Disimpan 2 tahun.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown on Chores → Today and on Today; Show me opens the checklist (Phase 164, D9).
     id: "bills-2026-11",
     date: "2026-11-10",

@@ -58,7 +58,13 @@ export const LEGAL = {
   // the screen and the app version; read by the operator and the
   // household's admins, never by staff; kept 2 years (migrations/135). No new
   // service.
-  policyVersion: "2026-11-10.2",
+  // 2026-11-10.3: bills and upkeep — chores with an optional reminder, and
+  // a morning notification to the admin a chore is for (every admin for
+  // staff chores), from chore titles already stored (migrations/137); for
+  // admins only, a paid bill's amount and receipt photo, in storage only
+  // admins can open, kept 2 years from the payment (migrations/138). No new
+  // service.
+  policyVersion: "2026-11-10.3",
   effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

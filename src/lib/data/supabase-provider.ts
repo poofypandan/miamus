@@ -869,14 +869,38 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
-  async uploadReceipt(file, repairId) {
-    // <household>/<repair>/…: the bucket's policies read the household from
+  async uploadReceipt(file, folder) {
+    // <household>/<folder>/…: the bucket's policies read the household from
     // the path and let only its owners in (migrations/131).
     const ext = extensionFor(file);
-    const path = `${getActiveHouseholdId()}/${repairId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const path = `${getActiveHouseholdId()}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await client().storage.from(RECEIPTS_BUCKET).upload(path, file, { contentType: file.type });
     if (error) throw error;
     return client().storage.from(RECEIPTS_BUCKET).getPublicUrl(path).data.publicUrl;
+  },
+  async listBillPayments() {
+    const { data, error } = await client()
+      .from("bill_payments")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .order("paid_at", { ascending: false })
+      .limit(1000);
+    if (error) throw error;
+    return data ?? [];
+  },
+  async saveBillPayment(taskId, payment) {
+    const { data, error } = await client()
+      .from("bill_payments")
+      .upsert({ task_id: taskId, household_id: getActiveHouseholdId(), ...payment }, { onConflict: "task_id" })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteBillPayment(taskId) {
+    const { data, error } = await client().from("bill_payments").delete().eq("task_id", taskId).select();
+    if (error) throw error;
+    return data?.[0] ?? null;
   },
   async deleteReceipt(url) {
     const marker = `/object/public/${RECEIPTS_BUCKET}/`;

@@ -141,6 +141,9 @@ people are **staf** and **admin**.
 | Every 2 weeks · Every 3 months · Every 6 months · Every year | **Setiap 2 minggu · Setiap 3 bulan · Setiap 6 bulan · Setiap tahun** | Phase 164 repeats. |
 | Postpaid / Token (electricity) | **Pascabayar** / **Token** | |
 | Clean the water tank | **Kuras toren** | Saved in Indonesian when staff or anyone may do it. |
+| Payment / Payments (a bill's history) | **Pembayaran** / **Riwayat bayar** | Phase 164 PR B. "Pembayaran · hanya pemilik" heads the paid bill's block. |
+| Add amount or receipt | **Tambah jumlah atau bukti bayar** | On a paid bill with nothing recorded yet. |
+| No amount (a payment with a receipt only) | **Tanpa jumlah** | |
 | Pest control | **Basmi hama** | Phase 164 checklist; staff read it, so not the English loanword. |
 | Mark paid / Paid · Amount · Receipt (of a bill) | **Tandai sudah dibayar** / **Sudah dibayar** · **Jumlah** · **Bukti bayar** | Phase 164 PR B (payments). Not "Lunas", which reads as a loan paid off; a repair's paper receipt stays **Nota**. |
 | My tasks (admin's own chores on Today) | **Tugas saya** | Phase 163. |
