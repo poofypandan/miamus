@@ -21,13 +21,16 @@ import type { TaskException } from "@/types/database";
  * The couldn't-do records behind useTaskExceptions (Phase 165,
  * migrations/139), outside React like the repairs cache, so the household's
  * own refresh (the app back in front, pull to refresh, the save queue
- * draining) reloads it too. One cache per household; the last 8 days, which
- * covers everything staff may still file for (7 days back) and Today's
- * "From earlier".
+ * draining) reloads it too. One cache per household; the records still
+ * kept (90 days).
  */
 
-/** How far back records are read: the guard's 7 days, plus today. */
-export const EXCEPTION_LOOKBACK_DAYS = 7;
+/**
+ * How far back records are read: as long as they are kept (90 days), so a
+ * chore still open in "From earlier" keeps its explanation after the 7 days
+ * staff may file for (Codex, PR #71).
+ */
+export const EXCEPTION_LOOKBACK_DAYS = 90;
 
 export interface Snapshot {
   household: string | null;

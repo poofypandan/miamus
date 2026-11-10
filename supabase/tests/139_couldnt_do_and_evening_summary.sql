@@ -397,6 +397,14 @@ select pg_temp.ok((select array_agg(slot_time order by slot_time) from public.ro
                     where schedule_id = '00000000-0000-0000-0000-000000013904') = array['16:00'::time],
   '... and a 07:50 log settles 08:00');
 delete from public.master_schedules where id = '00000000-0000-0000-0000-000000013904';
+-- An archived pet's routines leave the summary, as they leave Today.
+update public.task_entities set metadata = '{"archived": true}' where id = '00000000-0000-0000-0000-0000000139e1';
+update public.master_schedules set is_active = true where id = '00000000-0000-0000-0000-000000013901';
+select pg_temp.ok(not exists (select 1 from public.routine_slots_open(pg_temp.today())
+                               where entity_id = '00000000-0000-0000-0000-0000000139e1'),
+  'an archived pet''s routines are left out');
+update public.task_entities set metadata = '{}' where id = '00000000-0000-0000-0000-0000000139e1';
+update public.master_schedules set is_active = false where id = '00000000-0000-0000-0000-000000013901';
 
 -- ---- 90 days, photos, export ---------------------------------------------------------
 insert into public.task_exceptions (id, household_id, chore_id, occurs_on, reason, photo_url)

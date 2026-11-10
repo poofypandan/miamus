@@ -662,7 +662,7 @@ revoke all on function public.chore_days_open(date) from public, anon, authentic
 grant execute on function public.chore_days_open(date) to service_role;
 
 -- Routine slots still to do on p_day, as buildAgenda (scheduleEngine.ts)
--- reads them: active schedules of pets not at the clinic, fixed times or
+-- reads them: active schedules of pets not archived or at the clinic, fixed times or
 -- interval slots ("weekly" isn't expanded, as in the app). A single-slot
 -- schedule — every one the app creates — is done by any log that day. A
 -- multi-slot one matches each slot, earliest first, to the nearest unclaimed
@@ -697,6 +697,9 @@ begin
        and (ms.expires_at is null or ms.expires_at >= p_day)
        and e.status is distinct from 'admitted'
        and e.household_id is not null
+       -- Archived pets keep their schedules but leave Today (isActivePet,
+       -- src/lib/pets.ts), so they leave the summary too (Codex, PR #71).
+       and coalesce(e.metadata ->> 'archived', 'false') <> 'true'
   loop
     if s.frequency_type = 'fixed_time' then
       slots := array(select t from unnest(s.fixed_times) as t order by t);
