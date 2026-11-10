@@ -19,7 +19,7 @@
  *   POST /rest/v1/rpc/kakak_status  allowed and on, for OWNER only
  *   POST /rest/v1/rpc/my_locale     "id"
  *   GET  staff_profiles, task_entities, household_locations,
- *        inventory_items, master_schedules  a small fixed household
+ *        inventory_items, master_schedules, households  a small fixed household
  *   GET /storage/v1/object/household-logs/<household>/...
  *        a 1080x810 JPEG, for OWNER only (storage RLS in miniature)
  *   GET /storage/v1/render/...      500: the app resizes photos itself now
@@ -47,6 +47,8 @@ const HOUSEHOLD = {
   household_locations: [{ id: TERRACE, name: "Teras", created_at: "2026-10-01T00:00:00Z" }],
   inventory_items: [],
   master_schedules: [],
+  // "Who lives here?" (Phase 162): never answered, so pets stay on.
+  households: [{ id: HOUSEHOLD_ID, has_pets: null }],
 };
 
 function claimsOf(req) {

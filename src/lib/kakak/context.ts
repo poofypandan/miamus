@@ -59,6 +59,8 @@ export interface ContextRows {
   schedules: ContextScheduleRow[];
   rooms: ContextRoomRow[];
   items: ContextItemRow[];
+  /** households.has_pets (migrations/133); only an explicit false switches pets off. */
+  hasPets?: boolean | null;
 }
 
 export interface RefMap {
@@ -198,7 +200,17 @@ export function buildContext(
   }
 
   return {
-    household: { today, now, ownerLocale, owner: { ref: "M1", name: ownerName }, people, pets, rooms, items },
+    household: {
+      today,
+      now,
+      ownerLocale,
+      owner: { ref: "M1", name: ownerName },
+      people,
+      pets,
+      rooms,
+      items,
+      ...(rows.hasPets === false ? { petsOff: true } : {}),
+    },
     refs,
     names,
   };

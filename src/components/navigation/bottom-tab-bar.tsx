@@ -18,6 +18,7 @@ import {
 } from "@/lib/dashboard-modules";
 import { PendingBar } from "@/components/shared/pending-bar";
 import { useTabNavigation } from "@/hooks/use-tab-navigation";
+import { moduleFlagsFrom, useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useOwnerLocale } from "@/context/owner-locale-context";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { isPlainClick } from "@/lib/in-place-navigation";
@@ -53,7 +54,9 @@ const TABS: Record<DashboardModule, { label: Record<OwnerLocale, string>; icon: 
 export function BottomTabBar() {
   const searchParams = useSearchParams();
   const locale = useOwnerLocale();
-  const routeModule = moduleFromParam(searchParams.get("module"));
+  // No Pets tab for a household that said it has none (Phase 162).
+  const flags = moduleFlagsFrom(useHouseholdProfile().hasPets);
+  const routeModule = moduleFromParam(searchParams.get("module"), flags);
   // The tapped tab lights at once; the content follows when it is ready —
   // see useTabNavigation (Phase 125).
   const {
@@ -74,7 +77,7 @@ export function BottomTabBar() {
       className="sticky bottom-0 z-40 w-full border-t bg-background pb-safe shadow-[0_-1px_8px_rgba(0,0,0,0.04)]"
     >
       <div className="flex h-16">
-        {enabledModules().map((module) => {
+        {enabledModules(flags).map((module) => {
           const { label: labels, icon: Icon } = TABS[module];
           const label = labels[locale];
           const active = module === activeModule;

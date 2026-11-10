@@ -27,6 +27,8 @@ const COPY = {
     privacy: "Privacy Policy",
     privacyHref: "/privacy",
     consentAfter: ".",
+    whatIs: "What is Miamus?",
+    whatIsHref: "/welcome",
     notConfigured: "Supabase isn't configured on this deployment.",
     unreachable: "Couldn't reach Google sign-in. Try again.",
     errors: {
@@ -44,6 +46,8 @@ const COPY = {
     privacy: "Kebijakan Privasi",
     privacyHref: "/privasi",
     consentAfter: ".",
+    whatIs: "Apa itu Miamus?",
+    whatIsHref: "/selamat-datang",
     notConfigured: "Supabase belum disiapkan di server ini.",
     unreachable: "Tidak bisa membuka login Google. Coba lagi.",
     errors: {
@@ -200,6 +204,16 @@ function FrontDoor() {
         </Link>
         {t.consentAfter}
       </p>
+
+      {/* The public landing page (2026-11-09), for anyone who arrives here
+          without knowing what Miamus is. A quiet link: this screen stays the
+          door for owners and staff. */}
+      <Link
+        href={t.whatIsHref}
+        className="mx-auto mt-4 inline-flex min-h-[44px] items-center text-sm font-medium text-gray-900 underline underline-offset-4"
+      >
+        {t.whatIs}
+      </Link>
     </main>
   );
 }

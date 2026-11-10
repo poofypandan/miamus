@@ -23,6 +23,25 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "who-lives-here-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: hide Pets if you don't have any", id: "Baru: sembunyikan Hewan kalau tidak ada" },
+    steps: {
+      en: [
+        "Household → Who lives here: switch Pets off, and the Pets tab and every pet line disappear, for staff too.",
+        "Have pets? Nothing changes for you.",
+        "New households answer this when they sign up. Kids and Elders come later.",
+      ],
+      id: [
+        "Rumah → Siapa yang tinggal di sini: matikan Hewan, tab Hewan dan semua baris hewan hilang, juga di HP staf.",
+        "Punya hewan? Tidak ada yang berubah.",
+        "Rumah baru menjawab ini saat mendaftar. Anak dan Lansia menyusul.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     id: "weak-signal-saves-2026-11",
     date: "2026-11-09",
     audience: "owner",

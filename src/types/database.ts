@@ -31,6 +31,11 @@ export type Household = {
   // sign-in entirely.
   owner_auth_id: string | null;
   created_at: string;
+  // "Who lives here?" (Phase 162, migrations/133): null until answered, which
+  // the app treats as pets on.
+  has_pets: boolean | null;
+  has_pets_set_at: string | null;
+  has_pets_set_by: string | null;
 };
 
 export type HouseholdMember = {
@@ -842,7 +847,7 @@ export interface Database {
       };
       // The household and its owner membership in one transaction.
       create_household: {
-        Args: { p_name: string };
+        Args: { p_name: string; p_has_pets?: boolean | null };
         Returns: string;
       };
       my_locale: {
@@ -860,6 +865,10 @@ export interface Database {
           daily_limit: number;
           calls_left: number;
         }[];
+      };
+      set_household_has_pets: {
+        Args: { p_household: string; p_on: boolean };
+        Returns: undefined;
       };
       set_kakak_enabled: {
         Args: { p_household: string; p_on: boolean };

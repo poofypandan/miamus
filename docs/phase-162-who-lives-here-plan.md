@@ -1,7 +1,12 @@
 # Phase 162 — "Who lives here?" at sign-up
 
 Status: **approved by the owner, 2026-11-09: recommended options for D1–D7.**
-Nothing built yet; the build starts after PR #41 merges (see "One PR, after #41").
+**Built 2026-11-10** on `claude/phase-162-who-lives-here` (migration 133, local
+only until the owner OKs staging and production). Two changes found while
+building: staff phones in a home without pets couldn't ask for something to
+buy at all (the whole button hid with no pets), so the button now stays and
+only the pet field and the pet-only kinds (Treats, Pee pad) go; and no staff
+tutorial card, since nothing new appears on staff phones (D5).
 D7 keeps today's landing line; if the landing page proposal (PR #43) is
 adopted, its wording replaces it.
 Roadmap item 12 (`docs/roadmap-2026-11-09.md`, P2). Mockup:

@@ -96,6 +96,9 @@ const ITEM_ORDER: ItemType[] = ["food", "shampoo", "pee_pad", "other"];
 // a real value that is mapped back to null on submit.
 const NO_PET = "__none__";
 
+// Kinds that only make sense with a pet; hidden in a home without one.
+const PET_ONLY_ITEMS: ItemType[] = ["treats", "pee_pad"];
+
 export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) {
   const t = COPY[locale];
   const { pets, activePetId, flagLowStock, inventoryItems } = useHousehold();
@@ -153,7 +156,10 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
     }
   }
 
-  if (pets.length === 0) return null;
+  // A household without pets still needs to ask for things (Phase 162): the
+  // button stays, and only the pet field and the pet-only kinds go.
+  const hasPets = pets.length > 0;
+  const itemOrder = hasPets ? ITEM_ORDER : ITEM_ORDER.filter((value) => !PET_ONLY_ITEMS.includes(value));
 
   const trigger = (
     <SheetTrigger asChild>
@@ -196,27 +202,29 @@ export function LowStockFlagButton({ locale = "en" }: { locale?: "en" | "id" }) 
           <SheetDescription>{t.description}</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-3 px-4">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t.petOptional}</Label>
-            <Select value={petId} onValueChange={setPetId}>
-              <SelectTrigger className="min-h-[48px] w-full">
-                <SelectValue placeholder={t.petPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_PET}>{t.noPet}</SelectItem>
-                {pets.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {hasPets && (
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">{t.petOptional}</Label>
+              <Select value={petId} onValueChange={setPetId}>
+                <SelectTrigger className="min-h-[48px] w-full">
+                  <SelectValue placeholder={t.petPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_PET}>{t.noPet}</SelectItem>
+                  {pets.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">{t.item}</Label>
             <div className="grid grid-cols-2 gap-2">
-              {ITEM_ORDER.map((value) => (
+              {itemOrder.map((value) => (
                 <Button
                   key={value}
                   type="button"
