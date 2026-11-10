@@ -320,7 +320,11 @@ photos are stored (D10). The checklist is a guide, not proof: the page says
 - **Straight away** (no PIN): **Libur mingguan: Minggu**, **Sisa cuti: 8
   dari 12 hari** with "Tahun kerja sejak 14 Jul", and this year's leave with
   its kind. Leave is already visible to every session of the house, and the
-  allowance is not money.
+  allowance is not money. The phone reads the three settings this needs
+  (weekly days off, leave days a year, start date) through `my_leave`
+  (below), which returns nothing about pay and works even when pay is
+  turned off. The balance itself is worked out on the phone from those
+  settings and the leave requests it already loads (Codex, PR #73).
 - **Pay, behind the PIN** (D8): a card "Gaji dan THR" with amounts shown as
   **Rp ••••••** and **Lihat dengan PIN**. The PIN pad is the existing staff
   PIN screen, worded "Masukkan PIN Anda untuk melihat gaji". Then: agreed pay
@@ -356,8 +360,9 @@ Rules for the build:
 
 1. **Owners only** in the database: RLS through `household_members`, never
    `get_user_household_ids()` (staff phones pass it; AGENTS.md).
-2. **Staff read only their own, only through a function that checks their
-   PIN** (`my_pay`, below), never by table access. No pay table is granted to
+2. **Staff read only their own pay, only through a function that checks
+   their PIN** (`my_pay`, below), never by table access. The non-money leave
+   settings come through `my_leave`, without a PIN. No pay table is granted to
    staff sessions in any way.
 3. **Never sent to Kakak / Anthropic**: pay tables are excluded from Kakak's
    household context, and the plan for Kakak help later (below) must keep it
@@ -414,13 +419,16 @@ Section 5, "Who can see it", a new bullet:
 > **EN:** Staff pay: only the household's admins. Each staff member can see
 > their own pay, payments and THR in the app after entering their PIN, unless
 > an admin turns this off; they can't see anyone else's, or receipt photos.
-> Pay is never sent to Anthropic (Kakak).
+> A staff member's weekly day off, yearly leave days and start date can be
+> seen on the household's staff phones, as leave already is. Pay is never
+> sent to Anthropic (Kakak).
 >
 > **ID:** Gaji staf: hanya admin rumah. Tiap staf dapat melihat gaji,
 > pembayaran, dan THR miliknya sendiri di aplikasi setelah memasukkan PIN,
 > kecuali admin mematikannya; staf tidak dapat melihat milik orang lain
-> maupun foto bukti bayar. Data gaji tidak pernah dikirim ke Anthropic
-> (Kakak).
+> maupun foto bukti bayar. Libur mingguan, jumlah cuti per tahun, dan
+> tanggal mulai bekerja staf dapat dilihat di HP staf rumah itu, seperti
+> cuti selama ini. Data gaji tidak pernah dikirim ke Anthropic (Kakak).
 
 Section 7, "How long we keep it", a new bullet:
 
@@ -548,6 +556,17 @@ migration; AGENTS.md):
   amount, pay-by) if there is one, and their last 12
   payments as `{id, kind, period, amount_idr, paid_on, paid_by,
   received_at}`: no receipts, no notes. Granted to `authenticated`.
+- `my_leave(p_staff_id uuid) returns jsonb` — **SECURITY DEFINER**, empty
+  `search_path`, **no PIN**. Refuses unless the caller is a staff phone
+  session (`require_staff_phone_session()`) of that person's household
+  (`get_user_household_ids()`) and the person is staff (`user_id` null).
+  Returns only `weekly_days_off`, `leave_days_per_year` and `started_on`
+  from `staff_pay_terms`, or nulls when there's no row. Nothing about pay,
+  THR or the agreement. It doesn't check `staff_see_pay`, so the leave
+  balance still shows when pay is hidden. On a shared phone, a colleague
+  could see someone's leave allowance and start date; leave itself is
+  already visible to the whole house, so this adds little. Granted to
+  `authenticated`.
 - `confirm_pay_received(p_payment_id uuid, p_staff_id uuid, p_pin text)` —
   SECURITY DEFINER, same checks; sets `received_at = now()` once, only on
   that person's payment. Granted to `authenticated`.
@@ -592,6 +611,10 @@ migration; AGENTS.md):
   notes; wrong PIN returns nothing and counts toward the lockout; a locked
   person gets nothing; an owner session is refused; another household's
   phone is refused; `staff_see_pay` off returns nothing;
+- `my_leave`: a staff phone of the household gets the three leave fields
+  and nothing else, also with `staff_see_pay` off; another household's
+  phone, an owner session, an admin's profile and logged-out callers get
+  nothing;
 - `confirm_pay_received` sets `received_at` once, only for that person;
   editing the amount clears it;
 - `leave_requests.kind`: staff insert with and without it; old-shape insert
