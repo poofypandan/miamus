@@ -7,8 +7,8 @@ import { useT } from "@/context/owner-locale-context";
 import { dataProvider } from "@/lib/data";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
 import { coverTakeover, type ChoreOccurrence } from "@/lib/chore-recurrence";
-import { isBill, removePayment } from "@/lib/bill-payments";
-import type { HouseholdTask } from "@/types/database";
+import { isBill, loadBillPayments } from "@/lib/bill-payments";
+import type { BillPayment, HouseholdTask } from "@/types/database";
 
 /** Sent (with the saved row), kept on the phone to send, or not saved. */
 export type FinishOutcome = { outcome: "sent"; task: HouseholdTask } | { outcome: "queued" } | null;
@@ -72,19 +72,43 @@ export function useFinishMyChore() {
         toast.info(t("Still sending. Try again in a moment.", "Masih dikirim. Coba lagi sebentar lagi."));
         return false;
       }
+      // A bill not paid after all: its amount and receipt go too (Phase 164
+      // PR B). The payment first, and the day reopens only if that worked,
+      // so a failed delete never leaves a payment on a bill not paid; if
+      // reopening then fails, the payment is put back. The receipt file is
+      // deleted only once both have gone through (Codex, PR #65).
+      let removed: BillPayment | null = null;
+      if (bill) {
+        try {
+          removed = await dataProvider.deleteBillPayment(rowId);
+        } catch (err) {
+          explain(err);
+          return false;
+        }
+      }
       try {
         await updateHouseholdTaskStatus(rowId, "pending");
       } catch (err) {
+        if (removed) {
+          void dataProvider
+            .saveBillPayment(rowId, { amount_idr: removed.amount_idr, receipt_url: removed.receipt_url })
+            .catch((restoreErr) => console.error("Could not put a bill payment back", restoreErr))
+            .finally(() => void loadBillPayments(true));
+        }
         explain(err);
         return false;
+      }
+      if (bill) {
+        if (removed?.receipt_url) {
+          void dataProvider.deleteReceipt(removed.receipt_url).catch((err) => console.error("Could not delete a receipt", err));
+        }
+        void loadBillPayments(true);
       }
       // Photos the admin added are no use to a chore that is open again;
       // best effort, as with a deleted log's photo.
       for (const url of [photos?.before, photos?.after]) {
         if (url) void dataProvider.deletePhoto(url).catch((err) => console.error("Could not delete a chore photo", err));
       }
-      // A bill not paid after all: its amount and receipt go too (Phase 164 PR B).
-      if (bill) void removePayment(rowId).catch((err) => console.error("Could not remove a bill payment", err));
       return true;
     },
     [updateHouseholdTaskStatus, explain, t]

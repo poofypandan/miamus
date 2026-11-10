@@ -231,3 +231,42 @@ test("a bill covered for someone on leave on its first day still asks for both p
   await expect(sheet.getByLabel("Amount (optional)")).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Mark paid" })).toBeDisabled();
 });
+
+test("if removing the payment fails, the bill stays paid with its payment (Codex, PR #65)", async ({ context, page }) => {
+  const pbb = chore({ title: "PBB", status: "completed", completed_by: OWNER_PROFILE_ID, completed_at: new Date().toISOString() });
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    chores: [pbb],
+    billPayments: [
+      {
+        id: "00000000-0000-4000-8000-000000000477",
+        household_id: HOUSEHOLD_ID,
+        task_id: pbb.id,
+        series_id: pbb.id,
+        amount_idr: 1200000,
+        receipt_url: null,
+        paid_at: new Date().toISOString(),
+        created_by: null,
+        updated_at: new Date().toISOString(),
+      },
+    ],
+  });
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Your task is done" }).click({ timeout: 20_000 });
+  const card = page.getByRole("region", { name: "My tasks" });
+  await expect(card).toContainText("Paid · Rp1.200.000");
+  await card.getByRole("button", { name: /PBB/ }).last().click();
+  const sheet = page.getByRole("dialog");
+
+  stub.trouble.bill_payments = { drop: 1 };
+  await sheet.getByRole("button", { name: "Mark not done" }).click();
+  await expect(page.getByText("No connection. Try again in a moment.")).toBeVisible();
+  // Nothing half-done: still paid, payment kept.
+  expect(pbb).toMatchObject({ status: "completed" });
+  expect(stub.billPayments).toHaveLength(1);
+
+  // Tried again with a signal: both go.
+  await sheet.getByRole("button", { name: "Mark not done" }).click();
+  await expect.poll(() => pbb.status).toBe("pending");
+  await expect.poll(() => stub.billPayments.length).toBe(0);
+});
