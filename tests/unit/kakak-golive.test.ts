@@ -17,7 +17,7 @@ import {
 } from "@/lib/kakak/engine";
 import { kakakExamples } from "@/lib/kakak/examples";
 import { practiceClient } from "@/lib/kakak/practice";
-import { REPEAT_CHOICES, refineChore, repeatLabel } from "@/lib/kakak/refine";
+import { MAX_REFINEMENT_NOTE, REPEAT_CHOICES, refineChore, refinementNote, repeatLabel } from "@/lib/kakak/refine";
 import { isSaveableSuggestion } from "@/lib/kakak/suggestions";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -236,6 +236,15 @@ describe("refineChore (the card's chips)", () => {
     const anyone = refineChore(sari, { assignee: null });
     expect(anyone).toMatchObject({ assignedTo: null, assigneeName: null, assignToSelf: false });
     expect(isSaveableSuggestion(anyone)).toBe(true);
+  });
+
+  it("tells Kakak what the chips changed, short enough for one turn", () => {
+    const daily = refineChore(refineChore(chore, { recurrence: "daily" }), { assignee: { id: id(1), name: "Sari" } });
+    expect(refinementNote([daily])).toBe("(Already set on the card: Siram tanaman: every day, for Sari.)");
+    expect(refinementNote([refineChore(chore, { assignee: null })])).toBe("(Already set on the card: Siram tanaman: every monday, for anyone.)");
+    expect(refinementNote([{ kind: "food" }])).toBe("");
+    const many = Array(10).fill(daily);
+    expect(refinementNote(many).length).toBeLessThanOrEqual(MAX_REFINEMENT_NOTE);
   });
 
   it("words each choice like the card does", () => {

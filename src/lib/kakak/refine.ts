@@ -56,3 +56,26 @@ function ordinal(n: number): string {
   if (n % 100 >= 11 && n % 100 <= 13) return "th";
   return ["th", "st", "nd", "rd"][n % 10] ?? "th";
 }
+
+/** Room the note may take in the owner's next turn (MAX_TYPED is 500). */
+export const MAX_REFINEMENT_NOTE = 200;
+
+/**
+ * What the chips already changed, for Kakak, sent with the owner's next
+ * correction ("at 9 instead") so her new card keeps it (Codex, PR #68). The
+ * history itself is never rewritten: it must stay byte-identical. English,
+ * like the rest of what the route tells her; she still answers in the
+ * owner's language.
+ */
+export function refinementNote(items: { kind: string }[]): string {
+  const parts = items
+    .filter((item): item is ChoreSuggestion => item.kind === "chore")
+    .map((item) => {
+      const how = item.recurrence === "none" ? "one time" : repeatLabel(item.recurrence, item.dueDate, "en").toLowerCase();
+      const who = item.assigneeName ? `for ${item.assigneeName}` : "for anyone";
+      return `${item.title}: ${how}, ${who}`;
+    });
+  if (parts.length === 0) return "";
+  const note = `(Already set on the card: ${parts.join("; ")}.)`;
+  return note.length <= MAX_REFINEMENT_NOTE ? note : `${note.slice(0, MAX_REFINEMENT_NOTE - 2).trimEnd()}…)`;
+}

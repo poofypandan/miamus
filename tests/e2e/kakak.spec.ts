@@ -264,8 +264,18 @@ test("the card's chips change how often and who, with no call to Kakak", async (
   await expect(page.locator("dd", { hasText: "Anyone" })).toBeVisible();
   expect(kakak.asked).toHaveLength(2); // the chips asked Kakak nothing
 
+  // A typed change afterwards tells Kakak what the chips set; the owner's line shows only their words.
+  await page.getByRole("button", { name: "Change" }).click();
+  await page.getByRole("textbox", { name: "What should change?" }).fill("at 10 instead");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect.poll(() => kakak.asked.length).toBe(3);
+  expect(kakak.asked[2].reply).toBe("(Already set on the card: Pel teras: one time, for anyone.) at 10 instead");
+  await expect(page.getByText("at 10 instead", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Looks right" })).toBeVisible();
+
   await page.getByRole("button", { name: "Looks right" }).click();
   await expect.poll(() => stub.tasks.length).toBe(1);
-  expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", assigned_to: null, recurrence: "none" });
-  await expect.poll(() => kakak.outcomes).toEqual(["changed"]);
+  // The stub's new card is Kakak's own (weekly, Ari): what she sends back is what is saved.
+  expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", recurrence: "weekly" });
+  await expect.poll(() => kakak.outcomes).toEqual(["changed", "confirmed"]);
 });

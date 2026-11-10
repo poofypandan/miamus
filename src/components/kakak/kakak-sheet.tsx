@@ -33,7 +33,7 @@ import { MAX_TYPED, type KakakHistory, type RefusalReason } from "@/lib/kakak/en
 import type { KakakSuggestion } from "@/lib/kakak/suggestions";
 import { useKakakSave } from "@/lib/kakak/use-kakak-save";
 import { firstName } from "@/lib/kakak/context";
-import { REPEAT_CHOICES, refineChore, repeatLabel, type ChoreRefinement } from "@/lib/kakak/refine";
+import { REPEAT_CHOICES, refineChore, refinementNote, repeatLabel, type ChoreRefinement } from "@/lib/kakak/refine";
 import type { ChoreSuggestion } from "@/lib/kakak/suggestions";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { cn } from "@/lib/utils";
@@ -109,9 +109,14 @@ function Conversation({ onClose }: { onClose: () => void }) {
   useEffect(() => () => abort.current?.abort(), []);
 
   async function send(text: string) {
-    const words = text.trim().slice(0, MAX_TYPED);
-    if (!words) return;
-    setSaid((list) => [...list, words]);
+    const typed = text.trim();
+    if (!typed) return;
+    // A correction after the card's chips carries what they changed, so
+    // Kakak's next card keeps it (Codex, PR #68). The owner's line shows
+    // only what they typed.
+    const note = screen.kind === "card" && screen.refined ? refinementNote(screen.items) : "";
+    const words = note ? `${note} ${typed.slice(0, MAX_TYPED - note.length - 1)}` : typed.slice(0, MAX_TYPED);
+    setSaid((list) => [...list, typed.slice(0, MAX_TYPED)]);
     setDraft("");
     setTypingAnswer(false);
     await ask(words, history);
