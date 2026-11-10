@@ -8,7 +8,7 @@ Counts only, never content.
 
 | Signal | Target | Read from |
 | --- | --- | --- |
-| **S1** first staff finish the same day | most households (the median household) same day; owner setup time under 10 minutes | `households.created_at` → the first chore or routine a staff member finished (`household_tasks.completed_by`, `task_logs.staff_id`, roster rows without a Google account); setup minutes from `household_setup.active_seconds` |
+| **S1** first staff finish the same day | half or more of new households (the median household) same day; owner setup time under 10 minutes | `households.created_at` → the first chore or routine a staff member finished (`household_tasks.completed_by`, `task_logs.staff_id`, roster rows without a Google account); setup minutes from `household_setup.active_seconds` |
 | **S2** typed fields to set up | 10 or fewer | `household_setup.typed_fields` (from PR A2). **Before:** rooms, chores, staff, pets and routines added in the first 14 days beyond what setup added (each one is at least one typed field) |
 | **S3** due tasks closed (done or "couldn't") | 90% or more | `north_star_day(day)`: chore-days and routine slots due, the same rules as the evening summary (139); closed = done or a `task_exceptions` row |
 | **S4** weekly active households | 70% of new households | week 4 (days 21–27): at least 3 tasks finished by staff per staff member on the roster |
@@ -64,6 +64,13 @@ there, and the prompt says to skip it.
   included) minus what setup added.
 - **Increments, not totals.** `record_household_setup()` adds what a screen
   sends; a retried call counts twice. Fine for counts.
+- **Only finished setups** (`finished_at` set by Add all, the last step or
+  Skip) count in the setup medians; a setup left half-way doesn't.
 - **Cost.** The report reads every household's chores for each day of the
-  window (8 weeks: 56 days). Fine at today's size; worth a look past a few
-  hundred households.
+  window (8 weeks: 56 days) on every call. Fine at today's size; past a few
+  hundred households, keep ended days in a small table filled nightly.
+- **Two copies of the chore-day rules.** `north_star_day` repeats 139's
+  `chore_days_open` rules (written days, leave that pauses). A change to one
+  must be made to the other; a later migration could fold both into one
+  `chore_days(day)` function. The summary and weekly figures are also
+  written out twice in `north_star_report`; keep them in step.

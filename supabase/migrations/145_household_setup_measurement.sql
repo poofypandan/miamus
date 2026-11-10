@@ -312,15 +312,18 @@ grant execute on function public.north_star_day(date) to service_role;
 --                          the first chore or routine a staff member (not an
 --                          admin) finished
 --   same_day / same_day_of how many had that first finish on the day they
---                          were made, of those made before today (S1)
+--                          were made, of those made before today (plus any
+--                          made today that already have one) (S1)
 --   signup_minutes         median minutes from asking for access to the
 --                          household existing (the approval wait)
---   setup_households       how many have a household_setup row (from PR A2)
---   setup_minutes          median active setup minutes (S1, owner time)
+--   setup_households       how many finished setup (household_setup
+--                          .finished_at; from PR A2)
+--   setup_minutes          median active setup minutes of those (S1, owner time)
 --   typed_fields           median typed fields during setup (S2)
 --   paths                  how many took each setup path
 --   hand_items_14d / _of   median rooms, chores, staff, pets and routines
---                          added in the first 14 days beyond what setup added
+--                          added in the first 14 days (from the household's
+--                          creation) beyond what setup added
 --                          (each is at least one typed field: S2's "before"),
 --                          of households at least 14 days old
 --   s4_active / s4_of      week 4 (days 21–27): at least 3 tasks finished by
@@ -370,29 +373,34 @@ begin
       join public.staff_profiles s on s.id = l.staff_id and s.user_id is null
      where l.sub_type = 'complete' and l.completed_at > hh.created_at
   ),
-  per_hh as (
+  per_hh0 as (
     select hh.id, hh.created_at, hh.day,
            hh.day - (extract(isodow from hh.day)::int - 1) as week,
            (select min(d.at) from staff_done d where d.household_id = hh.id) as first_at,
            (select extract(epoch from hh.created_at - r.requested_at) / 60.0
               from public.household_access_requests r
              where r.user_id = hh.owner_auth_id and r.requested_at <= hh.created_at) as signup_min,
-           su.household_id is not null as has_setup,
+           -- Only finished setups (Add all, the last step or Skip) count:
+           -- one left half-way would pull the medians down.
+           su.finished_at is not null as has_setup,
            su.active_seconds, su.typed_fields, su.path,
            case when now() >= hh.created_at + interval '14 days' then greatest(0,
                (select count(*) from public.household_tasks t
                  where t.household_id = hh.id and t.parent_task_id is null
-                   and t.created_at < hh.created_at + interval '14 days')
+                   and t.created_at >= hh.created_at and t.created_at < hh.created_at + interval '14 days')
              + (select count(*) from public.household_locations r
-                 where r.household_id = hh.id and r.created_at < hh.created_at + interval '14 days')
+                 where r.household_id = hh.id
+                   and r.created_at >= hh.created_at and r.created_at < hh.created_at + interval '14 days')
              + (select count(*) from public.staff_profiles s
                  where s.household_id = hh.id and s.user_id is null
-                   and s.created_at < hh.created_at + interval '14 days')
+                   and s.created_at >= hh.created_at and s.created_at < hh.created_at + interval '14 days')
              + (select count(*) from public.task_entities e
-                 where e.household_id = hh.id and e.created_at < hh.created_at + interval '14 days')
+                 where e.household_id = hh.id
+                   and e.created_at >= hh.created_at and e.created_at < hh.created_at + interval '14 days')
              + (select count(*) from public.master_schedules ms
                   join public.task_entities e on e.id = ms.entity_id
-                 where e.household_id = hh.id and ms.created_at < hh.created_at + interval '14 days')
+                 where e.household_id = hh.id
+                   and ms.created_at >= hh.created_at and ms.created_at < hh.created_at + interval '14 days')
              - coalesce(su.rooms_added + su.chores_added + su.routines_added + su.bills_added
                         + su.staff_added + su.pets_added, 0))
            end as hand_items,
@@ -422,6 +430,9 @@ begin
       from hh
       left join public.household_setup su on su.household_id = hh.id
   ),
+  per_hh as (
+    select p.*, (p.first_at at time zone 'Asia/Jakarta')::date as first_day from per_hh0 p
+  ),
   days as (
     select g::date as d
       from generate_series(least(first_week, today - 7), today - 1, interval '1 day') as g
@@ -444,8 +455,8 @@ begin
                  order by extract(epoch from p.first_at - p.created_at) / 60.0)
                  filter (where p.first_at is not null))::numeric, 1),
              'same_day', count(p.id) filter (
-                 where p.first_at is not null and (p.first_at at time zone 'Asia/Jakarta')::date = p.day),
-             'same_day_of', count(p.id) filter (where p.day < today),
+                 where p.first_day = p.day),
+             'same_day_of', count(p.id) filter (where p.day < today or p.first_day = p.day),
              'signup_minutes', round((percentile_cont(0.5) within group (order by p.signup_min)
                  filter (where p.signup_min is not null))::numeric, 1),
              'setup_households', count(p.id) filter (where p.has_setup),
@@ -487,8 +498,8 @@ begin
             order by extract(epoch from p.first_at - p.created_at) / 60.0)
             filter (where p.first_at is not null))::numeric, 1),
         'same_day', count(p.id) filter (
-            where p.first_at is not null and (p.first_at at time zone 'Asia/Jakarta')::date = p.day),
-        'same_day_of', count(p.id) filter (where p.day < today),
+            where p.first_day = p.day),
+        'same_day_of', count(p.id) filter (where p.day < today or p.first_day = p.day),
         'signup_minutes', round((percentile_cont(0.5) within group (order by p.signup_min)
             filter (where p.signup_min is not null))::numeric, 1),
         'setup_households', count(p.id) filter (where p.has_setup),

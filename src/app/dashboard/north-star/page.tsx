@@ -145,7 +145,7 @@ function targetLine(key: SignalTile["key"], report: NorthStarReport, t: Translat
   const target = report.targets;
   switch (key) {
     case "s1":
-      return t("Target: most households", "Target: sebagian besar rumah");
+      return t("Target: half or more", "Target: setengah atau lebih");
     case "s2":
       return t(`Target: ${target.s2TypedFields} or fewer`, `Target: ${target.s2TypedFields} atau kurang`);
     case "s3":

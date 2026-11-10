@@ -215,6 +215,13 @@ insert into public.kakak_requests (household_id, user_id, created_at, job) value
   ('00000000-0000-0000-0000-0000000145f2', :a9, pg_temp.at(9, 9), 'quick'),
   ('00000000-0000-0000-0000-0000000145f2', :a9, pg_temp.at(8, 9), 'setup');
 
+-- f2 started setup and left half-way: not counted in the setup medians.
+insert into public.household_setup (household_id, started_at, active_seconds, typed_fields)
+values ('00000000-0000-0000-0000-0000000145f2', pg_temp.at(25, 10), 20, 0);
+-- A room stamped before f1 existed (old or imported data) isn't "added by hand".
+insert into public.household_locations (household_id, name, kind, created_at)
+values (:f1, 'Gudang', 'room', pg_temp.at(31, 9));
+
 -- ---- The report ------------------------------------------------------------------------
 create temp table r as select public.north_star_report(8) as j;
 select pg_temp.ok((select (j #>> '{summary,households}')::int = 2 from r), 'two households in the window');
@@ -226,9 +233,9 @@ select pg_temp.ok((select (j #>> '{summary,signup_minutes}')::numeric = 120 from
   'the wait from asking to the household: 120 minutes');
 select pg_temp.ok((select (j #>> '{summary,setup_households}')::int = 1 and (j #>> '{summary,setup_minutes}')::numeric = 7
                           and (j #>> '{summary,typed_fields}')::numeric = 4 from r),
-  'setup: one household, 7 active minutes, 4 typed fields');
+  'setup: one finished household, 7 active minutes, 4 typed fields (f2''s unfinished one isn''t counted)');
 select pg_temp.ok((select (j #>> '{summary,hand_items_14d}')::numeric = 1.5 and (j #>> '{summary,hand_items_14d_of}')::int = 2 from r),
-  'S2 before: f1 added 4 by hand in 14 days (2 rooms, Sari, a chore) less 1 from setup, f2 none; the median is 1.5');
+  'S2 before: f1 added 4 by hand in 14 days (2 rooms, Sari, a chore; not the older room) less 1 from setup, f2 none; the median is 1.5');
 select pg_temp.ok((select (j #>> '{summary,s4_active}')::int = 1 and (j #>> '{summary,s4_of}')::int = 1 from r),
   'S4: f1 is active in week 4; f2 is too young to count');
 select pg_temp.ok((select (j #>> '{summary,s5_repeat}')::int = 1 and (j #>> '{summary,s5_of}')::int = 2 from r),
@@ -284,9 +291,9 @@ select pg_temp.ok((select (j #>> '{setup,typed_fields}')::int = 4 and (j #>> '{s
                           and j ? 'staff_notifications' and (j #>> '{my_notifications}') is not null
                      from (select pg_temp.json_as(:a1, 'select public.export_household_data()') as j) x),
   'the export carries the setup counts, and keeps 141''s staff notifications');
-select pg_temp.ok((select (j -> 'setup') = 'null'::jsonb
+select pg_temp.ok((select (j #>> '{setup,finished_at}') is null and (j #>> '{setup,active_seconds}')::int = 20
                      from (select pg_temp.json_as(:a9, 'select public.export_household_data()') as j) x),
-  'a household with no setup row exports null');
+  'f2 exports its own unfinished row');
 select pg_temp.ok(pg_temp.err_as(:p1, 'select public.export_household_data()') like '%admins_only%',
   'a staff phone still can''t export');
 
@@ -313,6 +320,39 @@ select pg_temp.ok((select prosecdef and proconfig @> array['search_path=""']
                   and (select prosecdef and proconfig @> array['search_path=""']
                      from pg_proc where oid = 'public.platform_north_star(integer)'::regprocedure),
   'both definer functions pin an empty search_path');
+
+-- ---- A household made today that already has a first finish (review fix) -------------------
+insert into public.households (id, name, created_at)
+values ('00000000-0000-0000-0000-0000000145f3', 'Rumah Anggrek', (pg_temp.today() + time '00:00') at time zone 'Asia/Jakarta');
+insert into public.staff_profiles (id, household_id, name)
+values ('00000000-0000-0000-0000-0000000145c3', '00000000-0000-0000-0000-0000000145f3', 'Wati');
+insert into public.household_tasks (household_id, title, due_date, status, completed_by, completed_at, before_photo_url, after_photo_url)
+values ('00000000-0000-0000-0000-0000000145f3', 'Sapu', pg_temp.today(), 'completed', '00000000-0000-0000-0000-0000000145c3',
+        now(), 'x/b.jpg', 'x/a.jpg');
+select pg_temp.ok((select (j #>> '{summary,same_day}')::int = 2 and (j #>> '{summary,same_day_of}')::int = 3
+                     from (select public.north_star_report(8) as j) x),
+  'a household made today with a first finish counts on both sides: 2 of 3, never more than all');
+
+-- ---- Interval routines and an off-pattern written day (review fix) --------------------------
+-- Potty every 4 hours 08.00–16.00 (3 slots), logged at 12.05 yesterday; a
+-- routine with a zero interval has no slots and breaks nothing; a weekly
+-- chore from 8 days ago (due yesterday, open) with a written day 2 days
+-- ago, off its pattern, done.
+insert into public.master_schedules (entity_id, title, module, frequency_type, start_time, end_time, interval_hours, is_active, created_at)
+values ('00000000-0000-0000-0000-0000000145e1', 'Pipis', 'pet', 'interval', '08:00', '16:00', 4, true, now() - interval '3 days'),
+       ('00000000-0000-0000-0000-0000000145e1', 'Rusak', 'pet', 'interval', '08:00', '16:00', 0, true, now() - interval '3 days');
+insert into public.task_logs (schedule_id, entity_id, module, completed_at)
+select id, entity_id, 'pet', pg_temp.at(1, 12, 5) from public.master_schedules where title = 'Pipis'
+   and entity_id = '00000000-0000-0000-0000-0000000145e1';
+insert into public.household_tasks (id, household_id, title, recurrence, due_date, status, created_at)
+values ('00000000-0000-0000-0000-0000000145d6', :f1, 'Kaca jendela', 'weekly', pg_temp.today() - 8, 'pending', now() - interval '9 days');
+insert into public.household_tasks (household_id, title, parent_task_id, due_date, status, completed_at, before_photo_url, after_photo_url)
+values (:f1, 'Kaca jendela', '00000000-0000-0000-0000-0000000145d6', pg_temp.today() - 2, 'completed', pg_temp.at(2, 9),
+        'x/b.jpg', 'x/a.jpg');
+select pg_temp.ok((select due = 9 and closed = 4 from public.north_star_day(pg_temp.today() - 1) where household_id = :f1::uuid),
+  'yesterday adds 3 interval slots (1 closed) and the weekly chore (open): 9 due, 4 closed');
+select pg_temp.ok((select due = 7 and closed = 1 from public.north_star_day(pg_temp.today() - 2) where household_id = :f1::uuid),
+  'two days ago adds 3 open slots and the written day off the pattern (done): 7 due, 1 closed');
 
 -- ---- Deleted with the household -------------------------------------------------------------
 delete from public.households where id = :f1::uuid;

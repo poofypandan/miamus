@@ -57,8 +57,9 @@ export interface NorthStarReport {
 }
 
 /**
- * S1's "same day" as a share: met when the median household had a staff
- * member finish a first task on the day it was made.
+ * S1's "same day" as a share: met when at least half the households (the
+ * median household) had a staff member finish a first task on the day they
+ * were made. The page says "half or more".
  */
 export const S1_SAME_DAY_SHARE = 0.5;
 
