@@ -1,10 +1,10 @@
 # Phase 169 — The closet: what's where and what's out
 
-Status: **plan, waiting for the owner (D1–D12, each with a recommended A).**
-Nothing is built. Building starts **after Phase 168 (suites, migration 142)
-has merged**, because a walk-in closet usually sits inside a bedroom
-("LT2 · Master Bedroom · Walk-in closet"). Migration **143** is reserved for
-this phase. Roadmap item 17 (`docs/roadmap-2026-11-09.md`, P3): "Closet:
+Status: **decided: owner chose all recommendations (D1–D12 A), 2026-11-10;
+build after Phase 168 (live), PR A with migration 143.** The open questions
+below stay open; the owner answers them before PR B. Phase 168 (suites)
+shipped as migration **140**; a walk-in closet usually sits inside a bedroom
+("LT2 · Master Bedroom · Walk-in closet"). Roadmap item 17 (`docs/roadmap-2026-11-09.md`, P3): "Closet:
 what's where and what's out: laundry, dry cleaner, lent, repair; staff
 photograph what leaves and returns, with a count; photos of each section."
 Mockup: `docs/mockups/phase-169-closet.html` (open in a browser, phone
@@ -12,7 +12,7 @@ width; owner screens English left and Bahasa Indonesia right, staff screens
 in Bahasa Indonesia only).
 
 Builds on **Phase 158** (rooms, floors and spots, migration 129), **Phase
-168** (rooms inside rooms, migration 142, PR #72 plan, PR #74 build),
+168** (rooms inside rooms, migration 140, PR #72 plan, PR #74 build, live),
 **Phase 156** (food: a thing, its photo, its place, its status) and **Phase
 159** (repairs: staff report with a photo, owners decide). It reuses their
 photo field, compression (`compressPhoto`, with PR #66's fix), bottom
@@ -53,7 +53,7 @@ laundry, and memory.
 | Piece | Where | What it gives the closet |
 | --- | --- | --- |
 | Places | `household_locations` (105, 129): `kind` floor/room, `parent_id`, `sort_order` | the closet is a room, on a floor |
-| Rooms inside rooms | Phase 168, migration 142 (PR #74, building) | a walk-in closet inside the Master Bedroom; one shared `placePath()` gives "LT2 · Master Bedroom · Walk-in closet" |
+| Rooms inside rooms | Phase 168, migration 140 (PR #74, live) | a walk-in closet inside the Master Bedroom; one shared `placePath()` gives "LT2 · Master Bedroom · Walk-in closet" |
 | Spots | `household_tasks.spot`, `repairs` spot (129, 130): **free text** on a chore or repair, 1–40 characters, matched case-insensitively; chips in `spot-field.tsx` | the closet's sections ("Rack A", "Drawer 3") are spots of the closet room; today they have no photo because they aren't stored anywhere |
 | Rooms view and room sheet | `src/components/chores/rooms-view.tsx`, `src/lib/rooms-view.ts` | the closet is shown where rooms are shown, no new tab |
 | Food | `food_items` (123): name, photo, where kept, status (eaten, given away, thrown away), finished rows kept 90 days | the "thing, photo, place, status" pattern; the 90-day keep |
@@ -265,7 +265,7 @@ uses them. The smallest change that keeps one concept:
   one (the usual case: "LT2 · Master Bedroom · Walk-in closet"). The closet
   shows everywhere with 168's `placePath()`, and a spot adds one more step:
   "LT2 · Master Bedroom · Walk-in closet · Rack A". No closet-specific
-  nesting; 142's one-level cap is unchanged.
+  nesting; 140's one-level cap is unchanged.
 - **Bags are household-wide**: a bag may name the closet it came from
   ("Dari", optional), but towels, sheets and the kids' uniforms go in the
   same laundry bag, so Out now is one list for the house. A closet's sheet
@@ -408,7 +408,7 @@ changes a word, the glossary row changes with it before any build.
 Everything below is one design in **migration 143** (reserved). Additive:
 four new tables and one new column. Not created in this PR. Re-check
 `supabase/migrations` and open PRs before building (139 couldn't-do, 140
-staff push, 141 staff pay, 142 suites are taken).
+suites, 141 staff push, 142 staff pay are taken or reserved).
 
 **`household_locations`, one column**
 
@@ -643,7 +643,7 @@ build.
 
 ## Rollout in PRs (D11)
 
-**After Phase 168 PR A has merged** (migration 142, `placePath()`).
+**After Phase 168 PR A** (migration 140, `placePath()`; live).
 
 **PR A: what's out, and spots with photos** (migration 143, all tables)
 
@@ -705,6 +705,8 @@ masing-masing berada."
 3. "Lihat foto setiap rak di lemari pakaian supaya tahu tempatnya."
 
 ## Decisions for the owner
+
+**Decided 2026-11-10: the owner chose all recommendations, D1–D12 A.**
 
 - **D1 — How a trip out is recorded.**
   **A (recommended):** one record per bag: kind, place, **count**, 1–3
