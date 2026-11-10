@@ -268,6 +268,20 @@ function TasksView() {
     );
   }, [chores, locations]);
 
+  // The rooms-inside tip (Phase 168) only once a chore on this phone is in a
+  // room inside a room: "LT2 · Kamar Tamu 2 · Kamar Mandi".
+  const showRoomsInsideTip = useMemo(() => {
+    const rooms = new Set(
+      (locations ?? []).filter((place) => place.kind !== "floor").map((place) => place.id)
+    );
+    const inside = new Set(
+      (locations ?? [])
+        .filter((place) => place.kind !== "floor" && place.parent_id && rooms.has(place.parent_id))
+        .map((place) => place.id)
+    );
+    return chores.some((chore) => !!chore.task.location_id && inside.has(chore.task.location_id));
+  }, [chores, locations]);
+
   // `compact` inside Selesai: a finished chore loses its inline photo pair
   // and says "Lihat foto" instead (Phase 131); routines are compact already.
   function renderEntry(entry: UnifiedAgendaEntry, compact = false) {
@@ -327,6 +341,7 @@ function TasksView() {
         <StaffTipCard
           tips={[
             { id: "staff-feedback-2026-11", show: true },
+            { id: "staff-rooms-inside-2026-11", show: showRoomsInsideTip },
             { id: "staff-weak-signal-2026-11", show: true },
             { id: "staff-floors-2026-11", show: showFloorsTip },
             { id: "staff-repairs-2026-11", show: true },

@@ -171,11 +171,15 @@ export function buildContext(
 
   // Each place by its own name, with its floor (migrations/129): "LT2 ·
   // Lounge" on the card, so "Service Area" on LT1 and on LT2 are told apart,
-  // and a floor offered as a place of its own for whole-floor chores.
+  // and a floor offered as a place of its own for whole-floor chores. A room
+  // inside a room (Phase 168) carries that room too: "LT2 · GB1 · Bathroom",
+  // so the three bedrooms' bathrooms are told apart.
   const rooms: KakakHousehold["rooms"] = [];
-  const floorNames = new Map(
-    rows.rooms.filter((room) => room.kind === "floor").map((floor) => [floor.id, cleanName(floor.name)]),
-  );
+  const byId = new Map(rows.rooms.map((room) => [room.id, room]));
+  const floorName = (id: string | null | undefined) => {
+    const place = id ? byId.get(id) : undefined;
+    return place && place.kind === "floor" ? cleanName(place.name) : null;
+  };
   for (const room of [...rows.rooms].sort(byAge)) {
     const ref = `R${rooms.length + 1}`;
     const name = cleanName(room.name);
@@ -183,9 +187,12 @@ export function buildContext(
       rooms.push({ ref, name, wholeFloor: true });
       names.rooms[ref] = name;
     } else {
-      const floor = (room.parent_id && floorNames.get(room.parent_id)) || null;
-      rooms.push(floor ? { ref, name, floor } : { ref, name });
-      names.rooms[ref] = floor ? `${floor} · ${name}` : name;
+      const parent = room.parent_id ? byId.get(room.parent_id) : undefined;
+      const outer = parent && parent.kind !== "floor" ? parent : null;
+      const floor = outer ? floorName(outer.parent_id) : floorName(room.parent_id);
+      const inside = outer ? cleanName(outer.name) : null;
+      rooms.push({ ref, name, ...(floor ? { floor } : {}), ...(inside ? { inside } : {}) });
+      names.rooms[ref] = [floor, inside, name].filter(Boolean).join(" · ");
     }
     refs.rooms[ref] = room.id;
   }
