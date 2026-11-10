@@ -17,6 +17,8 @@ import {
 } from "@/lib/kakak/engine";
 import { kakakExamples } from "@/lib/kakak/examples";
 import { practiceClient } from "@/lib/kakak/practice";
+import { REPEAT_CHOICES, refineChore, repeatLabel } from "@/lib/kakak/refine";
+import { isSaveableSuggestion } from "@/lib/kakak/suggestions";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -198,4 +200,46 @@ describe("every example works in practice mode", () => {
       }
     });
   }
+});
+
+describe("refineChore (the card's chips)", () => {
+  const chore = {
+    kind: "chore" as const,
+    title: "Siram tanaman",
+    titleEn: null,
+    category: "cleaning" as const,
+    assignedTo: null,
+    assignToSelf: true,
+    assigneeName: "Dewi",
+    dueDate: "2026-11-16",
+    dueTime: "08:00",
+    recurrence: "weekly" as const,
+    recurrenceUntil: "2026-12-31",
+    requiresSupervision: false,
+    locationId: null,
+    roomName: null,
+    newRoomName: null,
+    newRoomFloorId: null,
+    newRoomFloorName: null,
+    notes: null,
+  };
+
+  it("changes how often; one time drops the end date", () => {
+    expect(refineChore(chore, { recurrence: "monthly" })).toMatchObject({ recurrence: "monthly", recurrenceUntil: "2026-12-31" });
+    expect(refineChore(chore, { recurrence: "none" })).toMatchObject({ recurrence: "none", recurrenceUntil: null });
+  });
+
+  it("changes who, and the result is still saveable", () => {
+    const sari = refineChore(chore, { assignee: { id: id(1), name: "Sari" } });
+    expect(sari).toMatchObject({ assignedTo: id(1), assigneeName: "Sari", assignToSelf: false });
+    expect(isSaveableSuggestion(sari)).toBe(true);
+    const anyone = refineChore(sari, { assignee: null });
+    expect(anyone).toMatchObject({ assignedTo: null, assigneeName: null, assignToSelf: false });
+    expect(isSaveableSuggestion(anyone)).toBe(true);
+  });
+
+  it("words each choice like the card does", () => {
+    expect(REPEAT_CHOICES.map((r) => repeatLabel(r, "2026-11-16", "en"))).toEqual(["One time", "Every day", "Every Monday", "Monthly on the 16th"]);
+    expect(REPEAT_CHOICES.map((r) => repeatLabel(r, "2026-11-16", "id"))).toEqual(["Sekali saja", "Setiap hari", "Setiap Senin", "Setiap tanggal 16"]);
+  });
 });

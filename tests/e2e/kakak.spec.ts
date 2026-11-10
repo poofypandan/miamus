@@ -89,7 +89,7 @@ test("an admin tells Kakak, answers her question, confirms the card, and can und
   // The card, in plain words; the history went back with the answer.
   await expect(page.getByText("Pel teras (Mop the terrace)")).toBeVisible();
   await expect(page.getByText("Monday 16 Nov, 09:00")).toBeVisible();
-  await expect(page.getByText("Every Monday")).toBeVisible();
+  await expect(page.locator("dd").getByText("Every Monday", { exact: true })).toBeVisible();
   expect(kakak.asked[1]).toMatchObject({ reply: "Monday" });
   expect((kakak.asked[1].history as { messages: unknown[] }).messages).toHaveLength(2);
   expect(stub.tasks).toHaveLength(0); // nothing saved before Looks right
@@ -222,7 +222,7 @@ test("practice mode: the real Kakak route answers with no AI, and saving still w
   await expect(page.getByText(/^Mode latihan:/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Ari pel teras setiap Senin jam 9", { exact: true })).toBeVisible();
   await expect(page.getByText("Pel teras", { exact: true })).toBeVisible();
-  await expect(page.getByText("Setiap Senin").first()).toBeVisible();
+  await expect(page.locator("dd").getByText("Setiap Senin", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Sudah benar" }).click();
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", assigned_to: STAFF_ID, due_time: "09:00", recurrence: "weekly" });
@@ -239,8 +239,33 @@ test("practice mode: a tapped example becomes a card in one go", async ({ contex
 
   await expect(page.getByText(/^Practice mode:/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Siram tanaman (Waters the plants)")).toBeVisible();
-  await expect(page.getByText("Every Monday", { exact: true })).toBeVisible();
+  await expect(page.locator("dd").getByText("Every Monday", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Looks right" }).click();
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0]).toMatchObject({ title: "Siram tanaman", assigned_to: STAFF_ID, due_time: "08:00", recurrence: "weekly" });
+});
+
+test("the card's chips change how often and who, with no call to Kakak", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  const kakak = await answerKakak(page);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("Ari mops the terrace at 9");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Monday" }).click();
+  await expect(page.locator("dd").getByText("Every Monday", { exact: true })).toBeVisible();
+
+  const often = page.getByRole("group", { name: "How often" });
+  await expect(often.getByRole("button", { name: "Every Monday" })).toHaveAttribute("aria-pressed", "true");
+  await often.getByRole("button", { name: "One time" }).click();
+  await expect(page.locator("dd").getByText("Every Monday", { exact: true })).toHaveCount(0);
+  await page.getByRole("group", { name: "Who" }).getByRole("button", { name: "Anyone" }).click();
+  await expect(page.locator("dd", { hasText: "Anyone" })).toBeVisible();
+  expect(kakak.asked).toHaveLength(2); // the chips asked Kakak nothing
+
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.tasks.length).toBe(1);
+  expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", assigned_to: null, recurrence: "none" });
+  await expect.poll(() => kakak.outcomes).toEqual(["changed"]);
 });

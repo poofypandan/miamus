@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import {
   Check,
@@ -32,13 +32,18 @@ import { addsSomething, describeSuggestion, savedSummary } from "@/lib/kakak/des
 import { MAX_TYPED, type KakakHistory, type RefusalReason } from "@/lib/kakak/engine";
 import type { KakakSuggestion } from "@/lib/kakak/suggestions";
 import { useKakakSave } from "@/lib/kakak/use-kakak-save";
+import { firstName } from "@/lib/kakak/context";
+import { REPEAT_CHOICES, refineChore, repeatLabel, type ChoreRefinement } from "@/lib/kakak/refine";
+import type { ChoreSuggestion } from "@/lib/kakak/suggestions";
+import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { cn } from "@/lib/utils";
 
 type Screen =
   | { kind: "typing" }
   | { kind: "waiting" }
   | { kind: "question"; question: string; answers: string[]; allowTyping: boolean }
-  | { kind: "card"; text: string; items: KakakSuggestion[]; requestId: string }
+  /** `refined`: the owner adjusted the card with its chips before saving. */
+  | { kind: "card"; text: string; items: KakakSuggestion[]; requestId: string; refined?: boolean }
   | { kind: "message"; text: string; problem?: Problem };
 
 /**
@@ -168,18 +173,20 @@ function Conversation({ onClose }: { onClose: () => void }) {
     }
   }
 
-  async function confirm(items: KakakSuggestion[], requestId: string) {
+  async function confirm(items: KakakSuggestion[], requestId: string, refined: boolean) {
     if (saving) return;
     setSaving(true);
     try {
       const { undo } = await save(items);
-      reportKakakOutcome(requestId, "confirmed");
+      // Adjusted with the card's chips: Kakak was close, not right (statistics).
+      reportKakakOutcome(requestId, refined ? "changed" : "confirmed");
       toast.success(savedSummary(items, locale), {
         duration: UNDO_TOAST_MS,
         action: {
           label: t("Undo", "Batalkan"),
           onClick: () => {
-            reportKakakOutcome(requestId, "undone");
+            // The record takes Undo only after "confirmed" (migrations/126).
+            if (!refined) reportKakakOutcome(requestId, "undone");
             // "Undone" only when every part came back (Codex, PR #68).
             void undo().then((allBack) =>
               allBack
@@ -266,7 +273,14 @@ function Conversation({ onClose }: { onClose: () => void }) {
           onDrop={(index) =>
             setScreen({ ...screen, items: screen.items.filter((_, i) => i !== index) })
           }
-          onConfirm={() => void confirm(screen.items.filter(addsSomething), screen.requestId)}
+          onRefine={(index, change) =>
+            setScreen({
+              ...screen,
+              refined: true,
+              items: screen.items.map((item, i) => (i === index && item.kind === "chore" ? refineChore(item, change) : item)),
+            })
+          }
+          onConfirm={() => void confirm(screen.items.filter(addsSomething), screen.requestId, Boolean(screen.refined))}
           onChange={() => {
             reportKakakOutcome(screen.requestId, "changed");
             setTypingAnswer(true);
@@ -413,6 +427,7 @@ function SuggestionCard({
   saving,
   changing,
   onDrop,
+  onRefine,
   onConfirm,
   onChange,
   onCancel,
@@ -422,6 +437,7 @@ function SuggestionCard({
   saving: boolean;
   changing: boolean;
   onDrop: (index: number) => void;
+  onRefine: (index: number, change: ChoreRefinement) => void;
   onConfirm: () => void;
   onChange: () => void;
   onCancel: () => void;
@@ -463,6 +479,9 @@ function SuggestionCard({
                 ))}
               </dl>
               {card.note && <p className="text-xs text-muted-foreground">{card.note}</p>}
+              {item.kind === "chore" && !changing && (
+                <ChoreChips item={item} disabled={saving} onRefine={(change) => onRefine(index, change)} />
+              )}
             </div>
           );
         })}
@@ -498,6 +517,129 @@ function SuggestionCard({
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * One-tap refinements under a chore (lib/kakak/refine.ts): how often, and
+ * for whom. They change the card on the phone, with no call to the AI; a
+ * change the chips can't say goes through Change instead.
+ */
+function ChoreChips({
+  item,
+  disabled,
+  onRefine,
+}: {
+  item: ChoreSuggestion;
+  disabled: boolean;
+  onRefine: (change: ChoreRefinement) => void;
+}) {
+  const t = useT();
+  const locale = useOwnerLocale();
+  return (
+    <div className="mt-2 flex flex-col gap-2 border-t pt-3">
+      <ChipRow label={t("How often", "Seberapa sering")}>
+        {REPEAT_CHOICES.map((choice) => (
+          <Chip
+            key={choice}
+            on={item.recurrence === choice}
+            disabled={disabled}
+            onClick={() => onRefine({ recurrence: choice })}
+          >
+            {repeatLabel(choice, item.dueDate, locale)}
+          </Chip>
+        ))}
+      </ChipRow>
+      {/* The roster loads on demand; until then, only "Anyone". */}
+      <Suspense fallback={<WhoChips item={item} people={[]} disabled={disabled} onRefine={onRefine} />}>
+        <RosterWhoChips item={item} disabled={disabled} onRefine={onRefine} />
+      </Suspense>
+    </div>
+  );
+}
+
+/** At most four people, so the row stays short: the one Kakak picked first. */
+const MAX_WHO_CHIPS = 4;
+
+function RosterWhoChips(props: { item: ChoreSuggestion; disabled: boolean; onRefine: (change: ChoreRefinement) => void }) {
+  const { profiles } = useStaffProfiles();
+  const staff = (profiles ?? []).filter((p) => !p.user_id).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const picked = staff.find((p) => p.id === props.item.assignedTo);
+  const people = [...(picked ? [picked] : []), ...staff.filter((p) => p !== picked)]
+    .slice(0, MAX_WHO_CHIPS)
+    .map((p) => ({ id: p.id, name: firstName(p.name) }));
+  return <WhoChips {...props} people={people} />;
+}
+
+function WhoChips({
+  item,
+  people,
+  disabled,
+  onRefine,
+}: {
+  item: ChoreSuggestion;
+  people: { id: string; name: string }[];
+  disabled: boolean;
+  onRefine: (change: ChoreRefinement) => void;
+}) {
+  const t = useT();
+  return (
+    <ChipRow label={t("Who", "Siapa")}>
+      {people.map((person) => (
+        <Chip
+          key={person.id}
+          on={item.assignedTo === person.id}
+          disabled={disabled}
+          onClick={() => onRefine({ assignee: person })}
+        >
+          {person.name}
+        </Chip>
+      ))}
+      <Chip
+        on={item.assignedTo === null && !item.assignToSelf}
+        disabled={disabled}
+        onClick={() => onRefine({ assignee: null })}
+      >
+        {t("Anyone", "Siapa saja")}
+      </Chip>
+    </ChipRow>
+  );
+}
+
+function ChipRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5" role="group" aria-label={label}>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+/** The food form's choice chip, a little smaller for the card. */
+function Chip({
+  on,
+  disabled,
+  onClick,
+  children,
+}: {
+  on: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "min-h-9 rounded-full border px-3 text-sm disabled:opacity-50",
+        on ? "border-primary bg-primary text-primary-foreground" : "text-gray-700 active:bg-muted"
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

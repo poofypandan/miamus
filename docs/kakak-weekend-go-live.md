@@ -207,9 +207,10 @@ wrong card costs nothing: tap **Cancel**.
 | 5 | [Mochi] makan jam 7 pagi dan jam 6 sore | Feed [Mochi] at 7 am and 6 pm | Pet meal times. If one is already set, Kakak says so instead of adding it twice. |
 | 6 | Ingatkan saya bayar listrik tiap tanggal 20 | Remind me to pay the electricity bill on the 20th every month | "Remind me" becomes your own monthly chore. |
 | 7 | (after any card, tap **Ubah** / **Change**) Jam 10 saja | Make it 10 instead | You correct her in plain words; the card updates. |
+| 7b | (on a chore card, tap the chips) **Sekali saja · Setiap Senin · Siapa saja** | **One time · Every Monday · Anyone** | Refine how often and who with one tap, no typing. Instant: the chips don't ask the AI. |
 | 8 | Kasih obat cacing ke [Mochi] tiap 3 bulan | Give [Mochi] worm medicine every 3 months | She says honestly that she can't set up medicine yet, and where to add it by hand. |
 
-**Good order for an audience:** 1, 2, 4, 7, then whichever they ask for.
+**Good order for an audience:** 1, 7b, 2, 4, 7, then whichever they ask for.
 Hand the phone to someone and let them try their own sentence: that's the
 moment that sells it.
 
