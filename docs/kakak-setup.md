@@ -57,6 +57,46 @@ an Anthropic key: set `KAKAK_PRACTICE=true` on that server (no
 It tests the app around Kakak, not her judgement. Whether she understands
 real sentences is what the eval (`tests/kakak`) is for, against the real API.
 
+## Talk to Kakak (voice beta)
+
+The first, lightweight step towards roadmap item 23 ("Call Kakak"). A large
+mic in the Kakak sheet: tap, talk, and the words appear live in the typing
+box; tap **Stop** (or just stop talking) and they go to `/api/kakak` exactly
+as if typed. **Read replies aloud** reads her question, message or card
+aloud with the phone's own voice; the choice is remembered on that phone.
+Code: `src/components/kakak/kakak-voice.tsx` (UI) and
+`src/lib/kakak/voice.ts` (state machine, unit-tested).
+
+- **No new service or key.** It uses the browser's Web Speech API:
+  `SpeechRecognition` (prefixed `webkitSpeechRecognition`) to listen, in
+  `id-ID` or `en-US` from the owner's language, and `speechSynthesis` to
+  speak, choosing an Indonesian or English voice the phone has.
+- **Privacy.** The browser may send the audio to its maker (Apple for
+  Safari, Google for Chrome) to turn it into text, under their terms with
+  the owner. Miamus never receives or stores audio, only the text, as typed
+  Kakak already does. Said on the Kakak settings page and in the privacy
+  policy (policy version 2026-11-10.3).
+- **Where it works** (from the vendors' documentation and bug trackers,
+  2026-11-10; not yet tried on a real phone):
+  | Where | Listening | Reading aloud |
+  | --- | --- | --- |
+  | Android, Chrome (tab or installed app) | Yes. Chrome asks for the mic once. | Yes (Google voices) |
+  | iPhone, Safari tab (iOS 14.5+) | Yes, if Siri and Dictation are on | Yes |
+  | iPhone, Miamus on the Home Screen | No: WebKit doesn't offer it to Home Screen apps (bug 225298). The sheet shows the tip to use the keyboard's mic key. | Yes |
+  | Firefox, older browsers | No: keyboard-mic tip | Usually yes |
+- **Practice mode** works as usual: speech becomes text on the phone, and
+  the scripted Kakak answers it.
+- **Turning it off**: `NEXT_PUBLIC_KAKAK_VOICE=false` on the server, then
+  redeploy (a build-time flag), hides the mic and the speaker switch. It
+  only ever shows where Kakak itself does.
+
+**Tutorial** (shown once as a card above the mic, `kakak-voice-2026-11` in
+`src/lib/whats-new.ts`; owners only, since staff never see Kakak):
+
+1. Tap the mic and say what you need. Your words appear as you speak.
+2. Tap Stop when you're done. Kakak shows her card; nothing is saved until you confirm.
+3. Want to hear her answers? Turn on Read replies aloud. This phone remembers it.
+
 ## Limits (migration 126)
 
 - 40 calls per household per Jakarta day (`kakak_settings.daily_limit`).

@@ -15,7 +15,8 @@ import { LEGAL, isLegalDraft } from "@/config/legal";
  * window in task_photo_retention_cutoff() (migrations/102), and food photos
  * and finished food (migrations/123), repairs (kept 2 years after closing,
  * migrations/130), feedback (kept 2 years, migrations/135), and Kakak's request counts (kept 13
- * months; the text itself goes to Anthropic, not our database). If either changes,
+ * months; the text itself goes to Anthropic, not our database). Talking to
+ * Kakak uses the browser's own speech recognition: no audio reaches Miamus. If either changes,
  * this has to change with it. Not legal advice: have it reviewed before a
  * public launch.
  */
@@ -114,6 +115,7 @@ const COPY: Record<
             ul: [
               "Kakak is off unless an admin of your household turns it on, and any admin can turn it off again.",
               "What you type to Kakak, her questions and your answers are sent to Anthropic to be understood (see section 5). Miamus doesn't store them: the conversation stays on your phone while Kakak is open, then is forgotten.",
+              "If you talk to Kakak instead of typing, your browser's own speech recognition turns your voice into text. To do that, the browser may send the audio to the company that makes it (Apple for Safari, Google for Chrome), under that company's privacy terms with you. Miamus never receives or stores audio: only the text is sent to Kakak, exactly as if you had typed it. If you turn on reading replies aloud, your phone does the reading.",
               "To understand requests like “ask Mbak Sari to water the plants”, each request also carries the first names of your staff, your pets' names, your room names, the names of items on your shopping list, and today's date. Nothing else about your staff is sent.",
               "A count of Kakak requests and what each cost, without any of the text.",
               "Kakak's suggestions can be wrong. Nothing is saved until you check and confirm it; what is saved is the chore, food or shopping item you confirmed, just as if you had typed it yourself.",
@@ -133,6 +135,7 @@ const COPY: Record<
               "Your sign-in session, which staff name is selected on a shared phone, app-lock settings, and the language you picked (on the sign-in screen, and a copy of your account's language).",
               "To keep working on bad Wi-Fi: a copy of the household data this phone last loaded (replaced on every load, and not used after 24 hours), routines, finished chores and food saved with no signal or a signal too weak to send, and photos waiting to upload, until they are sent, and the photos of a chore still in progress until it is finished. Signing out deletes all of these from the phone, including anything not yet sent.",
               "Which medicine-course reminders you closed on this phone.",
+              "Whether Kakak's replies are read aloud on this phone.",
               "Whether you turned notifications on in this browser (so Miamus can renew them if the browser drops them), and when you last said \"Not now\" to the notifications reminder.",
               "If you unlock Miamus with Face ID or a fingerprint, your phone does the check. Your face or fingerprint data never leaves your phone, and we never receive it.",
             ],
@@ -364,6 +367,7 @@ const COPY: Record<
             ul: [
               "Kakak tidak aktif kecuali admin rumah tangga Anda menyalakannya, dan setiap admin bisa mematikannya lagi.",
               "Yang Anda ketik ke Kakak, pertanyaan Kakak, dan jawaban Anda dikirim ke Anthropic untuk dipahami (lihat bagian 5). Miamus tidak menyimpannya: percakapan hanya ada di HP Anda selama Kakak terbuka, lalu dilupakan.",
+              "Jika Anda bicara ke Kakak alih-alih mengetik, fitur pengenal suara bawaan browser Anda yang mengubah suara Anda menjadi teks. Untuk itu, browser bisa mengirim rekaman suaranya ke perusahaan pembuatnya (Apple untuk Safari, Google untuk Chrome), sesuai ketentuan privasi perusahaan itu dengan Anda. Miamus tidak pernah menerima atau menyimpan rekaman suara: hanya teksnya yang dikirim ke Kakak, sama seperti jika Anda mengetiknya. Jika Anda menyalakan fitur membacakan jawaban, HP Anda sendiri yang membacakannya.",
               "Supaya Kakak paham permintaan seperti “minta Mbak Sari menyiram tanaman”, setiap permintaan juga membawa nama depan staf, nama hewan peliharaan, nama ruangan, nama barang di daftar belanja, dan tanggal hari ini. Tidak ada data staf lain yang dikirim.",
               "Jumlah permintaan ke Kakak dan biaya masing-masing, tanpa isi teksnya.",
               "Saran Kakak bisa salah. Tidak ada yang disimpan sebelum Anda memeriksa dan mengonfirmasinya; yang disimpan adalah tugas, makanan, atau barang belanja yang Anda konfirmasi, sama seperti jika Anda mengetiknya sendiri.",
@@ -383,6 +387,7 @@ const COPY: Record<
               "Sesi login, nama staf yang dipilih di HP bersama, pengaturan kunci aplikasi, dan bahasa yang Anda pilih (di halaman masuk, dan salinan bahasa akun Anda).",
               "Supaya tetap bisa dipakai saat sinyal jelek: salinan data rumah yang terakhir dimuat di HP ini (diganti setiap kali dimuat, dan tidak dipakai setelah 24 jam), catatan rutinitas, tugas yang diselesaikan, dan makanan yang disimpan saat tidak ada sinyal atau sinyal terlalu lemah untuk mengirim, serta foto yang menunggu diunggah, sampai terkirim, serta foto tugas yang sedang dikerjakan sampai tugasnya selesai. Jika Anda keluar, semuanya dihapus dari HP ini, termasuk yang belum terkirim.",
               "Pengingat pengobatan mana yang sudah Anda tutup di HP ini.",
+              "Apakah jawaban Kakak dibacakan di HP ini.",
               "Apakah Anda menyalakan notifikasi di browser ini (agar Miamus bisa memperbaruinya kalau browser menghapusnya), dan kapan terakhir Anda memilih \"Nanti saja\" pada pengingat notifikasi.",
               "Jika Anda membuka Miamus dengan Face ID atau sidik jari, HP Anda yang memeriksanya. Data wajah atau sidik jari Anda tidak pernah keluar dari HP, dan tidak pernah kami terima.",
             ],

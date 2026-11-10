@@ -24,6 +24,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { KakakAvatar } from "@/components/kakak/kakak-avatar";
 import { KakakExamples } from "@/components/kakak/kakak-examples";
 import { KakakThinking } from "@/components/kakak/kakak-thinking";
+import { KakakVoice } from "@/components/kakak/kakak-voice";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
@@ -222,6 +223,12 @@ function Conversation({ onClose }: { onClose: () => void }) {
     onClose();
   }
 
+  /** The typing box is on screen (the same test as where it renders below). */
+  const showTyping =
+    screen.kind === "typing" ||
+    (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||
+    ((screen.kind === "question" || screen.kind === "card") && typingAnswer);
+
   return (
     <div className="flex flex-col gap-4 px-4 pb-4">
       {practice && (
@@ -316,6 +323,15 @@ function Conversation({ onClose }: { onClose: () => void }) {
           {t("Start again", "Mulai lagi")}
         </Button>
       )}
+
+      {/* Talk to Kakak (voice beta): spoken words go through send() like typed ones. */}
+      <KakakVoice
+        screen={screen}
+        listenHere={showTyping || screen.kind === "question"}
+        inputShown={showTyping}
+        onHeard={setDraft}
+        onSpoken={(text) => void send(text)}
+      />
 
       {(screen.kind === "typing" ||
         (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||

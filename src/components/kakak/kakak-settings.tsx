@@ -68,6 +68,10 @@ export function KakakSettings({ status, reload }: { status: KakakStatus; reload:
               "What you type, and the first names of the people on your household's list, and your pets, rooms and shopping items, are sent to Anthropic in the United States so Kakak can understand them. Anthropic keeps them up to 30 days and doesn't use them for training.",
               "Yang Anda ketik, serta nama depan orang di daftar rumah Anda, nama hewan, ruangan, dan barang belanja Anda, dikirim ke Anthropic di Amerika Serikat supaya Kakak bisa memahaminya. Anthropic menyimpannya paling lama 30 hari dan tidak memakainya untuk melatih AI."
             )}{" "}
+            {t(
+              "If you talk to Kakak, your browser turns your voice into text and may send the audio to Apple or Google to do it. Miamus only gets the text, never the audio.",
+              "Jika Anda bicara ke Kakak, browser Anda mengubah suara menjadi teks dan bisa mengirim rekaman suaranya ke Apple atau Google untuk itu. Miamus hanya menerima teksnya, tidak pernah rekaman suaranya."
+            )}{" "}
             <Link href={locale === "id" ? "/privasi" : "/privacy"} className="font-medium underline underline-offset-2">
               {t("Privacy policy", "Kebijakan privasi")}
             </Link>
