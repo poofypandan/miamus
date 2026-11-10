@@ -103,54 +103,56 @@ export function LandingPage({ locale }: { locale: OwnerLocale }) {
       </header>
 
       {/* Hero */}
-      <section
-        data-landing-hero
-        className={`flex flex-col items-center px-6 pt-10 pb-12 text-center md:px-10 md:pt-16 md:pb-20 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:gap-16 lg:px-12 lg:pt-20 lg:pb-28 lg:text-left ${WIDE} lg:box-content`}
-      >
-        <div className="flex w-full flex-col items-center md:max-w-lg lg:max-w-none lg:items-start">
-          <div className="rounded-[14px] shadow-[0_12px_28px_-10px_rgba(17,24,39,0.5)]">
-            <BrandMark size={60} rounded />
-          </div>
-          <h1 className="mt-7 text-[28px] leading-[1.15] font-semibold tracking-tight text-balance md:text-[40px] md:leading-[1.1] lg:mt-8 lg:text-[52px] lg:leading-[1.05]">
-            {t.hero.headline}
-          </h1>
-          <p className="mt-4 text-base leading-relaxed text-gray-700 text-pretty md:text-lg lg:mt-6 lg:max-w-xl">{t.hero.subline}</p>
-          <p className="mt-2 text-sm text-muted-foreground md:text-[15px]">{t.hero.brandLine}</p>
+      <section className="px-6 pt-10 pb-12 md:px-10 md:pt-16 md:pb-20 lg:px-12 lg:pt-20 lg:pb-28">
+        <div
+          data-landing-hero
+          className={`flex flex-col items-center text-center lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:gap-16 lg:text-left ${WIDE}`}
+        >
+          <div className="flex w-full flex-col items-center md:max-w-lg lg:max-w-none lg:items-start">
+            <div className="rounded-[14px] shadow-[0_12px_28px_-10px_rgba(17,24,39,0.5)]">
+              <BrandMark size={60} rounded />
+            </div>
+            <h1 className="mt-7 text-[28px] leading-[1.15] font-semibold tracking-tight text-balance md:text-[40px] md:leading-[1.1] lg:mt-8 lg:text-[52px] lg:leading-[1.05]">
+              {t.hero.headline}
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-gray-700 text-pretty md:text-lg lg:mt-6 lg:max-w-xl">{t.hero.subline}</p>
+            <p className="mt-2 text-sm text-muted-foreground md:text-[15px]">{t.hero.brandLine}</p>
 
-          <div className="mt-8 flex w-full flex-col gap-3 md:max-w-sm lg:mt-10">
-            <LandingGoogleButton locale={locale} label={t.hero.requestAccess} failedText={t.request.failed} />
-            <LocaleLink
-              locale={locale}
-              href="/"
-              className="flex min-h-[52px] w-full items-center justify-center rounded-xl border border-gray-200 text-base font-medium text-gray-900 active:bg-gray-50"
+            <div className="mt-8 flex w-full flex-col gap-3 md:max-w-sm lg:mt-10">
+              <LandingGoogleButton locale={locale} label={t.hero.requestAccess} failedText={t.request.failed} />
+              <LocaleLink
+                locale={locale}
+                href="/"
+                className="flex min-h-[52px] w-full items-center justify-center rounded-xl border border-gray-200 text-base font-medium text-gray-900 active:bg-gray-50"
+              >
+                {t.hero.haveAccount}
+              </LocaleLink>
+            </div>
+            <Link
+              href="/join/code"
+              className="mt-4 flex min-h-[44px] items-center gap-1.5 text-sm text-muted-foreground"
             >
-              {t.hero.haveAccount}
-            </LocaleLink>
+              <UserRound className="size-4" strokeWidth={1.75} aria-hidden />
+              {t.hero.staffPrompt} <span lang="id" className="font-semibold text-gray-900">Saya staf</span>
+            </Link>
+            <p className="mt-1 text-xs text-muted-foreground">{t.hero.betaNote}</p>
           </div>
-          <Link
-            href="/join/code"
-            className="mt-4 flex min-h-[44px] items-center gap-1.5 text-sm text-muted-foreground"
-          >
-            <UserRound className="size-4" strokeWidth={1.75} aria-hidden />
-            {t.hero.staffPrompt} <span lang="id" className="font-semibold text-gray-900">Saya staf</span>
-          </Link>
-          <p className="mt-1 text-xs text-muted-foreground">{t.hero.betaNote}</p>
-        </div>
 
-        {/* The screens. A laptop also gets the staff phone, tucked behind:
-            it is display:none below lg and lazy, so phones never fetch it. */}
-        <div className="relative mt-10 flex w-[78%] justify-center md:w-[320px] lg:mt-0 lg:w-full lg:justify-end lg:pr-6">
-          <PhoneShot
-            src={shotSrc("staff-today", locale)}
-            alt={t.how.steps.find((step) => step.shot === "staff-today")?.shotAlt ?? ""}
-            className="absolute top-12 right-[46%] hidden w-[240px] -rotate-6 opacity-95 lg:block xl:w-[260px]"
-          />
-          <PhoneShot
-            src={shotSrc("owner-today", locale)}
-            alt={t.hero.shotAlt}
-            className="relative w-full lg:w-[300px] xl:w-[320px]"
-            priority
-          />
+          {/* The screens. A laptop also gets the staff phone, tucked behind:
+              it is display:none below lg and lazy, so phones never fetch it. */}
+          <div className="relative mt-10 flex w-[78%] justify-center md:w-[320px] lg:mt-0 lg:w-full lg:justify-end lg:pr-6">
+            <PhoneShot
+              src={shotSrc("staff-today", locale)}
+              alt={t.how.steps.find((step) => step.shot === "staff-today")?.shotAlt ?? ""}
+              className="absolute top-12 right-[46%] hidden w-[240px] -rotate-6 opacity-95 lg:block xl:w-[260px]"
+            />
+            <PhoneShot
+              src={shotSrc("owner-today", locale)}
+              alt={t.hero.shotAlt}
+              className="relative w-full lg:w-[300px] xl:w-[320px]"
+              priority
+            />
+          </div>
         </div>
       </section>
 
