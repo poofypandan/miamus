@@ -527,6 +527,10 @@ export function AgendaTab() {
         {range === "day" && hasOwnChores && <WhatsNewCard id="my-tasks-2026-11" />}
         {/* Marking a bill paid (Phase 164 PR B): for an admin with a bill of their own. */}
         {range === "day" && mine.some((o) => isBill(o.task)) && <WhatsNewCard id="bill-payments-2026-11" />}
+        {/* Couldn't-do and the evening summary (Phase 165, D10): for homes with staff. */}
+        {range === "day" && (allProfiles ?? []).some((p) => !p.user_id && !p.archived_at) && (
+          <WhatsNewCard id="couldnt-do-2026-11" />
+        )}
         {/* Bills and upkeep (Phase 164, D9): Show me opens the checklist on Chores. */}
         {range === "day" && (
           <WhatsNewCard

@@ -69,7 +69,15 @@ export const LEGAL = {
   // admins only, a paid bill's amount and receipt photo, in storage only
   // admins can open, kept 2 years from the payment (migrations/138). No new
   // service.
-  policyVersion: "2026-11-10.4",
+  // 2026-11-10.5: "Tidak bisa dikerjakan" — when staff say a task couldn't
+  // be done: the reason, an optional note and photo, the shopping item that
+  // ran out, who and when; seen by the household's admins and staff; kept 90
+  // days (photo 30). New admin notifications: an evening summary of what
+  // wasn't done (at a chosen hour, or off), leave requests, schedule
+  // suggestions, and a pet refusing medicine; staff notes never in them.
+  // Each admin's notification choices are stored (migrations/139). No new
+  // service.
+  policyVersion: "2026-11-10.5",
   effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

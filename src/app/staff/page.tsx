@@ -344,6 +344,7 @@ function TasksView() {
             comes first on a busy morning, not a stack of news. */}
         <StaffTipCard
           tips={[
+            { id: "staff-couldnt-do-2026-11", show: true },
             { id: "staff-feedback-2026-11", show: true },
             { id: "staff-weak-signal-2026-11", show: true },
             { id: "staff-floors-2026-11", show: showFloorsTip },

@@ -28,6 +28,26 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Shown on Today to admins of households with staff (Phase 165, D10).
+    id: "couldnt-do-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "New: when staff can't do a task", id: "Baru: kalau staf tidak bisa mengerjakan tugas" },
+    steps: {
+      en: [
+        "Staff can now tell you why a task couldn't be done, like out of stock or the pet wouldn't eat. It shows in amber on Today; tap it to see their note and photo.",
+        "Each evening at 7:00 PM, one notification lists what's still open, only if something is. Nothing open, no notification.",
+        "You're also told when staff ask for leave or suggest a schedule change. Change the time or turn either off in Household → Notifications.",
+      ],
+      id: [
+        "Staf sekarang bisa memberi tahu kenapa tugas tidak bisa dikerjakan, misalnya barang habis atau hewan tidak mau makan. Tugasnya ditandai kuning di Hari ini; ketuk untuk melihat catatan dan fotonya.",
+        "Setiap malam pukul 19.00, satu notifikasi berisi yang belum selesai, hanya kalau ada. Kalau semua selesai, tidak ada notifikasi.",
+        "Anda juga diberi tahu saat staf minta cuti atau mengusulkan perubahan jadwal. Ubah jamnya atau matikan di Rumah → Notifikasi.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown on Today to an admin with a bill in My tasks (Phase 164 PR B).
     id: "bill-payments-2026-11",
     date: "2026-11-10",
@@ -309,6 +329,15 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    id: "staff-couldnt-do-2026-11",
+    date: "2026-11-10",
+    title: "Baru: Tidak bisa dikerjakan",
+    lines: [
+      "Tidak bisa mengerjakan tugas? Buka tugasnya, ketuk Tidak bisa dikerjakan, lalu pilih alasannya. Admin bisa melihatnya.",
+      "Salah pilih? Ketuk Batalkan dalam 5 menit.",
+    ],
+  },
   {
     id: "staff-feedback-2026-11",
     date: "2026-11-10",
