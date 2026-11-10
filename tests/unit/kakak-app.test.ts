@@ -307,6 +307,7 @@ describe("the card", () => {
     newRoomFloorId: null,
     newRoomFloorName: null,
     notes: null,
+    remindDaysBefore: null,
   };
   it("says it in plain words in both languages", () => {
     expect(describeSuggestion(item, "id").rows).toEqual([

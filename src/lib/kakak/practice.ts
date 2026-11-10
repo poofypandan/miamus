@@ -129,6 +129,24 @@ function clip(text: string, max: number): string {
   return trimmed.length > max ? `${trimmed.slice(0, max - 1).trimEnd()}…` : trimmed;
 }
 
+/**
+ * "Remind me the day before" / "ingatkan sehari sebelumnya" (migrations/137):
+ * the days of warning asked for, longest phrase first, or null. "Remind me"
+ * with no lead time is on the day, as the real Kakak is told.
+ */
+const REMIND_LEADS: [RegExp, number][] = [
+  [/\b(?:a|1|one) week before\b|\b(?:seminggu|1 minggu) sebelum(?:nya)?\b|\bh-7\b/i, 7],
+  [/\b(?:3|three) days before\b|\b3 hari sebelum(?:nya)?\b|\bh-3\b/i, 3],
+  [/\bthe day before\b|\b(?:1|one) day before\b|\b(?:sehari|1 hari) sebelum(?:nya)?\b|\bh-1\b/i, 1],
+  [/\bon the day\b|\bpada harinya\b|\bremind me\b|\bingatkan saya\b/i, 0],
+];
+
+/** -1: the card chips' note turned the reminder off ("no reminder"). */
+function remindFrom(text: string): number | null {
+  if (/\bno reminder\b/i.test(text)) return -1;
+  return REMIND_LEADS.find(([pattern]) => pattern.test(text))?.[1] ?? null;
+}
+
 /** "Ingatkan saya …" / "Remind me to …": a chore for the owner (M1), as the real Kakak does. */
 const REMIND_ME = /\b(?:ingatkan saya(?: untuk)?|remind me(?: to)?)\b/i;
 
@@ -136,6 +154,9 @@ const REMIND_ME = /\b(?:ingatkan saya(?: untuk)?|remind me(?: to)?)\b/i;
 function choreTitle(household: KakakHousehold, sentence: string): string {
   const people = [...household.people, household.owner].map((p) => p.name.toLowerCase().split(/\s+/)[0]);
   return sentence
+    .replace(/,?\s*(?:remind me|ingatkan saya)\s+(?:a week|one week|1 week|3 days|three days|the day|1 day|one day)\s+before\b/gi, " ")
+    .replace(/,?\s*ingatkan saya\s+(?:seminggu|1 minggu|3 hari|sehari|1 hari)\s+sebelum(?:nya)?\b/gi, " ")
+    .replace(/,?\s*(?:remind me|ingatkan saya)\s+(?:on the day|pada harinya)\b/gi, " ")
     .replace(REMIND_ME, " ")
     .replace(/\b(?:jam|pukul|at)\s+\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?\b/gi, " ")
     .replace(/\b\d{1,2}[:.]\d{2}\s*(?:am|pm)?\b/gi, " ")
@@ -516,6 +537,7 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
   const plan =
     latest((w) => whenFrom(w, household.today) ?? (ONE_TIME.test(w) ? { days: [firstDay], recurrence: "none" as const } : null)) ??
     when ?? { days: [household.today], recurrence: "none" as const };
+  const remind = latest((w) => remindFrom(w));
   const person = latest((w) => findPerson(household, w) ?? (ANYONE.test(w) ? "anyone" : null));
   const time = latest((w) => timesFrom(w)[0] ?? null);
   const room = latest((w) => findRef(household.rooms, w));
@@ -540,6 +562,7 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
       new_room_name: null,
       new_room_floor: null,
       notes: null,
+      remind_days_before: remind === -1 ? null : remind,
     }),
   );
   return message(model, [text(copy.here), ...calls]);
