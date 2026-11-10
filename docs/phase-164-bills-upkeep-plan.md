@@ -1,6 +1,9 @@
 # Phase 164 — Bills and upkeep reminders
 
-Status: **plan for the owner's approval.** Nothing is built.
+Status: **decided: owner delegated to the recommendations, 2026-11-10
+(D1–D9 all A).** Nothing is built yet: building starts after Phase 163
+(My tasks, migration 136) has merged, with reminders first (PR A, migration
+**137**, reserved) and payments second (PR B, migration **138**, held).
 Roadmap item 11 (`docs/roadmap-2026-11-09.md`, P1): "Bills and upkeep
 reminders: electricity, water, internet, iuran RT, PBB, AC service, toren,
 gas, pest control. Common misses; mostly repeating chores, plus a quick-add
@@ -8,7 +11,7 @@ list. Small." Mockup: `docs/mockups/phase-164-bills-upkeep.html` (open in a
 browser, phone width; English left, Bahasa Indonesia right).
 
 Builds on **Phase 163, "My tasks" on Today** (`docs/phase-163-my-tasks-plan.md`,
-PR #56, decided D1–D5 A, migration 136): a bill given to an owner is one of
+PR #56, plan merged, decided D1–D5 A, migration 136): a bill given to an owner is one of
 their own tasks, and 163 is what lets an owner tick it off on Today without
 photos. 163 must be built first.
 
@@ -324,7 +327,12 @@ not in this plan's PR:
 | Postpaid / Token (electricity) | **Pascabayar** / **Token** |
 | Clean the water tank | **Kuras toren** |
 
-## The database: migration 137
+## The database: migrations 137 and 138
+
+Everything below is one design. **PR A uses migration 137** (the repeat
+interval, reminders, the re-created day check and guard, the reminder job);
+**PR B uses migration 138** (`bill_payments`, the receipt and orphan
+clean-ups, the payments clean-up job, the export). Both numbers are reserved.
 
 Additive. **136 is Phase 163's**; re-check `supabase/migrations` and open PRs
 before building. Not created in this PR.
@@ -337,7 +345,7 @@ before building. Not created in this PR.
 | `remind_days_before` | `smallint`, null = no reminder; check in (0, 1, 3, 7) (D3). |
 
 Plus `unique (id, household_id)` on `household_tasks` (as 105 and 130 have),
-for the composite key below. New category value `bill`: no database change
+for the composite key below; it goes in 138 with the table that needs it. New category value `bill`: no database change
 (the column has no CHECK); added to `HouseholdTaskCategory`, labels and the
 icon map (Lucide `ReceiptText`).
 
@@ -442,7 +450,7 @@ export): the Mark paid sheet, amount and receipt, history, the delete
 dialog's warning, the privacy policy.
 
 Splitting means the reminders can go out before the receipts design is
-reviewed. If the owner prefers one PR, it's one migration, 137.
+reviewed (decided with D1–D9: two PRs, 137 then 138).
 
 Each: unit tests (`occursOn` with intervals, the quick-add defaults, rupiah
 formatting), Playwright on the stub (add three bills, see one on Today,
@@ -451,6 +459,9 @@ clean, migration local → staging → production with the owner's OK, merge
 with the owner's OK.
 
 ## Decisions for the owner
+
+**Decided 2026-11-10: the owner delegated to the recommendations, so D1–D9
+are all A.**
 
 - **D1 — Every 3 months and every year.**
   **A (recommended):** a repeat interval for weekly and monthly chores
