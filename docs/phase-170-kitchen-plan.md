@@ -1,6 +1,8 @@
 # Phase 170 — Cooking, groceries and planning under Kitchen
 
-Status: **plan, waiting for the owner (D1–D16, each with a recommended A).**
+Status: **decided: owner chose all recommendations (D1–D16 A), 2026-11-10;
+PR A amounts and units with migration 144.** The four open questions below
+stay open; the owner answers each before the PR it affects.
 Nothing is built. Migration **144** is reserved for PR A (amounts and units);
 PR B (recipes) and PR C (menu and the cook's view) each take the next free
 number when they're built, and the manager reserves it then. Roadmap item 20
@@ -770,6 +772,9 @@ to Shopping**." / "Rencanakan menu seminggu di **Dapur → Menu**, lalu
 tekan **Sudah dimasak**."
 
 ## Decisions for the owner
+
+**Decided 2026-11-10: the owner chose all recommendations, so D1–D16 are
+all A.**
 
 - **D1 — Exact amounts: for which items?**
   **A (recommended):** opt-in per item; an owner switches on **Track amount**
