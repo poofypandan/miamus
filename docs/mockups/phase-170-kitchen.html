@@ -261,8 +261,8 @@ const T = {
     pills: ["Makanan", "Belanja", "Menu"],
     addFood: "Tambah makanan",
     ready: "Siap dimakan", ingredients: "Bahan masakan", ingHint: "Makanan segar dan bahan pokok",
-    rendang: "Rendang", rendangSub: "Masak di rumah · Kulkas", portions3: "3 porsi", days2: "2 hari lagi",
-    cake: "Lapis legit", cakeSub: "Dari Tante Rina · Meja", days5: "5 hari lagi",
+    rendang: "Rendang", rendangSub: "Masakan rumah · Kulkas", portions3: "3 porsi", days2: "2 hari lagi",
+    cake: "Lapis legit", cakeSub: "dari Tante Rina · Meja", days5: "5 hari lagi",
     rice: "Beras", riceSub: "Bahan pokok", left: (v) => `Sisa ${v}`,
     eggs: "Telur", chicken: "Ayam", chickenSub: "Freezer",
     oil: "Minyak goreng", lowWord: "Hampir habis",
@@ -461,7 +461,7 @@ function st3() {
   const toast = `<div class="toast top"><span class="ok">${ic("circle-check")}</span><span>Rendang sudah dimasak</span><b>${ic("undo", "xs")}Batalkan</b></div>`;
   const sheet = `<div class="dim"></div>${toast}<div class="sheet low"><div class="grab"></div><h3>Ada sisa?</h3>
     <p class="lead">Simpan di Makanan supaya tidak lupa dimakan.</p>
-    <div class="list">${row("soup", "Rendang", "Masak di rumah · Kulkas", `<span class="amt">2 porsi</span>`, "photo")}</div>
+    <div class="list">${row("soup", "Rendang", "Masakan rumah · Kulkas", `<span class="amt">2 porsi</span>`, "photo")}</div>
     <div class="legend">Tanggal kedaluwarsa dipilih di langkah berikutnya.</div>
     <div class="btn primary">${ic("refrigerator")}Simpan ke Makanan</div>
     <div class="btn outline">Tidak ada sisa</div></div>`;
