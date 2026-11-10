@@ -39,7 +39,7 @@ vi.mock("@/lib/tenant", () => ({ getActiveHouseholdId: () => household }));
 
 const queue = await import("@/lib/offline-queue");
 const { isOldHost, OLD_HOSTS, CANONICAL_ORIGIN } = await import("@/config/hosts");
-const { countChoreDrafts, mayMove, movedUrl, sendBeforeMove } = await import("@/lib/address-move");
+const { countChoreDrafts, mayMove, movedUrl, sendBeforeMove, SendTally } = await import("@/lib/address-move");
 type SendDeps = import("@/lib/address-move").SendDeps;
 
 const NO_ANSWER = { message: "TypeError: Failed to fetch", details: "", hint: "", code: "" };
@@ -221,6 +221,41 @@ describe("sending before the move", () => {
     expect(mayMove(outcome, true)).toBe(true);
     expect(await ids()).toEqual(["a", "b"]);
     finish();
+  });
+
+  it("still reports what a slow pass had refused, after the screen stopped waiting on it", async () => {
+    // Codex, PR #54: the pass outlives the screen's wait, then ends with a
+    // refusal. drainOutbox removes the refused save, so the next look finds
+    // an empty queue — and must still say a save was refused.
+    await seed(logItem("a"));
+    let refuse: () => void = () => {};
+    provider.createLogsBatch.mockImplementation(
+      () => new Promise((_, reject) => (refuse = () => reject(REFUSED)))
+    );
+    const tally = new SendTally();
+    let pass: Promise<unknown> = Promise.resolve();
+    const slow = deps({ tally, waitMs: 20, drain: () => (pass = queue.drainOutbox()) as never });
+
+    const first = await sendBeforeMove(slow);
+    expect(first).toMatchObject({ status: "waiting", waiting: 1, reason: "no-answer", refused: 0 });
+
+    refuse();
+    await pass;
+    expect(await ids()).toEqual([]);
+
+    const next = await sendBeforeMove(slow);
+    expect(next).toEqual({ status: "empty", sent: 0, refused: 1 });
+  });
+
+  it("counts a pass once, however many tries waited on it", () => {
+    const tally = new SendTally();
+    const report = { sent: [logItem("a")], refused: [logItem("b")], waiting: 0, confirmed: true };
+    tally.add(report);
+    tally.add(report);
+    expect({ sent: tally.sent, refused: tally.refused }).toEqual({ sent: 1, refused: 1 });
+    // Sent but not yet confirmed: the next pass confirms them, and counts them then.
+    tally.add({ sent: [logItem("c")], refused: [], waiting: 0, confirmed: false });
+    expect(tally.sent).toBe(1);
   });
 
   it("with nothing waiting, sends nothing and may move at once", async () => {

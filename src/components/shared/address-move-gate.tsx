@@ -14,6 +14,7 @@ import {
   mayMove,
   movedUrl,
   sendBeforeMove,
+  SendTally,
   type MoveAudience,
   type SendDeps,
   type SendOutcome,
@@ -136,6 +137,8 @@ function drainOnce(): Promise<DrainReport> {
 const deps: SendDeps = {
   readQueue: getOfflineQueue,
   drain: drainOnce,
+  // One screen per page load: its totals last until the phone moves.
+  tally: new SendTally(),
   online: () => typeof navigator === "undefined" || navigator.onLine !== false,
   signedOut: async () => (await readSessionState()) === "none",
 };

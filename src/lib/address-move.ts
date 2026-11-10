@@ -94,6 +94,30 @@ export interface SendDeps {
    * and Pindah sekarang while the pass carries on (Codex, PR #54).
    */
   waitMs?: number;
+  /**
+   * What every pass on this screen has sent and had refused, kept across
+   * tries. Without it a pass that finished after the screen stopped waiting
+   * would be forgotten — and drainOutbox has already removed what the server
+   * refused, so the next look finds an empty queue and the person is never
+   * told to enter those saves again (Codex, PR #54).
+   */
+  tally?: SendTally;
+}
+
+/** Counts each pass's report once, however many tries waited on it. */
+export class SendTally {
+  private counted = new WeakSet<DrainReport>();
+  sent = 0;
+  refused = 0;
+
+  add(report: DrainReport): void {
+    if (this.counted.has(report)) return;
+    this.counted.add(report);
+    // Sent saves leave the queue only once the reload after them worked;
+    // until then the next pass confirms them (lib/offline-queue.ts).
+    if (report.confirmed) this.sent += report.sent.length;
+    this.refused += report.refused.length;
+  }
 }
 
 /** As long as a save button spins (lib/offline-queue.ts UI_WAIT_MS). */
@@ -104,65 +128,76 @@ const TIMED_OUT = Symbol("timed out");
 /**
  * Sends what is waiting, once, and says what is left. `onSending` is called
  * with the count before the try, for "Mengirim 3 catatan…".
+ *
+ * `sent` and `refused` are this screen's totals when `deps.tally` is given
+ * (the screen always gives one), otherwise this try's alone.
  */
 export async function sendBeforeMove(deps: SendDeps, onSending?: (count: number) => void): Promise<SendOutcome> {
+  const tally = deps.tally ?? new SendTally();
+  const empty = (): SendOutcome => ({ status: "empty", sent: tally.sent, refused: tally.refused });
+  const waiting = (reason: WaitingReason, count: number | null): SendOutcome => ({
+    status: "waiting",
+    waiting: count,
+    sent: tally.sent,
+    refused: tally.refused,
+    reason,
+  });
+
   let before: readonly OfflineQueueItem[];
   try {
     before = await deps.readQueue();
   } catch {
-    return { status: "waiting", waiting: null, sent: 0, refused: 0, reason: "error" };
+    return waiting("error", null);
   }
-  if (before.length === 0) return { status: "empty", sent: 0, refused: 0 };
-
-  const waiting = (reason: WaitingReason, count: number | null, sent = 0, refused = 0): SendOutcome => ({
-    status: "waiting",
-    waiting: count,
-    sent,
-    refused,
-    reason,
-  });
+  if (before.length === 0) return empty();
 
   if (!deps.online()) return waiting("offline", before.length);
   if (await deps.signedOut().catch(() => false)) return waiting("signed-out", before.length);
 
   onSending?.(before.length);
+  const pass = deps.drain();
+  // Counted whenever it ends, even after this try has stopped waiting.
+  pass.then(
+    (finished) => tally.add(finished),
+    () => undefined
+  );
   let report: DrainReport | typeof TIMED_OUT;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     report = await Promise.race([
-      deps.drain(),
+      pass,
       new Promise<typeof TIMED_OUT>((resolve) => {
         timer = setTimeout(() => resolve(TIMED_OUT), deps.waitMs ?? SEND_WAIT_MS);
       }),
     ]);
   } catch {
     const left = await deps.readQueue().catch(() => null);
-    if (left && left.length === 0) return { status: "empty", sent: 0, refused: 0 };
+    if (left && left.length === 0) return empty();
     return waiting("error", left ? left.length : before.length);
   } finally {
     clearTimeout(timer);
   }
 
   if (report === TIMED_OUT) {
-    // Still sending. The queue says what is left; the pass carries on.
+    // Still sending. The queue says what is left; the pass carries on, and
+    // the tally takes its report when it ends.
     const left = await deps.readQueue().catch(() => null);
-    if (left && left.length === 0) return { status: "empty", sent: before.length, refused: 0 };
+    if (left && left.length === 0) return empty();
     return waiting("no-answer", left ? left.length : before.length);
   }
+  tally.add(report);
 
   let after: readonly OfflineQueueItem[];
   try {
     after = await deps.readQueue();
   } catch {
-    return waiting("error", null, report.sent.length, report.refused.length);
+    return waiting("error", null);
   }
-  const sent = report.sent.length;
-  const refused = report.refused.length;
-  if (after.length === 0) return { status: "empty", sent, refused };
+  if (after.length === 0) return empty();
   // drainOutbox counts what it tried and could not send; what it skipped
   // belongs to another household and is in neither count.
   const reason: WaitingReason = report.waiting > 0 || !report.confirmed ? "no-answer" : "other-household";
-  return waiting(reason, after.length, sent, refused);
+  return waiting(reason, after.length);
 }
 
 /**
