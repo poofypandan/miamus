@@ -8,7 +8,36 @@ Every pull request runs `.github/workflows/checks.yml`:
 4. build (`npm run build`)
 5. browser tests (`npm run test:e2e`)
 
-A PR is ready for review only when this check is green, alongside Vercel's.
+A PR is ready for review only when this check is green. Vercel does not
+build PRs (see "Vercel previews are off" below).
+
+## Vercel previews are off
+
+Only `main` deploys on Vercel (production, miamus.app). Pushes to any other
+branch create no Vercel deployment. This is set in `vercel.json`:
+
+```json
+"git": { "deploymentEnabled": { "main": true, "**": false } }
+```
+
+`**` is needed, not `*`: Vercel matches branch names with minimatch, where `*`
+stops at `/`, so `*` alone would miss branches like `claude/…`. When a branch
+matches both rules, `true` wins, so `main` still deploys.
+
+**Why:** on 2026-11-10 previews for every executor push used up the Hobby
+plan's daily deployment limit, and merges to `main` could not deploy until it
+reset. The checks above and Codex reviews cover PRs, so previews are not
+needed. Revisit when moving to Pro.
+
+**One-off preview, if you need one:**
+
+- from your computer, on the branch: `npx vercel` (creates a preview, not
+  production; it counts toward the limit too);
+- or in the Vercel dashboard: the project → Deployments → **Create
+  Deployment**, then pick the branch or commit.
+
+Preview deployments use Vercel's Preview environment variables, which point
+at staging Supabase, not production.
 
 ## Unit tests — `tests/unit`
 
