@@ -181,7 +181,7 @@ export function BillsUpkeepSheet({
   // Never one that is already set up, even if it was ticked before that was known.
   const picked = [...selected]
     .map((key) => actual(quickItem(key)))
-    .filter((item) => !alreadyAdded(item, chores, inventoryItems));
+    .filter((item) => !alreadyAdded(item, chores, inventoryItems, today));
   const missingDate = picked.find((item) => item.kind === "chore" && !choiceFor(item).first);
 
   async function add() {
@@ -248,7 +248,7 @@ export function BillsUpkeepSheet({
   function row(base: QuickItem) {
     const item = actual(base);
     const Icon = ICONS[item.icon];
-    const added = alreadyAdded(item, chores, inventoryItems);
+    const added = alreadyAdded(item, chores, inventoryItems, today);
     const isOn = selected.has(base.key);
     const isOpen = expanded === base.key && item.kind === "chore" && !added;
     const choice = item.kind === "chore" ? choiceFor(item) : null;

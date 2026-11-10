@@ -80,14 +80,24 @@ describe("the checklist's defaults (Phase 164)", () => {
   });
 
   it("knows what's already set up, by its title", () => {
-    const chores = [task({ title: "Bayar listrik PLN", recurrence: "monthly" }), task({ id: "x", title: "Servis AC", parent_task_id: "p" })];
-    expect(alreadyAdded(chore("electricity"), chores, [])).toBe(true);
-    expect(alreadyAdded(chore("electricity-token"), chores, [])).toBe(true);
+    const today = "2026-11-10";
+    const chores = [
+      task({ title: "Bayar listrik PLN", recurrence: "monthly" }),
+      task({ id: "x", title: "Servis AC", parent_task_id: "p" }),
+      // Paid once last week: history, not a bill set up.
+      task({ id: "y", title: "Internet", due_date: "2026-11-05", status: "completed" }),
+      // A repeat that has ended.
+      task({ id: "z", title: "BPJS Kesehatan", recurrence: "monthly", recurrence_until: "2026-10-31" }),
+    ];
+    expect(alreadyAdded(chore("electricity"), chores, [], today)).toBe(true);
+    expect(alreadyAdded(chore("electricity-token"), chores, [], today)).toBe(true);
     // A written day isn't a chore set up.
-    expect(alreadyAdded(chore("ac"), chores, [])).toBe(false);
+    expect(alreadyAdded(chore("ac"), chores, [], today)).toBe(false);
+    expect(alreadyAdded(chore("internet"), chores, [], today)).toBe(false);
+    expect(alreadyAdded(chore("bpjs"), chores, [], today)).toBe(false);
     const gas = { scope: "home", name: "Gas LPG 12 kg" } as InventoryItem;
-    expect(alreadyAdded(quickItem("gas"), [], [gas])).toBe(true);
-    expect(alreadyAdded(quickItem("gallon"), [], [gas])).toBe(false);
+    expect(alreadyAdded(quickItem("gas"), [], [gas], today)).toBe(true);
+    expect(alreadyAdded(quickItem("gallon"), [], [gas], today)).toBe(false);
   });
 });
 

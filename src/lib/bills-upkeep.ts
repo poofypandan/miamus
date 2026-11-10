@@ -1,5 +1,6 @@
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { repeatLabel } from "@/lib/chore-recurrence";
+import { isSetUp } from "@/lib/rooms-view";
 import type { ChoreRecurrence, HouseholdTask, HouseholdTaskCategory, InventoryItem } from "@/types/database";
 
 /**
@@ -349,12 +350,21 @@ export function quickSubline(item: QuickChore, first: string | null, locale: Own
   return `${repeat} · ${dueText(item.recurrence, item.interval, first, locale)}`;
 }
 
-/** Already set up: a chore that is still going (or a supply) whose title says so. */
-export function alreadyAdded(item: QuickItem, chores: HouseholdTask[], supplies: InventoryItem[]): boolean {
+/**
+ * Already set up: a chore that is still going (a repeat that hasn't ended, a
+ * one-off still to come; the Rooms view's rule), or a supply, whose title
+ * says so. A bill paid once last week doesn't count (Codex, PR #60).
+ */
+export function alreadyAdded(
+  item: QuickItem,
+  chores: HouseholdTask[],
+  supplies: InventoryItem[],
+  today: string
+): boolean {
   if (item.kind === "supply") {
     return supplies.some((s) => s.scope === "home" && item.matches.test(s.name));
   }
-  return chores.some((c) => !c.parent_task_id && c.status !== "cancelled" && item.matches.test(c.title));
+  return chores.some((c) => isSetUp(c, today) && item.matches.test(c.title));
 }
 
 /**
