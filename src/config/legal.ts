@@ -50,8 +50,11 @@ export const LEGAL = {
   // finished chores and new food, and anything saved on a signal too weak
   // to send, not only while offline (Phase 161, R10). No new service; still
   // deleted on sign-out.
-  policyVersion: "2026-11-09.4",
-  effectiveDate: { en: "9 November 2026", id: "9 November 2026" },
+  // 2026-11-10.1: kept on the phone — whether notifications were turned on
+  // in this browser (so they can be renewed) and when the notifications
+  // reminder was last put off. No new data on the server, no new service.
+  policyVersion: "2026-11-10.1",
+  effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on

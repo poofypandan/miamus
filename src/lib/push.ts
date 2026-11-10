@@ -12,6 +12,49 @@ import type { PushSubscriptionJSON } from "@/types/database";
 
 export const SERVICE_WORKER_URL = "/sw.js";
 
+/**
+ * Which account turned push on in this browser (a convenience: storage may
+ * fail). It lets resyncPush subscribe again on its own when the browser has
+ * dropped the subscription but notifications are still allowed, without ever
+ * doing that for someone who turned them off, or for the next account to sign
+ * in on a shared computer.
+ */
+export const PUSH_WANTED_KEY = "miamus.push.wanted";
+
+/**
+ * Fired whenever this device's subscription is made, renewed or removed, so
+ * every status display re-checks (use-push-status) — including after a silent
+ * resyncPush, which no button started (Codex, #50).
+ */
+export const PUSH_CHANGED_EVENT = "miamus:push-changed";
+
+function announceChange(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(PUSH_CHANGED_EVENT));
+}
+
+function wantedBy(): string | null {
+  try {
+    return localStorage.getItem(PUSH_WANTED_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setWantedBy(userId: string | null): void {
+  try {
+    if (userId) localStorage.setItem(PUSH_WANTED_KEY, userId);
+    else localStorage.removeItem(PUSH_WANTED_KEY);
+  } catch {
+    // Private mode or storage off: only the silent re-subscribe is lost.
+  }
+}
+
+async function signedInUserId(): Promise<string | null> {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user.id ?? null;
+}
+
 /** iPhone, iPod, or an iPad (which has reported itself as a Mac since iPadOS 13). */
 export function isIos(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -71,7 +114,8 @@ export async function fetchPushPublicKey(): Promise<string | null> {
   if (!supabase) return null;
   const { data, error } = await supabase.rpc("get_push_public_key");
   if (error) throw error;
-  return data;
+  // Anything but a non-empty string is "not configured", never a key.
+  return typeof data === "string" && data.length > 0 ? data : null;
 }
 
 function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
@@ -133,15 +177,22 @@ export async function enablePush(
   publicKey: string
 ): Promise<"enabled" | "denied"> {
   const permission = await Notification.requestPermission();
-  if (permission !== "granted") return "denied";
+  if (permission !== "granted") {
+    announceChange();
+    return "denied";
+  }
   const registration = await activeRegistration();
   await save(await subscribe(registration, keyBytes(publicKey)), householdId);
+  setWantedBy(await signedInUserId());
+  announceChange();
   return "enabled";
 }
 
 /** Turns push off for this device: the row first, then the browser's side. */
 export async function disablePush(): Promise<void> {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+  // First, so a failure below can't leave resyncPush turning it back on.
+  setWantedBy(null);
   const subscription = await currentSubscription();
   if (!subscription) return;
   if (supabase) {
@@ -152,6 +203,7 @@ export async function disablePush(): Promise<void> {
     if (error) throw error;
   }
   await subscription.unsubscribe();
+  announceChange();
 }
 
 /**
@@ -161,16 +213,27 @@ export async function disablePush(): Promise<void> {
  * them all; either way the device stops receiving with nothing on screen to
  * say so. Run on every dashboard visit (usePushResync), this re-saves what
  * the browser holds — and re-subscribes against the current key if needed.
+ *
+ * When the browser holds no subscription at all but notifications are still
+ * allowed (the browser dropped it, or the server's keys changed and it was
+ * cleared), it subscribes again — but only for the account that turned push
+ * on here (PUSH_WANTED_KEY), so "Turn off" and signing out stay off.
+ *
  * Never prompts: it does nothing unless permission was already granted.
  */
 export async function resyncPush(householdId: string): Promise<void> {
   if (pushAvailability() !== "supported" || Notification.permission !== "granted") return;
   const registration = await navigator.serviceWorker.getRegistration("/");
-  const existing = await registration?.pushManager.getSubscription();
-  if (!registration || !existing) return;
+  if (!registration) return;
+  const existing = await registration.pushManager.getSubscription();
+  if (!existing) {
+    const wanted = wantedBy();
+    if (!wanted || wanted !== (await signedInUserId())) return;
+  }
   const publicKey = await fetchPushPublicKey();
   if (!publicKey) return;
   await save(await subscribe(registration, keyBytes(publicKey)), householdId);
+  announceChange();
 }
 
 /** Queues a test to every device of this account's; resolves to how many. */

@@ -45,7 +45,7 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import { AGENDA_WEEK_DAYS, weekStartOf } from "@/lib/unified-agenda";
 import { compressPhoto } from "@/lib/image";
 import { readSnapshot, writeSnapshot } from "@/lib/snapshot-cache";
-import { isSessionUnreachable } from "@/lib/auth/device-session";
+import { readSessionState, waitForSession } from "@/lib/auth/device-session";
 import { isConnectionError } from "@/lib/network-errors";
 import { warmImagesWhenIdle } from "@/lib/image-warm";
 import {
@@ -159,6 +159,13 @@ interface HouseholdContextValue {
    * latter.
    */
   hasData: boolean;
+  /**
+   * The latest load found no session on this device at all, so it sent
+   * nothing (every query would have been refused). A staff phone in this
+   * state has to be linked again; the provider loads by itself once a
+   * session arrives.
+   */
+  signedOut: boolean;
   /** Tries the load again now, without skeletons. Never rejects. */
   retrySync: () => Promise<void>;
   isMockMode: boolean;
@@ -378,6 +385,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [syncFailed, setSyncFailed] = useState(false);
   const [hasData, setHasData] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
 
   // Resolved before anything is fetched (Phase 86C). Every query is scoped to
   // this, so loading first would show one household's data and then swap it.
@@ -668,9 +676,21 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       // state and to the snapshot, replace the household with nothing. That
       // looks exactly like being signed out, and is how a working phone ended
       // up being sent a fresh invite. Report it as what it is instead.
-      if (await isSessionUnreachable()) {
+      const state = await readSessionState();
+      if (state === "unreachable") {
         throw new Error("Session could not be renewed — no connection");
       }
+      // No session at all: nothing to load, and every query would be refused
+      // by RLS (a phone before its invite, an owner before Google, a bot).
+      // Nothing is sent; the listener below loads the moment a session
+      // arrives. Not a failure — there is no connection problem to report or
+      // retry — but skeletons must not stay up waiting for it.
+      if (state === "none") {
+        setSignedOut(true);
+        if (pass > appliedRefresh.current) setLoading(false);
+        return;
+      }
+      setSignedOut(false);
       await loadEverything(pass);
     } catch (err) {
       // Only if nothing newer has already succeeded: a stale failure must not
@@ -1272,6 +1292,20 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     await refresh({ silent: true });
   }, [applyTenant, refresh]);
 
+  // The load that found no session sent nothing; this is the other half. When
+  // a session does arrive without a page load, the household is worked out
+  // again (with no session it fell back to a guess) and loaded, silently.
+  // Every sign-in today ends in a full page load, which loads anyway, so this
+  // is the safety net, not the main path.
+  useEffect(() => {
+    if (!signedOut) return;
+    const stop = new AbortController();
+    void waitForSession(stop.signal).then(() => {
+      reloadTenant().catch((err) => console.warn("Household load after sign-in failed — retrying", err));
+    });
+    return () => stop.abort();
+  }, [signedOut, reloadTenant]);
+
   // What the stepper reads its starting point from; see adjustInventoryQuantity.
   const inventoryItemsRef = useRef(inventoryItems);
   useEffect(() => {
@@ -1602,6 +1636,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       loading,
       syncFailed,
       hasData,
+      signedOut,
       retrySync,
       isMockMode,
       activePetId,
@@ -1685,6 +1720,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       loading,
       syncFailed,
       hasData,
+      signedOut,
       retrySync,
       activePetId,
       selectedDate,

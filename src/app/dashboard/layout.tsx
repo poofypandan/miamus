@@ -12,6 +12,7 @@ import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { OutboxNotice } from "@/components/shared/outbox-notice";
 import { StaffOnboardingBanner } from "@/components/dashboard/staff-onboarding-banner";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
+import { PushPrompt } from "@/components/dashboard/push-prompt";
 import { useHousehold } from "@/context/household-context";
 import { OwnerLocaleProvider, useOwnerLocale } from "@/context/owner-locale-context";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
@@ -80,6 +81,13 @@ function DashboardShell({ children }: { children: ReactNode }) {
           {/* Sits outside <main> so the one-time hint stays put above the
             swipeable carousel rather than scrolling with a single tab. */}
           <StaffOnboardingBanner />
+          {/* Turn notifications on for this device, until it's on or put off
+              for now (2026-11-10). Production had no subscriptions at all
+              while the only way in was Household → Notifications. Reads the
+              URL (hidden on that page), so it needs Suspense like TopNav. */}
+          <Suspense fallback={null}>
+            <PushPrompt />
+          </Suspense>
           {/* pt-3, not pt-6 — this padding sits outside the carousel's clipping
             box, so trimming it is free of shadow-clipping risk and is where
             most of the old 40px gap under the tabs came from. No bottom

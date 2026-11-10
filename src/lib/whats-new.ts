@@ -23,6 +23,25 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "notifications-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "Turn on notifications on your phone", id: "Aktifkan notifikasi di HP Anda" },
+    steps: {
+      en: [
+        "Tap Turn on in the card at the top of the app, then Allow: urgent repairs, sick pets and food reminders reach this phone.",
+        "On iPhone, first tap Share → Add to Home Screen, and open Miamus from there.",
+        "Each phone is turned on separately. Household → Notifications shows On, Off or Blocked, and sends a test.",
+      ],
+      id: [
+        "Ketuk Aktifkan di kartu paling atas aplikasi, lalu Izinkan: perbaikan darurat, hewan sakit, dan pengingat makanan masuk ke HP ini.",
+        "Di iPhone, ketuk dulu Bagikan → Tambahkan ke Layar Utama, lalu buka Miamus dari sana.",
+        "Setiap HP diaktifkan sendiri-sendiri. Rumah → Notifikasi menunjukkan Aktif, Mati, atau Diblokir, dan bisa kirim tes.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     id: "who-lives-here-2026-11",
     date: "2026-11-10",
     audience: "owner",
