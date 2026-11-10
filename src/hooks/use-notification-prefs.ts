@@ -35,7 +35,8 @@ function subscribe(listener: () => void) {
 }
 
 function load(): Promise<void> {
-  if (state.loaded || inflight) return inflight ?? Promise.resolve();
+  // A failed load is tried again on the next mount (Codex, PR #71).
+  if ((state.loaded && !state.failed) || inflight) return inflight ?? Promise.resolve();
   inflight = dataProvider
     .getNotificationPrefs()
     .then((prefs) => emit({ prefs, loaded: true, failed: false }))

@@ -96,7 +96,7 @@ function CouldntDoBody({
   onFiled?: () => void;
 }) {
   const formatTime = useFormatTime();
-  const { inventoryItems, setInventoryStatus, flagLowStock } = useHousehold();
+  const { inventoryItems, refresh } = useHousehold();
   const { staffId } = useStaffIdentity();
   const [reason, setReason] = useState<TaskExceptionReason | null>(null);
   const [note, setNote] = useState("");
@@ -153,17 +153,31 @@ function CouldntDoBody({
         inventory_item_id: picked,
         staff_id: staffId,
       };
+      // On the shopping list (on by default): the item marked out, or the
+      // other thing as a note. Sent with the first record, through the save
+      // queue, so a weak signal doesn't lose it (Codex, PR #71).
+      let shopping: { itemId?: string | null; noteId?: string; note?: string } | null =
+        reason === "out_of_stock" && toList
+          ? picked
+            ? { itemId: picked }
+            : extra
+              ? { noteId: crypto.randomUUID(), note: extra.slice(0, 120) }
+              : null
+          : null;
       const ids: string[] = [];
       let waiting = false;
       if (target.kind === "chore") {
         const id = crypto.randomUUID();
         ids.push(id);
-        const outcome = await fileTaskException({
-          ...base,
-          id,
-          chore_id: target.occurrence.template.id,
-          occurs_on: target.occurrence.date,
-        });
+        const outcome = await fileTaskException(
+          {
+            ...base,
+            id,
+            chore_id: target.occurrence.template.id,
+            occurs_on: target.occurrence.date,
+          },
+          shopping
+        );
         waiting = outcome.status === "waiting";
       } else {
         // One record per pet: the picked ones for a refusal, every open one otherwise.
@@ -172,25 +186,22 @@ function CouldntDoBody({
         for (const item of chosen) {
           const id = crypto.randomUUID();
           ids.push(id);
-          const outcome = await fileTaskException({
-            ...base,
-            id,
-            schedule_id: item.scheduleId,
-            entity_id: item.entityId,
-            occurs_on: target.date,
-            slot_time: item.time,
-          });
+          const outcome = await fileTaskException(
+            {
+              ...base,
+              id,
+              schedule_id: item.scheduleId,
+              entity_id: item.entityId,
+              occurs_on: target.date,
+              slot_time: item.time,
+            },
+            shopping
+          );
+          shopping = null;
           waiting = waiting || outcome.status === "waiting";
         }
       }
 
-      // On the shopping list (on by default): the item marked out, or the
-      // other thing as a note. Their own writes; a failure there never
-      // undoes the reason.
-      if (reason === "out_of_stock" && toList) {
-        if (picked) void setInventoryStatus(picked, "out").catch((err) => console.error(err));
-        else if (extra) void flagLowStock({ pet_id: null, item_type: "other", note: extra.slice(0, 120) }).catch((err) => console.error(err));
-      }
 
       toast.success(waiting ? "Tersimpan di HP. Terkirim otomatis saat ada sinyal." : "Terkirim. Admin bisa melihatnya.", {
         duration: 8000,
@@ -211,6 +222,8 @@ function CouldntDoBody({
           },
         },
       });
+      // The shopping list shows the change once the household reloads.
+      if (reason === "out_of_stock" && toList && !waiting) void refresh({ silent: true });
       onDone();
       onFiled?.();
     } catch (err) {

@@ -301,7 +301,7 @@ export const mockProvider: DataProvider = {
   async createInventoryAlert(input) {
     const db = loadDB();
     const alert: InventoryAlert = {
-      id: uid("alert"),
+      id: input.id ?? uid("alert"),
       household_id: getActiveHouseholdId(),
       pet_id: input.pet_id ?? null,
       item_type: input.item_type,

@@ -120,6 +120,8 @@ export interface CreateMedicalRecordInput {
 }
 
 export interface CreateInventoryAlertInput {
+  /** Made on the phone when the save is queued (Phase 165), so a resend is "already saved". */
+  id?: string;
   pet_id?: string | null;
   item_type: ItemType;
   note?: string | null;

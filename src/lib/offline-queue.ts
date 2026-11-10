@@ -84,7 +84,17 @@ export type OutboxJob =
    * "Tidak bisa dikerjakan" (Phase 165): its id is made on the phone, so a
    * resend is told "already saved" by the primary key.
    */
-  | { kind: "couldnt"; input: CreateTaskExceptionInput };
+  | {
+      kind: "couldnt";
+      input: CreateTaskExceptionInput;
+      /**
+       * "Masukkan ke daftar belanja" (Phase 165): sent with the record, so
+       * it isn't lost on a weak signal (Codex, PR #71). The item marked out
+       * (the same answer however often), or a note under an id made here
+       * (a resend is "already saved").
+       */
+      shopping?: { itemId?: string | null; noteId?: string; note?: string } | null;
+    };
 
 export interface OfflineQueueItem {
   id: string;
@@ -336,13 +346,33 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
         if (isAlreadySaved(err)) return { kind: "food", food: null };
         throw err;
       }
-    case "couldnt":
+    case "couldnt": {
+      let exception: TaskException | null = null;
       try {
-        return { kind: "couldnt", exception: await dataProvider.createTaskException(ready.input) };
+        exception = await dataProvider.createTaskException(ready.input);
       } catch (err) {
-        if (isAlreadySaved(err)) return { kind: "couldnt", exception: null };
-        throw err;
+        if (!isAlreadySaved(err)) throw err;
       }
+      // Then the shopping list. A failure here leaves the job queued, and the
+      // resend finds the record "already saved" and tries only this again.
+      const shopping = ready.shopping;
+      if (shopping?.itemId) {
+        await dataProvider.setInventoryStatus(shopping.itemId, "out", ready.input.staff_id ?? null);
+      } else if (shopping?.note && shopping.noteId) {
+        try {
+          await dataProvider.createInventoryAlert({
+            id: shopping.noteId,
+            pet_id: null,
+            item_type: "other",
+            note: shopping.note,
+            staff_id: ready.input.staff_id ?? null,
+          });
+        } catch (err) {
+          if (!isAlreadySaved(err)) throw err;
+        }
+      }
+      return { kind: "couldnt", exception };
+    }
     case "chore": {
       const rowId =
         ready.rowId ?? (await dataProvider.materialiseChoreOccurrence(ready.templateId, ready.date, ready.assignedTo)).id;

@@ -171,8 +171,11 @@ export function pendingException(item: OfflineQueueItem, household: string): Tas
  * "waiting": no answer yet, it goes by itself; the screen shows it meanwhile.
  * A refusal from the server is thrown (another phone already said so, say).
  */
-export async function fileTaskException(input: CreateTaskExceptionInput): Promise<SubmitOutcome> {
-  return submitJob<SendResult>({ kind: "couldnt", input }, (result) => {
+export async function fileTaskException(
+  input: CreateTaskExceptionInput,
+  shopping: { itemId?: string | null; noteId?: string; note?: string } | null = null
+): Promise<SubmitOutcome> {
+  return submitJob<SendResult>({ kind: "couldnt", input, shopping }, (result) => {
     if (result.kind !== "couldnt") return;
     if (result.exception) keep(result.exception);
     else void loadTaskExceptions(true);
