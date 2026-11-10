@@ -64,6 +64,10 @@ export function paidOn(payment: BillPayment, locale: OwnerLocale): string {
 type Listener = (state: { payments: BillPayment[]; loaded: boolean; failed: boolean }) => void;
 let state: { payments: BillPayment[]; loaded: boolean; failed: boolean } = { payments: [], loaded: false, failed: false };
 let inflight: Promise<void> | null = null;
+// A fresh read asked for while one is under way (after a save): that read may
+// predate the change, so another follows it (Codex, PR #65).
+let rerun = false;
+let forHousehold: string | null = null;
 const listeners = new Set<Listener>();
 
 function publish(next: typeof state) {
@@ -71,8 +75,15 @@ function publish(next: typeof state) {
   for (const listener of listeners) listener(state);
 }
 
-export function loadBillPayments(): Promise<void> {
-  if (inflight) return inflight;
+/**
+ * Reads the household's payments. `fresh`: something just changed, so a read
+ * already under way isn't enough; one more runs after it.
+ */
+export function loadBillPayments(fresh = false): Promise<void> {
+  if (inflight) {
+    if (fresh) rerun = true;
+    return inflight;
+  }
   inflight = dataProvider
     .listBillPayments()
     .then(
@@ -84,8 +95,21 @@ export function loadBillPayments(): Promise<void> {
     )
     .finally(() => {
       inflight = null;
+      if (rerun) {
+        rerun = false;
+        void loadBillPayments();
+      }
     });
   return inflight;
+}
+
+/**
+ * The household's refresh (returning to the app, pull to refresh): payments
+ * too, if anything on screen shows them, so another owner's change appears
+ * (Codex, PR #65). As refreshRepairs.
+ */
+export function refreshBillPayments(): void {
+  if (listeners.size > 0 && forHousehold) void loadBillPayments(true);
 }
 
 export function subscribeBillPayments(listener: Listener): () => void {
@@ -93,8 +117,6 @@ export function subscribeBillPayments(listener: Listener): () => void {
   listener(state);
   return () => listeners.delete(listener);
 }
-
-let forHousehold: string | null = null;
 
 /**
  * Makes sure the payments held are this household's: read them if nothing
@@ -136,7 +158,7 @@ export async function savePayment(params: {
     if (previous?.receipt_url && previous.receipt_url !== saved.receipt_url) {
       void dataProvider.deleteReceipt(previous.receipt_url).catch(() => undefined);
     }
-    void loadBillPayments();
+    void loadBillPayments(true);
     return saved;
   } catch (err) {
     if (uploaded) void dataProvider.deleteReceipt(uploaded).catch(() => undefined);
@@ -148,5 +170,5 @@ export async function savePayment(params: {
 export async function removePayment(taskId: string): Promise<void> {
   const removed = await dataProvider.deleteBillPayment(taskId);
   if (removed?.receipt_url) void dataProvider.deleteReceipt(removed.receipt_url).catch(() => undefined);
-  void loadBillPayments();
+  void loadBillPayments(true);
 }

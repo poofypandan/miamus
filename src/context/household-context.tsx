@@ -5,6 +5,7 @@ import { addDays } from "date-fns";
 import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
 import { forgetDeletedChore, refreshRepairs } from "@/lib/repairs-store";
+import { refreshBillPayments } from "@/lib/bill-payments";
 import { screenLocale } from "@/lib/owner-locale";
 import type {
   CreateEntityInput,
@@ -654,6 +655,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     // Repairs live in their own cache (src/lib/repairs-store.ts); catch it
     // up with everything else (Codex, PR #37).
     refreshRepairs();
+    // Bill payments too (owners only; only while a screen shows them).
+    refreshBillPayments();
     // A silent pass never *puts up* skeletons. It matters more than it looks:
     // flipping `loading` on re-renders the staff list as skeletons, which
     // unmounts the card holding an open photo-tagging dialog — exactly what a

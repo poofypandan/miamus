@@ -23,7 +23,9 @@ export function useBillPayments(enabled = true): {
     failed: false,
   });
 
-  useEffect(() => subscribeBillPayments(setState), []);
+  // Subscribed only while something here shows payments, so the household's
+  // refresh reads them only then (refreshBillPayments).
+  useEffect(() => (enabled ? subscribeBillPayments(setState) : undefined), [enabled]);
 
   useEffect(() => {
     if (!enabled || !activeHouseholdId) return;
