@@ -1,7 +1,11 @@
 # Phase 172 — The first 10 minutes
 
-Status: **plan, waiting for the owner's decisions (D1–D15, each with a
-recommended A).** Nothing is built and nothing is applied anywhere. This
+Status: **decided: owner chose all recommendations (D1–D15 A), 2026-11-10;
+build order PR 0 (145) → A1 → 171 PR A (146) → A2 → B.** Nothing is built
+and nothing is applied anywhere. The owner questions below stay open; until
+they're answered the build uses the defaults (cap 25, keep the $20 limit,
+Indonesian room names with English beside them, captions only, 4 home
+types). This
 plan turns the recommendations the owner adopted on 10 November ("Yes, adopt
 it") into one experience. It covers recommendations **2** (starter
 templates), **3** (Kakak setup from one voice note), **4** (no approval
@@ -908,6 +912,10 @@ with the owner's OK, merge with the owner's OK.
 
 ## Decisions for the owner
 
+**Decided 2026-11-10: the owner chose all recommendations ("Yes, all of
+it"), so D1–D15 are all A.** Build order: PR 0 (145) → A1 → 171 PR A (146)
+→ A2 → B.
+
 - **D1 — The approval wait.**
   **A (recommended):** approve automatically when someone creates a
   household, review afterwards; a daily cap (25) and a switch fall back to
@@ -984,6 +992,10 @@ with the owner's OK, merge with the owner's OK.
 - **Staff: none.** The claim screen has one line and a video tip.
 
 ## Questions only the owner can answer
+
+Still open. Until the owner answers, the build uses the defaults: landing
+page wording unchanged, a cap of 25, the $20 limit kept, Indonesian room
+names with English beside them, captions only.
 
 1. **Landing page wording**: change "invite-only beta" to "free while in
    beta" when the wait goes?
