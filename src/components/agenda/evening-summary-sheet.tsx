@@ -115,21 +115,24 @@ function SummaryBody({
   // with the household's copy laid over it (fresher for this phone's saves).
   const inWeek =
     formatDateLocal(weekStartOf(new Date(`${date}T00:00:00`))) === formatDateLocal(weekStartOf(selectedDate));
-  const [dayRows, setDayRows] = useState<{ date: string; rows: HouseholdTask[] } | null>(null);
+  const [dayRows, setDayRows] = useState<{ date: string; rows: HouseholdTask[] | "failed" } | null>(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
     dataProvider
       .listHouseholdTasks(date, date, todayKey)
       .then((rows) => live && setDayRows({ date, rows }))
       .catch((err) => {
+        // Not "nothing to do" (Codex, PR #71): said so, with Try again.
         console.warn("Summary chores not loaded", err);
-        if (live) setDayRows({ date, rows: [] });
+        if (live) setDayRows({ date, rows: "failed" });
       });
     return () => {
       live = false;
     };
-  }, [date, todayKey]);
-  const fetched = dayRows?.date === date ? dayRows.rows : null;
+  }, [date, todayKey, attempt]);
+  const fetched = dayRows?.date === date && dayRows.rows !== "failed" ? dayRows.rows : null;
+  const failed = dayRows?.date === date && dayRows.rows === "failed" && !inWeek;
   const rows = useMemo(() => {
     if (!fetched) return inWeek ? householdTasks : null;
     const byId = new Map(fetched.map((row) => [row.id, row] as const));
@@ -159,6 +162,22 @@ function SummaryBody({
     day: "numeric",
     month: "long",
   });
+  if (failed) {
+    return (
+      <div className="flex flex-col items-center gap-3 p-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          {t("Couldn't load this day's tasks.", "Tugas hari itu gagal dimuat.")}
+        </p>
+        <button
+          type="button"
+          onClick={() => setAttempt((n) => n + 1)}
+          className="min-h-11 rounded-xl border px-4 text-sm font-medium active:bg-muted"
+        >
+          {t("Try again", "Coba lagi")}
+        </button>
+      </div>
+    );
+  }
   if (!summary) {
     return (
       <div className="flex flex-col gap-3 p-4">
