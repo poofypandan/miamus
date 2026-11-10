@@ -45,6 +45,8 @@ export interface FirstRun {
   linkedPhones: number;
   /** Not now. */
   dismiss: () => void;
+  /** Takes Not now back (the toast's Undo). */
+  undoDismiss: () => void;
   /** Closes the one-time "your home is set up" note. */
   close: () => void;
 }
@@ -59,7 +61,7 @@ export interface FirstRun {
  * owner comes back to the app: the usual way through step 3 is "send the
  * link on WhatsApp, wait, come back".
  */
-export function useFirstRun(): FirstRun {
+export function useFirstRun(active = true): FirstRun {
   const { logs, householdTasks, schedules, loading, memberProfile, memberProfileReady, activeHouseholdId, tenantReady } =
     useHousehold();
   const { petsOn } = useHouseholdProfile();
@@ -70,28 +72,61 @@ export function useFirstRun(): FirstRun {
   const ownerKey =
     tenantReady && memberProfileReady ? firstRunStorageKey(memberProfile?.id ?? activeHouseholdId) : null;
 
-  // undefined until read for this owner: nothing shows before that.
-  const [memory, setMemory] = useState<{ key: string; value: FirstRunMemory } | null>(null);
+  // Everything below is held with the key it was read for, so nothing from
+  // one household (or owner) leaks into another's card: a value for another
+  // key reads as not known yet.
+  const [memory, setMemory] = useState<Keyed<FirstRunMemory> | null>(null);
+  const [phonesRead, setPhonesRead] = useState<Keyed<number> | null>(null);
+  const [finishedRead, setFinishedRead] = useState<Keyed<boolean> | null>(null);
+  const [tickedRead, setTickedRead] = useState<Keyed<ReadonlySet<FirstRunStepId>> | null>(null);
+  const current = forKey(memory, ownerKey);
+  const phones = forKey(phonesRead, ownerKey) ?? null;
+  const finishedChore = forKey(finishedRead, ownerKey) ?? null;
+  const ticked = forKey(tickedRead, ownerKey) ?? NONE_TICKED;
+
   useEffect(() => {
     if (ownerKey) setMemory({ key: ownerKey, value: readMemory(ownerKey) });
   }, [ownerKey]);
-  const current = memory && memory.key === ownerKey ? memory.value : undefined;
 
-  const past = isPastFirstRun({ chores: householdTasks, logs: logs.length });
   const closed = current === "dismissed" || current === "finished" || current === "completed";
+  // What's loaded already settles it, when it can.
+  const pastOnScreen = isPastFirstRun({ chores: householdTasks, logs: logs.length });
+  const open = !!ownerKey && current !== undefined && !closed && !pastOnScreen;
 
-  // Linked phones: null until known. A failed read counts as none linked,
-  // so the card still shows (step 3 just stays open).
-  const [phones, setPhones] = useState<number | null>(null);
-  const wantsPhones = current !== undefined && !closed && !past;
+  // Ever finished a chore, on any date: once per owner key, only while the
+  // checklist could still show. A failed read counts as no.
   useEffect(() => {
-    if (!wantsPhones) return;
+    if (!open || !ownerKey || finishedChore !== null) return;
+    let live = true;
+    dataProvider
+      .hasFinishedChore()
+      .catch(() => false)
+      .then((value) => live && setFinishedRead({ key: ownerKey, value }));
+    return () => {
+      live = false;
+    };
+  }, [open, ownerKey, finishedChore]);
+
+  // Linked phones: null until known. A failed read counts as none linked, so
+  // the card still shows (step 3 just stays open). Read again when the owner
+  // comes back to the app, but only while none is linked yet and Today is
+  // on the Day view, where the card lives.
+  const wantsPhones = open && active && finishedChore === false && (phones === null || phones === 0);
+  useEffect(() => {
+    if (!wantsPhones || !ownerKey) return;
     let live = true;
     const load = () => {
       dataProvider
         .listLinkedPhones()
-        .then((list) => live && setPhones(list.length))
-        .catch(() => live && setPhones((known) => known ?? 0));
+        .then((list) => list.length)
+        .catch(() => null)
+        .then((count) => {
+          if (!live) return;
+          setPhonesRead((known) => ({
+            key: ownerKey,
+            value: count ?? (known?.key === ownerKey ? known.value : 0),
+          }));
+        });
     };
     load();
     const onVisible = () => {
@@ -102,7 +137,7 @@ export function useFirstRun(): FirstRun {
       live = false;
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [wantsPhones]);
+  }, [wantsPhones, ownerKey]);
 
   const raw = useMemo(
     () =>
@@ -112,24 +147,32 @@ export function useFirstRun(): FirstRun {
         chores: householdTasks,
         petRoutines: petsOn ? schedules.length : 0,
         logs: logs.length,
+        finishedChore,
       }),
-    [allProfiles, phones, householdTasks, petsOn, schedules.length, logs.length]
+    [allProfiles, phones, householdTasks, petsOn, schedules.length, logs.length, finishedChore]
   );
 
   // A step once ticked stays ticked for the visit: Today reads chores around
   // the day on screen, and a first chore set for today shouldn't untick when
   // the owner looks at tomorrow.
-  const [ticked, setTicked] = useState<ReadonlySet<FirstRunStepId>>(new Set());
   useEffect(() => {
+    if (!ownerKey) return;
     const fresh = raw.filter((step) => step.done && !ticked.has(step.id));
-    if (fresh.length > 0) setTicked(new Set([...ticked, ...fresh.map((step) => step.id)]));
-  }, [raw, ticked]);
+    if (fresh.length > 0) {
+      setTickedRead({ key: ownerKey, value: new Set([...ticked, ...fresh.map((step) => step.id)]) });
+    }
+  }, [raw, ticked, ownerKey]);
   const steps = useMemo(
     () => raw.map((step) => (step.done || ticked.has(step.id) ? { ...step, done: true } : step)),
     [raw, ticked]
   );
 
-  const ready = !loading && current !== undefined && allProfiles !== null && (closed || past || phones !== null);
+  const past = pastOnScreen || finishedChore === true;
+  const ready =
+    !loading &&
+    current !== undefined &&
+    allProfiles !== null &&
+    (closed || pastOnScreen || (finishedChore !== null && (past || phones !== null)));
   const view: FirstRunView = ready ? firstRunView(steps, current ?? null) : "hidden";
 
   useEffect(() => {
@@ -142,7 +185,7 @@ export function useFirstRun(): FirstRun {
   }, [ready, ownerKey, current, steps, view]);
 
   const remember = useCallback(
-    (value: "dismissed" | "finished") => {
+    (value: Exclude<FirstRunMemory, null>) => {
       if (!ownerKey) return;
       writeMemory(ownerKey, value);
       setMemory({ key: ownerKey, value });
@@ -150,12 +193,28 @@ export function useFirstRun(): FirstRun {
     [ownerKey]
   );
 
+  const staff = useMemo(() => staffOf(allProfiles), [allProfiles]);
+
   return {
     view,
     steps,
-    staff: staffOf(allProfiles),
+    staff,
     linkedPhones: phones ?? 0,
     dismiss: () => remember("dismissed"),
+    // Not now's Undo: back to the checklist, as already seen.
+    undoDismiss: () => remember("shown"),
     close: () => remember("finished"),
   };
 }
+
+interface Keyed<T> {
+  key: string;
+  value: T;
+}
+
+/** A value read for `key`, or undefined when it was read for another (or none). */
+function forKey<T>(read: Keyed<T> | null, key: string | null): T | undefined {
+  return read && key && read.key === key ? read.value : undefined;
+}
+
+const NONE_TICKED: ReadonlySet<FirstRunStepId> = new Set();

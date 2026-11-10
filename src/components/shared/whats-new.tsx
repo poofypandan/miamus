@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import {
   STAFF_TIP_CLOSED_ON_KEY,
@@ -108,8 +109,7 @@ function closedOn(): string | null {
 }
 
 function todayKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return formatDateLocal(new Date());
 }
 
 /**

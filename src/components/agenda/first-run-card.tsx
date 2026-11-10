@@ -208,7 +208,10 @@ export function FirstRunCard({
           type="button"
           onClick={() => {
             firstRun.dismiss();
-            toast(t("Hidden. Staff and invites are in the Household tab.", "Disembunyikan. Staf dan undangan ada di tab Rumah."));
+            toast(t("Hidden. Staff and invites are in the Household tab.", "Disembunyikan. Staf dan undangan ada di tab Rumah."), {
+              duration: 6000,
+              action: { label: t("Undo", "Batalkan"), onClick: firstRun.undoDismiss },
+            });
           }}
           className="min-h-11 rounded-lg px-2 text-[13px] font-medium text-muted-foreground active:bg-muted"
         >

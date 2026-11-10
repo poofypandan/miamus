@@ -108,9 +108,15 @@ test("Bahasa Indonesia: Nanti saja hides the checklist for good, and the welcome
   await expect(card).toContainText("Tambah staf");
   await expect(card.getByRole("link", { name: "Tambah Orang" })).toBeVisible();
 
+  // Tapped by mistake: the toast's Batalkan brings it back.
   await card.getByRole("button", { name: "Nanti saja" }).click();
   await expect(card).toHaveCount(0);
   await expect(page.getByText("Disembunyikan. Staf dan undangan ada di tab Rumah.")).toBeVisible();
+  await page.getByRole("button", { name: "Batalkan" }).click();
+  await expect(card).toBeVisible();
+
+  await card.getByRole("button", { name: "Nanti saja" }).click();
+  await expect(card).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Tambah Tugas" })).toBeVisible();
 
   await page.reload();
@@ -139,6 +145,48 @@ test("a household already past setup never sees it", async ({ context, page }) =
   });
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Today" })).toBeVisible({ timeout: 20_000 });
+  await expect(checklist(page)).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Your home is set up" })).toHaveCount(0);
+});
+
+test("an older household whose only finished work is a one-off chore from weeks ago never sees it", async ({
+  context,
+  page,
+}) => {
+  const chore = (over: Record<string, unknown>) => ({
+    household_id: HOUSEHOLD_ID,
+    notes: null,
+    category: "cleaning",
+    assigned_to: STAFF_ID,
+    due_time: null,
+    photo_url: null,
+    created_at: "2026-10-01T00:00:00Z",
+    recurrence: "none",
+    recurrence_until: null,
+    parent_task_id: null,
+    requires_supervision: false,
+    before_photo_url: null,
+    after_photo_url: null,
+    location_id: null,
+    spot: null,
+    ...over,
+  });
+  // Nothing finished in what Today loads: today's chore is still open, and
+  // the finished one is a one-off from October, outside every read.
+  const chores = [
+    chore({ id: "00000000-0000-4000-8000-0000000b1101", title: "Siram tanaman", due_date: today(), status: "pending", completed_by: null, completed_at: null }),
+    chore({ id: "00000000-0000-4000-8000-0000000b1102", title: "Cuci gorden", due_date: "2026-10-05", status: "completed", completed_by: STAFF_ID, completed_at: "2026-10-05T03:00:00Z" }),
+  ];
+  await installStub(context, {
+    owner: { locale: "en" },
+    firstRun: true,
+    household: { hasPets: false, pets: false },
+    staff: [SARI],
+    linkedPhones: [{ id: "device-1", linked_at: "2026-10-01T01:00:00Z", last_seen_at: "2026-11-10T01:00:00Z" }],
+    chores,
+  });
+  await page.goto("/dashboard");
+  await expect(page.getByText("Siram tanaman")).toBeVisible({ timeout: 20_000 });
   await expect(checklist(page)).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Your home is set up" })).toHaveCount(0);
 });

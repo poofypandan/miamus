@@ -67,6 +67,10 @@ describe("first-run steps", () => {
       "done",
     ]);
     expect(isPastFirstRun({ chores: [], logs: 1 })).toBe(true);
+    // A chore finished on a day Today hasn't loaded still counts (Claude review, #62).
+    expect(isPastFirstRun({ chores: [], logs: 0, finishedChore: true })).toBe(true);
+    expect(isPastFirstRun({ chores: [], logs: 0, finishedChore: null })).toBe(false);
+    expect(doneIds({ finishedChore: true })).toContain("done");
     expect(isPastFirstRun({ chores: [{ assigned_to: null, status: "pending" }], logs: 0 })).toBe(false);
   });
 });

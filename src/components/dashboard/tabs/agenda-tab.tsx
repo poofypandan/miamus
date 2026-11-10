@@ -145,7 +145,8 @@ export function AgendaTab() {
   }
 
   // "Set up your home" (audit B1, item 3): until the first task is finished.
-  const firstRun = useFirstRun();
+  // Reads only on the Day view, where the card lives.
+  const firstRun = useFirstRun(range === "day");
   // The Week view's every-day matrix (Phase 143). Held here rather than in the
   // view, which remounts on every page-turn: paging back through weeks to
   // check whether evening doses were missed should not fold it up each time.

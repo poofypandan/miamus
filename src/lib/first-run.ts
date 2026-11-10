@@ -42,6 +42,12 @@ export interface FirstRunInput {
   petRoutines: number;
   /** Routine logs on record (any, by anyone). */
   logs: number;
+  /**
+   * Whether the household has ever finished a chore, on any date
+   * (dataProvider.hasFinishedChore); null while not known. `chores` alone
+   * can't say: it holds only the days around the one on screen.
+   */
+  finishedChore?: boolean | null;
 }
 
 /** Staff: on the roster, not an admin (migrations/106), not archived (109). */
@@ -55,8 +61,10 @@ export function staffOf(people: FirstRunPerson[] | null): FirstRunPerson[] {
  * never sees the checklist, and a new one is done with it the moment its
  * first task is finished.
  */
-export function isPastFirstRun(input: Pick<FirstRunInput, "chores" | "logs">): boolean {
-  return input.logs > 0 || input.chores.some((chore) => chore.status === "completed");
+export function isPastFirstRun(input: Pick<FirstRunInput, "chores" | "logs" | "finishedChore">): boolean {
+  return (
+    input.logs > 0 || input.finishedChore === true || input.chores.some((chore) => chore.status === "completed")
+  );
 }
 
 export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
