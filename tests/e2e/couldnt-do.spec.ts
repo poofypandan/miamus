@@ -113,6 +113,12 @@ test("staff say a chore couldn't be done, take it back with Batalkan, and say it
   await expect(again.getByTestId("couldnt-do-note")).toContainText("Tidak bisa dikerjakan: sudah dikerjakan orang lain");
   await expect(again.getByText("Ternyata sudah bisa? Selesaikan seperti biasa.")).toBeVisible();
   await expect(again.getByRole("button", { name: "Tidak bisa dikerjakan" })).toHaveCount(0);
+
+  // Still inside the 5 minutes, long after the toast: Batalkan on the note itself.
+  await again.getByTestId("couldnt-do-note").getByRole("button", { name: "Batalkan" }).click();
+  await expect.poll(() => stub.exceptions.length).toBe(0);
+  await expect(again.getByTestId("couldnt-do-note")).toHaveCount(0);
+  await expect(again.getByRole("button", { name: "Tidak bisa dikerjakan" })).toBeVisible();
 });
 
 test("staff say a pet wouldn't take its medicine", async ({ context, page }) => {

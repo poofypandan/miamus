@@ -659,54 +659,102 @@ grant execute on function public.chore_days_open(date) to service_role;
 -- Routine slots still to do on p_day, as buildAgenda (scheduleEngine.ts)
 -- reads them: active schedules of pets not at the clinic, fixed times or
 -- interval slots ("weekly" isn't expanded, as in the app). A single-slot
--- schedule — every one the app creates — is done by any log that day; an
--- interval schedule's first N slots count as done for N logs.
+-- schedule — every one the app creates — is done by any log that day. A
+-- multi-slot one matches each slot, earliest first, to the nearest unclaimed
+-- log within half its interval (3 hours for fixed times), exactly as
+-- buildAgenda does (Codex, PR #71): counting logs would mark the wrong slot.
 create or replace function public.routine_slots_open(p_day date)
 returns table (household_id uuid, schedule_id uuid, entity_id uuid, pet_name text, title text, slot_time time)
-language sql
+language plpgsql
 stable
 set search_path = ''
 as $$
-  with active as (
-    select s.id, s.entity_id, s.title, s.frequency_type, s.fixed_times, s.start_time, s.end_time, s.interval_hours,
-           e.household_id, e.name as pet_name
-      from public.master_schedules s
-      join public.task_entities e on e.id = s.entity_id
-     where s.is_active
-       and (s.created_at at time zone 'Asia/Jakarta')::date <= p_day
-       and (s.expires_at is null or s.expires_at >= p_day)
+declare
+  s record;
+  slots time[];
+  marks int[];
+  claimed boolean[];
+  win numeric;
+  slot time;
+  slot_min int;
+  best int;
+  best_diff numeric;
+  diff numeric;
+  i int;
+begin
+  for s in
+    select ms.id, ms.entity_id, ms.title, ms.frequency_type, ms.fixed_times, ms.start_time, ms.end_time,
+           ms.interval_hours, e.household_id, e.name as pet_name
+      from public.master_schedules ms
+      join public.task_entities e on e.id = ms.entity_id
+     where ms.is_active
+       and (ms.created_at at time zone 'Asia/Jakarta')::date <= p_day
+       and (ms.expires_at is null or ms.expires_at >= p_day)
        and e.status is distinct from 'admitted'
        and e.household_id is not null
-  ),
-  slots as (
-    select a.*, f.slot::time as slot_time
-      from active a
-     cross join lateral unnest(a.fixed_times) as f(slot)
-     where a.frequency_type = 'fixed_time'
-    union all
-    select a.*, g.slot::time
-      from active a
-     cross join lateral generate_series(
-       p_day + a.start_time, p_day + a.end_time, make_interval(hours => a.interval_hours)
-     ) as g(slot)
-     where a.frequency_type = 'interval'
-       and a.start_time is not null and a.end_time is not null and coalesce(a.interval_hours, 0) > 0
-  ),
-  ranked as (
-    select sl.*, row_number() over (partition by sl.id, sl.entity_id order by sl.slot_time) as n
-      from slots sl
-  ),
-  logged as (
-    select l.schedule_id, l.entity_id, count(*) as n
-      from public.task_logs l
-     where l.schedule_id is not null
-       and (l.completed_at at time zone 'Asia/Jakarta')::date = p_day
-     group by l.schedule_id, l.entity_id
-  )
-  select r.household_id, r.id, r.entity_id, r.pet_name, r.title, r.slot_time
-    from ranked r
-    left join logged lg on lg.schedule_id = r.id and lg.entity_id = r.entity_id
-   where r.n > coalesce(lg.n, 0);
+  loop
+    if s.frequency_type = 'fixed_time' then
+      slots := array(select t from unnest(s.fixed_times) as t order by t);
+    elsif s.frequency_type = 'interval' and s.start_time is not null and s.end_time is not null
+          and coalesce(s.interval_hours, 0) > 0 then
+      slots := array(
+        select g::time
+          from generate_series(p_day + s.start_time, p_day + s.end_time, make_interval(hours => s.interval_hours)) as g
+         order by 1
+      );
+    else
+      continue;
+    end if;
+    if coalesce(cardinality(slots), 0) = 0 then
+      continue;
+    end if;
+
+    -- That day's logs for this pet, as minutes of the Jakarta day, earliest first.
+    marks := array(
+      select (extract(hour from (l.completed_at at time zone 'Asia/Jakarta')) * 60
+              + extract(minute from (l.completed_at at time zone 'Asia/Jakarta')))::int as m
+        from public.task_logs l
+       where l.schedule_id = s.id
+         and l.entity_id = s.entity_id
+         and (l.completed_at at time zone 'Asia/Jakarta')::date = p_day
+       order by 1
+    );
+
+    if cardinality(slots) = 1 then
+      if coalesce(cardinality(marks), 0) = 0 then
+        household_id := s.household_id; schedule_id := s.id; entity_id := s.entity_id;
+        pet_name := s.pet_name; title := s.title; slot_time := slots[1];
+        return next;
+      end if;
+      continue;
+    end if;
+
+    win := case when s.frequency_type = 'interval' and coalesce(s.interval_hours, 0) > 0
+                then s.interval_hours * 60 / 2.0 else 180 end;
+    claimed := array_fill(false, array[greatest(coalesce(cardinality(marks), 0), 1)]);
+    foreach slot in array slots loop
+      slot_min := extract(hour from slot)::int * 60 + extract(minute from slot)::int;
+      best := null;
+      best_diff := null;
+      for i in 1 .. coalesce(cardinality(marks), 0) loop
+        if not claimed[i] then
+          diff := abs(marks[i] - slot_min);
+          if diff <= win and (best_diff is null or diff < best_diff) then
+            best := i;
+            best_diff := diff;
+          end if;
+        end if;
+      end loop;
+      if best is null then
+        household_id := s.household_id; schedule_id := s.id; entity_id := s.entity_id;
+        pet_name := s.pet_name; title := s.title; slot_time := slot;
+        return next;
+      else
+        claimed[best] := true;
+      end if;
+    end loop;
+  end loop;
+end;
 $$;
 revoke all on function public.routine_slots_open(date) from public, anon, authenticated;
 grant execute on function public.routine_slots_open(date) to service_role;

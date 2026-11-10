@@ -632,6 +632,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 exception={exception}
                 medicine={medicine}
                 petName={dogs.length > 1 ? item.entityName : undefined}
+                allowWithdraw
               />
             ))}
           {allExplained && (

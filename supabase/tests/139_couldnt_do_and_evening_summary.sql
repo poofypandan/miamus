@@ -369,6 +369,26 @@ select pg_temp.ok((select n from runs) = 1
                   and not exists (select 1 from pushes where user_id = '00000000-0000-0000-0000-0000000139a1'),
   'Sari on leave with her chores paused: her laundry isn''t listed');
 
+-- ---- Slots matched as Today matches them (Codex, PR #71) ------------------------------
+-- Potty every 4 hours from 08:00 to 16:00, with one log at 12:05: the 12:00
+-- slot is done, 08:00 and 16:00 are open (not 08:00 done and 12:00 open).
+insert into public.master_schedules (id, entity_id, title, module, frequency_type, start_time, end_time, interval_hours, is_active, created_at)
+values ('00000000-0000-0000-0000-000000013904', '00000000-0000-0000-0000-0000000139e1', 'Potty', 'pet', 'interval',
+        '08:00', '16:00', 4, true, now() - interval '7 days');
+insert into public.task_logs (schedule_id, entity_id, module, completed_at)
+values ('00000000-0000-0000-0000-000000013904', '00000000-0000-0000-0000-0000000139e1', 'pet',
+        (pg_temp.today() + time '12:05') at time zone 'Asia/Jakarta');
+select pg_temp.ok((select array_agg(slot_time order by slot_time) from public.routine_slots_open(pg_temp.today())
+                    where schedule_id = '00000000-0000-0000-0000-000000013904') = array['08:00'::time, '16:00'::time],
+  'an interval routine: the logged 12:00 slot is done, 08:00 and 16:00 are open');
+insert into public.task_logs (schedule_id, entity_id, module, completed_at)
+values ('00000000-0000-0000-0000-000000013904', '00000000-0000-0000-0000-0000000139e1', 'pet',
+        (pg_temp.today() + time '07:50') at time zone 'Asia/Jakarta');
+select pg_temp.ok((select array_agg(slot_time order by slot_time) from public.routine_slots_open(pg_temp.today())
+                    where schedule_id = '00000000-0000-0000-0000-000000013904') = array['16:00'::time],
+  '... and a 07:50 log settles 08:00');
+delete from public.master_schedules where id = '00000000-0000-0000-0000-000000013904';
+
 -- ---- 90 days, photos, export ---------------------------------------------------------
 insert into public.task_exceptions (id, household_id, chore_id, occurs_on, reason, photo_url)
 values ('00000000-0000-0000-0000-00000139ee03', '00000000-0000-0000-0000-0000000139f1', '00000000-0000-0000-0000-0000000139d6',

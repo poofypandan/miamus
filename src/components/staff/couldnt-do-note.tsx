@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { CircleSlash, ShoppingBasket } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { CircleSlash, Loader2, ShoppingBasket, Undo2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SaveStillWaitingError } from "@/lib/offline-queue";
+import { withdrawTaskException } from "@/lib/task-exceptions-store";
 import { PhotoLightbox } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
-import { ownerReasonLabel, staffReasonLabel } from "@/lib/couldnt-do";
+import { WITHDRAW_WINDOW_MS, canWithdraw, ownerReasonLabel, staffReasonLabel } from "@/lib/couldnt-do";
 import { photoSrc } from "@/lib/photos";
 import { formatTime } from "@/lib/time";
 import type { TaskException } from "@/types/database";
@@ -23,18 +27,48 @@ export function CouldntDoNote({
   locale = "id",
   medicine = false,
   petName,
+  allowWithdraw = false,
 }: {
   exception: TaskException;
   locale?: "en" | "id";
   medicine?: boolean;
   /** Routines: which pet it was about. */
   petName?: string;
+  /**
+   * Staff sheets: Batalkan while the 5 minutes last (D3; Codex, PR #71), so
+   * a mistake noticed after the toast is gone can still be taken back.
+   */
+  allowWithdraw?: boolean;
 }) {
   const id = locale === "id";
   const { inventoryItems } = useHousehold();
   const { allProfiles } = useStaffProfiles();
   const nameOf = useStaffNameLookup(allProfiles, id ? "Seseorang" : "Someone");
   const [viewing, setViewing] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  // Re-checked as time passes, so the button goes when the window closes.
+  const [now, setNow] = useState(() => Date.now());
+  const open = allowWithdraw && canWithdraw(exception, now);
+  useEffect(() => {
+    if (!open) return;
+    const end = new Date(exception.created_at).getTime() + WITHDRAW_WINDOW_MS;
+    const timer = setTimeout(() => setNow(Date.now()), Math.max(1000, end - Date.now()));
+    return () => clearTimeout(timer);
+  }, [open, exception.created_at, now]);
+
+  async function withdraw() {
+    setWithdrawing(true);
+    try {
+      if (await withdrawTaskException(exception.id)) toast("Dibatalkan.");
+      else toast.error("Sudah lewat 5 menit, tidak bisa dibatalkan.");
+    } catch (err) {
+      if (err instanceof SaveStillWaitingError) toast.error("Masih dikirim. Coba lagi sebentar.");
+      else toast.error("Gagal membatalkan. Coba lagi.");
+    } finally {
+      setWithdrawing(false);
+      setNow(Date.now());
+    }
+  }
   const who = exception.staff_id ? nameOf(exception.staff_id) : null;
   const when = formatTime(new Date(exception.created_at), locale);
   const reason =
@@ -80,6 +114,11 @@ export function CouldntDoNote({
           <ShoppingBasket className="size-3.5 shrink-0" aria-hidden />
           {id ? `Yang habis: ${item}` : `Ran out: ${item}`}
         </p>
+      )}
+      {open && (
+        <Button variant="outline" className="min-h-11 w-full bg-white" disabled={withdrawing} onClick={() => void withdraw()}>
+          {withdrawing ? <Loader2 className="animate-spin" /> : <Undo2 />} Batalkan
+        </Button>
       )}
       {exception.photo_url && (
         <PhotoLightbox

@@ -318,7 +318,7 @@ function FinishChoreBody({
             </p>
           )}
 
-          {!done && exception && <CouldntDoNote exception={exception} />}
+          {!done && exception && <CouldntDoNote exception={exception} allowWithdraw />}
 
           {done ? (
             <>
