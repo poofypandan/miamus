@@ -55,12 +55,14 @@ export async function readSessionState(): Promise<SessionState> {
  * Resolves once this device has a session: at once if it already has one,
  * otherwise when auth-js reports one (a sign-in, or a renewal that finally
  * got through). Never rejects; with no sign-in it simply never resolves, and
- * the request waiting on it is never sent.
+ * the request waiting on it is never sent. `signal` stops listening (a screen
+ * that unmounted); the promise then stays pending.
  */
-export function waitForSession(): Promise<void> {
+export function waitForSession(signal?: AbortSignal): Promise<void> {
   const client = supabase;
   if (!client) return Promise.resolve();
   return new Promise((resolve) => {
+    if (signal?.aborted) return;
     let done = false;
     const { data } = client.auth.onAuthStateChange((_event, session) => {
       if (done || !session) return;
@@ -69,9 +71,13 @@ export function waitForSession(): Promise<void> {
       // whatever runs next will call back into it.
       setTimeout(() => {
         data.subscription.unsubscribe();
-        resolve();
+        if (!signal?.aborted) resolve();
       }, 0);
     });
+    signal?.addEventListener("abort", () => {
+      done = true;
+      data.subscription.unsubscribe();
+    }, { once: true });
   });
 }
 

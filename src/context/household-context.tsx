@@ -1299,14 +1299,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // is the safety net, not the main path.
   useEffect(() => {
     if (!signedOut) return;
-    let cancelled = false;
-    void waitForSession().then(() => {
-      if (cancelled) return;
+    const stop = new AbortController();
+    void waitForSession(stop.signal).then(() => {
       reloadTenant().catch((err) => console.warn("Household load after sign-in failed — retrying", err));
     });
-    return () => {
-      cancelled = true;
-    };
+    return () => stop.abort();
   }, [signedOut, reloadTenant]);
 
   // What the stepper reads its starting point from; see adjustInventoryQuantity.

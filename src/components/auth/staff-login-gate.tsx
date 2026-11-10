@@ -221,6 +221,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
 
   useEffect(() => {
     let live = true;
+    const stop = new AbortController();
     // Checked first for the same reason as in refresh(): with the session out
     // of reach, the query would go out with only the public key and RLS would
     // answer with no names at all — shown below as "nobody is registered,
@@ -232,7 +233,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
         // Without a session the roster read would go out with only the
         // public key and be refused. Wait for one instead (a sign-in in
         // another tab, or a renewal that finally gets through).
-        if (state === "none") await waitForSession();
+        if (state === "none") await waitForSession(stop.signal);
         if (!live) return [];
         if (state === "none") setNotLinked(false);
         return dataProvider.listStaffProfiles();
@@ -256,6 +257,7 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
       });
     return () => {
       live = false;
+      stop.abort();
     };
   }, [attempt]);
 
