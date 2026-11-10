@@ -81,7 +81,14 @@ little; it's to *do work* with the little it asks.
 - **Staff phones**: *Lapor kerusakan* (Repairs) and *Makanan masuk* (Food)
   in the Lapor sheet; pet routines and Catat Ekstra (already hidden without
   pets, 162).
-- **Bills and upkeep reminders** are sent by migration 137's function.
+- **Pushes and reminders by module**: `notify_chores_due` (137) sends the
+  07:00 reminder for *every* chore with a reminder, bills (`category =
+  'bill'`) among them; `notify_food_expiring` and `notify_food_from_staff`
+  (123–124) are Food's; `notify_urgent_repair` (130) is Repairs'.
+- **Views in the URL**: `?chores=` (`use-chores-view.ts`: today · rooms ·
+  repairs) and `?kitchen=` (`use-kitchen-view.ts`: Food when absent, `buy`
+  for Shopping). Kakak's tools: `create_chore` (with a `bill` category),
+  `add_to_shopping_list`, `add_pet_routine`, `add_food`, `ask_question`.
 - **What's new** (`src/lib/whats-new.ts`): 55 entries in four days
   (evaluation); the new budget is one a week.
 
@@ -205,9 +212,17 @@ menambahkannya."
 - **Switching off** (D6): at once (soft sync, no reload), with a toast and
   **Batalkan** (Undo). If there's open work, one line under the row says
   what stays: "3 open repairs stay saved. Staff can't report new ones while
-  this is off." Data is never deleted; reminders for it stop; staff buttons
-  go; Kakak loses its tools for it. **Pets keeps 162's rule** (archive pets
-  first), because its tab disappears.
+  this is off." Data is never deleted. **Pets keeps 162's rule** (archive
+  pets first), because its tab disappears.
+
+**What "off" does, feature by feature** (the PR A checklist):
+
+| Off | Owner screens | A link to the hidden view | Staff phones | Pushes | Kakak |
+| --- | --- | --- | --- | --- | --- |
+| **Repairs** | no Repairs pill on Chores; no repair lines on Today; the wrench count on Rooms hides | `?chores=repairs` falls back to Chores → Today (in `use-chores-view.ts`, like `moduleFromParam` for tabs) | no *Lapor kerusakan* | `notify_urgent_repair` skips the household (a repair saved from a stale screen waits for Repairs to come back) | nothing to change (no repair tool) |
+| **Bills and upkeep** | no checklist; **chores with `category = 'bill'` hide** from Chores and Today (they stay saved, with their payments) | — | bill chores hide from the staff list too | `notify_chores_due` skips **only `category = 'bill'` chores**; every other chore's reminder still goes | `create_chore` no longer offers the `bill` category |
+| **Food at home** | no Food pill; Kitchen opens on Shopping; no food lines on Today | no `?kitchen` (the old default) and any Food link open Shopping (in `use-kitchen-view.ts`) | no *Makanan masuk*; Dapur opens on Belanja | `notify_food_expiring` and `notify_food_from_staff` skip the household | `add_food` left out of the tool list |
+| **Pets** | as 162 (tab, Today lines, supplies shelf) | as 162 (`moduleFromParam`) | as 162 | pet routine proposals: as 162 | as 162 (`add_pet_routine` left out) |
 
 ## Offers at the moment of need (D7)
 
@@ -353,8 +368,13 @@ reserved; 172 may reserve its own).
   (`not_admin`); refuses a null `p_on` (`bad_value`) and unknown features
   (the check). Upserts with `set_at`, `set_by`. `revoke all … from public,
   anon;` `grant execute … to authenticated, service_role;`.
-- **Reminders respect the switch**: 137's Bills and upkeep reminder
-  function skips households with `bills` off.
+- **Pushes respect the switch** (table above): `notify_chores_due` gains a
+  condition that drops `category = 'bill'` chores for households with
+  `bills` off (never the whole household: other chores' reminders still
+  go); `notify_food_expiring`, `notify_food_from_staff` and
+  `notify_urgent_repair` skip households with `food` / `repairs` off. Each
+  is re-created from its latest definition, keeping its grants, with a test
+  that it skips and that the others still send.
 - **"Off" isn't enforced on normal writes.** Off hides; it doesn't lock. A
   stale staff screen that reports a repair while Repairs is off saves it,
   and the owner sees it when Repairs is back.
@@ -388,7 +408,7 @@ execute neither function).
 
 | PR | What | Migration | Size |
 | --- | --- | --- | --- |
-| **A, build now** | `src/lib/features.ts` (rows, defaults, which pill and staff button each hides); a `useHouseholdFeatures()` hook beside `useHouseholdProfile()` (cache on device, no flash); Household → **Features** replaces Who lives here; switches wired for Repairs, Bills and upkeep, Food at home and Pets; staff hides; Kakak's tool list respects the switches; the bills reminder skips; sign-up screen 2 handing off to 172; privacy line; glossary rows; one What's new entry | **145** | Small–medium |
+| **A, build now** | `src/lib/features.ts` (rows, defaults, which pill and staff button each hides); a `useHouseholdFeatures()` hook beside `useHouseholdProfile()` (cache on device, no flash); Household → **Features** replaces Who lives here; switches wired for Repairs, Bills and upkeep, Food at home and Pets; staff hides; Kakak's tool list respects the switches; the four push functions respect them; the Chores and Kitchen view fallbacks; sign-up screen 2 handing off to 172; privacy line; glossary rows; one What's new entry | **145** | Small–medium |
 | later | each optional feature (closet, kitchen amounts, recipes, menu) joins Features off, with the offer component built by the first | its own | — |
 | later, after interviews | people records, Elders in Care, their routines; Kids after parent interviews | its own | Large |
 | dropped for now | health, workouts, nutrition per person, basic nutrition | — | — |
@@ -408,7 +428,10 @@ on: they're back; no reload), Codex until clean, migration local → staging
   don't use. Nothing is deleted." / "Rumah → Fitur: matikan yang tidak Anda
   pakai. Tidak ada yang dihapus." Shown in Household, not on Today.
 - **New households**: no card (the stop rule; Features is in their
-  Household list from the start).
+  Household list from the start). "New" is the evaluation's test: created
+  less than 14 days ago **or** first-run setup not done (the B1 checklist
+  still showing). The card shows only to owners of households past both,
+  so a household that signs up after the deploy never sees it.
 - **Staff**: none.
 
 ## Stop-rules check
