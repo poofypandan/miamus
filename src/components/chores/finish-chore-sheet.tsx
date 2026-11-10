@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Camera, Check, CheckCircle2, CloudOff, CloudUpload, Eye, Hand, Loader2 } from "lucide-react";
+import { AlertTriangle, Camera, Check, CheckCircle2, CloudOff, CloudUpload, Eye, Hand, Loader2, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -284,10 +284,16 @@ function FinishChoreBody({
               <RepairNotes repairId={repair.id} locale="id" asStaff />
             </div>
           )}
+          {/* The instruction, readable (audit B1): normal ink under a small
+              label, line breaks kept as the owner typed them. */}
           {task.notes && (
-            <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
-              {task.notes}
-            </p>
+            <div className="flex flex-col gap-0.5 rounded-xl border bg-muted/40 p-3">
+              <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                <NotebookPen className="size-3 shrink-0" aria-hidden />
+                Catatan
+              </p>
+              <p className="text-sm leading-snug break-words whitespace-pre-line text-gray-900">{task.notes}</p>
+            </div>
           )}
 
           {supervised && (
@@ -487,7 +493,7 @@ function ProofStep({
           <p className="text-sm font-semibold">
             {title} <span className="font-normal text-red-600">· wajib</span>
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             {url && takenAt ? `Diambil ${formatTime(takenAt)}` : hint}
           </p>
           {status && (

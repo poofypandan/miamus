@@ -8,6 +8,7 @@ import {
   Clock,
   CloudUpload,
   Eye,
+  NotebookPen,
   Pencil,
   Repeat,
   UserRound,
@@ -40,6 +41,7 @@ const COPY = {
     anytime: "Anytime today",
     unassigned: "Anyone",
     forYou: "For you",
+    note: "Note",
     supervision: "Wait for an owner",
     done: "Done",
     waiting: "Waiting to send",
@@ -49,6 +51,7 @@ const COPY = {
     anytime: "Kapan saja hari ini",
     unassigned: "Siapa saja",
     forYou: "Untuk Anda",
+    note: "Catatan",
     supervision: "Tunggu pemilik rumah",
     done: "Selesai",
     waiting: "Menunggu dikirim",
@@ -138,9 +141,26 @@ export function ChoreCard({
           </span>
           {/* Where, straight under what (Phase 135) — kept on a finished
               compact card too: it is how one chore is told from another. */}
-          {locationName && <LocationTag name={locationName} muted={done} className="mt-0.5" />}
+          {/* Readable on purpose (audit B1, item 5): the room at 13px and
+              wrapped, never cut off; the note at 14px in normal ink under a
+              small label. The note was the smallest, lightest text on the
+              card, and it is the instruction. */}
+          {locationName && <LocationTag name={locationName} muted={done} wrap className="mt-0.5 text-[13px]" />}
           {task.notes && !(compact && done) && (
-            <span className="mt-0.5 block text-xs text-muted-foreground">{task.notes}</span>
+            <span className="mt-1.5 flex flex-col gap-0.5 rounded-lg bg-muted/60 px-2.5 py-1.5">
+              <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                <NotebookPen className="size-3 shrink-0" aria-hidden />
+                {t.note}
+              </span>
+              <span
+                className={cn(
+                  "text-sm leading-snug break-words whitespace-pre-line",
+                  done ? "text-muted-foreground" : "text-gray-900"
+                )}
+              >
+                {task.notes}
+              </span>
+            </span>
           )}
         </span>
         {done && <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", DONE_TONE.check)} />}
@@ -212,8 +232,8 @@ export function ChoreCard({
       {/* Only ever shown on today's list, where it is the explanation for a
           chore whose own date has passed (see expandChores). */}
       {overdue && !done && (
-        <p className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-          <AlertTriangle className="size-3 shrink-0" />
+        <p className="flex items-center gap-1 text-[13px] font-medium text-muted-foreground">
+          <AlertTriangle className="size-3.5 shrink-0" />
           {t.overdue(dayKeyLabel(occurrence.date, today, locale))}
         </p>
       )}

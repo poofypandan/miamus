@@ -1200,6 +1200,16 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return (data ?? []) as LinkedPhone[];
   },
+  async hasFinishedChore() {
+    const { data, error } = await client()
+      .from("household_tasks")
+      .select("id")
+      .eq("household_id", getActiveHouseholdId())
+      .eq("status", "completed")
+      .limit(1);
+    if (error) throw error;
+    return (data ?? []).length > 0;
+  },
   async removeLinkedPhone(id) {
     const { data, error } = await client().rpc("remove_linked_phone", {
       p_household_id: getActiveHouseholdId(),

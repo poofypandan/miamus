@@ -137,6 +137,10 @@ people are **staf** and **admin**.
 | Undo (toast action) | **Batalkan** | Already the word in every Undo toast; never "Urungkan". |
 | Add photos (optional), owner sheet | **Tambah foto (opsional)** | Owner-only form, so "opsional" (staff forms say "boleh dikosongkan"). |
 | Both photos, or none | **Dua foto, atau tidak sama sekali** | Phase 163: an admin's own chore takes both photos or neither. |
+| Set up your home (first-run checklist) | **Siapkan rumah Anda** | Audit B1: the card on a new household's Today. Steps: Beri nama rumah · Tambah staf · Hubungkan HP staf · Beri tugas pertama · Lihat hasilnya. |
+| Not now | **Nanti saja** | Hides a card for good; plainer than "Lain kali". |
+| Your home is set up | **Rumah Anda sudah siap** | The one-time note after the first finished task. |
+| Note (on a chore, the label above it) | **Catatan** | Audit B1: staff cards and sheets show the owner's note under this label. |
 
 ## Formatting
 
