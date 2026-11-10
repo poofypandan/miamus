@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -28,6 +28,10 @@ import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { buildEveningSummary, ownerReasonLabel, type SummaryRow } from "@/lib/couldnt-do";
 import { isAdmitted } from "@/lib/pets";
 import { cn } from "@/lib/utils";
+import { dataProvider } from "@/lib/data";
+import { weekStartOf } from "@/lib/unified-agenda";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { HouseholdTask } from "@/types/database";
 
 /**
  * The evening summary (Phase 165, D7 A): what couldn't be done, what isn't
@@ -96,7 +100,7 @@ function SummaryBody({
   const t = useT();
   const locale = useOwnerLocale();
   const formatTime = useFormatTime();
-  const { householdTasks, leaveRequests, pets, schedules, logs, routineProposals } = useHousehold();
+  const { householdTasks, leaveRequests, pets, schedules, logs, routineProposals, selectedDate } = useHousehold();
   const { exceptions } = useTaskExceptions();
   const { allProfiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
@@ -106,11 +110,39 @@ function SummaryBody({
   // Today's "due by now" moves with the clock while the sheet is open.
   const clock = useMinuteClock(date === todayKey);
 
+  // The day's own chores (Codex, PR #71): the household holds only the week
+  // on screen, and the push may open this on another week. Read for the day,
+  // with the household's copy laid over it (fresher for this phone's saves).
+  const inWeek =
+    formatDateLocal(weekStartOf(new Date(`${date}T00:00:00`))) === formatDateLocal(weekStartOf(selectedDate));
+  const [dayRows, setDayRows] = useState<{ date: string; rows: HouseholdTask[] } | null>(null);
+  useEffect(() => {
+    let live = true;
+    dataProvider
+      .listHouseholdTasks(date, date, todayKey)
+      .then((rows) => live && setDayRows({ date, rows }))
+      .catch((err) => {
+        console.warn("Summary chores not loaded", err);
+        if (live) setDayRows({ date, rows: [] });
+      });
+    return () => {
+      live = false;
+    };
+  }, [date, todayKey]);
+  const fetched = dayRows?.date === date ? dayRows.rows : null;
+  const rows = useMemo(() => {
+    if (!fetched) return inWeek ? householdTasks : null;
+    const byId = new Map(fetched.map((row) => [row.id, row] as const));
+    if (inWeek) for (const row of householdTasks) byId.set(row.id, row);
+    return [...byId.values()];
+  }, [fetched, inWeek, householdTasks]);
+
   const summary = useMemo(() => {
+    if (!rows) return null;
     const now = new Date(clock);
     return buildEveningSummary({
       date,
-      chores: applyLeaveTriage(expandChores({ rows: householdTasks, date, today: todayKey }), leaveRequests),
+      chores: applyLeaveTriage(expandChores({ rows, date, today: todayKey }), leaveRequests),
       groups: buildAgenda({ date, entities: pets, schedules, logs, now }),
       exceptions,
       leaves: leaveRequests,
@@ -119,13 +151,22 @@ function SummaryBody({
       // Today: due by now, as the push counts. An earlier day: all of it.
       untilMinutes: date === todayKey ? now.getHours() * 60 + now.getMinutes() : null,
     });
-  }, [date, clock, householdTasks, todayKey, leaveRequests, pets, schedules, logs, exceptions, routineProposals]);
+  }, [date, clock, rows, todayKey, leaveRequests, pets, schedules, logs, exceptions, routineProposals]);
 
   const heading = new Date(`${date}T00:00:00`).toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
+  if (!summary) {
+    return (
+      <div className="flex flex-col gap-3 p-4">
+        <Skeleton className="h-6 w-1/2 self-center" />
+        <Skeleton className="h-14 w-full rounded-xl" />
+        <Skeleton className="h-14 w-full rounded-xl" />
+      </div>
+    );
+  }
   const nothing =
     summary.couldnt.length === 0 && summary.notDone.length === 0 && summary.leaves.length === 0 && summary.suggestions === 0;
 
