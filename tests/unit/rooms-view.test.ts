@@ -172,6 +172,11 @@ describe("schedule labels", () => {
     expect(scheduleLabel(chore({ title: "a", recurrence: "daily" }), "id")).toBe("Setiap hari");
     expect(scheduleLabel(chore({ title: "a", recurrence: "monthly", due_date: "2026-11-14" }), "en")).toBe("Monthly, 14th");
     expect(scheduleLabel(chore({ title: "a", due_date: "2026-11-14" }), "en")).toBe("Sat 14 Nov");
+    // Every N weeks or months (Phase 164, Codex PR #60).
+    expect(scheduleLabel(chore({ title: "a", recurrence: "monthly", recurrence_interval: 3, due_date: "2026-11-20" }), "en")).toBe("Every 3 months, 20th");
+    expect(scheduleLabel(chore({ title: "a", recurrence: "monthly", recurrence_interval: 6, due_date: "2026-11-20" }), "id")).toBe("Tiap 6 bulan, tgl 20");
+    expect(scheduleLabel(chore({ title: "a", recurrence: "monthly", recurrence_interval: 12, due_date: "2026-08-31" }), "en")).toBe("Every year, 31 Aug");
+    expect(scheduleLabel(chore({ title: "a", recurrence: "weekly", recurrence_interval: 2, due_date: "2026-11-12" }), "en")).toBe("Every 2 weeks, Thu");
   });
 
   it("joins a room's days in week order", () => {

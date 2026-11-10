@@ -13,7 +13,8 @@ import { defineConfig, devices } from "@playwright/test";
  * project would send its requests past the stub, so every test also fails if
  * any request reaches a supabase.co host — they are blocked, not sent.
  */
-const PORT = 3100;
+// E2E_PORT: a free port when another checkout's server already holds 3100.
+const PORT = Number(process.env.E2E_PORT) || 3100;
 
 export default defineConfig({
   testDir: "tests/e2e",

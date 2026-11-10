@@ -19,7 +19,7 @@ import type {
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { DataProvider } from "./types";
-import { isTemplate, rolloverFloorFor } from "@/lib/chore-recurrence";
+import { isTemplate, longRepeatFloorFor } from "@/lib/chore-recurrence";
 import { isSetUp } from "@/lib/rooms-view";
 
 const STORAGE_KEY = "maimus_mock_db_v1";
@@ -538,6 +538,11 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(updated);
   },
+  async listWrittenOccurrences(from, to) {
+    return delay(
+      loadDB().householdTasks.filter((t) => !!t.parent_task_id && t.due_date >= from && t.due_date <= to)
+    );
+  },
   async listSetUpChores(today) {
     // Same rows listHouseholdTasks reads from, filtered the way the Rooms
     // view's isSetUp does.
@@ -550,8 +555,11 @@ export const mockProvider: DataProvider = {
     // is still pending from before it (the rollover).
     // Plus, on today, the reads Phase 126 added: repeats that ended within
     // the last month, and the last month's written occurrences of repeats.
+    // Reaching back a year for every repeat's written days is cheap in
+    // memory; the Supabase provider reads that far only for long repeats
+    // (every 3 months, every year; migrations/137).
     const showsToday = from <= today && today <= to;
-    const rolloverFloor = rolloverFloorFor(today);
+    const rolloverFloor = longRepeatFloorFor(today);
     const repeatsFrom = showsToday && rolloverFloor < from ? rolloverFloor : from;
     const tasks = loadDB().householdTasks.filter((task) => {
       if (task.due_date >= from && task.due_date <= to) return true;
@@ -1142,6 +1150,9 @@ export const mockProvider: DataProvider = {
   },
   async listLinkedPhones() {
     return delay([]);
+  },
+  async hasFinishedChore() {
+    return delay(loadDB().householdTasks.some((task) => task.status === "completed"));
   },
   async removeLinkedPhone() {
     return delay(false);
