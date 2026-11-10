@@ -6,7 +6,7 @@ import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
 import { dataProvider } from "@/lib/data";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
-import type { ChoreOccurrence } from "@/lib/chore-recurrence";
+import { storedTakeoverRowId, type ChoreOccurrence } from "@/lib/chore-recurrence";
 
 /** Both photos, or none (migrations/136). */
 export interface MyChorePhotos {
@@ -30,7 +30,7 @@ export interface MyChorePhotos {
  * queue's retry.
  */
 export function useFinishMyChore() {
-  const { finishChore, updateHouseholdTaskStatus, pendingIds } = useHousehold();
+  const { finishChore, updateHouseholdTask, updateHouseholdTaskStatus, pendingIds, memberProfile } = useHousehold();
   const t = useT();
   // Read at the moment of a tap, not from the render that made the toast.
   const pendingRef = useRef(pendingIds);
@@ -83,6 +83,11 @@ export function useFinishMyChore() {
     async (occurrence: ChoreOccurrence, photos?: MyChorePhotos): Promise<"sent" | "queued" | null> => {
       const title = occurrence.task.title;
       try {
+        // A chore covered for someone on leave is mine on screen but still
+        // theirs in the database: take it over first, as its own edit, or
+        // the photo-free completion is refused (migrations/136).
+        const takeover = photos ? null : storedTakeoverRowId(occurrence, memberProfile?.id);
+        if (takeover && memberProfile) await updateHouseholdTask(takeover, { assigned_to: memberProfile.id });
         const { queued, task } = await finishChore({
           templateId: occurrence.template.id,
           date: occurrence.date,
@@ -116,7 +121,7 @@ export function useFinishMyChore() {
         return null;
       }
     },
-    [finishChore, reopen, explain, t]
+    [finishChore, updateHouseholdTask, memberProfile, reopen, explain, t]
   );
 
   return { finish, reopen };

@@ -454,9 +454,30 @@ export function myOccurrences(
 /**
  * Whether "My tasks" may finish chores on the day being viewed (D4 A): today
  * (and the carried-over chores it shows) yes; a future day is read-only so a
- * chore isn't ticked off before it's due; a past day is read-only like the
- * rest of a past Today.
+ * chore isn't ticked off before it's due; on a past day nothing new is
+ * finished, but a done chore can still be marked not done (a carried-over
+ * chore finished today is only found on its own day).
  */
 export function myTasksMode(viewing: string, today: string): "today" | "future" | "past" {
   return viewing === today ? "today" : viewing > today ? "future" : "past";
+}
+
+/**
+ * The stored row an admin has to take over before finishing it photo-free,
+ * or null (Phase 163; Codex, PR #58).
+ *
+ * Leave cover (lib/leave.ts) shows an absent staff member's chore as the
+ * cover person's, but only on screen: the row itself still names the absent
+ * person, and migrations/136 lets an admin skip the photos only on a chore
+ * stored as theirs or nobody's. So when what My tasks shows and what is
+ * stored disagree, the takeover is written first, as its own edit (the
+ * two-step path 136 allows), and then the completion.
+ */
+export function storedTakeoverRowId(
+  occurrence: ChoreOccurrence,
+  memberId: string | null | undefined
+): string | null {
+  if (!memberId || !occurrence.row || occurrence.task.assigned_to !== memberId) return null;
+  const stored = occurrence.row.assigned_to ?? null;
+  return stored && stored !== memberId ? occurrence.row.id : null;
 }

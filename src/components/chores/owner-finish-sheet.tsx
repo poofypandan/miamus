@@ -252,7 +252,10 @@ function OwnerFinishBody({
                   : t("Mark done", "Tandai selesai")}
             </Button>
           )}
-          {done && occurrence.row && mode !== "past" && (
+          {/* Past days too (Codex, PR #58): a carried-over chore finished
+              today leaves today's list, and its own day is where it can be
+              opened again once the Undo toast has gone. */}
+          {done && occurrence.row && (
             <Button variant="outline" onClick={markNotDone} disabled={busy} className="min-h-12 rounded-xl">
               {busy ? <Loader2 className="animate-spin" /> : <RotateCcw />} {t("Mark not done", "Tandai belum selesai")}
             </Button>

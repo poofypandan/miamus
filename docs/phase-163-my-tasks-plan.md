@@ -120,8 +120,14 @@ own chores**, and keeps them required for staff exactly as now:
   the done row: the sheet has **Mark not done**.
 - **Which days:** today and carried-over chores can be finished. On a future
   day the card shows the rows without circles ("Tomorrow, 2 tasks"), so a
-  chore isn't ticked off before it's due. On a past day, the card is
-  read-only, like the rest of a past Today.
+  chore isn't ticked off before it's due. On a past day nothing new
+  is finished, but a done chore's sheet still has **Mark not done**: a
+  carried-over chore finished today leaves today's list and is found on its
+  own day (Codex, PR #58).
+- **Covering for someone on leave:** a chore shown in My tasks because I
+  cover a staff member's leave is still stored under them. Finishing it
+  photo-free first takes it over (assigned to me, its own edit), then
+  completes it: the two-step path migration 136 allows (Codex, PR #58).
 - **The staff view is unchanged.** An owner who switches to Staff still sees
   the staff experience, photos and all; it remains the way to see what a
   staff phone sees.

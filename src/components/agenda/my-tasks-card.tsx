@@ -29,7 +29,8 @@ import { cn } from "@/lib/utils";
  *
  * Today: a circle per open row finishes it (D3 A: no photos needed for an
  * admin's own chore); the row itself opens the sheet. A future day is
- * read-only, with no circles (D4 A); so is a past day.
+ * read-only, with no circles (D4 A). A past day has no circles either, but its
+ * sheet can still mark a done chore not done.
  *
  * Owner-facing, in the owner's language.
  */

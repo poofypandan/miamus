@@ -166,6 +166,61 @@ test("tomorrow's own chores show read-only; an admin with none sees no card", as
   expect(laundry).toMatchObject({ status: "pending" });
 });
 
+test("a chore covered for someone on leave is taken over, then finished without photos", async ({ context, page }) => {
+  const today = ymd(dateIn(0));
+  // Ari's one-off, stored as Ari's; Ari is on approved leave and the admin covers.
+  const sweep = chore({ title: "Sweep the terrace", assigned_to: STAFF_ID });
+  const leave = {
+    id: "00000000-0000-4000-8000-000000016380",
+    household_id: HOUSEHOLD_ID,
+    staff_id: STAFF_ID,
+    start_date: today,
+    end_date: today,
+    status: "approved",
+    fallback_action: "reassign",
+    fallback_assignee_id: OWNER_PROFILE_ID,
+    ended_on: null,
+    created_at: "2026-11-01T00:00:00Z",
+  };
+  const stub = await installStub(context, { owner: { locale: "en" }, chores: [sweep], leaves: [leave] });
+  await page.goto("/dashboard");
+
+  const card = myTasks(page);
+  await expect(card).toContainText("Sweep the terrace", { timeout: 20_000 });
+  await card.getByRole("button", { name: "Mark done: Sweep the terrace" }).click();
+  await expect(page.getByText("Done: Sweep the terrace")).toBeVisible();
+  // Taken over first (its own edit), then completed photo-free: the stub
+  // applies migrations/136's rule and would refuse it the other way round.
+  expect(sweep).toMatchObject({ status: "completed", assigned_to: OWNER_PROFILE_ID, completed_by: OWNER_PROFILE_ID });
+  const patches = stub.writes.filter(([method, table]) => method === "PATCH" && table === "household_tasks");
+  expect(patches).toHaveLength(2);
+});
+
+test("a carried-over chore finished today can be marked not done from its own day", async ({ context, page }) => {
+  const yesterday = dateIn(-1);
+  const bill = chore({ title: "Pay the electricity bill", due_date: ymd(yesterday) });
+  await installStub(context, { owner: { locale: "en" }, chores: [bill] });
+  await page.goto("/dashboard");
+
+  const card = myTasks(page);
+  await expect(card).toContainText("carried over", { timeout: 20_000 });
+  await card.getByRole("button", { name: "Mark done: Pay the electricity bill" }).click();
+  await expect(page.getByText("Done: Pay the electricity bill")).toBeVisible();
+  expect(bill).toMatchObject({ status: "completed", completed_by: OWNER_PROFILE_ID });
+
+  // Its own day: no circles, but the sheet can still reopen it.
+  await page
+    .getByRole("button")
+    .filter({ hasText: new RegExp(`^\\D*${yesterday.getDate()}$`) })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Your task is done" }).click();
+  await expect(card.getByRole("button", { name: /Mark done/ })).toHaveCount(0);
+  await card.getByRole("button", { name: /^Anytime Pay the electricity bill/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Mark not done" }).click();
+  await expect.poll(() => bill.status).toBe("pending");
+});
+
 test("staff phones still need both photos", async ({ context, page }) => {
   const sweep = chore({ title: "Sapu teras", assigned_to: STAFF_ID });
   await installStub(context, { stored: freshSession(), staffPhone: true, chores: [sweep] });

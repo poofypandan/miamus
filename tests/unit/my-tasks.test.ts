@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expandChores, myOccurrences, myTasksMode } from "@/lib/chore-recurrence";
+import { expandChores, myOccurrences, myTasksMode, storedTakeoverRowId } from "@/lib/chore-recurrence";
 import { jobPhotos, type ChoreFinishJob } from "@/lib/offline-queue";
 import type { HouseholdTask } from "@/types/database";
 
@@ -119,5 +119,34 @@ describe("a chore save with no photos", () => {
 
   it("still waits on both when it has them", () => {
     expect(jobPhotos({ ...job, before: "b.jpg", after: "a.jpg" })).toEqual(["b.jpg", "a.jpg"]);
+  });
+});
+
+describe("storedTakeoverRowId", () => {
+  it("names the row when leave cover shows it as mine but it is stored as someone else's", () => {
+    const row = chore({ assigned_to: ARI });
+    const [occurrence] = day([row]);
+    const covered = { ...occurrence, task: { ...occurrence.task, assigned_to: ME } };
+    expect(storedTakeoverRowId(covered, ME)).toBe(row.id);
+  });
+
+  it("is null when it is already stored as mine or nobody's", () => {
+    const [mine] = day([chore({ assigned_to: ME })]);
+    expect(storedTakeoverRowId(mine, ME)).toBeNull();
+    const [nobody] = day([chore({ assigned_to: null })]);
+    expect(storedTakeoverRowId({ ...nobody, task: { ...nobody.task, assigned_to: ME } }, ME)).toBeNull();
+  });
+
+  it("is null for a day not written yet (it is written as mine)", () => {
+    const template = chore({ assigned_to: ARI, recurrence: "daily", due_date: "2026-11-01" });
+    const [virtual] = day([template]);
+    expect(virtual.row).toBeNull();
+    expect(storedTakeoverRowId({ ...virtual, task: { ...virtual.task, assigned_to: ME } }, ME)).toBeNull();
+  });
+
+  it("is null without a roster row, or when it isn't shown as mine", () => {
+    const [occurrence] = day([chore({ assigned_to: ARI })]);
+    expect(storedTakeoverRowId(occurrence, null)).toBeNull();
+    expect(storedTakeoverRowId(occurrence, ME)).toBeNull();
   });
 });

@@ -90,6 +90,8 @@ export interface StubOptions {
   pushKey?: string;
   /** Leave the Add to Home Screen tip showing (owner phones have it closed by default). */
   installTip?: boolean;
+  /** leave_requests rows the household already has (Phase 163: leave cover). */
+  leaves?: Record<string, unknown>[];
 }
 
 /**
@@ -297,6 +299,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: one ? (rows[0] ?? null) : rows });
       }
+      if (table === "leave_requests" && options.leaves) return route.fulfill({ json: options.leaves });
       if (table === "household_locations" && options.roomsFail?.on) {
         return route.fulfill({ status: 500, json: { message: "stub: rooms unavailable" } });
       }
