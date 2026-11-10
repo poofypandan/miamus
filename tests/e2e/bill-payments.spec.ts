@@ -232,7 +232,7 @@ test("a bill covered for someone on leave on its first day still asks for both p
   await expect(sheet.getByRole("button", { name: "Mark paid" })).toBeDisabled();
 });
 
-test("if removing the payment fails, the bill stays paid with its payment (Codex, PR #65)", async ({ context, page }) => {
+test("marking a bill not paid is all or nothing: a dropped call changes neither (Codex, PR #65)", async ({ context, page }) => {
   const pbb = chore({ title: "PBB", status: "completed", completed_by: OWNER_PROFILE_ID, completed_at: new Date().toISOString() });
   const stub = await installStub(context, {
     owner: { locale: "en" },
@@ -258,7 +258,7 @@ test("if removing the payment fails, the bill stays paid with its payment (Codex
   await card.getByRole("button", { name: /PBB/ }).last().click();
   const sheet = page.getByRole("dialog");
 
-  stub.trouble.bill_payments = { drop: 1 };
+  stub.trouble["rpc/reopen_bill_day"] = { drop: 1 };
   await sheet.getByRole("button", { name: "Mark not done" }).click();
   await expect(page.getByText("No connection. Try again in a moment.")).toBeVisible();
   // Nothing half-done: still paid, payment kept.

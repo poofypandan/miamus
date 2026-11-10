@@ -351,6 +351,23 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       if (table === "household_locations" && options.rooms) return answerRooms(route, options.rooms);
       if (table === "repairs") return answerRepairs(route, repairs, who === OWNER);
       if (table === "repair_costs") return answerRepairCosts(route, repairCosts, who === OWNER);
+      // migrations/138: payment removed and day reopened together, owners only.
+      if (table === "rpc/reopen_bill_day") {
+        const taskId = request.postDataJSON()?.p_task_id;
+        const row = [...tasks, ...(options.chores ?? [])].find((t) => t.id === taskId);
+        if (who !== OWNER || !row) return route.fulfill({ status: 403, json: { code: "42501", message: "chore_not_updated" } });
+        const index = billPayments.findIndex((p) => p.task_id === taskId);
+        const payment = index === -1 ? null : billPayments.splice(index, 1)[0];
+        Object.assign(row, {
+          status: "pending",
+          completed_at: null,
+          completed_by: null,
+          photo_url: null,
+          before_photo_url: null,
+          after_photo_url: null,
+        });
+        return route.fulfill({ json: { task: row, payment } });
+      }
       if (table === "bill_payments") {
         billPaymentReads.push(who === OWNER ? "owner" : "other");
         return answerBillPayments(route, billPayments, who === OWNER);

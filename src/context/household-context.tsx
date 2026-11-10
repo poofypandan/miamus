@@ -70,6 +70,7 @@ import type {
   InventoryAuditWithStaff,
   ProposalStatus,
   HouseholdTask,
+  BillPayment,
   HouseholdTaskStatus,
   LeaveRequest,
 } from "@/types/database";
@@ -335,6 +336,11 @@ interface HouseholdContextValue {
       after_photo_url?: string | null;
     }
   ) => Promise<HouseholdTask>;
+  /**
+   * Owner-only. A paid bill's day marked not paid: payment and completion go
+   * together (migrations/138). Returns the removed payment, if any.
+   */
+  reopenBillDay: (id: string) => Promise<BillPayment | null>;
   /** Owner-only. Edits a chore's own fields; never its completion state. */
   updateHouseholdTask: (id: string, patch: UpdateHouseholdTaskInput) => Promise<HouseholdTask>;
   /** Owner-only. Skips a repeat's first day; null if it was finished or moved meanwhile. */
@@ -1479,6 +1485,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const reopenBillDay = useCallback(async (id: string) => {
+    const { task, payment } = await dataProvider.reopenBillDay(id);
+    setHouseholdTasks((prev) => prev.map((row) => (row.id === id ? task : row)));
+    return payment;
+  }, []);
+
   const updateHouseholdTask = useCallback(
     async (id: string, patch: UpdateHouseholdTaskInput) => {
       const updated = await dataProvider.updateHouseholdTask(id, patch);
@@ -1704,6 +1716,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteHouseholdTask,
       materialiseChoreOccurrence,
       updateHouseholdTaskStatus,
+      reopenBillDay,
       claimHouseholdTask,
       undoInventoryAlert,
       undoRoutineProposal,
@@ -1785,6 +1798,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       deleteHouseholdTask,
       materialiseChoreOccurrence,
       updateHouseholdTaskStatus,
+      reopenBillDay,
       claimHouseholdTask,
       undoInventoryAlert,
       undoRoutineProposal,

@@ -448,6 +448,12 @@ export interface DataProvider {
   ): Promise<BillPayment>;
   /** Owners only: removes a day's payment; returns what was removed, if any. */
   deleteBillPayment(taskId: string): Promise<BillPayment | null>;
+  /**
+   * A paid bill's day marked not paid: its payment removed and the day
+   * reopened in one transaction (migrations/138); the removed payment, if
+   * any, comes back so its receipt file can go.
+   */
+  reopenBillDay(taskId: string): Promise<{ task: HouseholdTask; payment: BillPayment | null }>;
   deleteReceipt(url: string): Promise<void>;
   /** Every note on the household's repairs, oldest first. */
   listRepairNotes(): Promise<RepairNote[]>;

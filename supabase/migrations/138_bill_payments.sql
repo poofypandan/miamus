@@ -29,8 +29,8 @@
 --        export is owners-only).
 --
 -- Privacy policy and legal.ts updated in the same PR (new personal data).
--- Additive: one constraint, one table, its indexes and policy, two functions, three
--- re-created, one cron job. No SECURITY DEFINER function a client can call
+-- Additive: one constraint, one table, its indexes and policy, three functions
+-- (reopen_bill_day, called by owners, runs as the caller), three re-created, one cron job. No SECURITY DEFINER function a client can call
 -- except the export, re-created as it was (owners only through
 -- caller_admin_household()); every function created or replaced revokes
 -- EXECUTE here.
@@ -122,6 +122,41 @@ create trigger bill_payments_server_fields
   for each row execute function public.bill_payments_server_fields();
 
 revoke all on function public.bill_payments_server_fields() from public, anon, authenticated;
+
+-- Marking a paid bill not paid (Undo, Mark not done): its payment goes and
+-- the day reopens, in one transaction, so neither half can happen without
+-- the other (Codex, PR #65). Not SECURITY DEFINER: it runs as the caller,
+-- under the tables' own policies (an owner's delete and update; anyone else's
+-- delete reaches nothing). Returns the reopened day and the removed payment
+-- (null if there was none), so the app can drop the receipt file.
+create or replace function public.reopen_bill_day(p_task_id uuid)
+returns jsonb
+language plpgsql
+set search_path = ''
+as $$
+declare
+  removed public.bill_payments;
+  reopened public.household_tasks;
+begin
+  delete from public.bill_payments where task_id = p_task_id returning * into removed;
+  -- As updateHouseholdTaskStatus(…, 'pending'): the whole completion goes.
+  update public.household_tasks
+     set status = 'pending', completed_at = null, completed_by = null,
+         photo_url = null, before_photo_url = null, after_photo_url = null
+   where id = p_task_id
+  returning * into reopened;
+  if reopened.id is null then
+    raise exception 'chore_not_updated' using errcode = '42501';
+  end if;
+  return jsonb_build_object(
+    'task', to_jsonb(reopened),
+    'payment', case when removed.id is null then null else to_jsonb(removed) end
+  );
+end;
+$$;
+
+revoke all on function public.reopen_bill_day(uuid) from public, anon;
+grant execute on function public.reopen_bill_day(uuid) to authenticated;
 
 -- --- 3. Kept 2 years ------------------------------------------------------------------
 -- Not SECURITY DEFINER: only its cron job (as its owner) and the service role

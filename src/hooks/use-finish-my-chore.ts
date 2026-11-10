@@ -8,7 +8,7 @@ import { dataProvider } from "@/lib/data";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
 import { coverTakeover, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { isBill, loadBillPayments } from "@/lib/bill-payments";
-import type { BillPayment, HouseholdTask } from "@/types/database";
+import type { HouseholdTask } from "@/types/database";
 
 /** Sent (with the saved row), kept on the phone to send, or not saved. */
 export type FinishOutcome = { outcome: "sent"; task: HouseholdTask } | { outcome: "queued" } | null;
@@ -35,7 +35,7 @@ export interface MyChorePhotos {
  * queue's retry.
  */
 export function useFinishMyChore() {
-  const { finishChore, updateHouseholdTaskStatus, pendingIds, memberProfile } = useHousehold();
+  const { finishChore, updateHouseholdTaskStatus, reopenBillDay, pendingIds, memberProfile } = useHousehold();
   const t = useT();
   // Read at the moment of a tap, not from the render that made the toast.
   const pendingRef = useRef(pendingIds);
@@ -72,37 +72,23 @@ export function useFinishMyChore() {
         toast.info(t("Still sending. Try again in a moment.", "Masih dikirim. Coba lagi sebentar lagi."));
         return false;
       }
-      // A bill not paid after all: its amount and receipt go too (Phase 164
-      // PR B). The payment first, and the day reopens only if that worked,
-      // so a failed delete never leaves a payment on a bill not paid; if
-      // reopening then fails, the payment is put back. The receipt file is
-      // deleted only once both have gone through (Codex, PR #65).
-      let removed: BillPayment | null = null;
-      if (bill) {
-        try {
-          removed = await dataProvider.deleteBillPayment(rowId);
-        } catch (err) {
-          explain(err);
-          return false;
-        }
-      }
+      // A bill not paid after all: its payment and the completion go
+      // together, in one transaction, so a dropped connection can't leave
+      // one without the other (migrations/138; Codex, PR #65). The receipt
+      // file goes after, best effort; the nightly sweep is the safety net.
       try {
-        await updateHouseholdTaskStatus(rowId, "pending");
-      } catch (err) {
-        if (removed) {
-          void dataProvider
-            .saveBillPayment(rowId, { amount_idr: removed.amount_idr, receipt_url: removed.receipt_url })
-            .catch((restoreErr) => console.error("Could not put a bill payment back", restoreErr))
-            .finally(() => void loadBillPayments(true));
+        if (bill) {
+          const removed = await reopenBillDay(rowId);
+          if (removed?.receipt_url) {
+            void dataProvider.deleteReceipt(removed.receipt_url).catch((err) => console.error("Could not delete a receipt", err));
+          }
+          void loadBillPayments(true);
+        } else {
+          await updateHouseholdTaskStatus(rowId, "pending");
         }
+      } catch (err) {
         explain(err);
         return false;
-      }
-      if (bill) {
-        if (removed?.receipt_url) {
-          void dataProvider.deleteReceipt(removed.receipt_url).catch((err) => console.error("Could not delete a receipt", err));
-        }
-        void loadBillPayments(true);
       }
       // Photos the admin added are no use to a chore that is open again;
       // best effort, as with a deleted log's photo.
@@ -111,7 +97,7 @@ export function useFinishMyChore() {
       }
       return true;
     },
-    [updateHouseholdTaskStatus, explain, t]
+    [updateHouseholdTaskStatus, reopenBillDay, explain, t]
   );
 
   const finish = useCallback(

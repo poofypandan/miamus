@@ -994,6 +994,12 @@ export interface Database {
         Args: { p_household_id: string };
         Returns: string;
       };
+      // Marks a paid bill's day not paid: payment removed and day reopened in
+      // one transaction (migrations/138).
+      reopen_bill_day: {
+        Args: { p_task_id: string };
+        Returns: { task: HouseholdTask; payment: BillPayment | null };
+      };
       list_linked_phones: {
         Args: { p_household_id: string };
         Returns: { id: string; linked_at: string; last_seen_at: string }[];

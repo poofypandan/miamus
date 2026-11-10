@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import type { OrganiseRoomsMoved,
   HouseholdTask,
+  BillPayment,
   InventoryAuditLog,
   InventoryAuditWithStaff,
   InventoryItem,
@@ -896,6 +897,11 @@ export const supabaseProvider: DataProvider = {
       .single();
     if (error) throw error;
     return data;
+  },
+  async reopenBillDay(taskId) {
+    const { data, error, status } = await client().rpc("reopen_bill_day", { p_task_id: taskId });
+    if (error) throw withStatus(error, status);
+    return data as { task: HouseholdTask; payment: BillPayment | null };
   },
   async deleteBillPayment(taskId) {
     const { data, error } = await client().from("bill_payments").delete().eq("task_id", taskId).select();

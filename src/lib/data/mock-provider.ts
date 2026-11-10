@@ -785,6 +785,25 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(row);
   },
+  async reopenBillDay(taskId) {
+    const db = loadDB();
+    const payment = (db.billPayments ?? []).find((p) => p.task_id === taskId) ?? null;
+    const idx = db.householdTasks.findIndex((t) => t.id === taskId);
+    if (idx === -1) throw new Error(`Household task ${taskId} not found`);
+    const task: HouseholdTask = {
+      ...db.householdTasks[idx],
+      status: "pending",
+      completed_at: null,
+      completed_by: null,
+      photo_url: null,
+      before_photo_url: null,
+      after_photo_url: null,
+    };
+    db.householdTasks[idx] = task;
+    db.billPayments = (db.billPayments ?? []).filter((p) => p.task_id !== taskId);
+    saveDB(db);
+    return delay({ task, payment });
+  },
   async deleteBillPayment(taskId) {
     const db = loadDB();
     const existing = (db.billPayments ?? []).find((p) => p.task_id === taskId) ?? null;
