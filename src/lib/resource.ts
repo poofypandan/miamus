@@ -1,5 +1,6 @@
 import { use, useEffect, useSyncExternalStore } from "react";
 import { getActiveHouseholdId } from "@/lib/tenant";
+import { waitForSession } from "@/lib/auth/device-session";
 
 /**
  * Data a tab loads for itself, read through Suspense (Phase 125).
@@ -80,7 +81,10 @@ export function createResource<T>(load: () => Promise<T>) {
   function refresh(key: string): Promise<Settled<T>> {
     const entry = entryFor(key);
     if (entry.inflight) return entry.inflight;
-    const promise: Promise<Settled<T>> = load().then(
+    // Not before this device has a session: without one the request goes out
+    // with only the public key and RLS refuses it. A first read still stops
+    // holding the screen after FIRST_READ_MAX_WAIT_MS, as on a slow load.
+    const promise: Promise<Settled<T>> = waitForSession().then(load).then(
       (value) => ({ ok: true as const, value }),
       (error: unknown) => {
         console.error(error);
