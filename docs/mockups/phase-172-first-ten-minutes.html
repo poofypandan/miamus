@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First ten minutes mockups</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --okbg:rgba(16,185,129,.06); --okline:rgba(16,185,129,.3); --amber:#92400e; --amberbg:#fffbeb; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1100px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0 0 6px; color:var(--muted); max-width:720px; }
+  section.screen { max-width:1100px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:680px; }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:740px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone.tall { height:2060px; }
+  .phone.mid { height:900px; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
+  .owner { position:absolute; top:-2px; left:18px; background:#e5e7eb; color:#374151; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:40px; }
+  .brand { font-weight:600; font-size:17px; display:flex; gap:6px; align-items:center; }
+  .mark { width:24px; height:24px; display:block; }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:6px 12px; font-size:13px; color:var(--muted); font-weight:500; white-space:nowrap; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .ob { flex:1; overflow:hidden; padding:18px 18px 14px; display:flex; flex-direction:column; gap:12px; }
+  .ob > * { flex:none; }
+  .ob .spacer { flex:1; }
+  .obicon { width:44px; height:44px; border-radius:12px; background:var(--track); display:flex; align-items:center; justify-content:center; }
+  .obicon .ic { width:22px; height:22px; color:var(--ink2); }
+  .h { font-size:21px; font-weight:650; margin:0; letter-spacing:-.01em; }
+  .sub { font-size:13.5px; color:var(--muted); margin:-6px 0 0; }
+  .steps { display:flex; gap:4px; }
+  .steps i { flex:1; height:3px; border-radius:3px; background:#e5e7eb; }
+  .steps i.on { background:var(--primary); }
+  .dates { display:flex; gap:4px; }
+  .dates span { flex:1; text-align:center; padding:5px 0; border-radius:12px; font-size:11px; color:var(--muted); }
+  .dates span b { display:block; font-size:15px; color:var(--ink); }
+  .dates span.on { background:var(--primary); color:#fff; }
+  .dates span.on b { color:#fff; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .ic.xs { width:12px; height:12px; }
+  .ic.lg { width:22px; height:22px; }
+  .label { font-size:12.5px; font-weight:600; color:var(--ink2); margin-bottom:-6px; }
+  .field { border:1px solid var(--line); background:#fff; border-radius:12px; min-height:46px; padding:12px; font-size:14.5px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .field.typing { border-color:var(--ink); }
+  .field .ph { color:#9ca3af; }
+  .field .caret { width:1.5px; height:18px; background:var(--ink); margin-left:-6px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { border:1px solid var(--line); border-radius:999px; padding:6px 11px; font-size:12.5px; color:var(--ink2); background:#fff; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+  .chip.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .chip.on .ic { color:#fff; }
+  .chip.soon { color:#9ca3af; border-style:dashed; }
+  .chip.sm { padding:3px 9px; font-size:11.5px; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:50px; border-radius:12px; font-weight:600; font-size:14.5px; }
+  .btn.primary { background:var(--primary); color:#fff; }
+  .btn.primary .ic { color:#fff; }
+  .btn.outline { border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:500; }
+  .btn.sm { min-height:36px; font-size:12.5px; border-radius:10px; padding:0 10px; }
+  .link { text-align:center; font-size:13px; color:var(--ink2); font-weight:500; display:flex; align-items:center; justify-content:center; gap:4px; }
+  .fine { font-size:11.5px; color:var(--muted); line-height:1.45; }
+  .fine u { color:var(--ink2); }
+  .types { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .type { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:6px; min-height:118px; }
+  .type.on { border:1.5px solid var(--ink); box-shadow:0 0 0 3px rgba(17,24,39,.06); }
+  .type .ic { width:24px; height:24px; color:var(--ink2); }
+  .type b { font-size:13.5px; font-weight:600; line-height:1.25; }
+  .type span { font-size:11.5px; color:var(--muted); line-height:1.35; }
+  .kcard { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; align-items:center; gap:10px; }
+  .kcard .kav { width:36px; height:36px; border-radius:10px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
+  .kcard .kav .ic { color:var(--ink2); }
+  .kcard .t { flex:1; min-width:0; }
+  .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .t > b { font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .t > span { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .shape { background:#fff; border:1px solid var(--line); border-radius:14px; padding:6px 12px 10px; display:flex; flex-direction:column; gap:2px; }
+  .step { display:flex; align-items:center; justify-content:space-between; min-height:40px; font-size:13.5px; }
+  .step .ctl { display:flex; align-items:center; gap:10px; }
+  .step .ctl i { width:30px; height:30px; border-radius:999px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-style:normal; }
+  .step .ctl i .ic { width:14px; height:14px; color:var(--ink2); }
+  .step .ctl b { min-width:14px; text-align:center; font-variant-numeric:tabular-nums; }
+  .grp { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:4px 2px -4px; }
+  .list { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+  .room { display:flex; align-items:center; gap:10px; padding:9px 12px; border-top:1px solid var(--line); min-height:46px; }
+  .room:first-child { border-top:0; }
+  .room .t > b { font-weight:600; font-size:13.5px; }
+  .chore { display:flex; align-items:center; gap:10px; padding:6px 12px 6px 44px; min-height:42px; }
+  .chore .t > b { font-size:13px; }
+  .chore .t > span { font-size:11.5px; }
+  .chore .t > b, .chore .t > span, .scard .t > b, .scard .t > span { white-space:normal; }
+  .chore.off .t > b { color:#9ca3af; text-decoration:line-through; text-decoration-color:#d1d5db; }
+  .room.off .t > b { color:#9ca3af; }
+  .who { font-size:11px; color:var(--ink2); background:var(--track); border-radius:999px; padding:2px 8px; white-space:nowrap; flex:none; }
+  .who.any { color:var(--muted); }
+  .box { width:22px; height:22px; border-radius:6px; border:1.5px solid #9ca3af; flex:none; display:flex; align-items:center; justify-content:center; background:#fff; }
+  .box.on { background:var(--primary); border-color:var(--primary); }
+  .box.on .ic { color:#fff; width:14px; height:14px; }
+  .box.sm { width:19px; height:19px; border-radius:5px; }
+  .added { font-size:11.5px; color:var(--ok); display:flex; align-items:center; gap:3px; font-weight:500; white-space:nowrap; }
+  .added .ic { color:var(--ok); }
+  .foot { flex:none; background:#fff; border-top:1px solid var(--line); padding:10px 14px 12px; display:flex; flex-direction:column; gap:8px; }
+  .foot .sum { font-size:12px; color:var(--muted); text-align:center; }
+  .person { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  .person .nm { font-size:14.5px; display:flex; align-items:center; gap:8px; }
+  .person .nm .ic { color:#9ca3af; }
+  .person .chips .chip { padding:4px 9px; font-size:11.5px; }
+  .wa { background:#e7f6e9; border-radius:14px; padding:10px 12px; font-size:13px; color:#1f2937; line-height:1.45; border:1px solid #cfe9d3; }
+  .wa .u { color:#0b6bcb; word-break:break-all; }
+  .wahead { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:70px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:8px 16px 16px; display:flex; flex-direction:column; gap:12px; overflow:hidden; }
+  .sheet.low { top:300px; }
+  .sheet > * { flex:none; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto 2px; }
+  .sheet h3 { margin:0; font-size:17px; text-align:center; }
+  .sheet .lead { margin:-6px 0 0; font-size:13px; color:var(--muted); text-align:center; }
+  .micwrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 0 2px; }
+  .mic { width:76px; height:76px; border-radius:999px; background:var(--primary); display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 10px rgba(17,24,39,.06), 0 0 0 20px rgba(17,24,39,.03); }
+  .mic .ic { color:#fff; width:30px; height:30px; }
+  .listening { font-size:12.5px; color:var(--ink2); font-weight:500; }
+  .transcript { border:1px solid var(--ink); border-radius:12px; padding:10px 12px; font-size:13.5px; line-height:1.5; min-height:120px; }
+  .transcript .soft { color:#9ca3af; }
+  .consent { display:flex; gap:6px; font-size:11.5px; color:var(--muted); line-height:1.45; }
+  .consent .ic { margin-top:1px; }
+  .addall { background:#fff; border:1.5px solid var(--ink); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+  .addall .top { display:flex; gap:10px; align-items:center; }
+  .addall .kav { width:36px; height:36px; border-radius:10px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
+  .addall .kav .ic { color:var(--ink2); }
+  .counts { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12.5px; color:var(--ink2); }
+  .counts b { font-variant-numeric:tabular-nums; }
+  .guess { font-size:11px; color:var(--amber); background:var(--amberbg); border-radius:999px; padding:2px 8px; white-space:nowrap; flex:none; }
+  .firstrun { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:4px; }
+  .firstrun header { display:flex; align-items:baseline; justify-content:space-between; }
+  .firstrun h3 { margin:0; font-size:15px; }
+  .firstrun header span { font-size:12px; color:var(--muted); }
+  .frs { display:flex; align-items:center; gap:10px; min-height:36px; font-size:13.5px; }
+  .frs .ic { color:#9ca3af; }
+  .frs.done { color:var(--muted); }
+  .frs.done .ic { color:var(--ok); }
+  .frs.next { font-weight:600; }
+  .frs.next .ic { color:var(--ink); }
+  .frs em { font-style:normal; font-weight:400; color:var(--muted); font-size:12px; margin-left:auto; }
+  .quiet { display:flex; align-items:center; gap:8px; min-height:34px; padding:0 4px; font-size:13.5px; color:var(--ink2); }
+  .quiet span { flex:1; }
+  .dayh { margin:2px 0 0; font-size:14px; font-weight:600; }
+  .trow { display:flex; align-items:center; gap:10px; padding:8px 10px; min-height:52px; background:#fff; border:1px solid var(--line); border-radius:12px; }
+  .time { width:52px; flex:none; font-size:11.5px; color:#52525b; font-variant-numeric:tabular-nums; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+  .tip { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:13px; }
+  .tip span { flex:1; }
+  .vbtn { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); border-radius:10px; padding:6px 10px; font-size:12px; font-weight:600; color:var(--ink); background:#fff; white-space:nowrap; }
+  .vbtn .ic { color:var(--ink); width:15px; height:15px; }
+  .names { display:flex; flex-direction:column; gap:8px; }
+  .nbtn { background:#fff; border:1px solid var(--line); border-radius:14px; min-height:58px; display:flex; align-items:center; gap:12px; padding:0 14px; font-size:16px; font-weight:500; }
+  .nbtn .av { width:34px; height:34px; border-radius:999px; background:var(--track); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:var(--ink2); }
+  .nbtn.on { border:1.5px solid var(--ink); }
+  .nbtn .ic { margin-left:auto; color:#9ca3af; }
+  .scard { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; align-items:center; gap:10px; }
+  .scard .t > b { font-size:15px; }
+  .scard .go { border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:13px; font-weight:600; }
+  .video { background:#0f172a; border-radius:16px; aspect-ratio:9/16; width:100%; max-height:430px; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .video .mini { width:62%; height:78%; background:#f8fafc; border-radius:14px; display:flex; flex-direction:column; gap:6px; padding:10px; }
+  .video .mini i { display:block; height:10px; border-radius:4px; background:#e5e7eb; }
+  .video .mini i.d { background:#111827; width:60%; }
+  .video .cap { position:absolute; left:12px; right:12px; bottom:18px; background:rgba(0,0,0,.72); color:#fff; font-size:13px; text-align:center; border-radius:8px; padding:6px 8px; }
+  .video .bar { position:absolute; left:12px; right:12px; bottom:8px; height:3px; border-radius:3px; background:rgba(255,255,255,.25); }
+  .video .bar i { display:block; width:40%; height:100%; background:#fff; border-radius:3px; }
+  .note { font-size:12px; color:var(--muted); }
+  code { font-size:12px; background:#fff; border:1px solid var(--line); border-radius:4px; padding:0 4px; }
+  .pin { display:flex; gap:10px; justify-content:center; }
+  .pin i { width:46px; height:54px; border:1px solid var(--line); border-radius:12px; background:#fff; display:flex; align-items:center; justify-content:center; font-style:normal; font-size:22px; }
+  .pin i.f::after { content:""; width:12px; height:12px; border-radius:999px; background:var(--ink); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-trees" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></symbol>
+  <symbol id="i-building-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m10 8 6 4-6 4Z"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="i-paw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.05Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="mark" viewBox="0 0 512 512"><rect width="512" height="512" rx="114.5" fill="#171717"/><polyline points="112,214 256,104 400,214" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,400 152,262 256,354 360,262 360,400" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="page">
+  <h1>Phase 172 — The first 10 minutes</h1>
+  <p>Phone-width mockups for <code>docs/phase-172-first-ten-minutes-plan.md</code>, drawn with the recommended options (D1–D15 A). Owner screens: English left, Bahasa Indonesia right. Staff screens: Bahasa Indonesia only.</p>
+  <p>The path, in order: Google and language (unchanged); name and Who lives here (Phase 171), with no approval wait; What kind of home? (171 asks, 172 acts); the template review, untick; staff names, job chips, one WhatsApp message; or one voice note to Kakak with an Add all card; a calm first Today; staff pick their name.</p>
+</header>
+
+<main id="screens"></main>
+
+<script>
+const T = {
+  en: {
+    tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    day: "Day", week: "Week",
+    week7: [["Mon", 16], ["Tue", 17], ["Wed", 18], ["Thu", 19], ["Fri", 20], ["Sat", 21], ["Sun", 22]],
+    welcome: "Welcome to Miamus", nameLabel: "Name your household", namePh: "e.g. The Smith Residence", nameVal: "Rumah Wijaya",
+    who: "Who lives here?", pets: "Pets", kids: "Kids", elders: "Elders", soon: "Soon",
+    create: "Create household",
+    privacy: "Creating a household shares your Google name and email with Poofy Labs, who runs Miamus. ",
+    privacyLink: "Privacy",
+    homeH: "What kind of home?", homeSub: "We'll start you with the usual rooms and chores. You change anything next.",
+    types: [
+      ["i-trees", "House with a garden", "A pool, a carport, one or two floors"],
+      ["i-building", "Big house, several floors", "Three floors or more, a rooftop"],
+      ["i-building-2", "Apartment", "One floor, a balcony"],
+      ["i-house", "Something else", "Start small, or tell Kakak"],
+    ],
+    kakakCardT: "Tell Kakak about your home", kakakCardS: "One voice note, and Kakak makes the list. Free, once.",
+    cont: "Continue", skip: "Skip",
+    reviewH: "Your home", reviewSub: "Untick what you don't have.",
+    floors: "Floors", bedrooms: "Bedrooms", bathrooms: "Bathrooms",
+    has: ["Garden", "Pool", "Carport", "Rooftop", "Staff room", "Laundry room"],
+    g1: "LT1", g2: "LT2", gOut: "Outside", gBills: "Bills and upkeep",
+    every: "Every day", weekly: (d) => `Every week · ${d}`, twoweeks: (d) => `Every 2 weeks · ${d}`, monthly: "Every month · 1st",
+    any: "Anyone", added: "Added",
+    sum: "18 rooms · 46 chores · 6 bills", addN: "Add 70",
+    instead: "Tell Kakak instead", later: "Skip for now",
+    gloss: true,
+    staffH: "Your staff", staffSub: "Add their names. A job is optional: we'll give them the right chores.",
+    jobs: ["Cleaning", "Kitchen", "Laundry", "Garden", "Driver", "Pool"],
+    addAnother: "Add another",
+    sendWA: "Send one WhatsApp message", waHint: "Send this to your staff. Each person picks their name.",
+    watch: "Watch · 15 s",
+    waPreview: "What your staff receive (always in Indonesian)",
+    kH: "Tell Kakak about your home", kLead: "Say it the way you'd tell a friend.",
+    listening: "Listening…", kTyped: "Or type it",
+    consent: "Kakak sends what you say to Anthropic to make your list. Nothing is saved there for long. ",
+    make: "Make my list", kbTip: "On iPhone Home Screen: tap the mic on your keyboard and speak.",
+    kResT: "Kakak's list", kRes: [["18", "rooms"], ["46", "chores"], ["4", "staff"], ["3", "pets"], ["6", "bills"]],
+    addAll: "Add all 77", change: "Change something", guess: "Kakak's guess — check it",
+    hello: "Good morning, Rina",
+    frT: "Set up your home", frN: "3 of 5",
+    frSteps: [["Name your home", 1], ["Add staff", 1], ["Link a staff phone", 2, "1 of 4 linked"], ["Give them a first task", 1], ["See it done", 0]],
+    linked: "Sari linked her phone",
+    todayH: "Today", anytime: "Anytime",
+  },
+  id: {
+    tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    day: "Hari", week: "Minggu",
+    week7: [["Sen", 16], ["Sel", 17], ["Rab", 18], ["Kam", 19], ["Jum", 20], ["Sab", 21], ["Min", 22]],
+    welcome: "Selamat datang di Miamus", nameLabel: "Beri nama rumah Anda", namePh: "mis. Rumah Keluarga Wijaya", nameVal: "Rumah Wijaya",
+    who: "Siapa yang tinggal di sini?", pets: "Hewan", kids: "Anak", elders: "Lansia", soon: "Segera",
+    create: "Buat rumah",
+    privacy: "Membuat rumah membagikan nama dan email Google Anda kepada Poofy Labs, pengelola Miamus. ",
+    privacyLink: "Privasi",
+    homeH: "Seperti apa rumah Anda?", homeSub: "Kami siapkan ruangan dan tugas yang biasa. Semua bisa diubah setelah ini.",
+    types: [
+      ["i-trees", "Rumah dengan taman", "Ada kolam, carport, satu atau dua lantai"],
+      ["i-building", "Rumah besar bertingkat", "Tiga lantai atau lebih, ada rooftop"],
+      ["i-building-2", "Apartemen", "Satu lantai, ada balkon"],
+      ["i-house", "Lainnya", "Mulai dari yang sedikit, atau bilang ke Kakak"],
+    ],
+    kakakCardT: "Ceritakan rumah Anda ke Kakak", kakakCardS: "Satu pesan suara, Kakak buatkan daftarnya. Gratis, sekali.",
+    cont: "Lanjut", skip: "Lewati",
+    reviewH: "Rumah Anda", reviewSub: "Hapus centang yang tidak ada.",
+    floors: "Lantai", bedrooms: "Kamar tidur", bathrooms: "Kamar mandi",
+    has: ["Taman", "Kolam", "Carport", "Rooftop", "Kamar staf", "Ruang cuci"],
+    g1: "LT1", g2: "LT2", gOut: "Luar rumah", gBills: "Tagihan dan perawatan",
+    every: "Setiap hari", weekly: (d) => `Setiap minggu · ${d}`, twoweeks: (d) => `Setiap 2 minggu · ${d}`, monthly: "Setiap bulan · tgl 1",
+    any: "Siapa saja", added: "Sudah ditambahkan",
+    sum: "18 ruangan · 46 tugas · 6 tagihan", addN: "Tambah 70",
+    instead: "Bilang ke Kakak saja", later: "Lewati dulu",
+    gloss: false,
+    staffH: "Staf Anda", staffSub: "Tulis nama mereka. Tugas utama boleh dipilih: kami bagikan tugas yang sesuai.",
+    jobs: ["Bersih-bersih", "Dapur", "Cuci dan setrika", "Kebun", "Sopir", "Kolam"],
+    addAnother: "Tambah lagi",
+    sendWA: "Kirim satu pesan WhatsApp", waHint: "Kirim ke staf Anda. Masing-masing memilih namanya.",
+    watch: "Tonton · 15 detik",
+    waPreview: "Yang diterima staf (selalu dalam Bahasa Indonesia)",
+    kH: "Ceritakan rumah Anda ke Kakak", kLead: "Ceritakan seperti ke teman.",
+    listening: "Mendengarkan…", kTyped: "Atau ketik",
+    consent: "Kakak mengirim yang Anda ucapkan ke Anthropic untuk membuat daftar. Tidak disimpan lama di sana. ",
+    make: "Buatkan daftar", kbTip: "Di Layar Utama iPhone: ketuk mic di keyboard, lalu bicara.",
+    kResT: "Daftar dari Kakak", kRes: [["18", "ruangan"], ["46", "tugas"], ["4", "staf"], ["3", "hewan"], ["6", "tagihan"]],
+    addAll: "Tambah semua 77", change: "Ubah sesuatu", guess: "Tebakan Kakak — cek lagi",
+    hello: "Selamat pagi, Rina",
+    frT: "Siapkan rumah Anda", frN: "3 dari 5",
+    frSteps: [["Beri nama rumah", 1], ["Tambah staf", 1], ["Hubungkan HP staf", 2, "1 dari 4 terhubung"], ["Beri tugas pertama", 1], ["Lihat hasilnya", 0]],
+    linked: "HP Sari sudah terhubung",
+    todayH: "Hari ini", anytime: "Kapan saja",
+  },
+};
+
+const ic = (id, cls = "") => `<svg class="ic ${cls}"><use href="#${id}"/></svg>`;
+const box = (on, sm) => `<span class="box ${on ? "on" : ""} ${sm ? "sm" : ""}">${on ? ic("i-check") : ""}</span>`;
+const steps = (n) => `<div class="steps">${[1,2,3,4].map(i => `<i class="${i <= n ? "on" : ""}"></i>`).join("")}</div>`;
+
+function phone(inner, { cls = "", tag = "", who = "" } = {}) {
+  return `<div class="phone ${cls}">${tag ? `<span class="tag">${tag}</span>` : ""}${who ? `<span class="owner">${who}</span>` : ""}<div class="status"></div>${inner}</div>`;
+}
+function tabbar(t, on = 0) {
+  const icons = ["i-calendar", "i-paw", "i-clipboard", "i-pot", "i-house"];
+  return `<div class="tabbar">${t.tabs.map((n, i) => `<span class="${i === on ? "on" : ""}">${ic(icons[i])}${n}</span>`).join("")}</div>`;
+}
+
+// 1. Name screen (Phase 171 draws it; no request screen before it any more)
+function sName(t, l) {
+  return phone(`
+    <div class="ob">
+      ${steps(1)}
+      <div class="obicon">${ic("i-house")}</div>
+      <h3 class="h">${t.welcome}</h3>
+      <div class="label">${t.nameLabel}</div>
+      <div class="field typing"><span>${t.nameVal}</span><span class="caret"></span><span style="flex:1"></span></div>
+      <div class="label">${t.who}</div>
+      <div class="chips">
+        <span class="chip on">${ic("i-paw", "xs")} ${t.pets}</span>
+        <span class="chip soon">${t.kids} · ${t.soon}</span>
+        <span class="chip soon">${t.elders} · ${t.soon}</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="btn primary">${t.create}</div>
+      <div class="fine">${t.privacy}<u>${t.privacyLink}</u></div>
+    </div>`, { tag: l.toUpperCase(), who: "171 + 172" });
+}
+
+// 2. What kind of home? (171 draws the chips; 172 owns the keys and what follows)
+function sHome(t, l) {
+  return phone(`
+    <div class="ob">
+      <div style="display:flex;justify-content:space-between;align-items:center">${steps(2)}<span class="link" style="margin-left:12px">${t.skip}</span></div>
+      <h3 class="h">${t.homeH}</h3>
+      <p class="sub">${t.homeSub}</p>
+      <div class="types">
+        ${t.types.map((ty, i) => `<div class="type ${i === 1 ? "on" : ""}">${ic(ty[0])}<b>${ty[1]}</b><span>${ty[2]}</span></div>`).join("")}
+      </div>
+      <div class="kcard"><span class="kav">${ic("i-mic")}</span><div class="t"><b>${t.kakakCardT}</b><span style="white-space:normal">${t.kakakCardS}</span></div>${ic("i-chevron-right")}</div>
+      <div class="spacer"></div>
+      <div class="btn primary">${t.cont}</div>
+    </div>`, { tag: l.toUpperCase(), who: "171 asks · 172 acts" });
+}
+
+// 3. Template review with untick
+function chore(t, title, gloss, cad, who, on = true) {
+  return `<div class="chore ${on ? "" : "off"}">${box(on, true)}<div class="t"><b>${title}</b><span>${t.gloss ? gloss + " · " : ""}${cad}</span></div><span class="who ${who === t.any ? "any" : ""}">${who}</span></div>`;
+}
+function room(name, gloss, t, on = true, extra = "") {
+  return `<div class="room ${on ? "" : "off"}">${box(on)}<div class="t"><b>${name}</b>${t.gloss && gloss ? `<span>${gloss}</span>` : ""}</div>${extra}</div>`;
+}
+function sReview(t, l) {
+  const sat = l === "en" ? "Sat" : "Sab", tue = l === "en" ? "Tue" : "Sel", mon = l === "en" ? "Mon" : "Sen";
+  return phone(`
+    <div class="appbar"><div class="row"><span>${ic("i-chevron-left", "lg")}</span><b style="font-size:16px">${t.reviewH}</b><span class="link">${t.skip}</span></div></div>
+    <div class="body">
+      ${steps(3)}
+      <p class="sub" style="margin:0">${t.reviewSub}</p>
+      <div class="shape">
+        <div class="step"><span>${t.floors}</span><span class="ctl"><i>${ic("i-minus")}</i><b>3</b><i>${ic("i-plus")}</i></span></div>
+        <div class="step"><span>${t.bedrooms}</span><span class="ctl"><i>${ic("i-minus")}</i><b>5</b><i>${ic("i-plus")}</i></span></div>
+        <div class="step"><span>${t.bathrooms}</span><span class="ctl"><i>${ic("i-minus")}</i><b>4</b><i>${ic("i-plus")}</i></span></div>
+        <div class="chips" style="padding-top:4px">${t.has.map((h, i) => `<span class="chip sm ${i === 1 ? "" : "on"}">${h}</span>`).join("")}</div>
+      </div>
+      <div class="grp">${t.g1}</div>
+      <div class="list">
+        ${room("LT1", l === "en" ? "Whole floor" : "", t)}
+        ${chore(t, "Sapu dan pel lantai", "Sweep and mop", t.every, t.any)}
+        ${chore(t, "Lap kaca jendela", "Clean the windows", t.weekly(l === "en" ? "Fri" : "Jum"), t.any)}
+        ${room("Dapur", "Kitchen", t)}
+        ${chore(t, "Cuci piring", "Wash the dishes", t.every, "Yanti")}
+        ${chore(t, "Bersihkan dapur dan kompor", "Clean the kitchen and stove", t.every, "Yanti")}
+        ${chore(t, "Bersihkan kulkas", "Clean out the fridge", t.monthly, "Yanti")}
+        ${room("Dapur Kotor", "Wet kitchen", t, false)}
+        ${room("Ruang Keluarga", "Family room", t)}
+        ${chore(t, "Vakum sofa dan karpet", "Vacuum the sofa and rugs", t.weekly(l === "en" ? "Wed" : "Rab"), "Sari")}
+      </div>
+      <div class="grp">${t.g2}</div>
+      <div class="list">
+        ${room("Kamar Utama", "Master bedroom", t)}
+        ${chore(t, "Rapikan kamar dan tempat tidur", "Tidy the room and make the bed", t.every, "Sari")}
+        ${chore(t, "Ganti seprai dan sarung bantal", "Change the sheets", t.weekly(sat), "Sari")}
+        ${room("Kamar Mandi", l === "en" ? "Bathroom · inside Kamar Utama" : "di dalam Kamar Utama", t)}
+        ${chore(t, "Sikat kamar mandi dan toilet", "Scrub the bathroom and toilet", t.weekly(tue), "Sari")}
+        ${chore(t, "Kuras bak mandi", "Drain and scrub the bak", t.weekly(l === "en" ? "Thu" : "Kam"), "Sari", false)}
+      </div>
+      <div class="grp">${t.gOut}</div>
+      <div class="list">
+        ${room("Taman", "Garden", t)}
+        ${chore(t, "Siram tanaman", "Water the plants", t.every, "Budi")}
+        ${chore(t, "Potong rumput", "Mow the lawn", t.twoweeks(sat), "Budi")}
+        ${room("Carport", "", t)}
+        ${chore(t, "Cuci mobil", "Wash the car", t.weekly(sat), "Joko")}
+      </div>
+      <div class="grp">${t.gBills}</div>
+      <div class="list">
+        <div class="room">${box(true)}<div class="t"><b>${l === "en" ? "Electricity (PLN)" : "Listrik PLN"}</b><span>${l === "en" ? "Every month · 20th · Me" : "Setiap bulan · tgl 20 · Saya"}</span></div></div>
+        <div class="room">${box(true)}<div class="t"><b>${l === "en" ? "Water (PDAM)" : "Air PDAM"}</b><span>${l === "en" ? "Every month · 20th · Me" : "Setiap bulan · tgl 20 · Saya"}</span></div></div>
+        <div class="room"><span style="width:22px"></span><div class="t"><b>Iuran RT/RW</b><span>${l === "en" ? "Every month · 1st" : "Setiap bulan · tgl 1"}</span></div><span class="added">${ic("i-check", "xs")} ${t.added}</span></div>
+      </div>
+    </div>
+    <div class="foot">
+      <div class="sum">${t.sum}</div>
+      <div class="btn primary">${t.addN}</div>
+      <div class="link">${ic("i-mic", "xs")} ${t.instead}</div>
+    </div>`, { cls: "tall", tag: l.toUpperCase(), who: "172" });
+}
+
+// 4. Staff in one go
+function person(name, job, t) {
+  return `<div class="person"><div class="nm">${ic("i-user")} ${name}</div><div class="chips">${t.jobs.map((j, i) => `<span class="chip ${job.includes(i) ? "on" : ""}">${j}</span>`).join("")}</div></div>`;
+}
+function sStaff(t, l) {
+  return phone(`
+    <div class="appbar"><div class="row"><span>${ic("i-chevron-left", "lg")}</span><b style="font-size:16px">${t.staffH}</b><span class="link">${t.skip}</span></div></div>
+    <div class="body">
+      ${steps(4)}
+      <p class="sub" style="margin:0">${t.staffSub}</p>
+      ${person("Yanti", [1], t)}
+      ${person("Sari", [0, 2], t)}
+      ${person("Budi", [3, 5], t)}
+      ${person("Joko", [4], t)}
+      <div class="link" style="justify-content:flex-start;padding-left:4px">${ic("i-plus", "xs")} ${t.addAnother}</div>
+    </div>
+    <div class="foot">
+      <div class="btn primary">${ic("i-message")} ${t.sendWA}</div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="fine" style="flex:1">${t.waHint}</span><span class="vbtn">${ic("i-play")} ${t.watch}</span></div>
+    </div>`, { cls: "mid", tag: l.toUpperCase(), who: "172" });
+}
+
+// 5. Kakak voice note, then the Add all card
+function sKakak(t, l) {
+  return phone(`
+    <div class="appbar"><div class="row"><span>${ic("i-chevron-left", "lg")}</span><b style="font-size:16px">${t.reviewH}</b><span></span></div></div>
+    <div class="body" style="opacity:.5">
+      ${steps(3)}
+      <div class="shape" style="height:120px"></div>
+      <div class="list" style="height:240px"></div>
+    </div>
+    <div class="dim"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>${t.kH}</h3>
+      <p class="lead">${t.kLead}</p>
+      <div class="micwrap"><div class="mic">${ic("i-mic")}</div><span class="listening">${t.listening}</span></div>
+      <div class="transcript">Rumah 3 lantai, 5 kamar tidur, ada kolam renang dan taman. Staf: Mbak Yanti masak, Mbak Sari bersih-bersih dan setrika, Pak Budi kebun dan kolam, Pak Joko sopir. <span class="soft">Dua anjing, Coco dan Bruno, satu kucing, Mimi…</span></div>
+      <div class="consent">${ic("i-shield", "xs")}<span>${t.consent}<u>${t.privacyLink}</u></span></div>
+      <div class="btn primary">${ic("i-sparkles")} ${t.make}</div>
+      <div class="fine" style="text-align:center">${t.kbTip}</div>
+    </div>`, { tag: l.toUpperCase(), who: "172 PR B" });
+}
+function sKakakResult(t, l) {
+  return phone(`
+    <div class="appbar"><div class="row"><span>${ic("i-chevron-left", "lg")}</span><b style="font-size:16px">${t.reviewH}</b><span class="link">${t.skip}</span></div></div>
+    <div class="body">
+      ${steps(3)}
+      <div class="addall">
+        <div class="top"><span class="kav">${ic("i-sparkles")}</span><div class="t"><b style="font-weight:600">${t.kResT}</b><span>${l === "en" ? "Untick anything to skip it." : "Hapus centang untuk melewatinya."}</span></div></div>
+        <div class="counts">${t.kRes.map(([n, w]) => `<span><b>${n}</b> ${w}</span>`).join("")}</div>
+        <div class="btn primary">${t.addAll}</div>
+        <div class="link">${t.change}</div>
+      </div>
+      <div class="shape">
+        <div class="step"><span>${t.floors}</span><span class="ctl"><i>${ic("i-minus")}</i><b>3</b><i>${ic("i-plus")}</i></span></div>
+        <div class="step"><span>${t.bathrooms}</span><span class="ctl"><span class="guess">${t.guess}</span><i>${ic("i-minus")}</i><b>4</b><i>${ic("i-plus")}</i></span></div>
+      </div>
+      <div class="grp">${l === "en" ? "Staff" : "Staf"}</div>
+      <div class="list">
+        <div class="room">${box(true)}<div class="t"><b>Mbak Yanti</b><span>${t.jobs[1]}</span></div></div>
+        <div class="room">${box(true)}<div class="t"><b>Mbak Sari</b><span>${t.jobs[0]} · ${t.jobs[2]}</span></div></div>
+        <div class="room">${box(true)}<div class="t"><b>Pak Budi</b><span>${t.jobs[3]} · ${t.jobs[5]}</span></div></div>
+        <div class="room">${box(true)}<div class="t"><b>Pak Joko</b><span>${t.jobs[4]}</span></div></div>
+      </div>
+      <div class="grp">${l === "en" ? "Pets" : "Hewan"}</div>
+      <div class="list">
+        <div class="room">${box(true)}<div class="t"><b>Coco</b><span>${l === "en" ? "Dog · 5 routines" : "Anjing · 5 rutinitas"}</span></div></div>
+        <div class="room">${box(true)}<div class="t"><b>Mimi</b><span>${l === "en" ? "Cat · 3 routines" : "Kucing · 3 rutinitas"}</span></div></div>
+      </div>
+    </div>`, { cls: "mid", tag: l.toUpperCase(), who: "172 PR B" });
+}
+
+// 6. Calm first Today
+function sToday(t, l) {
+  const row = (time, title, sub) => `<div class="trow"><span class="time">${time}</span><div class="t"><b>${title}</b><span>${sub}</span></div>${ic("i-circle")}</div>`;
+  return phone(`
+    <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><div class="seg" style="width:150px"><span class="on">${t.day}</span><span>${t.week}</span></div></div></div>
+    <div class="body">
+      <div class="dates">${t.week7.map(([d, n], i) => `<span class="${i === 2 ? "on" : ""}">${d}<b>${n}</b></span>`).join("")}</div>
+      <div class="firstrun">
+        <header><h3>${t.frT}</h3><span>${t.frN}</span></header>
+        ${t.frSteps.map(([s, st, em]) => `<div class="frs ${st === 1 ? "done" : st === 2 ? "next" : ""}">${ic(st === 1 ? "i-circle-check" : "i-circle")}<span>${s}</span>${em ? `<em>${em}</em>` : ""}</div>`).join("")}
+        <div style="display:flex;gap:8px;margin-top:4px"><div class="btn primary sm" style="flex:1">${ic("i-message", "xs")} ${t.sendWA}</div><span class="vbtn">${ic("i-play")} ${t.watch}</span></div>
+      </div>
+      <div class="quiet">${ic("i-phone")}<span>${t.linked}</span></div>
+      <div class="dayh">${t.todayH}</div>
+      ${row(l === "en" ? "Anytime" : "Kapan saja", "Sapu dan pel lantai", "LT1 · " + t.any)}
+      ${row(l === "en" ? "Anytime" : "Kapan saja", "Cuci piring", "Dapur · Yanti")}
+      ${row(l === "en" ? "Anytime" : "Kapan saja", "Siram tanaman", "Taman · Budi")}
+      ${row("07.00", l === "en" ? "Breakfast · Coco" : "Makan pagi · Coco", t.any)}
+    </div>
+    ${tabbar(t, 0)}`, { tag: l.toUpperCase(), who: "172 PR A1" });
+}
+
+// 7. Staff screens, Indonesian only
+function sClaim() {
+  return phone(`
+    <div class="ob">
+      <div class="obicon">${ic("i-users")}</div>
+      <h3 class="h">Rumah Wijaya</h3>
+      <p class="sub">Pilih nama Anda, lalu buat PIN.</p>
+      <div class="names">
+        <div class="nbtn"><span class="av">Y</span>Yanti${ic("i-chevron-right")}</div>
+        <div class="nbtn on"><span class="av">S</span>Sari${ic("i-chevron-right")}</div>
+        <div class="nbtn"><span class="av">B</span>Budi${ic("i-chevron-right")}</div>
+        <div class="nbtn"><span class="av">J</span>Joko${ic("i-chevron-right")}</div>
+      </div>
+      <div class="spacer"></div>
+      <div style="display:flex;justify-content:center"><span class="vbtn">${ic("i-play")} Tonton · 15 detik</span></div>
+    </div>`, { tag: "STAF", who: "172 PR A2" });
+}
+function sPin() {
+  return phone(`
+    <div class="ob">
+      <div class="obicon">${ic("i-lock")}</div>
+      <h3 class="h">Buat PIN, Sari</h3>
+      <p class="sub">4 angka. Dipakai setiap membuka Miamus.</p>
+      <div class="pin"><i class="f"></i><i class="f"></i><i></i><i></i></div>
+      <div class="spacer"></div>
+      <div class="btn primary">Lanjut</div>
+    </div>`, { tag: "STAF", who: "172 PR A2" });
+}
+function sStaffToday() {
+  const card = (title, sub) => `<div class="scard"><div class="t"><b>${title}</b><span>${sub}</span></div><span class="go">Saya kerjakan</span></div>`;
+  return phone(`
+    <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><div class="seg" style="width:200px"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div></div>
+    <div class="body">
+      <div class="tip">${ic("i-phone")}<span>Tambahkan Miamus ke Layar Utama.</span><span class="vbtn">${ic("i-play")} Tonton · 15 detik</span></div>
+      <div class="dayh">Selamat pagi, Sari</div>
+      ${card("Sapu dan pel lantai", "LT1 · Siapa saja")}
+      ${card("Rapikan kamar dan tempat tidur", "LT2 · Kamar Utama")}
+      ${card("Vakum sofa dan karpet", "LT1 · Ruang Keluarga")}
+      ${card("Sikat kamar mandi dan toilet", "LT2 · Kamar Utama · Kamar Mandi")}
+    </div>`, { tag: "STAF", who: "172 PR A1/A2" });
+}
+function sVideo() {
+  return phone(`
+    <div class="body" style="opacity:.4"><div class="tip" style="height:48px"></div><div class="scard" style="height:70px"></div></div>
+    <div class="dim"></div>
+    <div class="sheet" style="top:60px">
+      <div class="grab"></div>
+      <h3>Menyelesaikan tugas dengan foto</h3>
+      <div class="video"><div class="mini"><i class="d"></i><i></i><i></i><i style="height:70px"></i><i></i></div><div class="cap">Ketuk tugas, ambil foto sesudahnya</div><div class="bar"><i></i></div></div>
+      <div class="btn outline">${ic("i-x")} Tutup</div>
+    </div>`, { tag: "STAF", who: "video tip" });
+}
+
+// WhatsApp message preview (staff read it; always Indonesian)
+function sWhatsApp(t, l) {
+  return phone(`
+    <div class="appbar"><div class="row"><span>${ic("i-chevron-left", "lg")}</span><b style="font-size:15px">Staf Rumah Wijaya</b><span></span></div></div>
+    <div class="body">
+      <div class="wahead">${ic("i-message", "xs")} ${t.waPreview}</div>
+      <div class="wa">Halo! Ini Miamus, aplikasi rumah kita. Buka link ini, pilih nama Anda, lalu buat PIN: <span class="u">https://miamus.app/join/code?c=K7P-M2Q</span><br>Video 15 detik: <span class="u">https://miamus.app/tips/staf-mulai</span></div>
+      <p class="note">${l === "en"
+        ? "One message for everyone. The code is already in the link; each person picks their own name within 7 days, and you see who linked."
+        : "Satu pesan untuk semua. Kodenya sudah ada di link; masing-masing memilih namanya dalam 7 hari, dan Anda melihat siapa yang terhubung."}</p>
+    </div>`, { tag: l.toUpperCase(), who: "172 PR A2" });
+}
+
+const SCREENS = [
+  ["1. Sign-up: name and Who lives here, with no approval wait",
+   "Phase 171 draws this screen. 172 removes the Request access and Request sent screens before it: Create household approves the account automatically (daily cap and switch, D1). The privacy sentence moves under the button.",
+   (t, l) => sName(t, l), true],
+  ["2. What kind of home?",
+   "Phase 171 asks; 172 owns the four keys and what happens next (/setup?home=multi_floor). Skip opens the review with house defaults. Kakak is offered here too.",
+   (t, l) => sHome(t, l), true],
+  ["3. Your home: the template review, untick what you don't have",
+   "The shape row (taps only) builds the list. Everything starts ticked; here the pool, the wet kitchen and the bak are unticked. Chore and room titles are saved in Indonesian (staff read them); English owners see the meaning in grey. Assignees come from the job chips on the next screen. Bills reuse Phase 164's list, with Added for what exists.",
+   (t, l) => sReview(t, l), true],
+  ["4. Your staff: names, an optional job, one WhatsApp message",
+   "Four typed names, four job taps, one send. Jobs assign the matching chores; everything else stays Anyone.",
+   (t, l) => sStaff(t, l), true],
+  ["4b. The one message staff receive",
+   "Indonesian for every household. The house code is in the link; one line of instruction and a 15-second video.",
+   (t, l) => sWhatsApp(t, l), true],
+  ["5. Or tell Kakak, one voice note (free once)",
+   "The phone's own speech recognition; in an iPhone Home Screen app, the keyboard mic. One-line consent for this job only. The template list waits behind.",
+   (t, l) => sKakak(t, l), true],
+  ["5b. Kakak's list: one Add all card",
+   "Kakak describes the house; code expands it into rooms and chores with the catalogue's titles. Guesses are marked. Untick to skip, exactly like the template.",
+   (t, l) => sKakakResult(t, l), true],
+  ["6. The calm first Today",
+   "The checklist first, above the fold, step names only. No What's new cards (first 14 days or until set up), no pets question (answered at sign-up), no Add to Home Screen yet. A quiet line says who linked. The day continues below the fold, as on a real phone.",
+   (t, l) => sToday(t, l), true],
+];
+const STAFF = [
+  ["7. Staff: pick your name, make a PIN (Indonesian only)",
+   "From the WhatsApp link the code is filled in. Names can be claimed once, within 7 days of being added. Then the PIN, twice, then Today with a one-line Add to Home Screen tip and a video.",
+   [sClaim, sPin, sStaffToday]],
+  ["8. A video tip (staff, Indonesian)",
+   "Recorded from the mock app with Playwright, captions burned in, no faces or voice, about 1 MB. Never pops up by itself.",
+   [sVideo]],
+];
+
+const main = document.getElementById("screens");
+for (const [h, p, fn] of SCREENS) {
+  const s = document.createElement("section");
+  s.className = "screen";
+  s.innerHTML = `<h2>${h}</h2><p>${p}</p><div class="pair">${fn(T.en, "en")}${fn(T.id, "id")}</div>`;
+  main.appendChild(s);
+}
+for (const [h, p, fns] of STAFF) {
+  const s = document.createElement("section");
+  s.className = "screen";
+  s.innerHTML = `<h2>${h}</h2><p>${p}</p><div class="pair">${fns.map(f => f()).join("")}</div>`;
+  main.appendChild(s);
+}
+</script>
+</body>
+</html>
