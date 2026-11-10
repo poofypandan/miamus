@@ -1007,6 +1007,17 @@ export interface Database {
         Args: { p_user_id: string; p_approve: boolean };
         Returns: undefined;
       };
+      // Setup counts and the north star (migrations/145, Phase 172 PR 0).
+      // Members of the household only; numbers are added, never negative.
+      record_household_setup: {
+        Args: { p_household: string; p_fields: Record<string, string | number> };
+        Returns: undefined;
+      };
+      // Platform admins only: S1–S5 per sign-up week. See lib/north-star.
+      platform_north_star: {
+        Args: { p_weeks?: number };
+        Returns: unknown;
+      };
       // The household and its owner membership in one transaction.
       create_household: {
         Args: { p_name: string; p_has_pets?: boolean | null };

@@ -60,15 +60,16 @@ select pg_temp.ok((select array_agg(table_name || '.' || column_name order by ta
                      from information_schema.columns
                     where table_schema = 'public' and table_name like 'kakak\_%'
                       and data_type in ('text', 'character varying', 'character', 'ARRAY', 'json', 'jsonb', 'bytea', 'USER-DEFINED'))
-                  = array['kakak_requests.model', 'kakak_requests.outcome', 'kakak_requests.result', 'kakak_requests.tools'],
-  'the only text columns are model, outcome, result and tools');
+                  -- job: 'quick' or 'setup', a checked value (migrations/145).
+                  = array['kakak_requests.job', 'kakak_requests.model', 'kakak_requests.outcome', 'kakak_requests.result', 'kakak_requests.tools'],
+  'the only text columns are job, model, outcome, result and tools');
 select pg_temp.ok((select bool_and(exists (
                      select 1 from pg_constraint c
                       where c.conrelid = 'public.kakak_requests'::regclass and c.contype = 'c'
                         and a.attnum = any (c.conkey)))
                      from pg_attribute a
                     where a.attrelid = 'public.kakak_requests'::regclass
-                      and a.attname in ('model', 'outcome', 'result', 'tools')),
+                      and a.attname in ('job', 'model', 'outcome', 'result', 'tools')),
   'and each of them is held by a CHECK');
 select pg_temp.ok(pg_temp.err($$insert into public.kakak_requests (household_id, model)
                                 values ('00000000-0000-0000-0000-0000000126f1', 'tolong beli beras dua kilo')$$) like '%check%',

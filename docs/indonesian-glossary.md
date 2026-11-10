@@ -201,6 +201,9 @@ people are **staf** and **admin**.
 | Retake photo | **Foto ulang** | Phase 169 (planned): a spot's photo, after tidying. |
 | Rack · Drawer · Hanging rail · Shelf · Shoes · Box (spot quick names) | **Rak · Laci · Gantungan · Ambalan · Rak sepatu · Kotak** | Phase 169 (planned). Households type their own ("Rak A", "Laci Raka"). Still **Bagian** for Spot. |
 | Valuable pieces / Whose | **Pakaian berharga** / **Milik** | Phase 169 PR B (planned): "Milik Ibu". |
+| Usage counts (privacy policy) | **Hitungan pemakaian** | Phase 172 PR 0: numbers about setup and first tasks, never content. |
+| North star (operator page) / North star numbers | **Ukuran utama** / **Angka ukuran utama** | Phase 172 PR 0: the platform admins' page of S1–S5. |
+| Below target · On target · No data yet | **Di bawah target · Sesuai target · Belum ada data** | Phase 172 PR 0, the north-star page. "Target" is the everyday word. |
 
 ## Formatting
 
