@@ -15,9 +15,12 @@ export const REPEAT_CHOICES: ChoreRecurrence[] = ["none", "daily", "weekly", "mo
 export type ChoreRefinement =
   | { recurrence: ChoreRecurrence }
   /** A roster person, or null for anyone. */
-  | { assignee: { id: string; name: string } | null };
+  | { assignee: { id: string; name: string } | null }
+  /** "Remind me" (migrations/137): 0, 1, 3 or 7 days before, or null for off. */
+  | { remindDaysBefore: number | null };
 
 export function refineChore(item: ChoreSuggestion, change: ChoreRefinement): ChoreSuggestion {
+  if ("remindDaysBefore" in change) return { ...item, remindDaysBefore: change.remindDaysBefore };
   if ("recurrence" in change) {
     return {
       ...item,
@@ -81,7 +84,10 @@ export function refinementNote(items: { kind: string }[], room: number = MAX_REF
     .map((item) => {
       const how = item.recurrence === "none" ? "one time" : repeatLabel(item.recurrence, item.dueDate, "en").toLowerCase();
       const who = item.assigneeName ? `for ${item.assigneeName}` : "for anyone";
-      return `${item.title}: ${how}, ${who}`;
+      const days = item.remindDaysBefore ?? null;
+      const remind =
+        days === null ? "no reminder" : days === 0 ? "remind on the day" : days === 7 ? "remind 1 week before" : `remind ${days} day${days === 1 ? "" : "s"} before`;
+      return `${item.title}: ${how}, ${who}, ${remind}`;
     });
   // Whole parts only, as many as fit: a half-cut "every Mon…" would mislead.
   const kept: string[] = [];
