@@ -77,3 +77,44 @@ test("a staff phone opening / still goes straight to /staff", async ({ context, 
   await page.goto("/");
   await expect(page).toHaveURL(/\/staff$/, { timeout: 15_000 });
 });
+
+// A laptop gets a designed page, not the phone column (the root layout's
+// mobile frame lets go of its width for data-wide-page): the hero splits into
+// words on the left and the app's screens on the right, and nothing scrolls
+// sideways.
+test.describe("on a laptop", () => {
+  test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
+
+  for (const path of ["/welcome", "/selamat-datang"]) {
+    test(`${path} lays the hero out in two columns`, async ({ context, page }) => {
+      await installStub(context, { stored: null });
+      await page.goto(path);
+      const columns = page.locator("[data-landing-hero] > *");
+      await expect(columns).toHaveCount(2);
+      const words = (await columns.nth(0).boundingBox())!;
+      const screens = (await columns.nth(1).boundingBox())!;
+      // Side by side, words first, sharing a row.
+      expect(words.x + words.width).toBeLessThanOrEqual(screens.x);
+      expect(Math.abs(words.y + words.height / 2 - (screens.y + screens.height / 2))).toBeLessThan(200);
+      // Wider than the old phone column, and centred inside a sensible cap.
+      const main = (await page.locator("main").boundingBox())!;
+      expect(main.width).toBe(1440);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1440);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    });
+  }
+});
+
+test("a phone sees one column and nothing scrolls sideways", async ({ context, page }) => {
+  await installStub(context, { stored: null });
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const path of ["/welcome", "/selamat-datang"]) {
+    await page.goto(path);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+    const columns = page.locator("[data-landing-hero] > *");
+    const words = (await columns.nth(0).boundingBox())!;
+    const screens = (await columns.nth(1).boundingBox())!;
+    // Stacked: the screen sits under the words.
+    expect(screens.y).toBeGreaterThanOrEqual(words.y + words.height);
+  }
+});
