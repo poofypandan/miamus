@@ -460,6 +460,26 @@ export type Repair = {
   warranty_until?: string | null;
 };
 
+/** Optional kind of feedback (migrations/135). */
+export type FeedbackCategory = "idea" | "problem" | "other";
+
+/**
+ * A note to the people who make Miamus (migrations/135). Owners of the
+ * household read it; staff phones send but never read. created_by,
+ * created_at are stamped by the server; staff_id is set for staff phones only.
+ */
+export type Feedback = {
+  id: string;
+  household_id: string;
+  message: string;
+  category: FeedbackCategory | null;
+  staff_id: string | null;
+  created_by: string | null;
+  app_version: string | null;
+  page: string | null;
+  created_at: string;
+};
+
 /** What a repair cost, and its receipt (migrations/131). Owners only (D4). */
 export type RepairCost = {
   repair_id: string;
@@ -656,6 +676,13 @@ export interface Database {
         Row: RepairNote;
         Insert: Partial<RepairNote> & Pick<RepairNote, "repair_id" | "household_id" | "body">;
         Update: Partial<RepairNote>;
+        Relationships: [];
+      };
+      feedback: {
+        Row: Feedback;
+        Insert: Pick<Feedback, "household_id" | "message"> &
+          Partial<Pick<Feedback, "category" | "staff_id" | "app_version" | "page">>;
+        Update: never;
         Relationships: [];
       };
       repairs: {

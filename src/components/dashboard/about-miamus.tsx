@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { ChevronRight, MessageSquareText } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { LEGAL } from "@/config/legal";
+import { FeedbackSheet } from "@/components/shared/feedback-sheet";
 import { useOwnerLocale } from "@/context/owner-locale-context";
 import type { OwnerLocale } from "@/lib/owner-locale";
 
@@ -28,6 +31,8 @@ const COPY = {
     madeBy: `Made with care by ${LEGAL.operatorName}.`,
     privacy: "Privacy Policy",
     privacyHref: "/privacy",
+    feedback: "Send feedback",
+    feedbackDetail: "Ideas, problems, anything: straight to us.",
   },
   id: {
     title: "Tentang Miamus",
@@ -44,11 +49,17 @@ const COPY = {
     madeBy: `Dibuat dengan sepenuh hati oleh ${LEGAL.operatorName}.`,
     privacy: "Kebijakan Privasi",
     privacyHref: "/privasi",
+    feedback: "Kirim masukan",
+    feedbackDetail: "Ide, masalah, apa saja: langsung ke kami.",
   },
 } satisfies Record<OwnerLocale, unknown>;
 
 export function AboutMiamus() {
-  const copy = COPY[useOwnerLocale()];
+  const locale = useOwnerLocale();
+  const copy = COPY[locale];
+  // Feedback (roadmap item 9, migrations/135): here, low-key, where an
+  // owner who wants to tell the makers something would look.
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   return (
     <article className="flex flex-col gap-6 pb-4">
@@ -72,6 +83,22 @@ export function AboutMiamus() {
           <figcaption className="mt-1.5 text-sm text-muted-foreground">{copy.proverb.note}</figcaption>
         </figure>
       )}
+
+      <button
+        type="button"
+        onClick={() => setFeedbackOpen(true)}
+        className="flex min-h-16 w-full items-center gap-3 rounded-xl border bg-card px-4 text-left active:bg-muted"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+          <MessageSquareText className="size-5" strokeWidth={1.75} />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-base font-semibold text-gray-900">{copy.feedback}</span>
+          <span className="text-xs text-muted-foreground">{copy.feedbackDetail}</span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+      </button>
+      <FeedbackSheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} locale={locale} />
 
       <footer className="flex flex-col items-center gap-1 pt-2 text-center text-xs text-muted-foreground">
         <span>{copy.madeBy}</span>
