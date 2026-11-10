@@ -53,7 +53,12 @@ export const LEGAL = {
   // 2026-11-10.1: kept on the phone — whether notifications were turned on
   // in this browser (so they can be renewed) and when the notifications
   // reminder was last put off. No new data on the server, no new service.
-  policyVersion: "2026-11-10.1",
+  // 2026-11-10.2: feedback sent from the app ("Send feedback" / "Kirim
+  // masukan"): the message, an optional type, who sent it, the household,
+  // the screen and the app version; read by the operator and the
+  // household's admins, never by staff; kept 2 years (migrations/135). No new
+  // service.
+  policyVersion: "2026-11-10.2",
   effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
