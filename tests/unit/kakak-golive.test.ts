@@ -151,6 +151,10 @@ describe("kakakExamples", () => {
     expect(id[2].text).toMatch(/^Ingatkan saya/);
   });
 
+  it("keeps a pet's whole name, as the household block does", () => {
+    expect(kakakExamples({ locale: "en", staffNames: [], petNames: ["Kopi  Susu"] })[3].text).toBe("Feed Kopi Susu at 7 am and 5 pm");
+  });
+
   it("drops honorifics, as Kakak's household block does", () => {
     expect(kakakExamples({ locale: "id", staffNames: ["Bik Nah"], petNames: [] })[0].text).toBe("Nah siram tanaman setiap Senin jam 8");
     expect(kakakExamples({ locale: "en", staffNames: ["Mbak Sari Wulandari"], petNames: [] })[0].text).toBe("Sari waters the plants every Monday at 8");
