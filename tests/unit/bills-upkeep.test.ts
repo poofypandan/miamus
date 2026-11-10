@@ -9,7 +9,7 @@ import {
   type QuickChore,
 } from "@/lib/bills-upkeep";
 import { comingUpLabel, comingUpReminders, remindLabel, remindOf } from "@/lib/chore-reminders";
-import type { HouseholdTask, InventoryItem } from "@/types/database";
+import type { HouseholdTask, InventoryItem, LeaveRequest } from "@/types/database";
 
 const chore = (key: Parameters<typeof quickItem>[0]) => quickItem(key) as QuickChore;
 
@@ -155,6 +155,33 @@ describe("Coming up on Today", () => {
   it("a daily chore with a reminder isn't also coming up (code review, PR #60)", () => {
     const plants = task({ title: "Plants", recurrence: "daily", due_date: "2026-11-01", remind_days_before: 1, assigned_to: me });
     expect(show([plants])).toEqual([]);
+  });
+
+  it("leave: pause hides it, reassign follows the cover, back early reminds again (Codex, PR #60)", () => {
+    const leave = (fallback_action: string, extra: Record<string, unknown> = {}) =>
+      ({
+        id: "L",
+        household_id: "h",
+        staff_id: "staff-ari",
+        start_date: "2026-11-17",
+        end_date: "2026-11-19",
+        status: "approved",
+        fallback_action,
+        fallback_assignee_id: null,
+        ended_on: null,
+        ...extra,
+      }) as unknown as LeaveRequest;
+    const ac = task({ title: "AC", due_date: "2026-11-18", remind_days_before: 1, assigned_to: "staff-ari" });
+    const run = (leaves: LeaveRequest[]) =>
+      comingUpReminders({ rows: [ac], today: "2026-11-17", memberId: me, ownerRows: owners, leaves }).map((c) => c.task.title);
+    expect(run([])).toEqual(["AC"]);
+    expect(run([leave("pause")])).toEqual([]);
+    expect(run([leave("unassign")])).toEqual(["AC"]);
+    // Covered by the other owner: theirs now, not mine.
+    expect(run([leave("reassign", { fallback_assignee_id: other })])).toEqual([]);
+    expect(run([leave("reassign", { fallback_assignee_id: me })])).toEqual(["AC"]);
+    // Back early on the 18th: the day is no longer covered.
+    expect(run([leave("pause", { status: "ended_early", ended_on: "2026-11-18" })])).toEqual(["AC"]);
   });
 
   it("a yearly bill a week out", () => {

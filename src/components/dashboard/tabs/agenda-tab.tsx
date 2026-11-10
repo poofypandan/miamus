@@ -88,6 +88,7 @@ export function AgendaTab() {
     inventoryAlerts,
     memberProfile,
     pendingIds,
+    leaveRequests,
   } = useHousehold();
   const householdName = useHouseholdName();
   // "Who lives here?" (Phase 162): with pets off, Today says nothing about
@@ -206,8 +207,9 @@ export function AgendaTab() {
         today: todayKey,
         memberId: memberProfile?.id ?? null,
         ownerRows,
+        leaves: leaveRequests,
       }),
-    [writtenAhead, setUpRows, householdTasks, todayKey, memberProfile?.id, ownerRows]
+    [writtenAhead, setUpRows, householdTasks, todayKey, memberProfile?.id, ownerRows, leaveRequests]
   );
   function showComingUp() {
     if (comingUp.length === 0) return;

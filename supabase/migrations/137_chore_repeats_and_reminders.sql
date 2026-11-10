@@ -270,7 +270,7 @@ begin
       -- That day's state, as expandChores reads it: a written row governs
       -- its day; otherwise the chore itself on its first day; otherwise the
       -- day is still to do. Who it's for follows the same rule.
-      select d.household_id, d.title, d.due_time, d.ahead,
+      select d.household_id, d.title, d.due_time, d.ahead, d.day,
              case when r.id is not null then r.assigned_to else d.assigned_to end as assignee
         from due d
         left join lateral (
@@ -282,12 +282,40 @@ begin
         ) r on true
        where coalesce(r.status, case when d.day = d.due_date then d.status else 'pending' end) = 'pending'
     ),
+    covered as (
+      -- Leave, as Today applies it (applyLeaveTriage, src/lib/leave.ts): on
+      -- a day the person it's for is away (approved, or back early only
+      -- before they returned), "pause" takes the day off the agenda, so no
+      -- reminder; "reassign" hands it to the cover person; "unassign" makes
+      -- it anyone's (Codex, PR #60).
+      select o.household_id, o.title, o.due_time, o.ahead,
+             case
+               when lv.id is null then o.assignee
+               when coalesce(lv.fallback_action, 'unassign') = 'reassign' and lv.fallback_assignee_id is not null
+                 then lv.fallback_assignee_id
+               else null
+             end as assignee
+        from open_days o
+        left join lateral (
+          select l.id, l.fallback_action, l.fallback_assignee_id
+            from public.leave_requests l
+           where o.assignee is not null
+             and l.staff_id = o.assignee
+             and l.household_id = o.household_id
+             and l.status in ('approved', 'ended_early')
+             and o.day between l.start_date and l.end_date
+             and (l.ended_on is null or o.day < l.ended_on)
+           order by l.created_at
+           limit 1
+        ) lv on true
+       where lv.id is null or coalesce(lv.fallback_action, 'unassign') <> 'pause'
+    ),
     routed as (
       -- An owner's chore goes to that owner; anyone else's to every owner.
       -- Owners only (household_members), and only those with a phone set up
       -- for notifications in this household.
       select o.household_id, o.title, o.due_time, o.ahead, m.user_id
-        from open_days o
+        from covered o
         join public.household_members m on m.household_id = o.household_id
         left join public.staff_profiles p on p.id = o.assignee and p.household_id = o.household_id
         left join public.household_members am on am.household_id = o.household_id and am.user_id = p.user_id

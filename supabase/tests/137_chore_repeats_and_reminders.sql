@@ -287,6 +287,43 @@ select pg_temp.ok((select body = 'Due today: Water the plants.'
                      from pg_temp.pushes where user_id = '00000000-0000-0000-0000-0000000137a4'),
   'a daily chore is reminded once a morning, not also as tomorrow''s');
 
+-- Leave (Codex, PR #60): Ari away on the day with "pause" hides the day, so
+-- no reminder; with "reassign" to a2 it goes to a2 alone; back early, the
+-- days from her return remind as usual.
+delete from pg_temp.pushes;
+insert into public.household_tasks
+  (id, household_id, title, category, recurrence, recurrence_interval, due_date, remind_days_before, assigned_to)
+values
+  ('00000000-0000-0000-0000-000000013730', '00000000-0000-0000-0000-0000000137f1', 'Kuras toren', 'maintenance',
+   'none', 1, '2027-05-04', 1, '00000000-0000-0000-0000-0000000137c1'),
+  ('00000000-0000-0000-0000-000000013731', '00000000-0000-0000-0000-0000000137f1', 'Cuci AC', 'maintenance',
+   'none', 1, '2027-05-14', 1, '00000000-0000-0000-0000-0000000137c1'),
+  ('00000000-0000-0000-0000-000000013732', '00000000-0000-0000-0000-0000000137f1', 'Basmi hama', 'maintenance',
+   'none', 1, '2027-05-24', 1, '00000000-0000-0000-0000-0000000137c1');
+insert into public.leave_requests (household_id, staff_id, start_date, end_date, status, fallback_action, fallback_assignee_id, ended_on)
+select '00000000-0000-0000-0000-0000000137f1', '00000000-0000-0000-0000-0000000137c1', s::date, e::date, st, fa,
+       case when fa = 'reassign' then r.a2 end, eo::date
+from roster r, (values
+  ('2027-05-03', '2027-05-05', 'approved', 'pause', null),
+  ('2027-05-13', '2027-05-15', 'approved', 'reassign', null),
+  ('2027-05-20', '2027-05-28', 'ended_early', 'pause', '2027-05-22')
+) as v(s, e, st, fa, eo);
+
+select pg_temp.ok(public.notify_chores_due('2027-05-03') >= 0, 'run on 3 May 2027');
+select pg_temp.ok(not exists (select 1 from pg_temp.pushes where body like '%Kuras toren%'),
+  'paused for Ari''s leave: no reminder');
+delete from pg_temp.pushes;
+select pg_temp.ok(public.notify_chores_due('2027-05-13') >= 1, 'run on 13 May 2027');
+select pg_temp.ok((select body = 'Besok: Cuci AC.' from pg_temp.pushes where user_id = '00000000-0000-0000-0000-0000000137a2'),
+  'reassigned to a2 for the leave: a2 is reminded');
+select pg_temp.ok(not exists (select 1 from pg_temp.pushes
+                               where user_id = '00000000-0000-0000-0000-0000000137a1' and body like '%Cuci AC%'),
+  '... and only a2');
+delete from pg_temp.pushes;
+select pg_temp.ok(public.notify_chores_due('2027-05-23') >= 1, 'run on 23 May 2027');
+select pg_temp.ok((select body like '%Tomorrow: Basmi hama.%' from pg_temp.pushes where user_id = '00000000-0000-0000-0000-0000000137a1'),
+  'back early: the day after her return reminds as usual');
+
 -- ---- The list of titles --------------------------------------------------------------
 select pg_temp.ok(public.chore_due_titles(array['A'], 'en') = 'A', 'one title');
 select pg_temp.ok(public.chore_due_titles(array['A', 'B', 'C'], 'en') = 'A, B and C', 'three titles, English');

@@ -1,6 +1,7 @@
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { isTemplate, nextOccurrence, occursOn } from "@/lib/chore-recurrence";
-import type { HouseholdTask } from "@/types/database";
+import { leaveCovering } from "@/lib/leave";
+import type { HouseholdTask, LeaveRequest } from "@/types/database";
 
 /**
  * "Remind me" on a chore (Phase 164, D3; migrations/137): off, on the day,
@@ -61,8 +62,10 @@ export function comingUpReminders(params: {
   today: string;
   memberId: string | null;
   ownerRows: ReadonlySet<string>;
+  /** Leave, applied as Today applies it (applyLeaveTriage). */
+  leaves?: LeaveRequest[];
 }): ComingUp[] {
-  const { rows, today, memberId, ownerRows } = params;
+  const { rows, today, memberId, ownerRows, leaves = [] } = params;
   const written = new Map<string, HouseholdTask>();
   for (const row of rows) {
     if (row.parent_task_id) written.set(`${row.parent_task_id}|${row.due_date}`, row);
@@ -70,6 +73,17 @@ export function comingUpReminders(params: {
 
   const byId = new Map(rows.map((row) => [row.id, row]));
   const forSomeoneElse = (assignee: string | null) => !!assignee && ownerRows.has(assignee) && assignee !== memberId;
+  // Who a day is for once leave is applied, as applyLeaveTriage does on
+  // Today (src/lib/leave.ts): "pause" takes the day off the agenda (no
+  // reminder: undefined), "reassign" hands it to the cover person,
+  // "unassign" makes it anyone's (Codex, PR #60). The same rule as the push.
+  const afterLeave = (assignee: string | null, date: string): string | null | undefined => {
+    const leave = leaveCovering(leaves, assignee, date);
+    if (!leave) return assignee;
+    const action = leave.fallback_action ?? "unassign";
+    if (action === "pause") return undefined;
+    return action === "reassign" && leave.fallback_assignee_id ? leave.fallback_assignee_id : null;
+  };
 
   const items: ComingUp[] = [];
   for (const task of rows) {
@@ -83,7 +97,8 @@ export function comingUpReminders(params: {
       const remind = remindOf(template);
       if (!remind || occursOn(template, task.due_date)) continue;
       if (task.due_date <= today || task.due_date > addDays(today, remind)) continue;
-      if (forSomeoneElse(task.assigned_to)) continue;
+      const who = afterLeave(task.assigned_to, task.due_date);
+      if (who === undefined || forSomeoneElse(who)) continue;
       items.push({ task, date: task.due_date });
       continue;
     }
@@ -113,7 +128,8 @@ export function comingUpReminders(params: {
     const status = row ? row.status : date === task.due_date ? task.status : "pending";
     if (status !== "pending") continue;
 
-    if (forSomeoneElse(row ? row.assigned_to : task.assigned_to)) continue;
+    const who = afterLeave(row ? row.assigned_to : task.assigned_to, date);
+    if (who === undefined || forSomeoneElse(who)) continue;
 
     items.push({ task: row ?? task, date });
   }
