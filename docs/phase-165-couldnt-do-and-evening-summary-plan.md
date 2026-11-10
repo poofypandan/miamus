@@ -1,6 +1,8 @@
 # Phase 165: "Tidak bisa dikerjakan" and the evening summary
 
-Status: **plan and mockup for the owner's decisions. Nothing built.**
+Status: **decided: owner delegated to the recommendations, 2026-11-10
+(D1 A to D10 A). Not built yet**: the build waits for 137 (PR #60) and 138
+(bill payments) to merge.
 Audit batch **B2** (`docs/product-audit-2026-11-09.md`, items 1 and 2, "one
 plan with mockups, they share the evening summary"). Mockup:
 `docs/mockups/phase-165-couldnt-do.html` (open in a browser, phone width).
@@ -48,11 +50,11 @@ and the owner hears **only about exceptions**, once, in the evening.
 | My tasks | The admin's own chores in a card on Today, "1 of 3 done", tick to finish. | Phase 163, `my-tasks-card.tsx` |
 | First-run checklist, calmer staff Today | Built, PR #62 (no files shared with this plan). | B1 |
 
-**Push isn't reaching anyone yet.** Production has no push subscriptions
-(see the push root-cause note, 2026-11-10): nothing asked owners to turn
-notifications on, and the Singapore move and the move to miamus.app reset
-them. The evening summary only helps once that fix ships. This plan doesn't
-depend on its code, but it is the order to ship in.
+**Owners still have to turn notifications on.** Nothing used to ask owners
+to turn notifications on, and the Singapore move and the move to miamus.app
+reset the old subscriptions. The push fix (PR #50, live) now asks them. Until
+an owner taps "Turn on", their phone gets no push, the evening summary
+included. The build doesn't wait for that.
 
 ## The idea in one line
 
@@ -522,6 +524,9 @@ production with the owner's OK; merge with the owner's OK.
   nagging; keep it on by default only if 2 of 3 keep it on.
 
 ## Decisions for the owner
+
+**Decided 2026-11-10: the owner delegated to the recommendations, so D1–D10
+are all A.**
 
 - **D1: Where a "couldn't" is stored.**
   **A (recommended):** its own table (`task_exceptions`). Chores, routine
