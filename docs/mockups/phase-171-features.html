@@ -311,7 +311,7 @@ const s3 = (l) => {
   } : {
     title: "Fitur", lead: "Nyalakan yang dibutuhkan rumah Anda. Kalau dimatikan, fitur hanya disembunyikan; tidak ada yang dihapus.",
     g: [["Rumah", [["wrench", "Perbaikan", "Staf melaporkan yang rusak dengan foto; Anda atur perbaikannya.", true], ["receipt", "Tagihan dan perawatan", "Pengingat listrik, air, PBB, servis AC dan lainnya.", true], ["shirt", "Lemari pakaian", "Pakaian yang di laundry, penjahit atau dipinjam, dengan foto.", false]]],
-         ["Dapur", [["cooking-pot", "Makanan di rumah", "Sisa masakan dan makanan dari orang, di mana disimpan dan sampai kapan.", true], ["book-open", "Menu dan resep", "Rencanakan menu seminggu; juru masak melihat menu hari ini.", true], ["salad", "Gizi", "Kalori dan protein di resep dan menu.", false]]],
+         ["Dapur", [["cooking-pot", "Makanan di rumah", "Sisa masakan dan makanan dari orang, di mana disimpan dan sampai kapan.", true], ["book-open", "Menu dan resep", "Rencanakan menu seminggu; yang memasak melihat menu hari ini.", true], ["salad", "Gizi", "Kalori dan protein di resep dan menu.", false]]],
          ["Rawat", [["paw-print", "Hewan", "Rutinitas, makan, obat, dokter hewan dan foto.", true], ["person-standing", "Lansia", "Rutinitas dan latihan harian, dicentang oleh yang membantu.", true]]]],
   };
   return phone(L[l].tag, `${appbar("Miamus")}<div class="body"></div>${tabbar(l, "house")}

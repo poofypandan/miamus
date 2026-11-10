@@ -211,7 +211,7 @@ three groups:
 | | **Bills and upkeep** / Tagihan dan perawatan | Reminders for electricity, water, PBB, AC service and the like. / Pengingat listrik, air, PBB, servis AC dan lainnya. | On |
 | | **Closet** / Lemari pakaian | What's at the laundry, the tailor or lent out, with photos. / Pakaian yang di laundry, penjahit atau dipinjam, dengan foto. | Off |
 | **Kitchen** / Dapur | **Food at home** / Makanan di rumah | Leftovers and food from others, with where it's kept and when it's best by. / Sisa masakan dan makanan dari orang, di mana disimpan dan sampai kapan. | On |
-| | **Menu and recipes** / Menu dan resep | Plan the week's meals; the cook sees today's menu. / Rencanakan menu seminggu; juru masak melihat menu hari ini. | Off |
+| | **Menu and recipes** / Menu dan resep | Plan the week's meals; the cook sees today's menu. / Rencanakan menu seminggu; yang memasak melihat menu hari ini. | Off |
 | | **Nutrition** / Gizi | Calories and protein on recipes and the menu. / Kalori dan protein di resep dan menu. | Off (needs Menu and recipes) |
 | **Care** / Rawat | **Pets** / Hewan | Routines, meals, medicine, vet visits and photos. / Rutinitas, makan, obat, dokter hewan dan foto. | From sign-up |
 | | **Kids** / Anak (PR C) | Routines for the children, like school pick-up. / Rutinitas anak, seperti jemput sekolah. | From sign-up |
@@ -426,10 +426,10 @@ Honest about what it would take:
 | Groups | Home · Kitchen · Care | Rumah · Dapur · Rawat |
 | Off with open work | {n} open repairs stay saved. Staff can't report new ones while this is off. | {n} perbaikan yang belum selesai tetap tersimpan. Staf tidak bisa melapor yang baru selama fitur ini mati. |
 | Needs another | Needs Menu and recipes | Perlu Menu dan resep |
-| Toasts | {Feature} is on · {Feature} is off · Undo · Couldn't save. Try again. | {Fitur} aktif · {Fitur} dimatikan · Urungkan · Gagal menyimpan. Coba lagi. |
+| Toasts | {Feature} is on · {Feature} is off · Undo · Couldn't save. Try again. | {Fitur} aktif · {Fitur} dimatikan · Batalkan · Gagal menyimpan. Coba lagi. |
 | Offer buttons | Turn on · No thanks | Nyalakan · Tidak, terima kasih |
 | Offer, Nutrition | Track calories and protein? Miamus can add them to your recipes and the week's menu. | Catat kalori dan protein? Miamus bisa menambahkannya di resep dan menu mingguan. |
-| Offer, Menu | Plan meals and keep recipes? Your cook sees today's menu on their phone. | Rencanakan menu dan simpan resep? Juru masak melihat menu hari ini di HP-nya. |
+| Offer, Menu | Plan meals and keep recipes? Your cook sees today's menu on their phone. | Rencanakan menu dan simpan resep? Yang memasak melihat menu hari ini di HP-nya. |
 | Offer, Closet | Is this a closet? Keep track of clothes at the laundry or lent out. | Ini lemari pakaian? Catat pakaian yang di laundry atau dipinjam. |
 | Family row (PR B) | Family | Keluarga |
 | Add | Add family member | Tambah anggota keluarga |
