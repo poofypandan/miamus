@@ -14,6 +14,7 @@ import {
   type SubmitOutcome,
 } from "@/lib/offline-queue";
 import { discardPhoto } from "@/lib/photo-queue";
+import { canWithdraw } from "@/lib/couldnt-do";
 import type { TaskException } from "@/types/database";
 
 /**
@@ -118,6 +119,16 @@ export function photoStillUsed(url: string, withdrawnId: string): boolean {
   );
 }
 
+/**
+ * A reload that must land: after the save queue sends a couldn't-do record,
+ * its local copy leaves the queue only once the server's copy is on screen
+ * (Codex, PR #71). Throws if the reload failed, so the queue keeps it.
+ */
+export async function confirmTaskExceptions(): Promise<void> {
+  await loadTaskExceptions(true);
+  if (snapshot.failed) throw new Error("Couldn't-do records not reloaded");
+}
+
 /** Reload, if any screen shows them. Called by HouseholdProvider's refresh. */
 export function refreshTaskExceptions(): void {
   if (listeners.size > 0) void loadTaskExceptions(true);
@@ -178,9 +189,15 @@ export async function withdrawTaskException(id: string): Promise<boolean> {
   const queued = outboxItems().find((item) => item.job.kind === "couldnt" && item.job.input.id === id);
   if (queued) {
     if (isSending(queued.id)) throw new SaveStillWaitingError();
+    // An earlier try may have landed with its reply lost: that copy goes
+    // first. No answer (a weak signal) throws, and the save stays queued, so
+    // nothing is dropped that the server may still hold (Codex, PR #71).
+    const removed = await dataProvider.deleteTaskException(id);
+    // Nothing removed: it never landed, or it landed over 5 minutes ago and
+    // stays. Inside the window (counted from when it was queued, which is
+    // before the server's clock) it can only be the first.
+    if (!removed && !canWithdraw({ created_at: new Date(queued.timestamp).toISOString() })) return false;
     await clearFromQueue(queued.id);
-    // An earlier try may have landed with its reply lost: remove that copy too.
-    await dataProvider.deleteTaskException(id).catch(() => false);
     const photo = queued.job.kind === "couldnt" ? queued.job.input.photo_url : null;
     forget(id);
     if (photo && !photoStillUsed(photo, id)) {

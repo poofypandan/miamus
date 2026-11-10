@@ -369,6 +369,15 @@ select pg_temp.ok((select n from runs) = 1
                   and not exists (select 1 from pushes where user_id = '00000000-0000-0000-0000-0000000139a1'),
   'Sari on leave with her chores paused: her laundry isn''t listed');
 
+-- ---- A written day's own title and time (Codex, PR #71) -------------------------------
+-- Today's plants, written with its own title and time (21:00): not due by 19.00.
+update public.household_tasks
+   set status = 'pending', before_photo_url = null, after_photo_url = null, title = 'Plants (late)', due_time = '21:00'
+ where parent_task_id = '00000000-0000-0000-0000-0000000139d5' and due_date = pg_temp.today();
+select pg_temp.ok((select title = 'Plants (late)' and due_time = '21:00'
+                     from public.chore_days_open(pg_temp.today()) where chore_id = '00000000-0000-0000-0000-0000000139d5'),
+  'a written day reads its own title and time');
+
 -- ---- Slots matched as Today matches them (Codex, PR #71) ------------------------------
 -- Potty every 4 hours from 08:00 to 16:00, with one log at 12:05: the 12:00
 -- slot is done, 08:00 and 16:00 are open (not 08:00 done and 12:00 open).

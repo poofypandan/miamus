@@ -619,11 +619,16 @@ as $$
        and not public.chore_occurs_on(t, p_day)
   ),
   open_days as (
-    select d.household_id, d.id, d.title, d.due_time,
+    -- A written day governs its own title, time and who it's for, as
+    -- expandChores reads it: an owner may have moved today's to 21:00
+    -- (Codex, PR #71).
+    select d.household_id, d.id,
+           case when r.id is not null then r.title else d.title end as title,
+           case when r.id is not null then r.due_time else d.due_time end as due_time,
            case when r.id is not null then r.assigned_to else d.assigned_to end as assignee
       from due d
       left join lateral (
-        select x.id, x.status, x.assigned_to
+        select x.id, x.status, x.assigned_to, x.title, x.due_time
           from public.household_tasks x
          where x.parent_task_id = d.id and x.due_date = p_day
          order by x.created_at
