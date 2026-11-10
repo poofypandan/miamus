@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff notifications mockups</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --okbg:rgba(16,185,129,.06); --okline:rgba(16,185,129,.3); --amber:#92400e; --amberbg:#fffbeb; --amberline:#fde68a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1100px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0 0 6px; color:var(--muted); max-width:720px; }
+  section.screen { max-width:1100px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:680px; }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:740px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone.short { height:620px; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:9; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:40px; }
+  .brand { font-weight:600; font-size:17px; display:flex; gap:6px; align-items:center; }
+  .mark { width:24px; height:24px; display:block; }
+  .who { display:flex; align-items:center; gap:4px; font-size:13px; color:var(--ink2); background:var(--track); border-radius:999px; padding:4px 10px; }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:6px 12px; font-size:13px; color:var(--muted); font-weight:500; white-space:nowrap; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .dates { display:flex; gap:4px; }
+  .dates span { flex:1; text-align:center; padding:5px 0; border-radius:12px; font-size:11px; color:var(--muted); }
+  .dates span b { display:block; font-size:15px; color:var(--ink); }
+  .dates span.on { background:var(--primary); color:#fff; }
+  .dates span.on b { color:#fff; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .ic.xs { width:12px; height:12px; }
+  .ic.lg { width:20px; height:20px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .card .top { display:flex; gap:10px; align-items:flex-start; }
+  .tile { width:36px; height:36px; border-radius:10px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
+  .tile .ic { color:var(--ink2); width:18px; height:18px; }
+  .card h3 { margin:0; font-size:15px; font-weight:600; }
+  .card p { margin:2px 0 0; font-size:14px; color:var(--ink2); }
+  .card .note { font-size:13px; color:var(--muted); display:flex; gap:6px; align-items:flex-start; margin:0; }
+  .card .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .steps { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; font-size:14px; color:var(--ink2); }
+  .steps li { display:flex; gap:8px; align-items:center; }
+  .steps .n { width:22px; height:22px; border-radius:999px; background:var(--track); font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex:none; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; border-radius:12px; font-weight:600; font-size:14px; }
+  .btn.primary { background:var(--primary); color:#fff; }
+  .btn.primary .ic { color:#fff; }
+  .btn.outline { border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:500; }
+  .btn.quiet { color:var(--ink2); font-weight:500; min-height:40px; }
+  .yb { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; margin-top:-2px; }
+  .chore { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; gap:10px; align-items:center; min-height:58px; }
+  .chore .time { width:44px; font-size:12px; color:#52525b; font-variant-numeric:tabular-nums; flex:none; }
+  .chore .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .chore .t b { font-weight:500; font-size:15px; }
+  .chore .t span { font-size:13px; color:var(--muted); }
+  .chore.new { border-color:var(--amberline); background:var(--amberbg); }
+  .pill { font-size:11.5px; border-radius:999px; padding:2px 8px; background:#fff; border:1px solid var(--amberline); color:var(--amber); font-weight:500; }
+  .sect { font-size:13px; font-weight:600; color:var(--ink2); margin:2px 2px -4px; }
+  .fab { position:absolute; right:16px; bottom:76px; background:var(--primary); color:#fff; border-radius:999px; padding:12px 18px; display:flex; gap:6px; align-items:center; font-weight:600; font-size:14px; box-shadow:0 8px 20px -8px rgba(0,0,0,.4); z-index:1; }
+  .fab .ic { color:#fff; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:120px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:8px 16px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+  .sheet.tall { top:56px; }
+  .sheet > * { flex:none; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto 2px; }
+  .sheet h3 { margin:0; font-size:17px; text-align:center; }
+  .list { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+  .li { display:flex; align-items:center; gap:10px; padding:10px 12px; border-top:1px solid var(--line); min-height:52px; }
+  .li:first-child { border-top:0; }
+  .li .lic { width:32px; height:32px; border-radius:8px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
+  .li .lic .ic { color:var(--ink2); }
+  .li .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .li .t b { font-weight:500; font-size:14.5px; }
+  .li .t span { font-size:12.5px; color:var(--muted); }
+  .li .val { font-size:13px; color:var(--ink2); display:flex; align-items:center; gap:2px; }
+  .li .val.ok { color:var(--ok); font-weight:500; }
+  .li.hl { background:#fafafa; }
+  .sw { width:44px; height:26px; border-radius:999px; background:#d1d5db; position:relative; flex:none; }
+  .sw::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:999px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+  .sw.on { background:var(--primary); }
+  .sw.on::after { left:21px; }
+  .grp { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:2px 2px -4px; }
+  .bul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; font-size:14px; color:var(--ink2); }
+  .bul li { display:flex; gap:8px; align-items:center; }
+  .bul .ic { color:var(--ok); }
+  .quiet { display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink2); background:var(--track); border-radius:12px; padding:10px 12px; }
+  .toast { position:absolute; left:14px; right:14px; bottom:74px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:flex-start; gap:8px; padding:12px; font-size:13.5px; }
+  .toast span { flex:1; }
+  .toast span small { display:block; color:var(--muted); font-size:12.5px; margin-top:1px; }
+  .toast .ok { color:var(--ok); flex:none; display:flex; }
+  .toast .ok .ic { color:var(--ok); }
+  .strip { display:flex; align-items:center; gap:8px; background:var(--amberbg); border:1px solid var(--amberline); border-radius:12px; padding:10px 12px; font-size:14px; color:var(--amber); }
+  .strip span { flex:1; }
+  .strip b { background:#fff; border:1px solid var(--amberline); border-radius:10px; padding:7px 10px; font-size:13px; color:var(--ink); white-space:nowrap; }
+  .strip .ic { color:#b45309; }
+  /* Lock screen */
+  .lock { background:linear-gradient(160deg,#334155 0%,#1e293b 55%,#0f172a 100%); color:#fff; }
+  .lock .clock { text-align:center; margin-top:34px; }
+  .lock .clock .d { font-size:15px; opacity:.85; }
+  .lock .clock .h { font-size:76px; font-weight:300; letter-spacing:-2px; line-height:1; margin-top:4px; }
+  .notes { padding:22px 10px 0; display:flex; flex-direction:column; gap:8px; }
+  .note { background:rgba(255,255,255,.82); color:var(--ink); border-radius:18px; padding:10px 12px; display:flex; gap:10px; backdrop-filter:blur(8px); }
+  .note .mark { width:34px; height:34px; flex:none; border-radius:8px; }
+  .note .pt { flex:1; min-width:0; font-size:13.5px; }
+  .note .pt div { display:flex; justify-content:space-between; color:#4b5563; font-size:11.5px; }
+  .note .pt b { display:block; font-size:14px; }
+  .lockcap { font-size:11.5px; color:rgba(255,255,255,.8); margin:6px 6px -2px; display:flex; gap:5px; align-items:center; }
+  .lockcap .ic { color:rgba(255,255,255,.8); }
+  .lockfoot { margin-top:auto; padding:0 18px 22px; display:flex; justify-content:space-between; }
+  .lockfoot span { width:48px; height:48px; border-radius:999px; background:rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; }
+  .lockfoot .ic { color:#fff; }
+  .legend { font-size:12px; color:var(--muted); margin:-2px 2px 0; }
+  .cmp { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .os { position:absolute; left:28px; right:28px; top:440px; z-index:5; background:#f2f2f2; border-radius:14px; overflow:hidden; text-align:center; box-shadow:0 12px 40px -10px rgba(0,0,0,.5); }
+  .os p { margin:0; padding:16px 14px 12px; font-size:14px; }
+  .os p b { display:block; margin-bottom:4px; }
+  .os div { display:flex; border-top:1px solid #d4d4d4; }
+  .os div span { flex:1; padding:11px; color:#2563eb; font-size:15px; }
+  .os div span + span { border-left:1px solid #d4d4d4; font-weight:600; }
+  code { font-size:12.5px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></symbol>
+  <symbol id="i-bell-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M17 17H4a1 1 0 0 1-.74-1.67C4.59 13.96 6 12.5 6 8a6 6 0 0 1 .26-1.74"/><path d="M8.67 3.1A6 6 0 0 1 18 8c0 2.07.3 3.53.74 4.66"/><path d="m2 2 20 20"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="i-smartphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></symbol>
+  <symbol id="i-square-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-cooking-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-arrow-right-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.54 21.69a.5.5 0 0 0 .94-.03l6.5-19a.5.5 0 0 0-.64-.64l-19 6.5a.5.5 0 0 0-.03.94l7.93 3.18a2 2 0 0 1 1.11 1.11z"/><path d="m21.85 2.15-10.94 10.93"/></symbol>
+  <symbol id="i-flashlight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6c0 2-2 2-2 4v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V10c0-2-2-2-2-4V2h12z"/><path d="M6 6h12"/><path d="M12 12v.01"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-message-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="M3.3 7 12 12l8.7-5"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.05Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol>
+  <symbol id="i-calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <!-- The Miamus mark (src/components/brand/brand-mark.tsx): a roofline over an M, on an ink tile. -->
+  <symbol id="mark" viewBox="0 0 512 512"><rect width="512" height="512" rx="114.5" fill="#171717"/><polyline points="112,214 256,104 400,214" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,400 152,262 256,354 360,262 360,400" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="page">
+  <h1>Phase 166: Notifications on staff phones</h1>
+  <p>Phone-width mockups for <code>docs/phase-166-staff-notifications-plan.md</code>, drawn with the chosen options (D1–D11 A). Decided 2026-11-10: the owner delegated to the recommendations. Staff screens are Bahasa Indonesia only. The owner screens at the end are shown in English and in Bahasa Indonesia. Names, tasks and times are examples.</p>
+</header>
+
+<!-- 1. The turn-on card -->
+<section class="screen">
+  <h2>1. Staff Today: the turn-on card (Android, and a shared phone)</h2>
+  <p>The card takes the one tip slot (#62), so Today gets no busier. Left: Sari's own phone. Right: a kitchen phone that Sari and Wati share, which adds one line, shown under the phone's own permission dialog that appears after Aktifkan. "Nanti saja" hides it for 14 days, and after three times only settings offer it.</p>
+  <div class="pair">
+    <div class="phone"><span class="tag">Staf · HP pribadi</span>
+      <div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><span class="who"><svg class="ic xs"><use href="#i-user"/></svg>Sari</span></div>
+        <div class="seg"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
+      <div class="body">
+        <div class="dates"><span>Sen<b>16</b></span><span class="on">Sel<b>17</b></span><span>Rab<b>18</b></span><span>Kam<b>19</b></span><span>Jum<b>20</b></span><span>Sab<b>21</b></span><span>Min<b>22</b></span></div>
+        <div class="card">
+          <div class="top"><span class="tile"><svg class="ic"><use href="#i-bell"/></svg></span>
+            <div><h3>Aktifkan notifikasi</h3><p>Dapat kabar di HP ini kalau ada tugas baru untuk Anda, atau admin menjawab permintaan Anda.</p></div></div>
+          <p class="note"><svg class="ic xs" style="margin-top:3px"><use href="#i-moon"/></svg>Tidak ada notifikasi pukul 21.00–06.00.</p>
+          <div class="row2"><span class="btn primary"><svg class="ic"><use href="#i-bell"/></svg>Aktifkan</span><span class="btn outline">Nanti saja</span></div>
+          <span class="yb">Yang baru: sekarang Miamus bisa memberi kabar lewat notifikasi.</span>
+        </div>
+        <div class="sect">Pagi</div>
+        <div class="chore"><span class="time">08.00</span><span class="t"><b>Sapu teras</b><span>Teras depan</span></span></div>
+        <div class="chore"><span class="time">09.30</span><span class="t"><b>Cuci baju</b><span>Ruang cuci</span></span></div>
+      </div>
+      <span class="fab"><svg class="ic"><use href="#i-plus"/></svg>Lapor</span>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-clipboard-list"/></svg>Tugas</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Dapur</span></div>
+    </div>
+
+    <div class="phone"><span class="tag">Staf · HP bersama</span>
+      <div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><span class="who"><svg class="ic xs"><use href="#i-user"/></svg>Sari</span></div>
+        <div class="seg"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
+      <div class="body">
+        <div class="dates"><span>Sen<b>16</b></span><span class="on">Sel<b>17</b></span><span>Rab<b>18</b></span><span>Kam<b>19</b></span><span>Jum<b>20</b></span><span>Sab<b>21</b></span><span>Min<b>22</b></span></div>
+        <div class="card">
+          <div class="top"><span class="tile"><svg class="ic"><use href="#i-bell"/></svg></span>
+            <div><h3>Aktifkan notifikasi</h3><p>Dapat kabar di HP ini kalau ada tugas baru untuk Anda, atau admin menjawab permintaan Anda.</p></div></div>
+          <p class="note"><svg class="ic xs" style="margin-top:3px"><use href="#i-users"/></svg>HP ini dipakai bersama. Notifikasi hanya menyebut nama Anda.</p>
+          <p class="note"><svg class="ic xs" style="margin-top:3px"><use href="#i-moon"/></svg>Tidak ada notifikasi pukul 21.00–06.00.</p>
+          <div class="row2"><span class="btn primary"><svg class="ic"><use href="#i-bell"/></svg>Aktifkan</span><span class="btn outline">Nanti saja</span></div>
+        </div>
+        <div class="sect">Pagi</div>
+        <div class="chore"><span class="time">08.00</span><span class="t"><b>Sapu teras</b><span>Teras depan</span></span></div>
+      </div>
+      <!-- The phone's own permission dialog, after "Aktifkan". -->
+      <div class="dim" style="z-index:4"></div>
+      <div class="os"><p><b>miamus.app</b>Izinkan mengirim notifikasi?</p><div><span>Jangan izinkan</span><span>Izinkan</span></div></div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-clipboard-list"/></svg>Tugas</span><span><svg class="ic"><use href="#i-cooking-pot"/></svg>Dapur</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. iPhone and blocked -->
+<section class="screen">
+  <h2>2. The card on an iPhone in Safari, and on a blocked phone</h2>
+  <p>On iPhone, push only works from the Home Screen (iOS 16.4+), so the card shows the steps instead. The Home Screen app has its own storage, so staff sign in once more with the house code and PIN. When the phone has blocked notifications, the card says where to allow them and shows again after 30 days. The second card is for a browser whose push service isn't on the allow-list (for example some HeyTap/Realme browsers).</p>
+  <div class="pair">
+    <div class="phone short"><span class="tag">Staf · iPhone, Safari</span>
+      <div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><span class="who"><svg class="ic xs"><use href="#i-user"/></svg>Wati</span></div></div>
+      <div class="body">
+        <div class="card">
+          <div class="top"><span class="tile"><svg class="ic"><use href="#i-bell"/></svg></span>
+            <div><h3>Notifikasi di iPhone</h3><p>Di iPhone, notifikasi hanya bisa dari Layar Utama.</p></div></div>
+          <ol class="steps">
+            <li><span class="n">1</span>Ketuk <svg class="ic"><use href="#i-share"/></svg><b>Bagikan</b></li>
+            <li><span class="n">2</span>Pilih <svg class="ic"><use href="#i-square-plus"/></svg><b>Tambahkan ke Layar Utama</b></li>
+            <li><span class="n">3</span>Buka Miamus dari Layar Utama, lalu aktifkan notifikasi di sana.</li>
+          </ol>
+          <p class="note"><svg class="ic xs" style="margin-top:3px"><use href="#i-lock"/></svg>Di Layar Utama, masuk lagi dengan kode rumah dan PIN.</p>
+          <span class="btn outline">Mengerti</span>
+        </div>
+      </div>
+    </div>
+    <div class="phone short"><span class="tag">Staf · diblokir</span>
+      <div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><span class="who"><svg class="ic xs"><use href="#i-user"/></svg>Sari</span></div></div>
+      <div class="body">
+        <div class="card">
+          <div class="top"><span class="tile"><svg class="ic"><use href="#i-bell-off"/></svg></span>
+            <div><h3>Notifikasi diblokir</h3><p>Izinkan notifikasi untuk Miamus di pengaturan HP atau browser.</p></div></div>
+          <span class="btn outline">Mengerti</span>
+        </div>
+        <div class="card">
+          <div class="top"><span class="tile"><svg class="ic"><use href="#i-bell-off"/></svg></span>
+            <div><h3>Tidak bisa di browser ini</h3><p>Notifikasi tidak bisa diaktifkan di browser ini. Buka Miamus di Chrome.</p></div></div>
+          <span class="btn outline">Mengerti</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Lock screens -->
+<section class="screen">
+  <h2>3. On the lock screen: a personal phone and a shared phone</h2>
+  <p>Same events, different text. A personal phone shows the details. A shared phone (two or more people with notifications on, or two or more PIN sign-ins in 30 days) says only whose it is. Task pushes replace each other for the day, so the lock screen keeps one per person. A shared phone never shows task names, leave dates or repair details.</p>
+  <div class="pair">
+    <div class="phone lock"><span class="tag">HP pribadi Sari</span>
+      <div class="status"></div>
+      <div class="clock"><div class="d">Selasa, 17 November</div><div class="h">10.42</div></div>
+      <div class="notes">
+        <div class="note"><svg class="mark"><use href="#mark"/></svg><div class="pt"><div><span>MIAMUS</span><span>sekarang</span></div><b>Tugas baru</b>Siram tanaman · 15.00</div></div>
+        <div class="note"><svg class="mark"><use href="#mark"/></svg><div class="pt"><div><span>MIAMUS</span><span>09.15</span></div><b>Cuti disetujui</b>12–14 Nov.</div></div>
+        <div class="note"><svg class="mark"><use href="#mark"/></svg><div class="pt"><div><span>MIAMUS</span><span>kemarin</span></div><b>Sudah diperbaiki</b>Keran bocor</div></div>
+      </div>
+      <div class="lockfoot"><span><svg class="ic"><use href="#i-flashlight"/></svg></span><span><svg class="ic"><use href="#i-camera"/></svg></span></div>
+    </div>
+    <div class="phone lock"><span class="tag">HP bersama (Sari, Wati)</span>
+      <div class="status"></div>
+      <div class="clock"><div class="d">Selasa, 17 November</div><div class="h">10.42</div></div>
+      <div class="notes">
+        <div class="note"><svg class="mark"><use href="#mark"/></svg><div class="pt"><div><span>MIAMUS</span><span>sekarang</span></div><b>Untuk Sari</b>Ada tugas baru hari ini.</div></div>
+        <div class="note"><svg class="mark"><use href="#mark"/></svg><div class="pt"><div><span>MIAMUS</span><span>09.15</span></div><b>Untuk Sari</b>Admin sudah menjawab permintaan Anda.</div></div>
+        <div class="note"><svg class="mark"><use href="#mark"/></svg><div class="pt"><div><span>MIAMUS</span><span>08.30</span></div><b>Tugas baru untuk semua</b>Buka Miamus untuk melihat.</div></div>
+      </div>
+      <div class="lockfoot"><span><svg class="ic"><use href="#i-flashlight"/></svg></span><span><svg class="ic"><use href="#i-camera"/></svg></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Tapping a push meant for someone else -->
+<section class="screen">
+  <h2>4. Tapping Sari's push while Wati is on duty</h2>
+  <p>The push opens Today with a strip. Nothing appears in Sari's name until her PIN is entered on the usual name and PIN screen. The new task is tinted so whoever is on duty sees what the push was about.</p>
+  <div class="pair">
+    <div class="phone short"><span class="tag">Staf · HP bersama</span>
+      <div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><span class="who"><svg class="ic xs"><use href="#i-user"/></svg>Wati</span></div>
+        <div class="seg"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
+      <div class="body">
+        <div class="strip"><svg class="ic"><use href="#i-bell"/></svg><span>Notifikasi ini untuk Sari.</span><b>Ganti ke Sari</b></div>
+        <div class="sect">Pagi</div>
+        <div class="chore"><span class="time">08.00</span><span class="t"><b>Lap debu ruang tamu</b><span>Ruang tamu</span></span></div>
+        <div class="chore"><span class="time">11.00</span><span class="t"><b>Setrika</b><span>Ruang cuci</span></span></div>
+      </div>
+    </div>
+    <div class="phone short"><span class="tag">Staf · setelah PIN Sari</span>
+      <div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><span class="who"><svg class="ic xs"><use href="#i-user"/></svg>Sari</span></div>
+        <div class="seg"><span class="on">Tugas Hari Ini</span><span>Dapur</span></div></div>
+      <div class="body">
+        <div class="sect">Siang</div>
+        <div class="chore new"><span class="time">15.00</span><span class="t"><b>Siram tanaman</b><span>Taman belakang</span></span><span class="pill">Baru</span></div>
+        <div class="sect">Pagi</div>
+        <div class="chore"><span class="time">08.00</span><span class="t"><b>Sapu teras</b><span>Teras depan</span></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Settings -->
+<section class="screen">
+  <h2>5. Staff notification settings: in the Lapor sheet</h2>
+  <p>One row at the bottom of the Lapor sheet (D7). It opens a sheet with one switch for the person on duty, the four things that are sent, the quiet hours and a test. There are no per-event options. "Matikan di HP ini (untuk semua)" removes the subscription for everyone on the phone, after a confirm step.</p>
+  <div class="pair">
+    <div class="phone"><span class="tag">Staf · Lapor</span>
+      <div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><span class="who"><svg class="ic xs"><use href="#i-user"/></svg>Sari</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Lapor</h3>
+        <div class="list">
+          <div class="li"><span class="lic"><svg class="ic"><use href="#i-cooking-pot"/></svg></span><span class="t"><b>Makanan masuk</b></span><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="li"><span class="lic"><svg class="ic"><use href="#i-wrench"/></svg></span><span class="t"><b>Lapor kerusakan</b></span><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="li"><span class="lic"><svg class="ic"><use href="#i-package"/></svg></span><span class="t"><b>Stok menipis</b></span><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="li"><span class="lic"><svg class="ic"><use href="#i-calendar-days"/></svg></span><span class="t"><b>Usulan jadwal</b></span><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+          <div class="li"><span class="lic"><svg class="ic"><use href="#i-message-square"/></svg></span><span class="t"><b>Catatan ekstra</b></span><svg class="ic"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="list">
+          <div class="li hl"><span class="lic"><svg class="ic"><use href="#i-bell"/></svg></span><span class="t"><b>Notifikasi di HP ini</b></span><span class="val ok">Aktif<svg class="ic"><use href="#i-chevron-right"/></svg></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone"><span class="tag">Staf · Notifikasi di HP ini</span>
+      <div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>Miamus</span><span class="who"><svg class="ic xs"><use href="#i-user"/></svg>Sari</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet tall">
+        <div class="grab"></div>
+        <h3>Notifikasi di HP ini</h3>
+        <div class="list">
+          <div class="li"><span class="lic"><svg class="ic"><use href="#i-user"/></svg></span><span class="t"><b>Untuk saya (Sari)</b><span>Aktif</span></span><span class="sw on"></span></div>
+        </div>
+        <p class="legend" style="margin-top:-4px">HP ini juga memberi kabar untuk: Wati.</p>
+        <div class="grp">Yang dikabarkan</div>
+        <ul class="bul">
+          <li><svg class="ic"><use href="#i-circle-check"/></svg>Tugas baru untuk Anda hari ini</li>
+          <li><svg class="ic"><use href="#i-circle-check"/></svg>Tugas yang dipindah ke Anda</li>
+          <li><svg class="ic"><use href="#i-circle-check"/></svg>Jawaban cuti dan usulan jadwal</li>
+          <li><svg class="ic"><use href="#i-circle-check"/></svg>Laporan kerusakan yang sudah dicek</li>
+        </ul>
+        <div class="grp">Jam tenang</div>
+        <div class="quiet"><svg class="ic"><use href="#i-moon"/></svg>Tidak ada notifikasi pukul 21.00–06.00.</div>
+        <span class="btn outline"><svg class="ic"><use href="#i-send"/></svg>Kirim tes</span>
+        <span class="btn quiet">Matikan di HP ini (untuk semua)</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. Owner: Household → Notifications -->
+<section class="screen">
+  <h2>6. Owner: Household → Notifications, the staff phones switch (EN / ID)</h2>
+  <p>One household switch (D8), on by default, under the owner's own "Notifications on this phone" card from #50. Owners can't turn notifications on for staff, because only the phone can allow them.</p>
+  <div class="pair" id="owner-settings"></div>
+</section>
+
+<!-- 7. Owner: who is reachable, and the toast -->
+<section class="screen">
+  <h2>7. Owner: who has them on, and the toast after saving (EN / ID)</h2>
+  <p>The Staff list shows each person's status, and Linked staff phones shows whose notifications each phone carries. After saving a chore for today, the toast says the person will get a notification, so the owner doesn't need to send a WhatsApp as well. With the switch off or in quiet hours, it says only "Saved." (The toast really appears in Chores after saving. It is drawn here to save space.)</p>
+  <div class="pair" id="owner-staff"></div>
+</section>
+
+<script>
+// Owner screens are drawn twice from the same markup: once per owner language.
+const T = {
+  en: {
+    tag: "Owner · English", tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    household: "Household", notif: "Notifications",
+    thisPhone: "Notifications on this phone", on: "On", off: "Off",
+    ownerSub: "Urgent reports, food and bill reminders, for you.",
+    staffPhones: "Staff phones", staffSwitch: "Send notifications to staff phones",
+    staffSub: "New tasks for them today, and your answers to their requests. Never between 9:00 PM and 6:00 AM.",
+    staffHow: "Each staff member turns them on on their own phone, from their Today.",
+    reach: "2 of 3 staff have notifications on.",
+    staffTitle: "Staff", sari: "Sari", wati: "Wati", rina: "Rina",
+    notifOn: "Notifications on", notifOff: "Notifications off",
+    phones: "Linked staff phones", phone: "Phone", last: "Last sign-in", today: "today", yesterday: "yesterday",
+    notifFor: "Notifications for", noneOn: "Notifications off",
+    toast: "Saved. Sari will get a notification.", toastSub: "Siram tanaman · today 3:00 PM",
+  },
+  id: {
+    tag: "Pemilik · Bahasa Indonesia", tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    household: "Rumah", notif: "Notifikasi",
+    thisPhone: "Notifikasi di HP ini", on: "Aktif", off: "Mati",
+    ownerSub: "Laporan darurat, pengingat makanan dan tagihan, untuk Anda.",
+    staffPhones: "HP staf", staffSwitch: "Kirim notifikasi ke HP staf",
+    staffSub: "Tugas baru untuk mereka hari ini, dan jawaban Anda atas permintaan mereka. Tidak pernah pukul 21.00–06.00.",
+    staffHow: "Setiap staf mengaktifkannya sendiri di HP mereka, dari Hari ini.",
+    reach: "2 dari 3 staf sudah mengaktifkan notifikasi.",
+    staffTitle: "Staf", sari: "Sari", wati: "Wati", rina: "Rina",
+    notifOn: "Notifikasi aktif", notifOff: "Notifikasi mati",
+    phones: "HP staf yang terhubung", phone: "HP", last: "Terakhir masuk", today: "hari ini", yesterday: "kemarin",
+    notifFor: "Notifikasi untuk", noneOn: "Notifikasi mati",
+    toast: "Tersimpan. Sari akan mendapat notifikasi.", toastSub: "Siram tanaman · hari ini 15.00",
+  },
+};
+
+const icon = (id, cls = "ic") => `<svg class="${cls}"><use href="#i-${id}"/></svg>`;
+const tabbar = (t, on) => `<div class="tabbar">${["house","paw-print","clipboard-list","cooking-pot","users"].map((id, i) =>
+  `<span class="${i === on ? "on" : ""}">${icon(id)}${t.tabs[i]}</span>`).join("")}</div>`;
+const appbar = (t, title) => `<div class="status"></div><div class="appbar"><div class="row"><span class="brand"><svg class="mark"><use href="#mark"/></svg>${title}</span></div></div>`;
+
+function ownerSettings(t) {
+  return `<div class="phone short"><span class="tag">${t.tag}</span>${appbar(t, t.household)}
+    <div class="body">
+      <div class="sect">${t.notif}</div>
+      <div class="list">
+        <div class="li"><span class="lic">${icon("bell")}</span><span class="t"><b>${t.thisPhone}</b><span>${t.ownerSub}</span></span><span class="val ok">${t.on}</span></div>
+      </div>
+      <div class="list">
+        <div class="li"><span class="lic">${icon("smartphone")}</span><span class="t"><b>${t.staffPhones}</b><span>${t.staffSwitch}</span></span><span class="sw on"></span></div>
+        <div class="li" style="display:block"><span class="t" style="gap:6px"><span>${t.staffSub}</span><span>${t.staffHow}</span><span style="color:var(--ink2)">${icon("users","ic xs")} ${t.reach}</span></span></div>
+      </div>
+    </div>${tabbar(t, 4)}</div>`;
+}
+
+function ownerStaff(t) {
+  return `<div class="phone"><span class="tag">${t.tag}</span>${appbar(t, t.staffTitle)}
+    <div class="body">
+      <div class="list">
+        <div class="li"><span class="lic">${icon("user")}</span><span class="t"><b>${t.sari}</b><span>${icon("bell","ic xs")} ${t.notifOn}</span></span>${icon("chevron-right")}</div>
+        <div class="li"><span class="lic">${icon("user")}</span><span class="t"><b>${t.wati}</b><span>${icon("bell","ic xs")} ${t.notifOn}</span></span>${icon("chevron-right")}</div>
+        <div class="li"><span class="lic">${icon("user")}</span><span class="t"><b>${t.rina}</b><span>${icon("bell-off","ic xs")} ${t.notifOff}</span></span>${icon("chevron-right")}</div>
+      </div>
+      <div class="sect">${t.phones}</div>
+      <div class="list">
+        <div class="li"><span class="t"><b>${t.phone} 1</b><span>${t.last} ${t.today} · ${t.notifFor} Sari, Wati</span></span>${icon("x")}</div>
+        <div class="li"><span class="t"><b>${t.phone} 2</b><span>${t.last} ${t.yesterday} · ${t.noneOn}</span></span>${icon("x")}</div>
+      </div>
+    </div>
+    <div class="toast"><span class="ok">${icon("circle-check")}</span><span>${t.toast}<small>${t.toastSub}</small></span></div>
+    ${tabbar(t, 4)}</div>`;
+}
+
+document.getElementById("owner-settings").innerHTML = ownerSettings(T.en) + ownerSettings(T.id);
+document.getElementById("owner-staff").innerHTML = ownerStaff(T.en) + ownerStaff(T.id);
+</script>
+</body>
+</html>

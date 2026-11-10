@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Couldn't-do mockups</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --okbg:rgba(16,185,129,.06); --okline:rgba(16,185,129,.3); --red:#b91c1c; --redbg:rgba(239,68,68,.05); --redline:rgba(239,68,68,.25);
+    --amber:#b45309; --amberbg:#fffbeb; --amberline:#fcd34d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1140px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0 0 6px; color:var(--muted); max-width:720px; }
+  section.screen { max-width:1140px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:700px; }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:740px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:9; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:40px; }
+  .brand { font-weight:600; font-size:17px; display:flex; gap:7px; align-items:center; }
+  .mark { width:24px; height:24px; border-radius:7px; background:var(--primary); display:flex; align-items:center; justify-content:center; }
+  .mark .ic { color:#fff; width:14px; height:14px; }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:4px 10px; font-size:12px; color:var(--muted); font-weight:500; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .ic.xs { width:12px; height:12px; }
+  .ic.lg { width:22px; height:22px; }
+  .h { margin:2px 0 0; font-size:15px; font-weight:600; }
+  .quiet { display:flex; align-items:center; gap:8px; min-height:36px; padding:0 4px; font-size:13.5px; color:var(--ink2); }
+  .quiet span { flex:1; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:6px; display:flex; flex-direction:column; gap:2px; }
+  .card header { display:flex; align-items:baseline; justify-content:space-between; padding:4px 6px; }
+  .card h3 { margin:0; font-size:14px; font-weight:600; }
+  .card header span { font-size:12px; color:var(--muted); }
+  .row { display:flex; align-items:center; gap:8px; border-radius:8px; padding:6px; min-height:48px; border:1px solid transparent; }
+  .row .lead { width:32px; height:32px; display:flex; align-items:center; justify-content:center; flex:none; }
+  .row .lead .ic { color:#9ca3af; }
+  .time { width:54px; flex:none; font-size:11.5px; color:#52525b; font-variant-numeric:tabular-nums; }
+  .t { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .t > b { font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .t > span { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row.late { background:var(--redbg); border-color:var(--redline); }
+  .row.late .t > span { color:var(--red); }
+  .row.late .t > span .ic { color:var(--red); }
+  .row.cant { background:var(--amberbg); border-color:var(--amberline); border-left:3px solid #f59e0b; padding-left:4px; }
+  .row.cant .lead .ic, .row.cant .t > span .ic { color:var(--amber); }
+  .row.cant .t > span { color:var(--amber); }
+  .row.done .lead .ic { color:var(--ok); }
+  .row.done .t b { color:var(--muted); }
+  .chev { color:#a1a1aa; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:120px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:8px 16px 16px; display:flex; flex-direction:column; gap:12px; overflow:hidden; }
+  .sheet.tall { top:60px; }
+  .sheet > * { flex:none; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto 2px; }
+  .sheet h3 { margin:0; font-size:17px; text-align:center; }
+  .sheet .sub { margin:-8px 0 0; font-size:13px; color:var(--muted); text-align:center; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:52px; border-radius:12px; font-weight:600; font-size:14.5px; }
+  .btn.primary { background:var(--primary); color:#fff; }
+  .btn.primary .ic { color:#fff; }
+  .btn.muted { background:#e5e7eb; color:#6b7280; }
+  .btn.muted .ic { color:#6b7280; }
+  .btn.outline { border:1px solid var(--line); background:#fff; color:var(--ink2); font-weight:500; min-height:48px; }
+  .btn.sm { min-height:40px; font-size:13px; }
+  .spacer { flex:1 !important; }
+  .reason { display:flex; align-items:center; gap:12px; min-height:56px; border:1px solid var(--line); border-radius:12px; padding:0 14px; font-size:15px; font-weight:500; }
+  .reason .ic { width:20px; height:20px; color:#52525b; }
+  .reason span { flex:1; }
+  .reason small { display:block; font-size:12px; color:var(--muted); font-weight:400; }
+  .reason.on { border-color:var(--primary); box-shadow:0 0 0 1px var(--primary); }
+  .label { font-size:13px; font-weight:600; color:var(--ink2); margin-bottom:-6px; }
+  .label i { font-style:normal; font-weight:400; color:var(--muted); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { border:1px solid var(--line); border-radius:999px; padding:9px 14px; font-size:14px; background:#fff; }
+  .chip.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .check { display:flex; align-items:center; gap:10px; font-size:14px; }
+  .box { width:22px; height:22px; border-radius:6px; background:var(--primary); display:flex; align-items:center; justify-content:center; }
+  .box .ic { color:#fff; width:14px; height:14px; }
+  .field { border:1px solid var(--line); border-radius:12px; padding:12px; font-size:14px; color:#9ca3af; min-height:46px; }
+  .field.tall { min-height:64px; }
+  .addphoto { display:flex; align-items:center; justify-content:center; gap:6px; border:1px dashed #d1d5db; border-radius:12px; min-height:46px; font-size:13.5px; color:var(--ink2); }
+  .toast { position:absolute; left:14px; right:14px; bottom:74px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:center; gap:8px; padding:10px 12px; font-size:13.5px; }
+  .toast span { flex:1; }
+  .toast .ok { color:var(--ok); }
+  .toast b { display:flex; align-items:center; gap:4px; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-weight:600; }
+  .info { display:flex; flex-direction:column; gap:8px; background:var(--amberbg); border:1px solid var(--amberline); border-radius:12px; padding:12px; }
+  .info .top { display:flex; align-items:center; gap:8px; font-weight:600; color:var(--amber); font-size:14px; }
+  .info .top .ic { color:var(--amber); }
+  .info .meta { font-size:12.5px; color:var(--ink2); }
+  .info q { font-size:13.5px; color:var(--ink); quotes:"\201C" "\201D"; }
+  .info .line { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink2); }
+  .thumb { width:64px; height:64px; border-radius:10px; background:linear-gradient(135deg,#e5e7eb,#d1d5db); display:flex; align-items:center; justify-content:center; }
+  .thumb .ic { color:#9ca3af; width:22px; height:22px; }
+  .tip { font-size:12.5px; color:var(--muted); text-align:center; margin:-4px 0 0; }
+  .lock { flex:1; background:linear-gradient(180deg,#1f2937,#111827); display:flex; flex-direction:column; align-items:center; padding:40px 12px 0; gap:6px; color:#fff; }
+  .lock .clock { font-size:64px; font-weight:300; letter-spacing:-1px; line-height:1; }
+  .lock .date { font-size:15px; opacity:.85; margin-bottom:24px; }
+  .notif { width:100%; background:rgba(255,255,255,.88); color:var(--ink); border-radius:18px; padding:10px 12px; display:flex; gap:10px; }
+  .notif .app { width:34px; height:34px; border-radius:9px; background:var(--primary); display:flex; align-items:center; justify-content:center; flex:none; }
+  .notif .app .ic { color:#fff; width:18px; height:18px; }
+  .notif .txt { flex:1; min-width:0; font-size:13px; }
+  .notif .txt b { display:flex; justify-content:space-between; font-size:13.5px; }
+  .notif .txt b small { font-weight:400; color:var(--muted); font-size:11.5px; }
+  .notif .txt p { margin:2px 0 0; color:var(--ink2); }
+  .notif.small .txt p { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .sect { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--ink2); margin-bottom:-6px; }
+  .sect i { font-style:normal; font-weight:400; color:var(--muted); }
+  .srow { display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:12px; padding:10px 12px; min-height:52px; }
+  .srow .t > span { white-space:normal; }
+  .srow.cant { background:var(--amberbg); border-color:var(--amberline); }
+  .srow.cant .ic.r { color:var(--amber); }
+  .done-line { display:flex; align-items:center; gap:8px; color:var(--ok); font-weight:500; font-size:13.5px; justify-content:center; }
+  .done-line .ic { color:var(--ok); }
+  .set { background:#fff; border:1px solid var(--line); border-radius:12px; }
+  .set .it { display:flex; align-items:center; gap:10px; padding:12px; border-top:1px solid var(--line); }
+  .set .it:first-child { border-top:0; }
+  .set .it .t > span { white-space:normal; }
+  .sw { width:44px; height:26px; border-radius:999px; background:#16a34a; position:relative; flex:none; }
+  .sw::after { content:""; position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:999px; background:#fff; }
+  .sel { border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:13px; display:flex; align-items:center; gap:4px; }
+  .wa { display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; padding-top:30px; }
+  .wa .badge { width:56px; height:56px; border-radius:999px; background:#d1fae5; display:flex; align-items:center; justify-content:center; }
+  .wa .badge .ic { color:var(--ok); width:28px; height:28px; }
+  .wa h3 { margin:0; font-size:18px; }
+  .wa p { margin:0; color:var(--muted); font-size:14px; max-width:270px; }
+  .notes { max-width:1140px; margin:0 auto; padding:10px 16px 40px; color:var(--muted); font-size:13px; }
+  .notes li { margin:3px 0; }
+  code { font-size:12px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-circle-slash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="9" x2="15" y1="15" y2="9"/></symbol>
+<symbol id="i-package-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/><path d="m17 13 5 5m-5 0 5-5"/></symbol>
+<symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol>
+<symbol id="i-pill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></symbol>
+<symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></symbol>
+<symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-undo-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="i-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></symbol>
+<symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/></symbol>
+<symbol id="i-check-circle-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+<symbol id="i-basket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 11-1 9"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4"/><path d="M4.5 15.5h15"/><path d="m5 11 4-7"/><path d="m9 11 1 9"/></symbol>
+<symbol id="i-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></symbol>
+<symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></symbol>
+<symbol id="i-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol>
+<symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+<symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+<symbol id="i-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+<symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+</svg>
+
+<header class="page">
+  <h1>Phase 165: "Tidak bisa dikerjakan" and the evening summary</h1>
+  <p>Phone-width mockups for <code>docs/phase-165-couldnt-do-and-evening-summary-plan.md</code>, drawn with the chosen options (D1–D10 all A; decided 2026-11-10: the owner delegated to the recommendations). Staff screens are Bahasa Indonesia only; owner screens are shown in English and Bahasa Indonesia. Icons are Lucide line icons; no emoji. Nothing here is built.</p>
+</header>
+
+<!-- ============ 1. STAFF ============ -->
+<section class="screen">
+  <h2>1. Staff: from the task to a reason (Indonesian only)</h2>
+  <p>A quiet outline button under the main action (left). Four big reasons; "Hewan tidak mau makan / minum obat" only on pet routines (middle, a chore). For Barang habis, pick what ran out from the shopping list, and it goes on the list (right). Note and photo are optional except for Lainnya.</p>
+  <div class="pair">
+
+    <div class="phone"><div class="tag">Staf · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Tugas Hari Ini</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet tall">
+        <div class="grab"></div>
+        <h3>Cuci baju</h3>
+        <p class="sub">09.00 · Ruang cuci · untuk Sari</p>
+        <div class="label">1. Foto sebelum <i>· wajib</i></div>
+        <div class="addphoto"><svg class="ic"><use href="#i-camera"/></svg>Ambil Foto Sebelum</div>
+        <div class="label">2. Foto sesudah <i>· wajib</i></div>
+        <div class="addphoto"><svg class="ic"><use href="#i-camera"/></svg>Ambil Foto Sesudah</div>
+        <div class="spacer"></div>
+        <div class="btn muted"><svg class="ic"><use href="#i-camera"/></svg>Ambil 2 foto dulu</div>
+        <div class="btn outline"><svg class="ic"><use href="#i-circle-slash"/></svg>Tidak bisa dikerjakan</div>
+      </div>
+    </div>
+
+    <div class="phone"><div class="tag">Staf · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Tugas Hari Ini</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Kenapa tidak bisa?</h3>
+        <p class="sub">Cuci baju · 09.00</p>
+        <div class="reason"><svg class="ic"><use href="#i-package-x"/></svg><span>Barang habis</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="reason"><svg class="ic"><use href="#i-users"/></svg><span>Sudah dikerjakan orang lain</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="reason"><svg class="ic"><use href="#i-message"/></svg><span>Lainnya<small>Tulis alasannya</small></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="label" style="margin-top:6px">Di tugas hewan, ada juga:</div>
+        <div class="reason"><svg class="ic"><use href="#i-paw-print"/></svg><span>Hewan tidak mau makan</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="reason"><svg class="ic"><use href="#i-pill"/></svg><span>Hewan tidak mau minum obat<small>Admin langsung diberi tahu.</small></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+      </div>
+    </div>
+
+    <div class="phone"><div class="tag">Staf · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Tugas Hari Ini</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet tall">
+        <div class="grab"></div>
+        <h3>Barang habis</h3>
+        <p class="sub">Cuci baju · 09.00</p>
+        <div class="label">Apa yang habis?</div>
+        <div class="chips"><span class="chip on">Deterjen</span><span class="chip">Pewangi</span><span class="chip">Pemutih</span><span class="chip">Barang lain</span></div>
+        <div class="check"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span>Masukkan ke daftar belanja</div>
+        <div class="label">Catatan <i>(boleh dikosongkan)</i></div>
+        <div class="field tall">Contoh: tinggal sedikit, cukup untuk besok</div>
+        <div class="label">Foto <i>(boleh dikosongkan)</i></div>
+        <div class="addphoto"><svg class="ic"><use href="#i-camera"/></svg>Tambah foto</div>
+        <div class="spacer"></div>
+        <div class="btn primary">Kirim</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="screen">
+  <h2>2. Staff: after sending</h2>
+  <p>The card turns amber with the reason and time, and stays in the list. "Batalkan" works for 5 minutes (D3). The task can still be finished later: done wins. Right: after a leave request, when an admin will get the push, the WhatsApp nudge says so and WhatsApp becomes a second option (D8).</p>
+  <div class="pair">
+
+    <div class="phone"><div class="tag">Staf · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Tugas Hari Ini</span><span class="seg"><span class="on">Tugas</span><span>Dapur</span></span></div></div>
+      <div class="body">
+        <div class="card">
+          <div class="row late"><span class="lead"><svg class="ic lg"><use href="#i-circle"/></svg></span><span class="time">08.00</span><span class="t"><b>Pel teras</b><span><svg class="ic xs"><use href="#i-alert"/></svg>Lewat waktu</span></span></div>
+          <div class="row cant"><span class="lead"><svg class="ic lg"><use href="#i-circle-slash"/></svg></span><span class="time">09.00</span><span class="t"><b>Cuci baju</b><span><svg class="ic xs"><use href="#i-circle-slash"/></svg>Tidak bisa · Barang habis · 09.10</span></span></div>
+          <div class="row"><span class="lead"><svg class="ic lg"><use href="#i-circle"/></svg></span><span class="time">12.00</span><span class="t"><b>Makan siang · Mochi, Kopi</b><span><svg class="ic xs"><use href="#i-paw-print"/></svg>Ketuk untuk foto</span></span></div>
+          <div class="row"><span class="lead"><svg class="ic lg"><use href="#i-circle"/></svg></span><span class="time">15.00</span><span class="t"><b>Siram tanaman</b><span><svg class="ic xs"><use href="#i-map-pin"/></svg>Teras</span></span></div>
+          <div class="row done"><span class="lead"><svg class="ic lg"><use href="#i-circle-check"/></svg></span><span class="time">07.00</span><span class="t"><b>Sarapan · Mochi, Kopi</b><span>Selesai 07.12 · Sari</span></span></div>
+        </div>
+      </div>
+      <div class="toast"><svg class="ic ok"><use href="#i-check-circle-2"/></svg><span>Terkirim. Admin bisa melihatnya.</span><b><svg class="ic xs"><use href="#i-undo-2"/></svg>Batalkan</b></div>
+    </div>
+
+    <div class="phone"><div class="tag">Staf · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Tugas Hari Ini</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet tall">
+        <div class="grab"></div>
+        <h3>Cuci baju</h3>
+        <p class="sub">09.00 · Ruang cuci · untuk Sari</p>
+        <div class="info">
+          <div class="top"><svg class="ic"><use href="#i-circle-slash"/></svg>Tidak bisa · Barang habis</div>
+          <div class="meta">Sari · 09.10 · Deterjen masuk daftar belanja</div>
+        </div>
+        <div class="label">1. Foto sebelum <i>· wajib</i></div>
+        <div class="addphoto"><svg class="ic"><use href="#i-camera"/></svg>Ambil Foto Sebelum</div>
+        <div class="label">2. Foto sesudah <i>· wajib</i></div>
+        <div class="addphoto"><svg class="ic"><use href="#i-camera"/></svg>Ambil Foto Sesudah</div>
+        <div class="spacer"></div>
+        <p class="tip">Ternyata sudah bisa? Selesaikan seperti biasa.</p>
+        <div class="btn muted"><svg class="ic"><use href="#i-camera"/></svg>Ambil 2 foto dulu</div>
+      </div>
+    </div>
+
+    <div class="phone"><div class="tag">Staf · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Cuti</span></div></div>
+      <div class="body">
+        <div class="wa">
+          <span class="badge"><svg class="ic"><use href="#i-check-circle-2"/></svg></span>
+          <h3>Permintaan cuti terkirim</h3>
+          <p>12–14 Nov. Admin sudah diberi tahu lewat notifikasi.</p>
+        </div>
+        <div class="spacer"></div>
+        <div class="btn primary">Selesai</div>
+        <div class="btn outline sm"><svg class="ic"><use href="#i-wa"/></svg>Kirim WA juga</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 3. OWNER TODAY ============ -->
+<section class="screen">
+  <h2>3. Owner: Today, with a couldn't-do task</h2>
+  <p>Amber instead of red, with the reason, who and when. My tasks counts it ("1 couldn't") when someone said an admin's own chore couldn't be done. After the summary time, one quiet line opens the evening summary sheet.</p>
+  <div class="pair">
+
+    <div class="phone"><div class="tag">Owner · EN</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Miamus</span><span class="seg"><span class="on">Overview</span><span>Staff</span></span></div></div>
+      <div class="body">
+        <div class="quiet"><svg class="ic"><use href="#i-moon"/></svg><span>3 not done today</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="quiet"><svg class="ic"><use href="#i-basket"/></svg><span>2 things to buy</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="card"><header><h3>My tasks</h3><span>1 of 3 done · 1 couldn't</span></header>
+          <div class="row cant"><span class="lead"><svg class="ic lg"><use href="#i-circle-slash"/></svg></span><span class="t"><b>Pay the water bill</b><span><svg class="ic xs"><use href="#i-circle-slash"/></svg>Couldn't: other · Rina · 4:05 PM</span></span></div>
+          <div class="row"><span class="lead"><svg class="ic lg"><use href="#i-circle"/></svg></span><span class="t"><b>Water the plants</b><span><svg class="ic xs"><use href="#i-map-pin"/></svg>Terrace <svg class="ic xs"><use href="#i-repeat"/></svg></span></span></div>
+          <div class="row done"><span class="lead"><svg class="ic lg"><use href="#i-circle-check"/></svg></span><span class="t"><b>Book the vet</b><span>Done 9:30 AM</span></span></div>
+        </div>
+        <h4 class="h">Today</h4>
+        <div class="card">
+          <div class="row cant"><span class="time">9:00 AM</span><span class="t"><b>Laundry</b><span><svg class="ic xs"><use href="#i-circle-slash"/></svg>Couldn't: out of stock · Sari · 9:10 AM</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row late"><span class="time">8:00 AM</span><span class="t"><b>Mop the terrace</b><span><svg class="ic xs"><use href="#i-alert"/></svg>Not done · Sari</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row late"><span class="time">6:00 PM</span><span class="t"><b>Dinner · Mochi</b><span><svg class="ic xs"><use href="#i-paw-print"/></svg>Not logged yet</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row done"><span class="time">7:00 AM</span><span class="t"><b>Breakfast · Mochi, Kopi</b><span>Done 7:12 AM · Sari</span></span></div>
+        </div>
+      </div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar"/></svg>Today</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Pets</span><span><svg class="ic"><use href="#i-sparkles"/></svg>Chores</span><span><svg class="ic"><use href="#i-pot"/></svg>Kitchen</span><span><svg class="ic"><use href="#i-house"/></svg>Household</span></div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Miamus</span><span class="seg"><span class="on">Ringkasan</span><span>Staf</span></span></div></div>
+      <div class="body">
+        <div class="quiet"><svg class="ic"><use href="#i-moon"/></svg><span>3 belum selesai hari ini</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="quiet"><svg class="ic"><use href="#i-basket"/></svg><span>2 barang perlu dibeli</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="card"><header><h3>Tugas saya</h3><span>1 dari 3 selesai · 1 tidak bisa</span></header>
+          <div class="row cant"><span class="lead"><svg class="ic lg"><use href="#i-circle-slash"/></svg></span><span class="t"><b>Bayar tagihan air</b><span><svg class="ic xs"><use href="#i-circle-slash"/></svg>Tidak bisa: lainnya · Rina · 16.05</span></span></div>
+          <div class="row"><span class="lead"><svg class="ic lg"><use href="#i-circle"/></svg></span><span class="t"><b>Siram tanaman</b><span><svg class="ic xs"><use href="#i-map-pin"/></svg>Teras <svg class="ic xs"><use href="#i-repeat"/></svg></span></span></div>
+          <div class="row done"><span class="lead"><svg class="ic lg"><use href="#i-circle-check"/></svg></span><span class="t"><b>Buat janji dokter hewan</b><span>Selesai 09.30</span></span></div>
+        </div>
+        <h4 class="h">Hari ini</h4>
+        <div class="card">
+          <div class="row cant"><span class="time">09.00</span><span class="t"><b>Cuci baju</b><span><svg class="ic xs"><use href="#i-circle-slash"/></svg>Tidak bisa: barang habis · Sari · 09.10</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row late"><span class="time">08.00</span><span class="t"><b>Pel teras</b><span><svg class="ic xs"><use href="#i-alert"/></svg>Belum dikerjakan · Sari</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row late"><span class="time">18.00</span><span class="t"><b>Makan malam · Mochi</b><span><svg class="ic xs"><use href="#i-paw-print"/></svg>Belum dicatat</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+          <div class="row done"><span class="time">07.00</span><span class="t"><b>Sarapan · Mochi, Kopi</b><span>Selesai 07.12 · Sari</span></span></div>
+        </div>
+      </div>
+      <div class="tabbar"><span class="on"><svg class="ic"><use href="#i-calendar"/></svg>Hari ini</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Hewan</span><span><svg class="ic"><use href="#i-sparkles"/></svg>Tugas</span><span><svg class="ic"><use href="#i-pot"/></svg>Dapur</span><span><svg class="ic"><use href="#i-house"/></svg>Rumah</span></div>
+    </div>
+
+  </div>
+</section>
+
+<section class="screen">
+  <h2>4. Owner: opening a couldn't-do task</h2>
+  <p>The usual sheet, with the reason block on top: who, when, the staff's note in quotes, the photo, and what went on the shopping list. The owner's existing actions (the chore editor: change it, skip a day, give it to someone else) are unchanged; no new owner action in this phase.</p>
+  <div class="pair">
+
+    <div class="phone"><div class="tag">Owner · EN</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Miamus</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Laundry</h3>
+        <p class="sub">9:00 AM · Laundry room · for Sari · every day</p>
+        <div class="info">
+          <div class="top"><svg class="ic"><use href="#i-circle-slash"/></svg>Couldn't be done: out of stock</div>
+          <div class="meta">Sari · 9:10 AM</div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span class="thumb"><svg class="ic"><use href="#i-image"/></svg></span>
+            <div style="flex:1"><div class="meta" style="margin-bottom:2px">Sari's note</div><q>Only a little left, enough for tomorrow's whites.</q></div>
+          </div>
+          <div class="line"><svg class="ic xs"><use href="#i-basket"/></svg>Detergent is on the shopping list</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="btn outline">Edit chore</div>
+      </div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Miamus</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h3>Cuci baju</h3>
+        <p class="sub">09.00 · Ruang cuci · untuk Sari · setiap hari</p>
+        <div class="info">
+          <div class="top"><svg class="ic"><use href="#i-circle-slash"/></svg>Tidak bisa dikerjakan: barang habis</div>
+          <div class="meta">Sari · 09.10</div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span class="thumb"><svg class="ic"><use href="#i-image"/></svg></span>
+            <div style="flex:1"><div class="meta" style="margin-bottom:2px">Catatan Sari</div><q>Tinggal sedikit, cukup untuk cucian putih besok.</q></div>
+          </div>
+          <div class="line"><svg class="ic xs"><use href="#i-basket"/></svg>Deterjen sudah masuk daftar belanja</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="btn outline">Ubah tugas</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 5. EVENING ============ -->
+<section class="screen">
+  <h2>5. Owner: the evening summary push</h2>
+  <p>One push at 19.00 (or the admin's chosen hour), only when something is open. Couldn't first, then not done, then what waits for the admin. Reason labels only, never the staff's note. Below it, the two on-arrival pushes for requests and a refused medicine.</p>
+  <div class="pair">
+
+    <div class="phone"><div class="tag">Owner · EN</div>
+      <div class="lock">
+        <div class="clock">7:00</div><div class="date">Tuesday 10 November</div>
+        <div class="notif"><span class="app"><svg class="ic"><use href="#i-paw-print"/></svg></span><div class="txt"><b>Not done today <small>now</small></b><p>Couldn't: Laundry (out of stock). Not done: Mop the terrace, Mochi's dinner 6:00 PM. Waiting for you: Sari's leave.</p></div></div>
+        <div class="notif small"><span class="app"><svg class="ic"><use href="#i-paw-print"/></svg></span><div class="txt"><b>Leave request <small>2h ago</small></b><p>Sari asked for 12–14 Nov off.</p></div></div>
+        <div class="notif small"><span class="app"><svg class="ic"><use href="#i-paw-print"/></svg></span><div class="txt"><b>Medicine not taken <small>8:05 AM</small></b><p>Mochi wouldn't take Amoxicillin (8:00 AM). Reported by Sari.</p></div></div>
+      </div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · ID</div>
+      <div class="lock">
+        <div class="clock">19.00</div><div class="date">Selasa, 10 November</div>
+        <div class="notif"><span class="app"><svg class="ic"><use href="#i-paw-print"/></svg></span><div class="txt"><b>Belum selesai hari ini <small>sekarang</small></b><p>Tidak bisa: Cuci baju (barang habis). Belum: Pel teras, Makan malam Mochi 18.00. Menunggu Anda: cuti Sari.</p></div></div>
+        <div class="notif small"><span class="app"><svg class="ic"><use href="#i-paw-print"/></svg></span><div class="txt"><b>Usulan jadwal <small>3 jam lalu</small></b><p>Sari mengusulkan 3 perubahan jadwal.</p></div></div>
+        <div class="notif small"><span class="app"><svg class="ic"><use href="#i-paw-print"/></svg></span><div class="txt"><b>Obat tidak diminum <small>08.05</small></b><p>Mochi tidak mau minum obat Amoxicillin (08.00). Dilaporkan Sari.</p></div></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="screen">
+  <h2>6. Owner: the summary sheet (tapping the push)</h2>
+  <p>Opens over Today (<code>?summary=2026-11-10</code>). Read-only; each row opens the task's normal sheet or the request's existing screen. Shopping is a line here and never a reason to push.</p>
+  <div class="pair">
+
+    <div class="phone"><div class="tag">Owner · EN</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Miamus</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet tall">
+        <div class="grab"></div>
+        <h3>Not done today</h3>
+        <p class="sub">Tuesday 10 November · 7:00 PM</p>
+        <div class="sect">Couldn't be done <i>1</i></div>
+        <div class="srow cant"><svg class="ic r"><use href="#i-circle-slash"/></svg><span class="t"><b>Laundry</b><span>Out of stock · Sari · 9:10 AM · "Only a little left…"</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="sect">Not done yet <i>2</i></div>
+        <div class="srow"><svg class="ic"><use href="#i-circle"/></svg><span class="t"><b>Mop the terrace</b><span>8:00 AM · Sari</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="srow"><svg class="ic"><use href="#i-paw-print"/></svg><span class="t"><b>Dinner · Mochi</b><span>6:00 PM</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="sect">Waiting for you <i>1</i></div>
+        <div class="srow"><svg class="ic"><use href="#i-calendar"/></svg><span class="t"><b>Sari's leave</b><span>12–14 Nov</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="sect">To buy <i>2</i></div>
+        <div class="srow"><svg class="ic"><use href="#i-basket"/></svg><span class="t"><b>Detergent, Dog food</b><span>Opens Kitchen</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="spacer"></div>
+        <div class="done-line"><svg class="ic"><use href="#i-check-circle-2"/></svg>12 done today</div>
+      </div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand"><span class="mark"><svg class="ic"><use href="#i-paw-print"/></svg></span>Miamus</span></div></div>
+      <div class="body"></div>
+      <div class="dim"></div>
+      <div class="sheet tall">
+        <div class="grab"></div>
+        <h3>Belum selesai hari ini</h3>
+        <p class="sub">Selasa, 10 November · 19.00</p>
+        <div class="sect">Tidak bisa dikerjakan <i>1</i></div>
+        <div class="srow cant"><svg class="ic r"><use href="#i-circle-slash"/></svg><span class="t"><b>Cuci baju</b><span>Barang habis · Sari · 09.10 · "Tinggal sedikit…"</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="sect">Belum dikerjakan <i>2</i></div>
+        <div class="srow"><svg class="ic"><use href="#i-circle"/></svg><span class="t"><b>Pel teras</b><span>08.00 · Sari</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="srow"><svg class="ic"><use href="#i-paw-print"/></svg><span class="t"><b>Makan malam · Mochi</b><span>18.00</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="sect">Menunggu Anda <i>1</i></div>
+        <div class="srow"><svg class="ic"><use href="#i-calendar"/></svg><span class="t"><b>Cuti Sari</b><span>12–14 Nov</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="sect">Perlu dibeli <i>2</i></div>
+        <div class="srow"><svg class="ic"><use href="#i-basket"/></svg><span class="t"><b>Deterjen, Makanan Anjing</b><span>Buka Dapur</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="spacer"></div>
+        <div class="done-line"><svg class="ic"><use href="#i-check-circle-2"/></svg>12 selesai hari ini</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="screen">
+  <h2>7. Owner: the two switches (Household → Notifications)</h2>
+  <p>Per admin, on by default (D6, D8). The summary only sends when something is open. Sick pet, urgent repair and PIN-locked alerts stay as they are, with no switch.</p>
+  <div class="pair">
+
+    <div class="phone"><div class="tag">Owner · EN</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Notifications</span></div></div>
+      <div class="body">
+        <div class="set">
+          <div class="it"><svg class="ic"><use href="#i-bell"/></svg><span class="t"><b>This phone</b><span>On · Send a test</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="set">
+          <div class="it"><svg class="ic"><use href="#i-moon"/></svg><span class="t"><b>Evening summary</b><span>What wasn't done today, only when something is open.</span></span><span class="sw"></span></div>
+          <div class="it"><span class="t" style="padding-left:26px"><b style="font-weight:400">Time</b></span><span class="sel">7:00 PM <svg class="ic xs"><use href="#i-chevron-down"/></svg></span></div>
+          <div class="it"><svg class="ic"><use href="#i-bulb"/></svg><span class="t"><b>Staff requests</b><span>Leave and schedule suggestions, when they arrive.</span></span><span class="sw"></span></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><svg class="ic"><use href="#i-calendar"/></svg>Today</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Pets</span><span><svg class="ic"><use href="#i-sparkles"/></svg>Chores</span><span><svg class="ic"><use href="#i-pot"/></svg>Kitchen</span><span class="on"><svg class="ic"><use href="#i-house"/></svg>Household</span></div>
+    </div>
+
+    <div class="phone"><div class="tag">Owner · ID</div><div class="status"></div>
+      <div class="appbar"><div class="row"><span class="brand">Notifikasi</span></div></div>
+      <div class="body">
+        <div class="set">
+          <div class="it"><svg class="ic"><use href="#i-bell"/></svg><span class="t"><b>HP ini</b><span>Aktif · Kirim tes</span></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        </div>
+        <div class="set">
+          <div class="it"><svg class="ic"><use href="#i-moon"/></svg><span class="t"><b>Ringkasan malam</b><span>Yang belum selesai hari ini, hanya kalau ada.</span></span><span class="sw"></span></div>
+          <div class="it"><span class="t" style="padding-left:26px"><b style="font-weight:400">Jam</b></span><span class="sel">19.00 <svg class="ic xs"><use href="#i-chevron-down"/></svg></span></div>
+          <div class="it"><svg class="ic"><use href="#i-bulb"/></svg><span class="t"><b>Permintaan staf</b><span>Cuti dan usulan jadwal, saat masuk.</span></span><span class="sw"></span></div>
+        </div>
+      </div>
+      <div class="tabbar"><span><svg class="ic"><use href="#i-calendar"/></svg>Hari ini</span><span><svg class="ic"><use href="#i-paw-print"/></svg>Hewan</span><span><svg class="ic"><use href="#i-sparkles"/></svg>Tugas</span><span><svg class="ic"><use href="#i-pot"/></svg>Dapur</span><span class="on"><svg class="ic"><use href="#i-house"/></svg>Rumah</span></div>
+    </div>
+
+  </div>
+</section>
+
+<div class="notes">
+  <ul>
+    <li>Amber uses the warning tint the app already has (low stock, "Cek tanggalnya"); red stays for "not done".</li>
+    <li>Example names and items are made up. Times follow <code>useFormatTime()</code>: 9:10 AM for English, 09.10 for Indonesian.</li>
+    <li>No images are embedded; the logo is a placeholder mark.</li>
+  </ul>
+</div>
+</body>
+</html>
