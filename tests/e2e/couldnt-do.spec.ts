@@ -7,10 +7,9 @@ import { OWNER_PROFILE_ID, STAFF_ID, freshSession, installStub } from "./stub-ba
 // back for 5 minutes; owners see it in amber with what was said, get an
 // evening summary sheet, and set their two notification switches.
 
-function ymd(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-const today = () => ymd(new Date());
+// Today in Jakarta, the browser's zone (playwright.config.ts), whatever zone
+// the runner is in: CI runs in UTC.
+const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
 
 let n = 0;
 const chore = (over: Record<string, unknown>) => ({
@@ -218,9 +217,12 @@ test("the evening summary sheet, from its link, in Bahasa Indonesia", async ({ c
 });
 
 test("the quiet line on Today after the summary hour opens the sheet", async ({ context, page }) => {
-  const mop = chore({ title: "Mop the terrace" });
+  // 20.30 in Jakarta (the browser's zone), whatever zone the test runner is
+  // in: CI runs in UTC.
+  const day = today();
+  const mop = chore({ title: "Mop the terrace", due_date: day });
   await installStub(context, { owner: { locale: "en" }, chores: [mop], notificationPrefs: { evening_summary_hour: 18, staff_request_pushes: true } });
-  await page.clock.setFixedTime(new Date(`${today()}T20:30:00`));
+  await page.clock.setFixedTime(new Date(`${day}T20:30:00+07:00`));
   await page.goto("/dashboard");
 
   // The chore and the fixture's pet routines due by 20.30.
