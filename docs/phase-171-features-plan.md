@@ -249,7 +249,7 @@ One rule set, used by every feature:
   one line, **Turn on** (primary) and **No thanks**. No modal, nothing that
   blocks the screen it's on.
 - **Once per owner.** **No thanks** hides that offer for that owner for
-  good, on every phone (saved on the account, beside the language). **Turn
+  good, on every phone (saved on the account). **Turn
   on** switches the feature for the household and hides the offer for every
   owner. Features is always there to change it.
 - **One at a time.** At most one offer on screen, and at most one new offer
@@ -285,8 +285,17 @@ PIN, pay and leave). That's:
 Each person has: **name** (as the family says it: *Oma Lina*, *Raka*), a
 **relation** (Partner · Child · Parent · Grandparent · Other family /
 Pasangan · Anak · Orang tua · Kakek/Nenek · Keluarga lain), an optional
-**birth year** (not a date: enough for "about 78", less to hold), and
-**archived** (history kept, gone from lists).
+**birth year** (not a date: enough for "about 78", less to hold), a
+**Care group** (Elders · Kids · none: which Care pill they appear under;
+suggested from the relation, Parent and Grandparent → Elders, Child → Kids,
+and changeable, because "Oma" can be an owner's mother), and **archived**
+(history kept, gone from lists). The relation is how the owners describe
+them; Miamus never derives anything from it except that suggestion.
+
+**Only owners read people records.** Staff phones never read the list of
+family members, their relations or birth years. A staff phone learns a
+person's name only when that person has a care routine meant for it,
+through the routine itself (below), the way it learns a pet's name today.
 
 Where: **Household → Family**, the row that exists. Today it lists owner
 accounts and *Invite family*; it becomes the family: owners (with an
@@ -422,7 +431,8 @@ Honest about what it would take:
 | Add | Add family member | Tambah anggota keluarga |
 | Relations | Partner · Child · Parent · Grandparent · Other family | Pasangan · Anak · Orang tua · Kakek/Nenek · Keluarga lain |
 | Birth year | Birth year (optional) | Tahun lahir (opsional) |
-| Add-person line (PR B) | Add family who agree to be in Miamus. Only owners see birth years. | Tambahkan keluarga yang setuju dicatat di Miamus. Tahun lahir hanya dilihat pemilik rumah. |
+| Add-person line (PR B) | Add family who agree to be in Miamus. Only owners see this list; staff see a name only on a routine that's theirs. | Tambahkan keluarga yang setuju dicatat di Miamus. Hanya pemilik rumah yang melihat daftar ini; staf hanya melihat nama di rutinitas yang menjadi tugasnya. |
+| Care group (PR B) | Care: Elders · Kids · None | Rawat: Lansia · Anak · Tidak ada |
 | Elder page | Routines · This week · Add routine | Rutinitas · Minggu ini · Tambah rutinitas |
 | Summary | Morning walk: 5 of 7 days | Jalan pagi: 5 dari 7 hari |
 | Routine form | Who does it · Anyone · Days · Time | Siapa yang mengerjakan · Siapa saja · Hari · Jam |
@@ -519,10 +529,14 @@ answered. Written by **`set_household_start_with(p_household uuid, p_items
 text[])`** (same owner check, revoke/grant as above). Not added to
 `create_household`: screen 2 comes after the household exists.
 
-**Dismissed offers**: `user_preferences.dismissed_offers text[] not null
-default '{}'`. The table has no client grants (114), so two functions:
+**Dismissed offers**: a small table of their own, **`owner_dismissed_offers`**
+(`user_id` → `auth.users on delete cascade`, `offer text` with a check of
+known values, `dismissed_at`; primary key `(user_id, offer)`). Not a column
+on `user_preferences`: that row only exists once a language is saved and
+its `locale` is `not null`, so a dismissal could fail for an owner who has
+none. RLS on, no client grants; two functions:
 **`my_dismissed_offers()`** returns the caller's list; **`dismiss_offer(p_offer
-text)`** appends one (known values only, checked). Both `security definer`,
+text)`** inserts one (`on conflict do nothing`). Both `security definer`,
 `search_path = ''`, `auth.uid()` only, anonymous callers refused (staff
 phones never see offers), `revoke all … from public, anon;` `grant execute
 … to authenticated;`. **Turn on** needs no dismissal row: the feature is on,
@@ -537,16 +551,24 @@ account; grants (`anon` can execute none).
 
 - **`household_people`**: `id`, `household_id` (cascade), `name` (`text`,
   1–40 chars), `relation` (`check in ('partner', 'child', 'parent',
-  'grandparent', 'other')`), `user_id` (`uuid` → `auth.users on delete set
-  null`, nullable; unique per household: an owner's own row), `archived_at`,
-  `created_at`, `created_by`. Select: members and staff phones (staff need
-  the name on a routine). Insert/update: owners only (`household_members`
-  check in the policy), and a trigger like 106's gives each owner their
-  linked row.
-- **`household_person_details`**: `person_id` (primary key, cascade),
-  `birth_year` (`smallint`, 1900 to the current year). **Owners only**, no
-  staff policy at all. Later per-person fields that staff mustn't see go
-  here; allergies, which the cook must see, get their own table later.
+  'grandparent', 'other')`), `care_group` (`check in ('elder', 'kid')`,
+  nullable), `birth_year` (`smallint`, nullable, 1900 to the current year,
+  checked in a trigger since `check` can't call `now()` safely), `user_id`
+  (`uuid` → `auth.users on delete set null`, nullable; unique per household:
+  an owner's own row), `archived_at`, `created_at`, `created_by`.
+  **Owners only, for every operation**: select, insert, update policies
+  check a `household_members` row for `auth.uid()` and that household
+  (never `get_user_household_ids()`, which staff phones pass); no delete
+  policy (archive instead; the household's deletion cascades). A trigger
+  like 106's gives each new owner a linked row, and the migration backfills
+  one for every existing owner.
+- **What staff see of a person**: the linked `task_entities` row (below),
+  which exists only once the person has a care routine, and carries only
+  the name (a trigger keeps it in step when an owner renames the person,
+  and archives it with them). Staff phones already read `task_entities` for
+  pets; they never read `household_people`.
+- **Allergies later** (kitchen D12 B), which the cook must see, get their
+  own table and policy then, not a column here.
 - **The routine engine**: `task_entities.entity_type` check gains
   `'person'`; `task_entities.person_id` (nullable, unique, cascade);
   `master_schedules.module` and `task_logs.module` checks gain `'care'`;
@@ -557,9 +579,10 @@ account; grants (`anon` can execute none).
   `master_schedules` and `task_logs` policies and the routine proposal path
   (staff suggestions stay pet-only at first).
 - **`set_household_feature`** gains `'elders'` with the archive-first
-  guard.
-- **The household export** (127, "Your data") includes people, details and
-  care logs; deletion is by the existing cascade.
+  guard (refused while a person with `care_group = 'elder'` isn't
+  archived).
+- **The household export** (127, "Your data") includes people and care
+  logs; deletion is by the existing cascade.
 
 ## Privacy policy (`src/components/legal/privacy-policy.tsx`, both languages)
 
@@ -570,19 +593,27 @@ account; grants (`anon` can execute none).
   service, no change in where data lives. Reviewers please confirm.
 - **PR B, before it ships:**
   - section 3, a new group **"Family members you add"**: name, relation to
-    the household, an optional birth year (owners only), and for elders
-    their routines, who ticked them, when, and any note staff or family
-    added; notes can mention health, so owners should keep them practical;
-  - section 5 ("Who can see it"): staff see a family member's name and the
-    routines that are theirs to do; never birth years;
+    the household, an optional birth year, whether they're cared for as an
+    elder or a child, and for elders their routines, who ticked them, when,
+    and any note staff or family added; notes can mention health, so owners
+    should keep them practical;
+  - section 5 ("Who can see it"): only the household's admins see family
+    members; staff see a person's name only on a routine that's theirs to
+    do, never the relation or birth year;
+  - section 10, "Children": its first sentence changes in PR B, because an
+    admin may now add a child's name to the family list even before Kids
+    routines exist: "Miamus is for adults. Admins may add their children's
+    names to the family list; only admins see them." / "Miamus untuk orang
+    dewasa. Admin boleh menambahkan nama anak ke daftar keluarga; hanya
+    admin yang melihatnya." The rest of section 10 stays;
   - section 7 ("How long"): kept until the person is deleted or the
     household is; archived people keep their history;
   - section 9: a line for admins: tell family members you add, and the
     elder, that their routines are recorded;
   - `src/config/legal.ts`: nothing changes unless a new processor is added
     (none is).
-- **PR C (kids)**: section 10, "Children", is rewritten: Miamus stores
-  children's names and routines only as entered by their parent or
+- **PR C (kids)**: section 10, "Children", gains kids' routines: Miamus
+  stores children's names and routines only as entered by their parent or
   guardian (the admin), never asks children to sign in, and takes no
   photos of their routines (UU PDP Pasal 25: a parent's consent for
   children's data).
@@ -658,7 +689,7 @@ the owner's OK, merge with the owner's OK.
 - **D8 — Who is a person record.**
   **A (recommended):** family who live in or are cared for at home, not
   staff; owners listed automatically and linked to their account; under
-  Household → Family; name, relation, optional birth year (owners only). B:
+  Household → Family; name, relation, optional birth year, a Care group; only owners read the list, staff see a name only on their routine. B:
   only people who are cared for (kids, elders); owners aren't person
   records. C: store people like pets, in `task_entities`.
 - **D9 — Elders' routines: which engine.**
