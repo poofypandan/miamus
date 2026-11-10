@@ -308,7 +308,7 @@ kebaya, a suit, a handbag.
 
 Offline: a bag or a return saved with no signal goes into the existing
 outbox (R10) with its photos, like a finished chore, and is sent when the
-signal comes back.
+signal comes back. (The outbox learns two new kinds of save in PR A.)
 
 ## Owner flow (English or Bahasa Indonesia)
 
@@ -491,7 +491,7 @@ staff push, 141 staff pay, 142 suites are taken).
 
 | Column | |
 | --- | --- |
-| `trip_id`, `item_id`, `household_id` | composite FKs to both, `on delete cascade`; primary key `(trip_id, item_id)` |
+| `trip_id`, `item_id`, `household_id` | composite FKs to both, `on delete cascade`; primary key `(trip_id, item_id)`. A non-member session may add a piece only to an open bag it created in the last 10 minutes (the send form); owners any time |
 | `back_at` | set by the returns trigger when a return ticks the piece |
 
 **Who may do what (RLS)**
@@ -512,6 +512,9 @@ staff push, 141 staff pay, 142 suites are taken).
 - `closet_items`: read by the household; insert, update, delete by
   `household_members`.
 - `location_spots`: above.
+- Composite keys: `closet_trips`, `closet_items` and `location_spots` each
+  get `unique (id, household_id)` (as 105 and 130), so every reference above
+  stays inside one household.
 - `revoke all … from anon` on every new table.
 
 **Triggers and functions** (every one: `search_path = ''`; revoked from
@@ -563,7 +566,7 @@ only):
 - A bag closed as **missing** follows the same 90 days; the piece's
   "Missing since" (PR B) stays while the piece exists.
 
-**Export** (`export_household_data()`, as 138 left it): re-created to
+**Export** (`export_household_data()`, as the latest migration before 143 left it; 138 today): re-created to
 include the four tables (owners-only export, `caller_admin_household()`,
 revoked from `public, anon`, granted to `authenticated`). Household
 deletion cascades through `household_id`.
