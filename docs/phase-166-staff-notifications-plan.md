@@ -1,6 +1,8 @@
 # Phase 166: Notifications on staff phones
 
-Status: **plan for the owner's decision. Nothing is built.**
+Status: **decided: owner delegated to the recommendations, 2026-11-10
+(D1 A to D11 A). Not built yet**: per D11, the build waits for Phase 165
+PR A (migration 139) to merge.
 Audit item **4** (`docs/product-audit-2026-11-09.md`, "Notifications on staff
 phones"). Decision **B3** says this comes before any WhatsApp work.
 Mockup: `docs/mockups/phase-166-staff-notifications.html` (open it in a browser at phone width).
@@ -469,8 +471,10 @@ covers staff. It's unchanged.
 **Service providers, noticed while reading:** the endpoint allow-list (103)
 includes Microsoft's push service (WNS, Edge on Windows), but the policy
 names only Apple, Google and Mozilla. The gap already exists for owners'
-browsers. Fix it in this phase's privacy PR at the latest: add "or
-Microsoft" in both languages, or drop WNS from the allow-list.
+browsers. The manager has asked the Phase 165 build to fix it in its
+privacy update (add "or Microsoft" in both languages, or drop WNS from the
+allow-list). If that hasn't happened by this phase's privacy PR, fix it
+there.
 
 ## Tutorials
 
@@ -512,6 +516,9 @@ If staff with notifications on still start late, the channel isn't the
 problem, and the WhatsApp experiment (B4) has less to prove.
 
 ## Decisions for the owner
+
+**Decided 2026-11-10: the owner delegated to the recommendations, so D1–D11
+are all A.**
 
 - **D1: Which events push to staff.**
   **A (recommended):** the four in the brief.
