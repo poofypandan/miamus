@@ -21,9 +21,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// What a shared link to the app shows — in WhatsApp most of all, where staff
+// and most owners meet it (owner, 2026-11-10: the English "Household
+// Management" card felt robotic). Indonesian, warm, short enough for the
+// WhatsApp card (title ~30 characters, description ~70); the line is the
+// brand's promise from the launch screen. The picture is app/opengraph-image.tsx.
+// The landing pages (/welcome, /selamat-datang) set their own.
+const SHARE_TITLE = "Miamus untuk rumah Anda";
+const SHARE_DESCRIPTION = "Biar pikiran sedikit lebih ringan. Masuk untuk lihat rumah Anda.";
+
 export const metadata: Metadata = {
-  title: "Miamus - Household Management",
-  description: "Shared household management for everyone under one roof",
+  title: SHARE_TITLE,
+  description: SHARE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "Miamus",
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
+    locale: "id_ID",
+  },
+  twitter: { card: "summary_large_image", title: SHARE_TITLE, description: SHARE_DESCRIPTION },
   // No `manifest` or `icons` here: app/manifest.ts and app/icon.tsx /
   // apple-icon.tsx are file conventions, and Next links them itself (Phase 107).
   appleWebApp: {

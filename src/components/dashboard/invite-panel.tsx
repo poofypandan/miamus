@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, Copy, Loader2, Smartphone, UserPlus } from "lucide-react";
+import { Check, Copy, Loader2, Send, Smartphone, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useHousehold } from "@/context/household-context";
 import { createInviteLink, INVITE_TTL_DAYS, type InviteKind } from "@/lib/invites";
-import { useT } from "@/context/owner-locale-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { inviteMessage, whatsAppShareUrl } from "@/lib/share-text";
 
 /**
  * Where the owner hands out access (Phase 89).
@@ -60,6 +61,7 @@ function InviteCard({
 }) {
   const { activeHouseholdId } = useHousehold();
   const t = useT();
+  const locale = useOwnerLocale();
   const [link, setLink] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -136,6 +138,24 @@ function InviteCard({
             </Button>
           )}
         </div>
+
+        {link && (
+          // The link with a few warm words, ready to send (owner, 2026-11-10).
+          <Button
+            variant="outline"
+            className="min-h-[44px]"
+            onClick={() =>
+              window.open(
+                whatsAppShareUrl(inviteMessage(kind, link, INVITE_TTL_DAYS, locale)),
+                "_blank",
+                "noopener,noreferrer"
+              )
+            }
+          >
+            <Send />
+            {t("Send on WhatsApp", "Kirim lewat WhatsApp")}
+          </Button>
+        )}
 
         {link && (
           <p className="text-[11px] text-muted-foreground">
