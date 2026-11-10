@@ -13,6 +13,7 @@ import { StockStatusSheet } from "@/components/shopping/stock-status-sheet";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import {
   STOCK_STATUS_LABELS,
   alertSubject,
@@ -52,6 +53,7 @@ export function ShoppingTab() {
   } = useHousehold();
   const locale = useOwnerLocale();
   const t = useT();
+  const { petsOn } = useHouseholdProfile();
   const { allProfiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const [choosing, setChoosing] = useState<InventoryItem | null>(null);
@@ -255,10 +257,17 @@ export function ShoppingTab() {
           <EmptyState
             icon={Package}
             title={t("Nothing on the list yet", "Belum ada barang")}
-            description={t(
-              "Add the things your home keeps — dog food, pee pads, cleaning supplies — and your staff can say when they run low.",
-              "Tambahkan barang yang selalu ada di rumah — makanan anjing, pee pad, sabun — supaya staf bisa memberi tahu kalau hampir habis."
-            )}
+            description={
+              petsOn
+                ? t(
+                    "Add the things your home keeps — dog food, pee pads, cleaning supplies — and your staff can say when they run low.",
+                    "Tambahkan barang yang selalu ada di rumah — makanan anjing, pee pad, sabun — supaya staf bisa memberi tahu kalau hampir habis."
+                  )
+                : t(
+                    "Add the things your home keeps — rice, gallon water, cleaning supplies — and your staff can say when they run low.",
+                    "Tambahkan barang yang selalu ada di rumah — beras, galon, sabun — supaya staf bisa memberi tahu kalau hampir habis."
+                  )
+            }
           />
         ) : (
           <ItemList items={inventoryItems} lang={locale} onPress={setChoosing} />
@@ -280,7 +289,8 @@ export function ShoppingTab() {
         open={editing !== null}
         onOpenChange={(open) => !open && setEditing(null)}
         item={formItem}
-        defaultScope="pet"
+        // No pet shelf to start on in a home without pets (Phase 162).
+        defaultScope={petsOn ? "pet" : "home"}
       />
     </div>
   );

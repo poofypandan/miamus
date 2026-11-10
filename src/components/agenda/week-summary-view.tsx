@@ -111,10 +111,14 @@ export function WeekSummaryView({
 
         {summary.beyond.length === 0 ? (
           <p className="rounded-xl border border-dashed px-3 py-5 text-center text-sm text-muted-foreground">
-            {t(
-              "Nothing beyond the daily routine this week.",
-              "Minggu ini tidak ada apa-apa selain rutinitas harian."
-            )}
+            {/* No daily routine to be "beyond" in a home without pets'
+                routines (Phase 162). */}
+            {summary.rhythm.length > 0
+              ? t(
+                  "Nothing beyond the daily routine this week.",
+                  "Minggu ini tidak ada apa-apa selain rutinitas harian."
+                )
+              : t("Nothing this week.", "Minggu ini tidak ada apa-apa.")}
           </p>
         ) : (
           summary.beyond.map(({ date, entries }) => {

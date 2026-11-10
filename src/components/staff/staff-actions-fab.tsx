@@ -30,7 +30,7 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
  * Staff-facing, so Bahasa Indonesia.
  */
 export function StaffActionsFab() {
-  const { routineProposals } = useHousehold();
+  const { routineProposals, pets } = useHousehold();
   const [open, setOpen] = useState(false);
   // Food came to the door (Phase 156): the add-food sheet, straight from here.
   const [addingFood, setAddingFood] = useState(false);
@@ -93,7 +93,11 @@ export function StaffActionsFab() {
           <SheetHeader className="border-b">
             <SheetTitle>Laporan & Usulan</SheetTitle>
             <SheetDescription>
-              Catat makanan masuk, lapor kerusakan, laporkan stok, usulkan jadwal, atau catat kegiatan ekstra.
+              {/* Without pets there is no schedule to suggest and no pet note
+                  to write (Phase 162). */}
+              {pets.length > 0
+                ? "Catat makanan masuk, lapor kerusakan, laporkan stok, usulkan jadwal, atau catat kegiatan ekstra."
+                : "Catat makanan masuk, lapor kerusakan, atau laporkan stok."}
             </SheetDescription>
           </SheetHeader>
           {/* overscroll-contain: reaching the end of the list must not start

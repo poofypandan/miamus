@@ -33,6 +33,12 @@ export interface KakakHousehold {
    */
   rooms: { ref: string; name: string; floor?: string | null; wholeFloor?: boolean }[];
   items: { ref: string; name: string; pet: boolean }[];
+  /**
+   * "Who lives here?" (Phase 162, migrations/133): true only when the owner
+   * said the household has no pets. Absent otherwise, so the block for every
+   * household with pets is exactly what it was.
+   */
+  petsOff?: boolean;
 }
 
 const WEEKDAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -118,13 +124,17 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   lines.push(`- ${household.owner.ref}: the owner (${household.owner.name})`);
   for (const person of household.people) lines.push(`- ${person.ref}: ${person.name}`);
   lines.push("");
-  lines.push("Pets (current daily times):");
-  for (const pet of household.pets) {
-    lines.push(
-      `- ${pet.ref}: ${pet.name} (${pet.kind}). Meals: ${times(pet.meals)}. Potty: ${times(pet.potty)}.`,
-    );
+  if (household.petsOff) {
+    lines.push("Pets: switched off for this household (Household → Who lives here). No pet routines.");
+  } else {
+    lines.push("Pets (current daily times):");
+    for (const pet of household.pets) {
+      lines.push(
+        `- ${pet.ref}: ${pet.name} (${pet.kind}). Meals: ${times(pet.meals)}. Potty: ${times(pet.potty)}.`,
+      );
+    }
+    if (household.pets.length === 0) lines.push("- none");
   }
-  if (household.pets.length === 0) lines.push("- none");
   lines.push("");
   lines.push("Rooms:");
   for (const room of household.rooms) lines.push(`- ${room.ref}: ${roomLine(room)}`);

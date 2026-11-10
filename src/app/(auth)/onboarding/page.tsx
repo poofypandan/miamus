@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Clock, Languages, Loader2, ShieldX, UserRoundPlus } from "lucide-react";
+import { Clock, Languages, Loader2, PawPrint, ShieldX, UserRoundPlus } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { LanguageChoice } from "@/components/dashboard/language-settings";
 import { Button } from "@/components/ui/button";
@@ -266,6 +266,9 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
   const router = useRouter();
   const { reloadTenant } = useHousehold();
   const [name, setName] = useState("");
+  // "Who lives here?" (Phase 162, D2): nothing pre-selected, so an untouched
+  // chip means no pets.
+  const [hasPets, setHasPets] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
 
@@ -292,7 +295,10 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
     // One call: the household and the owner membership are written together
     // (migrations/113), so a failure can no longer leave a household nobody
     // can reach (the Phase 120 retry this replaces).
-    const { error } = await supabase.rpc("create_household", { p_name: residence });
+    const { error } = await supabase.rpc("create_household", {
+      p_name: residence,
+      p_has_pets: hasPets,
+    });
     if (!error) {
       await enterHousehold();
       return;
@@ -326,8 +332,8 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         {t(
-          "Let's set up your household. It takes one step — then you can add your pets, chores and the people who share the house.",
-          "Mari siapkan rumah Anda. Cukup satu langkah — lalu Anda bisa menambahkan hewan, tugas dan orang-orang yang tinggal bersama."
+          "Let's set up your household. It takes one step — then you can add your chores, staff and family.",
+          "Mari siapkan rumah Anda. Cukup satu langkah — lalu Anda bisa menambahkan tugas, staf dan keluarga."
         )}
       </p>
 
@@ -351,6 +357,7 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
             "Ditampilkan di bagian atas setiap layar, untuk semua orang di rumah."
           )}
         </p>
+        <WhoLivesHere hasPets={hasPets} onChange={setHasPets} />
         <Button type="submit" disabled={saving || !name.trim()} className="min-h-[52px]">
           {saving && <Loader2 className="animate-spin" />} {t("Create household", "Buat rumah")}
         </Button>
@@ -369,6 +376,62 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
       </form>
       <LanguageSwitch />
     </main>
+  );
+}
+
+// --- Who lives here? (Phase 162) ------------------------------------------------------
+
+/**
+ * One question under the name, so sign-up stays one step. Pets now; Kids and
+ * Elders shown greyed as "Soon" so people see where it's going (D1). They are
+ * not buttons and store nothing: recording that children or elderly people
+ * live in a home needs its own privacy-policy update, with the Care tab.
+ */
+function WhoLivesHere({
+  hasPets,
+  onChange,
+}: {
+  hasPets: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  const t = useT();
+  return (
+    <fieldset className="mt-3 flex flex-col gap-2">
+      <legend className="text-sm font-medium text-gray-900">
+        {t("Who lives here?", "Siapa yang tinggal di sini?")}
+      </legend>
+      <p className="text-xs text-muted-foreground">
+        {t(
+          "Miamus shows only what fits your home. Change it any time under Household.",
+          "Miamus hanya menampilkan yang sesuai dengan rumah Anda. Bisa diubah kapan saja di tab Rumah."
+        )}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          aria-pressed={hasPets}
+          onClick={() => onChange(!hasPets)}
+          className={
+            hasPets
+              ? "flex min-h-11 items-center gap-1.5 rounded-full border border-gray-900 bg-gray-900 px-4 text-sm font-medium text-white"
+              : "flex min-h-11 items-center gap-1.5 rounded-full border bg-white px-4 text-sm font-medium text-gray-700 active:bg-muted"
+          }
+        >
+          <PawPrint className="size-4" aria-hidden />
+          {t("Pets", "Hewan")}
+        </button>
+        {[t("Kids", "Anak"), t("Elders", "Lansia")].map((label) => (
+          <span
+            key={label}
+            aria-disabled="true"
+            className="flex min-h-11 items-center gap-1 rounded-full border border-dashed px-4 text-sm text-gray-400"
+          >
+            {label}
+            <span className="text-[11px]">· {t("Soon", "Segera")}</span>
+          </span>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

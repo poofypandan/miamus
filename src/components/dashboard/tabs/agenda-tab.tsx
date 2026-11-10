@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue } from "@/components/dashboard/approval-queue";
 import { MedicationCourseAlerts } from "@/components/dashboard/medication-course-alerts";
+import { PetsQuestionCard } from "@/components/dashboard/pets-question-card";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
@@ -30,6 +31,7 @@ import { useToday } from "@/hooks/use-today";
 import { useRepairs } from "@/hooks/use-repairs";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
+import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { dayLabel } from "@/lib/date-label";
 import { moduleHref } from "@/lib/dashboard-modules";
 import { isLowStock } from "@/lib/inventory";
@@ -78,6 +80,9 @@ export function AgendaTab() {
     inventoryAlerts,
   } = useHousehold();
   const householdName = useHouseholdName();
+  // "Who lives here?" (Phase 162): with pets off, Today says nothing about
+  // pets (no Add Pet, no All | Pets | Chores pills).
+  const { petsOn } = useHouseholdProfile();
   const locale = useOwnerLocale();
   const t = useT();
   // Nothing anywhere yet, not just nothing today: the first screen after
@@ -112,7 +117,9 @@ export function AgendaTab() {
   // All | Pets | Chores (Phase 132): narrows what is drawn, never what is
   // loaded. `allEntries` still decides the welcome screen, so filtering a
   // brand-new household to Pets does not greet it twice.
-  const [filter, setFilter] = useAgendaFilter();
+  const [chosenFilter, setFilter] = useAgendaFilter();
+  // A ?show=pets left in the URL can't hide everything once pets are off.
+  const filter: AgendaFilter = petsOn ? chosenFilter : "all";
   const allEntries = useMemo(
     () => buildUnifiedAgenda({ groups, chores }),
     [groups, chores]
@@ -245,6 +252,10 @@ export function AgendaTab() {
             Renders nothing when there is nothing to ask. */}
         <MedicationCourseAlerts />
 
+        {/* Asked once, of a household that never answered and never had a
+            pet (Phase 162, D3). Renders nothing otherwise. */}
+        <PetsQuestionCard />
+
         {(needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
           <div className="-my-1 flex flex-col">
             {repairLines.toReview > 0 && (
@@ -324,7 +335,7 @@ export function AgendaTab() {
             {/* Under the heading, as the Pets tab's photo filters sit under
                 theirs (Phase 134). Not on an empty day — unless a filter is
                 on, which must stay reachable to be turned off. */}
-            {(allEntries.length > 0 || filter !== "all") && (
+            {petsOn && (allEntries.length > 0 || filter !== "all") && (
               <AgendaFilterPills
                 value={filter}
                 onChange={setFilter}
@@ -347,18 +358,28 @@ export function AgendaTab() {
                     ? t("Welcome to your new household!", "Selamat datang di rumah baru Anda!")
                     : t(`Welcome to ${householdName}!`, `Selamat datang di ${householdName}!`)
                 }
-                description={t(
-                  "Let's start by adding a pet or a chore. Everything you add shows up here, day by day, for everyone in the house.",
-                  "Mari mulai dengan menambahkan hewan atau tugas. Semua yang Anda tambahkan muncul di sini, hari demi hari, untuk semua orang di rumah."
-                )}
+                description={
+                  petsOn
+                    ? t(
+                        "Let's start by adding a pet or a chore. Everything you add shows up here, day by day, for everyone in the house.",
+                        "Mari mulai dengan menambahkan hewan atau tugas. Semua yang Anda tambahkan muncul di sini, hari demi hari, untuk semua orang di rumah."
+                      )
+                    : t(
+                        "Let's start by adding a chore. Everything you add shows up here, day by day, for everyone in the house.",
+                        "Mari mulai dengan menambahkan tugas. Semua yang Anda tambahkan muncul di sini, hari demi hari, untuk semua orang di rumah."
+                      )
+                }
               >
-                <Button className="min-h-[44px]" asChild>
-                  <Link href={moduleHref("pets")} scroll={false} onClick={switchToPets}>
-                    <PawPrint /> {t("Add Pet", "Tambah Hewan")}
-                  </Link>
-                </Button>
+                {petsOn && (
+                  <Button className="min-h-[44px]" asChild>
+                    <Link href={moduleHref("pets")} scroll={false} onClick={switchToPets}>
+                      <PawPrint /> {t("Add Pet", "Tambah Hewan")}
+                    </Link>
+                  </Button>
+                )}
                 <Button
-                  variant="outline"
+                  // The only button when pets are off, so the primary one.
+                  variant={petsOn ? "outline" : "default"}
                   className="min-h-[44px]"
                   onClick={() => {
                     setEditing(null);
@@ -382,7 +403,9 @@ export function AgendaTab() {
                 icon={CalendarDays}
                 title={t("Nothing scheduled", "Tidak ada jadwal")}
                 description={
-                  pets.length === 0
+                  !petsOn
+                    ? t("No chores on this day.", "Tidak ada tugas hari ini.")
+                    : pets.length === 0
                     ? t(
                         "No chores on this day. Add one, or add a pet to plan their daily routines.",
                         "Tidak ada tugas hari ini. Tambahkan satu, atau tambahkan hewan untuk merencanakan rutinitas hariannya."
@@ -403,7 +426,7 @@ export function AgendaTab() {
                 >
                   <Plus /> {t("Add Chore", "Tambah Tugas")}
                 </Button>
-                {pets.length === 0 && (
+                {petsOn && pets.length === 0 && (
                   <Button variant="outline" className="min-h-[44px]" asChild>
                     <Link href={moduleHref("pets")} scroll={false} onClick={switchToPets}>
                       <PawPrint /> {t("Add Pet", "Tambah Hewan")}
