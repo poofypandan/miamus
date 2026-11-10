@@ -173,12 +173,12 @@ export function listenOnce(Ctor: RecognitionCtor, lang: string, handlers: Listen
   recognition.maxAlternatives = 1;
 
   recognition.onresult = (event) => {
-    if (cancelled) return;
+    if (cancelled || ended) return; // late words after Stop's grace: already sent
     heard = joinResults(event.results);
     handlers.onHeard(heard);
   };
   recognition.onerror = (event) => {
-    if (cancelled) return;
+    if (cancelled || ended) return;
     const problem = problemFor(event.error);
     if (!problem) return;
     // Silence after some words isn't a problem: send the words.

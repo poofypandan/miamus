@@ -134,6 +134,28 @@ test("voice: Cancel keeps the words in the box and sends nothing", async ({ cont
   expect(asked).toBe(0);
 });
 
+test("voice: tapping Send while the mic is on sends once", async ({ context, page }) => {
+  await fakeSpeech(context, "works");
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  const asked: string[] = [];
+  await page.route("**/api/kakak", (route) => {
+    asked.push(route.request().postDataJSON().reply);
+    return route.fulfill({ json: { kind: "message", text: "Noted.", history: { messages: [] }, requestId: "x" } });
+  });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Talk to Kakak" }).click();
+  await say(page, "Buy eggs", false);
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByText("Noted.")).toBeVisible();
+  // The browser finishes the utterance late: nothing more goes to Kakak.
+  await say(page, "Buy eggs", true);
+  await page.evaluate(() => (window as unknown as { __recognition: { onend: () => void } }).__recognition.onend());
+  await page.waitForTimeout(300);
+  expect(asked).toEqual(["Buy eggs"]);
+});
+
 test("voice: a browser with no speech recognition gets the keyboard mic tip", async ({ context, page }) => {
   await fakeSpeech(context, "missing");
   await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });

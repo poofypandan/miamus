@@ -76,6 +76,13 @@ export function KakakVoice({
 
   const busy = screen.kind === "waiting";
   useEffect(() => {
+    // Sent by typing while the mic was still on: drop the listening, or its
+    // words would be sent a second time.
+    if (busy && listening.current) {
+      listening.current.cancel();
+      listening.current = null;
+      dispatch({ type: "stop" });
+    }
     dispatch({ type: "thinking", on: busy });
     if (!busy) setSpoke(false);
   }, [busy]);

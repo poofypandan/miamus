@@ -235,8 +235,12 @@ describe("listenOnce", () => {
     expect(h.onFinished).not.toHaveBeenCalled();
     vi.advanceTimersByTime(FINISH_GRACE_MS);
     expect(h.onFinished).toHaveBeenCalledWith("Beli gula");
+    FakeRecognition.last!.hear(["Beli gula pasir", true]); // late words aren't shown again
+    FakeRecognition.last!.fail("network");
     FakeRecognition.last!.end(); // a late end changes nothing
     expect(h.onFinished).toHaveBeenCalledTimes(1);
+    expect(h.onHeard).toHaveBeenCalledTimes(1);
+    expect(h.onProblem).not.toHaveBeenCalled();
   });
 });
 
