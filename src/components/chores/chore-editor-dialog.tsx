@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Loader2, Lock, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,6 +40,10 @@ import {
   recurrenceOf,
 } from "@/lib/chore-recurrence";
 import { REMIND_CHOICES, remindLabel } from "@/lib/chore-reminders";
+import { useBillPayments } from "@/hooks/use-bill-payments";
+import { historyFor, paidOn } from "@/lib/bill-payments";
+import { formatIdr } from "@/lib/repairs";
+import { photoSrc } from "@/lib/photos";
 import {
   HOUSEHOLD_TASK_CATEGORIES,
   categoryIcon,
@@ -446,6 +450,11 @@ export function ChoreEditorDialog({
   }
 
   const repeats = recurrence !== "none";
+  // A bill's payments (Phase 164 PR B), owners only: the history below, and
+  // what deleting the bill would take with it.
+  const editingBill = editing && (series ?? task)?.category === "bill";
+  const { payments: billPayments } = useBillPayments(open && editingBill);
+  const billHistory = editingBill && (series ?? task) ? historyFor(billPayments, (series ?? task)!.id) : [];
   // The form's repeats, plus this chore's own if it's one the form doesn't
   // offer (an interval set some other way), so opening it never changes it.
   const sameRepeat = (choice: { recurrence: ChoreRecurrence; interval: number }) =>
@@ -689,6 +698,35 @@ export function ChoreEditorDialog({
             />
           </div>
 
+          {editingBill && billHistory.length > 0 && (
+            <section aria-label={t("Payments", "Riwayat bayar")} className="flex flex-col gap-1.5">
+              <h4 className="flex items-center gap-1.5 text-xs font-medium">
+                {t("Payments", "Riwayat bayar")}
+                <Lock className="size-3 text-muted-foreground" aria-label={t("Owners only", "Hanya pemilik")} />
+              </h4>
+              <ul className="overflow-hidden rounded-xl border">
+                {billHistory.map((p) => (
+                  <li key={p.id} className="flex min-h-12 items-center gap-3 border-t px-3 py-2 text-sm first:border-t-0">
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="font-medium">
+                        {p.amount_idr != null ? formatIdr(p.amount_idr) : t("No amount", "Tanpa jumlah")}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{paidOn(p, locale)}</span>
+                    </span>
+                    {p.receipt_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photoSrc(p.receipt_url, 160)}
+                        alt={t("Receipt", "Bukti bayar")}
+                        className="size-10 shrink-0 rounded-md bg-muted object-cover"
+                      />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {editing && (
             <div className="flex flex-col gap-2 border-t pt-4">
               {confirmDelete ? (
@@ -744,6 +782,14 @@ export function ChoreEditorDialog({
                           "Ini akan menghapus tugas ini beserta semua catatan penyelesaiannya."
                         )}
                       </p>
+                      {editingBill && (
+                        <p className="text-xs font-medium text-red-900">
+                          {t(
+                            "Deleting this bill also deletes its payment history. Stop repeating keeps it.",
+                            "Menghapus tagihan ini juga menghapus riwayat bayarnya. Hentikan pengulangan untuk menyimpannya."
+                          )}
+                        </p>
+                      )}
                       <Button
                         variant="destructive"
                         className="min-h-[44px]"
@@ -767,6 +813,8 @@ export function ChoreEditorDialog({
                 <>
                   <p className="text-xs text-muted-foreground">
                     {t("This cannot be undone.", "Ini tidak bisa dibatalkan.")}
+                    {editingBill &&
+                      ` ${t("Its payment, if any, is deleted too.", "Pembayarannya, kalau ada, ikut terhapus.")}`}
                   </p>
                   <div className="flex gap-2">
                     <Button
