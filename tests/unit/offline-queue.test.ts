@@ -748,19 +748,49 @@ describe("a walk-in's saves go in order (Phase 174; Codex, PR #94)", () => {
   it("a couldn't-do record naming a walk-in waits for that walk-in's start (Codex, PR #94 round 2)", async () => {
     const created = { createTaskException: vi.fn(async () => ({ id: "x-1" })) };
     Object.assign(provider, created);
-    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
-    await queue.submitJob(start());
-    expect((await queue.submitJob(couldnt("visit-1"))).status).toBe("waiting");
-    expect(created.createTaskException).not.toHaveBeenCalled();
-    // One that names no walk-in, or another walk-in, goes at once.
-    expect(queue.dependsOn(couldnt(null), start())).toBe(false);
-    expect(queue.dependsOn(couldnt("visit-9"), start())).toBe(false);
-    // The drain sends it right after its start.
-    const order: string[] = [];
-    provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-1" }));
-    created.createTaskException.mockImplementation(async () => (order.push("couldnt"), { id: "x-1" }));
-    await queue.drainOutbox();
-    expect(order).toEqual(["start", "couldnt"]);
-    delete (provider as Record<string, unknown>).createTaskException;
+    try {
+      provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+      await queue.submitJob(start());
+      expect((await queue.submitJob(couldnt("visit-1"))).status).toBe("waiting");
+      expect(created.createTaskException).not.toHaveBeenCalled();
+      // One that names no walk-in, or another walk-in, goes at once.
+      expect(queue.dependsOn(couldnt(null), start())).toBe(false);
+      expect(queue.dependsOn(couldnt("visit-9"), start())).toBe(false);
+      // The drain sends it right after its start.
+      const order: string[] = [];
+      provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-1" }));
+      created.createTaskException.mockImplementation(async () => (order.push("couldnt"), { id: "x-1" }));
+      await queue.drainOutbox();
+      expect(order).toEqual(["start", "couldnt"]);
+    } finally {
+      delete (provider as Record<string, unknown>).createTaskException;
+    }
+  });
+
+  it("a couldn't-do naming a walk-in that never landed keeps its reason, without the link", async () => {
+    const calls: unknown[] = [];
+    const created = {
+      createTaskException: vi.fn(async (input: { repair_visit_id?: string }) => {
+        calls.push(input);
+        if (input.repair_visit_id) {
+          throw {
+            code: "23503",
+            message: 'insert or update on table "task_exceptions" violates foreign key constraint "task_exceptions_repair_visit_fkey"',
+          };
+        }
+        return { id: "x-1" };
+      }),
+    };
+    Object.assign(provider, created);
+    try {
+      const outcome = await queue.submitJob(couldnt("visit-gone"));
+      expect(outcome.status).toBe("sent");
+      expect(calls).toHaveLength(2);
+      expect(calls[1]).not.toHaveProperty("repair_visit_id");
+      expect(calls[1]).toMatchObject({ reason: "supervising_repair", chore_id: "chore-1" });
+      expect(await stored()).toEqual([]);
+    } finally {
+      delete (provider as Record<string, unknown>).createTaskException;
+    }
   });
 });

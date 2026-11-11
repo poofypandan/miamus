@@ -171,6 +171,12 @@ export function isAlreadySaved(err: unknown): boolean {
   return code === "23505" && typeof message === "string" && /_pkey/.test(message);
 }
 
+/** The walk-in a couldn't-do record names isn't there (its foreign key, migrations/149). */
+function isMissingWalkIn(err: unknown): boolean {
+  const { code, message } = (err ?? {}) as { code?: unknown; message?: unknown };
+  return code === "23503" && typeof message === "string" && /task_exceptions_repair_visit_fkey/.test(message);
+}
+
 /** HTTP answers that mean "not now", not "no". */
 const RETRY_STATUSES = new Set([401, 408, 425, 429, 502, 503, 504, 520, 521, 522, 523, 524]);
 
@@ -436,7 +442,22 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
       try {
         exception = await dataProvider.createTaskException(ready.input);
       } catch (err) {
-        if (!isAlreadySaved(err)) throw err;
+        if (isAlreadySaved(err)) {
+          // An earlier try landed.
+        } else if (ready.input.repair_visit_id && isMissingWalkIn(err)) {
+          // "Mengawasi perbaikan" for a walk-in that never reached the server
+          // (refused, or taken back): the reason still stands, without the
+          // link, rather than losing the record (code review, PR #94).
+          const { repair_visit_id: _gone, ...unlinked } = ready.input;
+          void _gone;
+          try {
+            exception = await dataProvider.createTaskException(unlinked);
+          } catch (again) {
+            if (!isAlreadySaved(again)) throw again;
+          }
+        } else {
+          throw err;
+        }
       }
       // Then the shopping list. A failure here leaves the job queued, and the
       // resend finds the record "already saved" and tries only this again.
