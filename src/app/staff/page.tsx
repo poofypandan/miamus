@@ -152,7 +152,7 @@ function StaffTasks() {
         <div className="flex flex-col gap-4 px-4 pt-3">
           {/* Above both views: a failed load is the same news for either. */}
           <ConnectionNotice locale="id" />
-          <OutboxNotice locale="id" />
+          <OutboxNotice locale="id" staff />
           {/* Never remounted, so a view that suspends on first read keeps the
               other one on screen until it is complete (Phase 125). */}
           <Suspense fallback={null}>

@@ -118,13 +118,22 @@ export const LEGAL = {
   // home picked at sign-up (Phase 171 PR A, migrations/145; the kind of home
   // is household_setup.home_type, migrations/142). Switching off hides, never
   // deletes. No new service.
-  // 2026-11-11.4: kitchen amounts (Phase 170 PR A, migrations/148) — for
+  // 2026-11-11.4: pre-launch hardening (audit of 11 Nov, migrations/146) —
+  // a linked staff phone not used for 60 days is unlinked automatically; an
+  // admin account that no longer belongs to any household is deleted 30
+  // days later (with its request), unless it joins or asks again first; PIN
+  // lockouts grow (15 minutes, 1 hour, then until an admin sets a new PIN);
+  // each saved task notes which phone or account saved it (only that phone
+  // can undo it, for minutes, or a walk until shortly after it ends); whose
+  // PIN last opened a linked phone is kept while it is linked. No new
+  // service.
+  // 2026-11-11.5: kitchen amounts (Phase 170 PR A, migrations/148) — for
   // items an admin chooses to track: how much is left, the last amount
   // bought, and when and by whom (the staff name picked on the phone) the
   // amount last changed; only the latest amount, no history; kept while the
   // item exists. Portions left on listed food. No new service, region or
   // change to Kakak.
-  policyVersion: "2026-11-11.4",
+  policyVersion: "2026-11-11.5",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
