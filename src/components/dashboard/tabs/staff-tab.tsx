@@ -47,7 +47,7 @@ import {
 import { PinPad, PIN_LENGTH } from "@/components/auth/pin-pad";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InvitePanel } from "@/components/dashboard/invite-panel";
-import { HouseCodePanel } from "@/components/dashboard/house-code-panel";
+import { formatCode, HouseCodePanel } from "@/components/dashboard/house-code-panel";
 import { HouseholdMembersPanel } from "@/components/dashboard/household-members-panel";
 import { SecuritySettings } from "@/components/dashboard/security-settings";
 import { PushNotificationSettings, pushStatusLabel } from "@/components/dashboard/push-notification-settings";
@@ -79,6 +79,7 @@ import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
 import { FeedbackSheet } from "@/components/shared/feedback-sheet";
 import { RoomsManager } from "@/components/dashboard/rooms-manager";
 import { FeaturesPanel } from "@/components/dashboard/features-panel";
+import { SendStaffMessageButton } from "@/components/setup/send-staff-message";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { featuresOnCount } from "@/lib/features";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -556,11 +557,20 @@ function StaffRoster({
       await dataProvider.archiveStaffProfile(profile.id);
       await reload();
       setRemoveTarget(null);
+      // Archiving also gives the house a new code (migrations/146), so the
+      // old one can't be used to sign in again. Shown here, once.
+      const code = await dataProvider.getHouseCode().catch(() => null);
       toast.success(
-        t(
-          `${profile.name} removed — their past work keeps their name`,
-          `${profile.name} dihapus — pekerjaan sebelumnya tetap atas namanya`
-        )
+        code
+          ? t(
+              `${profile.name} removed. The house code is now ${formatCode(code)}; share the new one with your staff.`,
+              `${profile.name} dihapus. Kode rumah sekarang ${formatCode(code)}; bagikan kode baru ke staf Anda.`
+            )
+          : t(
+              `${profile.name} removed. The house code has changed; see it under Staff sign-in.`,
+              `${profile.name} dihapus. Kode rumah sudah diganti; lihat di Masuk staf.`
+            ),
+        { duration: 10000 }
       );
     } catch (err) {
       console.error(err);
@@ -627,11 +637,21 @@ function StaffRoster({
         <div className="flex flex-col gap-2 rounded-xl border bg-card px-4 py-3">
           <p className="text-xs text-muted-foreground">
             {t(
-              "Add your staff, then send each phone its link.",
-              "Tambah staf, lalu kirim link ke HP masing-masing."
+              "Add your staff, then send one WhatsApp message.",
+              "Tambah staf, lalu kirim satu pesan WhatsApp."
             )}
           </p>
           <VideoTip id="owner-staff-phones" locale={locale} />
+        </div>
+      )}
+      {/* Staff in one go (Phase 172 PR A2): while someone added this week
+          still has to pick their name and make a PIN. */}
+      {staff !== null && staff.some((p) => !p.has_pin && !p.user_id && isClaimable(p.created_at)) && (
+        <div className="flex flex-col gap-2 rounded-xl border bg-card px-4 py-3">
+          <p className="text-xs text-muted-foreground">
+            {t("Send this to your staff. Each person picks their name.", "Kirim ke staf Anda. Masing-masing memilih namanya.")}
+          </p>
+          <SendStaffMessageButton variant="outline" />
         </div>
       )}
 
@@ -993,4 +1013,11 @@ function SignOutRow({ locale }: { locale: "en" | "id" }) {
       />
     </>
   );
+}
+
+/** Added less than 7 days ago: the claim window (migrations/147). */
+function isClaimable(createdAt: string | null | undefined): boolean {
+  if (!createdAt) return false;
+  const at = new Date(createdAt).getTime();
+  return Number.isFinite(at) && Date.now() - at < 7 * 24 * 60 * 60 * 1000;
 }

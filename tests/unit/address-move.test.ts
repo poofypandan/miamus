@@ -81,6 +81,10 @@ function deps(overrides: Partial<SendDeps> = {}): SendDeps {
 }
 
 beforeEach(() => {
+  // A linked phone unless a test says otherwise: the real check would ask the
+  // network (CI sets a Supabase URL), and an unlinked phone keeps its saves
+  // (pre-launch audit L4).
+  queue.setLinkCheckForTests(async () => "linked");
   memory.clear();
   household = "house-a";
   (globalThis as { indexedDB?: unknown }).indexedDB = {};
@@ -207,11 +211,22 @@ describe("sending before the move", () => {
     expect(outcome).toEqual({ status: "empty", sent: 0, refused: 1 });
   });
 
+  it("keeps the saves of a phone that is no longer linked, rather than counting them refused (audit L4)", async () => {
+    queue.setLinkCheckForTests(async () => "unlinked");
+    await seed(logItem("a"));
+    provider.createLogsBatch.mockRejectedValue(REFUSED);
+
+    const outcome = await sendBeforeMove(deps());
+
+    expect(outcome).toMatchObject({ status: "waiting", waiting: 1 });
+    expect(await ids()).toEqual(["a"]);
+  });
+
   it("stops waiting on a pass that hangs (a slow photo), keeps the saves, and offers the choices", async () => {
     await seed(logItem("a"), logItem("b"));
     let finish: () => void = () => {};
     const hanging = new Promise<import("@/lib/offline-queue").DrainReport>((resolve) => {
-      finish = () => resolve({ sent: [], refused: [], waiting: 2, confirmed: true });
+      finish = () => resolve({ sent: [], refused: [], settled: [], unlinked: false, waiting: 2, confirmed: true });
     });
 
     const outcome = await sendBeforeMove(deps({ drain: () => hanging, waitMs: 20 }));
@@ -249,12 +264,12 @@ describe("sending before the move", () => {
 
   it("counts a pass once, however many tries waited on it", () => {
     const tally = new SendTally();
-    const report = { sent: [logItem("a")], refused: [logItem("b")], waiting: 0, confirmed: true };
+    const report = { sent: [logItem("a")], refused: [logItem("b")], settled: [], unlinked: false, waiting: 0, confirmed: true };
     tally.add(report);
     tally.add(report);
     expect({ sent: tally.sent, refused: tally.refused }).toEqual({ sent: 1, refused: 1 });
     // Sent but not yet confirmed: the next pass confirms them, and counts them then.
-    tally.add({ sent: [logItem("c")], refused: [], waiting: 0, confirmed: false });
+    tally.add({ sent: [logItem("c")], refused: [], settled: [], unlinked: false, waiting: 0, confirmed: false });
     expect(tally.sent).toBe(1);
   });
 

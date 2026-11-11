@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ChevronLeft, Loader2, UserRound } from "lucide-react";
@@ -14,6 +14,8 @@ import { ensureAnonymousSession } from "@/lib/auth/device-session";
 import { dataProvider } from "@/lib/data";
 import type { HouseCodePerson } from "@/lib/data/types";
 import { storeTenantId } from "@/lib/tenant";
+import { claimFromFragment, codeFromFragment } from "@/lib/setup-apply";
+import { VideoTip } from "@/components/shared/video-tip";
 
 /**
  * Staff sign in with the house code (Phase 151, migrations/115): code → name
@@ -36,11 +38,25 @@ export default function JoinWithCodePage() {
 type Step =
   | { kind: "code" }
   | { kind: "names"; code: string; people: HouseCodePerson[] }
-  | { kind: "pin"; code: string; people: HouseCodePerson[]; person: HouseCodePerson };
+  | { kind: "pin"; code: string; people: HouseCodePerson[]; person: HouseCodePerson }
+  | { kind: "claim"; code: string; people: HouseCodePerson[]; person: HouseCodePerson };
 
 function JoinWithCode() {
   const [step, setStep] = useState<Step>({ kind: "code" });
+  // The claim code from the owner's link (audit L5): without it, a name
+  // without a PIN can't be picked here, only signed into with a PIN.
+  const [claim, setClaim] = useState<string | null>(null);
 
+  if (step.kind === "claim") {
+    return (
+      <ClaimStep
+        code={step.code}
+        claim={claim}
+        person={step.person}
+        onBack={() => setStep({ kind: "names", code: step.code, people: step.people })}
+      />
+    );
+  }
   if (step.kind === "pin") {
     return (
       <PinStep
@@ -54,12 +70,19 @@ function JoinWithCode() {
     return (
       <NamesStep
         people={step.people}
-        onPick={(person) => setStep({ ...step, kind: "pin", person })}
+        onPick={(person) => {
+          if (person.has_pin) setStep({ ...step, kind: "pin", person });
+          else if (person.claimable && claim) setStep({ ...step, kind: "claim", person });
+          // The code typed by hand: the link from the owner's WhatsApp has the claim code.
+          else if (person.claimable) toast.info("Buka link dari WhatsApp pemilik rumah untuk membuat PIN.");
+          // Added more than a week ago without a PIN: an invite link, as before.
+          else toast.info("Belum punya PIN. Minta link undangan ke admin rumah untuk membuat PIN.");
+        }}
         onBack={() => setStep({ kind: "code" })}
       />
     );
   }
-  return <CodeStep onFound={(code, people) => setStep({ kind: "names", code, people })} />;
+  return <CodeStep onFound={(code, people) => setStep({ kind: "names", code, people })} onClaim={setClaim} />;
 }
 
 function Screen({ children }: { children: React.ReactNode }) {
@@ -73,15 +96,42 @@ function Screen({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CodeStep({ onFound }: { onFound: (code: string, people: HouseCodePerson[]) => void }) {
+function CodeStep({
+  onFound,
+  onClaim,
+}: {
+  onFound: (code: string, people: HouseCodePerson[]) => void;
+  onClaim: (claim: string | null) => void;
+}) {
   const [code, setCode] = useState("");
   const [checking, setChecking] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const ready = code.replace(/[^a-z0-9]/gi, "").length === 6;
 
+  // The owner's one WhatsApp message (Phase 172 PR A2) carries the code in
+  // the fragment, #c=K7P-M2Q, so it never reaches server logs. Fill it in,
+  // take it out of the address bar, and go straight to the names.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current) return;
+    prefilled.current = true;
+    const fromLink = codeFromFragment(window.location.hash);
+    if (!fromLink) return;
+    onClaim(claimFromFragment(window.location.hash));
+    window.history.replaceState(window.history.state, "", window.location.pathname);
+    setCode(fromLink);
+    void check(fromLink);
+    // check is stable enough for a once-on-mount fill: it reads only its argument.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!ready || checking) return;
+    await check(code);
+  }
+
+  async function check(code: string) {
     setChecking(true);
     setProblem(null);
     try {
@@ -159,29 +209,35 @@ function NamesStep({
   return (
     <Screen>
       <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Siapa yang bertugas?</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Pilih nama Anda.</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {people.some((p) => p.claimable) ? "Pilih nama Anda, lalu buat PIN." : "Pilih nama Anda."}
+      </p>
       <div className="mt-6 flex flex-col gap-2">
         {people.map((person) => (
           <button
             key={person.id}
             type="button"
-            onClick={() =>
-              person.has_pin
-                ? onPick(person)
-                : toast.info("Belum punya PIN. Minta link undangan ke admin rumah untuk membuat PIN.")
-            }
+            onClick={() => onPick(person)}
             className="flex min-h-[56px] items-center gap-3 rounded-xl border bg-card px-4 text-left text-base font-medium active:bg-muted"
           >
             <span className="flex size-9 items-center justify-center rounded-full bg-muted">
               <UserRound className="size-4 text-muted-foreground" />
             </span>
             <span className="flex-1">{person.name}</span>
-            {!person.has_pin && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">Belum punya PIN</span>
-            )}
+            {!person.has_pin &&
+              (person.claimable ? (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Buat PIN</span>
+              ) : (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">Belum punya PIN</span>
+              ))}
           </button>
         ))}
       </div>
+      {people.some((p) => p.claimable) && (
+        <div className="mt-4">
+          <VideoTip id="staff-house-code" locale="id" />
+        </div>
+      )}
       <Button variant="ghost" onClick={onBack} className="mt-6 min-h-[48px]">
         <ChevronLeft />
         Kembali
@@ -221,7 +277,8 @@ function PinStep({ code, person, onBack }: { code: string; person: HouseCodePers
         return;
       }
       if (result.status === "wrong_code") reject("Kode rumah sudah diganti. Kembali dan ketik kode yang baru.");
-      else if (result.status === "too_many_attempts") reject("Terlalu banyak kode salah. Coba lagi 1 jam lagi.");
+      // From this phone's wrong codes, or (146) too many wrong PINs.
+      else if (result.status === "too_many_attempts") reject("Terlalu banyak percobaan. Coba lagi 1 jam lagi.");
       else reject(pinFailureMessage(result));
     } catch (err) {
       console.error("House code sign-in failed", err);
@@ -243,6 +300,107 @@ function PinStep({ code, person, onBack }: { code: string; person: HouseCodePers
     <StaffPinScreen
       title={person.name}
       subtitle="Masukkan PIN"
+      pin={pin}
+      shake={shake}
+      busy={checking}
+      notice={notice}
+      onDigit={pressDigit}
+      onBackspace={() => !checking && setPin((p) => p.slice(0, -1))}
+      onBack={onBack}
+    />
+  );
+}
+
+/**
+ * Staff in one go (Phase 172 PR A2, D10): a name with no PIN yet. Make a
+ * PIN, enter it again, and the phone is linked (migrations/147:
+ * claim_staff_with_house_code, only within 7 days of being added).
+ */
+function ClaimStep({
+  code,
+  claim,
+  person,
+  onBack,
+}: {
+  code: string;
+  claim: string | null;
+  person: HouseCodePerson;
+  onBack: () => void;
+}) {
+  const [first, setFirst] = useState<string | null>(null);
+  const [pin, setPin] = useState("");
+  const [shake, setShake] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const busy = useRef(false);
+
+  function reject(message: string, startOver = false) {
+    setNotice(message);
+    setShake(true);
+    setTimeout(() => {
+      setPin("");
+      if (startOver) setFirst(null);
+      setShake(false);
+    }, 400);
+  }
+
+  async function submitClaim(value: string) {
+    if (busy.current) return;
+    busy.current = true;
+    setChecking(true);
+    try {
+      const result = await dataProvider.claimStaffWithHouseCode(code, person.id, value, claim);
+      if (result.status === "ok") {
+        storeTenantId(result.household_id);
+        rememberStaffOnThisPhone(person);
+        // A full load, as after an invite link.
+        window.location.replace("/staff");
+        return;
+      }
+      if (result.status === "no_claim_link") {
+        toast.info("Link ini sudah tidak berlaku. Minta link baru ke pemilik rumah.");
+        onBack();
+        return;
+      }
+      if (result.status === "not_claimable") {
+        toast.info("Nama ini tidak bisa dipilih lagi. Minta link undangan ke admin rumah.");
+        onBack();
+        return;
+      }
+      if (result.status === "wrong_code") reject("Kode rumah sudah diganti. Kembali dan ketik kode yang baru.", true);
+      else if (result.status === "too_many_attempts") reject("Terlalu banyak kode salah. Coba lagi 1 jam lagi.", true);
+      else reject("PIN harus 4 angka.", true);
+    } catch (err) {
+      console.error("Claiming a name failed", err);
+      reject("Gagal menyimpan PIN. Periksa koneksi.", true);
+    } finally {
+      busy.current = false;
+      setChecking(false);
+    }
+  }
+
+  function pressDigit(digit: string) {
+    if (shake || checking || pin.length >= PIN_LENGTH) return;
+    const next = pin + digit;
+    setPin(next);
+    if (next.length < PIN_LENGTH) return;
+    if (first === null) {
+      setNotice(null);
+      setTimeout(() => {
+        setFirst(next);
+        setPin("");
+      }, 150);
+    } else if (next !== first) {
+      reject("PIN tidak sama. Buat PIN lagi.", true);
+    } else {
+      void submitClaim(next);
+    }
+  }
+
+  return (
+    <StaffPinScreen
+      title={person.name}
+      subtitle={first === null ? "Buat PIN" : "Ulangi PIN"}
       pin={pin}
       shake={shake}
       busy={checking}

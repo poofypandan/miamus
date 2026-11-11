@@ -248,6 +248,13 @@ export interface UpdateHouseholdTaskInput {
  * that could fail on its own and leave a chore done by nobody.
  */
 export interface HouseholdTaskStatusPatch {
+  /**
+   * Complete only a chore that is still pending (pre-launch audit M4): the
+   * save queue's finish. Throws ChoreAlreadySettledError when it was finished
+   * by someone else or cancelled meanwhile; this call's own earlier try that
+   * landed (same person, same time) counts as done.
+   */
+  onlyIfPending?: boolean;
   photo_url?: string | null;
   /** Proof, in two halves since Phase 100. Both optional. */
   before_photo_url?: string | null;
@@ -619,6 +626,12 @@ export interface DataProvider {
   houseCodeRoster(code: string): Promise<HouseCodePerson[]>;
   /** Code, name and PIN together; on "ok" this phone is linked to the household. */
   signInWithHouseCode(code: string, staffId: string, pin: string): Promise<HouseCodeSignIn>;
+  /**
+   * Staff in one go (Phase 172 PR A2, migrations/147): a person with no PIN
+   * yet, added in the last 7 days, picks their name and makes a PIN; on
+   * "ok" this phone is linked to the household.
+   */
+  claimStaffWithHouseCode(code: string, staffId: string, pin: string, claim: string | null): Promise<HouseCodeClaim>;
   /** Admins only, for the active household. */
   getHouseCode(): Promise<string | null>;
   rotateHouseCode(): Promise<string>;
@@ -632,20 +645,40 @@ export interface DataProvider {
   hasFinishedChore(): Promise<boolean>;
 }
 
-/** A PIN check's answer (migrations/115). */
+/**
+ * A PIN check's answer (migrations/115). Since 146 a lock grows (15 minutes,
+ * 1 hour, then until an admin sets a new PIN: locked_until null and
+ * until_reset), and too many wrong PINs from one phone or one household in an
+ * hour answer too_many_attempts.
+ */
 export type PinCheck =
   | { status: "ok" }
   | { status: "wrong_pin"; attempts_left: number }
-  | { status: "locked"; locked_until: string }
+  | { status: "locked"; locked_until: string | null; until_reset?: boolean }
+  | { status: "too_many_attempts" }
   | { status: "no_pin" };
 
-export type HouseCodePerson = { id: string; name: string; has_pin: boolean };
+export type HouseCodePerson = {
+  id: string;
+  name: string;
+  has_pin: boolean;
+  /** No PIN yet and added in the last 7 days: they can pick it (migrations/147). Absent before 147. */
+  claimable?: boolean;
+};
 
 export type HouseCodeSignIn =
   | Exclude<PinCheck, { status: "ok" }>
   | { status: "ok"; household_id: string }
   | { status: "wrong_code" }
   | { status: "too_many_attempts" };
+
+export type HouseCodeClaim =
+  | { status: "ok"; household_id: string }
+  | { status: "wrong_code" }
+  | { status: "too_many_attempts" }
+  | { status: "not_claimable" }
+  | { status: "no_claim_link" }
+  | { status: "bad_pin" };
 
 /** A staff phone linked to the household (device_sessions). */
 export type LinkedPhone = { id: string; linked_at: string; last_seen_at: string };

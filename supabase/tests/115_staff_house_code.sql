@@ -149,15 +149,16 @@ select pg_temp.ok(true, 'anon refused on every new function');
 reset role;
 
 -- ---------------------------------------------------------------- limit across all sessions
--- 200 wrong codes in an hour from anywhere pauses code sign-in, even for a
--- brand-new session (fresh anonymous sessions are free to make).
+-- 115 paused code sign-in for everyone after 200 wrong codes in an hour.
+-- 146 removed that cap (one person could block every household with it; the
+-- pre-launch audit's M1): a brand-new session still signs in.
 insert into public.staff_sign_in_attempts (user_id, kind, success)
 select null, 'code', false from generate_series(1, 200);
 insert into auth.users (id, instance_id, aud, role, is_anonymous, created_at, updated_at)
 values ('00000000-0000-0000-0000-00000000b004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', true, now(), now());
 set local role authenticated;
 select pg_temp.act('00000000-0000-0000-0000-00000000b004');
-select pg_temp.ok(public.sign_in_with_house_code(:'new_code', '00000000-0000-0000-0000-0000000000e1', '1234')->>'status' = 'too_many_attempts', '200 wrong codes across sessions pauses a fresh session');
+select pg_temp.ok(public.sign_in_with_house_code(:'new_code', '00000000-0000-0000-0000-0000000000e1', '1234')->>'status' <> 'too_many_attempts', '200 wrong codes elsewhere no longer pause a fresh session (146)');
 reset role;
 
 select pg_temp.ok((select count(*) > 0 from public.staff_sign_in_attempts), 'attempts recorded');

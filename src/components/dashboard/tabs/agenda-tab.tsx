@@ -3,8 +3,9 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { Bell, CalendarDays, ChevronRight, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Sparkles, Wrench } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Smartphone, Sparkles, Wrench } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -22,6 +23,9 @@ import { ApprovalQueue } from "@/components/dashboard/approval-queue";
 import { MedicationCourseAlerts } from "@/components/dashboard/medication-course-alerts";
 import { PetsQuestionCard } from "@/components/dashboard/pets-question-card";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
+import { StaffProgressCard } from "@/components/dashboard/staff-progress-card";
+import { StaffWorkloadSheet } from "@/components/dashboard/staff-workload-sheet";
+import { useStaffProgress } from "@/hooks/use-staff-progress";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
@@ -38,6 +42,7 @@ import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { useRepairs } from "@/hooks/use-repairs";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { useStaffClaimsToday } from "@/hooks/use-staff-claims-today";
 import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores";
 import { useBillPayments } from "@/hooks/use-bill-payments";
 import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
@@ -184,6 +189,12 @@ export function AgendaTab() {
     [dateStr, pets, schedules, logs]
   );
 
+  // Staff progress (owners, 11 Nov): one row per person, house and pets,
+  // in place of the Chores tab's chores-only strip. Only in a home with
+  // staff: an owner on their own has nobody to follow.
+  const progress = useStaffProgress({ petsOn });
+  const hasStaff = useMemo(() => (allProfiles ?? []).some((p) => !p.user_id && !p.archived_at), [allProfiles]);
+
   // All | Pets | Chores (Phase 132): narrows what is drawn, never what is
   // loaded. `allEntries` still decides the welcome screen, so filtering a
   // brand-new household to Pets does not greet it twice.
@@ -216,6 +227,33 @@ export function AgendaTab() {
 
   // Repairs (Phase 159): staff reports to review, and work done to check.
   // Normal staff reports land here rather than as a push (D6).
+  // Staff in one go (Phase 172 PR A2): whose phone was linked today.
+  const { linked: linkedToday, undo: undoClaim } = useStaffClaimsToday();
+  const { reload: reloadRoster } = useStaffProfiles();
+  // Two taps: the first asks, the second undoes (code review, PR #90): an
+  // undo signs a phone out and clears a PIN, so a brushed link mustn't.
+  const [confirmingUndo, setConfirmingUndo] = useState<string | null>(null);
+  async function notThem(staffId: string, name: string) {
+    if (confirmingUndo !== staffId) {
+      setConfirmingUndo(staffId);
+      window.setTimeout(() => setConfirmingUndo((current) => (current === staffId ? null : current)), 5000);
+      return;
+    }
+    setConfirmingUndo(null);
+    const ok = await undoClaim(staffId);
+    // The roster (Household → Staff) shows the name without a PIN again.
+    if (ok) reloadRoster();
+    if (ok) {
+      toast.success(
+        t(
+          `${name}'s phone is removed. ${name} can pick the name again from the link.`,
+          `HP ${name} dihapus. ${name} bisa memilih namanya lagi lewat link.`
+        )
+      );
+    } else {
+      toast.error(t("Couldn't undo. Try again.", "Gagal dibatalkan. Coba lagi."));
+    }
+  }
   const { repairs, visits } = useRepairs();
   const repairLines = useMemo(
     () => (repairsOn ? repairsToday(repairs, visits) : { toReview: 0, toCheck: 0 }),
@@ -441,8 +479,29 @@ export function AgendaTab() {
             pet (Phase 162, D3). Renders nothing otherwise. */}
         <PetsQuestionCard />
 
-        {(notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
+        {/* Who is on track, at a glance (owners, 11 Nov): above the quiet
+            lines, since it is what Today is opened for in a home with staff.
+            A row opens that person's day in the Who did what sheet. */}
+        {range === "day" && hasStaff && progress && <StaffProgressCard progress={progress} dayLabel={label} />}
+
+        {(linkedToday.length > 0 || notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
           <div className="-my-1 flex flex-col">
+            {linkedToday.map(({ staffId, name }) => (
+              <div key={staffId} className="flex min-h-11 items-center gap-2 px-1 text-sm text-gray-700">
+                <Smartphone className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="min-w-0 flex-1">{t(`${name}'s phone is linked`, `HP ${name} sudah terhubung`)}</span>
+                {/* Audit L5: if it wasn't them, the owner puts the name back. */}
+                <button
+                  type="button"
+                  onClick={() => void notThem(staffId, name)}
+                  className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-gray-900 underline underline-offset-2 active:bg-muted"
+                >
+                  {confirmingUndo === staffId
+                    ? t("Tap again to undo", "Ketuk lagi untuk membatalkan")
+                    : t(`Not ${name}? Undo`, `Bukan ${name}? Batalkan`)}
+                </button>
+              </div>
+            ))}
             {notDoneCount > 0 && (
               <button
                 type="button"
@@ -762,6 +821,10 @@ export function AgendaTab() {
           setEditorOpen(true);
         }}
       />
+
+      {/* Who did what, and a person's day from their progress row; open
+          while ?workload= is set. Mounted here only, so one sheet opens. */}
+      <StaffWorkloadSheet />
 
       <EveningSummarySheet
         date={summaryOpen}

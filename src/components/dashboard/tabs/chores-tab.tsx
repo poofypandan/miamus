@@ -2,17 +2,15 @@
 
 import { useEffect, useMemo, useState, type ComponentProps } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ClipboardList, Plus, ReceiptText } from "lucide-react";
+import { ClipboardList, ListChecks, Plus, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { OverdueSection } from "@/components/agenda/overdue-section";
-import { StaffCompletionStrip } from "@/components/dashboard/staff-completion-strip";
-import { StaffWorkloadSheet } from "@/components/dashboard/staff-workload-sheet";
-import { dayLabel } from "@/lib/date-label";
 import { DateRibbon } from "@/components/date-ribbon";
 import { ChoreCard } from "@/components/chores/chore-card";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { BillsUpkeepSheet } from "@/components/chores/bills-upkeep-sheet";
+import { StarterListSheet } from "@/components/setup/starter-list-sheet";
 import { BillPaymentSheet } from "@/components/chores/bill-payment-editor";
 import { RoomsView } from "@/components/chores/rooms-view";
 import { RepairsView } from "@/components/repairs/repairs-view";
@@ -105,6 +103,8 @@ function TodayChores() {
   // opens it here with ?bills=open, which is then dropped from the URL so
   // Back and a reload don't reopen it.
   const [billsOpen, setBillsOpen] = useState(false);
+  // Starter list (Phase 172 PR A2, D7): the usual rooms and chores, ticked in.
+  const [starterOpen, setStarterOpen] = useState(false);
   const [paymentFor, setPaymentFor] = useState<ChoreOccurrence | null>(null);
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -143,18 +143,23 @@ function TodayChores() {
     <div className="flex flex-col gap-4">
       <DateRibbon value={selectedDate} onChange={setSelectedDate} locale={locale} />
 
-      <StaffCompletionStrip
-        occurrences={occurrences}
-        date={dateStr}
-        dayLabel={dayLabel(selectedDate, today, locale)}
-      />
+      {/* Staff progress lives on Today since the owners asked (11 Nov):
+          house and pets per person, so Chores stays the chore desk. */}
 
       {/* Its tutorial (Phase 164, D9); Show me opens the checklist. */}
       {billsOn && <WhatsNewCard id="bills-2026-11" onTry={() => setBillsOpen(true)} />}
+      <WhatsNewCard id="starter-list-2026-11" onTry={() => setStarterOpen(true)} />
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-gray-900">{t("Chores", "Tugas")}</h2>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            className="min-h-[36px] shrink-0 px-3 text-xs"
+            onClick={() => setStarterOpen(true)}
+          >
+            <ListChecks className="size-3.5" /> {t("Starter list", "Daftar awal")}
+          </Button>
           {billsOn && (
             <Button
               variant="outline"
@@ -286,9 +291,6 @@ function TodayChores() {
         </>
       )}
 
-      {/* Opened from the progress strip; open while ?workload= is set. */}
-      <StaffWorkloadSheet />
-
       <ChoreEditorDialog
         open={editorOpen}
         onOpenChange={setEditorOpen}
@@ -306,6 +308,8 @@ function TodayChores() {
         open={!!paymentFor}
         onOpenChange={(next) => !next && setPaymentFor(null)}
       />
+
+      <StarterListSheet open={starterOpen} onOpenChange={setStarterOpen} />
 
       <BillsUpkeepSheet
         open={billsOpen && billsOn}
