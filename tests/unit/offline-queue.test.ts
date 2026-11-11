@@ -24,6 +24,11 @@ const provider = {
   materialiseChoreOccurrence: vi.fn(),
   updateHouseholdTaskStatus: vi.fn(),
   updateHouseholdTask: vi.fn(),
+  deletePhoto: vi.fn(async () => undefined),
+  createRepair: vi.fn(),
+  createRepairWalkIn: vi.fn(),
+  finishRepairWalkIn: vi.fn(),
+  handOverSupervision: vi.fn(),
 };
 vi.mock("@/lib/data", () => ({ dataProvider: provider }));
 
@@ -85,6 +90,7 @@ async function stored() {
 }
 
 beforeEach(() => {
+  queue.setLinkCheckForTests(async () => "linked");
   memory.clear();
   household = "house-a";
   (globalThis as { indexedDB?: unknown }).indexedDB = {};
@@ -330,6 +336,8 @@ describe("drainOutbox", () => {
     expect(report.sent).toHaveLength(1);
     expect(provider.materialiseChoreOccurrence).toHaveBeenCalledWith("tpl-1", "2026-11-09", "staff-1");
     expect(provider.updateHouseholdTaskStatus).toHaveBeenCalledWith("row-9", "completed", {
+      // Only over a chore still pending (pre-launch audit M4).
+      onlyIfPending: true,
       before_photo_url: "https://x/before.jpg",
       after_photo_url: "https://x/after.jpg",
       photo_url: "https://x/after.jpg",
@@ -467,5 +475,322 @@ describe("the write timeout", () => {
     ["POST", "http://s.test/auth/v1/token", false],
   ])("%s %s → %s", (method, url, expected) => {
     expect(isTableWrite(url, method)).toBe(expected);
+  });
+});
+
+// Pre-launch audit M4: the queued finish only completes a pending chore.
+const { ChoreAlreadySettledError } = await import("@/lib/chore-settled");
+describe("a finish that arrives after the chore was settled elsewhere", () => {
+  async function queueChore() {
+    provider.materialiseChoreOccurrence.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(choreJob());
+    for (const fn of Object.values(provider)) fn.mockReset();
+    provider.materialiseChoreOccurrence.mockResolvedValue({ id: "row-9" });
+  }
+
+  it.each(["completed", "cancelled"] as const)("leaves a %s chore as it is, says so, and keeps the photos out", async (state) => {
+    await queueChore();
+    provider.updateHouseholdTaskStatus.mockRejectedValue(new ChoreAlreadySettledError(state));
+    const report = await queue.drainOutbox();
+    expect(report.settled.map((s) => s.state)).toEqual([state]);
+    expect(report.refused).toHaveLength(1);
+    expect(report.sent).toEqual([]);
+    expect(await stored()).toEqual([]);
+    expect(provider.deletePhoto).toHaveBeenCalledWith("https://x/before.jpg");
+    expect(provider.deletePhoto).toHaveBeenCalledWith("https://x/after.jpg");
+  });
+
+  it("is refused at once when sent straight away, so the sheet can say why", async () => {
+    provider.materialiseChoreOccurrence.mockResolvedValue({ id: "row-9" });
+    provider.updateHouseholdTaskStatus.mockRejectedValue(new ChoreAlreadySettledError("completed"));
+    await expect(queue.submitJob(choreJob())).rejects.toBeInstanceOf(ChoreAlreadySettledError);
+    expect(await stored()).toEqual([]);
+  });
+});
+
+// Pre-launch audit L4: a phone that is no longer linked keeps its saves.
+describe("a phone that is no longer linked", () => {
+  const REFUSED_SESSION = { code: "42501", message: "new row violates row-level security policy", status: 403 };
+  const EXPIRED = { code: "PGRST303", message: "JWT expired", status: 401 };
+
+  async function queueLog() {
+    provider.createLogsBatch.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(logJob());
+    provider.createLogsBatch.mockReset();
+  }
+
+  it("tells the sign-in's refusals from the save's", () => {
+    expect(queue.isSessionRefusal(REFUSED_SESSION)).toBe(true);
+    expect(queue.isSessionRefusal(EXPIRED)).toBe(true);
+    expect(queue.isSessionRefusal({ status: 401, message: "Unauthorized" })).toBe(true);
+    expect(queue.isSessionRefusal({ code: "P0001", message: "staff_archived", status: 400 })).toBe(false);
+    expect(queue.isSessionRefusal(NO_ANSWER)).toBe(false);
+  });
+
+  it("keeps the saves and says so when the link check finds it unlinked", async () => {
+    queue.setLinkCheckForTests(async () => "unlinked");
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(REFUSED_SESSION);
+    const report = await queue.drainOutbox();
+    expect(report.unlinked).toBe(true);
+    expect(report.refused).toEqual([]);
+    expect(await stored()).toHaveLength(1);
+    expect(queue.outboxUnlinked()).toBe(true);
+  });
+
+  it("calls it unlinked after repeated sign-in refusals the check can't answer, never dropping the save", async () => {
+    queue.setLinkCheckForTests(async () => "unknown");
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(EXPIRED);
+    for (let i = 1; i < queue.UNLINKED_AFTER_REFUSALS; i++) {
+      expect((await queue.drainOutbox()).unlinked).toBe(false);
+    }
+    expect((await queue.drainOutbox()).unlinked).toBe(true);
+    expect(await stored()).toHaveLength(1);
+  });
+
+  it("never calls it unlinked when the check only gets no answer, however often", async () => {
+    queue.setLinkCheckForTests(async () => "no_answer");
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(EXPIRED);
+    for (let i = 0; i < queue.UNLINKED_AFTER_REFUSALS * 2; i++) {
+      const report = await queue.drainOutbox();
+      expect(report.unlinked).toBe(false);
+      expect(report.waiting).toBe(1);
+    }
+    expect(await stored()).toHaveLength(1);
+  });
+
+  it("still drops a real refusal while the phone is linked", async () => {
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(REFUSED_SESSION);
+    const report = await queue.drainOutbox();
+    expect(report.unlinked).toBe(false);
+    expect(report.refused).toHaveLength(1);
+  });
+
+  it("sends everything once linked again, and the notice goes", async () => {
+    queue.setLinkCheckForTests(async () => "unlinked");
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(REFUSED_SESSION);
+    await queue.drainOutbox();
+    provider.createLogsBatch.mockReset();
+    provider.createLogsBatch.mockResolvedValue([{ id: "id-dog-1" }]);
+    const report = await queue.drainOutbox();
+    expect(report.sent).toHaveLength(1);
+    expect(queue.outboxUnlinked()).toBe(false);
+  });
+});
+
+describe("a walk-in's saves go in order (Phase 174; Codex, PR #94)", () => {
+  const start = (): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "walkin_start",
+    repair: null,
+    visit: {
+      id: "visit-1",
+      repair_id: "repair-1",
+      worker_name: "Pak Budi",
+      logged_by_staff: "staff-1",
+      arrived_phone_at: "2026-11-11T02:00:00.000Z",
+      before_photo_url: "https://x/house-a/repairs/repair-1/b.jpg",
+    },
+  });
+  const finish = (visit = "visit-1", releases: string | null | undefined = "staff-1"): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "walkin_finish",
+    visitId: visit,
+    finish: { after_photo_url: "https://x/a.jpg", left_phone_at: "2026-11-11T04:00:00.000Z", outcome: "fixed", note: null },
+    releases,
+  });
+  const handOver = (): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "supervision_handover",
+    input: { id: "stretch-2", visit_id: "visit-1", staff_id: "staff-2" },
+    releases: "staff-1",
+  });
+  const startOf = (visit: string, staff: string, repair = "repair-1"): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "walkin_start",
+    repair: null,
+    visit: {
+      id: visit,
+      repair_id: repair,
+      worker_name: null,
+      logged_by_staff: staff,
+      arrived_phone_at: "2026-11-11T05:00:00.000Z",
+      before_photo_url: `https://x/house-a/repairs/${repair}/b2.jpg`,
+    },
+  });
+  const couldnt = (visit: string | null): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "couldnt",
+    input: {
+      id: "x-1",
+      chore_id: "chore-1",
+      occurs_on: "2026-11-11",
+      reason: visit ? "supervising_repair" : "out_of_stock",
+      staff_id: "staff-1",
+      ...(visit ? { repair_visit_id: visit } : {}),
+    },
+  });
+
+  it("one rule: a save waits for an earlier one whose effects touch what it references", () => {
+    expect(queue.dependsOn(finish(), start())).toBe(true);
+    expect(queue.dependsOn(handOver(), start())).toBe(true);
+    expect(queue.dependsOn(finish(), handOver())).toBe(true);
+    expect(queue.dependsOn(start(), finish())).toBe(true); // the finish frees staff-1, who logs the start
+    expect(queue.dependsOn(logJob(), start())).toBe(false);
+    expect(queue.dependsOn(start(), logJob())).toBe(false);
+    expect(queue.dependsOn(choreJob(), finish())).toBe(false);
+  });
+
+  it("Selesai saved while the start still waits is kept, not sent ahead of it", async () => {
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    expect((await queue.submitJob(start())).status).toBe("waiting");
+    const outcome = await queue.submitJob(finish());
+    expect(outcome.status).toBe("waiting");
+    expect(provider.finishRepairWalkIn).not.toHaveBeenCalled();
+    expect((await stored()).map((i) => i.job.kind)).toEqual(["walkin_start", "walkin_finish"]);
+  });
+
+  it("a start still being sent (past the spinner) holds its Selesai, in submitJob and in the drain", async () => {
+    vi.useFakeTimers();
+    let land!: (row: unknown) => void;
+    provider.createRepairWalkIn.mockReturnValue(new Promise((resolve) => (land = resolve)));
+    const first = queue.submitJob(start());
+    await vi.advanceTimersByTimeAsync(queue.UI_WAIT_MS + 1);
+    await expect(first).resolves.toEqual({ status: "waiting" });
+    await expect(queue.submitJob(finish())).resolves.toEqual({ status: "waiting" });
+    const report = await queue.drainOutbox();
+    expect(report.waiting).toBe(2);
+    expect(provider.finishRepairWalkIn).not.toHaveBeenCalled();
+    land({ id: "visit-1" });
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  it("a start that gets no answer in the drain holds the walk-in's later saves; other saves still go", async () => {
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    provider.createLogsBatch.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(start());
+    await queue.submitJob(handOver());
+    await queue.submitJob(finish());
+    for (const fn of Object.values(provider)) fn.mockReset();
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    const report = await queue.drainOutbox();
+    expect(report.waiting).toBe(3);
+    expect(provider.handOverSupervision).not.toHaveBeenCalled();
+    expect(provider.finishRepairWalkIn).not.toHaveBeenCalled();
+  });
+
+  it("once the start lands, the hand-over and Selesai follow in order in the same pass", async () => {
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(start());
+    await queue.submitJob(handOver());
+    await queue.submitJob(finish());
+    for (const fn of Object.values(provider)) fn.mockReset();
+    const order: string[] = [];
+    provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-1" }));
+    provider.handOverSupervision.mockImplementation(async () => (order.push("handover"), { id: "stretch-2" }));
+    provider.finishRepairWalkIn.mockImplementation(async () => (order.push("finish"), { id: "visit-1" }));
+    const report = await queue.drainOutbox();
+    expect(order).toEqual(["start", "handover", "finish"]);
+    expect(report.sent).toHaveLength(3);
+    expect(await stored()).toEqual([]);
+  });
+
+  it("a new walk-in waits for a queued Selesai that frees its person, not for someone else's (Codex, PR #94 round 2)", async () => {
+    // Visit 1 is on the server; its Selesai (freeing staff-1) gets no answer.
+    provider.finishRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    expect((await queue.submitJob(finish("visit-1", "staff-1"))).status).toBe("waiting");
+    provider.createRepairWalkIn.mockResolvedValue({ id: "x" });
+    // staff-1's next walk-in waits behind it...
+    expect((await queue.submitJob(startOf("visit-2", "staff-1"))).status).toBe("waiting");
+    expect(provider.createRepairWalkIn).not.toHaveBeenCalled();
+    // ...staff-2's goes at once.
+    expect((await queue.submitJob(startOf("visit-3", "staff-2"))).status).toBe("sent");
+    expect(provider.createRepairWalkIn).toHaveBeenCalledTimes(1);
+    // The drain keeps the order: still no answer for the Selesai, so the start waits.
+    provider.createRepairWalkIn.mockClear();
+    const held = await queue.drainOutbox();
+    expect(held.waiting).toBe(2);
+    expect(provider.createRepairWalkIn).not.toHaveBeenCalled();
+    // Once it lands, the start follows in the same pass.
+    const order: string[] = [];
+    provider.finishRepairWalkIn.mockImplementation(async () => (order.push("finish"), { id: "visit-1" }));
+    provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-2" }));
+    await queue.drainOutbox();
+    expect(order).toEqual(["finish", "start"]);
+  });
+
+  it("a hand-over frees the person handing over, for their next walk-in", () => {
+    expect(queue.dependsOn(startOf("visit-2", "staff-1"), handOver())).toBe(true);
+    // ...and the person taking over can't start one ahead of the hand-over either.
+    expect(queue.dependsOn(startOf("visit-2", "staff-2"), handOver())).toBe(true);
+    expect(queue.dependsOn(startOf("visit-2", "staff-3"), handOver())).toBe(false);
+  });
+
+  it("a release saved without its person (an older app) holds every person's next walk-in", () => {
+    const { releases: _drop, ...older } = finish("visit-1") as Extract<
+      import("@/lib/offline-queue").OutboxJob,
+      { kind: "walkin_finish" }
+    >;
+    void _drop;
+    expect(queue.dependsOn(startOf("visit-2", "staff-9"), older)).toBe(true);
+    expect(queue.dependsOn(startOf("visit-2", "staff-9"), finish("visit-1", null))).toBe(true);
+  });
+
+  it("a walk-in on a repair made by a queued 'Baru' waits for it", () => {
+    const baru: import("@/lib/offline-queue").OutboxJob = {
+      kind: "walkin_start",
+      repair: { id: "repair-new", title: "Stopkontak", status: "reported", reported_by_staff: "staff-1" },
+      visit: { ...(startOf("visit-1", "staff-1", "repair-new") as { visit: import("@/lib/data").WalkInStartInput }).visit },
+    };
+    expect(queue.dependsOn(startOf("visit-2", "staff-2", "repair-new"), baru)).toBe(true);
+    expect(queue.dependsOn(startOf("visit-2", "staff-2", "repair-other"), baru)).toBe(false);
+  });
+
+  it("a couldn't-do record naming a walk-in waits for that walk-in's start (Codex, PR #94 round 2)", async () => {
+    const created = { createTaskException: vi.fn(async () => ({ id: "x-1" })) };
+    Object.assign(provider, created);
+    try {
+      provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+      await queue.submitJob(start());
+      expect((await queue.submitJob(couldnt("visit-1"))).status).toBe("waiting");
+      expect(created.createTaskException).not.toHaveBeenCalled();
+      // One that names no walk-in, or another walk-in, goes at once.
+      expect(queue.dependsOn(couldnt(null), start())).toBe(false);
+      expect(queue.dependsOn(couldnt("visit-9"), start())).toBe(false);
+      // The drain sends it right after its start.
+      const order: string[] = [];
+      provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-1" }));
+      created.createTaskException.mockImplementation(async () => (order.push("couldnt"), { id: "x-1" }));
+      await queue.drainOutbox();
+      expect(order).toEqual(["start", "couldnt"]);
+    } finally {
+      delete (provider as Record<string, unknown>).createTaskException;
+    }
+  });
+
+  it("a couldn't-do naming a walk-in that never landed keeps its reason, without the link", async () => {
+    const calls: unknown[] = [];
+    const created = {
+      createTaskException: vi.fn(async (input: { repair_visit_id?: string }) => {
+        calls.push(input);
+        if (input.repair_visit_id) {
+          throw {
+            code: "23503",
+            message: 'insert or update on table "task_exceptions" violates foreign key constraint "task_exceptions_repair_visit_fkey"',
+          };
+        }
+        return { id: "x-1" };
+      }),
+    };
+    Object.assign(provider, created);
+    try {
+      const outcome = await queue.submitJob(couldnt("visit-gone"));
+      expect(outcome.status).toBe("sent");
+      expect(calls).toHaveLength(2);
+      expect(calls[1]).not.toHaveProperty("repair_visit_id");
+      expect(calls[1]).toMatchObject({ reason: "supervising_repair", chore_id: "chore-1" });
+      expect(await stored()).toEqual([]);
+    } finally {
+      delete (provider as Record<string, unknown>).createTaskException;
+    }
   });
 });

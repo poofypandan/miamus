@@ -1,3 +1,4 @@
+import { ChoreAlreadySettledError } from "@/lib/chore-settled";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -18,6 +19,8 @@ import type {
   TaskException,
   NotificationPrefs,
   RepairNote,
+  RepairSupervision,
+  RepairWalkIn,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
@@ -51,6 +54,9 @@ interface MockDB {
   repairs?: Repair[];
   repairCosts?: RepairCost[];
   repairNotes?: RepairNote[];
+  /** Phase 174. Optional, as above. */
+  repairWalkIns?: RepairWalkIn[];
+  repairSupervision?: RepairSupervision[];
   /** Phase 164 PR B. Optional, as above. */
   billPayments?: BillPayment[];
   /** Phase 165. Optional, as above. */
@@ -709,7 +715,7 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const now = new Date().toISOString();
     const repair: Repair = {
-      id: uid("repair"),
+      id: input.id ?? uid("repair"),
       household_id: getActiveHouseholdId(),
       location_id: input.location_id ?? null,
       spot: input.spot?.trim() || null,
@@ -757,6 +763,10 @@ export const mockProvider: DataProvider = {
     // As the cascade: its cost and notes go too.
     db.repairCosts = (db.repairCosts ?? []).filter((c) => c.repair_id !== id);
     db.repairNotes = (db.repairNotes ?? []).filter((n) => n.repair_id !== id);
+    // Walk-ins and their stretches cascade (migrations/149).
+    const gone = new Set((db.repairWalkIns ?? []).filter((v) => v.repair_id === id).map((v) => v.id));
+    db.repairWalkIns = (db.repairWalkIns ?? []).filter((v) => v.repair_id !== id);
+    db.repairSupervision = (db.repairSupervision ?? []).filter((s) => !gone.has(s.visit_id));
     // As the foreign key's "set null": visits stay, unlinked.
     db.householdTasks = db.householdTasks.map((t) => (t.repair_id === id ? { ...t, repair_id: null } : t));
     saveDB(db);
@@ -840,6 +850,132 @@ export const mockProvider: DataProvider = {
   },
   async deleteReceipt() {
     return delay(undefined);
+  },
+  async listRepairWalkIns() {
+    const household = getActiveHouseholdId();
+    return delay(
+      (loadDB().repairWalkIns ?? [])
+        .filter((v) => v.household_id === household)
+        .sort((a, b) => a.arrived_at.localeCompare(b.arrived_at))
+    );
+  },
+  async listRepairSupervision(since) {
+    const household = getActiveHouseholdId();
+    return delay(
+      (loadDB().repairSupervision ?? []).filter(
+        (s) => s.household_id === household && (!s.ended_at || s.ended_at >= since)
+      )
+    );
+  },
+  // The triggers of migrations/149, in miniature: a walk-in opens its
+  // logger's stretch, Selesai closes it, a hand-over closes one and opens
+  // the next at the same time.
+  async createRepairWalkIn(input) {
+    const db = loadDB();
+    const now = new Date().toISOString();
+    if ((db.repairWalkIns ?? []).some((v) => v.id === input.id)) {
+      throw Object.assign(new Error("duplicate key value violates unique constraint \"repair_visits_pkey\""), {
+        code: "23505",
+      });
+    }
+    const busy = (db.repairSupervision ?? []).some((s) => !s.ended_at && s.staff_id === input.logged_by_staff);
+    if (input.logged_by_staff && busy) throw Object.assign(new Error("supervision_busy"), { code: "23514" });
+    const row: RepairWalkIn = {
+      id: input.id,
+      household_id: getActiveHouseholdId(),
+      repair_id: input.repair_id,
+      worker_name: input.worker_name?.trim() || null,
+      logged_by_staff: input.logged_by_staff,
+      created_by: null,
+      arrived_at: now,
+      arrived_phone_at: input.arrived_phone_at,
+      before_photo_url: input.before_photo_url,
+      left_at: null,
+      left_phone_at: null,
+      after_photo_url: null,
+      outcome: null,
+      note: null,
+    };
+    db.repairWalkIns = [...(db.repairWalkIns ?? []), row];
+    if (input.logged_by_staff) {
+      db.repairSupervision = [
+        ...(db.repairSupervision ?? []),
+        {
+          id: uid("supervision"),
+          household_id: row.household_id,
+          visit_id: row.id,
+          staff_id: input.logged_by_staff,
+          user_id: null,
+          started_at: now,
+          ended_at: null,
+        },
+      ];
+    }
+    saveDB(db);
+    return delay(row);
+  },
+  async finishRepairWalkIn(id, finish) {
+    const db = loadDB();
+    const list = db.repairWalkIns ?? [];
+    const idx = list.findIndex((v) => v.id === id);
+    if (idx === -1) throw new Error("Walk-in was not finished.");
+    if (list[idx].left_at) return delay(list[idx]);
+    const now = new Date().toISOString();
+    const next: RepairWalkIn = { ...list[idx], ...finish, note: finish.note?.trim() || null, left_at: now };
+    list[idx] = next;
+    db.repairWalkIns = list;
+    db.repairSupervision = (db.repairSupervision ?? []).map((s) =>
+      s.visit_id === id && !s.ended_at ? { ...s, ended_at: now } : s
+    );
+    saveDB(db);
+    return delay(next);
+  },
+  async reopenRepairWalkIn(id) {
+    const db = loadDB();
+    const list = db.repairWalkIns ?? [];
+    const idx = list.findIndex((v) => v.id === id);
+    if (idx === -1 || !list[idx].left_at) throw new Error("Walk-in was not reopened.");
+    const leftAt = list[idx].left_at;
+    const next: RepairWalkIn = { ...list[idx], left_at: null, left_phone_at: null, after_photo_url: null, outcome: null, note: null };
+    list[idx] = next;
+    db.repairWalkIns = list;
+    const last = (db.repairSupervision ?? [])
+      .filter((s) => s.visit_id === id && s.ended_at === leftAt)
+      .sort((a, b) => b.started_at.localeCompare(a.started_at))[0];
+    if (last) db.repairSupervision = (db.repairSupervision ?? []).map((s) => (s.id === last.id ? { ...s, ended_at: null } : s));
+    saveDB(db);
+    return delay(next);
+  },
+  async deleteRepairWalkIn(id) {
+    const db = loadDB();
+    const before = (db.repairWalkIns ?? []).length;
+    db.repairWalkIns = (db.repairWalkIns ?? []).filter((v) => v.id !== id);
+    db.repairSupervision = (db.repairSupervision ?? []).filter((s) => s.visit_id !== id);
+    saveDB(db);
+    return delay(db.repairWalkIns.length < before);
+  },
+  async handOverSupervision(input) {
+    const db = loadDB();
+    const now = new Date().toISOString();
+    const busy = (db.repairSupervision ?? []).some(
+      (s) => !s.ended_at && s.staff_id === input.staff_id && s.visit_id !== input.visit_id
+    );
+    if (busy) throw Object.assign(new Error("supervision_busy"), { code: "23514" });
+    const row: RepairSupervision = {
+      id: input.id,
+      household_id: getActiveHouseholdId(),
+      visit_id: input.visit_id,
+      staff_id: input.staff_id,
+      user_id: null,
+      started_at: now,
+      ended_at: null,
+    };
+    db.repairSupervision = [
+      ...(db.repairSupervision ?? []).map((s) => (s.visit_id === input.visit_id && !s.ended_at ? { ...s, ended_at: now } : s)),
+      row,
+    ];
+    saveDB(db);
+    return delay(row);
   },
   async listRepairNotes() {
     const household = getActiveHouseholdId();
@@ -948,6 +1084,20 @@ export const mockProvider: DataProvider = {
     const idx = db.householdTasks.findIndex((t) => t.id === id);
     if (idx === -1) throw new Error(`Household task ${id} not found`);
     const completing = status === "completed";
+    // The queued finish (audit M4), as the Supabase provider does it.
+    if (completing && patch?.onlyIfPending && db.householdTasks[idx].status !== "pending") {
+      const current = db.householdTasks[idx];
+      if (current.status === "cancelled") throw new ChoreAlreadySettledError("cancelled");
+      const ownPhoto = !!patch.after_photo_url && current.after_photo_url === patch.after_photo_url;
+      const same =
+        ownPhoto ||
+        current.completed_by === (patch.completed_by ?? null) &&
+        !!current.completed_at &&
+        !!patch.completed_at &&
+        new Date(current.completed_at).getTime() === new Date(patch.completed_at).getTime();
+      if (same) return delay(current);
+      throw new ChoreAlreadySettledError("completed");
+    }
     const updated: HouseholdTask = {
       ...db.householdTasks[idx],
       status,
@@ -1263,7 +1413,7 @@ export const mockProvider: DataProvider = {
     return delay(
       db.staffProfiles
         .filter((p) => !p.user_id)
-        .map((p) => ({ id: p.id, name: p.name, has_pin: p.has_pin }))
+        .map((p) => ({ id: p.id, name: p.name, has_pin: p.has_pin, claimable: !p.has_pin }))
     );
   },
   async signInWithHouseCode(code, staffId, pin) {
@@ -1274,6 +1424,20 @@ export const mockProvider: DataProvider = {
     if ((db.staffPins ?? {})[staffId] !== pin) {
       return delay({ status: "wrong_pin" as const, attempts_left: 4 });
     }
+    return delay({ status: "ok" as const, household_id: getActiveHouseholdId() });
+  },
+  async claimStaffWithHouseCode(code, staffId, pin, claim) {
+    const db = loadDB();
+    if (code.replace(/[^a-z0-9]/gi, "").toUpperCase() !== (db.houseCode ?? MOCK_HOUSE_CODE)) {
+      return delay({ status: "wrong_code" as const });
+    }
+    if (!claim) return delay({ status: "no_claim_link" as const });
+    const person = db.staffProfiles.find((p) => p.id === staffId && !p.user_id && !p.has_pin);
+    if (!person) return delay({ status: "not_claimable" as const });
+    if (!/^\d{4}$/.test(pin)) return delay({ status: "bad_pin" as const });
+    person.has_pin = true;
+    db.staffPins = { ...(db.staffPins ?? {}), [staffId]: pin };
+    saveDB(db);
     return delay({ status: "ok" as const, household_id: getActiveHouseholdId() });
   },
   async getHouseCode() {

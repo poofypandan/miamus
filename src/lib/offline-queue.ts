@@ -1,10 +1,19 @@
 import { get, update } from "idb-keyval";
-import type { CreateBatchLogInput, CreateTaskExceptionInput, FoodItemInput } from "@/lib/data";
-import type { FoodItem, HouseholdTask, TaskException, TaskLog } from "@/types/database";
+import type {
+  CreateBatchLogInput,
+  CreateTaskExceptionInput,
+  FoodItemInput,
+  RepairInput,
+  WalkInFinishInput,
+  WalkInStartInput,
+} from "@/lib/data";
+import type { FoodItem, HouseholdTask, RepairSupervision, RepairWalkIn, TaskException, TaskLog } from "@/types/database";
 import { dataProvider } from "@/lib/data";
 import { isConnectionError } from "@/lib/network-errors";
 import { ensureUploaded, PhotoNotUploadedError } from "@/lib/photo-queue";
 import { getActiveHouseholdId } from "@/lib/tenant";
+import { isChoreAlreadySettled, type ChoreAlreadySettledError } from "@/lib/chore-settled";
+import { phoneLinkState, type PhoneLinkState } from "@/lib/phone-link";
 
 /**
  * Saves that wait on the phone until they reach the server (Phase 161, R10;
@@ -94,6 +103,27 @@ export type OutboxJob =
        * (a resend is "already saved").
        */
       shopping?: { itemId?: string | null; noteId?: string; note?: string } | null;
+    }
+  /**
+   * "Ada tukang datang" (Phase 174): the walk-in, and with "Baru" the repair
+   * it is for, both under ids made on the phone, so a resend is "already
+   * saved" for each. The before photo goes first.
+   */
+  | { kind: "walkin_start"; repair: (RepairInput & { id: string }) | null; visit: WalkInStartInput }
+  /** Selesai: the database takes the same finish twice as one (migrations/149). */
+  | {
+      kind: "walkin_finish";
+      visitId: string;
+      finish: WalkInFinishInput;
+      /** Who it frees (the visit's supervisor when saved); absent: anyone, for ordering. */
+      releases?: string | null;
+    }
+  /** "Ganti yang mengawasi": a new stretch under an id made on the phone. */
+  | {
+      kind: "supervision_handover";
+      input: { id: string; visit_id: string; staff_id: string };
+      /** Who hands it over (and is freed); absent: anyone, for ordering. */
+      releases?: string | null;
     };
 
 export interface OfflineQueueItem {
@@ -141,6 +171,12 @@ export function isAlreadySaved(err: unknown): boolean {
   return code === "23505" && typeof message === "string" && /_pkey/.test(message);
 }
 
+/** The walk-in a couldn't-do record names isn't there (its foreign key, migrations/149). */
+function isMissingWalkIn(err: unknown): boolean {
+  const { code, message } = (err ?? {}) as { code?: unknown; message?: unknown };
+  return code === "23503" && typeof message === "string" && /task_exceptions_repair_visit_fkey/.test(message);
+}
+
 /** HTTP answers that mean "not now", not "no". */
 const RETRY_STATUSES = new Set([401, 408, 425, 429, 502, 503, 504, 520, 521, 522, 523, 524]);
 
@@ -156,14 +192,37 @@ export function isRetryable(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const { code, message, status } = err as { code?: unknown; message?: unknown; status?: unknown };
   if (typeof status === "number" && RETRY_STATUSES.has(status)) return true;
-  // PostgREST: the access token ran out and has not been renewed yet.
-  if (code === "PGRST301" || code === "PGRST303") return true;
-  if (typeof message === "string" && /JWT expired/i.test(message)) return true;
+  if (isTokenNotRenewed(err)) return true;
   // A reply that is not PostgREST's at all (a proxy's HTML error page):
   // postgrest-js passes it on as `{ message: body }`, with no code. Our own
   // thrown errors are Error instances, and the database always sends a code.
   return !(err instanceof Error) && code === undefined && typeof message === "string";
 }
+
+/**
+ * The server refusing this phone's sign-in rather than the save (audit L4):
+ * a 401, an expired or unusable token, or "not allowed" (42501), which is
+ * what a phone that was unlinked gets back for every write.
+ */
+export function isSessionRefusal(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const { code, status } = err as { code?: unknown; status?: unknown };
+  return status === 401 || code === "42501" || isTokenNotRenewed(err);
+}
+
+/** PostgREST: the access token ran out and has not been renewed yet. */
+function isTokenNotRenewed(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const { code, message } = err as { code?: unknown; message?: unknown };
+  if (code === "PGRST301" || code === "PGRST303") return true;
+  return typeof message === "string" && /JWT expired/i.test(message);
+}
+
+/**
+ * Refusals of the sign-in in a row whose link check had no clear answer;
+ * past this many the phone is treated as unlinked (its saves still kept).
+ */
+export const UNLINKED_AFTER_REFUSALS = 5;
 
 /** Seconds between retries while something waits: 5, 10, 20, 40, then every 60. */
 export function retryDelayMs(failures: number): number {
@@ -173,6 +232,9 @@ export function retryDelayMs(failures: number): number {
 // --- What the screen subscribes to --------------------------------------------
 
 let items: OfflineQueueItem[] = [];
+let unlinked = false;
+let sessionRefusals = 0;
+let linkCheck: (householdId: string | null) => Promise<PhoneLinkState> = phoneLinkState;
 let hydrated = false;
 let hydrating: Promise<void> | null = null;
 const listeners = new Set<() => void>();
@@ -195,6 +257,27 @@ export function outboxVersion(): number {
 /** What is waiting, as this page last read it. */
 export function outboxItems(): readonly OfflineQueueItem[] {
   return items;
+}
+
+/**
+ * True once the last drain found this phone no longer linked (audit L4).
+ * The saves stay on the phone; they go after the phone is linked again.
+ */
+export function outboxUnlinked(): boolean {
+  return unlinked;
+}
+
+function setUnlinked(next: boolean) {
+  if (unlinked === next) return;
+  unlinked = next;
+  emit();
+}
+
+/** For tests: how the queue asks whether the phone is still linked. */
+export function setLinkCheckForTests(check: ((householdId: string | null) => Promise<PhoneLinkState>) | null): void {
+  linkCheck = check ?? phoneLinkState;
+  unlinked = false;
+  sessionRefusals = 0;
 }
 
 function available(): boolean {
@@ -276,7 +359,9 @@ export type SendResult =
   | { kind: "logs"; logs: TaskLog[] }
   | { kind: "chore"; task: HouseholdTask }
   | { kind: "food"; food: FoodItem | null }
-  | { kind: "couldnt"; exception: TaskException | null };
+  | { kind: "couldnt"; exception: TaskException | null }
+  | { kind: "walkin"; walkIn: RepairWalkIn | null }
+  | { kind: "supervision"; row: RepairSupervision | null };
 
 /**
  * Thrown when something asks to delete a row that is still waiting in the
@@ -302,6 +387,12 @@ export function jobPhotos(job: OutboxJob): string[] {
       return [job.before, job.after].filter((url): url is string => !!url);
     case "couldnt":
       return job.input.photo_url ? [job.input.photo_url] : [];
+    case "walkin_start":
+      return [job.repair?.photo_url, job.visit.before_photo_url].filter((url): url is string => !!url);
+    case "walkin_finish":
+      return [job.finish.after_photo_url];
+    case "supervision_handover":
+      return [];
   }
 }
 
@@ -351,7 +442,22 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
       try {
         exception = await dataProvider.createTaskException(ready.input);
       } catch (err) {
-        if (!isAlreadySaved(err)) throw err;
+        if (isAlreadySaved(err)) {
+          // An earlier try landed.
+        } else if (ready.input.repair_visit_id && isMissingWalkIn(err)) {
+          // "Mengawasi perbaikan" for a walk-in that never reached the server
+          // (refused, or taken back): the reason still stands, without the
+          // link, rather than losing the record (code review, PR #94).
+          const { repair_visit_id: _gone, ...unlinked } = ready.input;
+          void _gone;
+          try {
+            exception = await dataProvider.createTaskException(unlinked);
+          } catch (again) {
+            if (!isAlreadySaved(again)) throw again;
+          }
+        } else {
+          throw err;
+        }
       }
       // Then the shopping list. A failure here leaves the job queued, and the
       // resend finds the record "already saved" and tries only this again.
@@ -373,18 +479,58 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
       }
       return { kind: "couldnt", exception };
     }
+    case "walkin_start": {
+      // The repair first ("Baru"), then the walk-in on it. A resend finds
+      // either already there and goes on.
+      if (ready.repair) {
+        try {
+          await dataProvider.createRepair(ready.repair);
+        } catch (err) {
+          if (!isAlreadySaved(err)) throw err;
+        }
+      }
+      try {
+        return { kind: "walkin", walkIn: await dataProvider.createRepairWalkIn(ready.visit) };
+      } catch (err) {
+        if (isAlreadySaved(err)) return { kind: "walkin", walkIn: null };
+        throw err;
+      }
+    }
+    case "walkin_finish":
+      return { kind: "walkin", walkIn: await dataProvider.finishRepairWalkIn(ready.visitId, ready.finish) };
+    case "supervision_handover":
+      try {
+        return { kind: "supervision", row: await dataProvider.handOverSupervision(ready.input) };
+      } catch (err) {
+        if (isAlreadySaved(err)) return { kind: "supervision", row: null };
+        throw err;
+      }
     case "chore": {
       const rowId =
         ready.rowId ?? (await dataProvider.materialiseChoreOccurrence(ready.templateId, ready.date, ready.assignedTo)).id;
       if (ready.takeOverAs) await dataProvider.updateHouseholdTask(rowId, { assigned_to: ready.takeOverAs });
-      const task = await dataProvider.updateHouseholdTaskStatus(rowId, "completed", {
-        before_photo_url: ready.before,
-        after_photo_url: ready.after,
-        photo_url: ready.after,
-        completed_by: ready.completedBy,
-        completed_at: ready.completedAt,
-      });
-      return { kind: "chore", task };
+      try {
+        const task = await dataProvider.updateHouseholdTaskStatus(rowId, "completed", {
+          // Never over a newer state (audit M4): a chore someone else
+          // finished, or an admin cancelled, while this waited stays so.
+          onlyIfPending: true,
+          before_photo_url: ready.before,
+          after_photo_url: ready.after,
+          photo_url: ready.after,
+          completed_by: ready.completedBy,
+          completed_at: ready.completedAt,
+        });
+        return { kind: "chore", task };
+      } catch (err) {
+        if (isChoreAlreadySettled(err)) {
+          // This phone's photos stay out of it. Best effort: the phone may
+          // delete its own fresh uploads; anything older is the clean-up's.
+          for (const url of [ready.before, ready.after]) {
+            if (url) void dataProvider.deletePhoto(url).catch(() => undefined);
+          }
+        }
+        throw err;
+      }
     }
   }
 }
@@ -421,6 +567,79 @@ type TryResult<T> = { ok: true; result: T } | { ok: false; err: unknown } | { ok
  * With nowhere to keep it (a locked-down private window), it is sent
  * directly and any failure is thrown, as before Phase 161.
  */
+/**
+ * What a save references, and what it creates or releases on the server
+ * (Phase 174). One rule orders the queue: a save waits for any earlier save
+ * still on the phone whose effects touch what it references. Otherwise a
+ * later save could land first and be refused, or worse, accepted against a
+ * state the person never saw (Codex, PR #94, two rounds):
+ *
+ *   repair:R    made by a "Baru" start; referenced by any walk-in on R
+ *   visit:V     made by a start, changed by a hand-over or Selesai;
+ *               referenced by a hand-over, a Selesai, a couldn't-do record
+ *               that names V ("Mengawasi perbaikan")
+ *   person:P    taken by a start or a hand-over to P, released by a
+ *               Selesai or hand-over of a visit P supervises; referenced by
+ *               a start (P must be free) and a hand-over to P. A release
+ *               saved before its person was known (an older app) releases
+ *               "person:*", which every person reference waits for.
+ *
+ * Saves with no keys (logs, food, chores) never wait for anything.
+ */
+export interface JobKeys {
+  refs: string[];
+  effects: string[];
+}
+
+const ANY_PERSON = "person:*";
+
+export function jobKeys(job: OutboxJob): JobKeys {
+  const person = (id: string | null | undefined) => (id ? `person:${id}` : ANY_PERSON);
+  switch (job.kind) {
+    case "walkin_start": {
+      const taker = job.visit.logged_by_staff;
+      return {
+        refs: [`repair:${job.visit.repair_id}`, ...(taker ? [`person:${taker}`] : [])],
+        effects: [
+          `visit:${job.visit.id}`,
+          ...(job.repair ? [`repair:${job.repair.id}`] : []),
+          ...(taker ? [`person:${taker}`] : []),
+        ],
+      };
+    }
+    case "walkin_finish":
+      return { refs: [`visit:${job.visitId}`], effects: [`visit:${job.visitId}`, person(job.releases)] };
+    case "supervision_handover":
+      return {
+        refs: [`visit:${job.input.visit_id}`, `person:${job.input.staff_id}`],
+        effects: [`visit:${job.input.visit_id}`, person(job.releases), `person:${job.input.staff_id}`],
+      };
+    case "couldnt":
+      return job.input.repair_visit_id ? { refs: [`visit:${job.input.repair_visit_id}`], effects: [] } : { refs: [], effects: [] };
+    default:
+      return { refs: [], effects: [] };
+  }
+}
+
+/** Does `later` have to wait for `earlier` (one rule; see jobKeys)? */
+export function dependsOn(later: OutboxJob, earlier: OutboxJob): boolean {
+  const { refs } = jobKeys(later);
+  if (refs.length === 0) return false;
+  const effects = new Set(jobKeys(earlier).effects);
+  if (effects.size === 0) return false;
+  return refs.some((ref) => effects.has(ref) || (ref.startsWith("person:") && effects.has(ANY_PERSON)));
+}
+
+/** An earlier save it depends on is still on the phone (queued or being sent). */
+function waitsForEarlier(item: OfflineQueueItem): boolean {
+  if (jobKeys(item.job).refs.length === 0) return false;
+  for (const other of items) {
+    if (other.id === item.id) return false; // reached itself: nothing earlier
+    if (dependsOn(item.job, other.job)) return true;
+  }
+  return false;
+}
+
 export async function submitJob<T extends SendResult>(
   job: OutboxJob,
   onSent?: (result: T) => void
@@ -431,6 +650,12 @@ export async function submitJob<T extends SendResult>(
     const result = (await sendJob(job)) as T;
     onSent?.(result);
     return { status: "sent", result };
+  }
+  // Behind an earlier save it depends on: it goes after that one, from the
+  // queue, never alongside it.
+  if (waitsForEarlier(item)) {
+    notifyWaiting();
+    return { status: "waiting" };
   }
 
   inFlight.add(id);
@@ -523,8 +748,18 @@ async function withStableIds(item: OfflineQueueItem): Promise<OutboxJob> {
 
 export interface DrainReport {
   sent: OfflineQueueItem[];
-  /** Refused by the server and removed. */
+  /** Refused by the server and removed (including `settled`). */
   refused: OfflineQueueItem[];
+  /**
+   * Chores finished elsewhere or cancelled while this waited (audit M4):
+   * removed like a refusal, told apart so the screen can say why.
+   */
+  settled: { item: OfflineQueueItem; state: ChoreAlreadySettledError["state"] }[];
+  /**
+   * True when the server refused this phone's sign-in itself several times
+   * in a row (audit L4): it is probably no longer linked. The saves stay.
+   */
+  unlinked: boolean;
   /** Still waiting after this pass. */
   waiting: number;
   /**
@@ -547,34 +782,55 @@ export interface DrainReport {
 export async function drainOutbox(
   beforeClear?: (report: DrainReport) => Promise<void>
 ): Promise<DrainReport> {
-  const report: DrainReport = { sent: [], refused: [], waiting: 0, confirmed: true };
+  const report: DrainReport = { sent: [], refused: [], settled: [], unlinked: false, waiting: 0, confirmed: true };
   if (!available()) return report;
   const household = getActiveHouseholdId();
   const queue = await readAll();
   items = queue;
   emit();
   let stalled = false;
+  // Saves not sent in this pass: anything depending on them waits too.
+  const held: OutboxJob[] = [];
   for (const item of queue) {
     // Saved for another household (a phone that switched): it waits for that one.
     if (item.householdId && item.householdId !== household) continue;
-    if (stalled || inFlight.has(item.id)) {
+    if (stalled || inFlight.has(item.id) || held.some((earlier) => dependsOn(item.job, earlier))) {
       report.waiting++;
+      held.push(item.job);
       continue;
     }
     inFlight.add(item.id);
+    let kept = false;
     try {
       await sendJob(await withStableIds(item));
       report.sent.push(item);
+      sessionRefusals = 0;
+      setUnlinked(false);
     } catch (err) {
-      if (isRetryable(err)) {
+      // The sign-in refused, not the save (audit L4): is the phone still
+      // linked? If not, everything stays for a re-link instead of being
+      // retried forever (a 401) or thrown away (a 42501).
+      const link = isSessionRefusal(err) ? await linkCheck(household) : null;
+      if (link === "unknown") sessionRefusals++;
+      else if (link === "linked") sessionRefusals = 0;
+      if (link === "unlinked" || (link === "unknown" && sessionRefusals >= UNLINKED_AFTER_REFUSALS)) {
+        setUnlinked(true);
+        report.unlinked = true;
         stalled = true;
         report.waiting++;
+        kept = true;
+      } else if (link === "unknown" || link === "no_answer" || isRetryable(err)) {
+        stalled = true;
+        report.waiting++;
+        kept = true;
       } else {
         console.error("A queued save was refused", item.id, err);
         report.refused.push(item);
+        if (isChoreAlreadySettled(err)) report.settled.push({ item, state: err.state });
       }
     } finally {
       inFlight.delete(item.id);
+      if (kept) held.push(item.job);
     }
   }
   if (report.sent.length > 0 || report.refused.length > 0) {

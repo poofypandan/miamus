@@ -234,13 +234,50 @@ people are **staf** and **admin**.
 | N left · All done · N late · N couldn't be done · No tasks | **Sisa N · Semua selesai · N terlambat · N tidak bisa dikerjakan · Tidak ada tugas** | The calm line under a name. |
 | Anyone, not done yet | **Siapa saja, belum dikerjakan** | The small row for what nobody owns and nobody has done. |
 | Everyone (back from a person's day) · Not yet · From an earlier day | **Semua orang · Belum · Dari hari sebelumnya** | The person's day in Siapa mengerjakan apa. |
-| Supervising a repair since 10.00 (planned) | **Mengawasi perbaikan sejak 10.00** | Phase 174: the busy line's place is ready; nothing fills it yet. |
+| Supervising a repair since 10.00 | **Mengawasi perbaikan sejak 10.00** | Phase 174 PR A: the busy line on a person's progress row, while they supervise a walk-in. |
+| A repair person is here (staff button) / Someone's here (owner button) | **Ada tukang datang** | Phase 174 PR A. The staff's big button on Perbaikan; the owners' button in Tugas → Perbaikan. "Tukang" is the everyday word. |
+| In progress · Today · Still broken · Fixed (staff sections) | **Sedang dikerjakan · Hari ini · Masih rusak · Sudah diperbaiki** | Phase 174 PR A: the sections of the staff's Perbaikan pill. |
+| What's being fixed? · New · What's broken? | **Apa yang diperbaiki? · Baru · Apa yang rusak?** | Phase 174 PR A, the Ada tukang datang sheet. |
+| Who? (optional, staff) / Other name | **Siapa? (boleh dikosongkan)** / **Nama lain** | Phase 174 PR A. Names only, never a number. |
+| Developer team (name chip) | **Tim developer** | Phase 174 PR A: the fixed chip beside recent names. "Developer" is what owners of a new house say. |
+| Before photo · After photo · Photo of the part being fixed | **Foto sebelum diperbaiki · Foto sesudah diperbaiki · Foto bagian yang diperbaiki** | Phase 174 PR A. The tile hint steers to the work, not to people (D5). |
+| How did it go? (optional) | **Bagaimana hasilnya? (boleh dikosongkan)** | Phase 174 PR A, the Selesai sheet. |
+| Done / Not finished, coming back / Owner should check (staff chips) | **Sudah beres** / **Belum selesai, datang lagi** / **Perlu dicek pemilik rumah** | Phase 174 PR A. "Pemilik rumah", not Bapak/Ibu, until the Bu/Pak setting exists. |
+| Done / Coming back / Please check (the chips as owners read them) | **Sudah beres** / **Akan datang lagi** / **Mohon dicek** | Phase 174 PR A, owner screens in Indonesian. |
+| Saved. Shown to the owners. | **Tersimpan. Pemilik rumah bisa melihatnya.** | Phase 174 PR A, the toast after Ada tukang datang and Selesai. PR B's pushes change it to **Tersimpan · Pemilik rumah diberi tahu**: until then nobody is pushed, so the toast doesn't say so. |
+| Retake | **Foto ulang** | Phase 174 PR A, beside a photo already taken. |
+| Not closed since yesterday | **Belum ditutup sejak kemarin** | Phase 174 PR A: a walk-in nobody closed (D6); it never closes itself. |
+| Supervising a repair (staff strip, task label, couldn't-do reason) | **Sedang mengawasi perbaikan** (strip) / **Mengawasi perbaikan** (label and reason) | Phase 174 PR A (D10). |
+| Hand over supervision | **Ganti yang mengawasi** | Phase 174 PR A (D11). |
+| Supervised by Ari 09.10–10.30, then Syam | **Diawasi Ari 09.10–10.30, lalu Syam** | Phase 174 PR A, the owners' repair timeline. |
+| Walk-in (owner timeline) · logged by Ari | **Datang langsung** · **dicatat Ari** | Phase 174 PR A. |
+| Pak Budi is here (owners' Today line) | **Pak Budi sedang bekerja** | Phase 174 PR A, with the repair and the place after it. |
+| Repair person here / Repair finished (pushes) | **Tukang datang** / **Perbaikan selesai** | Phase 174 PR B (planned). |
+| Send to the developer | **Kirim ke developer** | Phase 174 PR C (planned). |
 | Features (Household row) | **Fitur** | Phase 171 PR A: Household → Fitur replaces "Siapa yang tinggal di sini". Everyday word. |
 | On / off (a feature) | **aktif / dimatikan** | Phase 171 PR A: "4 aktif" on the row; toasts "{Fitur} aktif" · "{Fitur} dimatikan". |
 | Food at home (feature) | **Makanan di rumah** | Phase 171 PR A, the Features row; the Kitchen pill stays **Makanan**. |
 | What kind of home? | **Rumah seperti apa?** | Phase 171 PR A, sign-up screen 2 (the brief's wording; Phase 172's plan drafted "Seperti apa rumah Anda?"). |
 | House with a garden · Big house, several floors · Apartment · Something else | **Rumah dengan taman · Rumah besar bertingkat · Apartemen · Lainnya** | Phase 172's four home types, drawn by Phase 171's screen. |
 | No thanks (offer, later) | **Tidak, terima kasih** | Phase 171 D7: the offer card, built with the first feature that starts off. |
+| Your home (setup review) · Untick what you don't have. | **Rumah Anda** · **Hapus centang yang tidak ada.** | Phase 172 PR A2, `/setup`. |
+| Starter list | **Daftar awal** | Phase 172 PR A2: the button on Chores → Today for existing households. |
+| Floors · Bedrooms · Bathrooms (shape row) | **Lantai · Kamar tidur · Kamar mandi** | Phase 172 PR A2, the steppers. |
+| Garden · Pool · Carport · Rooftop · Staff room · Laundry room | **Taman · Kolam · Carport · Rooftop · Kamar staf · Ruang cuci** | Phase 172 PR A2, the chips. "Kamar staf", never "Kamar ART" or "Kamar pembantu". |
+| Whole house · Outside | **Seluruh rumah · Luar rumah** | Phase 172 PR A2, review groups (Whole floor stays **Seluruh lantai**). |
+| Added (already in the household) | **Sudah ditambahkan** | Phase 172 PR A2 (D7). |
+| Skip for now · Next: your staff · Add N | **Lewati dulu · Lanjut: staf Anda · Tambah N** | Phase 172 PR A2. |
+| Your staff · Add another · Name | **Staf Anda · Tambah lagi · Nama** | Phase 172 PR A2, the staff step. |
+| Job chips: Cleaning · Kitchen · Laundry · Garden · Driver · Pool | **Bersih-bersih · Dapur · Cuci dan setrika · Kebun · Sopir · Kolam** | Phase 172 PR A2 (D6). A hint, not a lock. |
+| Anyone (assignee) · For you | **Siapa saja · Untuk Anda** | Phase 172 PR A2 (Siapa saja as in Phase 164). |
+| Send one WhatsApp message · Send this to your staff. Each person picks their name. | **Kirim satu pesan WhatsApp · Kirim ke staf Anda. Masing-masing memilih namanya.** | Phase 172 PR A2 (D10). |
+| Your home is ready · Go to Today | **Rumah Anda siap · Ke Hari ini** | Phase 172 PR A2, after Add. |
+| Pick your name, then make a PIN · Make a PIN · Enter the PIN again | **Pilih nama Anda, lalu buat PIN. · Buat PIN · Ulangi PIN** | Phase 172 PR A2, the staff claim screen (staff, Indonesian only). |
+| {name}'s phone is linked | **HP {name} sudah terhubung** | Phase 172 PR A2, the owner's Today line. **HP**, never "ponsel". |
+| Not {name}? Undo · {name}'s phone is removed. {name} can pick the name again from the link. | **Bukan {name}? Batalkan · HP {name} dihapus. {name} bisa memilih namanya lagi lewat link.** | Phase 172 PR A2, audit L5: the owner puts a claimed name back (two taps: **Ketuk lagi untuk membatalkan** / Tap again to undo). Undo is **Batalkan**. |
+| Open the link from the owner's WhatsApp to make a PIN. · This link no longer works. Ask the owner for a new one. | **Buka link dari WhatsApp pemilik rumah untuk membuat PIN. · Link ini sudah tidak berlaku. Minta link baru ke pemilik rumah.** | Phase 172 PR A2, audit L5 (staff, Indonesian only): the house code alone can't claim a name. |
+| Service charge (IPL) | **Iuran pengelola (IPL)** | Phase 172 PR A2: apartments' monthly bill in the Bills and upkeep checklist. |
+| Room names saved by the templates | **Ruang Tamu · Ruang Keluarga · Ruang Keluarga Atas · Ruang Makan · Dapur · Dapur Kotor · Kamar Utama · Kamar Tidur 2 · Kamar Mandi · Kamar Staf · Kamar Mandi Staf · Ruang Cuci · Gudang · Balkon · Teras · Taman · Kolam Renang** | Phase 172 Appendix A1; floors **LT1, LT2…** and **Rooftop**. Owners rename any room later. |
 
 ## Formatting
 

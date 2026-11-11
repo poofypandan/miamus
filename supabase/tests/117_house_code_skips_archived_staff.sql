@@ -71,6 +71,11 @@ select pg_temp.ok((select failed_pin_attempts = 0 from public.staff_profiles whe
 set local role authenticated;
 select pg_temp.act('00000000-0000-0000-0000-0000000117a1');
 select public.archive_staff_profile('00000000-0000-0000-0000-0000000117e1') \g /dev/null
+-- Archiving gives the house a new code (146); the rest of this file uses it.
+reset role;
+select code as house_code from public.household_join_codes
+ where household_id = '00000000-0000-0000-0000-0000000117f1' \gset
+set local role authenticated;
 select pg_temp.act('00000000-0000-0000-0000-0000000117b2');
 select pg_temp.ok((select count(*) = 0 from public.house_code_roster(:'house_code')),
   'archived through the app: off the list');

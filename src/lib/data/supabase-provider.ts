@@ -1,3 +1,4 @@
+import { ChoreAlreadySettledError } from "@/lib/chore-settled";
 import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import type { OrganiseRoomsMoved,
@@ -9,7 +10,7 @@ import type { OrganiseRoomsMoved,
   InventoryItem,
   StaffProfile,
 } from "@/types/database";
-import type { CreateHouseholdTaskInput, DataProvider, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
+import type { CreateHouseholdTaskInput, DataProvider, HouseCodeClaim, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
 import { longRepeatFloorFor, longestGapDays, LONGEST_REPEAT_GAP_DAYS, rolloverFloorFor } from "@/lib/chore-recurrence";
 
 function client() {
@@ -184,8 +185,13 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async deleteLog(id) {
-    const { error } = await client().from("task_logs").delete().eq("id", id);
+    // .select() so a refused delete shows: RLS filters it to zero rows rather
+    // than failing. Since migrations/146 a staff phone may delete only a log
+    // it saved, within its undo window; without this the app would drop the
+    // log and its photo locally while the row stays.
+    const { data, error } = await client().from("task_logs").delete().eq("id", id).select("id");
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Log was not deleted");
   },
   async createSchedule(input) {
     const { data, error } = await client()
@@ -849,6 +855,8 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("repairs")
       .insert({
+        // A walk-in's "Baru" names its repair on the phone (Phase 174).
+        ...(input.id ? { id: input.id } : {}),
         household_id: getActiveHouseholdId(),
         title: input.title,
         details: input.details ?? null,
@@ -936,6 +944,71 @@ export const supabaseProvider: DataProvider = {
       .storage.from(RECEIPTS_BUCKET)
       .remove([decodeURIComponent(url.slice(idx + marker.length))]);
     if (error) throw error;
+  },
+  async listRepairWalkIns() {
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("repair_visits")
+        .select("*")
+        .eq("household_id", household)
+        .order("arrived_at", { ascending: true })
+        .order("id")
+        .range(from, to)
+    );
+  },
+  async listRepairSupervision(since) {
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("repair_supervision")
+        .select("*")
+        .eq("household_id", household)
+        .or(`ended_at.is.null,ended_at.gte.${since}`)
+        .order("started_at", { ascending: true })
+        .order("id")
+        .range(from, to)
+    );
+  },
+  async createRepairWalkIn(input) {
+    const { data, error } = await client()
+      .from("repair_visits")
+      .insert({ ...input, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async finishRepairWalkIn(id, finish) {
+    const { data, error } = await client().from("repair_visits").update(finish).eq("id", id).select();
+    if (error) throw error;
+    // An RLS-filtered update is a 200 with no rows (the visit is gone).
+    if (!data || data.length === 0) throw new Error("Walk-in was not finished.");
+    return data[0];
+  },
+  async reopenRepairWalkIn(id) {
+    const { data, error } = await client()
+      .from("repair_visits")
+      .update({ after_photo_url: null, left_phone_at: null, outcome: null, note: null })
+      .eq("id", id)
+      .select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Walk-in was not reopened.");
+    return data[0];
+  },
+  async deleteRepairWalkIn(id) {
+    const { data, error } = await client().from("repair_visits").delete().eq("id", id).select("id");
+    if (error) throw error;
+    return !!data && data.length > 0;
+  },
+  async handOverSupervision(input) {
+    const { data, error } = await client()
+      .from("repair_supervision")
+      .insert({ ...input, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
   async listRepairNotes() {
     const household = getActiveHouseholdId();
@@ -1039,19 +1112,47 @@ export const supabaseProvider: DataProvider = {
     // because a half-cleared chore would show as open while still crediting
     // someone for it.
     const completing = status === "completed";
-    const { data, error, status: httpStatus } = await client()
+    const completedAt = completing ? (patch?.completed_at ?? new Date().toISOString()) : null;
+    const completedBy = completing ? (patch?.completed_by ?? null) : null;
+    let query = client()
       .from("household_tasks")
       .update({
         status,
-        completed_at: completing ? (patch?.completed_at ?? new Date().toISOString()) : null,
-        completed_by: completing ? (patch?.completed_by ?? null) : null,
+        completed_at: completedAt,
+        completed_by: completedBy,
         photo_url: completing ? (patch?.photo_url ?? null) : null,
         before_photo_url: completing ? (patch?.before_photo_url ?? null) : null,
         after_photo_url: completing ? (patch?.after_photo_url ?? null) : null,
       })
-      .eq("id", id)
-      .select();
+      .eq("id", id);
+    // The queued finish (audit M4): never over a newer state.
+    const guarded = completing && !!patch?.onlyIfPending;
+    if (guarded) query = query.eq("status", "pending");
+    const { data, error, status: httpStatus } = await query.select();
     if (error) throw withStatus(error, httpStatus);
+    if (guarded && (!data || data.length === 0)) {
+      const { data: current, error: readError } = await client()
+        .from("household_tasks")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (readError) throw readError;
+      if (current?.status === "completed") {
+        // This finish's own earlier try, whose reply was lost: its photos
+        // (unique per upload) are on the row, or its author and time are.
+        const ownPhoto =
+          (!!patch?.after_photo_url && current.after_photo_url === patch.after_photo_url) ||
+          (!!patch?.before_photo_url && current.before_photo_url === patch.before_photo_url);
+        const same =
+          ownPhoto ||
+          (current.completed_by === completedBy &&
+            !!current.completed_at &&
+            new Date(current.completed_at).getTime() === new Date(completedAt!).getTime());
+        if (same) return current;
+        throw new ChoreAlreadySettledError("completed");
+      }
+      if (current?.status === "cancelled") throw new ChoreAlreadySettledError("cancelled");
+    }
     // .select() so an RLS-filtered update (200 with zero rows) surfaces as a
     // failure instead of a chore that silently never closed — same reasoning
     // as setStaffPin.
@@ -1312,6 +1413,16 @@ export const supabaseProvider: DataProvider = {
     });
     if (error) throw error;
     return data as unknown as HouseCodeSignIn;
+  },
+  async claimStaffWithHouseCode(code, staffId, pin, claim) {
+    const { data, error } = await client().rpc("claim_staff_with_house_code", {
+      p_code: code,
+      p_staff_id: staffId,
+      p_new_pin: pin,
+      p_claim: claim ?? "",
+    });
+    if (error) throw error;
+    return data as unknown as HouseCodeClaim;
   },
   async getHouseCode() {
     const { data, error } = await client().rpc("my_house_code", {

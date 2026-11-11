@@ -105,7 +105,8 @@ export async function middleware(request: NextRequest) {
 }
 
 /** The owner side. Everything else — "/", /staff, /join, /auth/callback — stays public. */
-const GUARDED = ["/dashboard", "/onboarding"];
+// /setup: the starter templates (Phase 172 PR A2), right after sign-up.
+const GUARDED = ["/dashboard", "/onboarding", "/setup"];
 
 /**
  * The host the phone asked for. Behind Vercel's proxy that is the Host

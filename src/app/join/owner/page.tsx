@@ -9,12 +9,15 @@ import { PublicLanguageSwitch } from "@/components/shared/public-language-switch
 import { usePublicLocale } from "@/hooks/use-public-locale";
 import { supabase } from "@/lib/supabase/client";
 
-type Stage = "checking" | "needs-login" | "redeeming" | "failed";
+type Stage = "checking" | "needs-login" | "redeeming" | "failed" | "already-member";
 
 const COPY = {
   en: {
     expiredTitle: "Invalid or expired link",
     expiredBody: "This invite has already been used or has expired. Ask a household admin for a new one.",
+    alreadyTitle: "This account already has a household",
+    alreadyBody:
+      "For now, a Google account can belong to one household only. Sign in with a different Google account, or ask the person who invited you to invite that one. The invite still works.",
     backToSignIn: "Back to sign in",
     invitedTitle: "You've been invited",
     invitedBody: "Sign in with Google to join this household as an admin.",
@@ -25,6 +28,9 @@ const COPY = {
   id: {
     expiredTitle: "Link tidak valid atau kedaluwarsa",
     expiredBody: "Undangan ini sudah dipakai atau sudah kedaluwarsa. Minta yang baru ke admin rumah.",
+    alreadyTitle: "Akun ini sudah punya rumah",
+    alreadyBody:
+      "Untuk saat ini, satu akun Google hanya bisa masuk ke satu rumah. Masuk dengan akun Google lain, atau minta yang mengundang Anda untuk mengundang akun itu. Undangannya masih berlaku.",
     backToSignIn: "Kembali ke halaman masuk",
     invitedTitle: "Anda diundang",
     invitedBody: "Masuk dengan Google untuk bergabung ke rumah ini sebagai admin.",
@@ -88,7 +94,8 @@ function JoinOwnerScreen() {
       const { data, error } = await client.rpc("use_owner_invite_token", { p_token: token });
       if (error || !data) {
         console.error("Owner invite redemption failed", error);
-        setStage("failed");
+        // One household per account for now (migrations/146, audit M2).
+        setStage(error?.message?.includes("already_in_a_household") ? "already-member" : "failed");
         return;
       }
       // A full load, not a router push: HouseholdProvider resolves the
@@ -116,15 +123,16 @@ function JoinOwnerScreen() {
   if (!locale) return null;
   const t = COPY[locale];
 
-  if (stage === "failed") {
+  if (stage === "failed" || stage === "already-member") {
+    const already = stage === "already-member";
     return (
       <main
         lang={locale}
         className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 text-center"
       >
         <PublicLanguageSwitch locale={locale} onChange={setLocale} />
-        <h1 className="text-xl font-semibold text-gray-900">{t.expiredTitle}</h1>
-        <p className="mt-3 text-sm text-muted-foreground">{t.expiredBody}</p>
+        <h1 className="text-xl font-semibold text-gray-900">{already ? t.alreadyTitle : t.expiredTitle}</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{already ? t.alreadyBody : t.expiredBody}</p>
         <Link
           href="/"
           className="mt-8 text-sm font-medium text-gray-900 underline underline-offset-4"

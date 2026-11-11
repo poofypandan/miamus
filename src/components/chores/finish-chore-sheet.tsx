@@ -25,6 +25,7 @@ import { RepairNotes } from "@/components/repairs/repair-notes";
 import { cn } from "@/lib/utils";
 import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
+import { choreSettledMessageId, isChoreAlreadySettled } from "@/lib/chore-settled";
 import { discardPhoto } from "@/lib/photo-queue";
 import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
@@ -89,6 +90,7 @@ function FinishChoreBody({
     claimHouseholdTask,
     finishChore,
     pendingIds,
+    refresh,
   } = useHousehold();
   const { staffId } = useStaffIdentity();
   // Photos already uploaded for this day's chore, restored from the device
@@ -252,6 +254,15 @@ function FinishChoreBody({
       }
       onOpenChange(false);
     } catch (err) {
+      // Finished by someone else, or cancelled, before this reached the
+      // server (audit M4): theirs stands, these photos are not used.
+      if (isChoreAlreadySettled(err)) {
+        clearChoreDraft(draftKey);
+        toast.info(choreSettledMessageId(err.state, task.title), { duration: 8000 });
+        onOpenChange(false);
+        void refresh({ silent: true });
+        return;
+      }
       const handled = explainFailure(err);
       reloading = handled === "reloading";
       if (!handled) toast.error("Gagal menyimpan. Foto tetap tersimpan, coba lagi.");

@@ -57,6 +57,8 @@ export type DeviceSession = {
   household_id: string;
   created_at: string;
   last_seen_at: string;
+  // Whose PIN last opened this phone (migrations/146).
+  staff_id?: string | null;
 };
 
 // A co-owner's way in (migrations/091): redeems into household_members, so
@@ -167,6 +169,9 @@ export type TaskLog = {
   // When the save reached the database (migrations/144), set there whatever
   // the phone sends. Null for older rows; absent while still queued.
   received_at?: string | null;
+  // The session that saved it, set by the database (migrations/146): only
+  // that phone may undo it. Null for older rows; absent while still queued.
+  created_by?: string | null;
 };
 
 export type MedicalRecord = {
@@ -502,6 +507,57 @@ export type Repair = {
   warranty_until?: string | null;
 };
 
+/** How a walk-in ended, from the staff's optional chip (Phase 174). */
+export type WalkInOutcome = "fixed" | "come_back" | "check";
+
+/**
+ * A repair person who turned up (Phase 174, migrations/149, table
+ * repair_visits): logged by staff at the gate with a before photo, closed
+ * with Selesai and an after photo. Scheduled visits stay chores
+ * (HouseholdTask.repair_id); a walk-in always belongs to a repair. The
+ * times are the server's; the *_phone_at ones are the phone's, kept for a
+ * save sent later. Kept with its repair (while open, 2 years after closing).
+ */
+export type RepairWalkIn = {
+  id: string;
+  household_id: string;
+  repair_id: string;
+  /** A name or company, as staff typed it; never a phone number (D3). */
+  worker_name: string | null;
+  logged_by_staff: string | null;
+  created_by: string | null;
+  /** When the save reached the server. */
+  arrived_at: string;
+  arrived_phone_at: string | null;
+  before_photo_url: string;
+  /** Null until Selesai reached the server. */
+  left_at: string | null;
+  left_phone_at: string | null;
+  after_photo_url: string | null;
+  /** The session whose Selesai reached the server (only it may take it back). Absent on pending saves. */
+  finished_by?: string | null;
+  outcome: WalkInOutcome | null;
+  note: string | null;
+};
+
+/**
+ * Who supervised a walk-in, from when to when (Phase 174, migrations/149).
+ * Opened and closed by the database's triggers, never edited by a phone:
+ * a walk-in opens its logger's stretch, Selesai closes it, a hand-over
+ * closes one and opens the next. Kept 90 days.
+ */
+export type RepairSupervision = {
+  id: string;
+  household_id: string;
+  visit_id: string;
+  /** A roster row (admins have one too, migrations/106). */
+  staff_id: string | null;
+  /** An owner with no roster row. */
+  user_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+};
+
 /** Optional kind of feedback (migrations/135). */
 export type FeedbackCategory = "idea" | "problem" | "other";
 
@@ -556,7 +612,13 @@ export type BillPayment = {
 };
 
 /** Why a task couldn't be done (Phase 165, migrations/139). */
-export type TaskExceptionReason = "out_of_stock" | "pet_refused" | "done_by_other" | "other";
+export type TaskExceptionReason =
+  | "out_of_stock"
+  | "pet_refused"
+  | "done_by_other"
+  | "other"
+  /** Phase 174 (migrations/149): watching a repair person; links the visit, needs no note. */
+  | "supervising_repair";
 
 /**
  * Someone said a task couldn't be done (Phase 165, migrations/139): one per
@@ -582,6 +644,8 @@ export type TaskException = {
   /** The shopping-list item that ran out, if one was picked. */
   inventory_item_id: string | null;
   staff_id: string | null;
+  /** The walk-in visit being supervised, for "supervising_repair" (migrations/149). Absent before it. */
+  repair_visit_id?: string | null;
   /** When it was said, by the server's clock. */
   created_at: string;
 };
@@ -796,6 +860,19 @@ export interface Database {
         Row: Feedback;
         Insert: Pick<Feedback, "household_id" | "message"> &
           Partial<Pick<Feedback, "category" | "staff_id" | "app_version" | "page">>;
+        Update: never;
+        Relationships: [];
+      };
+      repair_visits: {
+        Row: RepairWalkIn;
+        Insert: Partial<RepairWalkIn> &
+          Pick<RepairWalkIn, "household_id" | "repair_id" | "before_photo_url">;
+        Update: Partial<RepairWalkIn>;
+        Relationships: [];
+      };
+      repair_supervision: {
+        Row: RepairSupervision;
+        Insert: Partial<RepairSupervision> & Pick<RepairSupervision, "household_id" | "visit_id">;
         Update: never;
         Relationships: [];
       };
@@ -1097,6 +1174,27 @@ export interface Database {
       set_household_has_pets: {
         Args: { p_household: string; p_on: boolean };
         Returns: undefined;
+      };
+      apply_household_setup: {
+        // Phase 172 PR A2 (migrations/147): the reviewed list in one call.
+        Args: { p_household: string; p_draft: Record<string, unknown> };
+        Returns: Record<string, unknown>;
+      };
+      claim_staff_with_house_code: {
+        Args: { p_code: string; p_staff_id: string; p_new_pin: string; p_claim: string };
+        Returns: Record<string, unknown>;
+      };
+      staff_claim_link: {
+        Args: { p_household: string };
+        Returns: string;
+      };
+      undo_staff_claim: {
+        Args: { p_household: string; p_staff_id: string };
+        Returns: boolean;
+      };
+      staff_claims_today: {
+        Args: { p_household: string };
+        Returns: { staff_id: string; name: string; claimed_at: string }[];
       };
       set_household_feature: {
         Args: { p_household: string; p_feature: string; p_on: boolean };

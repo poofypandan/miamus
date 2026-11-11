@@ -38,9 +38,12 @@ import type {
   RepairCost,
   BillPayment,
   RepairNote,
+  RepairSupervision,
+  RepairWalkIn,
   TaskException,
   TaskExceptionReason,
   NotificationPrefs,
+  WalkInOutcome,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -192,6 +195,8 @@ export interface CreateHouseholdTaskInput {
 
 /** A new repair (Phase 159). Status: owners 'open', staff phones 'reported'. */
 export interface RepairInput {
+  /** Made on the phone for a walk-in's "Baru" (Phase 174), so a resend is "already saved". */
+  id?: string;
   title: string;
   details?: string | null;
   location_id?: string | null;
@@ -200,6 +205,29 @@ export interface RepairInput {
   urgent?: boolean;
   status: "open" | "reported";
   reported_by_staff?: string | null;
+}
+
+/**
+ * "Ada tukang datang" (Phase 174, migrations/149): a walk-in on a repair.
+ * The id is made on the phone (the save queue). The server stamps the
+ * arrival time; arrived_phone_at is the phone's, for a save sent later.
+ */
+export interface WalkInStartInput {
+  id: string;
+  repair_id: string;
+  worker_name: string | null;
+  /** Who is holding the phone; null for an owner with no roster row. */
+  logged_by_staff: string | null;
+  arrived_phone_at: string;
+  before_photo_url: string;
+}
+
+/** Selesai: the after photo (required), the optional chip and note. */
+export interface WalkInFinishInput {
+  after_photo_url: string;
+  left_phone_at: string;
+  outcome: WalkInOutcome | null;
+  note: string | null;
 }
 
 /** What owners change on a repair. */
@@ -248,6 +276,13 @@ export interface UpdateHouseholdTaskInput {
  * that could fail on its own and leave a chore done by nobody.
  */
 export interface HouseholdTaskStatusPatch {
+  /**
+   * Complete only a chore that is still pending (pre-launch audit M4): the
+   * save queue's finish. Throws ChoreAlreadySettledError when it was finished
+   * by someone else or cancelled meanwhile; this call's own earlier try that
+   * landed (same person, same time) counts as done.
+   */
+  onlyIfPending?: boolean;
   photo_url?: string | null;
   /** Proof, in two halves since Phase 100. Both optional. */
   before_photo_url?: string | null;
@@ -333,6 +368,8 @@ export interface CreateTaskExceptionInput {
   photo_url?: string | null;
   inventory_item_id?: string | null;
   staff_id?: string | null;
+  /** "Mengawasi perbaikan" (migrations/149): the walk-in being supervised. Sent only with that reason. */
+  repair_visit_id?: string | null;
 }
 
 export interface StaffWorkload {
@@ -495,6 +532,20 @@ export interface DataProvider {
    */
   reopenBillDay(taskId: string): Promise<{ task: HouseholdTask; payment: BillPayment | null }>;
   deleteReceipt(url: string): Promise<void>;
+  /** Every walk-in of the household, oldest first (Phase 174, migrations/149). */
+  listRepairWalkIns(): Promise<RepairWalkIn[]>;
+  /** Supervising stretches that ended on or after `since` (ISO), or are still open. */
+  listRepairSupervision(since: string): Promise<RepairSupervision[]>;
+  /** "Ada tukang datang": the walk-in, which opens its logger's supervising stretch. */
+  createRepairWalkIn(input: WalkInStartInput): Promise<RepairWalkIn>;
+  /** Selesai, once; it closes the open stretch. */
+  finishRepairWalkIn(id: string, finish: WalkInFinishInput): Promise<RepairWalkIn>;
+  /** Takes back a Selesai within 5 minutes (staff), or any time (owners). */
+  reopenRepairWalkIn(id: string): Promise<RepairWalkIn>;
+  /** Owners, or the phone that logged it within 5 minutes. False when nothing went. */
+  deleteRepairWalkIn(id: string): Promise<boolean>;
+  /** "Ganti yang mengawasi": a new stretch for the visit; the database closes the previous one. */
+  handOverSupervision(input: { id: string; visit_id: string; staff_id: string }): Promise<RepairSupervision>;
   /** Every note on the household's repairs, oldest first. */
   listRepairNotes(): Promise<RepairNote[]>;
   addRepairNote(note: { repair_id: string; body: string; photo_url?: string | null; staff_id?: string | null }): Promise<RepairNote>;
@@ -619,6 +670,12 @@ export interface DataProvider {
   houseCodeRoster(code: string): Promise<HouseCodePerson[]>;
   /** Code, name and PIN together; on "ok" this phone is linked to the household. */
   signInWithHouseCode(code: string, staffId: string, pin: string): Promise<HouseCodeSignIn>;
+  /**
+   * Staff in one go (Phase 172 PR A2, migrations/147): a person with no PIN
+   * yet, added in the last 7 days, picks their name and makes a PIN; on
+   * "ok" this phone is linked to the household.
+   */
+  claimStaffWithHouseCode(code: string, staffId: string, pin: string, claim: string | null): Promise<HouseCodeClaim>;
   /** Admins only, for the active household. */
   getHouseCode(): Promise<string | null>;
   rotateHouseCode(): Promise<string>;
@@ -632,20 +689,40 @@ export interface DataProvider {
   hasFinishedChore(): Promise<boolean>;
 }
 
-/** A PIN check's answer (migrations/115). */
+/**
+ * A PIN check's answer (migrations/115). Since 146 a lock grows (15 minutes,
+ * 1 hour, then until an admin sets a new PIN: locked_until null and
+ * until_reset), and too many wrong PINs from one phone or one household in an
+ * hour answer too_many_attempts.
+ */
 export type PinCheck =
   | { status: "ok" }
   | { status: "wrong_pin"; attempts_left: number }
-  | { status: "locked"; locked_until: string }
+  | { status: "locked"; locked_until: string | null; until_reset?: boolean }
+  | { status: "too_many_attempts" }
   | { status: "no_pin" };
 
-export type HouseCodePerson = { id: string; name: string; has_pin: boolean };
+export type HouseCodePerson = {
+  id: string;
+  name: string;
+  has_pin: boolean;
+  /** No PIN yet and added in the last 7 days: they can pick it (migrations/147). Absent before 147. */
+  claimable?: boolean;
+};
 
 export type HouseCodeSignIn =
   | Exclude<PinCheck, { status: "ok" }>
   | { status: "ok"; household_id: string }
   | { status: "wrong_code" }
   | { status: "too_many_attempts" };
+
+export type HouseCodeClaim =
+  | { status: "ok"; household_id: string }
+  | { status: "wrong_code" }
+  | { status: "too_many_attempts" }
+  | { status: "not_claimable" }
+  | { status: "no_claim_link" }
+  | { status: "bad_pin" };
 
 /** A staff phone linked to the household (device_sessions). */
 export type LinkedPhone = { id: string; linked_at: string; last_seen_at: string };
