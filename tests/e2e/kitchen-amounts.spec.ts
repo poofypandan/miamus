@@ -1,0 +1,177 @@
+import { expect, test } from "@playwright/test";
+import { HOUSEHOLD_ID } from "../fixtures/household";
+import { STAFF_ID, freshSession, installStub } from "./stub-backend";
+
+// Kitchen amounts (Phase 170 PR A, migrations/148): an owner tracks an item
+// (the old count only a hint), Bought asks how much and adds it, a staff
+// phone moves the amount with minus and plus, and the Features switch off
+// hides all of it.
+
+const rice = (over: Record<string, unknown> = {}) => ({
+  id: "00000000-0000-4000-8000-000000170001",
+  household_id: HOUSEHOLD_ID,
+  scope: "home",
+  name: "Beras",
+  category: "pantry",
+  quantity: 2,
+  unit: "kg",
+  min_threshold: 2,
+  photo_url: null,
+  created_at: "2026-10-01T00:00:00Z",
+  variant: null,
+  audit_frequency_days: 30,
+  last_audited_at: "2026-10-03T03:00:00Z",
+  notes: null,
+  stock_status: "ok",
+  stock_status_at: null,
+  stock_status_by: null,
+  track_amount: false,
+  amount_set_at: null,
+  amount_set_by: null,
+  last_bought_amount: null,
+  ...over,
+});
+
+const soap = {
+  ...rice(),
+  id: "00000000-0000-4000-8000-000000170002",
+  name: "Sabun cuci",
+  category: "household_supplies",
+  quantity: 0,
+  last_audited_at: null,
+};
+
+test("an owner tracks rice under Food → Ingredients; the old count is only a hint", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [rice(), soap] });
+  await page.goto("/dashboard?module=inventory");
+
+  // D6: rice browses under Food → Ingredients; soap stays under Shopping.
+  const ingredients = page.getByRole("region", { name: "Ingredients" });
+  await expect(page.getByRole("heading", { name: "Ready to eat" })).toBeVisible({ timeout: 20_000 });
+  await expect(ingredients.getByRole("button", { name: /Beras/ })).toBeVisible();
+  await expect(ingredients.getByRole("button", { name: /Sabun cuci/ })).toHaveCount(0);
+
+  await ingredients.getByRole("button", { name: /Beras/ }).click();
+  await page.getByRole("button", { name: /^Track amount/ }).click();
+  await expect(page.getByText("Old count: 2 kg on 3 Oct, not used")).toHaveCount(0);
+  await page.getByRole("switch", { name: "Track amount" }).click();
+  await expect(page.getByText("Old count: 2 kg on 3 Oct, not used")).toBeVisible();
+  // Never pre-filled from the old count (D14).
+  await expect(page.getByLabel("How much is there now?")).toHaveValue("");
+  await page.getByLabel("How much is there now?").fill("4.5");
+  await page.getByLabel(/Running low at/).fill("1");
+  await page.getByRole("button", { name: "Save" }).click();
+
+  await expect(ingredients.getByRole("button", { name: /Beras/ })).toContainText("4.5 kg left");
+  expect(stub.supplies[0]).toMatchObject({ track_amount: true, quantity: 4.5, min_threshold: 1, unit: "kg", stock_status: "ok" });
+
+  // Shopping keeps the non-food supplies.
+  await page.getByRole("tab", { name: "Shopping" }).click();
+  await expect(page.getByRole("button", { name: /Sabun cuci/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Beras/ })).toHaveCount(0);
+});
+
+test("Bought asks how much, with last time pre-filled, and adds it; Undo puts it back", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    features: { kitchen: true },
+    items: [
+      rice({
+        track_amount: true,
+        quantity: 0.5,
+        min_threshold: 1,
+        stock_status: "low",
+        amount_set_at: new Date().toISOString(),
+        last_bought_amount: 5,
+      }),
+    ],
+  });
+  await page.goto("/dashboard?module=inventory&kitchen=buy");
+
+  await page.getByRole("button", { name: "Bought Beras" }).click({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "How much did you buy?" })).toBeVisible();
+  await expect(page.getByText("Beras · usually 5 kg")).toBeVisible();
+  await expect(page.getByLabel("Amount bought")).toHaveValue("5");
+  await expect(page.getByText("0.5 kg + 5 kg =")).toBeVisible();
+  await page.getByRole("button", { name: "Bought", exact: true }).click();
+
+  await expect(page.getByText("Bought · Beras 5.5 kg")).toBeVisible();
+  expect(stub.supplies[0]).toMatchObject({ quantity: 5.5, stock_status: "ok", last_bought_amount: 5 });
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => stub.supplies[0].quantity).toBe(0.5);
+  expect(stub.supplies[0]).toMatchObject({ stock_status: "low", last_bought_amount: 5 });
+});
+
+test("a staff phone moves the amount with minus and plus, and can't switch tracking", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [rice({ track_amount: true, quantity: 2, min_threshold: 1, amount_set_at: new Date().toISOString() })],
+  });
+  await page.goto("/staff");
+  await page.getByRole("tab", { name: "Dapur" }).click();
+
+  const bahan = page.getByRole("region", { name: "Bahan masakan" });
+  await expect(bahan.getByRole("button", { name: /Beras/ })).toContainText("Sisa 2 kg", { timeout: 20_000 });
+  await bahan.getByRole("button", { name: /Beras/ }).click();
+  await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
+  await expect(page.getByText("Sisa 2,5 kg").first()).toBeVisible();
+  await expect.poll(() => stub.supplies[0].quantity).toBe(2.5);
+  expect(stub.supplies[0].amount_set_by).toBe(STAFF_ID);
+
+  // Down to the low level: running low, by the server's rule.
+  await page.getByRole("button", { name: "Kurangi 0,5 kg" }).click();
+  await page.getByRole("button", { name: "Kurangi 0,5 kg" }).click();
+  await page.getByRole("button", { name: "Kurangi 0,5 kg" }).click();
+  await expect.poll(() => stub.supplies[0].quantity).toBe(1);
+  expect(stub.supplies[0].stock_status).toBe("low");
+
+  // Staff never see Track amount (D3), and nothing on the sheet is English.
+  await expect(page.getByRole("button", { name: /Catat jumlah|Track amount/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Ubah jumlah" })).toBeVisible();
+});
+
+test("Kitchen amounts off hides the amounts, Track amount and Ingredients", async ({ context, page }) => {
+  await installStub(context, {
+    owner: { locale: "en" },
+    features: { kitchen: false },
+    items: [rice({ track_amount: true, quantity: 4.5, min_threshold: 1, amount_set_at: new Date().toISOString() }), soap],
+  });
+  await page.goto("/dashboard?module=inventory");
+  await expect(page.getByRole("button", { name: "Add food" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Ingredients" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Ready to eat" })).toHaveCount(0);
+
+  await page.getByRole("tab", { name: "Shopping" }).click();
+  const row = page.getByRole("button", { name: /Beras/ });
+  await expect(row).toBeVisible();
+  await expect(row).not.toContainText("left");
+  await row.click();
+  await expect(page.getByRole("button", { name: "Edit item" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Track amount/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Set amount" })).toHaveCount(0);
+});
+
+test("portions on food: set in the form, Ate 1 portion counts down (D7)", async ({ context, page }) => {
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true });
+  await page.goto("/staff?view=stok");
+  await expect(page.getByText("Belum ada makanan")).toBeVisible({ timeout: 20_000 });
+
+  await page.getByRole("button", { name: "Tambah makanan" }).click();
+  await page.getByLabel(/Makanan apa\?/).fill("Rendang");
+  await page.getByRole("button", { name: "Dimasak di rumah" }).click();
+  await page.getByRole("button", { name: "Besok" }).click();
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Tambah 1 porsi" }).click();
+  await page.getByRole("button", { name: "Simpan" }).click();
+
+  const row = page.getByRole("button", { name: /Rendang/ });
+  await expect(row).toContainText("3 porsi");
+  expect(stub.foods[0]).toMatchObject({ portions: 3 });
+
+  await row.click();
+  await page.getByRole("button", { name: "Dimakan 1 porsi" }).click();
+  await expect(page.getByText("Rendang · sisa 2 porsi")).toBeVisible();
+  await expect.poll(() => stub.foods[0].portions).toBe(2);
+});
