@@ -518,7 +518,7 @@ function StartForm({
           <span className="font-normal text-muted-foreground">{t("(optional)", "(boleh dikosongkan)")}</span>
         </p>
         <div className="flex flex-wrap gap-2">
-          {[...names, DEVELOPER_CHIP].map((n) => (
+          {[DEVELOPER_CHIP, ...names].map((n) => (
             <Chip
               key={n}
               on={otherName === null && who === n}
