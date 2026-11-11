@@ -215,6 +215,12 @@ export const supabaseProvider: DataProvider = {
     const { error } = await client().from("master_schedules").delete().eq("id", id);
     if (error) throw error;
   },
+  async schedulesWithLogs(ids) {
+    if (ids.length === 0) return new Set<string>();
+    const { data, error } = await client().from("task_logs").select("schedule_id").in("schedule_id", ids);
+    if (error) throw error;
+    return new Set((data ?? []).map((row) => row.schedule_id as string));
+  },
   async createMedicalRecord(input) {
     const { data, error } = await client()
       .from("medical_records")

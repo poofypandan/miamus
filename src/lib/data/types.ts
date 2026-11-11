@@ -24,6 +24,8 @@ import type {
   ScheduleCategoryName,
   StaffProfile,
   LogSubType,
+  RoutineKind,
+  RoutineProof,
   ChoreRecurrence,
   HouseholdTask,
   HouseholdLocation,
@@ -106,6 +108,14 @@ export interface CreateScheduleInput {
   // single future occurrence (see scheduleEngine's isScheduleActiveOn lower
   // bound) so it doesn't show as due before its actual date.
   created_at?: string;
+  // Phase 173 (migrations/144): the Add routine sheet's fields. Omitted by
+  // every older editor, so those rows keep the database defaults.
+  kind?: RoutineKind | null;
+  routine_group_id?: string | null;
+  days_of_week?: number[] | null;
+  note?: string | null;
+  staff_id?: string | null;
+  proof?: RoutineProof;
 }
 
 export interface CreateMedicalRecordInput {
@@ -348,6 +358,12 @@ export interface DataProvider {
   createSchedulesBatch(entries: CreateScheduleInput[]): Promise<MasterSchedule[]>;
   updateSchedule(id: string, patch: Partial<MasterSchedule>): Promise<MasterSchedule>;
   deleteSchedule(id: string): Promise<void>;
+  /**
+   * Which of these routines have any log on record (Phase 173): removing a pet
+   * from a routine ends a row with history (so it keeps its title) and
+   * deletes one without.
+   */
+  schedulesWithLogs(ids: string[]): Promise<Set<string>>;
   createMedicalRecord(input: CreateMedicalRecordInput): Promise<MedicalRecord>;
   uploadPhoto(file: File, pathPrefix: string): Promise<string>;
   /**
