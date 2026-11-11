@@ -6,6 +6,7 @@ import { useHousehold } from "@/context/household-context";
 import { choreDraftKey, clearChoreDraft } from "@/lib/chore-draft";
 import { drainOutbox, onNewWaiting, outboxItems, retryDelayMs, type DrainReport } from "@/lib/offline-queue";
 import { confirmTaskExceptions } from "@/lib/task-exceptions-store";
+import { choreSettledMessageEn, choreSettledMessageId } from "@/lib/chore-settled";
 import { getActiveHouseholdId } from "@/lib/tenant";
 
 /**
@@ -14,6 +15,9 @@ import { getActiveHouseholdId } from "@/lib/tenant";
  * row ids), but would send everything twice and toast twice.
  */
 let draining: Promise<void> | null = null;
+
+/** "No longer linked" is said once per page, not on every try. */
+let unlinkedTold = false;
 
 /** Soon after a save starts waiting: the signal may only have blinked. */
 const FIRST_RETRY_MS = 3_000;
@@ -48,10 +52,12 @@ export function useOfflineSync(lang: "en" | "id") {
     let failures = 0;
     let timer: number | undefined;
     let stopped = false;
+    let paused = false;
 
     async function afterSend(report: DrainReport) {
       const household = getActiveHouseholdId();
-      for (const item of report.sent) {
+      // Sent, or settled elsewhere meanwhile (audit M4): the draft is done.
+      for (const item of [...report.sent, ...report.settled.map((s) => s.item)]) {
         // The chore's photos are on the server with it: the draft is done.
         if (item.job.kind === "chore") {
           clearChoreDraft(choreDraftKey(household, item.job.templateId, item.job.date));
@@ -89,7 +95,20 @@ export function useOfflineSync(lang: "en" | "id") {
       if (result.sent.length > 0 && result.confirmed) {
         toast.success(id ? "Catatan yang tertunda sudah terkirim" : "Waiting saves sent");
       }
-      if (result.refused.length > 0) {
+      // A chore finished by someone else, or cancelled, while this waited.
+      for (const { item, state } of result.settled) {
+        const title = item.job.kind === "chore" ? item.job.title : undefined;
+        toast.info(id ? choreSettledMessageId(state, title) : choreSettledMessageEn(state, title), { duration: 8000 });
+      }
+      if (result.unlinked && !unlinkedTold) {
+        unlinkedTold = true;
+        toast.error(
+          id
+            ? "HP ini tidak terhubung lagi ke rumah. Catatan yang tertunda tetap di HP ini."
+            : "This phone is no longer linked to the household. Waiting saves are kept on it."
+        );
+      }
+      if (result.refused.length > result.settled.length) {
         toast.error(
           id
             ? "Ada catatan yang ditolak server dan tidak tersimpan. Coba catat lagi."
@@ -100,7 +119,7 @@ export function useOfflineSync(lang: "en" | "id") {
 
     function schedule(ms: number) {
       window.clearTimeout(timer);
-      if (stopped || outboxItems().length === 0) return;
+      if (stopped || paused || outboxItems().length === 0) return;
       timer = window.setTimeout(run, ms);
     }
 
@@ -117,6 +136,10 @@ export function useOfflineSync(lang: "en" | "id") {
       draining = drainOnce()
         .then((result) => {
           report(result);
+          // No longer linked (audit L4): no timer, which would only be
+          // refused again. The app coming back to the front, the signal
+          // returning or a new save still try; a re-link reloads the page.
+          paused = !!result?.unlinked;
           if (result && result.waiting === 0 && result.confirmed) failures = 0;
           else failures++;
         })

@@ -6,6 +6,7 @@ import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
 import { dataProvider } from "@/lib/data";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
+import { choreSettledMessageEn, choreSettledMessageId, isChoreAlreadySettled } from "@/lib/chore-settled";
 import { coverTakeover, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { isBill, loadBillPayments } from "@/lib/bill-payments";
 import type { HouseholdTask } from "@/types/database";
@@ -47,6 +48,11 @@ export function useFinishMyChore() {
   const explain = useCallback(
     (err: unknown): boolean => {
       console.error(err);
+      // Finished by someone else, or cancelled, meanwhile (audit M4).
+      if (isChoreAlreadySettled(err)) {
+        toast.info(t(choreSettledMessageEn(err.state), choreSettledMessageId(err.state)), { duration: 8000 });
+        return false;
+      }
       const failure = classifySubmitError(err);
       if (failure === "update" && reloadForUpdate()) {
         toast.info(t("Miamus was updated. Reloading…", "Miamus diperbarui. Memuat ulang…"));

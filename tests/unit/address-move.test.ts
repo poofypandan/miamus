@@ -211,7 +211,7 @@ describe("sending before the move", () => {
     await seed(logItem("a"), logItem("b"));
     let finish: () => void = () => {};
     const hanging = new Promise<import("@/lib/offline-queue").DrainReport>((resolve) => {
-      finish = () => resolve({ sent: [], refused: [], waiting: 2, confirmed: true });
+      finish = () => resolve({ sent: [], refused: [], settled: [], unlinked: false, waiting: 2, confirmed: true });
     });
 
     const outcome = await sendBeforeMove(deps({ drain: () => hanging, waitMs: 20 }));
@@ -249,12 +249,12 @@ describe("sending before the move", () => {
 
   it("counts a pass once, however many tries waited on it", () => {
     const tally = new SendTally();
-    const report = { sent: [logItem("a")], refused: [logItem("b")], waiting: 0, confirmed: true };
+    const report = { sent: [logItem("a")], refused: [logItem("b")], settled: [], unlinked: false, waiting: 0, confirmed: true };
     tally.add(report);
     tally.add(report);
     expect({ sent: tally.sent, refused: tally.refused }).toEqual({ sent: 1, refused: 1 });
     // Sent but not yet confirmed: the next pass confirms them, and counts them then.
-    tally.add({ sent: [logItem("c")], refused: [], waiting: 0, confirmed: false });
+    tally.add({ sent: [logItem("c")], refused: [], settled: [], unlinked: false, waiting: 0, confirmed: false });
     expect(tally.sent).toBe(1);
   });
 
