@@ -248,6 +248,13 @@ export interface UpdateHouseholdTaskInput {
  * that could fail on its own and leave a chore done by nobody.
  */
 export interface HouseholdTaskStatusPatch {
+  /**
+   * Complete only a chore that is still pending (pre-launch audit M4): the
+   * save queue's finish. Throws ChoreAlreadySettledError when it was finished
+   * by someone else or cancelled meanwhile; this call's own earlier try that
+   * landed (same person, same time) counts as done.
+   */
+  onlyIfPending?: boolean;
   photo_url?: string | null;
   /** Proof, in two halves since Phase 100. Both optional. */
   before_photo_url?: string | null;
