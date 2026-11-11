@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { categorizeSchedule } from "@/lib/schedule-categories";
 import { buildAgenda, isScheduleActiveOn } from "@/lib/scheduleEngine";
+import { buildUnifiedAgenda } from "@/lib/unified-agenda";
 import { isoWeekday, proofChoices, strongestProof } from "@/lib/pet-routine-kinds";
 import {
   cardWalkState,
@@ -127,6 +128,22 @@ describe("buildAgenda with routines", () => {
       now: NOW,
     });
     expect(groups).toHaveLength(2);
+  });
+
+  it("gives two such cards for the same pet distinct feed keys (Codex, PR #85)", () => {
+    const groups = buildAgenda({
+      date: MONDAY,
+      entities: [MATCHA],
+      schedules: [
+        row({ id: "w1", entity_id: "matcha", title: "Jalan-jalan", kind: "walk", fixed_times: ["07:00"], staff_id: "yanti" }),
+        row({ id: "w2", entity_id: "matcha", title: "Jalan-jalan", kind: "walk", fixed_times: ["07:00"], staff_id: "sari", routine_group_id: "g2" }),
+      ],
+      logs: [],
+      now: NOW,
+    });
+    const keys = buildUnifiedAgenda({ groups, chores: [] }).map((e) => e.key);
+    expect(keys).toHaveLength(2);
+    expect(new Set(keys).size).toBe(2);
   });
 
   it("groups old rows by time and title, as before", () => {
