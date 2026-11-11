@@ -3,7 +3,8 @@
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FoodView } from "@/components/kitchen/food-view";
 import { IngredientsSection } from "@/components/kitchen/ingredients-section";
-import { RecipesView } from "@/components/kitchen/recipes-view";
+import { MenuView } from "@/components/kitchen/menu-view";
+import { StaffMenu } from "@/components/kitchen/menu-today-card";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { ShoppingTab } from "@/components/shopping/shopping-tab";
 import { StaffShopping } from "@/components/shopping/staff-shopping";
@@ -64,11 +65,8 @@ export function KitchenTab() {
         </div>
       )}
       {view === "menu" && recipesOn(flags) ? (
-        <div className="flex flex-col gap-4 px-4">
-          <div className="empty:hidden">
-            <WhatsNewCard id="recipes-2026-11" />
-          </div>
-          <RecipesView lang={locale} owner />
+        <div className="px-4">
+          <MenuView />
         </div>
       ) : view === "food" ? (
         <div className="flex flex-col gap-6 px-4">
@@ -85,7 +83,8 @@ export function KitchenTab() {
 /**
  * "Dapur" on a staff phone (Phase 156; it replaced "Belanja"): the same
  * Makanan · Belanja · Menu pill. Staff add, edit and finish food; they do
- * not delete it. Menu opens the recipes, read only (Phase 170 PR B).
+ * not delete it. Menu opens today's menu and the recipes, read only
+ * (Phase 170 PR B and C).
  * Bahasa Indonesia only.
  */
 export function StaffKitchen() {
@@ -97,7 +96,7 @@ export function StaffKitchen() {
     <div className="flex flex-col gap-4">
       <KitchenSwitch locale="id" />
       {view === "menu" && recipesOn(flags) ? (
-        <RecipesView lang="id" owner={false} />
+        <StaffMenu />
       ) : view === "food" ? (
         <div className="flex flex-col gap-6">
           <FoodView locale="id" canDelete={false} readyHeading={ingredients} />

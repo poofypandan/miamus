@@ -240,7 +240,9 @@ export function startingAmount(item: Pick<InventoryItem, "quantity" | "amount_se
  *     low level or tracking changed (and is then credited to whoever changed
  *     the amount);
  *   - otherwise a tap on Out empties a tracked item, and a tap on Running
- *     low stays until the amount next changes.
+ *     low stays until the amount next changes;
+ *   - (153) a status back to Enough clears to_buy_amount, and an item with a
+ *     shortfall stays Running low while its amount moves above the low level.
  */
 export function applyAmountRules(before: InventoryItem | null, after: InventoryItem, now: Date = new Date()): InventoryItem {
   const next: InventoryItem = { ...after, amount_set_at: before?.amount_set_at ?? null };
@@ -253,7 +255,11 @@ export function applyAmountRules(before: InventoryItem | null, after: InventoryI
   if (tracked) {
     if (amountChanged || trackingOn) next.amount_set_at = stamp;
     if (amountChanged || trackingOn || next.min_threshold !== before?.min_threshold) {
-      const derived = deriveStatus(next.quantity, next.min_threshold);
+      let derived = deriveStatus(next.quantity, next.min_threshold);
+      // A shortfall from the menu review stays on the list until bought (migrations/153).
+      if (derived === "ok" && next.to_buy_amount != null && (statusBefore === "low" || statusBefore === "out")) {
+        derived = "low";
+      }
       if (derived !== statusBefore) {
         const credited = amountChanged || trackingOn || next.amount_set_by !== before?.amount_set_by;
         next.stock_status_by = credited ? (next.amount_set_by ?? null) : null;
@@ -264,6 +270,8 @@ export function applyAmountRules(before: InventoryItem | null, after: InventoryI
       next.amount_set_at = stamp;
     }
   }
+  // Back to Enough clears the shortfall (bought, or someone tapped Enough; migrations/153).
+  if ((next.stock_status ?? "ok") === "ok" && next.to_buy_amount != null) next.to_buy_amount = null;
   if (before === null || (next.stock_status ?? "ok") !== statusBefore) next.stock_status_at = stamp;
   return next;
 }
@@ -321,4 +329,16 @@ export function lastBoughtInUnit(
   if (amount === null || amount === undefined) return null;
   const converted = convertAmount(amount, from, to);
   return converted !== null && converted > 0 && converted <= MAX_AMOUNT ? converted : null;
+}
+
+/** "500 g" for 0.5 kg, "250 ml" for 0.25 L; otherwise the item's own unit. */
+export function friendlyAmount(value: number, unit: InventoryUnit, lang: "en" | "id"): string {
+  if (unit === "kg" && value < 1) return formatAmount(clean(value * 1000), "g", lang);
+  if (unit === "L" && value < 1) return formatAmount(clean(value * 1000), "ml", lang);
+  return formatAmount(value, unit, lang);
+}
+
+/** On To buy and in the WhatsApp text: "500 g", or null without a shortfall. */
+export function toBuyAmountLabel(item: Pick<InventoryItem, "to_buy_amount" | "unit">, lang: "en" | "id"): string | null {
+  return item.to_buy_amount ? friendlyAmount(item.to_buy_amount, item.unit, lang) : null;
 }

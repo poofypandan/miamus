@@ -16,7 +16,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { amountsOn, ingredientsUnderFood } from "@/lib/features";
-import { amountLine, isIngredient, isTracked } from "@/lib/kitchen-units";
+import { amountLine, isIngredient, isTracked, toBuyAmountLabel } from "@/lib/kitchen-units";
 import {
   STOCK_STATUS_LABELS,
   alertSubject,
@@ -186,11 +186,15 @@ export function ShoppingTab() {
                 const when = day(item.stock_status_at);
                 const status = stockStatus(item);
                 const amount = showAmounts && isTracked(item) ? amountLine(item, locale).text : null;
+                // The menu's shortfall (Phase 170 PR C): "Buy 500 g".
+                const buy = toBuyAmountLabel(item, locale);
                 return (
                   <ToBuyRow
                     key={item.id}
                     title={stockItemName(item)}
-                    detail={[STOCK_STATUS_LABELS[locale][status], amount, by, when].filter(Boolean).join(" · ")}
+                    detail={[buy ? t(`Buy ${buy}`, `Beli ${buy}`) : null, STOCK_STATUS_LABELS[locale][status], amount, by, when]
+                      .filter(Boolean)
+                      .join(" · ")}
                     out={status === "out"}
                     tickLabel={t(`Bought ${stockItemName(item)}`, `${stockItemName(item)} sudah dibeli`)}
                     onTick={() => purchase.buy(item)}

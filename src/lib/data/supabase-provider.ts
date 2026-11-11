@@ -13,9 +13,11 @@ import type { OrganiseRoomsMoved,
   InventoryItem,
   Recipe,
   RecipeIngredient,
+  MenuDish,
   StaffProfile,
 } from "@/types/database";
 import { withLines } from "@/lib/recipes";
+import { MenuAlreadyCookedError } from "./types";
 import type { CreateHouseholdTaskInput, DataProvider, HouseCodeClaim, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
 import { longRepeatFloorFor, longestGapDays, LONGEST_REPEAT_GAP_DAYS, rolloverFloorFor } from "@/lib/chore-recurrence";
 
@@ -575,6 +577,86 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client().from("recipes").delete().eq("id", id).select("id");
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Recipe was not deleted");
+  },
+  async listMenuDishes(from, to) {
+    const { data, error } = await client()
+      .from("menu_dishes")
+      .select("*")
+      .eq("household_id", getActiveHouseholdId())
+      .gte("day", from)
+      .lte("day", to)
+      .order("day")
+      .order("position");
+    // A database before migrations/153: no menu yet, not a failure.
+    if (error) {
+      if (error.code === "PGRST205" || error.code === "42P01") return [];
+      throw error;
+    }
+    return (data ?? []) as MenuDish[];
+  },
+  async addMenuDishes(inputs) {
+    if (inputs.length === 0) return [];
+    const household = getActiveHouseholdId();
+    const { data, error, status } = await client()
+      .from("menu_dishes")
+      .insert(inputs.map((input) => ({ ...input, household_id: household })))
+      .select();
+    if (error) throw withStatus(error, status);
+    return (data ?? []) as MenuDish[];
+  },
+  async updateMenuDish(id, patch) {
+    const { data, error, status } = await client().from("menu_dishes").update(patch).eq("id", id).select().single();
+    if (error) throw withStatus(error, status);
+    return data as MenuDish;
+  },
+  async deleteMenuDishes(ids) {
+    if (ids.length === 0) return;
+    // Owners only (migrations/153); a staff phone's delete matches no rows.
+    const { data, error } = await client().from("menu_dishes").delete().in("id", ids).select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Dish was not deleted");
+  },
+  async cookMenuDish(id, uses, staffId) {
+    const { data, error, status } = await withRpcDeadline((signal) =>
+      client().rpc("cook_menu_dish", { p_dish_id: id, p_uses: uses, p_staff_id: staffId }).abortSignal(signal)
+    );
+    if (error) {
+      if (error.message?.includes("already_cooked")) throw new MenuAlreadyCookedError();
+      throw withStatus(error, status);
+    }
+    return data as { dish: MenuDish; items: InventoryItem[] };
+  },
+  async uncookMenuDish(id) {
+    const { data, error, status } = await withRpcDeadline((signal) =>
+      client().rpc("uncook_menu_dish", { p_dish_id: id }).abortSignal(signal)
+    );
+    if (error) throw withStatus(error, status);
+    return data as { dish: MenuDish; items: InventoryItem[] };
+  },
+  async getKitchenNotes() {
+    const { data, error } = await client()
+      .from("households")
+      .select("kitchen_notes, kitchen_notes_confirmed_at")
+      .eq("id", getActiveHouseholdId())
+      .maybeSingle();
+    if (error) {
+      // A database before migrations/153: no column yet.
+      if (error.code === "42703" || error.code === "PGRST204") return null;
+      throw error;
+    }
+    if (!data) return null;
+    const row = data as { kitchen_notes: string | null; kitchen_notes_confirmed_at: string | null };
+    return { text: row.kitchen_notes, confirmedAt: row.kitchen_notes_confirmed_at };
+  },
+  async setKitchenNotes(notes, confirm) {
+    const { data, error, status } = await client().rpc("set_kitchen_notes", {
+      p_household_id: getActiveHouseholdId(),
+      p_notes: notes,
+      p_confirm: confirm,
+    });
+    if (error) throw withStatus(error, status);
+    const row = data as { kitchen_notes: string | null; kitchen_notes_confirmed_at: string | null };
+    return { text: row.kitchen_notes, confirmedAt: row.kitchen_notes_confirmed_at };
   },
   async listRoutineProposals() {
     const { data, error } = await client()

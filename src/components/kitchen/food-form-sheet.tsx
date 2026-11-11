@@ -48,25 +48,38 @@ export function FoodFormSheet({
   item,
   locale,
   onClose,
+  prefill,
 }: {
   open: boolean;
   /** The food being edited; null to add one. */
   item: FoodItem | null;
   locale: FoodLocale;
   onClose: () => void;
+  /** A new food's starting name and source (a cooked dish's leftovers, Phase 170 PR C). */
+  prefill?: { name: string; source: FoodSource };
 }) {
   useBackToClose(open, onClose);
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent side="bottom" className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl">
         {/* Keyed so each opening starts from that food's values. */}
-        {open && <FoodForm key={item?.id ?? "new"} item={item} locale={locale} onDone={onClose} />}
+        {open && <FoodForm key={item?.id ?? "new"} item={item} locale={locale} onDone={onClose} prefill={prefill} />}
       </SheetContent>
     </Sheet>
   );
 }
 
-function FoodForm({ item, locale, onDone }: { item: FoodItem | null; locale: FoodLocale; onDone: () => void }) {
+function FoodForm({
+  item,
+  locale,
+  onDone,
+  prefill,
+}: {
+  item: FoodItem | null;
+  locale: FoodLocale;
+  onDone: () => void;
+  prefill?: { name: string; source: FoodSource };
+}) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
   const { addFoodFromForm, editFood } = useHousehold();
@@ -74,11 +87,13 @@ function FoodForm({ item, locale, onDone }: { item: FoodItem | null; locale: Foo
 
   const [photo, setPhoto] = useState<File | string | null>(item?.photo_url ?? null);
   const [photoBusy, setPhotoBusy] = useState(false);
-  const [name, setName] = useState(item?.name ?? "");
+  const [name, setName] = useState(item?.name ?? prefill?.name ?? "");
   const [keptIn, setKeptIn] = useState<FoodPlace>(item?.kept_in ?? "fridge");
   const [expiresOn, setExpiresOn] = useState<string | null>(item?.expires_on ?? null);
   const [unknownDate, setUnknownDate] = useState(!item?.expires_on && !!item?.expiry_unknown);
-  const [source, setSource] = useState<FoodSource | null>(item?.source ?? (item?.from_whom ? "gift" : null));
+  const [source, setSource] = useState<FoodSource | null>(
+    item?.source ?? (item?.from_whom ? "gift" : (prefill?.source ?? null))
+  );
   // "pick": the date field is showing. Otherwise the chips say it.
   const [picking, setPicking] = useState(
     () => !!item?.expires_on && !EXPIRY_CHOICES.some((c) => addDaysTo(today, c.days) === item.expires_on)

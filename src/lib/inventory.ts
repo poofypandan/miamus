@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ITEM_TYPE_LABELS } from "@/lib/item-types";
-import { STOCK_UNITS, UNIT_LABELS, amountStep, unitLabel } from "@/lib/kitchen-units";
+import { STOCK_UNITS, UNIT_LABELS, amountStep, toBuyAmountLabel, unitLabel } from "@/lib/kitchen-units";
 import type {
   InventoryAlert,
   StockStatus,
@@ -222,7 +222,11 @@ export function buildShoppingList(
     const lines = items
       .filter((item) => item.scope === scope && isLowStock(item))
       .sort(compareForList)
-      .map((item) => `- ${stockItemName(item)} (${status[stockStatus(item)].toLowerCase()})`);
+      // The menu's shortfall when there is one (Phase 170 PR C): "- Ayam 500 g".
+      .map((item) => {
+        const buy = toBuyAmountLabel(item, lang);
+        return buy ? `- ${stockItemName(item)} ${buy}` : `- ${stockItemName(item)} (${status[stockStatus(item)].toLowerCase()})`;
+      });
     return lines.length > 0 ? [`*${scopes[scope]}*\n${lines.join("\n")}`] : [];
   });
   const noteLines = notes.map(({ alert, petName }) => {

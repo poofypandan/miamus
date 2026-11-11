@@ -292,7 +292,7 @@ people are **staf** and **admin**.
 | How much did you buy? / usually 5 kg / Skip amount / Bought | **Beli berapa?** / **biasanya 5 kg** / **Lewati jumlah** / **Sudah dibeli** | Phase 170 PR A; owners and staff. Toast: **Sudah dibeli · masih hampir habis**. |
 | Portions / Ate 1 portion | **Porsi** / **Dimakan 1 porsi** | Phase 170 PR A (D7): "Rendang · 3 porsi"; toast **sisa 2 porsi**. |
 | Kitchen units | **buah, butir, ikat, siung, lembar, batang, bungkus, sachet** (recipes add **sdm, sdt**, Phase 170 PR B) | Phase 170 PR A: the words Indonesian kitchens use, kept in English too; the English picker adds a small second line (piece, egg, bunch, clove, leaf, stalk, packet, sachet). |
-| Kitchen pill (third) | **Menu** | Phase 170 PR B: **Makanan · Belanja · Menu**. Until the weekly menu (PR C) it opens on the recipes. |
+| Kitchen pill (third) | **Menu** | Phase 170 PR B: **Makanan · Belanja · Menu**. Since PR C it opens on the week (owners) or Menu hari ini and the recipes (staff). |
 | Recipe / Recipes / New recipe / Edit recipe | **Resep** / **Resep** / **Resep baru** / **Ubah resep** | Phase 170 PR B. |
 | Servings | **Porsi** | Phase 170 PR B: "untuk 4 porsi"; the stepper reads **Untuk 4 porsi**. |
 | Ingredients (recipe) / Steps | **Bahan** / **Cara membuat** | Phase 170 PR B: what Indonesian recipes print. "Bahan masakan" stays the Food group. |
@@ -302,6 +302,18 @@ people are **staf** and **admin**.
 | For staff, in Bahasa Indonesia / Indonesian version | **Untuk staf, dalam Bahasa Indonesia** / **versi Bahasa Indonesia** | Phase 170 PR B: the owner's note **Belum ada versi Bahasa Indonesia**; the preview switch **English · Untuk staf**. |
 | Add an ingredient / From your list | **Tambah bahan** / **Dari daftar** | Phase 170 PR B, the recipe form. |
 | One step per line | **Satu langkah per baris** | Phase 170 PR B, the recipe form. |
+| Menu today / This week · Next week · Last week | **Menu hari ini** / **Minggu ini · Minggu depan · Minggu lalu** | Phase 170 PR C: the staff card on Tugas Hari Ini; the owner's week heading. Another day on the staff card: **Menu Kamis**. |
+| Breakfast · Lunch · Dinner | **Sarapan · Makan siang · Makan malam** (staff card: **Pagi · Siang · Malam**) | Phase 170 PR C. |
+| Dish / Add a dish / Edit dish / Remove from the menu | **Masakan** / **Tambah masakan** / **Ubah masakan** / **Hapus dari menu** | Phase 170 PR C, the owner's dish form. Field hint: **Pilih resep atau ketik masakan**. |
+| Nothing planned | **Belum ada menu** | Phase 170 PR C, an empty day in the owner's week. |
+| Plan this | **Masukkan ke menu** | Phase 170 PR C, on a recipe. |
+| Recipe deleted | **Resep sudah dihapus** | Phase 170 PR C: a dish whose recipe was deleted keeps its name. |
+| Cooked / Use these ingredients / Mark not cooked | **Sudah dimasak** / **Pakai bahan ini** / **Tandai belum dimasak** | Phase 170 PR C. Toast: **Rendang sudah dimasak · Batalkan**. |
+| Ingredients used / Not counted | **Bahan yang dipakai** / **Tidak dihitung** | Phase 170 PR C, the cook's confirm sheet. |
+| Leftovers? / Save to Food / No leftovers | **Ada sisa?** / **Simpan ke Makanan** / **Tidak ada sisa** | Phase 170 PR C. |
+| Kitchen notes | **Catatan dapur** | Phase 170 PR C: neutral, never names the cook's role ("untuk yang memasak"). |
+| Add missing to Shopping / To buy / Check these / Not on your list / Enough | **Tambahkan yang kurang ke Belanja** / **Perlu dibeli** / **Cek dulu** / **Belum ada di daftar** / **Cukup** | Phase 170 PR C, the review sheet. Line: **Perlu 1,5 kg · ada 1 kg · beli 500 g**; on To buy **Beli 500 g**. |
+| Copy last week | **Salin minggu lalu** | Phase 170 PR C. |
 
 ## Formatting
 

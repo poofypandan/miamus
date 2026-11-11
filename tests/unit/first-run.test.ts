@@ -121,11 +121,13 @@ describe("staff tips, one at a time", () => {
   const none = () => false;
 
   it("shows the newest that applies", () => {
-    expect(pickStaffTip(all, none)).toBe("staff-recipes-2026-11");
+    expect(pickStaffTip(all, none)).toBe("staff-menu-2026-11");
   });
 
   it("then the next newest, keeping the list's order for the same day", () => {
-    const seen = new Set(["staff-recipes-2026-11"]);
+    const seen = new Set(["staff-menu-2026-11"]);
+    expect(pickStaffTip(all, (id) => seen.has(id))).toBe("staff-recipes-2026-11");
+    seen.add("staff-recipes-2026-11");
     expect(pickStaffTip(all, (id) => seen.has(id))).toBe("staff-kitchen-amounts-2026-11");
     seen.add("staff-kitchen-amounts-2026-11");
     expect(pickStaffTip(all, (id) => seen.has(id))).toBe("staff-couldnt-do-2026-11");

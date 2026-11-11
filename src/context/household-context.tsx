@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
 import { forgetDeletedChore, refreshRepairs } from "@/lib/repairs-store";
 import { refreshRecipes } from "@/lib/recipes-store";
+import { refreshMenu } from "@/lib/menu-store";
 import { refreshBillPayments } from "@/lib/bill-payments";
 import { refreshTaskExceptions } from "@/lib/task-exceptions-store";
 import { screenLocale } from "@/lib/owner-locale";
@@ -288,6 +289,18 @@ interface HouseholdContextValue {
   /** Anyone in the household: enough, running low or out (Phase 154). */
   setInventoryStatus: (id: string, status: StockStatus) => Promise<InventoryItem>;
   removeInventoryItem: (id: string) => Promise<void>;
+  /**
+   * Rows the server just returned for items changed elsewhere (cooking and
+   * its Undo, Phase 170 PR C): shown as they are, except an item with taps
+   * still waiting to be sent (those are already on the screen).
+   */
+  applyInventoryRows: (rows: InventoryItem[]) => void;
+  /**
+   * Add missing to Shopping (owners, Phase 170 PR C): Running low or Out
+   * with the shortfall stored, one ordinary update per item, in order with
+   * the item's other writes.
+   */
+  markToBuy: (id: string, patch: { stock_status: StockStatus; to_buy_amount: number | null }) => Promise<InventoryItem>;
   /**
    * Food at home (Phase 156). Anyone in the household adds, edits and
    * finishes food; only admins delete it (the database decides). A photo is
@@ -709,6 +722,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     refreshRepairs();
     // Recipes (Phase 170 PR B), only while a screen shows them.
     refreshRecipes();
+    // The weekly menu (Phase 170 PR C), likewise.
+    refreshMenu();
     // Bill payments too (owners only; only while a screen shows them).
     refreshBillPayments();
     // Couldn't-do records (Phase 165), likewise only while a screen shows them.
@@ -1239,6 +1254,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       const patch: InventoryItemPatch = {
         stock_status: "ok",
         stock_status_by: staffId,
+        // record_purchase clears the menu's shortfall (migrations/153).
+        to_buy_amount: null,
         ...(adds && current
           ? { quantity: current.quantity + amount!, last_bought_amount: amount, amount_set_by: staffId }
           : {}),
@@ -1291,6 +1308,22 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
     },
     [dropPendingTaps, writeInventoryItem]
+  );
+
+  const applyInventoryRows = useCallback((rows: InventoryItem[]) => {
+    const fresh = rows.filter((row) => !pendingStock.current.has(row.id));
+    if (fresh.length === 0) return;
+    const byId = new Map(fresh.map((row) => [row.id, row]));
+    inventoryItemsRef.current = inventoryItemsRef.current.map((item) => byId.get(item.id) ?? item);
+    setInventoryItems((prev) => prev.map((item) => byId.get(item.id) ?? item));
+  }, []);
+
+  const markToBuy = useCallback(
+    (id: string, patch: { stock_status: StockStatus; to_buy_amount: number | null }) => {
+      const full: InventoryItemPatch = { ...patch, stock_status_by: readActiveStaffId() };
+      return writeInventoryItem(id, full, () => dataProvider.updateInventoryItem(id, full));
+    },
+    [writeInventoryItem]
   );
 
   const removeInventoryItem = useCallback(async (id: string) => {
@@ -1933,6 +1966,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       updateInventoryItem,
       setInventoryStatus,
       removeInventoryItem,
+      applyInventoryRows,
+      markToBuy,
       addFood,
       addFoodFromForm,
       editFood,
@@ -2021,6 +2056,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       updateInventoryItem,
       setInventoryStatus,
       removeInventoryItem,
+      applyInventoryRows,
+      markToBuy,
       addFood,
       addFoodFromForm,
       editFood,

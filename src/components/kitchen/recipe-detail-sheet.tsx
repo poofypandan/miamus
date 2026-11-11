@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Languages, Minus, Pencil, Plus } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { CalendarPlus, Languages, Minus, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -41,6 +41,7 @@ export function RecipeDetailSheet({
   owner,
   onClose,
   onEdit,
+  onPlan,
 }: {
   recipe: RecipeWithLines | null;
   lang: RecipeLang;
@@ -48,32 +49,50 @@ export function RecipeDetailSheet({
   onClose: () => void;
   /** Owners: open the editor, optionally at the Indonesian version. */
   onEdit?: (recipe: RecipeWithLines, at?: "indonesian") => void;
+  /** Owners: put it on the menu (Phase 170 PR C). */
+  onPlan?: (recipe: RecipeWithLines) => void;
 }) {
   useBackToClose(recipe !== null, onClose);
   return (
     <Sheet open={recipe !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto">
-        {recipe && <RecipeBody key={recipe.id} recipe={recipe} lang={lang} owner={owner} onEdit={onEdit} />}
+        {recipe && <RecipeBody key={recipe.id} recipe={recipe} lang={lang} owner={owner} onEdit={onEdit} onPlan={onPlan} />}
       </SheetContent>
     </Sheet>
   );
 }
 
-function RecipeBody({
+/**
+ * The recipe itself. Also shown inside a planned dish (Phase 170 PR C):
+ * `servings` starts the stepper at the dish's servings, `title` replaces the
+ * recipe's name (the dish's), `before` sits under the title (the kitchen
+ * notes and the dish's note) and `footer` at the bottom (Sudah dimasak).
+ */
+export function RecipeBody({
   recipe,
   lang,
   owner,
   onEdit,
+  onPlan,
+  servings: startServings,
+  title,
+  before,
+  footer,
 }: {
   recipe: RecipeWithLines;
   lang: RecipeLang;
   owner: boolean;
   onEdit?: (recipe: RecipeWithLines, at?: "indonesian") => void;
+  onPlan?: (recipe: RecipeWithLines) => void;
+  servings?: number;
+  title?: string;
+  before?: ReactNode;
+  footer?: ReactNode;
 }) {
   const { inventoryItems } = useHousehold();
   const id = lang === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const [servings, setServings] = useState(recipe.servings);
+  const [servings, setServings] = useState(startServings ?? recipe.servings);
   // Owners of an English recipe can look at it as the cook does.
   const english = recipe.written_in === "en";
   const [asStaff, setAsStaff] = useState(!owner);
@@ -89,10 +108,11 @@ function RecipeBody({
   return (
     <div className="flex flex-col">
       <SheetHeader>
-        <SheetTitle className={cn(big ? "text-2xl" : "text-xl")}>{text.name}</SheetTitle>
+        <SheetTitle className={cn(big ? "text-2xl" : "text-xl")}>{title ?? text.name}</SheetTitle>
         <SheetDescription className="sr-only">{tr("Recipe", "Resep")}</SheetDescription>
       </SheetHeader>
       <div className="flex flex-col gap-5 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        {before}
         {owner && english && (
           <SegmentedControl
             ariaLabel={tr("Language", "Bahasa")}
@@ -207,11 +227,17 @@ function RecipeBody({
           </section>
         )}
 
+        {owner && onPlan && (
+          <Button className="min-h-12 rounded-xl text-base" onClick={() => onPlan(recipe)}>
+            <CalendarPlus /> {tr("Plan this", "Masukkan ke menu")}
+          </Button>
+        )}
         {owner && onEdit && (
           <Button variant="outline" className="min-h-12 rounded-xl text-base" onClick={() => onEdit(recipe)}>
             <Pencil /> {tr("Edit recipe", "Ubah resep")}
           </Button>
         )}
+        {footer}
       </div>
     </div>
   );

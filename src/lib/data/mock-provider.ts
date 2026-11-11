@@ -1,6 +1,7 @@
 import { ChoreAlreadySettledError } from "@/lib/chore-settled";
 import { applyAmountRules } from "@/lib/kitchen-units";
 import type { RecipeWithLines } from "@/lib/recipes";
+import { MenuAlreadyCookedError, type KitchenNotes } from "./types";
 
 /** Portion taps in mock mode, by op id (migrations/148's food_portion_ops). */
 const mockPortionOps = new Map<string, { consumed: number; finished: boolean; undone: boolean }>();
@@ -12,6 +13,7 @@ import type {
   InventoryAlert,
   RoutineProposal,
   InventoryItem,
+  MenuDish,
   FoodItem,
   InventoryAuditWithStaff,
   StaffProfile,
@@ -71,6 +73,9 @@ interface MockDB {
   repairPushPrefs?: RepairPushPrefs;
   /** Phase 170 PR B. Optional, as above. */
   recipes?: RecipeWithLines[];
+  /** Phase 170 PR C. Optional, as above. */
+  menuDishes?: MenuDish[];
+  kitchenNotes?: KitchenNotes;
 }
 
 function freshDB(): MockDB {
@@ -442,6 +447,7 @@ export const mockProvider: DataProvider = {
       amount_set_by: adds ? staffId : (current.amount_set_by ?? null),
       stock_status: "ok",
       stock_status_by: staffId,
+      to_buy_amount: null,
     });
     db.inventoryItems[index] = item;
     saveDB(db);
@@ -620,8 +626,110 @@ export const mockProvider: DataProvider = {
   async deleteRecipe(id) {
     const db = loadDB();
     db.recipes = (db.recipes ?? []).filter((r) => r.id !== id);
+    // A dish keeps its title and loses the link (migrations/153).
+    db.menuDishes = (db.menuDishes ?? []).map((d) => (d.recipe_id === id ? { ...d, recipe_id: null } : d));
     saveDB(db);
     return delay(undefined);
+  },
+  async listMenuDishes(from, to) {
+    return delay((loadDB().menuDishes ?? []).filter((d) => d.day >= from && d.day <= to));
+  },
+  async addMenuDishes(inputs) {
+    const db = loadDB();
+    const now = new Date().toISOString();
+    const household = getActiveHouseholdId();
+    const added: MenuDish[] = inputs.map((input) => ({
+      ...input,
+      title: input.title.trim(),
+      notes: input.notes?.trim() || null,
+      id: uid("dish"),
+      household_id: household,
+      cooked_at: null,
+      cooked_by: null,
+      cooked_uses: null,
+      created_by: null,
+      created_at: now,
+      updated_at: now,
+    }));
+    db.menuDishes = [...(db.menuDishes ?? []), ...added];
+    saveDB(db);
+    return delay(added);
+  },
+  async updateMenuDish(id, patch) {
+    const db = loadDB();
+    const dishes = db.menuDishes ?? [];
+    const index = dishes.findIndex((d) => d.id === id);
+    if (index === -1) throw new Error("Dish not found");
+    const dish: MenuDish = { ...dishes[index], ...patch, updated_at: new Date().toISOString() };
+    dishes[index] = dish;
+    db.menuDishes = dishes;
+    saveDB(db);
+    return delay(dish);
+  },
+  async deleteMenuDishes(ids) {
+    const db = loadDB();
+    db.menuDishes = (db.menuDishes ?? []).filter((d) => !ids.includes(d.id));
+    saveDB(db);
+    return delay(undefined);
+  },
+  async cookMenuDish(id, uses, staffId) {
+    // cook_menu_dish (migrations/153): tracked items only, floored at 0, once.
+    const db = loadDB();
+    const dishes = db.menuDishes ?? [];
+    const index = dishes.findIndex((d) => d.id === id);
+    if (index === -1) throw new Error("Dish not found");
+    if (dishes[index].cooked_at) throw new MenuAlreadyCookedError();
+    const took: { item_id: string; amount: number }[] = [];
+    const items: InventoryItem[] = [];
+    for (const use of uses) {
+      const at = db.inventoryItems.findIndex((i) => i.id === use.item_id);
+      const current = db.inventoryItems[at];
+      if (!current || current.track_amount !== true) throw new Error("item_not_tracked");
+      const taken = Math.min(current.quantity, use.amount);
+      if (taken <= 0) continue;
+      const item = applyAmountRules(current, { ...current, quantity: current.quantity - taken, amount_set_by: staffId });
+      db.inventoryItems[at] = item;
+      items.push(item);
+      took.push({ item_id: item.id, amount: taken });
+    }
+    const dish: MenuDish = { ...dishes[index], cooked_at: new Date().toISOString(), cooked_by: staffId, cooked_uses: took };
+    dishes[index] = dish;
+    db.menuDishes = dishes;
+    saveDB(db);
+    return delay({ dish, items });
+  },
+  async uncookMenuDish(id) {
+    const db = loadDB();
+    const dishes = db.menuDishes ?? [];
+    const index = dishes.findIndex((d) => d.id === id);
+    if (index === -1) throw new Error("Dish not found");
+    const items: InventoryItem[] = [];
+    for (const use of dishes[index].cooked_uses ?? []) {
+      const at = db.inventoryItems.findIndex((i) => i.id === use.item_id);
+      const current = db.inventoryItems[at];
+      if (!current || current.track_amount !== true) continue;
+      const item = applyAmountRules(current, { ...current, quantity: current.quantity + use.amount });
+      db.inventoryItems[at] = item;
+      items.push(item);
+    }
+    const dish: MenuDish = { ...dishes[index], cooked_at: null, cooked_by: null, cooked_uses: null };
+    dishes[index] = dish;
+    db.menuDishes = dishes;
+    saveDB(db);
+    return delay({ dish, items });
+  },
+  async getKitchenNotes() {
+    return delay(loadDB().kitchenNotes ?? { text: null, confirmedAt: null });
+  },
+  async setKitchenNotes(notes, confirm) {
+    const db = loadDB();
+    const before = db.kitchenNotes ?? { text: null, confirmedAt: null };
+    db.kitchenNotes = {
+      text: notes?.trim() || null,
+      confirmedAt: before.confirmedAt ?? (confirm ? new Date().toISOString() : null),
+    };
+    saveDB(db);
+    return delay(db.kitchenNotes);
   },
   async listRoutineProposals() {
     return delay(loadDB().routineProposals);

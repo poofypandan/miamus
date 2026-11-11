@@ -1,4 +1,5 @@
 import type { RecipePayload, RecipeWithLines } from "@/lib/recipes";
+import type { MenuDishInput } from "@/lib/menu";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -12,6 +13,8 @@ import type {
   ItemType,
   RoutineProposal,
   InventoryItem,
+  CookedUse,
+  MenuDish,
   FoodItem,
   FoodOutcome,
   FoodPlace,
@@ -324,8 +327,25 @@ export interface InventoryItemInput {
  */
 export type InventoryItemPatch = Partial<InventoryItemInput> &
   Partial<
-    Pick<InventoryItem, "track_amount" | "amount_set_by" | "stock_status" | "stock_status_by" | "last_bought_amount">
+    Pick<
+      InventoryItem,
+      "track_amount" | "amount_set_by" | "stock_status" | "stock_status_by" | "last_bought_amount" | "to_buy_amount"
+    >
   >;
+
+/** The household's kitchen note and the owner's one-time health-data OK (migrations/153). */
+export interface KitchenNotes {
+  text: string | null;
+  confirmedAt: string | null;
+}
+
+/** cook_menu_dish refused a dish that is already cooked (another phone, or a resend). */
+export class MenuAlreadyCookedError extends Error {
+  constructor() {
+    super("already_cooked");
+    this.name = "MenuAlreadyCookedError";
+  }
+}
 
 /** One stock check as the staff member recorded it (migrations/083, 099). */
 /** What a person fills in when adding or editing food (Phase 156). */
@@ -499,6 +519,28 @@ export interface DataProvider {
   saveRecipe(payload: RecipePayload): Promise<RecipeWithLines>;
   /** Owners only; its lines go with it. */
   deleteRecipe(id: string): Promise<void>;
+  /**
+   * The weekly menu (Phase 170 PR C, migrations/153): the dishes from `from`
+   * to `to` (YYYY-MM-DD, inclusive). Every session reads; [] before 153.
+   */
+  listMenuDishes(from: string, to: string): Promise<MenuDish[]>;
+  /** Owners only: plan dishes (one insert). */
+  addMenuDishes(inputs: MenuDishInput[]): Promise<MenuDish[]>;
+  /** Owners only; never the cooked_* columns (the database refuses). */
+  updateMenuDish(id: string, patch: Partial<MenuDishInput>): Promise<MenuDish>;
+  /** Owners only. */
+  deleteMenuDishes(ids: string[]): Promise<void>;
+  /**
+   * Any household session: Sudah dimasak. Takes `uses` off stock and marks
+   * the dish cooked; refused (MenuAlreadyCookedError) if it already is.
+   */
+  cookMenuDish(id: string, uses: CookedUse[], staffId: string | null): Promise<{ dish: MenuDish; items: InventoryItem[] }>;
+  /** Any household session: puts back exactly what cooking took. */
+  uncookMenuDish(id: string): Promise<{ dish: MenuDish; items: InventoryItem[] }>;
+  /** The household's kitchen note; null before 153. */
+  getKitchenNotes(): Promise<KitchenNotes | null>;
+  /** Owners only. `confirm`: the one-time health-data OK (D12). */
+  setKitchenNotes(notes: string | null, confirm: boolean): Promise<KitchenNotes>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
   createRoutineProposalsBatch(inputs: CreateRoutineProposalInput[]): Promise<RoutineProposal[]>;

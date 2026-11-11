@@ -38,6 +38,11 @@ export type Household = {
   has_pets: boolean | null;
   has_pets_set_at: string | null;
   has_pets_set_by: string | null;
+  // The kitchen note for whoever cooks (Phase 170 PR C, migrations/153),
+  // and the owner's one-time health-data OK. Written through set_kitchen_notes.
+  kitchen_notes?: string | null;
+  kitchen_notes_confirmed_at?: string | null;
+  kitchen_notes_confirmed_by?: string | null;
 };
 
 export type HouseholdMember = {
@@ -409,6 +414,38 @@ export type RecipeIngredient = {
   position: number;
 };
 
+/** A meal on the menu (migrations/153). */
+export type MenuMeal = "breakfast" | "lunch" | "dinner";
+
+/** What cooking took off one tracked item, in the item's unit (migrations/153). */
+export type CookedUse = { item_id: string; amount: number };
+
+/**
+ * One dish on a day (Phase 170 PR C, migrations/153). Owners plan; every
+ * staff phone reads. cooked_* are written only by cook_menu_dish and
+ * uncook_menu_dish. No prices, ever.
+ */
+export type MenuDish = {
+  id: string;
+  household_id: string;
+  /** YYYY-MM-DD. */
+  day: string;
+  meal: MenuMeal;
+  /** Null for a dish with just a name, or once its recipe is deleted. */
+  recipe_id: string | null;
+  title: string;
+  /** Null for a dish without a recipe. */
+  servings: number | null;
+  notes: string | null;
+  position: number;
+  cooked_at: string | null;
+  cooked_by: string | null;
+  cooked_uses: CookedUse[] | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type InventoryItem = {
   id: string;
   // The tenant (migrations/086).
@@ -451,6 +488,12 @@ export type InventoryItem = {
   amount_set_by?: string | null;
   /** The last purchase's amount, in `unit`: the "How much did you buy?" pre-fill. */
   last_bought_amount?: number | null;
+  /**
+   * The shortfall "Add missing to Shopping" stored (Phase 170 PR C,
+   * migrations/153), in `unit`: To buy reads "Chicken 500 g". Cleared when
+   * bought or set back to Enough.
+   */
+  to_buy_amount?: number | null;
   // The Phase 83 box/loose ledger. Still in the table so a phone on the
   // previous build keeps working through the deploy; nothing reads them now.
   unit_type?: string;
@@ -908,6 +951,13 @@ export interface Database {
         Update: Partial<RecipeIngredient>;
         Relationships: [];
       };
+      // The weekly menu (migrations/153): owners write, every session reads.
+      menu_dishes: {
+        Row: MenuDish;
+        Insert: Partial<MenuDish> & Pick<MenuDish, "household_id" | "day" | "meal" | "title">;
+        Update: Partial<MenuDish>;
+        Relationships: [];
+      };
       inventory_audit_logs: {
         Row: InventoryAuditLog;
         Insert: Partial<InventoryAuditLog> & Pick<InventoryAuditLog, "item_id">;
@@ -1072,6 +1122,20 @@ export interface Database {
       save_recipe: {
         Args: { p_recipe: Record<string, unknown>; p_ingredients?: Record<string, unknown>[] };
         Returns: { recipe: Recipe; ingredients: RecipeIngredient[] };
+      };
+      // Cooking and its Undo (migrations/153); any household session.
+      cook_menu_dish: {
+        Args: { p_dish_id: string; p_uses: CookedUse[]; p_staff_id?: string | null };
+        Returns: { dish: MenuDish; items: InventoryItem[] };
+      };
+      uncook_menu_dish: {
+        Args: { p_dish_id: string };
+        Returns: { dish: MenuDish; items: InventoryItem[] };
+      };
+      // The household's kitchen note (migrations/153); owners only.
+      set_kitchen_notes: {
+        Args: { p_household_id: string; p_notes: string | null; p_confirm?: boolean };
+        Returns: { kitchen_notes: string | null; kitchen_notes_confirmed_at: string | null };
       };
       // Bought (migrations/148): adds the amount on a tracked item, keeps it
       // as the next pre-fill, and puts the item back to enough.

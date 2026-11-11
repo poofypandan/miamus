@@ -28,6 +28,28 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Phase 170 PR C: shown on Kitchen → Menu's week while the Kitchen switch
+    // is on, under the calm-start rules (one card a week, never to new
+    // households), so it waits its turn behind this week's card.
+    id: "menu-2026-11",
+    date: "2026-11-13",
+    audience: "owner",
+    title: { en: "New: the week's menu", id: "Baru: menu seminggu" },
+    steps: {
+      en: [
+        "Plan the week in Kitchen → Menu: tap + on a day, pick a recipe or type a dish. Copy last week fills the empty days.",
+        "Add missing to Shopping adds up what the week needs against what's at home, and shows you the list first.",
+        "Staff see Menu hari ini on their Today. When they tap Sudah dimasak, the ingredients come off what's at home.",
+      ],
+      id: [
+        "Rencanakan menu seminggu di Dapur → Menu: ketuk + di satu hari, pilih resep atau ketik masakan. Salin minggu lalu mengisi hari yang masih kosong.",
+        "Tambahkan yang kurang ke Belanja menjumlahkan kebutuhan seminggu dengan stok di rumah, dan menunjukkan daftarnya dulu.",
+        "Staf melihat Menu hari ini di Tugas Hari Ini. Saat mereka menekan Sudah dimasak, bahannya dikurangi dari stok di rumah.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Phase 170 PR B: shown on Kitchen → Menu while the Kitchen switch is
     // on, under the calm-start rules (one card a week, never to new
     // households): Kitchen amounts' card had this week, so it waits.
@@ -508,6 +530,16 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    // Phase 170 PR C: once Today has a menu, while the Kitchen switch is on.
+    id: "staff-menu-2026-11",
+    date: "2026-11-13",
+    title: "Baru: Menu hari ini",
+    lines: [
+      "Menu hari ini ada di atas Tugas Hari Ini. Ketuk masakannya untuk melihat resepnya.",
+      "Setelah masak, tekan Sudah dimasak. Bahannya dikurangi sendiri. Salah tekan? Tekan Batalkan.",
+    ],
+  },
   {
     // Phase 170 PR B: once the household has a recipe, while the Kitchen switch is on.
     id: "staff-recipes-2026-11",

@@ -58,7 +58,9 @@ import {
 } from "@/lib/repair-walkins";
 import { leaveCovering } from "@/lib/leave";
 import { slotOf } from "@/lib/couldnt-do";
-import { HardHat } from "lucide-react";
+import { HardHat, UtensilsCrossed } from "lucide-react";
+import { useMenuWeek } from "@/hooks/use-menu";
+import { todayMenuLine } from "@/lib/menu";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { dayLabel } from "@/lib/date-label";
@@ -228,7 +230,7 @@ export function AgendaTab() {
 
   // Food to eat soon (Phase 156): the same kind of quiet line, above it.
   // Food at home and Repairs switched off (Phase 171): their lines go.
-  const { food: foodOn, repairs: repairsOn } = useHouseholdFeatures();
+  const { food: foodOn, repairs: repairsOn, kitchen: kitchenOn } = useHouseholdFeatures();
   const eatSoon = useMemo(
     () => (foodOn ? countEatSoon(foodItems, formatDateLocal(today)) : 0),
     [foodItems, today, foodOn]
@@ -380,6 +382,17 @@ export function AgendaTab() {
     );
   }, [showsToday, clock, summaryHour, todayKey, allChores, groups, exceptions, leaveRequests, pets, logs]);
 
+  // Today's menu (Phase 170 PR C, D9): one quiet line while the Kitchen
+  // switch is on and today has a plan.
+  const { dishes: menuDishes } = useMenuWeek(todayKey, { enabled: kitchenOn });
+  const menuLine = kitchenOn && showsToday ? todayMenuLine(menuDishes, todayKey, locale) : null;
+  const menuHref = `${moduleHref("inventory")}&kitchen=menu`;
+  function switchToMenu(event: React.MouseEvent) {
+    if (!isPlainClick(event)) return;
+    event.preventDefault();
+    startTransition(() => pushInPlace(menuHref));
+  }
+
   function switchToFood(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;
     event.preventDefault();
@@ -524,7 +537,7 @@ export function AgendaTab() {
             A row opens that person's day in the Who did what sheet. */}
         {range === "day" && hasStaff && progress && <StaffProgressCard progress={progress} dayLabel={label} />}
 
-        {(linkedToday.length > 0 || notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0 || (showsToday && hereNow.length > 0)) && (
+        {(linkedToday.length > 0 || !!menuLine || notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0 || (showsToday && hereNow.length > 0)) && (
           <div className="-my-1 flex flex-col">
             {linkedToday.map(({ staffId, name }) => (
               <div key={staffId} className="flex min-h-11 items-center gap-2 px-1 text-sm text-gray-700">
@@ -620,6 +633,19 @@ export function AgendaTab() {
                 <CookingPot className="size-4 shrink-0 text-amber-700" />
                 <span className="flex-1">{needsDateLabel(needsDate, locale)}</span>
                 <ChevronRight className="size-4 shrink-0 text-amber-700" />
+              </Link>
+            )}
+            {menuLine && (
+              <Link
+                href={menuHref}
+                scroll={false}
+                onClick={switchToMenu}
+                data-testid="menu-today-line"
+                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+              >
+                <UtensilsCrossed className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="min-w-0 flex-1 truncate">{menuLine}</span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               </Link>
             )}
             {eatSoon > 0 && (

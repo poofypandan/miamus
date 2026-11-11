@@ -1,0 +1,138 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { toast } from "sonner";
+import { Loader2, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useT } from "@/context/owner-locale-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
+import { MENU_LIMITS } from "@/lib/menu";
+import { saveKitchenNotes } from "@/lib/menu-store";
+import type { KitchenNotes } from "@/lib/data/types";
+
+/**
+ * Kitchen notes (owners, Phase 170 PR C, D12): one short note for whoever
+ * cooks, shown on the Menu, on Menu hari ini and on every dish the cook
+ * opens. One note per household, never per person.
+ *
+ * It may hold health information (an allergy), which UU PDP treats with
+ * extra care, so the first save asks once and the server records the
+ * owner's OK with who and when (set_kitchen_notes). Blank clears it.
+ */
+export function KitchenNotesSheet({
+  open,
+  notes,
+  onClose,
+}: {
+  open: boolean;
+  notes: KitchenNotes | null;
+  onClose: () => void;
+}) {
+  useBackToClose(open, onClose);
+  return (
+    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+      <SheetContent side="bottom" className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl">
+        {open && <NotesForm notes={notes} onDone={onClose} />}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function NotesForm({ notes, onDone }: { notes: KitchenNotes | null; onDone: () => void }) {
+  const t = useT();
+  const [text, setText] = useState(notes?.text ?? "");
+  const [asking, setAsking] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const confirmed = !!notes?.confirmedAt;
+  const changed = text.trim() !== (notes?.text ?? "");
+
+  async function save(confirm: boolean) {
+    setSaving(true);
+    try {
+      await saveKitchenNotes(text.trim() || null, confirm);
+      toast.success(t("Kitchen notes saved", "Catatan dapur disimpan"));
+      onDone();
+    } catch (err) {
+      console.error(err);
+      toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+      setSaving(false);
+    }
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!changed || saving) return;
+    // The first note asks once (D12); clearing or a later edit doesn't.
+    if (text.trim() && !confirmed) {
+      setAsking(true);
+      return;
+    }
+    void save(false);
+  }
+
+  if (asking) {
+    return (
+      <div className="flex flex-col">
+        <SheetHeader>
+          <SheetTitle className="text-xl">{t("Before you save", "Sebelum disimpan")}</SheetTitle>
+          <SheetDescription className="sr-only">{t("Kitchen notes", "Catatan dapur")}</SheetDescription>
+        </SheetHeader>
+        <div className="flex flex-col gap-4 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <div className="flex items-start gap-3 rounded-xl border bg-card p-3">
+            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+            <p className="text-sm leading-relaxed text-gray-800">
+              {t(
+                "This note may include health information about your family, such as allergies. It's shown to your staff so they can cook safely. Save?",
+                "Catatan ini bisa berisi informasi kesehatan keluarga Anda, misalnya alergi. Catatan ditampilkan kepada staf agar mereka bisa memasak dengan aman. Simpan?"
+              )}
+            </p>
+          </div>
+          <Button className="min-h-12 rounded-xl text-base" onClick={() => void save(true)} disabled={saving}>
+            {saving && <Loader2 className="animate-spin" />}
+            {t("Save", "Simpan")}
+          </Button>
+          <Button variant="outline" className="min-h-11 rounded-xl" onClick={() => setAsking(false)} disabled={saving}>
+            {t("Back", "Kembali")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col">
+      <SheetHeader>
+        <SheetTitle className="text-xl">{t("Kitchen notes", "Catatan dapur")}</SheetTitle>
+        <SheetDescription>
+          {t(
+            "For whoever cooks: what the family doesn't eat, how spicy, anything to keep in mind.",
+            "Untuk yang memasak: makanan yang tidak dimakan keluarga, tingkat pedas, atau hal lain yang perlu diingat."
+          )}
+        </SheetDescription>
+      </SheetHeader>
+      <div className="flex flex-col gap-3 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={MENU_LIMITS.kitchenNotes}
+          rows={4}
+          placeholder={t("No pork. Not too spicy for the kids.", "Tanpa babi. Jangan terlalu pedas untuk anak-anak.")}
+          aria-label={t("Kitchen notes", "Catatan dapur")}
+          className="rounded-xl text-base"
+        />
+        <p className="text-xs text-muted-foreground">
+          {t(
+            "Staff phones can read this. Write only what the cook needs to know.",
+            "HP staf bisa membaca catatan ini. Tulis hanya yang perlu diketahui oleh yang memasak."
+          )}
+        </p>
+        <Button type="submit" className="min-h-12 rounded-xl text-base" disabled={!changed || saving}>
+          {saving && <Loader2 className="animate-spin" />}
+          {t("Save", "Simpan")}
+        </Button>
+      </div>
+    </form>
+  );
+}
