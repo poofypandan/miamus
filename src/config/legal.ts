@@ -127,13 +127,21 @@ export const LEGAL = {
   // can undo it, for minutes, or a walk until shortly after it ends); whose
   // PIN last opened a linked phone is kept while it is linked. No new
   // service.
-  // 2026-11-11.5: kitchen amounts (Phase 170 PR A, migrations/148) — for
+  // 2026-11-11.5: walk-in repairs and supervising (Phase 174 PR A,
+  // migrations/149) — a repair person's name or company (optional, typed by
+  // staff or an admin; no phone number), when they arrived and left, before
+  // and after photos of the work (not of people), an optional result and
+  // note: third-party data, kept with the repair (while open, 2 years after
+  // closing). Who supervised a walk-in and from when to when (staff data),
+  // kept 90 days; a couldn't-do reason "supervising a repair". No new
+  // service; no new notification yet (owner pushes come with PR B).
+  // 2026-11-11.6: kitchen amounts (Phase 170 PR A, migrations/148) — for
   // items an admin chooses to track: how much is left, the last amount
   // bought, and when and by whom (the staff name picked on the phone) the
   // amount last changed; only the latest amount, no history; kept while the
   // item exists. Portions left on listed food. No new service, region or
   // change to Kakak.
-  policyVersion: "2026-11-11.5",
+  policyVersion: "2026-11-11.6",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

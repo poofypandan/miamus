@@ -6,6 +6,7 @@ import { useHousehold } from "@/context/household-context";
 import { choreDraftKey, clearChoreDraft } from "@/lib/chore-draft";
 import { drainOutbox, onNewWaiting, outboxItems, retryDelayMs, type DrainReport } from "@/lib/offline-queue";
 import { confirmTaskExceptions } from "@/lib/task-exceptions-store";
+import { confirmRepairs } from "@/lib/repairs-store";
 import { choreSettledMessageEn, choreSettledMessageId } from "@/lib/chore-settled";
 import { getActiveHouseholdId } from "@/lib/tenant";
 
@@ -69,6 +70,17 @@ export function useOfflineSync(lang: "en" | "id") {
       // Couldn't-do records live in their own cache (Phase 165): wait for it
       // to hold them too. A failed reload throws, and they stay queued.
       if (report.sent.some((item) => item.job.kind === "couldnt")) await confirmTaskExceptions();
+      // Walk-ins and hand-overs, the same way (Phase 174).
+      if (
+        report.sent.some(
+          (item) =>
+            item.job.kind === "walkin_start" ||
+            item.job.kind === "walkin_finish" ||
+            item.job.kind === "supervision_handover"
+        )
+      ) {
+        await confirmRepairs();
+      }
     }
 
     async function drain(): Promise<DrainReport | null> {

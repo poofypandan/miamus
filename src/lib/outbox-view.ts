@@ -152,6 +152,9 @@ export function outboxView(
     } else if (job.kind === "food") {
       pendingIds.add(job.id);
       foods.push(pendingFood(job.id, job.input, job.addedBy, householdId, new Date(item.timestamp).toISOString()));
+    } else if (job.kind !== "chore") {
+      // Walk-ins and hand-overs: laid over by the repairs store (Phase 174).
+      continue;
     } else {
       // The day's row, if this phone has it — by id, or written since by
       // another phone (or by an earlier try of this very save).

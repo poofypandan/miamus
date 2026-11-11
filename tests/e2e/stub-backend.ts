@@ -135,6 +135,10 @@ export interface StubOptions {
   schedules?: Record<string, unknown>[];
   /** task_exceptions rows already on record (Phase 165); changed in place. */
   exceptions?: Record<string, unknown>[];
+  /** repair_visits rows (walk-ins, Phase 174); changed in place. */
+  walkIns?: Record<string, unknown>[];
+  /** repair_supervision rows (Phase 174); changed in place by the stub's "triggers". */
+  supervision?: Record<string, unknown>[];
   /** The admin's notification switches (Phase 165); changed in place. */
   notificationPrefs?: { evening_summary_hour: number | null; staff_request_pushes: boolean };
   /** What household_requests_push_on answers a staff phone (Phase 165). */
@@ -220,6 +224,9 @@ export interface Stub {
   repairNotes: Record<string, unknown>[];
   /** task_exceptions rows as the stub holds them (Phase 165). */
   exceptions: Record<string, unknown>[];
+  /** repair_visits and repair_supervision as the stub holds them (Phase 174). */
+  walkIns: Record<string, unknown>[];
+  supervision: Record<string, unknown>[];
   /** The admin's notification switches as last saved (Phase 165). */
   notificationPrefs: { evening_summary_hour: number | null; staff_request_pushes: boolean };
   setNetwork(up: boolean): void;
@@ -267,6 +274,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const removed: string[] = [];
   const repairNotes: Record<string, unknown>[] = [];
   const exceptions: Record<string, unknown>[] = options.exceptions ?? [];
+  const walkIns: Record<string, unknown>[] = options.walkIns ?? [];
+  const supervision: Record<string, unknown>[] = options.supervision ?? [];
   const notificationPrefs = options.notificationPrefs ?? { evening_summary_hour: 19, staff_request_pushes: true };
   const kakak = { allowed: false, enabled: false, ...options.kakak };
   // An established household by default (Phase 172's calm first screen
@@ -601,6 +610,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         );
       }
       if (table === "repair_notes") return answerRepairNotes(route, repairNotes);
+      // Phase 174 (migrations/149): walk-ins and supervising stretches.
+      if (table === "repair_visits") return answerWalkIns(route, walkIns, supervision, who === OWNER);
+      if (table === "repair_supervision") return answerSupervision(route, walkIns, supervision);
       // Phase 165 (migrations/139): couldn't-do records and the admin's switches.
       if (table === "task_exceptions") return answerExceptions(route, exceptions);
       if (table === "rpc/my_notification_prefs" && who === OWNER) return route.fulfill({ json: [notificationPrefs] });
@@ -649,6 +661,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     removed,
     repairNotes,
     exceptions,
+    walkIns,
+    supervision,
     notificationPrefs,
     kakak,
     household,
@@ -1242,4 +1256,108 @@ function answerExceptions(route: Route, rows: Record<string, unknown>[]) {
     return route.fulfill({ json: index === -1 ? [] : rows.splice(index, 1).map((r) => ({ id: r.id })) });
   }
   return route.fulfill({ json: [] });
+}
+
+function stubError(route: Route, status: number, code: string, message: string) {
+  return route.fulfill({ status, json: { code, message, details: null, hint: null } });
+}
+
+/**
+ * repair_visits (migrations/149), with its triggers in miniature: the server
+ * stamps the times, a walk-in opens its logger's stretch (one per person:
+ * supervision_busy), Selesai closes it, and a resend of the same id is
+ * "already saved" (the primary key).
+ */
+function answerWalkIns(
+  route: Route,
+  walkIns: Record<string, unknown>[],
+  supervision: Record<string, unknown>[],
+  owner: boolean
+) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
+  const now = new Date().toISOString();
+  if (request.method() === "GET") return reply(walkIns);
+  if (request.method() === "POST") {
+    const body = request.postDataJSON();
+    const fields = Array.isArray(body) ? body[0] : body;
+    if (walkIns.some((v) => v.id === fields.id)) {
+      return stubError(route, 409, "23505", 'duplicate key value violates unique constraint "repair_visits_pkey"');
+    }
+    if (fields.logged_by_staff && supervision.some((s) => !s.ended_at && s.staff_id === fields.logged_by_staff)) {
+      return stubError(route, 400, "23514", "supervision_busy");
+    }
+    const row: Record<string, unknown> = {
+      worker_name: null,
+      created_by: null,
+      arrived_phone_at: null,
+      left_at: null,
+      left_phone_at: null,
+      after_photo_url: null,
+      outcome: null,
+      note: null,
+      ...fields,
+      arrived_at: now,
+    };
+    walkIns.push(row);
+    if (fields.logged_by_staff) {
+      supervision.push({
+        id: `00000000-0000-4000-8000-${String(900 + supervision.length).padStart(12, "0")}`,
+        household_id: fields.household_id,
+        visit_id: fields.id,
+        staff_id: fields.logged_by_staff,
+        user_id: null,
+        started_at: now,
+        ended_at: null,
+      });
+    }
+    return reply([row]);
+  }
+  const index = walkIns.findIndex((v) => v.id === id);
+  if (request.method() === "DELETE") {
+    if (index === -1) return reply([]);
+    supervision.splice(0, supervision.length, ...supervision.filter((s) => s.visit_id !== id));
+    return reply(walkIns.splice(index, 1));
+  }
+  if (index === -1) return reply([]);
+  const row = walkIns[index];
+  const patch = request.postDataJSON() ?? {};
+  if (patch.after_photo_url && !row.after_photo_url) {
+    Object.assign(row, patch, { left_at: now });
+    for (const s of supervision) if (s.visit_id === id && !s.ended_at) s.ended_at = now;
+  } else if (patch.after_photo_url === null && row.after_photo_url) {
+    const leftAt = row.left_at;
+    Object.assign(row, { after_photo_url: null, left_at: null, left_phone_at: null, outcome: null, note: null });
+    const last = supervision.filter((s) => s.visit_id === id && s.ended_at === leftAt).at(-1);
+    if (last) last.ended_at = null;
+  } else if (owner) {
+    Object.assign(row, patch);
+  }
+  return reply([row]);
+}
+
+/** repair_supervision (migrations/149): reads, and the hand-over insert. */
+function answerSupervision(route: Route, walkIns: Record<string, unknown>[], supervision: Record<string, unknown>[]) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  if (request.method() === "GET") return reply(supervision);
+  if (request.method() !== "POST") return stubError(route, 403, "42501", "permission denied for table repair_supervision");
+  const body = request.postDataJSON();
+  const fields = Array.isArray(body) ? body[0] : body;
+  if (supervision.some((s) => s.id === fields.id)) {
+    return stubError(route, 409, "23505", 'duplicate key value violates unique constraint "repair_supervision_pkey"');
+  }
+  const visit = walkIns.find((v) => v.id === fields.visit_id);
+  if (!visit || visit.after_photo_url) return stubError(route, 400, "23514", "supervision_visit_finished");
+  if (supervision.some((s) => !s.ended_at && s.staff_id === fields.staff_id && s.visit_id !== fields.visit_id)) {
+    return stubError(route, 400, "23514", "supervision_busy");
+  }
+  const now = new Date().toISOString();
+  for (const s of supervision) if (s.visit_id === fields.visit_id && !s.ended_at) s.ended_at = now;
+  const row = { user_id: null, ...fields, started_at: now, ended_at: null };
+  supervision.push(row);
+  return reply([row]);
 }

@@ -26,4 +26,7 @@ export type {
   FoodItemPatch,
   LeaveDecision,
   CreateTaskExceptionInput,
+  RepairInput,
+  WalkInStartInput,
+  WalkInFinishInput,
 } from "./types";

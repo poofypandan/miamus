@@ -38,9 +38,12 @@ import type {
   RepairCost,
   BillPayment,
   RepairNote,
+  RepairSupervision,
+  RepairWalkIn,
   TaskException,
   TaskExceptionReason,
   NotificationPrefs,
+  WalkInOutcome,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -192,6 +195,8 @@ export interface CreateHouseholdTaskInput {
 
 /** A new repair (Phase 159). Status: owners 'open', staff phones 'reported'. */
 export interface RepairInput {
+  /** Made on the phone for a walk-in's "Baru" (Phase 174), so a resend is "already saved". */
+  id?: string;
   title: string;
   details?: string | null;
   location_id?: string | null;
@@ -200,6 +205,29 @@ export interface RepairInput {
   urgent?: boolean;
   status: "open" | "reported";
   reported_by_staff?: string | null;
+}
+
+/**
+ * "Ada tukang datang" (Phase 174, migrations/149): a walk-in on a repair.
+ * The id is made on the phone (the save queue). The server stamps the
+ * arrival time; arrived_phone_at is the phone's, for a save sent later.
+ */
+export interface WalkInStartInput {
+  id: string;
+  repair_id: string;
+  worker_name: string | null;
+  /** Who is holding the phone; null for an owner with no roster row. */
+  logged_by_staff: string | null;
+  arrived_phone_at: string;
+  before_photo_url: string;
+}
+
+/** Selesai: the after photo (required), the optional chip and note. */
+export interface WalkInFinishInput {
+  after_photo_url: string;
+  left_phone_at: string;
+  outcome: WalkInOutcome | null;
+  note: string | null;
 }
 
 /** What owners change on a repair. */
@@ -352,6 +380,8 @@ export interface CreateTaskExceptionInput {
   photo_url?: string | null;
   inventory_item_id?: string | null;
   staff_id?: string | null;
+  /** "Mengawasi perbaikan" (migrations/149): the walk-in being supervised. Sent only with that reason. */
+  repair_visit_id?: string | null;
 }
 
 export interface StaffWorkload {
@@ -528,6 +558,20 @@ export interface DataProvider {
    */
   reopenBillDay(taskId: string): Promise<{ task: HouseholdTask; payment: BillPayment | null }>;
   deleteReceipt(url: string): Promise<void>;
+  /** Every walk-in of the household, oldest first (Phase 174, migrations/149). */
+  listRepairWalkIns(): Promise<RepairWalkIn[]>;
+  /** Supervising stretches that ended on or after `since` (ISO), or are still open. */
+  listRepairSupervision(since: string): Promise<RepairSupervision[]>;
+  /** "Ada tukang datang": the walk-in, which opens its logger's supervising stretch. */
+  createRepairWalkIn(input: WalkInStartInput): Promise<RepairWalkIn>;
+  /** Selesai, once; it closes the open stretch. */
+  finishRepairWalkIn(id: string, finish: WalkInFinishInput): Promise<RepairWalkIn>;
+  /** Takes back a Selesai within 5 minutes (staff), or any time (owners). */
+  reopenRepairWalkIn(id: string): Promise<RepairWalkIn>;
+  /** Owners, or the phone that logged it within 5 minutes. False when nothing went. */
+  deleteRepairWalkIn(id: string): Promise<boolean>;
+  /** "Ganti yang mengawasi": a new stretch for the visit; the database closes the previous one. */
+  handOverSupervision(input: { id: string; visit_id: string; staff_id: string }): Promise<RepairSupervision>;
   /** Every note on the household's repairs, oldest first. */
   listRepairNotes(): Promise<RepairNote[]>;
   addRepairNote(note: { repair_id: string; body: string; photo_url?: string | null; staff_id?: string | null }): Promise<RepairNote>;
