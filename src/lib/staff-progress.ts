@@ -2,6 +2,7 @@ import { leaveCovering } from "@/lib/leave";
 import { classifyChore, classifyDay, type DayTask } from "@/lib/couldnt-do";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { AgendaGroup } from "@/lib/scheduleEngine";
+import { supervisionExplains, type SupervisionStretch } from "@/lib/repair-walkins";
 import type { LeaveRequest, StaffProfile, TaskException, TaskLog } from "@/types/database";
 
 /**
@@ -40,8 +41,8 @@ export interface KindCount {
 
 /**
  * What someone is busy with that is not on a list, shown in place of the
- * counts' calm line: "Mengawasi perbaikan sejak 10.00". Nothing fills it yet;
- * it is the place Phase 174 (repairs supervision) plugs into.
+ * counts' calm line: "Mengawasi perbaikan sejak 10.00". Phase 174 fills it
+ * from the open supervising stretches (lib/repair-walkins supervisingNow).
  */
 export interface StaffBusy {
   /** Already in the reader's language: "Supervising a repair". */
@@ -60,6 +61,11 @@ export interface ProgressTask extends DayTask {
   carried: boolean;
   /** Who logged or finished it, when known. */
   doneBy: string | null;
+  /**
+   * Missed while its person was supervising a repair (Phase 174, D10): the
+   * stretch that explains it. Still open, never late; null otherwise.
+   */
+  supervising: SupervisionStretch | null;
 }
 
 export interface PersonProgress {
@@ -144,8 +150,13 @@ export function buildStaffProgress(params: {
   logs?: readonly TaskLog[];
   /** Everyone still here (useStaffProfiles().profiles): removed people are left out. */
   roster: readonly Pick<StaffProfile, "id" | "name" | "user_id">[];
-  /** Phase 174: who is busy with what. Empty until repairs supervision lands. */
+  /** Phase 174: who is busy with what (an open supervising stretch). */
   busy?: ReadonlyMap<string, StaffBusy>;
+  /**
+   * Phase 174: the day's supervising stretches, and the time to read open
+   * ones to. An open task due inside one is explained, not late (D10 A).
+   */
+  supervision?: { stretches: readonly SupervisionStretch[]; now: Date };
   /**
    * Household → Features (Phase 171): Pets off counts no pet routines; Repairs
    * off shows no busy line (repairs supervision is the only thing that fills
@@ -156,9 +167,18 @@ export function buildStaffProgress(params: {
 }): StaffProgress {
   const { date, today, nowMinutes, chores, exceptions, leaves, admittedIds, logs, roster } = params;
   const groups = params.features?.pets === false ? [] : params.groups;
-  const busy = params.features?.repairs === false ? undefined : params.busy;
+  const repairsOff = params.features?.repairs === false;
+  const busy = repairsOff ? undefined : params.busy;
+  const supervision = repairsOff ? undefined : params.supervision;
   const known = new Set(roster.map((p) => p.id));
   const away = (id: string | null | undefined) => !!id && !!leaveCovering(leaves as LeaveRequest[], id, date);
+  // Staff on duty (not admins, not on leave): an unowned task is explained
+  // only when every one of them was supervising (D10).
+  const onDuty = roster.filter((p) => !p.user_id && !away(p.id)).map((p) => p.id);
+  const explainedBy = (task: DayTask, owner: string | null, isCarried: boolean): SupervisionStretch | null =>
+    !supervision || isCarried || task.state !== "open"
+      ? null
+      : supervisionExplains({ staffId: owner, date, time: task.time }, supervision.stretches, onDuty, supervision.now);
 
   const day = classifyDay({ date, chores, groups, exceptions, admittedIds, logs });
   // Carried over from earlier days: still owed, and late by definition,
@@ -198,11 +218,14 @@ export function buildStaffProgress(params: {
       if (task.state === "done") return;
       owner = null;
     }
+    const supervising = explainedBy(task, owner, isCarried);
     const entry: ProgressTask = {
       ...task,
       carried: isCarried,
-      late: task.state === "open" && (isCarried || isLate({ date, today, nowMinutes, time: task.time })),
+      late:
+        task.state === "open" && !supervising && (isCarried || isLate({ date, today, nowMinutes, time: task.time })),
       doneBy: doneByOf(task),
+      supervising,
     };
     const list = byPerson.get(owner);
     if (list) list.push(entry);

@@ -48,6 +48,17 @@ import { useBillPayments } from "@/hooks/use-bill-payments";
 import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
 import { comingUpLabel, comingUpReminders } from "@/lib/chore-reminders";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
+import {
+  isForgotten,
+  openWalkIns,
+  ownerSupervisingLine,
+  supervisionExplains,
+  supervisionStretches,
+  walkInTodayLine,
+} from "@/lib/repair-walkins";
+import { leaveCovering } from "@/lib/leave";
+import { slotOf } from "@/lib/couldnt-do";
+import { HardHat } from "lucide-react";
 import { APP_NAME, useHouseholdName } from "@/hooks/use-household-name";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { dayLabel } from "@/lib/date-label";
@@ -192,7 +203,7 @@ export function AgendaTab() {
   // Staff progress (owners, 11 Nov): one row per person, house and pets,
   // in place of the Chores tab's chores-only strip. Only in a home with
   // staff: an owner on their own has nobody to follow.
-  const progress = useStaffProgress({ petsOn });
+  const progress = useStaffProgress({ petsOn, locale });
   const hasStaff = useMemo(() => (allProfiles ?? []).some((p) => !p.user_id && !p.archived_at), [allProfiles]);
 
   // All | Pets | Chores (Phase 132): narrows what is drawn, never what is
@@ -254,10 +265,29 @@ export function AgendaTab() {
       toast.error(t("Couldn't undo. Try again.", "Gagal dibatalkan. Coba lagi."));
     }
   }
-  const { repairs, visits } = useRepairs();
+  const { repairs, visits, walkIns, supervision } = useRepairs();
   const repairLines = useMemo(
-    () => (repairsOn ? repairsToday(repairs, visits) : { toReview: 0, toCheck: 0 }),
-    [repairs, visits, repairsOn]
+    () => (repairsOn ? repairsToday(repairs, visits, walkIns) : { toReview: 0, toCheck: 0 }),
+    [repairs, visits, walkIns, repairsOn]
+  );
+  // Someone working in the house now (Phase 174): "Pak Budi is here · Leaking tap, LT2".
+  // Only those who came today: a walk-in nobody closed since an earlier day
+  // isn't "here" (it never closes itself, D6; Repairs lists it).
+  const hereNow = useMemo(
+    () => (repairsOn ? openWalkIns(walkIns).filter((v) => !isForgotten(v, formatDateLocal(today))) : []),
+    [walkIns, repairsOn, today]
+  );
+  // Supervising stretches (D10): a missed task due inside one says so on its row.
+  const stretches = useMemo(
+    () => (repairsOn ? supervisionStretches(supervision, walkIns, repairs) : []),
+    [repairsOn, supervision, walkIns, repairs]
+  );
+  const onDuty = useMemo(
+    () =>
+      (allProfiles ?? [])
+        .filter((p) => !p.user_id && !p.archived_at && !leaveCovering(leaveRequests, p.id, dateStr))
+        .map((p) => p.id),
+    [allProfiles, leaveRequests, dateStr]
   );
   const repairsHref = `${moduleHref("chores")}&chores=repairs`;
   function switchToRepairs(event: React.MouseEvent) {
@@ -378,6 +408,15 @@ export function AgendaTab() {
       ? ownerCouldntRowLine(exception, locale, exception.staff_id ? staffName(exception.staff_id) : null)
       : null;
   }
+  function supervisingLineFor(occurrence: ChoreOccurrence): string | null {
+    if (stretches.length === 0 || occurrence.status !== "pending" || choreException(exceptions, occurrence)) return null;
+    const stretch = supervisionExplains(
+      { staffId: occurrence.task.assigned_to ?? null, date: occurrence.date, time: slotOf(occurrence.task.due_time) },
+      stretches,
+      onDuty
+    );
+    return stretch ? ownerSupervisingLine(stretch, stretch.staffId ? staffName(stretch.staffId) : null, locale) : null;
+  }
   function openEditorFor(occurrence: ChoreOccurrence) {
     // The template, not the occurrence: editing a repeat from any of its
     // days edits the repeat. A materialised occurrence has its own row
@@ -407,6 +446,7 @@ export function AgendaTab() {
           entry.occurrence.task.completed_by ? staffName(entry.occurrence.task.completed_by) : null
         }
         couldnt={couldntLineFor(entry.occurrence)}
+        supervising={supervisingLineFor(entry.occurrence)}
         onPress={() => openChore(entry.occurrence)}
       />
     );
@@ -484,7 +524,7 @@ export function AgendaTab() {
             A row opens that person's day in the Who did what sheet. */}
         {range === "day" && hasStaff && progress && <StaffProgressCard progress={progress} dayLabel={label} />}
 
-        {(linkedToday.length > 0 || notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
+        {(linkedToday.length > 0 || notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0 || (showsToday && hereNow.length > 0)) && (
           <div className="-my-1 flex flex-col">
             {linkedToday.map(({ staffId, name }) => (
               <div key={staffId} className="flex min-h-11 items-center gap-2 px-1 text-sm text-gray-700">
@@ -502,6 +542,26 @@ export function AgendaTab() {
                 </button>
               </div>
             ))}
+            {showsToday &&
+              hereNow.map((visit) => {
+                const repair = repairs.find((r) => r.id === visit.repair_id);
+                return (
+                  <Link
+                    key={visit.id}
+                    href={repairsHref}
+                    scroll={false}
+                    onClick={switchToRepairs}
+                    data-testid="walkin-today-line"
+                    className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+                  >
+                    <HardHat className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">
+                      {walkInTodayLine(visit, repair?.title ?? "", repair ? roomName(repair.location_id, null) : null, locale)}
+                    </span>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  </Link>
+                );
+              })}
             {notDoneCount > 0 && (
               <button
                 type="button"

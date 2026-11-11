@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, CircleSlash, Eye, MapPin, Repeat } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleSlash, Eye, MapPin, Repeat, Wrench } from "lucide-react";
 import { ChoreReviewLightbox, choreProofShots } from "@/components/chores/chore-proof-photos";
 import { photoSrc } from "@/lib/photos";
 import { AGENDA_TONES, DONE_TONE } from "@/lib/agenda-tones";
@@ -37,6 +37,7 @@ export function ChoreTimelineRow({
   locationName,
   onPress,
   couldnt = null,
+  supervising = null,
 }: {
   occurrence: ChoreOccurrence;
   assigneeName?: string | null;
@@ -53,6 +54,11 @@ export function ChoreTimelineRow({
    * language ("Couldn't: out of stock · Sari · 9:10 AM"). Amber, not forgotten.
    */
   couldnt?: string | null;
+  /**
+   * Missed while its person was supervising a repair (Phase 174, D10): "Ari
+   * was supervising a repair, 10:00 AM–1:30 PM". Still not done; a quiet line.
+   */
+  supervising?: string | null;
 }) {
   const formatTime = useFormatTime();
   const { task, status, overdue } = occurrence;
@@ -150,6 +156,12 @@ export function ChoreTimelineRow({
           <span className="flex items-center gap-1 truncate text-xs font-medium text-amber-800" data-testid="couldnt-line">
             <CircleSlash className="size-3 shrink-0" aria-hidden />
             <span className="truncate">{couldnt}</span>
+          </span>
+        )}
+        {supervising && !couldnt && !done && (
+          <span className="flex items-center gap-1 truncate text-xs font-medium text-gray-600" data-testid="supervising-line">
+            <Wrench className="size-3 shrink-0" aria-hidden />
+            <span className="truncate">{supervising}</span>
           </span>
         )}
         {overdue && !done && (

@@ -43,6 +43,28 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Show me", id: "Lihat" },
   },
   {
+    // Phase 174 PR A: the one owner card for walk-ins, in Chores → Repairs
+    // (the calm-start rules hold it until the week is free). Staff get no
+    // card: the Perbaikan pill's button says what to do (stop rule).
+    id: "walkins-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: staff log repair people as they arrive", id: "Baru: staf mencatat tukang yang datang" },
+    steps: {
+      en: [
+        "Staff tap Ada tukang datang on their new Perbaikan pill: what's being fixed, who, and a photo before the work starts. Selesai adds the after photo.",
+        "You see who is here on Today, and each visit's before and after on the repair.",
+        "Tasks missed while someone supervised a repair say so on their own: nothing to ask, nothing for staff to type.",
+      ],
+      id: [
+        "Staf mengetuk Ada tukang datang di tab Perbaikan yang baru: apa yang diperbaiki, siapa, dan foto sebelum mulai. Selesai menambahkan foto sesudahnya.",
+        "Anda melihat siapa yang sedang bekerja di Hari ini, serta foto sebelum dan sesudah tiap kunjungan di perbaikannya.",
+        "Tugas yang terlewat karena staf sedang mengawasi perbaikan langsung diberi keterangan: tidak perlu bertanya, staf tidak perlu mengetik.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown in Household, where the switches live (Phase 171 PR A, D8): this
     // week's one card, for existing households only (the calm-start rules
     // keep it from new ones). Staff get none.

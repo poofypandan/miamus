@@ -855,6 +855,8 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("repairs")
       .insert({
+        // A walk-in's "Baru" names its repair on the phone (Phase 174).
+        ...(input.id ? { id: input.id } : {}),
         household_id: getActiveHouseholdId(),
         title: input.title,
         details: input.details ?? null,
@@ -942,6 +944,71 @@ export const supabaseProvider: DataProvider = {
       .storage.from(RECEIPTS_BUCKET)
       .remove([decodeURIComponent(url.slice(idx + marker.length))]);
     if (error) throw error;
+  },
+  async listRepairWalkIns() {
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("repair_visits")
+        .select("*")
+        .eq("household_id", household)
+        .order("arrived_at", { ascending: true })
+        .order("id")
+        .range(from, to)
+    );
+  },
+  async listRepairSupervision(since) {
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("repair_supervision")
+        .select("*")
+        .eq("household_id", household)
+        .or(`ended_at.is.null,ended_at.gte.${since}`)
+        .order("started_at", { ascending: true })
+        .order("id")
+        .range(from, to)
+    );
+  },
+  async createRepairWalkIn(input) {
+    const { data, error } = await client()
+      .from("repair_visits")
+      .insert({ ...input, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async finishRepairWalkIn(id, finish) {
+    const { data, error } = await client().from("repair_visits").update(finish).eq("id", id).select();
+    if (error) throw error;
+    // An RLS-filtered update is a 200 with no rows (the visit is gone).
+    if (!data || data.length === 0) throw new Error("Walk-in was not finished.");
+    return data[0];
+  },
+  async reopenRepairWalkIn(id) {
+    const { data, error } = await client()
+      .from("repair_visits")
+      .update({ after_photo_url: null, left_phone_at: null, outcome: null, note: null })
+      .eq("id", id)
+      .select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Walk-in was not reopened.");
+    return data[0];
+  },
+  async deleteRepairWalkIn(id) {
+    const { data, error } = await client().from("repair_visits").delete().eq("id", id).select("id");
+    if (error) throw error;
+    return !!data && data.length > 0;
+  },
+  async handOverSupervision(input) {
+    const { data, error } = await client()
+      .from("repair_supervision")
+      .insert({ ...input, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
   async listRepairNotes() {
     const household = getActiveHouseholdId();

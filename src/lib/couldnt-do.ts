@@ -44,6 +44,8 @@ export function staffReasonLabel(reason: TaskExceptionReason, medicine = false):
       return "Sudah dikerjakan orang lain";
     case "other":
       return "Lainnya";
+    case "supervising_repair":
+      return "Mengawasi perbaikan";
   }
 }
 
@@ -65,6 +67,8 @@ export function ownerReasonLabel(reason: TaskExceptionReason, locale: OwnerLocal
       return id ? "Sudah dikerjakan orang lain" : "Already done by someone else";
     case "other":
       return id ? "Lainnya" : "Other";
+    case "supervising_repair":
+      return id ? "Mengawasi perbaikan" : "Supervising a repair";
   }
 }
 
