@@ -3,6 +3,7 @@ import { categorizeSchedule } from "@/lib/schedule-categories";
 import { buildAgenda, isScheduleActiveOn } from "@/lib/scheduleEngine";
 import { isoWeekday, proofChoices, strongestProof } from "@/lib/pet-routine-kinds";
 import {
+  cardWalkState,
   FRESH_PHOTO_MS,
   isFreshCapture,
   stepTime,
@@ -203,6 +204,24 @@ describe("threePhotoState", () => {
     const arrived = log({ id: "b", schedule_id: "w", entity_id: "matcha", completed_at: at(MONDAY, "07:15"), sub_type: "arrived" });
     const yesterday = log({ id: "y", schedule_id: "w", entity_id: "matcha", completed_at: at(SUNDAY, "07:02"), sub_type: "check_in" });
     expect(threePhotoState(items, [arrived, yesterday], MONDAY).next).toBe("start");
+  });
+});
+
+describe("cardWalkState: a pet left out of the first walk walks on its own", () => {
+  it("starts a new sequence for the pets still open once the first walk is done", () => {
+    const rows = [
+      row({ id: "wb", entity_id: "matcha", title: "Jalan-jalan", kind: "walk", fixed_times: ["07:00"], proof: "three" }),
+      row({ id: "wm", entity_id: "mocha", title: "Jalan-jalan", kind: "walk", fixed_times: ["07:00"], proof: "three" }),
+    ];
+    const steps = (["check_in", "arrived", "check_out"] as const).map((sub, i) =>
+      log({ id: `m${i}`, schedule_id: "wb", entity_id: "matcha", completed_at: at(MONDAY, `07:0${i + 1}`), sub_type: sub })
+    );
+    const items = buildAgenda({ date: MONDAY, entities: [MOCHA, MATCHA], schedules: rows, logs: steps, now: NOW })[0].items;
+    const state = cardWalkState(items, steps, MONDAY);
+    expect(state.next).toBe("start");
+    expect(state.logs).toEqual([]);
+    const mochaStart = log({ id: "x", schedule_id: "wm", entity_id: "mocha", completed_at: at(MONDAY, "09:00"), sub_type: "check_in" });
+    expect(cardWalkState(items, [...steps, mochaStart], MONDAY).next).toBe("arrived");
   });
 });
 

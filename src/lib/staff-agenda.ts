@@ -87,6 +87,20 @@ export function threePhotoState(items: AgendaItem[], logs: TaskLog[], date: stri
   };
 }
 
+/**
+ * The walk a card shows (Phase 173): the card's walk, or, once that one is
+ * finished, a walk of their own for the pets still open: a pet left out of
+ * the first walk (someone said it couldn't be done, then it could) starts its
+ * own sequence without touching the finished one (Codex, PR #85). A pet whose
+ * walk is done is "completed" (buildAgenda finishes it at its end photo).
+ */
+export function cardWalkState(items: AgendaItem[], logs: TaskLog[], date: string): ThreePhotoState {
+  const all = threePhotoState(items, logs, date);
+  if (all.next !== null) return all;
+  const open = items.filter((i) => i.status !== "completed");
+  return open.length > 0 ? threePhotoState(open, logs, date) : all;
+}
+
 /** A save that reached the server more than this after the phone's time was sent offline (D14 rule 3). */
 export const LATE_SAVE_MS = 5 * 60_000;
 

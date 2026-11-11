@@ -322,3 +322,51 @@ test("staff: a Tick routine someone said couldn't be done can still be finished 
   await page.getByRole("button", { name: "Centang 2 hewan" }).click();
   await expect.poll(() => stub.logs.length).toBe(2);
 });
+
+test("staff: a pet left out of a shared walk starts its own walk later", async ({ context, page }) => {
+  const group = "00000000-0000-4000-8000-0000000173e1";
+  const bentoWalk = schedule(BENTO, "Jalan-jalan", ["07:00"], { kind: "walk", routine_group_id: group, proof: "three" });
+  const mochiWalk = schedule(MOCHI, "Jalan-jalan", ["07:00"], { kind: "walk", routine_group_id: group, proof: "three" });
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+  // Bento walked this morning; Mochi was said to be unable to go.
+  const steps = (["check_in", "arrived", "check_out"] as const).map((sub, i) => ({
+    id: `00000000-0000-4000-8000-0000001739e${i}`,
+    schedule_id: bentoWalk.id,
+    entity_id: BENTO.id,
+    module: "pet",
+    photo_url: null,
+    notes: null,
+    completed_at: `${today}T07:0${i * 2 + 1}:00+07:00`,
+    received_at: `${today}T07:0${i * 2 + 1}:00+07:00`,
+    sub_type: sub,
+  }));
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    schedules: [bentoWalk, mochiWalk],
+    logs: steps,
+    exceptions: [
+      {
+        id: "00000000-0000-4000-8000-0000001739f1",
+        household_id: HOUSEHOLD_ID,
+        chore_id: null,
+        schedule_id: mochiWalk.id,
+        entity_id: MOCHI.id,
+        occurs_on: today,
+        slot_time: "07:00",
+        reason: "other",
+        note: null,
+        photo_url: null,
+        inventory_item_id: null,
+        staff_id: STAFF_ID,
+        created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      },
+    ],
+  });
+  await page.goto("/staff");
+  await card(page, "07.00 Jalan-jalan").click({ timeout: 20_000 });
+  // Mochi can go after all: the sheet starts Mochi's own walk.
+  await shoot(page.getByRole("dialog").locator("label", { hasText: "Mulai" }).locator('input[type="file"]'));
+  await expect.poll(() => stub.logs.filter((l) => l.entity_id === MOCHI.id).map((l) => l.sub_type)).toEqual(["check_in"]);
+  expect(stub.logs.filter((l) => l.entity_id === BENTO.id)).toHaveLength(3);
+});

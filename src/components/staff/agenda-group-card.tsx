@@ -46,10 +46,10 @@ import { categoryCardTint, categoryIconColor, routineIcon } from "@/lib/schedule
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { UNDO_WINDOW_MS } from "@/lib/undo-window";
 import {
+  cardWalkState,
   isFreshCapture,
   stepSubType,
   stepTime,
-  threePhotoState,
   walkMinutes,
   type ThreePhotoStep,
 } from "@/lib/staff-agenda";
@@ -251,7 +251,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // Where a three-photo routine stands, from the day's logs (queued saves
   // included), so closing the app at the park loses nothing.
   const walk = useMemo(
-    () => (three ? threePhotoState(group.items, logs, date) : null),
+    () => (three ? cardWalkState(group.items, logs, date) : null),
     [three, group.items, logs, date]
   );
   const walkStarted = !!walk?.start && !walk.end;
