@@ -235,7 +235,7 @@ const T = {
     privacyLink: "Privacy",
     sentH: "Request sent", sentBody: "We'll let you know by WhatsApp or email as soon as you're approved.",
     sentAuto: "This screen moves on by itself once you're approved.", checkAgain: "Check again", signOut: "Sign out",
-    apprH: "Household requests", apprPending: "Waiting", apprApproved: "Approved just now", approve: "Approve", reject: "Reject", emailThem: "Email them", waThem: "Send on WhatsApp", copyLink: "Copy link",
+    apprH: "Household requests", apprPending: "Waiting", apprApproved: "Approved just now", approve: "Approve", reject: "Reject", emailThem: "Email them", waThem: "Send on WhatsApp", copyLink: "Copy link", toldThem: "Told them", toldHint: "Tap once the message has gone. This deletes their number.",
     askH: "How should we let you know?", optional: "(optional)", waNum: "WhatsApp number", waNumVal: "0812 3456 7890", save: "Save",
     askNote: "We'll use your number only to tell you you're approved, then delete it.", policy: "Privacy policy", prefersWa: "Prefers WhatsApp · +62 812 3456 7890",
     apprWhen: "Requested 09:12",
@@ -285,7 +285,7 @@ const T = {
     privacyLink: "Privasi",
     sentH: "Permintaan terkirim", sentBody: "Kami akan memberi tahu Anda lewat WhatsApp atau email begitu permintaan Anda disetujui.",
     sentAuto: "Layar ini lanjut sendiri setelah disetujui.", checkAgain: "Cek lagi", signOut: "Keluar",
-    apprH: "Permintaan rumah baru", apprPending: "Menunggu", apprApproved: "Baru disetujui", approve: "Setujui", reject: "Tolak", emailThem: "Kirim email", waThem: "Kirim lewat WhatsApp", copyLink: "Salin link",
+    apprH: "Permintaan rumah baru", apprPending: "Menunggu", apprApproved: "Baru disetujui", approve: "Setujui", reject: "Tolak", emailThem: "Kirim email", waThem: "Kirim lewat WhatsApp", copyLink: "Salin link", toldThem: "Sudah diberi tahu", toldHint: "Ketuk setelah pesan terkirim. Nomornya lalu dihapus.",
     askH: "Mau diberi tahu lewat apa?", optional: "(opsional)", waNum: "Nomor WhatsApp", waNumVal: "0812 3456 7890", save: "Simpan",
     askNote: "Nomor Anda hanya dipakai untuk memberi tahu bahwa Anda disetujui, lalu dihapus.", policy: "Kebijakan privasi", prefersWa: "Lewat WhatsApp · +62 812 3456 7890",
     apprWhen: "Diminta 09.12",
@@ -387,7 +387,8 @@ function sApprovals(t, l) {
       <div class="list">
         <div class="room"><span class="kav" style="width:32px;height:32px;border-radius:999px;background:var(--track);display:flex;align-items:center;justify-content:center">${ic("i-user")}</span><div class="t"><b>Rina Wijaya</b><span>${t.prefersWa}</span></div><span class="added">${ic("i-check", "xs")}</span></div>
         <div style="padding:0 12px 8px 54px"><div class="btn primary sm">${ic("i-message", "xs")} ${t.waThem}</div></div>
-        <div style="display:flex;gap:8px;padding:0 12px 12px 54px"><div class="btn outline sm" style="flex:1">${t.emailThem}</div><div class="btn outline sm" style="flex:1">${t.copyLink}</div></div>
+        <div style="display:flex;gap:8px;padding:0 12px 8px 54px"><div class="btn outline sm" style="flex:1">${t.emailThem}</div><div class="btn outline sm" style="flex:1">${t.copyLink}</div></div>
+        <div style="padding:0 12px 12px 54px;display:flex;flex-direction:column;gap:4px"><div class="btn outline sm">${ic("i-check", "xs")} ${t.toldThem}</div><span class="fine">${t.toldHint}</span></div>
       </div>
       <div class="grp">${t.apprPending}</div>
       <div class="list">
@@ -644,7 +645,7 @@ const SCREENS = [
    "One tap on Request access (one line, privacy sentence kept), then this. The screen promises a WhatsApp message or an email, asks (optionally) which they prefer, with a one-line privacy note under the number (why, how long, a link to the policy; no checkbox), and checks again by itself every 60 seconds, so it moves on the moment the request is approved. Automatic approval is built as a switch, off by default.",
    (t, l) => sWaiting(t, l), true],
   ["0b. The operator approves, then tells them by WhatsApp or email (D2, changed 11 Nov)",
-   "Approve leaves the row open with their choice and three buttons: Send on WhatsApp opens straight to their chat when they gave a number (the share sheet otherwise), then Email them, then Copy link. Any of them deletes the number. Pending rows have the same buttons for anyone waiting longer.",
+   "Approve leaves the row open with their choice and three buttons: Send on WhatsApp opens straight to their chat when they gave a number (the share sheet otherwise), then Email them, then Copy link. These only prepare a message, so the number is deleted only when the operator taps Told them after really sending it. Pending rows have the same buttons for anyone waiting longer.",
    (t, l) => sApprovals(t, l), true],
   ["1. Sign-up: name and Who lives here, after approval",
    "Phase 171 draws this screen, as today, once the request is approved.",

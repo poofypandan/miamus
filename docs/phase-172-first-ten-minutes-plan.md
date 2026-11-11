@@ -245,9 +245,14 @@ template path, still within the S2 target of 10.
   sign-up (`user_preferences`, 114; English when none). No mail or messaging
   service and no new processor: the operator's own WhatsApp and the support
   Google Group send it.
-- **The number is deleted once it has done its job:** tapping any of the
-  three buttons on an **approved** row records "told" and **deletes the
-  number** at once; creating the household deletes it too; and the nightly
+- **The number is deleted once it has done its job.** The three buttons
+  only prepare or copy a message; they don't prove it was sent (the
+  operator can cancel the WhatsApp draft or never paste the link). So once
+  any of them has been used, the approved row shows a fourth, explicit
+  button, **Told them**, which the operator taps after actually sending: it
+  records "told" and **deletes the number** at once. Until then the number
+  stays, so a cancelled draft can be retried on their chosen channel.
+  Creating the household deletes it too (they clearly know); and the nightly
   clean-up deletes any number older than **30 days**, whatever happened
   (also for pending and rejected requests). It is never shown anywhere else,
   never sent to staff, and never part of a household.
@@ -795,7 +800,7 @@ setup should be no different.
 | Contact note, under the number field (link to `/privacy#waiting-contact` or `/privasi#waiting-contact`) | We'll use your number only to tell you you're approved, then delete it. Privacy policy | Nomor Anda hanya dipakai untuk memberi tahu bahwa Anda disetujui, lalu dihapus. Kebijakan privasi |
 | Email chip detail | We'll write to {email}. | Kami akan menulis ke {email}. |
 | Approvals page | Prefers WhatsApp · Prefers email | Lewat WhatsApp · Lewat email |
-| Approvals page buttons | Send on WhatsApp · Email them · Copy link | Kirim lewat WhatsApp · Kirim email · Salin link |
+| Approvals page buttons | Send on WhatsApp · Email them · Copy link · Told them | Kirim lewat WhatsApp · Kirim email · Salin link · Sudah diberi tahu |
 | Message text, approved (WhatsApp and email) | You're in. Open https://miamus.app to set up your household. | Anda sudah bisa masuk. Buka https://miamus.app untuk menyiapkan rumah Anda. |
 | Message text, still pending | We've got your request and will let you know soon. | Permintaan Anda sudah kami terima. Kami akan segera memberi tahu Anda. |
 | Home type heading | What kind of home? | Seperti apa rumah Anda? |
@@ -907,7 +912,9 @@ Nothing below is created in this PR.
   (same definer rules, own row only) returns the choice so the waiting
   screen can show it.
 - **`mark_access_request_told(p_user_id uuid)`**: `is_platform_admin()`
-  only; on an approved row sets `told_at` and **nulls `notify_phone`**.
+  only; called only by the explicit **Told them** button (never by the
+  WhatsApp, Email or Copy link buttons); on an approved row sets `told_at`
+  and **nulls `notify_phone`**.
   Same revoke/grant, granted to authenticated (the check is inside).
 - `create_household` (re-created above anyway) nulls the caller's
   `notify_phone`.
@@ -926,7 +933,8 @@ Nothing below is created in this PR.
   day gets pending and `household_not_approved`; rejected stays refused; second household refused;
   anonymous refused; platform admin unaffected; a requester sets and clears
   their own contact while pending, never someone else's, never after
-  approval, never from a staff phone; a bad number is refused; "told" and
+  approval, never from a staff phone; a bad number is refused; the number
+  survives until **Told them**; "told" and
   `create_household` delete the number; the nightly job deletes numbers
   older than 30 days; grants.
 
@@ -1043,8 +1051,9 @@ only until they're told (30 days at most). Build order: PR 0 (145) → A1 → 17
   we let you know?**: WhatsApp (they type a number) or Email (their sign-up
   email). After **Approve**: **Send on WhatsApp** first (straight to their
   chat with a number, the share sheet without), **Email them** second,
-  **Copy link** third (Email first if they chose it). The number is kept only
-  until they're approved and told (or make their household), then deleted,
+  **Copy link** third (Email first if they chose it), then **Told them**,
+  which the operator taps once the message has really gone. The number is
+  kept only until **Told them** (or they make their household), then deleted,
   30 days at most; privacy-policy lines in PR A1, and a one-line
   just-in-time note under the number field ("We'll use your number only to
   tell you you're approved, then delete it. Privacy policy", linking to that
