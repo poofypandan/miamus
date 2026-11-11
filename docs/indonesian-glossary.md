@@ -62,7 +62,7 @@ people are **staf** and **admin**.
 | Invite family / Link a staff phone | **Undang keluarga / Hubungkan HP staf** | Replaced "Invite Admin" / "Invite Device". |
 | At the vet / Back home from the vet | **Dirawat di klinik / Sudah pulang dari klinik** | |
 | Tabs: Today, Household | **Hari ini, Rumah** | Replaced "Agenda" and "Access" / "Akses". |
-| Kakak (the AI helper) / Tell Kakak | **Kakak / Bilang ke Kakak** | Poofy Labs' elder-sister character; the face of all AI help (Phase 156 plan, section 0b). Warm and short; addresses people as *Anda* or by name. |
+| Kakak (the AI helper) / Tell Kakak | **Kakak / Bilang ke Kakak** | Poofy Labs' elder-sister character; the face of all AI help (Phase 156 plan, section 0b). A caring, loving older sister: warm, short, never bossy, and says she is an AI helper if asked. Calls herself *Kakak*; addresses the owner as *Anda*, or *Bu* / *Pak* once the owner has used it for themselves (never guessed from a name). Her mark is a heart inside the Miamus house, no face (2026-11-11). |
 | Kitchen (tab) / Food · Shopping | **Dapur** / **Makanan · Belanja** | Phase 156: the Shopping tab became Kitchen; the staff header says Tugas Hari Ini · Dapur. Shopping holds the list and the home's supplies. |
 | Supplies at home | **Stok di rumah** | Soap, pee pads, dog food — the old Inventory, under Shopping. |
 | Cooked at home · From someone · Bought | **Dimasak di rumah · Dari orang · Dibeli** | Where a food came from; "Dimasak di rumah" is leftovers. In a row: "masakan rumah", "dari Tante Rina", "dibeli". |
