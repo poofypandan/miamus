@@ -161,7 +161,12 @@ export const LEGAL = {
   // every phone in the household, kept until an admin deletes them; in the
   // household export. No photos, no prices, no new service, region or
   // change to Kakak.
-  policyVersion: "2026-11-11.9",
+  // 2026-11-11.10: sending repairs to the developer (Phase 174 PR C, no
+  // migration) — an admin can share a list of open repairs with their
+  // photos from their own phone (share sheet or a page saved as PDF);
+  // Miamus sends nothing and makes no public link. No new data, storage or
+  // service.
+  policyVersion: "2026-11-11.10",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
