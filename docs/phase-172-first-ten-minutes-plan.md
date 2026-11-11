@@ -1,15 +1,18 @@
 # Phase 172 — The first 10 minutes
 
-Status: **decided: owner chose all recommendations (D1–D15 A), 2026-11-10;
-build order PR 0 (145) → A1 → 171 PR A (146) → A2 → B.** Nothing is built
+Status: **decided: all A except D1 = manual approval kept, 2026-11-11**
+(D1–D15 A on 2026-11-10; on 2026-11-11 the owner changed D1: "make sure I
+still need to approve new households"). **Build order PR 0 (145) → A1 →
+171 PR A (146) → A2 → B.** Nothing is built
 and nothing is applied anywhere. The owner questions below stay open; until
 they're answered the build uses the defaults (cap 25, keep the $20 limit,
 Indonesian room names with English beside them, captions only, 4 home
 types). This
 plan turns the recommendations the owner adopted on 10 November ("Yes, adopt
 it") into one experience. It covers recommendations **2** (starter
-templates), **3** (Kakak setup from one voice note), **4** (no approval
-wait), **6** (calm first screen, video tips) and **7** (usage counts),
+templates), **3** (Kakak setup from one voice note), **4** (the approval
+wait; the owner keeps manual approval, and people are told right away),
+**6** (calm first screen, video tips) and **7** (usage counts),
 with **8** (delegated setup) designed now and built later. Source:
 `docs/app-evaluation-2026-11-10.md` (PR #79). Migration **145** is
 this phase's, for its first PR (PR 0, measurement): decided by the manager
@@ -118,8 +121,8 @@ From the evaluation's friction audit (section 5), counted on `main` at
 
 ## The idea in one line
 
-**One short path from Google to a working house: no wait, one chip for
-the kind of home, a ready list you untick, staff names and one WhatsApp
+**One short path from Google to a working house: one tap to ask, an
+approval you hear about right away, one chip for the kind of home, a ready list you untick, staff names and one WhatsApp
 message, then a calm Today with the checklist on top.** Kakak can replace
 the ticking with one voice note, free once. Every step is counted, never
 read.
@@ -129,7 +132,8 @@ read.
 | # | Screen | Owner's typing | Owner's taps | Owner | Phase |
 | --- | --- | --- | --- | --- | --- |
 | 1 | **Continue with Google** → language | 0 | 2 | — | as today |
-| 2 | **Name your household** + **Who lives here?** (Pets, Kids, Elders) | 1 | 2 | 171 | 171 (no wait: 172) |
+| 1b | **Request access** (one tap) → **Request sent**: "We'll email you as soon as you're approved." The operator approves; the person is emailed right away and the screen moves on by itself | 0 | 1 | — | 172 PR A1 (D1, D2) |
+| 2 | **Name your household** + **Who lives here?** (Pets, Kids, Elders) | 1 | 2 | 171 | 171 |
 | 3 | **What kind of home?** (4 cards) | 0 | 1 | 171 asks, 172 acts | hand-off |
 | 4 | **Your home** (the template review): shape row, rooms and chores, bills; untick | 0 | ~12 | 172 | 172 PR A2 |
 | 4b | or **Tell Kakak about your home** (one voice note) → the same review with an **Add all** card | 1 voice note | ~6 | 172 | 172 PR B |
@@ -142,7 +146,9 @@ Template path: **8 typed fields** (household name, 4 staff names, 3 pet
 names), about **35 taps**, 6–8 minutes. Kakak path: **1 typed field and one
 voice note** (Kakak hears the staff and pet names), about **20 taps**, 4–6
 minutes. Steps 4–6 each have **Skip**: nothing on the default path is
-required beyond the household's name (the stop rule).
+required beyond the household's name (the stop rule). All of this comes
+after the operator's approval (step 1b, D1): the minutes are the owner's own
+time, not the wait.
 
 ## Before and after
 
@@ -151,16 +157,20 @@ a person meets on the way, not counting labels and the names of things.
 
 | Job | Before: taps | Before: typed | Before: reading | Before: minutes | **After: taps** | **After: typed** | **After: reading** | **After: minutes** |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Sign-up → household ready | ~8 | 1 | ~120 words, **plus a wait of hours to days** | 2 + the wait | **~5** | **1** | **~40 words, no wait** | **1** |
+| Sign-up → household ready | ~8 | 1 | ~120 words, **plus a wait of hours to days, and nobody tells you** | 2 + the wait | **~6** | **1** | **~60 words; the wait lasts until you approve, and they're told right away** | **1 + until approved** |
 | Set up a big house (20 places, 40+ chores, bills) | ~400 | ~65 | every form, 40 times | 45–60 | **~13** (template) / **~6** (Kakak) | **0** / **one voice note** | **~60 words** | **3–4** / **2–3** |
 | Add 4 staff and link their phones | ~24 | 4 | ~150 words | 5–8 | **~8** | **4** (0 with Kakak) | **~15 words** + an optional 15-second video | **1–2** |
 | Add 3 pets with routines | ~60 | ~15 | form labels | 10 | **~8** | **3** (0 with Kakak) | ~10 words | **1** |
 | Reading before the first chore (owner) | — | — | **~330 words** | — | — | — | **~110 words** | — |
-| **Whole first session, big house** (S1, S2) | **~490** | **~85** | ~330 words | **60–80 + the wait** | **~35** / **~20** | **8** / **1 + one voice note** | ~110 words | **6–8** / **4–6** |
+| **Whole first session, big house** (S1, S2) | **~490** | **~85** | ~330 words | **60–80 + the wait** | **~35** / **~20** | **8** / **1 + one voice note** | ~110 words | **6–8** / **4–6**, + until approved |
 | Staff: first sign-in → first chore done with photos | ~16 (+4 Home Screen) | 0 | short | 3 | **~14** (+4) | 0 | **one line** + a 15-second video | 2–3 |
 
-**S1 before:** hours to days (approval), then 15–60 minutes of setup.
-**S1 after:** same day; 6–8 minutes of owner time (template), 4–6 (Kakak);
+**S1 before:** hours to days (approval, with no message when it's done),
+then 15–60 minutes of setup.
+**S1 after:** same day **when the operator approves the same day** (the
+owner keeps manual approval, D1; the person is emailed the moment they're
+approved and the waiting screen moves on by itself); then 6–8 minutes of
+owner time (template), 4–6 (Kakak);
 the first staff finish as soon as a staff member opens the WhatsApp link
 (and with staff push, Phase 166, they're told about new work).
 **S2 before:** about 65 typed fields and 400 taps (85 and 490 with staff and
@@ -170,82 +180,82 @@ one typed field and about 20 taps.
 These "after" numbers are targets counted from the mockup. PR 0 measures
 the real ones (D13).
 
-## 1. No approval wait (recommendation 4, D1, D2)
+## 1. Approval kept, and nobody waits in silence (recommendation 4, D1, D2)
 
-**What changes:** a new owner never sees "Request access" or "Request
-sent". After the language they go straight to the name screen;
-**Create household** approves them automatically, and the operator reviews
-afterwards.
+**Owner decision, 2026-11-11 (D1):** "make sure I still need to approve new
+households." Manual approval stays the default. Automatic approval is built
+as a **switch, off by default**, for later. What changes is that nobody
+waits without hearing back, and the wait is as short as the operator makes
+it.
 
-How it works:
+### What a new owner sees (switch off, the default)
 
-- **`my_household_access()`** gains a sixth answer, **`open`**: no request
-  yet and automatic approval is available. `canCreateHousehold()` accepts
-  it; `RequestScreen` and `WaitingScreen` remain only for the fallback
-  below. **Old builds** (a PWA updates on its next open) map an unknown
-  value to `none` and show Request access; so `request_household_access()`
-  is re-created to approve automatically too, under the same switch and
-  cap, and return `approved`, which old builds already understand. Either
-  path gets an old or a new phone straight to the name form.
-- **`create_household(p_name, p_has_pets)`** (re-created, same signature,
-  same advisory lock): for a non-admin with no request row, if
-  `signup_config.auto_approve` is on and fewer than
-  `signup_config.daily_auto_cap` accounts were approved automatically today
-  (Jakarta day; counted under a **global** transaction-scoped advisory lock,
-  `pg_advisory_xact_lock(hashtext('auto_approve'))`, taken before the count,
-  as `kakak_begin` does for its global cap, so a burst of sign-ups can't all
-  read "24"), it writes the request as **approved, automatically**
+1. **Request access**, one tap, after the language: today's screen, with
+   the body cut to one line ("Miamus approves each new household. Ask once;
+   we'll email you.") and the privacy sentence kept under the button.
+2. **Request sent**: "**We'll email you at {their Google email} from
+   support@poofylabs.dev as soon as you're approved.**" The screen checks
+   again by itself every 60 seconds while it's on screen (it already checks
+   when the tab is shown again), so someone who keeps it open moves on to
+   the name screen without tapping anything. **Check again** stays.
+3. **Approved**: the next time the screen checks, or when they open the
+   email's link, they're on **Name your household**, and the rest of the
+   flow runs as above.
+
+### What the operator does
+
+- **Told right away**: the existing push "New household request · X is
+  waiting for your approval" (`request_household_access`, 113) is
+  unchanged. The evening review also lists pending requests.
+- **Approve, then tell them in one tap (D2):** on the approvals page,
+  tapping **Approve** leaves the row open with **Email them**: a `mailto:`
+  link to their Google email with a ready text in their language ("You're
+  in. Open miamus.app to set up your household." / "Anda sudah bisa masuk.
+  Buka miamus.app untuk menyiapkan rumah Anda."), sent by hand from the
+  support Google Group. Pending rows have the same button ("We've got your
+  request…") for anyone who waits longer than a day. No mail service, no new
+  processor, nothing new stored: the email is already on the request.
+- Reject and the 30-day deletion of rejected requests are unchanged.
+
+### The automatic-approval switch (built, off by default)
+
+So the owner can turn it on later without a new release, PR A1 builds it
+and leaves it off:
+
+- **`signup_config`** (one row, like `kakak_config`; platform admin with
+  SQL): `auto_approve boolean not null default false`, `daily_auto_cap int
+  not null default 25`.
+- **When it is on**, `my_household_access()` answers **`open`** for an
+  account with no request yet, and `canCreateHousehold()` accepts it.
+  `create_household(p_name, p_has_pets)` (re-created, same signature, same
+  per-account lock) writes the request as **approved, automatically**
   (`decided_by` null, a new `auto boolean` column true) in the same
-  transaction, then creates the household as today. A rejected account is
-  still refused. One household per account is unchanged.
-- **Over the cap, or with the switch off**, `create_household` raises
-  `household_not_approved` **without writing anything** (a raise would roll
-  back any row it wrote). The screen then calls `request_household_access()`,
-  a separate call that commits the **pending** request and its push, and
-  shows today's Request sent screen with the new wording below. Nothing else
-  about today's manual path changes.
-- **The operator is told afterwards**: on an automatic approval,
-  `create_household` queues **"New household · X just joined"** to the
-  platform admins (the same best-effort `queue_push` loop
-  `request_household_access` uses today, inside its own exception block so a
-  push can never cost the household). The fallback request keeps today's
-  "waiting for your approval" push. The approvals page lists automatic
-  approvals with an **Automatic** label beside the date.
-- **The privacy sentence** on the Request screen ("Your request shares your
-  Google name and email with Poofy Labs…") moves under **Create household**,
-  because creating a household now shares it.
+  transaction, if fewer than `daily_auto_cap` accounts were approved
+  automatically today (Jakarta day; counted under a **global**
+  transaction-scoped advisory lock, `pg_advisory_xact_lock(hashtext(
+  'auto_approve'))`, taken before the count, as `kakak_begin` does, so a
+  burst of sign-ups can't all read "24"), and queues **"New household · X
+  just joined"** to the platform admins (best effort, in its own exception
+  block, like 113's push). `request_household_access()` is re-created to do
+  the same for old app builds, which map `open` to `none` and show Request
+  access; it returns `approved`, which they understand.
+- **Over the cap**, `create_household` raises `household_not_approved`
+  **without writing anything** (a raise would roll back any row it wrote);
+  the screen then calls `request_household_access()`, which commits a
+  **pending** request and its push: today's manual path.
+- **When it is off** (the default), every function behaves exactly as
+  today; the only differences anyone sees are the wording, the 60-second
+  check and **Email them**.
 
-**Safeguards against abuse and spam** (the cost of a stranger is an empty
-household and, with Kakak setup, at most one capped AI call):
+**Safeguards, if the switch is ever turned on:** Google sign-in only (staff
+phones are already refused; owner action: switch email sign-in off in
+Supabase, roadmap item 5); one household per account (as today); the daily
+cap; the switch itself; Kakak's free setup capped separately (section 3);
+**Reject** still works on an approved account that hasn't made a household,
+and a spam household is deleted by hand (SQL, 127's deletion path).
 
-1. **Google sign-in only.** Staff phones (anonymous sessions) are already
-   refused. Owner action: switch off email sign-in in Supabase (unused, noted
-   in roadmap item 5).
-2. **One household per account** (as today).
-3. **A daily cap** on automatic approvals: `signup_config.daily_auto_cap`,
-   default **25** a day across Miamus. Past it, people wait for a person, as
-   today. The evening review reports the count.
-4. **A kill switch**: `signup_config.auto_approve` (one row, platform admin
-   with SQL, like `kakak_config`). Off = back to today's flow exactly.
-5. **Kakak's free setup is capped separately** (section 3): once per
-   household, a global daily number, a per-call cost ceiling.
-6. **Review afterwards**: a platform admin can still **Reject** an
-   automatically approved account that hasn't made a household yet (the
-   existing button). A spam household that exists is deleted by hand (SQL,
-   the household-deletion path from 127) until it happens often enough to
-   deserve a button (not in this phase).
-
-**If a wait remains** (over the cap or switched off), nobody is left
-guessing (D2): the Request sent screen says **"We'll email you at
-{their Google email} from support@poofylabs.dev, usually within a day."**
-and the approvals page gets an **Email them** button beside each pending
-row: a `mailto:` link with a ready text in their language ("You're in. Open
-miamus.app to set up your household."), sent by hand from the support
-Google Group. No mail service, no new processor, nothing new stored: the
-email is already on the request.
-
-**Landing page:** "Invite-only beta" wording on the landing page and the
-Request screen changes to "Free while in beta" (owner question 1).
+**Landing page:** "invite-only beta" can stay true with manual approval
+(owner question 1).
 
 ## 2. "What kind of home?" → a starter template (recommendation 2, D3–D7)
 
@@ -258,7 +268,7 @@ sign-up; everything from the template review on is 172's.
 | | Owned by | Contract |
 | --- | --- | --- |
 | Language, name, **Who lives here?** | 171 (and 162) | unchanged; `create_household(p_name, p_has_pets)` |
-| No approval wait inside `create_household` | **172** (PR A1) | re-creates `create_household` with the same signature; if 171 PR B re-creates it too, the later PR keeps both changes |
+| The automatic-approval switch inside `create_household` (off by default) | **172** (PR A1) | re-creates `create_household` with the same signature; if 171 PR B re-creates it too, the later PR keeps both changes |
 | **What kind of home?** chip screen | **171** draws it | four keys, defined in 172's `src/lib/setup-templates.ts`: `garden` · `multi_floor` · `apartment` · `other`; **Skip** allowed |
 | What the answer does | **172** | 171's screen navigates to **`/setup?home=<key>`** (Skip → `/setup` with no key, which opens on the shape row with "house" defaults). 172 stores the key in `household_setup.home_type` (PR 0's table) |
 | "Where would you like to start?" | 171 | if 171 keeps it, it comes **after** setup (or is dropped: owner's call in 171's D1/D2). 172 recommends one question at sign-up, the home type, because it is the one that removes typing |
@@ -733,8 +743,11 @@ setup should be no different.
 
 | Where | English | Bahasa Indonesia |
 | --- | --- | --- |
-| Name screen, under the button | Creating a household shares your Google name and email with Poofy Labs, who runs Miamus. Privacy | Membuat rumah membagikan nama dan email Google Anda kepada Poofy Labs, pengelola Miamus. Privasi |
-| Waiting (fallback) | We'll email you at {email} from support@poofylabs.dev, usually within a day. | Kami akan mengirim email ke {email} dari support@poofylabs.dev, biasanya dalam sehari. |
+| Request screen, one line | Miamus approves each new household. Ask once; we'll email you. | Miamus menyetujui setiap rumah baru. Cukup minta sekali; kami kirim email ke Anda. |
+| Request screen, under the button (as today) | Your request shares your Google name and email with Poofy Labs, who runs Miamus. Privacy | Permintaan ini membagikan nama dan email Google Anda kepada Poofy Labs, pengelola Miamus. Privasi |
+| Request sent | We'll email you at {email} from support@poofylabs.dev as soon as you're approved. | Kami akan mengirim email ke {email} dari support@poofylabs.dev begitu permintaan Anda disetujui. |
+| Approvals page button | Email them | Kirim email |
+| Email text, approved | You're in. Open miamus.app to set up your household. | Anda sudah bisa masuk. Buka miamus.app untuk menyiapkan rumah Anda. |
 | Home type heading | What kind of home? | Seperti apa rumah Anda? |
 | Home type line | We'll start you with the usual rooms and chores. You change anything next. | Kami siapkan ruangan dan tugas yang biasa. Semua bisa diubah setelah ini. |
 | Review heading | Your home | Rumah Anda |
@@ -760,7 +773,7 @@ setup should be no different.
 | Kakak failed | Kakak couldn't make the list. Pick from the list below instead. | Kakak belum bisa membuat daftar. Pilih dari daftar di bawah saja. |
 | Today line, first day | Sari's phone is linked | HP Sari sudah terhubung |
 | Chores button (existing households) | Starter list | Daftar awal |
-| Push to platform admins | New household · {name} just joined | Rumah baru · {name} baru bergabung |
+| Push to platform admins (only with the switch on) | New household · {name} just joined | Rumah baru · {name} baru bergabung |
 
 **Staff text (Indonesian only):** the WhatsApp message above; claim screen
 "Pilih nama Anda, lalu buat PIN."; buttons **Buat PIN**, **Ulangi PIN**;
@@ -814,9 +827,9 @@ Nothing below is created in this PR.
   function reads nothing for a non-platform-admin; it returns no names or
   ids; grants (`anon` executes none).
 
-### PR A1 (its own number when built; not 146, which is 171's): no approval wait
+### PR A1 (its own number when built; not 146, which is 171's): the approval switch, off
 
-- `signup_config` (one row: `auto_approve boolean not null default true`,
+- `signup_config` (one row: `auto_approve boolean not null default false`,
   `daily_auto_cap int not null default 25 check (>= 0)`), RLS on, no client
   grants (as `kakak_config`).
 - `household_access_requests.auto boolean not null default false`.
@@ -829,9 +842,10 @@ Nothing below is created in this PR.
   same switch, cap and lock (for old builds); otherwise files pending and
   pushes as today. Same revoke/grant.
 - `list_household_access_requests()` re-created to return `auto`.
-- Tests: open → create works and writes an automatic approval; the 26th
-  account that day gets pending and `household_not_approved`; switch off →
-  today's flow; rejected stays refused; second household refused;
+- Tests: **by default (switch off) every function behaves as today**
+  (request → pending → approve → create); with the switch on, open →
+  create works and writes an automatic approval, and the 26th account that
+  day gets pending and `household_not_approved`; rejected stays refused; second household refused;
   anonymous refused; platform admin unaffected; grants.
 
 ### PR A2 (next free): templates, staff in one go
@@ -869,7 +883,7 @@ Nothing below is created in this PR.
 | PR | Change |
 | --- | --- |
 | **PR 0** | **Yes.** New kind of data: usage counts (section 6's line, EN and ID). No new service; Supabase, same region. |
-| **PR A1** | **Yes, small.** Section 7 (sign-up): accounts are approved automatically; the operator still sees the Google name and email of each new household's creator; the 30-day deletion of rejected requests is unchanged. The sentence moves to the name screen. |
+| **PR A1** | **No**, while the switch is off (approval works as the policy describes today). If the owner ever turns automatic approval on, section 7 is updated first: accounts may be approved automatically; the operator still sees each creator's Google name and email; the 30-day deletion of rejected requests is unchanged. |
 | **PR A2** | **No.** Templates add ordinary rooms, chores, staff names and pets, which the policy already covers. The claim window changes how a phone links, not what is stored. |
 | **PR B** | **Yes, small.** The Kakak section: an owner can use Kakak **once for setup without switching Kakak on**; what's sent to Anthropic is what they say plus the household block, as for any Kakak request; kept by Anthropic up to 30 days, as today. |
 | Video tips | **No.** Mock data only, served by Vercel, no tracker. |
@@ -882,7 +896,7 @@ each PR that changes the text.
 | PR | What | Migration | Size |
 | --- | --- | --- | --- |
 | **0** | **Measurement first**, so the before numbers exist: `household_setup` (empty until A2), `platform_north_star()`, `/dashboard/north-star` (platform admins), `kakak_requests.job`, the privacy line, the evening review reads it | **145** | Small |
-| **A1** | **No approval wait + calm first screen**: `open` access, automatic approval with cap and switch, the fallback email wording and **Email them** button, the new push; What's new rules (14 days, never the backlog, one a week), checklist first, Add to Home Screen after setup, one-line instructions, `<VideoTip>` and the first videos (Playwright recordings in `public/tips/`), the `/tips/<id>` page | own number (not 146) | Small–medium |
+| **A1** | **Approval you hear about + calm first screen**: the one-line Request screen, the waiting screen's email promise and 60-second check, **Email them** after **Approve**; the automatic-approval switch (`open` access, cap, push) built **off**; What's new rules (14 days, never the backlog, one a week), checklist first, Add to Home Screen after setup, one-line instructions, `<VideoTip>` and the first videos (Playwright recordings in `public/tips/`), the `/tips/<id>` page | own number (not 146) | Small–medium |
 | **A2** | **Templates + staff in one go**: `setup-templates.ts` and `buildSetupDraft()`, `/setup` (review, staff, pets), `apply_household_setup`, the house-code claim and prefilled link, the one WhatsApp message, **Starter list** on Chores for existing households, `household_setup` written, 171's home-type screen switched on, the What's new entry for existing households | next free | Medium–large |
 | **B** | **Kakak setup**: per-job routing, the job profile, `propose_home_setup`, `/api/kakak/setup`, `kakak_begin_setup`, the free allowance and caps, the voice sheet and the **Add all** card, practice-mode script, the eval cases for setup (10 voice notes, scored on rooms, chores and names), privacy line | next free | Medium |
 | **later** | **Delegated setup** (section 7): `setup_proposals`, the staff screen, the owner's review in Waiting for you; concierge on the paid plan | next free | Medium |
@@ -890,7 +904,8 @@ each PR that changes the text.
 **Build order (decided by the manager, 10 November):**
 
 1. **172 PR 0**: measurement, migration **145**.
-2. **172 PR A1**: no approval wait and the calm first screen (its own number
+2. **172 PR A1**: the approval you hear about (manual approval kept, the
+   switch built off) and the calm first screen (its own number
    when built).
 3. **171 PR A** (PR #78): feature switches and the sign-up screens, migration
    **146**.
@@ -905,7 +920,7 @@ Delegated setup comes later.
 Each PR: `tsc`, `next build`, unit tests (`buildSetupDraft` counts and
 titles per shape, dedupe against an existing household, the What's new
 rules, the claim window, cost estimates), Playwright on the stub (sign up
-with no wait, pick a home type, untick a room, add two staff with job chips,
+request access, approve it from the approvals page, pick a home type, untick a room, add two staff with job chips,
 Add, see the calm Today with the checklist first; B: practice-mode voice
 note → Add all), Codex until clean, migrations local → staging → production
 with the owner's OK, merge with the owner's OK.
@@ -913,20 +928,24 @@ with the owner's OK, merge with the owner's OK.
 ## Decisions for the owner
 
 **Decided 2026-11-10: the owner chose all recommendations ("Yes, all of
-it"), so D1–D15 are all A.** Build order: PR 0 (145) → A1 → 171 PR A (146)
+it"), so D1–D15 are all A. Changed 2026-11-11: D1 is manual approval kept**
+("make sure I still need to approve new households"); automatic approval
+is built as a switch, off by default. Build order: PR 0 (145) → A1 → 171 PR A (146)
 → A2 → B.
 
-- **D1 — The approval wait.**
-  **A (recommended):** approve automatically when someone creates a
-  household, review afterwards; a daily cap (25) and a switch fall back to
-  today's manual approval. B: a code on the landing page ("MIAMUS") that
-  skips the wait; no code, wait as today. C: keep manual approval and only
-  add the email.
-- **D2 — Telling people they're in, if a wait remains.**
-  **A (recommended):** the screen promises an email from
-  support@poofylabs.dev, and the approvals page has an **Email them**
-  button with a ready text; sent by hand, no new service. B: add an email
-  service (a new processor and a privacy change). C: no message (today).
+- **D1 — The approval wait. Decided 2026-11-11: manual approval kept.**
+  The owner approves every new household; the waiting screen promises an
+  email and checks again by itself; automatic approval (daily cap 25) is
+  built as a switch, **off by default**. The options were: A (recommended
+  on 10 Nov, chosen then, changed on 11 Nov): approve automatically, review
+  afterwards. B: a code on the landing page that skips the wait. C: keep
+  manual approval and only add the email.
+- **D2 — Telling people they're in.**
+  **A (recommended, decided):** the waiting screen promises an email from
+  support@poofylabs.dev, and the approvals page shows **Email them** right
+  after **Approve** (and beside pending rows), with a ready text; sent by
+  hand, no new service. B: add an email service (a new processor and a
+  privacy change). C: no message (today).
 - **D3 — The home types.**
   **A (recommended):** four: House with a garden · Big house, several
   floors · Apartment · Something else. B: three, without Something else
@@ -997,10 +1016,10 @@ Still open. Until the owner answers, the build uses the defaults: landing
 page wording unchanged, a cap of 25, the $20 limit kept, Indonesian room
 names with English beside them, captions only.
 
-1. **Landing page wording**: change "invite-only beta" to "free while in
-   beta" when the wait goes?
-2. **The daily cap of 25** automatic sign-ups: right for now, or lower
-   until 3–5 target households are live?
+1. **Landing page wording**: keep "invite-only beta" (still true with
+   manual approval), or say "free while in beta; we approve each household"?
+2. **The daily cap of 25** automatic sign-ups, if the switch is ever turned
+   on: right, or lower until 3–5 target households are live?
 3. **Anthropic's monthly limit ($20)**: raise it when free Kakak setup
    ships, or keep it and accept that setup stops for the month if it's
    reached (the template path still works)?
