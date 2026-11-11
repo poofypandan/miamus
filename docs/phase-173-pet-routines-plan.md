@@ -334,6 +334,18 @@ button: tap (1), shutter (1), use photo (1).
   today, so a walk set to 1 photo or Tick finishes normally and an Other
   routine set to 3 photos gets the three steps.
 
+### Multi-pet walks: a follow-up (decided while building PR A, 2026-11-11)
+
+PR A offers **3 photos for one pet only**. A walk for several pets is proven
+by **one photo** of them all (the sheet says so: "3 photos is for one pet at
+a time. For several pets, one photo covers them all."), and a three-photo
+routine is always **one card per pet**, so every walk is its own sequence.
+Shared three-photo walks for several pets (one sequence, three photos
+covering every dog on the lead) kept producing edge cases in review (a pet
+left out of the first walk, per-sequence owner rows, undo across sequences);
+they move to a follow-up PR with their own design. The owner's real walk
+(Matcha only) is single-pet.
+
 ### Anti-faking rules (A)
 
 What Miamus does, and what a browser can and can't promise:

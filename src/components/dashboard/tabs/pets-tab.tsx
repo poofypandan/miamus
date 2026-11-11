@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { DateRibbon } from "@/components/date-ribbon";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
+import { AddRoutineSheet, type AddRoutineTarget } from "@/components/dashboard/add-routine-sheet";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { useHousehold } from "@/context/household-context";
@@ -46,6 +47,8 @@ export function PetsTab() {
   const locale = useOwnerLocale();
   const t = useT();
   const [addOpen, setAddOpen] = useState(false);
+  // Add routine from here starts with every pet ticked (Phase 173, D1).
+  const [routineTarget, setRoutineTarget] = useState<AddRoutineTarget | null>(null);
   const canManagePets = userRole === "owner";
 
   // Null until the owner picks a day, so the view follows the clock over
@@ -123,9 +126,22 @@ export function PetsTab() {
           {/* Local to this tab: moving it does not move the Agenda. */}
           <DateRibbon value={date} onChange={setChosenDate} locale={locale} />
 
-          <h2 className="text-sm font-semibold text-gray-900">
-            {t(`${dayLabel(date, today, locale)}'s Progress`, `Progres ${dayLabel(date, today, locale)}`)}
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-gray-900">
+              {t(`${dayLabel(date, today, locale)}'s Progress`, `Progres ${dayLabel(date, today, locale)}`)}
+            </h2>
+            {/* Quiet, above the pets: a routine for every pet, or untick some. */}
+            {canManagePets && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRoutineTarget({ petIds: pets.map((p) => p.id) })}
+                className="min-h-10 rounded-lg text-sm font-medium text-zinc-700"
+              >
+                <Plus /> {t("Add routine", "Tambah rutinitas")}
+              </Button>
+            )}
+          </div>
           {/* Every row opens that pet's profile sheet — details, routines,
               medical records — which is what the directory above this used to
               be for. */}
@@ -136,6 +152,9 @@ export function PetsTab() {
           {/* No "Flag Low Stock" here: reporting is staff data entry and lives
               in the staff view. The owner reads reports and restocks. */}
           <PhotoStream logs={photoLogs} entities={entities} showAvatar />
+          {canManagePets && (
+            <AddRoutineSheet target={routineTarget} onClose={() => setRoutineTarget(null)} />
+          )}
         </>
       )}
     </div>

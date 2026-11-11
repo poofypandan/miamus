@@ -1,5 +1,6 @@
 import { categorizeSchedule, displayTitle, type ScheduleCategory } from "@/lib/schedule-categories";
-import type { MasterSchedule, TaskEntity, TaskLog, Module } from "@/types/database";
+import { isoWeekday, proofOf, strongestProof } from "@/lib/pet-routine-kinds";
+import type { MasterSchedule, TaskEntity, TaskLog, Module, RoutineKind, RoutineProof } from "@/types/database";
 
 export type AgendaStatus = "pending" | "completed" | "overdue";
 
@@ -15,6 +16,11 @@ export interface AgendaItem {
   module: Module;
   status: AgendaStatus;
   log: TaskLog | null;
+  // Phase 173: what the Add routine sheet saved (null on old rows).
+  kind: RoutineKind | null;
+  proof: RoutineProof;
+  note: string | null;
+  staffId: string | null;
 }
 
 export interface AgendaGroup {
@@ -23,6 +29,13 @@ export interface AgendaGroup {
   category: ScheduleCategory;
   module: Module;
   items: AgendaItem[];
+  /** Phase 173: the routine's kind (its icon), or null for the old kinds. */
+  kind: RoutineKind | null;
+  /** The proof the card follows: three over photo over tick (D4, D14). */
+  proof: RoutineProof;
+  /** The owner's note and the person it is for; the same on every item. */
+  note: string | null;
+  staffId: string | null;
   /**
    * Every distinct task title in this group, in the order they were scheduled.
    * One entry for an ordinary group; several when a dog takes three medicines
@@ -94,6 +107,11 @@ export function isScheduleActiveOn(schedule: MasterSchedule, dateStr: string): b
   // inserted. A no-op for ordinary rows, whose created_at is "now".
   if (formatDateLocal(new Date(schedule.created_at)) > dateStr) return false;
   if (schedule.expires_at && schedule.expires_at < dateStr) return false;
+  // Some days only (Phase 173): the weekday of the calendar date itself, which
+  // is already the Jakarta day the screen shows (routine_slots_open reads the
+  // same). Null, or an empty list from a bad write, means every day.
+  const days = schedule.days_of_week;
+  if (days && days.length > 0 && !days.includes(isoWeekday(dateStr))) return false;
   return true;
 }
 
@@ -119,12 +137,18 @@ export function buildAgenda(params: {
     const slots = [...scheduleSlotMinutes(schedule)].sort((a, b) => a - b);
     if (slots.length === 0) continue;
 
+    const proof = proofOf(schedule);
     const dayLogs = logs
       .filter(
         (l) =>
           l.schedule_id === schedule.id &&
           l.entity_id === entity.id &&
-          isSameLocalDay(l.completed_at, date)
+          isSameLocalDay(l.completed_at, date) &&
+          // A three-photo routine (Phase 173, D14) is done at its end photo:
+          // the start and arrived photos leave it open, as routine_slots_open
+          // reads it (migrations/144). The card reads those steps from the
+          // day's logs itself (threePhotoState).
+          (proof !== "three" || l.sub_type === "check_out")
       )
       .map((l) => ({ log: l, minutes: localMinutesOfDay(l.completed_at) }))
       .sort((a, b) => a.minutes - b.minutes);
@@ -184,6 +208,10 @@ export function buildAgenda(params: {
         module: schedule.module,
         status,
         log: matchedLog,
+        kind: schedule.kind ?? null,
+        proof,
+        note: schedule.note?.trim() || null,
+        staffId: schedule.staff_id ?? null,
       });
     }
   }
@@ -203,10 +231,20 @@ export function buildAgenda(params: {
     // (that is the thing being merged) and add the entity (Mocha's noon
     // medicines are not Matcha's), while the rest keep the title and ignore the
     // entity.
+    //
+    // Routines from the Add routine sheet (Phase 173) also key on their note
+    // and person: Matcha's 07:00 walk with Yanti and a note, and Mocha's with
+    // Sari, stay two cards, each with its own note and name. Old rows (no
+    // kind) group exactly as before.
     const groupKey =
       item.category === "medication"
         ? `${item.time}|medication|${item.entityId}`
-        : `${item.time}|${item.title}`;
+        : item.kind
+          ? // A three-photo routine is one card per pet: each pet's walk is
+            // its own sequence (multi-pet walks are a follow-up, plan
+            // "Multi-pet walks"; Codex, PR #85).
+            `${item.time}|${item.title}|routine|${item.note ?? ""}|${item.staffId ?? ""}${item.proof === "three" ? `|${item.entityId}` : ""}`
+          : `${item.time}|${item.title}`;
     let group = groups.get(groupKey);
     if (!group) {
       group = {
@@ -216,10 +254,15 @@ export function buildAgenda(params: {
         module: item.module,
         items: [],
         titles: [],
+        kind: item.kind,
+        proof: item.proof,
+        note: item.note,
+        staffId: item.staffId,
       };
       groups.set(groupKey, group);
     }
     group.items.push(item);
+    group.proof = strongestProof(group.items.map((i) => i.proof));
     if (!group.titles.includes(item.title)) group.titles.push(item.title);
   }
 

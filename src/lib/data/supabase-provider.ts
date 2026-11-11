@@ -215,6 +215,25 @@ export const supabaseProvider: DataProvider = {
     const { error } = await client().from("master_schedules").delete().eq("id", id);
     if (error) throw error;
   },
+  async schedulesWithLogs(ids) {
+    // One existence check per routine row (a group is a few rows): a single
+    // read of every log would be cut at the API's row limit (1,000), and a
+    // row missing from it would be deleted with its history (Codex, PR #85).
+    const found = await Promise.all(
+      [...new Set(ids)].map(async (id) => {
+        // A "couldn't do" record is history too: deleting the row would
+        // cascade to it (migrations/139; Codex, PR #85).
+        const [logs, exceptions] = await Promise.all([
+          client().from("task_logs").select("id").eq("schedule_id", id).limit(1),
+          client().from("task_exceptions").select("id").eq("schedule_id", id).limit(1),
+        ]);
+        if (logs.error) throw logs.error;
+        if (exceptions.error) throw exceptions.error;
+        return (logs.data ?? []).length > 0 || (exceptions.data ?? []).length > 0 ? id : null;
+      })
+    );
+    return new Set(found.filter((id): id is string => id !== null));
+  },
   async createMedicalRecord(input) {
     const { data, error } = await client()
       .from("medical_records")

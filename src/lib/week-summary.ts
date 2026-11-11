@@ -39,7 +39,7 @@ const RHYTHM_CATEGORIES: ReadonlySet<ScheduleCategory> = new Set([
 ]);
 
 /** Within one dog, medicine first: a missed dose matters more than a missed walk. */
-const CATEGORY_ORDER: Record<string, number> = { medication: 0, meal: 1, potty: 2, chore: 3 };
+const CATEGORY_ORDER: Record<string, number> = { medication: 0, meal: 1, potty: 2, routine: 3, chore: 4 };
 
 export type CellState =
   /** Everything owed that day was done. */
@@ -108,6 +108,14 @@ export function isRhythmGroup(
   group: AgendaGroup,
   scheduleById: Map<string, MasterSchedule>
 ): boolean {
+  // A routine from the Add routine sheet (Phase 173) is part of the rhythm
+  // when it is every day with no end; some days or once are the week's news.
+  if (group.category === "routine") {
+    return group.items.every((item) => {
+      const s = scheduleById.get(item.scheduleId);
+      return !!s && !s.expires_at && !(s.days_of_week && s.days_of_week.length > 0);
+    });
+  }
   if (!RHYTHM_CATEGORIES.has(group.category)) return false;
   return group.items.every(
     (item) => scheduleById.get(item.scheduleId)?.frequency_type !== "weekly"

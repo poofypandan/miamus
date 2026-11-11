@@ -1,5 +1,6 @@
 "use client";
 
+import { withLaterSteps } from "@/lib/staff-agenda";
 import {
   useRef,
   useState,
@@ -116,7 +117,7 @@ export function LogPhotoThumbnail({
   logs,
 }: LogPhotoThumbnailProps) {
   const lang = useScreenLang();
-  const { userRole, deleteLogWithPhoto, schedules } = useHousehold();
+  const { userRole, deleteLogWithPhoto, schedules, logs: allLogs } = useHousehold();
   const t = useT();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -191,9 +192,15 @@ export function LogPhotoThumbnail({
       // Only the last call carries photo_url, so a shared file is removed
       // once, after every row pointing at it is gone — the same order the
       // staff card uses.
-      const rows = logs && logs.length > 0 ? logs : [log];
+      // Several photos can be behind one delete (a walk's later steps go with
+      // an earlier one, Phase 173): each file goes once, with its last row.
+      const rows = withLaterSteps(logs && logs.length > 0 ? logs : [log], allLogs);
+      const lastByUrl = new Map<string, number>();
+      rows.forEach((row, i) => {
+        if (row.photo_url) lastByUrl.set(row.photo_url, i);
+      });
       for (let i = 0; i < rows.length; i++) {
-        const isLast = i === rows.length - 1;
+        const isLast = !!rows[i].photo_url && lastByUrl.get(rows[i].photo_url!) === i;
         await deleteLogWithPhoto(isLast ? rows[i] : { ...rows[i], photo_url: null });
       }
       toast.success(t("Task undone", "Tugas dibatalkan"));
