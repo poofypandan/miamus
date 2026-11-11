@@ -105,7 +105,13 @@ export const LEGAL = {
   // days after asking at the latest (migrations/143). We tell people by
   // WhatsApp or email. No new service (WhatsApp is opened on the operator's
   // own phone; Miamus sends nothing).
-  policyVersion: "2026-11-11.1",
+  // 2026-11-11.3: which features a household has switched on (Household →
+  // Features: Repairs, Bills and upkeep, Food at home, Pets) and the kind of
+  // home picked at sign-up (Phase 171 PR A, migrations/145; the kind of home
+  // is household_setup.home_type, migrations/142). Switching off hides, never
+  // deletes. No new service. (.2 is held by PR #85; whichever lands second
+  // rebases.)
+  policyVersion: "2026-11-11.3",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

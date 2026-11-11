@@ -3,6 +3,8 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { pushInPlace, replaceInPlace } from "@/lib/in-place-navigation";
 import { isChoreJob, type ChoreJob } from "@/lib/chore-jobs";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { choresViewFor } from "@/lib/features";
 
 export type ChoresView = "today" | "rooms" | "repairs";
 
@@ -26,7 +28,9 @@ export function useChoresView(): {
   const searchParams = useSearchParams();
   const raw = searchParams.get("chores");
   // Today · Rooms · Repairs (Phase 159 adds the third, `?chores=repairs`).
-  const view: ChoresView = raw === "rooms" || raw === "repairs" ? raw : "today";
+  // Repairs switched off (Phase 171): ?chores=repairs falls back to Today.
+  const { flags } = useHouseholdFeatures();
+  const view: ChoresView = choresViewFor(raw === "rooms" || raw === "repairs" ? raw : "today", flags);
   const rawJob = searchParams.get("job");
   const job = view === "rooms" && isChoreJob(rawJob) ? rawJob : null;
 

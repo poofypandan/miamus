@@ -1,7 +1,11 @@
 # Phase 171 — Features you switch on, and a simple sign-up
 
 Status: **decided: owner chose all recommendations (D1–D15 A),
-2026-11-10; PR A (146) builds after Phase 172 PR A1.** The three open
+2026-11-10. PR A built 2026-11-11 as migration 145** (the next free
+number; 144 is PR #85's). The kind of home is stored in Phase 172's
+`household_setup.home_type` (142), so 145 adds no `households.home_type`;
+the "What kind of home?" screen is built behind `SETUP_TEMPLATES_READY`
+(off) until Phase 172 PR A2 turns it on. The three open
 questions below stay open. Nothing is built, nothing
 is applied anywhere. Migration **146** is a placeholder for PR A (feature
 switches and the "What kind of home?" answer). People records, elders'

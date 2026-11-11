@@ -788,6 +788,14 @@ export interface Database {
         Update: Partial<Household>;
         Relationships: [];
       };
+      household_features: {
+        // Phase 171 PR A (migrations/145): read by members and staff phones;
+        // written only through set_household_feature().
+        Row: { household_id: string; feature: string; enabled: boolean; set_at: string; set_by: string | null };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       household_members: {
         Row: HouseholdMember;
         Insert: Partial<HouseholdMember> & Pick<HouseholdMember, "household_id" | "user_id">;
@@ -1059,6 +1067,10 @@ export interface Database {
       };
       set_household_has_pets: {
         Args: { p_household: string; p_on: boolean };
+        Returns: undefined;
+      };
+      set_household_feature: {
+        Args: { p_household: string; p_feature: string; p_on: boolean };
         Returns: undefined;
       };
       set_kakak_enabled: {
