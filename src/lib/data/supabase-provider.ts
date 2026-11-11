@@ -1066,11 +1066,16 @@ export const supabaseProvider: DataProvider = {
         .maybeSingle();
       if (readError) throw readError;
       if (current?.status === "completed") {
-        // This finish's own earlier try, whose reply was lost.
+        // This finish's own earlier try, whose reply was lost: its photos
+        // (unique per upload) are on the row, or its author and time are.
+        const ownPhoto =
+          (!!patch?.after_photo_url && current.after_photo_url === patch.after_photo_url) ||
+          (!!patch?.before_photo_url && current.before_photo_url === patch.before_photo_url);
         const same =
-          current.completed_by === completedBy &&
-          !!current.completed_at &&
-          new Date(current.completed_at).getTime() === new Date(completedAt!).getTime();
+          ownPhoto ||
+          (current.completed_by === completedBy &&
+            !!current.completed_at &&
+            new Date(current.completed_at).getTime() === new Date(completedAt!).getTime());
         if (same) return current;
         throw new ChoreAlreadySettledError("completed");
       }

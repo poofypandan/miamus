@@ -163,7 +163,7 @@ function OwnerFinishBody({
           }
         : undefined,
     });
-    if (result?.outcome === "sent" && photos) clearChoreDraft(draftKey);
+    if ((result?.outcome === "sent" && photos) || result?.outcome === "settled") clearChoreDraft(draftKey);
     if (result?.outcome === "queued" && hasPaymentInput) {
       toast.info(
         t(
@@ -185,7 +185,8 @@ function OwnerFinishBody({
     if (!result) return;
     // Sent: nothing is owed any more. Kept on the phone: the queue clears
     // the draft once it has gone (useOfflineSync).
-    if (result.outcome === "sent") clearChoreDraft(draftKey);
+    // Settled elsewhere meanwhile (audit M4): its photos are gone too.
+    if (result.outcome === "sent" || result.outcome === "settled") clearChoreDraft(draftKey);
     onOpenChange(false);
   }
 

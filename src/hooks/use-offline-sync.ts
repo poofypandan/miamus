@@ -155,6 +155,8 @@ export function useOfflineSync(lang: "en" | "id") {
 
     function soon() {
       failures = 0;
+      // A new save tries again even after "no longer linked" (audit L4).
+      paused = false;
       schedule(FIRST_RETRY_MS);
     }
 

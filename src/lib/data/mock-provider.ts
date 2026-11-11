@@ -953,7 +953,9 @@ export const mockProvider: DataProvider = {
     if (completing && patch?.onlyIfPending && db.householdTasks[idx].status !== "pending") {
       const current = db.householdTasks[idx];
       if (current.status === "cancelled") throw new ChoreAlreadySettledError("cancelled");
+      const ownPhoto = !!patch.after_photo_url && current.after_photo_url === patch.after_photo_url;
       const same =
+        ownPhoto ||
         current.completed_by === (patch.completed_by ?? null) &&
         !!current.completed_at &&
         !!patch.completed_at &&

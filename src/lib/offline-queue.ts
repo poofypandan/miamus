@@ -158,9 +158,7 @@ export function isRetryable(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const { code, message, status } = err as { code?: unknown; message?: unknown; status?: unknown };
   if (typeof status === "number" && RETRY_STATUSES.has(status)) return true;
-  // PostgREST: the access token ran out and has not been renewed yet.
-  if (code === "PGRST301" || code === "PGRST303") return true;
-  if (typeof message === "string" && /JWT expired/i.test(message)) return true;
+  if (isTokenNotRenewed(err)) return true;
   // A reply that is not PostgREST's at all (a proxy's HTML error page):
   // postgrest-js passes it on as `{ message: body }`, with no code. Our own
   // thrown errors are Error instances, and the database always sends a code.
@@ -174,9 +172,15 @@ export function isRetryable(err: unknown): boolean {
  */
 export function isSessionRefusal(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
-  const { code, message, status } = err as { code?: unknown; message?: unknown; status?: unknown };
-  if (status === 401) return true;
-  if (code === "PGRST301" || code === "PGRST303" || code === "42501") return true;
+  const { code, status } = err as { code?: unknown; status?: unknown };
+  return status === 401 || code === "42501" || isTokenNotRenewed(err);
+}
+
+/** PostgREST: the access token ran out and has not been renewed yet. */
+function isTokenNotRenewed(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const { code, message } = err as { code?: unknown; message?: unknown };
+  if (code === "PGRST301" || code === "PGRST303") return true;
   return typeof message === "string" && /JWT expired/i.test(message);
 }
 
@@ -642,6 +646,7 @@ export async function drainOutbox(
       // retried forever (a 401) or thrown away (a 42501).
       const link = isSessionRefusal(err) ? await linkCheck(household) : null;
       if (link === "unknown") sessionRefusals++;
+      else if (link === "linked") sessionRefusals = 0;
       if (link === "unlinked" || (link === "unknown" && sessionRefusals >= UNLINKED_AFTER_REFUSALS)) {
         setUnlinked(true);
         report.unlinked = true;

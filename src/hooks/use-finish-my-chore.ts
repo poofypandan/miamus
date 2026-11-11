@@ -12,7 +12,12 @@ import { isBill, loadBillPayments } from "@/lib/bill-payments";
 import type { HouseholdTask } from "@/types/database";
 
 /** Sent (with the saved row), kept on the phone to send, or not saved. */
-export type FinishOutcome = { outcome: "sent"; task: HouseholdTask } | { outcome: "queued" } | null;
+export type FinishOutcome =
+  | { outcome: "sent"; task: HouseholdTask }
+  | { outcome: "queued" }
+  /** Finished by someone else, or cancelled, meanwhile (audit M4): nothing owed. */
+  | { outcome: "settled" }
+  | null;
 
 /** Both photos, or none (migrations/136). */
 export interface MyChorePhotos {
@@ -162,7 +167,7 @@ export function useFinishMyChore() {
         return { outcome: "sent", task };
       } catch (err) {
         explain(err);
-        return null;
+        return isChoreAlreadySettled(err) ? { outcome: "settled" } : null;
       }
     },
     [finishChore, memberProfile, reopen, explain, t]
