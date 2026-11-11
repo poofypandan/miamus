@@ -1,5 +1,5 @@
 import { leaveCovering } from "@/lib/leave";
-import { choreException, classifyDay, slotOf, type DayTask } from "@/lib/couldnt-do";
+import { classifyChore, classifyDay, type DayTask } from "@/lib/couldnt-do";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { AgendaGroup } from "@/lib/scheduleEngine";
 import type { LeaveRequest, StaffProfile, TaskException, TaskLog } from "@/types/database";
@@ -158,22 +158,14 @@ export function buildStaffProgress(params: {
   // browsing today (expandChores).
   const carried: DayTask[] = chores
     .filter((o) => o.overdue && o.status === "pending" && o.date !== date)
-    .map((occurrence) => {
-      const exception = choreException(exceptions, occurrence);
-      return {
-        key: occurrence.key,
-        kind: "chore" as const,
-        state: exception ? ("couldnt" as const) : ("open" as const),
-        title: occurrence.task.title,
-        time: slotOf(occurrence.task.due_time),
-        occurrence,
-        exception: exception ?? undefined,
-      };
-    });
+    .map((occurrence) => classifyChore(occurrence, exceptions));
 
   const ownerOf = (task: DayTask): string | null => {
     if (task.kind === "chore") {
       const t = task.occurrence!.task;
+      // Done by someone else while the assignee was away: the doer's work,
+      // not hidden under a "Libur" row (the leave triage only moves open ones).
+      if (task.state === "done" && t.completed_by && t.assigned_to && away(t.assigned_to)) return t.completed_by;
       return t.assigned_to ?? t.completed_by ?? task.exception?.staff_id ?? null;
     }
     const chip = task.item!.staffId;

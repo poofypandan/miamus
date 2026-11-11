@@ -222,6 +222,20 @@ export interface DayTask {
   medicine?: boolean;
 }
 
+/** One chore as a DayTask: done, couldn't (a record for its day; done wins) or open. */
+export function classifyChore(occurrence: ChoreOccurrence, exceptions: readonly TaskException[]): DayTask {
+  const exception = choreException(exceptions, occurrence);
+  return {
+    key: occurrence.key,
+    kind: "chore",
+    state: occurrence.status === "completed" ? "done" : exception ? "couldnt" : "open",
+    title: occurrence.task.title,
+    time: slotOf(occurrence.task.due_time),
+    occurrence,
+    exception: exception ?? undefined,
+  };
+}
+
 export function classifyDay(params: {
   date: string;
   chores: readonly ChoreOccurrence[];
@@ -237,16 +251,7 @@ export function classifyDay(params: {
   for (const occurrence of chores) {
     if (occurrence.date !== date) continue;
     if (occurrence.status !== "completed" && occurrence.status !== "pending") continue;
-    const exception = occurrence.status === "pending" ? choreException(exceptions, occurrence) : null;
-    out.push({
-      key: occurrence.key,
-      kind: "chore",
-      state: occurrence.status === "completed" ? "done" : exception ? "couldnt" : "open",
-      title: occurrence.task.title,
-      time: slotOf(occurrence.task.due_time),
-      occurrence,
-      exception: exception ?? undefined,
-    });
+    out.push(classifyChore(occurrence, exceptions));
   }
 
   for (const group of groups) {

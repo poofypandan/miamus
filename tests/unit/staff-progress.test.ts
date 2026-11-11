@@ -277,6 +277,15 @@ describe("buildStaffProgress", () => {
     expect(progress.anyone).toBeNull();
   });
 
+  it("credits a chore someone finished while its assignee was on leave to whoever finished it", () => {
+    const progress = build({
+      rows: [chore({ title: "Setrika", assigned_to: SYAM, status: "completed", completed_by: ARI })],
+      leaves: [leave(SYAM, { fallback_action: "pause" })],
+    });
+    expect(progress.people.find((p) => p.id === ARI)!.house).toEqual({ done: 1, total: 1 });
+    expect(progress.people.find((p) => p.id === SYAM)!.house).toBeNull();
+  });
+
   it("puts an unowned couldn't-do on the person who said so", () => {
     const lunch = routine(MOCHA, "Makan Siang", ["12:00"]);
     const progress = build({

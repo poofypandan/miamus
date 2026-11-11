@@ -38,9 +38,14 @@ export function StaffPersonDay({ personId, onBack }: { personId: string; onBack:
   const label = dayLabel(selectedDate, today, locale);
   const personLine = usePersonLine();
 
+  const { profiles } = useStaffProfiles();
   const anyone = personId === ANYONE_PERSON;
   const person = anyone ? null : (progress?.people.find((p) => p.id === personId) ?? null);
-  const title = anyone ? t("Anyone, not done yet", "Siapa saja, belum dikerjakan") : (person?.name ?? "");
+  // An admin with nothing on this day has no progress row, but is still here.
+  const onRoster = anyone || !!person || (profiles ?? []).some((p) => p.id === personId);
+  const title = anyone
+    ? t("Anyone, not done yet", "Siapa saja, belum dikerjakan")
+    : (person?.name ?? profiles?.find((p) => p.id === personId)?.name ?? "");
   const tasks = anyone ? (progress?.anyone?.tasks ?? []) : (person?.tasks ?? []);
 
   return (
@@ -68,7 +73,7 @@ export function StaffPersonDay({ personId, onBack }: { personId: string; onBack:
             <Skeleton className="h-14 w-full rounded-xl" />
             <Skeleton className="h-14 w-full rounded-xl" />
           </div>
-        ) : !anyone && !person ? (
+        ) : !onRoster ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             {t("This person is no longer on the roster.", "Orang ini sudah tidak ada di daftar.")}
           </p>
