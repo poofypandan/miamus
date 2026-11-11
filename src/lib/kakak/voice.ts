@@ -240,22 +240,114 @@ export interface VoiceLike {
 // Chrome, Apple's enhanced and premium voices, and the Indonesian ones.
 const NATURAL = /(natural|premium|enhanced|neural|siri|google|damayanti)/i;
 
+// Kakak is an older sister, so she reads aloud in a woman's voice when the
+// phone has one (owner, 2026-11-11). Browsers don't say a voice's gender, so
+// these are names: Apple's from macOS's own voice list, Google's (desktop
+// Chrome, and Android's "Natural" voices and their id-id-x-… engine ids),
+// and Microsoft's (Windows, Edge), from Readium Speech's curated lists
+// (github.com/readium/speech, json/en.json and id.json), read 2026-11-11.
+// Children's voices (Microsoft Ana, Maisie) are left out on purpose.
+const FEMALE: Record<VoiceLocale, RegExp> = {
+  id: new RegExp(
+    [
+      String.raw`\b(damayanti|gadis)\b`,
+      String.raw`^google bahasa indonesia( [12] \(natural\))?$`,
+      String.raw`^chrome os bahasa indonesia [12]$`,
+      String.raw`\bid-id-x-(idc|idd)-`,
+      String.raw`\bid-id-language$`,
+    ].join("|"),
+    "i"
+  ),
+  en: new RegExp(
+    [
+      String.raw`\bfemale\b`,
+      String.raw`\b(samantha|zoe|allison|nicky|joelle|karen|matilda|catherine|moira|tessa|fiona|kate|serena|stephanie|martha|tara|isha|sangeeta|veena)\b`,
+      String.raw`\b(zira|hazel|susan|linda|heera|jenny|aria|michelle|sonia|libby|natasha|clara|neerja|emily|leah|molly|rosa|luna)\b`,
+      String.raw`\b(ava|emma)(multilingual)?\b`,
+      String.raw`^google us english( [1257] \(natural\))?$`,
+      String.raw`^google uk english [246] \(natural\)$`,
+      String.raw`^google australian english [13] \(natural\)$`,
+      String.raw`^chrome os (us english [1257]|uk english [246]|australian english [13])$`,
+      String.raw`\ben-us-x-(tpc|iob|iog|tpf|sfg)-`,
+      String.raw`\ben-gb-x-(gba|gbc|gbg)-`,
+      String.raw`\ben-au-x-(aua|auc)-`,
+      String.raw`\ben-(us|gb|au)-language$`,
+    ].join("|"),
+    "i"
+  ),
+};
+
+// Known men's voices, so that a voice we can't place beats one we know is a
+// man's. Microsoft Andika (Indonesian) is left unplaced: the sources disagree.
+const MALE: Record<VoiceLocale, RegExp> = {
+  id: new RegExp(
+    [
+      String.raw`\bardi\b`,
+      String.raw`^google bahasa indonesia [34] \(natural\)$`,
+      String.raw`^chrome os bahasa indonesia [34]$`,
+      String.raw`\bid-id-x-(ide|dfz)-`,
+    ].join("|"),
+    "i"
+  ),
+  en: new RegExp(
+    [
+      String.raw`\bmale\b`,
+      String.raw`\b(daniel|alex|tom|aaron|arthur|oliver|jamie|rishi|aman|lee|gordon|evan|nathan)\b`,
+      String.raw`\b(david|mark|george|richard|ravi|sean|guy|ryan|thomas|eric|roger|steffan|liam|connor|prabhat|luke)\b`,
+      String.raw`\b(andrew|brian|christopher|william)(multilingual)?\b`,
+      String.raw`^google us english [346] \(natural\)$`,
+      String.raw`^google uk english [135] \(natural\)$`,
+      String.raw`^google australian english [24] \(natural\)$`,
+      String.raw`\ben-us-x-(iol|iom|tpd)-`,
+      String.raw`\ben-gb-x-(rjs|gbb|gbd)-`,
+      String.raw`\ben-au-x-(aub|aud)-`,
+    ].join("|"),
+    "i"
+  ),
+};
+
+// Apple's novelty voices (singing, whispering, robots): never Kakak.
+const NOVELTY =
+  /^(albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox)(\s*\(|$)/i;
+
+// Real voices that sound robotic (Apple's Eloquence and old MacinTalk
+// voices, eSpeak): only when the language has nothing better.
+const ROBOTIC =
+  /^(eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley|fred|junior|kathy|ralph)(\s*\(|$)|^espeak\b/i;
+
 /**
- * The most natural voice for the owner's language, or null to let the
- * browser pick (it still speaks, in its default voice for `lang`).
+ * How one voice ranks for the owner's language; -1 means never. Each rule
+ * outweighs every rule below it together:
+ * 1. the owner's language (a voice in another language is never picked);
+ * 2. not robotic;
+ * 3. a known woman's voice, then one we can't place, then a known man's;
+ * 4. the exact accent (en-US for English, id-ID for Indonesian);
+ * 5. a natural-sounding voice;
+ * 6. the phone's default.
+ */
+export function voiceScore(voice: VoiceLike, locale: VoiceLocale): number {
+  const lang = voice.lang.replace("_", "-").toLowerCase();
+  if (lang !== locale && !lang.startsWith(`${locale}-`)) return -1;
+  const name = voice.name.trim();
+  if (NOVELTY.test(name)) return -1;
+  let points = 0;
+  if (!ROBOTIC.test(name)) points += 32;
+  if (FEMALE[locale].test(name)) points += 16;
+  else if (!MALE[locale].test(name)) points += 8;
+  if (lang === VOICE_LANG[locale].toLowerCase()) points += 4;
+  if (NATURAL.test(name)) points += 2;
+  if (voice.default) points += 1;
+  return points;
+}
+
+/**
+ * Kakak's reading voice: a woman's voice in the owner's language when the
+ * phone has one, the most natural first; otherwise the best other voice in
+ * that language; or null to let the browser pick (it still speaks, in its
+ * default voice for `lang`).
  */
 export function pickVoice<V extends VoiceLike>(voices: readonly V[], locale: VoiceLocale): V | null {
-  const want = VOICE_LANG[locale].toLowerCase();
-  const prefix = locale;
-  const score = (voice: V) => {
-    const lang = voice.lang.replace("_", "-").toLowerCase();
-    if (!lang.startsWith(prefix)) return -1;
-    let points = 0;
-    if (lang === want) points += 4;
-    if (NATURAL.test(voice.name)) points += 2;
-    if (voice.default) points += 1;
-    return points;
-  };
+  const score = (voice: V) => voiceScore(voice, locale);
   let best: V | null = null;
   let bestScore = -1;
   for (const voice of voices) {

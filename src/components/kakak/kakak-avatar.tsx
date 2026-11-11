@@ -1,29 +1,44 @@
 import { cn } from "@/lib/utils";
+import { ROOF_POINTS } from "@/components/brand/brand-mark";
 
 /**
- * Kakak's small round avatar. A placeholder drawing until Poofy Labs'
- * character art exists (parent plan 0b): calm neutral colours, no extra brand
- * colour on screen.
+ * Kakak's small round mark (owner, 2026-11-11): the Miamus house with a
+ * heart inside, no face. The roof and the two walls are the logo's own
+ * strokes; the heart takes the place of the M's dip, so she reads as the
+ * home's caring older sister rather than a person. One gentle warm colour,
+ * the `kakak` tokens in globals.css (clay rose on a warm blush, lighter rose
+ * on a warm dark), and nothing else.
  */
+
+/** The logo's two walls without the M's V between them (512 box). */
+export const KAKAK_WALLS = "M152 400V262M360 262V400";
+
+/** A soft heart where the M dipped: lobes level with the wall tops. */
+export const KAKAK_HEART =
+  "M256 374C236 359 194 331 194 296C194 274 210 258 229 258C242 258 251 266 256 276C261 266 270 258 283 258C302 258 318 274 318 296C318 331 276 359 256 374Z";
+
+/** The drawing, cropped to the house so it fills the circle evenly. */
+export const KAKAK_VIEWBOX = "92 84 328 336";
+
 export function KakakAvatar({ className }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100",
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-kakak-line bg-kakak-tint text-kakak",
         className
       )}
     >
-      <svg viewBox="0 0 32 32" className="size-[78%]" fill="none">
-        {/* Hair */}
-        <path d="M7 15c0-6 4-10 9-10s9 4 9 10c0 1-1 1-1 0-1-3-4-5-8-5s-7 2-8 5c0 1-1 1-1 0Z" fill="#475569" />
-        {/* Face */}
-        <circle cx="16" cy="17" r="8" fill="#f1d4bd" />
-        <path d="M8 15c1-4 4-6 8-6s7 2 8 6c-3-1-5-3-6-4-1 2-5 4-10 4Z" fill="#475569" />
-        {/* Eyes and smile */}
-        <circle cx="13" cy="18" r="1" fill="#334155" />
-        <circle cx="19" cy="18" r="1" fill="#334155" />
-        <path d="M13.5 21c1.5 1.2 3.5 1.2 5 0" stroke="#334155" strokeWidth="1.1" strokeLinecap="round" />
+      <svg viewBox={KAKAK_VIEWBOX} className="size-[64%]" fill="none">
+        <polyline
+          points={ROOF_POINTS}
+          stroke="currentColor"
+          strokeWidth={40}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d={KAKAK_WALLS} stroke="currentColor" strokeWidth={40} strokeLinecap="round" />
+        <path d={KAKAK_HEART} fill="currentColor" />
       </svg>
     </span>
   );

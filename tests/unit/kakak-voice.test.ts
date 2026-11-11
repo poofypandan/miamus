@@ -8,6 +8,7 @@ import {
   kakakWords,
   listenOnce,
   pickVoice,
+  voiceScore,
   problemFor,
   readSpeakChoice,
   speakable,
@@ -279,6 +280,86 @@ describe("pickVoice", () => {
     expect(pickVoice([{ name: "Moira", lang: "en-IE", localService: true }], "en")?.name).toBe("Moira");
     expect(pickVoice([{ name: "Thomas", lang: "fr-FR", localService: true }], "id")).toBeNull();
     expect(pickVoice([], "en")).toBeNull();
+  });
+});
+
+describe("pickVoice: Kakak reads in a woman's voice", () => {
+  const v = (name: string, lang: string, extra: { default?: boolean } = {}) => ({ name, lang, localService: true, ...extra });
+
+  it("never lets a woman's voice in another language win", () => {
+    const voices = [v("Damayanti", "id-ID"), v("Samantha", "en-US"), v("Amélie", "fr-CA")];
+    expect(pickVoice([v("Daniel", "en-GB"), v("Damayanti", "id-ID")], "en")?.name).toBe("Daniel");
+    expect(pickVoice([v("Samantha", "en-US"), v("Google Bahasa Indonesia 3 (Natural)", "id-ID")], "id")?.name).toBe(
+      "Google Bahasa Indonesia 3 (Natural)"
+    );
+    expect(pickVoice(voices, "id")?.name).toBe("Damayanti");
+    expect(voiceScore(v("Samantha", "en-US"), "id")).toBe(-1);
+    // "en" means English, not any tag that starts with the letters.
+    expect(voiceScore(v("Someone", "eng"), "en")).toBe(-1);
+  });
+
+  it("prefers a known woman's voice over a man's or an unknown one, on every platform", () => {
+    // iPhone and Mac (names as macOS lists them).
+    expect(pickVoice([v("Daniel", "en-GB"), v("Fred", "en-US"), v("Samantha (English (US))", "en-US")], "en")?.name).toBe(
+      "Samantha (English (US))"
+    );
+    // Desktop Chrome.
+    expect(pickVoice([v("Google UK English Male", "en-GB"), v("Google UK English Female", "en-GB")], "en")?.name).toBe(
+      "Google UK English Female"
+    );
+    // Android: the engine ids, and the numbered Natural voices.
+    expect(
+      pickVoice(
+        [
+          v("Android Speech Recognition and Synthesis from Google id-id-x-ide-network", "id-ID"),
+          v("Android Speech Recognition and Synthesis from Google id-id-x-idc-network", "id-ID"),
+        ],
+        "id"
+      )?.name
+    ).toBe("Android Speech Recognition and Synthesis from Google id-id-x-idc-network");
+    expect(pickVoice([v("Google Bahasa Indonesia 4 (Natural)", "id-ID"), v("Google Bahasa Indonesia 2 (Natural)", "id-ID")], "id")?.name).toBe(
+      "Google Bahasa Indonesia 2 (Natural)"
+    );
+    // Windows and Edge.
+    expect(pickVoice([v("Microsoft David - English (United States)", "en-US"), v("Microsoft Zira - English (United States)", "en-US")], "en")?.name).toBe(
+      "Microsoft Zira - English (United States)"
+    );
+    expect(
+      pickVoice(
+        [
+          v("Microsoft Ardi Online (Natural) - Indonesian (Indonesia)", "id-ID"),
+          v("Microsoft Gadis Online (Natural) - Indonesian (Indonesia)", "id-ID"),
+        ],
+        "id"
+      )?.name
+    ).toBe("Microsoft Gadis Online (Natural) - Indonesian (Indonesia)");
+    expect(pickVoice([v("Microsoft Guy Online (Natural) - English (United States)", "en-US"), v("Microsoft AvaMultilingual Online (Natural) - English (United States)", "en-US")], "en")?.name).toBe(
+      "Microsoft AvaMultilingual Online (Natural) - English (United States)"
+    );
+  });
+
+  it("takes a woman's voice in another accent over a man's in the exact one", () => {
+    expect(pickVoice([v("Microsoft David - English (United States)", "en-US"), v("Karen", "en-AU")], "en")?.name).toBe("Karen");
+  });
+
+  it("keeps the exact accent, then a natural voice, among women's voices", () => {
+    expect(pickVoice([v("Karen", "en-AU"), v("Samantha", "en-US")], "en")?.name).toBe("Samantha");
+    expect(pickVoice([v("Samantha", "en-US", { default: true }), v("Google US English", "en-US")], "en")?.name).toBe("Google US English");
+  });
+
+  it("falls back gracefully when no voice is a woman's", () => {
+    // An unknown voice (Android's plain language voice) beats a known man's.
+    expect(pickVoice([v("Microsoft Ardi Online (Natural) - Indonesian (Indonesia)", "id-ID"), v("Bahasa Indonesia", "id_ID")], "id")?.name).toBe(
+      "Bahasa Indonesia"
+    );
+    // Only men's voices: still the best of them, never null.
+    expect(pickVoice([v("Daniel", "en-GB"), v("Google UK English Male", "en-GB")], "en")?.name).toBe("Google UK English Male");
+  });
+
+  it("never picks a novelty voice, and a robotic one only when nothing else speaks the language", () => {
+    expect(pickVoice([v("Bubbles", "en-US"), v("Bad News", "en-US"), v("Superstar", "en-US")], "en")).toBeNull();
+    expect(pickVoice([v("Flo (English (US))", "en-US"), v("Grandma (English (US))", "en-US"), v("Daniel", "en-GB")], "en")?.name).toBe("Daniel");
+    expect(pickVoice([v("Bubbles", "en-US"), v("Shelley (English (US))", "en-US")], "en")?.name).toBe("Shelley (English (US))");
   });
 });
 

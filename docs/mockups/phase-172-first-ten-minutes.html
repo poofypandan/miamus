@@ -75,8 +75,9 @@
   .type b { font-size:13.5px; font-weight:600; line-height:1.25; }
   .type span { font-size:11.5px; color:var(--muted); line-height:1.35; }
   .kcard { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; align-items:center; gap:10px; }
-  .kcard .kav { width:36px; height:36px; border-radius:10px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
-  .kcard .kav .ic { color:var(--ink2); }
+  /* Kakak's mark (2026-11-11): a heart inside the Miamus house, clay rose on blush. */
+  .kcard .kav { width:36px; height:36px; border-radius:999px; background:#fbf1ee; border:1px solid #f1ddd7; color:#b65f55; display:flex; align-items:center; justify-content:center; flex:none; }
+  .kav .km { width:64%; height:64%; }
   .kcard .t { flex:1; min-width:0; }
   .t { flex:1; min-width:0; display:flex; flex-direction:column; }
   .t > b { font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -132,8 +133,7 @@
   .consent .ic { margin-top:1px; }
   .addall { background:#fff; border:1.5px solid var(--ink); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:10px; }
   .addall .top { display:flex; gap:10px; align-items:center; }
-  .addall .kav { width:36px; height:36px; border-radius:10px; background:var(--track); display:flex; align-items:center; justify-content:center; flex:none; }
-  .addall .kav .ic { color:var(--ink2); }
+  .addall .kav { width:36px; height:36px; border-radius:999px; background:#fbf1ee; border:1px solid #f1ddd7; color:#b65f55; display:flex; align-items:center; justify-content:center; flex:none; }
   .counts { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12.5px; color:var(--ink2); }
   .counts b { font-variant-numeric:tabular-nums; }
   .guess { font-size:11px; color:var(--amber); background:var(--amberbg); border-radius:999px; padding:2px 8px; white-space:nowrap; flex:none; }
@@ -213,6 +213,7 @@
   <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
   <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
   <symbol id="mark" viewBox="0 0 512 512"><rect width="512" height="512" rx="114.5" fill="#171717"/><polyline points="112,214 256,104 400,214" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,400 152,262 256,354 360,262 360,400" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="kakak" viewBox="92 84 328 336"><polyline points="112,214 256,104 400,214" fill="none" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><path d="M152 400V262M360 262V400" fill="none" stroke="currentColor" stroke-width="40" stroke-linecap="round"/><path d="M256 374C236 359 194 331 194 296C194 274 210 258 229 258C242 258 251 266 256 276C261 266 270 258 283 258C302 258 318 274 318 296C318 331 276 359 256 374Z" fill="currentColor"/></symbol>
 </svg>
 
 <header class="page">
@@ -409,7 +410,7 @@ function sHome(t, l) {
       <div class="types">
         ${t.types.map((ty, i) => `<div class="type ${i === 1 ? "on" : ""}">${ic(ty[0])}<b>${ty[1]}</b><span>${ty[2]}</span></div>`).join("")}
       </div>
-      <div class="kcard"><span class="kav">${ic("i-mic")}</span><div class="t"><b>${t.kakakCardT}</b><span style="white-space:normal">${t.kakakCardS}</span></div>${ic("i-chevron-right")}</div>
+      <div class="kcard"><span class="kav"><svg class="km"><use href="#kakak"/></svg></span><div class="t"><b>${t.kakakCardT}</b><span style="white-space:normal">${t.kakakCardS}</span></div>${ic("i-chevron-right")}</div>
       <div class="spacer"></div>
       <div class="btn primary">${t.cont}</div>
     </div>`, { tag: l.toUpperCase(), who: "171 asks · 172 acts" });
@@ -528,7 +529,7 @@ function sKakakResult(t, l) {
     <div class="body">
       ${steps(3)}
       <div class="addall">
-        <div class="top"><span class="kav">${ic("i-sparkles")}</span><div class="t"><b style="font-weight:600">${t.kResT}</b><span>${l === "en" ? "Untick anything to skip it." : "Hapus centang untuk melewatinya."}</span></div></div>
+        <div class="top"><span class="kav"><svg class="km"><use href="#kakak"/></svg></span><div class="t"><b style="font-weight:600">${t.kResT}</b><span>${l === "en" ? "Untick anything to skip it." : "Hapus centang untuk melewatinya."}</span></div></div>
         <div class="counts">${t.kRes.map(([n, w]) => `<span><b>${n}</b> ${w}</span>`).join("")}</div>
         <div class="btn primary">${t.addAll}</div>
         <div class="link">${t.change}</div>
