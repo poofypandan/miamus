@@ -256,7 +256,9 @@ people are **staf** and **admin**.
 | Walk-in (owner timeline) · logged by Ari | **Datang langsung** · **dicatat Ari** | Phase 174 PR A. |
 | Pak Budi is here (owners' Today line) | **Pak Budi sedang bekerja** | Phase 174 PR A, with the repair and the place after it. |
 | Repair person here / Repair finished (pushes) | **Tukang datang** / **Perbaikan selesai** | Phase 174 PR B (planned). |
-| Send to the developer | **Kirim ke developer** | Phase 174 PR C (planned). |
+| Send to the developer | **Kirim ke developer** | Phase 174 PR C: the quiet button under the Repairs list, and the sheet's title. |
+| Share on WhatsApp · Save as PDF · Copy text · Message language | **Bagikan lewat WhatsApp · Simpan sebagai PDF · Salin teks · Bahasa pesan** | Phase 174 PR C, the developer sheet. The language toggle reads **Bahasa Indonesia · English** (each as it calls itself), Indonesian first. |
+| Repair list (message and PDF head) · Reported 9 Nov · Not started yet | **Daftar perbaikan · Dilaporkan 9 Nov · Belum dikerjakan** | Phase 174 PR C, text for the developer. Other statuses: **Sedang dikerjakan · Dijadwalkan 12 Nov · Sudah dikerjakan, masih kami cek · Belum selesai, perlu datang lagi**. Addressed **Pak/Bu** (who the developer is isn't known); the owner can change it in WhatsApp. |
 | Features (Household row) | **Fitur** | Phase 171 PR A: Household → Fitur replaces "Siapa yang tinggal di sini". Everyday word. |
 | On / off (a feature) | **aktif / dimatikan** | Phase 171 PR A: "4 aktif" on the row; toasts "{Fitur} aktif" · "{Fitur} dimatikan". |
 | Food at home (feature) | **Makanan di rumah** | Phase 171 PR A, the Features row; the Kitchen pill stays **Makanan**. |
