@@ -22,6 +22,11 @@ async function photo() {
 
 /** A camera photo "just taken": the browser stamps a buffer upload with now. */
 async function shoot(input: Locator) {
+  // The card's camera is disabled while the previous step saves. The walk
+  // line moves on first, so on a slow runner a photo set right after it went
+  // into a disabled input and was dropped (CI, PR #93). A person can't tap a
+  // spinner; wait for the camera to be ready, as they would.
+  await expect(input).toBeEnabled();
   await input.setInputFiles({ name: "IMG_0001.jpg", mimeType: "image/jpeg", buffer: await photo() });
 }
 

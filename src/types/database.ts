@@ -304,7 +304,17 @@ export type InventoryUnit =
   | "kg"
   | "g"
   | "L"
-  | "ml";
+  | "ml"
+  // Kitchen units (Phase 170 PR A, migrations/148): the words Indonesian
+  // kitchens use. sdm and sdt are recipe-only and never a stock unit.
+  | "buah"
+  | "butir"
+  | "ikat"
+  | "siung"
+  | "lembar"
+  | "batang"
+  | "bungkus"
+  | "sachet";
 
 /** Where an item stands on the shopping list (migrations/122, Phase 154). */
 export type StockStatus = "ok" | "low" | "out";
@@ -340,6 +350,11 @@ export type FoodItem = {
   /** Stamped by the server when the container is ticked returned. */
   container_returned_at: string | null;
   notes: string | null;
+  /**
+   * Optional portions left (Phase 170 PR A, D7; migrations/148): "Rendang ·
+   * 3 portions"; "Ate 1 portion" counts down. Null = not counted, as before.
+   */
+  portions?: number | null;
   /** Who added it, as selected on their phone (self-declared, cf. 071). */
   added_by: string | null;
   created_by: string | null;
@@ -380,6 +395,19 @@ export type InventoryItem = {
   stock_status_at?: string | null;
   /** Who changed it, as selected on their phone (self-declared, cf. 071). */
   stock_status_by?: string | null;
+  /**
+   * Kitchen amounts (Phase 170 PR A, migrations/148). An owner opts an item
+   * in; `quantity` is then the amount left, in `unit`, and `min_threshold`
+   * its "Running low at" (0 = none). The database derives the status from
+   * them. Owner-only, like the unit and the low level.
+   */
+  track_amount?: boolean;
+  /** When the tracked amount last changed, by the server's clock. Drives "about … · 3 weeks ago". */
+  amount_set_at?: string | null;
+  /** Who changed it, as selected on their phone (self-declared, cf. 071). */
+  amount_set_by?: string | null;
+  /** The last purchase's amount, in `unit`: the "How much did you buy?" pre-fill. */
+  last_bought_amount?: number | null;
   // The Phase 83 box/loose ledger. Still in the table so a phone on the
   // previous build keeps working through the deploy; nothing reads them now.
   unit_type?: string;
@@ -512,6 +540,57 @@ export type Repair = {
   warranty_until?: string | null;
 };
 
+/** How a walk-in ended, from the staff's optional chip (Phase 174). */
+export type WalkInOutcome = "fixed" | "come_back" | "check";
+
+/**
+ * A repair person who turned up (Phase 174, migrations/149, table
+ * repair_visits): logged by staff at the gate with a before photo, closed
+ * with Selesai and an after photo. Scheduled visits stay chores
+ * (HouseholdTask.repair_id); a walk-in always belongs to a repair. The
+ * times are the server's; the *_phone_at ones are the phone's, kept for a
+ * save sent later. Kept with its repair (while open, 2 years after closing).
+ */
+export type RepairWalkIn = {
+  id: string;
+  household_id: string;
+  repair_id: string;
+  /** A name or company, as staff typed it; never a phone number (D3). */
+  worker_name: string | null;
+  logged_by_staff: string | null;
+  created_by: string | null;
+  /** When the save reached the server. */
+  arrived_at: string;
+  arrived_phone_at: string | null;
+  before_photo_url: string;
+  /** Null until Selesai reached the server. */
+  left_at: string | null;
+  left_phone_at: string | null;
+  after_photo_url: string | null;
+  /** The session whose Selesai reached the server (only it may take it back). Absent on pending saves. */
+  finished_by?: string | null;
+  outcome: WalkInOutcome | null;
+  note: string | null;
+};
+
+/**
+ * Who supervised a walk-in, from when to when (Phase 174, migrations/149).
+ * Opened and closed by the database's triggers, never edited by a phone:
+ * a walk-in opens its logger's stretch, Selesai closes it, a hand-over
+ * closes one and opens the next. Kept 90 days.
+ */
+export type RepairSupervision = {
+  id: string;
+  household_id: string;
+  visit_id: string;
+  /** A roster row (admins have one too, migrations/106). */
+  staff_id: string | null;
+  /** An owner with no roster row. */
+  user_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+};
+
 /** Optional kind of feedback (migrations/135). */
 export type FeedbackCategory = "idea" | "problem" | "other";
 
@@ -566,7 +645,13 @@ export type BillPayment = {
 };
 
 /** Why a task couldn't be done (Phase 165, migrations/139). */
-export type TaskExceptionReason = "out_of_stock" | "pet_refused" | "done_by_other" | "other";
+export type TaskExceptionReason =
+  | "out_of_stock"
+  | "pet_refused"
+  | "done_by_other"
+  | "other"
+  /** Phase 174 (migrations/149): watching a repair person; links the visit, needs no note. */
+  | "supervising_repair";
 
 /**
  * Someone said a task couldn't be done (Phase 165, migrations/139): one per
@@ -592,6 +677,8 @@ export type TaskException = {
   /** The shopping-list item that ran out, if one was picked. */
   inventory_item_id: string | null;
   staff_id: string | null;
+  /** The walk-in visit being supervised, for "supervising_repair" (migrations/149). Absent before it. */
+  repair_visit_id?: string | null;
   /** When it was said, by the server's clock. */
   created_at: string;
 };
@@ -809,6 +896,19 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      repair_visits: {
+        Row: RepairWalkIn;
+        Insert: Partial<RepairWalkIn> &
+          Pick<RepairWalkIn, "household_id" | "repair_id" | "before_photo_url">;
+        Update: Partial<RepairWalkIn>;
+        Relationships: [];
+      };
+      repair_supervision: {
+        Row: RepairSupervision;
+        Insert: Partial<RepairSupervision> & Pick<RepairSupervision, "household_id" | "visit_id">;
+        Update: never;
+        Relationships: [];
+      };
       repairs: {
         Row: Repair;
         Insert: Partial<Repair> & Pick<Repair, "household_id" | "title">;
@@ -890,8 +990,26 @@ export interface Database {
         Returns: boolean;
       };
       // The +/- stepper (migrations/099): an atomic increment, floored at 0.
+      // Phase 170 PR A (migrations/148): the person on duty is recorded
+      // with the change; two-argument calls still work.
       adjust_inventory_quantity: {
-        Args: { p_item_id: string; p_delta: number };
+        Args: { p_item_id: string; p_delta: number; p_staff_id?: string | null };
+        Returns: InventoryItem[];
+      };
+      // Ate 1 portion and its Undo (migrations/148): decided on the server,
+      // keyed by an op id made on the phone, safe to resend.
+      eat_food_portion: {
+        Args: { p_food_id: string; p_op_id: string; p_staff_id?: string | null };
+        Returns: { food: FoodItem; consumed: number };
+      };
+      undo_food_portion: {
+        Args: { p_food_id: string; p_op_id: string };
+        Returns: { food: FoodItem; restored: number };
+      };
+      // Bought (migrations/148): adds the amount on a tracked item, keeps it
+      // as the next pre-fill, and puts the item back to enough.
+      record_purchase: {
+        Args: { p_item_id: string; p_amount?: number | null; p_staff_id?: string | null };
         Returns: InventoryItem[];
       };
       // Finished work per staff member over a span, by completer

@@ -25,6 +25,12 @@ const provider = {
   updateHouseholdTaskStatus: vi.fn(),
   updateHouseholdTask: vi.fn(),
   deletePhoto: vi.fn(async () => undefined),
+  eatFoodPortion: vi.fn(),
+  undoFoodPortion: vi.fn(),
+  createRepair: vi.fn(),
+  createRepairWalkIn: vi.fn(),
+  finishRepairWalkIn: vi.fn(),
+  handOverSupervision: vi.fn(),
 };
 vi.mock("@/lib/data", () => ({ dataProvider: provider }));
 
@@ -46,7 +52,7 @@ const photos = (await import("@/lib/photo-queue")) as unknown as {
   ensureUploaded: ReturnType<typeof vi.fn>;
   PhotoNotUploadedError: new (reason: "pending" | "failed") => Error;
 };
-const { outboxView, overlay, pendingChoreRowId } = await import("@/lib/outbox-view");
+const { applyPortions, outboxView, overlay, pendingChoreRowId } = await import("@/lib/outbox-view");
 const { isTableWrite } = await import("@/lib/supabase/write-timeout");
 
 const NO_ANSWER = { message: "TypeError: Failed to fetch", details: "", hint: "", code: "" };
@@ -255,6 +261,43 @@ describe("drainOutbox", () => {
     for (const fn of Object.values(provider)) fn.mockReset();
   }
 
+  it("resends a portion tap and its undo with their op id, so the server counts each once (Phase 170 PR A, Codex #93)", async () => {
+    provider.eatFoodPortion.mockRejectedValue(NO_ANSWER);
+    provider.undoFoodPortion.mockRejectedValue(NO_ANSWER);
+    const tap = { kind: "portion" as const, opId: "op-1", foodId: "food-1", staffId: "staff-1" };
+    const undo = { kind: "portion-undo" as const, opId: "op-1", foodId: "food-1" };
+    expect((await queue.submitJob(tap)).status).toBe("waiting");
+    expect((await queue.submitJob(undo)).status).toBe("waiting");
+    provider.eatFoodPortion.mockReset();
+    provider.undoFoodPortion.mockReset();
+    provider.eatFoodPortion.mockResolvedValue({ food: { id: "food-1", portions: 2 }, consumed: 1 });
+    provider.undoFoodPortion.mockResolvedValue({ food: { id: "food-1", portions: 3 }, restored: 1 });
+    const report = await queue.drainOutbox();
+    expect(report.sent).toHaveLength(2);
+    expect(provider.eatFoodPortion).toHaveBeenCalledWith("food-1", "op-1", "staff-1");
+    expect(provider.undoFoodPortion).toHaveBeenCalledWith("food-1", "op-1");
+    expect(await stored()).toEqual([]);
+  });
+
+  it("hands a drained portion's answer to the screen before it counts as answered (Codex, PR #93)", async () => {
+    provider.eatFoodPortion.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob({ kind: "portion", opId: "op-9", foodId: "food-1", staffId: null });
+    provider.eatFoodPortion.mockReset();
+    provider.eatFoodPortion.mockResolvedValue({ food: { id: "food-1", portions: 2 }, consumed: 1 });
+    const seen: { kind: string; answeredYet: boolean }[] = [];
+    const stop = queue.onQueuedSaveSent((item, result) => {
+      seen.push({ kind: result.kind, answeredYet: queue.isAnswered(item.id) });
+    });
+    // The reload after the drain fails: the screen still has the server's row.
+    const report = await queue.drainOutbox(async () => {
+      throw new Error("reload failed");
+    });
+    stop();
+    expect(seen).toEqual([{ kind: "portion", answeredYet: false }]);
+    expect(report.confirmed).toBe(false);
+    expect(queue.isAnswered(report.sent[0].id)).toBe(true);
+  });
+
   it("treats a lost reply as saved: the retry is refused by the primary key, and nothing is saved twice", async () => {
     await queueUp(logJob());
     provider.createLogsBatch.mockRejectedValue(LOST_REPLY);
@@ -398,6 +441,53 @@ describe("drainOutbox", () => {
     const report = await queue.drainOutbox();
     expect(provider.createFoodItem).toHaveBeenCalledWith({ ...input, id: "food-1" }, "staff-1");
     expect(report.sent).toHaveLength(1);
+  });
+});
+
+describe("portion taps waiting on the phone (Phase 170 PR A, Codex #93)", () => {
+  const rendang = { id: "food-1", portions: 3, outcome: null, finished_at: null, finished_by: null } as unknown as import("@/types/database").FoodItem;
+  const item = (id: string, job: import("@/lib/offline-queue").OutboxJob) => ({ id, job, householdId: "house-a", timestamp: 0 });
+
+  it("are laid over the server's count, so a reload still shows them", () => {
+    const view = outboxView(
+      [
+        item("q1", { kind: "portion", opId: "op-1", foodId: "food-1", staffId: null }),
+        item("q2", { kind: "portion", opId: "op-2", foodId: "food-1", staffId: null }),
+      ],
+      "house-a",
+      []
+    );
+    expect(applyPortions([rendang], view.portions, () => false)[0].portions).toBe(1);
+  });
+
+  it("stop counting once the server has answered them (its copy already has them)", () => {
+    const view = outboxView([item("q1", { kind: "portion", opId: "op-1", foodId: "food-1", staffId: null })], "house-a", []);
+    expect(applyPortions([{ ...rendang, portions: 2 }], view.portions, (id) => id === "q1")[0].portions).toBe(2);
+  });
+
+  it("show an undo of the finishing tap back on the list, and a tap with its undo as no change", () => {
+    const finished = { ...rendang, portions: 0, outcome: "eaten" } as typeof rendang;
+    const undo = outboxView(
+      [item("q1", { kind: "portion-undo", opId: "op-1", foodId: "food-1", reopens: true })],
+      "house-a",
+      []
+    );
+    expect(applyPortions([finished], undo.portions, () => false)[0]).toMatchObject({ portions: 1, outcome: null });
+    const both = outboxView(
+      [
+        item("q1", { kind: "portion", opId: "op-2", foodId: "food-1", staffId: null }),
+        item("q2", { kind: "portion-undo", opId: "op-2", foodId: "food-1" }),
+      ],
+      "house-a",
+      []
+    );
+    expect(applyPortions([rendang], both.portions, () => false)[0].portions).toBe(3);
+  });
+
+  it("never take a count below 0 or touch food that isn't counted", () => {
+    const view = outboxView([item("q1", { kind: "portion", opId: "op-1", foodId: "food-1", staffId: null })], "house-a", []);
+    expect(applyPortions([{ ...rendang, portions: 0 }], view.portions, () => false)[0].portions).toBe(0);
+    expect(applyPortions([{ ...rendang, portions: null }], view.portions, () => false)[0].portions).toBeNull();
   });
 });
 
@@ -575,5 +665,218 @@ describe("a phone that is no longer linked", () => {
     const report = await queue.drainOutbox();
     expect(report.sent).toHaveLength(1);
     expect(queue.outboxUnlinked()).toBe(false);
+  });
+});
+
+describe("a walk-in's saves go in order (Phase 174; Codex, PR #94)", () => {
+  const start = (): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "walkin_start",
+    repair: null,
+    visit: {
+      id: "visit-1",
+      repair_id: "repair-1",
+      worker_name: "Pak Budi",
+      logged_by_staff: "staff-1",
+      arrived_phone_at: "2026-11-11T02:00:00.000Z",
+      before_photo_url: "https://x/house-a/repairs/repair-1/b.jpg",
+    },
+  });
+  const finish = (visit = "visit-1", releases: string | null | undefined = "staff-1"): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "walkin_finish",
+    visitId: visit,
+    finish: { after_photo_url: "https://x/a.jpg", left_phone_at: "2026-11-11T04:00:00.000Z", outcome: "fixed", note: null },
+    releases,
+  });
+  const handOver = (): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "supervision_handover",
+    input: { id: "stretch-2", visit_id: "visit-1", staff_id: "staff-2" },
+    releases: "staff-1",
+  });
+  const startOf = (visit: string, staff: string, repair = "repair-1"): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "walkin_start",
+    repair: null,
+    visit: {
+      id: visit,
+      repair_id: repair,
+      worker_name: null,
+      logged_by_staff: staff,
+      arrived_phone_at: "2026-11-11T05:00:00.000Z",
+      before_photo_url: `https://x/house-a/repairs/${repair}/b2.jpg`,
+    },
+  });
+  const couldnt = (visit: string | null): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "couldnt",
+    input: {
+      id: "x-1",
+      chore_id: "chore-1",
+      occurs_on: "2026-11-11",
+      reason: visit ? "supervising_repair" : "out_of_stock",
+      staff_id: "staff-1",
+      ...(visit ? { repair_visit_id: visit } : {}),
+    },
+  });
+
+  it("one rule: a save waits for an earlier one whose effects touch what it references", () => {
+    expect(queue.dependsOn(finish(), start())).toBe(true);
+    expect(queue.dependsOn(handOver(), start())).toBe(true);
+    expect(queue.dependsOn(finish(), handOver())).toBe(true);
+    expect(queue.dependsOn(start(), finish())).toBe(true); // the finish frees staff-1, who logs the start
+    expect(queue.dependsOn(logJob(), start())).toBe(false);
+    expect(queue.dependsOn(start(), logJob())).toBe(false);
+    expect(queue.dependsOn(choreJob(), finish())).toBe(false);
+  });
+
+  it("Selesai saved while the start still waits is kept, not sent ahead of it", async () => {
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    expect((await queue.submitJob(start())).status).toBe("waiting");
+    const outcome = await queue.submitJob(finish());
+    expect(outcome.status).toBe("waiting");
+    expect(provider.finishRepairWalkIn).not.toHaveBeenCalled();
+    expect((await stored()).map((i) => i.job.kind)).toEqual(["walkin_start", "walkin_finish"]);
+  });
+
+  it("a start still being sent (past the spinner) holds its Selesai, in submitJob and in the drain", async () => {
+    vi.useFakeTimers();
+    let land!: (row: unknown) => void;
+    provider.createRepairWalkIn.mockReturnValue(new Promise((resolve) => (land = resolve)));
+    const first = queue.submitJob(start());
+    await vi.advanceTimersByTimeAsync(queue.UI_WAIT_MS + 1);
+    await expect(first).resolves.toEqual({ status: "waiting" });
+    await expect(queue.submitJob(finish())).resolves.toEqual({ status: "waiting" });
+    const report = await queue.drainOutbox();
+    expect(report.waiting).toBe(2);
+    expect(provider.finishRepairWalkIn).not.toHaveBeenCalled();
+    land({ id: "visit-1" });
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  it("a start that gets no answer in the drain holds the walk-in's later saves; other saves still go", async () => {
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    provider.createLogsBatch.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(start());
+    await queue.submitJob(handOver());
+    await queue.submitJob(finish());
+    for (const fn of Object.values(provider)) fn.mockReset();
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    const report = await queue.drainOutbox();
+    expect(report.waiting).toBe(3);
+    expect(provider.handOverSupervision).not.toHaveBeenCalled();
+    expect(provider.finishRepairWalkIn).not.toHaveBeenCalled();
+  });
+
+  it("once the start lands, the hand-over and Selesai follow in order in the same pass", async () => {
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(start());
+    await queue.submitJob(handOver());
+    await queue.submitJob(finish());
+    for (const fn of Object.values(provider)) fn.mockReset();
+    const order: string[] = [];
+    provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-1" }));
+    provider.handOverSupervision.mockImplementation(async () => (order.push("handover"), { id: "stretch-2" }));
+    provider.finishRepairWalkIn.mockImplementation(async () => (order.push("finish"), { id: "visit-1" }));
+    const report = await queue.drainOutbox();
+    expect(order).toEqual(["start", "handover", "finish"]);
+    expect(report.sent).toHaveLength(3);
+    expect(await stored()).toEqual([]);
+  });
+
+  it("a new walk-in waits for a queued Selesai that frees its person, not for someone else's (Codex, PR #94 round 2)", async () => {
+    // Visit 1 is on the server; its Selesai (freeing staff-1) gets no answer.
+    provider.finishRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    expect((await queue.submitJob(finish("visit-1", "staff-1"))).status).toBe("waiting");
+    provider.createRepairWalkIn.mockResolvedValue({ id: "x" });
+    // staff-1's next walk-in waits behind it...
+    expect((await queue.submitJob(startOf("visit-2", "staff-1"))).status).toBe("waiting");
+    expect(provider.createRepairWalkIn).not.toHaveBeenCalled();
+    // ...staff-2's goes at once.
+    expect((await queue.submitJob(startOf("visit-3", "staff-2"))).status).toBe("sent");
+    expect(provider.createRepairWalkIn).toHaveBeenCalledTimes(1);
+    // The drain keeps the order: still no answer for the Selesai, so the start waits.
+    provider.createRepairWalkIn.mockClear();
+    const held = await queue.drainOutbox();
+    expect(held.waiting).toBe(2);
+    expect(provider.createRepairWalkIn).not.toHaveBeenCalled();
+    // Once it lands, the start follows in the same pass.
+    const order: string[] = [];
+    provider.finishRepairWalkIn.mockImplementation(async () => (order.push("finish"), { id: "visit-1" }));
+    provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-2" }));
+    await queue.drainOutbox();
+    expect(order).toEqual(["finish", "start"]);
+  });
+
+  it("a hand-over frees the person handing over, for their next walk-in", () => {
+    expect(queue.dependsOn(startOf("visit-2", "staff-1"), handOver())).toBe(true);
+    // ...and the person taking over can't start one ahead of the hand-over either.
+    expect(queue.dependsOn(startOf("visit-2", "staff-2"), handOver())).toBe(true);
+    expect(queue.dependsOn(startOf("visit-2", "staff-3"), handOver())).toBe(false);
+  });
+
+  it("a release saved without its person (an older app) holds every person's next walk-in", () => {
+    const { releases: _drop, ...older } = finish("visit-1") as Extract<
+      import("@/lib/offline-queue").OutboxJob,
+      { kind: "walkin_finish" }
+    >;
+    void _drop;
+    expect(queue.dependsOn(startOf("visit-2", "staff-9"), older)).toBe(true);
+    expect(queue.dependsOn(startOf("visit-2", "staff-9"), finish("visit-1", null))).toBe(true);
+  });
+
+  it("a walk-in on a repair made by a queued 'Baru' waits for it", () => {
+    const baru: import("@/lib/offline-queue").OutboxJob = {
+      kind: "walkin_start",
+      repair: { id: "repair-new", title: "Stopkontak", status: "reported", reported_by_staff: "staff-1" },
+      visit: { ...(startOf("visit-1", "staff-1", "repair-new") as { visit: import("@/lib/data").WalkInStartInput }).visit },
+    };
+    expect(queue.dependsOn(startOf("visit-2", "staff-2", "repair-new"), baru)).toBe(true);
+    expect(queue.dependsOn(startOf("visit-2", "staff-2", "repair-other"), baru)).toBe(false);
+  });
+
+  it("a couldn't-do record naming a walk-in waits for that walk-in's start (Codex, PR #94 round 2)", async () => {
+    const created = { createTaskException: vi.fn(async () => ({ id: "x-1" })) };
+    Object.assign(provider, created);
+    try {
+      provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+      await queue.submitJob(start());
+      expect((await queue.submitJob(couldnt("visit-1"))).status).toBe("waiting");
+      expect(created.createTaskException).not.toHaveBeenCalled();
+      // One that names no walk-in, or another walk-in, goes at once.
+      expect(queue.dependsOn(couldnt(null), start())).toBe(false);
+      expect(queue.dependsOn(couldnt("visit-9"), start())).toBe(false);
+      // The drain sends it right after its start.
+      const order: string[] = [];
+      provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-1" }));
+      created.createTaskException.mockImplementation(async () => (order.push("couldnt"), { id: "x-1" }));
+      await queue.drainOutbox();
+      expect(order).toEqual(["start", "couldnt"]);
+    } finally {
+      delete (provider as Record<string, unknown>).createTaskException;
+    }
+  });
+
+  it("a couldn't-do naming a walk-in that never landed keeps its reason, without the link", async () => {
+    const calls: unknown[] = [];
+    const created = {
+      createTaskException: vi.fn(async (input: { repair_visit_id?: string }) => {
+        calls.push(input);
+        if (input.repair_visit_id) {
+          throw {
+            code: "23503",
+            message: 'insert or update on table "task_exceptions" violates foreign key constraint "task_exceptions_repair_visit_fkey"',
+          };
+        }
+        return { id: "x-1" };
+      }),
+    };
+    Object.assign(provider, created);
+    try {
+      const outcome = await queue.submitJob(couldnt("visit-gone"));
+      expect(outcome.status).toBe("sent");
+      expect(calls).toHaveLength(2);
+      expect(calls[1]).not.toHaveProperty("repair_visit_id");
+      expect(calls[1]).toMatchObject({ reason: "supervising_repair", chore_id: "chore-1" });
+      expect(await stored()).toEqual([]);
+    } finally {
+      delete (provider as Record<string, unknown>).createTaskException;
+    }
   });
 });

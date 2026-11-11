@@ -1,3 +1,4 @@
+import { WRITE_TIMEOUT_MS } from "@/lib/supabase/write-timeout";
 import { ChoreAlreadySettledError } from "@/lib/chore-settled";
 import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
@@ -7,6 +8,7 @@ import type { OrganiseRoomsMoved,
   NotificationPrefs,
   InventoryAuditLog,
   InventoryAuditWithStaff,
+  FoodItem,
   InventoryItem,
   StaffProfile,
 } from "@/types/database";
@@ -96,6 +98,28 @@ type AuditRow = InventoryAuditLog & { staff_profiles: { name: string } | null };
 
 function flattenAudit({ staff_profiles, ...audit }: AuditRow): InventoryAuditWithStaff {
   return { ...audit, staff_name: staff_profiles?.name ?? null };
+}
+
+/**
+ * The stock and portion RPCs give up like table writes do (Phase 170 PR A,
+ * code review on #93). Table writes already have lib/supabase/write-timeout;
+ * RPCs are left out of it (some are slow by design), so these few set their
+ * own. One phone's writes to an item go to the server one after another
+ * (lib/in-order), and a request stuck on a dead signal would otherwise hold
+ * Out or Set amount behind it for minutes. The reason is a TimeoutError, as
+ * write-timeout's, so it reads as "no answer" (retryable), not a cancel.
+ */
+async function withRpcDeadline<T>(run: (signal: AbortSignal) => PromiseLike<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new DOMException("The save timed out", "TimeoutError")),
+    WRITE_TIMEOUT_MS
+  );
+  try {
+    return await run(controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export const supabaseProvider: DataProvider = {
@@ -378,13 +402,29 @@ export const supabaseProvider: DataProvider = {
     if (!data || data.length === 0) throw new Error("Item was not updated");
     return data[0];
   },
-  async adjustInventoryQuantity(id, delta) {
-    // migrations/099. Returns the updated row; none at all means RLS hid it
-    // (another household's id, or a row deleted under us).
-    const { data, error } = await client()
-      .rpc("adjust_inventory_quantity", { p_item_id: id, p_delta: delta })
-      .select()
-      .single();
+  async adjustInventoryQuantity(id, delta, staffId = null) {
+    // migrations/099, with who changed it since 148. Returns the updated
+    // row; none at all means RLS hid it (another household's id, or a row
+    // deleted under us).
+    const { data, error } = await withRpcDeadline((signal) =>
+      client()
+        .rpc("adjust_inventory_quantity", { p_item_id: id, p_delta: delta, p_staff_id: staffId })
+        .abortSignal(signal)
+        .select()
+        .single()
+    );
+    if (error) throw error;
+    return data as InventoryItem;
+  },
+  async recordPurchase(id, amount, staffId) {
+    // migrations/148: security invoker, so RLS and the owner guard apply.
+    const { data, error } = await withRpcDeadline((signal) =>
+      client()
+        .rpc("record_purchase", { p_item_id: id, p_amount: amount, p_staff_id: staffId })
+        .abortSignal(signal)
+        .select()
+        .single()
+    );
     if (error) throw error;
     return data as InventoryItem;
   },
@@ -473,6 +513,20 @@ export const supabaseProvider: DataProvider = {
       .single();
     if (error) throw withStatus(error, status);
     return data;
+  },
+  async eatFoodPortion(id, opId, staffId) {
+    const { data, error, status } = await withRpcDeadline((signal) =>
+      client().rpc("eat_food_portion", { p_food_id: id, p_op_id: opId, p_staff_id: staffId }).abortSignal(signal)
+    );
+    if (error) throw withStatus(error, status);
+    return data as { food: FoodItem; consumed: number };
+  },
+  async undoFoodPortion(id, opId) {
+    const { data, error, status } = await withRpcDeadline((signal) =>
+      client().rpc("undo_food_portion", { p_food_id: id, p_op_id: opId }).abortSignal(signal)
+    );
+    if (error) throw withStatus(error, status);
+    return data as { food: FoodItem; restored: number };
   },
   async updateFoodItem(id, patch) {
     // .select() so an RLS-filtered update (200, no rows) is an error rather
@@ -855,6 +909,8 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client()
       .from("repairs")
       .insert({
+        // A walk-in's "Baru" names its repair on the phone (Phase 174).
+        ...(input.id ? { id: input.id } : {}),
         household_id: getActiveHouseholdId(),
         title: input.title,
         details: input.details ?? null,
@@ -942,6 +998,71 @@ export const supabaseProvider: DataProvider = {
       .storage.from(RECEIPTS_BUCKET)
       .remove([decodeURIComponent(url.slice(idx + marker.length))]);
     if (error) throw error;
+  },
+  async listRepairWalkIns() {
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("repair_visits")
+        .select("*")
+        .eq("household_id", household)
+        .order("arrived_at", { ascending: true })
+        .order("id")
+        .range(from, to)
+    );
+  },
+  async listRepairSupervision(since) {
+    const household = getActiveHouseholdId();
+    return allRows((from, to) =>
+      client()
+        .from("repair_supervision")
+        .select("*")
+        .eq("household_id", household)
+        .or(`ended_at.is.null,ended_at.gte.${since}`)
+        .order("started_at", { ascending: true })
+        .order("id")
+        .range(from, to)
+    );
+  },
+  async createRepairWalkIn(input) {
+    const { data, error } = await client()
+      .from("repair_visits")
+      .insert({ ...input, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async finishRepairWalkIn(id, finish) {
+    const { data, error } = await client().from("repair_visits").update(finish).eq("id", id).select();
+    if (error) throw error;
+    // An RLS-filtered update is a 200 with no rows (the visit is gone).
+    if (!data || data.length === 0) throw new Error("Walk-in was not finished.");
+    return data[0];
+  },
+  async reopenRepairWalkIn(id) {
+    const { data, error } = await client()
+      .from("repair_visits")
+      .update({ after_photo_url: null, left_phone_at: null, outcome: null, note: null })
+      .eq("id", id)
+      .select();
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Walk-in was not reopened.");
+    return data[0];
+  },
+  async deleteRepairWalkIn(id) {
+    const { data, error } = await client().from("repair_visits").delete().eq("id", id).select("id");
+    if (error) throw error;
+    return !!data && data.length > 0;
+  },
+  async handOverSupervision(input) {
+    const { data, error } = await client()
+      .from("repair_supervision")
+      .insert({ ...input, household_id: getActiveHouseholdId() })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
   async listRepairNotes() {
     const household = getActiveHouseholdId();

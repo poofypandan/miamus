@@ -24,21 +24,21 @@ import { renderHouseholdBlock } from "@/lib/kakak/household";
 const migration = (name: string) => readFileSync(join(__dirname, "../../supabase/migrations", name), "utf8");
 
 describe("feature defaults", () => {
-  it("agree with household_feature_defaults() in migrations/145", () => {
-    const sql = migration("145_household_features.sql");
+  it("agree with household_feature_defaults(), newest in migrations/148", () => {
+    const sql = migration("148_kitchen_amounts.sql");
     const body = /household_feature_defaults\(\)[\s\S]*?select '(\{[^']*\})'::jsonb/.exec(sql);
     expect(body).not.toBeNull();
     expect(JSON.parse(body![1])).toEqual(FEATURE_DEFAULTS);
   });
 
-  it("list the same features as the table's check", () => {
-    const sql = migration("145_household_features.sql");
-    const check = /feature text not null check \(feature in \(([^)]*)\)\)/.exec(sql);
+  it("list the same features as the table's check (newest in migrations/148)", () => {
+    const sql = migration("148_kitchen_amounts.sql");
+    const check = /check \(feature in \(([^)]*)\)\)/.exec(sql);
     expect(check![1].split(",").map((s) => s.trim().replace(/'/g, ""))).toEqual([...FEATURES]);
   });
 
-  it("start everything in PR A on, so no household loses anything", () => {
-    expect(featureFlagsFrom([])).toEqual({ repairs: true, bills: true, food: true });
+  it("start everything in PR A on, so no household loses anything; later features join off", () => {
+    expect(featureFlagsFrom([])).toEqual({ repairs: true, bills: true, food: true, kitchen: false });
     expect(featureFlagsFrom(null)).toEqual(FEATURE_DEFAULTS);
   });
 
@@ -48,7 +48,7 @@ describe("feature defaults", () => {
         { feature: "repairs", enabled: false },
         { feature: "closet", enabled: true },
       ])
-    ).toEqual({ repairs: false, bills: true, food: true });
+    ).toEqual({ repairs: false, bills: true, food: true, kitchen: false });
   });
 });
 

@@ -1,4 +1,8 @@
 import { ChoreAlreadySettledError } from "@/lib/chore-settled";
+import { applyAmountRules } from "@/lib/kitchen-units";
+
+/** Portion taps in mock mode, by op id (migrations/148's food_portion_ops). */
+const mockPortionOps = new Map<string, { consumed: number; finished: boolean; undone: boolean }>();
 import type {
   TaskEntity,
   MasterSchedule,
@@ -19,6 +23,8 @@ import type {
   TaskException,
   NotificationPrefs,
   RepairNote,
+  RepairSupervision,
+  RepairWalkIn,
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
@@ -52,6 +58,9 @@ interface MockDB {
   repairs?: Repair[];
   repairCosts?: RepairCost[];
   repairNotes?: RepairNote[];
+  /** Phase 174. Optional, as above. */
+  repairWalkIns?: RepairWalkIn[];
+  repairSupervision?: RepairSupervision[];
   /** Phase 164 PR B. Optional, as above. */
   billPayments?: BillPayment[];
   /** Phase 165. Optional, as above. */
@@ -381,7 +390,8 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);
     if (index === -1) throw new Error("Item not found");
-    const item: InventoryItem = { ...db.inventoryItems[index], ...patch };
+    // The amount rules trigger (migrations/148), as the server would apply it.
+    const item: InventoryItem = applyAmountRules(db.inventoryItems[index], { ...db.inventoryItems[index], ...patch });
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);
@@ -390,23 +400,44 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);
     if (index === -1) throw new Error("Item not found");
-    const item: InventoryItem = {
+    const item: InventoryItem = applyAmountRules(db.inventoryItems[index], {
       ...db.inventoryItems[index],
       stock_status: status,
       stock_status_by: staffId,
-      stock_status_at: new Date().toISOString(),
-    };
+    });
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);
   },
-  async adjustInventoryQuantity(id, delta) {
+  async adjustInventoryQuantity(id, delta, staffId = null) {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);
     if (index === -1) throw new Error("Item not found");
-    // Floored at zero, like the RPC in migrations/099.
+    // Floored at zero, like the RPC in migrations/099 and 148.
     const current = db.inventoryItems[index];
-    const item: InventoryItem = { ...current, quantity: Math.max(0, current.quantity + delta) };
+    const item: InventoryItem = applyAmountRules(current, {
+      ...current,
+      quantity: Math.max(0, current.quantity + delta),
+      amount_set_by: staffId,
+    });
+    db.inventoryItems[index] = item;
+    saveDB(db);
+    return delay(item);
+  },
+  async recordPurchase(id, amount, staffId) {
+    const db = loadDB();
+    const index = db.inventoryItems.findIndex((i) => i.id === id);
+    if (index === -1) throw new Error("Item not found");
+    const current = db.inventoryItems[index];
+    const adds = current.track_amount === true && amount !== null;
+    const item: InventoryItem = applyAmountRules(current, {
+      ...current,
+      quantity: adds ? current.quantity + amount : current.quantity,
+      last_bought_amount: adds ? amount : (current.last_bought_amount ?? null),
+      amount_set_by: adds ? staffId : (current.amount_set_by ?? null),
+      stock_status: "ok",
+      stock_status_by: staffId,
+    });
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);
@@ -480,6 +511,47 @@ export const mockProvider: DataProvider = {
     db.foodItems.push(item);
     saveDB(db);
     return delay(item);
+  },
+  async eatFoodPortion(id, opId, staffId) {
+    // migrations/148's rules: one portion if there is one, finished at the
+    // last, once per op id (an undo that came first leaves a marker).
+    const db = loadDB();
+    const index = db.foodItems.findIndex((f) => f.id === id);
+    if (index === -1) throw new Error("Food not found");
+    const before = db.foodItems[index];
+    const known = mockPortionOps.get(opId);
+    if (known) return delay({ food: before, consumed: known.consumed });
+    const takes = typeof before.portions === "number" && before.portions > 0 && !before.outcome;
+    const ends = takes && before.portions === 1;
+    mockPortionOps.set(opId, { consumed: takes ? 1 : 0, finished: ends, undone: false });
+    if (!takes) return delay({ food: before, consumed: 0 });
+    const now = new Date().toISOString();
+    const item: FoodItem = { ...before, portions: (before.portions as number) - 1, updated_at: now };
+    if (ends) Object.assign(item, { outcome: "eaten", finished_at: now, finished_by: staffId });
+    db.foodItems[index] = item;
+    saveDB(db);
+    return delay({ food: item, consumed: 1 });
+  },
+  async undoFoodPortion(id, opId) {
+    const db = loadDB();
+    const index = db.foodItems.findIndex((f) => f.id === id);
+    if (index === -1) throw new Error("Food not found");
+    const before = db.foodItems[index];
+    const op = mockPortionOps.get(opId);
+    if (!op) {
+      mockPortionOps.set(opId, { consumed: 0, finished: false, undone: true });
+      return delay({ food: before, restored: 0 });
+    }
+    if (op.undone || op.consumed === 0) {
+      op.undone = true;
+      return delay({ food: before, restored: 0 });
+    }
+    op.undone = true;
+    const item: FoodItem = { ...before, portions: Math.min(99, (before.portions ?? 0) + 1), updated_at: new Date().toISOString() };
+    if (op.finished && before.outcome === "eaten") Object.assign(item, { outcome: null, finished_at: null, finished_by: null });
+    db.foodItems[index] = item;
+    saveDB(db);
+    return delay({ food: item, restored: 1 });
   },
   async updateFoodItem(id, patch) {
     const db = loadDB();
@@ -712,7 +784,7 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const now = new Date().toISOString();
     const repair: Repair = {
-      id: uid("repair"),
+      id: input.id ?? uid("repair"),
       household_id: getActiveHouseholdId(),
       location_id: input.location_id ?? null,
       spot: input.spot?.trim() || null,
@@ -760,6 +832,10 @@ export const mockProvider: DataProvider = {
     // As the cascade: its cost and notes go too.
     db.repairCosts = (db.repairCosts ?? []).filter((c) => c.repair_id !== id);
     db.repairNotes = (db.repairNotes ?? []).filter((n) => n.repair_id !== id);
+    // Walk-ins and their stretches cascade (migrations/149).
+    const gone = new Set((db.repairWalkIns ?? []).filter((v) => v.repair_id === id).map((v) => v.id));
+    db.repairWalkIns = (db.repairWalkIns ?? []).filter((v) => v.repair_id !== id);
+    db.repairSupervision = (db.repairSupervision ?? []).filter((s) => !gone.has(s.visit_id));
     // As the foreign key's "set null": visits stay, unlinked.
     db.householdTasks = db.householdTasks.map((t) => (t.repair_id === id ? { ...t, repair_id: null } : t));
     saveDB(db);
@@ -843,6 +919,132 @@ export const mockProvider: DataProvider = {
   },
   async deleteReceipt() {
     return delay(undefined);
+  },
+  async listRepairWalkIns() {
+    const household = getActiveHouseholdId();
+    return delay(
+      (loadDB().repairWalkIns ?? [])
+        .filter((v) => v.household_id === household)
+        .sort((a, b) => a.arrived_at.localeCompare(b.arrived_at))
+    );
+  },
+  async listRepairSupervision(since) {
+    const household = getActiveHouseholdId();
+    return delay(
+      (loadDB().repairSupervision ?? []).filter(
+        (s) => s.household_id === household && (!s.ended_at || s.ended_at >= since)
+      )
+    );
+  },
+  // The triggers of migrations/149, in miniature: a walk-in opens its
+  // logger's stretch, Selesai closes it, a hand-over closes one and opens
+  // the next at the same time.
+  async createRepairWalkIn(input) {
+    const db = loadDB();
+    const now = new Date().toISOString();
+    if ((db.repairWalkIns ?? []).some((v) => v.id === input.id)) {
+      throw Object.assign(new Error("duplicate key value violates unique constraint \"repair_visits_pkey\""), {
+        code: "23505",
+      });
+    }
+    const busy = (db.repairSupervision ?? []).some((s) => !s.ended_at && s.staff_id === input.logged_by_staff);
+    if (input.logged_by_staff && busy) throw Object.assign(new Error("supervision_busy"), { code: "23514" });
+    const row: RepairWalkIn = {
+      id: input.id,
+      household_id: getActiveHouseholdId(),
+      repair_id: input.repair_id,
+      worker_name: input.worker_name?.trim() || null,
+      logged_by_staff: input.logged_by_staff,
+      created_by: null,
+      arrived_at: now,
+      arrived_phone_at: input.arrived_phone_at,
+      before_photo_url: input.before_photo_url,
+      left_at: null,
+      left_phone_at: null,
+      after_photo_url: null,
+      outcome: null,
+      note: null,
+    };
+    db.repairWalkIns = [...(db.repairWalkIns ?? []), row];
+    if (input.logged_by_staff) {
+      db.repairSupervision = [
+        ...(db.repairSupervision ?? []),
+        {
+          id: uid("supervision"),
+          household_id: row.household_id,
+          visit_id: row.id,
+          staff_id: input.logged_by_staff,
+          user_id: null,
+          started_at: now,
+          ended_at: null,
+        },
+      ];
+    }
+    saveDB(db);
+    return delay(row);
+  },
+  async finishRepairWalkIn(id, finish) {
+    const db = loadDB();
+    const list = db.repairWalkIns ?? [];
+    const idx = list.findIndex((v) => v.id === id);
+    if (idx === -1) throw new Error("Walk-in was not finished.");
+    if (list[idx].left_at) return delay(list[idx]);
+    const now = new Date().toISOString();
+    const next: RepairWalkIn = { ...list[idx], ...finish, note: finish.note?.trim() || null, left_at: now };
+    list[idx] = next;
+    db.repairWalkIns = list;
+    db.repairSupervision = (db.repairSupervision ?? []).map((s) =>
+      s.visit_id === id && !s.ended_at ? { ...s, ended_at: now } : s
+    );
+    saveDB(db);
+    return delay(next);
+  },
+  async reopenRepairWalkIn(id) {
+    const db = loadDB();
+    const list = db.repairWalkIns ?? [];
+    const idx = list.findIndex((v) => v.id === id);
+    if (idx === -1 || !list[idx].left_at) throw new Error("Walk-in was not reopened.");
+    const leftAt = list[idx].left_at;
+    const next: RepairWalkIn = { ...list[idx], left_at: null, left_phone_at: null, after_photo_url: null, outcome: null, note: null };
+    list[idx] = next;
+    db.repairWalkIns = list;
+    const last = (db.repairSupervision ?? [])
+      .filter((s) => s.visit_id === id && s.ended_at === leftAt)
+      .sort((a, b) => b.started_at.localeCompare(a.started_at))[0];
+    if (last) db.repairSupervision = (db.repairSupervision ?? []).map((s) => (s.id === last.id ? { ...s, ended_at: null } : s));
+    saveDB(db);
+    return delay(next);
+  },
+  async deleteRepairWalkIn(id) {
+    const db = loadDB();
+    const before = (db.repairWalkIns ?? []).length;
+    db.repairWalkIns = (db.repairWalkIns ?? []).filter((v) => v.id !== id);
+    db.repairSupervision = (db.repairSupervision ?? []).filter((s) => s.visit_id !== id);
+    saveDB(db);
+    return delay(db.repairWalkIns.length < before);
+  },
+  async handOverSupervision(input) {
+    const db = loadDB();
+    const now = new Date().toISOString();
+    const busy = (db.repairSupervision ?? []).some(
+      (s) => !s.ended_at && s.staff_id === input.staff_id && s.visit_id !== input.visit_id
+    );
+    if (busy) throw Object.assign(new Error("supervision_busy"), { code: "23514" });
+    const row: RepairSupervision = {
+      id: input.id,
+      household_id: getActiveHouseholdId(),
+      visit_id: input.visit_id,
+      staff_id: input.staff_id,
+      user_id: null,
+      started_at: now,
+      ended_at: null,
+    };
+    db.repairSupervision = [
+      ...(db.repairSupervision ?? []).map((s) => (s.visit_id === input.visit_id && !s.ended_at ? { ...s, ended_at: now } : s)),
+      row,
+    ];
+    saveDB(db);
+    return delay(row);
   },
   async listRepairNotes() {
     const household = getActiveHouseholdId();

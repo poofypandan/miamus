@@ -127,13 +127,27 @@ export const LEGAL = {
   // can undo it, for minutes, or a walk until shortly after it ends); whose
   // PIN last opened a linked phone is kept while it is linked. No new
   // service.
-  // 2026-11-11.5: routine reminders and "not done" alerts (Phase 173 PR C,
+  // 2026-11-11.5: walk-in repairs and supervising (Phase 174 PR A,
+  // migrations/149) — a repair person's name or company (optional, typed by
+  // staff or an admin; no phone number), when they arrived and left, before
+  // and after photos of the work (not of people), an optional result and
+  // note: third-party data, kept with the repair (while open, 2 years after
+  // closing). Who supervised a walk-in and from when to when (staff data),
+  // kept 90 days; a couldn't-do reason "supervising a repair". No new
+  // service; no new notification yet (owner pushes come with PR B).
+  // 2026-11-11.6: kitchen amounts (Phase 170 PR A, migrations/148) — for
+  // items an admin chooses to track: how much is left, the last amount
+  // bought, and when and by whom (the staff name picked on the phone) the
+  // amount last changed; only the latest amount, no history; kept while the
+  // item exists. Portions left on listed food. No new service, region or
+  // change to Kakak.
+  // 2026-11-11.7: routine reminders and "not done" alerts (Phase 173 PR C,
   // migrations/150) — a staff reminder at a routine's time when an admin
   // turned it on and it isn't done, until 10 PM (other staff notifications
   // still stop at 9 PM); admins told when a chosen routine still isn't done
   // 30 minutes after its time, until 10:30 PM. No new service, no new kind
   // of personal data.
-  policyVersion: "2026-11-11.5",
+  policyVersion: "2026-11-11.7",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

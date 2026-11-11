@@ -38,9 +38,12 @@ import type {
   RepairCost,
   BillPayment,
   RepairNote,
+  RepairSupervision,
+  RepairWalkIn,
   TaskException,
   TaskExceptionReason,
   NotificationPrefs,
+  WalkInOutcome,
 } from "@/types/database";
 
 export interface CreateEntityInput {
@@ -195,6 +198,8 @@ export interface CreateHouseholdTaskInput {
 
 /** A new repair (Phase 159). Status: owners 'open', staff phones 'reported'. */
 export interface RepairInput {
+  /** Made on the phone for a walk-in's "Baru" (Phase 174), so a resend is "already saved". */
+  id?: string;
   title: string;
   details?: string | null;
   location_id?: string | null;
@@ -203,6 +208,29 @@ export interface RepairInput {
   urgent?: boolean;
   status: "open" | "reported";
   reported_by_staff?: string | null;
+}
+
+/**
+ * "Ada tukang datang" (Phase 174, migrations/149): a walk-in on a repair.
+ * The id is made on the phone (the save queue). The server stamps the
+ * arrival time; arrived_phone_at is the phone's, for a save sent later.
+ */
+export interface WalkInStartInput {
+  id: string;
+  repair_id: string;
+  worker_name: string | null;
+  /** Who is holding the phone; null for an owner with no roster row. */
+  logged_by_staff: string | null;
+  arrived_phone_at: string;
+  before_photo_url: string;
+}
+
+/** Selesai: the after photo (required), the optional chip and note. */
+export interface WalkInFinishInput {
+  after_photo_url: string;
+  left_phone_at: string;
+  outcome: WalkInOutcome | null;
+  note: string | null;
 }
 
 /** What owners change on a repair. */
@@ -287,6 +315,16 @@ export interface InventoryItemInput {
   audit_frequency_days: number;
 }
 
+/**
+ * A change to an item. Owners may change anything; a staff phone only the
+ * amount, the status and the purchase columns (inventory_items_owner_guard,
+ * migrations/099 and 148).
+ */
+export type InventoryItemPatch = Partial<InventoryItemInput> &
+  Partial<
+    Pick<InventoryItem, "track_amount" | "amount_set_by" | "stock_status" | "stock_status_by" | "last_bought_amount">
+  >;
+
 /** One stock check as the staff member recorded it (migrations/083, 099). */
 /** What a person fills in when adding or editing food (Phase 156). */
 export interface FoodItemInput {
@@ -300,6 +338,8 @@ export interface FoodItemInput {
   from_whom: string | null;
   return_container: boolean;
   notes: string | null;
+  /** Optional portions (migrations/148); left out = unchanged. */
+  portions?: number | null;
 }
 
 /**
@@ -343,6 +383,8 @@ export interface CreateTaskExceptionInput {
   photo_url?: string | null;
   inventory_item_id?: string | null;
   staff_id?: string | null;
+  /** "Mengawasi perbaikan" (migrations/149): the walk-in being supervised. Sent only with that reason. */
+  repair_visit_id?: string | null;
 }
 
 export interface StaffWorkload {
@@ -395,7 +437,7 @@ export interface DataProvider {
   deleteInventoryAlert(id: string): Promise<void>;
   listInventoryItems(): Promise<InventoryItem[]>;
   createInventoryItem(input: InventoryItemInput): Promise<InventoryItem>;
-  updateInventoryItem(id: string, patch: Partial<InventoryItemInput>): Promise<InventoryItem>;
+  updateInventoryItem(id: string, patch: InventoryItemPatch): Promise<InventoryItem>;
   /**
    * Any household session: marks an item enough, running low or out
    * (migrations/122). `staffId` is who is on duty on this phone, or null.
@@ -407,7 +449,13 @@ export interface DataProvider {
    * at zero, and returns the item as it now stands. An increment rather than a
    * write of the total, so two phones tapping at once both count.
    */
-  adjustInventoryQuantity(id: string, delta: number): Promise<InventoryItem>;
+  adjustInventoryQuantity(id: string, delta: number, staffId?: string | null): Promise<InventoryItem>;
+  /**
+   * Bought (Phase 170 PR A, migrations/148): back to enough; on a tracked
+   * item, `amount` (in its unit) is added and kept as the next pre-fill.
+   * Null amount = ticked without a number.
+   */
+  recordPurchase(id: string, amount: number | null, staffId: string | null): Promise<InventoryItem>;
   /** The most recent stock check per item, keyed by item id. */
   listLatestInventoryAudits(): Promise<Record<string, InventoryAuditWithStaff>>;
   /** Stock photos go to their own bucket, not household-logs. */
@@ -430,6 +478,14 @@ export interface DataProvider {
    */
   createFoodItem(input: FoodItemInput & { id?: string }, addedBy: string | null): Promise<FoodItem>;
   updateFoodItem(id: string, patch: FoodItemPatch): Promise<FoodItem>;
+  /**
+   * Ate 1 portion (migrations/148): the server takes one if there is one and
+   * finishes the food at the last; `consumed` says what this tap took (0 or
+   * 1). `opId` is made on the phone per tap; sending it again changes nothing.
+   */
+  eatFoodPortion(id: string, opId: string, staffId: string | null): Promise<{ food: FoodItem; consumed: number }>;
+  /** Undo that tap: puts back exactly what it took (and the finish it made), once. */
+  undoFoodPortion(id: string, opId: string): Promise<{ food: FoodItem; restored: number }>;
   /** Admins only (the delete policy); for food added by mistake. */
   deleteFoodItem(id: string): Promise<void>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
@@ -505,6 +561,20 @@ export interface DataProvider {
    */
   reopenBillDay(taskId: string): Promise<{ task: HouseholdTask; payment: BillPayment | null }>;
   deleteReceipt(url: string): Promise<void>;
+  /** Every walk-in of the household, oldest first (Phase 174, migrations/149). */
+  listRepairWalkIns(): Promise<RepairWalkIn[]>;
+  /** Supervising stretches that ended on or after `since` (ISO), or are still open. */
+  listRepairSupervision(since: string): Promise<RepairSupervision[]>;
+  /** "Ada tukang datang": the walk-in, which opens its logger's supervising stretch. */
+  createRepairWalkIn(input: WalkInStartInput): Promise<RepairWalkIn>;
+  /** Selesai, once; it closes the open stretch. */
+  finishRepairWalkIn(id: string, finish: WalkInFinishInput): Promise<RepairWalkIn>;
+  /** Takes back a Selesai within 5 minutes (staff), or any time (owners). */
+  reopenRepairWalkIn(id: string): Promise<RepairWalkIn>;
+  /** Owners, or the phone that logged it within 5 minutes. False when nothing went. */
+  deleteRepairWalkIn(id: string): Promise<boolean>;
+  /** "Ganti yang mengawasi": a new stretch for the visit; the database closes the previous one. */
+  handOverSupervision(input: { id: string; visit_id: string; staff_id: string }): Promise<RepairSupervision>;
   /** Every note on the household's repairs, oldest first. */
   listRepairNotes(): Promise<RepairNote[]>;
   addRepairNote(note: { repair_id: string; body: string; photo_url?: string | null; staff_id?: string | null }): Promise<RepairNote>;

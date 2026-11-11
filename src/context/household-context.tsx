@@ -16,6 +16,7 @@ import type {
   CreateMedicalRecordInput,
   CreateInventoryAlertInput,
   InventoryItemInput,
+  InventoryItemPatch,
   FoodItemInput,
   CreateRoutineProposalInput,
   CreateHouseholdTaskInput,
@@ -24,6 +25,8 @@ import type {
 } from "@/lib/data";
 import { LEAVE_LOOKBACK_DAYS } from "@/lib/leave";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
+import { createInOrder } from "@/lib/in-order";
+import { applyAmountRules, lastBoughtInUnit, undoPurchasePatch } from "@/lib/kitchen-units";
 import {
   readCachedMemberProfile,
   setActiveMemberProfile,
@@ -36,12 +39,14 @@ import {
   hydrateOutbox,
   outboxItems,
   submitJob,
+  isAnswered,
+  onQueuedSaveSent,
   subscribeOutbox,
   SaveStillWaitingError,
   type OfflineQueueItem,
   type SendResult,
 } from "@/lib/offline-queue";
-import { outboxView, overlay, pendingFood } from "@/lib/outbox-view";
+import { applyPortions, outboxView, overlay, pendingFood } from "@/lib/outbox-view";
 import { discardPhoto, enqueuePhoto } from "@/lib/photo-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { AGENDA_WEEK_DAYS, weekStartOf } from "@/lib/unified-agenda";
@@ -67,6 +72,7 @@ import type {
   InventoryAlert,
   RoutineProposal,
   InventoryItem,
+  InventoryUnit,
   FoodItem,
   FoodOutcome,
   StockStatus,
@@ -100,6 +106,20 @@ export type UserRole = "staff" | "owner";
 // Where the retired owner PIN used to leave its mark (Phase 108). Read only to
 // be deleted: see the role effect below.
 const LEGACY_OWNER_FLAG_KEY = "banyuwangi11:isOwner";
+
+/** One "Ate 1 portion" tap (Phase 170 PR A): its op id and what the server said. */
+export interface PortionTap {
+  foodId: string;
+  opId: string;
+  status: "sent" | "waiting";
+  food: FoodItem | null;
+  consumed: number | null;
+}
+
+/** Track amount as an owner sets it (Phase 170 PR A). Off keeps the numbers, unshown. */
+export type TrackAmountSettings =
+  | { track: false }
+  | { track: true; unit: InventoryUnit; quantity: number; lowAt: number };
 
 interface HouseholdContextValue {
   /**
@@ -297,6 +317,16 @@ interface HouseholdContextValue {
   /** Undo is gone (its toast closed): remove the finished food's photo now. */
   releaseFinishedFoodPhoto: (id: string) => void;
   returnFoodContainer: (id: string) => Promise<void>;
+  /**
+   * Ate 1 portion of a food (Phase 170 PR A, D7), decided on the server: it
+   * takes one if there is one, and the last one finishes the food as Eaten.
+   * Kept on the phone on a weak signal and safe to resend (migrations/148).
+   * `consumed` is what the server says this tap took; null while it waits.
+   * Anyone in the household.
+   */
+  eatFoodPortion: (id: string) => Promise<PortionTap>;
+  /** Undo that tap: the server puts back exactly what it took, once. */
+  undoFoodPortion: (tap: PortionTap) => Promise<void>;
   /** Admins only: food added by mistake. Takes its photo with it. */
   removeFood: (id: string) => Promise<void>;
   /**
@@ -304,6 +334,18 @@ interface HouseholdContextValue {
    * once; sent to the server in a batch — see the implementation.
    */
   adjustInventoryQuantity: (id: string, delta: number) => void;
+  /**
+   * Kitchen amounts (Phase 170 PR A, migrations/148). Anyone in the
+   * household: Set amount (the number typed), and Bought with how much
+   * (null = ticked without a number). Each shows at once and is put back if
+   * the save fails; the server's answer, with the status it derived, wins.
+   */
+  setInventoryAmount: (id: string, quantity: number) => Promise<InventoryItem>;
+  recordPurchase: (id: string, amount: number | null) => Promise<InventoryItem>;
+  /** The Bought toast's Undo: takes the amount back off and restores the status and pre-fill. */
+  undoPurchase: (before: InventoryItem, amount: number | null) => Promise<void>;
+  /** Owner only (the guard refuses staff): switch Track amount, with unit, amount and low level. */
+  setTrackAmount: (id: string, settings: TrackAmountSettings) => Promise<InventoryItem>;
   /**
    * Records a stock check: uploads the shelf photo, files the audit under
    * whoever is signed in on this device, and writes the count back onto the
@@ -979,7 +1021,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     [queued, activeHouseholdId, householdTasks]
   );
   const shownLogs = useMemo(() => overlay(logs, waiting.logs), [logs, waiting.logs]);
-  const shownFoods = useMemo(() => overlay(foodItems, waiting.foods), [foodItems, waiting.foods]);
+  // Waiting portion taps over the counts (Phase 170 PR A): read at render,
+  // so a tap the server has just answered isn't counted twice.
+  const shownFoods = useMemo(
+    () => applyPortions(overlay(foodItems, waiting.foods), waiting.portions, isAnswered),
+    [foodItems, waiting.foods, waiting.portions]
+  );
   // Bills and upkeep switched off (Phase 171, migrations/145): its chores
   // hide from every screen, owners' and staff phones alike, and come back
   // with the switch. Saved rows are untouched; only what's shown changes.
@@ -1096,28 +1143,152 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const setInventoryStatus = useCallback(async (id: string, status: StockStatus) => {
-    // Shown at once; put back if the save fails.
-    let previous: InventoryItem | undefined;
-    setInventoryItems((prev) =>
-      prev.map((i) => {
-        if (i.id !== id) return i;
-        previous = i;
-        return { ...i, stock_status: status };
-      })
-    );
-    try {
-      const item = await dataProvider.setInventoryStatus(id, status, readActiveStaffId());
-      setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
-      return item;
-    } catch (err) {
-      if (previous) {
-        const restore = previous;
-        setInventoryItems((prev) => prev.map((i) => (i.id === id ? restore : i)));
+  // The stepper's taps not yet sent, per item, and the timer that will send
+  // them. Refs, not state: nothing renders from them.
+  const pendingStock = useRef(new Map<string, { delta: number; timer: ReturnType<typeof setTimeout> }>());
+
+  // Every write to one item from this phone (taps, Out, Set amount, Bought,
+  // Undo, Track amount) goes to the server in the order it was made, one
+  // after another (lib/in-order): on a slow signal, an increment sent
+  // before Out can no longer land after it (Codex, PR #93). An answer is
+  // shown only if no newer write to that item is still on its way and no
+  // taps are waiting to be sent: those are already on the screen.
+  const stockWrites = useRef(createInOrder());
+  const sendStockWrite = useCallback(
+    async (id: string, send: () => Promise<InventoryItem>): Promise<InventoryItem> => {
+      const { value, latest } = await stockWrites.current.run(id, send);
+      if (latest && !pendingStock.current.has(id)) {
+        setInventoryItems((prev) => prev.map((i) => (i.id === id ? value : i)));
       }
-      throw err;
-    }
+      return value;
+    },
+    []
+  );
+
+  // Taps not sent yet stop counting once someone says what is there
+  // outright (Set amount, Out on a tracked item, Track amount's number):
+  // they're already on the screen, which the outright write replaces. Taps
+  // already sent are ahead of it in the queue, so it still wins.
+  const dropPendingTaps = useCallback((id: string) => {
+    const pending = pendingStock.current.get(id);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pendingStock.current.delete(id);
   }, []);
+
+  // Kitchen amounts (Phase 170 PR A): one optimistic write, mirrored
+  // through the amount rules (lib/kitchen-units, as migrations/148's
+  // trigger), sent in order, put back if it fails.
+  const writeInventoryItem = useCallback(
+    async (id: string, patch: InventoryItemPatch, send: () => Promise<InventoryItem>) => {
+      let previous: InventoryItem | undefined;
+      setInventoryItems((prev) =>
+        prev.map((i) => {
+          if (i.id !== id) return i;
+          previous = i;
+          return applyAmountRules(i, { ...i, ...patch });
+        })
+      );
+      try {
+        return await sendStockWrite(id, send);
+      } catch (err) {
+        if (previous) {
+          const restore = previous;
+          setInventoryItems((prev) => prev.map((i) => (i.id === id ? restore : i)));
+        }
+        throw err;
+      }
+    },
+    [sendStockWrite]
+  );
+
+  const setInventoryStatus = useCallback(
+    (id: string, status: StockStatus) => {
+      const staffId = readActiveStaffId();
+      // Out empties a tracked item (migrations/148): unsent plus taps would
+      // put an amount back after it.
+      if (status === "out" && inventoryItemsRef.current.find((i) => i.id === id)?.track_amount === true) {
+        dropPendingTaps(id);
+      }
+      // On a tracked item, the screen also empties it at once.
+      return writeInventoryItem(id, { stock_status: status, stock_status_by: staffId }, () =>
+        dataProvider.setInventoryStatus(id, status, staffId)
+      );
+    },
+    [dropPendingTaps, writeInventoryItem]
+  );
+
+  const setInventoryAmount = useCallback(
+    (id: string, quantity: number) => {
+      // The typed amount replaces any minus/plus taps not sent yet.
+      dropPendingTaps(id);
+      const patch: InventoryItemPatch = { quantity: Math.max(0, quantity), amount_set_by: readActiveStaffId() };
+      return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
+    },
+    [dropPendingTaps, writeInventoryItem]
+  );
+
+  const recordPurchase = useCallback(
+    (id: string, amount: number | null) => {
+      const staffId = readActiveStaffId();
+      const current = inventoryItemsRef.current.find((i) => i.id === id);
+      const adds = current?.track_amount === true && amount !== null;
+      const patch: InventoryItemPatch = {
+        stock_status: "ok",
+        stock_status_by: staffId,
+        ...(adds && current
+          ? { quantity: current.quantity + amount!, last_bought_amount: amount, amount_set_by: staffId }
+          : {}),
+      };
+      return writeInventoryItem(id, patch, () => dataProvider.recordPurchase(id, amount, staffId));
+    },
+    [writeInventoryItem]
+  );
+
+  const undoPurchase = useCallback(
+    async (before: InventoryItem, amount: number | null) => {
+      const staffId = readActiveStaffId();
+      // Taken back off as an increment, so another phone's change in the
+      // meantime is kept; then the status and pre-fill, only where that
+      // can't erase another phone's change (undoPurchasePatch).
+      let now = inventoryItemsRef.current.find((i) => i.id === before.id) ?? before;
+      if (before.track_amount === true && amount !== null) {
+        now = await sendStockWrite(before.id, () => dataProvider.adjustInventoryQuantity(before.id, -amount, staffId));
+      }
+      const back = undoPurchasePatch(before, now, amount);
+      if (!back) return;
+      // Credited to whoever undid it: the earlier marker may have been
+      // removed since, and 148 refuses a removed person's id.
+      const patch: InventoryItemPatch = { ...back, ...(back.stock_status ? { stock_status_by: staffId } : {}) };
+      await writeInventoryItem(before.id, patch, () => dataProvider.updateInventoryItem(before.id, patch));
+    },
+    [sendStockWrite, writeInventoryItem]
+  );
+
+  const setTrackAmount = useCallback(
+    (id: string, settings: TrackAmountSettings) => {
+      // The number typed here is what's there now.
+      if (settings.track) dropPendingTaps(id);
+      const current = inventoryItemsRef.current.find((i) => i.id === id);
+      const patch: InventoryItemPatch = settings.track
+        ? {
+            track_amount: true,
+            unit: settings.unit,
+            quantity: Math.max(0, settings.quantity),
+            // Blank "Running low at" is 0: only Out, at nothing left. The
+            // Phase 110 default of 2 is never kept by accident (D14).
+            min_threshold: Math.max(0, settings.lowAt),
+            amount_set_by: readActiveStaffId(),
+            // The pre-fill follows the unit, or goes (Codex, PR #93).
+            ...(current && current.unit !== settings.unit
+              ? { last_bought_amount: lastBoughtInUnit(current.last_bought_amount, current.unit, settings.unit) }
+              : {}),
+          }
+        : { track_amount: false };
+      return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
+    },
+    [dropPendingTaps, writeInventoryItem]
+  );
 
   const removeInventoryItem = useCallback(async (id: string) => {
     await dataProvider.deleteInventoryItem(id);
@@ -1263,6 +1434,64 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     [putFood, deleteFinishedPhoto]
   );
 
+  const eatFoodPortion = useCallback(
+    async (id: string): Promise<PortionTap> => {
+      const opId = crypto.randomUUID();
+      // Shown at once by the queue's overlay (applyPortions), after a reload
+      // too; the server's answer (with any other phone's taps) replaces it,
+      // and decides whether the last portion finishes it. A refusal leaves
+      // the queue, and the overlay with it.
+      const outcome = await submitJob<Extract<SendResult, { kind: "portion" }>>(
+        { kind: "portion", opId, foodId: id, staffId: readActiveStaffId() },
+        ({ food }) => putFood(food)
+      );
+      if (outcome.status !== "sent") return { foodId: id, opId, status: "waiting", food: null, consumed: null };
+      const { food, consumed } = outcome.result;
+      if (consumed === 1 && food.outcome === "eaten") {
+        // This tap finished it: its photo goes as with the Eaten button,
+        // when the toast closes (or the fallback), unless it is undone.
+        foodUndone.current.delete(id);
+        if (food.photo_url) {
+          foodPhotoTimers.current.set(id, setTimeout(() => deleteFinishedPhoto(id), FOOD_PHOTO_FALLBACK_MS));
+        }
+      }
+      return { foodId: id, opId, status: "sent", food, consumed };
+    },
+    [putFood, deleteFinishedPhoto]
+  );
+
+  const undoFoodPortion = useCallback(
+    async (tap: PortionTap) => {
+      // Nothing to put back when the server said this tap took nothing.
+      if (tap.consumed === 0) return;
+      // Shown at once by the queue's overlay, back on the list if this tap
+      // finished it (the server still checks nothing changed since).
+      foodUndone.current.add(tap.foodId);
+      await submitJob<Extract<SendResult, { kind: "portion-undo" }>>(
+        {
+          kind: "portion-undo",
+          opId: tap.opId,
+          foodId: tap.foodId,
+          reopens: tap.consumed === 1 && tap.food?.outcome === "eaten",
+        },
+        ({ food }) => putFood(food)
+      );
+    },
+    [putFood]
+  );
+
+  // A portion tap or undo sent later by the queue's drain: the screen takes
+  // the server's row before the queue stops laying the change over it
+  // (Codex, PR #93), even if the reload after the drain fails.
+  useEffect(
+    () =>
+      onQueuedSaveSent((item, result) => {
+        if (item.householdId && item.householdId !== getActiveHouseholdId()) return;
+        if (result.kind === "portion" || result.kind === "portion-undo") putFood(result.food);
+      }),
+    [putFood]
+  );
+
   const releaseFinishedFoodPhoto = useCallback(
     (id: string) => deleteFinishedPhoto(id),
     [deleteFinishedPhoto]
@@ -1347,9 +1576,6 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     refreshRef.current = refresh;
   }, [refresh]);
 
-  // The stepper's taps not yet sent, per item, and the timer that will send
-  // them. Refs, not state: nothing renders from them.
-  const pendingStock = useRef(new Map<string, { delta: number; timer: ReturnType<typeof setTimeout> }>());
 
   /**
    * A stepper tap (Phase 110).
@@ -1378,10 +1604,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     const quantity = Math.max(0, current.quantity + delta);
     const applied = quantity - current.quantity;
     if (applied === 0) return;
-    inventoryItemsRef.current = inventoryItemsRef.current.map((item) =>
-      item.id === id ? { ...item, quantity } : item
-    );
-    setInventoryItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
+    // A tracked item's status follows its amount (migrations/148), shown at once.
+    const staffId = readActiveStaffId();
+    const moved = (item: InventoryItem) => applyAmountRules(item, { ...item, quantity, amount_set_by: staffId });
+    inventoryItemsRef.current = inventoryItemsRef.current.map((item) => (item.id === id ? moved(item) : item));
+    setInventoryItems((prev) => prev.map((item) => (item.id === id ? moved(item) : item)));
 
     const pending = pendingStock.current;
     const entry = pending.get(id);
@@ -1391,12 +1618,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       pending.delete(id);
       if (total === 0) return;
       try {
-        const item = await dataProvider.adjustInventoryQuantity(id, total);
-        // Only if no newer taps landed while this was in flight: those are
-        // already on screen and on their way, and this answer predates them.
-        if (!pending.has(id)) {
-          setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
-        }
+        // In order behind any earlier write to this item (lib/in-order);
+        // the answer is shown only if nothing newer is on its way.
+        await sendStockWrite(id, () => dataProvider.adjustInventoryQuantity(id, total, staffId));
       } catch (err) {
         console.error(err);
         toast.error(
@@ -1406,7 +1630,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       }
     }, 600);
     pending.set(id, { delta: total, timer });
-  }, []);
+  }, [sendStockWrite]);
 
   // Online only, unlike task logging: the photo is the audit, and the offline
   // queue carries URLs rather than files — queueing it would mean holding the
@@ -1713,8 +1937,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       unfinishFood,
       releaseFinishedFoodPhoto,
       returnFoodContainer,
+      eatFoodPortion,
+      undoFoodPortion,
       removeFood,
       adjustInventoryQuantity,
+      setInventoryAmount,
+      recordPurchase,
+      undoPurchase,
+      setTrackAmount,
       reloadTenant,
       submitInventoryAudit,
       submitRoutineProposal,
@@ -1795,8 +2025,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       unfinishFood,
       releaseFinishedFoodPhoto,
       returnFoodContainer,
+      eatFoodPortion,
+      undoFoodPortion,
       removeFood,
       adjustInventoryQuantity,
+      setInventoryAmount,
+      recordPurchase,
+      undoPurchase,
+      setTrackAmount,
       reloadTenant,
       submitInventoryAudit,
       submitRoutineProposal,

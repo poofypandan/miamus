@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repairs walk-in mockups</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e7eb; --track:#f3f4f6; --primary:#171717;
+    --ok:#047857; --okbg:rgba(16,185,129,.06); --okline:rgba(16,185,129,.3); --warm:#92400e; --warmbg:#fffbeb; --warmline:#fcd34d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9ecef; font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif; color:var(--ink); }
+  header.page { max-width:1100px; margin:0 auto; padding:20px 16px 4px; }
+  header.page h1 { font-size:20px; margin:0 0 4px; }
+  header.page p { margin:0 0 6px; color:var(--muted); max-width:720px; }
+  section.screen { max-width:1100px; margin:0 auto; padding:18px 16px 8px; }
+  section.screen h2 { font-size:15px; margin:0 0 2px; }
+  section.screen > p { margin:0 0 12px; color:var(--muted); max-width:700px; }
+  .pair { display:flex; gap:20px; flex-wrap:wrap; }
+  .phone { width:360px; max-width:100%; height:820px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone.short { height:640px; }
+  .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
+  .status { height:22px; flex:none; }
+  .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 10px; flex:none; display:flex; flex-direction:column; gap:8px; }
+  .appbar .row { display:flex; align-items:center; justify-content:space-between; height:36px; }
+  .appbar h1 { margin:0; font-size:17px; font-weight:600; }
+  .appbar .sub { font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:4px; }
+  .seg { display:flex; background:var(--track); border-radius:999px; padding:3px; gap:2px; }
+  .seg span { flex:1; text-align:center; border-radius:999px; padding:6px 6px; font-size:12.5px; color:var(--muted); font-weight:500; white-space:nowrap; }
+  .seg span.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .body { flex:1; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .body > * { flex:none; }
+  .ic { width:16px; height:16px; flex:none; display:inline-block; vertical-align:middle; color:#71717a; }
+  .big { display:flex; align-items:center; gap:12px; min-height:64px; border-radius:16px; background:var(--primary); color:#fff; padding:0 16px; font-weight:600; font-size:16px; }
+  .big .ic { color:#fff; width:22px; height:22px; }
+  .big small { display:block; font-weight:400; font-size:12px; color:#d4d4d8; }
+  .sec { font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin:4px 2px -4px; }
+  .card { display:flex; flex-direction:column; gap:6px; border:1px solid var(--line); background:#fff; border-radius:12px; padding:10px 12px; }
+  .card .top { display:flex; align-items:center; gap:8px; }
+  .card .ti { flex:1; min-width:0; font-size:14px; font-weight:500; }
+  .card .sub { font-size:12.5px; color:var(--muted); }
+  .card.going { border-color:var(--warmline); border-left:3px solid #f59e0b; background:var(--warmbg); }
+  .card.done { background:var(--okbg); border-color:var(--okline); }
+  .card .state { font-size:12.5px; font-weight:500; color:var(--warm); display:flex; align-items:center; gap:4px; }
+  .card .state .ic { color:#b45309; width:13px; height:13px; }
+  .card .meta { font-size:12.5px; color:var(--ok); font-weight:500; display:flex; align-items:center; gap:4px; }
+  .card .meta .ic { color:var(--ok); width:13px; height:13px; }
+  .pill-btn { margin-left:auto; display:flex; align-items:center; gap:5px; border-radius:12px; background:var(--primary); color:#fff; font-size:12.5px; font-weight:600; padding:7px 11px; flex:none; white-space:nowrap; }
+  .pill-btn .ic { color:#fff; width:15px; height:15px; }
+  .bd { display:inline-flex; align-items:center; gap:3px; height:20px; padding:0 7px; border-radius:6px; font-size:10.5px; font-weight:600; background:#f4f4f5; color:#3f3f46; }
+  .quiet { display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border-radius:12px; border:1px solid var(--line); background:#fff; font-weight:500; font-size:13.5px; color:var(--ink2); }
+  .pairimg { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .img { aspect-ratio:4/3; border-radius:10px; display:flex; align-items:flex-end; padding:5px 7px; font-size:10.5px; font-weight:600; color:#fff; background:linear-gradient(135deg,#a8a29e,#57534e); position:relative; }
+  .img.after { background:linear-gradient(135deg,#cbd5e1,#64748b); }
+  .img.small { aspect-ratio:1/1; width:44px; border-radius:8px; padding:0; flex:none; }
+  .img .ic { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:rgba(255,255,255,.85); width:22px; height:22px; }
+  .img.empty { background:#fff; border:1.5px dashed #d1d5db; color:var(--muted); align-items:center; justify-content:center; flex-direction:column; gap:4px; padding:8px; text-align:center; font-weight:500; }
+  .img.empty .ic { position:static; transform:none; color:var(--ink2); }
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.35); z-index:2; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:64px; background:#fff; border-radius:20px 20px 0 0; z-index:3; padding:8px 16px 16px; display:flex; flex-direction:column; gap:9px; overflow:hidden; }
+  .sheet > * { flex:none; }
+  .grab { width:36px; height:5px; border-radius:9px; background:#d1d5db; margin:0 auto 2px; }
+  .sheet h3 { margin:0; font-size:17px; text-align:center; }
+  .label { font-size:12.5px; font-weight:600; color:var(--ink2); margin:4px 0 -3px; }
+  .label em { font-style:normal; font-weight:400; color:var(--muted); }
+  .opt { display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:12px; padding:9px 12px; font-size:13.5px; }
+  .opt .w { flex:1; min-width:0; }
+  .opt .w small { display:block; color:var(--muted); font-size:12px; }
+  .opt.on { border:1.5px solid var(--ink); }
+  .radio { width:18px; height:18px; border-radius:999px; border:1.5px solid #9ca3af; flex:none; }
+  .opt.on .radio { border:5px solid var(--ink); }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); border-radius:999px; padding:6px 11px; font-size:12.5px; color:var(--ink2); background:#fff; }
+  .chip .ic { width:14px; height:14px; color:currentColor; }
+  .chip.on { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .field { border:1px solid var(--line); border-radius:12px; min-height:42px; padding:10px 12px; font-size:13.5px; display:flex; align-items:center; gap:8px; }
+  .field.typed { border-color:var(--ink); }
+  .field.ph { color:#9ca3af; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; border-radius:12px; font-weight:600; font-size:14px; background:var(--primary); color:#fff; margin-top:auto; }
+  .btn.off { background:#d4d4d8; }
+  .btn .ic { color:#fff; }
+  .toast { position:absolute; left:14px; right:14px; bottom:18px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:center; gap:8px; padding:12px; font-size:13.5px; }
+  .toast span { flex:1; }
+  .toast .ic { color:var(--ok); }
+  .toast b { display:flex; align-items:center; gap:4px; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-weight:600; }
+  /* lock screen */
+  .lock { background:linear-gradient(180deg,#1f2937,#4b5563); color:#fff; }
+  .lock .clock { text-align:center; font-size:64px; font-weight:300; margin-top:40px; letter-spacing:-1px; }
+  .lock .date { text-align:center; font-size:15px; opacity:.85; margin-bottom:26px; }
+  .notif { margin:0 12px 10px; background:rgba(255,255,255,.88); color:var(--ink); border-radius:18px; padding:11px 13px; display:flex; gap:10px; }
+  .notif .app { width:34px; height:34px; border-radius:9px; background:#fff; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; flex:none; }
+  .notif .app .ic { color:var(--ink); width:18px; height:18px; }
+  .notif .w { flex:1; min-width:0; font-size:13px; }
+  .notif .w b { display:flex; justify-content:space-between; font-size:13.5px; }
+  .notif .w b i { font-style:normal; font-weight:400; color:var(--muted); font-size:12px; }
+  .notif .pic { margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+  .tabbar { flex:none; height:60px; background:#fff; border-top:1px solid var(--line); display:flex; }
+  .tabbar span { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10px; color:var(--muted); font-weight:500; }
+  .tabbar span .ic { width:21px; height:21px; color:currentColor; }
+  .tabbar span.on { color:var(--ink); }
+  .tl { display:flex; flex-direction:column; gap:0; }
+  .tl .ev { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .tl .ev:last-child { border-bottom:none; }
+  .tl .ev .ic { margin-top:2px; }
+  .tl .ev .w { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+  .tl .ev .w small { color:var(--muted); font-size:12px; }
+  .note { font-size:12.5px; color:var(--ink2); background:#f9fafb; border-radius:8px; padding:6px 8px; }
+  .row2 { display:flex; gap:8px; }
+  .row2 > * { flex:1; }
+  .ob { display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border-radius:12px; font-weight:600; font-size:13.5px; border:1px solid var(--line); background:#fff; color:var(--ink2); }
+  .ob.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .ob.primary .ic { color:#fff; }
+  .dev { display:flex; gap:10px; align-items:center; border:1px solid var(--line); border-radius:12px; padding:8px 10px; font-size:13px; }
+  .dev .w { flex:1; min-width:0; }
+  .dev .w small { display:block; color:var(--muted); font-size:11.5px; }
+  .dev .ck { width:20px; height:20px; border-radius:6px; background:var(--primary); display:flex; align-items:center; justify-content:center; flex:none; }
+  .dev .ck .ic { color:#fff; width:14px; height:14px; }
+  .dev .ck.no { background:#fff; border:1.5px solid #9ca3af; }
+  .dev.no { opacity:.55; }
+  .wa { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:10px 12px; font-size:12.5px; white-space:pre-line; line-height:1.45; color:var(--ink2); }
+  .hint { font-size:11.5px; color:var(--muted); margin-top:-4px; }
+  .legend { font-size:12px; color:var(--muted); margin:2px 2px 0; max-width:700px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-hard-hat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M14 6a6 6 0 0 1 6 6v3"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><rect x="2" y="15" width="20" height="4" rx="1"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-user-round" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="i-undo-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-share-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></symbol>
+  <symbol id="i-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+  <symbol id="i-calendar-days" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></symbol>
+  <symbol id="i-paw-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></symbol>
+  <symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-cooking-pot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="m4 8 16-4"/><path d="m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"/></symbol>
+</svg>
+
+<header class="page">
+  <h1>Phase 174: repairs from the staff side, "Ada tukang datang"</h1>
+  <p>Mockups for <code>docs/phase-174-repairs-walkin-plan.md</code>. Staff screens: Bahasa Indonesia only. Owner screens: English left, Bahasa Indonesia right. Icons are the app's lucide line icons; no emoji. Names, rooms and times are examples.</p>
+</header>
+
+<section class="screen">
+  <h2>1. Staff: the Perbaikan pill (Bahasa Indonesia only)</h2>
+  <p>A third pill, shown only when Repairs is on. The big button first; then what's being worked on (tinted), today's scheduled visits, what's still broken, and what was fixed this week. Lapor kerusakan stays for problems with no tukang yet.</p>
+  <div class="pair" id="s1"></div>
+</section>
+
+<section class="screen">
+  <h2>2. Staff: Ada tukang datang (Bahasa Indonesia only)</h2>
+  <p>One sheet, no wizard. Left: an open repair picked; its last tukang is already chosen; the before photo taken. 7 taps from the pill (6 with no name). Right: Baru, a few words and a room chip. Name, room and spot are optional; "what" and the photo are the only required parts.</p>
+  <div class="pair" id="s2"></div>
+</section>
+
+<section class="screen">
+  <h2>3. Staff: Selesai, and the finished card (Bahasa Indonesia only)</h2>
+  <p>Left: from the card's Selesai: the after photo (live camera, required), an optional chip and note. 4 to 5 taps. Right: the card in Sudah diperbaiki, before and after side by side, with the times.</p>
+  <div class="pair" id="s3"></div>
+</section>
+
+<section class="screen">
+  <h2>4. Owners hear about it: arrival and finish pushes</h2>
+  <p>Two pushes, each switchable per owner in Household → Notifications, none between 21.00 and 06.00. The finish push replaces the arrival push. Android shows the after photo; iPhone shows the text.</p>
+  <div class="pair" id="s4"></div>
+</section>
+
+<section class="screen">
+  <h2>5. Owners: the repair, before and after</h2>
+  <p>Chores → Repairs → the repair. The walk-in sits in the timeline with who, time in and out, who logged it, both photos, the chip and the note. The existing buttons close it.</p>
+  <div class="pair" id="s5"></div>
+</section>
+
+<section class="screen">
+  <h2>6. Owners: send the list to the developer</h2>
+  <p>Chores → Repairs → Send to the developer. All open problems ticked; untick what isn't theirs. Share on WhatsApp (text and photos through the phone's share sheet) or Save as PDF. Owners only; no public link.</p>
+  <div class="pair" id="s6"></div>
+</section>
+
+<section class="screen">
+  <h2>7. Staff: supervising the repair, "Mengawasi perbaikan" (Bahasa Indonesia only)</h2>
+  <p>Left: Ari's Tugas Hari Ini while she supervises the AC repair. The strip shows when it started and how long it has run, with Selesai. Her tasks due meanwhile carry a quiet "Mengawasi perbaikan" label instead of turning late: nothing to tap. Right: for an edge case auto-explain leaves alone (here a task with no time), the Tidak bisa dikerjakan sheet offers "Mengawasi perbaikan" on a day she supervised, linked to the visit, with no note to type. For a task whose time falls inside her stretch it is already chosen.</p>
+  <div class="pair" id="s7"></div>
+</section>
+
+<section class="screen">
+  <h2>8. Owners: the evening summary explains missed tasks</h2>
+  <p>139's evening push, re-created: tasks missed while Ari supervised are still "Not done", with the stretch in brackets once, not per task.</p>
+  <div class="pair" id="s8"></div>
+</section>
+
+<section class="screen">
+  <h2>9. Owners: staff progress on Today and the summary sheet</h2>
+  <p>Top: the queued staff progress card, one row per staff member, reading the active supervision from this phase. Below: the summary sheet groups the explained tasks under Ari's stretch; a tap opens the repair.</p>
+  <div class="pair" id="s9"></div>
+</section>
+
+<script>
+const ic = (n, cls = "") => `<svg class="ic ${cls}"><use href="#i-${n}"/></svg>`;
+const img = (label, after, small) => `<div class="img ${after ? "after" : ""} ${small ? "small" : ""}">${ic("image")}${small ? "" : label}</div>`;
+const seg3 = (on) => `<div class="seg">${["Tugas Hari Ini", "Dapur", "Perbaikan"].map((s, i) => `<span class="${i === on ? "on" : ""}">${s}</span>`).join("")}</div>`;
+const staffBar = `<div class="appbar"><div class="row"><h1>Miamus</h1><span class="sub">${ic("user-round")}Ari</span></div>${seg3(2)}</div>`;
+
+/* ---------- 1. Perbaikan pill ---------- */
+function perbaikanList() {
+  return `<div class="phone"><span class="tag">Staf · ID</span><div class="status"></div>${staffBar}
+  <div class="body">
+    <div class="big">${ic("wrench")}<div>Ada tukang datang<small>Apa yang diperbaiki, siapa, foto sebelum</small></div></div>
+    <div class="sec">Sedang dikerjakan</div>
+    <div class="card going">
+      <div class="top">${img("", false, true)}<div class="ti">Keran bocor<div class="sub">LT2 · Kamar Tamu 1 · Kamar Mandi</div></div><span class="pill-btn">${ic("camera")}Selesai</span></div>
+      <div class="state">${ic("hard-hat")}Pak Budi · diawasi Ari · sejak 09.10</div>
+    </div>
+    <div class="sec">Hari ini</div>
+    <div class="card"><div class="top">${ic("calendar-days")}<div class="ti">Awasi perbaikan: AC menetes<div class="sub">14.00 · LT3 · Kamar Utama · Tim developer</div></div>${ic("chevron-right")}</div></div>
+    <div class="sec">Masih rusak</div>
+    <div class="card"><div class="top">${img("", false, true)}<div class="ti">Dinding retak<div class="sub">LT3 · Ruang Musik</div></div><span class="bd">Diterima</span></div></div>
+    <div class="card"><div class="top">${img("", false, true)}<div class="ti">Pintu lemari macet<div class="sub">LT1 · Dapur</div></div><span class="bd">Menunggu dicek</span></div></div>
+    <div class="sec">Sudah diperbaiki</div>
+    <div class="card done"><div class="top">${img("", true, true)}<div class="ti">Lampu teras mati<div class="sub">Sen · Pak Ujang</div></div>${ic("circle-check")}</div></div>
+    <div class="quiet">${ic("flag")}Lapor kerusakan</div>
+  </div></div>`;
+}
+document.getElementById("s1").innerHTML = perbaikanList();
+
+/* ---------- 2. Ada tukang datang ---------- */
+function behindStaff() {
+  return `<div class="status"></div>${staffBar}<div class="body"><div class="big">${ic("wrench")}<div>Ada tukang datang</div></div></div><div class="dim"></div>`;
+}
+function sheetPick() {
+  return `<div class="phone"><span class="tag">Staf · ID</span>${behindStaff()}
+  <div class="sheet"><div class="grab"></div><h3>Ada tukang datang</h3>
+    <div class="label">Apa yang diperbaiki?</div>
+    <div class="opt on"><span class="radio"></span><div class="w">Keran bocor<small>LT2 · Kamar Tamu 1 · Kamar Mandi</small></div></div>
+    <div class="opt"><span class="radio"></span><div class="w">AC menetes<small>LT3 · Kamar Utama</small></div></div>
+    <div class="opt"><span class="radio"></span><div class="w">Dinding retak<small>LT3 · Ruang Musik</small></div></div>
+    <div class="opt"><span class="radio"></span>${ic("plus")}<div class="w">Baru</div></div>
+    <div class="label">Siapa? <em>(boleh dikosongkan)</em></div>
+    <div class="chips"><span class="chip on">${ic("hard-hat")}Pak Budi</span><span class="chip">Tim developer</span><span class="chip">Pak Ujang · listrik</span><span class="chip">${ic("plus")}Nama lain</span></div>
+    <div class="label">Foto sebelum diperbaiki</div>
+    <div class="pairimg">${img("09.10")}<div class="img empty">${ic("camera")}Foto ulang</div></div>
+    <div class="btn">Simpan</div>
+  </div></div>`;
+}
+function sheetNew() {
+  return `<div class="phone"><span class="tag">Staf · ID</span>${behindStaff()}
+  <div class="sheet"><div class="grab"></div><h3>Ada tukang datang</h3>
+    <div class="label">Apa yang diperbaiki?</div>
+    <div class="opt"><span class="radio"></span><div class="w">Keran bocor<small>LT2 · Kamar Tamu 1 · Kamar Mandi</small></div></div>
+    <div class="opt on"><span class="radio"></span>${ic("plus")}<div class="w">Baru</div></div>
+    <div class="field typed">Stopkontak longgar</div>
+    <div class="chips"><span class="chip">${ic("map-pin")}LT2 · Kamar Tamu 1</span><span class="chip on">${ic("map-pin")}LT1 · Ruang Keluarga</span><span class="chip">Pilih ruangan</span></div>
+    <div class="field ph">Bagian (boleh dikosongkan)</div>
+    <div class="label">Siapa? <em>(boleh dikosongkan)</em></div>
+    <div class="chips"><span class="chip">Pak Budi</span><span class="chip">Tim developer</span><span class="chip on">${ic("hard-hat")}Pak Ujang · listrik</span><span class="chip">${ic("plus")}Nama lain</span></div>
+    <div class="label">Foto sebelum diperbaiki</div>
+    <div class="img empty" style="aspect-ratio:auto;min-height:88px">${ic("camera")}Foto bagian yang diperbaiki</div>
+    <div class="btn off">Simpan</div>
+  </div></div>`;
+}
+document.getElementById("s2").innerHTML = sheetPick() + sheetNew();
+
+/* ---------- 3. Selesai ---------- */
+function sheetDone() {
+  return `<div class="phone"><span class="tag">Staf · ID</span>${behindStaff()}
+  <div class="sheet"><div class="grab"></div><h3>Selesai</h3>
+    <div class="card"><div class="top">${img("", false, true)}<div class="ti">Keran bocor<div class="sub">Pak Budi · sejak 09.10</div></div></div></div>
+    <div class="label">Foto sesudah diperbaiki</div>
+    <div class="pairimg">${img("Sebelum · 09.10")}${img("Sesudah · 11.40", true)}</div>
+    <div class="label">Bagaimana hasilnya? <em>(boleh dikosongkan)</em></div>
+    <div class="chips"><span class="chip on">${ic("check")}Sudah beres</span><span class="chip">Belum selesai, datang lagi</span><span class="chip">Perlu dicek pemilik rumah</span></div>
+    <div class="field ph">Catatan (boleh dikosongkan)</div>
+    <div class="btn">Simpan</div>
+  </div></div>`;
+}
+function finishedCard() {
+  return `<div class="phone"><span class="tag">Staf · ID</span><div class="status"></div>${staffBar}
+  <div class="body">
+    <div class="big">${ic("wrench")}<div>Ada tukang datang</div></div>
+    <div class="sec">Hari ini</div>
+    <div class="card"><div class="top">${ic("calendar-days")}<div class="ti">Awasi perbaikan: AC menetes<div class="sub">14.00 · LT3 · Kamar Utama · Tim developer</div></div>${ic("chevron-right")}</div></div>
+    <div class="sec">Sudah diperbaiki</div>
+    <div class="card done">
+      <div class="top"><div class="ti">Keran bocor<div class="sub">LT2 · Kamar Tamu 1 · Kamar Mandi</div></div>${ic("circle-check")}</div>
+      <div class="pairimg">${img("Sebelum")}${img("Sesudah", true)}</div>
+      <div class="meta">${ic("check")}Sudah beres · Pak Budi · 09.10–11.40</div>
+    </div>
+  </div>
+  <div class="toast">${ic("circle-check")}<span>Tersimpan · Pemilik rumah diberi tahu</span><b>${ic("undo-2")}Batalkan</b></div>
+  </div>`;
+}
+document.getElementById("s3").innerHTML = sheetDone() + finishedCard();
+
+/* ---------- owner text ---------- */
+const T = {
+  en: {
+    tag: "Owner · EN", date: "Tuesday 11 November", t1: "9:10", t2: "11:40", t3: "7:00",
+    arrT: "Repair person here", arrB: "Pak Budi · Leaking tap · LT2 · Guest Bedroom 1 (Ari)",
+    doneT: "Repair finished", doneB: "Leaking tap · Pak Budi · Done", now: "now", ago: "2h ago",
+    tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
+    repair: "Leaking tap", place: "LT2 · Guest Bedroom 1 · Bathroom",
+    stage: "Work done — check the photos",
+    reported: "Reported by Ari", reportedWhen: "Mon 10 Nov, 7:20 PM",
+    walk: "Walk-in · Pak Budi", walkWhen: "Tue 9:10–11:40 AM · logged by Ari", sup: "Supervised by Ari 9:10–10:30 AM, then Syam 10:30–11:40 AM",
+    before: "Before · 9:10 AM", after: "After · 11:40 AM", chip: "Done",
+    note: "Washer replaced. Pak Budi says the pipe is fine.",
+    fixed: "Fixed", again: "Needs another visit",
+    devT: "Send to the developer", devLead: "Open problems with photos. Untick what isn't the developer's.",
+    items: [["Leaking tap", "LT2 · Guest Bedroom 1 · Bathroom", "Reported 10 Nov", 1], ["Cracked wall", "LT3 · Music Room", "Reported 4 Nov", 1], ["Dripping AC", "LT3 · Master Bedroom", "Reported 8 Nov", 1], ["Loose socket", "LT1 · Family Room", "Reported 11 Nov", 0]],
+    share: "Share on WhatsApp", pdf: "Save as PDF", preview: "Message preview",
+    wa: "Repair list, Rumah Melati, 11 Nov 2026: 3 items\n\n1. Leaking tap · LT2 · Guest Bedroom 1 · Bathroom · reported 10 Nov\n2. Cracked wall · LT3 · Music Room · reported 4 Nov\n3. Dripping AC · LT3 · Master Bedroom · reported 8 Nov\n\nPhotos attached, in the same order.",
+    only: "Owners only. Miamus doesn't send this; you choose who receives it.",
+    sumT: "Not done today", sumB: "Not done: Mop the terrace, Iron clothes (Ari was supervising the AC repair 10:00 AM–1:30 PM). Waiting for you: Syam's leave.", date2: "Tuesday 11 November",
+    staffT: "Staff today", ari: "Supervising a repair since 10:00 AM", ariN: "4 of 9 done", syam: "Pets and kitchen", syamN: "7 of 8 done",
+    sheetT: "3 not done today", grp: "Ari · supervising the AC repair · 10:00 AM–1:30 PM",
+    t1a: "Mop the terrace", t1b: "10:30 AM", t2a: "Iron clothes", t2b: "11:00 AM",
+    plain: "Not done yet", t3a: "Water the plants", t3b: "4:00 PM · Syam", done: "12 done today", open: "Open the repair",
+  },
+  id: {
+    tag: "Owner · ID", date: "Selasa, 11 November", t1: "09.10", t2: "11.40", t3: "19.00",
+    arrT: "Tukang datang", arrB: "Pak Budi · Keran bocor · LT2 · Kamar Tamu 1 (Ari)",
+    doneT: "Perbaikan selesai", doneB: "Keran bocor · Pak Budi · Sudah beres", now: "sekarang", ago: "2 jam lalu",
+    tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
+    repair: "Keran bocor", place: "LT2 · Kamar Tamu 1 · Kamar Mandi",
+    stage: "Pekerjaan selesai — cek fotonya",
+    reported: "Dilaporkan Ari", reportedWhen: "Sen 10 Nov, 19.20",
+    walk: "Datang langsung · Pak Budi", walkWhen: "Sel 09.10–11.40 · dicatat Ari", sup: "Diawasi Ari 09.10–10.30, lalu Syam 10.30–11.40",
+    before: "Sebelum · 09.10", after: "Sesudah · 11.40", chip: "Sudah beres",
+    note: "Karet keran diganti. Kata Pak Budi pipanya aman.",
+    fixed: "Sudah diperbaiki", again: "Perlu datang lagi",
+    devT: "Kirim ke developer", devLead: "Masalah yang masih terbuka beserta fotonya. Hapus centang yang bukan urusan developer.",
+    items: [["Keran bocor", "LT2 · Kamar Tamu 1 · Kamar Mandi", "Dilaporkan 10 Nov", 1], ["Dinding retak", "LT3 · Ruang Musik", "Dilaporkan 4 Nov", 1], ["AC menetes", "LT3 · Kamar Utama", "Dilaporkan 8 Nov", 1], ["Stopkontak longgar", "LT1 · Ruang Keluarga", "Dilaporkan 11 Nov", 0]],
+    share: "Bagikan lewat WhatsApp", pdf: "Simpan sebagai PDF", preview: "Pratinjau pesan",
+    wa: "Daftar perbaikan, Rumah Melati, 11 Nov 2026: 3 item\n\n1. Keran bocor · LT2 · Kamar Tamu 1 · Kamar Mandi · dilaporkan 10 Nov\n2. Dinding retak · LT3 · Ruang Musik · dilaporkan 4 Nov\n3. AC menetes · LT3 · Kamar Utama · dilaporkan 8 Nov\n\nFoto terlampir, dengan urutan yang sama.",
+    only: "Hanya pemilik. Miamus tidak mengirimkannya; Anda yang memilih penerimanya.",
+    sumT: "Belum selesai hari ini", sumB: "Belum: Pel teras, Setrika baju (Ari mengawasi perbaikan AC 10.00–13.30). Menunggu Anda: cuti Syam.", date2: "Selasa, 11 November",
+    staffT: "Staf hari ini", ari: "Mengawasi perbaikan sejak 10.00", ariN: "4 dari 9 selesai", syam: "Hewan dan dapur", syamN: "7 dari 8 selesai",
+    sheetT: "3 belum selesai hari ini", grp: "Ari · mengawasi perbaikan AC · 10.00–13.30",
+    t1a: "Pel teras", t1b: "10.30", t2a: "Setrika baju", t2b: "11.00",
+    plain: "Belum dikerjakan", t3a: "Siram tanaman", t3b: "16.00 · Syam", done: "12 selesai hari ini", open: "Buka perbaikan",
+  },
+};
+const tabIcons = ["calendar-days", "paw-print", "clipboard-list", "cooking-pot", "users"];
+const tabbar = (t, on) => `<div class="tabbar">${t.tabs.map((n, i) => `<span class="${i === on ? "on" : ""}">${ic(tabIcons[i])}${n}</span>`).join("")}</div>`;
+
+/* ---------- 4. pushes ---------- */
+function lock(t) {
+  return `<div class="phone short lock"><span class="tag">${t.tag}</span><div class="status"></div>
+    <div class="clock">${t.t2}</div><div class="date">${t.date}</div>
+    <div class="notif"><div class="app">${ic("wrench")}</div><div class="w"><b>${t.doneT}<i>${t.now}</i></b>${t.doneB}
+      <div class="pic">${img("")}${img("", true)}</div></div></div>
+    <div class="notif" style="opacity:.7"><div class="app">${ic("hard-hat")}</div><div class="w"><b>${t.arrT}<i>${t.ago}</i></b>${t.arrB}</div></div>
+  </div>`;
+}
+document.getElementById("s4").innerHTML = lock(T.en) + lock(T.id);
+
+/* ---------- 5. the repair ---------- */
+function repair(t) {
+  return `<div class="phone"><span class="tag">${t.tag}</span><div class="status"></div>
+    <div class="appbar"><div class="row"><h1>${t.repair}</h1></div></div>
+    <div class="body">
+      <div class="sub" style="font-size:12.5px;color:var(--muted);margin-top:-4px">${t.place}</div>
+      <div class="card going"><div class="state">${ic("clock")}${t.stage}</div></div>
+      <div class="tl">
+        <div class="ev">${ic("flag")}<div class="w">${t.reported}<small>${t.reportedWhen}</small></div></div>
+        <div class="ev">${ic("hard-hat")}<div class="w"><b style="font-weight:600">${t.walk}</b><small>${t.walkWhen}</small><small>${t.sup}</small>
+          <div class="pairimg">${img(t.before)}${img(t.after, true)}</div>
+          <div><span class="bd">${ic("check")}${t.chip}</span></div>
+          <div class="note">${t.note}</div></div></div>
+      </div>
+      <div class="row2"><div class="ob primary">${ic("circle-check")}${t.fixed}</div><div class="ob">${t.again}</div></div>
+    </div>${tabbar(t, 2)}</div>`;
+}
+document.getElementById("s5").innerHTML = repair(T.en) + repair(T.id);
+
+/* ---------- 6. developer list ---------- */
+function dev(t) {
+  return `<div class="phone"><span class="tag">${t.tag}</span><div class="status"></div>
+    <div class="appbar"><div class="row"><h1>${t.devT}</h1></div></div>
+    <div class="body">
+      <div class="hint" style="margin-top:0">${t.devLead}</div>
+      ${t.items.map(([w, p, d, on], i) => `<div class="dev ${on ? "" : "no"}"><span class="ck ${on ? "" : "no"}">${on ? ic("check") : ""}</span>${img("", false, true)}<div class="w">${on ? (i + 1) + ". " : ""}${w}<small>${p} · ${d}</small></div></div>`).join("")}
+      <div class="label">${t.preview}</div>
+      <div class="wa">${t.wa}</div>
+      <div class="row2"><div class="ob primary">${ic("share-2")}${t.share}</div><div class="ob">${ic("file-text")}${t.pdf}</div></div>
+      <div class="hint">${t.only}</div>
+    </div></div>`;
+}
+document.getElementById("s6").innerHTML = dev(T.en) + dev(T.id);
+/* ---------- 7. supervising (staff) ---------- */
+const staffBarTugas = `<div class="appbar"><div class="row"><h1>Miamus</h1><span class="sub">${ic("user-round")}Ari</span></div>${seg3(0)}</div>`;
+function tugasSupervising() {
+  const task = (time, title, label) => `<div class="card"><div class="top">${ic("clipboard-list")}<span style="font-size:14px;font-weight:500;font-variant-numeric:tabular-nums">${time}</span><div class="ti">${title}</div></div>${label ? `<div class="state" style="color:var(--muted)">${ic("hard-hat")}${label}</div>` : ""}</div>`;
+  return `<div class="phone"><span class="tag">Staf · ID</span><div class="status"></div>${staffBarTugas}
+  <div class="body">
+    <div class="card going">
+      <div class="top">${ic("hard-hat")}<div class="ti">Sedang mengawasi perbaikan<div class="sub">AC menetes · LT3 · Kamar Utama · Tim developer</div></div><span class="pill-btn">${ic("camera")}Selesai</span></div>
+      <div class="state">${ic("clock")}sejak 10.00 · 1 jam 20 menit</div>
+    </div>
+    <div class="sec">Selasa, 11 Nov</div>
+    <div class="card done"><div class="top">${ic("clipboard-list")}<span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--muted)">08.00</span><div class="ti" style="color:var(--muted)">Sapu dan pel ruang tamu</div>${ic("circle-check")}</div></div>
+    ${task("10.30", "Pel teras", "Mengawasi perbaikan")}
+    ${task("11.00", "Setrika baju", "Mengawasi perbaikan")}
+    ${task("14.00", "Ganti seprai kamar tamu", "")}
+    ${task("16.00", "Lap kaca LT2", "")}
+  </div></div>`;
+}
+function couldntSheet() {
+  return `<div class="phone"><span class="tag">Staf · ID</span><div class="status"></div>${staffBarTugas}<div class="body"></div><div class="dim"></div>
+  <div class="sheet" style="top:300px"><div class="grab"></div><h3>Tidak bisa dikerjakan</h3>
+    <div class="card"><div class="top">${ic("clipboard-list")}<div class="ti">Rapikan lemari dapur<div class="sub">Tanpa jam</div></div></div></div>
+    <div class="label">Kenapa?</div>
+    <div class="chips"><span class="chip">Barang habis</span><span class="chip">Sudah dikerjakan orang lain</span><span class="chip on">${ic("hard-hat")}Mengawasi perbaikan</span><span class="chip">Lainnya</span></div>
+    <div class="hint">AC menetes · 10.00–13.40 · terhubung ke perbaikan ini</div>
+    <div class="btn">Simpan</div>
+  </div></div>`;
+}
+document.getElementById("s7").innerHTML = tugasSupervising() + couldntSheet();
+
+/* ---------- 8. evening summary push ---------- */
+function summaryLock(t) {
+  return `<div class="phone short lock"><span class="tag">${t.tag}</span><div class="status"></div>
+    <div class="clock">${t.t3}</div><div class="date">${t.date2}</div>
+    <div class="notif"><div class="app">${ic("clipboard-list")}</div><div class="w"><b>${t.sumT}<i>${t.now}</i></b>${t.sumB}</div></div>
+  </div>`;
+}
+document.getElementById("s8").innerHTML = summaryLock(T.en) + summaryLock(T.id);
+
+/* ---------- 9. staff progress + summary sheet ---------- */
+function progress(t) {
+  const row = (n, line, cnt, busy) => `<div class="opt" style="${busy ? "background:var(--warmbg);border-color:var(--warmline)" : ""}"><div class="av" style="width:32px;height:32px;border-radius:999px;background:#f4f4f5;display:flex;align-items:center;justify-content:center;font-weight:600;color:#52525b;flex:none">${n[0]}</div><div class="w">${n}<small style="${busy ? "color:var(--warm)" : ""}">${busy ? ic("hard-hat") + " " : ""}${line}</small></div><span style="font-size:12px;color:var(--muted)">${cnt}</span></div>`;
+  const tk = (a, b, note) => `<div class="dev"><div class="w">${a}<small>${b}</small></div></div>`;
+  return `<div class="phone"><span class="tag">${t.tag}</span><div class="status"></div>
+    <div class="appbar"><div class="row"><h1>${t.tabs[0]}</h1></div></div>
+    <div class="body">
+      <div class="sec">${t.staffT}</div>
+      ${row("Ari", t.ari, t.ariN, true)}
+      ${row("Syam", t.syam, t.syamN, false)}
+    </div>
+    <div class="dim" style="top:auto;height:0"></div>
+    <div class="sheet" style="top:330px;box-shadow:0 -8px 24px -8px rgba(17,24,39,.25)"><div class="grab"></div><h3>${t.sheetT}</h3>
+      <div class="card going"><div class="state">${ic("hard-hat")}${t.grp}</div>
+        ${tk(t.t1a, t.t1b)}${tk(t.t2a, t.t2b)}
+        <div class="sub" style="display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--ink2)">${ic("wrench")}${t.open}${ic("chevron-right")}</div>
+      </div>
+      <div class="label">${t.plain}</div>
+      ${tk(t.t3a, t.t3b)}
+      <div class="hint" style="margin-top:4px">${t.done}</div>
+    </div>
+    ${tabbar(t, 0)}</div>`;
+}
+document.getElementById("s9").innerHTML = progress(T.en) + progress(T.id);
+</script>
+<p class="legend" style="max-width:1100px;margin:16px auto 32px;padding:0 16px">Not shown: Household → Notifications gains two rows, "When a repair person arrives" and "When a repair is finished" (Saat tukang datang · Saat perbaikan selesai), both on by default. Today gains a quiet line while someone is working.</p>
+</body>
+</html>

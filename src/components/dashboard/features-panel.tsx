@@ -2,7 +2,7 @@
 
 import { useState, type ComponentType } from "react";
 import { toast } from "sonner";
-import { CookingPot, Loader2, PawPrint, ReceiptText, Wrench } from "lucide-react";
+import { CookingPot, Loader2, PawPrint, ReceiptText, Scale, Wrench } from "lucide-react";
 import { useHousehold } from "@/context/household-context";
 import { useT, type Translate } from "@/context/owner-locale-context";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -14,7 +14,8 @@ import { cn } from "@/lib/utils";
 /**
  * Household → Features (Phase 171 PR A, D3–D6; it replaced "Who lives
  * here"). One plain line per row, grouped Home · Kitchen · Pets. Only
- * modules that exist have a row (D4); every row starts on.
+ * modules that exist have a row (D4); the PR A rows start on, later ones
+ * (Kitchen amounts, Phase 170) join off.
  *
  * Off hides, never deletes (D6): at once, no reload, with a toast and
  * Undo. Pets keeps Phase 162's rule (archive pets first), here and in the
@@ -66,6 +67,18 @@ const GROUPS: { title: (t: Translate) => string; rows: Row[] }[] = [
           t(
             "Leftovers and food from others, where it's kept and until when.",
             "Sisa masakan dan makanan dari orang, di mana disimpan dan sampai kapan."
+          ),
+      },
+      {
+        // Phase 170 PR A: the first feature that joins off (171 D4); on for
+        // the households that existed when migrations/148 ran.
+        key: "kitchen",
+        icon: Scale,
+        label: (t) => t("Kitchen amounts", "Jumlah bahan dapur"),
+        line: (t) =>
+          t(
+            "Exact amounts for the items you choose, such as 1.2 kg of rice left. They change when you buy, never on a schedule.",
+            "Jumlah pasti untuk barang yang Anda pilih, misalnya sisa beras 1,2 kg. Berubah saat belanja, tidak perlu dihitung rutin."
           ),
       },
     ],

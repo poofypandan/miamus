@@ -25,6 +25,7 @@ import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
 import { StaffKitchen } from "@/components/kitchen/kitchen-tab";
+import { ingredientsUnderFood } from "@/lib/features";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { OutboxNotice } from "@/components/shared/outbox-notice";
@@ -50,7 +51,11 @@ import { PendingBar } from "@/components/shared/pending-bar";
 import { useScrollTopOnChange, useTabNavigation } from "@/hooks/use-tab-navigation";
 import { cn } from "@/lib/utils";
 import { useTaskExceptions } from "@/hooks/use-task-exceptions";
-import { choreException, groupExceptions, staffCouldntLine } from "@/lib/couldnt-do";
+import { choreException, groupExceptions, slotOf, staffCouldntLine } from "@/lib/couldnt-do";
+import { StaffRepairsView, SupervisingStrip } from "@/components/staff/staff-perbaikan";
+import { useRepairs } from "@/hooks/use-repairs";
+import { leaveCovering } from "@/lib/leave";
+import { STAFF_SUPERVISING_LABEL, supervisionExplains, supervisionStretches } from "@/lib/repair-walkins";
 
 export default function StaffPage() {
   const { loading, tenantReady, roleHydrated } = useHousehold();
@@ -83,13 +88,17 @@ export default function StaffPage() {
 // read one value (CLAUDE.md, State Persistence). It also survives the page
 // reload a low-memory phone can do on the way back from the camera, which is
 // exactly when a staff member is mid-stock-check.
-const VIEWS = ["tugas", "stok"] as const;
+// Perbaikan (Phase 174): only while Repairs is on (Household → Features);
+// a ?view=perbaikan left over with it off falls back to Tugas.
+const VIEWS = ["tugas", "stok", "perbaikan"] as const;
 type StaffView = (typeof VIEWS)[number];
 
 function StaffTasks() {
   const { refresh } = useHousehold();
+  const { repairs: repairsOn } = useHouseholdFeatures();
   const param = useSearchParams().get("view");
-  const view: StaffView = VIEWS.includes(param as StaffView) ? (param as StaffView) : "tugas";
+  const known: StaffView = VIEWS.includes(param as StaffView) ? (param as StaffView) : "tugas";
+  const view: StaffView = known === "perbaikan" && !repairsOn ? "tugas" : known;
 
   // The pill lights on the tap, the list follows when ready, the page
   // returns to the top in that same commit — useTabNavigation (Phase 125).
@@ -139,6 +148,7 @@ function StaffTasks() {
             // Dapur (Phase 156): Makanan · Belanja inside. Still "stok" in
             // the URL, so old links land here.
             { value: "stok", label: "Dapur" },
+            ...(repairsOn ? [{ value: "perbaikan" as const, label: "Perbaikan" }] : []),
           ]}
           value={activeView}
           onChange={setView}
@@ -155,7 +165,7 @@ function StaffTasks() {
           {/* Never remounted, so a view that suspends on first read keeps the
               other one on screen until it is complete (Phase 125). */}
           <Suspense fallback={null}>
-            {view === "tugas" ? <TasksView /> : <StaffKitchen />}
+            {view === "tugas" ? <TasksView /> : view === "perbaikan" ? <StaffRepairsView /> : <StaffKitchen />}
           </Suspense>
         </div>
       </PullToRefresh>
@@ -170,6 +180,20 @@ function StaffTasks() {
       <PendingBar active={isPending} />
     </div>
   );
+}
+
+/**
+ * Who is on duty on a day, for auto-explain (D10): staff on the roster (not
+ * admins), the leave applied by the caller.
+ */
+function useDutyRoster() {
+  const { leaveRequests } = useHousehold();
+  const { profiles } = useStaffProfiles();
+  const staffProfilesForDuty = useMemo(
+    () => (profiles ?? []).filter((p) => !p.user_id).map((p) => p.id),
+    [profiles]
+  );
+  return { leaveRequests, staffProfilesForDuty };
 }
 
 function TasksView() {
@@ -239,9 +263,40 @@ function TasksView() {
   // Couldn't-do records (Phase 165): an explained task sits below what is
   // still open and above what is done.
   const { exceptions } = useTaskExceptions();
+
+  // Supervising a repair (Phase 174, D10): this person's tasks due inside
+  // their stretch carry "Mengawasi perbaikan" instead of reading as
+  // forgotten, with nothing to tap. Read at display time; done wins.
+  const featureFlags = useHouseholdFeatures();
+  const { repairs: repairsFeatureOn } = featureFlags;
+  const { repairs: repairList, walkIns, supervision } = useRepairs({ enabled: repairsFeatureOn });
+  const { leaveRequests, staffProfilesForDuty } = useDutyRoster();
+  const stretches = useMemo(
+    () => (repairsFeatureOn ? supervisionStretches(supervision, walkIns, repairList) : []),
+    [repairsFeatureOn, supervision, walkIns, repairList]
+  );
+  const onDuty = useMemo(
+    () => staffProfilesForDuty.filter((id) => !leaveCovering(leaveRequests, id, dateStr)),
+    [staffProfilesForDuty, leaveRequests, dateStr]
+  );
+  const supervisingNote = (entry: UnifiedAgendaEntry): boolean => {
+    if (stretches.length === 0) return false;
+    if (entry.kind === "chore") {
+      const o = entry.occurrence;
+      // A chore carried over from an earlier day is owed, as staff progress
+      // reads it: never explained (one rule for both screens).
+      if (o.status !== "pending" || o.overdue || choreException(exceptions, o)) return false;
+      return !!supervisionExplains(
+        { staffId: o.task.assigned_to ?? null, date: o.date, time: slotOf(o.task.due_time) },
+        stretches,
+        onDuty
+      );
+    }
+    return false;
+  };
   const explained = (entry: UnifiedAgendaEntry) =>
     entry.kind === "chore"
-      ? !!choreException(exceptions, entry.occurrence)
+      ? !!choreException(exceptions, entry.occurrence) || supervisingNote(entry)
       : groupExceptions(exceptions, dateStr, entry.group).length > 0 &&
         groupExceptions(exceptions, dateStr, entry.group).length ===
           entry.group.items.filter((i) => i.status !== "completed").length;
@@ -255,8 +310,8 @@ function TasksView() {
       else (explained(entry) ? later : open).push(entry);
     }
     return { open: [...open, ...later], settled };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `explained` reads exceptions and dateStr, listed.
-  }, [rest, logs, admittedPets, exceptions, dateStr]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `explained` reads exceptions, dateStr, stretches and onDuty, listed.
+  }, [rest, logs, admittedPets, exceptions, dateStr, stretches, onDuty]);
 
   // Which chore the detail sheet is showing, held as a KEY rather than as the
   // occurrence itself. Occurrences are derived fresh whenever the chore rows
@@ -280,7 +335,9 @@ function TasksView() {
   // The repair-notes tip (Phase 159 PR B) only once a repair visit is on
   // this phone's list: that's where notes are written.
   const showRepairNotesTip = useMemo(() => chores.some((chore) => !!chore.task.repair_id), [chores]);
-  const { repairs: repairsOn } = useHouseholdFeatures();
+  const repairsOn = repairsFeatureOn;
+  // The tip says ingredients moved to Makanan: true only with Food at home on too.
+  const kitchenAmountsOn = ingredientsUnderFood(featureFlags);
 
   // The floors tip (Phase 158) only once this phone's list actually shows a
   // floor or a spot: before the owner sorts rooms there is nothing to explain.
@@ -335,6 +392,7 @@ function TasksView() {
           const exception = choreException(exceptions, entry.occurrence);
           return exception ? staffCouldntLine(exception) : null;
         })()}
+        supervising={supervisingNote(entry) ? STAFF_SUPERVISING_LABEL : null}
         // What the tap leads to (Phase 130): an unclaimed chore is claimed
         // before anything is photographed.
         action={
@@ -373,6 +431,9 @@ function TasksView() {
             never a colleague's. */}
         {!loading && <MyProgressLine staffId={staffId} />}
 
+        {/* Supervising a repair (Phase 174): the strip, for that person only. */}
+        {repairsFeatureOn && <SupervisingStrip />}
+
         {/* One tip at a time, newest first (audit B1, item 5): the work
             comes first on a busy morning, not a stack of news. The
             notifications card goes first in that slot (Phase 166, D9), and
@@ -382,6 +443,8 @@ function TasksView() {
         ) : pushCard.ready ? (
         <StaffTipCard
           tips={[
+            // Phase 170 PR A: only while Kitchen amounts is on.
+            { id: "staff-kitchen-amounts-2026-11", show: kitchenAmountsOn },
             { id: "staff-couldnt-do-2026-11", show: true },
             { id: "staff-feedback-2026-11", show: true },
             { id: "staff-rooms-inside-2026-11", show: showRoomsInsideTip },

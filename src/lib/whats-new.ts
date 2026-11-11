@@ -49,6 +49,27 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
+    // Shown in Kitchen while Kitchen amounts is on (Phase 170 PR A), under
+    // the calm-start rules (one card a week, never to new households).
+    id: "kitchen-amounts-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: exact amounts in Kitchen", id: "Baru: jumlah pasti di Dapur" },
+    steps: {
+      en: [
+        "Want exact amounts? Tap an item and switch on Track amount. Only for the items you care about.",
+        "It updates when you buy. Nobody has to count.",
+        "Ingredients now sit under Food, next to what's ready to eat.",
+      ],
+      id: [
+        "Ingin jumlah yang pasti? Ketuk barang lalu nyalakan Catat jumlah. Cukup untuk barang yang penting.",
+        "Jumlahnya berubah saat belanja. Tidak ada yang perlu menghitung.",
+        "Bahan masakan sekarang ada di Makanan, di samping yang siap dimakan.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown on Chores → Today (Phase 172 PR A2), existing households only
     // (the calm-start rules keep it from new ones, who get the list at
     // sign-up). Show me opens the Starter list. One card a week: if the
@@ -62,6 +83,28 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       id: ["Tugas → Daftar awal: centang yang belum ada. Yang sudah ada ditandai Sudah ditambahkan."],
     },
     tryLabel: { en: "Show me", id: "Lihat" },
+  },
+  {
+    // Phase 174 PR A: the one owner card for walk-ins, in Chores → Repairs
+    // (the calm-start rules hold it until the week is free). Staff get no
+    // card: the Perbaikan pill's button says what to do (stop rule).
+    id: "walkins-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: staff log repair people as they arrive", id: "Baru: staf mencatat tukang yang datang" },
+    steps: {
+      en: [
+        "Staff tap Ada tukang datang on their new Perbaikan pill: what's being fixed, who, and a photo before the work starts. Selesai adds the after photo.",
+        "You see who is here on Today, and each visit's before and after on the repair.",
+        "Tasks missed while someone supervised a repair say so on their own: nothing to ask, nothing for staff to type.",
+      ],
+      id: [
+        "Staf mengetuk Ada tukang datang di tab Perbaikan yang baru: apa yang diperbaiki, siapa, dan foto sebelum mulai. Selesai menambahkan foto sesudahnya.",
+        "Anda melihat siapa yang sedang bekerja di Hari ini, serta foto sebelum dan sesudah tiap kunjungan di perbaikannya.",
+        "Tugas yang terlewat karena staf sedang mengawasi perbaikan langsung diberi keterangan: tidak perlu bertanya, staf tidak perlu mengetik.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
     // Shown in Household, where the switches live (Phase 171 PR A, D8): this
@@ -420,6 +463,16 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    // Phase 170 PR A: while Kitchen amounts is on for the household.
+    id: "staff-kitchen-amounts-2026-11",
+    date: "2026-11-11",
+    title: "Baru: bahan masakan di Makanan",
+    lines: [
+      "Bahan masakan (beras, telur, minyak) sekarang ada di Dapur → Makanan. Cara menandainya sama: ketuk, lalu pilih Hampir habis atau Habis.",
+      "Kalau ada angkanya, tekan minus atau plus saja.",
+    ],
+  },
   {
     id: "staff-couldnt-do-2026-11",
     date: "2026-11-10",

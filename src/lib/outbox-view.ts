@@ -19,9 +19,52 @@ export interface OutboxView {
   tasks: HouseholdTask[];
   /** Every id above: "waiting to send" on the screen. */
   pendingIds: ReadonlySet<string>;
+  /**
+   * Portion taps and undos waiting on the phone (Phase 170 PR A), laid over
+   * the server's count by applyPortions, so a reload still shows them.
+   */
+  portions: PendingPortion[];
 }
 
-export const EMPTY_OUTBOX_VIEW: OutboxView = { logs: [], foods: [], tasks: [], pendingIds: new Set() };
+export interface PendingPortion {
+  /** The queue item, to stop laying it over once the server has answered it. */
+  itemId: string;
+  foodId: string;
+  /** +1 for a tap, -1 for an undo. */
+  taken: 1 | -1;
+  /** An undo of the tap that finished the food: shown back on the list. */
+  reopens: boolean;
+}
+
+/**
+ * The food as it will be once the waiting portion taps are sent (Phase 170
+ * PR A; Codex, PR #93). Relative, unlike the other waiting saves, so an
+ * answered one is skipped: the server's copy already has it. Whether a tap
+ * finishes the food is the server's call, so a count may show 0 until then.
+ */
+export function applyPortions(
+  foods: FoodItem[],
+  portions: readonly PendingPortion[],
+  isAnswered: (itemId: string) => boolean
+): FoodItem[] {
+  const live = portions.filter((p) => !isAnswered(p.itemId));
+  if (live.length === 0) return foods;
+  return foods.map((food) => {
+    const mine = live.filter((p) => p.foodId === food.id);
+    if (mine.length === 0 || typeof food.portions !== "number") return food;
+    let next: FoodItem = food;
+    for (const p of mine) {
+      if (p.taken === -1 && p.reopens && next.outcome === "eaten") {
+        next = { ...next, outcome: null, finished_at: null, finished_by: null };
+      }
+      const portions = Math.min(99, Math.max(0, (next.portions ?? 0) - p.taken));
+      next = { ...next, portions };
+    }
+    return next;
+  });
+}
+
+export const EMPTY_OUTBOX_VIEW: OutboxView = { logs: [], foods: [], tasks: [], pendingIds: new Set(), portions: [] };
 
 export function pendingFood(
   id: string,
@@ -73,6 +116,7 @@ export function outboxView(
   const foods: FoodItem[] = [];
   const changed: HouseholdTask[] = [];
   const pendingIds = new Set<string>();
+  const portions: PendingPortion[] = [];
 
   for (const item of items) {
     if (item.householdId && item.householdId !== householdId) continue;
@@ -97,9 +141,20 @@ export function outboxView(
     } else if (job.kind === "couldnt") {
       // Laid over by the couldn't-do store itself (lib/task-exceptions-store.ts).
       continue;
+    } else if (job.kind === "portion" || job.kind === "portion-undo") {
+      // Laid over the server's count by applyPortions (Phase 170 PR A).
+      portions.push({
+        itemId: item.id,
+        foodId: job.foodId,
+        taken: job.kind === "portion" ? 1 : -1,
+        reopens: job.kind === "portion-undo" && job.reopens === true,
+      });
     } else if (job.kind === "food") {
       pendingIds.add(job.id);
       foods.push(pendingFood(job.id, job.input, job.addedBy, householdId, new Date(item.timestamp).toISOString()));
+    } else if (job.kind !== "chore") {
+      // Walk-ins and hand-overs: laid over by the repairs store (Phase 174).
+      continue;
     } else {
       // The day's row, if this phone has it — by id, or written since by
       // another phone (or by an earlier try of this very save).
@@ -132,7 +187,7 @@ export function outboxView(
       );
     }
   }
-  return { logs, foods, tasks: changed, pendingIds };
+  return { logs, foods, tasks: changed, pendingIds, portions };
 }
 
 /** The server's copy with the waiting saves laid over it, by id. */

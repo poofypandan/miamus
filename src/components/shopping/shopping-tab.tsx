@@ -2,18 +2,21 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Circle, ClipboardCopy, Loader2, MessageCircle, Package, Plus } from "lucide-react";
+import { ClipboardCopy, Loader2, MessageCircle, Package, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-import { InventoryItemForm } from "@/components/inventory/inventory-item-form";
-import { ItemList } from "@/components/shopping/item-list";
-import { StockStatusSheet } from "@/components/shopping/stock-status-sheet";
+import { usePurchase } from "@/components/shopping/bought-sheet";
+import { StockItemsPanel } from "@/components/shopping/stock-items-panel";
+import { ToBuyRow } from "@/components/shopping/to-buy-row";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { amountsOn, ingredientsUnderFood } from "@/lib/features";
+import { amountLine, isIngredient, isTracked } from "@/lib/kitchen-units";
 import {
   STOCK_STATUS_LABELS,
   alertSubject,
@@ -25,8 +28,7 @@ import {
 } from "@/lib/inventory";
 import { isActiveAlert } from "@/lib/inventory-status";
 import { DATE_LOCALE } from "@/lib/owner-locale";
-import { cn } from "@/lib/utils";
-import type { InventoryAlert, InventoryItem } from "@/types/database";
+import type { InventoryAlert } from "@/types/database";
 
 /**
  * The owner's Shopping tab (Phase 154; it replaced Inventory). For both
@@ -47,7 +49,6 @@ export function ShoppingTab() {
     inventoryAlerts,
     entities,
     loading,
-    setInventoryStatus,
     resolveInventoryAlert,
     flagLowStock,
   } = useHousehold();
@@ -56,15 +57,15 @@ export function ShoppingTab() {
   const { petsOn } = useHouseholdProfile();
   const { allProfiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
-  const [choosing, setChoosing] = useState<InventoryItem | null>(null);
-  const [editing, setEditing] = useState<InventoryItem | "new" | null>(null);
-  // The item the form shows, kept while it closes so the title doesn't flip
-  // to "Add item" during the fade-out.
-  const [formItem, setFormItem] = useState<InventoryItem | null>(null);
-  function edit(next: InventoryItem | "new") {
-    setFormItem(next === "new" ? null : next);
-    setEditing(next);
-  }
+  const flags = useHouseholdFeatures();
+  const showAmounts = amountsOn(flags);
+  // D6: with Kitchen amounts on, fresh food and pantry browse under Food →
+  // Ingredients; Shopping keeps the non-food supplies. To buy gathers all.
+  const supplies = useMemo(
+    () => (ingredientsUnderFood(flags) ? inventoryItems.filter((item) => !isIngredient(item)) : inventoryItems),
+    [flags, inventoryItems]
+  );
+  const purchase = usePurchase(locale);
   const [jot, setJot] = useState("");
   const [jotting, setJotting] = useState(false);
 
@@ -105,22 +106,6 @@ export function ShoppingTab() {
 
   const day = (iso: string | null | undefined) =>
     iso ? new Date(iso).toLocaleDateString(DATE_LOCALE[locale], { day: "numeric", month: "short" }) : null;
-
-  async function bought(item: InventoryItem) {
-    const before = stockStatus(item);
-    try {
-      await setInventoryStatus(item.id, "ok");
-      toast.success(t(`Bought — ${stockItemName(item)}`, `Sudah dibeli — ${stockItemName(item)}`), {
-        action: {
-          label: t("Undo", "Batalkan"),
-          onClick: () => void setInventoryStatus(item.id, before).catch(() => undefined),
-        },
-      });
-    } catch (err) {
-      console.error(err);
-      toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
-    }
-  }
 
   async function noteDone(alert: InventoryAlert, subject: string) {
     try {
@@ -200,14 +185,15 @@ export function ShoppingTab() {
                 const by = item.stock_status_by ? staffName(item.stock_status_by) : null;
                 const when = day(item.stock_status_at);
                 const status = stockStatus(item);
+                const amount = showAmounts && isTracked(item) ? amountLine(item, locale).text : null;
                 return (
-                  <Row
+                  <ToBuyRow
                     key={item.id}
                     title={stockItemName(item)}
-                    detail={[STOCK_STATUS_LABELS[locale][status], by, when].filter(Boolean).join(" · ")}
+                    detail={[STOCK_STATUS_LABELS[locale][status], amount, by, when].filter(Boolean).join(" · ")}
                     out={status === "out"}
                     tickLabel={t(`Bought ${stockItemName(item)}`, `${stockItemName(item)} sudah dibeli`)}
-                    onTick={() => bought(item)}
+                    onTick={() => purchase.buy(item)}
                   />
                 );
               })}
@@ -215,7 +201,7 @@ export function ShoppingTab() {
                 const subject = alertSubject(alert, pet, locale);
                 const by = alert.staff_id ? staffName(alert.staff_id) : null;
                 return (
-                  <Row
+                  <ToBuyRow
                     key={alert.id}
                     title={subject}
                     detail={[alert.note !== subject ? alert.note : null, by, day(alert.created_at)]
@@ -244,90 +230,40 @@ export function ShoppingTab() {
         )}
       </section>
 
-      <section className="flex flex-col gap-2" aria-labelledby="everything-title">
-        <div className="flex items-center justify-between gap-2">
-          <h2 id="everything-title" className="text-sm font-semibold text-gray-900">
-            {t("Supplies at home", "Stok di rumah")}
-          </h2>
-          <Button variant="ghost" size="sm" className="-mr-2 min-h-10" onClick={() => edit("new")}>
-            <Plus /> {t("Add item", "Tambah barang")}
-          </Button>
-        </div>
-        {inventoryItems.length === 0 ? (
-          <EmptyState
-            icon={Package}
-            title={t("Nothing on the list yet", "Belum ada barang")}
-            description={
-              petsOn
-                ? t(
-                    "Add the things your home keeps — dog food, pee pads, cleaning supplies — and your staff can say when they run low.",
-                    "Tambahkan barang yang selalu ada di rumah — makanan anjing, pee pad, sabun — supaya staf bisa memberi tahu kalau hampir habis."
-                  )
-                : t(
-                    "Add the things your home keeps — rice, gallon water, cleaning supplies — and your staff can say when they run low.",
-                    "Tambahkan barang yang selalu ada di rumah — beras, galon, sabun — supaya staf bisa memberi tahu kalau hampir habis."
-                  )
-            }
-          />
-        ) : (
-          <ItemList items={inventoryItems} lang={locale} onPress={setChoosing} />
-        )}
-      </section>
-
-      <StockStatusSheet
-        item={choosing}
+      <StockItemsPanel
+        id="everything-title"
+        title={t("Supplies at home", "Stok di rumah")}
+        items={supplies}
         lang={locale}
-        onClose={() => setChoosing(null)}
-        onEdit={(item) => {
-          // Straight from one sheet to the next: useBackToClose holds the
-          // editor's history entry until the sheet's own has gone.
-          setChoosing(null);
-          edit(item);
-        }}
-      />
-      <InventoryItemForm
-        open={editing !== null}
-        onOpenChange={(open) => !open && setEditing(null)}
-        item={formItem}
+        owner
         // No pet shelf to start on in a home without pets (Phase 162).
         defaultScope={petsOn ? "pet" : "home"}
+        addLabel={t("Add item", "Tambah barang")}
+        empty={
+          inventoryItems.length > 0 ? (
+            <p className="rounded-xl border border-dashed px-3 py-5 text-center text-sm text-muted-foreground">
+              {t("Food items are under Food → Ingredients.", "Bahan masakan ada di Makanan → Bahan masakan.")}
+            </p>
+          ) : (
+            <EmptyState
+              icon={Package}
+              title={t("Nothing on the list yet", "Belum ada barang")}
+              description={
+                petsOn
+                  ? t(
+                      "Add the things your home keeps — dog food, pee pads, cleaning supplies — and your staff can say when they run low.",
+                      "Tambahkan barang yang selalu ada di rumah — makanan anjing, pee pad, sabun — supaya staf bisa memberi tahu kalau hampir habis."
+                    )
+                  : t(
+                      "Add the things your home keeps — rice, gallon water, cleaning supplies — and your staff can say when they run low.",
+                      "Tambahkan barang yang selalu ada di rumah — beras, galon, sabun — supaya staf bisa memberi tahu kalau hampir habis."
+                    )
+              }
+            />
+          )
+        }
       />
-    </div>
-  );
-}
-
-/** One thing to buy: a round tick on the left, like a checklist. */
-function Row({
-  title,
-  detail,
-  out = false,
-  tickLabel,
-  onTick,
-}: {
-  title: string;
-  detail: string;
-  out?: boolean;
-  tickLabel: string;
-  onTick: () => void;
-}) {
-  return (
-    <div className="flex min-h-[56px] items-center gap-3 pr-3">
-      <button
-        type="button"
-        onClick={onTick}
-        aria-label={tickLabel}
-        className="flex size-12 shrink-0 items-center justify-center text-muted-foreground active:text-gray-900"
-      >
-        <Circle className="size-5" />
-      </button>
-      <span className="flex min-w-0 flex-1 flex-col py-2">
-        <span className="truncate text-sm font-medium">{title}</span>
-        {detail && (
-          <span className={cn("truncate text-xs", out ? "text-red-700" : "text-muted-foreground")}>
-            {detail}
-          </span>
-        )}
-      </span>
+      {purchase.sheet}
     </div>
   );
 }

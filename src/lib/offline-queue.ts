@@ -1,6 +1,13 @@
 import { get, update } from "idb-keyval";
-import type { CreateBatchLogInput, CreateTaskExceptionInput, FoodItemInput } from "@/lib/data";
-import type { FoodItem, HouseholdTask, TaskException, TaskLog } from "@/types/database";
+import type {
+  CreateBatchLogInput,
+  CreateTaskExceptionInput,
+  FoodItemInput,
+  RepairInput,
+  WalkInFinishInput,
+  WalkInStartInput,
+} from "@/lib/data";
+import type { FoodItem, HouseholdTask, RepairSupervision, RepairWalkIn, TaskException, TaskLog } from "@/types/database";
 import { dataProvider } from "@/lib/data";
 import { isConnectionError } from "@/lib/network-errors";
 import { ensureUploaded, PhotoNotUploadedError } from "@/lib/photo-queue";
@@ -83,6 +90,20 @@ export type OutboxJob =
   | ChoreFinishJob
   | { kind: "food"; id: string; input: FoodItemInput; addedBy: string | null }
   /**
+   * "Ate 1 portion" and its Undo (Phase 170 PR A, migrations/148), decided
+   * on the server and keyed by an op id made on the phone: a resend after a
+   * lost answer, or one racing its own first try, counts once, and an Undo
+   * puts back exactly what its tap took, in whichever order they land.
+   */
+  | { kind: "portion"; opId: string; foodId: string; staffId: string | null }
+  | {
+      kind: "portion-undo";
+      opId: string;
+      foodId: string;
+      /** The tap took the last portion and finished the food: shown reopened while this waits. */
+      reopens?: boolean;
+    }
+  /**
    * "Tidak bisa dikerjakan" (Phase 165): its id is made on the phone, so a
    * resend is told "already saved" by the primary key.
    */
@@ -96,6 +117,27 @@ export type OutboxJob =
        * (a resend is "already saved").
        */
       shopping?: { itemId?: string | null; noteId?: string; note?: string } | null;
+    }
+  /**
+   * "Ada tukang datang" (Phase 174): the walk-in, and with "Baru" the repair
+   * it is for, both under ids made on the phone, so a resend is "already
+   * saved" for each. The before photo goes first.
+   */
+  | { kind: "walkin_start"; repair: (RepairInput & { id: string }) | null; visit: WalkInStartInput }
+  /** Selesai: the database takes the same finish twice as one (migrations/149). */
+  | {
+      kind: "walkin_finish";
+      visitId: string;
+      finish: WalkInFinishInput;
+      /** Who it frees (the visit's supervisor when saved); absent: anyone, for ordering. */
+      releases?: string | null;
+    }
+  /** "Ganti yang mengawasi": a new stretch under an id made on the phone. */
+  | {
+      kind: "supervision_handover";
+      input: { id: string; visit_id: string; staff_id: string };
+      /** Who hands it over (and is freed); absent: anyone, for ordering. */
+      releases?: string | null;
     };
 
 export interface OfflineQueueItem {
@@ -141,6 +183,12 @@ export function isAlreadySaved(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const { code, message } = err as { code?: unknown; message?: unknown };
   return code === "23505" && typeof message === "string" && /_pkey/.test(message);
+}
+
+/** The walk-in a couldn't-do record names isn't there (its foreign key, migrations/149). */
+function isMissingWalkIn(err: unknown): boolean {
+  const { code, message } = (err ?? {}) as { code?: unknown; message?: unknown };
+  return code === "23503" && typeof message === "string" && /task_exceptions_repair_visit_fkey/.test(message);
 }
 
 /** HTTP answers that mean "not now", not "no". */
@@ -314,9 +362,34 @@ export async function addToOutbox(item: OfflineQueueItem): Promise<boolean> {
 export async function clearFromQueue(id: string): Promise<void> {
   try {
     await mutate((current) => current.filter((item) => item.id !== id));
+    answered.delete(id);
   } catch (err) {
     console.error("Could not remove a sent save from the queue", err);
   }
+}
+
+/**
+ * Saves the server has answered that are still in the queue for a moment
+ * (until the screen has the server's copy and the queue is written). The
+ * screen stops laying a relative change (a portion) over the server's copy
+ * once it is answered, so it is never counted twice (Phase 170 PR A).
+ */
+const answered = new Set<string>();
+export function isAnswered(itemId: string): boolean {
+  return answered.has(itemId);
+}
+
+/**
+ * Told each answer the drain gets, before it counts as answered (Codex,
+ * PR #93): the screen takes the server's row first (a portion's food), so
+ * it never shows the old count with the waiting change no longer laid over
+ * it, even when the reload after the drain fails.
+ */
+type SendListener = (item: OfflineQueueItem, result: SendResult) => void;
+const sendListeners = new Set<SendListener>();
+export function onQueuedSaveSent(listener: SendListener): () => void {
+  sendListeners.add(listener);
+  return () => sendListeners.delete(listener);
 }
 
 // --- Sending ------------------------------------------------------------------
@@ -325,7 +398,11 @@ export type SendResult =
   | { kind: "logs"; logs: TaskLog[] }
   | { kind: "chore"; task: HouseholdTask }
   | { kind: "food"; food: FoodItem | null }
-  | { kind: "couldnt"; exception: TaskException | null };
+  | { kind: "portion"; food: FoodItem; consumed: number }
+  | { kind: "portion-undo"; food: FoodItem; restored: number }
+  | { kind: "couldnt"; exception: TaskException | null }
+  | { kind: "walkin"; walkIn: RepairWalkIn | null }
+  | { kind: "supervision"; row: RepairSupervision | null };
 
 /**
  * Thrown when something asks to delete a row that is still waiting in the
@@ -351,6 +428,15 @@ export function jobPhotos(job: OutboxJob): string[] {
       return [job.before, job.after].filter((url): url is string => !!url);
     case "couldnt":
       return job.input.photo_url ? [job.input.photo_url] : [];
+    case "portion":
+    case "portion-undo":
+      return [];
+    case "walkin_start":
+      return [job.repair?.photo_url, job.visit.before_photo_url].filter((url): url is string => !!url);
+    case "walkin_finish":
+      return [job.finish.after_photo_url];
+    case "supervision_handover":
+      return [];
   }
 }
 
@@ -395,12 +481,31 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
         if (isAlreadySaved(err)) return { kind: "food", food: null };
         throw err;
       }
+    case "portion":
+      return { kind: "portion", ...(await dataProvider.eatFoodPortion(ready.foodId, ready.opId, ready.staffId)) };
+    case "portion-undo":
+      return { kind: "portion-undo", ...(await dataProvider.undoFoodPortion(ready.foodId, ready.opId)) };
     case "couldnt": {
       let exception: TaskException | null = null;
       try {
         exception = await dataProvider.createTaskException(ready.input);
       } catch (err) {
-        if (!isAlreadySaved(err)) throw err;
+        if (isAlreadySaved(err)) {
+          // An earlier try landed.
+        } else if (ready.input.repair_visit_id && isMissingWalkIn(err)) {
+          // "Mengawasi perbaikan" for a walk-in that never reached the server
+          // (refused, or taken back): the reason still stands, without the
+          // link, rather than losing the record (code review, PR #94).
+          const { repair_visit_id: _gone, ...unlinked } = ready.input;
+          void _gone;
+          try {
+            exception = await dataProvider.createTaskException(unlinked);
+          } catch (again) {
+            if (!isAlreadySaved(again)) throw again;
+          }
+        } else {
+          throw err;
+        }
       }
       // Then the shopping list. A failure here leaves the job queued, and the
       // resend finds the record "already saved" and tries only this again.
@@ -422,6 +527,32 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
       }
       return { kind: "couldnt", exception };
     }
+    case "walkin_start": {
+      // The repair first ("Baru"), then the walk-in on it. A resend finds
+      // either already there and goes on.
+      if (ready.repair) {
+        try {
+          await dataProvider.createRepair(ready.repair);
+        } catch (err) {
+          if (!isAlreadySaved(err)) throw err;
+        }
+      }
+      try {
+        return { kind: "walkin", walkIn: await dataProvider.createRepairWalkIn(ready.visit) };
+      } catch (err) {
+        if (isAlreadySaved(err)) return { kind: "walkin", walkIn: null };
+        throw err;
+      }
+    }
+    case "walkin_finish":
+      return { kind: "walkin", walkIn: await dataProvider.finishRepairWalkIn(ready.visitId, ready.finish) };
+    case "supervision_handover":
+      try {
+        return { kind: "supervision", row: await dataProvider.handOverSupervision(ready.input) };
+      } catch (err) {
+        if (isAlreadySaved(err)) return { kind: "supervision", row: null };
+        throw err;
+      }
     case "chore": {
       const rowId =
         ready.rowId ?? (await dataProvider.materialiseChoreOccurrence(ready.templateId, ready.date, ready.assignedTo)).id;
@@ -484,6 +615,79 @@ type TryResult<T> = { ok: true; result: T } | { ok: false; err: unknown } | { ok
  * With nowhere to keep it (a locked-down private window), it is sent
  * directly and any failure is thrown, as before Phase 161.
  */
+/**
+ * What a save references, and what it creates or releases on the server
+ * (Phase 174). One rule orders the queue: a save waits for any earlier save
+ * still on the phone whose effects touch what it references. Otherwise a
+ * later save could land first and be refused, or worse, accepted against a
+ * state the person never saw (Codex, PR #94, two rounds):
+ *
+ *   repair:R    made by a "Baru" start; referenced by any walk-in on R
+ *   visit:V     made by a start, changed by a hand-over or Selesai;
+ *               referenced by a hand-over, a Selesai, a couldn't-do record
+ *               that names V ("Mengawasi perbaikan")
+ *   person:P    taken by a start or a hand-over to P, released by a
+ *               Selesai or hand-over of a visit P supervises; referenced by
+ *               a start (P must be free) and a hand-over to P. A release
+ *               saved before its person was known (an older app) releases
+ *               "person:*", which every person reference waits for.
+ *
+ * Saves with no keys (logs, food, chores) never wait for anything.
+ */
+export interface JobKeys {
+  refs: string[];
+  effects: string[];
+}
+
+const ANY_PERSON = "person:*";
+
+export function jobKeys(job: OutboxJob): JobKeys {
+  const person = (id: string | null | undefined) => (id ? `person:${id}` : ANY_PERSON);
+  switch (job.kind) {
+    case "walkin_start": {
+      const taker = job.visit.logged_by_staff;
+      return {
+        refs: [`repair:${job.visit.repair_id}`, ...(taker ? [`person:${taker}`] : [])],
+        effects: [
+          `visit:${job.visit.id}`,
+          ...(job.repair ? [`repair:${job.repair.id}`] : []),
+          ...(taker ? [`person:${taker}`] : []),
+        ],
+      };
+    }
+    case "walkin_finish":
+      return { refs: [`visit:${job.visitId}`], effects: [`visit:${job.visitId}`, person(job.releases)] };
+    case "supervision_handover":
+      return {
+        refs: [`visit:${job.input.visit_id}`, `person:${job.input.staff_id}`],
+        effects: [`visit:${job.input.visit_id}`, person(job.releases), `person:${job.input.staff_id}`],
+      };
+    case "couldnt":
+      return job.input.repair_visit_id ? { refs: [`visit:${job.input.repair_visit_id}`], effects: [] } : { refs: [], effects: [] };
+    default:
+      return { refs: [], effects: [] };
+  }
+}
+
+/** Does `later` have to wait for `earlier` (one rule; see jobKeys)? */
+export function dependsOn(later: OutboxJob, earlier: OutboxJob): boolean {
+  const { refs } = jobKeys(later);
+  if (refs.length === 0) return false;
+  const effects = new Set(jobKeys(earlier).effects);
+  if (effects.size === 0) return false;
+  return refs.some((ref) => effects.has(ref) || (ref.startsWith("person:") && effects.has(ANY_PERSON)));
+}
+
+/** An earlier save it depends on is still on the phone (queued or being sent). */
+function waitsForEarlier(item: OfflineQueueItem): boolean {
+  if (jobKeys(item.job).refs.length === 0) return false;
+  for (const other of items) {
+    if (other.id === item.id) return false; // reached itself: nothing earlier
+    if (dependsOn(item.job, other.job)) return true;
+  }
+  return false;
+}
+
 export async function submitJob<T extends SendResult>(
   job: OutboxJob,
   onSent?: (result: T) => void
@@ -494,6 +698,12 @@ export async function submitJob<T extends SendResult>(
     const result = (await sendJob(job)) as T;
     onSent?.(result);
     return { status: "sent", result };
+  }
+  // Behind an earlier save it depends on: it goes after that one, from the
+  // queue, never alongside it.
+  if (waitsForEarlier(item)) {
+    notifyWaiting();
+    return { status: "waiting" };
   }
 
   inFlight.add(id);
@@ -523,6 +733,7 @@ export async function submitJob<T extends SendResult>(
 
   inFlight.delete(id);
   if (first.ok === true) {
+    answered.add(id);
     onSent?.(first.result);
     await clearFromQueue(id);
     return { status: "sent", result: first.result };
@@ -627,16 +838,28 @@ export async function drainOutbox(
   items = queue;
   emit();
   let stalled = false;
+  // Saves not sent in this pass: anything depending on them waits too.
+  const held: OutboxJob[] = [];
   for (const item of queue) {
     // Saved for another household (a phone that switched): it waits for that one.
     if (item.householdId && item.householdId !== household) continue;
-    if (stalled || inFlight.has(item.id)) {
+    if (stalled || inFlight.has(item.id) || held.some((earlier) => dependsOn(item.job, earlier))) {
       report.waiting++;
+      held.push(item.job);
       continue;
     }
     inFlight.add(item.id);
+    let kept = false;
     try {
-      await sendJob(await withStableIds(item));
+      const result = await sendJob(await withStableIds(item));
+      for (const listener of sendListeners) {
+        try {
+          listener(item, result);
+        } catch (err) {
+          console.error("A screen update after a queued save failed", err);
+        }
+      }
+      answered.add(item.id);
       report.sent.push(item);
       sessionRefusals = 0;
       setUnlinked(false);
@@ -652,9 +875,11 @@ export async function drainOutbox(
         report.unlinked = true;
         stalled = true;
         report.waiting++;
+        kept = true;
       } else if (link === "unknown" || link === "no_answer" || isRetryable(err)) {
         stalled = true;
         report.waiting++;
+        kept = true;
       } else {
         console.error("A queued save was refused", item.id, err);
         report.refused.push(item);
@@ -662,6 +887,7 @@ export async function drainOutbox(
       }
     } finally {
       inFlight.delete(item.id);
+      if (kept) held.push(item.job);
     }
   }
   if (report.sent.length > 0 || report.refused.length > 0) {
@@ -674,9 +900,9 @@ export async function drainOutbox(
       report.confirmed = false;
     }
     const done = new Set([...(report.confirmed ? report.sent : []), ...report.refused].map((item) => item.id));
-    await mutate((current) => current.filter((item) => !done.has(item.id))).catch((err) =>
-      console.error("Could not remove sent saves from the queue", err)
-    );
+    await mutate((current) => current.filter((item) => !done.has(item.id)))
+      .then(() => done.forEach((id) => answered.delete(id)))
+      .catch((err) => console.error("Could not remove sent saves from the queue", err));
   }
   return report;
 }

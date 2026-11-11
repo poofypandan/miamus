@@ -1,5 +1,7 @@
 import type { BrowserContext, Route } from "@playwright/test";
 import { BENTO, HOUSEHOLD_ID, MOCHI, SCHEDULES } from "../fixtures/household";
+import { applyAmountRules } from "../../src/lib/kitchen-units";
+import type { InventoryItem } from "../../src/types/database";
 
 /**
  * A pretend Supabase for the browser tests (Phases 146–147).
@@ -94,6 +96,13 @@ export interface StubOptions {
    * set_household_feature, so a staff phone in the same test reads the new value.
    */
   features?: Record<string, boolean>;
+  /**
+   * inventory_items rows the household already has (Phase 170 PR A). The
+   * stub then holds them: updates, adjust_inventory_quantity and
+   * record_purchase change them in place, with migrations/148's amount rules
+   * and owner guard (a staff phone can't change tracking, units or low levels).
+   */
+  items?: Record<string, unknown>[];
   /** The VAPID public key get_push_public_key returns to the admin (push set up on the server). */
   pushKey?: string;
   /** Leave the Add to Home Screen tip showing (owner phones have it closed by default). */
@@ -126,6 +135,10 @@ export interface StubOptions {
   schedules?: Record<string, unknown>[];
   /** task_exceptions rows already on record (Phase 165); changed in place. */
   exceptions?: Record<string, unknown>[];
+  /** repair_visits rows (walk-ins, Phase 174); changed in place. */
+  walkIns?: Record<string, unknown>[];
+  /** repair_supervision rows (Phase 174); changed in place by the stub's "triggers". */
+  supervision?: Record<string, unknown>[];
   /** The admin's notification switches (Phase 165); changed in place. */
   notificationPrefs?: { evening_summary_hour: number | null; staff_request_pushes: boolean };
   /** What household_requests_push_on answers a staff phone (Phase 165). */
@@ -179,9 +192,15 @@ export interface Stub {
     realBackend: string[];
     /** set_my_push_person calls from a staff phone (Phase 166). */
     pushPeople: Record<string, unknown>[];
+    /** The op id of each eat_food_portion call, resends included (Phase 170 PR A). */
+    portionCalls: string[];
+    /** The op id of each undo_food_portion call. */
+    portionUndos: string[];
   };
   /** food_items rows as the stub holds them (Phase 156). */
   foods: Record<string, unknown>[];
+  /** Set lostReplies to drop that many eat_food_portion answers after counting them. */
+  portionTrouble: { lostReplies: number };
   /** household_tasks rows created on this phone (Kakak's saves). */
   tasks: Record<string, unknown>[];
   /** inventory_items rows added on this phone (Phase 164: gas and gallons). */
@@ -205,6 +224,9 @@ export interface Stub {
   repairNotes: Record<string, unknown>[];
   /** task_exceptions rows as the stub holds them (Phase 165). */
   exceptions: Record<string, unknown>[];
+  /** repair_visits and repair_supervision as the stub holds them (Phase 174). */
+  walkIns: Record<string, unknown>[];
+  supervision: Record<string, unknown>[];
   /** The admin's notification switches as last saved (Phase 165). */
   notificationPrefs: { evening_summary_hour: number | null; staff_request_pushes: boolean };
   setNetwork(up: boolean): void;
@@ -237,10 +259,13 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const writes: [string, string][] = [];
   const logs: Record<string, unknown>[] = options.logs ?? [];
   const schedules: Record<string, unknown>[] = [...(SCHEDULES as unknown as Record<string, unknown>[]), ...(options.schedules ?? [])];
-  const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [] };
+  const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [], portionCalls: [], portionUndos: [] };
   const foods: Record<string, unknown>[] = [];
+  const portionOps = new Map<string, { consumed: number; finished: boolean; undone: boolean }>();
+  /** eat_food_portion answers to drop after counting (a reply lost on the way back). */
+  const portionTrouble = { lostReplies: 0 };
   const tasks: Record<string, unknown>[] = [];
-  const supplies: Record<string, unknown>[] = [];
+  const supplies: Record<string, unknown>[] = options.items ? options.items.map((row) => ({ ...row })) : [];
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
   const repairCosts: Record<string, unknown>[] = [];
   const billPayments: Record<string, unknown>[] = options.billPayments ? [...options.billPayments] : [];
@@ -249,6 +274,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const removed: string[] = [];
   const repairNotes: Record<string, unknown>[] = [];
   const exceptions: Record<string, unknown>[] = options.exceptions ?? [];
+  const walkIns: Record<string, unknown>[] = options.walkIns ?? [];
+  const supervision: Record<string, unknown>[] = options.supervision ?? [];
   const notificationPrefs = options.notificationPrefs ?? { evening_summary_hour: 19, staff_request_pushes: true };
   const kakak = { allowed: false, enabled: false, ...options.kakak };
   // An established household by default (Phase 172's calm first screen
@@ -452,6 +479,93 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: object ? row : [row] });
       }
+      // Kitchen amounts (Phase 170 PR A, migrations/148).
+      if (table === "inventory_items" && request.method() === "PATCH") {
+        const itemId = (new URL(request.url()).searchParams.get("id") ?? "").replace(/^eq\./, "");
+        const index = supplies.findIndex((row) => row.id === itemId);
+        const patch = request.postDataJSON() as Record<string, unknown>;
+        const before = supplies[index] as unknown as InventoryItem | undefined;
+        if (!before) return route.fulfill({ json: [] });
+        const ownerOnly = ["track_amount", "unit", "min_threshold", "name", "category", "scope", "photo_url", "notes"];
+        if (who !== OWNER && ownerOnly.some((key) => key in patch && patch[key] !== (before as unknown as Record<string, unknown>)[key])) {
+          return route.fulfill({ status: 403, json: { code: "42501", message: "inventory_owner_only", details: null, hint: null } });
+        }
+        const after = applyAmountRules(before, { ...before, ...patch } as InventoryItem);
+        supplies[index] = after as unknown as Record<string, unknown>;
+        const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: object ? after : [after] });
+      }
+      if (table === "rpc/adjust_inventory_quantity" || table === "rpc/record_purchase") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        const index = supplies.findIndex((row) => row.id === body.p_item_id);
+        const before = supplies[index] as unknown as InventoryItem | undefined;
+        if (!before) return route.fulfill({ json: [] });
+        let after: InventoryItem;
+        if (table === "rpc/adjust_inventory_quantity") {
+          after = applyAmountRules(before, {
+            ...before,
+            quantity: Math.max(0, before.quantity + Number(body.p_delta)),
+            amount_set_by: (body.p_staff_id as string | null) ?? null,
+          });
+        } else {
+          const amount = body.p_amount === null || body.p_amount === undefined ? null : Number(body.p_amount);
+          const adds = before.track_amount === true && amount !== null;
+          after = applyAmountRules(before, {
+            ...before,
+            quantity: adds ? before.quantity + amount! : before.quantity,
+            last_bought_amount: adds ? amount : (before.last_bought_amount ?? null),
+            amount_set_by: adds ? ((body.p_staff_id as string | null) ?? null) : (before.amount_set_by ?? null),
+            stock_status: "ok",
+            stock_status_by: (body.p_staff_id as string | null) ?? null,
+          });
+        }
+        supplies[index] = after as unknown as Record<string, unknown>;
+        const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: object ? after : [after] });
+      }
+      // Ate 1 portion and its Undo (migrations/148): decided here, once per op id.
+      if (table === "rpc/eat_food_portion" || table === "rpc/undo_food_portion") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        const food = foods.find((row) => row.id === body.p_food_id);
+        if (!food) return route.fulfill({ status: 403, json: { code: "42501", message: "not_found", details: null, hint: null } });
+        const opId = String(body.p_op_id);
+        const op = portionOps.get(opId);
+        let answer: Record<string, unknown>;
+        if (table === "rpc/eat_food_portion") {
+          seen.portionCalls.push(opId);
+          if (op) {
+            answer = { food, consumed: op.consumed };
+          } else {
+            const takes = typeof food.portions === "number" && (food.portions as number) > 0 && !food.outcome;
+            const ends = takes && food.portions === 1;
+            portionOps.set(opId, { consumed: takes ? 1 : 0, finished: ends, undone: false });
+            if (takes) {
+              food.portions = (food.portions as number) - 1;
+              if (ends) Object.assign(food, { outcome: "eaten", finished_at: new Date().toISOString() });
+            }
+            answer = { food, consumed: takes ? 1 : 0 };
+          }
+          if (portionTrouble.lostReplies > 0) {
+            portionTrouble.lostReplies -= 1;
+            return route.abort("connectionreset");
+          }
+        } else {
+          seen.portionUndos.push(opId);
+          let restored = 0;
+          if (!op) {
+            portionOps.set(opId, { consumed: 0, finished: false, undone: true });
+          } else if (!op.undone) {
+            op.undone = true;
+            if (op.consumed === 1) {
+              restored = 1;
+              food.portions = Math.min(99, ((food.portions as number) ?? 0) + 1);
+              if (op.finished && food.outcome === "eaten") Object.assign(food, { outcome: null, finished_at: null });
+            }
+          }
+          answer = { food, restored };
+        }
+        return route.fulfill({ json: answer });
+      }
       if (table === "inventory_items" && request.method() === "GET" && supplies.length > 0) {
         return route.fulfill({ json: supplies });
       }
@@ -496,6 +610,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         );
       }
       if (table === "repair_notes") return answerRepairNotes(route, repairNotes);
+      // Phase 174 (migrations/149): walk-ins and supervising stretches.
+      if (table === "repair_visits") return answerWalkIns(route, walkIns, supervision, who === OWNER);
+      if (table === "repair_supervision") return answerSupervision(route, walkIns, supervision);
       // Phase 165 (migrations/139): couldn't-do records and the admin's switches.
       if (table === "task_exceptions") return answerExceptions(route, exceptions);
       if (table === "rpc/my_notification_prefs" && who === OWNER) return route.fulfill({ json: [notificationPrefs] });
@@ -533,6 +650,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     schedules,
     seen,
     foods,
+    portionTrouble,
     tasks,
     supplies,
     repairs,
@@ -543,6 +661,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     removed,
     repairNotes,
     exceptions,
+    walkIns,
+    supervision,
     notificationPrefs,
     kakak,
     household,
@@ -1136,4 +1256,108 @@ function answerExceptions(route: Route, rows: Record<string, unknown>[]) {
     return route.fulfill({ json: index === -1 ? [] : rows.splice(index, 1).map((r) => ({ id: r.id })) });
   }
   return route.fulfill({ json: [] });
+}
+
+function stubError(route: Route, status: number, code: string, message: string) {
+  return route.fulfill({ status, json: { code, message, details: null, hint: null } });
+}
+
+/**
+ * repair_visits (migrations/149), with its triggers in miniature: the server
+ * stamps the times, a walk-in opens its logger's stretch (one per person:
+ * supervision_busy), Selesai closes it, and a resend of the same id is
+ * "already saved" (the primary key).
+ */
+function answerWalkIns(
+  route: Route,
+  walkIns: Record<string, unknown>[],
+  supervision: Record<string, unknown>[],
+  owner: boolean
+) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  const id = new URL(request.url()).searchParams.get("id")?.replace(/^eq\./, "");
+  const now = new Date().toISOString();
+  if (request.method() === "GET") return reply(walkIns);
+  if (request.method() === "POST") {
+    const body = request.postDataJSON();
+    const fields = Array.isArray(body) ? body[0] : body;
+    if (walkIns.some((v) => v.id === fields.id)) {
+      return stubError(route, 409, "23505", 'duplicate key value violates unique constraint "repair_visits_pkey"');
+    }
+    if (fields.logged_by_staff && supervision.some((s) => !s.ended_at && s.staff_id === fields.logged_by_staff)) {
+      return stubError(route, 400, "23514", "supervision_busy");
+    }
+    const row: Record<string, unknown> = {
+      worker_name: null,
+      created_by: null,
+      arrived_phone_at: null,
+      left_at: null,
+      left_phone_at: null,
+      after_photo_url: null,
+      outcome: null,
+      note: null,
+      ...fields,
+      arrived_at: now,
+    };
+    walkIns.push(row);
+    if (fields.logged_by_staff) {
+      supervision.push({
+        id: `00000000-0000-4000-8000-${String(900 + supervision.length).padStart(12, "0")}`,
+        household_id: fields.household_id,
+        visit_id: fields.id,
+        staff_id: fields.logged_by_staff,
+        user_id: null,
+        started_at: now,
+        ended_at: null,
+      });
+    }
+    return reply([row]);
+  }
+  const index = walkIns.findIndex((v) => v.id === id);
+  if (request.method() === "DELETE") {
+    if (index === -1) return reply([]);
+    supervision.splice(0, supervision.length, ...supervision.filter((s) => s.visit_id !== id));
+    return reply(walkIns.splice(index, 1));
+  }
+  if (index === -1) return reply([]);
+  const row = walkIns[index];
+  const patch = request.postDataJSON() ?? {};
+  if (patch.after_photo_url && !row.after_photo_url) {
+    Object.assign(row, patch, { left_at: now });
+    for (const s of supervision) if (s.visit_id === id && !s.ended_at) s.ended_at = now;
+  } else if (patch.after_photo_url === null && row.after_photo_url) {
+    const leftAt = row.left_at;
+    Object.assign(row, { after_photo_url: null, left_at: null, left_phone_at: null, outcome: null, note: null });
+    const last = supervision.filter((s) => s.visit_id === id && s.ended_at === leftAt).at(-1);
+    if (last) last.ended_at = null;
+  } else if (owner) {
+    Object.assign(row, patch);
+  }
+  return reply([row]);
+}
+
+/** repair_supervision (migrations/149): reads, and the hand-over insert. */
+function answerSupervision(route: Route, walkIns: Record<string, unknown>[], supervision: Record<string, unknown>[]) {
+  const request = route.request();
+  const wantsObject = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
+  if (request.method() === "GET") return reply(supervision);
+  if (request.method() !== "POST") return stubError(route, 403, "42501", "permission denied for table repair_supervision");
+  const body = request.postDataJSON();
+  const fields = Array.isArray(body) ? body[0] : body;
+  if (supervision.some((s) => s.id === fields.id)) {
+    return stubError(route, 409, "23505", 'duplicate key value violates unique constraint "repair_supervision_pkey"');
+  }
+  const visit = walkIns.find((v) => v.id === fields.visit_id);
+  if (!visit || visit.after_photo_url) return stubError(route, 400, "23514", "supervision_visit_finished");
+  if (supervision.some((s) => !s.ended_at && s.staff_id === fields.staff_id && s.visit_id !== fields.visit_id)) {
+    return stubError(route, 400, "23514", "supervision_busy");
+  }
+  const now = new Date().toISOString();
+  for (const s of supervision) if (s.visit_id === fields.visit_id && !s.ended_at) s.ended_at = now;
+  const row = { user_id: null, ...fields, started_at: now, ended_at: null };
+  supervision.push(row);
+  return reply([row]);
 }

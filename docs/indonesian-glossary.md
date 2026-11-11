@@ -237,7 +237,26 @@ people are **staf** and **admin**.
 | N left · All done · N late · N couldn't be done · No tasks | **Sisa N · Semua selesai · N terlambat · N tidak bisa dikerjakan · Tidak ada tugas** | The calm line under a name. |
 | Anyone, not done yet | **Siapa saja, belum dikerjakan** | The small row for what nobody owns and nobody has done. |
 | Everyone (back from a person's day) · Not yet · From an earlier day | **Semua orang · Belum · Dari hari sebelumnya** | The person's day in Siapa mengerjakan apa. |
-| Supervising a repair since 10.00 (planned) | **Mengawasi perbaikan sejak 10.00** | Phase 174: the busy line's place is ready; nothing fills it yet. |
+| Supervising a repair since 10.00 | **Mengawasi perbaikan sejak 10.00** | Phase 174 PR A: the busy line on a person's progress row, while they supervise a walk-in. |
+| A repair person is here (staff button) / Someone's here (owner button) | **Ada tukang datang** | Phase 174 PR A. The staff's big button on Perbaikan; the owners' button in Tugas → Perbaikan. "Tukang" is the everyday word. |
+| In progress · Today · Still broken · Fixed (staff sections) | **Sedang dikerjakan · Hari ini · Masih rusak · Sudah diperbaiki** | Phase 174 PR A: the sections of the staff's Perbaikan pill. |
+| What's being fixed? · New · What's broken? | **Apa yang diperbaiki? · Baru · Apa yang rusak?** | Phase 174 PR A, the Ada tukang datang sheet. |
+| Who? (optional, staff) / Other name | **Siapa? (boleh dikosongkan)** / **Nama lain** | Phase 174 PR A. Names only, never a number. |
+| Developer team (name chip) | **Tim developer** | Phase 174 PR A: the fixed chip beside recent names. "Developer" is what owners of a new house say. |
+| Before photo · After photo · Photo of the part being fixed | **Foto sebelum diperbaiki · Foto sesudah diperbaiki · Foto bagian yang diperbaiki** | Phase 174 PR A. The tile hint steers to the work, not to people (D5). |
+| How did it go? (optional) | **Bagaimana hasilnya? (boleh dikosongkan)** | Phase 174 PR A, the Selesai sheet. |
+| Done / Not finished, coming back / Owner should check (staff chips) | **Sudah beres** / **Belum selesai, datang lagi** / **Perlu dicek pemilik rumah** | Phase 174 PR A. "Pemilik rumah", not Bapak/Ibu, until the Bu/Pak setting exists. |
+| Done / Coming back / Please check (the chips as owners read them) | **Sudah beres** / **Akan datang lagi** / **Mohon dicek** | Phase 174 PR A, owner screens in Indonesian. |
+| Saved. Shown to the owners. | **Tersimpan. Pemilik rumah bisa melihatnya.** | Phase 174 PR A, the toast after Ada tukang datang and Selesai. PR B's pushes change it to **Tersimpan · Pemilik rumah diberi tahu**: until then nobody is pushed, so the toast doesn't say so. |
+| Retake | **Foto ulang** | Phase 174 PR A, beside a photo already taken. |
+| Not closed since yesterday | **Belum ditutup sejak kemarin** | Phase 174 PR A: a walk-in nobody closed (D6); it never closes itself. |
+| Supervising a repair (staff strip, task label, couldn't-do reason) | **Sedang mengawasi perbaikan** (strip) / **Mengawasi perbaikan** (label and reason) | Phase 174 PR A (D10). |
+| Hand over supervision | **Ganti yang mengawasi** | Phase 174 PR A (D11). |
+| Supervised by Ari 09.10–10.30, then Syam | **Diawasi Ari 09.10–10.30, lalu Syam** | Phase 174 PR A, the owners' repair timeline. |
+| Walk-in (owner timeline) · logged by Ari | **Datang langsung** · **dicatat Ari** | Phase 174 PR A. |
+| Pak Budi is here (owners' Today line) | **Pak Budi sedang bekerja** | Phase 174 PR A, with the repair and the place after it. |
+| Repair person here / Repair finished (pushes) | **Tukang datang** / **Perbaikan selesai** | Phase 174 PR B (planned). |
+| Send to the developer | **Kirim ke developer** | Phase 174 PR C (planned). |
 | Features (Household row) | **Fitur** | Phase 171 PR A: Household → Fitur replaces "Siapa yang tinggal di sini". Everyday word. |
 | On / off (a feature) | **aktif / dimatikan** | Phase 171 PR A: "4 aktif" on the row; toasts "{Fitur} aktif" · "{Fitur} dimatikan". |
 | Food at home (feature) | **Makanan di rumah** | Phase 171 PR A, the Features row; the Kitchen pill stays **Makanan**. |
@@ -262,6 +281,17 @@ people are **staf** and **admin**.
 | Open the link from the owner's WhatsApp to make a PIN. · This link no longer works. Ask the owner for a new one. | **Buka link dari WhatsApp pemilik rumah untuk membuat PIN. · Link ini sudah tidak berlaku. Minta link baru ke pemilik rumah.** | Phase 172 PR A2, audit L5 (staff, Indonesian only): the house code alone can't claim a name. |
 | Service charge (IPL) | **Iuran pengelola (IPL)** | Phase 172 PR A2: apartments' monthly bill in the Bills and upkeep checklist. |
 | Room names saved by the templates | **Ruang Tamu · Ruang Keluarga · Ruang Keluarga Atas · Ruang Makan · Dapur · Dapur Kotor · Kamar Utama · Kamar Tidur 2 · Kamar Mandi · Kamar Staf · Kamar Mandi Staf · Ruang Cuci · Gudang · Balkon · Teras · Taman · Kolam Renang** | Phase 172 Appendix A1; floors **LT1, LT2…** and **Rooftop**. Owners rename any room later. |
+| Kitchen amounts (feature) | **Jumlah bahan dapur** | Phase 170 PR A, the Features row under Dapur. |
+| Ready to eat · Ingredients (Food groups) | **Siap dimakan · Bahan masakan** | Phase 170 PR A (D6): fresh food and pantry items browse under Makanan. Hint: **Makanan segar dan bahan pokok**. |
+| Track amount / Set amount | **Catat jumlah** / **Ubah jumlah** | Phase 170 PR A. "Catat", as in Dicatat Sari. |
+| N left / about N · 3 weeks ago | **Sisa N** / **sekitar N · 3 minggu lalu** | Phase 170 PR A: "Sisa 1,2 kg"; the second in grey after 14 days, never red. |
+| How much is there now? / A guess is fine… | **Berapa yang ada sekarang?** / **Perkiraan juga boleh; nanti terkoreksi saat belanja.** | Phase 170 PR A, owner form. |
+| Running low at (optional) | **Hampir habis kalau tinggal (opsional)** | Phase 170 PR A, owner form; matches *Hampir habis*. |
+| Old count: 2 kg on 3 Oct, not used | **Hitungan lama: 2 kg pada 3 Okt, tidak dipakai** | Phase 170 PR A (D14). |
+| Unit | **Satuan** | Phase 170 PR A, the Track amount chips. |
+| How much did you buy? / usually 5 kg / Skip amount / Bought | **Beli berapa?** / **biasanya 5 kg** / **Lewati jumlah** / **Sudah dibeli** | Phase 170 PR A; owners and staff. Toast: **Sudah dibeli · masih hampir habis**. |
+| Portions / Ate 1 portion | **Porsi** / **Dimakan 1 porsi** | Phase 170 PR A (D7): "Rendang · 3 porsi"; toast **sisa 2 porsi**. |
+| Kitchen units | **buah, butir, ikat, siung, lembar, batang, bungkus, sachet** (recipes later add **sdm, sdt**) | Phase 170 PR A: the words Indonesian kitchens use, kept in English too; the English picker adds a small second line (piece, egg, bunch, clove, leaf, stalk, packet, sachet). |
 
 ## Formatting
 

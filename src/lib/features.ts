@@ -12,16 +12,19 @@
  */
 import type { HouseholdTask } from "@/types/database";
 
-export const FEATURES = ["repairs", "bills", "food"] as const;
+// "kitchen": kitchen amounts (Phase 170 PR A, migrations/148), the first
+// feature that joins off (D4); on for the households that existed when 148
+// ran, the founding household among them.
+export const FEATURES = ["repairs", "bills", "food", "kitchen"] as const;
 export type Feature = (typeof FEATURES)[number];
 export type FeatureFlags = Record<Feature, boolean>;
 
 /**
- * No row = this. Mirrors household_feature_defaults() in migrations/145
+ * No row = this. Mirrors household_feature_defaults() (migrations/145, re-created in 148)
  * (a unit test reads the migration and checks they agree). Later features
  * join with `false` (D4: they start off, with an offer at the moment of need).
  */
-export const FEATURE_DEFAULTS: FeatureFlags = { repairs: true, bills: true, food: true };
+export const FEATURE_DEFAULTS: FeatureFlags = { repairs: true, bills: true, food: true, kitchen: false };
 
 export function isFeature(value: unknown): value is Feature {
   return typeof value === "string" && (FEATURES as readonly string[]).includes(value);
@@ -53,6 +56,25 @@ export function visibleChores<T extends Pick<HouseholdTask, "category">>(rows: T
  */
 export function choresViewFor<V extends string>(view: V, flags: FeatureFlags): V | "today" {
   return view === "repairs" && !flags.repairs ? "today" : view;
+}
+
+/**
+ * Kitchen amounts on screen (Phase 170 PR A): the switch alone. Off hides
+ * the amounts, Track amount and "How much did you buy?"; the numbers stay
+ * saved and come back with the switch, and buying ticks as before.
+ */
+export function amountsOn(flags: Pick<FeatureFlags, "kitchen">): boolean {
+  return flags.kitchen;
+}
+
+/**
+ * D6: fresh food and pantry items browse under Food → Ingredients, beside
+ * Ready to eat, while kitchen amounts and Food at home are both on;
+ * otherwise everything stays under Shopping, as before. Each item lives in
+ * one browsing place; To buy still gathers all of it.
+ */
+export function ingredientsUnderFood(flags: Pick<FeatureFlags, "kitchen" | "food">): boolean {
+  return flags.kitchen && flags.food;
 }
 
 /** The Kitchen pill: with Food at home off, Shopping alone. */
