@@ -20,6 +20,7 @@ export type QuickKey =
   | "water"
   | "internet"
   | "iuran"
+  | "ipl"
   | "bpjs"
   | "pbb"
   | "stnk"
@@ -166,7 +167,23 @@ export const QUICK_ITEMS: QuickItem[] = [
     due: { kind: "day", day: 1 },
     who: "me",
     remind: 0,
-    matches: /\biuran\b/i,
+    matches: /\biuran\b(?!\s+pengelola)/i,
+  },
+  {
+    // Apartments' service charge (Phase 172 PR A2, Appendix A).
+    kind: "chore",
+    key: "ipl",
+    group: "bill",
+    icon: "house",
+    name: { en: "Service charge (IPL)", id: "Iuran pengelola (IPL)" },
+    title: { en: "Service charge (IPL)", id: "Iuran pengelola (IPL)" },
+    category: "bill",
+    recurrence: "monthly",
+    interval: 1,
+    due: { kind: "day", day: 10 },
+    who: "me",
+    remind: 3,
+    matches: /\b(ipl|service charge|iuran pengelola)\b/i,
   },
   {
     kind: "chore",

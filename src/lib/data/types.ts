@@ -626,6 +626,12 @@ export interface DataProvider {
   houseCodeRoster(code: string): Promise<HouseCodePerson[]>;
   /** Code, name and PIN together; on "ok" this phone is linked to the household. */
   signInWithHouseCode(code: string, staffId: string, pin: string): Promise<HouseCodeSignIn>;
+  /**
+   * Staff in one go (Phase 172 PR A2, migrations/147): a person with no PIN
+   * yet, added in the last 7 days, picks their name and makes a PIN; on
+   * "ok" this phone is linked to the household.
+   */
+  claimStaffWithHouseCode(code: string, staffId: string, pin: string, claim: string | null): Promise<HouseCodeClaim>;
   /** Admins only, for the active household. */
   getHouseCode(): Promise<string | null>;
   rotateHouseCode(): Promise<string>;
@@ -652,13 +658,27 @@ export type PinCheck =
   | { status: "too_many_attempts" }
   | { status: "no_pin" };
 
-export type HouseCodePerson = { id: string; name: string; has_pin: boolean };
+export type HouseCodePerson = {
+  id: string;
+  name: string;
+  has_pin: boolean;
+  /** No PIN yet and added in the last 7 days: they can pick it (migrations/147). Absent before 147. */
+  claimable?: boolean;
+};
 
 export type HouseCodeSignIn =
   | Exclude<PinCheck, { status: "ok" }>
   | { status: "ok"; household_id: string }
   | { status: "wrong_code" }
   | { status: "too_many_attempts" };
+
+export type HouseCodeClaim =
+  | { status: "ok"; household_id: string }
+  | { status: "wrong_code" }
+  | { status: "too_many_attempts" }
+  | { status: "not_claimable" }
+  | { status: "no_claim_link" }
+  | { status: "bad_pin" };
 
 /** A staff phone linked to the household (device_sessions). */
 export type LinkedPhone = { id: string; linked_at: string; last_seen_at: string };

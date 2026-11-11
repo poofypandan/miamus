@@ -241,6 +241,24 @@ people are **staf** and **admin**.
 | What kind of home? | **Rumah seperti apa?** | Phase 171 PR A, sign-up screen 2 (the brief's wording; Phase 172's plan drafted "Seperti apa rumah Anda?"). |
 | House with a garden · Big house, several floors · Apartment · Something else | **Rumah dengan taman · Rumah besar bertingkat · Apartemen · Lainnya** | Phase 172's four home types, drawn by Phase 171's screen. |
 | No thanks (offer, later) | **Tidak, terima kasih** | Phase 171 D7: the offer card, built with the first feature that starts off. |
+| Your home (setup review) · Untick what you don't have. | **Rumah Anda** · **Hapus centang yang tidak ada.** | Phase 172 PR A2, `/setup`. |
+| Starter list | **Daftar awal** | Phase 172 PR A2: the button on Chores → Today for existing households. |
+| Floors · Bedrooms · Bathrooms (shape row) | **Lantai · Kamar tidur · Kamar mandi** | Phase 172 PR A2, the steppers. |
+| Garden · Pool · Carport · Rooftop · Staff room · Laundry room | **Taman · Kolam · Carport · Rooftop · Kamar staf · Ruang cuci** | Phase 172 PR A2, the chips. "Kamar staf", never "Kamar ART" or "Kamar pembantu". |
+| Whole house · Outside | **Seluruh rumah · Luar rumah** | Phase 172 PR A2, review groups (Whole floor stays **Seluruh lantai**). |
+| Added (already in the household) | **Sudah ditambahkan** | Phase 172 PR A2 (D7). |
+| Skip for now · Next: your staff · Add N | **Lewati dulu · Lanjut: staf Anda · Tambah N** | Phase 172 PR A2. |
+| Your staff · Add another · Name | **Staf Anda · Tambah lagi · Nama** | Phase 172 PR A2, the staff step. |
+| Job chips: Cleaning · Kitchen · Laundry · Garden · Driver · Pool | **Bersih-bersih · Dapur · Cuci dan setrika · Kebun · Sopir · Kolam** | Phase 172 PR A2 (D6). A hint, not a lock. |
+| Anyone (assignee) · For you | **Siapa saja · Untuk Anda** | Phase 172 PR A2 (Siapa saja as in Phase 164). |
+| Send one WhatsApp message · Send this to your staff. Each person picks their name. | **Kirim satu pesan WhatsApp · Kirim ke staf Anda. Masing-masing memilih namanya.** | Phase 172 PR A2 (D10). |
+| Your home is ready · Go to Today | **Rumah Anda siap · Ke Hari ini** | Phase 172 PR A2, after Add. |
+| Pick your name, then make a PIN · Make a PIN · Enter the PIN again | **Pilih nama Anda, lalu buat PIN. · Buat PIN · Ulangi PIN** | Phase 172 PR A2, the staff claim screen (staff, Indonesian only). |
+| {name}'s phone is linked | **HP {name} sudah terhubung** | Phase 172 PR A2, the owner's Today line. **HP**, never "ponsel". |
+| Not {name}? Undo · {name}'s phone is removed. {name} can pick the name again from the link. | **Bukan {name}? Batalkan · HP {name} dihapus. {name} bisa memilih namanya lagi lewat link.** | Phase 172 PR A2, audit L5: the owner puts a claimed name back (two taps: **Ketuk lagi untuk membatalkan** / Tap again to undo). Undo is **Batalkan**. |
+| Open the link from the owner's WhatsApp to make a PIN. · This link no longer works. Ask the owner for a new one. | **Buka link dari WhatsApp pemilik rumah untuk membuat PIN. · Link ini sudah tidak berlaku. Minta link baru ke pemilik rumah.** | Phase 172 PR A2, audit L5 (staff, Indonesian only): the house code alone can't claim a name. |
+| Service charge (IPL) | **Iuran pengelola (IPL)** | Phase 172 PR A2: apartments' monthly bill in the Bills and upkeep checklist. |
+| Room names saved by the templates | **Ruang Tamu · Ruang Keluarga · Ruang Keluarga Atas · Ruang Makan · Dapur · Dapur Kotor · Kamar Utama · Kamar Tidur 2 · Kamar Mandi · Kamar Staf · Kamar Mandi Staf · Ruang Cuci · Gudang · Balkon · Teras · Taman · Kolam Renang** | Phase 172 Appendix A1; floors **LT1, LT2…** and **Rooftop**. Owners rename any room later. |
 
 ## Formatting
 

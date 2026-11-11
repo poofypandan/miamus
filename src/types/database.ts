@@ -1103,6 +1103,27 @@ export interface Database {
         Args: { p_household: string; p_on: boolean };
         Returns: undefined;
       };
+      apply_household_setup: {
+        // Phase 172 PR A2 (migrations/147): the reviewed list in one call.
+        Args: { p_household: string; p_draft: Record<string, unknown> };
+        Returns: Record<string, unknown>;
+      };
+      claim_staff_with_house_code: {
+        Args: { p_code: string; p_staff_id: string; p_new_pin: string; p_claim: string };
+        Returns: Record<string, unknown>;
+      };
+      staff_claim_link: {
+        Args: { p_household: string };
+        Returns: string;
+      };
+      undo_staff_claim: {
+        Args: { p_household: string; p_staff_id: string };
+        Returns: boolean;
+      };
+      staff_claims_today: {
+        Args: { p_household: string };
+        Returns: { staff_id: string; name: string; claimed_at: string }[];
+      };
       set_household_feature: {
         Args: { p_household: string; p_feature: string; p_on: boolean };
         Returns: undefined;
