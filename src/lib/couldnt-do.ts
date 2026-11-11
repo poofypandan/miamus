@@ -196,6 +196,96 @@ function byTime(a: SummaryRow, b: SummaryRow): number {
 }
 
 /**
+ * One task on one day, as both the evening summary and the staff progress
+ * rows on Today read it (Phase 165, Phase 174 prep): done, couldn't (a record
+ * says why, and done still wins), or open. The rules are the database's
+ * (chore_days_open, migrations/139; routine_slots_open, migrations/144): a
+ * chore counts on its own day unless called off; a pet slot counts unless its
+ * pet is at the clinic (a vet visit still counts); a vet visit checked in but
+ * not closed is open; a three-photo walk is done at its end photo (buildAgenda
+ * already reads it so).
+ */
+export interface DayTask {
+  key: string;
+  kind: "chore" | "routine";
+  state: "done" | "couldnt" | "open";
+  title: string;
+  /** "HH:MM", or null for an anytime chore. */
+  time: string | null;
+  exception?: TaskException;
+  /** Chores. */
+  occurrence?: ChoreOccurrence;
+  /** Routines: the slot and its card. */
+  item?: AgendaItem;
+  group?: AgendaGroup;
+  petName?: string;
+  medicine?: boolean;
+}
+
+/** One chore as a DayTask: done, couldn't (a record for its day; done wins) or open. */
+export function classifyChore(occurrence: ChoreOccurrence, exceptions: readonly TaskException[]): DayTask {
+  const exception = choreException(exceptions, occurrence);
+  return {
+    key: occurrence.key,
+    kind: "chore",
+    state: occurrence.status === "completed" ? "done" : exception ? "couldnt" : "open",
+    title: occurrence.task.title,
+    time: slotOf(occurrence.task.due_time),
+    occurrence,
+    exception: exception ?? undefined,
+  };
+}
+
+export function classifyDay(params: {
+  date: string;
+  chores: readonly ChoreOccurrence[];
+  groups: readonly AgendaGroup[];
+  exceptions: readonly TaskException[];
+  admittedIds: ReadonlySet<string>;
+  /** The day's logs: a vet visit checked in but not closed is still open. */
+  logs?: readonly TaskLog[];
+}): DayTask[] {
+  const { date, chores, groups, exceptions, admittedIds, logs = [] } = params;
+  const out: DayTask[] = [];
+
+  for (const occurrence of chores) {
+    if (occurrence.date !== date) continue;
+    if (occurrence.status !== "completed" && occurrence.status !== "pending") continue;
+    out.push(classifyChore(occurrence, exceptions));
+  }
+
+  for (const group of groups) {
+    // A vet visit logs "complete" at check-in, but stays open until it is
+    // closed (vetVisitState; Codex, PR #71).
+    const visitOpen =
+      group.category === "vet" &&
+      (() => {
+        const visit = vetVisitState(group.items, logs as TaskLog[]);
+        return visit.checkedIn && !visit.closed;
+      })();
+    for (const item of group.items) {
+      if (admittedIds.has(item.entityId) && group.category !== "vet") continue;
+      const done = item.status === "completed" && !visitOpen;
+      const exception = done ? null : itemException(exceptions, date, item);
+      out.push({
+        key: `${item.key}|${item.entityId}`,
+        kind: "routine",
+        state: done ? "done" : exception ? "couldnt" : "open",
+        title: item.title,
+        time: item.time,
+        item,
+        group,
+        petName: item.entityName,
+        medicine: item.category === "medication",
+        exception: exception ?? undefined,
+      });
+    }
+  }
+
+  return out;
+}
+
+/**
  * What the evening summary lists for one day (D7 A), the way the push does
  * (migrations/139): what couldn't be done, whatever its time; what isn't done
  * yet and was due by `untilMinutes` (null: the whole day); leave and
@@ -215,63 +305,40 @@ export function buildEveningSummary(params: {
   /** The day's logs: a vet visit checked in but not closed is still open. */
   logs?: readonly TaskLog[];
 }): EveningSummary {
-  const { date, chores, groups, exceptions, leaves, proposals, admittedIds, untilMinutes, logs = [] } = params;
+  const { date, leaves, proposals, untilMinutes } = params;
   const due = (time: string | null) => untilMinutes === null || time === null || minutesOf(time) <= untilMinutes;
   const couldnt: SummaryRow[] = [];
   const notDone: SummaryRow[] = [];
   let done = 0;
 
-  for (const occurrence of chores) {
-    if (occurrence.date !== date) continue;
-    if (occurrence.status === "completed") {
+  for (const task of classifyDay(params)) {
+    if (task.state === "done") {
       done += 1;
       continue;
     }
-    if (occurrence.status !== "pending") continue;
-    const exception = choreException(exceptions, occurrence);
-    const time = slotOf(occurrence.task.due_time);
-    const row: SummaryRow = {
-      key: occurrence.key,
-      kind: "chore",
-      title: occurrence.task.title,
-      time,
-      staffId: exception?.staff_id ?? occurrence.task.assigned_to,
-      occurrence,
-      exception: exception ?? undefined,
-    };
-    if (exception) couldnt.push(row);
-    else if (due(time)) notDone.push(row);
-  }
-
-  for (const group of groups) {
-    // A vet visit logs "complete" at check-in, but stays open until it is
-    // closed (vetVisitState; Codex, PR #71).
-    const visitOpen =
-      group.category === "vet" &&
-      (() => {
-        const visit = vetVisitState(group.items, logs as TaskLog[]);
-        return visit.checkedIn && !visit.closed;
-      })();
-    for (const item of group.items) {
-      if (admittedIds.has(item.entityId) && group.category !== "vet") continue;
-      if (item.status === "completed" && !visitOpen) {
-        done += 1;
-        continue;
-      }
-      const exception = itemException(exceptions, date, item);
-      const row: SummaryRow = {
-        key: `${item.key}|${item.entityId}`,
-        kind: "routine",
-        title: item.title,
-        time: item.time,
-        staffId: exception?.staff_id ?? null,
-        petName: item.entityName,
-        medicine: item.category === "medication",
-        exception: exception ?? undefined,
-      };
-      if (exception) couldnt.push(row);
-      else if (due(item.time)) notDone.push(row);
-    }
+    const row: SummaryRow =
+      task.kind === "chore"
+        ? {
+            key: task.key,
+            kind: "chore",
+            title: task.title,
+            time: task.time,
+            staffId: task.exception?.staff_id ?? task.occurrence!.task.assigned_to,
+            occurrence: task.occurrence,
+            exception: task.exception,
+          }
+        : {
+            key: task.key,
+            kind: "routine",
+            title: task.title,
+            time: task.time,
+            staffId: task.exception?.staff_id ?? null,
+            petName: task.petName,
+            medicine: task.medicine,
+            exception: task.exception,
+          };
+    if (task.state === "couldnt") couldnt.push(row);
+    else if (due(task.time)) notDone.push(row);
   }
 
   const waitingLeaves = leaves

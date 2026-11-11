@@ -146,7 +146,7 @@ test("a household already past setup never sees it", async ({ context, page }) =
     ],
   });
   await page.goto("/dashboard");
-  await expect(page.getByRole("heading", { name: "Today" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(checklist(page)).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Your home is set up" })).toHaveCount(0);
 });

@@ -14,16 +14,27 @@ export type WorkloadHorizon = (typeof WORKLOAD_HORIZONS)[number];
 
 const HORIZON_DAYS: Record<WorkloadHorizon, number> = { today: 1, "7d": 7, "30d": 30 };
 
+/** The person view's id for the "Anyone, not done yet" row. */
+export const ANYONE_PERSON = "anyone";
+
 /**
  * The Staff Workload sheet's open state and time span, as one URL param
  * (Phase 116): `?workload=7d` is the sheet, open, on the last seven days. In
  * the URL like every other toggle here (CLAUDE.md, State Persistence), and so
  * the phone's Back button closes the sheet rather than leaving the tab.
+ *
+ * `&person=<id>` (staff progress on Today): the sheet on one person's whole
+ * day instead, house and pets, from a tap on their row. `person=anyone` is the
+ * "Anyone, not done yet" row.
  */
 export function useWorkloadParam(): {
   horizon: WorkloadHorizon | null;
+  person: string | null;
   open: (horizon?: WorkloadHorizon) => void;
+  openPerson: (id: string) => void;
   setHorizon: (horizon: WorkloadHorizon) => void;
+  /** From a person's day to everyone's "Who did what", in place. */
+  showEveryone: () => void;
   close: () => void;
 } {
   const pathname = usePathname();
@@ -32,24 +43,30 @@ export function useWorkloadParam(): {
   const horizon = WORKLOAD_HORIZONS.includes(raw as WorkloadHorizon)
     ? (raw as WorkloadHorizon)
     : null;
+  const person = horizon ? searchParams.get("person") || null : null;
 
-  const hrefWith = (value: WorkloadHorizon | null) => {
+  const hrefWith = (value: WorkloadHorizon | null, who: string | null = null) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value) params.set("workload", value);
     else params.delete("workload");
+    if (value && who) params.set("person", who);
+    else params.delete("person");
     const query = params.toString();
     return query ? `${pathname}?${query}` : pathname;
   };
 
   return {
     horizon,
+    person,
     // A push to open, so Back closes it…
-    // All three in place, with no server round trip: the sheet is the same
-    // page (Phase 121).
+    // All in place, with no server round trip: the sheet is the same page
+    // (Phase 121).
     open: (value = "today") => pushInPlace(hrefWith(value)),
+    openPerson: (id) => pushInPlace(hrefWith("today", id)),
     // …and a replace to change the span, so Back does not step through every
     // span that was looked at on the way.
     setHorizon: (value) => replaceInPlace(hrefWith(value)),
+    showEveryone: () => replaceInPlace(hrefWith("today")),
     close: () => replaceInPlace(hrefWith(null)),
   };
 }
