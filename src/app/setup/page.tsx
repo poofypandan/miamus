@@ -98,7 +98,7 @@ function Setup() {
   const homeParam = params.get("home");
   const home = isHomeType(homeParam) ? homeParam : null;
   const isOwner = useRequireOwner();
-  const { activeHouseholdId, tenantReady, memberProfile, refresh } = useHousehold();
+  const { activeHouseholdId, tenantReady, refresh } = useHousehold();
   const { bills: billsOn } = useHouseholdFeatures();
   const today = formatDateLocal(useToday());
   const { locations, reload: reloadRooms } = useHouseholdLocations();
@@ -151,7 +151,7 @@ function Setup() {
   async function add() {
     if (saving) return;
     setSaving(true);
-    const payload = toApplyPayload(draft, unticked, added, staff, memberProfile?.id ?? null);
+    const payload = toApplyPayload(draft, unticked, added, staff);
     const outcome = await applyHouseholdSetup(activeHouseholdId, payload);
     if (!outcome.ok) {
       setSaving(false);

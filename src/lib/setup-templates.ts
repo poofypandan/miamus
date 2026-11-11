@@ -560,7 +560,8 @@ export function assigneeFor(job: SetupJob, staff: DraftStaff[]): string | null {
   return withJob.length === 1 ? withJob[0].key : null;
 }
 
-export type ApplyAssignee = { staff: string } | { profile: string } | null;
+/** A draft person, the caller themself (resolved by the database), or Anyone. */
+export type ApplyAssignee = { staff: string } | { me: true } | null;
 
 /** What apply_household_setup (migrations/146) takes. */
 export interface ApplyPayload {
@@ -586,14 +587,14 @@ export interface ApplyPayload {
  * The draft, as ticked, into one all-or-nothing call. Already-added chores
  * and bills are left out; rooms are sent by name (the database maps them to
  * the household's own), so a chore can still point at an existing room.
- * Bills for "me" go to the owner's own roster entry (ownerProfileId).
+ * Bills for "me" go to the owner's own roster entry, which the database
+ * looks up for the caller.
  */
 export function toApplyPayload(
   draft: SetupDraft,
   unticked: ReadonlySet<string>,
   added: ReadonlySet<string>,
-  staff: DraftStaff[],
-  ownerProfileId: string | null
+  staff: DraftStaff[]
 ): ApplyPayload {
   const out = leftOut(draft, unticked);
   const people = staff.filter((s) => s.name.trim()).map((s) => ({ ...s, name: s.name.trim().replace(/\s+/g, " ") }));
@@ -621,7 +622,9 @@ export function toApplyPayload(
       interval: b.interval,
       due_date: b.dueDate,
       category: b.category,
-      assignee: b.who === "me" && ownerProfileId ? { profile: ownerProfileId } : null,
+      // "For you": the database finds the owner's own roster entry, so a
+      // bill titled in the owner's language never lands on staff screens.
+      assignee: b.who === "me" ? { me: true } : null,
       remind: b.remind,
       from_bills: true,
     });

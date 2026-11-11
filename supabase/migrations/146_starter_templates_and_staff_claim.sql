@@ -53,7 +53,7 @@ alter table public.staff_sign_in_attempts
 --     "staff":  [{ "key", "name" }],                       at most 12
 --     "chores": [{ "title", "place": key | null, "recurrence", "interval",
 --                  "due_date", "category",
---                  "assignee": null | { "staff": key } | { "profile": uuid },
+--                  "assignee": null | { "staff": key } | { "me": true } | { "profile": uuid },
 --                  "remind": null | 0 | 1 | 3 | 7,
 --                  "from_bills": true (optional: counted as a bill) }] }   at most 150
 create or replace function public.apply_household_setup(p_household uuid, p_draft jsonb)
@@ -216,6 +216,16 @@ begin
     if item -> 'assignee' is not null and jsonb_typeof(item -> 'assignee') <> 'null' then
       if item -> 'assignee' ? 'staff' and people ? (item -> 'assignee' ->> 'staff') then
         v_who := (people ->> (item -> 'assignee' ->> 'staff'))::uuid;
+      elsif item -> 'assignee' ->> 'me' = 'true' then
+        -- The caller's own roster entry, found here rather than trusted
+        -- from a phone that may not have loaded it yet (Codex, PR #90): a
+        -- bill "for you" never quietly becomes anyone's.
+        select s.id into v_who from public.staff_profiles s
+         where s.household_id = p_household and s.user_id = uid and s.archived_at is null
+         order by s.created_at limit 1;
+        if v_who is null then
+          raise exception 'no_owner_profile' using errcode = '22023';
+        end if;
       elsif item -> 'assignee' ? 'profile' then
         select s.id into v_who from public.staff_profiles s
          where s.id::text = item -> 'assignee' ->> 'profile'

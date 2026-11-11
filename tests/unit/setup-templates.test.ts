@@ -231,7 +231,7 @@ describe("unticking and assigning", () => {
 
   it("builds one payload: ticked, not added, assigned, bills to the owner, only places in use", () => {
     const staff: DraftStaff[] = [{ key: "s1", name: " Mbak  Sari ", job: "kitchen" }];
-    const payload = toApplyPayload(draft, new Set(["r:pool", "trash@house"]), new Set(["dishes@r:kitchen"]), staff, "owner-profile");
+    const payload = toApplyPayload(draft, new Set(["r:pool", "trash@house"]), new Set(["dishes@r:kitchen"]), staff);
     expect(payload.staff).toEqual([{ key: "s1", name: "Mbak Sari" }]);
     expect(payload.rooms.some((r) => r.key === "r:pool")).toBe(false);
     expect(payload.chores.some((c) => c.title === "Cek kaporit kolam")).toBe(false);
@@ -240,7 +240,7 @@ describe("unticking and assigning", () => {
     expect(payload.chores.find((c) => c.title === "Bersihkan kulkas")?.assignee).toEqual({ staff: "s1" });
     expect(payload.chores.find((c) => c.title === "Sapu dan pel lantai")?.assignee).toBeNull();
     const pln = payload.chores.find((c) => c.category === "bill" && c.title === "Electricity (PLN)");
-    expect(pln).toMatchObject({ assignee: { profile: "owner-profile" }, remind: 3 });
+    expect(pln).toMatchObject({ assignee: { me: true }, remind: 3, from_bills: true });
     // A room inside another comes after its parent; floors only when used.
     const order = payload.rooms.map((r) => r.key);
     expect(order.indexOf("r:bed1")).toBeLessThan(order.indexOf("r:bath1"));

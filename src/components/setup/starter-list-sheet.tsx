@@ -35,7 +35,7 @@ import {
 export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT();
   const locale = useOwnerLocale();
-  const { activeHouseholdId, memberProfile, refresh } = useHousehold();
+  const { activeHouseholdId, refresh } = useHousehold();
   const { bills: billsOn } = useHouseholdFeatures();
   const today = formatDateLocal(useToday());
   const { locations, reload: reloadRooms } = useHouseholdLocations();
@@ -91,7 +91,7 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
     setSaving(true);
     const outcome = await applyHouseholdSetup(
       activeHouseholdId,
-      toApplyPayload(draft, unticked, added, [], memberProfile?.id ?? null)
+      toApplyPayload(draft, unticked, added, [])
     );
     if (!outcome.ok) {
       setSaving(false);

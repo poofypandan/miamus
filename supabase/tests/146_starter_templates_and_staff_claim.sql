@@ -119,7 +119,7 @@ insert into drafts values ('house', jsonb_build_object(
                        'due_date', (select today from d), 'category', 'maintenance', 'assignee', null, 'remind', null),
     jsonb_build_object('title', 'Listrik PLN', 'place', null, 'recurrence', 'monthly', 'interval', 1,
                        'due_date', (select today from d), 'category', 'bill',
-                       'assignee', jsonb_build_object('profile', '00000000-0000-0000-0000-0000000146e1'), 'remind', 3),
+                       'assignee', jsonb_build_object('me', true), 'remind', 3),
     -- Upkeep from the bills list: a maintenance chore, counted as a bill.
     jsonb_build_object('title', 'Servis AC', 'place', null, 'recurrence', 'monthly', 'interval', 3,
                        'due_date', (select today from d), 'category', 'maintenance', 'assignee', null, 'remind', 1,
@@ -151,7 +151,7 @@ select pg_temp.ok((select s.name = 'Mbak Sari' from public.household_tasks t joi
   '... a chore to the person with its job, the name tidied');
 select pg_temp.ok((select assigned_to = '00000000-0000-0000-0000-0000000146e1'::uuid and remind_days_before = 3 and category = 'bill'
                      from public.household_tasks where household_id = :f1::uuid and title = 'Listrik PLN'),
-  '... the bill to the owner, with its reminder');
+  '... the bill "for you" to the owner''s own roster entry, found by the database, with its reminder');
 select pg_temp.ok((select recurrence = 'weekly' and recurrence_interval = 2 and l.name = 'Taman'
                      from public.household_tasks t join public.household_locations l on l.id = t.location_id
                     where t.household_id = :f1::uuid and t.title = 'Potong rumput'),
@@ -206,6 +206,16 @@ insert into drafts values ('foreign', jsonb_build_object('v', 1, 'chores', jsonb
                      'assignee', jsonb_build_object('profile', '00000000-0000-0000-0000-0000000146e9'), 'remind', null))));
 select pg_temp.ok(pg_temp.err_as(:a1, pg_temp.apply_sql('foreign')) like '%invalid_assignee%',
   'a chore can''t go to another household''s person');
+-- A member with no roster entry: "for you" is refused, never turned into Anyone.
+update public.staff_profiles set archived_at = now() where id = '00000000-0000-0000-0000-0000000146e1';
+insert into drafts values ('mine', jsonb_build_object('v', 1, 'chores', jsonb_build_array(
+  jsonb_build_object('title', 'Air PDAM', 'place', null, 'recurrence', 'monthly', 'interval', 1,
+                     'due_date', (select today from d), 'category', 'bill', 'assignee', jsonb_build_object('me', true), 'remind', 3))));
+select pg_temp.ok(pg_temp.err_as(:a1, pg_temp.apply_sql('mine')) like '%no_owner_profile%',
+  'a bill for the owner with no roster entry is refused, not given to anyone');
+update public.staff_profiles set archived_at = null where id = '00000000-0000-0000-0000-0000000146e1';
+select pg_temp.ok((select count(*) = 0 from public.household_tasks where household_id = :f1::uuid and title = 'Air PDAM'),
+  '... and nothing was saved');
 insert into drafts values ('far', jsonb_build_object('v', 1, 'chores', jsonb_build_array(
   jsonb_build_object('title', 'Nanti', 'place', null, 'recurrence', 'none', 'interval', 1,
                      'due_date', '2099-01-01', 'category', 'errand', 'assignee', null, 'remind', null))));
