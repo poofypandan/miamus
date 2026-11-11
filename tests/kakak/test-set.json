@@ -1244,7 +1244,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P1",
+                  "pets": {
+                    "sameSet": [
+                      "P1"
+                    ]
+                  },
                   "kind": "meal",
                   "times": {
                     "sameSet": [
@@ -1263,7 +1267,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P1",
+                  "pets": {
+                    "sameSet": [
+                      "P1"
+                    ]
+                  },
                   "kind": "meal",
                   "times": {
                     "sameSet": [
@@ -1294,7 +1302,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P3",
+                  "pets": {
+                    "sameSet": [
+                      "P3"
+                    ]
+                  },
                   "kind": "meal",
                   "times": {
                     "sameSet": [
@@ -1325,7 +1337,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P2",
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
                   "kind": "potty",
                   "times": {
                     "sameSet": [
@@ -1376,7 +1392,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P2",
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
                   "kind": "meal",
                   "times": {
                     "sameSet": [
@@ -2712,7 +2732,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P1",
+                  "pets": {
+                    "sameSet": [
+                      "P1"
+                    ]
+                  },
                   "kind": "potty",
                   "times": {
                     "sameSet": [
@@ -2750,7 +2774,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P3",
+                  "pets": {
+                    "sameSet": [
+                      "P3"
+                    ]
+                  },
                   "kind": "meal",
                   "times": {
                     "sameSet": [
@@ -2781,7 +2809,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P2",
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
                   "kind": "meal",
                   "times": {
                     "sameSet": [
@@ -2821,7 +2853,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P1",
+                  "pets": {
+                    "sameSet": [
+                      "P1"
+                    ]
+                  },
                   "kind": "meal",
                   "times": {
                     "sameSet": []
@@ -2849,7 +2885,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P2",
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
                   "kind": "potty",
                   "times": {
                     "sameSet": [
@@ -2880,19 +2920,12 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P1",
-                  "kind": "meal",
-                  "times": {
+                  "pets": {
                     "sameSet": [
-                      "12:00"
+                      "P1",
+                      "P2"
                     ]
-                  }
-                }
-              },
-              {
-                "tool": "add_pet_routine",
-                "fields": {
-                  "pet": "P2",
+                  },
                   "kind": "meal",
                   "times": {
                     "sameSet": [
@@ -2905,7 +2938,7 @@
           }
         ]
       ],
-      "note": "'The dogs' = one call per dog."
+      "note": "'The dogs' = one call with both dogs (Phase 173 PR B)."
     },
     {
       "id": "K067",
@@ -3473,7 +3506,11 @@
               {
                 "tool": "add_pet_routine",
                 "fields": {
-                  "pet": "P1",
+                  "pets": {
+                    "sameSet": [
+                      "P1"
+                    ]
+                  },
                   "kind": "meal",
                   "times": {
                     "sameSet": [
@@ -4428,6 +4465,321 @@
         ]
       ],
       "note": "Two bathrooms: ask which."
+    },
+    {
+      "id": "K101",
+      "sentence": "Matikan lampu untuk Mochi dan Kopi setiap hari jam 21.30, pakai foto",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P1",
+                      "P2"
+                    ]
+                  },
+                  "kind": "lights",
+                  "times": {
+                    "sameSet": [
+                      "21:30"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "The owner's first sentence (Phase 173 PR B): one call for both dogs. Proof is the kind's default (a photo), set by the app."
+    },
+    {
+      "id": "K102",
+      "sentence": "Lights off for the dogs at 9:30 pm every night",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P1",
+                      "P2"
+                    ]
+                  },
+                  "kind": "lights",
+                  "times": {
+                    "sameSet": [
+                      "21:30"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "'The dogs' is both dogs, never Luna the cat."
+    },
+    {
+      "id": "K103",
+      "sentence": "Jalan-jalan Kopi tiap pagi jam 7, Mochi tidak usah",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
+                  "kind": "walk",
+                  "times": {
+                    "sameSet": [
+                      "07:00"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "The owner's second sentence, 'Matcha only': one dog, not the other."
+    },
+    {
+      "id": "K104",
+      "sentence": "Jalan-jalan Kopi tiap sore",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "what time in the evening",
+            "reply": "Jam 5 sore"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
+                  "kind": "walk",
+                  "times": {
+                    "sameSet": [
+                      "17:00"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
+                  "kind": "walk",
+                  "times": {
+                    "sameSet": [
+                      "17:00"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "No time given: ask, or pick a usual evening time (17.00)."
+    },
+    {
+      "id": "K105",
+      "sentence": "Brush Mochi's teeth on weekdays at 7 pm",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P1"
+                    ]
+                  },
+                  "kind": "teeth",
+                  "times": {
+                    "sameSet": [
+                      "19:00"
+                    ]
+                  },
+                  "days": {
+                    "sameSet": [
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Weekdays are mon to fri."
+    },
+    {
+      "id": "K106",
+      "sentence": "Ganti air minum Luna jam 8 pagi sampai Jumat",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P3"
+                    ]
+                  },
+                  "kind": "water",
+                  "times": {
+                    "sameSet": [
+                      "08:00"
+                    ]
+                  },
+                  "until": "2026-11-13"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "'Until Friday' is Friday 13 Nov in the pretend household's calendar."
+    },
+    {
+      "id": "K107",
+      "sentence": "Sari ajak main Mochi jam 4 sore, ingatkan dia ya",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P1"
+                    ]
+                  },
+                  "kind": "play",
+                  "times": {
+                    "sameSet": [
+                      "16:00"
+                    ]
+                  },
+                  "staff": "S1",
+                  "remind_staff": true
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "A named person and a reminder at the time (migrations/150)."
+    },
+    {
+      "id": "K108",
+      "sentence": "Lights off for Kopi at 9:30 pm, and tell me if it isn't done",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
+                  "kind": "lights",
+                  "times": {
+                    "sameSet": [
+                      "21:30"
+                    ]
+                  },
+                  "alert_owners": true
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Tell us if it's not done (migrations/150): 21:30 is before 22:00, so the alert can come."
     }
   ]
 }

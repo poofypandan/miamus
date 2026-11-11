@@ -250,13 +250,13 @@ describe("runKakakTurn", () => {
   it("drops a meal time the pet already has and says so", async () => {
     const { deps } = fake([
       {
-        content: [{ type: "tool_use", id: "toolu_p", name: "add_pet_routine", input: { pet: "P1", kind: "meal", times: ["07:00", "12:00"], label: null } }],
+        content: [{ type: "tool_use", id: "toolu_p", name: "add_pet_routine", input: { pets: ["P1"], kind: "meal", times: ["07:00", "12:00"], days: null, until: null, title: null, title_en: null, staff: null, note: null, remind_staff: false, alert_owners: false } }],
         stop_reason: "tool_use",
       },
     ]);
     const result = await runKakakTurn(deps, null, "Mochi makan jam 7 dan 12");
     if (result.kind !== "suggestions") throw new Error(result.kind);
-    expect(result.items[0]).toMatchObject({ kind: "pet_routine", petId: id(10), times: [{ time: "12:00", title: "Makan Siang" }], alreadyThere: ["07:00"] });
+    expect(result.items[0]).toMatchObject({ kind: "pet_routine", pets: [{ petId: id(10), times: [{ time: "12:00", title: "Makan Siang" }], alreadyThere: ["07:00"] }] });
   });
 
   it("treats a plain reply as a message", async () => {
@@ -345,6 +345,6 @@ describe("the card", () => {
   });
 
   it("doesn't count a routine that adds nothing", () => {
-    expect(addsSomething({ kind: "pet_routine", petId: id(10), petName: "Mochi", routine: "meal", times: [], alreadyThere: ["07:00"] })).toBe(false);
+    expect(addsSomething({ kind: "pet_routine", routine: "meal", pets: [{ petId: id(10), petName: "Mochi", times: [], alreadyThere: ["07:00"] }], title: null, titleEn: null, days: null, until: null, staffId: null, staffName: null, note: null, proof: null, remindStaff: false, alertOwners: false })).toBe(false);
   });
 });

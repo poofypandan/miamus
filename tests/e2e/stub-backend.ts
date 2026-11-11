@@ -129,6 +129,8 @@ export interface StubOptions {
   whatsNewWeek?: string;
   /** The roster in place of Ari (audit B1); changed in place, so a reload sees it. */
   staff?: Record<string, unknown>[];
+  /** Mochi's and Bento's names for this test (the demo's Mocha and Matcha; Phase 173 PR B). */
+  petNames?: [string, string];
   /** What list_linked_phones answers the admin (audit B1); changed in place. */
   linkedPhones?: Record<string, unknown>[];
   /** task_logs rows already on record (audit B1: a household past setup). */
@@ -188,6 +190,8 @@ export interface Stub {
   logs: Record<string, unknown>[];
   /** master_schedules as the stub holds them (Phase 173): the fixture's, the test's, and the admin's writes. */
   schedules: Record<string, unknown>[];
+  /** task_entities as the stub holds them (Phase 173 PR B): Mochi, Bento, and pets the admin adds. */
+  entities: Record<string, unknown>[];
   seen: {
     signups: number;
     tokenRefreshes: number;
@@ -269,6 +273,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const writes: [string, string][] = [];
   const logs: Record<string, unknown>[] = options.logs ?? [];
   const schedules: Record<string, unknown>[] = [...(SCHEDULES as unknown as Record<string, unknown>[]), ...(options.schedules ?? [])];
+  const entities: Record<string, unknown>[] = [MOCHI, BENTO].map(
+    (p, i) => ({ ...p, name: options.petNames?.[i] ?? p.name }) as unknown as Record<string, unknown>
+  );
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [], portionCalls: [], portionUndos: [] };
   const foods: Record<string, unknown>[] = [];
   const recipes: Record<string, unknown>[] = options.recipes ?? [];
@@ -336,17 +343,18 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   }
   if (options.staffPhone) {
     await context.addInitScript(
-      ([household, staff, couldntTip]) => {
+      ([household, staff, couldntTip, staffName]) => {
         // Only on the first load of each test: a reload must see what the
         // app itself wrote since.
         if (sessionStorage.getItem("stub-seeded")) return;
         sessionStorage.setItem("stub-seeded", "1");
         localStorage.setItem("miamus_tenant_id", household);
         localStorage.setItem("banyuwangi11:staffId", staff);
-        localStorage.setItem("banyuwangi11:staffName", "Ari");
+        localStorage.setItem("banyuwangi11:staffName", staffName);
         if (!couldntTip) localStorage.setItem("miamus.whats-new.staff-couldnt-do-2026-11", "seen");
       },
-      [HOUSEHOLD_ID, STAFF_ID, options.couldntTip ? "1" : ""]
+      // The phone's own person: Ari, or the first of options.staff (the demo's Syam).
+      [HOUSEHOLD_ID, STAFF_ID, options.couldntTip ? "1" : "", String(options.staff?.[0]?.name ?? "Ari")]
     );
   }
 
@@ -477,6 +485,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       }
       if (table === "task_logs") return answerLogs(route, logs);
       if (table === "master_schedules") return answerSchedules(route, schedules, who === OWNER);
+      if (table === "task_entities") return answerEntities(route, entities);
       // Supplies added here (Phase 164), and read back once there are any.
       if (table === "inventory_items" && request.method() === "POST") {
         const body = request.postDataJSON();
@@ -719,6 +728,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     writes,
     logs,
     schedules,
+    entities,
     seen,
     foods,
     portionTrouble,
@@ -1237,6 +1247,33 @@ function answerLogs(route: Route, logs: Record<string, unknown>[]) {
   }));
   logs.push(...saved);
   return route.fulfill({ json: saved });
+}
+
+/** task_entities (Phase 173 PR B): reads, a pet added (Add pet), and changes to one. */
+function answerEntities(route: Route, rows: Record<string, unknown>[]) {
+  const request = route.request();
+  const method = request.method();
+  const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  if (method === "GET") return route.fulfill({ json: one ? (rows[0] ?? null) : rows });
+  if (method === "POST") {
+    const body = request.postDataJSON();
+    const saved = (Array.isArray(body) ? body : [body]).map((row: Record<string, unknown>, i: number) => ({
+      id: `00000000-0000-4000-8000-${String(500 + rows.length + i).padStart(12, "0")}`,
+      household_id: HOUSEHOLD_ID,
+      created_at: new Date().toISOString(),
+      metadata: {},
+      ...row,
+    }));
+    rows.push(...saved);
+    return route.fulfill({ json: one ? saved[0] : saved });
+  }
+  const matched = filterRows(rows, new URL(request.url()).searchParams);
+  if (method === "PATCH") {
+    const patch = request.postDataJSON();
+    for (const row of matched) Object.assign(row, patch);
+    return route.fulfill({ json: one ? (matched[0] ?? null) : matched });
+  }
+  return route.fulfill({ json: [] });
 }
 
 /**

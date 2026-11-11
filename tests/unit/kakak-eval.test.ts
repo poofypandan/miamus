@@ -38,6 +38,21 @@ const chore = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const petRoutine = (overrides: Record<string, unknown> = {}) => ({
+  pets: ["P1"],
+  kind: "meal",
+  times: ["07:00"],
+  days: null,
+  until: null,
+  title: null,
+  title_en: null,
+  staff: null,
+  note: null,
+  remind_staff: false,
+  alert_owners: false,
+  ...overrides,
+});
+
 const suggestion = (input: Record<string, unknown>, name = "create_chore"): ActualTurn => ({
   kind: "suggestions",
   calls: [{ name, input }],
@@ -291,7 +306,7 @@ describe("gradeCase", () => {
 
   it("accepts a repeated pet time once the route drops it", () => {
     const k027 = caseById("K027");
-    const both = suggestion({ pet: "P1", kind: "meal", times: ["07:00", "18:00"], label: null }, "add_pet_routine");
+    const both = suggestion(petRoutine({ pets: ["P1"], kind: "meal", times: ["07:00", "18:00"] }), "add_pet_routine");
     expect(gradeCase(household, k027, [both]).pass).toBe(true);
   });
 });
@@ -346,7 +361,7 @@ describe("runner helpers", () => {
 describe("the test set", () => {
   it("is consistent with the household and the tools", () => {
     expect(checkTestSet(household, testSet)).toEqual([]);
-    expect(testSet.cases).toHaveLength(100);
+    expect(testSet.cases).toHaveLength(108);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 

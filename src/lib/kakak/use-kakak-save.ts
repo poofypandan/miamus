@@ -12,6 +12,8 @@ import { useHousehold } from "@/context/household-context";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { dataProvider } from "@/lib/data";
 import { stockStatus } from "@/lib/inventory";
+import { formatDateLocal } from "@/lib/scheduleEngine";
+import { petRoutineRows } from "./pet-routine-rows";
 import { isSaveableSuggestion, type KakakSuggestion } from "./suggestions";
 import type { StockStatus } from "@/types/database";
 
@@ -93,16 +95,14 @@ export function useKakakSave() {
               break;
             }
             case "pet_routine": {
-              if (item.times.length === 0) break;
-              const created = await household.createSchedulesBatch(
-                item.times.map(({ time, title }) => ({
-                  entity_id: item.petId,
-                  module: "pet" as const,
-                  frequency_type: "fixed_time" as const,
-                  fixed_times: [time],
-                  title,
-                })),
-              );
+              // The Add routine sheet's own planner and action (Phase 173 PR B).
+              const rows = petRoutineRows(item, {
+                newGroupId: () => crypto.randomUUID(),
+                today: formatDateLocal(new Date()),
+                nowIso: new Date().toISOString(),
+              });
+              if (rows.length === 0) break;
+              const created = await household.createSchedulesBatch(rows);
               for (const schedule of created) undos.push(() => household.deleteSchedule(schedule.id));
               break;
             }
