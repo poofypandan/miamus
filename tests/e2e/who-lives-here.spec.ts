@@ -23,24 +23,26 @@ test("no pets: four tabs, a chore-only welcome, and Pets back from Household", a
   await page.goto("/dashboard?module=pets");
   await expect(page.getByText("Let's start by adding a chore.", { exact: false })).toBeVisible({ timeout: 20_000 });
 
-  // Household → Who lives here → Pets on: the tab is back, no reload.
+  // Household → Features → Pets on (Phase 171 moved the switch there): the
+  // tab is back, no reload.
   await tabs(page).getByRole("link", { name: "Household" }).click();
-  const row = page.getByRole("button", { name: /^Who lives here/ });
-  await expect(row).toContainText("Just people");
+  const row = page.getByRole("button", { name: /^Features/ });
+  await expect(row).toContainText("3 on");
   await row.click();
-  await expect(page).toHaveURL(/page=who-lives-here/);
-  await page.getByRole("switch", { name: /Pets/ }).click();
-  await expect(page.getByText("Pets tab is back")).toBeVisible();
+  await expect(page).toHaveURL(/page=features/);
+  await page.getByRole("switch", { name: "Pets" }).click();
+  await expect(page.getByText("Pets is on")).toBeVisible();
   await expect(tabs(page).getByRole("link", { name: "Pets" })).toBeVisible();
   expect(stub.household.hasPets).toBe(true);
 });
 
 test("pets still in the app: the switch stays on and says why", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, household: { hasPets: true } });
+  // Phase 162's old link still lands on the switch (now in Features).
   await page.goto("/dashboard?module=access&page=who-lives-here");
 
   await expect(page.getByText(/You have 2 pets in Miamus/)).toBeVisible({ timeout: 20_000 });
-  const toggle = page.getByRole("switch", { name: /Pets/ });
+  const toggle = page.getByRole("switch", { name: "Pets" });
   await expect(toggle).toHaveAttribute("aria-checked", "true");
   // Held on, and marked so (D4): archive the pets first.
   await expect(toggle).toHaveAttribute("aria-disabled", "true");

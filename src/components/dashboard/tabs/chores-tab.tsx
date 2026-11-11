@@ -19,6 +19,7 @@ import { RepairsView } from "@/components/repairs/repairs-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { useChoresView } from "@/hooks/use-chores-view";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
@@ -42,6 +43,8 @@ import type { HouseholdTask } from "@/types/database";
 export function ChoresTab() {
   const { view, setView } = useChoresView();
   const t = useT();
+  // Repairs switched off (Phase 171): no pill, no card about it.
+  const { repairs: repairsOn } = useHouseholdFeatures();
   useScrollTopOnChange(view);
 
   return (
@@ -53,14 +56,16 @@ export function ChoresTab() {
         segments={[
           { value: "today", label: t("Today", "Hari ini") },
           { value: "rooms", label: t("Rooms", "Ruangan") },
-          { value: "repairs", label: t("Repairs", "Perbaikan") },
+          ...(repairsOn ? [{ value: "repairs" as const, label: t("Repairs", "Perbaikan") }] : []),
         ]}
         value={view}
         onChange={setView}
       />
       <WhatsNewCard id="rooms-2026-11" onTry={view === "rooms" ? undefined : () => setView("rooms")} />
       <WhatsNewCard id="room-picker-2026-11" />
-      <WhatsNewCard id="repairs-2026-11" onTry={view === "repairs" ? undefined : () => setView("repairs")} />
+      {repairsOn && (
+        <WhatsNewCard id="repairs-2026-11" onTry={view === "repairs" ? undefined : () => setView("repairs")} />
+      )}
       {view === "rooms" ? <RoomsView /> : view === "repairs" ? <RepairsView /> : <TodayChores />}
     </div>
   );
@@ -69,6 +74,8 @@ export function ChoresTab() {
 /** The day's chores: what the house owes on the selected day (Phase 100). */
 function TodayChores() {
   const { selectedDate, setSelectedDate, householdTasks, memberProfile } = useHousehold();
+  // Bills and upkeep switched off (Phase 171): no checklist, no card.
+  const { bills: billsOn } = useHouseholdFeatures();
   const locale = useOwnerLocale();
   const t = useT();
   // No chore exists at all, as opposed to none falling on this day: a new
@@ -143,18 +150,20 @@ function TodayChores() {
       />
 
       {/* Its tutorial (Phase 164, D9); Show me opens the checklist. */}
-      <WhatsNewCard id="bills-2026-11" onTry={() => setBillsOpen(true)} />
+      {billsOn && <WhatsNewCard id="bills-2026-11" onTry={() => setBillsOpen(true)} />}
 
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-gray-900">{t("Chores", "Tugas")}</h2>
         <div className="flex shrink-0 items-center gap-2">
-          <Button
-            variant="outline"
-            className="min-h-[36px] shrink-0 px-3 text-xs"
-            onClick={() => setBillsOpen(true)}
-          >
-            <ReceiptText className="size-3.5" /> {t("Bills and upkeep", "Tagihan dan perawatan")}
-          </Button>
+          {billsOn && (
+            <Button
+              variant="outline"
+              className="min-h-[36px] shrink-0 px-3 text-xs"
+              onClick={() => setBillsOpen(true)}
+            >
+              <ReceiptText className="size-3.5" /> {t("Bills and upkeep", "Tagihan dan perawatan")}
+            </Button>
+          )}
           <Button
             variant="outline"
             className="min-h-[36px] shrink-0 px-3 text-xs"
@@ -299,7 +308,7 @@ function TodayChores() {
       />
 
       <BillsUpkeepSheet
-        open={billsOpen}
+        open={billsOpen && billsOn}
         onOpenChange={setBillsOpen}
         onOtherBill={() => {
           setBillsOpen(false);

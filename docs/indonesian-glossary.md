@@ -229,6 +229,12 @@ people are **staf** and **admin**.
 | Other routines | **Rutinitas lain** | Phase 173: replaces Others / Lainnya in Manage routines. |
 | Usual routines for Coco | **Rutinitas biasa untuk Coco** | Phase 173 PR B (planned): starter list after adding a pet. |
 | Remind staff at this time | **Ingatkan staf di jam ini** | Phase 173 PR C (planned). Push title **Pengingat**, as Phase 164. |
+| Features (Household row) | **Fitur** | Phase 171 PR A: Household → Fitur replaces "Siapa yang tinggal di sini". Everyday word. |
+| On / off (a feature) | **aktif / dimatikan** | Phase 171 PR A: "4 aktif" on the row; toasts "{Fitur} aktif" · "{Fitur} dimatikan". |
+| Food at home (feature) | **Makanan di rumah** | Phase 171 PR A, the Features row; the Kitchen pill stays **Makanan**. |
+| What kind of home? | **Rumah seperti apa?** | Phase 171 PR A, sign-up screen 2 (the brief's wording; Phase 172's plan drafted "Seperti apa rumah Anda?"). |
+| House with a garden · Big house, several floors · Apartment · Something else | **Rumah dengan taman · Rumah besar bertingkat · Apartemen · Lainnya** | Phase 172's four home types, drawn by Phase 171's screen. |
+| No thanks (offer, later) | **Tidak, terima kasih** | Phase 171 D7: the offer card, built with the first feature that starts off. |
 
 ## Formatting
 

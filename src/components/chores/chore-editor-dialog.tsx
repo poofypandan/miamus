@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useHousehold } from "@/context/household-context";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
@@ -147,6 +148,7 @@ export function ChoreEditorDialog({
   const [places, setPlaces] = useState<HouseholdLocation[]>([]);
   const [spot, setSpot] = useState<string | null>(null);
   const [category, setCategory] = useState<HouseholdTaskCategory>("cleaning");
+  const { bills: billsOn } = useHouseholdFeatures();
   const [assignee, setAssignee] = useState<string>(UNASSIGNED);
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState("");
@@ -540,7 +542,9 @@ export function ChoreEditorDialog({
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">{t("Category", "Kategori")}</Label>
             <div className="grid grid-cols-2 gap-2">
-              {HOUSEHOLD_TASK_CATEGORIES.map((c) => {
+              {/* Bills and upkeep off (Phase 171): no Bill chip, unless this
+                  chore already is one, so a new chore never hides as it's saved. */}
+              {HOUSEHOLD_TASK_CATEGORIES.filter((c) => c !== "bill" || billsOn || category === "bill").map((c) => {
                 const Icon = categoryIcon(c);
                 return (
                   <Button

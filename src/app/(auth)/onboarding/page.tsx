@@ -3,7 +3,20 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Clock, Languages, Loader2, Mail, MessageCircle, PawPrint, ShieldX, UserRoundPlus } from "lucide-react";
+import {
+  Building,
+  Building2,
+  Clock,
+  House,
+  Languages,
+  Loader2,
+  Mail,
+  MessageCircle,
+  PawPrint,
+  ShieldX,
+  Trees,
+  UserRoundPlus,
+} from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { LanguageChoice } from "@/components/dashboard/language-settings";
 import { Button } from "@/components/ui/button";
@@ -26,6 +39,7 @@ import {
   type HouseholdAccess,
 } from "@/lib/household-access";
 import { clearCachedOwnerLocale, LOCALE_NAMES } from "@/lib/owner-locale";
+import { SETUP_TEMPLATES_READY, type HomeType } from "@/lib/setup-templates";
 import { supabase } from "@/lib/supabase/client";
 
 /**
@@ -461,6 +475,9 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
   const [hasPets, setHasPets] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
+  // The household made here, while "What kind of home?" is on screen
+  // (Phase 171 D1, second question; shown once Phase 172's template exists).
+  const [created, setCreated] = useState<string | null>(null);
 
   async function enterHousehold() {
     // Before navigating, not after: the household context resolved this
@@ -485,11 +502,17 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
     // One call: the household and the owner membership are written together
     // (migrations/113), so a failure can no longer leave a household nobody
     // can reach (the Phase 120 retry this replaces).
-    const { error } = await supabase.rpc("create_household", {
+    const { data, error } = await supabase.rpc("create_household", {
       p_name: residence,
       p_has_pets: hasPets,
     });
     if (!error) {
+      if (SETUP_TEMPLATES_READY && typeof data === "string") {
+        // The household exists, so Skip on the next screen loses nothing.
+        setCreated(data);
+        setSaving(false);
+        return;
+      }
       await enterHousehold();
       return;
     }
@@ -515,6 +538,8 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
     }
     setSaving(false);
   }
+
+  if (created) return <HomeTypeScreen householdId={created} onDone={enterHousehold} />;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 pb-[calc(3rem+env(safe-area-inset-bottom))]">
@@ -570,6 +595,136 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
         </p>
       </form>
       <LanguageSwitch />
+    </main>
+  );
+}
+
+// --- What kind of home? (Phase 171 D1, second question) ------------------------------
+
+const HOME_CHOICES: {
+  key: HomeType;
+  icon: typeof House;
+  label: [string, string];
+  line: [string, string];
+}[] = [
+  {
+    key: "garden",
+    icon: Trees,
+    label: ["House with a garden", "Rumah dengan taman"],
+    line: ["A pool, a carport, one or two floors", "Ada kolam, carport, satu atau dua lantai"],
+  },
+  {
+    key: "multi_floor",
+    icon: Building,
+    label: ["Big house, several floors", "Rumah besar bertingkat"],
+    line: ["Three floors or more, a rooftop", "Tiga lantai atau lebih, ada rooftop"],
+  },
+  {
+    key: "apartment",
+    icon: Building2,
+    label: ["Apartment", "Apartemen"],
+    line: ["One floor, a balcony", "Satu lantai, ada balkon"],
+  },
+  {
+    key: "other",
+    icon: House,
+    label: ["Something else", "Lainnya"],
+    line: ["Start small", "Mulai dari yang sedikit"],
+  },
+];
+
+/**
+ * One screen after Create household, with Skip (D1, D2). One choice,
+ * nothing pre-selected. Continue stores the answer
+ * (household_setup.home_type, migrations/142) and opens Phase 172's
+ * template for it; Skip stores nothing. The household already exists, so
+ * neither loses anything.
+ */
+function HomeTypeScreen({
+  householdId,
+  onDone,
+}: {
+  householdId: string;
+  onDone: (home: HomeType | null) => Promise<void> | void;
+}) {
+  const t = useT();
+  const [picked, setPicked] = useState<HomeType | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function finish(home: HomeType | null) {
+    if (busy) return;
+    setBusy(true);
+    if (home && supabase) {
+      // Best effort: the answer only picks a starting list, so a failed save
+      // never holds the owner up.
+      const { error } = await supabase.rpc("record_household_setup", {
+        p_household: householdId,
+        p_fields: { home_type: home },
+      });
+      if (error) console.error("Could not save the kind of home", error);
+    }
+    await onDone(home);
+  }
+
+  return (
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-6 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(3rem+env(safe-area-inset-bottom))]">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => void finish(null)}
+          disabled={busy}
+          className="min-h-11 rounded-lg px-3 text-sm font-medium text-muted-foreground active:bg-muted"
+        >
+          {t("Skip", "Lewati")}
+        </button>
+      </div>
+      <div className="flex flex-1 flex-col justify-center gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+          {t("What kind of home?", "Rumah seperti apa?")}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {t(
+            "Miamus sets up the usual rooms, chores and bills for you to tick.",
+            "Miamus menyiapkan ruangan, tugas dan tagihan yang biasa; Anda tinggal mencentang."
+          )}
+        </p>
+        <div role="radiogroup" aria-label={t("What kind of home?", "Rumah seperti apa?")} className="flex flex-col gap-2">
+          {HOME_CHOICES.map((choice) => {
+            const Icon = choice.icon;
+            const selected = picked === choice.key;
+            return (
+              <button
+                key={choice.key}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setPicked(choice.key)}
+                className={
+                  selected
+                    ? "flex min-h-16 items-center gap-3 rounded-xl border-2 border-gray-900 bg-white px-3 text-left"
+                    : "flex min-h-16 items-center gap-3 rounded-xl border-2 border-transparent bg-white px-3 text-left shadow-[inset_0_0_0_1px_var(--color-border)] active:bg-muted"
+                }
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-white text-gray-900">
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm font-medium text-gray-900">{t(...choice.label)}</span>
+                  <span className="text-xs text-muted-foreground">{t(...choice.line)}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <Button
+          type="button"
+          disabled={!picked || busy}
+          onClick={() => void finish(picked)}
+          className="mt-2 min-h-[52px]"
+        >
+          {busy && <Loader2 className="animate-spin" />} {t("Continue", "Lanjut")}
+        </Button>
+      </div>
     </main>
   );
 }

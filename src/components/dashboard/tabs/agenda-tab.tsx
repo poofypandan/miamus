@@ -37,6 +37,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { useRepairs } from "@/hooks/use-repairs";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores";
 import { useBillPayments } from "@/hooks/use-bill-payments";
 import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
@@ -204,14 +205,22 @@ export function AgendaTab() {
   );
 
   // Food to eat soon (Phase 156): the same kind of quiet line, above it.
-  const eatSoon = useMemo(() => countEatSoon(foodItems, formatDateLocal(today)), [foodItems, today]);
+  // Food at home and Repairs switched off (Phase 171): their lines go.
+  const { food: foodOn, repairs: repairsOn } = useHouseholdFeatures();
+  const eatSoon = useMemo(
+    () => (foodOn ? countEatSoon(foodItems, formatDateLocal(today)) : 0),
+    [foodItems, today, foodOn]
+  );
   // Staff answered "don't know" for a date: waiting for an owner (amber).
-  const needsDate = useMemo(() => countNeedsDate(foodItems), [foodItems]);
+  const needsDate = useMemo(() => (foodOn ? countNeedsDate(foodItems) : 0), [foodItems, foodOn]);
 
   // Repairs (Phase 159): staff reports to review, and work done to check.
   // Normal staff reports land here rather than as a push (D6).
   const { repairs, visits } = useRepairs();
-  const repairLines = useMemo(() => repairsToday(repairs, visits), [repairs, visits]);
+  const repairLines = useMemo(
+    () => (repairsOn ? repairsToday(repairs, visits) : { toReview: 0, toCheck: 0 }),
+    [repairs, visits, repairsOn]
+  );
   const repairsHref = `${moduleHref("chores")}&chores=repairs`;
   function switchToRepairs(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;

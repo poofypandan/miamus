@@ -2,13 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronRight, CookingPot, MessageSquareText, Plus } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   StaffReportsPanel,
   useDismissedBatches,
@@ -23,6 +17,7 @@ import { StaffPushRow, StaffPushSheet } from "@/components/staff/staff-push-shee
 import { useStaffPush } from "@/hooks/use-staff-push";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 
 /**
  * "+ Lapor" — the staff view's floating action button, opening a bottom sheet
@@ -34,6 +29,9 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
  */
 export function StaffActionsFab() {
   const { routineProposals, pets } = useHousehold();
+  // Food at home and Repairs switched off (Phase 171): their buttons go, and
+  // the line above them gets shorter, never longer (no new reading, D14).
+  const { food: foodOn, repairs: repairsOn } = useHouseholdFeatures();
   const [open, setOpen] = useState(false);
   // Food came to the door (Phase 156): the add-food sheet, straight from here.
   const [addingFood, setAddingFood] = useState(false);
@@ -57,10 +55,7 @@ export function StaffActionsFab() {
   // phase they sat in plain view at the bottom of the feed; tucked into a
   // drawer, they need a signal on the button or they'd go unseen.
   const unseenAnswers = useMemo(
-    () =>
-      visibleProposalBatches(routineProposals, dismissed, now).filter(
-        (batch) => batch.status !== "pending"
-      ).length,
+    () => visibleProposalBatches(routineProposals, dismissed, now).filter((batch) => batch.status !== "pending").length,
     [routineProposals, dismissed, now]
   );
 
@@ -76,9 +71,7 @@ export function StaffActionsFab() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label={
-            unseenAnswers > 0 ? `Lapor — ${unseenAnswers} jawaban baru` : "Lapor"
-          }
+          aria-label={unseenAnswers > 0 ? `Lapor — ${unseenAnswers} jawaban baru` : "Lapor"}
           className="pointer-events-auto relative flex h-14 items-center gap-2 rounded-full bg-primary pr-5 pl-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-black/25 transition-transform active:scale-95"
         >
           <Plus className="size-5" />
@@ -95,18 +88,18 @@ export function StaffActionsFab() {
         {/* Capped below full height so the page stays visible above it, and a
             flex column so only the body scrolls — the title stays put while a
             long history scrolls beneath it. */}
-        <SheetContent
-          side="bottom"
-          className="mx-auto max-h-[85dvh] max-w-md gap-0 rounded-t-2xl"
-        >
+        <SheetContent side="bottom" className="mx-auto max-h-[85dvh] max-w-md gap-0 rounded-t-2xl">
           <SheetHeader className="border-b">
             <SheetTitle>Laporan & Usulan</SheetTitle>
             <SheetDescription>
               {/* Without pets there is no schedule to suggest and no pet note
-                  to write (Phase 162). */}
-              {pets.length > 0
-                ? "Catat makanan masuk, lapor kerusakan, laporkan stok, usulkan jadwal, atau catat kegiatan ekstra."
-                : "Catat makanan masuk, lapor kerusakan, atau laporkan stok."}
+                  to write (Phase 162); without Food or Repairs, no button for
+                  them (Phase 171). */}
+              {lapor({
+                food: foodOn,
+                repairs: repairsOn,
+                pets: pets.length > 0,
+              })}
             </SheetDescription>
           </SheetHeader>
           {/* overscroll-contain: reaching the end of the list must not start
@@ -114,30 +107,36 @@ export function StaffActionsFab() {
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-6">
             {/* First, because food arrives mid-task and goes off: a photo is
                 enough, the owners are told. */}
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                setAddingFood(true);
-              }}
-              className="mb-4 flex min-h-16 w-full items-center gap-3 rounded-xl border bg-card px-4 text-left active:bg-muted"
-            >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
-                <CookingPot className="size-5" />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-base font-semibold">Makanan masuk</span>
-                <span className="text-xs text-muted-foreground">Foto, simpan di mana, kedaluwarsa</span>
-              </span>
-              <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
-            </button>
-            <StaffReportRepairButton
-              onPress={() => {
-                setOpen(false);
-                setReportingRepair(true);
-              }}
-            />
-            <MyRepairReports />
+            {foodOn && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  setAddingFood(true);
+                }}
+                className="mb-4 flex min-h-16 w-full items-center gap-3 rounded-xl border bg-card px-4 text-left active:bg-muted"
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <CookingPot className="size-5" />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-base font-semibold">Makanan masuk</span>
+                  <span className="text-xs text-muted-foreground">Foto, simpan di mana, kedaluwarsa</span>
+                </span>
+                <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+              </button>
+            )}
+            {repairsOn && (
+              <>
+                <StaffReportRepairButton
+                  onPress={() => {
+                    setOpen(false);
+                    setReportingRepair(true);
+                  }}
+                />
+                <MyRepairReports />
+              </>
+            )}
             <StaffReportsPanel dismissed={dismissed} dismiss={dismiss} now={now} />
             <button
               type="button"
@@ -171,4 +170,20 @@ export function StaffActionsFab() {
       <StaffPushSheet staffPush={staffPush} open={pushSettings} onClose={() => setPushSettings(false)} />
     </>
   );
+}
+
+/**
+ * The sheet's one line, from what is on: "Catat makanan masuk, lapor
+ * kerusakan, atau laporkan stok." Each part goes with its button.
+ */
+export function lapor({ food, repairs, pets }: { food: boolean; repairs: boolean; pets: boolean }): string {
+  const parts = [
+    food && "catat makanan masuk",
+    repairs && "lapor kerusakan",
+    "laporkan stok",
+    pets && "usulkan jadwal",
+    pets && "catat kegiatan ekstra",
+  ].filter((part): part is string => !!part);
+  const text = parts.length > 1 ? `${parts.slice(0, -1).join(", ")}, atau ${parts[parts.length - 1]}` : parts[0];
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
 }

@@ -61,6 +61,8 @@ export interface ContextRows {
   items: ContextItemRow[];
   /** households.has_pets (migrations/133); only an explicit false switches pets off. */
   hasPets?: boolean | null;
+  /** household_features (migrations/145): only an explicit false switches Food at home off. */
+  foodOn?: boolean | null;
 }
 
 export interface RefMap {
@@ -217,6 +219,7 @@ export function buildContext(
       rooms,
       items,
       ...(rows.hasPets === false ? { petsOff: true } : {}),
+      ...(rows.foodOn === false ? { foodOff: true } : {}),
     },
     refs,
     names,
