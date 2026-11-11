@@ -235,6 +235,12 @@ people are **staf** and **admin**.
 | Anyone, not done yet | **Siapa saja, belum dikerjakan** | The small row for what nobody owns and nobody has done. |
 | Everyone (back from a person's day) · Not yet · From an earlier day | **Semua orang · Belum · Dari hari sebelumnya** | The person's day in Siapa mengerjakan apa. |
 | Supervising a repair since 10.00 (planned) | **Mengawasi perbaikan sejak 10.00** | Phase 174: the busy line's place is ready; nothing fills it yet. |
+| Features (Household row) | **Fitur** | Phase 171 PR A: Household → Fitur replaces "Siapa yang tinggal di sini". Everyday word. |
+| On / off (a feature) | **aktif / dimatikan** | Phase 171 PR A: "4 aktif" on the row; toasts "{Fitur} aktif" · "{Fitur} dimatikan". |
+| Food at home (feature) | **Makanan di rumah** | Phase 171 PR A, the Features row; the Kitchen pill stays **Makanan**. |
+| What kind of home? | **Rumah seperti apa?** | Phase 171 PR A, sign-up screen 2 (the brief's wording; Phase 172's plan drafted "Seperti apa rumah Anda?"). |
+| House with a garden · Big house, several floors · Apartment · Something else | **Rumah dengan taman · Rumah besar bertingkat · Apartemen · Lainnya** | Phase 172's four home types, drawn by Phase 171's screen. |
+| No thanks (offer, later) | **Tidak, terima kasih** | Phase 171 D7: the offer card, built with the first feature that starts off. |
 
 ## Formatting
 

@@ -2,6 +2,8 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { pushInPlace } from "@/lib/in-place-navigation";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { kitchenViewFor } from "@/lib/features";
 
 export type KitchenView = "food" | "buy";
 
@@ -18,7 +20,9 @@ export type KitchenView = "food" | "buy";
 export function useKitchenView(): [KitchenView, (next: KitchenView) => void] {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const view: KitchenView = searchParams.get("kitchen") === "buy" ? "buy" : "food";
+  // Food at home switched off (Phase 171): every Kitchen link opens Shopping.
+  const { flags } = useHouseholdFeatures();
+  const view: KitchenView = kitchenViewFor(searchParams.get("kitchen") === "buy" ? "buy" : "food", flags);
 
   function setView(next: KitchenView) {
     if (next === view) return;

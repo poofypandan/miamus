@@ -49,6 +49,8 @@ import { compressPhoto } from "@/lib/image";
 import { readSnapshot, writeSnapshot } from "@/lib/snapshot-cache";
 import { readSessionState, waitForSession } from "@/lib/auth/device-session";
 import { isConnectionError } from "@/lib/network-errors";
+import { refreshFeatures, useFeatureFlagsFor } from "@/hooks/use-feature-flags";
+import { visibleChores } from "@/lib/features";
 import { warmImagesWhenIdle } from "@/lib/image-warm";
 import {
   resolveActiveHouseholdId,
@@ -666,6 +668,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     refreshBillPayments();
     // Couldn't-do records (Phase 165), likewise only while a screen shows them.
     refreshTaskExceptions();
+    // Household → Features (Phase 171): an owner may have switched something
+    // on another phone since this one opened.
+    refreshFeatures();
     // A silent pass never *puts up* skeletons. It matters more than it looks:
     // flipping `loading` on re-renders the staff list as skeletons, which
     // unmounts the card holding an open photo-tagging dialog — exactly what a
@@ -975,9 +980,13 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   );
   const shownLogs = useMemo(() => overlay(logs, waiting.logs), [logs, waiting.logs]);
   const shownFoods = useMemo(() => overlay(foodItems, waiting.foods), [foodItems, waiting.foods]);
+  // Bills and upkeep switched off (Phase 171, migrations/145): its chores
+  // hide from every screen, owners' and staff phones alike, and come back
+  // with the switch. Saved rows are untouched; only what's shown changes.
+  const { flags: featureFlags } = useFeatureFlagsFor(activeHouseholdId, tenantReady);
   const shownTasks = useMemo(
-    () => overlay(householdTasks, waiting.tasks, false),
-    [householdTasks, waiting.tasks]
+    () => visibleChores(overlay(householdTasks, waiting.tasks, false), featureFlags),
+    [householdTasks, waiting.tasks, featureFlags]
   );
 
   const finishChore = useCallback(
