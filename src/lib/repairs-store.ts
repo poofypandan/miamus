@@ -261,7 +261,10 @@ export function overlayRepairsOutbox(
       const visit = walkIns.get(job.visitId);
       if (visit && !visit.left_at) {
         pendingIds.add(visit.id);
-        walkIns.set(visit.id, { ...visit, ...job.finish });
+        // Closed on screen at once, with the phone's time until the
+        // server's arrives: it moves to "Sudah diperbaiki", and the repair to
+        // "work done", not nowhere (Codex, PR #94).
+        walkIns.set(visit.id, { ...visit, ...job.finish, left_at: job.finish.left_phone_at });
         supervision = supervision.map((s) =>
           s.visit_id === visit.id && !s.ended_at ? { ...s, ended_at: job.finish.left_phone_at } : s
         );

@@ -388,8 +388,14 @@ begin
   new.started_at := now();
   new.ended_at := null;
 
+  -- Locked: a Selesai being saved for this visit holds its row, so a
+  -- hand-over racing it waits, then reads it finished and is refused,
+  -- instead of opening a stretch on a closed visit (Codex, PR #94). The
+  -- finish takes the same row first and the stretches second, as this does,
+  -- so the two never deadlock.
   select * into visit from public.repair_visits v
-   where v.id = new.visit_id and v.household_id = new.household_id;
+   where v.id = new.visit_id and v.household_id = new.household_id
+   for update;
   if not found then
     raise exception 'supervision_visit' using errcode = '42501';
   end if;

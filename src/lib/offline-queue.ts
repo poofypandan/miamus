@@ -535,6 +535,36 @@ type TryResult<T> = { ok: true; result: T } | { ok: false; err: unknown } | { ok
  * With nowhere to keep it (a locked-down private window), it is sent
  * directly and any failure is thrown, as before Phase 161.
  */
+/**
+ * The walk-in a save belongs to (Phase 174), or null. A walk-in's saves
+ * reach the server in the order they were made — its start, a hand-over,
+ * its Selesai — or the later ones would be refused for a visit that isn't
+ * there yet (Codex, PR #94).
+ */
+export function walkInOf(job: OutboxJob): string | null {
+  switch (job.kind) {
+    case "walkin_start":
+      return job.visit.id;
+    case "walkin_finish":
+      return job.visitId;
+    case "supervision_handover":
+      return job.input.visit_id;
+    default:
+      return null;
+  }
+}
+
+/** An earlier save of the same walk-in is still on the phone (queued or being sent). */
+function waitsForEarlier(item: OfflineQueueItem): boolean {
+  const visit = walkInOf(item.job);
+  if (!visit) return false;
+  for (const other of items) {
+    if (other.id === item.id) return false; // reached itself: nothing earlier
+    if (walkInOf(other.job) === visit) return true;
+  }
+  return false;
+}
+
 export async function submitJob<T extends SendResult>(
   job: OutboxJob,
   onSent?: (result: T) => void
@@ -545,6 +575,12 @@ export async function submitJob<T extends SendResult>(
     const result = (await sendJob(job)) as T;
     onSent?.(result);
     return { status: "sent", result };
+  }
+  // Behind an earlier save of the same walk-in: it goes after that one,
+  // from the queue, never alongside it.
+  if (waitsForEarlier(item)) {
+    notifyWaiting();
+    return { status: "waiting" };
   }
 
   inFlight.add(id);
@@ -678,14 +714,19 @@ export async function drainOutbox(
   items = queue;
   emit();
   let stalled = false;
+  // Walk-ins with a save not sent in this pass: their later saves wait too.
+  const held = new Set<string>();
   for (const item of queue) {
     // Saved for another household (a phone that switched): it waits for that one.
     if (item.householdId && item.householdId !== household) continue;
-    if (stalled || inFlight.has(item.id)) {
+    const visit = walkInOf(item.job);
+    if (stalled || inFlight.has(item.id) || (visit && held.has(visit))) {
       report.waiting++;
+      if (visit) held.add(visit);
       continue;
     }
     inFlight.add(item.id);
+    let kept = false;
     try {
       await sendJob(await withStableIds(item));
       report.sent.push(item);
@@ -703,9 +744,11 @@ export async function drainOutbox(
         report.unlinked = true;
         stalled = true;
         report.waiting++;
+        kept = true;
       } else if (link === "unknown" || link === "no_answer" || isRetryable(err)) {
         stalled = true;
         report.waiting++;
+        kept = true;
       } else {
         console.error("A queued save was refused", item.id, err);
         report.refused.push(item);
@@ -713,6 +756,7 @@ export async function drainOutbox(
       }
     } finally {
       inFlight.delete(item.id);
+      if (kept && visit) held.add(visit);
     }
   }
   if (report.sent.length > 0 || report.refused.length > 0) {

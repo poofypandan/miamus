@@ -25,6 +25,10 @@ const provider = {
   updateHouseholdTaskStatus: vi.fn(),
   updateHouseholdTask: vi.fn(),
   deletePhoto: vi.fn(async () => undefined),
+  createRepair: vi.fn(),
+  createRepairWalkIn: vi.fn(),
+  finishRepairWalkIn: vi.fn(),
+  handOverSupervision: vi.fn(),
 };
 vi.mock("@/lib/data", () => ({ dataProvider: provider }));
 
@@ -575,5 +579,90 @@ describe("a phone that is no longer linked", () => {
     const report = await queue.drainOutbox();
     expect(report.sent).toHaveLength(1);
     expect(queue.outboxUnlinked()).toBe(false);
+  });
+});
+
+describe("a walk-in's saves go in order (Phase 174; Codex, PR #94)", () => {
+  const start = (): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "walkin_start",
+    repair: null,
+    visit: {
+      id: "visit-1",
+      repair_id: "repair-1",
+      worker_name: "Pak Budi",
+      logged_by_staff: "staff-1",
+      arrived_phone_at: "2026-11-11T02:00:00.000Z",
+      before_photo_url: "https://x/house-a/repairs/repair-1/b.jpg",
+    },
+  });
+  const finish = (): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "walkin_finish",
+    visitId: "visit-1",
+    finish: { after_photo_url: "https://x/a.jpg", left_phone_at: "2026-11-11T04:00:00.000Z", outcome: "fixed", note: null },
+  });
+  const handOver = (): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "supervision_handover",
+    input: { id: "stretch-2", visit_id: "visit-1", staff_id: "staff-2" },
+  });
+
+  it("knows which walk-in each save belongs to", () => {
+    expect(queue.walkInOf(start())).toBe("visit-1");
+    expect(queue.walkInOf(finish())).toBe("visit-1");
+    expect(queue.walkInOf(handOver())).toBe("visit-1");
+    expect(queue.walkInOf(logJob())).toBeNull();
+  });
+
+  it("Selesai saved while the start still waits is kept, not sent ahead of it", async () => {
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    expect((await queue.submitJob(start())).status).toBe("waiting");
+    const outcome = await queue.submitJob(finish());
+    expect(outcome.status).toBe("waiting");
+    expect(provider.finishRepairWalkIn).not.toHaveBeenCalled();
+    expect((await stored()).map((i) => i.job.kind)).toEqual(["walkin_start", "walkin_finish"]);
+  });
+
+  it("a start still being sent (past the spinner) holds its Selesai, in submitJob and in the drain", async () => {
+    vi.useFakeTimers();
+    let land!: (row: unknown) => void;
+    provider.createRepairWalkIn.mockReturnValue(new Promise((resolve) => (land = resolve)));
+    const first = queue.submitJob(start());
+    await vi.advanceTimersByTimeAsync(queue.UI_WAIT_MS + 1);
+    await expect(first).resolves.toEqual({ status: "waiting" });
+    await expect(queue.submitJob(finish())).resolves.toEqual({ status: "waiting" });
+    const report = await queue.drainOutbox();
+    expect(report.waiting).toBe(2);
+    expect(provider.finishRepairWalkIn).not.toHaveBeenCalled();
+    land({ id: "visit-1" });
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  it("a start that gets no answer in the drain holds the walk-in's later saves; other saves still go", async () => {
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    provider.createLogsBatch.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(start());
+    await queue.submitJob(handOver());
+    await queue.submitJob(finish());
+    for (const fn of Object.values(provider)) fn.mockReset();
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    const report = await queue.drainOutbox();
+    expect(report.waiting).toBe(3);
+    expect(provider.handOverSupervision).not.toHaveBeenCalled();
+    expect(provider.finishRepairWalkIn).not.toHaveBeenCalled();
+  });
+
+  it("once the start lands, the hand-over and Selesai follow in order in the same pass", async () => {
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(start());
+    await queue.submitJob(handOver());
+    await queue.submitJob(finish());
+    for (const fn of Object.values(provider)) fn.mockReset();
+    const order: string[] = [];
+    provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-1" }));
+    provider.handOverSupervision.mockImplementation(async () => (order.push("handover"), { id: "stretch-2" }));
+    provider.finishRepairWalkIn.mockImplementation(async () => (order.push("finish"), { id: "visit-1" }));
+    const report = await queue.drainOutbox();
+    expect(order).toEqual(["start", "handover", "finish"]);
+    expect(report.sent).toHaveLength(3);
+    expect(await stored()).toEqual([]);
   });
 });

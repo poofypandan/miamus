@@ -388,6 +388,11 @@ describe("walk-ins waiting on the phone", () => {
 
     const finished = overlayRepairsOutbox(empty, [start, finish], "h");
     expect(isOpenWalkIn(finished.walkIns[0])).toBe(false);
+    // Closed on screen with the phone's time: listed as fixed, and the
+    // repair reads "work done", not nowhere (Codex, PR #94).
+    expect(finished.walkIns[0].left_at).toBe(at("11:00"));
+    expect(recentlyFinished(finished.walkIns, new Date(at("12:00"))).map((v) => v.id)).toEqual(["wv"]);
+    expect(repairStage({ ...finished.repairs[0], status: "open" }, [], TODAY, finished.walkIns).kind).toBe("check");
     expect(finished.supervision[0].ended_at).toBe(at("11:00"));
     // Saved for another household: not shown here.
     expect(overlayRepairsOutbox(empty, [{ ...start, householdId: "other" }], "h").walkIns).toHaveLength(0);
