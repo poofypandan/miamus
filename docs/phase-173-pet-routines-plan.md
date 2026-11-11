@@ -1,7 +1,10 @@
 # Phase 173 — Any routine, for any pets, in one easy sheet
 
-Status: **plan, not decided.** Docs only: no app code, no migration applied.
-Migration **147** is reserved for PR A (described below, not written).
+Status: **decided: owner chose all A except D6 = photo by default; D14 added
+(owner to confirm A)** (2026-11-11, through the manager). Docs only: no app
+code, no migration applied. "147" below is a placeholder for PR A's
+migration: numbers are given in build order when the PR is built (rule of
+10 Nov).
 Mockup: `docs/mockups/phase-173-pet-routines.html` (open in a browser, phone
 width; owner screens English left, Bahasa Indonesia right; staff screens in
 Bahasa Indonesia only). Roadmap row 35.
@@ -21,8 +24,8 @@ medicines, vet, grooming) stay as they are.
 
 **Short answer to the last question: no.** Meals, potty and medicines work
 well. Anything else has to go through **Others**, which forces an end date,
-works one pet at a time, always asks staff for a photo, and has no place for
-a note to staff.
+works one pet at a time, makes staff pick each pet after every photo, and
+has no place for a note to staff.
 
 ## What exists (read 2026-11-10)
 
@@ -51,7 +54,7 @@ a note to staff.
   several pets writes **one log per pet** in one batch
   (`logTasksBatch`, `src/components/staff/agenda-group-card.tsx`). So two
   rows called "Matikan lampu" at 21:30 already show as one card. What's
-  missing is making them in one go, and finishing them without a photo.
+  missing is making them in one go, and finishing them quickly.
 - **Staff always need a photo** for a pet routine: the card's only way to
   finish is the camera, then ticking pets. No plain tick exists.
 - **No instructions on routines** (audit item 6): the card says so in a
@@ -81,7 +84,7 @@ a note to staff.
 ## The idea in one line
 
 **One "Add routine" sheet: pick what, pick the pets, pick the time. Every day,
-no end date, a tick, for anyone, unless you say otherwise.** Saved as one row
+no end date, a photo, for anyone, unless you say otherwise.** Saved as one row
 per pet with a shared group id, so everything that reads routines today keeps
 working.
 
@@ -99,7 +102,8 @@ Taps counted from the Pets tab. "Typed" means fields the owner types into
 | Entries made | 2, separately | **1** (two rows, one group) | 1 | **1** |
 | Shows as | An "Others" row (list icon), "Expires 31 Dec" | Light-off icon, no end | Same | Footprints icon, no end |
 | Note for staff | Not possible | Optional line | Not possible | Optional line |
-| Staff each time | 7 taps and a photo of a dark room | **1 tap** (both pets) | 6 taps and a photo | **1 tap** |
+| Staff each time | 7 taps and a photo | **3 taps and one photo** (both pets) | 6 taps and a photo, no length | **6 taps and two photos** (start, end); "Jalan-jalan · 32 menit" recorded |
+| If the owner sets Tick | — | 1 tap | — | 1 tap |
 
 How the "after" numbers add up:
 
@@ -109,9 +113,15 @@ How the "after" numbers add up:
 - **Walk:** Pets → **Matcha** → **Add routine** (For: Matcha) → **Walk**
   (suggests 06:30) → time to 07:00 (2) → **Add for Matcha**. 7 taps. A second
   walk in the evening: **Add time** and pick it, about 3 more.
-- **Staff:** the card shows "21.30 · Matikan lampu" with Mocha and Matcha
-  badges and the note. One tap on the circle logs both, with **Batalkan**
-  (Undo) for 5 minutes, as photos have now.
+- **Staff, lights off:** the card shows "21.30 · Matikan lampu" with Mocha
+  and Matcha badges, the note, and a round camera button. Tap it (1), the
+  camera opens straight away; shutter (1) and use photo (1). The photo is
+  saved for both dogs, with **Batalkan** (Undo) for 5 minutes. 3 taps, down
+  from 7, because there's no pet-picking step.
+- **Staff, walk:** the same 3 taps at the start ("Sedang jalan · mulai
+  07.02" on the card), and 3 more at the end. Miamus records "Jalan-jalan ·
+  32 menit" from the two photo times (D14). Same taps as today's single
+  photo, plus proof of how long the walk was.
 
 ## The sheet (mockup screens 1 and 2)
 
@@ -126,7 +136,7 @@ required (stop rule: no new required field).
 | **When** | The chip's time, **Every day**, no end | **Add time** (several times a day); **Every day · Some days · Once** (pill control; Some days shows Mon–Sun chips); **Ends** (optional, off). |
 | **Who** | **Anyone** | A staff chip. Staff still all see the card; it carries the name, as chores do. |
 | **Note for staff** | Empty | One line, up to 120 characters, shown as typed on the staff card. |
-| **Proof** | **Tick** | **Tick · Photo** (pill control). |
+| **Proof** | **Photo** (for Walk: a photo at the start and at the end, D14) | **Photo · Tick** (pill control). Tick is for routines the owner trusts without proof. |
 | Button | **Add for 2 pets** / **Add for Matcha** | |
 
 Owners see chip names in their language; the saved title is Indonesian
@@ -161,7 +171,7 @@ untouched:
 | Path | Effect of A |
 | --- | --- |
 | Staff Today card | Already one card per time and title, badges per pet. |
-| One tick, every pet | `logTasksBatch` already writes one log per pet in one batch. |
+| One photo (or tick), every pet | `logTasksBatch` already writes one log per pet in one batch, sharing one photo. |
 | Pet history, photo stream, staff completion strip | Logs are per pet, as now. |
 | Evening summary, "couldn't do" (139) | Per schedule and pet, as now. Mocha's lights can be "couldn't do" while Matcha's are done. |
 | Offline queue (161) | Same job; photo null is already valid. |
@@ -205,22 +215,33 @@ A new column, **`kind`**, settles the meal-by-default problem for new rows:
 - `ScheduleCategoryName` (types) gains `routine`. `routine_proposals.category`
   (staff suggestions) is unchanged: staff can't suggest the new kinds yet.
 
-## One tick for all (D4)
+## One photo (or one tap) for all (D4)
 
-- **Tick routines** (proof = tick): the card gets a round button at the
-  right. **One tap logs every pet on the card that's still open**: not done
-  yet, not admitted (suspended, as the card already skips), and without an
-  open "couldn't do" record for that day (139). Photo
-  null, staff id stamped, through the existing save queue. Toast: "Mocha,
-  Matcha · Matikan lampu selesai" with **Batalkan** for 5 minutes
-  (`UNDO_WINDOW_MS`). Tapping the card itself opens the sheet, where staff
-  can tick pets one by one (a walk done for one dog only) or say **Tidak bisa
-  dikerjakan** (139), as now.
-- **Photo routines** keep today's flow exactly (camera, then pick pets; the
-  pick starts empty on purpose).
+Applies to cards whose rows have a `kind` (made in the new sheet). Meals,
+potty, medicines, vet and grooming keep today's flow exactly (camera, then
+pick pets; the pick starts empty on purpose, because there the photo shows
+which dogs ate).
+
+- **Which pets:** every pet on the card that's still open: not done yet, not
+  admitted (suspended, as the card already skips), and without an open
+  "couldn't do" record for that day (139).
+- **Photo routines (the default):** the card has a round **camera** button
+  at the right. One tap opens the camera straight away (the existing
+  `<label>` file input, as the card's sheet uses today), one photo,
+  `compressPhoto`, `enqueuePhoto`, then **saved for every open pet** with no
+  pet-picking step. A photo of the switched-off lamp proves the routine, not
+  which dog was in frame. Toast: "Mocha, Matcha · Matikan lampu selesai"
+  with **Batalkan** for 5 minutes (`UNDO_WINDOW_MS`). Offline, it waits in
+  the save queue (161) like any photo.
+- **Tick routines** (when the owner chose Tick): the same button is a
+  circle; one tap logs every open pet with photo null.
+- **One pet only** (a walk done for one dog): tap the card itself. The
+  card's sheet lets staff photograph or tick pets one by one, or say **Tidak
+  bisa dikerjakan** (139), as now.
 - If one card mixes the two (same time and title, one row asks for a photo),
   the card asks for a photo.
-- No new reading for staff (stop rule): a circle and the note, nothing else.
+- No new reading for staff (stop rule): a camera button and the note,
+  nothing else.
 
 ## What happens to "Others" (D5)
 
@@ -232,13 +253,61 @@ same trick vet and grooming use). Old temporary rows are untouched and keep
 their "Until 12 Nov" line; editing one opens the sheet with **Ends** set. No
 data migration.
 
-## Proof (D6)
+## Proof (D6): decided, photo by default
 
-**Recommended (A):** **Tick** by default for everything made in the new
-sheet; **Photo** is one tap. Lights, water and teeth don't need a photo; the
-owner who wants walk photos picks Photo. Meals, potty, medicines, vet and
-grooming keep their photos (`needs_photo` defaults to true, so every
-existing row keeps asking for one).
+**Owner's choice (11 Nov): a photo by default for every routine,** lights off
+and walks included, "otherwise I wouldn't know they actually did it". The
+owner can switch any routine to **Tick** in the sheet. `needs_photo` defaults
+to true, so the database default, the sheet's default and every existing row
+agree. To keep it fast, the camera opens straight from the card's button and
+one photo covers every pet on the card (D4): 3 taps for lights off, against
+7 today.
+
+## Walk proof (D14), owner to confirm A
+
+The owner asked whether GPS could prove walks while keeping location private.
+What a web app (PWA) can and can't do:
+
+- It can read location **only while the page is open in the foreground**.
+- An iPhone Home Screen app, and Chrome on Android, **stop when the screen
+  locks** (the phone in a pocket on a walk).
+- **There's no background tracking without a native app.**
+- The **Wake Lock API** can keep the screen on during a walk, at the cost of
+  battery and taps from the pocket.
+- **Staff location is the staff member's personal data** (UU PDP). Collecting
+  it needs a clear purpose, the person's consent, a retention limit and a
+  line in the privacy policy, and a route shows where a person was, which is
+  more than "did the dog get walked".
+
+| Option | What it is | Location stored | Privacy policy |
+| --- | --- | --- | --- |
+| **A (recommended)** | A **start photo and an end photo**. Miamus shows "Jalan-jalan · 32 menit" from the two photo times. | **None** | No change: proof photos are already covered (30 days). |
+| B | A, plus an optional distance worked out **on the phone** while the screen is kept on (Wake Lock). Coordinates never leave the phone; only "1,2 km" and the minutes are saved. | None (distance only) | A new line and a consent screen on the staff phone, before first use. |
+| C | A stored GPS route. | The route | Not recommended: tracking a worker's movements for a dog walk is out of proportion. |
+
+Later, with a native app (not planned): background distance with the screen
+locked.
+
+**How A works (no migration of its own):**
+
+- A walk card's camera button takes the **start photo**, saved as a log with
+  `sub_type = 'check_in'` for every open pet; the card then reads "Sedang
+  jalan · mulai 07.02" and stays open. The next tap takes the **end photo**
+  (`sub_type = 'check_out'`). This is the two-part logging vet visits already
+  use (079; `vetVisitState`), so `task_logs` doesn't change.
+- **Done means the end photo**, as for a vet visit: `routine_slots_open`
+  (139) treats `kind = 'walk'` like `Vet: ` rows (done at `check_out`), and
+  the staff list's "Selesai" rule (`staff-agenda.ts`) keeps a started walk in
+  the day. Staff workload (100) already skips `check_in` logs, so a walk
+  counts once.
+- The owner sees "Jalan-jalan · 32 menit · Yanti" in the pet's history and on
+  Today, worked out from the two times; nothing new is stored. A walk with
+  no end photo by midnight shows "Mulai 07.02, tanpa foto akhir" and counts
+  as not done in the evening summary.
+- With **Tick** chosen, a walk is one tap and has no minutes.
+- **"Usually 30 minutes" nudge:** optional, not recommended now. It would
+  need a field in the sheet and a line for staff to read (two stop rules).
+  Revisit if walks come back short.
 
 ## Timed reminders for staff (D7) — PR C
 
@@ -293,8 +362,8 @@ New input (strict schema, nullable fields as today):
 - Still never saves without the card. Meals and potty behave as now
   (per-pet new-time check, `newPetTimes`); other kinds skip a time the pet
   already has with the same title.
-- Proof from Kakak is the kind's default: a photo for meals and potty (as
-  now), a tick for the new kinds. The owner changes it in the sheet.
+- Proof from Kakak is always a photo (D6); the owner can switch a routine to
+  Tick in the sheet afterwards.
 - Updated with it: the prompt's pet line, `validate.ts`, `suggestions.ts`,
   `describe.ts` (the card), `practice.ts`, and eval cases for both of the
   owner's sentences, "Matcha only", weekdays and "until Friday". The schema
@@ -364,7 +433,8 @@ files as meals. If 173 PR A lands first, 172 sets `kind: 'walk'` on them; if
   C's reminder would go to nobody.
 - **`routine_slots_open`** (139, the only version) is re-created to skip a
   day not in `days_of_week`, so the evening summary doesn't count Matcha's
-  weekday walk on a Sunday. TypeScript's `isScheduleActiveOn` gets the same
+  weekday walk on a Sunday, and to count a `kind = 'walk'` row as done only
+  at its end photo (`check_out`, D14), as it already does for vet visits. TypeScript's `isScheduleActiveOn` gets the same
   rule, with unit tests (Jakarta weekday at midnight, null days, Once).
 - The Phase 172 walk fix-up above, if 172's rows already exist.
 - No new `SECURITY DEFINER` function in 147. The one replaced,
@@ -383,8 +453,9 @@ routines-due', '*/5 * * * *', …)`. Tag `routine-<group or row>-<date>-<time>`,
 so a rerun replaces rather than repeats.
 
 **Old app builds** (until the PWA updates on next open): ignore `kind` (a new
-routine shows with the meal icon), `days_of_week` (shows every day) and
-`needs_photo` (asks for a photo). Wrong for a few hours, harmless; noted in
+routine shows with the meal icon), `days_of_week` (shows every day),
+`needs_photo` (a Tick routine asks for a photo) and walks (one photo, no end
+photo, so no minutes). Wrong for a few hours, harmless; noted in
 the release.
 
 ## Privacy
@@ -392,7 +463,14 @@ the release.
 - **PR A and PR B: no new kind of personal data, no new service, no change
   in where data lives or how long.** A note for staff and a chosen staff
   person on a routine are covered by "Tasks, chores, routines, schedules and
-  notes" (policy, both languages). No policy change.
+  notes" (policy, both languages). Walk start and end photos are "chore and
+  routine proof photos" (deleted after 30 days), and the minutes are worked
+  out from times already stored. **D14 A collects no location.** No policy
+  change.
+- **D14 B, if ever chosen, changes the policy** (both languages): that a
+  staff phone may measure a walk's distance while the screen is on, that the
+  location stays on the phone and only the distance and minutes are saved,
+  and that it's off until the staff member agrees on their phone.
 - **PR C changes the policy** (both languages): the staff-notifications line
   (privacy-policy.tsx, "They tell you about…") adds "a reminder at a
   routine's time, if the household turned it on for that routine", and "None
@@ -416,7 +494,10 @@ at most one What's new card that week.
 | Every day · Some days · Once | **Setiap hari · Hari tertentu · Sekali saja** | Repeat choices. |
 | Add time · Ends (optional) | **Tambah jam · Berakhir (opsional)** | Owner form, so "opsional". |
 | Note for staff | **Catatan untuk staf** | The label; staff see it under **Catatan**. |
-| Proof: Tick · Photo | **Bukti: Centang · Foto** | |
+| Proof: Photo · Tick | **Bukti: Foto · Centang** | Photo first: the default (D6). |
+| Walking · started 07.02 (staff card) | **Sedang jalan · mulai 07.02** | D14: between the start and end photos. |
+| Walk · 32 min (owner) | **Jalan-jalan · 32 menit** | D14: from the two photo times. |
+| Started 07.02, no end photo | **Mulai 07.02, tanpa foto akhir** | D14: a walk not finished by midnight. |
 | Add for 2 pets / Add for Matcha | **Tambah untuk 2 hewan / Tambah untuk Matcha** | Button. |
 | Other routines | **Rutinitas lain** | Replaces Others / Lainnya in Manage routines. |
 | Usual routines for Coco | **Rutinitas biasa untuk Coco** | Starter list after adding a pet. |
@@ -425,11 +506,14 @@ at most one What's new card that week.
 ## PRs (D12)
 
 1. **PR A (migration 147):** the sheet, kinds, several pets, no forced end
-   date, weekdays, once, note, who, tick proof and one tap for all on staff
-   cards, Others becomes Other routines, the write guard, the summary's
-   weekdays. Tests: unit (`categorizeSchedule`, `isScheduleActiveOn`), SQL
-   (guard, weekdays in `routine_slots_open`), Playwright (both examples
-   end to end, staff tick and undo, offline tick).
+   date, weekdays, once, note, who, photo proof by default (Tick
+   optional), one photo or tap for every pet on a staff card, walk start
+   and end photos with minutes (D14 A), Others becomes Other routines, the
+   write guard, the summary's weekdays and walks. Tests: unit
+   (`categorizeSchedule`, `isScheduleActiveOn`, walk minutes), SQL (guard,
+   weekdays and walks in `routine_slots_open`), Playwright (both examples
+   end to end, staff photo and undo, walk start and end, offline photo,
+   Tick).
 2. **PR B (no migration):** Kakak's tool and its eval cases; starter routines
    after adding a pet.
 3. **PR C (next free migration):** timed reminders, after the owner answers
@@ -445,9 +529,9 @@ production; the migration on production before the merge.
 | D1 | Entry points | Pets tab (all pets) and each pet's page and Manage sheet (that pet) | B: only inside Manage routines. C: Kakak only. |
 | D2 | Quick chips | Walk, Lights off, Play, Fresh water, Brush teeth, Other, each with a suggested time | B: a longer list (bath, clean the bed, brush coat). C: no chips, a title field. |
 | D3 | Multi-pet data | One row per pet plus `routine_group_id` | B: one row linked to several pets (every log and summary path changes). |
-| D4 | One tick for all | Circle logs every open pet on the card; open the card to choose; 5-minute undo | B: always choose pets first. |
+| D4 | One photo (or tick) for all | The card's button: one photo (or one tap, for Tick) saved for every open pet; open the card to do one pet; 5-minute undo | B: always choose pets first, as for meals. |
 | D5 | "Others" | Becomes Other routines using the new sheet; Once for one-offs; old rows untouched | B: keep Others beside the new sheet (two ways to do one thing). |
-| D6 | Default proof | Tick for new-sheet routines; Photo one tap away; old rows keep photos | B: photo by default. C: per kind (walk photo). |
+| D6 | Default proof | **Decided (owner): photo by default for every routine**; Tick one tap away in the sheet | (Was A: tick by default. Not chosen.) |
 | D7 | Timed reminders | Per routine, off by default, only if not done, may ring until 22:00 | B: keep 166's 21:00 quiet start (the 21:30 example never rings). C: on by default. |
 | D8 | Kakak | Extend `add_pet_routine` (several pets, any kind, days, until, staff, note) | B: a new tool (needs a migration for 126's CHECK). |
 | D9 | Starter routines | Ticked list after adding a dog or cat; offer joining existing groups | B: none. |
@@ -455,14 +539,15 @@ production; the migration on production before the merge.
 | D11 | Repeats | Every day, Some days, Once | B: also every N days. |
 | D12 | PR order | A (sheet and model, 147), B (Kakak and starters), C (reminders) | B: two PRs, Kakak and reminders together (reminders then wait on Q2 and hold Kakak back). |
 | D13 | Routine write guard | Close it in 147: only admins write `master_schedules` | B: leave it for a later security pass. |
+| D14 | Walk proof | Start and end photos, minutes from their times, no location | B: A plus an on-phone distance with Wake Lock (consent, policy line). C: stored GPS route (not recommended). Later: background distance with a native app. |
 
 ## Questions only the owner can answer
 
 1. **Who should "Lights off" be for at your house:** both dogs only, or every
    pet? (It decides whether the Pets tab's default of "every pet" is right,
    since production has 4 pets.)
-2. **Reminders at 21:30:** may a reminder you switch on ring until 22:00, when
-   166 agreed nothing after 21:00? (D7.)
-3. **Walk proof:** a tick, or a photo of Matcha out walking?
-4. **Starter list for dogs:** are Jalan pagi 06:30, Jalan sore 16:30 and
+2. **Walk proof (D14):** start and end photos with the minutes, and no
+   location (A)? (Reminders until 22:00 were settled by choosing D7 A; D6 is
+   photo.)
+3. **Starter list for dogs:** are Jalan pagi 06:30, Jalan sore 16:30 and
    Ganti air minum 08:00 the right usual ones?

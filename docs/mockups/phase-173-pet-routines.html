@@ -16,8 +16,9 @@
   section.screen h2 { font-size:15px; margin:0 0 2px; }
   section.screen > p { margin:0 0 12px; color:var(--muted); max-width:680px; }
   .pair { display:flex; gap:20px; flex-wrap:wrap; }
-  .phone { width:360px; max-width:100%; height:990px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
-  .phone.staff { height:580px; }
+  .phone { width:360px; max-width:100%; height:1025px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone.staff { height:600px; }
+  .phone.staff.walk { height:530px; }
   .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
   .status { height:22px; flex:none; }
   .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; }
@@ -78,6 +79,13 @@
   .tick { width:36px; height:40px; margin:-6px 0 -6px auto; display:flex; align-items:center; justify-content:center; flex:none; }
   .tick .ic { width:28px; height:28px; color:#9ca3af; }
   .card.done .tick .ic { color:var(--ok); }
+  .cam { width:38px; height:38px; margin:-6px 0 -6px auto; border-radius:999px; border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; flex:none; }
+  .cam .ic { color:var(--ink); width:18px; height:18px; }
+  .card .state { font-size:12.5px; font-weight:500; color:#92400e; display:flex; align-items:center; gap:4px; }
+  .card .state .ic { color:#b45309; width:13px; height:13px; }
+  .card .meta { font-size:12.5px; color:var(--ok); font-weight:500; display:flex; align-items:center; gap:4px; }
+  .card .meta .ic { color:var(--ok); width:13px; height:13px; }
+  .card.going { border-color:#fcd34d; border-left:3px solid #f59e0b; background:#fffbeb; }
   .seen { margin-left:auto; font-size:10.5px; color:var(--ok); font-weight:500; display:flex; align-items:center; gap:3px; }
   .seen .ic { color:var(--ok); width:12px; height:12px; }
   .toast { position:absolute; left:14px; right:14px; bottom:18px; z-index:4; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px -8px rgba(17,24,39,.25); display:flex; align-items:center; gap:8px; padding:12px; font-size:13.5px; }
@@ -129,20 +137,26 @@
 
 <section class="screen">
   <h2>1. Add routine: lights off for Mocha and Matcha, every day at 21:30 (owner)</h2>
-  <p>Opened from the Pets tab, so every pet starts ticked. The Lights off chip fills the title and suggests 21:30. The rest are defaults: every day, no end, anyone, tick. Four taps, nothing typed (the note is optional).</p>
+  <p>Opened from the Pets tab, so every pet starts ticked. The Lights off chip fills the title and suggests 21:30. The rest are defaults: every day, no end, anyone, a photo as proof. Four taps, nothing typed (the note is optional).</p>
   <div class="pair" id="s1"></div>
 </section>
 
 <section class="screen">
   <h2>2. Add routine: a walk for Matcha only, every day at 07:00 (owner)</h2>
-  <p>Opened from Matcha's page, so only Matcha is ticked. The Walk chip suggested 06:30; the owner moved it to 07:00. Seven taps, nothing typed.</p>
+  <p>Opened from Matcha's page, so only Matcha is ticked. The Walk chip suggested 06:30; the owner moved it to 07:00. Proof for a walk is a photo at the start and one at the end, and Miamus notes the minutes; no location. Seven taps, nothing typed.</p>
   <div class="pair" id="s2"></div>
 </section>
 
 <section class="screen">
-  <h2>3. Today on a staff phone, 21:31 (staff, Bahasa Indonesia only)</h2>
-  <p>Left: the lights-off card is one card for both dogs, with the owner's note and a circle. Right: one tap on the circle logs it for Mocha and Matcha, with Batalkan for 5 minutes. Matcha's walk this morning was one tap too. Meals and potty keep their photo flow.</p>
+  <h2>3. Today on a staff phone, 21:31: lights off (staff, Bahasa Indonesia only)</h2>
+  <p>Left: one card for both dogs, with the owner's note and a camera button. Tapping it opens the camera straight away; one photo is saved for Mocha and Matcha with no pet-picking step (3 taps: button, shutter, use photo). Right: after the photo, with Batalkan for 5 minutes. Meals and potty keep today's photo flow.</p>
   <div class="pair" id="s3"></div>
+</section>
+
+<section class="screen">
+  <h2>4. Matcha's walk: start photo and end photo (staff, Bahasa Indonesia only)</h2>
+  <p>Left, 07:15: the start photo was taken at 07:02, so the card stays open and reads "Sedang jalan". Right, 07:34: the end photo closes it, and the card and the owner's history show 32 minutes, worked out from the two photo times. No location is read or stored.</p>
+  <div class="pair" id="s4"></div>
 </section>
 
 <script>
@@ -158,6 +172,8 @@ const T = {
     addTime: "Add time", repeat: ["Every day", "Some days", "Once"], ends: "Ends", never: "Never",
     anyone: "Anyone", tick: "Tick", photo: "Photo",
     noteHint: "Staff read it as you type it.",
+    walkHint: "A photo at the start and at the end. Miamus notes how long it took.",
+    photoHint: "One photo covers every pet on the card.",
     preview: "Staff will see",
     btn1: "Add for 2 pets", btn2: "Add for Matcha",
     t1: "9:30 PM", t2: "7:00 AM",
@@ -171,6 +187,8 @@ const T = {
     addTime: "Tambah jam", repeat: ["Setiap hari", "Hari tertentu", "Sekali saja"], ends: "Berakhir", never: "Tidak",
     anyone: "Siapa saja", tick: "Centang", photo: "Foto",
     noteHint: "Staf membacanya persis seperti yang Anda tulis.",
+    walkHint: "Foto saat mulai dan saat selesai. Miamus mencatat berapa lama.",
+    photoHint: "Satu foto untuk semua hewan di kartu itu.",
     preview: "Yang dilihat staf",
     btn1: "Tambah untuk 2 hewan", btn2: "Tambah untuk Matcha",
     t1: "21.30", t2: "07.00",
@@ -193,12 +211,16 @@ function behind(t, petPage) {
     <div class="tabbar">${t.tabs.map((n, i) => `<span class="${i === 1 ? "on" : ""}">${ic(tabIcons[i])}${n}</span>`).join("")}</div>`;
 }
 
-function card({ time, title, icon, pets, done = [], note, who, finished, flash, seen, photo }) {
+// btn: "cam" (photo routine still open), "done" (finished), or none (old photo cards).
+function card({ time, title, icon, pets, done = [], note, who, finished, flash, seen, btn, state, meta }) {
   const allDone = finished;
-  return `<div class="card ${allDone ? "done" : ""} ${flash ? "flash" : ""}">
-    <div class="top">${ic(icon)}<span class="tm">${time}</span><span class="ti">${title}</span>
-      ${photo ? "" : `<span class="tick">${ic(allDone ? "circle-check" : "circle")}</span>`}</div>
+  const right = btn === "cam" ? `<span class="cam">${ic("camera")}</span>`
+    : btn === "done" ? `<span class="tick">${ic("circle-check")}</span>` : "";
+  return `<div class="card ${allDone ? "done" : ""} ${state ? "going" : ""} ${flash ? "flash" : ""}">
+    <div class="top">${ic(icon)}<span class="tm">${time}</span><span class="ti">${title}</span>${right}</div>
     ${note ? `<div class="note">${note}</div>` : ""}
+    ${state ? `<div class="state">${ic("clock")}${state}</div>` : ""}
+    ${meta ? `<div class="meta">${ic("check")}${meta}</div>` : ""}
     <div class="badges">${pets.map((p) => done.includes(p) ? `<span class="bd done">${ic("check")}${p}</span>` : `<span class="bd">${p}</span>`).join("")}
       ${who ? `<span class="bd who">${who}</span>` : ""}
       ${seen ? `<span class="seen">${ic("check")}${seen}</span>` : ""}</div>
@@ -228,9 +250,10 @@ function ownerSheet(lang, ex) {
     <div class="field">${note}</div>
     <div class="hint">${t.noteHint}</div>
     <div class="label">${t.proof}</div>
-    ${seg([t.tick, t.photo], 0)}
+    ${seg([t.photo, t.tick], 0)}
+    <div class="hint">${one ? t.photoHint : t.walkHint}</div>
     <div class="preview"><span class="pl">${t.preview}</span>
-      ${card({ time: staffTime, title: staffTitle, icon: one ? "lightbulb-off" : "footprints", pets: one ? ["Mocha", "Matcha"] : ["Matcha"], note })}</div>
+      ${card({ time: staffTime, title: staffTitle, icon: one ? "lightbulb-off" : "footprints", pets: one ? ["Mocha", "Matcha"] : ["Matcha"], note, btn: "cam" })}</div>
     <div class="btn primary">${ic("plus")}${one ? t.btn1 : t.btn2}</div>
   </div>`;
   return `<div class="phone"><div class="tag">${t.tag}</div><div class="status"></div>${behind(t, !one)}${sheet}</div>`;
@@ -241,11 +264,12 @@ function staffPhone(after) {
     time: "21.30", title: "Matikan lampu", icon: "lightbulb-off", pets: ["Mocha", "Matcha"],
     note: "Lampu ruang tamu dan kamar anjing",
     done: after ? ["Mocha", "Matcha"] : [], finished: after, flash: after,
+    btn: after ? "done" : "cam", seen: after ? "Lihat foto" : "",
   };
   return `<div class="phone staff"><div class="tag">Staf · ID</div><div class="status"></div>
     <div class="appbar"><div class="row"><h1>Hari ini</h1><span class="sub">Sel 10 Nov · Yanti</span></div></div>
     <div class="body">
-      ${card({ time: "07.00", title: "Jalan-jalan", icon: "footprints", pets: ["Matcha"], done: ["Matcha"], finished: true, note: "Pakai tali, sekitar 20 menit" })}
+      ${card({ time: "07.00", title: "Jalan-jalan", icon: "footprints", pets: ["Matcha"], done: ["Matcha"], finished: true, btn: "done", meta: "07.02 sampai 07.34 · 32 menit", seen: "Lihat foto" })}
       ${card({ time: "17.00", title: "Makan malam", icon: "utensils", photo: true, pets: ["Mocha", "Matcha"], done: ["Mocha", "Matcha"], finished: true, seen: "Lihat foto" })}
       ${card({ time: "21.00", title: "Pipis &amp; Pup", icon: "droplets", photo: true, pets: ["Mocha", "Matcha"], done: ["Mocha", "Matcha"], finished: true, seen: "Lihat foto" })}
       ${card(lights)}
@@ -256,7 +280,25 @@ function staffPhone(after) {
 
 document.getElementById("s1").innerHTML = ownerSheet("en", 1) + ownerSheet("id", 1);
 document.getElementById("s2").innerHTML = ownerSheet("en", 2) + ownerSheet("id", 2);
+function walkPhone(ended) {
+  const walk = ended
+    ? { time: "07.00", title: "Jalan-jalan", icon: "footprints", pets: ["Matcha"], done: ["Matcha"], finished: true, flash: true, btn: "done",
+        note: "Pakai tali, sekitar 20 menit", meta: "07.02 sampai 07.34 · 32 menit", seen: "Lihat foto" }
+    : { time: "07.00", title: "Jalan-jalan", icon: "footprints", pets: ["Matcha"], btn: "cam",
+        note: "Pakai tali, sekitar 20 menit", state: "Sedang jalan · mulai 07.02" };
+  return `<div class="phone staff walk"><div class="tag">Staf · ID</div><div class="status"></div>
+    <div class="appbar"><div class="row"><h1>Hari ini</h1><span class="sub">Sel 10 Nov · Yanti</span></div></div>
+    <div class="body">
+      ${card({ time: "06.30", title: "Pipis &amp; Pup", icon: "droplets", pets: ["Mocha", "Matcha"], done: ["Mocha", "Matcha"], finished: true, seen: "Lihat foto" })}
+      ${card(walk)}
+      ${card({ time: "08.00", title: "Makan pagi", icon: "utensils", pets: ["Mocha", "Matcha"] })}
+    </div>
+    ${ended ? `<div class="toast"><span class="ok">${ic("circle-check")}</span><span>Matcha · Jalan-jalan selesai · 32 menit</span><b>${ic("undo-2", "xs")}Batalkan</b></div>` : ""}
+  </div>`;
+}
+
 document.getElementById("s3").innerHTML = staffPhone(false) + staffPhone(true);
+document.getElementById("s4").innerHTML = walkPhone(false) + walkPhone(true);
 </script>
 </body>
 </html>
