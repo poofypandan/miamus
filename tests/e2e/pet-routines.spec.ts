@@ -216,6 +216,14 @@ test("staff: a walk in three photos, after closing the app, refusing an old file
   await expect.poll(() => stub.logs.map((l) => l.sub_type)).toEqual(["check_in", "arrived", "check_out"]);
   expect(new Set(stub.logs.map((l) => l.photo_url)).size).toBe(3);
   expect(stub.logs.every((l) => l.schedule_id === walk.id && l.entity_id === BENTO.id)).toBe(true);
+
+  // Within 5 minutes of the end photo, the card's sheet still takes the
+  // whole walk back, after the toast has gone.
+  await card(page, "07.00 Jalan-jalan").click();
+  await page.getByRole("button", { name: "Batalkan jalan-jalan" }).click();
+  await page.getByRole("dialog", { name: "Batalkan jalan-jalan?" }).getByRole("button", { name: "Batalkan" }).click();
+  await expect(page.getByText("Jalan-jalan dibatalkan")).toBeVisible();
+  await expect.poll(() => stub.logs.length).toBe(0);
 });
 
 test("staff: Batalkan jalan-jalan takes a walk in progress back to Mulai", async ({ context, page }) => {

@@ -221,9 +221,15 @@ export const supabaseProvider: DataProvider = {
     // row missing from it would be deleted with its history (Codex, PR #85).
     const found = await Promise.all(
       [...new Set(ids)].map(async (id) => {
-        const { data, error } = await client().from("task_logs").select("id").eq("schedule_id", id).limit(1);
-        if (error) throw error;
-        return (data ?? []).length > 0 ? id : null;
+        // A "couldn't do" record is history too: deleting the row would
+        // cascade to it (migrations/139; Codex, PR #85).
+        const [logs, exceptions] = await Promise.all([
+          client().from("task_logs").select("id").eq("schedule_id", id).limit(1),
+          client().from("task_exceptions").select("id").eq("schedule_id", id).limit(1),
+        ]);
+        if (logs.error) throw logs.error;
+        if (exceptions.error) throw exceptions.error;
+        return (logs.data ?? []).length > 0 || (exceptions.data ?? []).length > 0 ? id : null;
       })
     );
     return new Set(found.filter((id): id is string => id !== null));

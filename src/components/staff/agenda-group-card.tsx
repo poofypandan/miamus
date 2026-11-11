@@ -255,6 +255,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     [three, group.items, logs, date]
   );
   const walkStarted = !!walk?.start && !walk.end;
+  // A finished walk can still be taken back for 5 minutes from its end photo
+  // (UNDO_WINDOW_MS), from the card's sheet as well as the toast (Codex, PR #85).
+  const walkUndoable = !!walk?.end && now < deletableUntil(walk.end.completed_at);
 
   // Clamped, so deleting the last photo in the strip lands on the new last one
   // rather than reading past the end.
@@ -263,6 +266,16 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
 
   // Ticks only while the lightbox is open, so a photo that ages out of its
   // window while staff are looking at it loses the button there and then.
+  // Also while a finished walk's sheet is open: its Batalkan jalan-jalan
+  // leaves when the 5 minutes run out.
+  const walkEndAt = walk?.end?.completed_at ?? null;
+  useEffect(() => {
+    if (!sheetOpen || !walkEndAt) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(timer);
+  }, [sheetOpen, walkEndAt]);
+
   useEffect(() => {
     if (lightboxIndex === null) return;
     setNow(Date.now());
@@ -397,6 +410,13 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
 
   async function cancelWalk() {
     if (!walk) return;
+    // Re-checked at the tap: a finished walk is final after 5 minutes.
+    if (walk.end && Date.now() >= deletableUntil(walk.end.completed_at)) {
+      toast.error("Batas waktu 5 menit sudah lewat");
+      setConfirmCancelWalk(false);
+      setNow(Date.now());
+      return;
+    }
     setBusy(true);
     try {
       await removeLogs(walk.logs);
@@ -1001,7 +1021,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               )}
             </label>
           )}
-          {walkStarted && (
+          {(walkStarted || walkUndoable) && (
             <Button
               variant="outline"
               className="min-h-12 w-full font-medium text-gray-700"

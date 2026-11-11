@@ -226,6 +226,9 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
           <LogPhotoThumbnail
             key={log.id}
             log={log}
+            // Every pet's log behind this one photo, so a delete takes them
+            // all and leaves none pointing at a removed photo (Codex, PR #85).
+            logs={walk!.logs.filter((l) => l.photo_url === log.photo_url)}
             title={group.title}
             className="size-12 rounded-xl ring-2 ring-background"
           />

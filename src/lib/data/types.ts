@@ -359,9 +359,9 @@ export interface DataProvider {
   updateSchedule(id: string, patch: Partial<MasterSchedule>): Promise<MasterSchedule>;
   deleteSchedule(id: string): Promise<void>;
   /**
-   * Which of these routines have any log on record (Phase 173): removing a pet
-   * from a routine ends a row with history (so it keeps its title) and
-   * deletes one without.
+   * Which of these routines have any history (Phase 173): a log or a
+   * "couldn't do" record. Removing a pet from a routine ends a row with
+   * history (so it keeps its title and records) and deletes one without.
    */
   schedulesWithLogs(ids: string[]): Promise<Set<string>>;
   createMedicalRecord(input: CreateMedicalRecordInput): Promise<MedicalRecord>;
