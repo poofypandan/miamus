@@ -13,9 +13,15 @@ import { ROOF_POINTS } from "@/components/brand/brand-mark";
 /** The logo's two walls without the M's V between them (512 box). */
 export const KAKAK_WALLS = "M152 400V262M360 262V400";
 
-/** A soft heart where the M dipped: lobes level with the wall tops. */
+/**
+ * A soft heart where the M dipped, as big as the house allows (owner,
+ * 2026-11-11: "should the heart be bigger?"): 39% more area than the first
+ * drawing, raised under the roof where the house is widest, and kept 16
+ * units clear of the roof and the walls so it never merges with them at
+ * 20 px.
+ */
 export const KAKAK_HEART =
-  "M256 374C236 359 194 331 194 296C194 274 210 258 229 258C242 258 251 266 256 276C261 266 270 258 283 258C302 258 318 274 318 296C318 331 276 359 256 374Z";
+  "M256 322.4C232.4 304.7 182.8 271.7 182.8 230.4C182.8 204.4 201.7 185.6 224.1 185.6C239.5 185.6 250.1 195 256 206.8C261.9 195 272.5 185.6 287.9 185.6C310.3 185.6 329.2 204.4 329.2 230.4C329.2 271.7 279.6 304.7 256 322.4Z";
 
 /** The drawing, cropped to the house so it fills the circle evenly. */
 export const KAKAK_VIEWBOX = "92 84 328 336";
