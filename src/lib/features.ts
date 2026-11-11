@@ -1,0 +1,66 @@
+/**
+ * Household → Features (Phase 171 PR A, migrations/145): the modules a
+ * household can switch off. Only modules that exist have a switch (D4);
+ * the always-on core (Today, Chores → Today and Rooms, Shopping, staff) has
+ * none, since a switch there would only add a way to break the app.
+ *
+ * Off hides, never deletes (D6): a switched-off feature's pill, Today
+ * lines, staff buttons, Kakak tool and pushes go; its data stays and comes
+ * back with the switch. Pets is the fourth row on the Features page but
+ * stays households.has_pets (Phase 162, migrations/133), with its own
+ * archive-first rule.
+ */
+import type { HouseholdTask } from "@/types/database";
+
+export const FEATURES = ["repairs", "bills", "food"] as const;
+export type Feature = (typeof FEATURES)[number];
+export type FeatureFlags = Record<Feature, boolean>;
+
+/**
+ * No row = this. Mirrors household_feature_defaults() in migrations/145
+ * (a unit test reads the migration and checks they agree). Later features
+ * join with `false` (D4: they start off, with an offer at the moment of need).
+ */
+export const FEATURE_DEFAULTS: FeatureFlags = { repairs: true, bills: true, food: true };
+
+export function isFeature(value: unknown): value is Feature {
+  return typeof value === "string" && (FEATURES as readonly string[]).includes(value);
+}
+
+/** household_features rows → flags: a row wins, otherwise the default. */
+export function featureFlagsFrom(rows: readonly { feature: string; enabled: boolean }[] | null | undefined): FeatureFlags {
+  const flags: FeatureFlags = { ...FEATURE_DEFAULTS };
+  for (const row of rows ?? []) {
+    if (isFeature(row.feature) && typeof row.enabled === "boolean") flags[row.feature] = row.enabled;
+  }
+  return flags;
+}
+
+/**
+ * Bills and upkeep off: its chores (category 'bill') hide everywhere,
+ * owners' and staff screens alike. They stay saved, with their payments,
+ * and come back with the switch. Upkeep chores (AC service, toren) are
+ * ordinary maintenance chores and stay: they're work staff do.
+ */
+export function visibleChores<T extends Pick<HouseholdTask, "category">>(rows: T[], flags: FeatureFlags): T[] {
+  return flags.bills ? rows : rows.filter((row) => row.category !== "bill");
+}
+
+/**
+ * The Chores pill to show for a ?chores= value: Repairs falls back to
+ * Today while it's off, the way moduleFromParam sends a switched-off tab
+ * back to Today.
+ */
+export function choresViewFor<V extends string>(view: V, flags: FeatureFlags): V | "today" {
+  return view === "repairs" && !flags.repairs ? "today" : view;
+}
+
+/** The Kitchen pill: with Food at home off, Shopping alone. */
+export function kitchenViewFor(view: "food" | "buy", flags: FeatureFlags): "food" | "buy" {
+  return view === "food" && !flags.food ? "buy" : view;
+}
+
+/** How many of the Features page's rows are on, Pets included: "4 on". */
+export function featuresOnCount(flags: FeatureFlags, petsOn: boolean): number {
+  return FEATURES.filter((feature) => flags[feature]).length + (petsOn ? 1 : 0);
+}

@@ -22,6 +22,7 @@ import type { StaffWorkload } from "@/lib/data/types";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { StaffPersonDay } from "@/components/dashboard/staff-person-day";
 
 const HORIZON_LABELS: Record<OwnerLocale, Record<WorkloadHorizon, string>> = {
   en: { today: "Today", "7d": "Last 7 Days", "30d": "Last 30 Days" },
@@ -46,9 +47,25 @@ const SPAN_PHRASE: Record<OwnerLocale, Record<WorkloadHorizon, string>> = {
  * any caller who is not a household member, so a staff phone cannot total up
  * a colleague's week even by asking the database directly. In the owner's
  * language (Phase 149).
+ *
+ * Since staff progress moved to Today, a tap on a person's row opens the
+ * sheet on that person's whole day instead (?person=, StaffPersonDay), with
+ * a way back to everyone. Mounted once, on Today.
  */
 export function StaffWorkloadSheet() {
-  const { horizon, setHorizon, close } = useWorkloadParam();
+  const { horizon, person, close, showEveryone } = useWorkloadParam();
+  return (
+    <Sheet open={horizon !== null} onOpenChange={(next) => !next && close()}>
+      <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
+        {person ? <StaffPersonDay personId={person} onBack={showEveryone} /> : <EveryoneWorkload />}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/** Everyone's finished work over the chosen span (Phase 116). */
+function EveryoneWorkload() {
+  const { horizon, setHorizon } = useWorkloadParam();
   const { rows, failed } = useStaffWorkload(horizon);
   const { allProfiles } = useStaffProfiles();
   const shown = horizon ?? "today";
@@ -80,81 +97,79 @@ export function StaffWorkloadSheet() {
   }, [rows, allProfiles]);
 
   return (
-    <Sheet open={horizon !== null} onOpenChange={(next) => !next && close()}>
-      <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{t("Who did what", "Siapa mengerjakan apa")}</SheetTitle>
-          <SheetDescription>
-            {t(
-              "Tasks finished, counted by who completed them — pet routines and chores together.",
-              "Tugas yang selesai, dihitung menurut siapa yang menyelesaikannya — rutinitas hewan dan tugas rumah digabung."
-            )}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex flex-col gap-4 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-          <SegmentedControl
-            ariaLabel={t("Time span", "Rentang waktu")}
-            segments={WORKLOAD_HORIZONS.map((value) => ({
-              value,
-              label: HORIZON_LABELS[locale][value],
-            }))}
-            value={shown}
-            onChange={setHorizon}
-          />
-
-          {rows === null && failed ? (
-            <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
-              {t(
-                "Couldn't load the workload. Pull to refresh and try again.",
-                "Beban kerja gagal dimuat. Tarik untuk memuat ulang lalu coba lagi."
-              )}
-            </p>
-          ) : rows === null ? (
-            <div className="flex flex-col gap-2">
-              <Skeleton className="h-20 w-full rounded-xl" />
-              <Skeleton className="h-20 w-full rounded-xl" />
-              <Skeleton className="h-20 w-full rounded-xl" />
-            </div>
-          ) : staff.length === 0 ? (
-            <EmptyState
-              icon={BarChart3}
-              title={t("Nobody on the roster yet", "Belum ada orang di daftar")}
-              description={t(
-                "Add your staff on the Household tab. What they finish will be counted here.",
-                "Tambahkan staf di tab Rumah. Yang mereka selesaikan akan dihitung di sini."
-              )}
-            />
-          ) : (
-            <>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-gray-900 tabular-nums">{grandTotal}</span>{" "}
-                {t(grandTotal === 1 ? "task" : "tasks", "tugas")} {t("finished", "selesai")}{" "}
-                {SPAN_PHRASE[locale][shown]}
-              </p>
-
-              <ol className="flex flex-col gap-2">
-                {staff.map((row) => (
-                  <WorkloadRow key={row.staffId} row={row} top={top} />
-                ))}
-              </ol>
-
-              {/* Said, not dropped: work logged on the owner's own phone, or
-                  before staff had names, is real work that nobody's total
-                  includes. */}
-              {unattributed > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {t(
-                    `${unattributed} more ${unattributed === 1 ? "task was" : "tasks were"} finished without a name — logged before everyone had one on the roster.`,
-                    `${unattributed} tugas lain selesai tanpa nama — dicatat sebelum semua orang ada di daftar.`
-                  )}
-                </p>
-              )}
-            </>
+    <>
+      <SheetHeader>
+        <SheetTitle>{t("Who did what", "Siapa mengerjakan apa")}</SheetTitle>
+        <SheetDescription>
+          {t(
+            "Tasks finished, counted by who completed them — pet routines and chores together.",
+            "Tugas yang selesai, dihitung menurut siapa yang menyelesaikannya — rutinitas hewan dan tugas rumah digabung."
           )}
-        </div>
-      </SheetContent>
-    </Sheet>
+        </SheetDescription>
+      </SheetHeader>
+
+      <div className="flex flex-col gap-4 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        <SegmentedControl
+          ariaLabel={t("Time span", "Rentang waktu")}
+          segments={WORKLOAD_HORIZONS.map((value) => ({
+            value,
+            label: HORIZON_LABELS[locale][value],
+          }))}
+          value={shown}
+          onChange={setHorizon}
+        />
+
+        {rows === null && failed ? (
+          <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
+            {t(
+              "Couldn't load the workload. Pull to refresh and try again.",
+              "Beban kerja gagal dimuat. Tarik untuk memuat ulang lalu coba lagi."
+            )}
+          </p>
+        ) : rows === null ? (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-20 w-full rounded-xl" />
+            <Skeleton className="h-20 w-full rounded-xl" />
+            <Skeleton className="h-20 w-full rounded-xl" />
+          </div>
+        ) : staff.length === 0 ? (
+          <EmptyState
+            icon={BarChart3}
+            title={t("Nobody on the roster yet", "Belum ada orang di daftar")}
+            description={t(
+              "Add your staff on the Household tab. What they finish will be counted here.",
+              "Tambahkan staf di tab Rumah. Yang mereka selesaikan akan dihitung di sini."
+            )}
+          />
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-gray-900 tabular-nums">{grandTotal}</span>{" "}
+              {t(grandTotal === 1 ? "task" : "tasks", "tugas")} {t("finished", "selesai")}{" "}
+              {SPAN_PHRASE[locale][shown]}
+            </p>
+
+            <ol className="flex flex-col gap-2">
+              {staff.map((row) => (
+                <WorkloadRow key={row.staffId} row={row} top={top} />
+              ))}
+            </ol>
+
+            {/* Said, not dropped: work logged on the owner's own phone, or
+                before staff had names, is real work that nobody's total
+                includes. */}
+            {unattributed > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  `${unattributed} more ${unattributed === 1 ? "task was" : "tasks were"} finished without a name — logged before everyone had one on the roster.`,
+                  `${unattributed} tugas lain selesai tanpa nama — dicatat sebelum semua orang ada di daftar.`
+                )}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </>
   );
 }
 

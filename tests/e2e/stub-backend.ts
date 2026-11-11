@@ -88,6 +88,12 @@ export interface StubOptions {
    * household has its two pets (default) or none at all.
    */
   household?: { hasPets: boolean | null; pets?: boolean; createdAt?: string };
+  /**
+   * Household → Features (Phase 171, migrations/145): household_features
+   * rows by feature. Absent = no rows (everything on). Changed in place by
+   * set_household_feature, so a staff phone in the same test reads the new value.
+   */
+  features?: Record<string, boolean>;
   /** The VAPID public key get_push_public_key returns to the admin (push set up on the server). */
   pushKey?: string;
   /** Leave the Add to Home Screen tip showing (owner phones have it closed by default). */
@@ -184,6 +190,8 @@ export interface Stub {
   kakak: { allowed: boolean; enabled: boolean };
   /** households.has_pets as the admin last set it (Phase 162). */
   household: { hasPets: boolean | null };
+  /** household_features as the admin last set them (Phase 171). */
+  features: Record<string, boolean>;
   /** repairs rows as the stub holds them (Phase 159). */
   repairs: Record<string, unknown>[];
   /** repair_costs and repair_notes rows (Phase 159 PR B). */
@@ -250,6 +258,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     createdAt: options.household?.createdAt ?? "2026-10-01T00:00:00Z",
   };
   const withPets = options.household?.pets !== false;
+  const features: Record<string, boolean> = options.features ?? {};
   if (options.owner && !options.stored) options = { ...options, stored: freshSession(OWNER, false) };
 
   if (options.owner) {
@@ -377,6 +386,20 @@ export async function installStub(context: BrowserContext, options: StubOptions 
           seen.pushPeople.push(request.postDataJSON());
           return route.fulfill({ json: { status: "ok" } });
         }
+      }
+      if (table === "rpc/set_household_feature") {
+        // Owners only, as migrations/145 checks.
+        if (who !== OWNER) {
+          return route.fulfill({ status: 403, json: { code: "42501", message: "not_admin", details: null, hint: null } });
+        }
+        const body = request.postDataJSON();
+        features[String(body?.p_feature)] = Boolean(body?.p_on);
+        return route.fulfill({ status: 204, body: "" });
+      }
+      if (table === "household_features") {
+        return route.fulfill({
+          json: Object.entries(features).map(([feature, enabled]) => ({ feature, enabled })),
+        });
       }
       if (options.owner && who === OWNER && table === "rpc/set_household_has_pets") {
         household.hasPets = Boolean(request.postDataJSON()?.p_on);
@@ -523,6 +546,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     notificationPrefs,
     kakak,
     household,
+    features,
     setNetwork(up: boolean) {
       net.token = net.rest = net.signup = up;
     },

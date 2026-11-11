@@ -28,6 +28,20 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Shown in Household, where the switches live (Phase 171 PR A, D8): this
+    // week's one card, for existing households only (the calm-start rules
+    // keep it from new ones). Staff get none.
+    id: "features-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: choose what Miamus shows", id: "Baru: pilih yang ditampilkan Miamus" },
+    steps: {
+      en: ["Household → Features: switch off what you don't use. Nothing is deleted."],
+      id: ["Rumah → Fitur: matikan yang tidak Anda pakai. Tidak ada yang dihapus."],
+    },
+    tryLabel: { en: "Show me", id: "Lihat" },
+  },
+  {
     // Listed in Household → What's new only, never a card: Phase 165's
     // couldn't-do card already went to the same admins this week, and the
     // adopted rule is at most one card a week (docs/app-evaluation-2026-11-10.md).
@@ -228,12 +242,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: hide Pets if you don't have any", id: "Baru: sembunyikan Hewan kalau tidak ada" },
     steps: {
       en: [
-        "Household → Who lives here: switch Pets off, and the Pets tab and every pet line disappear, for staff too.",
+        "Household → Features: switch Pets off, and the Pets tab and every pet line disappear, for staff too.",
         "Have pets? Nothing changes for you.",
         "New households answer this when they sign up. Kids and Elders come later.",
       ],
       id: [
-        "Rumah → Siapa yang tinggal di sini: matikan Hewan, tab Hewan dan semua baris hewan hilang, juga di HP staf.",
+        "Rumah → Fitur: matikan Hewan, tab Hewan dan semua baris hewan hilang, juga di HP staf.",
         "Punya hewan? Tidak ada yang berubah.",
         "Rumah baru menjawab ini saat mendaftar. Anak dan Lansia menyusul.",
       ],

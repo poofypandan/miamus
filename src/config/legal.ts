@@ -113,7 +113,12 @@ export const LEGAL = {
   // completed_at already is). A routine's note for staff and the person it
   // is for are "tasks, routines, schedules and notes". Same 30-day photo
   // rule; no new service.
-  policyVersion: "2026-11-11.2",
+  // 2026-11-11.3: which features a household has switched on (Household →
+  // Features: Repairs, Bills and upkeep, Food at home, Pets) and the kind of
+  // home picked at sign-up (Phase 171 PR A, migrations/145; the kind of home
+  // is household_setup.home_type, migrations/142). Switching off hides, never
+  // deletes. No new service.
+  policyVersion: "2026-11-11.3",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

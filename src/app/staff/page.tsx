@@ -25,6 +25,7 @@ import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
 import { StaffKitchen } from "@/components/kitchen/kitchen-tab";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { OutboxNotice } from "@/components/shared/outbox-notice";
 import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
@@ -40,6 +41,7 @@ import { useStaffPush } from "@/hooks/use-staff-push";
 import { usePushResync } from "@/hooks/use-push-resync";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
+import { MyProgressLine } from "@/components/staff/my-progress-line";
 import { LaunchCover } from "@/components/brand/brand-cover";
 import { TapHint } from "@/components/staff/tap-hint";
 import { CompletedSection } from "@/components/agenda/completed-section";
@@ -278,6 +280,7 @@ function TasksView() {
   // The repair-notes tip (Phase 159 PR B) only once a repair visit is on
   // this phone's list: that's where notes are written.
   const showRepairNotesTip = useMemo(() => chores.some((chore) => !!chore.task.repair_id), [chores]);
+  const { repairs: repairsOn } = useHouseholdFeatures();
 
   // The floors tip (Phase 158) only once this phone's list actually shows a
   // floor or a spot: before the owner sorts rooms there is nothing to explain.
@@ -366,6 +369,10 @@ function TasksView() {
       >
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
 
+        {/* Their own progress, house and pets (staff progress on Today):
+            never a colleague's. */}
+        {!loading && <MyProgressLine staffId={staffId} />}
+
         {/* One tip at a time, newest first (audit B1, item 5): the work
             comes first on a busy morning, not a stack of news. The
             notifications card goes first in that slot (Phase 166, D9), and
@@ -380,8 +387,9 @@ function TasksView() {
             { id: "staff-rooms-inside-2026-11", show: showRoomsInsideTip },
             { id: "staff-weak-signal-2026-11", show: true },
             { id: "staff-floors-2026-11", show: showFloorsTip },
-            { id: "staff-repairs-2026-11", show: true },
-            { id: "staff-repair-notes-2026-11", show: showRepairNotesTip },
+            // Repairs switched off (Phase 171): no tip about a button that isn't there.
+            { id: "staff-repairs-2026-11", show: repairsOn },
+            { id: "staff-repair-notes-2026-11", show: repairsOn && showRepairNotesTip },
           ]}
         />
         ) : null}

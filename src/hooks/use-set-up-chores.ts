@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useHousehold } from "@/context/household-context";
 import { dataProvider } from "@/lib/data";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { visibleChores } from "@/lib/features";
 import type { HouseholdTask } from "@/types/database";
 
 /**
@@ -21,6 +23,7 @@ export function useSetUpChores(today: string): {
   reload: () => void;
 } {
   const { householdTasks } = useHousehold();
+  const { flags } = useHouseholdFeatures();
   const [state, setState] = useState<{ rows: HouseholdTask[] | null; failed: boolean }>({
     rows: null,
     failed: false,
@@ -47,8 +50,9 @@ export function useSetUpChores(today: string): {
     if (!state.rows) return state.failed ? householdTasks : null;
     const byId = new Map(state.rows.map((row) => [row.id, row]));
     for (const row of householdTasks) byId.set(row.id, row);
-    return [...byId.values()];
-  }, [state, householdTasks]);
+    // Bills off (Phase 171): hidden here too, as in the household's cache.
+    return visibleChores([...byId.values()], flags);
+  }, [state, householdTasks, flags]);
 
   return {
     rows,
@@ -67,6 +71,7 @@ export function useSetUpChores(today: string): {
  */
 export function useWrittenOccurrences(from: string, to: string): HouseholdTask[] {
   const { householdTasks } = useHousehold();
+  const { flags } = useHouseholdFeatures();
   const [rows, setRows] = useState<HouseholdTask[]>([]);
 
   useEffect(() => {
@@ -82,5 +87,5 @@ export function useWrittenOccurrences(from: string, to: string): HouseholdTask[]
     };
   }, [from, to, householdTasks]);
 
-  return rows;
+  return useMemo(() => visibleChores(rows, flags), [rows, flags]);
 }
