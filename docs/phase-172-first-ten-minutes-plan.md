@@ -133,7 +133,7 @@ read.
 | # | Screen | Owner's typing | Owner's taps | Owner | Phase |
 | --- | --- | --- | --- | --- | --- |
 | 1 | **Continue with Google** → language | 0 | 2 | — | as today |
-| 1b | **Request access** (one tap) → **Request sent**: "We'll let you know by WhatsApp or email as soon as you're approved." The operator approves and tells them right away (WhatsApp first, email second); the screen moves on by itself | 0 | 1 | — | 172 PR A1 (D1, D2) |
+| 1b | **Request access** (one tap) → **Request sent**: "We'll let you know by WhatsApp or email as soon as you're approved", with an optional "How should we let you know?" (WhatsApp number or their email). The operator approves and tells them right away (WhatsApp first, email second, copy link); the screen moves on by itself | 0 (1 if they give a number) | 1–3 | — | 172 PR A1 (D1, D2) |
 | 2 | **Name your household** + **Who lives here?** (Pets, Kids, Elders) | 1 | 2 | 171 | 171 |
 | 3 | **What kind of home?** (4 cards) | 0 | 1 | 171 asks, 172 acts | hand-off |
 | 4 | **Your home** (the template review): shape row, rooms and chores, bills; untick | 0 | ~12 | 172 | 172 PR A2 |
@@ -195,38 +195,57 @@ it.
    the body cut to one line ("Miamus approves each new household. Ask once;
    we'll let you know.") and the privacy sentence kept under the button.
 2. **Request sent**: "**We'll let you know by WhatsApp or email as soon as
-   you're approved.**" The screen checks
-   again by itself every 60 seconds while it's on screen (it already checks
-   when the tab is shown again), so someone who keeps it open moves on to
-   the name screen without tapping anything. **Check again** stays.
+   you're approved.**" Under it, one **optional** question: **How should we
+   let you know?** with two chips:
+   - **WhatsApp**: shows one field, **WhatsApp number** (`type="tel"`,
+     "0812…" or "+62 812…"), and **Save**;
+   - **Email**: shows their sign-up (Google) email, read-only; nothing to
+     type.
+
+   Nothing picked is fine: the operator then chooses (WhatsApp share sheet
+   or email). The answer can be changed or cleared until they're approved.
+   The screen checks again by itself every 60 seconds while it's on screen
+   (it already checks when the tab is shown again), so someone who keeps it
+   open moves on to the name screen without tapping anything. **Check
+   again** stays.
 3. **Approved**: the next time the screen checks, or when they open the
-   link in the WhatsApp message or email, they're on **Name your household**, and the rest of the
-   flow runs as above.
+   link in the WhatsApp message or email, they're on **Name your
+   household**, and the rest of the flow runs as above.
+
+The number is optional and comes before setup, so the default path still
+has no new required field. Someone who types it has 9 typed fields on the
+template path, still within the S2 target of 10.
 
 ### What the operator does
 
 - **Told right away**: the existing push "New household request · X is
   waiting for your approval" (`request_household_access`, 113) is
   unchanged. The evening review also lists pending requests.
-- **Approve, then tell them by WhatsApp or email (D2):** on the approvals
-  page, tapping **Approve** leaves the row open with two buttons:
-  1. **Send on WhatsApp** (first, primary): a `wa.me/?text=` share (the
-     same `whatsAppShareUrl()` the app already uses) with a ready message in
-     their language and the link: "You're in. Open https://miamus.app to set
-     up your household." / "Anda sudah bisa masuk. Buka https://miamus.app
-     untuk menyiapkan rumah Anda." **The operator picks the chat**: sign-up
-     collects no phone number, and this plan doesn't add one (no new
-     personal data, no new field). It suits a beta where the operator
-     usually knows who asked.
-  2. **Email them** (second): a `mailto:` link to their Google email (already
-     on the request) with the same text, sent by hand from the support
-     Google Group.
+- **Approve, then tell them (D2):** on the approvals page, tapping
+  **Approve** leaves the row open with their choice shown ("Prefers
+  WhatsApp", "Prefers email" or nothing) and three buttons, WhatsApp first:
+  1. **Send on WhatsApp** (primary): with a number, it opens **straight to
+     their chat**, `https://wa.me/<number>?text=…`; without one, the share
+     sheet, `wa.me/?text=…` (today's `whatsAppShareUrl()`). The ready message
+     is in their language: "You're in. Open https://miamus.app to set up
+     your household." / "Anda sudah bisa masuk. Buka https://miamus.app untuk
+     menyiapkan rumah Anda."
+  2. **Email them**: a `mailto:` link to their Google email with the same
+     text, sent by hand from the support Google Group.
+  3. **Copy link**: copies the same message, for any other channel.
 
-  Pending rows have the same two buttons ("We've got your request…") for
-  anyone who waits longer than a day. "Their language" is the language they
-  picked at sign-up: `list_household_access_requests()` is re-created to also
-  return it (from `user_preferences`, 114; English when none). No mail or
-  messaging service, no new processor, nothing new stored.
+  If they picked Email, Email is the primary button instead. Pending rows
+  have the same buttons ("We've got your request…") for anyone who waits
+  longer than a day. "Their language" is the language they picked at
+  sign-up (`user_preferences`, 114; English when none). No mail or messaging
+  service and no new processor: the operator's own WhatsApp and the support
+  Google Group send it.
+- **The number is deleted once it has done its job:** tapping any of the
+  three buttons on an **approved** row records "told" and **deletes the
+  number** at once; creating the household deletes it too; and the nightly
+  clean-up deletes any number older than **30 days**, whatever happened
+  (also for pending and rejected requests). It is never shown anywhere else,
+  never sent to staff, and never part of a household.
 - Reject and the 30-day deletion of rejected requests are unchanged.
 
 ### The automatic-approval switch (built, off by default)
@@ -758,7 +777,12 @@ setup should be no different.
 | Request screen, one line | Miamus approves each new household. Ask once; we'll let you know. | Miamus menyetujui setiap rumah baru. Cukup minta sekali; kami akan memberi tahu Anda. |
 | Request screen, under the button (as today) | Your request shares your Google name and email with Poofy Labs, who runs Miamus. Privacy | Permintaan ini membagikan nama dan email Google Anda kepada Poofy Labs, pengelola Miamus. Privasi |
 | Request sent | We'll let you know by WhatsApp or email as soon as you're approved. | Kami akan memberi tahu Anda lewat WhatsApp atau email begitu permintaan Anda disetujui. |
-| Approvals page buttons | Send on WhatsApp · Email them | Kirim lewat WhatsApp · Kirim email |
+| Contact question (optional) | How should we let you know? · WhatsApp · Email | Mau diberi tahu lewat apa? · WhatsApp · Email |
+| WhatsApp field | WhatsApp number · e.g. 0812 3456 7890 · Save | Nomor WhatsApp · mis. 0812 3456 7890 · Simpan |
+| Contact note | We use it once to tell you you're in, then delete it. | Hanya dipakai sekali untuk memberi tahu Anda, lalu dihapus. |
+| Email chip detail | We'll write to {email}. | Kami akan menulis ke {email}. |
+| Approvals page | Prefers WhatsApp · Prefers email | Lewat WhatsApp · Lewat email |
+| Approvals page buttons | Send on WhatsApp · Email them · Copy link | Kirim lewat WhatsApp · Kirim email · Salin link |
 | Message text, approved (WhatsApp and email) | You're in. Open https://miamus.app to set up your household. | Anda sudah bisa masuk. Buka https://miamus.app untuk menyiapkan rumah Anda. |
 | Message text, still pending | We've got your request and will let you know soon. | Permintaan Anda sudah kami terima. Kami akan segera memberi tahu Anda. |
 | Home type heading | What kind of home? | Seperti apa rumah Anda? |
@@ -840,7 +864,7 @@ Nothing below is created in this PR.
   function reads nothing for a non-platform-admin; it returns no names or
   ids; grants (`anon` executes none).
 
-### PR A1 (its own number when built; not 146, which is 171's): the approval switch, off
+### PR A1 (its own number when built; not 146, which is 171's): telling people, the approval switch (off)
 
 - `signup_config` (one row: `auto_approve boolean not null default false`,
   `daily_auto_cap int not null default 25 check (>= 0)`), RLS on, no client
@@ -854,15 +878,42 @@ Nothing below is created in this PR.
 - `request_household_access()` re-created: approves automatically under the
   same switch, cap and lock (for old builds); otherwise files pending and
   pushes as today. Same revoke/grant.
-- `list_household_access_requests()` re-created to also return `auto` and
-  the requester's language (`user_preferences.locale`, 114; `en` when
-  none), for the ready WhatsApp and email text. Same platform-admin check,
-  same revoke/grant.
+- `household_access_requests` gains `notify_via text` (check in
+  `whatsapp`, `email`; nullable), `notify_phone text` (nullable; digits
+  only, country code first, 8–15 digits, `check (notify_phone ~
+  '^[1-9][0-9]{7,14}$')`; the app turns "0812…" into "62812…"), `contact_set_at
+  timestamptz` and `told_at timestamptz`. The table already has no client
+  grants.
+- **`set_access_request_contact(p_via text, p_phone text)`**: `security
+  definer`, `search_path = ''`; only the caller's own row (`auth.uid()`),
+  only while it is **pending**; anonymous sessions refused; a null
+  `p_via` clears both; `p_phone` only with `whatsapp`, normalised and
+  checked; stamps `contact_set_at`. `revoke all … from public, anon;` `grant
+  execute … to authenticated;`.
+- `my_household_access()` unchanged; a new **`my_access_request_contact()`**
+  (same definer rules, own row only) returns the choice so the waiting
+  screen can show it.
+- **`mark_access_request_told(p_user_id uuid)`**: `is_platform_admin()`
+  only; on an approved row sets `told_at` and **nulls `notify_phone`**.
+  Same revoke/grant, granted to authenticated (the check is inside).
+- `create_household` (re-created above anyway) nulls the caller's
+  `notify_phone`.
+- `prune_household_access_requests()` (113's nightly job) re-created to also
+  null `notify_phone` where `contact_set_at` is more than 30 days ago; it
+  keeps doing everything else. Same `service_role`-only grants.
+- `list_household_access_requests()` re-created to also return `auto`,
+  `notify_via`, `notify_phone`, `told_at` and the requester's language
+  (`user_preferences.locale`, 114; `en` when none). Same platform-admin
+  check, same revoke/grant.
 - Tests: **by default (switch off) every function behaves as today**
   (request → pending → approve → create); with the switch on, open →
   create works and writes an automatic approval, and the 26th account that
   day gets pending and `household_not_approved`; rejected stays refused; second household refused;
-  anonymous refused; platform admin unaffected; grants.
+  anonymous refused; platform admin unaffected; a requester sets and clears
+  their own contact while pending, never someone else's, never after
+  approval, never from a staff phone; a bad number is refused; "told" and
+  `create_household` delete the number; the nightly job deletes numbers
+  older than 30 days; grants.
 
 ### PR A2 (next free): templates, staff in one go
 
@@ -899,7 +950,7 @@ Nothing below is created in this PR.
 | PR | Change |
 | --- | --- |
 | **PR 0** | **Yes.** New kind of data: usage counts (section 6's line, EN and ID). No new service; Supabase, same region. |
-| **PR A1** | **No**, while the switch is off (approval works as the policy describes today). If the owner ever turns automatic approval on, section 7 is updated first: accounts may be approved automatically; the operator still sees each creator's Google name and email; the 30-day deletion of rejected requests is unchanged. |
+| **PR A1** | **Yes.** New, optional personal data: **a WhatsApp number** someone may give while waiting for approval, used only by the operator to tell them they're in, deleted once they've been told or their household is made, and after 30 days at most. Not shared with anyone; no new service (the operator's own WhatsApp sends the message). Section 3 (what's collected at sign-up) and section 7 (retention) both get a line, EN and ID (below); `legal.ts` `policyVersion` bumped and `effectiveDate` updated. If the owner ever turns automatic approval on, section 7 also says accounts may be approved automatically. |
 | **PR A2** | **No.** Templates add ordinary rooms, chores, staff names and pets, which the policy already covers. The claim window changes how a phone links, not what is stored. |
 | **PR B** | **Yes, small.** The Kakak section: an owner can use Kakak **once for setup without switching Kakak on**; what's sent to Anthropic is what they say plus the household block, as for any Kakak request; kept by Anthropic up to 30 days, as today. |
 | Video tips | **No.** Mock data only, served by Vercel, no tracker. |
@@ -907,12 +958,26 @@ Nothing below is created in this PR.
 `policyVersion` bumped with a dated comment and `effectiveDate` updated in
 each PR that changes the text.
 
+**The PR A1 lines (draft):**
+
+- EN, section 3: "**Your WhatsApp number, if you give it** while you wait
+  for approval. We use it once, to tell you you're in."
+- ID, bagian 3: "**Nomor WhatsApp Anda, jika Anda berikan** saat menunggu
+  persetujuan. Hanya dipakai sekali, untuk memberi tahu bahwa Anda sudah
+  bisa masuk."
+- EN, section 7: "A WhatsApp number given while waiting is deleted as soon
+  as we've told you you're approved, or when you create your household, and
+  after 30 days at the latest."
+- ID, bagian 7: "Nomor WhatsApp yang diberikan saat menunggu dihapus begitu
+  kami memberi tahu bahwa Anda disetujui, atau saat Anda membuat rumah, dan
+  paling lambat setelah 30 hari."
+
 ## Rollout PRs, in order (D14)
 
 | PR | What | Migration | Size |
 | --- | --- | --- | --- |
 | **0** | **Measurement first**, so the before numbers exist: `household_setup` (empty until A2), `platform_north_star()`, `/dashboard/north-star` (platform admins), `kakak_requests.job`, the privacy line, the evening review reads it | **145** | Small |
-| **A1** | **Approval you hear about + calm first screen**: the one-line Request screen, the waiting screen's "WhatsApp or email" promise and 60-second check, **Send on WhatsApp** then **Email them** after **Approve** (and the requester's language in the list); the automatic-approval switch (`open` access, cap, push) built **off**; What's new rules (14 days, never the backlog, one a week), checklist first, Add to Home Screen after setup, one-line instructions, `<VideoTip>` and the first videos (Playwright recordings in `public/tips/`), the `/tips/<id>` page | own number (not 146) | Small–medium |
+| **A1** | **Approval you hear about + calm first screen**: the one-line Request screen, the waiting screen's "WhatsApp or email" promise, the optional contact choice and 60-second check, **Send on WhatsApp**, **Email them** and **Copy link** after **Approve**, the number deleted once told (30 days at most), the privacy lines; the automatic-approval switch (`open` access, cap, push) built **off**; What's new rules (14 days, never the backlog, one a week), checklist first, Add to Home Screen after setup, one-line instructions, `<VideoTip>` and the first videos (Playwright recordings in `public/tips/`), the `/tips/<id>` page | own number (not 146) | Small–medium |
 | **A2** | **Templates + staff in one go**: `setup-templates.ts` and `buildSetupDraft()`, `/setup` (review, staff, pets), `apply_household_setup`, the house-code claim and prefilled link, the one WhatsApp message, **Starter list** on Chores for existing households, `household_setup` written, 171's home-type screen switched on, the What's new entry for existing households | next free | Medium–large |
 | **B** | **Kakak setup**: per-job routing, the job profile, `propose_home_setup`, `/api/kakak/setup`, `kakak_begin_setup`, the free allowance and caps, the voice sheet and the **Add all** card, practice-mode script, the eval cases for setup (10 voice notes, scored on rooms, chores and names), privacy line | next free | Medium |
 | **later** | **Delegated setup** (section 7): `setup_proposals`, the staff screen, the owner's review in Waiting for you; concierge on the paid plan | next free | Medium |
@@ -947,7 +1012,8 @@ with the owner's OK, merge with the owner's OK.
 it"), so D1–D15 are all A. Changed 2026-11-11: D1 is manual approval kept**
 ("make sure I still need to approve new households"); automatic approval
 is built as a switch, off by default. **D2 is "tell them by WhatsApp or
-email"** (WhatsApp first). Build order: PR 0 (145) → A1 → 171 PR A (146)
+email"**: an optional choice on the waiting screen, a WhatsApp number kept
+only until they're told (30 days at most). Build order: PR 0 (145) → A1 → 171 PR A (146)
 → A2 → B.
 
 - **D1 — The approval wait. Decided 2026-11-11: manual approval kept.**
@@ -957,14 +1023,17 @@ email"** (WhatsApp first). Build order: PR 0 (145) → A1 → 171 PR A (146)
   on 10 Nov, chosen then, changed on 11 Nov): approve automatically, review
   afterwards. B: a code on the landing page that skips the wait. C: keep
   manual approval and only add the email.
-- **D2 — Telling people they're in. Decided 2026-11-11: by WhatsApp or
-  email.** After **Approve**, **Send on WhatsApp** first (a `wa.me` share
-  with a ready message and the miamus.app link; the operator picks the
-  chat, since sign-up collects no phone number and none is added), **Email
-  them** second (`mailto:`); the waiting screen says "by WhatsApp or email".
-  Sent by hand, no new service. Other options were: email only (A on 10 Nov);
-  B: an email service (a new processor and a privacy change); C: no message
-  (today).
+- **D2 — Telling people they're in. Decided 2026-11-11: WhatsApp or
+  email, their choice.** The waiting screen asks, optionally, **How should
+  we let you know?**: WhatsApp (they type a number) or Email (their sign-up
+  email). After **Approve**: **Send on WhatsApp** first (straight to their
+  chat with a number, the share sheet without), **Email them** second,
+  **Copy link** third (Email first if they chose it). The number is kept only
+  until they're approved and told (or make their household), then deleted,
+  30 days at most; privacy-policy lines in PR A1. Sent by hand, no new
+  service. Earlier options: email only (A on 10 Nov); WhatsApp share with
+  no number (11 Nov morning); an email service (a new processor); no
+  message (today).
 - **D3 — The home types.**
   **A (recommended):** four: House with a garden · Big house, several
   floors · Apartment · Something else. B: three, without Something else
