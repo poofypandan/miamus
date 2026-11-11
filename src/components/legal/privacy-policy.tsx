@@ -88,7 +88,7 @@ const COPY: Record<
           { h: "Requests to set up a household" },
           {
             ul: [
-              "If you sign in with Google to set up a new household, we keep your request: when you asked, whether it was approved or rejected, and whether it was approved automatically. Most accounts are approved automatically when they create their household, and we review new households afterwards; on a busy day, or if we turn this off, we review the request first and email you when it's approved. Either way, we see your name and email from Google sign-in.",
+              "If you sign in with Google to set up a new household, we keep your request: when you asked, whether it was approved or rejected, and whether it was approved automatically. We review each request and email you when it's approved. If we ever switch on automatic approval, an account is approved when it creates its household and we review new households afterwards. Either way, we see your name and email from Google sign-in.",
             ],
           },
           { h: "Staff" },
@@ -351,7 +351,7 @@ const COPY: Record<
           { h: "Permintaan membuat rumah tangga" },
           {
             ul: [
-              "Jika Anda masuk dengan Google untuk membuat rumah tangga baru, kami menyimpan permintaan Anda: kapan Anda memintanya, apakah disetujui atau ditolak, dan apakah disetujui otomatis. Sebagian besar akun disetujui otomatis saat membuat rumah tangganya, dan kami meninjau rumah tangga baru sesudahnya; pada hari yang ramai, atau jika fitur ini kami matikan, kami meninjau permintaannya lebih dulu dan mengirim email kepada Anda setelah disetujui. Bagaimanapun, kami melihat nama dan email Anda dari login Google.",
+              "Jika Anda masuk dengan Google untuk membuat rumah tangga baru, kami menyimpan permintaan Anda: kapan Anda memintanya, apakah disetujui atau ditolak, dan apakah disetujui otomatis. Kami meninjau setiap permintaan dan mengirim email kepada Anda setelah disetujui. Jika suatu saat persetujuan otomatis kami nyalakan, akun disetujui saat membuat rumah tangganya dan kami meninjau rumah tangga baru sesudahnya. Bagaimanapun, kami melihat nama dan email Anda dari login Google.",
             ],
           },
           { h: "Staf" },

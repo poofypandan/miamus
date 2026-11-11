@@ -1,12 +1,14 @@
--- Migration 143 checks: a new Google account sees 'open' and creates its
--- household with no wait (approved automatically, the operator told); the
--- daily cap and the switch fall back to today's manual approval without
--- writing anything; old app builds asking first are approved too; rejected,
+-- Migration 143 checks: the switch is OFF by default and nothing about
+-- signing up changes (ask, wait for the operator); switched on, a new Google
+-- account sees 'open' and creates its household with no wait (approved
+-- automatically, the operator told); the daily cap and the switch fall back
+-- to manual approval without writing anything; old app builds asking first
+-- are approved too; rejected,
 -- pending, anonymous and second-household accounts are refused as before;
 -- platform admins unaffected; the global lock; the approvals list; grants.
 -- LOCAL DATABASE ONLY. One transaction, rolled back:
 --   PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -X -q -t \
---     -f supabase/tests/143_signup_without_waiting.sql
+--     -f supabase/tests/143_signup_approval_switch.sql
 \set ON_ERROR_STOP on
 \pset footer off
 begin;
@@ -62,7 +64,6 @@ end $$;
 
 -- Nobody else's automatic approvals today count against these checks.
 delete from public.household_access_requests where auto;
-update public.signup_config set auto_approve = true, daily_auto_cap = 25;
 
 -- ---- People -------------------------------------------------------------------------------
 -- pa: platform admin (Indonesian), member of fa with a push device.
@@ -80,6 +81,7 @@ from (values
   ('00000000-0000-0000-0000-0000000143a5', 'rj@test.local', false, 'Rejected'),
   ('00000000-0000-0000-0000-0000000143a6', 'pd@test.local', false, 'Pending'),
   ('00000000-0000-0000-0000-0000000143a7', 'o1@test.local', false, 'Co Owner'),
+  ('00000000-0000-0000-0000-0000000143a8', 'n5@test.local', false, 'Wati'),
   ('00000000-0000-0000-0000-0000000143b1', null, true, null)
 ) as u(id, email, anon, nm);
 insert into public.platform_admins (user_id) values ('00000000-0000-0000-0000-0000000143aa');
@@ -110,6 +112,35 @@ insert into public.household_access_requests (user_id, status, requested_at, dec
 \set pd '''00000000-0000-0000-0000-0000000143a6'''
 \set o1 '''00000000-0000-0000-0000-0000000143a7'''
 \set s1 '''00000000-0000-0000-0000-0000000143b1'''
+
+\set n5 '''00000000-0000-0000-0000-0000000143a8'''
+
+-- ---- Off by default: the owner approves every new household (2026-11-10) -------------------
+select pg_temp.ok((select column_default = 'false' from information_schema.columns
+                    where table_schema = 'public' and table_name = 'signup_config' and column_name = 'auto_approve'),
+  'the switch defaults to off');
+select pg_temp.ok((select not auto_approve and daily_auto_cap = 25 from public.signup_config),
+  'the one row says off, with the cap ready for later');
+select pg_temp.ok(pg_temp.text_as(:n5, 'select public.my_household_access()') = 'none',
+  'off: a new account is not open, so the screen shows Request access');
+select pg_temp.ok(pg_temp.err_as(:n5, $q$ select public.create_household('Rumah Wati', false) $q$) like '%household_not_approved%',
+  '... creating is refused');
+select pg_temp.ok(not exists (select 1 from public.household_access_requests where user_id = :n5::uuid),
+  '... and nothing is written');
+select pg_temp.ok(pg_temp.text_as(:n5, 'select public.request_household_access()') = 'pending',
+  '... asking files a pending request');
+select pg_temp.ok((select count(*) = 1 from pg_temp.pushes where user_id = :pa::uuid and title = 'New household request'),
+  '... and the operator is pushed to approve it');
+select pg_temp.ok(pg_temp.err_as(:pa, format('select public.decide_household_access(%L, true)', :n5)) = '',
+  'the operator approves');
+select pg_temp.ok(pg_temp.err_as(:n5, $q$ select public.create_household('Rumah Wati', false) $q$) = '',
+  '... and only then can the household be created');
+select pg_temp.ok(not exists (select 1 from pg_temp.pushes where title in ('New household', 'Rumah baru')),
+  '... with no "just joined" push for a hand approval');
+
+-- ---- Switched on by a platform admin, for the checks below ----------------------------------
+update public.signup_config set auto_approve = true, daily_auto_cap = 25;
+delete from pg_temp.pushes;
 
 -- ---- What the screen is told -----------------------------------------------------------------
 select pg_temp.ok(pg_temp.text_as(:n1, 'select public.my_household_access()') = 'open', 'a new account is open');
@@ -240,9 +271,7 @@ select pg_temp.ok(not has_function_privilege('authenticated', 'public.signup_aut
                   and has_function_privilege('authenticated', 'public.create_household(text, boolean)', 'execute')
                   and has_function_privilege('authenticated', 'public.my_household_access()', 'execute'),
   'authenticated gets the public four, never the internal three');
-select pg_temp.ok((select count(*) = 1 from public.signup_config)
-                  and (select auto_approve and daily_auto_cap = 25 from public.signup_config),
-  'one config row');
+select pg_temp.ok((select count(*) = 1 from public.signup_config), 'one config row');
 select pg_temp.ok((select bool_and(prosecdef and proconfig @> array['search_path=""']) from pg_proc
                     where oid in ('public.signup_auto_open()'::regprocedure, 'public.signup_auto_approve(uuid)'::regprocedure,
                                   'public.notify_household_joined(uuid, text)'::regprocedure,

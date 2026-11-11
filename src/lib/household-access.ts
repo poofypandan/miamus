@@ -10,10 +10,11 @@
 
 /**
  * What /onboarding shows. "admin", "approved" and "open" all get the name
- * form. "open" (Phase 172, migrations/143): no request yet, and the account
- * is approved automatically when it creates its household, so there is no
- * wait. Over the day's cap, or with the switch off, it reads "none" and the
- * old Request access screen shows.
+ * form. "open" (Phase 172, migrations/143) only while a platform admin has
+ * switched automatic approval on (it is off: the owner approves every new
+ * household): no request yet, and the account is approved when it creates
+ * its household. With the switch off, or over the day's cap, it reads
+ * "none" and the Request access screen shows.
  */
 export type HouseholdAccess = "admin" | "approved" | "open" | "pending" | "rejected" | "none";
 

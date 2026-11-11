@@ -32,11 +32,13 @@ import { supabase } from "@/lib/supabase/client";
  *
  * Reached only through the middleware, which sends a signed-in Google account
  * here when it has no household_members row. Since Phase 148 a new household
- * needs the operator's approval first (migrations/113). Since Phase 172
- * (migrations/143) that approval is automatic: an "open" account goes
- * straight to the name form and Create household approves it in the same
- * call. Only over the day's cap, or with the switch off, does it still ask
- * and wait (the Request and Waiting screens below).
+ * needs the operator's approval first (migrations/113), and it still does:
+ * the owner approves every new household (2026-11-10). Phase 172
+ * (migrations/143) built automatic approval behind a switch that is off:
+ * only if a platform admin turns it on does an account read "open" and go
+ * straight to the name form, Create household approving it in the same
+ * call. Otherwise it asks and waits (the Request and Waiting screens below),
+ * and the waiting screen says it will be emailed.
  *
  * Since Phase 149 the first question is the language (migrations/114), and
  * every screen after it is in the one chosen. The staff hint stays in both:
@@ -120,9 +122,10 @@ function Onboarding() {
   // First, before anything is asked of them in either language.
   if (chosen === false) return <LanguageScreen />;
 
-  // No wait (Phase 172, D1): over the cap since the screen opened, the
-  // household isn't created and nothing is written; file the request, then
-  // show Request sent. Anything else that refuses re-reads the account.
+  // Only with automatic approval switched on (Phase 172, D1; off by
+  // default): over the cap since the screen opened, the household isn't
+  // created and nothing is written; file the request, then show Request
+  // sent. Anything else that refuses re-reads the account.
   async function notApproved() {
     if (access !== "open" || !supabase) return load();
     const { data, error } = await supabase.rpc("request_household_access");

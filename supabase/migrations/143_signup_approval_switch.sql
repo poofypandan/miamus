@@ -1,19 +1,23 @@
 -- ============================================================================
--- 143 — Sign up without waiting (Phase 172, PR A1)
+-- 143 — A switch for automatic sign-up approval, off (Phase 172, PR A1)
 -- ============================================================================
--- docs/phase-172-first-ten-minutes-plan.md, section 1; owner decisions
--- (2026-11-10): D1 A (approve automatically when someone creates a household,
--- review afterwards; a daily cap and a switch fall back to today's manual
--- approval), D2 A (if a wait remains, the screen promises an email and the
--- approvals page gets an Email them button; no mail service).
+-- docs/phase-172-first-ten-minutes-plan.md, section 1. Owner decisions
+-- (2026-11-10): D1 A, then changed by the owner the same night: "make sure I
+-- still need to approve new households". So automatic approval is BUILT but
+-- OFF: every new household still waits for the operator's approval, exactly
+-- as before, until a platform admin turns the switch on. D2 A stands: the
+-- waiting screen promises an email, and the approvals page gets an Email
+-- them button (no mail service).
 -- Numbered by build order (manager, 10 November): the next free number above
 -- the highest on main when built.
 --
 -- NEW
---   signup_config              one row: auto_approve (the switch, on) and
---        daily_auto_cap (25 automatic approvals a Jakarta day across Miamus).
---        No client access; a platform admin changes it with SQL, like
+--   signup_config              one row: auto_approve (the switch, OFF by
+--        default: manual approval) and daily_auto_cap (25 automatic approvals
+--        a Jakarta day across Miamus, once it is on). No client access; only
+--        with the owner's say-so, a platform admin changes it with SQL, like
 --        kakak_config:
+--          update public.signup_config set auto_approve = true;    -- approve automatically
 --          update public.signup_config set auto_approve = false;   -- back to manual
 --          update public.signup_config set daily_auto_cap = 10;
 --   household_access_requests.auto   true when the approval was automatic.
@@ -29,7 +33,8 @@
 --
 -- RE-CREATED, each from its newest definition:
 --   my_household_access (113)        a sixth answer, 'open': no request yet
---        and automatic approval is available. Anonymous sessions get 'none'.
+--        and automatic approval is available (never while the switch is
+--        off). Anonymous sessions get 'none'.
 --   create_household (133)           same signature, same lock. A non-admin
 --        with no request row is approved automatically in the same
 --        transaction when open; over the cap or switched off it raises
@@ -45,13 +50,19 @@
 --        account's language (for the Email them text). Return type changes,
 --        so it is dropped first.
 --
--- NOT CHANGED: a rejected account is refused; one household per account;
--- pending requests stay manual; decide_household_access; the 30-day prune of
--- rejected requests; anonymous sessions can never request or create.
+-- WITH THE SWITCH OFF (the default) nothing about signing up changes:
+-- my_household_access answers 'none' to a new account, it taps Request
+-- access, request_household_access files a pending request and pushes the
+-- operator, and create_household refuses until the operator approves.
 --
--- Privacy policy and legal.ts updated in the same PR (section 7: accounts
--- are approved automatically; the operator still sees the creator's Google
--- name and email). Additive: one table, one column with a default, new
+-- NOT CHANGED either way: a rejected account is refused; one household per
+-- account; pending requests stay manual; decide_household_access; the 30-day
+-- prune of rejected requests; anonymous sessions can never request or create.
+--
+-- Privacy policy and legal.ts updated in the same PR (section 3: we review
+-- each request and email when it's approved; if automatic approval is
+-- switched on, new households are reviewed afterwards; whether an approval
+-- was automatic is stored). Additive: one table, one column with a default, new
 -- internal functions, four re-created. Every SECURITY DEFINER function
 -- revokes EXECUTE from public and anon; the internal ones from
 -- authenticated too.
@@ -60,10 +71,11 @@
 -- --- 1. The switch and the cap ---------------------------------------------------------
 create table if not exists public.signup_config (
   id boolean primary key default true check (id),
-  auto_approve boolean not null default true,
+  -- Off: the owner approves every new household (2026-11-10).
+  auto_approve boolean not null default false,
   daily_auto_cap int not null default 25 check (daily_auto_cap >= 0)
 );
-insert into public.signup_config (id) values (true) on conflict (id) do nothing;
+insert into public.signup_config (id, auto_approve) values (true, false) on conflict (id) do nothing;
 
 alter table public.signup_config enable row level security;
 revoke all on public.signup_config from public, anon, authenticated;
