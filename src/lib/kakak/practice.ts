@@ -16,6 +16,8 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { addDays, weekdayIndex, type KakakHousehold } from "./household";
 import { splitRefinementNote } from "./refine";
+import { routineKindInfo } from "@/lib/pet-routine-kinds";
+import type { RoutineKind } from "@/types/database";
 import type { PetRoutineToolKind } from "./tools";
 import { newPetTimes } from "./validate";
 
@@ -142,6 +144,29 @@ function petRoutineKind(text: string): PetRoutineToolKind {
   if (has(text, /\b(ajak main|play)\b/)) return "play";
   if (has(text, /\b(pipis|pup|potty|jalan)\b/)) return "potty";
   return "meal";
+}
+
+/**
+ * Practice mode's one warm sentence for a routine card, as the real Kakak is
+ * told to write it (prompt.ts): "(Latihan) Baik. Kakak siapkan: Syam matikan
+ * lampu untuk Mocha dan Matcha setiap hari jam 21.30."
+ */
+function warmLine(
+  household: KakakHousehold,
+  { kind, pets, times, staff }: { kind: PetRoutineToolKind; pets: KakakHousehold["pets"]; times: string[]; staff: string | null },
+): string {
+  const id = household.ownerLocale === "id";
+  const info = routineKindInfo(kind as RoutineKind);
+  const who = staff ? household.people.find((p) => p.ref === staff)?.name ?? null : null;
+  const names = pets.map((p) => p.name);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} ${id ? "dan" : "and"} ${names[names.length - 1]}` : names[0];
+  const at = times.map((t) => (id ? t.replace(":", ".") : t)).join(", ");
+  if (id) {
+    const what = (info?.title ?? "Rutinitas").toLowerCase();
+    return `(Latihan) Baik. Kakak siapkan: ${who ? `${who} ` : ""}${what} untuk ${list} setiap hari jam ${at}.`;
+  }
+  const what = (info?.en ?? "the routine").toLowerCase();
+  return `(Practice) Of course. I'll set up ${what} for ${list} every day at ${at}${who ? `, done by ${who}` : ""}.`;
 }
 
 /** A person by first name ("Ari" in "Ari pel teras"). */
@@ -495,8 +520,14 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
     // Skips a time every named pet already has; the route drops the rest per pet.
     const times = asked.filter((time) => pets.some((pet) => newPetTimes(household, pet.ref, kind, [time]).length > 0));
     if (times.length === 0) return message(model, [text(copy.stuck)]);
+    const basic = kind === "meal" || kind === "potty";
+    // A person, a reminder and an alert only on a routine (meals and potty are for anyone).
+    const person = basic ? null : findPerson(household, first);
+    const staff = person && person !== household.owner.ref ? person : null;
+    const remind = !basic && has(first, /\b(ingatkan(?! saya)|remind (?!me)|reminder)\b/);
+    const alert = !basic && has(first, /\b(kabari|kabarin|tell me|tell us|let me know)\b/);
     return message(model, [
-      text(copy.here),
+      text(basic ? copy.here : warmLine(household, { kind, pets, times, staff })),
       toolUse("add_pet_routine", {
         pets: pets.map((pet) => pet.ref),
         kind,
@@ -505,10 +536,10 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
         until: null,
         title: null,
         title_en: null,
-        staff: null,
+        staff,
         note: null,
-        remind_staff: false,
-        alert_owners: false,
+        remind_staff: remind,
+        alert_owners: alert,
       }),
     ]);
   }

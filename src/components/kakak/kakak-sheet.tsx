@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import {
   Check,
+  CheckCircle2,
   CircleAlert,
   Gauge,
   Hourglass,
@@ -14,11 +15,13 @@ import {
   RotateCcw,
   Send,
   ShoppingCart,
+  Undo2,
   WifiOff,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { KakakAvatar } from "@/components/kakak/kakak-avatar";
@@ -31,14 +34,22 @@ import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { askKakak, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
-import { addsSomething, describeSuggestion, savedSummary } from "@/lib/kakak/describe";
+import { addsSomething, describeSuggestion, routineListLine, savedBenefit, savedSummary } from "@/lib/kakak/describe";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
 import { MAX_TYPED, type KakakHistory, type RefusalReason } from "@/lib/kakak/engine";
 import type { KakakSuggestion } from "@/lib/kakak/suggestions";
 import { useKakakSave } from "@/lib/kakak/use-kakak-save";
 import { firstName } from "@/lib/kakak/context";
-import { REPEAT_CHOICES, refineChore, refinementNote, repeatLabel, type ChoreRefinement } from "@/lib/kakak/refine";
+import {
+  REPEAT_CHOICES,
+  refineChore,
+  refinePetRoutine,
+  refinementNote,
+  repeatLabel,
+  type ChoreRefinement,
+  type PetRoutineRefinement,
+} from "@/lib/kakak/refine";
 import type { ChoreSuggestion } from "@/lib/kakak/suggestions";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { cn } from "@/lib/utils";
@@ -49,7 +60,9 @@ type Screen =
   | { kind: "question"; question: string; answers: string[]; allowTyping: boolean }
   /** `refined`: the owner adjusted the card with its chips before saving. */
   | { kind: "card"; text: string; items: KakakSuggestion[]; requestId: string; refined?: boolean }
-  | { kind: "message"; text: string; problem?: Problem };
+  | { kind: "message"; text: string; problem?: Problem }
+  /** A card with a pet routine was saved (Phase 173 PR B): Kakak says what it means, with Undo. */
+  | { kind: "saved"; text: string; items: KakakSuggestion[]; undo: () => Promise<boolean>; requestId: string; refined: boolean };
 
 /**
  * When a turn could not be answered: what to show and what the owner can do
@@ -192,6 +205,13 @@ function Conversation({ onClose }: { onClose: () => void }) {
       const { undo } = await save(items);
       // Adjusted with the card's chips: Kakak was close, not right (statistics).
       reportKakakOutcome(requestId, refined ? "changed" : "confirmed");
+      // A pet routine ends on Kakak's own "Done", saying what it means for
+      // the family, with the routine as the owner will find it (Phase 173 PR B).
+      const benefit = savedBenefit(items, locale);
+      if (benefit) {
+        setScreen({ kind: "saved", text: benefit, items, undo, requestId, refined });
+        return;
+      }
       toast.success(savedSummary(items, locale), {
         duration: UNDO_TOAST_MS,
         action: {
@@ -220,6 +240,24 @@ function Conversation({ onClose }: { onClose: () => void }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Undo from Kakak's "Done": everything this card added comes back out. */
+  async function undoSaved() {
+    if (screen.kind !== "saved" || saving) return;
+    setSaving(true);
+    if (!screen.refined) reportKakakOutcome(screen.requestId, "undone");
+    const allBack = await screen.undo();
+    setSaving(false);
+    if (allBack) toast(t("Undone.", "Dibatalkan."));
+    else
+      toast.error(
+        t(
+          "Couldn't undo all of it. Check the list and remove what's left.",
+          "Tidak semua bisa dibatalkan. Cek daftarnya dan hapus yang tersisa."
+        )
+      );
+    onClose();
   }
 
   function cancel() {
@@ -298,6 +336,15 @@ function Conversation({ onClose }: { onClose: () => void }) {
               items: screen.items.map((item, i) => (i === index && item.kind === "chore" ? refineChore(item, change) : item)),
             })
           }
+          onRefineRoutine={(index, change) =>
+            setScreen({
+              ...screen,
+              refined: true,
+              items: screen.items.map((item, i) =>
+                i === index && item.kind === "pet_routine" ? refinePetRoutine(item, change) : item
+              ),
+            })
+          }
           onConfirm={() => void confirm(screen.items.filter(addsSomething), screen.requestId, Boolean(screen.refined))}
           onChange={() => {
             reportKakakOutcome(screen.requestId, "changed");
@@ -306,6 +353,10 @@ function Conversation({ onClose }: { onClose: () => void }) {
           onCancel={cancel}
           changing={typingAnswer}
         />
+      )}
+
+      {screen.kind === "saved" && (
+        <SavedRoutine text={screen.text} items={screen.items} busy={saving} onDone={onClose} onUndo={() => void undoSaved()} />
       )}
 
       {screen.kind === "message" &&
@@ -458,6 +509,7 @@ function SuggestionCard({
   changing,
   onDrop,
   onRefine,
+  onRefineRoutine,
   onConfirm,
   onChange,
   onCancel,
@@ -468,6 +520,7 @@ function SuggestionCard({
   changing: boolean;
   onDrop: (index: number) => void;
   onRefine: (index: number, change: ChoreRefinement) => void;
+  onRefineRoutine: (index: number, change: PetRoutineRefinement) => void;
   onConfirm: () => void;
   onChange: () => void;
   onCancel: () => void;
@@ -502,13 +555,44 @@ function SuggestionCard({
                   </button>
                 )}
               </div>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                {card.rows.map((row, r) => (
-                  <div key={r} className="contents">
-                    <dt className="text-muted-foreground">{row.label}</dt>
-                    <dd className={cn("font-medium text-gray-900", row.guess && "text-amber-700")}>{row.value}</dd>
-                  </div>
-                ))}
+              <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 text-sm">
+                {card.rows.map((row, r) => {
+                  // The card assembles itself, one row after another (motion-reduce: at once).
+                  const motion = { className: "animate-kakak-row motion-reduce:animate-none", style: { animationDelay: `${r * 90}ms` } };
+                  return (
+                    <div key={r} className="contents">
+                      <dt className={cn("text-muted-foreground", motion.className)} style={motion.style}>
+                        {row.label}
+                      </dt>
+                      {row.toggle ? (
+                        <dd className={cn("flex min-h-9 items-center justify-between gap-2", motion.className)} style={motion.style}>
+                          <span className={cn("font-medium", row.toggle.on ? "text-gray-900" : "text-muted-foreground")}>
+                            {row.value}
+                          </span>
+                          <Switch
+                            on={row.toggle.on}
+                            label={row.label}
+                            disabled={saving || changing || !row.toggle.allowed}
+                            onToggle={() => {
+                              const toggle = row.toggle!;
+                              onRefineRoutine(
+                                index,
+                                toggle.field === "remindStaff" ? { remindStaff: !toggle.on } : { alertOwners: !toggle.on }
+                              );
+                            }}
+                          />
+                        </dd>
+                      ) : (
+                        <dd
+                          className={cn("font-medium text-gray-900", row.guess && "text-amber-700", motion.className)}
+                          style={motion.style}
+                        >
+                          {row.value}
+                        </dd>
+                      )}
+                    </div>
+                  );
+                })}
               </dl>
               {card.note && <p className="text-xs text-muted-foreground">{card.note}</p>}
               {item.kind === "chore" && !changing && (
@@ -538,7 +622,11 @@ function SuggestionCard({
             ) : (
               <>
                 <Check className="size-5" aria-hidden="true" />
-                {saveable > 1 ? t(`Save ${saveable}`, `Simpan ${saveable}`) : t("Looks right", "Sudah benar")}
+                {saveable > 1
+                  ? t(`Save ${saveable}`, `Simpan ${saveable}`)
+                  : items.some((item) => item.kind === "pet_routine")
+                    ? t("Save", "Simpan")
+                    : t("Looks right", "Sudah benar")}
               </>
             )}
           </Button>
@@ -679,6 +767,70 @@ function Chip({
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * Kakak's "Done" after a pet routine is saved (Phase 173 PR B): the benefit
+ * in her words, then the routine as it now sits in the pet's routines, then
+ * Done, with Undo beside it. The mark settles in once (motion-reduce: still).
+ */
+function SavedRoutine({
+  text,
+  items,
+  busy,
+  onDone,
+  onUndo,
+}: {
+  text: string;
+  items: KakakSuggestion[];
+  busy: boolean;
+  onDone: () => void;
+  onUndo: () => void;
+}) {
+  const t = useT();
+  const locale = useOwnerLocale();
+  const lines = items
+    .map((item) => ({ item, line: routineListLine(item, locale) }))
+    .filter((x): x is { item: Extract<KakakSuggestion, { kind: "pet_routine" }>; line: { title: string; detail: string } } => x.line !== null);
+  return (
+    <div className="flex flex-col gap-3" data-testid="kakak-saved">
+      <div className="flex justify-center py-1">
+        <span className="flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 animate-kakak-done motion-reduce:animate-none">
+          <CheckCircle2 className="size-7" aria-hidden="true" />
+        </span>
+      </div>
+      <div role="status">
+        <KakakBubble>{text}</KakakBubble>
+      </div>
+      <div
+        className="flex flex-col gap-1 rounded-xl border bg-card px-4 py-3 shadow-sm animate-kakak-row motion-reduce:animate-none"
+        style={{ animationDelay: "240ms" }}
+      >
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("In your routines", "Di rutinitas Anda")}
+        </p>
+        {lines.map(({ item, line }, index) => {
+          const Icon = routineKindInfo(item.routine as RoutineKind)?.icon ?? PawPrint;
+          return (
+            <div key={index} className="flex min-h-11 items-center gap-3">
+              <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="flex min-w-0 flex-col">
+                <span className="text-sm font-medium text-gray-900">{line.title}</span>
+                <span className="text-xs text-muted-foreground">{line.detail}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <Button type="button" className="min-h-12 rounded-xl text-base" disabled={busy} onClick={onDone}>
+        {t("Done", "Selesai")}
+      </Button>
+      <Button type="button" variant="ghost" className="min-h-11 rounded-xl" disabled={busy} onClick={onUndo}>
+        {busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Undo2 className="size-4" aria-hidden="true" />}
+        {t("Undo", "Batalkan")}
+      </Button>
+    </div>
   );
 }
 

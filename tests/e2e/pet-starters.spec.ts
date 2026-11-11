@@ -113,7 +113,12 @@ test("Kakak: lights off for both dogs is one card, confirmed, saved as one routi
   // Nothing is saved before the owner confirms.
   expect(stub.schedules.filter((s) => s.kind === "lights")).toEqual([]);
 
-  await page.getByRole("button", { name: "Looks right" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  // Kakak's Done: the benefit, then the routine as it now sits in the list.
+  const done = page.getByTestId("kakak-saved");
+  await expect(done.getByText("Done. Staff see it on Today at 21:30; a photo comes back each time.")).toBeVisible();
+  await expect(done.getByText("Matikan lampu · 21:30")).toBeVisible();
+  await expect(done.getByText("Mochi & Bento · Every day")).toBeVisible();
   await expect.poll(() => stub.schedules.filter((s) => s.kind === "lights").length).toBe(2);
   const made = stub.schedules.filter((s) => s.kind === "lights");
   expect(new Set(made.map((s) => s.entity_id))).toEqual(new Set([MOCHI.id, BENTO.id]));
@@ -122,4 +127,6 @@ test("Kakak: lights off for both dogs is one card, confirmed, saved as one routi
     expect(row).toMatchObject({ title: "Matikan lampu", fixed_times: ["21:30"], proof: "photo", days_of_week: null, expires_at: null, staff_id: null });
   }
   expect(stub.seen.realBackend).toEqual([]);
+  await done.getByRole("button", { name: "Done" }).click();
+  await expect(done).toBeHidden();
 });

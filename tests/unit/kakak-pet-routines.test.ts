@@ -7,7 +7,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
 import { buildContext, type ContextRows } from "@/lib/kakak/context";
-import { addsSomething, describeSuggestion, savedSummary } from "@/lib/kakak/describe";
+import { addsSomething, describeSuggestion, routineListLine, savedBenefit, savedSummary } from "@/lib/kakak/describe";
+import { refinePetRoutine, refinementNote } from "@/lib/kakak/refine";
 import { runKakakTurn, type TurnDeps } from "@/lib/kakak/engine";
 import { kakakExamples } from "@/lib/kakak/examples";
 import { renderHouseholdBlock } from "@/lib/kakak/household";
@@ -227,6 +228,8 @@ describe("the confirm card", () => {
       { label: "Ulangi", value: "Setiap hari" },
       { label: "Siapa", value: "Siapa saja" },
       { label: "Bukti", value: "Foto" },
+      { label: "Ingatkan staf", value: "Tidak", toggle: { field: "remindStaff", on: false, allowed: true } },
+      { label: "Kabari kami", value: "Tidak", toggle: { field: "alertOwners", on: false, allowed: true } },
     ]);
     expect(card.note).toBe("Matcha: 21.30 sudah ada.");
   });
@@ -244,10 +247,31 @@ describe("the confirm card", () => {
       { label: "Who", value: "Syam" },
       { label: "Note for staff", value: "Pakai tali" },
       { label: "Proof", value: "3 photos (start, there, back)" },
-      { label: "Remind staff", value: "At this time" },
-      { label: "Tell us", value: "If it's not done" },
+      { label: "Remind staff", value: "At this time", toggle: { field: "remindStaff", on: true, allowed: true } },
+      { label: "Tell us", value: "If it's not done", toggle: { field: "alertOwners", on: true, allowed: true } },
     ]);
     expect(savedSummary([item], "en")).toBe("Saved — Walk · Mocha");
+  });
+
+  it("a switch no time can use is shown greyed, and stays off", () => {
+    const rows = describeSuggestion(suggest(call({ times: ["23:00"] })), "en").rows;
+    expect(rows.slice(-2)).toEqual([
+      { label: "Remind staff", value: "Too late for a reminder", toggle: { field: "remindStaff", on: false, allowed: false } },
+      { label: "Tell us", value: "Too late for an alert", toggle: { field: "alertOwners", on: false, allowed: false } },
+    ]);
+  });
+
+  it("the card's switches flip with no call to Kakak, never past the hours they can work", () => {
+    const item = suggest(call({ pets: ["P1"] }));
+    expect(refinePetRoutine(item, { remindStaff: true })).toMatchObject({ remindStaff: true, alertOwners: false });
+    expect(refinePetRoutine(item, { alertOwners: true })).toMatchObject({ alertOwners: true });
+    const late = suggest(call({ pets: ["P1"], times: ["23:00"] }));
+    expect(refinePetRoutine(late, { remindStaff: true }).remindStaff).toBe(false);
+    const meal = suggest(call({ kind: "meal" }));
+    expect(refinePetRoutine(meal, { remindStaff: true })).toBe(meal);
+    expect(isSaveableSuggestion(refinePetRoutine(item, { remindStaff: true }))).toBe(true);
+    // A typed correction afterwards tells Kakak what the switches say.
+    expect(refinementNote([refinePetRoutine(item, { remindStaff: true })])).toContain("Matikan lampu: remind staff, no alert");
   });
 
   it("an Other routine shows the owner's English gloss", () => {
@@ -269,6 +293,27 @@ describe("the confirm card", () => {
     const item = suggest(call({ pets: ["P2"] }));
     expect(addsSomething(item)).toBe(false);
     expect(describeSuggestion(item, "en").note).toBe("21:30 is already there.");
+  });
+});
+
+describe("Kakak's Done (the benefit, not the mechanics)", () => {
+  it("a named person, a reminder and an alert", () => {
+    const item = suggest(call({ pets: ["P1", "P3"], staff: "S1", remind_staff: true, alert_owners: true }));
+    expect(savedBenefit([item], "en")).toBe("Done. Syam gets a reminder at 21:30; you'll only hear from me if it isn't done.");
+    expect(savedBenefit([item], "id")).toBe("Beres. Syam diingatkan jam 21.30; Kakak hanya mengabari Anda jika belum dikerjakan.");
+  });
+
+  it("anyone, no switches: staff see it, and a photo comes back", () => {
+    const item = suggest(call({ pets: ["P1"] }));
+    expect(savedBenefit([item], "en")).toBe("Done. Staff see it on Today at 21:30; a photo comes back each time.");
+    expect(savedBenefit([item], "id")).toBe("Beres. Staf melihatnya di Hari ini jam 21.30; fotonya masuk setiap kali.");
+  });
+
+  it("meals keep the toast; the routine line is what the owner will find", () => {
+    expect(savedBenefit([suggest(call({ kind: "meal" }))], "en")).toBeNull();
+    const item = suggest(call({ pets: ["P1", "P3"], days: ["mon", "wed"] }));
+    expect(routineListLine(item, "id")).toEqual({ title: "Matikan lampu · 21.30", detail: "Mocha & Luna · Sen, Rab" });
+    expect(routineListLine(suggest(call({ kind: "potty" })), "en")).toBeNull();
   });
 });
 
@@ -411,6 +456,23 @@ describe("practice mode and the examples", () => {
     const result = await runKakakTurn(deps(), null, example.text);
     if (result.kind !== "suggestions") throw new Error(result.kind);
     expect((result.items[0] as PetRoutineSuggestion).pets[0].times).toEqual([{ time: "21:30", title: "Matikan lampu" }]);
+  });
+
+  it("the demo sentence: a person, a reminder, an alert, and a warm reply", async () => {
+    const result = await runKakakTurn(
+      deps(),
+      null,
+      "Syam matikan lampu untuk Mocha dan Luna jam 21.30, pakai foto. Ingatkan Syam, kabari saya kalau belum",
+    );
+    if (result.kind !== "suggestions") throw new Error(result.kind);
+    expect(result.text).toBe("(Latihan) Baik. Kakak siapkan: Syam matikan lampu untuk Mocha dan Luna setiap hari jam 21.30.");
+    expect(result.items[0]).toMatchObject({ routine: "lights", staffName: "Syam", remindStaff: true, alertOwners: true });
+  });
+
+  it("'remind me' alone is not a staff reminder", async () => {
+    const result = await runKakakTurn(deps(), null, "Matikan lampu untuk Mocha jam 21.30");
+    if (result.kind !== "suggestions") throw new Error(result.kind);
+    expect(result.items[0]).toMatchObject({ remindStaff: false, alertOwners: false, staffId: null });
   });
 
   it("a walk for one pet in practice mode", async () => {

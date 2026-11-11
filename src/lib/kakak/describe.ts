@@ -4,6 +4,7 @@
 
 import { remindLabel } from "@/lib/chore-reminders";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
+import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
 import type { RoutineKind, RoutineProof } from "@/types/database";
 import type { KakakSuggestion } from "./suggestions";
 
@@ -15,6 +16,12 @@ export interface CardRow {
   value: string;
   /** "Kakak's guess — check it": shown in amber, with the safety line. */
   guess?: boolean;
+  /**
+   * A pet routine's PR C switch (migrations/150): the card shows it as a
+   * switch the owner can flip before saving, with no call to Kakak.
+   * `allowed` is false when none of the routine's times can use it.
+   */
+  toggle?: { field: "remindStaff" | "alertOwners"; on: boolean; allowed: boolean };
 }
 
 export interface CardItem {
@@ -270,10 +277,27 @@ function describePetRoutine(item: PetRoutine, locale: Locale, t: T): CardItem {
   rows.push({ label: t("Who", "Siapa"), value: item.staffName ?? t("Anyone", "Siapa saja") });
   if (item.note) rows.push({ label: t("Note for staff", "Catatan untuk staf"), value: item.note });
   if (item.proof) rows.push({ label: t("Proof", "Bukti"), value: t(...PROOFS[item.proof]) });
-  if (item.remindStaff) rows.push({ label: t("Remind staff", "Ingatkan staf"), value: t("At this time", "Di jam ini") });
-  if (item.alertOwners) {
-    rows.push({ label: t("Tell us", "Kabari kami"), value: t("If it's not done", "Jika belum dikerjakan") });
-  }
+  // The two switches are always on the card, so the owner sees them and can flip them.
+  const remindAllowed = times.length === 0 || times.some(reminderTimeAllowed);
+  const alertAllowed = times.length === 0 || times.some(ownerAlertTimeAllowed);
+  rows.push({
+    label: t("Remind staff", "Ingatkan staf"),
+    value: !remindAllowed
+      ? t("Too late for a reminder", "Terlalu malam untuk pengingat")
+      : item.remindStaff
+        ? t("At this time", "Di jam ini")
+        : t("Off", "Tidak"),
+    toggle: { field: "remindStaff", on: item.remindStaff && remindAllowed, allowed: remindAllowed },
+  });
+  rows.push({
+    label: t("Tell us", "Kabari kami"),
+    value: !alertAllowed
+      ? t("Too late for an alert", "Terlalu malam untuk kabar")
+      : item.alertOwners
+        ? t("If it's not done", "Jika belum dikerjakan")
+        : t("Off", "Tidak"),
+    toggle: { field: "alertOwners", on: item.alertOwners && alertAllowed, allowed: alertAllowed },
+  });
   return { heading: `${t("Routine", "Rutinitas")} · ${names}`, rows, note };
 }
 
@@ -286,4 +310,52 @@ function petRoutineSummary(item: PetRoutine, locale: Locale): string {
     return `${names} ${times.map((x) => cardTime(x, locale)).join(", ")}`;
   }
   return `${routineName(item, locale)} · ${names}`;
+}
+
+/**
+ * What Kakak says once a card with a pet routine is saved (Phase 173 PR B):
+ * the benefit, not the mechanics. "Done. Syam gets a reminder at 21:30;
+ * you'll only hear from me if it isn't done." Null when the card held no
+ * routine with a kind (meals and potty keep the toast).
+ */
+export function savedBenefit(items: KakakSuggestion[], locale: Locale): string | null {
+  const t = translator(locale);
+  const routines = items.filter(
+    (item): item is PetRoutine => item.kind === "pet_routine" && item.routine !== "meal" && item.routine !== "potty",
+  );
+  if (routines.length === 0) return null;
+  const item = routines[0];
+  const kept = item.pets.filter((p) => p.times.length > 0);
+  const times = [...new Set(kept.flatMap((p) => p.times.map((x) => x.time)))].sort();
+  const at = times.map((x) => cardTime(x, locale)).join(", ");
+  const who = item.staffName;
+  const first = item.remindStaff
+    ? who
+      ? t(`${who} gets a reminder at ${at}`, `${who} diingatkan jam ${at}`)
+      : t(`Staff get a reminder at ${at}`, `Staf diingatkan jam ${at}`)
+    : who
+      ? t(`${who} sees it on Today at ${at}`, `${who} melihatnya di Hari ini jam ${at}`)
+      : t(`Staff see it on Today at ${at}`, `Staf melihatnya di Hari ini jam ${at}`);
+  const second = item.alertOwners
+    ? t("you'll only hear from me if it isn't done", "Kakak hanya mengabari Anda jika belum dikerjakan")
+    : item.proof === "tick"
+      ? t("it's ticked off when it's done", "dicentang setelah selesai")
+      : t("a photo comes back each time", "fotonya masuk setiap kali");
+  return t(`Done. ${first}; ${second}.`, `Beres. ${first}; ${second}.`);
+}
+
+/**
+ * The routine as the owner will find it in the pet's routines, for the one
+ * line under Kakak's "Done": "Matikan lampu · 21.30" over "Mocha & Matcha ·
+ * Every day". Null for meals and potty.
+ */
+export function routineListLine(item: KakakSuggestion, locale: Locale): { title: string; detail: string } | null {
+  if (item.kind !== "pet_routine" || item.routine === "meal" || item.routine === "potty") return null;
+  const t = translator(locale);
+  const kept = item.pets.filter((p) => p.times.length > 0);
+  const times = [...new Set(kept.flatMap((p) => p.times.map((x) => x.time)))].sort();
+  return {
+    title: `${item.title ?? ""} · ${times.map((x) => cardTime(x, locale)).join(", ")}`,
+    detail: `${petList(kept.map((p) => p.petName))} · ${routineRepeats(item, locale, t)}`,
+  };
 }

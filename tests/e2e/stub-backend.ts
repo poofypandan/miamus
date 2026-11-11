@@ -129,6 +129,8 @@ export interface StubOptions {
   whatsNewWeek?: string;
   /** The roster in place of Ari (audit B1); changed in place, so a reload sees it. */
   staff?: Record<string, unknown>[];
+  /** Mochi's and Bento's names for this test (the demo's Mocha and Matcha; Phase 173 PR B). */
+  petNames?: [string, string];
   /** What list_linked_phones answers the admin (audit B1); changed in place. */
   linkedPhones?: Record<string, unknown>[];
   /** task_logs rows already on record (audit B1: a household past setup). */
@@ -271,7 +273,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const writes: [string, string][] = [];
   const logs: Record<string, unknown>[] = options.logs ?? [];
   const schedules: Record<string, unknown>[] = [...(SCHEDULES as unknown as Record<string, unknown>[]), ...(options.schedules ?? [])];
-  const entities: Record<string, unknown>[] = [MOCHI, BENTO].map((p) => ({ ...p }) as unknown as Record<string, unknown>);
+  const entities: Record<string, unknown>[] = [MOCHI, BENTO].map(
+    (p, i) => ({ ...p, name: options.petNames?.[i] ?? p.name }) as unknown as Record<string, unknown>
+  );
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [], portionCalls: [], portionUndos: [] };
   const foods: Record<string, unknown>[] = [];
   const recipes: Record<string, unknown>[] = options.recipes ?? [];
@@ -339,17 +343,18 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   }
   if (options.staffPhone) {
     await context.addInitScript(
-      ([household, staff, couldntTip]) => {
+      ([household, staff, couldntTip, staffName]) => {
         // Only on the first load of each test: a reload must see what the
         // app itself wrote since.
         if (sessionStorage.getItem("stub-seeded")) return;
         sessionStorage.setItem("stub-seeded", "1");
         localStorage.setItem("miamus_tenant_id", household);
         localStorage.setItem("banyuwangi11:staffId", staff);
-        localStorage.setItem("banyuwangi11:staffName", "Ari");
+        localStorage.setItem("banyuwangi11:staffName", staffName);
         if (!couldntTip) localStorage.setItem("miamus.whats-new.staff-couldnt-do-2026-11", "seen");
       },
-      [HOUSEHOLD_ID, STAFF_ID, options.couldntTip ? "1" : ""]
+      // The phone's own person: Ari, or the first of options.staff (the demo's Syam).
+      [HOUSEHOLD_ID, STAFF_ID, options.couldntTip ? "1" : "", String(options.staff?.[0]?.name ?? "Ari")]
     );
   }
 

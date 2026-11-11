@@ -96,7 +96,9 @@ export function PetFormDialog({
         toast.success(t("Pet updated", "Hewan diperbarui"));
       } else {
         const created = await createEntity({ entity_type: "pet", name: name.trim(), icon: "dog", metadata });
-        toast.success(t("Pet added", "Hewan ditambahkan"));
+        // With the usual routines to offer, their sheet says the pet is in;
+        // a toast would sit over its Add button (Phase 173 PR B).
+        if (!onCreated) toast.success(t("Pet added", "Hewan ditambahkan"));
         onOpenChange(false);
         onCreated?.(created);
         return;

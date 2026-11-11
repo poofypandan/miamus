@@ -414,6 +414,8 @@ export function kakakWords(screen: VoiceScreen, locale: VoiceLocale): string {
     case "question":
       return screen.question ?? "";
     case "message":
+    // Kakak's "Done" after a pet routine is saved (Phase 173 PR B).
+    case "saved":
       return screen.text ?? "";
     case "card": {
       const items = (screen.items ?? []).map((item) => {

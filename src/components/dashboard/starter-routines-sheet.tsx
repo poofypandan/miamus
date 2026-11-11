@@ -113,8 +113,8 @@ export function StarterRoutinesSheet({ pet, onClose }: { pet: TaskEntity | null;
           <SheetTitle>{t(`Usual routines for ${name}`, `Rutinitas biasa untuk ${name}`)}</SheetTitle>
           <SheetDescription>
             {t(
-              "Staff see these from today. Untick what you don't want.",
-              "Staf melihatnya mulai hari ini. Hapus centang yang tidak perlu."
+              `${name} is added. Staff see these from today; untick what you don't want.`,
+              `${name} sudah ditambahkan. Staf melihatnya mulai hari ini; hapus centang yang tidak perlu.`
             )}
           </SheetDescription>
         </SheetHeader>
