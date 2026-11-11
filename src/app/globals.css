@@ -396,3 +396,33 @@
     }
   }
 }
+
+/*
+ * Send to the developer, Save as PDF (Phase 174 PR C): while the repair list
+ * page is open, paper gets only that page. It is a fixed overlay on screen;
+ * on paper it flows over as many pages as it needs, one repair never split.
+ */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  html.print-developer-list body > *:not([data-print-root]) {
+    display: none !important;
+  }
+
+  html.print-developer-list,
+  html.print-developer-list body {
+    background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  html.print-developer-list [data-print-root] {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+}

@@ -96,6 +96,29 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
+    // Phase 174 PR C (D7 A). Listed in Household → What's new only, never a
+    // card: this week's card already went to walk-ins (walkins-2026-11; one
+    // card a week). The button sits under the Repairs list and explains
+    // itself. Owners only; staff see nothing new.
+    id: "developer-list-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: send repairs to the developer", id: "Baru: kirim perbaikan ke developer" },
+    steps: {
+      en: [
+        "Chores → Repairs → Send to the developer: every open repair with its photos, all ticked. Untick what isn't the developer's.",
+        "Share on WhatsApp sends a short, polite list with the photos, in Bahasa Indonesia (English is one tap away). Save as PDF makes a page to send as a file.",
+        "Miamus doesn't send it: you choose who gets it.",
+      ],
+      id: [
+        "Tugas → Perbaikan → Kirim ke developer: semua perbaikan yang masih terbuka beserta fotonya, sudah dicentang. Hapus centang yang bukan urusan developer.",
+        "Bagikan lewat WhatsApp mengirim daftar singkat dan sopan beserta fotonya, dalam Bahasa Indonesia (bahasa Inggris tinggal satu ketukan). Simpan sebagai PDF membuat halaman untuk dikirim sebagai berkas.",
+        "Miamus tidak mengirimkannya: Anda yang memilih penerimanya.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Phase 174 PR B (D4, D10). Listed in Household → What's new only, never
     // a card: this week's card already went to walk-ins (walkins-2026-11; one
     // card a week). The two switches explain themselves in Household →
