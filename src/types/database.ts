@@ -938,6 +938,41 @@ export interface Database {
         Args: Record<string, never>;
         Returns: number;
       };
+      // Notifications on staff phones (migrations/141). A staff phone's own list:
+      my_phone_push_people: {
+        Args: Record<string, never>;
+        Returns: {
+          people: { staff_id: string; name: string }[];
+          shared: boolean;
+          household_on: boolean;
+        };
+      };
+      set_my_push_person: {
+        Args: { p_staff_id: string; p_on: boolean; p_pin?: string };
+        Returns:
+          | { status: "ok" }
+          | { status: "pin_required" }
+          | { status: "wrong_pin"; attempts_left: number }
+          | { status: "locked"; locked_until: string }
+          | { status: "no_pin" };
+      };
+      // Admins only (caller_admin_household):
+      staff_push_overview: {
+        Args: Record<string, never>;
+        Returns: {
+          enabled: boolean;
+          people: { staff_id: string; phones_on: number }[];
+          phones: { device_session_id: string; names: string[] }[];
+        };
+      };
+      set_household_staff_push: {
+        Args: { p_on: boolean };
+        Returns: boolean;
+      };
+      staff_will_be_notified: {
+        Args: { p_staff_ids: string[]; p_today_task?: boolean };
+        Returns: string[];
+      };
       // Every RLS policy's question: which households may auth.uid() touch.
       get_user_household_ids: {
         Args: Record<string, never>;
@@ -971,6 +1006,17 @@ export interface Database {
       decide_household_access: {
         Args: { p_user_id: string; p_approve: boolean };
         Returns: undefined;
+      };
+      // Setup counts and the north star (migrations/142, Phase 172 PR 0).
+      // Members of the household only; numbers are added, never negative.
+      record_household_setup: {
+        Args: { p_household: string; p_fields: Record<string, string | number> };
+        Returns: undefined;
+      };
+      // Platform admins only: S1–S5 per sign-up week. See lib/north-star.
+      platform_north_star: {
+        Args: { p_weeks?: number };
+        Returns: unknown;
       };
       // The household and its owner membership in one transaction.
       create_household: {

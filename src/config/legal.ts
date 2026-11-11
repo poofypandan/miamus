@@ -78,7 +78,19 @@ export const LEGAL = {
   // Each admin's notification choices are stored (migrations/139). No new
   // service. Also: Microsoft's push service (Edge on Windows) named beside
   // Apple, Google and Mozilla; the server already sent to it (migrations/103).
-  policyVersion: "2026-11-10.5",
+  // 2026-11-10.6: notifications on staff phones (Phase 166, migrations/141)
+  // — which people each linked phone gives notifications for, that phone's
+  // push details, and each household's switch for them; on a shared phone a
+  // notification says only whose it is; none 21.00–06.00. Deleted with the
+  // phone, when turned off, or when the push service drops the phone. No new
+  // service (the same Apple, Google, Microsoft and Mozilla push services).
+  // 2026-11-10.7: usage counts (Phase 172 PR 0, migrations/142) — how long
+  // setting up a household took, how many things it added, how many fields
+  // were typed, when tasks are first finished, and each ended day's due and
+  // closed task counts (kept 400 days); numbers only, never content. Read by
+  // Poofy Labs as totals across households, without names; kept while the
+  // household exists, deleted with it. No new service.
+  policyVersion: "2026-11-10.7",
   effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
