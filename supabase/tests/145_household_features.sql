@@ -100,7 +100,8 @@ from (values
 \set f2 '''00000000-0000-0000-0000-0000000145f2'''
 
 -- ---- Defaults ------------------------------------------------------------------------
-select pg_temp.ok(public.household_feature_defaults() = '{"repairs": true, "bills": true, "food": true}'::jsonb,
+-- @>: later features join the defaults (148 adds "kitchen": false).
+select pg_temp.ok(public.household_feature_defaults() @> '{"repairs": true, "bills": true, "food": true}'::jsonb,
   'the defaults: repairs, bills and food on');
 select pg_temp.ok(public.household_feature_on(:f1, 'repairs') and public.household_feature_on(:f1, 'bills')
                   and public.household_feature_on(:f1, 'food'),
