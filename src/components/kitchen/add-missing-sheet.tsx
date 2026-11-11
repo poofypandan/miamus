@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Loader2, ShoppingBasket } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, RefreshCw, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
@@ -11,7 +11,7 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRecipes } from "@/hooks/use-recipes";
 import { STOCK_STATUS_LABELS, isLowStock, stockItemName, stockStatus } from "@/lib/inventory";
 import { isActiveAlert } from "@/lib/inventory-status";
-import { friendlyAmount, menuShortfall, shortfallLine, toBuyPatch } from "@/lib/menu";
+import { friendlyAmount, menuShortfall, shortfallLine, toBuyPatch, type CookReadiness } from "@/lib/menu";
 import type { MenuDish } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -32,21 +32,63 @@ export function AddMissingSheet({
   dishes,
   from,
   to,
+  readiness,
+  onRetry,
   onClose,
 }: {
   open: boolean;
   dishes: readonly MenuDish[];
   from: string;
   to: string;
+  /**
+   * The week, the recipes and the items from the server (shortfallReadiness).
+   * The review is a snapshot, so it's taken only once they're all in (Codex,
+   * PR #101); until then the sheet says Loading…, or Try again on failure.
+   */
+  readiness: CookReadiness;
+  onRetry: () => void;
   onClose: () => void;
 }) {
   useBackToClose(open, onClose);
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent side="bottom" className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl">
-        {open && <Review dishes={dishes} from={from} to={to} onDone={onClose} />}
+        {open &&
+          (readiness === "ready" ? (
+            <Review dishes={dishes} from={from} to={to} onDone={onClose} />
+          ) : (
+            <Waiting failed={readiness === "failed"} onRetry={onRetry} />
+          ))}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function Waiting({ failed, onRetry }: { failed: boolean; onRetry: () => void }) {
+  const t = useT();
+  return (
+    <div className="flex flex-col">
+      <SheetHeader>
+        <SheetTitle className="text-xl">{t("Add missing to Shopping", "Tambahkan yang kurang ke Belanja")}</SheetTitle>
+        <SheetDescription className="sr-only">{t("Add missing to Shopping", "Tambahkan yang kurang ke Belanja")}</SheetDescription>
+      </SheetHeader>
+      <div className="flex flex-col items-center gap-3 px-4 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        {failed ? (
+          <>
+            <p className="text-center text-sm text-muted-foreground">
+              {t("Couldn't load the week's recipes and stock.", "Resep dan stok minggu ini belum bisa dimuat.")}
+            </p>
+            <Button variant="outline" className="min-h-11 rounded-xl" onClick={onRetry}>
+              <RefreshCw /> {t("Try again", "Coba lagi")}
+            </Button>
+          </>
+        ) : (
+          <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground" role="status">
+            <Loader2 className="size-4 animate-spin" /> {t("Loading…", "Memuat…")}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 

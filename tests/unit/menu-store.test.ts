@@ -54,12 +54,15 @@ describe("a week whose first read failed is read again", () => {
     await store.loadMenuWeek("2026-11-11", true);
     expect(store.getMenuSnapshot().weeks).not.toContain("2026-11-09");
     expect(store.missingWeeks()).toContain("2026-11-09");
+    // Failed, so Add missing says Try again rather than Loading… forever.
+    expect(store.getMenuSnapshot().failedWeeks).toContain("2026-11-09");
 
     provider.listMenuDishes.mockResolvedValueOnce([dish("d1", "2026-11-11", "Soto")]);
     store.refreshMenu();
     await vi.waitFor(() => expect(store.getMenuSnapshot().weeks).toContain("2026-11-09"));
     expect(store.getMenuSnapshot().dishes.map((d) => d.title)).toContain("Soto");
     expect(store.missingWeeks()).not.toContain("2026-11-09");
+    expect(store.getMenuSnapshot().failedWeeks).not.toContain("2026-11-09");
   });
 
   it("coming back online retries only the weeks that failed", async () => {

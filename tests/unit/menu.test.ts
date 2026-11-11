@@ -10,6 +10,7 @@ import {
   addDays,
   canCopyLastWeek,
   cookReadiness,
+  shortfallReadiness,
   copyLastWeek,
   cookLines,
   dishTitle,
@@ -29,7 +30,7 @@ import {
   weekRangeLabel,
   weekStart,
 } from "@/lib/menu";
-import { applyAmountRules, unitChangePatch } from "@/lib/kitchen-units";
+import { applyAmountRules, undoPurchasePatch, unitChangePatch } from "@/lib/kitchen-units";
 import { buildShoppingList } from "@/lib/inventory";
 import type { RecipeWithLines } from "@/lib/recipes";
 import type { InventoryItem, MenuDish, RecipeIngredient } from "@/types/database";
@@ -260,6 +261,49 @@ describe("cooking waits until the recipe and items have loaded (Codex, PR #101)"
   it("a recipe with only free lines doesn't need the items; a deleted recipe has nothing to take off", () => {
     expect(cookReadiness(dish({ recipe_id: "plain" }), { ...state, recipes: [plain], listsFresh: false })).toBe("ready");
     expect(cookReadiness(dish({ recipe_id: "gone" }), state)).toBe("ready");
+  });
+});
+
+describe("Add missing waits for the week, recipes and items from the server (Codex, PR #101)", () => {
+  const all = { weekLoaded: true, weekFailed: false, recipesFresh: true, recipesErrored: false, listsFresh: true, listsFailed: false };
+  it("ready only when all three came in", () => {
+    expect(shortfallReadiness(all)).toBe("ready");
+    expect(shortfallReadiness({ ...all, weekLoaded: false })).toBe("loading");
+    expect(shortfallReadiness({ ...all, recipesFresh: false })).toBe("loading");
+    expect(shortfallReadiness({ ...all, listsFresh: false })).toBe("loading");
+  });
+  it("failed when a read failed and hasn't come in since", () => {
+    expect(shortfallReadiness({ ...all, weekLoaded: false, weekFailed: true })).toBe("failed");
+    expect(shortfallReadiness({ ...all, recipesFresh: false, recipesErrored: true })).toBe("failed");
+    expect(shortfallReadiness({ ...all, listsFresh: false, listsFailed: true })).toBe("failed");
+    // A failure that has since come in is ready.
+    expect(shortfallReadiness({ ...all, recipesErrored: true, listsFailed: true })).toBe("ready");
+  });
+});
+
+describe("Undo of a purchase puts the menu's shortfall back (Codex, PR #101)", () => {
+  const listed = { ...shallots, stock_status: "low" as const, to_buy_amount: 6, last_bought_amount: null };
+  it("an untracked item: Running low again, with its shortfall", () => {
+    expect(undoPurchasePatch(listed, { ...listed, stock_status: "ok", to_buy_amount: null }, null)).toEqual({
+      stock_status: "low",
+      to_buy_amount: 6,
+    });
+  });
+  it("not when someone set a new shortfall, or the item stays Enough", () => {
+    expect(undoPurchasePatch(listed, { ...listed, stock_status: "ok", to_buy_amount: 2 }, null)).toEqual({ stock_status: "low" });
+    // Another phone tapped Out since: its status stays, and the shortfall comes back with it.
+    expect(undoPurchasePatch(listed, { ...listed, stock_status: "out", to_buy_amount: null }, null)).toEqual({ to_buy_amount: 6 });
+    const tracked = { ...chicken, stock_status: "low" as const, to_buy_amount: 0.5, quantity: 1 };
+    // Tracked, the amount taken back, now at the low level or below: the status already says low.
+    expect(undoPurchasePatch(tracked, { ...tracked, quantity: 0.2, stock_status: "low", to_buy_amount: null, last_bought_amount: null }, 1)).toEqual({ to_buy_amount: 0.5 });
+    // A tracked item the undo leaves Enough (it was never low): nothing to hold a shortfall.
+    const plain = { ...chicken, stock_status: "ok" as const, to_buy_amount: 0.5 };
+    expect(undoPurchasePatch(plain, { ...plain, stock_status: "ok", to_buy_amount: null, last_bought_amount: null }, 1)).toBeNull();
+  });
+  it("converted when the unit changed since, dropped when it no longer converts", () => {
+    const kg = { ...chicken, stock_status: "low" as const, to_buy_amount: 0.5, quantity: 1, track_amount: false };
+    expect(undoPurchasePatch(kg, { ...kg, unit: "g" as const, stock_status: "ok", to_buy_amount: null }, null)).toEqual({ stock_status: "low", to_buy_amount: 500 });
+    expect(undoPurchasePatch(kg, { ...kg, unit: "buah" as const, stock_status: "ok", to_buy_amount: null }, null)).toEqual({ stock_status: "low" });
   });
 });
 

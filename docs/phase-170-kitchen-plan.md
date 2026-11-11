@@ -164,6 +164,10 @@ Undo and the What's new card.
   refresh, online and back in the foreground; Copy last week waits for both
   weeks from the server; a unit change converts `to_buy_amount` (in the app
   and in the trigger) or clears it.
+- **Codex final pass on #101 (two P2s, fixed)**: Add missing takes its
+  snapshot only once the week, the recipes and the items came from the
+  server (Loading… / Try again until then); a Bought's Undo puts the
+  menu's shortfall back (converted if the unit changed).
 - **Not in PR C (less typing / less reading)**: the addendum (Eat soon,
   leftover dishes, Ready to cook, packs, the Menu changed banner), the "won't
   come off" unit hint (the confirm sheet's *Tidak dihitung* says it), cooking

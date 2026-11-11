@@ -296,14 +296,21 @@ export function isIngredient(item: Pick<InventoryItem, "category">): boolean {
  *     it (148), which would erase another phone's purchase;
  *   - the pre-fill goes back only if it is still this purchase's amount
  *     (another phone's later purchase keeps its own);
+ *   - the menu's shortfall (to_buy_amount, Phase 170 PR C) goes back if the
+ *     purchase cleared it and nobody set a new one since, and only while the
+ *     item is back on the list (an Enough item can't hold one); converted if
+ *     an owner changed the unit meanwhile, dropped if the units no longer
+ *     convert (Codex, PR #101);
  *   - null = nothing to write.
  */
 export function undoPurchasePatch(
-  before: Pick<InventoryItem, "stock_status" | "last_bought_amount" | "track_amount">,
-  now: Pick<InventoryItem, "quantity" | "stock_status" | "last_bought_amount">,
+  before: Pick<InventoryItem, "stock_status" | "last_bought_amount" | "track_amount"> &
+    Partial<Pick<InventoryItem, "to_buy_amount" | "unit">>,
+  now: Pick<InventoryItem, "quantity" | "stock_status" | "last_bought_amount"> &
+    Partial<Pick<InventoryItem, "to_buy_amount" | "unit">>,
   amount: number | null
-): { stock_status?: StockStatus; last_bought_amount?: number | null } | null {
-  const patch: { stock_status?: StockStatus; last_bought_amount?: number | null } = {};
+): { stock_status?: StockStatus; last_bought_amount?: number | null; to_buy_amount?: number } | null {
+  const patch: { stock_status?: StockStatus; last_bought_amount?: number | null; to_buy_amount?: number } = {};
   const target = before.stock_status ?? "ok";
   const current = now.stock_status ?? "ok";
   const tookAmountBack = before.track_amount === true && amount !== null;
@@ -316,6 +323,13 @@ export function undoPurchasePatch(
   if (restore && !erases && target !== current) patch.stock_status = target;
   const ours = before.track_amount === true && amount !== null && now.last_bought_amount === amount;
   if (ours && (before.last_bought_amount ?? null) !== amount) patch.last_bought_amount = before.last_bought_amount ?? null;
+  const listed = (patch.stock_status ?? current) !== "ok";
+  if (before.to_buy_amount != null && now.to_buy_amount == null && listed) {
+    const from = before.unit;
+    const to = now.unit ?? from;
+    const back = from && to ? lastBoughtInUnit(before.to_buy_amount, from, to) : before.to_buy_amount;
+    if (back !== null) patch.to_buy_amount = back;
+  }
   return Object.keys(patch).length > 0 ? patch : null;
 }
 

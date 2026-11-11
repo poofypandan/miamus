@@ -21,12 +21,22 @@ export interface MenuSnapshot {
   dishes: MenuDish[];
   /** Mondays whose seven days came from the server (Copy last week waits for both; Codex, PR #101). */
   weeks: string[];
+  /** Mondays whose last read failed and hasn't come in since. */
+  failedWeeks: string[];
   notes: KitchenNotes | null;
   loaded: boolean;
   failed: boolean;
 }
 
-export const EMPTY_MENU: MenuSnapshot = { household: null, dishes: [], weeks: [], notes: null, loaded: false, failed: false };
+export const EMPTY_MENU: MenuSnapshot = {
+  household: null,
+  dishes: [],
+  weeks: [],
+  failedWeeks: [],
+  notes: null,
+  loaded: false,
+  failed: false,
+};
 
 const CACHE_VERSION = 1;
 const cacheKey = (household: string) => `miamus_menu_v${CACHE_VERSION}:${household}`;
@@ -139,7 +149,7 @@ function ensureHousehold(household: string) {
   if (snapshot.household === household) return;
   const cached = typeof window === "undefined" ? null : readCache(household);
   snapshot = cached
-    ? { household, dishes: cached.dishes, weeks: [], notes: cached.notes, loaded: true, failed: false }
+    ? { household, dishes: cached.dishes, weeks: [], failedWeeks: [], notes: cached.notes, loaded: true, failed: false }
     : { ...EMPTY_MENU, household };
   listeners.forEach((listener) => listener());
 }
@@ -179,6 +189,7 @@ export async function loadMenuWeek(day: string, force = false): Promise<void> {
           ...snapshot,
           dishes: withWeek(snapshot, monday, dishes),
           weeks: snapshot.weeks.includes(monday) ? snapshot.weeks : [...snapshot.weeks, monday],
+          failedWeeks: snapshot.failedWeeks.filter((w) => w !== monday),
           notes,
           loaded: true,
           failed: false,
@@ -187,7 +198,12 @@ export async function loadMenuWeek(day: string, force = false): Promise<void> {
     } catch (err) {
       console.error("Menu not loaded", err);
       if (currentHousehold() === household && snapshot.household === household) {
-        emit({ ...snapshot, loaded: true, failed: snapshot.dishes.length === 0 });
+        emit({
+          ...snapshot,
+          loaded: true,
+          failed: snapshot.dishes.length === 0,
+          failedWeeks: snapshot.failedWeeks.includes(monday) ? snapshot.failedWeeks : [...snapshot.failedWeeks, monday],
+        });
       }
     } finally {
       inflight.delete(key);

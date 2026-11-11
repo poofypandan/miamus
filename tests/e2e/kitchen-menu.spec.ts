@@ -425,3 +425,40 @@ test("a dish can't be cooked before its recipe has loaded: Sedang memuat…, the
   await expect(page.getByRole("button", { name: "Sudah dimasak" })).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole("heading", { name: "Soto ayam" })).toBeVisible();
 });
+
+test("Add missing waits for the recipes before it adds up: Loading…, then the review (Codex, PR #101)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    features: { kitchen: true },
+    items: [chicken, rice, shallots],
+    recipes: [soto],
+    menu: [dish(0, "lunch", "Chicken soto", { recipe_id: SOTO, servings: 6 })],
+    holdRecipes: true,
+  });
+  await page.goto("/dashboard?module=inventory&kitchen=menu");
+  // Never a review from half the data: the button waits.
+  await expect(page.getByRole("button", { name: "Loading…" })).toBeDisabled({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Add missing to Shopping" })).toHaveCount(0);
+
+  stub.releaseRecipes();
+  await page.getByRole("button", { name: "Add missing to Shopping" }).click({ timeout: 10_000 });
+  await expect(page.getByText("Need 1.5 kg · have 1 kg · buy 500 g")).toBeVisible();
+});
+
+test("Undo of a purchase puts the menu's shortfall back on the list (Codex, PR #101)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    features: { kitchen: true },
+    items: [{ ...shallots, stock_status: "low", to_buy_amount: 6 }],
+  });
+  await page.goto("/dashboard?module=inventory&kitchen=buy");
+  await expect(page.getByText(/Buy 6 pcs · Running low/)).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Bought Bawang merah" }).click();
+  await expect.poll(() => stub.supplies[0].to_buy_amount).toBeNull();
+  expect(stub.supplies[0].stock_status).toBe("ok");
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => stub.supplies[0].to_buy_amount).toBe(6);
+  expect(stub.supplies[0].stock_status).toBe("low");
+  await expect(page.getByText(/Buy 6 pcs · Running low/)).toBeVisible();
+});

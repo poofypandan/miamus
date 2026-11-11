@@ -9,6 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   CopyPlus,
+  Loader2,
+  RefreshCw,
   NotebookPen,
   Plus,
   ShoppingBasket,
@@ -33,6 +35,7 @@ import {
   addDays,
   canCopyLastWeek,
   copyLastWeek,
+  shortfallReadiness,
   dayMonth,
   dishServings,
   dishesOn,
@@ -42,7 +45,9 @@ import {
   weekStart,
   weekdayLong,
 } from "@/lib/menu";
-import { addDishes, deleteDishes } from "@/lib/menu-store";
+import { addDishes, deleteDishes, loadMenuWeek } from "@/lib/menu-store";
+import { loadRecipes } from "@/lib/recipes-store";
+import { useHousehold } from "@/context/household-context";
 import { servingsLabel, type RecipeLang, type RecipeWithLines } from "@/lib/recipes";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { MenuDish, MenuMeal } from "@/types/database";
@@ -70,12 +75,29 @@ export function MenuView() {
   const monday = weekStart(weekParam && DAY.test(weekParam) ? weekParam : today);
   const showRecipes = params.get("recipes") === "1";
 
-  const { dishes, notes, loaded, weekLoaded } = useMenuWeek(monday);
+  const { dishes, notes, loaded, weekLoaded, weekFailed } = useMenuWeek(monday);
   // Last week too, for Copy last week.
   const { weekLoaded: lastWeekLoaded } = useMenuWeek(addDays(monday, -7));
   const held = useAllHeldDishes();
   const { recipes } = useRecipes();
   const cook = useCookFlow(lang, false);
+  // Add missing adds up only fresh data: the week, the recipes and the items
+  // from the server in this session (Codex, PR #101).
+  const { fresh: recipesFresh, errored: recipesErrored } = useRecipes();
+  const { listsFresh, syncFailed, refresh } = useHousehold();
+  const missingReady = shortfallReadiness({
+    weekLoaded,
+    weekFailed,
+    recipesFresh,
+    recipesErrored,
+    listsFresh,
+    listsFailed: syncFailed,
+  });
+  function retryMissing() {
+    void loadRecipes(true);
+    void loadMenuWeek(monday, true);
+    void refresh({ silent: true }).catch(() => undefined);
+  }
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState<DishFormTarget | null>(null);
@@ -252,11 +274,22 @@ export function MenuView() {
           <CopyPlus /> {t("Copy last week", "Salin minggu lalu")}
         </Button>
       )}
-      {anyLeft && (
-        <Button variant="outline" className="min-h-11 rounded-xl" onClick={() => setMissingOpen(true)}>
-          <ShoppingBasket /> {t("Add missing to Shopping", "Tambahkan yang kurang ke Belanja")}
-        </Button>
-      )}
+      {anyLeft &&
+        (missingReady === "failed" ? (
+          <Button variant="outline" className="min-h-11 rounded-xl" onClick={retryMissing}>
+            <RefreshCw /> {t("Couldn't load. Try again", "Belum bisa dimuat. Coba lagi")}
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            className="min-h-11 rounded-xl"
+            onClick={() => setMissingOpen(true)}
+            disabled={missingReady === "loading"}
+          >
+            {missingReady === "loading" ? <Loader2 className="animate-spin" /> : <ShoppingBasket />}{" "}
+            {missingReady === "loading" ? t("Loading…", "Memuat…") : t("Add missing to Shopping", "Tambahkan yang kurang ke Belanja")}
+          </Button>
+        ))}
 
       <button
         type="button"
@@ -296,7 +329,15 @@ export function MenuView() {
       {cook.sheets}
       <DishFormSheet target={form} dishes={held} onClose={() => setForm(null)} />
       <KitchenNotesSheet open={notesOpen} notes={notes} onClose={() => setNotesOpen(false)} />
-      <AddMissingSheet open={missingOpen} dishes={dishes} from={from} to={end} onClose={() => setMissingOpen(false)} />
+      <AddMissingSheet
+        open={missingOpen}
+        dishes={dishes}
+        from={from}
+        to={end}
+        readiness={missingReady}
+        onRetry={retryMissing}
+        onClose={() => setMissingOpen(false)}
+      />
     </div>
   );
 }

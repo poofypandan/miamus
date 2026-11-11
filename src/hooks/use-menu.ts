@@ -30,6 +30,8 @@ export function useMenuWeek(
   failed: boolean;
   /** This week came from the server in this session (not only the phone's copy). */
   weekLoaded: boolean;
+  /** This week's last read failed and hasn't come in since. */
+  weekFailed: boolean;
 } {
   const state = useSyncExternalStore(subscribeMenu, getMenuSnapshot, () => EMPTY_MENU);
   const current = household();
@@ -49,6 +51,7 @@ export function useMenuWeek(
     loaded: mine && state.loaded,
     failed: mine && state.failed,
     weekLoaded: mine && state.weeks.includes(monday),
+    weekFailed: mine && state.failedWeeks.includes(monday),
   };
 }
 

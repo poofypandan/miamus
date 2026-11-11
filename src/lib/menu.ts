@@ -305,6 +305,32 @@ export function cookReadiness(
 }
 
 /**
+ * Whether Add missing to Shopping may add things up yet (Codex, PR #101):
+ * the review is a snapshot, so it waits until the week's dishes, the recipes
+ * and the household's items all came from the server in this session. The
+ * phone's copy alone could freeze "Nothing to add" or miss a shortfall.
+ * Failed, when any of the three reads failed and hasn't come in since.
+ */
+export function shortfallReadiness(state: {
+  weekLoaded: boolean;
+  weekFailed: boolean;
+  recipesFresh: boolean;
+  recipesErrored: boolean;
+  listsFresh: boolean;
+  listsFailed: boolean;
+}): CookReadiness {
+  if (
+    (!state.weekLoaded && state.weekFailed) ||
+    (!state.recipesFresh && state.recipesErrored) ||
+    (!state.listsFresh && state.listsFailed)
+  ) {
+    return "failed";
+  }
+  if (!state.weekLoaded || !state.recipesFresh || !state.listsFresh) return "loading";
+  return "ready";
+}
+
+/**
  * What cook_menu_dish takes: the ticked lines, each > 0, at most 100,000,
  * with the unit the phone saw, so the server converts (or refuses) if an
  * owner changed the item's unit meanwhile (Codex, PR #101).
