@@ -7,7 +7,7 @@
 // and no tokens used.
 //
 // It is not clever, and isn't meant to be: it recognises days, times, names,
-// rooms, "buy", food words and pet meal/potty times, asks one question when
+// rooms, "buy", food words and pet routines (meals, potty, walks, lights off…), asks one question when
 // the day or a food's date is missing, and otherwise suggests. What it
 // tests is the app around Kakak, never Kakak's judgement — that needs the
 // real eval (tests/kakak).
@@ -16,6 +16,10 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { addDays, weekdayIndex, type KakakHousehold } from "./household";
 import { splitRefinementNote } from "./refine";
+import { routineKindInfo } from "@/lib/pet-routine-kinds";
+import type { RoutineKind } from "@/types/database";
+import type { PetRoutineToolKind } from "./tools";
+import { newPetTimes } from "./validate";
 
 /** Practice mode is on only when asked for, and never on production. */
 export function practiceAllowed(env: Record<string, string | undefined>): boolean {
@@ -114,6 +118,55 @@ function findRef<T extends { ref: string; name: string }>(list: T[], text: strin
     return name.length >= 2 && t.includes(name);
   });
   return hits.sort((a, b) => b.name.length - a.name.length)[0] ?? null;
+}
+
+/**
+ * Every pet the text names ("Mocha dan Matcha"), or every dog for "the dogs"
+ * / "anjing-anjing" / "both dogs", in the household's order.
+ */
+function findPets(household: KakakHousehold, text: string): KakakHousehold["pets"] {
+  if (has(text, /\b(the dogs|both dogs|anjing-anjing|kedua anjing|semua anjing)\b/)) {
+    return household.pets.filter((pet) => pet.kind === "dog");
+  }
+  const t = ` ${text.toLowerCase()} `;
+  return household.pets.filter((pet) => {
+    const name = pet.name.toLowerCase().trim();
+    return name.length >= 2 && t.includes(name);
+  });
+}
+
+/** The routine a sentence is about; a meal unless it names another (Phase 173 PR B). */
+function petRoutineKind(text: string): PetRoutineToolKind {
+  if (has(text, /\b(lampu|lights?)\b/)) return "lights";
+  if (has(text, /\b(jalan-jalan|jalan pagi|jalan sore|walks?)\b/)) return "walk";
+  if (has(text, /\b(air minum|fresh water|water)\b/)) return "water";
+  if (has(text, /\b(sikat gigi|teeth)\b/)) return "teeth";
+  if (has(text, /\b(ajak main|play)\b/)) return "play";
+  if (has(text, /\b(pipis|pup|potty|jalan)\b/)) return "potty";
+  return "meal";
+}
+
+/**
+ * Practice mode's one warm sentence for a routine card, as the real Kakak is
+ * told to write it (prompt.ts): "(Latihan) Baik. Kakak siapkan: Syam matikan
+ * lampu untuk Mocha dan Matcha setiap hari jam 21.30."
+ */
+function warmLine(
+  household: KakakHousehold,
+  { kind, pets, times, staff }: { kind: PetRoutineToolKind; pets: KakakHousehold["pets"]; times: string[]; staff: string | null },
+): string {
+  const id = household.ownerLocale === "id";
+  const info = routineKindInfo(kind as RoutineKind);
+  const who = staff ? household.people.find((p) => p.ref === staff)?.name ?? null : null;
+  const names = pets.map((p) => p.name);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} ${id ? "dan" : "and"} ${names[names.length - 1]}` : names[0];
+  const at = times.map((t) => (id ? t.replace(":", ".") : t)).join(", ");
+  if (id) {
+    const what = (info?.title ?? "Rutinitas").toLowerCase();
+    return `(Latihan) Baik. Kakak siapkan: ${who ? `${who} ` : ""}${what} untuk ${list} setiap hari jam ${at}.`;
+  }
+  const what = (info?.en ?? "the routine").toLowerCase();
+  return `(Practice) Of course. I'll set up ${what} for ${list} every day at ${at}${who ? `, done by ${who}` : ""}.`;
 }
 
 /** A person by first name ("Ari" in "Ari pel teras"). */
@@ -301,8 +354,8 @@ type Intent = "shopping" | "food" | "pet" | "chore";
 function intentOf(household: KakakHousehold, text: string): Intent {
   if (has(text, /\b(beli|belikan|buy|habis|abis|out of|running low|restock)\b/)) return "shopping";
   if (
-    findRef(household.pets, text) &&
-    has(text, /\b(makan|meal|meals|feed|feeding|sarapan|breakfast|dinner|pipis|pup|potty|walk|jalan)\b/) &&
+    findPets(household, text).length > 0 &&
+    has(text, /\b(makan|meal|meals|feed|feeding|sarapan|breakfast|dinner|pipis|pup|potty|walk|jalan|lampu|lights?|air minum|water|sikat gigi|teeth|ajak main|play)\b/) &&
     timesFrom(text).length
   ) {
     return "pet";
@@ -461,14 +514,33 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
   }
 
   if (intent === "pet") {
-    const pet = findRef(household.pets, first)!;
-    const potty = has(first, /\b(pipis|pup|potty|walk|jalan)\b/);
-    const existing = new Set(potty ? pet.potty : pet.meals);
-    const times = timesFrom(first).filter((t) => !existing.has(t)).slice(0, 12);
+    const pets = findPets(household, first);
+    const kind = petRoutineKind(first);
+    const asked = timesFrom(first).slice(0, 12);
+    // Skips a time every named pet already has; the route drops the rest per pet.
+    const times = asked.filter((time) => pets.some((pet) => newPetTimes(household, pet.ref, kind, [time]).length > 0));
     if (times.length === 0) return message(model, [text(copy.stuck)]);
+    const basic = kind === "meal" || kind === "potty";
+    // A person, a reminder and an alert only on a routine (meals and potty are for anyone).
+    const person = basic ? null : findPerson(household, first);
+    const staff = person && person !== household.owner.ref ? person : null;
+    const remind = !basic && has(first, /\b(ingatkan(?! saya)|remind (?!me)|reminder)\b/);
+    const alert = !basic && has(first, /\b(kabari|kabarin|tell me|tell us|let me know)\b/);
     return message(model, [
-      text(copy.here),
-      toolUse("add_pet_routine", { pet: pet.ref, kind: potty ? "potty" : "meal", times, label: null }),
+      text(basic ? copy.here : warmLine(household, { kind, pets, times, staff })),
+      toolUse("add_pet_routine", {
+        pets: pets.map((pet) => pet.ref),
+        kind,
+        times,
+        days: null,
+        until: null,
+        title: null,
+        title_en: null,
+        staff,
+        note: null,
+        remind_staff: remind,
+        alert_owners: alert,
+      }),
     ]);
   }
 

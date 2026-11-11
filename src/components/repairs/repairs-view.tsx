@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronRight, HardHat, Plus, RefreshCw, Siren, Wrench } from "lucide-react";
+import { ChevronRight, HardHat, Plus, RefreshCw, Share2, Siren, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { WhatsNewCard } from "@/components/shared/whats-new";
+import { DeveloperListSheet } from "@/components/repairs/developer-list-sheet";
 import { RepairReportSheet } from "@/components/repairs/repair-report-sheet";
 import { RepairSheet, repairStageText } from "@/components/repairs/repair-sheet";
 import { WalkInFinishSheet, WalkInStartSheet } from "@/components/repairs/walkin-sheets";
@@ -13,6 +14,7 @@ import { useLocationName } from "@/hooks/use-household-locations";
 import { useRepairs } from "@/hooks/use-repairs";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useFormatTime } from "@/components/ui/ui-labels";
+import { developerItems } from "@/lib/developer-list";
 import { repairStage, repairsBoard } from "@/lib/repairs";
 import { cn } from "@/lib/utils";
 import type { Repair, RepairWalkIn } from "@/types/database";
@@ -34,6 +36,14 @@ export function RepairsView() {
   const [finishing, setFinishing] = useState<RepairWalkIn | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const openRepair = repairs.find((r) => r.id === openId) ?? null;
+  const placeName = useLocationName();
+  // Send to the developer (Phase 174 PR C): a fresh list, all ticked, each time it opens.
+  const [sending, setSending] = useState(0);
+  const [sendOpen, setSendOpen] = useState(false);
+  const developerList = useMemo(
+    () => developerItems(board.open, visits, walkIns, placeName),
+    [board.open, visits, walkIns, placeName]
+  );
   const empty = board.toReview.length + board.open.length + board.fixed.length === 0;
 
   return (
@@ -70,6 +80,18 @@ export function RepairsView() {
           <RepairSection title={t("To review", "Perlu dicek")} repairs={board.toReview} onOpen={setOpenId} />
           <RepairSection title={t("Open", "Sedang berjalan")} repairs={board.open} onOpen={setOpenId} />
           <RepairSection title={t("Fixed", "Sudah diperbaiki")} repairs={board.fixed} onOpen={setOpenId} />
+          {board.open.length > 0 && (
+            <Button
+              variant="ghost"
+              className="min-h-[44px] self-center rounded-xl text-gray-700"
+              onClick={() => {
+                setSending((n) => n + 1);
+                setSendOpen(true);
+              }}
+            >
+              <Share2 /> {t("Send to the developer", "Kirim ke developer")}
+            </Button>
+          )}
         </>
       )}
 
@@ -86,6 +108,13 @@ export function RepairsView() {
       />
       <WalkInFinishSheet visit={finishing} onClose={() => setFinishing(null)} locale={locale} asStaff={false} />
       <RepairSheet repair={openRepair} onClose={() => setOpenId(null)} />
+      <DeveloperListSheet
+        key={sending}
+        open={sendOpen}
+        onClose={() => setSendOpen(false)}
+        items={developerList}
+        walkIns={walkIns}
+      />
     </div>
   );
 }

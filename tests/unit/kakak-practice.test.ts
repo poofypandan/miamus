@@ -159,8 +159,8 @@ describe("practice conversations", () => {
   it("pet meal times skip the ones the pet already has", async () => {
     const { deps } = setup("id");
     const result = suggestions(await runKakakTurn(deps, null, "Mochi makan jam 7 dan jam 5 sore"));
-    expect(result.items[0]).toMatchObject({ kind: "pet_routine", petId: id(10) });
-    const times = result.items[0].kind === "pet_routine" ? result.items[0].times.map((t) => t.time) : [];
+    expect(result.items[0]).toMatchObject({ kind: "pet_routine", pets: [{ petId: id(10) }] });
+    const times = result.items[0].kind === "pet_routine" ? result.items[0].pets[0].times.map((t) => t.time) : [];
     expect(times).toEqual(["17:00"]);
   });
 
@@ -175,14 +175,14 @@ describe("practice conversations", () => {
 
   it("a time with minutes and am/pm is read once", async () => {
     const pm = suggestions(await runKakakTurn(setup("en").deps, null, "Feed Mochi at 9:00 pm"));
-    expect(pm.items[0].kind === "pet_routine" ? pm.items[0].times.map((t) => t.time) : []).toEqual(["21:00"]);
+    expect(pm.items[0].kind === "pet_routine" ? pm.items[0].pets[0].times.map((t) => t.time) : []).toEqual(["21:00"]);
     const am = suggestions(await runKakakTurn(setup("en").deps, null, "Feed Mochi at 9:15 am"));
-    expect(am.items[0].kind === "pet_routine" ? am.items[0].times.map((t) => t.time) : []).toEqual(["09:15"]);
+    expect(am.items[0].kind === "pet_routine" ? am.items[0].pets[0].times.map((t) => t.time) : []).toEqual(["09:15"]);
   });
 
   it("Indonesian evening times with minutes", async () => {
     const result = suggestions(await runKakakTurn(setup("id").deps, null, "Mochi makan jam 9.30 malam"));
-    expect(result.items[0].kind === "pet_routine" ? result.items[0].times.map((t) => t.time) : []).toEqual(["21:30"]);
+    expect(result.items[0].kind === "pet_routine" ? result.items[0].pets[0].times.map((t) => t.time) : []).toEqual(["21:30"]);
   });
 
   it("a change to a shopping or pet card is declined, not silently ignored", async () => {
@@ -208,7 +208,7 @@ describe("practice conversations", () => {
   it("12 am is midnight, once", async () => {
     const { deps } = setup("en");
     const result = suggestions(await runKakakTurn(deps, null, "Feed Mochi at 12 am"));
-    const times = result.items[0].kind === "pet_routine" ? result.items[0].times.map((t) => t.time) : [];
+    const times = result.items[0].kind === "pet_routine" ? result.items[0].pets[0].times.map((t) => t.time) : [];
     expect(times).toEqual(["00:00"]);
   });
 

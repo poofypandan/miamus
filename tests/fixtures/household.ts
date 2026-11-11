@@ -11,7 +11,7 @@ import type { HouseholdTask, MasterSchedule, TaskEntity, TaskLog } from "@/types
  */
 export const HOUSEHOLD_ID = "00000000-0000-4000-8000-000000000001";
 
-function pet(id: string, name: string): TaskEntity {
+export function pet(id: string, name: string): TaskEntity {
   return {
     id,
     household_id: HOUSEHOLD_ID,

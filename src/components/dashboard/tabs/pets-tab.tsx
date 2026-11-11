@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { DateRibbon } from "@/components/date-ribbon";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { AddRoutineSheet, type AddRoutineTarget } from "@/components/dashboard/add-routine-sheet";
+import { StarterRoutinesSheet } from "@/components/dashboard/starter-routines-sheet";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
 import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { useHousehold } from "@/context/household-context";
@@ -16,6 +17,7 @@ import { useToday } from "@/hooks/use-today";
 import { dayLabel } from "@/lib/date-label";
 import { petPhotoLogs } from "@/lib/pets";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import type { TaskEntity } from "@/types/database";
 
 /**
  * The pets dashboard: how each dog's day is going, and what came back on
@@ -49,6 +51,8 @@ export function PetsTab() {
   const [addOpen, setAddOpen] = useState(false);
   // Add routine from here starts with every pet ticked (Phase 173, D1).
   const [routineTarget, setRoutineTarget] = useState<AddRoutineTarget | null>(null);
+  // The pet just added, whose usual routines are offered (Phase 173 PR B, D9).
+  const [starterPet, setStarterPet] = useState<TaskEntity | null>(null);
   const canManagePets = userRole === "owner";
 
   // Null until the owner picks a day, so the view follows the clock over
@@ -85,6 +89,7 @@ export function PetsTab() {
       createEntity={createEntity}
       updateEntity={updateEntity}
       deleteEntity={deleteEntity}
+      onCreated={setStarterPet}
     />
   ) : null;
 
@@ -101,6 +106,8 @@ export function PetsTab() {
   return (
     <div className="flex flex-col gap-3 px-4 pb-6">
       {addDialog}
+      {/* Outside the list: the first pet's sheet opens while the empty state is still showing. */}
+      {canManagePets && <StarterRoutinesSheet pet={starterPet} onClose={() => setStarterPet(null)} />}
 
       {pets.length === 0 ? (
         // No date ribbon until there is a pet: it would pick a day for a

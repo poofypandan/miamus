@@ -3,7 +3,7 @@
 // household, and real dates. Pure; run by `--check` and by the unit tests.
 
 import { householdRefs, type KakakHousehold } from "@/lib/kakak/household";
-import { KAKAK_TOOLS } from "@/lib/kakak/tools";
+import { KAKAK_TOOLS, TOOL_WEEKDAYS } from "@/lib/kakak/tools";
 import { isDay, isTime } from "@/lib/kakak/validate";
 import type { ExpectedShoppingItem, FieldMatcher, KakakTestSet } from "./types";
 
@@ -12,9 +12,13 @@ const REF_FIELDS: Record<string, "people" | "pets" | "rooms" | "items"> = {
   room: "rooms",
   pet: "pets",
   item: "items",
+  staff: "people",
 };
 
-const DATE_FIELDS = new Set(["due_date", "recurrence_until", "expires_on"]);
+/** Fields whose sameSet lists references (add_pet_routine's pets, Phase 173 PR B). */
+const REF_SET_FIELDS: Record<string, "people" | "pets" | "rooms" | "items"> = { pets: "pets" };
+
+const DATE_FIELDS = new Set(["due_date", "recurrence_until", "expires_on", "until"]);
 const TIME_FIELDS = new Set(["due_time"]);
 
 function schemaFields(tool: string): Set<string> {
@@ -61,8 +65,19 @@ export function checkTestSet(
         const [from, to] = matcher.timeBetween;
         if (!isTime(from) || !isTime(to) || from > to) problems.push(`${where}: ${field} has a bad time range`);
       }
-      if ("sameSet" in matcher && !matcher.sameSet.every(isTime)) {
-        problems.push(`${where}: ${field} has a time that is not HH:mm`);
+      if ("sameSet" in matcher) {
+        const setKind = REF_SET_FIELDS[field];
+        if (setKind) {
+          for (const value of matcher.sameSet) {
+            if (!refs[setKind].has(value)) problems.push(`${where}: ${field} ${JSON.stringify(value)} is not in the household`);
+          }
+        } else if (field === "days") {
+          if (!matcher.sameSet.every((d) => (TOOL_WEEKDAYS as readonly string[]).includes(d))) {
+            problems.push(`${where}: days has a day that is not mon … sun`);
+          }
+        } else if (!matcher.sameSet.every(isTime)) {
+          problems.push(`${where}: ${field} has a time that is not HH:mm`);
+        }
       }
       if ("textHas" in matcher && (matcher.textHas.length === 0 || matcher.textHas.some((g) => g.length === 0))) {
         problems.push(`${where}: ${field} has an empty textHas group`);

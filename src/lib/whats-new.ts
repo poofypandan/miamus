@@ -50,6 +50,52 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
+    // Phase 173 PR B (D8): the one card for Kakak's pet routines, in the
+    // Kakak sheet before the first try, for households with Kakak only. It
+    // follows the calm-start rules (one card a week, never to new
+    // households), so it waits if another card holds this week.
+    id: "kakak-routines-2026-11",
+    date: "2026-11-12",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: Kakak sets up pet routines", id: "Baru: Kakak bisa mengatur rutinitas hewan" },
+    steps: {
+      en: [
+        "Say it in one sentence: \u201cLights off for both dogs every day at 9:30 PM\u201d. One card covers every pet.",
+        "Walks, lights off, play, fresh water, brushing teeth or anything else, on the days you choose. A walk asks staff for 3 photos; anything else, 1.",
+        "Kakak can also remind staff at that time, or tell you if it isn't done. Nothing is saved until you confirm.",
+      ],
+      id: [
+        "Cukup satu kalimat: \u201cMatikan lampu untuk kedua anjing setiap hari jam 21.30\u201d. Satu kartu untuk semua hewan.",
+        "Jalan-jalan, matikan lampu, ajak main, ganti air minum, sikat gigi atau yang lain, di hari yang Anda pilih. Jalan-jalan minta 3 foto dari staf; yang lain 1 foto.",
+        "Kakak juga bisa mengingatkan staf di jam itu, atau mengabari Anda jika belum dikerjakan. Tidak ada yang disimpan sebelum Anda konfirmasi.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
+    // Phase 173 PR B (D9). Listed in Household → What's new only, never a
+    // card: the list appears by itself after Add pet and explains itself.
+    // Staff need no tutorial: the routines show on Today like any other.
+    id: "pet-starters-2026-11",
+    date: "2026-11-12",
+    audience: "owner",
+    title: { en: "New: usual routines for a new pet", id: "Baru: rutinitas biasa untuk hewan baru" },
+    steps: {
+      en: [
+        "After Add pet, Miamus offers the usual routines, ticked: a morning walk, an evening walk and fresh water for a dog; fresh water and the litter box for a cat.",
+        "Your household's other routines, like lights off, are offered too, unticked: tick one to add the new pet to it.",
+        "Untick what you don't want, then Add. Skip adds nothing.",
+      ],
+      id: [
+        "Setelah Tambah Hewan, Miamus menawarkan rutinitas yang biasa, sudah dicentang: jalan pagi, jalan sore dan ganti air minum untuk anjing; ganti air minum dan pasir kucing untuk kucing.",
+        "Rutinitas lain di rumah Anda, seperti matikan lampu, juga ditawarkan tanpa centang: centang untuk menambahkan hewan baru ke rutinitas itu.",
+        "Hapus centang yang tidak perlu, lalu Tambah. Lewati tidak menambahkan apa pun.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Phase 170 PR B: shown on Kitchen → Menu while the Kitchen switch is
     // on, under the calm-start rules (one card a week, never to new
     // households): Kitchen amounts' card had this week, so it waits.
@@ -67,6 +113,29 @@ export const WHATS_NEW: WhatsNewEntry[] = [
         "Dapur → Menu → Resep baru: nama, porsi, dan bahan dari daftar Anda. Cara membuat opsional.",
         "Ditulis dalam bahasa Inggris? Tambahkan versi Bahasa Indonesia untuk staf: HP staf hanya menampilkan Bahasa Indonesia.",
         "Yang memasak membukanya di Dapur → Menu, dan bisa mengubah porsinya: jumlah bahannya ikut berubah.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
+    // Phase 174 PR C (D7 A). Listed in Household → What's new only, never a
+    // card: this week's card already went to walk-ins (walkins-2026-11; one
+    // card a week). The button sits under the Repairs list and explains
+    // itself. Owners only; staff see nothing new.
+    id: "developer-list-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: send repairs to the developer", id: "Baru: kirim perbaikan ke developer" },
+    steps: {
+      en: [
+        "Chores → Repairs → Send to the developer: every open repair with its photos, all ticked. Untick what isn't the developer's.",
+        "Share on WhatsApp sends a short, polite list with the photos, in Bahasa Indonesia (English is one tap away). Save as PDF makes a page to send as a file.",
+        "Miamus doesn't send it: you choose who gets it.",
+      ],
+      id: [
+        "Tugas → Perbaikan → Kirim ke developer: semua perbaikan yang masih terbuka beserta fotonya, sudah dicentang. Hapus centang yang bukan urusan developer.",
+        "Bagikan lewat WhatsApp mengirim daftar singkat dan sopan beserta fotonya, dalam Bahasa Indonesia (bahasa Inggris tinggal satu ketukan). Simpan sebagai PDF membuat halaman untuk dikirim sebagai berkas.",
+        "Miamus tidak mengirimkannya: Anda yang memilih penerimanya.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },

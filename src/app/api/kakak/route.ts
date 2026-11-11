@@ -90,7 +90,7 @@ async function readRows(
   const schedules = petIds.length
     ? await supabase
         .from("master_schedules")
-        .select("entity_id, title, frequency_type, fixed_times, is_active, expires_at")
+        .select("entity_id, title, frequency_type, fixed_times, is_active, expires_at, kind, days_of_week, created_at")
         .in("entity_id", petIds)
     : { data: [], error: null };
   if (schedules.error) throw schedules.error;

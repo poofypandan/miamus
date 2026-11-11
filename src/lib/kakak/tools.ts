@@ -23,6 +23,16 @@ export const KAKAK_TOOL_NAMES = [
 
 export type KakakToolName = (typeof KAKAK_TOOL_NAMES)[number];
 
+/**
+ * add_pet_routine's kinds (Phase 173 PR B, D8): meals and potty as before,
+ * then the Add routine sheet's kinds (lib/pet-routine-kinds.ts).
+ */
+export const PET_ROUTINE_TOOL_KINDS = ["meal", "potty", "walk", "lights", "play", "water", "teeth", "other"] as const;
+export type PetRoutineToolKind = (typeof PET_ROUTINE_TOOL_KINDS)[number];
+
+/** Weekdays as the tool writes them; ISO order (1 = Monday ... 7 = Sunday). */
+export const TOOL_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+
 export const KAKAK_TOOLS: Anthropic.Tool[] = [
   {
     name: "create_chore",
@@ -127,23 +137,50 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
   {
     name: "add_pet_routine",
     description:
-      "Suggest daily meal or potty times for one pet. Only meals and potty breaks; medicine, grooming and vet visits are done on the Pets tab. Never saves anything.",
+      "Suggest one pet routine for the owner to confirm: meal or potty times, or another routine (a walk, lights off, play, fresh water, brushing teeth, or something else). One call covers every pet it is for: 'both dogs' is one call. Medicine, grooming and vet visits are done on the Pets tab. Never saves anything.",
     strict: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
-      required: ["pet", "kind", "times", "label"],
+      required: ["pets", "kind", "times", "days", "until", "title", "title_en", "staff", "note", "remind_staff", "alert_owners"],
       properties: {
-        pet: { type: "string", description: "A pet reference (P1, …). For 'the dogs', one call per pet." },
-        kind: { type: "string", enum: ["meal", "potty"] },
+        pets: {
+          type: "array",
+          items: { type: "string" },
+          description: "1 to 8 pet references (P1, …): every pet the routine is for.",
+        },
+        kind: { type: "string", enum: [...PET_ROUTINE_TOOL_KINDS] },
         times: {
           type: "array",
           items: { type: "string" },
-          description: "1 to 12 times, HH:mm, 24-hour, each a new time (not one the pet already has).",
+          description: "1 to 12 times, HH:mm, 24-hour.",
         },
-        label: nullableString(
-          "Meals only, optional, Indonesian ('Sarapan'). Null to use the app's default.",
+        days: {
+          anyOf: [{ type: "array", items: { type: "string", enum: [...TOOL_WEEKDAYS] } }, { type: "null" }],
+          description: "Null for every day; otherwise the weekdays it happens on. Always null for meal and potty.",
+        },
+        until: {
+          anyOf: [{ type: "string", format: "date" }, { type: "null" }],
+          description: "Null for no end; otherwise the last day, YYYY-MM-DD. Always null for meal and potty.",
+        },
+        title: nullableString(
+          "Bahasa Indonesia, as staff will read it. Required for other ('Sisir bulu'). For a meal, an optional label ('Sarapan'). Otherwise null for the routine's own name. Max 60 characters.",
         ),
+        title_en: nullableString("For other: an English gloss for an English-speaking owner, else null."),
+        staff: nullableString(
+          "A staff reference (S1, …) only when the owner says who does it; null means anyone. Always null for meal and potty.",
+        ),
+        note: nullableString(
+          "A short note staff see on the card, only if the owner gave one ('Pakai tali'). Max 120 characters. Always null for meal and potty.",
+        ),
+        remind_staff: {
+          type: "boolean",
+          description: "True only if the owner asks for staff to be reminded at the routine's time. Always false for meal and potty.",
+        },
+        alert_owners: {
+          type: "boolean",
+          description: "True only if the owner asks to be told when it isn't done. Always false for meal and potty.",
+        },
       },
     },
   },

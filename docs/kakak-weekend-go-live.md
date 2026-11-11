@@ -179,6 +179,14 @@ shopping, pet meals, a food that needs a question, two things at once,
 something Kakak can't do, an attempt to override her rules, and a bare
 "Mbak". **Pass:** at least 9 of 10, and no "must-never" failures.
 
+Pet routines (Phase 173 PR B: lights off for both dogs, a walk for one dog,
+a question when no time is given, weekdays, "until Friday", a person with a
+reminder, an alert), about US$0.15–0.50:
+
+```bash
+npm run eval:kakak -- --model opus --effort low --cases K101,K102,K103,K104,K105,K106,K107,K108 --budget 2
+```
+
 Optional, the same sentences on Sonnet 5.5 for comparison (about
 US$0.10–0.35):
 
@@ -205,12 +213,14 @@ wrong card costs nothing: tap **Cancel**.
 | 3 | Tolong tambahin ke list belanja: gula 2 kg, kopi bubuk, sama baterai AA | Add 3 rolls of tissue and dish soap to the list | Shopping with amounts, in everyday language. Staff see the list in Indonesian. |
 | 4 | Tante Rina bawa rantang isi opor, rantangnya harus dikembalikan | Aunt Rina brought opor in her container, we need to give it back | Kakak **asks** when it needs eating by, with one-tap answers. Pick her guess: the card marks it "Kakak's guess — check it" and remembers to return the container. |
 | 5 | [Mochi] makan jam 7 pagi dan jam 6 sore | Feed [Mochi] at 7 am and 6 pm | Pet meal times. If one is already set, Kakak says so instead of adding it twice. |
+| 5b | Matikan lampu untuk [Mocha] dan [Matcha] setiap hari jam 21.30 | Lights off for [Mocha] and [Matcha] every day at 9:30 pm | One routine for both dogs, one card: **Routine · Mocha & Matcha**, a photo as proof. Add "ingatkan staf" / "remind staff" for a reminder at 21.30, or "kabari saya kalau belum" / "tell me if it isn't done" for an alert. |
+| 5c | Jalan-jalan [Matcha] tiap sore jam 5, [Mocha] tidak usah | Walk [Matcha] every evening at 5, not [Mocha] | One dog only. A walk for one dog asks staff for 3 photos (start, there, back). |
 | 6 | Ingatkan saya bayar listrik tiap tanggal 20 | Remind me to pay the electricity bill on the 20th every month | "Remind me" becomes your own monthly chore. |
 | 7 | (after any card, tap **Ubah** / **Change**) Jam 10 saja | Make it 10 instead | You correct her in plain words; the card updates. |
 | 7b | (on a chore card, tap the chips) **Sekali saja · Setiap Senin · Siapa saja** | **One time · Every Monday · Anyone** | Refine how often and who with one tap, no typing. Instant: the chips don't ask the AI. |
 | 8 | Kasih obat cacing ke [Mochi] tiap 3 bulan | Give [Mochi] worm medicine every 3 months | She says honestly that she can't set up medicine yet, and where to add it by hand. |
 
-**Good order for an audience:** 1, 7b, 2, 4, 7, then whichever they ask for.
+**Good order for an audience:** 1, 7b, 2, 5b, 4, 7, then whichever they ask for.
 Hand the phone to someone and let them try their own sentence: that's the
 moment that sells it.
 

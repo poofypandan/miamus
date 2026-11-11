@@ -8,7 +8,8 @@
 // Pure, so it is unit-tested; the result passes isSaveableSuggestion like
 // anything the route built.
 
-import type { ChoreRecurrence, ChoreSuggestion } from "./suggestions";
+import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
+import type { ChoreRecurrence, ChoreSuggestion, PetRoutineSuggestion } from "./suggestions";
 
 export const REPEAT_CHOICES: ChoreRecurrence[] = ["none", "daily", "weekly", "monthly"];
 
@@ -35,6 +36,20 @@ export function refineChore(item: ChoreSuggestion, change: ChoreRefinement): Cho
     assigneeName: change.assignee?.name ?? null,
     assignToSelf: false,
   };
+}
+
+/**
+ * A pet routine card's switches (Phase 173 PR B): remind staff, tell us if
+ * it isn't done. Flipped on the phone with no call to Kakak; a switch none of
+ * the routine's times can use stays off, as the Add routine sheet saves it.
+ */
+export type PetRoutineRefinement = { remindStaff: boolean } | { alertOwners: boolean };
+
+export function refinePetRoutine(item: PetRoutineSuggestion, change: PetRoutineRefinement): PetRoutineSuggestion {
+  if (item.routine === "meal" || item.routine === "potty") return item;
+  const times = item.pets.flatMap((p) => p.times.map((t) => t.time));
+  if ("remindStaff" in change) return { ...item, remindStaff: change.remindStaff && times.some(reminderTimeAllowed) };
+  return { ...item, alertOwners: change.alertOwners && times.some(ownerAlertTimeAllowed) };
 }
 
 /** The chip's words: "Every Monday", "Every month on the 16th" — the card's own wording. */
@@ -80,15 +95,23 @@ const NOTE_CLOSE = ".)";
 export function refinementNote(items: { kind: string }[], room: number = MAX_REFINEMENT_NOTE): string {
   const max = Math.min(room, MAX_REFINEMENT_NOTE);
   const parts = items
-    .filter((item): item is ChoreSuggestion => item.kind === "chore")
+    .filter((item): item is ChoreSuggestion | PetRoutineSuggestion => item.kind === "chore" || item.kind === "pet_routine")
     .map((item) => {
+      if (item.kind === "pet_routine") {
+        // Only a routine's switches can be flipped on the card.
+        if (item.routine === "meal" || item.routine === "potty") return null;
+        const remind = item.remindStaff ? "remind staff" : "no staff reminder";
+        const alert = item.alertOwners ? "tell owners if not done" : "no alert";
+        return `${item.title}: ${remind}, ${alert}`;
+      }
       const how = item.recurrence === "none" ? "one time" : repeatLabel(item.recurrence, item.dueDate, "en").toLowerCase();
       const who = item.assigneeName ? `for ${item.assigneeName}` : "for anyone";
       const days = item.remindDaysBefore ?? null;
       const remind =
         days === null ? "no reminder" : days === 0 ? "remind on the day" : days === 7 ? "remind 1 week before" : `remind ${days} day${days === 1 ? "" : "s"} before`;
       return `${item.title}: ${how}, ${who}, ${remind}`;
-    });
+    })
+    .filter((part): part is string => part !== null);
   // Whole parts only, as many as fit: a half-cut "every Mon…" would mislead.
   const kept: string[] = [];
   for (const part of parts) {

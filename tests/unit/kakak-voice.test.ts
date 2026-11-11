@@ -419,7 +419,7 @@ describe("what Kakak reads aloud", () => {
         kind: "card",
         text: "Here's what I'll add:",
         items: [
-          { kind: "pet_routine", petId: "p1", petName: "Mochi", routine: "potty", times: [{ time: "07:00", title: "Potty" }, { time: "17:00", title: "Potty" }], alreadyThere: ["12:00"] },
+          { kind: "pet_routine", routine: "potty", pets: [{ petId: "p1", petName: "Mochi", times: [{ time: "07:00", title: "Potty" }, { time: "17:00", title: "Potty" }], alreadyThere: ["12:00"] }], title: null, titleEn: null, days: null, until: null, staffId: null, staffName: null, note: null, proof: null, remindStaff: false, alertOwners: false },
         ],
       },
       "en"
