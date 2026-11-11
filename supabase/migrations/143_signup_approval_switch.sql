@@ -31,6 +31,22 @@
 --   notify_household_joined(uid, name)   internal: "New household · X just
 --        joined" to the platform admins, best-effort.
 --
+--   household_access_requests.notify_whatsapp   OPTIONAL: the Indonesian
+--        WhatsApp number someone waiting for approval asked to be told on
+--        (owner, 2026-11-11), as 628…, digits only. Asked only on the waiting
+--        screen, never on the way to a household. Read only by platform
+--        admins (the approvals list). Kept only until it is used: cleared
+--        when the operator opens WhatsApp to tell them, when the request is
+--        rejected, when they create their household, and by the nightly prune
+--        30 days after they asked at the latest.
+--   normalize_id_whatsapp(text)      +62 / 62 / 08 / 8… with spaces or
+--        dashes → 628…, or null when it isn't an Indonesian mobile number.
+--   set_my_access_contact(number)    the person waiting sets or clears their
+--        own number (null: email). Only on their own pending request.
+--   my_access_contact()              reads it back, for their own screen.
+--   household_access_told(user)      platform admins: the operator opened
+--        WhatsApp to tell them; the number is cleared.
+--
 -- RE-CREATED, each from its newest definition:
 --   my_household_access (113)        a sixth answer, 'open': no request yet
 --        and automatic approval is available (never while the switch is
@@ -46,9 +62,12 @@
 --        switch, cap and lock, and returns 'approved' (old app builds map an
 --        unknown answer to "none" and still call this; 'approved' is what
 --        they understand). Otherwise files pending and pushes, as before.
---   list_household_access_requests (113)   also returns `auto` and the
---        account's language (for the Email them text). Return type changes,
---        so it is dropped first.
+--   list_household_access_requests (113)   also returns `auto`, the
+--        account's language (for the ready message) and the WhatsApp number
+--        if they gave one. Return type changes, so it is dropped first.
+--   decide_household_access (113)    a rejection clears the number.
+--   prune_household_access_requests (113)   also clears any number asked
+--        for more than 30 days ago.
 --
 -- WITH THE SWITCH OFF (the default) nothing about signing up changes:
 -- my_household_access answers 'none' to a new account, it taps Request
@@ -60,9 +79,10 @@
 -- prune of rejected requests; anonymous sessions can never request or create.
 --
 -- Privacy policy and legal.ts updated in the same PR (section 3: we review
--- each request and email when it's approved; if automatic approval is
+-- each request and tell the person by WhatsApp or email; the optional
+-- number, who sees it and when it is deleted; if automatic approval is
 -- switched on, new households are reviewed afterwards; whether an approval
--- was automatic is stored). Additive: one table, one column with a default, new
+-- was automatic is stored; section 7: the number's retention). Additive: one table, one column with a default, new
 -- internal functions, four re-created. Every SECURITY DEFINER function
 -- revokes EXECUTE from public and anon; the internal ones from
 -- authenticated too.
@@ -82,6 +102,34 @@ revoke all on public.signup_config from public, anon, authenticated;
 grant select, insert, update, delete on public.signup_config to service_role;
 
 alter table public.household_access_requests add column if not exists auto boolean not null default false;
+
+-- The optional WhatsApp number to tell them on (owner, 2026-11-11).
+alter table public.household_access_requests add column if not exists notify_whatsapp text;
+alter table public.household_access_requests drop constraint if exists household_access_requests_notify_whatsapp_check;
+alter table public.household_access_requests add constraint household_access_requests_notify_whatsapp_check
+  check (notify_whatsapp is null or notify_whatsapp ~ '^628[1-9][0-9]{6,10}$');
+
+-- An Indonesian mobile number as WhatsApp wants it (628…), from what people
+-- type: +62 812-3456-7890, 0812 3456 7890, 812345678. Null if it isn't one.
+create or replace function public.normalize_id_whatsapp(p_input text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select case when d ~ '^628[1-9][0-9]{6,10}$' then d end
+    from (
+      select case
+               when x like '62%' then x
+               when x like '0%' then '62' || substr(x, 2)
+               when x like '8%' then '62' || x
+               else x
+             end as d
+        from (select regexp_replace(coalesce(p_input, ''), '[[:space:]().+-]', '', 'g') as x) a
+    ) b;
+$$;
+revoke all on function public.normalize_id_whatsapp(text) from public, anon;
+grant execute on function public.normalize_id_whatsapp(text) to authenticated, service_role;
 
 -- The cap counts automatic approvals by the Jakarta day they were made.
 create index if not exists household_access_requests_auto_decided_idx
@@ -286,7 +334,8 @@ returns table (
   requested_at timestamptz,
   decided_at timestamptz,
   auto boolean,
-  locale text
+  locale text,
+  whatsapp text
 )
 language plpgsql
 stable
@@ -310,7 +359,8 @@ begin
       r.requested_at,
       r.decided_at,
       r.auto,
-      coalesce(p.locale, 'en')::text
+      coalesce(p.locale, 'en')::text,
+      r.notify_whatsapp
     from public.household_access_requests r
     join auth.users u on u.id = r.user_id
     left join public.user_preferences p on p.user_id = r.user_id
@@ -385,6 +435,11 @@ begin
   insert into public.household_members (household_id, user_id, role)
   values (new_id, uid, 'owner');
 
+  -- In: the number they asked to be told on has done its job (or never will).
+  update public.household_access_requests r
+     set notify_whatsapp = null
+   where r.user_id = uid and r.notify_whatsapp is not null;
+
   -- Reviewed afterwards: the operator hears who joined (D1). Never at the
   -- household's cost.
   if coalesce(joined_auto, false) then
@@ -400,3 +455,158 @@ end;
 $$;
 revoke all on function public.create_household(text, boolean) from public, anon;
 grant execute on function public.create_household(text, boolean) to authenticated, service_role;
+
+-- --- 7. Telling them they're in: the optional WhatsApp number -------------------------
+-- The person waiting sets (or clears, with null or '') the number on their
+-- own pending request. Returns what is stored: 628…, or null for email.
+create or replace function public.set_my_access_contact(p_whatsapp text)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+  anonymous boolean;
+  clean text;
+begin
+  if uid is null then
+    raise exception 'not_authenticated' using errcode = '28000';
+  end if;
+  select u.is_anonymous into anonymous from auth.users u where u.id = uid;
+  if coalesce(anonymous, true) then
+    raise exception 'anonymous_cannot_request_household' using errcode = '42501';
+  end if;
+  if nullif(btrim(coalesce(p_whatsapp, '')), '') is not null then
+    clean := public.normalize_id_whatsapp(p_whatsapp);
+    if clean is null then
+      raise exception 'invalid_whatsapp' using errcode = '22023';
+    end if;
+  end if;
+  update public.household_access_requests r
+     set notify_whatsapp = clean
+   where r.user_id = uid and r.status = 'pending';
+  if not found then
+    raise exception 'no_pending_request' using errcode = '22023';
+  end if;
+  return clean;
+end;
+$$;
+revoke all on function public.set_my_access_contact(text) from public, anon;
+grant execute on function public.set_my_access_contact(text) to authenticated, service_role;
+
+-- Their own number, for the waiting screen. Null for email, or no request.
+create or replace function public.my_access_contact()
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select r.notify_whatsapp from public.household_access_requests r where r.user_id = auth.uid();
+$$;
+revoke all on function public.my_access_contact() from public, anon;
+grant execute on function public.my_access_contact() to authenticated, service_role;
+
+-- The operator opened WhatsApp to tell them they're in: the number goes.
+-- Platform admins only; only for an approved request.
+create or replace function public.household_access_told(p_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_platform_admin() then
+    raise exception 'not_platform_admin' using errcode = '42501';
+  end if;
+  update public.household_access_requests r
+     set notify_whatsapp = null
+   where r.user_id = p_user_id and r.status = 'approved';
+end;
+$$;
+revoke all on function public.household_access_told(uuid) from public, anon;
+grant execute on function public.household_access_told(uuid) to authenticated, service_role;
+
+-- --- 8. Decisions (113): a rejection clears the number --------------------------------
+create or replace function public.decide_household_access(p_user_id uuid, p_approve boolean)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_platform_admin() then
+    raise exception 'not_platform_admin' using errcode = '42501';
+  end if;
+  if p_approve is null then
+    raise exception 'decision_required' using errcode = '22023';
+  end if;
+
+  update public.household_access_requests r
+     set status = case when p_approve then 'approved' else 'rejected' end,
+         decided_at = now(),
+         decided_by = auth.uid(),
+         -- Nobody is told on WhatsApp that they weren't approved.
+         notify_whatsapp = case when p_approve then r.notify_whatsapp end
+   where r.user_id = p_user_id;
+
+  if not found then
+    raise exception 'request_not_found' using errcode = '22023';
+  end if;
+end;
+$$;
+revoke all on function public.decide_household_access(uuid, boolean) from public, anon;
+grant execute on function public.decide_household_access(uuid, boolean) to authenticated, service_role;
+
+-- --- 9. The nightly prune (113): numbers go after 30 days at the latest ---------------
+create or replace function public.prune_household_access_requests()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target record;
+  removed integer := 0;
+begin
+  -- The WhatsApp number to tell them on is kept 30 days at most (privacy
+  -- policy, section 7), whatever became of the request (migrations/143).
+  update public.household_access_requests r
+     set notify_whatsapp = null
+   where r.notify_whatsapp is not null
+     and r.requested_at < now() - interval '30 days';
+
+  for target in
+    select r.user_id
+      from public.household_access_requests r
+     where r.status = 'rejected'
+       and r.decided_at < now() - interval '30 days'
+  loop
+    begin
+      perform 1 from auth.users u where u.id = target.user_id for update;
+
+      if found
+         and not exists (select 1 from public.household_members m where m.user_id = target.user_id)
+         and not exists (select 1 from public.device_sessions d where d.user_id = target.user_id)
+         and not exists (select 1 from public.platform_admins pa where pa.user_id = target.user_id)
+      then
+        -- Cascades to the request row, identities, sessions and push devices.
+        delete from auth.users u where u.id = target.user_id;
+      else
+        -- Gone already, or kept because it is something else now: only the
+        -- request goes.
+        delete from public.household_access_requests r where r.user_id = target.user_id;
+      end if;
+      removed := removed + 1;
+    exception when others then
+      -- The block's changes roll back, the request with them: retried tomorrow.
+      raise warning 'Rejected account % not deleted, will retry: %', target.user_id, sqlerrm;
+    end;
+  end loop;
+
+  return removed;
+end;
+$$;
+revoke all on function public.prune_household_access_requests() from public, anon, authenticated;
+grant execute on function public.prune_household_access_requests() to service_role;

@@ -97,8 +97,16 @@ export const LEGAL = {
   // approval was automatic is stored; the operator still sees the creator's
   // Google name and email. The 30-day deletion of rejected requests is
   // unchanged. No new service.
-  policyVersion: "2026-11-10.8",
-  effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
+  // 2026-11-11.1: telling people they're in (Phase 172 PR A1, owner
+  // 2026-11-11) — while waiting for approval, someone may leave a WhatsApp
+  // number to be told on (optional, Indonesian mobile numbers only); only
+  // Poofy Labs sees it, only to say the request is approved; deleted once
+  // they're messaged, on rejection, when they set up their household, or 30
+  // days after asking at the latest (migrations/143). We tell people by
+  // WhatsApp or email. No new service (WhatsApp is opened on the operator's
+  // own phone; Miamus sends nothing).
+  policyVersion: "2026-11-11.1",
+  effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on

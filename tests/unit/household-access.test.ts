@@ -3,6 +3,8 @@ import {
   canCreateHousehold,
   createHouseholdFailure,
   emailThemHref,
+  formatWhatsApp,
+  normalizeWhatsApp,
   parseHouseholdAccess,
 } from "@/lib/household-access";
 
@@ -57,5 +59,32 @@ describe("emailThemHref", () => {
   it("is null without an email", () => {
     expect(emailThemHref({ email: null, locale: "en", full_name: "Sam" })).toBeNull();
     expect(emailThemHref({ email: "  ", locale: "en", full_name: "Sam" })).toBeNull();
+  });
+});
+
+describe("normalizeWhatsApp", () => {
+  it("turns Indonesian mobile numbers as people type them into 628…", () => {
+    expect(normalizeWhatsApp("+62 812 3456 7890")).toBe("6281234567890");
+    expect(normalizeWhatsApp("0812-3456-7890")).toBe("6281234567890");
+    expect(normalizeWhatsApp("(0812) 345.678")).toBe("62812345678");
+    expect(normalizeWhatsApp("0812 345 678")).toBe("62812345678");
+    expect(normalizeWhatsApp("81234567")).toBe("6281234567");
+    expect(normalizeWhatsApp("6281234567890")).toBe("6281234567890");
+  });
+
+  it("refuses landlines, foreign numbers and nonsense", () => {
+    expect(normalizeWhatsApp("021 555 1234")).toBeNull();
+    expect(normalizeWhatsApp("+1 415 555 0100")).toBeNull();
+    expect(normalizeWhatsApp("0812")).toBeNull();
+    expect(normalizeWhatsApp("08123456789012345")).toBeNull();
+    expect(normalizeWhatsApp("abc")).toBeNull();
+    expect(normalizeWhatsApp("")).toBeNull();
+  });
+});
+
+describe("formatWhatsApp", () => {
+  it("writes it the local way", () => {
+    expect(formatWhatsApp("6281234567890")).toBe("0812-3456-7890");
+    expect(formatWhatsApp("62812345678")).toBe("0812-3456-78");
   });
 });

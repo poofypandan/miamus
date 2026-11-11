@@ -42,6 +42,8 @@ export interface AccessRequest {
   auto?: boolean;
   /** The account's language, for the Email them text. */
   locale?: string | null;
+  /** The WhatsApp number they asked to be told on (628…), if any (migrations/143). */
+  whatsapp?: string | null;
 }
 
 /** Pending first (oldest first, so nobody waits longest), then decisions, newest first. */
@@ -97,4 +99,28 @@ export function emailThemHref(request: Pick<AccessRequest, "email" | "locale" | 
     ? `${greeting}\n\nAnda sudah bisa masuk. Buka miamus.app untuk menyiapkan rumah Anda.\n\nPoofy Labs`
     : `${greeting}\n\nYou're in. Open miamus.app to set up your household.\n\nPoofy Labs`;
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/**
+ * An Indonesian mobile number as WhatsApp wants it (628…, digits only), from
+ * what people type: "+62 812-3456-7890", "0812 3456 7890", "812345678". Null
+ * when it isn't one. The database's normalize_id_whatsapp() (migrations/143)
+ * does the same and has the last word.
+ */
+export function normalizeWhatsApp(input: string): string | null {
+  const digits = input.replace(/[\s().+-]/g, "");
+  const d = digits.startsWith("62")
+    ? digits
+    : digits.startsWith("0")
+      ? `62${digits.slice(1)}`
+      : digits.startsWith("8")
+        ? `62${digits}`
+        : digits;
+  return /^628[1-9]\d{6,10}$/.test(d) ? d : null;
+}
+
+/** 6281234567890 → "0812-3456-7890", the way Indonesians write it. */
+export function formatWhatsApp(number: string): string {
+  const local = number.startsWith("62") ? `0${number.slice(2)}` : number;
+  return [local.slice(0, 4), local.slice(4, 8), local.slice(8)].filter(Boolean).join("-");
 }

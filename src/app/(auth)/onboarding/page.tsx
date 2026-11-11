@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Clock, Languages, Loader2, PawPrint, ShieldX, UserRoundPlus } from "lucide-react";
+import { Clock, Languages, Loader2, Mail, MessageCircle, PawPrint, ShieldX, UserRoundPlus } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { LanguageChoice } from "@/components/dashboard/language-settings";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import { moduleHref } from "@/lib/dashboard-modules";
 import {
   canCreateHousehold,
   createHouseholdFailure,
+  formatWhatsApp,
+  normalizeWhatsApp,
   parseHouseholdAccess,
   type HouseholdAccess,
 } from "@/lib/household-access";
@@ -255,16 +257,12 @@ function WaitingScreen({ onCheck }: { onCheck: () => Promise<void> }) {
     <Screen icon={<Clock className="size-5" />}>
       <Heading>{t("Request sent", "Permintaan terkirim")}</Heading>
       <Body>
-        {email
-          ? t(
-              `We'll email you at ${email} from ${LEGAL.contactEmail}, usually within a day.`,
-              `Kami akan mengirim email ke ${email} dari ${LEGAL.contactEmail}, biasanya dalam sehari.`
-            )
-          : t(
-              `We'll email you from ${LEGAL.contactEmail}, usually within a day.`,
-              `Kami akan mengirim email dari ${LEGAL.contactEmail}, biasanya dalam sehari.`
-            )}
+        {t(
+          "We'll let you know by WhatsApp or email, usually within a day.",
+          "Kami akan memberi tahu lewat WhatsApp atau email, biasanya dalam sehari."
+        )}
       </Body>
+      <TellMeBy email={email} />
       <StaffHint />
       <Button
         variant="outline"
@@ -276,6 +274,161 @@ function WaitingScreen({ onCheck }: { onCheck: () => Promise<void> }) {
       </Button>
       <SignOutButton />
     </Screen>
+  );
+}
+
+/**
+ * "How should we let you know?" (owner, 2026-11-11): one optional question,
+ * only here, while someone waits for approval. Email (their sign-up address,
+ * nothing to type) unless they choose WhatsApp and leave a number. The
+ * number is checked and stored as 628… by set_my_access_contact
+ * (migrations/143), seen only by the operator, and deleted once they're told
+ * (30 days at most). The line under the field is the notice; typing the
+ * number after it is the consent.
+ */
+function TellMeBy({ email }: { email: string | null }) {
+  const t = useT();
+  const { locale } = useOwnerLocaleContext();
+  const [mode, setMode] = useState<"email" | "whatsapp">("email");
+  const [saved, setSaved] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<"invalid" | "failed" | null>(null);
+
+  // What they chose before, on an earlier visit.
+  useEffect(() => {
+    let cancelled = false;
+    void supabase?.rpc("my_access_contact").then(({ data, error }) => {
+      if (cancelled || error || typeof data !== "string" || !data) return;
+      setSaved(data);
+      setMode("whatsapp");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function store(value: string | null): Promise<boolean> {
+    if (!supabase) return false;
+    setBusy(true);
+    setProblem(null);
+    const { data, error } = await supabase.rpc("set_my_access_contact", { p_whatsapp: value });
+    setBusy(false);
+    if (error) {
+      setProblem(error.message?.includes("invalid_whatsapp") ? "invalid" : "failed");
+      return false;
+    }
+    setSaved(typeof data === "string" && data ? data : null);
+    return true;
+  }
+
+  async function chooseEmail() {
+    setMode("email");
+    setProblem(null);
+    // A number left earlier goes: email it is.
+    if (saved) await store(null);
+  }
+
+  async function saveNumber(e: React.FormEvent) {
+    e.preventDefault();
+    const number = normalizeWhatsApp(draft);
+    if (!number) {
+      setProblem("invalid");
+      return;
+    }
+    if (await store(number)) setDraft("");
+  }
+
+  const chip = (on: boolean) =>
+    on
+      ? "flex min-h-11 items-center gap-1.5 rounded-full border border-gray-900 bg-gray-900 px-4 text-sm font-medium text-white"
+      : "flex min-h-11 items-center gap-1.5 rounded-full border bg-white px-4 text-sm font-medium text-gray-700 active:bg-muted";
+
+  return (
+    <fieldset className="flex flex-col gap-2 rounded-xl border bg-white px-4 py-3">
+      <legend className="sr-only">{t("How should we let you know?", "Bagaimana kami memberi tahu Anda?")}</legend>
+      <p aria-hidden className="text-sm font-medium text-gray-900">
+        {t("How should we let you know?", "Bagaimana kami memberi tahu Anda?")}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" aria-pressed={mode === "email"} disabled={busy} onClick={() => void chooseEmail()} className={chip(mode === "email")}>
+          <Mail className="size-4" aria-hidden /> {t("Email", "Email")}
+        </button>
+        <button
+          type="button"
+          aria-pressed={mode === "whatsapp"}
+          disabled={busy}
+          onClick={() => {
+            setMode("whatsapp");
+            setProblem(null);
+          }}
+          className={chip(mode === "whatsapp")}
+        >
+          <MessageCircle className="size-4" aria-hidden /> {t("WhatsApp", "WhatsApp")}
+        </button>
+      </div>
+      {mode === "email" ? (
+        email && (
+          <p className="text-xs text-muted-foreground">
+            {t(`We'll write to ${email}.`, `Kami akan mengirim ke ${email}.`)}
+          </p>
+        )
+      ) : saved && !draft ? (
+        <p className="text-xs text-muted-foreground">
+          {t(
+            `We'll message you on WhatsApp at ${formatWhatsApp(saved)}.`,
+            `Kami akan mengirim pesan WhatsApp ke ${formatWhatsApp(saved)}.`
+          )}{" "}
+          <button type="button" onClick={() => setDraft(formatWhatsApp(saved))} className="font-medium text-gray-900 underline underline-offset-4">
+            {t("Change", "Ubah")}
+          </button>
+        </p>
+      ) : (
+        <form onSubmit={(e) => void saveNumber(e)} className="flex flex-col gap-2">
+          <Label htmlFor="tell-whatsapp" className="text-xs font-medium text-gray-900">
+            {t("Your WhatsApp number", "Nomor WhatsApp Anda")}
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="tell-whatsapp"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="0812 3456 7890"
+              maxLength={24}
+              className="min-h-[44px] flex-1"
+            />
+            <Button type="submit" disabled={busy || !draft.trim()} className="min-h-[44px] rounded-lg">
+              {busy && <Loader2 className="animate-spin" />} {t("Save", "Simpan")}
+            </Button>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {t(
+              "We'll use your number only to tell you you're approved, then delete it. ",
+              "Nomor Anda hanya kami pakai untuk memberi tahu bahwa Anda sudah disetujui, lalu kami hapus. "
+            )}
+            <Link
+              href={locale === "id" ? "/privasi#household-requests" : "/privacy#household-requests"}
+              className="font-medium text-gray-900 underline underline-offset-4"
+            >
+              {t("Privacy policy", "Kebijakan privasi")}
+            </Link>
+          </p>
+        </form>
+      )}
+      {problem && (
+        <p className="text-xs text-destructive" role="alert">
+          {problem === "invalid"
+            ? t(
+                "Enter an Indonesian mobile number, like 0812 3456 7890.",
+                "Masukkan nomor HP Indonesia, misalnya 0812 3456 7890."
+              )
+            : t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi.")}
+        </p>
+      )}
+    </fieldset>
   );
 }
 

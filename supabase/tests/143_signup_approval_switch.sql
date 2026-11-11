@@ -131,10 +131,16 @@ select pg_temp.ok(pg_temp.text_as(:n5, 'select public.request_household_access()
   '... asking files a pending request');
 select pg_temp.ok((select count(*) = 1 from pg_temp.pushes where user_id = :pa::uuid and title = 'New household request'),
   '... and the operator is pushed to approve it');
+select pg_temp.ok(pg_temp.text_as(:n5, $q$ select public.set_my_access_contact('0812-3456-7890') $q$) = '6281234567890',
+  'waiting, they leave a WhatsApp number to be told on');
 select pg_temp.ok(pg_temp.err_as(:pa, format('select public.decide_household_access(%L, true)', :n5)) = '',
   'the operator approves');
+select pg_temp.ok((select notify_whatsapp = '6281234567890' from public.household_access_requests where user_id = :n5::uuid),
+  '... and the number is still there, to tell them');
 select pg_temp.ok(pg_temp.err_as(:n5, $q$ select public.create_household('Rumah Wati', false) $q$) = '',
   '... and only then can the household be created');
+select pg_temp.ok((select notify_whatsapp is null from public.household_access_requests where user_id = :n5::uuid),
+  'creating the household clears the number: they know they''re in');
 select pg_temp.ok(not exists (select 1 from pg_temp.pushes where title in ('New household', 'Rumah baru')),
   '... with no "just joined" push for a hand approval');
 
@@ -250,6 +256,87 @@ select pg_temp.ok(pg_temp.text_as(:pa, $q$ select auto::text || '|' || locale fr
 select pg_temp.ok(pg_temp.err_as(:n1, 'select * from public.list_household_access_requests()') like '%not_platform_admin%',
   'anyone else is refused the list');
 
+-- ---- The optional WhatsApp number (owner, 2026-11-11) ------------------------------------
+select pg_temp.ok(public.normalize_id_whatsapp('+62 812 3456 7890') = '6281234567890'
+                  and public.normalize_id_whatsapp('0812-3456-7890') = '6281234567890'
+                  and public.normalize_id_whatsapp('(0812) 345.678') = '62812345678'
+                  and public.normalize_id_whatsapp('81234567') = '6281234567'
+                  and public.normalize_id_whatsapp('6281234567890') = '6281234567890',
+  'Indonesian mobile numbers as people type them become 628…');
+select pg_temp.ok(public.normalize_id_whatsapp('021 555 1234') is null
+                  and public.normalize_id_whatsapp('+1 415 555 0100') is null
+                  and public.normalize_id_whatsapp('0812') is null
+                  and public.normalize_id_whatsapp('08123456789012345') is null
+                  and public.normalize_id_whatsapp('abc') is null
+                  and public.normalize_id_whatsapp('') is null,
+  '... a landline, a foreign number, too short, too long or not a number is none');
+-- rq: a fresh pending request.
+insert into auth.users (id, instance_id, aud, role, email, is_anonymous, created_at, updated_at)
+values ('00000000-0000-0000-0000-0000000143a9', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+        'rq@test.local', false, now(), now());
+insert into public.household_access_requests (user_id, status) values ('00000000-0000-0000-0000-0000000143a9', 'pending');
+\set rq '''00000000-0000-0000-0000-0000000143a9'''
+select pg_temp.ok(pg_temp.text_as(:rq, $q$ select public.set_my_access_contact('+62 813 1111 2222') $q$) = '6281311112222',
+  'someone waiting sets their number');
+select pg_temp.ok(pg_temp.text_as(:rq, 'select public.my_access_contact()') = '6281311112222',
+  '... and reads it back');
+select pg_temp.ok(pg_temp.err_as(:rq, $q$ select public.set_my_access_contact('021 555 1234') $q$) like '%invalid_whatsapp%',
+  'a number that isn''t an Indonesian mobile is refused');
+select pg_temp.ok((select notify_whatsapp = '6281311112222' from public.household_access_requests where user_id = :rq::uuid),
+  '... and the stored one stays');
+select pg_temp.ok(pg_temp.text_as(:rq, $q$ select coalesce(public.set_my_access_contact(''), 'email') $q$) = 'email'
+                  and pg_temp.text_as(:rq, 'select coalesce(public.my_access_contact(), ''email'')') = 'email',
+  'choosing email clears it');
+select pg_temp.ok(pg_temp.err_as(:n1, $q$ select public.set_my_access_contact('0812 3456 7890') $q$) like '%no_pending_request%',
+  'only a pending request takes a number (not an approved one)');
+select pg_temp.ok(pg_temp.err_as(:s1, $q$ select public.set_my_access_contact('0812 3456 7890') $q$) like '%anonymous_cannot_request_household%',
+  'a staff phone is refused');
+select pg_temp.ok(pg_temp.err_as(null, $q$ select public.set_my_access_contact('0812 3456 7890') $q$) like '%permission denied%'
+                  and pg_temp.err_as(null, 'select public.my_access_contact()') like '%permission denied%',
+  'anon can''t set or read one');
+select pg_temp.ok(pg_temp.err_as(:n1, 'select * from public.household_access_requests') like '%permission denied%',
+  'no client reads the requests table');
+select pg_temp.text_as(:rq, $q$ select public.set_my_access_contact('0813 1111 2222') $q$);
+select pg_temp.ok(pg_temp.text_as(:pa, $q$ select whatsapp from public.list_household_access_requests() where email = 'rq@test.local' $q$)
+                  = '6281311112222',
+  'the platform admin sees it in the approvals list');
+select pg_temp.ok(pg_temp.err_as(:n1, format('select public.household_access_told(%L)', :rq)) like '%not_platform_admin%',
+  'nobody else can mark it used');
+select pg_temp.ok(pg_temp.err_as(:pa, format('select public.household_access_told(%L)', :rq)) = ''
+                  and (select notify_whatsapp = '6281311112222' from public.household_access_requests where user_id = :rq::uuid),
+  'while still pending, opening WhatsApp clears nothing');
+select pg_temp.ok(pg_temp.err_as(:pa, format('select public.decide_household_access(%L, true)', :rq)) = '',
+  'approved');
+select pg_temp.ok(pg_temp.err_as(:pa, format('select public.household_access_told(%L)', :rq)) = '',
+  '... the operator opens WhatsApp to tell them');
+select pg_temp.ok((select notify_whatsapp is null from public.household_access_requests where user_id = :rq::uuid),
+  '... and the number is gone');
+-- A rejection clears it too.
+update public.household_access_requests set status = 'pending', decided_at = null, decided_by = null where user_id = :rq::uuid;
+select pg_temp.text_as(:rq, $q$ select public.set_my_access_contact('0813 1111 2222') $q$);
+select pg_temp.ok(pg_temp.err_as(:pa, format('select public.decide_household_access(%L, false)', :rq)) = '',
+  'rejected');
+select pg_temp.ok((select notify_whatsapp is null from public.household_access_requests where user_id = :rq::uuid),
+  '... and the number is gone: nobody is told on WhatsApp they weren''t approved');
+-- The nightly prune: 30 days at most.
+update public.household_access_requests set status = 'pending', decided_at = null, decided_by = null where user_id = :rq::uuid;
+select pg_temp.text_as(:rq, $q$ select public.set_my_access_contact('0813 1111 2222') $q$);
+select pg_temp.text_as(:pd, $q$ select public.set_my_access_contact('0814 3333 4444') $q$);
+update public.household_access_requests set requested_at = now() - interval '31 days' where user_id = :rq::uuid;
+select public.prune_household_access_requests();
+select pg_temp.ok((select notify_whatsapp is null and status = 'pending' from public.household_access_requests where user_id = :rq::uuid),
+  'the nightly prune clears a number asked for more than 30 days ago (the request stays)');
+select pg_temp.ok((select notify_whatsapp = '6281433334444' from public.household_access_requests where user_id = :pd::uuid),
+  '... and keeps a recent one');
+select pg_temp.ok(pg_temp.err_as(:pa, 'select public.prune_household_access_requests()') like '%permission denied%',
+  'no client runs the prune');
+do $$ begin
+  update public.household_access_requests set notify_whatsapp = '+6281234' where user_id = '00000000-0000-0000-0000-0000000143a6';
+  raise exception 'FAIL: a malformed number was stored';
+exception when check_violation then null;
+end $$;
+select 'ok  the table itself refuses a number not in 628… form';
+
 -- ---- Grants and config -----------------------------------------------------------------------
 select pg_temp.ok(pg_temp.err_as(:n1, 'select * from public.signup_config') like '%permission denied%',
   'no client reads the switch');
@@ -263,7 +350,11 @@ select pg_temp.ok(not has_function_privilege('anon', 'public.my_household_access
                   and not has_function_privilege('anon', 'public.create_household(text, boolean)', 'execute')
                   and not has_function_privilege('anon', 'public.signup_auto_open()', 'execute')
                   and not has_function_privilege('anon', 'public.signup_auto_approve(uuid)', 'execute')
-                  and not has_function_privilege('anon', 'public.notify_household_joined(uuid, text)', 'execute'),
+                  and not has_function_privilege('anon', 'public.notify_household_joined(uuid, text)', 'execute')
+                  and not has_function_privilege('anon', 'public.set_my_access_contact(text)', 'execute')
+                  and not has_function_privilege('anon', 'public.my_access_contact()', 'execute')
+                  and not has_function_privilege('anon', 'public.household_access_told(uuid)', 'execute')
+                  and not has_function_privilege('anon', 'public.decide_household_access(uuid, boolean)', 'execute'),
   'anon executes none of them');
 select pg_temp.ok(not has_function_privilege('authenticated', 'public.signup_auto_open()', 'execute')
                   and not has_function_privilege('authenticated', 'public.signup_auto_approve(uuid)', 'execute')
@@ -277,7 +368,11 @@ select pg_temp.ok((select bool_and(prosecdef and proconfig @> array['search_path
                                   'public.notify_household_joined(uuid, text)'::regprocedure,
                                   'public.my_household_access()'::regprocedure, 'public.request_household_access()'::regprocedure,
                                   'public.list_household_access_requests()'::regprocedure,
-                                  'public.create_household(text, boolean)'::regprocedure)),
+                                  'public.create_household(text, boolean)'::regprocedure,
+                                  'public.set_my_access_contact(text)'::regprocedure, 'public.my_access_contact()'::regprocedure,
+                                  'public.household_access_told(uuid)'::regprocedure,
+                                  'public.decide_household_access(uuid, boolean)'::regprocedure,
+                                  'public.prune_household_access_requests()'::regprocedure)),
   'every definer function pins an empty search_path');
 
 rollback;
