@@ -128,6 +128,32 @@ test("owner: Others is now Other routines, and a routine opens the same sheet to
   expect(rows.map((r) => r.fixed_times)).toEqual([["22:00"], ["22:00"]]);
 });
 
+test("owner: taking pets off a routine ends a row with history and deletes one without", async ({ context, page }) => {
+  const mochi = lights(MOCHI);
+  const bento = lights(BENTO);
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    schedules: [mochi, bento],
+    // Bento's lights were done last night; Mochi's never.
+    logs: [{ id: "00000000-0000-4000-8000-0000000173f1", schedule_id: bento.id, entity_id: BENTO.id, module: "pet", photo_url: null, notes: null, completed_at: new Date(Date.now() - 86_400_000).toISOString(), sub_type: "complete" }],
+  });
+  await page.goto("/dashboard?module=pets");
+  await page.getByRole("button", { name: /Mochi/ }).first().click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Manage Routines" }).click();
+  await page.getByRole("button", { name: /Lights off/ }).click();
+  const sheet = page.getByTestId("add-routine-sheet");
+  await sheet.getByRole("button", { name: "Remove routine" }).click();
+  await page.getByRole("dialog", { name: "Remove this routine?" }).getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByText("Routine removed")).toBeVisible();
+
+  // Mochi's row had no history: gone. Bento's had: it ends yesterday and
+  // leaves the group, so its log keeps its title and it never comes back.
+  expect(stub.schedules.find((s) => s.id === mochi.id)).toBeUndefined();
+  const ended = stub.schedules.find((s) => s.id === bento.id)!;
+  expect(ended.routine_group_id).toBeNull();
+  expect(String(ended.expires_at) < new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())).toBe(true);
+});
+
 test("staff: one photo settles lights off for both dogs, with Batalkan", async ({ context, page }) => {
   const stub = await installStub(context, { stored: freshSession(), staffPhone: true, schedules: [lights(MOCHI), lights(BENTO)] });
   await page.goto("/staff");

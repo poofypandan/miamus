@@ -996,7 +996,11 @@ function silent(route: Route): Route {
  */
 function answerLogs(route: Route, logs: Record<string, unknown>[]) {
   const request = route.request();
-  if (request.method() === "GET") return route.fulfill({ json: logs });
+  if (request.method() === "GET") {
+    // "Has this routine any history?" (Phase 173) asks per schedule_id.
+    const params = new URL(request.url()).searchParams;
+    return route.fulfill({ json: params.has("schedule_id") ? filterRows(logs, params) : logs });
+  }
   // Deletes by id (an undo, a cancelled walk; Phase 173), answered with what went.
   if (request.method() === "DELETE") {
     const gone = filterRows(logs, new URL(request.url()).searchParams);
