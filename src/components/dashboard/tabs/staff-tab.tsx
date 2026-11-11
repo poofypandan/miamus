@@ -47,7 +47,7 @@ import {
 import { PinPad, PIN_LENGTH } from "@/components/auth/pin-pad";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InvitePanel } from "@/components/dashboard/invite-panel";
-import { HouseCodePanel } from "@/components/dashboard/house-code-panel";
+import { formatCode, HouseCodePanel } from "@/components/dashboard/house-code-panel";
 import { HouseholdMembersPanel } from "@/components/dashboard/household-members-panel";
 import { SecuritySettings } from "@/components/dashboard/security-settings";
 import { PushNotificationSettings, pushStatusLabel } from "@/components/dashboard/push-notification-settings";
@@ -557,11 +557,20 @@ function StaffRoster({
       await dataProvider.archiveStaffProfile(profile.id);
       await reload();
       setRemoveTarget(null);
+      // Archiving also gives the house a new code (migrations/146), so the
+      // old one can't be used to sign in again. Shown here, once.
+      const code = await dataProvider.getHouseCode().catch(() => null);
       toast.success(
-        t(
-          `${profile.name} removed — their past work keeps their name`,
-          `${profile.name} dihapus — pekerjaan sebelumnya tetap atas namanya`
-        )
+        code
+          ? t(
+              `${profile.name} removed. The house code is now ${formatCode(code)}; share the new one with your staff.`,
+              `${profile.name} dihapus. Kode rumah sekarang ${formatCode(code)}; bagikan kode baru ke staf Anda.`
+            )
+          : t(
+              `${profile.name} removed. The house code has changed; see it under Staff sign-in.`,
+              `${profile.name} dihapus. Kode rumah sudah diganti; lihat di Masuk staf.`
+            ),
+        { duration: 10000 }
       );
     } catch (err) {
       console.error(err);

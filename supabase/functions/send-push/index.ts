@@ -12,9 +12,9 @@
  *        url?, tag?, user_id?, exclude_user_id? }
  *   → { sent, failed, removed }
  *
- * GET → a self-test of the web-push library in this runtime: it encrypts and
- *   signs a message for a throwaway subscription with throwaway keys, and
- *   sends nothing. No secret needed, because it touches no data.
+ * GET used to run a self-test of the web-push library (key generation and
+ * encryption) for anyone who asked, which only burned function time; removed
+ * (pre-launch audit L3). Anything but POST is 405.
  *
  * The VAPID keys come from Vault with the target list, not from function
  * secrets, so one SQL edit rotates them for the sender and the app at once.
@@ -70,7 +70,6 @@ function uuid(value: unknown): string | null {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "GET") return selfTest();
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   const secret = req.headers.get("x-push-secret") ?? "";
@@ -151,40 +150,6 @@ Deno.serve(async (req) => {
   console.log("send-push", result);
   return json(result);
 });
-
-/**
- * Proves the library's crypto works in this runtime — the ECDH, HKDF and
- * AES-GCM behind payload encryption and the ES256 VAPID signature — without a
- * network call. web-push is a Node library; this is the check that Deno's
- * node: compatibility carries all of it.
- */
-async function selfTest() {
-  try {
-    const vapid = webpush.generateVAPIDKeys();
-    const device = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, [
-      "deriveBits",
-    ]);
-    const raw = new Uint8Array(await crypto.subtle.exportKey("raw", device.publicKey));
-    const b64url = (bytes: Uint8Array) =>
-      btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    const details = webpush.generateRequestDetails(
-      {
-        endpoint: "https://fcm.googleapis.com/fcm/send/self-test",
-        keys: { p256dh: b64url(raw), auth: b64url(crypto.getRandomValues(new Uint8Array(16))) },
-      },
-      JSON.stringify({ title: "self-test", body: "self-test" }),
-      { vapidDetails: { subject: "https://example.com", publicKey: vapid.publicKey, privateKey: vapid.privateKey } }
-    );
-    return json({
-      ok: true,
-      encryptedBytes: (details.body as Uint8Array).length,
-      signed: String(details.headers.Authorization ?? "").startsWith("vapid t="),
-    });
-  } catch (err) {
-    console.error("send-push self-test failed", err);
-    return json({ ok: false, error: String(err) }, 500);
-  }
-}
 
 function failure(error: { code?: string; message: string }) {
   if (error.code === "42501") return json({ error: "Forbidden" }, 403);

@@ -229,6 +229,12 @@ people are **staf** and **admin**.
 | Other routines | **Rutinitas lain** | Phase 173: replaces Others / Lainnya in Manage routines. |
 | Usual routines for Coco | **Rutinitas biasa untuk Coco** | Phase 173 PR B (planned): starter list after adding a pet. |
 | Remind staff at this time | **Ingatkan staf di jam ini** | Phase 173 PR C (planned). Push title **Pengingat**, as Phase 164. |
+| Today's progress · House 6/8 · Pets 12/14 | **Progres Hari ini · Rumah 6/8 · Hewan 12/14** | Staff progress on Today (owners, 11 Nov): one row per person, only the kinds they have. A staff phone shows its own line, grouped as **Progres Anda**. |
+| On leave (a person's progress row) | **Libur** | The everyday word for a day off on a row. **Cuti** stays the word for the leave request itself. |
+| N left · All done · N late · N couldn't be done · No tasks | **Sisa N · Semua selesai · N terlambat · N tidak bisa dikerjakan · Tidak ada tugas** | The calm line under a name. |
+| Anyone, not done yet | **Siapa saja, belum dikerjakan** | The small row for what nobody owns and nobody has done. |
+| Everyone (back from a person's day) · Not yet · From an earlier day | **Semua orang · Belum · Dari hari sebelumnya** | The person's day in Siapa mengerjakan apa. |
+| Supervising a repair since 10.00 (planned) | **Mengawasi perbaikan sejak 10.00** | Phase 174: the busy line's place is ready; nothing fills it yet. |
 | Features (Household row) | **Fitur** | Phase 171 PR A: Household → Fitur replaces "Siapa yang tinggal di sini". Everyday word. |
 | On / off (a feature) | **aktif / dimatikan** | Phase 171 PR A: "4 aktif" on the row; toasts "{Fitur} aktif" · "{Fitur} dimatikan". |
 | Food at home (feature) | **Makanan di rumah** | Phase 171 PR A, the Features row; the Kitchen pill stays **Makanan**. |

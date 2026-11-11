@@ -41,6 +41,7 @@ import { useStaffPush } from "@/hooks/use-staff-push";
 import { usePushResync } from "@/hooks/use-push-resync";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
+import { MyProgressLine } from "@/components/staff/my-progress-line";
 import { LaunchCover } from "@/components/brand/brand-cover";
 import { TapHint } from "@/components/staff/tap-hint";
 import { CompletedSection } from "@/components/agenda/completed-section";
@@ -150,7 +151,7 @@ function StaffTasks() {
         <div className="flex flex-col gap-4 px-4 pt-3">
           {/* Above both views: a failed load is the same news for either. */}
           <ConnectionNotice locale="id" />
-          <OutboxNotice locale="id" />
+          <OutboxNotice locale="id" staff />
           {/* Never remounted, so a view that suspends on first read keeps the
               other one on screen until it is complete (Phase 125). */}
           <Suspense fallback={null}>
@@ -367,6 +368,10 @@ function TasksView() {
         className="flex flex-1 animate-view-fade flex-col gap-4 motion-reduce:animate-none"
       >
         <DateRibbon value={selectedDate} onChange={setSelectedDate} />
+
+        {/* Their own progress, house and pets (staff progress on Today):
+            never a colleague's. */}
+        {!loading && <MyProgressLine staffId={staffId} />}
 
         {/* One tip at a time, newest first (audit B1, item 5): the work
             comes first on a busy morning, not a stack of news. The

@@ -62,7 +62,8 @@ from (values
   ('00000000-0000-0000-0000-0000000146a9', 'nine146@test.local', false),
   ('00000000-0000-0000-0000-0000000146b1', null, true),
   ('00000000-0000-0000-0000-0000000146b2', null, true),
-  ('00000000-0000-0000-0000-0000000146b3', null, true)
+  ('00000000-0000-0000-0000-0000000146b3', null, true),
+  ('00000000-0000-0000-0000-0000000146b4', null, true)
 ) as u(id, email, anon);
 insert into public.households (id, name, owner_auth_id) values
   ('00000000-0000-0000-0000-0000000146f1', 'Rumah Melati', '00000000-0000-0000-0000-0000000146a1'),
@@ -442,6 +443,24 @@ select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select * from public.staff_clai
   'a staff phone can''t read it');
 select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select * from public.staff_claims_today(%L) $q$, :f1)) like '%not_admin%',
   'nor another household''s owner');
+
+-- ---- Claimed, then archived: the phone loses access (Codex P1, PR #90) -----------------
+-- A phone that claimed a name and never signed in with its PIN since must
+-- leave with the person (146's archive_staff_profile, re-created in 147).
+select pg_temp.ok(pg_temp.json_as('00000000-0000-0000-0000-0000000146b4', $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c6', '7777', (select token from pg_temp.claim)) $q$) ->> 'status' = 'ok',
+  'a fresh phone claims Wati');
+select pg_temp.ok(exists (select 1 from public.device_sessions where user_id = '00000000-0000-0000-0000-0000000146b4'
+                                 and household_id = :f1::uuid),
+  '... and is linked');
+-- Even if the link record lost the person (an older app build re-linking
+-- without it), the successful claim itself is enough.
+update public.device_sessions set staff_id = null where user_id = '00000000-0000-0000-0000-0000000146b4';
+select pg_temp.ok(pg_temp.err_as(:a1, $q$ select public.archive_staff_profile('00000000-0000-0000-0000-0000000146c6') $q$) = '',
+  'the owner archives Wati');
+select pg_temp.ok(not exists (select 1 from public.device_sessions where user_id = '00000000-0000-0000-0000-0000000146b4'),
+  '... and the phone that claimed the name is unlinked');
+select pg_temp.ok(pg_temp.json_as('00000000-0000-0000-0000-0000000146b4', $q$ select to_jsonb(coalesce(array_length(public.get_user_household_ids(), 1), 0)) $q$) = '0'::jsonb,
+  '... so it no longer reaches the household''s data');
 
 -- ---- Grants --------------------------------------------------------------------------
 select pg_temp.ok(not has_function_privilege('anon', 'public.house_code_roster(text)', 'execute')

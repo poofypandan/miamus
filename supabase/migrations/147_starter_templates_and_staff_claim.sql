@@ -50,6 +50,8 @@
 -- RE-CREATED
 --   house_code_roster (117)       also returns `claimable`: no PIN yet and
 --        added in the last 7 days.
+--   archive_staff_profile (146)   a successful claim counts as a sign-in when
+--        finding the phones to unlink (Codex P1, PR #90).
 --
 -- CHANGED (additive)
 --   staff_sign_in_attempts.kind   gains 'claim' (kept 30 days like every
@@ -616,3 +618,121 @@ $$;
 
 revoke all on function public.staff_claims_today(uuid) from public, anon;
 grant execute on function public.staff_claims_today(uuid) to authenticated, service_role;
+
+-- --- 5. Archiving someone takes the phone that claimed their name ------------------------
+-- archive_staff_profile, re-created from 146 (its newest definition) with one
+-- change: the "last signed in on" phones include a successful claim, so a
+-- phone linked by claiming a name, and not signed in with the PIN since,
+-- loses the household when the person is archived, even if its link no
+-- longer names them (Codex P1, PR #90). Everything else is 146's.
+create or replace function archive_staff_profile(p_staff_id uuid)
+returns staff_profiles
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row staff_profiles;
+  v_phones uuid[];
+begin
+  if auth.uid() is null then
+    raise exception 'not_authenticated' using errcode = '28000';
+  end if;
+
+  select * into v_row from staff_profiles
+  where id = p_staff_id and household_id = caller_admin_household();
+
+  if not found then
+    raise exception 'No such person in your household' using errcode = '42501';
+  end if;
+
+  -- An admin's roster row belongs to their Google account (migrations/106).
+  -- Taking their access away is the Admins panel's job
+  -- (remove_household_member).
+  if v_row.user_id is not null then
+    raise exception 'This person is an admin — remove their access under Admins instead'
+      using errcode = 'raise_exception';
+  end if;
+
+  update staff_profiles
+     set archived_at = now(),
+         pin = null,
+         has_pin = false
+   where id = p_staff_id
+  returning * into v_row;
+
+  -- Unfinished chores, and every repeating chore they hold (118).
+  update household_tasks
+     set assigned_to = null,
+         completed_by = case
+           when status = 'completed' then coalesce(completed_by, assigned_to)
+           else completed_by
+         end
+   where household_id = v_row.household_id
+     and assigned_to = p_staff_id
+     and (status = 'pending'
+          or (status = 'completed' and recurrence in ('daily', 'weekly', 'monthly')));
+
+  -- Pet routines made for them go back to anyone (Phase 173, migrations/144):
+  -- staff are archived, never deleted, so the column's on delete set null
+  -- would never fire.
+  update master_schedules ms
+     set staff_id = null
+   where ms.staff_id = p_staff_id;
+
+  -- The phones they were last signed in on (119, layer 1), a successful
+  -- claim counting as a sign-in (147: a phone that claimed the name and
+  -- never used its PIN since leaves with the person; Codex, PR #90).
+  with last_pin as (
+    select distinct on (a.user_id) a.user_id, a.staff_id
+      from staff_sign_in_attempts a
+     where a.household_id = v_row.household_id
+       and a.kind in ('pin', 'claim')
+       and a.success
+       and a.user_id is not null
+     order by a.user_id, a.created_at desc, a.id desc
+  )
+  select coalesce(array_agg(l.user_id), '{}') into v_phones
+    from last_pin l
+   where l.staff_id = p_staff_id;
+
+  -- And the phones they last opened, by the link's own record (146).
+  v_phones := v_phones || coalesce((
+    select array_agg(d.user_id) from device_sessions d
+     where d.household_id = v_row.household_id and d.staff_id = p_staff_id
+  ), '{}');
+
+  delete from device_sessions d
+   where d.household_id = v_row.household_id
+     and d.user_id = any (v_phones);
+  delete from push_subscriptions s
+   where s.household_id = v_row.household_id
+     and s.user_id = any (v_phones);
+
+  -- A new house code (pre-launch audit M1): the old one leaves with them.
+  -- Phones still linked stay linked.
+  insert into household_join_codes (household_id, code, rotated_at)
+  values (v_row.household_id, public.new_house_code(), now())
+  on conflict (household_id) do update set code = excluded.code, rotated_at = excluded.rotated_at;
+
+  begin
+    perform public.queue_owner_push(
+      v_row.household_id,
+      'House code changed',
+      v_row.name || ' was removed, so the house code has changed. Open Household to see the new one before you share it.',
+      'Kode rumah diganti',
+      v_row.name || ' sudah dihapus, jadi kode rumah diganti. Buka Rumah untuk melihat kode baru sebelum dibagikan.',
+      '/dashboard?module=access',
+      'house-code-' || v_row.household_id::text,
+      auth.uid()
+    );
+  exception when others then
+    raise warning 'House-code push not queued for household %: %', v_row.household_id, sqlerrm;
+  end;
+
+  return v_row;
+end;
+$$;
+
+revoke all on function archive_staff_profile(uuid) from public, anon;
+grant execute on function archive_staff_profile(uuid) to authenticated;

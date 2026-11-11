@@ -1,3 +1,4 @@
+import { ChoreAlreadySettledError } from "@/lib/chore-settled";
 import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import type { OrganiseRoomsMoved,
@@ -184,8 +185,13 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async deleteLog(id) {
-    const { error } = await client().from("task_logs").delete().eq("id", id);
+    // .select() so a refused delete shows: RLS filters it to zero rows rather
+    // than failing. Since migrations/146 a staff phone may delete only a log
+    // it saved, within its undo window; without this the app would drop the
+    // log and its photo locally while the row stays.
+    const { data, error } = await client().from("task_logs").delete().eq("id", id).select("id");
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Log was not deleted");
   },
   async createSchedule(input) {
     const { data, error } = await client()
@@ -1039,19 +1045,47 @@ export const supabaseProvider: DataProvider = {
     // because a half-cleared chore would show as open while still crediting
     // someone for it.
     const completing = status === "completed";
-    const { data, error, status: httpStatus } = await client()
+    const completedAt = completing ? (patch?.completed_at ?? new Date().toISOString()) : null;
+    const completedBy = completing ? (patch?.completed_by ?? null) : null;
+    let query = client()
       .from("household_tasks")
       .update({
         status,
-        completed_at: completing ? (patch?.completed_at ?? new Date().toISOString()) : null,
-        completed_by: completing ? (patch?.completed_by ?? null) : null,
+        completed_at: completedAt,
+        completed_by: completedBy,
         photo_url: completing ? (patch?.photo_url ?? null) : null,
         before_photo_url: completing ? (patch?.before_photo_url ?? null) : null,
         after_photo_url: completing ? (patch?.after_photo_url ?? null) : null,
       })
-      .eq("id", id)
-      .select();
+      .eq("id", id);
+    // The queued finish (audit M4): never over a newer state.
+    const guarded = completing && !!patch?.onlyIfPending;
+    if (guarded) query = query.eq("status", "pending");
+    const { data, error, status: httpStatus } = await query.select();
     if (error) throw withStatus(error, httpStatus);
+    if (guarded && (!data || data.length === 0)) {
+      const { data: current, error: readError } = await client()
+        .from("household_tasks")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (readError) throw readError;
+      if (current?.status === "completed") {
+        // This finish's own earlier try, whose reply was lost: its photos
+        // (unique per upload) are on the row, or its author and time are.
+        const ownPhoto =
+          (!!patch?.after_photo_url && current.after_photo_url === patch.after_photo_url) ||
+          (!!patch?.before_photo_url && current.before_photo_url === patch.before_photo_url);
+        const same =
+          ownPhoto ||
+          (current.completed_by === completedBy &&
+            !!current.completed_at &&
+            new Date(current.completed_at).getTime() === new Date(completedAt!).getTime());
+        if (same) return current;
+        throw new ChoreAlreadySettledError("completed");
+      }
+      if (current?.status === "cancelled") throw new ChoreAlreadySettledError("cancelled");
+    }
     // .select() so an RLS-filtered update (200 with zero rows) surfaces as a
     // failure instead of a chore that silently never closed — same reasoning
     // as setStaffPin.

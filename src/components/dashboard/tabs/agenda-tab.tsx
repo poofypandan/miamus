@@ -23,6 +23,9 @@ import { ApprovalQueue } from "@/components/dashboard/approval-queue";
 import { MedicationCourseAlerts } from "@/components/dashboard/medication-course-alerts";
 import { PetsQuestionCard } from "@/components/dashboard/pets-question-card";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
+import { StaffProgressCard } from "@/components/dashboard/staff-progress-card";
+import { StaffWorkloadSheet } from "@/components/dashboard/staff-workload-sheet";
+import { useStaffProgress } from "@/hooks/use-staff-progress";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
@@ -185,6 +188,12 @@ export function AgendaTab() {
     () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
     [dateStr, pets, schedules, logs]
   );
+
+  // Staff progress (owners, 11 Nov): one row per person, house and pets,
+  // in place of the Chores tab's chores-only strip. Only in a home with
+  // staff: an owner on their own has nobody to follow.
+  const progress = useStaffProgress({ petsOn });
+  const hasStaff = useMemo(() => (allProfiles ?? []).some((p) => !p.user_id && !p.archived_at), [allProfiles]);
 
   // All | Pets | Chores (Phase 132): narrows what is drawn, never what is
   // loaded. `allEntries` still decides the welcome screen, so filtering a
@@ -469,6 +478,11 @@ export function AgendaTab() {
         {/* Asked once, of a household that never answered and never had a
             pet (Phase 162, D3). Renders nothing otherwise. */}
         <PetsQuestionCard />
+
+        {/* Who is on track, at a glance (owners, 11 Nov): above the quiet
+            lines, since it is what Today is opened for in a home with staff.
+            A row opens that person's day in the Who did what sheet. */}
+        {range === "day" && hasStaff && progress && <StaffProgressCard progress={progress} dayLabel={label} />}
 
         {(linkedToday.length > 0 || notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
           <div className="-my-1 flex flex-col">
@@ -807,6 +821,10 @@ export function AgendaTab() {
           setEditorOpen(true);
         }}
       />
+
+      {/* Who did what, and a person's day from their progress row; open
+          while ?workload= is set. Mounted here only, so one sheet opens. */}
+      <StaffWorkloadSheet />
 
       <EveningSummarySheet
         date={summaryOpen}
