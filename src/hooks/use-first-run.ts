@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHousehold } from "@/context/household-context";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
+import { recordSetupStage } from "@/hooks/use-setup-stage";
+import { stageFrom } from "@/lib/calm-start";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { dataProvider } from "@/lib/data";
 import {
@@ -183,6 +185,20 @@ export function useFirstRun(active = true): FirstRun {
       setMemory({ key: ownerKey, value: next });
     }
   }, [ready, ownerKey, current, steps, view]);
+
+  // What the rest of the app waits on (Phase 172, lib/calm-start): What's
+  // new until past setup, Add to Home Screen until a first task is given.
+  // A checklist this phone already closed as done counts as past.
+  useEffect(() => {
+    if (!ready || !tenantReady) return;
+    recordSetupStage(
+      activeHouseholdId,
+      stageFrom({
+        past: past || current === "finished" || current === "completed",
+        taskGiven: steps.some((step) => step.id === "task" && step.done),
+      })
+    );
+  }, [ready, tenantReady, activeHouseholdId, past, current, steps]);
 
   const remember = useCallback(
     (value: Exclude<FirstRunMemory, null>) => {

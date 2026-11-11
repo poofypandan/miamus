@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { houseCodeMessage, inviteMessage, whatsAppShareUrl } from "@/lib/share-text";
+import { approvedMessage, houseCodeMessage, inviteMessage, whatsAppChatUrl, whatsAppShareUrl } from "@/lib/share-text";
 
 // What the owner's WhatsApp buttons fill in (owner, 2026-11-10): warm,
 // staff text in Indonesian with "Anda", family text in the owner's language.
@@ -39,5 +39,23 @@ describe("share text", () => {
 
   it("puts the text in a WhatsApp share link, encoded", () => {
     expect(whatsAppShareUrl("Halo! a&b\nc")).toBe("https://wa.me/?text=Halo!%20a%26b%0Ac");
+  });
+});
+
+describe("approvedMessage and whatsAppChatUrl (Phase 172)", () => {
+  it("writes both languages, theirs first, with the link and no emoji", () => {
+    const en = approvedMessage("Sam Lee", "en");
+    expect(en).toBe(
+      "Hi Sam, you're in: your Miamus request is approved. Open https://miamus.app to set up your household.\n\n" +
+        "Halo Sam, permintaan Anda untuk Miamus sudah disetujui. Buka https://miamus.app untuk menyiapkan rumah Anda.\n\nPoofy Labs"
+    );
+    expect(approvedMessage(null, "id").startsWith("Halo, permintaan Anda untuk Miamus sudah disetujui.")).toBe(true);
+    expect(en).not.toMatch(/[\u{1F300}-\u{1FAFF}☀-➿]/u);
+  });
+
+  it("opens their chat when there is a number, the picker when not", () => {
+    expect(whatsAppChatUrl("6281234567890", "a b")).toBe("https://wa.me/6281234567890?text=a%20b");
+    expect(whatsAppChatUrl(null, "a b")).toBe("https://wa.me/?text=a%20b");
+    expect(whatsAppChatUrl("+6281234567890", "a")).toBe("https://wa.me/?text=a");
   });
 });

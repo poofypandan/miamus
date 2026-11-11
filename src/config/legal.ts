@@ -90,6 +90,21 @@ export const LEGAL = {
   // closed task counts (kept 400 days); numbers only, never content. Read by
   // Poofy Labs as totals across households, without names; kept while the
   // household exists, deleted with it. No new service.
+  // 2026-11-10.8: sign-up approval (Phase 172 PR A1, migrations/143) —
+  // every request is still reviewed by hand (the owner's choice) and the
+  // person is emailed by hand from the support address once approved;
+  // automatic approval exists behind a switch that is off, and whether an
+  // approval was automatic is stored; the operator still sees the creator's
+  // Google name and email. The 30-day deletion of rejected requests is
+  // unchanged. No new service.
+  // 2026-11-11.1: telling people they're in (Phase 172 PR A1, owner
+  // 2026-11-11) — while waiting for approval, someone may leave a WhatsApp
+  // number to be told on (optional, Indonesian mobile numbers only); only
+  // Poofy Labs sees it, only to say the request is approved; deleted once
+  // they're messaged, on rejection, when they set up their household, or 30
+  // days after asking at the latest (migrations/143). We tell people by
+  // WhatsApp or email. No new service (WhatsApp is opened on the operator's
+  // own phone; Miamus sends nothing).
   // 2026-11-11.2: any routine, for any pets (Phase 173 PR A, migrations/144)
   // — walk photos are taken where the walk goes, so they may show a public
   // place and the staff member; Miamus records no location (no GPS; a camera

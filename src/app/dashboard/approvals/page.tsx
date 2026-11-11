@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, ChartColumn, Check, ChevronRight, Loader2, X } from "lucide-react";
+import { ArrowLeft, ChartColumn, Check, ChevronRight, Link2, Loader2, Mail, MessageCircle, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,10 +12,12 @@ import { useT } from "@/context/owner-locale-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { moduleHref } from "@/lib/dashboard-modules";
 import {
+  emailThemHref,
   requesterLabel,
   sortAccessRequests,
   type AccessRequest,
 } from "@/lib/household-access";
+import { APP_LINK, approvedMessage, whatsAppChatUrl } from "@/lib/share-text";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -170,23 +172,29 @@ export default function HouseholdApprovalsPage() {
           <Card className="py-2">
             <CardContent className="flex flex-col divide-y px-0">
               {decided.map((request) => (
-                <div key={request.user_id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <RequestIdentity request={request} />
+                <div key={request.user_id} data-testid="request-row" className="flex flex-col gap-2 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <RequestIdentity request={request} />
+                    </div>
+                    <StatusBadge status={request.status} />
+                    {/* A mis-tapped Reject is undone here; the database allows
+                        changing a decision (migrations/113). */}
+                    {request.status === "rejected" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void decide(request, true)}
+                        disabled={deciding !== null}
+                        className="min-h-[36px] shrink-0"
+                      >
+                        Approve
+                      </Button>
+                    )}
                   </div>
-                  <StatusBadge status={request.status} />
-                  {/* A mis-tapped Reject is undone here; the database allows
-                      changing a decision (migrations/113). */}
-                  {request.status === "rejected" && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void decide(request, true)}
-                      disabled={deciding !== null}
-                      className="min-h-[36px] shrink-0"
-                    >
-                      Approve
-                    </Button>
+                  {/* Approved by hand: tell them they're in (Phase 172, D2). */}
+                  {request.status === "approved" && !request.auto && (
+                    <TellThem request={request} onTold={() => void fetchRequests()} />
                   )}
                 </div>
               ))}
@@ -198,7 +206,61 @@ export default function HouseholdApprovalsPage() {
   );
 }
 
+/**
+ * Telling someone they're in (Phase 172; owner, 2026-11-11). WhatsApp first:
+ * straight to their chat when they left a number on the waiting screen, the
+ * chat picker when not. Then Email (their sign-up address) and Copy link, to
+ * paste anywhere. Miamus sends nothing itself. Opening WhatsApp to a number
+ * marks it used, and the database deletes it (migrations/143).
+ */
+function TellThem({ request, onTold }: { request: AccessRequest; onTold: () => void }) {
+  const t = useT();
+  const message = approvedMessage(request.full_name, request.locale);
+  const mail = emailThemHref(request);
+  const button =
+    "flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium text-gray-900 active:bg-muted";
+
+  async function told() {
+    if (!request.whatsapp || !supabase) return;
+    const { error } = await supabase.rpc("household_access_told", { p_user_id: request.user_id });
+    if (error) console.error(error);
+    onTold();
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(APP_LINK);
+      toast.success(t("Link copied", "Link disalin"));
+    } catch {
+      toast.error(t("Couldn't copy. Try again.", "Gagal menyalin. Coba lagi."));
+    }
+  }
+
+  return (
+    <div className="flex gap-2">
+      <a
+        href={whatsAppChatUrl(request.whatsapp, message)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => void told()}
+        className={button}
+      >
+        <MessageCircle className="size-3.5" aria-hidden /> {t("WhatsApp", "WhatsApp")}
+      </a>
+      {mail && (
+        <a href={mail} className={button}>
+          <Mail className="size-3.5" aria-hidden /> {t("Email", "Email")}
+        </a>
+      )}
+      <button type="button" onClick={() => void copyLink()} className={button}>
+        <Link2 className="size-3.5" aria-hidden /> {t("Copy link", "Salin link")}
+      </button>
+    </div>
+  );
+}
+
 function RequestIdentity({ request }: { request: AccessRequest }) {
+  const t = useT();
   const when = new Date(request.decided_at ?? request.requested_at).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -211,6 +273,8 @@ function RequestIdentity({ request }: { request: AccessRequest }) {
       )}
       <span className="text-xs text-muted-foreground">
         {request.status === "pending" ? `Asked ${when}` : `Decided ${when}`}
+        {/* Approved at sign-up, reviewed afterwards (Phase 172, D1). */}
+        {request.auto && <> · {t("Automatic", "Otomatis")}</>}
       </span>
     </div>
   );

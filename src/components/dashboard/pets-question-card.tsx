@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
+import { petsQuestionAllowed } from "@/lib/calm-start";
 import { isPet } from "@/lib/pets";
 
 /**
@@ -21,10 +22,12 @@ import { isPet } from "@/lib/pets";
 export function PetsQuestionCard() {
   const t = useT();
   const { entities, loading } = useHousehold();
-  const { hasPets, ready, setHasPets } = useHouseholdProfile();
+  const { hasPets, createdOn, ready, setHasPets } = useHouseholdProfile();
   const [saving, setSaving] = useState<boolean | null>(null);
 
-  if (!ready || loading || hasPets !== null || entities.some(isPet)) return null;
+  // Never for a household made since the sign-up question (Phase 172, D11
+  // rule 6): it answered there, even on an old build that sent no answer.
+  if (!ready || loading || hasPets !== null || entities.some(isPet) || !petsQuestionAllowed(createdOn)) return null;
 
   async function answer(on: boolean) {
     setSaving(on);

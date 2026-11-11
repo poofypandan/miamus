@@ -11,6 +11,8 @@ import {
 } from "@/components/dashboard/staff-onboarding-banner";
 import { useT } from "@/context/owner-locale-context";
 import { usePushStatus } from "@/hooks/use-push-status";
+import { useSetupStage } from "@/hooks/use-setup-stage";
+import { homeScreenTipAllowed } from "@/lib/calm-start";
 import { pushInPlace } from "@/lib/in-place-navigation";
 import { readSnooze, shouldShowPushPrompt, snoozeUntil, writeSnooze } from "@/lib/push-prompt";
 
@@ -42,6 +44,9 @@ export function PushPrompt() {
   const [snoozed, setSnoozed] = useState<number | null | undefined>(undefined);
   const [tipShowing, setTipShowing] = useState(true);
   const [busy, setBusy] = useState(false);
+  // After setup, not before (Phase 172, D11 rule 5): a new owner's first
+  // Today is the checklist alone until a first task is given.
+  const stage = useSetupStage();
   // Not on Household → Notifications itself, which says it all already.
   const searchParams = useSearchParams();
   const onSettingsPage = searchParams.get("module") === "access" && searchParams.get("page") === "notifications";
@@ -55,7 +60,12 @@ export function PushPrompt() {
     return () => window.removeEventListener(INSTALL_TIP_DISMISSED_EVENT, onTipDismissed);
   }, []);
 
-  if (onSettingsPage || snoozed === undefined || !shouldShowPushPrompt(status, snoozed, Date.now(), tipShowing)) {
+  if (
+    onSettingsPage ||
+    snoozed === undefined ||
+    !homeScreenTipAllowed(stage) ||
+    !shouldShowPushPrompt(status, snoozed, Date.now(), tipShowing)
+  ) {
     return null;
   }
 

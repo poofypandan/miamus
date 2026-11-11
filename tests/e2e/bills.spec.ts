@@ -110,7 +110,8 @@ test("Bahasa Indonesia: Coming up on Today, the tutorial, and a yearly bill's fo
     due_date: ymd(dateIn(30)),
     remind_days_before: 7,
   });
-  const stub = await installStub(context, { owner: { locale: "id" }, chores: [pbb, stnk] });
+  // One What's new card a week (Phase 172): this test is about this one.
+  const stub = await installStub(context, { owner: { locale: "id" }, chores: [pbb, stnk], whatsNewWeek: "bills-2026-11" });
   await page.goto("/dashboard");
 
   // Two days out, inside its 3-day window; the yearly one isn't yet.

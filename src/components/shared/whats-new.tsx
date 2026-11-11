@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { useToday } from "@/hooks/use-today";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { useHouseholdProfile } from "@/hooks/use-household-profile";
+import { useSetupStage } from "@/hooks/use-setup-stage";
+import { parseWhatsNewWeek, whatsNewDecision, type WhatsNewWeek } from "@/lib/calm-start";
 import {
   STAFF_TIP_CLOSED_ON_KEY,
   STAFF_WHATS_NEW,
@@ -26,6 +29,26 @@ function wasSeen(id: string): boolean {
   }
 }
 
+/** Rule 3's memory: which card holds this week on this phone. */
+const WEEK_KEY = "miamus.whats-new.week";
+
+function readWeek(): WhatsNewWeek | null {
+  try {
+    return parseWhatsNewWeek(localStorage.getItem(WEEK_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function writeWeek(week: WhatsNewWeek) {
+  try {
+    localStorage.setItem(WEEK_KEY, JSON.stringify(week));
+  } catch {
+    // Storage off: every card would claim the week, so show none rather
+    // than all (the caller checks the write took).
+  }
+}
+
 function markSeen(id: string) {
   try {
     localStorage.setItem(storageKey(id), "seen");
@@ -39,6 +62,11 @@ function markSeen(id: string) {
  * (lib/whats-new.ts). Closing it, or trying the feature from it, hides it on
  * this phone; Household → What's new keeps it readable.
  *
+ * The calm first screen (Phase 172, lib/calm-start) decides whether it may
+ * show at all: never to a household under 14 days old or not past its
+ * first-run checklist, never an entry older than the household, and at most
+ * one card a week on this phone (the first that may show claims the week).
+ *
  * Hidden on the first render and decided after mount: the server has no
  * storage, and a card that flashed in and out would be worse than one that
  * appears a moment late.
@@ -47,11 +75,22 @@ export function WhatsNewCard({ id, onTry }: { id: string; onTry?: () => void }) 
   const entry = whatsNewEntry(id);
   const locale = useOwnerLocale();
   const t = useT();
+  const { createdOn, ready } = useHouseholdProfile();
+  const stage = useSetupStage();
+  const today = formatDateLocal(useToday());
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    if (entry && !wasSeen(id)) setShow(true);
-  }, [entry, id]);
+    if (!entry || !ready || wasSeen(id)) return;
+    const decision = whatsNewDecision({ id, entryDate: entry.date, createdOn, stage, today, week: readWeek() });
+    if (decision === "hide") return;
+    if (decision === "claim") {
+      writeWeek({ id, on: today });
+      // Only the card that actually holds the week shows.
+      if (readWeek()?.id !== id) return;
+    }
+    setShow(true);
+  }, [entry, id, ready, createdOn, stage, today]);
 
   if (!entry || !show) return null;
 

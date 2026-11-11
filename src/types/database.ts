@@ -1030,7 +1030,25 @@ export interface Database {
           status: string;
           requested_at: string;
           decided_at: string | null;
+          // migrations/143
+          auto: boolean;
+          locale: string;
+          whatsapp: string | null;
         }[];
+      };
+      // The optional WhatsApp number to be told on (migrations/143): the
+      // person waiting sets and reads their own; platform admins mark it used.
+      set_my_access_contact: {
+        Args: { p_whatsapp: string | null };
+        Returns: string | null;
+      };
+      my_access_contact: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      household_access_told: {
+        Args: { p_user_id: string };
+        Returns: undefined;
       };
       decide_household_access: {
         Args: { p_user_id: string; p_approve: boolean };
