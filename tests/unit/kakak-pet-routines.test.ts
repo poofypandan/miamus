@@ -17,6 +17,8 @@ import { practiceClient } from "@/lib/kakak/practice";
 import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
 import { isSaveableSuggestion, toSuggestion, type PetRoutineSuggestion } from "@/lib/kakak/suggestions";
 import { KAKAK_TOOLS } from "@/lib/kakak/tools";
+import { draftFromRows, groupRows, planRoutineSave } from "@/lib/routine-groups";
+import type { MasterSchedule } from "@/types/database";
 import { newPetTimes, validateToolCall } from "@/lib/kakak/validate";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -388,7 +390,59 @@ describe("Kakak's Done (the benefit, not the mechanics)", () => {
 });
 
 describe("the rows a confirmed card writes (the Add routine sheet's planner)", () => {
-  const at = { groupId: "group-1", today: "2026-11-11", nowIso: "2026-11-11T01:00:00.000Z" };
+  // A fresh counter per call, so every expectation starts at group-1.
+  const groups = () => {
+    let n = 0;
+    return () => `group-${++n}`;
+  };
+  const at = {
+    get newGroupId() {
+      return groups();
+    },
+    today: "2026-11-11",
+    nowIso: "2026-11-11T01:00:00.000Z",
+  };
+
+  /** The created rows as the database would hand them back. */
+  const asRows = (created: ReturnType<typeof petRoutineRows>): MasterSchedule[] =>
+    created.map((row, i) => ({
+      id: `row-${i}`,
+      interval_hours: null,
+      start_time: null,
+      end_time: null,
+      is_active: true,
+      expires_at: null,
+      created_at: "2026-11-11T01:00:00.000Z",
+      ...row,
+    }) as MasterSchedule);
+
+  it("pets left with different times get a group each, so every group is rectangular (Codex, PR #100)", () => {
+    // Matcha already walks at 06:30 (Jalan pagi); Mocha doesn't.
+    const item = suggest(call({ pets: ["P1", "P2"], kind: "walk", times: ["06:30", "17:00"] }));
+    expect(item.pets.map((p) => p.times.map((t) => t.time))).toEqual([["06:30", "17:00"], ["17:00"]]);
+    const rows = asRows(petRoutineRows(item, at));
+    expect(rows.map((r) => [r.entity_id, r.fixed_times?.[0], r.routine_group_id])).toEqual([
+      [id(10), "06:30", "group-1"],
+      [id(10), "17:00", "group-1"],
+      [id(11), "17:00", "group-2"],
+    ]);
+    // Reopened in the routine editor and saved again (say, a new note): no new row anywhere.
+    for (const groupId of new Set(rows.map((r) => r.routine_group_id!))) {
+      const group = groupRows(rows, rows.find((r) => r.routine_group_id === groupId)!);
+      const draft = { ...draftFromRows(group, "2026-11-11"), note: "Pakai tali" };
+      const plan = planRoutineSave({ draft, existing: group, groupId, onceStart: at.nowIso, nowIso: at.nowIso, today: "2026-11-11" });
+      expect(plan.create).toEqual([]);
+      expect(plan.remove).toEqual([]);
+      expect(plan.update.map((u) => u.id).sort()).toEqual(group.map((r) => r.id).sort());
+      for (const u of plan.update) expect(u.patch.fixed_times).toEqual(group.find((r) => r.id === u.id)!.fixed_times);
+    }
+  });
+
+  it("pets with the same new times share one group", () => {
+    const rows = petRoutineRows(suggest(call({ pets: ["P1", "P3"], kind: "walk", times: ["06:30", "17:00"] })), at);
+    expect(new Set(rows.map((r) => r.routine_group_id))).toEqual(new Set(["group-1"]));
+    expect(rows).toHaveLength(4);
+  });
 
   it("lights off: one group, a row for each pet that needs it", () => {
     const rows = petRoutineRows(suggest(call({ pets: ["P1", "P3"] })), at);

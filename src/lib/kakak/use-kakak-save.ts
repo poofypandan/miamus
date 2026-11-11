@@ -97,7 +97,7 @@ export function useKakakSave() {
             case "pet_routine": {
               // The Add routine sheet's own planner and action (Phase 173 PR B).
               const rows = petRoutineRows(item, {
-                groupId: crypto.randomUUID(),
+                newGroupId: () => crypto.randomUUID(),
                 today: formatDateLocal(new Date()),
                 nowIso: new Date().toISOString(),
               });
