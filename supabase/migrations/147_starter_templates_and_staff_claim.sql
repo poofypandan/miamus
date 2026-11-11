@@ -340,6 +340,10 @@ create table if not exists public.staff_claim_links (
 );
 create index if not exists staff_claim_links_household_idx
   on public.staff_claim_links (household_id, created_at desc);
+-- Every foreign key gets an index (134's rule): deleting an account looks
+-- up the codes it made.
+create index if not exists staff_claim_links_created_by_idx
+  on public.staff_claim_links (created_by);
 alter table public.staff_claim_links enable row level security;
 revoke all on public.staff_claim_links from public, anon, authenticated;
 grant select, insert, update, delete on public.staff_claim_links to service_role;
