@@ -1026,6 +1026,14 @@ create trigger household_members_unmark_orphan
 
 -- Nightly. Skips (and forgets) an account that has joined a household or
 -- asked to set one up since, and never touches the operator's accounts.
+--
+-- One account at a time, under locks, as 143's prune does (Codex, PR #91): a
+-- request filed or a household joined while this runs must win. The request
+-- row is locked first (an update to it in flight is waited for), then the
+-- account itself: FOR UPDATE on auth.users conflicts with the key-share lock
+-- any insert that references the account holds until it commits (a new
+-- request, a membership), so those are waited for too, and anything that
+-- starts later waits for this. Only then is eligibility read again.
 create or replace function public.delete_orphaned_accounts()
 returns integer
 language plpgsql
@@ -1033,32 +1041,59 @@ security definer
 set search_path = ''
 as $$
 declare
-  removed integer;
+  target record;
+  removed integer := 0;
 begin
+  for target in
+    select a.user_id
+      from public.account_deletions a
+     where a.due_at <= now()
+  loop
+    begin
+      perform 1 from public.household_access_requests r where r.user_id = target.user_id for update;
+      perform 1 from auth.users u where u.id = target.user_id for update;
+      if not found then
+        delete from public.account_deletions a where a.user_id = target.user_id;
+        continue;
+      end if;
+
+      -- A fresh look, now that nothing about this account can change under us.
+      if exists (select 1 from public.household_members m where m.user_id = target.user_id)
+         or exists (select 1 from public.household_access_requests r
+                     join public.account_deletions a on a.user_id = r.user_id
+                    where r.user_id = target.user_id
+                      and (r.status = 'pending' or r.requested_at > a.since))
+         or exists (select 1 from public.platform_admins p where p.user_id = target.user_id)
+         or exists (select 1 from auth.users u where u.id = target.user_id and coalesce(u.is_anonymous, false))
+         or not exists (select 1 from public.account_deletions a
+                         where a.user_id = target.user_id and a.due_at <= now())
+      then
+        delete from public.account_deletions a where a.user_id = target.user_id;
+        continue;
+      end if;
+
+      -- Their roster rows lose user_id with the account (on delete set null),
+      -- which would make them look like PIN people nobody has claimed.
+      -- Archived first, so no one can take the name.
+      update public.staff_profiles s
+         set archived_at = coalesce(s.archived_at, now()),
+             pin = null,
+             has_pin = false
+       where s.user_id = target.user_id;
+
+      -- Cascades to the marker, the request, identities, sessions, devices.
+      delete from auth.users u where u.id = target.user_id;
+      removed := removed + 1;
+    exception when others then
+      -- This account's changes roll back: retried tomorrow.
+      raise warning 'Orphaned account % not deleted, will retry: %', target.user_id, sqlerrm;
+    end;
+  end loop;
+
+  -- Accounts that are no longer due for any reason are forgotten.
   delete from public.account_deletions a
    where exists (select 1 from public.household_members m where m.user_id = a.user_id)
-      or exists (select 1 from public.household_access_requests r
-                  where r.user_id = a.user_id
-                    and (r.status = 'pending' or r.requested_at > a.since))
       or exists (select 1 from public.platform_admins p where p.user_id = a.user_id);
-
-  -- Their roster rows lose user_id with the account (on delete set null),
-  -- which would make them look like PIN people nobody has claimed. Archived
-  -- first, so no one can take the name.
-  update public.staff_profiles s
-     set archived_at = coalesce(s.archived_at, now()),
-         pin = null,
-         has_pin = false
-    from public.account_deletions a
-   where a.due_at <= now()
-     and s.user_id = a.user_id;
-
-  delete from auth.users u
-   using public.account_deletions a
-   where a.due_at <= now()
-     and u.id = a.user_id
-     and not coalesce(u.is_anonymous, false);
-  get diagnostics removed = row_count;
   return removed;
 end;
 $$;
