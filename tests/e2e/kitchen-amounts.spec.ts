@@ -214,3 +214,53 @@ test("Undo keeps another phone's purchase made in the meantime (Codex, PR #93)",
   await page.waitForTimeout(500);
   expect(stub.supplies[0]).toMatchObject({ quantity: 3, stock_status: "ok", last_bought_amount: 3 });
 });
+
+test("plus then Habis within the moment the taps wait: the item stays empty (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [rice({ track_amount: true, quantity: 2, min_threshold: 0, amount_set_at: new Date().toISOString() })],
+  });
+  await page.goto("/staff");
+  await page.getByRole("tab", { name: "Dapur" }).click();
+  await page.getByRole("region", { name: "Bahan masakan" }).getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
+
+  // Plus, then Habis straight away, before the tap is sent.
+  await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
+  await page.getByRole("button", { name: "Habis", exact: true }).click();
+  await expect.poll(() => stub.supplies[0].stock_status).toBe("out");
+  // Long after the taps' wait (600 ms): nothing was added back.
+  await page.waitForTimeout(1500);
+  expect(stub.supplies[0]).toMatchObject({ quantity: 0, stock_status: "out" });
+  expect(stub.writes.filter(([, table]) => table === "rpc/adjust_inventory_quantity")).toHaveLength(0);
+});
+
+test("Habis after a plus already on its way waits for it, so the item still ends empty (code review, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [rice({ track_amount: true, quantity: 2, min_threshold: 0, amount_set_at: new Date().toISOString() })],
+  });
+  // A slow signal: the plus batch takes 1.5 s to reach the server.
+  await context.route("http://supabase.test/rest/v1/rpc/adjust_inventory_quantity*", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.fallback();
+  });
+  await page.goto("/staff");
+  await page.getByRole("tab", { name: "Dapur" }).click();
+  await page.getByRole("region", { name: "Bahan masakan" }).getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
+
+  await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
+  // Past the taps' 600 ms wait: the batch is on its way, not queued.
+  await page.waitForTimeout(800);
+  await page.getByRole("button", { name: "Habis", exact: true }).click();
+
+  await expect.poll(() => stub.supplies[0].stock_status, { timeout: 5_000 }).toBe("out");
+  await page.waitForTimeout(500);
+  expect(stub.supplies[0]).toMatchObject({ quantity: 0, stock_status: "out" });
+  // The increment reached the server first, then Out.
+  const order = stub.writes.map(([, table]) => table).filter((t) => t === "rpc/adjust_inventory_quantity" || t === "inventory_items");
+  expect(order).toEqual(["rpc/adjust_inventory_quantity", "inventory_items"]);
+});
