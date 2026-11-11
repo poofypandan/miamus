@@ -146,8 +146,17 @@ export function buildStaffProgress(params: {
   roster: readonly Pick<StaffProfile, "id" | "name" | "user_id">[];
   /** Phase 174: who is busy with what. Empty until repairs supervision lands. */
   busy?: ReadonlyMap<string, StaffBusy>;
+  /**
+   * Household → Features (Phase 171): Pets off counts no pet routines; Repairs
+   * off shows no busy line (repairs supervision is the only thing that fills
+   * it). Scheduled repair visits are ordinary chores on Today's list either
+   * way, so they still count as house work. Absent: both on.
+   */
+  features?: { pets: boolean; repairs: boolean };
 }): StaffProgress {
-  const { date, today, nowMinutes, chores, groups, exceptions, leaves, admittedIds, logs, roster, busy } = params;
+  const { date, today, nowMinutes, chores, exceptions, leaves, admittedIds, logs, roster } = params;
+  const groups = params.features?.pets === false ? [] : params.groups;
+  const busy = params.features?.repairs === false ? undefined : params.busy;
   const known = new Set(roster.map((p) => p.id));
   const away = (id: string | null | undefined) => !!id && !!leaveCovering(leaves as LeaveRequest[], id, date);
 

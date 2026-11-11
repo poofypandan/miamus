@@ -190,7 +190,7 @@ export function AgendaTab() {
   // Staff progress (owners, 11 Nov): one row per person, house and pets,
   // in place of the Chores tab's chores-only strip. Only in a home with
   // staff: an owner on their own has nobody to follow.
-  const progress = useStaffProgress();
+  const progress = useStaffProgress({ petsOn });
   const hasStaff = useMemo(() => (allProfiles ?? []).some((p) => !p.user_id && !p.archived_at), [allProfiles]);
 
   // All | Pets | Chores (Phase 132): narrows what is drawn, never what is

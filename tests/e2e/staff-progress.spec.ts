@@ -253,3 +253,22 @@ test("a staff phone shows only its own progress, in Indonesian", async ({ contex
   await expect(page.getByTestId("staff-progress-anyone")).toHaveCount(0);
   await expect(page.getByTestId("my-progress")).toHaveCount(1);
 });
+
+test("with Pets switched off, no pet counts and no pet routines on the Anyone row", async ({ context, page }) => {
+  await installStub(context, {
+    owner: { locale: "en" },
+    household: { hasPets: false },
+    staff: [person(STAFF_ID, "Ari"), person(SYAM, "Syam")],
+    chores: [sweep(), mop()],
+    schedules: [WALK, WATER],
+    logs: [walkLog()],
+  });
+  await at10(page);
+  await page.goto("/dashboard");
+
+  await expect(row(page, "Ari").getByTestId("progress-house")).toHaveText("House 1/2", { timeout: 20_000 });
+  await expect(page.getByTestId("progress-pets")).toHaveCount(0);
+  await expect(row(page, "Syam").getByTestId("staff-progress-line")).toHaveText("No tasks");
+  // The fixture's routines are anyone's; with Pets off they aren't counted.
+  await expect(page.getByTestId("staff-progress-anyone")).toHaveCount(0);
+});

@@ -14,6 +14,7 @@ import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useStaffProgress } from "@/hooks/use-staff-progress";
+import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { ANYONE_PERSON } from "@/hooks/use-staff-workload";
 import { useToday } from "@/hooks/use-today";
 import { ownerReasonLabel } from "@/lib/couldnt-do";
@@ -32,7 +33,8 @@ import { cn } from "@/lib/utils";
 export function StaffPersonDay({ personId, onBack }: { personId: string; onBack: () => void }) {
   const t = useT();
   const locale = useOwnerLocale();
-  const progress = useStaffProgress();
+  const { petsOn } = useHouseholdProfile();
+  const progress = useStaffProgress({ petsOn });
   const { selectedDate } = useHousehold();
   const today = useToday();
   const label = dayLabel(selectedDate, today, locale);

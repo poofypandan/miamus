@@ -134,8 +134,9 @@ function build(params: {
   now?: string;
   date?: string;
   busy?: Map<string, StaffBusy>;
+  features?: { pets: boolean; repairs: boolean };
 }) {
-  const { rows = [], schedules = [], logs = [], exceptions = [], leaves = [], pets = [MOCHA, MATCHA], now = "12:00", date = TODAY, busy } = params;
+  const { rows = [], schedules = [], logs = [], exceptions = [], leaves = [], pets = [MOCHA, MATCHA], now = "12:00", date = TODAY, busy, features } = params;
   const chores = applyLeaveTriage(expandChores({ rows, date, today: TODAY }), leaves);
   const groups = buildAgenda({ date, entities: pets, schedules, logs, now: new Date(`${TODAY}T${now}:00+07:00`) });
   const [h, m] = now.split(":").map(Number);
@@ -151,6 +152,7 @@ function build(params: {
     logs,
     roster: ROSTER,
     busy,
+    features,
   });
 }
 
@@ -354,6 +356,22 @@ describe("buildStaffProgress", () => {
     expect(plain.busy).toBeNull();
     const busy = new Map([[ARI, { label: "Mengawasi perbaikan", since: "10:00" }]]);
     expect(build({ busy }).people.find((p) => p.id === ARI)!.busy).toEqual({ label: "Mengawasi perbaikan", since: "10:00" });
+  });
+
+  it("follows the Features switches: Pets off counts no routines, Repairs off shows no busy line", () => {
+    const walk = routine(MOCHA, "Jalan-jalan", ["07:00"], { kind: "walk", staff_id: SYAM });
+    const rows = [chore({ title: "Sapu", assigned_to: ARI }), chore({ title: "Tukang AC datang", assigned_to: ARI, repair_id: "r1" } as Partial<HouseholdTask>)];
+    const busy = new Map([[ARI, { label: "Mengawasi perbaikan", since: "10:00" }]]);
+    const off = build({ rows, schedules: [walk], busy, features: { pets: false, repairs: false } });
+    expect(off.people.find((p) => p.id === SYAM)!.pets).toBeNull();
+    expect(off.anyone).toBeNull();
+    const ari = off.people.find((p) => p.id === ARI)!;
+    expect(ari.busy).toBeNull();
+    // A scheduled repair visit is still a chore on Today's list.
+    expect(ari.house).toEqual({ done: 0, total: 2 });
+    const on = build({ rows, schedules: [walk], busy, features: { pets: true, repairs: true } });
+    expect(on.people.find((p) => p.id === SYAM)!.pets).toEqual({ done: 0, total: 1 });
+    expect(on.people.find((p) => p.id === ARI)!.busy).not.toBeNull();
   });
 
   it("lists an admin's row only on a day they have work, after the staff", () => {
