@@ -405,6 +405,18 @@ export function AgendaTab() {
           <DateRibbon value={selectedDate} onChange={setSelectedDate} locale={locale} />
         )}
 
+        {/* Set up your home (audit B1): a new household's steps to its first
+            finished task. Directly under the date, above everything else
+            (Phase 172, D11 rule 4): for a new house it is the whole screen.
+            Renders nothing once past it. */}
+        {range === "day" && (
+          <FirstRunCard
+            firstRun={firstRun}
+            householdName={householdName}
+            onAddTask={() => addChore({ assigneeId: firstRun.staff[0]?.id ?? null })}
+          />
+        )}
+
         {/* A pending proposal is the only thing here blocking someone else's
             work, so it outranks the day itself. Renders nothing when the queue
             is empty. */}
@@ -515,15 +527,6 @@ export function AgendaTab() {
           </div>
         )}
 
-        {/* Set up your home (audit B1): a new household's steps to its first
-            finished task, above My tasks. Renders nothing once past it. */}
-        {range === "day" && (
-          <FirstRunCard
-            firstRun={firstRun}
-            householdName={householdName}
-            onAddTask={() => addChore({ assigneeId: firstRun.staff[0]?.id ?? null })}
-          />
-        )}
 
         {/* My tasks (Phase 163): below what waits on a decision, above the
             household's day. Renders nothing on a day with none of mine. */}

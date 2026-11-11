@@ -204,6 +204,13 @@ people are **staf** and **admin**.
 | Usage counts (privacy policy) | **Hitungan pemakaian** | Phase 172 PR 0: numbers about setup and first tasks, never content. |
 | North star (operator page) / North star numbers | **Ukuran utama** / **Angka ukuran utama** | Phase 172 PR 0: the platform admins' page of S1–S5. |
 | Below target · On target · No data yet | **Di bawah target · Sesuai target · Belum ada data** | Phase 172 PR 0, the north-star page. "Target" is the everyday word. |
+| Watch · 15 s (video tip) | **Tonton · 15 detik** | Phase 172 PR A1: the optional video beside a one-line instruction. |
+| Automatic (an approval made at sign-up) | **Otomatis** | Phase 172 PR A1, the approvals page. |
+| New household · {name} just joined (push) | **Rumah baru** · **{name} baru bergabung.** | Phase 172 PR A1, to platform admins. |
+| Tap the mic on your keyboard and speak. | **Ketuk mic di keyboard, lalu bicara.** | Phase 172 PR A1, Kakak's keyboard tip. "Mic" is the everyday word on the keyboard. |
+| How should we let you know? · Your WhatsApp number | **Bagaimana kami memberi tahu Anda? · Nomor WhatsApp Anda** | Phase 172 PR A1, the waiting screen (owner, 2026-11-11). |
+| We'll use your number only to tell you you're approved, then delete it. | **Nomor Anda hanya kami pakai untuk memberi tahu bahwa Anda sudah disetujui, lalu kami hapus.** | The note under the number field; "Kebijakan privasi" links to the policy. |
+| Copy link · Link copied | **Salin link · Link disalin** | The approvals page's third button. |
 
 ## Formatting
 

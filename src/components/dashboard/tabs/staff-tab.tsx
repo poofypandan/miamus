@@ -74,6 +74,7 @@ import { HouseholdDataPanel } from "@/components/dashboard/household-data-panel"
 import { useHouseholdDeletion } from "@/hooks/use-household-deletion";
 import { AboutMiamus } from "@/components/dashboard/about-miamus";
 import { WhatsNewCard, WhatsNewList } from "@/components/shared/whats-new";
+import { VideoTip } from "@/components/shared/video-tip";
 import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
 import { FeedbackSheet } from "@/components/shared/feedback-sheet";
 import { RoomsManager } from "@/components/dashboard/rooms-manager";
@@ -614,35 +615,19 @@ function StaffRoster({
     <div className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-gray-900">{t("Staff", "Staf")}</h2>
 
-      {/* How the pieces fit (Phase 120). A new owner meets a roster, an
-          invite card further down and the word "PIN" with nothing saying they
-          are one flow — and which half the staff member does themselves.
-          Only until the first person is added (Phase 155): after that it is
-          clutter, and the guide explains it. */}
+      {/* How the pieces fit (Phase 120): until the first person is added
+          (Phase 155). One line and an optional video since Phase 172 (D11
+          rule 7); it was three numbered steps. */}
       {staff !== null && staff.length === 0 && (
-      <ol className="flex flex-col gap-1.5 rounded-xl border bg-card px-4 py-3 text-xs text-muted-foreground">
-        <li>
-          <span className="font-medium text-gray-900">{t("1. Add each person", "1. Tambahkan setiap orang")}</span>{" "}
-          {t(
-            "who helps run the house, by name, below.",
-            "yang membantu di rumah, dengan namanya, di bawah."
-          )}
-        </li>
-        <li>
-          <span className="font-medium text-gray-900">{t("2. Invite their phone", "2. Undang HP-nya")}</span>{" "}
-          {t(
-            "with a staff-phone link (Household → Invite someone). A shared house phone works too.",
-            "dengan link HP staf (Rumah → Undang). HP bersama di rumah juga bisa."
-          )}
-        </li>
-        <li>
-          <span className="font-medium text-gray-900">{t("3. They sign in", "3. Mereka masuk")}</span>{" "}
-          {t(
-            `on that phone by tapping their name and choosing a ${PIN_LENGTH}-digit PIN. You never need to know it.`,
-            `di HP itu dengan mengetuk namanya dan memilih PIN ${PIN_LENGTH} angka. Anda tidak perlu tahu PIN-nya.`
-          )}
-        </li>
-      </ol>
+        <div className="flex flex-col gap-2 rounded-xl border bg-card px-4 py-3">
+          <p className="text-xs text-muted-foreground">
+            {t(
+              "Add your staff, then send each phone its link.",
+              "Tambah staf, lalu kirim link ke HP masing-masing."
+            )}
+          </p>
+          <VideoTip id="owner-staff-phones" locale={locale} />
+        </div>
       )}
 
       <SetPinDialog

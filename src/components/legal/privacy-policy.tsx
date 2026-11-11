@@ -24,7 +24,9 @@ import { LEGAL, isLegalDraft } from "@/config/legal";
  */
 
 type Lang = "en" | "id";
-type Block = { p: string } | { ul: string[] } | { h: string };
+// `id` makes a heading a link target (/privacy#household-requests), for a
+// notice elsewhere in the app that points at it.
+type Block = { p: string } | { ul: string[] } | { h: string; id?: string };
 type Section = { title: string; body: Block[] };
 
 const operator = LEGAL.operatorName || "[operator name]";
@@ -85,10 +87,11 @@ const COPY: Record<
               "Whether your household sends notifications to staff phones.",
             ],
           },
-          { h: "Requests to set up a household" },
+          { h: "Requests to set up a household", id: "household-requests" },
           {
             ul: [
-              "If you sign in with Google to set up a new household, we keep your request: when you asked, and whether it was approved or rejected. While we review it, we see your name and email from Google sign-in.",
+              "If you sign in with Google to set up a new household, we keep your request: when you asked, whether it was approved or rejected, and whether it was approved automatically. We review each request and let you know by WhatsApp or email when it's approved. If we ever switch on automatic approval, an account is approved when it creates its household and we review new households afterwards. Either way, we see your name and email from Google sign-in.",
+              `If, while you wait, you choose to be told on WhatsApp: the WhatsApp number you type. It is used only to tell you your request is approved, and only ${operator}, who runs Miamus, sees it. It is deleted once we've messaged you on WhatsApp, if your request isn't approved, when you set up your household, or 30 days after you asked, whichever comes first.`,
             ],
           },
           { h: "Staff" },
@@ -160,7 +163,7 @@ const COPY: Record<
           {
             ul: [
               "Running Miamus for your household — showing tasks, recording who did what, reminders, leave and stock. This is needed to provide the service you asked for.",
-              "Keeping it secure — sign-in, keeping each household's data separate, reviewing requests to set up new households, and preventing misuse. This is our legitimate interest.",
+              "Keeping it secure — sign-in, keeping each household's data separate, reviewing new households and requests to set them up, and preventing misuse. This is our legitimate interest.",
               "Sending notifications you've turned on. This is based on your consent, which you can withdraw at any time in your phone or browser settings.",
               "Improving Miamus — reading the feedback you choose to send, and usage counts (numbers only, never what you typed or said) to make Miamus easier to start. This is our legitimate interest.",
               "Kakak, if an admin turns it on — understanding what admins type so it can suggest chores, food and shopping items. This is based on the consent the admin gives by turning Kakak on, which they can withdraw by turning it off.",
@@ -226,6 +229,7 @@ const COPY: Record<
               "Usage counts are kept while your household exists, and deleted with it; the daily task counts are deleted after 400 days.",
               "Everything else is kept while your household uses Miamus.",
               "A request to set up a household that isn't approved is deleted 30 days after the decision, together with the Google sign-in it came from, unless that account has since joined a household. Approved requests are kept while the account is used.",
+              "A WhatsApp number left to be told about approval is deleted once we've messaged you, if the request isn't approved, when you set up your household, and 30 days after you asked at the latest.",
               "The admin who created a household can delete it in the app (Household → Your data). It is deleted 7 days later, unless an admin cancels before then. Its photos are then deleted automatically at night, usually the same night; a household with very many photos can take a few nights. Database backups keep a copy for up to 7 more days, then it is gone.",
               "If anyone asks us by email to delete their data or their household, we delete it within 30 days unless the law requires us to keep it. Copies in our providers' backups are cleared on their normal schedule.",
               "When staff are removed from a household, their profile is archived and their name stays on past work, so the household's records stay accurate. The admin or the staff member can ask us to remove it.",
@@ -348,10 +352,11 @@ const COPY: Record<
               "Apakah rumah tangga Anda mengirim notifikasi ke HP staf.",
             ],
           },
-          { h: "Permintaan membuat rumah tangga" },
+          { h: "Permintaan membuat rumah tangga", id: "household-requests" },
           {
             ul: [
-              "Jika Anda masuk dengan Google untuk membuat rumah tangga baru, kami menyimpan permintaan Anda: kapan Anda memintanya, dan apakah disetujui atau ditolak. Selama kami meninjaunya, kami melihat nama dan email Anda dari login Google.",
+              "Jika Anda masuk dengan Google untuk membuat rumah tangga baru, kami menyimpan permintaan Anda: kapan Anda memintanya, apakah disetujui atau ditolak, dan apakah disetujui otomatis. Kami meninjau setiap permintaan dan memberi tahu Anda lewat WhatsApp atau email setelah disetujui. Jika suatu saat persetujuan otomatis kami nyalakan, akun disetujui saat membuat rumah tangganya dan kami meninjau rumah tangga baru sesudahnya. Bagaimanapun, kami melihat nama dan email Anda dari login Google.",
+              `Jika selama menunggu Anda memilih diberi tahu lewat WhatsApp: nomor WhatsApp yang Anda ketik. Nomor ini hanya dipakai untuk memberi tahu bahwa permintaan Anda sudah disetujui, dan hanya ${operator}, pengelola Miamus, yang dapat melihatnya. Nomor dihapus setelah kami mengirim pesan WhatsApp kepada Anda, jika permintaan Anda tidak disetujui, saat Anda menyiapkan rumah tangga, atau 30 hari setelah Anda meminta, mana yang lebih dulu.`,
             ],
           },
           { h: "Staf" },
@@ -423,7 +428,7 @@ const COPY: Record<
           {
             ul: [
               "Menjalankan Miamus untuk rumah tangga Anda — menampilkan tugas, mencatat siapa mengerjakan apa, pengingat, cuti, dan stok. Ini diperlukan untuk memberikan layanan yang Anda minta.",
-              "Menjaga keamanan — login, memisahkan data setiap rumah tangga, meninjau permintaan membuat rumah tangga baru, dan mencegah penyalahgunaan. Ini adalah kepentingan sah kami.",
+              "Menjaga keamanan — login, memisahkan data setiap rumah tangga, meninjau rumah tangga baru dan permintaan membuatnya, dan mencegah penyalahgunaan. Ini adalah kepentingan sah kami.",
               "Mengirim notifikasi yang Anda nyalakan. Ini berdasarkan persetujuan Anda, yang dapat Anda tarik kapan saja lewat pengaturan HP atau browser.",
               "Memperbaiki Miamus — membaca masukan yang Anda pilih untuk dikirim, dan hitungan pemakaian (hanya angka, tidak pernah isi yang Anda ketik atau ucapkan) agar Miamus lebih mudah dimulai. Ini adalah kepentingan sah kami.",
               "Kakak, jika admin menyalakannya — memahami yang diketik admin agar Kakak bisa menyarankan tugas, makanan, dan barang belanja. Ini berdasarkan persetujuan yang diberikan admin saat menyalakan Kakak, yang dapat ditarik dengan mematikannya.",
@@ -489,6 +494,7 @@ const COPY: Record<
               "Hitungan pemakaian disimpan selama rumah tangga Anda ada, dan ikut dihapus bersamanya; hitungan tugas harian dihapus setelah 400 hari.",
               "Data lainnya disimpan selama rumah tangga Anda memakai Miamus.",
               "Permintaan membuat rumah tangga yang tidak disetujui dihapus 30 hari setelah keputusan, bersama akun login Google yang dipakai untuk memintanya, kecuali akun itu sudah bergabung ke sebuah rumah tangga. Permintaan yang disetujui disimpan selama akun tersebut dipakai.",
+              "Nomor WhatsApp untuk diberi tahu soal persetujuan dihapus setelah kami mengirim pesan kepada Anda, jika permintaan tidak disetujui, saat Anda menyiapkan rumah tangga, dan paling lambat 30 hari setelah Anda meminta.",
               "Admin yang membuat rumah tangga dapat menghapusnya di aplikasi (Rumah → Data Anda). Rumah tangga dihapus 7 hari kemudian, kecuali ada admin yang membatalkannya sebelum itu. Fotonya lalu dihapus otomatis pada malam hari, biasanya malam itu juga; rumah tangga dengan sangat banyak foto bisa memakan beberapa malam. Cadangan (backup) database menyimpan salinannya paling lama 7 hari lagi, lalu terhapus.",
               "Jika siapa pun meminta lewat email agar datanya atau rumah tangganya dihapus, kami menghapusnya dalam 30 hari, kecuali hukum mewajibkan kami menyimpannya. Salinan di cadangan (backup) penyedia kami terhapus sesuai jadwal normal mereka.",
               "Staf yang dikeluarkan dari rumah tangga diarsipkan, dan namanya tetap tercatat pada pekerjaan sebelumnya agar catatan rumah tetap akurat. Admin atau staf yang bersangkutan dapat meminta kami menghapusnya.",
@@ -609,7 +615,7 @@ export function PrivacyPolicy({ lang }: { lang: Lang }) {
           <h2 className="text-base font-semibold text-gray-900">{section.title}</h2>
           {section.body.map((block, i) =>
             "h" in block ? (
-              <h3 key={i} className="mt-4 text-sm font-semibold text-gray-900">
+              <h3 key={i} id={block.id} className="mt-4 scroll-mt-6 text-sm font-semibold text-gray-900">
                 {block.h}
               </h3>
             ) : "ul" in block ? (

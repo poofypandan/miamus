@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Clock, Languages, Loader2, PawPrint, ShieldX, UserRoundPlus } from "lucide-react";
+import { Clock, Languages, Loader2, Mail, MessageCircle, PawPrint, ShieldX, UserRoundPlus } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { LanguageChoice } from "@/components/dashboard/language-settings";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import { moduleHref } from "@/lib/dashboard-modules";
 import {
   canCreateHousehold,
   createHouseholdFailure,
+  formatWhatsApp,
+  normalizeWhatsApp,
   parseHouseholdAccess,
   type HouseholdAccess,
 } from "@/lib/household-access";
@@ -32,8 +34,13 @@ import { supabase } from "@/lib/supabase/client";
  *
  * Reached only through the middleware, which sends a signed-in Google account
  * here when it has no household_members row. Since Phase 148 a new household
- * needs the operator's approval first (migrations/113): the account asks, waits,
- * and only then gets the name form.
+ * needs the operator's approval first (migrations/113), and it still does:
+ * the owner approves every new household (2026-11-10). Phase 172
+ * (migrations/143) built automatic approval behind a switch that is off:
+ * only if a platform admin turns it on does an account read "open" and go
+ * straight to the name form, Create household approving it in the same
+ * call. Otherwise it asks and waits (the Request and Waiting screens below),
+ * and the waiting screen says it will be emailed.
  *
  * Since Phase 149 the first question is the language (migrations/114), and
  * every screen after it is in the one chosen. The staff hint stays in both:
@@ -117,7 +124,21 @@ function Onboarding() {
   // First, before anything is asked of them in either language.
   if (chosen === false) return <LanguageScreen />;
 
-  if (canCreateHousehold(access)) return <CreateHouseholdForm onNotApproved={load} />;
+  // Only with automatic approval switched on (Phase 172, D1; off by
+  // default): over the cap since the screen opened, the household isn't
+  // created and nothing is written; file the request, then show Request
+  // sent. Anything else that refuses re-reads the account.
+  async function notApproved() {
+    if (access !== "open" || !supabase) return load();
+    const { data, error } = await supabase.rpc("request_household_access");
+    if (error) {
+      console.error(error);
+      return load();
+    }
+    setAccess(parseHouseholdAccess(data));
+  }
+
+  if (canCreateHousehold(access)) return <CreateHouseholdForm onNotApproved={notApproved} />;
   if (access === "pending") return <WaitingScreen onCheck={load} />;
   if (access === "rejected") return <RejectedScreen />;
   return <RequestScreen onRequested={setAccess} />;
@@ -209,6 +230,19 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
 function WaitingScreen({ onCheck }: { onCheck: () => Promise<void> }) {
   const t = useT();
   const [checking, setChecking] = useState(false);
+  // The address the operator writes to (D2): the Google account's own, read
+  // on the phone. Null until known, or in mock mode.
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void supabase?.auth.getUser().then(({ data }) => {
+      if (!cancelled) setEmail(data.user?.email ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function check() {
     setChecking(true);
@@ -224,10 +258,11 @@ function WaitingScreen({ onCheck }: { onCheck: () => Promise<void> }) {
       <Heading>{t("Request sent", "Permintaan terkirim")}</Heading>
       <Body>
         {t(
-          "We're reviewing your request. Once it's approved, open Miamus again to name your household.",
-          "Kami sedang meninjau permintaan Anda. Setelah disetujui, buka Miamus lagi untuk memberi nama rumah Anda."
+          "We'll let you know by WhatsApp or email, usually within a day.",
+          "Kami akan memberi tahu lewat WhatsApp atau email, biasanya dalam sehari."
         )}
       </Body>
+      <TellMeBy email={email} />
       <StaffHint />
       <Button
         variant="outline"
@@ -239,6 +274,161 @@ function WaitingScreen({ onCheck }: { onCheck: () => Promise<void> }) {
       </Button>
       <SignOutButton />
     </Screen>
+  );
+}
+
+/**
+ * "How should we let you know?" (owner, 2026-11-11): one optional question,
+ * only here, while someone waits for approval. Email (their sign-up address,
+ * nothing to type) unless they choose WhatsApp and leave a number. The
+ * number is checked and stored as 628… by set_my_access_contact
+ * (migrations/143), seen only by the operator, and deleted once they're told
+ * (30 days at most). The line under the field is the notice; typing the
+ * number after it is the consent.
+ */
+function TellMeBy({ email }: { email: string | null }) {
+  const t = useT();
+  const { locale } = useOwnerLocaleContext();
+  const [mode, setMode] = useState<"email" | "whatsapp">("email");
+  const [saved, setSaved] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<"invalid" | "failed" | null>(null);
+
+  // What they chose before, on an earlier visit.
+  useEffect(() => {
+    let cancelled = false;
+    void supabase?.rpc("my_access_contact").then(({ data, error }) => {
+      if (cancelled || error || typeof data !== "string" || !data) return;
+      setSaved(data);
+      setMode("whatsapp");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function store(value: string | null): Promise<boolean> {
+    if (!supabase) return false;
+    setBusy(true);
+    setProblem(null);
+    const { data, error } = await supabase.rpc("set_my_access_contact", { p_whatsapp: value });
+    setBusy(false);
+    if (error) {
+      setProblem(error.message?.includes("invalid_whatsapp") ? "invalid" : "failed");
+      return false;
+    }
+    setSaved(typeof data === "string" && data ? data : null);
+    return true;
+  }
+
+  async function chooseEmail() {
+    setMode("email");
+    setProblem(null);
+    // A number left earlier goes: email it is.
+    if (saved) await store(null);
+  }
+
+  async function saveNumber(e: React.FormEvent) {
+    e.preventDefault();
+    const number = normalizeWhatsApp(draft);
+    if (!number) {
+      setProblem("invalid");
+      return;
+    }
+    if (await store(number)) setDraft("");
+  }
+
+  const chip = (on: boolean) =>
+    on
+      ? "flex min-h-11 items-center gap-1.5 rounded-full border border-gray-900 bg-gray-900 px-4 text-sm font-medium text-white"
+      : "flex min-h-11 items-center gap-1.5 rounded-full border bg-white px-4 text-sm font-medium text-gray-700 active:bg-muted";
+
+  return (
+    <fieldset className="flex flex-col gap-2 rounded-xl border bg-white px-4 py-3">
+      <legend className="sr-only">{t("How should we let you know?", "Bagaimana kami memberi tahu Anda?")}</legend>
+      <p aria-hidden className="text-sm font-medium text-gray-900">
+        {t("How should we let you know?", "Bagaimana kami memberi tahu Anda?")}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" aria-pressed={mode === "email"} disabled={busy} onClick={() => void chooseEmail()} className={chip(mode === "email")}>
+          <Mail className="size-4" aria-hidden /> {t("Email", "Email")}
+        </button>
+        <button
+          type="button"
+          aria-pressed={mode === "whatsapp"}
+          disabled={busy}
+          onClick={() => {
+            setMode("whatsapp");
+            setProblem(null);
+          }}
+          className={chip(mode === "whatsapp")}
+        >
+          <MessageCircle className="size-4" aria-hidden /> {t("WhatsApp", "WhatsApp")}
+        </button>
+      </div>
+      {mode === "email" ? (
+        email && (
+          <p className="text-xs text-muted-foreground">
+            {t(`We'll write to ${email}.`, `Kami akan mengirim ke ${email}.`)}
+          </p>
+        )
+      ) : saved && !draft ? (
+        <p className="text-xs text-muted-foreground">
+          {t(
+            `We'll message you on WhatsApp at ${formatWhatsApp(saved)}.`,
+            `Kami akan mengirim pesan WhatsApp ke ${formatWhatsApp(saved)}.`
+          )}{" "}
+          <button type="button" onClick={() => setDraft(formatWhatsApp(saved))} className="font-medium text-gray-900 underline underline-offset-4">
+            {t("Change", "Ubah")}
+          </button>
+        </p>
+      ) : (
+        <form onSubmit={(e) => void saveNumber(e)} className="flex flex-col gap-2">
+          <Label htmlFor="tell-whatsapp" className="text-xs font-medium text-gray-900">
+            {t("Your WhatsApp number", "Nomor WhatsApp Anda")}
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="tell-whatsapp"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="0812 3456 7890"
+              maxLength={24}
+              className="min-h-[44px] flex-1"
+            />
+            <Button type="submit" disabled={busy || !draft.trim()} className="min-h-[44px] rounded-lg">
+              {busy && <Loader2 className="animate-spin" />} {t("Save", "Simpan")}
+            </Button>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {t(
+              "We'll use your number only to tell you you're approved, then delete it. ",
+              "Nomor Anda hanya kami pakai untuk memberi tahu bahwa Anda sudah disetujui, lalu kami hapus. "
+            )}
+            <Link
+              href={locale === "id" ? "/privasi#household-requests" : "/privacy#household-requests"}
+              className="font-medium text-gray-900 underline underline-offset-4"
+            >
+              {t("Privacy policy", "Kebijakan privasi")}
+            </Link>
+          </p>
+        </form>
+      )}
+      {problem && (
+        <p className="text-xs text-destructive" role="alert">
+          {problem === "invalid"
+            ? t(
+                "Enter an Indonesian mobile number, like 0812 3456 7890.",
+                "Masukkan nomor HP Indonesia, misalnya 0812 3456 7890."
+              )
+            : t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi.")}
+        </p>
+      )}
+    </fieldset>
   );
 }
 
@@ -311,8 +501,11 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
         await enterHousehold();
         return;
       case "not_approved":
-        // Approval was withdrawn while this page was open.
+        // Over the day's cap since the page opened, or approval withdrawn.
+        // The screen may stay on this form (the request came back approved:
+        // Codex, PR #84), so the button must work again.
         await onNotApproved();
+        setSaving(false);
         return;
       case "invalid_name":
         setFailed(t("Use a name of up to 60 characters.", "Gunakan nama paling banyak 60 karakter."));
@@ -363,9 +556,11 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
         </Button>
         {failed && <p className="text-sm text-destructive">{failed}</p>}
         <p className="text-xs leading-relaxed text-muted-foreground">
+          {/* Moved here from the Request screen (Phase 172): creating a
+              household is now what shares it. */}
           {t(
-            "By creating a household, you confirm you've read the ",
-            "Dengan membuat rumah, Anda menyatakan sudah membaca "
+            `Creating a household shares your Google name and email with ${LEGAL.operatorName}, who runs Miamus. By creating it, you confirm you've read the `,
+            `Membuat rumah membagikan nama dan email Google Anda kepada ${LEGAL.operatorName}, pengelola Miamus. Dengan membuatnya, Anda menyatakan sudah membaca `
           )}
           <PrivacyLink />
           {t(

@@ -47,7 +47,9 @@ test("a new household sees the checklist, and its steps tick off from real data 
   await expect(card).toContainText("1 of 5");
   await expect(step(page, "home")).toHaveAttribute("data-done", "true");
   await expect(step(page, "home")).toContainText("Rumah Uji");
-  await expect(card).toContainText("Add each person by name.");
+  // Step names only, and the open step's one button (Phase 172, D11 rule 4).
+  await expect(card).not.toContainText("Add each person by name.");
+  await expect(card).not.toContainText("From here to the first task");
   // The welcome's own Add buttons step aside while the checklist shows.
   await expect(page.getByText("Nothing on this day yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Add Chore" })).toHaveCount(0);
@@ -75,7 +77,7 @@ test("a new household sees the checklist, and its steps tick off from real data 
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0]).toMatchObject({ title: "Sweep the terrace", assigned_to: STAFF_ID, due_date: today() });
   await expect(card).toContainText("4 of 5");
-  await expect(card).toContainText("This ticks itself when the task is finished");
+  await expect(card).toContainText("See it done");
 
   // Sari finishes it on her phone: the note, once.
   Object.assign(stub.tasks[0], { status: "completed", completed_by: STAFF_ID, completed_at: new Date().toISOString() });

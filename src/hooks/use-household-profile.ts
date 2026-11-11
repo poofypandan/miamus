@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useHousehold } from "@/context/household-context";
 import type { ModuleFlags } from "@/lib/dashboard-modules";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 
 /**
  * "Who lives here?" (Phase 162, migrations/133): does the household have pets.
@@ -20,14 +21,21 @@ export type HasPets = boolean | null;
 
 interface ProfileEntry {
   hasPets: HasPets;
+  /**
+   * The day the household was made (YYYY-MM-DD, this phone's calendar), or
+   * null while not known: the calm first screen's rules read it (Phase 172,
+   * lib/calm-start).
+   */
+  createdOn: string | null;
   ready: boolean;
   fetched: boolean;
 }
 
 const CACHE_PREFIX = "miamus_household_has_pets:";
+const CREATED_PREFIX = "miamus_household_created_on:";
 const entries = new Map<string, ProfileEntry>();
 const listeners = new Set<() => void>();
-const SERVER_SNAPSHOT: ProfileEntry = { hasPets: null, ready: false, fetched: false };
+const SERVER_SNAPSHOT: ProfileEntry = { hasPets: null, createdOn: null, ready: false, fetched: false };
 
 /** Null (never answered) counts as on: today's behaviour. */
 export function petsOnFrom(hasPets: HasPets): boolean {
@@ -66,19 +74,52 @@ function writeCached(householdId: string, value: HasPets) {
   }
 }
 
+function readCachedCreated(householdId: string): string | null {
+  try {
+    const value = window.localStorage.getItem(CREATED_PREFIX + householdId);
+    return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedCreated(householdId: string, value: string | null) {
+  if (!value) return;
+  try {
+    window.localStorage.setItem(CREATED_PREFIX + householdId, value);
+  } catch {
+    // As above.
+  }
+}
+
+/** A timestamp as this phone's calendar day, or null. */
+function dayOf(timestamp: unknown): string | null {
+  if (typeof timestamp !== "string") return null;
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? null : formatDateLocal(date);
+}
+
 function entryFor(householdId: string): ProfileEntry {
   let entry = entries.get(householdId);
   if (!entry) {
     const cached = readCached(householdId);
-    entry = { hasPets: cached ?? null, ready: cached !== undefined, fetched: false };
+    entry = {
+      hasPets: cached ?? null,
+      createdOn: readCachedCreated(householdId),
+      ready: cached !== undefined,
+      fetched: false,
+    };
     entries.set(householdId, entry);
   }
   return entry;
 }
 
-function store(householdId: string, hasPets: HasPets) {
-  entries.set(householdId, { hasPets, ready: true, fetched: true });
+function store(householdId: string, hasPets: HasPets, createdOn?: string | null) {
+  const known = entryFor(householdId).createdOn;
+  const created = createdOn === undefined ? known : (createdOn ?? known);
+  entries.set(householdId, { hasPets, createdOn: created, ready: true, fetched: true });
   writeCached(householdId, hasPets);
+  writeCachedCreated(householdId, created);
   notify();
 }
 
@@ -102,11 +143,12 @@ async function fetchProfile(householdId: string) {
     if (supabase) {
       const { data, error } = await supabase
         .from("households")
-        .select("has_pets")
+        .select("has_pets, created_at")
         .eq("id", householdId)
         .maybeSingle();
       if (!error && data) {
-        store(householdId, (data as { has_pets: HasPets }).has_pets ?? null);
+        const row = data as { has_pets: HasPets; created_at?: string | null };
+        store(householdId, row.has_pets ?? null, dayOf(row.created_at));
         return;
       }
       if (error) console.error("Could not load who lives here", error);
@@ -130,6 +172,8 @@ export type SetHasPetsResult = { ok: true } | { ok: false; reason: "has_live_pet
 export interface HouseholdProfile {
   /** The stored answer: true, false, or null (not answered yet). */
   hasPets: HasPets;
+  /** The day the household was made, or null while not known. */
+  createdOn: string | null;
   /** Whether pet screens show: everything except an explicit "no". */
   petsOn: boolean;
   /** True once there is a real answer (cached, fetched, or a read that failed). */
@@ -172,7 +216,13 @@ export function useHouseholdProfile(): HouseholdProfile {
     [activeHouseholdId]
   );
 
-  return { hasPets: entry.hasPets, petsOn: petsOnFrom(entry.hasPets), ready: entry.ready, setHasPets };
+  return {
+    hasPets: entry.hasPets,
+    createdOn: entry.createdOn,
+    petsOn: petsOnFrom(entry.hasPets),
+    ready: entry.ready,
+    setHasPets,
+  };
 }
 
 /** For tests: forget everything read this page session. */

@@ -56,6 +56,8 @@ test("an owner marks a bill paid with an amount and a receipt, changes it, and u
   const lastMonth = chore({ title: "Electricity (PLN)", due_date: ymd(dateIn(-30)), status: "completed", parent_task_id: pln.id });
   const stub = await installStub(context, {
     owner: { locale: "en" },
+    // One What's new card a week (Phase 172): this test is about this one.
+    whatsNewWeek: "bill-payments-2026-11",
     chores: [pln],
     billPayments: [
       {

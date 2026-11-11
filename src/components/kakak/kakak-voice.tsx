@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { AudioLines, Keyboard, Loader2, Mic, Square, Volume2, VolumeX } from "lucide-react";
+import { VideoTip } from "@/components/shared/video-tip";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import {
@@ -194,12 +195,12 @@ function Voice({
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
             <Keyboard className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>
-              {t(
-                "This browser can't listen here. To talk instead of typing, tap the mic key on your keyboard.",
-                "Browser ini belum bisa mendengar di sini. Untuk bicara tanpa mengetik, ketuk tombol mikrofon di keyboard."
-              )}
+              {t("Tap the mic on your keyboard and speak.", "Ketuk mic di keyboard, lalu bicara.")}
             </span>
           </p>
+        )}
+        {showTip && (
+          <VideoTip id="owner-kakak-voice" locale={locale} />
         )}
 
         {speaker.supported && (

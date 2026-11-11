@@ -198,7 +198,8 @@ test("voice: a browser with no speech recognition gets the keyboard mic tip", as
   await page.goto("/dashboard");
 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
-  await expect(page.getByText(/This browser can't listen here\. To talk instead of typing, tap the mic key on your keyboard\./)).toBeVisible();
+  // One line since Phase 172 (D11 rule 7).
+  await expect(page.getByText("Tap the mic on your keyboard and speak.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Talk to Kakak" })).toHaveCount(0);
   // Typing still works, and reading aloud is still offered.
   await expect(page.getByRole("textbox", { name: "What should I set up?" })).toBeVisible();
@@ -212,6 +213,6 @@ test("voice: a recognizer that refuses to run (iPhone Home Screen app) falls bac
 
   await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Bicara dengan Kakak" }).click();
-  await expect(page.getByText(/Browser ini belum bisa mendengar di sini\. Untuk bicara tanpa mengetik, ketuk tombol mikrofon di keyboard\./)).toBeVisible();
+  await expect(page.getByText("Ketuk mic di keyboard, lalu bicara.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Bicara dengan Kakak" })).toHaveCount(0);
 });

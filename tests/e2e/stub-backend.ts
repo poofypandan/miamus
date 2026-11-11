@@ -87,7 +87,7 @@ export interface StubOptions {
    * "Who lives here?" (Phase 162): households.has_pets, and whether the
    * household has its two pets (default) or none at all.
    */
-  household?: { hasPets: boolean | null; pets?: boolean };
+  household?: { hasPets: boolean | null; pets?: boolean; createdAt?: string };
   /** The VAPID public key get_push_public_key returns to the admin (push set up on the server). */
   pushKey?: string;
   /** Leave the Add to Home Screen tip showing (owner phones have it closed by default). */
@@ -97,8 +97,15 @@ export interface StubOptions {
   /**
    * Leave the first-run checklist to the household's data (audit B1). Owner
    * phones have it closed by default, like the install tip: not under test.
+   * Also leaves the household's setup stage unknown on the phone (Phase 172,
+   * lib/calm-start), so What's new and the Home Screen tips wait for Today.
    */
   firstRun?: boolean;
+  /**
+   * The What's new card that holds this week on the phone (Phase 172: one
+   * card a week), for a test about that card while others could show too.
+   */
+  whatsNewWeek?: string;
   /** The roster in place of Ari (audit B1); changed in place, so a reload sees it. */
   staff?: Record<string, unknown>[];
   /** What list_linked_phones answers the admin (audit B1); changed in place. */
@@ -227,17 +234,31 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const exceptions: Record<string, unknown>[] = options.exceptions ?? [];
   const notificationPrefs = options.notificationPrefs ?? { evening_summary_hour: 19, staff_request_pushes: true };
   const kakak = { allowed: false, enabled: false, ...options.kakak };
-  const household = { hasPets: options.household?.hasPets ?? null };
+  // An established household by default (Phase 172's calm first screen
+  // shows What's new only to households 14+ days old and past setup).
+  const household = {
+    hasPets: options.household?.hasPets ?? null,
+    createdAt: options.household?.createdAt ?? "2026-10-01T00:00:00Z",
+  };
   const withPets = options.household?.pets !== false;
   if (options.owner && !options.stored) options = { ...options, stored: freshSession(OWNER, false) };
 
   if (options.owner) {
     await context.addInitScript(
-      ({ locale, installTip, firstRun, firstRunKey }) => {
+      ({ locale, installTip, firstRun, firstRunKey, stageKey, whatsNewWeek }) => {
+        if (whatsNewWeek) {
+          const d = new Date();
+          const on = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          localStorage.setItem("miamus.whats-new.week", JSON.stringify({ id: whatsNewWeek, on }));
+        }
         // The banner about adding staff, already dismissed: not under test.
         if (!installTip) localStorage.setItem("b11_onboarding_dismissed", "true");
-        // The first-run checklist likewise, unless the test is about it.
-        if (!firstRun) localStorage.setItem(firstRunKey, "finished");
+        // The first-run checklist likewise, unless the test is about it; and
+        // then the household is past setup on this phone (Phase 172).
+        if (!firstRun) {
+          localStorage.setItem(firstRunKey, "finished");
+          if (!localStorage.getItem(stageKey)) localStorage.setItem(stageKey, "past");
+        }
         localStorage.setItem("miamus.owner-locale", locale);
       },
       {
@@ -245,6 +266,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         installTip: Boolean(options.installTip),
         firstRun: Boolean(options.firstRun),
         firstRunKey: `miamus.first-run.${OWNER_PROFILE_ID}`,
+        stageKey: `miamus.setup-stage.${HOUSEHOLD_ID}`,
+        whatsNewWeek: options.whatsNewWeek ?? null,
       }
     );
   }
@@ -358,7 +381,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         return route.fulfill({ json: one ? (options.staff[0] ?? null) : options.staff });
       }
       if (table === "households") {
-        const row = { id: HOUSEHOLD_ID, name: "Rumah Uji", has_pets: household.hasPets };
+        const row = { id: HOUSEHOLD_ID, name: "Rumah Uji", has_pets: household.hasPets, created_at: household.createdAt };
         const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: one ? row : [row] });
       }

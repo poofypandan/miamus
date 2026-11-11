@@ -13,7 +13,7 @@ Counts only, never content.
 | **S3** due tasks closed (done or "couldn't") | 90% or more | `north_star_day(day)`: chore-days and routine slots due, the same rules as the evening summary (139); closed = done or a `task_exceptions` row **by the end of that day** in Jakarta (a chore finished the next morning doesn't count for its due day) |
 | **S4** weekly active households | 70% of new households | week 4 (days 21–27): at least 3 tasks finished by staff per staff member on the roster |
 | **S5** Kakak repeat use | 50% of households that tried her | 3+ `kakak_requests` with `job = 'quick'` in week 3 (days 14–20) |
-| Approval wait | (none: it should go to zero with PR A1) | `household_access_requests.requested_at` → `households.created_at` |
+| Approval wait | (none: the owner approves each new household by hand, so this shows how long people wait, and whether the Email them reply comes within a day) | `household_access_requests.requested_at` → `households.created_at` |
 
 Cohorts are **sign-up weeks** (Monday to Sunday, Jakarta). S3 is for the
 calendar week across every household. A cohort counts for S2's "before" once

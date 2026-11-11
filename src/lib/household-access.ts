@@ -8,10 +8,17 @@
  * and both refuse anonymous (staff phone) sessions on their own.
  */
 
-/** What /onboarding shows. "admin" and "approved" both get the name form. */
-export type HouseholdAccess = "admin" | "approved" | "pending" | "rejected" | "none";
+/**
+ * What /onboarding shows. "admin", "approved" and "open" all get the name
+ * form. "open" (Phase 172, migrations/143) only while a platform admin has
+ * switched automatic approval on (it is off: the owner approves every new
+ * household): no request yet, and the account is approved when it creates
+ * its household. With the switch off, or over the day's cap, it reads
+ * "none" and the Request access screen shows.
+ */
+export type HouseholdAccess = "admin" | "approved" | "open" | "pending" | "rejected" | "none";
 
-const ACCESS_VALUES: readonly HouseholdAccess[] = ["admin", "approved", "pending", "rejected", "none"];
+const ACCESS_VALUES: readonly HouseholdAccess[] = ["admin", "approved", "open", "pending", "rejected", "none"];
 
 /** Anything the server sends that isn't a known state reads as "none": ask, don't assume. */
 export function parseHouseholdAccess(value: unknown): HouseholdAccess {
@@ -19,7 +26,7 @@ export function parseHouseholdAccess(value: unknown): HouseholdAccess {
 }
 
 export function canCreateHousehold(access: HouseholdAccess): boolean {
-  return access === "admin" || access === "approved";
+  return access === "admin" || access === "approved" || access === "open";
 }
 
 export type AccessRequestStatus = "pending" | "approved" | "rejected";
@@ -31,6 +38,12 @@ export interface AccessRequest {
   status: AccessRequestStatus;
   requested_at: string;
   decided_at: string | null;
+  /** Approved automatically at sign-up (migrations/143). */
+  auto?: boolean;
+  /** The account's language, for the Email them text. */
+  locale?: string | null;
+  /** The WhatsApp number they asked to be told on (628…), if any (migrations/143). */
+  whatsapp?: string | null;
 }
 
 /** Pending first (oldest first, so nobody waits longest), then decisions, newest first. */
@@ -67,4 +80,47 @@ export function createHouseholdFailure(error: { message?: string } | null | unde
 /** "Sam Lee" / "sam@…" / "Someone": the name an approvals row leads with. */
 export function requesterLabel(request: Pick<AccessRequest, "full_name" | "email">): string {
   return request.full_name?.trim() || request.email || "Someone";
+}
+
+/**
+ * The "Email them" link on the approvals page (Phase 172, D2): a ready
+ * message in the account's language, sent by hand from the support address.
+ * Miamus has no mail service; this only opens the operator's mail app.
+ * Null when the account has no email.
+ */
+export function emailThemHref(request: Pick<AccessRequest, "email" | "locale" | "full_name">): string | null {
+  const to = request.email?.trim();
+  if (!to) return null;
+  const id = request.locale === "id";
+  const first = request.full_name?.trim().split(/\s+/)[0];
+  const subject = id ? "Miamus: Anda sudah bisa masuk" : "Miamus: you're in";
+  const greeting = first ? (id ? `Halo ${first},` : `Hi ${first},`) : id ? "Halo," : "Hi,";
+  const body = id
+    ? `${greeting}\n\nAnda sudah bisa masuk. Buka miamus.app untuk menyiapkan rumah Anda.\n\nPoofy Labs`
+    : `${greeting}\n\nYou're in. Open miamus.app to set up your household.\n\nPoofy Labs`;
+  return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/**
+ * An Indonesian mobile number as WhatsApp wants it (628…, digits only), from
+ * what people type: "+62 812-3456-7890", "0812 3456 7890", "812345678". Null
+ * when it isn't one. The database's normalize_id_whatsapp() (migrations/143)
+ * does the same and has the last word.
+ */
+export function normalizeWhatsApp(input: string): string | null {
+  const digits = input.replace(/[\s().+-]/g, "");
+  const d = digits.startsWith("62")
+    ? digits
+    : digits.startsWith("0")
+      ? `62${digits.slice(1)}`
+      : digits.startsWith("8")
+        ? `62${digits}`
+        : digits;
+  return /^628[1-9]\d{6,10}$/.test(d) ? d : null;
+}
+
+/** 6281234567890 → "0812-3456-7890", the way Indonesians write it. */
+export function formatWhatsApp(number: string): string {
+  const local = number.startsWith("62") ? `0${number.slice(2)}` : number;
+  return [local.slice(0, 4), local.slice(4, 8), local.slice(8)].filter(Boolean).join("-");
 }
