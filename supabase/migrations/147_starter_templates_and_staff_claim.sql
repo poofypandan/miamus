@@ -15,6 +15,9 @@
 -- (household_id, name) columns 096 grants.
 --
 -- NEW
+--   setup_name_key(name)        one rule for "the same name" (trim, collapse
+--        whitespace, ignore case), used by the apply below and mirrored by
+--        the review on the phone.
 --   apply_household_setup(household, draft)   the reviewed list in ONE call,
 --        all or nothing: floors, rooms (with the rooms inside them), staff,
 --        chores and bills. SECURITY INVOKER, so every insert still passes
@@ -65,6 +68,24 @@ alter table public.staff_sign_in_attempts
   add constraint staff_sign_in_attempts_kind_check check (kind in ('code', 'pin', 'claim'));
 
 -- --- 2. Apply the reviewed list ---------------------------------------------------------
+-- One rule for "the same name", here and in the review the owner sees
+-- (src/lib/setup-templates.ts, nameKey, which mirrors it and is tested
+-- against the same cases): trim, collapse inner whitespace (spaces, tabs,
+-- line breaks, non-breaking spaces) to one space, ignore case. So "Ruang
+-- Tamu" with two spaces is the template's Ruang Tamu on both sides, shown
+-- as Added and never inserted twice (Codex, PR #90).
+create or replace function public.setup_name_key(p_name text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select lower(btrim(regexp_replace(coalesce(p_name, ''), '[ \t\n\r\f\v\u00a0]+', ' ', 'g'), ' '))
+$$;
+
+revoke all on function public.setup_name_key(text) from public, anon;
+grant execute on function public.setup_name_key(text) to authenticated, service_role;
+
 -- p_draft (src/lib/setup-templates.ts, toApplyPayload):
 --   { "v": 1,
 --     "floors": [{ "key", "name" }],                       at most 8
@@ -87,6 +108,7 @@ declare
   today date := (now() at time zone 'Asia/Jakarta')::date;
   places jsonb := '{}'::jsonb;   -- draft key → location id
   people jsonb := '{}'::jsonb;   -- draft key → staff profile id
+  room_floors jsonb := '{}'::jsonb; -- draft floor keys an older household's room stands in for
   item jsonb;
   k text;
   v_name text;
@@ -135,12 +157,18 @@ begin
       raise exception 'invalid_floor' using errcode = '22023';
     end if;
     select l.id, l.kind into v_id, v_kind from public.household_locations l
-     where l.household_id = p_household and l.parent_id is null and lower(btrim(l.name)) = lower(v_name);
+     where l.household_id = p_household and l.parent_id is null
+       and public.setup_name_key(l.name) = public.setup_name_key(v_name)
+     order by l.created_at limit 1;
     if v_id is null then
       insert into public.household_locations (household_id, name, kind)
       values (p_household, v_name, 'floor') returning id into v_id;
     elsif v_kind <> 'floor' then
-      raise exception 'place_name_taken: %', v_name using errcode = '23505';
+      -- An older household's room named like the floor ("LT2" before floors
+      -- existed, 129; Phase 158 reads it as the whole floor) stands in for
+      -- it: whole-floor chores go to it, and the floor's rooms stay at the
+      -- top level (code review, PR #90). The phone's review does the same.
+      room_floors := room_floors || jsonb_build_object(k, true);
     end if;
     places := places || jsonb_build_object(k, v_id);
     v_id := null;
@@ -158,11 +186,14 @@ begin
       if not places ? (item ->> 'parent') then
         raise exception 'invalid_room_parent' using errcode = '22023';
       end if;
-      v_parent := (places ->> (item ->> 'parent'))::uuid;
+      -- A floor a room stands in for has no rooms on it: top level.
+      v_parent := case when room_floors ? (item ->> 'parent') then null
+                       else (places ->> (item ->> 'parent'))::uuid end;
     end if;
     select l.id, l.kind into v_id, v_kind from public.household_locations l
      where l.household_id = p_household and l.parent_id is not distinct from v_parent
-       and lower(btrim(l.name)) = lower(v_name);
+       and public.setup_name_key(l.name) = public.setup_name_key(v_name)
+     order by l.created_at limit 1;
     if v_id is null then
       insert into public.household_locations (household_id, name, kind, parent_id)
       values (p_household, v_name, 'room', v_parent) returning id into v_id;
@@ -184,7 +215,7 @@ begin
     end if;
     select s.id into v_id from public.staff_profiles s
      where s.household_id = p_household and s.user_id is null and s.archived_at is null
-       and lower(s.name) = lower(v_name)
+       and public.setup_name_key(s.name) = public.setup_name_key(v_name)
      order by s.created_at limit 1;
     if v_id is null then
       insert into public.staff_profiles (household_id, name) values (p_household, v_name) returning id into v_id;
@@ -264,7 +295,7 @@ begin
        where t.household_id = p_household
          and t.parent_task_id is null
          and t.status <> 'cancelled'
-         and lower(regexp_replace(btrim(t.title), '\s+', ' ', 'g')) = lower(regexp_replace(v_title, '\s+', ' ', 'g'))
+         and public.setup_name_key(t.title) = public.setup_name_key(v_title)
          and t.location_id is not distinct from v_place
          and t.recurrence = v_rec
          and t.recurrence_interval = v_int

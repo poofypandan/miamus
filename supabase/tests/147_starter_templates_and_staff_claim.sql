@@ -130,6 +130,26 @@ insert into drafts values ('house', jsonb_build_object(
 create function pg_temp.apply_sql(draft text, household text default '00000000-0000-0000-0000-0000000146f1') returns text language sql as $$
   select format('select public.apply_household_setup(%L, (select body from pg_temp.drafts where name = %L))', household, draft) $$;
 
+-- ---- One rule for "the same name" (Codex, PR #90) ----------------------------------------
+-- tests/unit/setup-templates.test.ts reads these same cases and checks the
+-- phone's nameKey gives the same answers.
+create temp table name_cases (input text, expected text);
+insert into name_cases values
+-- name-key cases begin
+  ('Ruang Tamu', 'ruang tamu'),
+  ('Ruang  Tamu', 'ruang tamu'),
+  ('  ruang tamu  ', 'ruang tamu'),
+  (E'Ruang\tTamu', 'ruang tamu'),
+  (E'Ruang\u00a0Tamu', 'ruang tamu'),
+  (E'Kamar\n Mandi 2', 'kamar mandi 2'),
+  ('DAPUR KOTOR', 'dapur kotor'),
+  ('LT1', 'lt1'),
+  ('', '')
+-- name-key cases end
+;
+select pg_temp.ok((select bool_and(public.setup_name_key(input) = expected) from name_cases),
+  'setup_name_key: trim, collapse whitespace (tabs, line breaks, non-breaking spaces), ignore case');
+
 -- ---- Applying ------------------------------------------------------------------------
 select pg_temp.ok((select prosecdef = false from pg_proc where proname = 'apply_household_setup'),
   'apply_household_setup is security invoker (the tables'' own RLS still applies)');
@@ -175,6 +195,59 @@ update public.household_tasks set recurrence_until = (now() at time zone 'Asia/J
  where household_id = :f1::uuid and title = 'Potong rumput';
 select pg_temp.ok((pg_temp.json_as(:a1, pg_temp.apply_sql('house')) ->> 'chores_added')::int = 1,
   'a chore whose repeat ended is added again');
+
+-- A room the household typed with two spaces is the same room (Codex, PR #90).
+insert into public.household_locations (household_id, name, kind)
+values (:f1, 'Ruang  Tamu', 'room');
+insert into drafts values ('living', jsonb_build_object('v', 1,
+  'rooms', jsonb_build_array(jsonb_build_object('key', 'r:living', 'name', 'Ruang Tamu', 'parent', null)),
+  'chores', jsonb_build_array(
+    jsonb_build_object('title', 'Lap  meja tamu', 'place', 'r:living', 'recurrence', 'weekly', 'interval', 1,
+                       'due_date', (select today from d), 'category', 'cleaning', 'assignee', null, 'remind', null))));
+select pg_temp.ok(pg_temp.json_as(:a1, pg_temp.apply_sql('living')) ->> 'rooms_added' = '0',
+  '"Ruang Tamu" is the household''s "Ruang  Tamu": reused, not added');
+select pg_temp.ok((select count(*) = 1 from public.household_locations
+                    where household_id = :f1::uuid and public.setup_name_key(name) = 'ruang tamu'),
+  '... one living room, not two');
+select pg_temp.ok((select l.name = 'Ruang  Tamu' from public.household_tasks t join public.household_locations l on l.id = t.location_id
+                    where t.household_id = :f1::uuid and t.title = 'Lap  meja tamu'),
+  '... and its chore points at the household''s own room');
+insert into drafts values ('living-again', jsonb_build_object('v', 1,
+  'rooms', jsonb_build_array(jsonb_build_object('key', 'r:living', 'name', 'ruang tamu', 'parent', null)),
+  'chores', jsonb_build_array(
+    jsonb_build_object('title', E'Lap meja\ttamu', 'place', 'r:living', 'recurrence', 'weekly', 'interval', 1,
+                       'due_date', (select today from d), 'category', 'cleaning', 'assignee', null, 'remind', null))));
+select pg_temp.ok(pg_temp.json_as(:a1, pg_temp.apply_sql('living-again')) - 'staff'
+                  = '{"rooms_added": 0, "chores_added": 0, "bills_added": 0, "staff_added": 0, "skipped": 1}'::jsonb,
+  'a chore title that differs only in spacing or case is the same chore: skipped');
+
+-- An older household's room named "LT2" (before floors) stands in for the
+-- floor: no place_name_taken, its rooms at the top level (code review, PR #90).
+insert into public.households (id, name, owner_auth_id) values
+  ('00000000-0000-0000-0000-0000000146f3', 'Rumah Lama', '00000000-0000-0000-0000-0000000146a9');
+insert into public.household_members (household_id, user_id, role) values
+  ('00000000-0000-0000-0000-0000000146f3', '00000000-0000-0000-0000-0000000146a9', 'owner');
+insert into public.household_locations (household_id, name, kind) values
+  ('00000000-0000-0000-0000-0000000146f3', 'LT2', 'room');
+insert into drafts values ('old-floors', jsonb_build_object('v', 1,
+  'floors', jsonb_build_array(jsonb_build_object('key', 'f:2', 'name', 'LT2')),
+  'rooms', jsonb_build_array(
+    jsonb_build_object('key', 'r:bed1', 'name', 'Kamar Utama', 'parent', 'f:2'),
+    jsonb_build_object('key', 'r:bath1', 'name', 'Kamar Mandi', 'parent', 'r:bed1')),
+  'chores', jsonb_build_array(
+    jsonb_build_object('title', 'Sapu dan pel lantai', 'place', 'f:2', 'recurrence', 'daily', 'interval', 1,
+                       'due_date', (select today from d), 'category', 'cleaning', 'assignee', null, 'remind', null))));
+select pg_temp.ok(pg_temp.err_as(:a9, pg_temp.apply_sql('old-floors', '00000000-0000-0000-0000-0000000146f3')) = '',
+  'a room named LT2 (before floors) doesn''t make the Starter list fail');
+select pg_temp.ok((select count(*) = 0 from public.household_locations
+                    where household_id = '00000000-0000-0000-0000-0000000146f3' and kind = 'floor'),
+  '... no second LT2 is made');
+select pg_temp.ok((select parent_id is null from public.household_locations
+                    where household_id = '00000000-0000-0000-0000-0000000146f3' and name = 'Kamar Utama'),
+  '... the floor''s rooms stay at the top level (the room inside still inside)');
+select pg_temp.ok((select l.name = 'LT2' from public.household_tasks t join public.household_locations l on l.id = t.location_id
+                    where t.household_id = '00000000-0000-0000-0000-0000000146f3' and t.title = 'Sapu dan pel lantai'),
+  '... and the whole-floor chore goes to their LT2');
 
 -- All or nothing: a bad chore at the end leaves nothing behind.
 insert into drafts values ('broken', jsonb_build_object('v', 1,
@@ -233,8 +306,9 @@ insert into drafts values ('v2', jsonb_build_object('v', 2));
 select pg_temp.ok(pg_temp.err_as(:a1, pg_temp.apply_sql('v2')) like '%invalid_draft%', 'an unknown draft version is refused');
 insert into drafts values ('taken', jsonb_build_object('v', 1, 'floors', jsonb_build_array(
   jsonb_build_object('key', 'f:x', 'name', 'Taman'))));
-select pg_temp.ok(pg_temp.err_as(:a1, pg_temp.apply_sql('taken')) like '%place_name_taken%',
-  'a floor named like an existing top-level room is refused, not merged');
+select pg_temp.ok(pg_temp.err_as(:a1, pg_temp.apply_sql('taken')) = ''
+                  and not exists (select 1 from public.household_locations where household_id = :f1::uuid and kind = 'floor' and name = 'Taman'),
+  'a floor named like an existing top-level room uses that room, never a second place of that name');
 
 -- ---- Staff in one go -------------------------------------------------------------------
 insert into public.staff_profiles (id, household_id, name, created_at, has_pin, archived_at) values
@@ -375,6 +449,9 @@ select pg_temp.ok(not has_function_privilege('anon', 'public.house_code_roster(t
   'house_code_roster keeps its grants');
 select pg_temp.ok(to_regprocedure('public.claim_staff_with_house_code(text, uuid, text)') is null,
   'no 3-argument claim (without a claim code) is left behind');
+select pg_temp.ok(not has_function_privilege('anon', 'public.setup_name_key(text)', 'execute')
+                  and has_function_privilege('authenticated', 'public.setup_name_key(text)', 'execute'),
+  'setup_name_key: for signed-in callers (the apply runs as them), not anon');
 select pg_temp.ok(not has_function_privilege('anon', 'public.staff_claim_link(uuid)', 'execute')
                   and not has_function_privilege('anon', 'public.undo_staff_claim(uuid, uuid)', 'execute')
                   and not has_table_privilege('authenticated', 'public.staff_claim_links', 'select')

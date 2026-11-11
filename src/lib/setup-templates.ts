@@ -451,7 +451,19 @@ export function buildSetupDraft(input: Shape, options: BuildOptions): SetupDraft
 
 // --- What a household already has (D7) --------------------------------------------------
 
-const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+/**
+ * One rule for "the same name", the same as the database's setup_name_key
+ * (migrations/147), so what the review marks Added is exactly what the apply
+ * skips (Codex, PR #90): collapse runs of spaces, tabs, line breaks and
+ * non-breaking spaces to one space, trim, ignore case. The same explicit set
+ * on both sides: JavaScript's \s knows more Unicode spaces than Postgres.
+ * Case folding can differ for a few non-ASCII letters (Turkish dotted I);
+ * room and chore names here are Indonesian, so ASCII.
+ */
+export function nameKey(name: string | null | undefined): string {
+  return (name ?? "").replace(/[ \t\n\r\f\v\u00a0]+/g, " ").replace(/^ | $/g, "").toLowerCase();
+}
+const norm = nameKey;
 
 export interface Existing {
   locations: Pick<HouseholdLocation, "id" | "name" | "kind" | "parent_id">[];
@@ -466,15 +478,24 @@ export function matchPlaces(draft: SetupDraft, existing: Existing): Map<string, 
     existing.locations.find(
       (l) => norm(l.name) === norm(name) && (l.kind ?? "room") === kind && (l.parent_id ?? null) === parentId
     )?.id;
+  // An older household's room named like a floor ("LT2", before floors
+  // existed) stands in for it, as apply_household_setup does: whole-floor
+  // chores go to it, and that floor's rooms are at the top level.
+  const roomFloors = new Set<string>();
   for (const floor of draft.floors) {
     const id = find(floor.name, "floor", null);
+    const room = id ? undefined : find(floor.name, "room", null);
     if (id) found.set(floor.key, id);
+    else if (room) {
+      found.set(floor.key, room);
+      roomFloors.add(floor.key);
+    }
   }
   // Rooms on floors (and top-level rooms) before the rooms inside them.
   for (const pass of [false, true]) {
     for (const r of draft.rooms) {
       if (!!r.inside !== pass) continue;
-      const parentKey = r.inside ?? r.floor;
+      const parentKey = r.inside ?? (r.floor && roomFloors.has(r.floor) ? null : r.floor);
       const parentId = parentKey ? (found.get(parentKey) ?? null) : null;
       if (parentKey && !parentId) continue;
       const id = find(r.name, "room", parentId);

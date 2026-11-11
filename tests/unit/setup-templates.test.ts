@@ -3,6 +3,8 @@
 // nothing twice, what a household already has marked Added, unticking a
 // room takes its chores, job chips assign chores, and the call's payload.
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   HOME_TYPES,
@@ -269,5 +271,48 @@ describe("the Starter list's starting shape", () => {
   it("falls back to small defaults for a household with no rooms", async () => {
     const { shapeFromHousehold } = await import("@/lib/setup-templates");
     expect(shapeFromHousehold([])).toEqual({ homeType: "other", shape: SHAPES.other });
+  });
+});
+
+describe("one rule for the same name, here and in the database (Codex, PR #90)", () => {
+  // The cases live in the SQL test, so both sides answer the same list.
+  const sql = readFileSync(join(__dirname, "../../supabase/tests/147_starter_templates_and_staff_claim.sql"), "utf8");
+  const block = sql.slice(sql.indexOf("-- name-key cases begin"), sql.indexOf("-- name-key cases end"));
+  const unescape = (raw: string, e: boolean) =>
+    e ? raw.replace(/\\t/g, "\t").replace(/\\n/g, "\n").replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))) : raw;
+  const cases = [...block.matchAll(/\((E?)'([^']*)', '([^']*)'\)/g)].map((m) => [unescape(m[2], m[1] === "E"), m[3]] as const);
+
+  it("reads every case from the SQL test", () => {
+    expect(cases.length).toBeGreaterThanOrEqual(9);
+  });
+
+  it("gives the database's answer for each", async () => {
+    const { nameKey } = await import("@/lib/setup-templates");
+    for (const [input, expected] of cases) expect(nameKey(input)).toBe(expected);
+  });
+
+  it("marks a room typed with two spaces Added, as the apply will reuse it", async () => {
+    const draft = buildSetupDraft(SHAPES.other, opts("other"));
+    const added = alreadyInHousehold(draft, {
+      locations: [{ id: "x", name: "Ruang  Keluarga", kind: "room", parent_id: null }],
+      chores: [],
+      today: TODAY,
+    });
+    expect(added.has("r:family")).toBe(true);
+  });
+});
+
+describe("an older household's room named like a floor (code review, PR #90)", () => {
+  it("stands in for the floor, as the database does: its rooms are matched at the top level", () => {
+    const draft = buildSetupDraft(SHAPES.garden, opts("garden"));
+    const added = alreadyInHousehold(draft, {
+      locations: [
+        { id: "lt2", name: "LT2", kind: "room", parent_id: null },
+        { id: "master", name: "Kamar Utama", kind: "room", parent_id: null },
+      ],
+      chores: [],
+      today: TODAY,
+    });
+    expect(added.has("r:bed1")).toBe(true);
   });
 });
