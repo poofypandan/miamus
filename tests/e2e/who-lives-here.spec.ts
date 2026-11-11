@@ -55,7 +55,7 @@ test("never answered and no pets: asked once on Today, and No pets hides the tab
 
   await expect(page.getByText("Ada hewan di rumah?")).toBeVisible({ timeout: 20_000 });
   await expect(tabs(page, "Bagian").getByRole("link", { name: "Hewan" })).toBeVisible();
-  await page.getByRole("button", { name: "Tidak ada" }).click();
+  await page.getByRole("button", { name: "Tidak ada", exact: true }).click();
   await expect(tabs(page, "Bagian").getByRole("link", { name: "Hewan" })).toHaveCount(0);
   await expect(page.getByText("Ada hewan di rumah?")).toHaveCount(0);
   expect(stub.household.hasPets).toBe(false);
