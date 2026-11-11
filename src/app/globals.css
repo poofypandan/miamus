@@ -42,6 +42,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-kakak: var(--kakak);
+  --color-kakak-tint: var(--kakak-tint);
+  --color-kakak-line: var(--kakak-line);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -84,6 +87,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Kakak's one warm colour (2026-11-11): her mark only, never a button or
+     a background beyond her own circle. Clay rose on a warm blush; 4.0:1. */
+  --kakak: #b65f55;
+  --kakak-tint: #fbf1ee;
+  --kakak-line: #f1ddd7;
 }
 
 .dark {
@@ -118,6 +126,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  /* Lighter rose on a warm dark; 7.4:1. */
+  --kakak: #e5a196;
+  --kakak-tint: #2b201e;
+  --kakak-line: #4a3431;
 }
 
 @layer base {
