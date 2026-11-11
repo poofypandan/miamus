@@ -1,8 +1,9 @@
 # Phase 172 — The first 10 minutes
 
-Status: **decided: all A except D1 = manual approval kept, 2026-11-11**
-(D1–D15 A on 2026-11-10; on 2026-11-11 the owner changed D1: "make sure I
-still need to approve new households"). **Build order PR 0 (145) → A1 →
+Status: **decided: all A except D1 = manual approval kept and D2 = tell
+them by WhatsApp or email, 2026-11-11** (D1–D15 A on 2026-11-10; on
+2026-11-11 the owner changed D1: "make sure I still need to approve new
+households", and D2: WhatsApp first, email second). **Build order PR 0 (145) → A1 →
 171 PR A (146) → A2 → B.** Nothing is built
 and nothing is applied anywhere. The owner questions below stay open; until
 they're answered the build uses the defaults (cap 25, keep the $20 limit,
@@ -132,7 +133,7 @@ read.
 | # | Screen | Owner's typing | Owner's taps | Owner | Phase |
 | --- | --- | --- | --- | --- | --- |
 | 1 | **Continue with Google** → language | 0 | 2 | — | as today |
-| 1b | **Request access** (one tap) → **Request sent**: "We'll email you as soon as you're approved." The operator approves; the person is emailed right away and the screen moves on by itself | 0 | 1 | — | 172 PR A1 (D1, D2) |
+| 1b | **Request access** (one tap) → **Request sent**: "We'll let you know by WhatsApp or email as soon as you're approved." The operator approves and tells them right away (WhatsApp first, email second); the screen moves on by itself | 0 | 1 | — | 172 PR A1 (D1, D2) |
 | 2 | **Name your household** + **Who lives here?** (Pets, Kids, Elders) | 1 | 2 | 171 | 171 |
 | 3 | **What kind of home?** (4 cards) | 0 | 1 | 171 asks, 172 acts | hand-off |
 | 4 | **Your home** (the template review): shape row, rooms and chores, bills; untick | 0 | ~12 | 172 | 172 PR A2 |
@@ -168,8 +169,8 @@ a person meets on the way, not counting labels and the names of things.
 **S1 before:** hours to days (approval, with no message when it's done),
 then 15–60 minutes of setup.
 **S1 after:** same day **when the operator approves the same day** (the
-owner keeps manual approval, D1; the person is emailed the moment they're
-approved and the waiting screen moves on by itself); then 6–8 minutes of
+owner keeps manual approval, D1; the person is told by WhatsApp or email
+the moment they're approved and the waiting screen moves on by itself); then 6–8 minutes of
 owner time (template), 4–6 (Kakak);
 the first staff finish as soon as a staff member opens the WhatsApp link
 (and with staff push, Phase 166, they're told about new work).
@@ -192,14 +193,14 @@ it.
 
 1. **Request access**, one tap, after the language: today's screen, with
    the body cut to one line ("Miamus approves each new household. Ask once;
-   we'll email you.") and the privacy sentence kept under the button.
-2. **Request sent**: "**We'll email you at {their Google email} from
-   support@poofylabs.dev as soon as you're approved.**" The screen checks
+   we'll let you know.") and the privacy sentence kept under the button.
+2. **Request sent**: "**We'll let you know by WhatsApp or email as soon as
+   you're approved.**" The screen checks
    again by itself every 60 seconds while it's on screen (it already checks
    when the tab is shown again), so someone who keeps it open moves on to
    the name screen without tapping anything. **Check again** stays.
 3. **Approved**: the next time the screen checks, or when they open the
-   email's link, they're on **Name your household**, and the rest of the
+   link in the WhatsApp message or email, they're on **Name your household**, and the rest of the
    flow runs as above.
 
 ### What the operator does
@@ -207,14 +208,25 @@ it.
 - **Told right away**: the existing push "New household request · X is
   waiting for your approval" (`request_household_access`, 113) is
   unchanged. The evening review also lists pending requests.
-- **Approve, then tell them in one tap (D2):** on the approvals page,
-  tapping **Approve** leaves the row open with **Email them**: a `mailto:`
-  link to their Google email with a ready text in their language ("You're
-  in. Open miamus.app to set up your household." / "Anda sudah bisa masuk.
-  Buka miamus.app untuk menyiapkan rumah Anda."), sent by hand from the
-  support Google Group. Pending rows have the same button ("We've got your
-  request…") for anyone who waits longer than a day. No mail service, no new
-  processor, nothing new stored: the email is already on the request.
+- **Approve, then tell them by WhatsApp or email (D2):** on the approvals
+  page, tapping **Approve** leaves the row open with two buttons:
+  1. **Send on WhatsApp** (first, primary): a `wa.me/?text=` share (the
+     same `whatsAppShareUrl()` the app already uses) with a ready message in
+     their language and the link: "You're in. Open https://miamus.app to set
+     up your household." / "Anda sudah bisa masuk. Buka https://miamus.app
+     untuk menyiapkan rumah Anda." **The operator picks the chat**: sign-up
+     collects no phone number, and this plan doesn't add one (no new
+     personal data, no new field). It suits a beta where the operator
+     usually knows who asked.
+  2. **Email them** (second): a `mailto:` link to their Google email (already
+     on the request) with the same text, sent by hand from the support
+     Google Group.
+
+  Pending rows have the same two buttons ("We've got your request…") for
+  anyone who waits longer than a day. "Their language" is the language they
+  picked at sign-up: `list_household_access_requests()` is re-created to also
+  return it (from `user_preferences`, 114; English when none). No mail or
+  messaging service, no new processor, nothing new stored.
 - Reject and the 30-day deletion of rejected requests are unchanged.
 
 ### The automatic-approval switch (built, off by default)
@@ -245,7 +257,7 @@ and leaves it off:
   **pending** request and its push: today's manual path.
 - **When it is off** (the default), every function behaves exactly as
   today; the only differences anyone sees are the wording, the 60-second
-  check and **Email them**.
+  check and the **Send on WhatsApp** and **Email them** buttons.
 
 **Safeguards, if the switch is ever turned on:** Google sign-in only (staff
 phones are already refused; owner action: switch email sign-in off in
@@ -743,11 +755,12 @@ setup should be no different.
 
 | Where | English | Bahasa Indonesia |
 | --- | --- | --- |
-| Request screen, one line | Miamus approves each new household. Ask once; we'll email you. | Miamus menyetujui setiap rumah baru. Cukup minta sekali; kami kirim email ke Anda. |
+| Request screen, one line | Miamus approves each new household. Ask once; we'll let you know. | Miamus menyetujui setiap rumah baru. Cukup minta sekali; kami akan memberi tahu Anda. |
 | Request screen, under the button (as today) | Your request shares your Google name and email with Poofy Labs, who runs Miamus. Privacy | Permintaan ini membagikan nama dan email Google Anda kepada Poofy Labs, pengelola Miamus. Privasi |
-| Request sent | We'll email you at {email} from support@poofylabs.dev as soon as you're approved. | Kami akan mengirim email ke {email} dari support@poofylabs.dev begitu permintaan Anda disetujui. |
-| Approvals page button | Email them | Kirim email |
-| Email text, approved | You're in. Open miamus.app to set up your household. | Anda sudah bisa masuk. Buka miamus.app untuk menyiapkan rumah Anda. |
+| Request sent | We'll let you know by WhatsApp or email as soon as you're approved. | Kami akan memberi tahu Anda lewat WhatsApp atau email begitu permintaan Anda disetujui. |
+| Approvals page buttons | Send on WhatsApp · Email them | Kirim lewat WhatsApp · Kirim email |
+| Message text, approved (WhatsApp and email) | You're in. Open https://miamus.app to set up your household. | Anda sudah bisa masuk. Buka https://miamus.app untuk menyiapkan rumah Anda. |
+| Message text, still pending | We've got your request and will let you know soon. | Permintaan Anda sudah kami terima. Kami akan segera memberi tahu Anda. |
 | Home type heading | What kind of home? | Seperti apa rumah Anda? |
 | Home type line | We'll start you with the usual rooms and chores. You change anything next. | Kami siapkan ruangan dan tugas yang biasa. Semua bisa diubah setelah ini. |
 | Review heading | Your home | Rumah Anda |
@@ -841,7 +854,10 @@ Nothing below is created in this PR.
 - `request_household_access()` re-created: approves automatically under the
   same switch, cap and lock (for old builds); otherwise files pending and
   pushes as today. Same revoke/grant.
-- `list_household_access_requests()` re-created to return `auto`.
+- `list_household_access_requests()` re-created to also return `auto` and
+  the requester's language (`user_preferences.locale`, 114; `en` when
+  none), for the ready WhatsApp and email text. Same platform-admin check,
+  same revoke/grant.
 - Tests: **by default (switch off) every function behaves as today**
   (request → pending → approve → create); with the switch on, open →
   create works and writes an automatic approval, and the 26th account that
@@ -896,7 +912,7 @@ each PR that changes the text.
 | PR | What | Migration | Size |
 | --- | --- | --- | --- |
 | **0** | **Measurement first**, so the before numbers exist: `household_setup` (empty until A2), `platform_north_star()`, `/dashboard/north-star` (platform admins), `kakak_requests.job`, the privacy line, the evening review reads it | **145** | Small |
-| **A1** | **Approval you hear about + calm first screen**: the one-line Request screen, the waiting screen's email promise and 60-second check, **Email them** after **Approve**; the automatic-approval switch (`open` access, cap, push) built **off**; What's new rules (14 days, never the backlog, one a week), checklist first, Add to Home Screen after setup, one-line instructions, `<VideoTip>` and the first videos (Playwright recordings in `public/tips/`), the `/tips/<id>` page | own number (not 146) | Small–medium |
+| **A1** | **Approval you hear about + calm first screen**: the one-line Request screen, the waiting screen's "WhatsApp or email" promise and 60-second check, **Send on WhatsApp** then **Email them** after **Approve** (and the requester's language in the list); the automatic-approval switch (`open` access, cap, push) built **off**; What's new rules (14 days, never the backlog, one a week), checklist first, Add to Home Screen after setup, one-line instructions, `<VideoTip>` and the first videos (Playwright recordings in `public/tips/`), the `/tips/<id>` page | own number (not 146) | Small–medium |
 | **A2** | **Templates + staff in one go**: `setup-templates.ts` and `buildSetupDraft()`, `/setup` (review, staff, pets), `apply_household_setup`, the house-code claim and prefilled link, the one WhatsApp message, **Starter list** on Chores for existing households, `household_setup` written, 171's home-type screen switched on, the What's new entry for existing households | next free | Medium–large |
 | **B** | **Kakak setup**: per-job routing, the job profile, `propose_home_setup`, `/api/kakak/setup`, `kakak_begin_setup`, the free allowance and caps, the voice sheet and the **Add all** card, practice-mode script, the eval cases for setup (10 voice notes, scored on rooms, chores and names), privacy line | next free | Medium |
 | **later** | **Delegated setup** (section 7): `setup_proposals`, the staff screen, the owner's review in Waiting for you; concierge on the paid plan | next free | Medium |
@@ -930,22 +946,25 @@ with the owner's OK, merge with the owner's OK.
 **Decided 2026-11-10: the owner chose all recommendations ("Yes, all of
 it"), so D1–D15 are all A. Changed 2026-11-11: D1 is manual approval kept**
 ("make sure I still need to approve new households"); automatic approval
-is built as a switch, off by default. Build order: PR 0 (145) → A1 → 171 PR A (146)
+is built as a switch, off by default. **D2 is "tell them by WhatsApp or
+email"** (WhatsApp first). Build order: PR 0 (145) → A1 → 171 PR A (146)
 → A2 → B.
 
 - **D1 — The approval wait. Decided 2026-11-11: manual approval kept.**
-  The owner approves every new household; the waiting screen promises an
-  email and checks again by itself; automatic approval (daily cap 25) is
+  The owner approves every new household; the waiting screen promises a
+  WhatsApp message or an email and checks again by itself; automatic approval (daily cap 25) is
   built as a switch, **off by default**. The options were: A (recommended
   on 10 Nov, chosen then, changed on 11 Nov): approve automatically, review
   afterwards. B: a code on the landing page that skips the wait. C: keep
   manual approval and only add the email.
-- **D2 — Telling people they're in.**
-  **A (recommended, decided):** the waiting screen promises an email from
-  support@poofylabs.dev, and the approvals page shows **Email them** right
-  after **Approve** (and beside pending rows), with a ready text; sent by
-  hand, no new service. B: add an email service (a new processor and a
-  privacy change). C: no message (today).
+- **D2 — Telling people they're in. Decided 2026-11-11: by WhatsApp or
+  email.** After **Approve**, **Send on WhatsApp** first (a `wa.me` share
+  with a ready message and the miamus.app link; the operator picks the
+  chat, since sign-up collects no phone number and none is added), **Email
+  them** second (`mailto:`); the waiting screen says "by WhatsApp or email".
+  Sent by hand, no new service. Other options were: email only (A on 10 Nov);
+  B: an email service (a new processor and a privacy change); C: no message
+  (today).
 - **D3 — The home types.**
   **A (recommended):** four: House with a garden · Big house, several
   floors · Apartment · Something else. B: three, without Something else
