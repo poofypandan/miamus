@@ -8,6 +8,8 @@
 // their weekdays, worked out here in code, instead of leaving the arithmetic
 // to the model.
 
+import type { RoutineKind } from "@/types/database";
+
 export type KakakLocale = "id" | "en";
 
 export interface KakakHousehold {
@@ -25,6 +27,13 @@ export interface KakakHousehold {
     kind: "dog" | "cat" | "other";
     meals: string[];
     potty: string[];
+    /**
+     * Routines with a kind (Phase 173, migrations/144), each title with its
+     * times. Absent before Phase 173 PR B, which reads as none. Only the
+     * catalogue's kinds go into the block (as "walk 06:30"); an Other
+     * routine's typed title stays here, for the duplicate check only.
+     */
+    routines?: { kind: RoutineKind; title: string; times: string[] }[];
   }[];
   /**
    * Places (migrations/129): `name` is the place's own name; a room on a
@@ -137,7 +146,7 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
     lines.push("Pets (current daily times):");
     for (const pet of household.pets) {
       lines.push(
-        `- ${pet.ref}: ${pet.name} (${pet.kind}). Meals: ${times(pet.meals)}. Potty: ${times(pet.potty)}.`,
+        `- ${pet.ref}: ${pet.name} (${pet.kind}). Meals: ${times(pet.meals)}. Potty: ${times(pet.potty)}.${routinesLine(pet.routines)}`,
       );
     }
     if (household.pets.length === 0) lines.push("- none");
@@ -166,6 +175,25 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   lines.push(`First day of next month: ${dayLine(firstDayOfNextMonth(household.today))}.`);
   lines.push("</household>");
   return lines.join("\n");
+}
+
+/**
+ * " Routines: walk 06:30, 16:30; lights 21:30." for a pet's catalogue
+ * routines, or nothing, so a pet with none reads exactly as before. Other
+ * routines are left out: their titles are the owner's own words, which the
+ * privacy policy doesn't list among what goes to Anthropic.
+ */
+function routinesLine(routines: KakakHousehold["pets"][number]["routines"]): string {
+  const byKind = new Map<string, Set<string>>();
+  for (const routine of routines ?? []) {
+    if (routine.kind === "other") continue;
+    const set = byKind.get(routine.kind) ?? new Set<string>();
+    for (const time of routine.times) set.add(time);
+    byKind.set(routine.kind, set);
+  }
+  if (byKind.size === 0) return "";
+  const parts = [...byKind.entries()].map(([kind, set]) => `${kind} ${[...set].sort().join(", ")}`);
+  return ` Routines: ${parts.join("; ")}.`;
 }
 
 /**

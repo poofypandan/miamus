@@ -10,7 +10,11 @@
 // References are numbered in a fixed order (creation time, then id) so the
 // same household gives the same references on every call of a conversation.
 
+import { ROUTINE_KINDS } from "@/lib/pet-routine-kinds";
+import type { RoutineKind } from "@/types/database";
 import type { KakakHousehold, KakakLocale } from "./household";
+
+const ROUTINE_KIND_SET = new Set<string>(ROUTINE_KINDS.map((k) => k.kind));
 
 export interface ContextStaffRow {
   id: string;
@@ -35,6 +39,8 @@ export interface ContextScheduleRow {
   fixed_times: string[] | null;
   is_active: boolean;
   expires_at: string | null;
+  /** migrations/144; absent before it, which reads as an old row (no kind). */
+  kind?: string | null;
 }
 
 export interface ContextRoomRow {
@@ -156,17 +162,27 @@ export function buildContext(
     .sort(byAge);
   for (const pet of livePets) {
     const ref = `P${pets.length + 1}`;
-    const own = rows.schedules.filter(
-      (s) => s.entity_id === pet.id && s.is_active && !s.expires_at && s.frequency_type === "fixed_time",
-    );
+    const mine = rows.schedules.filter((s) => s.entity_id === pet.id && s.is_active && s.frequency_type === "fixed_time");
+    // Meals and potty are old rows (no kind) with no end; a routine with a
+    // kind (Phase 173) is never a meal, and counts until its last day.
+    const own = mine.filter((s) => !s.kind && !s.expires_at);
     const timesOf = (list: ContextScheduleRow[]) =>
       [...new Set(list.flatMap((s) => (s.fixed_times ?? []).map(hhmm).filter((t): t is string => t !== null)))].sort();
     const potty = timesOf(own.filter((s) => s.title === POTTY_TITLE));
     const meals = timesOf(
       own.filter((s) => s.title !== POTTY_TITLE && !NON_MEAL_PREFIXES.some((prefix) => s.title.startsWith(prefix))),
     );
+    const routines: NonNullable<KakakHousehold["pets"][number]["routines"]> = [];
+    for (const row of mine) {
+      if (!row.kind || !ROUTINE_KIND_SET.has(row.kind) || (row.expires_at && row.expires_at.slice(0, 10) < today)) continue;
+      const title = cleanName(row.title, 60);
+      const entry = routines.find((r) => r.kind === row.kind && r.title === title);
+      const times = timesOf([row]);
+      if (entry) entry.times = [...new Set([...entry.times, ...times])].sort();
+      else routines.push({ kind: row.kind as RoutineKind, title, times });
+    }
     const name = cleanName(pet.name);
-    pets.push({ ref, name, kind: petKind(pet.metadata), meals, potty });
+    pets.push({ ref, name, kind: petKind(pet.metadata), meals, potty, ...(routines.length ? { routines } : {}) });
     refs.pets[ref] = pet.id;
     names.pets[ref] = name;
   }

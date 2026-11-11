@@ -85,3 +85,34 @@ export function strongestProof(proofs: RoutineProof[]): RoutineProof {
   if (proofs.includes("photo")) return "photo";
   return proofs.length > 0 ? "tick" : "photo";
 }
+
+/** The pets the starter list knows (Phase 173 PR B, D9). */
+export type StarterSpecies = "dog" | "cat";
+
+export interface StarterRoutine {
+  /** Stable within a species, for the tick-list. */
+  key: string;
+  kind: RoutineKind;
+  /** What staff read. */
+  title: string;
+  /** What an English-speaking owner reads. */
+  en: string;
+  /** HH:mm. */
+  time: string;
+}
+
+/**
+ * The usual routines offered, ticked, after adding a dog or a cat (D9).
+ * Meals and potty stay in their own cards, so they aren't here.
+ */
+export const STARTER_ROUTINES: Record<StarterSpecies, StarterRoutine[]> = {
+  dog: [
+    { key: "walk-am", kind: "walk", title: "Jalan pagi", en: "Morning walk", time: "06:30" },
+    { key: "walk-pm", kind: "walk", title: "Jalan sore", en: "Evening walk", time: "16:30" },
+    { key: "water", kind: "water", title: "Ganti air minum", en: "Fresh water", time: "08:00" },
+  ],
+  cat: [
+    { key: "water", kind: "water", title: "Ganti air minum", en: "Fresh water", time: "08:00" },
+    { key: "litter", kind: "other", title: "Bersihkan pasir kucing", en: "Clean the litter box", time: "08:00" },
+  ],
+};

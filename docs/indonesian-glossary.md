@@ -227,7 +227,14 @@ people are **staf** and **admin**.
 | Started 07.02, no end photo | **Mulai 07.02, tanpa foto akhir** | Phase 173 (D14): a walk not finished by midnight. |
 | Add for 2 pets / Add for Matcha | **Tambah untuk 2 hewan / Tambah untuk Matcha** | Phase 173 button. |
 | Other routines | **Rutinitas lain** | Phase 173: replaces Others / Lainnya in Manage routines. |
-| Usual routines for Coco | **Rutinitas biasa untuk Coco** | Phase 173 PR B (planned): starter list after adding a pet. |
+| Usual routines for Coco | **Rutinitas biasa untuk Coco** | Phase 173 PR B (D9): starter list after adding a pet. |
+| Staff see these from today. Untick what you don't want. | **Staf melihatnya mulai hari ini. Hapus centang yang tidak perlu.** | Phase 173 PR B: the starter list's one line ("Hapus centang", as Phase 172's setup review). |
+| Dog · Cat | **Anjing · Kucing** | Phase 173 PR B: the starter list's pill control. |
+| Morning walk · Evening walk · Clean the litter box | **Jalan pagi · Jalan sore · Bersihkan pasir kucing** | Phase 173 PR B: starter routines; also the saved titles staff read. |
+| Add Coco to Lights off / with Mocha, Matcha | **Tambahkan Coco ke Matikan lampu / bersama Mocha, Matcha** | Phase 173 PR B: a household routine the new pet can join. |
+| Add 3 · Skip | **Tambah 3 · Lewati** | Phase 173 PR B: the starter list's buttons. |
+| Routine · Mocha & Matcha (Kakak's card) · Repeats · Proof: 3 photos (start, there, back) · A photo | **Rutinitas · Mocha & Matcha · Ulangi · Bukti: 3 foto (mulai, sampai, pulang) · Foto** | Phase 173 PR B (D8): Kakak's pet routine card; the rows reuse the sheet's labels. |
+| Remind staff: At this time · Tell us: If it's not done (Kakak's card) | **Ingatkan staf: Di jam ini · Kabari kami: Jika belum dikerjakan** | Phase 173 PR B: the two PR C switches as card rows. |
 | Remind staff at this time | **Ingatkan staf di jam ini** | Phase 173 PR C (D7). Push title **Pengingat**, as Phase 164; body "21.30 · Matikan lampu · Mocha & Matcha". |
 | Tell us if it's not done | **Kabari kami jika belum dikerjakan** | Phase 173 PR C (D15), owner sheet. The owner push: "Matikan lampu · Mocha & Matcha" / **Belum dikerjakan (21.30)**. |
 | Notifications (optional), sheet row | **Notifikasi (opsional)** | Phase 173 PR C: the row holding both switches. |

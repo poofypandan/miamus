@@ -7,9 +7,13 @@
 // Shared by the route (building) and the phone (checking again before
 // saving), so it imports nothing server-only.
 
+import { effectiveProof, routineKindInfo } from "@/lib/pet-routine-kinds";
+import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
+import type { RoutineKind, RoutineProof } from "@/types/database";
 import type { RefMap, RefNames } from "./context";
 import type { KakakHousehold } from "./household";
-import { REMIND_DAYS, isDay, isTime, newPetTimes } from "./validate";
+import { PET_ROUTINE_TOOL_KINDS, TOOL_WEEKDAYS, type PetRoutineToolKind } from "./tools";
+import { REMIND_DAYS, isDay, isTime, newPetTimes, routineTitle } from "./validate";
 
 export type ChoreCategory = "cleaning" | "maintenance" | "errand" | "groceries";
 export type ChoreRecurrence = "none" | "daily" | "weekly" | "monthly";
@@ -51,15 +55,38 @@ export interface ShoppingSuggestion {
   )[];
 }
 
+/**
+ * One routine for one or more pets (Phase 173 PR B, D8). Meals and potty are
+ * saved as before (a row per pet and time, no kind); every other kind as the
+ * Add routine sheet saves it: one group, a row per pet and time
+ * (lib/routine-groups.ts), so RLS and the database's checks apply the same.
+ */
 export interface PetRoutineSuggestion {
   kind: "pet_routine";
-  petId: string;
-  petName: string;
-  routine: "meal" | "potty";
-  /** New times only, HH:mm, each with the title it will be saved under. */
-  times: { time: string; title: string }[];
-  /** Times Kakak suggested that the pet already has: shown, not saved. */
-  alreadyThere: string[];
+  routine: PetRoutineToolKind;
+  /** What staff read, for a kind other than meal and potty (whose titles are per time). */
+  title: string | null;
+  /** An English gloss of an Other title, for an English-speaking owner. */
+  titleEn: string | null;
+  pets: {
+    petId: string;
+    petName: string;
+    /** New times only, HH:mm, each with the title it will be saved under. */
+    times: { time: string; title: string }[];
+    /** Times Kakak suggested that the pet already has: shown, not saved. */
+    alreadyThere: string[];
+  }[];
+  /** ISO weekdays (1 = Monday), or null for every day. */
+  days: number[] | null;
+  /** The last day, or null for no end. */
+  until: string | null;
+  staffId: string | null;
+  staffName: string | null;
+  note: string | null;
+  /** The kind's default (D6, D14): three photos for a walk with one pet, else a photo. Null for meal and potty. */
+  proof: RoutineProof | null;
+  remindStaff: boolean;
+  alertOwners: boolean;
 }
 
 export interface FoodSuggestion {
@@ -88,6 +115,15 @@ export function mealLabelForTime(time: string): string {
   if (hour < 15) return "Makan Siang";
   if (hour < 19) return "Makan Malam";
   return "Snack Malam";
+}
+
+/** "mon" … "sun" → ISO weekdays, sorted; every day (or none) is null. */
+export function toIsoDays(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null;
+  const days = [...new Set(value.map((d) => (TOOL_WEEKDAYS as readonly unknown[]).indexOf(d) + 1).filter((d) => d > 0))].sort(
+    (a, b) => a - b,
+  );
+  return days.length === 0 || days.length === 7 ? null : days;
 }
 
 function str(value: unknown): string | null {
@@ -159,21 +195,65 @@ export function toSuggestion(
       return entries.length ? { kind: "shopping", entries } : null;
     }
     case "add_pet_routine": {
-      const pet = String(input.pet);
-      const routine = input.kind === "potty" ? "potty" : "meal";
-      const asked = (Array.isArray(input.times) ? (input.times as string[]) : []).filter(isTime);
-      const fresh = newPetTimes(household, pet, routine, asked).sort();
-      const label = str(input.label);
+      const routine = (PET_ROUTINE_TOOL_KINDS as readonly string[]).includes(String(input.kind))
+        ? (input.kind as PetRoutineToolKind)
+        : "meal";
+      const basic = routine === "meal" || routine === "potty";
+      const asked = [...new Set((Array.isArray(input.times) ? (input.times as unknown[]) : []).filter(isTime))];
+      const title = routineTitle(routine, input.title);
+      const label = routine === "meal" ? str(input.title) : null;
+      const petRefs = [...new Set((Array.isArray(input.pets) ? (input.pets as unknown[]) : []).map(String))].filter(
+        (ref) => refs.pets[ref],
+      );
+      const pets = petRefs.map((ref) => {
+        const fresh = newPetTimes(household, ref, routine, asked, title).sort();
+        return {
+          petId: refs.pets[ref],
+          petName: names.pets[ref],
+          times: fresh.map((time) => ({
+            time,
+            title: routine === "potty" ? POTTY_TITLE : routine === "meal" ? (label ?? mealLabelForTime(time)) : (title ?? ""),
+          })),
+          alreadyThere: asked.filter((time) => !fresh.includes(time)).sort(),
+        };
+      });
+      if (basic) {
+        return {
+          kind: "pet_routine",
+          routine,
+          title: null,
+          titleEn: null,
+          pets,
+          days: null,
+          until: null,
+          staffId: null,
+          staffName: null,
+          note: null,
+          proof: null,
+          remindStaff: false,
+          alertOwners: false,
+        };
+      }
+      const days = toIsoDays(input.days);
+      const staff = str(input.staff);
+      const kept = pets.filter((p) => p.times.length > 0);
+      const times = [...new Set(kept.flatMap((p) => p.times.map((t) => t.time)))];
       return {
         kind: "pet_routine",
-        petId: refs.pets[pet],
-        petName: names.pets[pet],
         routine,
-        times: fresh.map((time) => ({
-          time,
-          title: routine === "potty" ? POTTY_TITLE : (label ?? mealLabelForTime(time)),
-        })),
-        alreadyThere: asked.filter((time) => !fresh.includes(time)).sort(),
+        title,
+        titleEn: routine === "other" ? str(input.title_en) : null,
+        pets,
+        days,
+        until: str(input.until),
+        staffId: staff ? (refs.people[staff] ?? null) : null,
+        staffName: staff && refs.people[staff] ? (names.people[staff] ?? null) : null,
+        note: str(input.note),
+        // 3 photos is for one pet; several share one photo (lib/pet-routine-kinds).
+        proof: effectiveProof(routineKindInfo(routine as RoutineKind)?.proof ?? "photo", Math.max(kept.length, 1)),
+        // A switch none of its times can use is shown and saved off (lib/routine-alerts).
+        remindStaff: input.remind_staff === true && times.some(reminderTimeAllowed),
+        alertOwners: input.alert_owners === true && times.some(ownerAlertTimeAllowed),
       };
     }
     case "add_food":
@@ -249,14 +329,37 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
             : e?.type === "note" && okText(e.note, 120, false) && okId(e.petId, true),
         )
       );
-    case "pet_routine":
+    case "pet_routine": {
+      if (typeof s.routine !== "string" || !(PET_ROUTINE_TOOL_KINDS as readonly string[]).includes(s.routine)) return false;
+      const basic = s.routine === "meal" || s.routine === "potty";
+      const pets = Array.isArray(s.pets) ? (s.pets as Record<string, unknown>[]) : null;
+      const days = s.days;
       return (
-        okId(s.petId, false) &&
-        (s.routine === "meal" || s.routine === "potty") &&
-        Array.isArray(s.times) &&
-        s.times.length <= 12 &&
-        s.times.every((t: Record<string, unknown>) => isTime(t?.time) && okText(t?.title, 40, false))
+        !!pets &&
+        pets.length >= 1 &&
+        pets.length <= 8 &&
+        new Set(pets.map((p) => p?.petId)).size === pets.length &&
+        pets.every(
+          (p) =>
+            okId(p?.petId, false) &&
+            Array.isArray(p.times) &&
+            p.times.length <= 12 &&
+            p.times.every((t: Record<string, unknown>) => isTime(t?.time) && okText(t?.title, 60, false)),
+        ) &&
+        (basic ? s.title === null : okText(s.title, 60, false)) &&
+        okText(s.titleEn ?? null, 60, true) &&
+        (days === null ||
+          (Array.isArray(days) && days.length >= 1 && days.length < 7 && days.every((d) => Number.isInteger(d) && d >= 1 && d <= 7))) &&
+        (s.until === null || isDay(s.until)) &&
+        okId(s.staffId, true) &&
+        okText(s.note, 120, true) &&
+        (basic ? s.proof === null : s.proof === "photo" || s.proof === "tick" || s.proof === "three") &&
+        typeof s.remindStaff === "boolean" &&
+        typeof s.alertOwners === "boolean" &&
+        // Meals and potty are saved as before: every day, for anyone, no switches.
+        (!basic || (days === null && s.until === null && s.staffId === null && s.note === null && !s.remindStaff && !s.alertOwners))
       );
+    }
     case "food":
       return (
         okText(s.name, 80, false) &&

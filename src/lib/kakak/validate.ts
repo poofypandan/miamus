@@ -4,8 +4,11 @@
 // they can't: lengths, HH:mm, real dates in range, and references that exist
 // in this household.
 
+import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
+import { ROUTINE_NOTE_MAX, routineKindInfo } from "@/lib/pet-routine-kinds";
+import type { RoutineKind } from "@/types/database";
 import { addDays, householdRefs, type KakakHousehold } from "./household";
-import type { KakakToolName } from "./tools";
+import { PET_ROUTINE_TOOL_KINDS, TOOL_WEEKDAYS, type KakakToolName, type PetRoutineToolKind } from "./tools";
 
 export type ValidationResult = { ok: true } | { ok: false; errors: string[] };
 
@@ -109,12 +112,45 @@ export function validateToolCall(
       break;
     }
     case "add_pet_routine": {
-      ref(errors, "pet", input.pet, refs.pets, false);
+      const pets = Array.isArray(input.pets) ? (input.pets as unknown[]) : [];
+      if (pets.length < 1 || pets.length > 8) errors.push("pets must have 1 to 8 entries");
+      pets.forEach((pet, index) => ref(errors, `pets[${index}]`, pet, refs.pets, false));
+      if (new Set(pets).size !== pets.length) errors.push("pets repeat");
+      const kind = input.kind as PetRoutineToolKind;
+      if (!(PET_ROUTINE_TOOL_KINDS as readonly string[]).includes(kind)) errors.push("kind is not a routine kind");
       const times = Array.isArray(input.times) ? (input.times as unknown[]) : [];
       if (times.length < 1 || times.length > 12) errors.push("times must have 1 to 12 entries");
       if (!times.every(isTime)) errors.push("every time must be HH:mm");
       if (new Set(times).size !== times.length) errors.push("times repeat");
-      text(errors, "label", input.label, { max: 40, required: false });
+      if (input.days != null) {
+        const days = Array.isArray(input.days) ? (input.days as unknown[]) : [];
+        if (days.length < 1 || days.length > 7) errors.push("days must be null (every day) or 1 to 7 weekdays");
+        if (!days.every((d) => (TOOL_WEEKDAYS as readonly unknown[]).includes(d))) errors.push("days must be mon … sun");
+        if (new Set(days).size !== days.length) errors.push("days repeat");
+      }
+      if (input.until != null) dayInRange(errors, "until", input.until, today, addDays(today, 3 * 366));
+      text(errors, "title", input.title, { max: kind === "meal" ? 40 : 60, required: kind === "other" });
+      text(errors, "title_en", input.title_en, { max: 60, required: false });
+      // A routine's person is someone on staff (migrations/144's trigger); the owner isn't a choice.
+      ref(errors, "staff", input.staff, staffRefs(refs.people), true);
+      text(errors, "note", input.note, { max: ROUTINE_NOTE_MAX, required: false });
+      if (kind === "meal" || kind === "potty") {
+        // Meals and potty breaks are made as before: every day, for anyone.
+        const extras: string[] = ["days", "until", "staff", "note"].filter((field) => input[field] != null);
+        if (input.remind_staff === true) extras.push("remind_staff");
+        if (input.alert_owners === true) extras.push("alert_owners");
+        if (extras.length) {
+          errors.push(`${extras.join(", ")} can't be set on ${kind}: meals and potty breaks are every day, for anyone`);
+        }
+      } else {
+        const valid = times.filter(isTime);
+        if (input.remind_staff === true && valid.length && !valid.some(reminderTimeAllowed)) {
+          errors.push("remind_staff: a reminder can only ring from 06:00 to 21:59; set it false and tell the owner");
+        }
+        if (input.alert_owners === true && valid.length && !valid.some(ownerAlertTimeAllowed)) {
+          errors.push("alert_owners: only for a routine from 05:30 to 22:00; set it false and tell the owner");
+        }
+      }
       break;
     }
     case "add_food": {
@@ -145,13 +181,43 @@ export function validateToolCall(
   return errors.length ? { ok: false, errors } : { ok: true };
 }
 
+/** Staff references only (S1, …): the owner (M1) can't be a routine's person. */
+function staffRefs(people: Set<string>): Set<string> {
+  return new Set([...people].filter((ref) => ref !== "M1"));
+}
+
+/**
+ * The title a routine is saved under: the owner's for Other (or a meal's
+ * label), the kind's own Indonesian name otherwise (lib/pet-routine-kinds).
+ * Null for meals and potty, whose titles are per time.
+ */
+export function routineTitle(kind: string, title: unknown): string | null {
+  if (kind === "meal" || kind === "potty") return null;
+  const typed = typeof title === "string" && title.trim() ? title.trim() : null;
+  return typed ?? routineKindInfo(kind as RoutineKind)?.title ?? null;
+}
+
 /**
  * The route drops a time the pet already has (and the card says so). Returns
- * the times that are new, in order.
+ * the times that are new, in order. Meals and potty compare with the pet's
+ * meal or potty times; another kind with a routine of the same kind (Other:
+ * the same title) at that time, so "Jalan pagi 06:30" counts as a walk.
  */
-export function newPetTimes(household: KakakHousehold, petRef: string, kind: string, times: string[]): string[] {
+export function newPetTimes(
+  household: KakakHousehold,
+  petRef: string,
+  kind: string,
+  times: string[],
+  title: string | null = null,
+): string[] {
   const pet = household.pets.find((p) => p.ref === petRef);
   if (!pet) return times;
-  const existing = new Set(kind === "meal" ? pet.meals : kind === "potty" ? pet.potty : []);
+  let existing: Set<string>;
+  if (kind === "meal") existing = new Set(pet.meals);
+  else if (kind === "potty") existing = new Set(pet.potty);
+  else {
+    const same = (pet.routines ?? []).filter((r) => (kind !== "other" && r.kind === kind) || (title !== null && r.title === title));
+    existing = new Set(same.flatMap((r) => r.times));
+  }
   return times.filter((time) => !existing.has(time));
 }

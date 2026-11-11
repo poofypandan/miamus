@@ -188,6 +188,8 @@ export interface Stub {
   logs: Record<string, unknown>[];
   /** master_schedules as the stub holds them (Phase 173): the fixture's, the test's, and the admin's writes. */
   schedules: Record<string, unknown>[];
+  /** task_entities as the stub holds them (Phase 173 PR B): Mochi, Bento, and pets the admin adds. */
+  entities: Record<string, unknown>[];
   seen: {
     signups: number;
     tokenRefreshes: number;
@@ -269,6 +271,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const writes: [string, string][] = [];
   const logs: Record<string, unknown>[] = options.logs ?? [];
   const schedules: Record<string, unknown>[] = [...(SCHEDULES as unknown as Record<string, unknown>[]), ...(options.schedules ?? [])];
+  const entities: Record<string, unknown>[] = [MOCHI, BENTO].map((p) => ({ ...p }) as unknown as Record<string, unknown>);
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [], portionCalls: [], portionUndos: [] };
   const foods: Record<string, unknown>[] = [];
   const recipes: Record<string, unknown>[] = options.recipes ?? [];
@@ -477,6 +480,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       }
       if (table === "task_logs") return answerLogs(route, logs);
       if (table === "master_schedules") return answerSchedules(route, schedules, who === OWNER);
+      if (table === "task_entities") return answerEntities(route, entities);
       // Supplies added here (Phase 164), and read back once there are any.
       if (table === "inventory_items" && request.method() === "POST") {
         const body = request.postDataJSON();
@@ -719,6 +723,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     writes,
     logs,
     schedules,
+    entities,
     seen,
     foods,
     portionTrouble,
@@ -1237,6 +1242,33 @@ function answerLogs(route: Route, logs: Record<string, unknown>[]) {
   }));
   logs.push(...saved);
   return route.fulfill({ json: saved });
+}
+
+/** task_entities (Phase 173 PR B): reads, a pet added (Add pet), and changes to one. */
+function answerEntities(route: Route, rows: Record<string, unknown>[]) {
+  const request = route.request();
+  const method = request.method();
+  const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  if (method === "GET") return route.fulfill({ json: one ? (rows[0] ?? null) : rows });
+  if (method === "POST") {
+    const body = request.postDataJSON();
+    const saved = (Array.isArray(body) ? body : [body]).map((row: Record<string, unknown>, i: number) => ({
+      id: `00000000-0000-4000-8000-${String(500 + rows.length + i).padStart(12, "0")}`,
+      household_id: HOUSEHOLD_ID,
+      created_at: new Date().toISOString(),
+      metadata: {},
+      ...row,
+    }));
+    rows.push(...saved);
+    return route.fulfill({ json: one ? saved[0] : saved });
+  }
+  const matched = filterRows(rows, new URL(request.url()).searchParams);
+  if (method === "PATCH") {
+    const patch = request.postDataJSON();
+    for (const row of matched) Object.assign(row, patch);
+    return route.fulfill({ json: one ? (matched[0] ?? null) : matched });
+  }
+  return route.fulfill({ json: [] });
 }
 
 /**

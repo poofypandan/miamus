@@ -43,7 +43,12 @@ const TERRACE = "00000000-0000-4000-8000-000000000120";
 // What Kakak's route reads about the household (tests/e2e/kakak.spec.ts).
 const HOUSEHOLD = {
   staff_profiles: [{ id: STAFF_ID, name: "Ari", created_at: "2026-10-01T00:00:00Z", user_id: null, archived_at: null }],
-  task_entities: [],
+  // Mochi and Bento (tests/fixtures/household.ts), so practice mode can make
+  // a pet routine for both (Phase 173 PR B).
+  task_entities: [
+    { id: "00000000-0000-4000-8000-0000000000a1", name: "Mochi", created_at: "2026-10-01T00:00:00Z", entity_type: "pet", metadata: {} },
+    { id: "00000000-0000-4000-8000-0000000000b1", name: "Bento", created_at: "2026-10-02T00:00:00Z", entity_type: "pet", metadata: {} },
+  ],
   household_locations: [{ id: TERRACE, name: "Teras", created_at: "2026-10-01T00:00:00Z" }],
   inventory_items: [],
   master_schedules: [],

@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { KakakAvatar } from "@/components/kakak/kakak-avatar";
 import { KakakExamples } from "@/components/kakak/kakak-examples";
+import { WhatsNewCard } from "@/components/shared/whats-new";
 import { KakakThinking } from "@/components/kakak/kakak-thinking";
 import { KakakVoice } from "@/components/kakak/kakak-voice";
 import { KakakRemindChips } from "@/components/kakak/kakak-remind-chips";
@@ -31,6 +32,8 @@ import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { askKakak, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
 import { addsSomething, describeSuggestion, savedSummary } from "@/lib/kakak/describe";
+import { routineKindInfo } from "@/lib/pet-routine-kinds";
+import type { RoutineKind } from "@/types/database";
 import { MAX_TYPED, type KakakHistory, type RefusalReason } from "@/lib/kakak/engine";
 import type { KakakSuggestion } from "@/lib/kakak/suggestions";
 import { useKakakSave } from "@/lib/kakak/use-kakak-save";
@@ -325,6 +328,9 @@ function Conversation({ onClose }: { onClose: () => void }) {
         </Button>
       )}
 
+      {/* Kakak's pet routines (Phase 173 PR B): once, before the first try, under the one-a-week rule. */}
+      {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-routines-2026-11" />}
+
       {/* Talk to Kakak (voice beta): spoken words go through send() like typed ones. */}
       <KakakVoice
         screen={screen}
@@ -475,7 +481,9 @@ function SuggestionCard({
       <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card shadow-sm">
         {items.map((item, index) => {
           const card = describeSuggestion(item, locale);
-          const Icon = KIND_ICONS[item.kind];
+          // A routine shows its own icon (Lights off, Walk…), as on the Pets tab.
+          const Icon =
+            (item.kind === "pet_routine" ? routineKindInfo(item.routine as RoutineKind)?.icon : undefined) ?? KIND_ICONS[item.kind];
           return (
             <div key={index} className="flex flex-col gap-1.5 px-4 py-3">
               <div className="flex items-center justify-between gap-2">

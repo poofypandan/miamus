@@ -1,8 +1,8 @@
 // The tappable examples on the Kakak sheet's first screen (plan, screen 2).
 // They teach what Kakak can do without a help page, so each one is something
 // her tools really do — a chore, a reminder for the owner, shopping, a pet's
-// meals, food in the fridge — never a question she can't answer yet ("who's
-// on leave?"). They use this household's own first names, so a tapped
+// meals (with two pets, lights off for both), food in the fridge — never a
+// question she can't answer yet ("who's on leave?"). They use this household's own first names, so a tapped
 // example works as it is: Kakak never has to say "I can't find Sari".
 // Each also works in practice mode (lib/kakak/practice.ts).
 //
@@ -73,7 +73,16 @@ export function kakakExamples({ locale, staffNames, petNames }: ExampleHousehold
       ? "Ingatkan saya bersihkan filter AC besok jam 7 malam"
       : "Remind me to clean the AC filter tomorrow at 7 pm",
   });
-  if (pet) {
+  const second = cleanPetName(petNames[1]);
+  if (pet && second) {
+    // Two pets or more: one routine for both in one sentence (Phase 173 PR B).
+    list.push({
+      kind: "pet",
+      text: id
+        ? `Matikan lampu untuk ${pet} dan ${second} setiap hari jam 21.30`
+        : `Lights off for ${pet} and ${second} every day at 9:30 pm`,
+    });
+  } else if (pet) {
     list.push({
       kind: "pet",
       text: id ? `${pet} makan jam 7 pagi dan jam 5 sore` : `Feed ${pet} at 7 am and 5 pm`,

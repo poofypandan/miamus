@@ -41,7 +41,8 @@ an Anthropic key: set `KAKAK_PRACTICE=true` on that server (no
 
 - Kakak answers with scripted replies built from your words and your
   household's real staff, rooms, pets and shopping items: days, times, names,
-  rooms, "beli/buy", food words and pet meal or potty times. She asks once
+  rooms, "beli/buy", food words and pet routines (meals, potty, walks, lights
+  off, water, teeth, play; several pets in one sentence). She asks once
   when a chore's day or a food's date is missing.
 - Everything around her runs for real: who may use Kakak (admins only, the
   household on the family list and switched on), the history checks,

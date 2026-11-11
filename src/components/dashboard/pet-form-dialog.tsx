@@ -30,6 +30,7 @@ export function PetFormDialog({
   createEntity,
   updateEntity,
   deleteEntity,
+  onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -37,6 +38,8 @@ export function PetFormDialog({
   createEntity: ReturnType<typeof useHousehold>["createEntity"];
   updateEntity: ReturnType<typeof useHousehold>["updateEntity"];
   deleteEntity: ReturnType<typeof useHousehold>["deleteEntity"];
+  /** A new pet was saved (Add pet only): the Pets tab offers its usual routines (Phase 173 PR B). */
+  onCreated?: (pet: TaskEntity) => void;
 }) {
   // Covers both entry points (Manage Pets and Edit Pet) in one place, since
   // `open` is owned by whichever parent rendered this dialog.
@@ -92,8 +95,11 @@ export function PetFormDialog({
         await updateEntity(pet.id, { name: name.trim(), metadata });
         toast.success(t("Pet updated", "Hewan diperbarui"));
       } else {
-        await createEntity({ entity_type: "pet", name: name.trim(), icon: "dog", metadata });
+        const created = await createEntity({ entity_type: "pet", name: name.trim(), icon: "dog", metadata });
         toast.success(t("Pet added", "Hewan ditambahkan"));
+        onOpenChange(false);
+        onCreated?.(created);
+        return;
       }
       onOpenChange(false);
     } catch (err) {

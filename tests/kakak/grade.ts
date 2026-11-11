@@ -3,7 +3,7 @@
 // docs/phase-156-kakak-test-set.md ("How a case is marked").
 
 import { householdRefs, type KakakHousehold } from "@/lib/kakak/household";
-import { newPetTimes } from "@/lib/kakak/validate";
+import { newPetTimes, routineTitle } from "@/lib/kakak/validate";
 import type { ExpectedCall, ExpectedShoppingItem, ExpectedTurn, FieldMatcher, KakakCase } from "./types";
 
 export interface ToolCall {
@@ -116,16 +116,36 @@ export const DEFAULTS: Record<string, Record<string, FieldMatcher>> = {
     expiry_is_guess: false,
   },
   add_to_shopping_list: {},
-  add_pet_routine: {},
+  add_pet_routine: {
+    days: null,
+    until: null,
+    staff: null,
+    note: null,
+    remind_staff: false,
+    alert_owners: false,
+  },
 };
 
-/** The input as the route would pass it on (pet times it already has dropped). */
+/**
+ * The input as the route would pass it on: each pet's times it already has
+ * dropped, then `pets` only those that still get a time and `times` what is
+ * left, so "the dogs at 17:00" when one dog has it grades as the other dog.
+ */
 export function routeView(household: KakakHousehold, call: ToolCall): ToolCall {
   if (call.name !== "add_pet_routine") return call;
   const times = Array.isArray(call.input.times) ? (call.input.times as string[]) : [];
+  const pets = Array.isArray(call.input.pets) ? (call.input.pets as string[]) : [];
+  const kind = String(call.input.kind);
+  const title = routineTitle(kind, call.input.title);
+  const fresh = pets.map((pet) => ({ pet, times: newPetTimes(household, pet, kind, times, title) }));
+  const kept = fresh.filter((p) => p.times.length > 0);
   return {
     name: call.name,
-    input: { ...call.input, times: newPetTimes(household, String(call.input.pet), String(call.input.kind), times) },
+    input: {
+      ...call.input,
+      pets: kept.map((p) => p.pet),
+      times: [...new Set(kept.flatMap((p) => p.times))],
+    },
   };
 }
 
@@ -230,7 +250,10 @@ function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "r
         { field: "room", kind: "rooms", value: input.room },
       ];
     case "add_pet_routine":
-      return [{ field: "pet", kind: "pets", value: input.pet }];
+      return [
+        ...((input.pets as unknown[] | undefined) ?? []).map((value, i) => ({ field: `pets[${i}]`, kind: "pets" as const, value })),
+        { field: "staff", kind: "people", value: input.staff },
+      ];
     case "add_to_shopping_list":
       return ((input.items as Record<string, unknown>[] | undefined) ?? []).flatMap((item, i) => [
         { field: `items[${i}].item`, kind: "items" as const, value: item.item },
