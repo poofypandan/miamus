@@ -1,5 +1,5 @@
 import { leaveCovering } from "@/lib/leave";
-import { classifyDay, type DayTask } from "@/lib/couldnt-do";
+import { choreException, classifyDay, slotOf, type DayTask } from "@/lib/couldnt-do";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { AgendaGroup } from "@/lib/scheduleEngine";
 import type { LeaveRequest, StaffProfile, TaskException, TaskLog } from "@/types/database";
@@ -54,7 +54,7 @@ export interface StaffBusy {
 export type ProgressTone = "neutral" | "amber" | "red";
 
 export interface ProgressTask extends DayTask {
-  /** Open and past its time (or from an earlier day). */
+  /** Open and past its time (or from an earlier day). A couldn't-do is never late. */
   late: boolean;
   /** Rolled over from an earlier day: listed, but not in the day's fraction. */
   carried: boolean;
@@ -152,18 +152,24 @@ export function buildStaffProgress(params: {
   const away = (id: string | null | undefined) => !!id && !!leaveCovering(leaves as LeaveRequest[], id, date);
 
   const day = classifyDay({ date, chores, groups, exceptions, admittedIds, logs });
-  // Carried over from earlier days: still owed, and late by definition.
-  // Only ever present when browsing today (expandChores).
+  // Carried over from earlier days: still owed, and late by definition,
+  // unless a couldn't-do record from its own day says why (Today's chore
+  // rows read it the same way; Codex, PR #89). Only ever present when
+  // browsing today (expandChores).
   const carried: DayTask[] = chores
     .filter((o) => o.overdue && o.status === "pending" && o.date !== date)
-    .map((occurrence) => ({
-      key: occurrence.key,
-      kind: "chore" as const,
-      state: "open" as const,
-      title: occurrence.task.title,
-      time: occurrence.task.due_time ? occurrence.task.due_time.slice(0, 5) : null,
-      occurrence,
-    }));
+    .map((occurrence) => {
+      const exception = choreException(exceptions, occurrence);
+      return {
+        key: occurrence.key,
+        kind: "chore" as const,
+        state: exception ? ("couldnt" as const) : ("open" as const),
+        title: occurrence.task.title,
+        time: slotOf(occurrence.task.due_time),
+        occurrence,
+        exception: exception ?? undefined,
+      };
+    });
 
   const ownerOf = (task: DayTask): string | null => {
     if (task.kind === "chore") {

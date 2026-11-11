@@ -242,6 +242,19 @@ describe("buildStaffProgress", () => {
     expect(ari.tasks[0]).toMatchObject({ title: "Lap kaca", carried: true, late: true });
   });
 
+  it("keeps a couldn't-do record on a carried-over chore: amber with its reason, not late", () => {
+    const old = chore({ title: "Lap kaca", assigned_to: null, due_date: "2026-11-09" });
+    const progress = build({
+      rows: [old],
+      exceptions: [exception({ chore_id: old.id, occurs_on: "2026-11-09", staff_id: ARI })],
+    });
+    const ari = progress.people.find((p) => p.id === ARI)!;
+    expect(ari).toMatchObject({ tone: "amber", couldnt: 1, late: 0 });
+    expect(ari.tasks[0]).toMatchObject({ title: "Lap kaca", carried: true, state: "couldnt", late: false });
+    expect(ari.tasks[0].exception?.reason).toBe("out_of_stock");
+    expect(progress.anyone).toBeNull();
+  });
+
   it("shows someone on approved leave as on leave; their open chip routines go to Anyone", () => {
     const walk = routine(MOCHA, "Jalan-jalan", ["07:00"], { kind: "walk", staff_id: SYAM });
     const progress = build({
