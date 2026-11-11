@@ -1,4 +1,8 @@
 import { ChoreAlreadySettledError } from "@/lib/chore-settled";
+import { applyAmountRules } from "@/lib/kitchen-units";
+
+/** Portion taps in mock mode, by op id (migrations/148's food_portion_ops). */
+const mockPortionOps = new Map<string, { consumed: number; finished: boolean; undone: boolean }>();
 import type {
   TaskEntity,
   MasterSchedule,
@@ -384,7 +388,8 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);
     if (index === -1) throw new Error("Item not found");
-    const item: InventoryItem = { ...db.inventoryItems[index], ...patch };
+    // The amount rules trigger (migrations/148), as the server would apply it.
+    const item: InventoryItem = applyAmountRules(db.inventoryItems[index], { ...db.inventoryItems[index], ...patch });
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);
@@ -393,23 +398,44 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);
     if (index === -1) throw new Error("Item not found");
-    const item: InventoryItem = {
+    const item: InventoryItem = applyAmountRules(db.inventoryItems[index], {
       ...db.inventoryItems[index],
       stock_status: status,
       stock_status_by: staffId,
-      stock_status_at: new Date().toISOString(),
-    };
+    });
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);
   },
-  async adjustInventoryQuantity(id, delta) {
+  async adjustInventoryQuantity(id, delta, staffId = null) {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);
     if (index === -1) throw new Error("Item not found");
-    // Floored at zero, like the RPC in migrations/099.
+    // Floored at zero, like the RPC in migrations/099 and 148.
     const current = db.inventoryItems[index];
-    const item: InventoryItem = { ...current, quantity: Math.max(0, current.quantity + delta) };
+    const item: InventoryItem = applyAmountRules(current, {
+      ...current,
+      quantity: Math.max(0, current.quantity + delta),
+      amount_set_by: staffId,
+    });
+    db.inventoryItems[index] = item;
+    saveDB(db);
+    return delay(item);
+  },
+  async recordPurchase(id, amount, staffId) {
+    const db = loadDB();
+    const index = db.inventoryItems.findIndex((i) => i.id === id);
+    if (index === -1) throw new Error("Item not found");
+    const current = db.inventoryItems[index];
+    const adds = current.track_amount === true && amount !== null;
+    const item: InventoryItem = applyAmountRules(current, {
+      ...current,
+      quantity: adds ? current.quantity + amount : current.quantity,
+      last_bought_amount: adds ? amount : (current.last_bought_amount ?? null),
+      amount_set_by: adds ? staffId : (current.amount_set_by ?? null),
+      stock_status: "ok",
+      stock_status_by: staffId,
+    });
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);
@@ -483,6 +509,47 @@ export const mockProvider: DataProvider = {
     db.foodItems.push(item);
     saveDB(db);
     return delay(item);
+  },
+  async eatFoodPortion(id, opId, staffId) {
+    // migrations/148's rules: one portion if there is one, finished at the
+    // last, once per op id (an undo that came first leaves a marker).
+    const db = loadDB();
+    const index = db.foodItems.findIndex((f) => f.id === id);
+    if (index === -1) throw new Error("Food not found");
+    const before = db.foodItems[index];
+    const known = mockPortionOps.get(opId);
+    if (known) return delay({ food: before, consumed: known.consumed });
+    const takes = typeof before.portions === "number" && before.portions > 0 && !before.outcome;
+    const ends = takes && before.portions === 1;
+    mockPortionOps.set(opId, { consumed: takes ? 1 : 0, finished: ends, undone: false });
+    if (!takes) return delay({ food: before, consumed: 0 });
+    const now = new Date().toISOString();
+    const item: FoodItem = { ...before, portions: (before.portions as number) - 1, updated_at: now };
+    if (ends) Object.assign(item, { outcome: "eaten", finished_at: now, finished_by: staffId });
+    db.foodItems[index] = item;
+    saveDB(db);
+    return delay({ food: item, consumed: 1 });
+  },
+  async undoFoodPortion(id, opId) {
+    const db = loadDB();
+    const index = db.foodItems.findIndex((f) => f.id === id);
+    if (index === -1) throw new Error("Food not found");
+    const before = db.foodItems[index];
+    const op = mockPortionOps.get(opId);
+    if (!op) {
+      mockPortionOps.set(opId, { consumed: 0, finished: false, undone: true });
+      return delay({ food: before, restored: 0 });
+    }
+    if (op.undone || op.consumed === 0) {
+      op.undone = true;
+      return delay({ food: before, restored: 0 });
+    }
+    op.undone = true;
+    const item: FoodItem = { ...before, portions: Math.min(99, (before.portions ?? 0) + 1), updated_at: new Date().toISOString() };
+    if (op.finished && before.outcome === "eaten") Object.assign(item, { outcome: null, finished_at: null, finished_by: null });
+    db.foodItems[index] = item;
+    saveDB(db);
+    return delay({ food: item, restored: 1 });
   },
   async updateFoodItem(id, patch) {
     const db = loadDB();

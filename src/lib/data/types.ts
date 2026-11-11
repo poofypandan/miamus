@@ -312,6 +312,16 @@ export interface InventoryItemInput {
   audit_frequency_days: number;
 }
 
+/**
+ * A change to an item. Owners may change anything; a staff phone only the
+ * amount, the status and the purchase columns (inventory_items_owner_guard,
+ * migrations/099 and 148).
+ */
+export type InventoryItemPatch = Partial<InventoryItemInput> &
+  Partial<
+    Pick<InventoryItem, "track_amount" | "amount_set_by" | "stock_status" | "stock_status_by" | "last_bought_amount">
+  >;
+
 /** One stock check as the staff member recorded it (migrations/083, 099). */
 /** What a person fills in when adding or editing food (Phase 156). */
 export interface FoodItemInput {
@@ -325,6 +335,8 @@ export interface FoodItemInput {
   from_whom: string | null;
   return_container: boolean;
   notes: string | null;
+  /** Optional portions (migrations/148); left out = unchanged. */
+  portions?: number | null;
 }
 
 /**
@@ -422,7 +434,7 @@ export interface DataProvider {
   deleteInventoryAlert(id: string): Promise<void>;
   listInventoryItems(): Promise<InventoryItem[]>;
   createInventoryItem(input: InventoryItemInput): Promise<InventoryItem>;
-  updateInventoryItem(id: string, patch: Partial<InventoryItemInput>): Promise<InventoryItem>;
+  updateInventoryItem(id: string, patch: InventoryItemPatch): Promise<InventoryItem>;
   /**
    * Any household session: marks an item enough, running low or out
    * (migrations/122). `staffId` is who is on duty on this phone, or null.
@@ -434,7 +446,13 @@ export interface DataProvider {
    * at zero, and returns the item as it now stands. An increment rather than a
    * write of the total, so two phones tapping at once both count.
    */
-  adjustInventoryQuantity(id: string, delta: number): Promise<InventoryItem>;
+  adjustInventoryQuantity(id: string, delta: number, staffId?: string | null): Promise<InventoryItem>;
+  /**
+   * Bought (Phase 170 PR A, migrations/148): back to enough; on a tracked
+   * item, `amount` (in its unit) is added and kept as the next pre-fill.
+   * Null amount = ticked without a number.
+   */
+  recordPurchase(id: string, amount: number | null, staffId: string | null): Promise<InventoryItem>;
   /** The most recent stock check per item, keyed by item id. */
   listLatestInventoryAudits(): Promise<Record<string, InventoryAuditWithStaff>>;
   /** Stock photos go to their own bucket, not household-logs. */
@@ -457,6 +475,14 @@ export interface DataProvider {
    */
   createFoodItem(input: FoodItemInput & { id?: string }, addedBy: string | null): Promise<FoodItem>;
   updateFoodItem(id: string, patch: FoodItemPatch): Promise<FoodItem>;
+  /**
+   * Ate 1 portion (migrations/148): the server takes one if there is one and
+   * finishes the food at the last; `consumed` says what this tap took (0 or
+   * 1). `opId` is made on the phone per tap; sending it again changes nothing.
+   */
+  eatFoodPortion(id: string, opId: string, staffId: string | null): Promise<{ food: FoodItem; consumed: number }>;
+  /** Undo that tap: puts back exactly what it took (and the finish it made), once. */
+  undoFoodPortion(id: string, opId: string): Promise<{ food: FoodItem; restored: number }>;
   /** Admins only (the delete policy); for food added by mistake. */
   deleteFoodItem(id: string): Promise<void>;
   listRoutineProposals(): Promise<RoutineProposal[]>;

@@ -21,6 +21,7 @@ export type {
   HouseholdTaskStatusPatch,
   CreateInventoryAuditInput,
   InventoryItemInput,
+  InventoryItemPatch,
   FoodItemInput,
   FoodItemPatch,
   LeaveDecision,

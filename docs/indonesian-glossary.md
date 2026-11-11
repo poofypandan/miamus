@@ -278,6 +278,17 @@ people are **staf** and **admin**.
 | Open the link from the owner's WhatsApp to make a PIN. · This link no longer works. Ask the owner for a new one. | **Buka link dari WhatsApp pemilik rumah untuk membuat PIN. · Link ini sudah tidak berlaku. Minta link baru ke pemilik rumah.** | Phase 172 PR A2, audit L5 (staff, Indonesian only): the house code alone can't claim a name. |
 | Service charge (IPL) | **Iuran pengelola (IPL)** | Phase 172 PR A2: apartments' monthly bill in the Bills and upkeep checklist. |
 | Room names saved by the templates | **Ruang Tamu · Ruang Keluarga · Ruang Keluarga Atas · Ruang Makan · Dapur · Dapur Kotor · Kamar Utama · Kamar Tidur 2 · Kamar Mandi · Kamar Staf · Kamar Mandi Staf · Ruang Cuci · Gudang · Balkon · Teras · Taman · Kolam Renang** | Phase 172 Appendix A1; floors **LT1, LT2…** and **Rooftop**. Owners rename any room later. |
+| Kitchen amounts (feature) | **Jumlah bahan dapur** | Phase 170 PR A, the Features row under Dapur. |
+| Ready to eat · Ingredients (Food groups) | **Siap dimakan · Bahan masakan** | Phase 170 PR A (D6): fresh food and pantry items browse under Makanan. Hint: **Makanan segar dan bahan pokok**. |
+| Track amount / Set amount | **Catat jumlah** / **Ubah jumlah** | Phase 170 PR A. "Catat", as in Dicatat Sari. |
+| N left / about N · 3 weeks ago | **Sisa N** / **sekitar N · 3 minggu lalu** | Phase 170 PR A: "Sisa 1,2 kg"; the second in grey after 14 days, never red. |
+| How much is there now? / A guess is fine… | **Berapa yang ada sekarang?** / **Perkiraan juga boleh; nanti terkoreksi saat belanja.** | Phase 170 PR A, owner form. |
+| Running low at (optional) | **Hampir habis kalau tinggal (opsional)** | Phase 170 PR A, owner form; matches *Hampir habis*. |
+| Old count: 2 kg on 3 Oct, not used | **Hitungan lama: 2 kg pada 3 Okt, tidak dipakai** | Phase 170 PR A (D14). |
+| Unit | **Satuan** | Phase 170 PR A, the Track amount chips. |
+| How much did you buy? / usually 5 kg / Skip amount / Bought | **Beli berapa?** / **biasanya 5 kg** / **Lewati jumlah** / **Sudah dibeli** | Phase 170 PR A; owners and staff. Toast: **Sudah dibeli · masih hampir habis**. |
+| Portions / Ate 1 portion | **Porsi** / **Dimakan 1 porsi** | Phase 170 PR A (D7): "Rendang · 3 porsi"; toast **sisa 2 porsi**. |
+| Kitchen units | **buah, butir, ikat, siung, lembar, batang, bungkus, sachet** (recipes later add **sdm, sdt**) | Phase 170 PR A: the words Indonesian kitchens use, kept in English too; the English picker adds a small second line (piece, egg, bunch, clove, leaf, stalk, packet, sachet). |
 
 ## Formatting
 

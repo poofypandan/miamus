@@ -1,18 +1,69 @@
 # Phase 170 — Cooking, groceries and planning under Kitchen
 
-Status: **decided: owner chose all recommendations (D1–D16 A), 2026-11-10;
-PR A amounts and units with migration 144.** The four open questions below
-stay open; the owner answers each before the PR it affects.
+Status: **decided: owner chose all recommendations (D1–D16 A), 2026-11-10.
+PR A (amounts and units, D1–D4, D6, D7, D14) built 2026-11-11 with migration
+148** (the plan first reserved 144; 144–147 went to pet routines, features,
+security and templates). PR B (recipes) and PR C (menu and the cook's view)
+each take the next free number when built; the manager reserves it then.
 **Addendum (2026-11-10, end of this file): Menu ↔ food ↔ shopping, D17–D22:
-parked after the 10 Nov evaluation.**
-Nothing is built. Migration **144** is reserved for PR A (amounts and units);
-PR B (recipes) and PR C (menu and the cook's view) each take the next free
-number when they're built, and the manager reserves it then. Roadmap item 20
+parked after the 10 Nov evaluation; not built.** Roadmap item 20
 (`docs/roadmap-2026-11-09.md`, P3): "Daily menu for the cook. Ties Kitchen to
 the day." Plus a new row for amounts and recipes (the owner's request of
 10 November). Mockup: `docs/mockups/phase-170-kitchen.html` (open in a
 browser, phone width; owner screens English left and Bahasa Indonesia
 right, staff screens Bahasa Indonesia only).
+
+## The household's answers (2026-11-11)
+
+The four open questions at the end of this plan, answered by the founding
+household:
+
+1. **The wife is a co-owner** already: D11 needs no work, no invite.
+2. **Both she and the staff cook.** *Menu hari ini* (PR C) goes to every
+   staff phone, as D9 A.
+3. **No allergies or diets the cook must never miss.** So **D12 → C**: no
+   Kitchen notes for health, no health-data confirm, no impact assessment.
+   PR C keeps a plain kitchen note only if it's still wanted then, without
+   the health wording.
+4. **Recipes are written in English or Indonesian, but cooks read Indonesian
+   only.** So PR B stores the original text **plus an Indonesian version**;
+   staff phones always show the Indonesian; a Kakak-assisted **Translate for
+   staff** fills it for the owner to review and save; and the owner is
+   warned when a recipe has no Indonesian version yet. (This replaces "Recipe
+   text is the household's own words and isn't translated" in D8.)
+
+## Features and Plus (owner, 2026-11-11)
+
+- **Kitchen amounts is an optional switch** in Household → Features
+  (Phase 171, `household_features`, feature `kitchen`). It joins **off**
+  for new households (171 D4); migration 148 switched it **on for every
+  household that existed when it ran** (only the founding household, which
+  asked for it). No offer card yet.
+- Off hides the amounts, Track amount, "How much did you buy?", staff's
+  *Perlu dibeli* and the Ingredients group (everything stays under
+  Shopping, as before); the numbers stay saved.
+- **Tagged Plus in code** (`src/lib/plans.ts`, `PLUS_FEATURES`) for when
+  billing exists. Nothing is gated: everything stays free until billing ships.
+
+## As built in PR A (2026-11-11)
+
+- **Portions on Food (D7) are in PR A** (manager, 2026-11-11: the owner
+  asked for "pax" counts): optional, 1–99, set in the food form; the row
+  reads "3 portions"; **Ate 1 portion** counts down, and the last one
+  finishes it as Eaten.
+- **Ingredients under Food (D6)** need both Kitchen amounts and Food at home
+  on. With Food at home off there is no Food pill, so they stay under
+  Shopping.
+- **Staff's *Perlu dibeli*** (D3's "one new staff screen piece") shows the
+  items running low or out, with a tick (and *Beli berapa?* on tracked
+  ones), while Kitchen amounts is on. The staff's own free-text notes stay
+  for owners to tick, as before.
+- **Bought's Undo** takes the amount back off as an increment and writes
+  back the previous status and pre-fill. The amount's time stays at the
+  undo (the server's clock only moves forward).
+- No `security definer` function: `adjust_inventory_quantity` and
+  `record_purchase` run as the caller, so RLS and the owner guard apply. The
+  archived-staff trigger also refuses another household's staff id.
 
 Builds on **Phase 154** (the shopping list, migration 122, decision R3 in
 `docs/phase-153-review.md` section 4), **Phase 156** (Food at home, migrations

@@ -28,6 +28,27 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Shown in Kitchen while Kitchen amounts is on (Phase 170 PR A), under
+    // the calm-start rules (one card a week, never to new households).
+    id: "kitchen-amounts-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: exact amounts in Kitchen", id: "Baru: jumlah pasti di Dapur" },
+    steps: {
+      en: [
+        "Want exact amounts? Tap an item and switch on Track amount. Only for the items you care about.",
+        "It updates when you buy. Nobody has to count.",
+        "Ingredients now sit under Food, next to what's ready to eat.",
+      ],
+      id: [
+        "Ingin jumlah yang pasti? Ketuk barang lalu nyalakan Catat jumlah. Cukup untuk barang yang penting.",
+        "Jumlahnya berubah saat belanja. Tidak ada yang perlu menghitung.",
+        "Bahan masakan sekarang ada di Makanan, di samping yang siap dimakan.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown on Chores → Today (Phase 172 PR A2), existing households only
     // (the calm-start rules keep it from new ones, who get the list at
     // sign-up). Show me opens the Starter list. One card a week: if the
@@ -421,6 +442,16 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    // Phase 170 PR A: while Kitchen amounts is on for the household.
+    id: "staff-kitchen-amounts-2026-11",
+    date: "2026-11-11",
+    title: "Baru: bahan masakan di Makanan",
+    lines: [
+      "Bahan masakan (beras, telur, minyak) sekarang ada di Dapur → Makanan. Cara menandainya sama: ketuk, lalu pilih Hampir habis atau Habis.",
+      "Kalau ada angkanya, tekan minus atau plus saja.",
+    ],
+  },
   {
     id: "staff-couldnt-do-2026-11",
     date: "2026-11-10",

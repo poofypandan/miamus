@@ -25,6 +25,7 @@ import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
 import { StaffKitchen } from "@/components/kitchen/kitchen-tab";
+import { ingredientsUnderFood } from "@/lib/features";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { OutboxNotice } from "@/components/shared/outbox-notice";
@@ -266,7 +267,8 @@ function TasksView() {
   // Supervising a repair (Phase 174, D10): this person's tasks due inside
   // their stretch carry "Mengawasi perbaikan" instead of reading as
   // forgotten, with nothing to tap. Read at display time; done wins.
-  const { repairs: repairsFeatureOn } = useHouseholdFeatures();
+  const featureFlags = useHouseholdFeatures();
+  const { repairs: repairsFeatureOn } = featureFlags;
   const { repairs: repairList, walkIns, supervision } = useRepairs({ enabled: repairsFeatureOn });
   const { leaveRequests, staffProfilesForDuty } = useDutyRoster();
   const stretches = useMemo(
@@ -334,6 +336,8 @@ function TasksView() {
   // this phone's list: that's where notes are written.
   const showRepairNotesTip = useMemo(() => chores.some((chore) => !!chore.task.repair_id), [chores]);
   const repairsOn = repairsFeatureOn;
+  // The tip says ingredients moved to Makanan: true only with Food at home on too.
+  const kitchenAmountsOn = ingredientsUnderFood(featureFlags);
 
   // The floors tip (Phase 158) only once this phone's list actually shows a
   // floor or a spot: before the owner sorts rooms there is nothing to explain.
@@ -439,6 +443,8 @@ function TasksView() {
         ) : pushCard.ready ? (
         <StaffTipCard
           tips={[
+            // Phase 170 PR A: only while Kitchen amounts is on.
+            { id: "staff-kitchen-amounts-2026-11", show: kitchenAmountsOn },
             { id: "staff-couldnt-do-2026-11", show: true },
             { id: "staff-feedback-2026-11", show: true },
             { id: "staff-rooms-inside-2026-11", show: showRoomsInsideTip },

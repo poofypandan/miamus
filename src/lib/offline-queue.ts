@@ -90,6 +90,20 @@ export type OutboxJob =
   | ChoreFinishJob
   | { kind: "food"; id: string; input: FoodItemInput; addedBy: string | null }
   /**
+   * "Ate 1 portion" and its Undo (Phase 170 PR A, migrations/148), decided
+   * on the server and keyed by an op id made on the phone: a resend after a
+   * lost answer, or one racing its own first try, counts once, and an Undo
+   * puts back exactly what its tap took, in whichever order they land.
+   */
+  | { kind: "portion"; opId: string; foodId: string; staffId: string | null }
+  | {
+      kind: "portion-undo";
+      opId: string;
+      foodId: string;
+      /** The tap took the last portion and finished the food: shown reopened while this waits. */
+      reopens?: boolean;
+    }
+  /**
    * "Tidak bisa dikerjakan" (Phase 165): its id is made on the phone, so a
    * resend is told "already saved" by the primary key.
    */
@@ -348,9 +362,34 @@ export async function addToOutbox(item: OfflineQueueItem): Promise<boolean> {
 export async function clearFromQueue(id: string): Promise<void> {
   try {
     await mutate((current) => current.filter((item) => item.id !== id));
+    answered.delete(id);
   } catch (err) {
     console.error("Could not remove a sent save from the queue", err);
   }
+}
+
+/**
+ * Saves the server has answered that are still in the queue for a moment
+ * (until the screen has the server's copy and the queue is written). The
+ * screen stops laying a relative change (a portion) over the server's copy
+ * once it is answered, so it is never counted twice (Phase 170 PR A).
+ */
+const answered = new Set<string>();
+export function isAnswered(itemId: string): boolean {
+  return answered.has(itemId);
+}
+
+/**
+ * Told each answer the drain gets, before it counts as answered (Codex,
+ * PR #93): the screen takes the server's row first (a portion's food), so
+ * it never shows the old count with the waiting change no longer laid over
+ * it, even when the reload after the drain fails.
+ */
+type SendListener = (item: OfflineQueueItem, result: SendResult) => void;
+const sendListeners = new Set<SendListener>();
+export function onQueuedSaveSent(listener: SendListener): () => void {
+  sendListeners.add(listener);
+  return () => sendListeners.delete(listener);
 }
 
 // --- Sending ------------------------------------------------------------------
@@ -359,6 +398,8 @@ export type SendResult =
   | { kind: "logs"; logs: TaskLog[] }
   | { kind: "chore"; task: HouseholdTask }
   | { kind: "food"; food: FoodItem | null }
+  | { kind: "portion"; food: FoodItem; consumed: number }
+  | { kind: "portion-undo"; food: FoodItem; restored: number }
   | { kind: "couldnt"; exception: TaskException | null }
   | { kind: "walkin"; walkIn: RepairWalkIn | null }
   | { kind: "supervision"; row: RepairSupervision | null };
@@ -387,6 +428,9 @@ export function jobPhotos(job: OutboxJob): string[] {
       return [job.before, job.after].filter((url): url is string => !!url);
     case "couldnt":
       return job.input.photo_url ? [job.input.photo_url] : [];
+    case "portion":
+    case "portion-undo":
+      return [];
     case "walkin_start":
       return [job.repair?.photo_url, job.visit.before_photo_url].filter((url): url is string => !!url);
     case "walkin_finish":
@@ -437,6 +481,10 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
         if (isAlreadySaved(err)) return { kind: "food", food: null };
         throw err;
       }
+    case "portion":
+      return { kind: "portion", ...(await dataProvider.eatFoodPortion(ready.foodId, ready.opId, ready.staffId)) };
+    case "portion-undo":
+      return { kind: "portion-undo", ...(await dataProvider.undoFoodPortion(ready.foodId, ready.opId)) };
     case "couldnt": {
       let exception: TaskException | null = null;
       try {
@@ -685,6 +733,7 @@ export async function submitJob<T extends SendResult>(
 
   inFlight.delete(id);
   if (first.ok === true) {
+    answered.add(id);
     onSent?.(first.result);
     await clearFromQueue(id);
     return { status: "sent", result: first.result };
@@ -802,7 +851,15 @@ export async function drainOutbox(
     inFlight.add(item.id);
     let kept = false;
     try {
-      await sendJob(await withStableIds(item));
+      const result = await sendJob(await withStableIds(item));
+      for (const listener of sendListeners) {
+        try {
+          listener(item, result);
+        } catch (err) {
+          console.error("A screen update after a queued save failed", err);
+        }
+      }
+      answered.add(item.id);
       report.sent.push(item);
       sessionRefusals = 0;
       setUnlinked(false);
@@ -843,9 +900,9 @@ export async function drainOutbox(
       report.confirmed = false;
     }
     const done = new Set([...(report.confirmed ? report.sent : []), ...report.refused].map((item) => item.id));
-    await mutate((current) => current.filter((item) => !done.has(item.id))).catch((err) =>
-      console.error("Could not remove sent saves from the queue", err)
-    );
+    await mutate((current) => current.filter((item) => !done.has(item.id)))
+      .then(() => done.forEach((id) => answered.delete(id)))
+      .catch((err) => console.error("Could not remove sent saves from the queue", err));
   }
   return report;
 }

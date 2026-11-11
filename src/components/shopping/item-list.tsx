@@ -2,6 +2,8 @@
 
 import { ChevronRight } from "lucide-react";
 import { StockStatusText } from "@/components/shopping/stock-status-sheet";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { amountsOn } from "@/lib/features";
 import {
   CATEGORY_ICONS,
   INVENTORY_SCOPES,
@@ -22,12 +24,16 @@ export function ItemList({
   items,
   lang,
   onPress,
+  headings = true,
 }: {
   items: InventoryItem[];
   lang: "en" | "id";
   onPress: (item: InventoryItem) => void;
+  /** Pets / Home headings; off where the list is one kind already (Food → Ingredients). */
+  headings?: boolean;
 }) {
   const scopes = lang === "id" ? SCOPE_LABELS_ID : SCOPE_LABELS_EN;
+  const showAmounts = amountsOn(useHouseholdFeatures());
   return (
     <div className="flex flex-col gap-4">
       {INVENTORY_SCOPES.map((scope) => {
@@ -35,7 +41,7 @@ export function ItemList({
         if (rows.length === 0) return null;
         return (
           <div key={scope} className="flex flex-col gap-1.5">
-            <h3 className="px-1 text-xs font-medium text-muted-foreground">{scopes[scope]}</h3>
+            {headings && <h3 className="px-1 text-xs font-medium text-muted-foreground">{scopes[scope]}</h3>}
             <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
               {rows.map((item) => {
                 const Icon = CATEGORY_ICONS[item.category];
@@ -61,7 +67,7 @@ export function ItemList({
                       </span>
                     )}
                     <span className="min-w-0 flex-1 truncate">{stockItemName(item)}</span>
-                    <StockStatusText item={item} lang={lang} />
+                    <StockStatusText item={item} lang={lang} showAmounts={showAmounts} />
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                   </button>
                 );

@@ -1,5 +1,7 @@
 import type { BrowserContext, Route } from "@playwright/test";
 import { BENTO, HOUSEHOLD_ID, MOCHI, SCHEDULES } from "../fixtures/household";
+import { applyAmountRules } from "../../src/lib/kitchen-units";
+import type { InventoryItem } from "../../src/types/database";
 
 /**
  * A pretend Supabase for the browser tests (Phases 146–147).
@@ -94,6 +96,13 @@ export interface StubOptions {
    * set_household_feature, so a staff phone in the same test reads the new value.
    */
   features?: Record<string, boolean>;
+  /**
+   * inventory_items rows the household already has (Phase 170 PR A). The
+   * stub then holds them: updates, adjust_inventory_quantity and
+   * record_purchase change them in place, with migrations/148's amount rules
+   * and owner guard (a staff phone can't change tracking, units or low levels).
+   */
+  items?: Record<string, unknown>[];
   /** The VAPID public key get_push_public_key returns to the admin (push set up on the server). */
   pushKey?: string;
   /** Leave the Add to Home Screen tip showing (owner phones have it closed by default). */
@@ -183,9 +192,15 @@ export interface Stub {
     realBackend: string[];
     /** set_my_push_person calls from a staff phone (Phase 166). */
     pushPeople: Record<string, unknown>[];
+    /** The op id of each eat_food_portion call, resends included (Phase 170 PR A). */
+    portionCalls: string[];
+    /** The op id of each undo_food_portion call. */
+    portionUndos: string[];
   };
   /** food_items rows as the stub holds them (Phase 156). */
   foods: Record<string, unknown>[];
+  /** Set lostReplies to drop that many eat_food_portion answers after counting them. */
+  portionTrouble: { lostReplies: number };
   /** household_tasks rows created on this phone (Kakak's saves). */
   tasks: Record<string, unknown>[];
   /** inventory_items rows added on this phone (Phase 164: gas and gallons). */
@@ -244,10 +259,13 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const writes: [string, string][] = [];
   const logs: Record<string, unknown>[] = options.logs ?? [];
   const schedules: Record<string, unknown>[] = [...(SCHEDULES as unknown as Record<string, unknown>[]), ...(options.schedules ?? [])];
-  const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [] };
+  const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [], portionCalls: [], portionUndos: [] };
   const foods: Record<string, unknown>[] = [];
+  const portionOps = new Map<string, { consumed: number; finished: boolean; undone: boolean }>();
+  /** eat_food_portion answers to drop after counting (a reply lost on the way back). */
+  const portionTrouble = { lostReplies: 0 };
   const tasks: Record<string, unknown>[] = [];
-  const supplies: Record<string, unknown>[] = [];
+  const supplies: Record<string, unknown>[] = options.items ? options.items.map((row) => ({ ...row })) : [];
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
   const repairCosts: Record<string, unknown>[] = [];
   const billPayments: Record<string, unknown>[] = options.billPayments ? [...options.billPayments] : [];
@@ -461,6 +479,93 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: object ? row : [row] });
       }
+      // Kitchen amounts (Phase 170 PR A, migrations/148).
+      if (table === "inventory_items" && request.method() === "PATCH") {
+        const itemId = (new URL(request.url()).searchParams.get("id") ?? "").replace(/^eq\./, "");
+        const index = supplies.findIndex((row) => row.id === itemId);
+        const patch = request.postDataJSON() as Record<string, unknown>;
+        const before = supplies[index] as unknown as InventoryItem | undefined;
+        if (!before) return route.fulfill({ json: [] });
+        const ownerOnly = ["track_amount", "unit", "min_threshold", "name", "category", "scope", "photo_url", "notes"];
+        if (who !== OWNER && ownerOnly.some((key) => key in patch && patch[key] !== (before as unknown as Record<string, unknown>)[key])) {
+          return route.fulfill({ status: 403, json: { code: "42501", message: "inventory_owner_only", details: null, hint: null } });
+        }
+        const after = applyAmountRules(before, { ...before, ...patch } as InventoryItem);
+        supplies[index] = after as unknown as Record<string, unknown>;
+        const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: object ? after : [after] });
+      }
+      if (table === "rpc/adjust_inventory_quantity" || table === "rpc/record_purchase") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        const index = supplies.findIndex((row) => row.id === body.p_item_id);
+        const before = supplies[index] as unknown as InventoryItem | undefined;
+        if (!before) return route.fulfill({ json: [] });
+        let after: InventoryItem;
+        if (table === "rpc/adjust_inventory_quantity") {
+          after = applyAmountRules(before, {
+            ...before,
+            quantity: Math.max(0, before.quantity + Number(body.p_delta)),
+            amount_set_by: (body.p_staff_id as string | null) ?? null,
+          });
+        } else {
+          const amount = body.p_amount === null || body.p_amount === undefined ? null : Number(body.p_amount);
+          const adds = before.track_amount === true && amount !== null;
+          after = applyAmountRules(before, {
+            ...before,
+            quantity: adds ? before.quantity + amount! : before.quantity,
+            last_bought_amount: adds ? amount : (before.last_bought_amount ?? null),
+            amount_set_by: adds ? ((body.p_staff_id as string | null) ?? null) : (before.amount_set_by ?? null),
+            stock_status: "ok",
+            stock_status_by: (body.p_staff_id as string | null) ?? null,
+          });
+        }
+        supplies[index] = after as unknown as Record<string, unknown>;
+        const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: object ? after : [after] });
+      }
+      // Ate 1 portion and its Undo (migrations/148): decided here, once per op id.
+      if (table === "rpc/eat_food_portion" || table === "rpc/undo_food_portion") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        const food = foods.find((row) => row.id === body.p_food_id);
+        if (!food) return route.fulfill({ status: 403, json: { code: "42501", message: "not_found", details: null, hint: null } });
+        const opId = String(body.p_op_id);
+        const op = portionOps.get(opId);
+        let answer: Record<string, unknown>;
+        if (table === "rpc/eat_food_portion") {
+          seen.portionCalls.push(opId);
+          if (op) {
+            answer = { food, consumed: op.consumed };
+          } else {
+            const takes = typeof food.portions === "number" && (food.portions as number) > 0 && !food.outcome;
+            const ends = takes && food.portions === 1;
+            portionOps.set(opId, { consumed: takes ? 1 : 0, finished: ends, undone: false });
+            if (takes) {
+              food.portions = (food.portions as number) - 1;
+              if (ends) Object.assign(food, { outcome: "eaten", finished_at: new Date().toISOString() });
+            }
+            answer = { food, consumed: takes ? 1 : 0 };
+          }
+          if (portionTrouble.lostReplies > 0) {
+            portionTrouble.lostReplies -= 1;
+            return route.abort("connectionreset");
+          }
+        } else {
+          seen.portionUndos.push(opId);
+          let restored = 0;
+          if (!op) {
+            portionOps.set(opId, { consumed: 0, finished: false, undone: true });
+          } else if (!op.undone) {
+            op.undone = true;
+            if (op.consumed === 1) {
+              restored = 1;
+              food.portions = Math.min(99, ((food.portions as number) ?? 0) + 1);
+              if (op.finished && food.outcome === "eaten") Object.assign(food, { outcome: null, finished_at: null });
+            }
+          }
+          answer = { food, restored };
+        }
+        return route.fulfill({ json: answer });
+      }
       if (table === "inventory_items" && request.method() === "GET" && supplies.length > 0) {
         return route.fulfill({ json: supplies });
       }
@@ -545,6 +650,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     schedules,
     seen,
     foods,
+    portionTrouble,
     tasks,
     supplies,
     repairs,

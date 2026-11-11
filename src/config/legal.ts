@@ -135,7 +135,13 @@ export const LEGAL = {
   // closing). Who supervised a walk-in and from when to when (staff data),
   // kept 90 days; a couldn't-do reason "supervising a repair". No new
   // service; no new notification yet (owner pushes come with PR B).
-  policyVersion: "2026-11-11.5",
+  // 2026-11-11.6: kitchen amounts (Phase 170 PR A, migrations/148) — for
+  // items an admin chooses to track: how much is left, the last amount
+  // bought, and when and by whom (the staff name picked on the phone) the
+  // amount last changed; only the latest amount, no history; kept while the
+  // item exists. Portions left on listed food. No new service, region or
+  // change to Kakak.
+  policyVersion: "2026-11-11.6",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

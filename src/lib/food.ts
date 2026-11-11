@@ -178,3 +178,12 @@ export function eatSoonLabel(count: number, locale: FoodLocale): string {
     ? `${count} makanan perlu segera dimakan`
     : `${count} food${count === 1 ? "" : "s"} to eat soon`;
 }
+
+/** "3 portions" / "3 porsi" (Phase 170 PR A, D7). */
+export function portionsLabel(portions: number, locale: FoodLocale): string {
+  if (locale === "id") return `${portions} porsi`;
+  return portions === 1 ? "1 portion" : `${portions} portions`;
+}
+
+/** Portions a person can set on a food: none, or 1 to 99 (migrations/148). */
+export const MAX_PORTIONS = 99;
