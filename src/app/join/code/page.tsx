@@ -14,7 +14,7 @@ import { ensureAnonymousSession } from "@/lib/auth/device-session";
 import { dataProvider } from "@/lib/data";
 import type { HouseCodePerson } from "@/lib/data/types";
 import { storeTenantId } from "@/lib/tenant";
-import { codeFromFragment } from "@/lib/setup-apply";
+import { claimFromFragment, codeFromFragment } from "@/lib/setup-apply";
 import { VideoTip } from "@/components/shared/video-tip";
 
 /**
@@ -43,11 +43,15 @@ type Step =
 
 function JoinWithCode() {
   const [step, setStep] = useState<Step>({ kind: "code" });
+  // The claim code from the owner's link (audit L5): without it, a name
+  // without a PIN can't be picked here, only signed into with a PIN.
+  const [claim, setClaim] = useState<string | null>(null);
 
   if (step.kind === "claim") {
     return (
       <ClaimStep
         code={step.code}
+        claim={claim}
         person={step.person}
         onBack={() => setStep({ kind: "names", code: step.code, people: step.people })}
       />
@@ -68,7 +72,9 @@ function JoinWithCode() {
         people={step.people}
         onPick={(person) => {
           if (person.has_pin) setStep({ ...step, kind: "pin", person });
-          else if (person.claimable) setStep({ ...step, kind: "claim", person });
+          else if (person.claimable && claim) setStep({ ...step, kind: "claim", person });
+          // The code typed by hand: the link from the owner's WhatsApp has the claim code.
+          else if (person.claimable) toast.info("Buka link dari WhatsApp pemilik rumah untuk membuat PIN.");
           // Added more than a week ago without a PIN: an invite link, as before.
           else toast.info("Belum punya PIN. Minta link undangan ke admin rumah untuk membuat PIN.");
         }}
@@ -76,7 +82,7 @@ function JoinWithCode() {
       />
     );
   }
-  return <CodeStep onFound={(code, people) => setStep({ kind: "names", code, people })} />;
+  return <CodeStep onFound={(code, people) => setStep({ kind: "names", code, people })} onClaim={setClaim} />;
 }
 
 function Screen({ children }: { children: React.ReactNode }) {
@@ -90,7 +96,13 @@ function Screen({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CodeStep({ onFound }: { onFound: (code: string, people: HouseCodePerson[]) => void }) {
+function CodeStep({
+  onFound,
+  onClaim,
+}: {
+  onFound: (code: string, people: HouseCodePerson[]) => void;
+  onClaim: (claim: string | null) => void;
+}) {
   const [code, setCode] = useState("");
   const [checking, setChecking] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -105,6 +117,7 @@ function CodeStep({ onFound }: { onFound: (code: string, people: HouseCodePerson
     prefilled.current = true;
     const fromLink = codeFromFragment(window.location.hash);
     if (!fromLink) return;
+    onClaim(claimFromFragment(window.location.hash));
     window.history.replaceState(window.history.state, "", window.location.pathname);
     setCode(fromLink);
     void check(fromLink);
@@ -302,7 +315,17 @@ function PinStep({ code, person, onBack }: { code: string; person: HouseCodePers
  * PIN, enter it again, and the phone is linked (migrations/147:
  * claim_staff_with_house_code, only within 7 days of being added).
  */
-function ClaimStep({ code, person, onBack }: { code: string; person: HouseCodePerson; onBack: () => void }) {
+function ClaimStep({
+  code,
+  claim,
+  person,
+  onBack,
+}: {
+  code: string;
+  claim: string | null;
+  person: HouseCodePerson;
+  onBack: () => void;
+}) {
   const [first, setFirst] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [shake, setShake] = useState(false);
@@ -320,17 +343,22 @@ function ClaimStep({ code, person, onBack }: { code: string; person: HouseCodePe
     }, 400);
   }
 
-  async function claim(value: string) {
+  async function submitClaim(value: string) {
     if (busy.current) return;
     busy.current = true;
     setChecking(true);
     try {
-      const result = await dataProvider.claimStaffWithHouseCode(code, person.id, value);
+      const result = await dataProvider.claimStaffWithHouseCode(code, person.id, value, claim);
       if (result.status === "ok") {
         storeTenantId(result.household_id);
         rememberStaffOnThisPhone(person);
         // A full load, as after an invite link.
         window.location.replace("/staff");
+        return;
+      }
+      if (result.status === "no_claim_link") {
+        toast.info("Link ini sudah tidak berlaku. Minta link baru ke pemilik rumah.");
+        onBack();
         return;
       }
       if (result.status === "not_claimable") {
@@ -364,7 +392,7 @@ function ClaimStep({ code, person, onBack }: { code: string; person: HouseCodePe
     } else if (next !== first) {
       reject("PIN tidak sama. Buat PIN lagi.", true);
     } else {
-      void claim(next);
+      void submitClaim(next);
     }
   }
 

@@ -4,15 +4,17 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
 import { dataProvider } from "@/lib/data";
-import { staffInOneGoMessage } from "@/lib/setup-apply";
+import { getStaffClaimLink, staffInOneGoMessage } from "@/lib/setup-apply";
 import { whatsAppShareUrl } from "@/lib/share-text";
 import { videoTip } from "@/lib/video-tips";
 
 /**
  * Staff in one go (Phase 172 PR A2, D10): one WhatsApp message with the
- * house link for everyone who still has to pick their name and make a PIN.
+ * house link and the claim code (audit L5) for everyone who still has to
+ * pick their name and make a PIN.
  * The message is Indonesian (staff read it); the button is the owner's
  * language.
  *
@@ -22,7 +24,8 @@ import { videoTip } from "@/lib/video-tips";
  */
 export function SendStaffMessageButton({ variant = "default" }: { variant?: "default" | "outline" }) {
   const t = useT();
-  const [code, setCode] = useState<string | null>(null);
+  const { activeHouseholdId } = useHousehold();
+  const [code, setCode] = useState<{ house: string; claim: string } | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
@@ -31,8 +34,11 @@ export function SendStaffMessageButton({ variant = "default" }: { variant?: "def
     setFailed(false);
     (async () => {
       try {
-        const value = (await dataProvider.getHouseCode()) ?? (await dataProvider.rotateHouseCode());
-        if (live) setCode(value);
+        const [house, claim] = await Promise.all([
+          dataProvider.getHouseCode().then((value) => value ?? dataProvider.rotateHouseCode()),
+          getStaffClaimLink(activeHouseholdId),
+        ]);
+        if (live) setCode({ house, claim });
       } catch (err) {
         console.error("Could not get the house code", err);
         if (live) setFailed(true);
@@ -41,7 +47,7 @@ export function SendStaffMessageButton({ variant = "default" }: { variant?: "def
     return () => {
       live = false;
     };
-  }, [attempt]);
+  }, [attempt, activeHouseholdId]);
 
   function send() {
     if (!code) {
@@ -51,7 +57,7 @@ export function SendStaffMessageButton({ variant = "default" }: { variant?: "def
     }
     const origin = window.location.origin;
     const tip = videoTip("staff-house-code");
-    const message = staffInOneGoMessage(code, origin, tip?.ready ? `${origin}/tips/staff-house-code` : null);
+    const message = staffInOneGoMessage(code.house, origin, code.claim, tip?.ready ? `${origin}/tips/staff-house-code` : null);
     window.open(whatsAppShareUrl(message), "_blank", "noopener,noreferrer");
   }
 

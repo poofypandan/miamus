@@ -1313,11 +1313,12 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data as unknown as HouseCodeSignIn;
   },
-  async claimStaffWithHouseCode(code, staffId, pin) {
+  async claimStaffWithHouseCode(code, staffId, pin, claim) {
     const { data, error } = await client().rpc("claim_staff_with_house_code", {
       p_code: code,
       p_staff_id: staffId,
       p_new_pin: pin,
+      p_claim: claim ?? "",
     });
     if (error) throw error;
     return data as unknown as HouseCodeClaim;

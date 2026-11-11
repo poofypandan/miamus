@@ -26,7 +26,7 @@ async function answerSetup(context: BrowserContext, theirRooms: string[] = []): 
   await context.route(`${STUB_URL}/rest/v1/rpc/**`, async (route) => {
     const name = new URL(route.request().url()).pathname.split("/").pop() ?? "";
     const body = route.request().postDataJSON() ?? {};
-    if (["apply_household_setup", "record_household_setup", "my_house_code", "staff_claims_today"].includes(name)) {
+    if (["apply_household_setup", "record_household_setup", "my_house_code", "staff_claims_today", "staff_claim_link"].includes(name)) {
       calls.rpc.push({ name, body });
     }
     if (name === "apply_household_setup") {
@@ -45,6 +45,7 @@ async function answerSetup(context: BrowserContext, theirRooms: string[] = []): 
     }
     if (name === "record_household_setup") return route.fulfill({ status: 204, body: "" });
     if (name === "my_house_code") return route.fulfill({ json: "K7PM2Q" });
+    if (name === "staff_claim_link") return route.fulfill({ json: "ABCDEFGHJK" });
     if (name === "staff_claims_today") return route.fulfill({ json: [] });
     return route.fallback();
   });
@@ -152,7 +153,8 @@ test("the review: untick a room, one stepper tap, two staff with jobs, Add, then
   const text = new URL(wa.url()).searchParams.get("text") ?? "";
   await wa.close();
   expect(text).toContain("pilih nama Anda, lalu buat PIN");
-  expect(text).toMatch(/\/join\/code#c=K7P-M2Q$/);
+  // The claim code rides beside the house code (audit L5).
+  expect(text).toMatch(/\/join\/code#c=K7P-M2Q&k=ABCDEFGHJK$/);
 });
 
 test("Starter list on Chores: what the household has is Added and never sent again", async ({ context, page }) => {
@@ -201,7 +203,7 @@ test("Starter list on Chores: what the household has is Added and never sent aga
   expect(draft.staff).toEqual([]);
 });
 
-test("staff in one go: the link fills the code, Sari picks her name and makes a PIN", async ({ context, page }) => {
+test("staff in one go: the link fills the code, Sari picks the name and makes a PIN", async ({ context, page }) => {
   await installStub(context, { stored: freshSession() });
   const claims: Record<string, unknown>[] = [];
   await context.route(`${STUB_URL}/rest/v1/rpc/**`, async (route) => {
@@ -223,8 +225,8 @@ test("staff in one go: the link fills the code, Sari picks her name and makes a 
     return route.fallback();
   });
 
-  await page.goto("/join/code#c=K7P-M2Q");
-  // Straight to the names; the code left the address bar.
+  await page.goto("/join/code#c=K7P-M2Q&k=ABCDEFGHJK");
+  // Straight to the names; both codes left the address bar.
   await expect(page.getByRole("heading", { name: "Siapa yang bertugas?" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Pilih nama Anda, lalu buat PIN.")).toBeVisible();
   expect(new URL(page.url()).hash).toBe("");
@@ -241,7 +243,9 @@ test("staff in one go: the link fills the code, Sari picks her name and makes a 
   const linked = page.waitForURL(/\/staff/);
   for (const d of "2468") await page.getByRole("button", { name: d, exact: true }).click();
   await linked;
-  expect(claims).toEqual([{ p_code: "K7P-M2Q", p_staff_id: "00000000-0000-4000-8000-00000000c102", p_new_pin: "2468" }]);
+  expect(claims).toEqual([
+    { p_code: "K7P-M2Q", p_staff_id: "00000000-0000-4000-8000-00000000c102", p_new_pin: "2468", p_claim: "ABCDEFGHJK" },
+  ]);
 });
 
 test("the PINs must match before anything is sent", async ({ context, page }) => {
@@ -255,7 +259,7 @@ test("the PINs must match before anything is sent", async ({ context, page }) =>
     if (name === "claim_staff_with_house_code") claimed += 1;
     return route.fallback();
   });
-  await page.goto("/join/code#c=K7PM2Q");
+  await page.goto("/join/code#c=K7PM2Q&k=ABCDEFGHJK");
   await page.getByRole("button", { name: /Sari/ }).click({ timeout: 20_000 });
   for (const d of "1111") await page.getByRole("button", { name: d, exact: true }).click();
   await expect(page.getByText("Ulangi PIN")).toBeVisible();
@@ -263,4 +267,46 @@ test("the PINs must match before anything is sent", async ({ context, page }) =>
   await expect(page.getByText("PIN tidak sama. Buat PIN lagi.")).toBeVisible();
   await expect(page.getByText("Buat PIN")).toBeVisible();
   expect(claimed).toBe(0);
+});
+
+test("the house code alone can't claim a name: the link from the owner is needed (audit L5)", async ({ context, page }) => {
+  await installStub(context, { stored: freshSession() });
+  let claimed = 0;
+  await context.route(`${STUB_URL}/rest/v1/rpc/**`, async (route) => {
+    const name = new URL(route.request().url()).pathname.split("/").pop() ?? "";
+    if (name === "house_code_roster") {
+      return route.fulfill({ json: [{ id: "00000000-0000-4000-8000-00000000c102", name: "Sari", has_pin: false, claimable: true }] });
+    }
+    if (name === "claim_staff_with_house_code") claimed += 1;
+    return route.fallback();
+  });
+  await page.goto("/join/code#c=K7PM2Q");
+  await page.getByRole("button", { name: /Sari/ }).click({ timeout: 20_000 });
+  await expect(page.getByText("Buka link dari WhatsApp pemilik rumah untuk membuat PIN.")).toBeVisible();
+  await expect(page.getByText("Ulangi PIN")).toHaveCount(0);
+  expect(claimed).toBe(0);
+});
+
+test("Today: Sari's phone is linked, and the owner can say Not Sari? Undo (audit L5)", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" } });
+  const undone: Record<string, unknown>[] = [];
+  await context.route(`${STUB_URL}/rest/v1/rpc/**`, async (route) => {
+    const name = new URL(route.request().url()).pathname.split("/").pop() ?? "";
+    if (name === "staff_claims_today") {
+      return route.fulfill({
+        json: undone.length ? [] : [{ staff_id: "00000000-0000-4000-8000-00000000c102", name: "Sari", claimed_at: new Date().toISOString() }],
+      });
+    }
+    if (name === "undo_staff_claim") {
+      undone.push(route.request().postDataJSON());
+      return route.fulfill({ json: true });
+    }
+    return route.fallback();
+  });
+  await page.goto("/dashboard");
+  await expect(page.getByText("Sari's phone is linked")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Not Sari? Undo" }).click();
+  await expect(page.getByText("Sari's phone is removed.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Sari's phone is linked")).toHaveCount(0);
+  expect(undone).toEqual([{ p_household: HOUSEHOLD_ID, p_staff_id: "00000000-0000-4000-8000-00000000c102" }]);
 });

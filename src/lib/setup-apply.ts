@@ -66,15 +66,31 @@ export async function recordSetup(householdId: string, fields: SetupFields): Pro
 
 /**
  * The one WhatsApp message (D10): one line of instruction and the house
- * link, the code in the fragment so it never reaches server logs. Staff
- * text, so Bahasa Indonesia whatever the owner reads.
+ * link. The house code and the claim code (audit L5: the house code alone
+ * can't claim a name) ride in the fragment, so they never reach server
+ * logs. Staff text, so Bahasa Indonesia whatever the owner reads.
  */
-export function staffInOneGoMessage(code: string, origin: string, videoUrl?: string | null): string {
+export function staffInOneGoMessage(code: string, origin: string, claim: string, videoUrl?: string | null): string {
   const pretty = code.length === 6 ? `${code.slice(0, 3)}-${code.slice(3)}` : code;
   return (
-    `Halo! Ini Miamus, aplikasi rumah kita. Buka link ini, pilih nama Anda, lalu buat PIN: ${origin}/join/code#c=${pretty}` +
+    `Halo! Ini Miamus, aplikasi rumah kita. Buka link ini, pilih nama Anda, lalu buat PIN: ${origin}/join/code#c=${pretty}&k=${claim}` +
     (videoUrl ? `\nVideo 15 detik: ${videoUrl}` : "")
   );
+}
+
+/** The claim code from /join/code#c=…&k=ABCDEFGHJK, or null. */
+export function claimFromFragment(hash: string): string | null {
+  const match = /(?:^#|&)k=([A-Za-z2-9]{10})(?:&|$)/.exec(hash);
+  return match ? match[1].toUpperCase() : null;
+}
+
+/** The owner's claim code for the active household (migrations/147), made if needed. */
+export async function getStaffClaimLink(householdId: string): Promise<string> {
+  const { supabase } = await import("@/lib/supabase/client");
+  if (!supabase) return "DEMOCLAIM2";
+  const { data, error } = await supabase.rpc("staff_claim_link", { p_household: householdId });
+  if (error || typeof data !== "string") throw error ?? new Error("no claim code");
+  return data;
 }
 
 /** The code from /join/code#c=K7P-M2Q, or null. */

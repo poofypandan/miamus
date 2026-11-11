@@ -624,7 +624,7 @@ export interface DataProvider {
    * yet, added in the last 7 days, picks their name and makes a PIN; on
    * "ok" this phone is linked to the household.
    */
-  claimStaffWithHouseCode(code: string, staffId: string, pin: string): Promise<HouseCodeClaim>;
+  claimStaffWithHouseCode(code: string, staffId: string, pin: string, claim: string | null): Promise<HouseCodeClaim>;
   /** Admins only, for the active household. */
   getHouseCode(): Promise<string | null>;
   rotateHouseCode(): Promise<string>;
@@ -664,6 +664,7 @@ export type HouseCodeClaim =
   | { status: "wrong_code" }
   | { status: "too_many_attempts" }
   | { status: "not_claimable" }
+  | { status: "no_claim_link" }
   | { status: "bad_pin" };
 
 /** A staff phone linked to the household (device_sessions). */

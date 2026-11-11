@@ -19,14 +19,24 @@
 --        parent is reused, a chore with the same title, place and repeat that
 --        is still going is skipped, and a staff name already on the roster is
 --        reused. Returns how many of each it added.
---   claim_staff_with_house_code(code, staff, pin)   D10: a staff phone with
---        the house code picks its name and makes a PIN, only for a person
---        with no PIN yet, not archived, added less than 7 days ago (110's
---        "claim an empty name, never take one", reachable from the house code
---        and narrowed to a week). Links the phone (device_sessions) as the
---        house-code sign-in does. Same limits as the house code (115).
+--   claim_staff_with_house_code(code, staff, pin, claim)   D10: a staff
+--        phone with the house code AND the claim code from the owner's
+--        WhatsApp link picks its name and makes a PIN, only for a person with
+--        no PIN yet, not archived, added less than 7 days ago (110's "claim an
+--        empty name, never take one", reachable from the house code and
+--        narrowed to a week). Links the phone (device_sessions) as the
+--        house-code sign-in does. Same limits as the house code (115), plus
+--        at most 20 claims an hour per household.
+--   staff_claim_links / staff_claim_link(household)   the claim code (audit
+--        L5): ten random characters an owner's "one WhatsApp message" carries
+--        beside the house code, good for 7 days. The house code alone (which
+--        former staff may still know) can sign in with a PIN, never claim.
+--   undo_staff_claim(household, staff)   owners only: "Not Sari? Undo" (audit
+--        L5): clears the PIN that was made and removes the phone that made
+--        it, so the name can be claimed again from the link.
 --   staff_claims_today(household)   owners only: who claimed their name
---        today (Jakarta), for Today's quiet line "Sari's phone is linked".
+--        today (Jakarta) and still has the PIN, for Today's quiet line
+--        "Sari's phone is linked · Not Sari? Undo".
 --
 -- RE-CREATED
 --   house_code_roster (117)       also returns `claimable`: no PIN yet and
@@ -282,7 +292,65 @@ revoke all on function public.apply_household_setup(uuid, jsonb) from public, an
 grant execute on function public.apply_household_setup(uuid, jsonb) to authenticated;
 
 -- --- 3. Staff in one go: pick your name, make a PIN ------------------------------------
-create or replace function public.claim_staff_with_house_code(p_code text, p_staff_id uuid, p_new_pin text)
+-- The claim code (audit L5): what the owner's one WhatsApp message carries
+-- beside the house code. Plain text like the house code itself, with no
+-- client grants: only the functions below read it.
+create table if not exists public.staff_claim_links (
+  token text primary key check (token ~ '^[A-Z2-9]{10}$'),
+  household_id uuid not null references public.households (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  created_by uuid references auth.users (id) on delete set null
+);
+create index if not exists staff_claim_links_household_idx
+  on public.staff_claim_links (household_id, created_at desc);
+alter table public.staff_claim_links enable row level security;
+revoke all on public.staff_claim_links from public, anon, authenticated;
+grant select, insert, update, delete on public.staff_claim_links to service_role;
+
+-- Owners only. The newest code if it was made in the last day (so the
+-- Staff page and a second send carry the same link), otherwise a new one.
+-- Each code works for 7 days; older ones are deleted here.
+create or replace function public.staff_claim_link(p_household uuid)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  alphabet constant text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  v_token text;
+begin
+  if not exists (
+    select 1 from public.household_members m where m.user_id = auth.uid() and m.household_id = p_household
+  ) then
+    raise exception 'not_admin' using errcode = '42501';
+  end if;
+  delete from public.staff_claim_links l
+   where l.household_id = p_household and l.created_at < now() - interval '7 days';
+  select l.token into v_token from public.staff_claim_links l
+   where l.household_id = p_household and l.created_at > now() - interval '1 day'
+   order by l.created_at desc limit 1;
+  if v_token is not null then
+    return v_token;
+  end if;
+  loop
+    v_token := '';
+    for i in 1..10 loop
+      v_token := v_token || substr(alphabet, 1 + (get_byte(extensions.gen_random_bytes(1), 0) % 31), 1);
+    end loop;
+    exit when not exists (select 1 from public.staff_claim_links l where l.token = v_token);
+  end loop;
+  insert into public.staff_claim_links (token, household_id, created_by) values (v_token, p_household, auth.uid());
+  return v_token;
+end;
+$$;
+
+revoke all on function public.staff_claim_link(uuid) from public, anon;
+grant execute on function public.staff_claim_link(uuid) to authenticated, service_role;
+
+create or replace function public.claim_staff_with_house_code(
+  p_code text, p_staff_id uuid, p_new_pin text, p_claim text
+)
 returns jsonb
 language plpgsql
 security definer
@@ -305,6 +373,26 @@ begin
     insert into public.staff_sign_in_attempts (user_id, kind, success)
     values (uid, 'code', false);
     return jsonb_build_object('status', 'wrong_code');
+  end if;
+
+  -- At most 20 claims an hour per household, made or refused (audit L5).
+  if (select count(*) from public.staff_sign_in_attempts a
+       where a.household_id = household and a.kind = 'claim'
+         and a.created_at > now() - interval '1 hour') >= 20 then
+    return jsonb_build_object('status', 'too_many_attempts');
+  end if;
+
+  -- The claim code from the owner's link (audit L5). A wrong one counts as a
+  -- wrong code toward this phone's house-code limit.
+  if p_claim is null or not exists (
+    select 1 from public.staff_claim_links l
+     where l.household_id = household
+       and l.token = upper(btrim(p_claim))
+       and l.created_at > now() - interval '7 days'
+  ) then
+    insert into public.staff_sign_in_attempts (user_id, household_id, kind, success)
+    values (uid, household, 'code', false);
+    return jsonb_build_object('status', 'no_claim_link');
   end if;
 
   if p_new_pin is null or p_new_pin !~ '^[0-9]{4}$' then
@@ -347,8 +435,50 @@ begin
 end;
 $$;
 
-revoke all on function public.claim_staff_with_house_code(text, uuid, text) from public, anon;
-grant execute on function public.claim_staff_with_house_code(text, uuid, text) to authenticated, service_role;
+revoke all on function public.claim_staff_with_house_code(text, uuid, text, text) from public, anon;
+grant execute on function public.claim_staff_with_house_code(text, uuid, text, text) to authenticated, service_role;
+
+-- "Not Sari? Undo" (audit L5): owners only. Clears the PIN the claim made
+-- and removes the phone that made it (as remove_linked_phone does, 115), so
+-- the name can be claimed again from the link. Only a name claimed in the
+-- last 7 days; any other PIN is reset the usual way (110).
+create or replace function public.undo_staff_claim(p_household uuid, p_staff_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  phone uuid;
+begin
+  if not exists (
+    select 1 from public.household_members m where m.user_id = auth.uid() and m.household_id = p_household
+  ) then
+    raise exception 'not_admin' using errcode = '42501';
+  end if;
+  select a.user_id into phone
+    from public.staff_sign_in_attempts a
+    join public.staff_profiles s on s.id = a.staff_id and s.household_id = p_household
+   where a.household_id = p_household and a.staff_id = p_staff_id
+     and a.kind = 'claim' and a.success
+     and a.created_at > now() - interval '7 days'
+     and s.user_id is null and s.has_pin
+   order by a.created_at desc
+   limit 1;
+  if phone is null then
+    return false;
+  end if;
+  update public.staff_profiles
+     set pin = null, has_pin = false, failed_pin_attempts = 0, pin_locked_until = null
+   where id = p_staff_id and household_id = p_household;
+  delete from public.device_sessions d where d.user_id = phone and d.household_id = p_household;
+  delete from public.push_subscriptions ps where ps.user_id = phone and ps.household_id = p_household;
+  return true;
+end;
+$$;
+
+revoke all on function public.undo_staff_claim(uuid, uuid) from public, anon;
+grant execute on function public.undo_staff_claim(uuid, uuid) to authenticated, service_role;
 
 -- --- 3b. The roster says who can still claim ------------------------------------------
 -- Re-created from 117 with one more column, so the join screen knows before
@@ -418,6 +548,7 @@ begin
      where a.household_id = p_household
        and a.kind = 'claim'
        and a.success
+       and s.has_pin   -- an undone claim leaves the line
        and a.created_at >= ((now() at time zone 'Asia/Jakarta')::date)::timestamp at time zone 'Asia/Jakarta'
      order by a.staff_id, a.created_at desc;
 end;

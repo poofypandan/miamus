@@ -1104,8 +1104,16 @@ export interface Database {
         Returns: Record<string, unknown>;
       };
       claim_staff_with_house_code: {
-        Args: { p_code: string; p_staff_id: string; p_new_pin: string };
+        Args: { p_code: string; p_staff_id: string; p_new_pin: string; p_claim: string };
         Returns: Record<string, unknown>;
+      };
+      staff_claim_link: {
+        Args: { p_household: string };
+        Returns: string;
+      };
+      undo_staff_claim: {
+        Args: { p_household: string; p_staff_id: string };
+        Returns: boolean;
       };
       staff_claims_today: {
         Args: { p_household: string };

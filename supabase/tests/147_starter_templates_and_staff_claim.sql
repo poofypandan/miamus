@@ -242,7 +242,28 @@ insert into public.staff_profiles (id, household_id, name, created_at, has_pin, 
   ('00000000-0000-0000-0000-0000000146c4', :f1, 'Yanti', now(), true, null);
 \set sari '(select id from public.staff_profiles where name = ''Mbak Sari'')'
 
-select pg_temp.ok(pg_temp.json_as(:p1, format($q$ select public.claim_staff_with_house_code('k7p-m2q', %L, '1234') $q$, :sari)) ->> 'status' = 'ok',
+-- The claim code the owner's WhatsApp link carries (audit L5).
+create temp table claim (token text);
+grant all on claim to public;
+insert into claim select pg_temp.json_as(:a1, format($q$ select to_jsonb(public.staff_claim_link(%L)) $q$, :f1)) #>> '{}';
+select pg_temp.ok((select token ~ '^[A-Z2-9]{10}$' from claim), 'the owner gets a 10-character claim code');
+select pg_temp.ok(pg_temp.json_as(:a1, format($q$ select to_jsonb(public.staff_claim_link(%L)) $q$, :f1)) #>> '{}' = (select token from claim),
+  '... the same one again within a day, so every send carries the same link');
+select pg_temp.ok(pg_temp.err_as(:p3, format($q$ select public.staff_claim_link(%L) $q$, :f1)) like '%not_admin%',
+  'a staff phone can''t make one');
+select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select public.staff_claim_link(%L) $q$, :f1)) like '%not_admin%',
+  'nor another household''s owner');
+
+-- The house code alone can't claim (audit L5: former staff may still know it).
+select pg_temp.ok(pg_temp.json_as(:p1, format($q$ select public.claim_staff_with_house_code('K7PM2Q', %L, '1234', null) $q$, :sari)) ->> 'status' = 'no_claim_link',
+  'without the claim code a name can''t be claimed');
+select pg_temp.ok(pg_temp.json_as(:p1, format($q$ select public.claim_staff_with_house_code('K7PM2Q', %L, '1234', 'ABCDEFGHJK') $q$, :sari)) ->> 'status' = 'no_claim_link',
+  '... nor with a wrong one');
+select pg_temp.ok((select count(*) = 2 from public.staff_sign_in_attempts where user_id = :p1::uuid and kind = 'code' and not success),
+  '... each counts as a wrong code toward this phone''s limit');
+delete from public.staff_sign_in_attempts where user_id = :p1::uuid;
+
+select pg_temp.ok(pg_temp.json_as(:p1, format($q$ select public.claim_staff_with_house_code('k7p-m2q', %L, '1234', (select token from pg_temp.claim)) $q$, :sari)) ->> 'status' = 'ok',
   'a staff phone with the house code claims Sari (added today, no PIN) and makes a PIN');
 select pg_temp.ok(exists (select 1 from public.staff_profiles where name = 'Mbak Sari' and has_pin), '... Sari has a PIN now');
 select pg_temp.ok(exists (select 1 from public.device_sessions where user_id = :p1::uuid and household_id = :f1::uuid),
@@ -251,36 +272,36 @@ select pg_temp.ok((select extensions.crypt('1234', pin) = pin from public.staff_
   '... the PIN is stored hashed');
 select pg_temp.ok(exists (select 1 from public.staff_sign_in_attempts where user_id = :p1::uuid and kind = 'claim' and success),
   '... and the claim is recorded');
-select pg_temp.ok(pg_temp.json_as(:p2, format($q$ select public.claim_staff_with_house_code('K7PM2Q', %L, '9999') $q$, :sari)) ->> 'status' = 'not_claimable',
+select pg_temp.ok(pg_temp.json_as(:p2, format($q$ select public.claim_staff_with_house_code('K7PM2Q', %L, '9999', (select token from pg_temp.claim)) $q$, :sari)) ->> 'status' = 'not_claimable',
   'a second phone can''t take Sari''s name once claimed');
-select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c2', '1111') $q$) ->> 'status' = 'not_claimable',
+select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c2', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'not_claimable',
   'a name added more than 7 days ago can''t be claimed (PIN sign-in only)');
-select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c3', '1111') $q$) ->> 'status' = 'not_claimable',
+select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c3', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'not_claimable',
   'nor an archived person');
-select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c4', '1111') $q$) ->> 'status' = 'not_claimable',
+select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c4', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'not_claimable',
   'nor someone who already has a PIN');
-select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146e9', '1111') $q$) ->> 'status' = 'not_claimable',
+select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146e9', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'not_claimable',
   'nor another household''s person');
-select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146e1', '1111') $q$) ->> 'status' = 'not_claimable',
+select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146e1', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'not_claimable',
   'nor an owner''s own roster entry');
 select pg_temp.ok(not exists (select 1 from public.device_sessions where user_id = :p2::uuid),
   '... none of them linked the phone');
-select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('AAAAAA', '00000000-0000-0000-0000-0000000146c2', '1111') $q$) ->> 'status' = 'wrong_code',
+select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('AAAAAA', '00000000-0000-0000-0000-0000000146c2', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'wrong_code',
   'a wrong code says so');
 select pg_temp.ok(exists (select 1 from public.staff_sign_in_attempts where user_id = :p2::uuid and kind = 'code' and not success),
   '... and counts toward the house code''s limit');
-select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c2', '12a4') $q$) ->> 'status' = 'bad_pin',
+select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c2', '12a4', (select token from pg_temp.claim)) $q$) ->> 'status' = 'bad_pin',
   'a PIN must be four digits');
-select pg_temp.ok(pg_temp.err_as(:a1, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c2', '1111') $q$)
+select pg_temp.ok(pg_temp.err_as(:a1, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c2', '1111', (select token from pg_temp.claim)) $q$)
                   like '%staff_phones_only%', 'a Google account can''t claim (staff phones only)');
-select pg_temp.ok(pg_temp.err_as(null, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c2', '1111') $q$)
+select pg_temp.ok(pg_temp.err_as(null, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c2', '1111', (select token from pg_temp.claim)) $q$)
                   like '%permission denied%', 'anon cannot call it');
 
 -- Ten wrong codes in an hour lock this phone's house-code tries, claims included.
 insert into public.staff_sign_in_attempts (user_id, kind, success)
 select :p2::uuid, 'code', false from generate_series(1, 10);
 insert into public.staff_profiles (id, household_id, name) values ('00000000-0000-0000-0000-0000000146c5', :f1, 'Dewi');
-select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c5', '1111') $q$) ->> 'status' = 'too_many_attempts',
+select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c5', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'too_many_attempts',
   'the house code''s limit applies to claims');
 
 -- The roster says who can still claim (house_code_roster, re-created from 117).
@@ -292,6 +313,44 @@ select pg_temp.ok((select claimable from roster where name = 'Dewi') and not (se
   'the roster marks Dewi (added today, no PIN) claimable; not Budi (8 days) or Sari (has a PIN now)');
 select pg_temp.ok(not exists (select 1 from roster where name in ('Joko', 'Ibu Melati')),
   '... and still leaves out archived people and owners');
+
+-- A claim code older than 7 days no longer works.
+update public.staff_claim_links set created_at = now() - interval '8 days' where token = (select token from claim);
+insert into public.staff_profiles (id, household_id, name) values ('00000000-0000-0000-0000-0000000146c6', :f1, 'Wati');
+select pg_temp.ok(pg_temp.json_as(:p3, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c6', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'no_claim_link',
+  'a claim code older than 7 days is refused');
+update public.staff_claim_links set created_at = now() where token = (select token from claim);
+
+-- At most 20 claims an hour per household (audit L5).
+insert into public.staff_sign_in_attempts (user_id, household_id, kind, success)
+select '00000000-0000-0000-0000-0000000146b3', :f1, 'claim', false from generate_series(1, 20);
+select pg_temp.ok(pg_temp.json_as(:p3, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c6', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'too_many_attempts',
+  'the 21st claim in an hour for a household is refused');
+delete from public.staff_sign_in_attempts where household_id = :f1::uuid and kind = 'claim' and not success;
+
+-- ---- Not Sari? Undo (audit L5) ---------------------------------------------------------
+select pg_temp.ok(pg_temp.err_as(:p3, format($q$ select public.undo_staff_claim(%L, %L) $q$, :f1, :sari)) like '%not_admin%',
+  'a staff phone can''t undo a claim');
+select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select public.undo_staff_claim(%L, %L) $q$, :f1, :sari)) like '%not_admin%',
+  'nor another household''s owner');
+select pg_temp.ok(pg_temp.json_as(:a1, format($q$ select jsonb_agg(name) from public.staff_claims_today(%L) $q$, :f1)) = '["Mbak Sari"]'::jsonb,
+  'before Undo: Today says Sari''s phone is linked');
+select pg_temp.ok(pg_temp.json_as(:a1, format($q$ select to_jsonb(public.undo_staff_claim(%L, %L)) $q$, :f1, :sari)) = 'true'::jsonb,
+  'the owner undoes Sari''s claim');
+select pg_temp.ok(not (select has_pin from public.staff_profiles where name = 'Mbak Sari')
+                  and (select pin is null from public.staff_profiles where name = 'Mbak Sari'),
+  '... the PIN is cleared');
+select pg_temp.ok(not exists (select 1 from public.device_sessions where user_id = :p1::uuid),
+  '... and the phone that made it is removed');
+select pg_temp.ok(pg_temp.json_as(:a1, format($q$ select coalesce(jsonb_agg(name), '[]') from public.staff_claims_today(%L) $q$, :f1)) = '[]'::jsonb,
+  '... and the Today line goes');
+select pg_temp.ok(pg_temp.json_as(:a1, format($q$ select to_jsonb(public.undo_staff_claim(%L, %L)) $q$, :f1, :sari)) = 'false'::jsonb,
+  'a second Undo finds nothing to undo');
+select pg_temp.ok(pg_temp.json_as(:p3, format($q$ select public.claim_staff_with_house_code('K7PM2Q', %L, '4321', (select token from pg_temp.claim)) $q$, :sari)) ->> 'status' = 'ok',
+  'the name can be claimed again from the link, by the right phone');
+select pg_temp.ok(pg_temp.json_as(:a1, $q$ select to_jsonb(public.undo_staff_claim('00000000-0000-0000-0000-0000000146f1', '00000000-0000-0000-0000-0000000146c4')) $q$) = 'false'::jsonb,
+  'Undo never touches a PIN that wasn''t made by a claim (Yanti)');
+select pg_temp.ok((select has_pin from public.staff_profiles where name = 'Yanti'), '... Yanti keeps hers');
 
 -- ---- Who linked today ------------------------------------------------------------------
 select pg_temp.ok(pg_temp.json_as(:a1, format($q$ select jsonb_agg(name) from public.staff_claims_today(%L) $q$, :f1)) = '["Mbak Sari"]'::jsonb,
@@ -305,12 +364,17 @@ select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select * from public.staff_clai
 select pg_temp.ok(not has_function_privilege('anon', 'public.house_code_roster(text)', 'execute')
                   and has_function_privilege('authenticated', 'public.house_code_roster(text)', 'execute'),
   'house_code_roster keeps its grants');
+select pg_temp.ok(not has_function_privilege('anon', 'public.staff_claim_link(uuid)', 'execute')
+                  and not has_function_privilege('anon', 'public.undo_staff_claim(uuid, uuid)', 'execute')
+                  and not has_table_privilege('authenticated', 'public.staff_claim_links', 'select')
+                  and not has_table_privilege('anon', 'public.staff_claim_links', 'select'),
+  'claim codes: anon executes neither function, and no client reads the table');
 select pg_temp.ok(not has_function_privilege('anon', 'public.apply_household_setup(uuid, jsonb)', 'execute')
-                  and not has_function_privilege('anon', 'public.claim_staff_with_house_code(text, uuid, text)', 'execute')
+                  and not has_function_privilege('anon', 'public.claim_staff_with_house_code(text, uuid, text, text)', 'execute')
                   and not has_function_privilege('anon', 'public.staff_claims_today(uuid)', 'execute'),
   'anon executes none of the new functions');
 select pg_temp.ok(has_function_privilege('authenticated', 'public.apply_household_setup(uuid, jsonb)', 'execute')
-                  and has_function_privilege('authenticated', 'public.claim_staff_with_house_code(text, uuid, text)', 'execute')
+                  and has_function_privilege('authenticated', 'public.claim_staff_with_house_code(text, uuid, text, text)', 'execute')
                   and has_function_privilege('authenticated', 'public.staff_claims_today(uuid)', 'execute'),
   'authenticated may call them (the checks are inside)');
 select pg_temp.ok(not has_table_privilege('authenticated', 'public.staff_sign_in_attempts', 'select'),

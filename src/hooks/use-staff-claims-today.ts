@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useHousehold } from "@/context/household-context";
 
 /**
@@ -10,7 +10,7 @@ import { useHousehold } from "@/context/household-context";
  */
 export type LinkedToday = { staffId: string; name: string };
 
-export function useStaffClaimsToday(): LinkedToday[] {
+export function useStaffClaimsToday(): { linked: LinkedToday[]; undo: (staffId: string) => Promise<boolean> } {
   const { activeHouseholdId, tenantReady, userRole } = useHousehold();
   const [linked, setLinked] = useState<LinkedToday[]>([]);
   const [attempt, setAttempt] = useState(0);
@@ -43,5 +43,27 @@ export function useStaffClaimsToday(): LinkedToday[] {
       live = false;
     };
   }, [activeHouseholdId, tenantReady, userRole, attempt]);
-  return linked;
+
+  /**
+   * "Not Sari? Undo" (audit L5): clears the PIN the claim made and removes
+   * the phone that made it (migrations/147 undo_staff_claim).
+   */
+  const undo = useCallback(
+    async (staffId: string): Promise<boolean> => {
+      const { supabase } = await import("@/lib/supabase/client");
+      if (!supabase) return false;
+      const { data, error } = await supabase.rpc("undo_staff_claim", {
+        p_household: activeHouseholdId,
+        p_staff_id: staffId,
+      });
+      if (error) {
+        console.error("Could not undo the claim", error);
+        return false;
+      }
+      setLinked((prev) => prev.filter((row) => row.staffId !== staffId));
+      return data === true;
+    },
+    [activeHouseholdId]
+  );
+  return { linked, undo };
 }

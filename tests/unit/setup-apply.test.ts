@@ -2,13 +2,13 @@
 // code it carries in the link's fragment.
 
 import { describe, expect, it } from "vitest";
-import { codeFromFragment, staffInOneGoMessage } from "@/lib/setup-apply";
+import { claimFromFragment, codeFromFragment, staffInOneGoMessage } from "@/lib/setup-apply";
 
 describe("the one WhatsApp message", () => {
-  it("is one line of Indonesian with the house link, the code in the fragment", () => {
-    const text = staffInOneGoMessage("K7PM2Q", "https://miamus.app");
+  it("is one line of Indonesian with the house link, both codes in the fragment", () => {
+    const text = staffInOneGoMessage("K7PM2Q", "https://miamus.app", "ABCDEFGHJK");
     expect(text).toBe(
-      "Halo! Ini Miamus, aplikasi rumah kita. Buka link ini, pilih nama Anda, lalu buat PIN: https://miamus.app/join/code#c=K7P-M2Q"
+      "Halo! Ini Miamus, aplikasi rumah kita. Buka link ini, pilih nama Anda, lalu buat PIN: https://miamus.app/join/code#c=K7P-M2Q&k=ABCDEFGHJK"
     );
     expect(text).not.toMatch(/\?/);
     // Plain text: no emoji or symbol characters (AGENTS.md).
@@ -16,7 +16,7 @@ describe("the one WhatsApp message", () => {
   });
 
   it("adds the 15-second video only when it exists", () => {
-    expect(staffInOneGoMessage("K7PM2Q", "https://miamus.app", "https://miamus.app/tips/staff-house-code")).toContain(
+    expect(staffInOneGoMessage("K7PM2Q", "https://miamus.app", "ABCDEFGHJK", "https://miamus.app/tips/staff-house-code")).toContain(
       "\nVideo 15 detik: https://miamus.app/tips/staff-house-code"
     );
   });
@@ -33,5 +33,18 @@ describe("the code from the link", () => {
     expect(codeFromFragment("")).toBeNull();
     expect(codeFromFragment("#c=K7P")).toBeNull();
     expect(codeFromFragment("#code=K7PM2Q")).toBeNull();
+  });
+});
+
+describe("the claim code from the link (audit L5)", () => {
+  it("reads k= beside the house code", () => {
+    expect(claimFromFragment("#c=K7P-M2Q&k=abcdefghjk")).toBe("ABCDEFGHJK");
+    expect(codeFromFragment("#c=K7P-M2Q&k=ABCDEFGHJK")).toBe("K7P-M2Q");
+  });
+
+  it("is null when absent or malformed", () => {
+    expect(claimFromFragment("#c=K7P-M2Q")).toBeNull();
+    expect(claimFromFragment("#c=K7P-M2Q&k=SHORT")).toBeNull();
+    expect(claimFromFragment("#c=K7P-M2Q&k=ABCDEFGHJ1")).toBeNull(); // 1 isn't in the alphabet
   });
 });
