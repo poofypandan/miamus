@@ -2,12 +2,15 @@
 
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FoodView } from "@/components/kitchen/food-view";
+import { IngredientsSection } from "@/components/kitchen/ingredients-section";
+import { WhatsNewCard } from "@/components/shared/whats-new";
 import { ShoppingTab } from "@/components/shopping/shopping-tab";
 import { StaffShopping } from "@/components/shopping/staff-shopping";
 import { useOwnerLocale } from "@/context/owner-locale-context";
 import { useKitchenView } from "@/hooks/use-kitchen-view";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
+import { amountsOn, ingredientsUnderFood } from "@/lib/features";
 import type { FoodLocale } from "@/lib/food";
 
 /** The pill itself, in the owner's language or (staff) Indonesian. */
@@ -39,7 +42,10 @@ export function KitchenTab() {
   const locale = useOwnerLocale();
   const [view] = useKitchenView();
   // Food at home off (Phase 171): Shopping alone, and one pill is no pills.
-  const { food } = useHouseholdFeatures();
+  const flags = useHouseholdFeatures();
+  const { food } = flags;
+  // Kitchen amounts (Phase 170 PR A): Ingredients under Food (D6).
+  const ingredients = ingredientsUnderFood(flags);
   useScrollTopOnChange(view);
   return (
     <div className="flex flex-col gap-4 pb-6">
@@ -48,9 +54,15 @@ export function KitchenTab() {
           <KitchenSwitch locale={locale} />
         </div>
       )}
+      {amountsOn(flags) && (
+        <div className="px-4 empty:hidden">
+          <WhatsNewCard id="kitchen-amounts-2026-11" />
+        </div>
+      )}
       {view === "food" ? (
-        <div className="px-4">
-          <FoodView locale={locale} canDelete />
+        <div className="flex flex-col gap-6 px-4">
+          <FoodView locale={locale} canDelete readyHeading={ingredients} />
+          {ingredients && <IngredientsSection lang={locale} owner />}
         </div>
       ) : (
         <ShoppingTab />
@@ -66,12 +78,21 @@ export function KitchenTab() {
  */
 export function StaffKitchen() {
   const [view] = useKitchenView();
-  const { food } = useHouseholdFeatures();
+  const flags = useHouseholdFeatures();
+  const { food } = flags;
+  const ingredients = ingredientsUnderFood(flags);
   useScrollTopOnChange(view);
   return (
     <div className="flex flex-col gap-4">
       {food && <KitchenSwitch locale="id" />}
-      {view === "food" ? <FoodView locale="id" canDelete={false} /> : <StaffShopping />}
+      {view === "food" ? (
+        <div className="flex flex-col gap-6">
+          <FoodView locale="id" canDelete={false} readyHeading={ingredients} />
+          {ingredients && <IngredientsSection lang="id" owner={false} />}
+        </div>
+      ) : (
+        <StaffShopping />
+      )}
     </div>
   );
 }

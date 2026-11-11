@@ -300,6 +300,8 @@ export interface FoodItemInput {
   from_whom: string | null;
   return_container: boolean;
   notes: string | null;
+  /** Optional portions (migrations/148); left out = unchanged. */
+  portions?: number | null;
 }
 
 /**

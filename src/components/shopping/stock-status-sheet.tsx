@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, CircleAlert, Loader2, PackageX, Pencil } from "lucide-react";
+import { Check, ChevronRight, CircleAlert, Loader2, PackageX, Pencil, Scale } from "lucide-react";
+import { AmountControls } from "@/components/shopping/amount-controls";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -13,6 +14,9 @@ import {
 } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { amountsOn } from "@/lib/features";
+import { amountLine, formatAmount, isTracked } from "@/lib/kitchen-units";
 import {
   CATEGORY_LABELS_EN,
   CATEGORY_LABELS_ID,
@@ -35,20 +39,32 @@ const ICONS: Record<StockStatus, typeof Check> = {
  * Tap an item, say how much is left (Phase 154): three big choices — enough,
  * running low, out. Shared by the owner's Shopping tab and the staff's
  * "Belanja"; staff screens pass "id". The owner also gets "Edit item".
+ *
+ * Kitchen amounts (Phase 170 PR A): a tracked item also shows its amount,
+ * minus, plus and Set amount, for owners and staff; owners get a Track
+ * amount row. The item is read live, so the sheet follows every change.
  */
 export function StockStatusSheet({
-  item,
+  item: picked,
   lang,
   onClose,
   onEdit,
+  onTrack,
 }: {
   item: InventoryItem | null;
   lang: "en" | "id";
   onClose: () => void;
   /** Owner only: opens the item's details. */
   onEdit?: (item: InventoryItem) => void;
+  /** Owner only: opens Track amount (Kitchen amounts on). */
+  onTrack?: (item: InventoryItem) => void;
 }) {
-  const { setInventoryStatus } = useHousehold();
+  const { setInventoryStatus, inventoryItems } = useHousehold();
+  const flags = useHouseholdFeatures();
+  const showAmounts = amountsOn(flags);
+  // As it is now, not as it was when tapped (minus and plus change it).
+  const item = picked ? (inventoryItems.find((i) => i.id === picked.id) ?? picked) : null;
+  const tracked = item !== null && showAmounts && isTracked(item);
   const [busy, setBusy] = useState<StockStatus | null>(null);
   // Back (Android, or the browser's) closes the sheet, not the list under it
   // — as every other sheet does (Codex review, PR #9).
@@ -94,6 +110,7 @@ export function StockStatusSheet({
               className="mb-1 max-h-48 w-full rounded-xl bg-muted object-contain"
             />
           )}
+          {tracked && item && <AmountControls item={item} lang={lang} />}
           {STOCK_STATUSES.map((status) => {
             const Icon = ICONS[status];
             const selected = status === current;
@@ -111,6 +128,33 @@ export function StockStatusSheet({
               </Button>
             );
           })}
+          {onTrack && showAmounts && item && (
+            <button
+              type="button"
+              onClick={() => onTrack(item)}
+              className="mt-1 flex min-h-12 items-center gap-3 rounded-xl border bg-card px-3 text-left text-sm active:bg-muted"
+            >
+              <Scale className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <span className="flex-1">{id ? "Catat jumlah" : "Track amount"}</span>
+              <span className="text-xs text-muted-foreground">
+                {isTracked(item)
+                  ? [
+                      id ? "Aktif" : "On",
+                      item.min_threshold > 0
+                        ? id
+                          ? `hampir habis di ${formatAmount(item.min_threshold, item.unit, lang)}`
+                          : `low at ${formatAmount(item.min_threshold, item.unit, lang)}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : id
+                    ? "Mati"
+                    : "Off"}
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            </button>
+          )}
           {onEdit && item && (
             <Button
               variant="ghost"
@@ -132,6 +176,22 @@ export function StockStatusSheet({
  */
 export function StockStatusText({ item, lang }: { item: InventoryItem; lang: "en" | "id" }) {
   const status = stockStatus(item);
+  const flags = useHouseholdFeatures();
+  if (amountsOn(flags) && isTracked(item)) {
+    // "1,2 kg left", grey and "about …" once untouched for 14 days (D2),
+    // with the status word when it's running low or out.
+    const line = amountLine(item, lang);
+    return (
+      <span className="flex shrink-0 flex-col items-end text-xs">
+        <span className={cn(line.stale ? "text-muted-foreground" : "font-medium text-gray-900")}>{line.text}</span>
+        {status !== "ok" && (
+          <span className={cn("font-medium", status === "out" ? "text-red-700" : "text-amber-700")}>
+            {STOCK_STATUS_LABELS[lang][status]}
+          </span>
+        )}
+      </span>
+    );
+  }
   if (status === "ok") return null;
   return (
     <span

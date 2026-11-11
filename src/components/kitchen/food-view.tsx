@@ -22,6 +22,7 @@ import {
   foodName,
   groupFood,
   needsDate,
+  portionsLabel,
   sourceLabel,
   type FoodGroup,
   type FoodLocale,
@@ -47,7 +48,16 @@ const GROUPS: FoodGroup[] = ["today", "week", "later"];
  * Shared by the owner's Kitchen tab and the staff's Dapur: staff screens
  * pass "id" and canDelete={false}.
  */
-export function FoodView({ locale, canDelete }: { locale: FoodLocale; canDelete: boolean }) {
+export function FoodView({
+  locale,
+  canDelete,
+  readyHeading = false,
+}: {
+  locale: FoodLocale;
+  canDelete: boolean;
+  /** "Ready to eat" above the list, when Ingredients follow it (Phase 170 PR A, D6). */
+  readyHeading?: boolean;
+}) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
   const { foodItems, loading, returnFoodContainer, pendingIds } = useHousehold();
@@ -99,6 +109,9 @@ export function FoodView({ locale, canDelete }: { locale: FoodLocale; canDelete:
 
   return (
     <div className="flex flex-col gap-4">
+      {readyHeading && (
+        <h2 className="text-base font-semibold text-gray-900">{tr("Ready to eat", "Siap dimakan")}</h2>
+      )}
       <Button className="min-h-12 w-full rounded-xl text-base" onClick={() => setAdding(true)}>
         <Plus /> {tr("Add food", "Tambah makanan")}
       </Button>
@@ -209,6 +222,7 @@ function FoodRow({
   const unknown = needsDate(item);
   const Icon = PLACE_ICONS[item.kept_in];
   const detail = [
+    item.portions ? portionsLabel(item.portions, locale) : null,
     FOOD_PLACE_LABELS[locale][item.kept_in],
     sourceLabel(item, locale),
   ]

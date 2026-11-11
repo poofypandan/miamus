@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Archive, Check, ChevronDown, Loader2, Refrigerator, Snowflake, Utensils } from "lucide-react";
+import { Archive, Check, ChevronDown, Loader2, Minus, Plus, Refrigerator, Snowflake, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { useToday } from "@/hooks/use-today";
 import {
   EXPIRY_CHOICES,
   FOOD_LIMITS,
+  MAX_PORTIONS,
   FOOD_PLACES,
   FOOD_PLACE_LABELS,
   FOOD_SOURCES,
@@ -85,6 +86,8 @@ function FoodForm({ item, locale, onDone }: { item: FoodItem | null; locale: Foo
   const [fromWhom, setFromWhom] = useState(item?.from_whom ?? "");
   const [returnContainer, setReturnContainer] = useState(item?.return_container ?? false);
   const [notes, setNotes] = useState(item?.notes ?? "");
+  // Optional (D7): blank = not counted, as before.
+  const [portions, setPortions] = useState<number | null>(item?.portions ?? null);
   const [notesOpen, setNotesOpen] = useState(!!item?.notes);
   const [saving, setSaving] = useState(false);
 
@@ -107,6 +110,7 @@ function FoodForm({ item, locale, onDone }: { item: FoodItem | null; locale: Foo
       // review, PR #10).
       return_container: source === "gift" ? returnContainer : false,
       notes: notes.trim() ? notes.trim().slice(0, FOOD_LIMITS.notes) : null,
+      portions,
     };
     try {
       if (item) {
@@ -307,6 +311,36 @@ function FoodForm({ item, locale, onDone }: { item: FoodItem | null; locale: Foo
             />
           )}
         </fieldset>
+
+        <div className="flex items-center gap-2">
+          <span className="flex-1 text-sm font-medium">
+            {tr("Portions", "Porsi")}{" "}
+            <span className="font-normal text-muted-foreground">{tr("(optional)", "(boleh dikosongkan)")}</span>
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            className="size-11 rounded-xl"
+            aria-label={tr("One portion less", "Kurangi 1 porsi")}
+            disabled={portions === null}
+            onClick={() => setPortions((n) => (n === null || n <= 1 ? null : n - 1))}
+          >
+            <Minus />
+          </Button>
+          <span className="w-8 text-center text-base font-semibold" aria-live="polite">
+            {portions ?? "–"}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            className="size-11 rounded-xl"
+            aria-label={tr("One portion more", "Tambah 1 porsi")}
+            disabled={portions !== null && portions >= MAX_PORTIONS}
+            onClick={() => setPortions((n) => Math.min(MAX_PORTIONS, (n ?? 0) + 1))}
+          >
+            <Plus />
+          </Button>
+        </div>
 
         {notesOpen ? (
           <div className="flex flex-col gap-1.5">

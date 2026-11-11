@@ -305,6 +305,8 @@ interface HouseholdContextValue {
   /** Undo is gone (its toast closed): remove the finished food's photo now. */
   releaseFinishedFoodPhoto: (id: string) => void;
   returnFoodContainer: (id: string) => Promise<void>;
+  /** Portions left on a food (Phase 170 PR A, D7); anyone in the household. */
+  setFoodPortions: (id: string, portions: number | null) => Promise<void>;
   /** Admins only: food added by mistake. Takes its photo with it. */
   removeFood: (id: string) => Promise<void>;
   /**
@@ -1374,6 +1376,21 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     [putFood, deleteFinishedPhoto]
   );
 
+  const setFoodPortions = useCallback(
+    async (id: string, portions: number | null) => {
+      const before = foodItemsRef.current.find((f) => f.id === id);
+      if (!before) return;
+      putFood({ ...before, portions });
+      try {
+        putFood(await dataProvider.updateFoodItem(id, { portions }));
+      } catch (err) {
+        putFood(before);
+        throw err;
+      }
+    },
+    [putFood]
+  );
+
   const releaseFinishedFoodPhoto = useCallback(
     (id: string) => deleteFinishedPhoto(id),
     [deleteFinishedPhoto]
@@ -1825,6 +1842,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       unfinishFood,
       releaseFinishedFoodPhoto,
       returnFoodContainer,
+      setFoodPortions,
       removeFood,
       adjustInventoryQuantity,
       setInventoryAmount,
@@ -1911,6 +1929,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       unfinishFood,
       releaseFinishedFoodPhoto,
       returnFoodContainer,
+      setFoodPortions,
       removeFood,
       adjustInventoryQuantity,
       setInventoryAmount,

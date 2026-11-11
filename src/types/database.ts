@@ -340,6 +340,11 @@ export type FoodItem = {
   /** Stamped by the server when the container is ticked returned. */
   container_returned_at: string | null;
   notes: string | null;
+  /**
+   * Optional portions left (Phase 170 PR A, D7; migrations/148): "Rendang ·
+   * 3 portions"; "Ate 1 portion" counts down. Null = not counted, as before.
+   */
+  portions?: number | null;
   /** Who added it, as selected on their phone (self-declared, cf. 071). */
   added_by: string | null;
   created_by: string | null;

@@ -264,3 +264,8 @@ export function applyAmountRules(before: InventoryItem | null, after: InventoryI
   if (before === null || (next.stock_status ?? "ok") !== statusBefore) next.stock_status_at = stamp;
   return next;
 }
+
+/** D6: the shelves that browse under Food → Ingredients (fresh food, pantry). */
+export function isIngredient(item: Pick<InventoryItem, "category">): boolean {
+  return item.category === "fresh_food" || item.category === "pantry";
+}

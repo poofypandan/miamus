@@ -19,6 +19,7 @@ import {
   expiryLabel,
   foodName,
   needsDate,
+  portionsLabel,
   type FoodLocale,
 } from "@/lib/food";
 import { DATE_LOCALE } from "@/lib/owner-locale";
@@ -90,13 +91,15 @@ function Detail({
 }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood, flagLowStock, pendingIds } = useHousehold();
+  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood, flagLowStock, pendingIds, setFoodPortions } =
+    useHousehold();
   // Added on this phone and not sent yet (Phase 161): nothing on the server to
   // finish, change or delete until it arrives.
   const waitingToSend = pendingIds.has(item.id);
   const name = foodName(item, locale);
   const today = formatDateLocal(useToday());
-  const [busy, setBusy] = useState<FoodOutcome | "delete" | null>(null);
+  const [busy, setBusy] = useState<FoodOutcome | "delete" | "portion" | null>(null);
+  const portions = item.portions ?? null;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const days = daysLeft(item, today);
@@ -148,6 +151,27 @@ function Detail({
     }
   }
 
+  // D7: one portion eaten; the last one finishes it as Eaten.
+  async function atePortion() {
+    if (portions === null) return;
+    if (portions <= 1) return finish("eaten");
+    setBusy("portion");
+    try {
+      await setFoodPortions(item.id, portions - 1);
+      toast.success(tr(`${name} · ${portions - 1} ${portions - 1 === 1 ? "portion" : "portions"} left`, `${name} · sisa ${portions - 1} porsi`), {
+        action: {
+          label: tr("Undo", "Batalkan"),
+          onClick: () => void setFoodPortions(item.id, portions).catch(() => undefined),
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error(tr("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function remove() {
     setBusy("delete");
     try {
@@ -184,6 +208,9 @@ function Detail({
               {item.expires_on && days !== null && days >= 0 && ` · ${shortDate(item.expires_on)}`}
             </span>
           </Fact>
+          {portions !== null && portions > 0 && (
+            <Fact label={tr("Portions", "Porsi")}>{portionsLabel(portions, locale)}</Fact>
+          )}
           <Fact label={tr("Kept in", "Disimpan di")}>{FOOD_PLACE_LABELS[locale][item.kept_in]}</Fact>
           {(item.from_whom || item.source) && (
             <Fact label={tr("From", "Dari")}>
@@ -209,6 +236,17 @@ function Detail({
           </p>
         ) : (
         <>
+        {portions !== null && portions > 0 && (
+          <Button
+            variant="outline"
+            className="min-h-12 rounded-xl text-base"
+            disabled={busy !== null}
+            onClick={() => void atePortion()}
+          >
+            {busy === "portion" ? <Loader2 className="animate-spin" /> : <UtensilsCrossed />}
+            {tr("Ate 1 portion", "Dimakan 1 porsi")}
+          </Button>
+        )}
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold">{tr("Is it finished?", "Sudah habis?")}</p>
           <div className="grid grid-cols-3 gap-2">
