@@ -113,7 +113,15 @@ export const LEGAL = {
   // completed_at already is). A routine's note for staff and the person it
   // is for are "tasks, routines, schedules and notes". Same 30-day photo
   // rule; no new service.
-  policyVersion: "2026-11-11.2",
+  // 2026-11-11.4: pre-launch hardening (audit of 11 Nov, migrations/146) —
+  // a linked staff phone not used for 60 days is unlinked automatically; an
+  // admin account that no longer belongs to any household is deleted 30
+  // days later (with its request); PIN lockouts grow (15 minutes, 1 hour,
+  // then until an admin sets a new PIN); each saved task notes which phone
+  // or account saved it (only that phone can undo it, for minutes); whose
+  // PIN last opened a linked phone is kept while it is linked. No new
+  // service. (.3 is held by PR #87; whichever lands later rebases.)
+  policyVersion: "2026-11-11.4",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

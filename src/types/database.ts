@@ -57,6 +57,8 @@ export type DeviceSession = {
   household_id: string;
   created_at: string;
   last_seen_at: string;
+  // Whose PIN last opened this phone (migrations/146).
+  staff_id?: string | null;
 };
 
 // A co-owner's way in (migrations/091): redeems into household_members, so
@@ -167,6 +169,9 @@ export type TaskLog = {
   // When the save reached the database (migrations/144), set there whatever
   // the phone sends. Null for older rows; absent while still queued.
   received_at?: string | null;
+  // The session that saved it, set by the database (migrations/146): only
+  // that phone may undo it. Null for older rows; absent while still queued.
+  created_by?: string | null;
 };
 
 export type MedicalRecord = {

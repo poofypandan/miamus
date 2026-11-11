@@ -33,7 +33,8 @@ export type SetPushPersonResult =
   | { status: "ok" }
   | { status: "pin_required" }
   | { status: "wrong_pin"; attempts_left: number }
-  | { status: "locked"; locked_until: string }
+  | { status: "locked"; locked_until: string | null; until_reset?: boolean }
+  | { status: "too_many_attempts" }
   | { status: "no_pin" };
 
 export interface StaffPushOverview {
