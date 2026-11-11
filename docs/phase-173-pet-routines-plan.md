@@ -311,7 +311,7 @@ button: tap (1), shutter (1), use photo (1).
   batch. The steps go in order: **Sudah pulang** appears only after **Sudah
   sampai**.
 - **Survives the app closing:** the card's step is worked out from that day's
-  logs (`walkState`, beside `vetVisitState` in `staff-agenda.ts`), including
+  logs (`threePhotoState`, beside `vetVisitState` in `staff-agenda.ts`), including
   saves still waiting in the offline queue (161). Close the app at the park,
   open it later, and the card still says **Sudah sampai**. Nothing is kept
   apart from the logs.
@@ -321,13 +321,18 @@ button: tap (1), shutter (1), use photo (1).
   back to **Mulai**. After the end photo there is the usual 5-minute
   **Batalkan**, then the walk is final. **Tidak bisa dikerjakan** (139) stays
   in the sheet for a walk that can't happen.
-- **Done means the end photo**, as for a vet visit. A walk not finished by
-  midnight shows "Mulai 07.02, tanpa foto akhir" to the owner and counts as
+- **Done means the end photo**, as for a vet visit, for every routine whose
+  `proof` is `three` (not every walk: see below). A three-photo routine not
+  finished by midnight shows "Mulai 07.02, tanpa foto akhir" to the owner and counts as
   not done in the evening summary.
 - **Per routine:** the sheet's **Proof** for a walk is **3 photos · 1 photo ·
   Tick**, with **3 photos** preset. Every other kind is **Photo · Tick**,
   with **Photo** preset (D6). The owner can choose 3 photos for an **Other**
-  routine too (say, a trip to the vet shop).
+  routine too (say, a trip to the vet shop). **What decides the flow is
+  `proof`, never `kind`:** `three` gets the three steps and is done at its
+  end photo; `photo` and `tick` are one step and done on their one log, as
+  today, so a walk set to 1 photo or Tick finishes normally and an Other
+  routine set to 3 photos gets the three steps.
 
 ### Anti-faking rules (A)
 
@@ -379,18 +384,26 @@ Optional, not recommended now. It would need a field in the sheet and a line
 for staff to read (two stop rules). The owner's row already shows the
 minutes; revisit if walks come back short.
 
-### What else changes for walks (PR A)
+### What else changes for three-photo routines (PR A)
+
+Every rule below keys on `proof = 'three'`, not on `kind = 'walk'`.
 
 - `LogSubType` gains `arrived`. `sub_type` has no CHECK (079), so the
   database needs no constraint change.
-- `routine_slots_open` (139) treats a walk as done only at `check_out`, as it
-  does for `Vet: ` rows.
+- `routine_slots_open` (139) treats a `proof = 'three'` row as done only at
+  `check_out`, as it does for `Vet: ` rows. Rows with `photo` or `tick` keep
+  the ordinary rule (any log that day).
 - **Staff workload** (`staff_workload`, 100, security invoker) counts pet
   logs whose `sub_type` isn't `check_in`. It's re-created to skip `arrived`
-  too, so a three-photo walk counts once. Same `grant` as 100.
-- `buildAgenda` marks an item done on any log, so walk cards use `walkState`
-  (as vet cards use `vetVisitState`), and the staff list's "Selesai" rule
-  (`staff-agenda.ts`) keeps a walk in the day until its end photo.
+  too, so a three-photo routine counts once. Same `grant` as 100.
+- `buildAgenda` marks an item done on any log, so cards whose rows have
+  `proof = 'three'` use `threePhotoState` (as vet cards use
+  `vetVisitState`), and the staff list's "Selesai" rule (`staff-agenda.ts`)
+  keeps them in the day until the end photo. Other cards, walks set to 1
+  photo or Tick included, are unchanged.
+- If one card mixes `three` with another proof (same time and title), the
+  card follows `three`, as a mixed tick and photo card asks for a photo
+  (D4).
 - The photo stream and the 30-day photo clean-up already handle several
   photos per log day; a walk adds two more per pet.
 
@@ -527,8 +540,9 @@ files as meals. If 173 PR A lands first, 172 sets `kind: 'walk'` on them; if
   C's reminder would go to nobody.
 - **`routine_slots_open`** (139, the only version) is re-created to skip a
   day not in `days_of_week`, so the evening summary doesn't count Matcha's
-  weekday walk on a Sunday, and to count a `kind = 'walk'` row as done only
-  at its end photo (`check_out`, D14), as it already does for vet visits.
+  weekday walk on a Sunday, and to count a `proof = 'three'` row as done
+  only at its end photo (`check_out`, D14), as it already does for vet
+  visits; `photo` and `tick` rows keep the ordinary rule.
   TypeScript's `isScheduleActiveOn` gets the weekday rule, with unit tests
   (Jakarta weekday at midnight, null days, Once).
 - **`staff_workload`** (100, the only version, `security invoker`) is
@@ -621,9 +635,11 @@ at most one What's new card that week.
    three-photo walk with live-camera checks, server times and minutes
    (D14 A), Others becomes Other routines, the write guard, the summary's
    weekdays and walks, the privacy clause. Tests: unit
-   (`categorizeSchedule`, `isScheduleActiveOn`, `walkState`, walk minutes
+   (`categorizeSchedule`, `isScheduleActiveOn`, `threePhotoState`, walk minutes
    from `received_at`, the 2-minute file check), SQL (guard, weekdays and
-   walks in `routine_slots_open`, `received_at` can't be set by the phone,
+   `proof` in `routine_slots_open` (a three-photo row done only at
+   `check_out`; a walk set to 1 photo done on its one log; an Other set to
+   3 photos needs all three), `received_at` can't be set by the phone,
    `staff_workload` counts a walk once), Playwright (both examples end to
    end, staff photo and undo, the three walk steps, closing the app mid-walk,
    cancel, an offline step, Tick).
