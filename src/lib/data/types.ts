@@ -629,7 +629,13 @@ export type PinCheck =
   | { status: "locked"; locked_until: string }
   | { status: "no_pin" };
 
-export type HouseCodePerson = { id: string; name: string; has_pin: boolean };
+export type HouseCodePerson = {
+  id: string;
+  name: string;
+  has_pin: boolean;
+  /** No PIN yet and added in the last 7 days: they can pick it (migrations/146). Absent before 146. */
+  claimable?: boolean;
+};
 
 export type HouseCodeSignIn =
   | Exclude<PinCheck, { status: "ok" }>

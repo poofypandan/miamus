@@ -210,8 +210,9 @@ test("staff in one go: the link fills the code, Sari picks her name and makes a 
       expect(route.request().postDataJSON()).toEqual({ p_code: "K7P-M2Q" });
       return route.fulfill({
         json: [
-          { id: "00000000-0000-4000-8000-00000000c101", name: "Ari", has_pin: true },
-          { id: "00000000-0000-4000-8000-00000000c102", name: "Sari", has_pin: false },
+          { id: "00000000-0000-4000-8000-00000000c101", name: "Ari", has_pin: true, claimable: false },
+          { id: "00000000-0000-4000-8000-00000000c102", name: "Sari", has_pin: false, claimable: true },
+          { id: "00000000-0000-4000-8000-00000000c103", name: "Budi", has_pin: false, claimable: false },
         ],
       });
     }
@@ -228,8 +229,13 @@ test("staff in one go: the link fills the code, Sari picks her name and makes a 
   await expect(page.getByText("Pilih nama Anda, lalu buat PIN.")).toBeVisible();
   expect(new URL(page.url()).hash).toBe("");
 
+  // Budi was added weeks ago: told at once to ask for an invite link, no PIN typed.
+  await page.getByRole("button", { name: /Budi/ }).click();
+  await expect(page.getByText("Belum punya PIN. Minta link undangan", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Siapa yang bertugas?" })).toBeVisible();
+
   await page.getByRole("button", { name: /Sari/ }).click();
-  await expect(page.getByText("Buat PIN")).toBeVisible();
+  await expect(page.getByText("Buat PIN", { exact: true })).toBeVisible();
   for (const d of "2468") await page.getByRole("button", { name: d, exact: true }).click();
   await expect(page.getByText("Ulangi PIN")).toBeVisible();
   const linked = page.waitForURL(/\/staff/);
@@ -244,7 +250,7 @@ test("the PINs must match before anything is sent", async ({ context, page }) =>
   await context.route(`${STUB_URL}/rest/v1/rpc/**`, async (route) => {
     const name = new URL(route.request().url()).pathname.split("/").pop() ?? "";
     if (name === "house_code_roster") {
-      return route.fulfill({ json: [{ id: "00000000-0000-4000-8000-00000000c102", name: "Sari", has_pin: false }] });
+      return route.fulfill({ json: [{ id: "00000000-0000-4000-8000-00000000c102", name: "Sari", has_pin: false, claimable: true }] });
     }
     if (name === "claim_staff_with_house_code") claimed += 1;
     return route.fallback();

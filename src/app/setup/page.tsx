@@ -102,7 +102,10 @@ function Setup() {
   const { bills: billsOn } = useHouseholdFeatures();
   const today = formatDateLocal(useToday());
   const { locations, reload: reloadRooms } = useHouseholdLocations();
-  const { rows: chores } = useSetUpChores(today);
+  // A returning owner's chores must be read before Added and the counts
+  // mean anything (code review, PR #90); a failed read doesn't block Add,
+  // the database skips duplicates anyway.
+  const { rows: chores, loaded: choresLoaded, failed: choresFailed } = useSetUpChores(today);
   const { reload: reloadStaff } = useStaffProfiles();
   const takeSeconds = useActiveSeconds();
 
@@ -245,7 +248,7 @@ function Setup() {
         ) : (
           <Button
             className="min-h-[52px] w-full"
-            disabled={saving || (counts.total === 0 && named.length === 0)}
+            disabled={saving || !(choresLoaded || choresFailed) || (counts.total === 0 && named.length === 0)}
             onClick={() => void add()}
           >
             {saving && <Loader2 className="animate-spin" />}

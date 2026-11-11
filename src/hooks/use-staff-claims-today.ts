@@ -6,12 +6,21 @@ import { useHousehold } from "@/context/household-context";
 /**
  * Who picked their name and made a PIN today (Phase 172 PR A2, D10;
  * migrations/146 staff_claims_today), for Today's quiet line "Sari's phone
- * is linked". Owners only; read again whenever the household refreshes. A
- * failed read shows nothing.
+ * is linked". Owners only. A failed read shows nothing.
  */
-export function useStaffClaimsToday(): string[] {
-  const { activeHouseholdId, tenantReady, userRole, householdTasks } = useHousehold();
-  const [names, setNames] = useState<string[]>([]);
+export type LinkedToday = { staffId: string; name: string };
+
+export function useStaffClaimsToday(): LinkedToday[] {
+  const { activeHouseholdId, tenantReady, userRole } = useHousehold();
+  const [linked, setLinked] = useState<LinkedToday[]>([]);
+  const [attempt, setAttempt] = useState(0);
+  // Read again when the app comes back to the front, not on every chore
+  // change (code review, PR #90): it changes a few times a day at most.
+  useEffect(() => {
+    const again = () => document.visibilityState === "visible" && setAttempt((n) => n + 1);
+    document.addEventListener("visibilitychange", again);
+    return () => document.removeEventListener("visibilitychange", again);
+  }, []);
   useEffect(() => {
     if (!tenantReady || userRole !== "owner") return;
     let live = true;
@@ -24,12 +33,15 @@ export function useStaffClaimsToday(): string[] {
         console.error("Could not read today's linked phones", error);
         return;
       }
-      setNames(((data ?? []) as { name: string }[]).map((row) => row.name).filter(Boolean));
+      setLinked(
+        ((data ?? []) as { staff_id: string; name: string }[])
+          .filter((row) => row.name)
+          .map((row) => ({ staffId: row.staff_id, name: row.name }))
+      );
     })();
     return () => {
       live = false;
     };
-    // householdTasks: a refresh (pull, foreground) reads it again.
-  }, [activeHouseholdId, tenantReady, userRole, householdTasks]);
-  return names;
+  }, [activeHouseholdId, tenantReady, userRole, attempt]);
+  return linked;
 }

@@ -66,7 +66,12 @@ function JoinWithCode() {
     return (
       <NamesStep
         people={step.people}
-        onPick={(person) => setStep({ ...step, kind: person.has_pin ? "pin" : "claim", person })}
+        onPick={(person) => {
+          if (person.has_pin) setStep({ ...step, kind: "pin", person });
+          else if (person.claimable) setStep({ ...step, kind: "claim", person });
+          // Added more than a week ago without a PIN: an invite link, as before.
+          else toast.info("Belum punya PIN. Minta link undangan ke admin rumah untuk membuat PIN.");
+        }}
         onBack={() => setStep({ kind: "code" })}
       />
     );
@@ -192,7 +197,7 @@ function NamesStep({
     <Screen>
       <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Siapa yang bertugas?</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        {people.some((p) => !p.has_pin) ? "Pilih nama Anda, lalu buat PIN." : "Pilih nama Anda."}
+        {people.some((p) => p.claimable) ? "Pilih nama Anda, lalu buat PIN." : "Pilih nama Anda."}
       </p>
       <div className="mt-6 flex flex-col gap-2">
         {people.map((person) => (
@@ -206,13 +211,16 @@ function NamesStep({
               <UserRound className="size-4 text-muted-foreground" />
             </span>
             <span className="flex-1">{person.name}</span>
-            {!person.has_pin && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Buat PIN</span>
-            )}
+            {!person.has_pin &&
+              (person.claimable ? (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Buat PIN</span>
+              ) : (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">Belum punya PIN</span>
+              ))}
           </button>
         ))}
       </div>
-      {people.some((p) => !p.has_pin) && (
+      {people.some((p) => p.claimable) && (
         <div className="mt-4">
           <VideoTip id="staff-house-code" locale="id" />
         </div>

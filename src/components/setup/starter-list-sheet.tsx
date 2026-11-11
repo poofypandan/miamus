@@ -39,7 +39,7 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
   const { bills: billsOn } = useHouseholdFeatures();
   const today = formatDateLocal(useToday());
   const { locations, reload: reloadRooms } = useHouseholdLocations();
-  const { rows: chores, loaded } = useSetUpChores(today);
+  const { rows: chores, loaded, failed, reload: reloadChores } = useSetUpChores(today);
   useBackToClose(open, () => onOpenChange(false));
 
   const start = useMemo(() => shapeFromHousehold(locations ?? []), [locations]);
@@ -128,6 +128,16 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
               added={added}
               locale={locale}
             />
+          ) : failed ? (
+            // Without every chore read, "Added" can't be trusted (code review, PR #90).
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                {t("Couldn't load your chores.", "Tugas Anda gagal dimuat.")}
+              </p>
+              <Button variant="outline" className="min-h-11" onClick={reloadChores}>
+                {t("Try again", "Coba lagi")}
+              </Button>
+            </div>
           ) : (
             <div className="flex justify-center py-10">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />

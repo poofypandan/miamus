@@ -66,10 +66,17 @@ export function SetupReview({
     </div>
   );
 
+  // A chore's accessible name says where it is: the same title repeats per
+  // room (code review, PR #90).
+  const placeName = (key: string | null) =>
+    key === null
+      ? tr("whole house", "seluruh rumah")
+      : (draft.rooms.find((r) => r.key === key)?.name ?? draft.floors.find((f) => f.key === key)?.name ?? "");
   const choreRow = (c: DraftChore, parentOut: boolean) => (
     <div key={c.key} className="ml-6">
       <Row
         label={c.title}
+        ariaLabel={`${c.title}, ${placeName(c.place)}`}
         meaning={en ? c.en : null}
         detail={cadenceLabel(c, locale)}
         checked={!out.has(c.key)}
@@ -179,6 +186,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 
 function Row({
   label,
+  ariaLabel,
   meaning,
   detail,
   checked,
@@ -189,6 +197,7 @@ function Row({
   strong,
 }: {
   label: string;
+  ariaLabel?: string;
   meaning?: string | null;
   detail?: string;
   checked: boolean;
@@ -223,7 +232,7 @@ function Row({
       type="button"
       role="checkbox"
       aria-checked={checked && !disabled}
-      aria-label={label}
+      aria-label={ariaLabel ?? label}
       disabled={disabled}
       onClick={onToggle}
       className="flex min-h-11 items-center gap-3 rounded-lg px-1 text-left active:bg-muted disabled:opacity-60"

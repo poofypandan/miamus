@@ -1241,7 +1241,7 @@ export const mockProvider: DataProvider = {
     return delay(
       db.staffProfiles
         .filter((p) => !p.user_id)
-        .map((p) => ({ id: p.id, name: p.name, has_pin: p.has_pin }))
+        .map((p) => ({ id: p.id, name: p.name, has_pin: p.has_pin, claimable: !p.has_pin }))
     );
   },
   async signInWithHouseCode(code, staffId, pin) {

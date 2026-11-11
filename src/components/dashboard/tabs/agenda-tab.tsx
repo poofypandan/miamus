@@ -446,8 +446,8 @@ export function AgendaTab() {
 
         {(linkedToday.length > 0 || notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
           <div className="-my-1 flex flex-col">
-            {linkedToday.map((name) => (
-              <p key={name} className="flex min-h-11 items-center gap-2 px-1 text-sm text-gray-700">
+            {linkedToday.map(({ staffId, name }) => (
+              <p key={staffId} className="flex min-h-11 items-center gap-2 px-1 text-sm text-gray-700">
                 <Smartphone className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                 <span className="min-w-0 flex-1">{t(`${name}'s phone is linked`, `HP ${name} sudah terhubung`)}</span>
               </p>

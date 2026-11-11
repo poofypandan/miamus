@@ -220,6 +220,11 @@ insert into drafts values ('far', jsonb_build_object('v', 1, 'chores', jsonb_bui
   jsonb_build_object('title', 'Nanti', 'place', null, 'recurrence', 'none', 'interval', 1,
                      'due_date', '2099-01-01', 'category', 'errand', 'assignee', null, 'remind', null))));
 select pg_temp.ok(pg_temp.err_as(:a1, pg_temp.apply_sql('far')) like '%invalid_chore%', 'a first day years away is refused');
+insert into drafts values ('no-interval', jsonb_build_object('v', 1, 'chores', jsonb_build_array(
+  jsonb_build_object('title', 'Tanpa ulang', 'place', null, 'recurrence', 'daily',
+                     'due_date', (select today from d), 'category', 'cleaning', 'assignee', null, 'remind', null))));
+select pg_temp.ok(pg_temp.err_as(:a1, pg_temp.apply_sql('no-interval')) like '%invalid_chore%',
+  'a chore with no interval is refused as invalid_chore, not a raw database error');
 insert into drafts values ('orphan', jsonb_build_object('v', 1, 'rooms', jsonb_build_array(
   jsonb_build_object('key', 'r:x', 'name', 'X', 'parent', 'f:9'))));
 select pg_temp.ok(pg_temp.err_as(:a1, pg_temp.apply_sql('orphan')) like '%invalid_room_parent%', 'a parent not in the list is refused');
@@ -278,6 +283,16 @@ insert into public.staff_profiles (id, household_id, name) values ('00000000-000
 select pg_temp.ok(pg_temp.json_as(:p2, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c5', '1111') $q$) ->> 'status' = 'too_many_attempts',
   'the house code''s limit applies to claims');
 
+-- The roster says who can still claim (house_code_roster, re-created from 117).
+create temp table roster as select * from public.house_code_roster('K7PM2Q') limit 0;
+grant all on roster to public;
+select pg_temp.err_as('00000000-0000-0000-0000-0000000146b1', $q$ insert into pg_temp.roster select * from public.house_code_roster('K7PM2Q') $q$);
+select pg_temp.ok((select claimable from roster where name = 'Dewi') and not (select claimable from roster where name = 'Budi')
+                  and not (select claimable from roster where name = 'Mbak Sari'),
+  'the roster marks Dewi (added today, no PIN) claimable; not Budi (8 days) or Sari (has a PIN now)');
+select pg_temp.ok(not exists (select 1 from roster where name in ('Joko', 'Ibu Melati')),
+  '... and still leaves out archived people and owners');
+
 -- ---- Who linked today ------------------------------------------------------------------
 select pg_temp.ok(pg_temp.json_as(:a1, format($q$ select jsonb_agg(name) from public.staff_claims_today(%L) $q$, :f1)) = '["Mbak Sari"]'::jsonb,
   'the owner sees who linked today: Sari');
@@ -287,6 +302,9 @@ select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select * from public.staff_clai
   'nor another household''s owner');
 
 -- ---- Grants --------------------------------------------------------------------------
+select pg_temp.ok(not has_function_privilege('anon', 'public.house_code_roster(text)', 'execute')
+                  and has_function_privilege('authenticated', 'public.house_code_roster(text)', 'execute'),
+  'house_code_roster keeps its grants');
 select pg_temp.ok(not has_function_privilege('anon', 'public.apply_household_setup(uuid, jsonb)', 'execute')
                   and not has_function_privilege('anon', 'public.claim_staff_with_house_code(text, uuid, text)', 'execute')
                   and not has_function_privilege('anon', 'public.staff_claims_today(uuid)', 'execute'),

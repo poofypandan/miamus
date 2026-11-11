@@ -28,6 +28,10 @@
 --   staff_claims_today(household)   owners only: who claimed their name
 --        today (Jakarta), for Today's quiet line "Sari's phone is linked".
 --
+-- RE-CREATED
+--   house_code_roster (117)       also returns `claimable`: no PIN yet and
+--        added in the last 7 days.
+--
 -- CHANGED (additive)
 --   staff_sign_in_attempts.kind   gains 'claim' (kept 30 days like every
 --        attempt; the owner sees each claim and can undo it with "let them
@@ -182,8 +186,8 @@ begin
     if char_length(v_title) not between 1 and 80
        or v_rec is null or v_rec not in ('none', 'daily', 'weekly', 'monthly')
        or v_cat is null or v_cat not in ('cleaning', 'maintenance', 'errand', 'groceries', 'bill')
-       or jsonb_typeof(item -> 'interval') <> 'number'
-       or jsonb_typeof(item -> 'due_date') <> 'string' then
+       or coalesce(jsonb_typeof(item -> 'interval'), '') <> 'number'
+       or coalesce(jsonb_typeof(item -> 'due_date'), '') <> 'string' then
       raise exception 'invalid_chore' using errcode = '22023';
     end if;
     v_int := (item ->> 'interval')::numeric::int;
@@ -345,6 +349,53 @@ $$;
 
 revoke all on function public.claim_staff_with_house_code(text, uuid, text) from public, anon;
 grant execute on function public.claim_staff_with_house_code(text, uuid, text) to authenticated, service_role;
+
+-- --- 3b. The roster says who can still claim ------------------------------------------
+-- Re-created from 117 with one more column, so the join screen knows before
+-- anyone types a PIN whether a name without one can be claimed (added in the
+-- last 7 days) or needs an invite link (code review, PR #90). The return
+-- type changes, so it is dropped and re-created with the same grants; old
+-- app builds ignore the extra column.
+drop function if exists public.house_code_roster(text);
+create function public.house_code_roster(p_code text)
+returns table (id uuid, name text, has_pin boolean, claimable boolean)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := public.require_staff_phone_session();
+  household uuid;
+begin
+  perform public.lock_house_code_session(uid);
+  if public.house_code_attempts_exceeded(uid) then
+    raise exception 'too_many_attempts' using errcode = 'P0001';
+  end if;
+
+  select c.household_id into household
+    from public.household_join_codes c
+   where c.code = public.normalize_house_code(p_code);
+
+  insert into public.staff_sign_in_attempts (user_id, household_id, kind, success)
+  values (uid, household, 'code', household is not null);
+
+  if household is null then
+    return;
+  end if;
+
+  return query
+    select s.id, s.name, s.has_pin,
+           (not s.has_pin and s.created_at > now() - interval '7 days') as claimable
+      from public.staff_profiles s
+     where s.household_id = household
+       and s.user_id is null
+       and s.archived_at is null
+     order by s.name;
+end;
+$$;
+
+revoke all on function public.house_code_roster(text) from public, anon;
+grant execute on function public.house_code_roster(text) to authenticated, service_role;
 
 -- --- 4. Who linked today, for the owner --------------------------------------------
 create or replace function public.staff_claims_today(p_household uuid)
