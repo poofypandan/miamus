@@ -34,8 +34,8 @@
 --   undo_staff_claim(household, staff)   owners only: "Not Sari? Undo" (audit
 --        L5): clears the PIN that was made and removes the phone that made
 --        it, so the name can be claimed again from the link.
---   staff_claims_today(household)   owners only: who claimed their name
---        today (Jakarta) and still has the PIN, for Today's quiet line
+--   staff_claims_today(household)   owners only: who claimed their name in
+--        the last 24 hours and still has the PIN, for Today's quiet line
 --        "Sari's phone is linked · Not Sari? Undo".
 --
 -- RE-CREATED
@@ -440,7 +440,9 @@ grant execute on function public.claim_staff_with_house_code(text, uuid, text, t
 
 -- "Not Sari? Undo" (audit L5): owners only. Clears the PIN the claim made
 -- and removes the phone that made it (as remove_linked_phone does, 115), so
--- the name can be claimed again from the link. Only a name claimed in the
+-- the name can be claimed again from the link. The whole phone goes, even if
+-- others sign in on it with their own PINs: when the owner says "not Sari",
+-- the phone that claimed the name is the one in doubt. Only a name claimed in the
 -- last 7 days; any other PIN is reset the usual way (110).
 create or replace function public.undo_staff_claim(p_household uuid, p_staff_id uuid)
 returns boolean
@@ -549,7 +551,9 @@ begin
        and a.kind = 'claim'
        and a.success
        and s.has_pin   -- an undone claim leaves the line
-       and a.created_at >= ((now() at time zone 'Asia/Jakarta')::date)::timestamp at time zone 'Asia/Jakarta'
+       -- The last 24 hours, not since midnight: a claim at 23.50 is still
+       -- there to undo in the morning (code review, PR #90).
+       and a.created_at > now() - interval '24 hours'
      order by a.staff_id, a.created_at desc;
 end;
 $$;

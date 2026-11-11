@@ -220,8 +220,20 @@ export function AgendaTab() {
   // Normal staff reports land here rather than as a push (D6).
   // Staff in one go (Phase 172 PR A2): whose phone was linked today.
   const { linked: linkedToday, undo: undoClaim } = useStaffClaimsToday();
+  const { reload: reloadRoster } = useStaffProfiles();
+  // Two taps: the first asks, the second undoes (code review, PR #90): an
+  // undo signs a phone out and clears a PIN, so a brushed link mustn't.
+  const [confirmingUndo, setConfirmingUndo] = useState<string | null>(null);
   async function notThem(staffId: string, name: string) {
+    if (confirmingUndo !== staffId) {
+      setConfirmingUndo(staffId);
+      window.setTimeout(() => setConfirmingUndo((current) => (current === staffId ? null : current)), 5000);
+      return;
+    }
+    setConfirmingUndo(null);
     const ok = await undoClaim(staffId);
+    // The roster (Household → Staff) shows the name without a PIN again.
+    if (ok) reloadRoster();
     if (ok) {
       toast.success(
         t(
@@ -470,7 +482,9 @@ export function AgendaTab() {
                   onClick={() => void notThem(staffId, name)}
                   className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-gray-900 underline underline-offset-2 active:bg-muted"
                 >
-                  {t(`Not ${name}? Undo`, `Bukan ${name}? Batalkan`)}
+                  {confirmingUndo === staffId
+                    ? t("Tap again to undo", "Ketuk lagi untuk membatalkan")
+                    : t(`Not ${name}? Undo`, `Bukan ${name}? Batalkan`)}
                 </button>
               </div>
             ))}

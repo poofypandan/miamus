@@ -305,7 +305,10 @@ test("Today: Sari's phone is linked, and the owner can say Not Sari? Undo (audit
   });
   await page.goto("/dashboard");
   await expect(page.getByText("Sari's phone is linked")).toBeVisible({ timeout: 20_000 });
+  // Two taps: a brushed link never signs a phone out.
   await page.getByRole("button", { name: "Not Sari? Undo" }).click();
+  expect(undone).toEqual([]);
+  await page.getByRole("button", { name: "Tap again to undo" }).click();
   await expect(page.getByText("Sari's phone is removed.", { exact: false })).toBeVisible();
   await expect(page.getByText("Sari's phone is linked")).toHaveCount(0);
   expect(undone).toEqual([{ p_household: HOUSEHOLD_ID, p_staff_id: "00000000-0000-4000-8000-00000000c102" }]);
