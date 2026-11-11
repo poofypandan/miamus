@@ -183,10 +183,12 @@ begin
   new.note := nullif(btrim(new.note), '');
 
   if tg_op = 'INSERT' then
-    -- A resend of a walk-in that already landed: let the primary key say
-    -- "already saved" (23505), whatever has changed since.
+    -- A resend of a walk-in that already landed: "already saved", as the
+    -- primary key would say it (23505, *_pkey; the save queue reads that),
+    -- whatever has changed since. Raised here rather than returning the row
+    -- unchecked: a delete landing in between would let it in (security review).
     if exists (select 1 from public.repair_visits v where v.id = new.id) then
-      return new;
+      raise exception 'duplicate key value violates unique constraint "repair_visits_pkey"' using errcode = '23505';
     end if;
     new.created_by := auth.uid();
     new.arrived_at := now();
@@ -378,9 +380,10 @@ begin
   if auth.uid() is not null and not (new.household_id = any (public.get_user_household_ids())) then
     raise exception 'supervision_household' using errcode = '42501';
   end if;
-  -- A resend of a hand-over that already landed: the primary key answers.
+  -- A resend of a hand-over that already landed: "already saved" (23505,
+  -- *_pkey), raised here, never the row returned unchecked (security review).
   if exists (select 1 from public.repair_supervision s where s.id = new.id) then
-    return new;
+    raise exception 'duplicate key value violates unique constraint "repair_supervision_pkey"' using errcode = '23505';
   end if;
   new.started_at := now();
   new.ended_at := null;
