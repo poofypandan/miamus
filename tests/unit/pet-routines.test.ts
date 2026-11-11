@@ -13,8 +13,9 @@ import {
   dayBefore,
   draftFromRows,
   draftProblem,
+  endedRowPatch,
   groupRows,
-  isEndedRow,
+  isOnceRow,
   newDraft,
   planRoutineSave,
 } from "@/lib/routine-groups";
@@ -321,13 +322,20 @@ describe("planRoutineSave (one row per pet and time, one group)", () => {
 });
 
 describe("group rows", () => {
-  it("leaves out rows an edit ended, but keeps a past one-off", () => {
-    const live = row({ id: "a", entity_id: "mocha" });
-    const ended = row({ id: "b", entity_id: "matcha", expires_at: "2026-11-15" });
-    expect(groupRows([live, ended], live, MONDAY).map((r) => r.id)).toEqual(["a"]);
-    expect(isEndedRow(ended, MONDAY)).toBe(true);
-    const pastOnce = row({ id: "c", entity_id: "mocha", created_at: new Date(`${SUNDAY}T00:00:00`).toISOString(), expires_at: SUNDAY });
-    expect(isEndedRow(pastOnce, MONDAY)).toBe(false);
+  it("never reads a removed row back into its group, even one made the day before (Codex, PR #85)", () => {
+    const live = row({ id: "a", entity_id: "mocha", created_at: new Date(`${SUNDAY}T09:00:00`).toISOString() });
+    // Made yesterday, removed today with history: it ends yesterday, which is
+    // also its first day, so by dates alone it would look like a one-off.
+    const removed = { ...row({ id: "b", entity_id: "matcha", created_at: live.created_at }), ...endedRowPatch(MONDAY) };
+    expect(removed).toMatchObject({ expires_at: SUNDAY, routine_group_id: null });
+    expect(isOnceRow(removed)).toBe(true);
+    expect(groupRows([live, removed], live).map((r) => r.id)).toEqual(["a"]);
+    expect(draftFromRows(groupRows([live, removed], live), MONDAY)).toMatchObject({ petIds: ["mocha"], repeat: "daily" });
+  });
+  it("tells a one-off by its first and last day being the same", () => {
+    expect(isOnceRow({ created_at: new Date(`${MONDAY}T00:00:00`).toISOString(), expires_at: MONDAY })).toBe(true);
+    expect(isOnceRow({ created_at: new Date(`${SUNDAY}T00:00:00`).toISOString(), expires_at: MONDAY })).toBe(false);
+    expect(isOnceRow({ created_at: new Date(`${MONDAY}T00:00:00`).toISOString(), expires_at: null })).toBe(false);
   });
   it("ends a removed row the day before", () => {
     expect(dayBefore("2026-12-01")).toBe("2026-11-30");

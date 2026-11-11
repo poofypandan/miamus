@@ -57,7 +57,7 @@ import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
 import { CancelRoutineButton } from "@/components/dashboard/cancel-routine-button";
 import { AddRoutineSheet, type AddRoutineTarget } from "@/components/dashboard/add-routine-sheet";
 import { routineIcon } from "@/lib/schedule-categories";
-import { groupRows, isEndedRow } from "@/lib/routine-groups";
+import { groupRows, isOnceRow } from "@/lib/routine-groups";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import { useToday } from "@/hooks/use-today";
 
@@ -1180,11 +1180,10 @@ function OtherRoutinesCard({
       } else if (category !== "temporary") {
         continue;
       }
-      if (isEndedRow(row, today) && category === "routine") continue;
       const key = row.routine_group_id ?? row.id;
       if (seen.has(key)) continue;
       seen.add(key);
-      const rows = groupRows(schedules, row, today);
+      const rows = groupRows(schedules, row);
       out.push({ key, rows, first: row });
     }
     return out.sort((a, b) =>
@@ -1324,6 +1323,10 @@ function CopyScheduleDrawer({
                 }
               : {}),
             ...(s.proof && s.proof !== "photo" ? { proof: s.proof } : {}),
+            // A start date that is part of the row: a one-off's day, or a
+            // visit anchored on a later day. Without it the copy starts today
+            // and shows every day until its end (Codex, PR #85).
+            ...(isOnceRow(s) || new Date(s.created_at).getTime() > Date.now() ? { created_at: s.created_at } : {}),
           });
         }
       }

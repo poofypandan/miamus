@@ -36,8 +36,8 @@ import {
   routineKindInfo,
 } from "@/lib/pet-routine-kinds";
 import {
-  dayBefore,
   draftFromRows,
+  endedRowPatch,
   draftProblem,
   newDraft,
   planRoutineSave,
@@ -211,13 +211,14 @@ export function AddRoutineSheet({
     }
   }
 
-  // A row with logs ends yesterday, so its history keeps its title; a row
-  // with none is deleted (D3 editing rules).
+  // A row with logs ends yesterday and leaves the group, so its history keeps
+  // its title and it is never read back as part of the routine; a row with
+  // none is deleted (D3 editing rules).
   async function removeRows(rows: MasterSchedule[]) {
     if (rows.length === 0) return;
     const withLogs = await dataProvider.schedulesWithLogs(rows.map((r) => r.id));
     for (const row of rows) {
-      if (withLogs.has(row.id)) await updateSchedule(row.id, { expires_at: dayBefore(today) });
+      if (withLogs.has(row.id)) await updateSchedule(row.id, endedRowPatch(today));
       else await deleteSchedule(row.id);
     }
   }

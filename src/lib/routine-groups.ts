@@ -52,20 +52,33 @@ export function newDraft(kind: RoutineKind, petIds: string[], today: string): Ro
 }
 
 /**
- * The live rows of one routine group, or the single row of an old routine.
- * Rows an earlier edit ended (a pet or a time removed, kept for their history)
- * are left out: they are no longer part of the routine.
+ * The rows of one routine group, or the single row of an old routine.
+ * A row an edit removed (a pet or a time taken off, kept for its history)
+ * has left the group: `endedRowPatch` clears its group id, so it is never
+ * read back as part of the routine. Dates alone can't tell it from a
+ * one-off: a row made yesterday and ended yesterday looks like one (Codex,
+ * PR #85).
  */
-export function groupRows(schedules: MasterSchedule[], row: MasterSchedule, today: string): MasterSchedule[] {
+export function groupRows(schedules: MasterSchedule[], row: MasterSchedule): MasterSchedule[] {
   if (!row.routine_group_id) return [row];
-  return schedules.filter(
-    (s) => s.routine_group_id === row.routine_group_id && !isEndedRow(s, today)
-  );
+  return schedules.filter((s) => s.routine_group_id === row.routine_group_id);
 }
 
-/** A routine row an edit ended: its last day was before today, and it isn't a past one-off. */
-export function isEndedRow(row: MasterSchedule, today: string): boolean {
-  return !!row.expires_at && row.expires_at < today && row.expires_at !== localDate(row.created_at);
+/**
+ * What ends a removed row that has history: its last day is yesterday (so
+ * its logs keep their title), and it leaves its group.
+ */
+export function endedRowPatch(today: string): Partial<MasterSchedule> {
+  return { expires_at: dayBefore(today), routine_group_id: null };
+}
+
+/**
+ * Whether a row was saved as a one-off (When: Once): its first and last day
+ * are the same day. Its start date is then part of what it is, and a copy
+ * must keep it.
+ */
+export function isOnceRow(row: Pick<MasterSchedule, "created_at" | "expires_at">): boolean {
+  return !!row.expires_at && row.expires_at === localDate(row.created_at);
 }
 
 /** The sheet filled in from an existing group, for editing (D5: old "Others" rows too). */
