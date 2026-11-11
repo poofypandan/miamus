@@ -632,11 +632,17 @@ export interface DataProvider {
   hasFinishedChore(): Promise<boolean>;
 }
 
-/** A PIN check's answer (migrations/115). */
+/**
+ * A PIN check's answer (migrations/115). Since 146 a lock grows (15 minutes,
+ * 1 hour, then until an admin sets a new PIN: locked_until null and
+ * until_reset), and too many wrong PINs from one phone or one household in an
+ * hour answer too_many_attempts.
+ */
 export type PinCheck =
   | { status: "ok" }
   | { status: "wrong_pin"; attempts_left: number }
-  | { status: "locked"; locked_until: string }
+  | { status: "locked"; locked_until: string | null; until_reset?: boolean }
+  | { status: "too_many_attempts" }
   | { status: "no_pin" };
 
 export type HouseCodePerson = { id: string; name: string; has_pin: boolean };

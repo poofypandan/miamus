@@ -221,7 +221,8 @@ function PinStep({ code, person, onBack }: { code: string; person: HouseCodePers
         return;
       }
       if (result.status === "wrong_code") reject("Kode rumah sudah diganti. Kembali dan ketik kode yang baru.");
-      else if (result.status === "too_many_attempts") reject("Terlalu banyak kode salah. Coba lagi 1 jam lagi.");
+      // From this phone's wrong codes, or (146) too many wrong PINs.
+      else if (result.status === "too_many_attempts") reject("Terlalu banyak percobaan. Coba lagi 1 jam lagi.");
       else reject(pinFailureMessage(result));
     } catch (err) {
       console.error("House code sign-in failed", err);
