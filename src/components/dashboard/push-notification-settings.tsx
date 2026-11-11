@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { BellOff, BellRing, Lightbulb, Loader2, Moon, Share, Smartphone } from "lucide-react";
+import { BellOff, BellRing, CircleCheck, HardHat, Lightbulb, Loader2, Moon, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,8 @@ import type { PushStatus } from "@/lib/push-prompt";
 import { usePushStatus } from "@/hooks/use-push-status";
 import { useOwnerLocale, useT, type Translate } from "@/context/owner-locale-context";
 import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
+import { useRepairPushPrefs } from "@/hooks/use-repair-push-prefs";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { DEFAULT_SUMMARY_HOUR, SUMMARY_HOURS } from "@/lib/couldnt-do";
@@ -257,6 +259,7 @@ export function PushNotificationSettings() {
         </CardContent>
       </Card>
       <NotificationChoices />
+      <RepairPushChoices />
       <StaffPhonesSwitch />
     </div>
   );
@@ -380,6 +383,64 @@ function NotificationChoices() {
           {t(
             "For your account, on every phone where notifications are on.",
             "Untuk akun Anda, di setiap HP yang notifikasinya aktif."
+          )}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Walk-in repairs (Phase 174 PR B, migrations/152): a push when staff log a
+ * repair person arriving, and one when the work is finished, with the before
+ * and after photos on the repair. Per account, each on by default (D4 A);
+ * shown only while Repairs is on (Phase 171), as the pushes themselves.
+ */
+function RepairPushChoices() {
+  const t = useT();
+  const { repairs: repairsOn } = useHouseholdFeatures();
+  const { prefs, loaded, failed, save } = useRepairPushPrefs(repairsOn);
+  const [saving, setSaving] = useState(false);
+  if (!repairsOn) return null;
+
+  async function change(next: typeof prefs) {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await save(next);
+    } catch (err) {
+      console.error(err);
+      toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="py-2" data-testid="repair-push-choices">
+      <CardContent className="flex flex-col px-4">
+        <ChoiceRow
+          icon={HardHat}
+          title={t("When a repair person arrives", "Saat tukang datang")}
+          detail={t("Who came and what for, as staff log it.", "Siapa yang datang dan untuk apa, saat staf mencatatnya.")}
+          on={prefs.repair_arrival_pushes}
+          disabled={!loaded || failed || saving}
+          onToggle={() => void change({ ...prefs, repair_arrival_pushes: !prefs.repair_arrival_pushes })}
+        />
+        <div className="border-t">
+          <ChoiceRow
+            icon={CircleCheck}
+            title={t("When a repair is finished", "Saat perbaikan selesai")}
+            detail={t("With before and after photos on the repair.", "Dengan foto sebelum dan sesudah di perbaikannya.")}
+            on={prefs.repair_done_pushes}
+            disabled={!loaded || failed || saving}
+            onToggle={() => void change({ ...prefs, repair_done_pushes: !prefs.repair_done_pushes })}
+          />
+        </div>
+        <p className="pb-2 text-[11px] text-muted-foreground">
+          {t(
+            "Never between 9:00 PM and 6:00 AM. For your account, on every phone where notifications are on.",
+            "Tidak pernah pukul 21.00–06.00. Untuk akun Anda, di setiap HP yang notifikasinya aktif."
           )}
         </p>
       </CardContent>

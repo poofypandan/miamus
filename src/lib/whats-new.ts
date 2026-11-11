@@ -28,6 +28,29 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Phase 174 PR B (D4, D10). Listed in Household → What's new only, never
+    // a card: this week's card already went to walk-ins (walkins-2026-11; one
+    // card a week). The two switches explain themselves in Household →
+    // Notifications. Staff need no tutorial: nothing changes on their phones.
+    id: "repair-pushes-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: told when a repair person comes and goes", id: "Baru: kabar saat tukang datang dan selesai" },
+    steps: {
+      en: [
+        "When staff log a repair person at the gate, you get a notification: who came and what for. When they tap Selesai, another one, with the before and after photos on the repair. Never between 9:00 PM and 6:00 AM.",
+        "Don't want one of them? Household → Notifications: When a repair person arrives, When a repair is finished.",
+        "The evening summary now says when a task was missed because someone was supervising a repair.",
+      ],
+      id: [
+        "Saat staf mencatat tukang di gerbang, Anda mendapat notifikasi: siapa yang datang dan untuk apa. Saat staf mengetuk Selesai, satu lagi, dengan foto sebelum dan sesudah di perbaikannya. Tidak pernah pukul 21.00–06.00.",
+        "Tidak mau salah satunya? Rumah → Notifikasi: Saat tukang datang, Saat perbaikan selesai.",
+        "Ringkasan malam kini menyebutkan tugas yang terlewat karena staf sedang mengawasi perbaikan.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Phase 173 PR C (D7, D15). Listed in Household → What's new only, never
     // a card: this week's card already went out (one card a week). The two
     // switches explain themselves in the Add routine sheet. Staff need no

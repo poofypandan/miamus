@@ -18,6 +18,7 @@ import {
   supervisionExplains,
   supervisionSpansOn,
   supervisionStretches,
+  summaryRowSupervision,
   walkInSpanLabel,
   walkInTime,
   walkInTodayLine,
@@ -253,6 +254,38 @@ describe("supervising (D10, D11)", () => {
     // Syam on leave: Ari alone was on duty.
     expect(supervisionExplains({ staffId: null, date: TODAY, time: "10:30" }, stretches, [ARI], now)?.staffId).toBe(ARI);
     expect(supervisionExplains({ staffId: null, date: TODAY, time: "10:30" }, stretches, [], now)).toBeNull();
+  });
+
+  // Phase 174 PR B: the evening summary sheet's rows, as the push reads them
+  // (notify_evening_summary, migrations/152; the same cases as its SQL test).
+  it("explains an evening summary row as the push does", () => {
+    const away = new Set<string>();
+    const isAway = (id: string) => away.has(id);
+    const row = (over: Partial<Parameters<typeof summaryRowSupervision>[0]>) =>
+      summaryRowSupervision({ kind: "chore", time: "11:00", staffId: ARI, ...over }, TODAY, stretches, [ARI, SYAM], isAway, now);
+    expect(row({})?.visitId).toBe("v1");
+    expect(row({ time: "15:00" })).toBeNull();
+    // A couldn't-do row says why itself.
+    expect(row({ exception: { reason: "other" } })).toBeNull();
+    // A routine with no person, while Syam was free at 10:30: not explained.
+    expect(row({ kind: "routine", time: "10:30", staffId: null, routineStaffId: null })).toBeNull();
+    // Ari's own routine: hers.
+    expect(row({ kind: "routine", time: "10:30", staffId: null, routineStaffId: ARI })?.visitId).toBe("v1");
+    // Syam's routine at 10:30, Syam free: not explained; Syam on leave, it's anyone's, and Syam is off duty.
+    expect(row({ kind: "routine", time: "10:30", staffId: null, routineStaffId: SYAM })).toBeNull();
+    away.add(SYAM);
+    expect(
+      summaryRowSupervision(
+        { kind: "routine", time: "10:30", staffId: null, routineStaffId: SYAM },
+        TODAY,
+        stretches,
+        [ARI],
+        isAway,
+        now
+      )?.staffId
+    ).toBe(ARI);
+    // No stretches (Repairs off): nothing.
+    expect(summaryRowSupervision({ kind: "chore", time: "11:00", staffId: ARI }, TODAY, [], [ARI], isAway, now)).toBeNull();
   });
 
   it("words the owner's lines in both languages", () => {

@@ -175,6 +175,8 @@ export interface SummaryRow {
   staffId: string | null;
   /** Routines: the pet's name. */
   petName?: string;
+  /** Routines: the person the routine is for (144), before leave; null for anyone. */
+  routineStaffId?: string | null;
   medicine?: boolean;
   exception?: TaskException;
   occurrence?: ChoreOccurrence;
@@ -337,6 +339,7 @@ export function buildEveningSummary(params: {
             title: task.title,
             time: task.time,
             staffId: task.exception?.staff_id ?? null,
+            routineStaffId: task.item?.staffId ?? null,
             petName: task.petName,
             medicine: task.medicine,
             exception: task.exception,
