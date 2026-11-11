@@ -1,11 +1,16 @@
 # Phase 174 — Repairs from the staff side: "Ada tukang datang"
 
-Status: **plan, waiting for the owner's decisions (D1–D12).** Docs only: no
+Status: **decided: owner chose all recommendations (D1–D12 A), 2026-11-11;
+PR A first.** Docs only: no
 app code, no migration created or applied. Migration numbers are given in
 build order when each PR is built ("number at build"; rule of 10 Nov).
 Mockup: `docs/mockups/phase-174-repairs-walkin.html` (open in a browser,
 phone width; staff screens in Bahasa Indonesia only; owner screens English
 left, Bahasa Indonesia right). Roadmap row 36.
+
+**Decided** (2026-11-11, through the manager): "Yes, all recommended": D1–D12
+all A. Still open: question 1, the developer's warranty (masa
+pemeliharaan) and when it ends.
 
 Builds on **Phase 159, Repairs** (`docs/phase-159-repairs-plan.md`,
 migrations 130–131, live) and on **Phase 171's Repairs switch** (PR #87,
