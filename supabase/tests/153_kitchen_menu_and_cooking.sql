@@ -330,6 +330,15 @@ select pg_temp.ok(not exists (select 1 from public.menu_dishes where id = :other
                   and exists (select 1 from public.menu_dishes where id = :lunch::uuid),
   'the nightly job deletes menu days older than a year and keeps today''s');
 
+-- ---- Deleted with the household ----------------------------------------------------------
+-- The note lives on the household's own row, and its dishes cascade with it.
+update public.households set kitchen_notes = 'Raka alergi kacang.' where id = :f2::uuid;
+insert into public.menu_dishes (household_id, day, meal, title) values (:f2, current_date, 'lunch', 'Soto');
+delete from public.households where id = :f2::uuid;
+select pg_temp.ok(not exists (select 1 from public.households where id = :f2::uuid and kitchen_notes is not null)
+                  and not exists (select 1 from public.menu_dishes where household_id = :f2::uuid),
+  'deleting a household deletes its kitchen note and its menu');
+
 -- ---- Grants ---------------------------------------------------------------------------
 select pg_temp.ok(not has_function_privilege('anon', 'public.cook_menu_dish(uuid, jsonb, uuid)', 'execute')
                   and not has_function_privilege('public', 'public.cook_menu_dish(uuid, jsonb, uuid)', 'execute')
