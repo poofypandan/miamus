@@ -679,8 +679,10 @@ function FinishForm({
 }) {
   const t = useWords(locale, asStaff);
   const reader: OwnerLocale = asStaff ? "id" : locale;
-  const { repairs } = useRepairs();
+  const { repairs, supervision } = useRepairs();
   const repair = repairs.find((r) => r.id === visit.repair_id);
+  // Who this Selesai frees: their next walk-in waits behind it in the queue.
+  const supervisor = supervision.find((s) => s.visit_id === visit.id && !s.ended_at)?.staff_id ?? null;
   const [photo, setPhoto] = useState<string | null>(null);
   const markSaved = useDropUnsavedPhoto(photo);
   const [outcome, setOutcome] = useState<WalkInOutcome | null>(null);
@@ -696,7 +698,7 @@ function FinishForm({
         left_phone_at: new Date().toISOString(),
         outcome,
         note: note.trim() ? note.trim().slice(0, WALKIN_LIMITS.note) : null,
-      });
+      }, supervisor);
       markSaved();
       const after = photo;
       toast.success(
@@ -832,7 +834,7 @@ export function HandOverSheet({
     if (!visit || !to || saving) return;
     setSaving(true);
     try {
-      const outcome = await handOverSupervision(visit.id, to);
+      const outcome = await handOverSupervision(visit.id, to, current);
       toast.success(
         outcome.status === "waiting"
           ? t("Kept on this phone. It sends itself when there's signal.", "Tersimpan di HP. Terkirim otomatis saat ada sinyal.")

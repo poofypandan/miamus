@@ -595,21 +595,49 @@ describe("a walk-in's saves go in order (Phase 174; Codex, PR #94)", () => {
       before_photo_url: "https://x/house-a/repairs/repair-1/b.jpg",
     },
   });
-  const finish = (): import("@/lib/offline-queue").OutboxJob => ({
+  const finish = (visit = "visit-1", releases: string | null | undefined = "staff-1"): import("@/lib/offline-queue").OutboxJob => ({
     kind: "walkin_finish",
-    visitId: "visit-1",
+    visitId: visit,
     finish: { after_photo_url: "https://x/a.jpg", left_phone_at: "2026-11-11T04:00:00.000Z", outcome: "fixed", note: null },
+    releases,
   });
   const handOver = (): import("@/lib/offline-queue").OutboxJob => ({
     kind: "supervision_handover",
     input: { id: "stretch-2", visit_id: "visit-1", staff_id: "staff-2" },
+    releases: "staff-1",
+  });
+  const startOf = (visit: string, staff: string, repair = "repair-1"): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "walkin_start",
+    repair: null,
+    visit: {
+      id: visit,
+      repair_id: repair,
+      worker_name: null,
+      logged_by_staff: staff,
+      arrived_phone_at: "2026-11-11T05:00:00.000Z",
+      before_photo_url: `https://x/house-a/repairs/${repair}/b2.jpg`,
+    },
+  });
+  const couldnt = (visit: string | null): import("@/lib/offline-queue").OutboxJob => ({
+    kind: "couldnt",
+    input: {
+      id: "x-1",
+      chore_id: "chore-1",
+      occurs_on: "2026-11-11",
+      reason: visit ? "supervising_repair" : "out_of_stock",
+      staff_id: "staff-1",
+      ...(visit ? { repair_visit_id: visit } : {}),
+    },
   });
 
-  it("knows which walk-in each save belongs to", () => {
-    expect(queue.walkInOf(start())).toBe("visit-1");
-    expect(queue.walkInOf(finish())).toBe("visit-1");
-    expect(queue.walkInOf(handOver())).toBe("visit-1");
-    expect(queue.walkInOf(logJob())).toBeNull();
+  it("one rule: a save waits for an earlier one whose effects touch what it references", () => {
+    expect(queue.dependsOn(finish(), start())).toBe(true);
+    expect(queue.dependsOn(handOver(), start())).toBe(true);
+    expect(queue.dependsOn(finish(), handOver())).toBe(true);
+    expect(queue.dependsOn(start(), finish())).toBe(true); // the finish frees staff-1, who logs the start
+    expect(queue.dependsOn(logJob(), start())).toBe(false);
+    expect(queue.dependsOn(start(), logJob())).toBe(false);
+    expect(queue.dependsOn(choreJob(), finish())).toBe(false);
   });
 
   it("Selesai saved while the start still waits is kept, not sent ahead of it", async () => {
@@ -664,5 +692,75 @@ describe("a walk-in's saves go in order (Phase 174; Codex, PR #94)", () => {
     expect(order).toEqual(["start", "handover", "finish"]);
     expect(report.sent).toHaveLength(3);
     expect(await stored()).toEqual([]);
+  });
+
+  it("a new walk-in waits for a queued Selesai that frees its person, not for someone else's (Codex, PR #94 round 2)", async () => {
+    // Visit 1 is on the server; its Selesai (freeing staff-1) gets no answer.
+    provider.finishRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    expect((await queue.submitJob(finish("visit-1", "staff-1"))).status).toBe("waiting");
+    provider.createRepairWalkIn.mockResolvedValue({ id: "x" });
+    // staff-1's next walk-in waits behind it...
+    expect((await queue.submitJob(startOf("visit-2", "staff-1"))).status).toBe("waiting");
+    expect(provider.createRepairWalkIn).not.toHaveBeenCalled();
+    // ...staff-2's goes at once.
+    expect((await queue.submitJob(startOf("visit-3", "staff-2"))).status).toBe("sent");
+    expect(provider.createRepairWalkIn).toHaveBeenCalledTimes(1);
+    // The drain keeps the order: still no answer for the Selesai, so the start waits.
+    provider.createRepairWalkIn.mockClear();
+    const held = await queue.drainOutbox();
+    expect(held.waiting).toBe(2);
+    expect(provider.createRepairWalkIn).not.toHaveBeenCalled();
+    // Once it lands, the start follows in the same pass.
+    const order: string[] = [];
+    provider.finishRepairWalkIn.mockImplementation(async () => (order.push("finish"), { id: "visit-1" }));
+    provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-2" }));
+    await queue.drainOutbox();
+    expect(order).toEqual(["finish", "start"]);
+  });
+
+  it("a hand-over frees the person handing over, for their next walk-in", () => {
+    expect(queue.dependsOn(startOf("visit-2", "staff-1"), handOver())).toBe(true);
+    // ...and the person taking over can't start one ahead of the hand-over either.
+    expect(queue.dependsOn(startOf("visit-2", "staff-2"), handOver())).toBe(true);
+    expect(queue.dependsOn(startOf("visit-2", "staff-3"), handOver())).toBe(false);
+  });
+
+  it("a release saved without its person (an older app) holds every person's next walk-in", () => {
+    const { releases: _drop, ...older } = finish("visit-1") as Extract<
+      import("@/lib/offline-queue").OutboxJob,
+      { kind: "walkin_finish" }
+    >;
+    void _drop;
+    expect(queue.dependsOn(startOf("visit-2", "staff-9"), older)).toBe(true);
+    expect(queue.dependsOn(startOf("visit-2", "staff-9"), finish("visit-1", null))).toBe(true);
+  });
+
+  it("a walk-in on a repair made by a queued 'Baru' waits for it", () => {
+    const baru: import("@/lib/offline-queue").OutboxJob = {
+      kind: "walkin_start",
+      repair: { id: "repair-new", title: "Stopkontak", status: "reported", reported_by_staff: "staff-1" },
+      visit: { ...(startOf("visit-1", "staff-1", "repair-new") as { visit: import("@/lib/data").WalkInStartInput }).visit },
+    };
+    expect(queue.dependsOn(startOf("visit-2", "staff-2", "repair-new"), baru)).toBe(true);
+    expect(queue.dependsOn(startOf("visit-2", "staff-2", "repair-other"), baru)).toBe(false);
+  });
+
+  it("a couldn't-do record naming a walk-in waits for that walk-in's start (Codex, PR #94 round 2)", async () => {
+    const created = { createTaskException: vi.fn(async () => ({ id: "x-1" })) };
+    Object.assign(provider, created);
+    provider.createRepairWalkIn.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(start());
+    expect((await queue.submitJob(couldnt("visit-1"))).status).toBe("waiting");
+    expect(created.createTaskException).not.toHaveBeenCalled();
+    // One that names no walk-in, or another walk-in, goes at once.
+    expect(queue.dependsOn(couldnt(null), start())).toBe(false);
+    expect(queue.dependsOn(couldnt("visit-9"), start())).toBe(false);
+    // The drain sends it right after its start.
+    const order: string[] = [];
+    provider.createRepairWalkIn.mockImplementation(async () => (order.push("start"), { id: "visit-1" }));
+    created.createTaskException.mockImplementation(async () => (order.push("couldnt"), { id: "x-1" }));
+    await queue.drainOutbox();
+    expect(order).toEqual(["start", "couldnt"]);
+    delete (provider as Record<string, unknown>).createTaskException;
   });
 });

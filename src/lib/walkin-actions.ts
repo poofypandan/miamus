@@ -30,15 +30,26 @@ export function startWalkIn(
   return submitJob<SendResult>({ kind: "walkin_start", repair, visit }, landed);
 }
 
-/** Selesai. */
-export function finishWalkIn(visitId: string, finish: WalkInFinishInput): Promise<SubmitOutcome> {
-  return submitJob<SendResult>({ kind: "walkin_finish", visitId, finish }, landed);
+/**
+ * Selesai. `releases` is whoever supervises the visit now: a walk-in that
+ * person logs next waits behind this save (offline-queue jobKeys).
+ */
+export function finishWalkIn(
+  visitId: string,
+  finish: WalkInFinishInput,
+  releases: string | null
+): Promise<SubmitOutcome> {
+  return submitJob<SendResult>({ kind: "walkin_finish", visitId, finish, releases }, landed);
 }
 
-/** "Ganti yang mengawasi". */
-export function handOverSupervision(visitId: string, staffId: string): Promise<SubmitOutcome> {
+/** "Ganti yang mengawasi", from `releases` (the current supervisor) to `staffId`. */
+export function handOverSupervision(visitId: string, staffId: string, releases: string | null): Promise<SubmitOutcome> {
   return submitJob<SendResult>(
-    { kind: "supervision_handover", input: { id: crypto.randomUUID(), visit_id: visitId, staff_id: staffId } },
+    {
+      kind: "supervision_handover",
+      input: { id: crypto.randomUUID(), visit_id: visitId, staff_id: staffId },
+      releases,
+    },
     () => void loadRepairs(true)
   );
 }

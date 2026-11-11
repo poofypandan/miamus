@@ -111,9 +111,20 @@ export type OutboxJob =
    */
   | { kind: "walkin_start"; repair: (RepairInput & { id: string }) | null; visit: WalkInStartInput }
   /** Selesai: the database takes the same finish twice as one (migrations/149). */
-  | { kind: "walkin_finish"; visitId: string; finish: WalkInFinishInput }
+  | {
+      kind: "walkin_finish";
+      visitId: string;
+      finish: WalkInFinishInput;
+      /** Who it frees (the visit's supervisor when saved); absent: anyone, for ordering. */
+      releases?: string | null;
+    }
   /** "Ganti yang mengawasi": a new stretch under an id made on the phone. */
-  | { kind: "supervision_handover"; input: { id: string; visit_id: string; staff_id: string } };
+  | {
+      kind: "supervision_handover";
+      input: { id: string; visit_id: string; staff_id: string };
+      /** Who hands it over (and is freed); absent: anyone, for ordering. */
+      releases?: string | null;
+    };
 
 export interface OfflineQueueItem {
   id: string;
@@ -536,31 +547,74 @@ type TryResult<T> = { ok: true; result: T } | { ok: false; err: unknown } | { ok
  * directly and any failure is thrown, as before Phase 161.
  */
 /**
- * The walk-in a save belongs to (Phase 174), or null. A walk-in's saves
- * reach the server in the order they were made — its start, a hand-over,
- * its Selesai — or the later ones would be refused for a visit that isn't
- * there yet (Codex, PR #94).
+ * What a save references, and what it creates or releases on the server
+ * (Phase 174). One rule orders the queue: a save waits for any earlier save
+ * still on the phone whose effects touch what it references. Otherwise a
+ * later save could land first and be refused, or worse, accepted against a
+ * state the person never saw (Codex, PR #94, two rounds):
+ *
+ *   repair:R    made by a "Baru" start; referenced by any walk-in on R
+ *   visit:V     made by a start, changed by a hand-over or Selesai;
+ *               referenced by a hand-over, a Selesai, a couldn't-do record
+ *               that names V ("Mengawasi perbaikan")
+ *   person:P    taken by a start or a hand-over to P, released by a
+ *               Selesai or hand-over of a visit P supervises; referenced by
+ *               a start (P must be free) and a hand-over to P. A release
+ *               saved before its person was known (an older app) releases
+ *               "person:*", which every person reference waits for.
+ *
+ * Saves with no keys (logs, food, chores) never wait for anything.
  */
-export function walkInOf(job: OutboxJob): string | null {
+export interface JobKeys {
+  refs: string[];
+  effects: string[];
+}
+
+const ANY_PERSON = "person:*";
+
+export function jobKeys(job: OutboxJob): JobKeys {
+  const person = (id: string | null | undefined) => (id ? `person:${id}` : ANY_PERSON);
   switch (job.kind) {
-    case "walkin_start":
-      return job.visit.id;
+    case "walkin_start": {
+      const taker = job.visit.logged_by_staff;
+      return {
+        refs: [`repair:${job.visit.repair_id}`, ...(taker ? [`person:${taker}`] : [])],
+        effects: [
+          `visit:${job.visit.id}`,
+          ...(job.repair ? [`repair:${job.repair.id}`] : []),
+          ...(taker ? [`person:${taker}`] : []),
+        ],
+      };
+    }
     case "walkin_finish":
-      return job.visitId;
+      return { refs: [`visit:${job.visitId}`], effects: [`visit:${job.visitId}`, person(job.releases)] };
     case "supervision_handover":
-      return job.input.visit_id;
+      return {
+        refs: [`visit:${job.input.visit_id}`, `person:${job.input.staff_id}`],
+        effects: [`visit:${job.input.visit_id}`, person(job.releases), `person:${job.input.staff_id}`],
+      };
+    case "couldnt":
+      return job.input.repair_visit_id ? { refs: [`visit:${job.input.repair_visit_id}`], effects: [] } : { refs: [], effects: [] };
     default:
-      return null;
+      return { refs: [], effects: [] };
   }
 }
 
-/** An earlier save of the same walk-in is still on the phone (queued or being sent). */
+/** Does `later` have to wait for `earlier` (one rule; see jobKeys)? */
+export function dependsOn(later: OutboxJob, earlier: OutboxJob): boolean {
+  const { refs } = jobKeys(later);
+  if (refs.length === 0) return false;
+  const effects = new Set(jobKeys(earlier).effects);
+  if (effects.size === 0) return false;
+  return refs.some((ref) => effects.has(ref) || (ref.startsWith("person:") && effects.has(ANY_PERSON)));
+}
+
+/** An earlier save it depends on is still on the phone (queued or being sent). */
 function waitsForEarlier(item: OfflineQueueItem): boolean {
-  const visit = walkInOf(item.job);
-  if (!visit) return false;
+  if (jobKeys(item.job).refs.length === 0) return false;
   for (const other of items) {
     if (other.id === item.id) return false; // reached itself: nothing earlier
-    if (walkInOf(other.job) === visit) return true;
+    if (dependsOn(item.job, other.job)) return true;
   }
   return false;
 }
@@ -576,8 +630,8 @@ export async function submitJob<T extends SendResult>(
     onSent?.(result);
     return { status: "sent", result };
   }
-  // Behind an earlier save of the same walk-in: it goes after that one,
-  // from the queue, never alongside it.
+  // Behind an earlier save it depends on: it goes after that one, from the
+  // queue, never alongside it.
   if (waitsForEarlier(item)) {
     notifyWaiting();
     return { status: "waiting" };
@@ -714,15 +768,14 @@ export async function drainOutbox(
   items = queue;
   emit();
   let stalled = false;
-  // Walk-ins with a save not sent in this pass: their later saves wait too.
-  const held = new Set<string>();
+  // Saves not sent in this pass: anything depending on them waits too.
+  const held: OutboxJob[] = [];
   for (const item of queue) {
     // Saved for another household (a phone that switched): it waits for that one.
     if (item.householdId && item.householdId !== household) continue;
-    const visit = walkInOf(item.job);
-    if (stalled || inFlight.has(item.id) || (visit && held.has(visit))) {
+    if (stalled || inFlight.has(item.id) || held.some((earlier) => dependsOn(item.job, earlier))) {
       report.waiting++;
-      if (visit) held.add(visit);
+      held.push(item.job);
       continue;
     }
     inFlight.add(item.id);
@@ -756,7 +809,7 @@ export async function drainOutbox(
       }
     } finally {
       inFlight.delete(item.id);
-      if (kept && visit) held.add(visit);
+      if (kept) held.push(item.job);
     }
   }
   if (report.sent.length > 0 || report.refused.length > 0) {
