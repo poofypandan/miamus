@@ -18,7 +18,7 @@ import type { TaskEntity, TaskLog } from "@/types/database";
 // Owner-facing, in the owner's language (Phase 149). Pills follow this order — the same order as the
 // routine editor's cards — rather than whichever category logged first today,
 // so the row doesn't reshuffle as the day fills in.
-const FILTER_ORDER: ScheduleCategory[] = ["meal", "potty", "vet", "medication", "grooming", "temporary"];
+const FILTER_ORDER: ScheduleCategory[] = ["meal", "potty", "vet", "medication", "grooming", "routine", "temporary"];
 const FILTER_LABELS: Record<OwnerLocale, Record<ScheduleCategory, string>> = {
   en: {
     meal: "Meals",
@@ -26,6 +26,7 @@ const FILTER_LABELS: Record<OwnerLocale, Record<ScheduleCategory, string>> = {
     vet: "Vet",
     medication: "Medicine",
     grooming: "Grooming",
+    routine: "Routines",
     temporary: "Others",
   },
   id: {
@@ -34,6 +35,7 @@ const FILTER_LABELS: Record<OwnerLocale, Record<ScheduleCategory, string>> = {
     vet: "Dokter Hewan",
     medication: "Obat",
     grooming: "Grooming",
+    routine: "Rutinitas",
     temporary: "Lainnya",
   },
 };

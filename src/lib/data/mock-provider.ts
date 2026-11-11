@@ -21,7 +21,7 @@ import type {
 } from "@/types/database";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
-import type { DataProvider } from "./types";
+import type { CreateScheduleInput, DataProvider } from "./types";
 import { isTemplate, longRepeatFloorFor } from "@/lib/chore-recurrence";
 import { isSetUp } from "@/lib/rooms-view";
 
@@ -115,6 +115,18 @@ function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** The Add routine sheet's fields (Phase 173), with the database's defaults. */
+function routineFields(input: CreateScheduleInput) {
+  return {
+    kind: input.kind ?? null,
+    routine_group_id: input.routine_group_id ?? null,
+    days_of_week: input.days_of_week ?? null,
+    note: input.note ?? null,
+    staff_id: input.staff_id ?? null,
+    proof: input.proof ?? "photo",
+  };
+}
+
 function delay<T>(value: T, ms = 150): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
@@ -194,6 +206,10 @@ export const mockProvider: DataProvider = {
       photo_url: input.photo_url ?? null,
       notes: input.notes ?? null,
       completed_at: completedAt,
+      staff_id: input.staff_id ?? null,
+      sub_type: input.sub_type ?? "complete",
+      // The database stamps this on arrival (migrations/144).
+      received_at: new Date().toISOString(),
     }));
     db.logs.push(...logs);
     saveDB(db);
@@ -220,6 +236,7 @@ export const mockProvider: DataProvider = {
       is_active: input.is_active ?? true,
       expires_at: input.expires_at ?? null,
       created_at: input.created_at ?? new Date().toISOString(),
+      ...routineFields(input),
     };
     db.schedules.push(newSchedule);
     saveDB(db);
@@ -240,6 +257,7 @@ export const mockProvider: DataProvider = {
       is_active: input.is_active ?? true,
       expires_at: input.expires_at ?? null,
       created_at: input.created_at ?? new Date().toISOString(),
+      ...routineFields(input),
     }));
     db.schedules.push(...created);
     saveDB(db);
@@ -258,6 +276,10 @@ export const mockProvider: DataProvider = {
     db.schedules = db.schedules.filter((s) => s.id !== id);
     saveDB(db);
     return delay(undefined);
+  },
+  async schedulesWithLogs(ids) {
+    const db = loadDB();
+    return delay(new Set(db.logs.filter((l) => l.schedule_id && ids.includes(l.schedule_id)).map((l) => l.schedule_id!)));
   },
   async createMedicalRecord(input) {
     const db = loadDB();
@@ -969,7 +991,7 @@ export const mockProvider: DataProvider = {
       tally.set(who, row);
     };
     for (const log of db.logs) {
-      if (log.module !== "pet" || !inSpan(log.completed_at) || log.sub_type === "check_in") continue;
+      if (log.module !== "pet" || !inSpan(log.completed_at) || log.sub_type === "check_in" || log.sub_type === "arrived") continue;
       bump(log.staff_id ?? null, "pets");
     }
     for (const task of db.householdTasks) {

@@ -55,6 +55,11 @@ import { cn } from "@/lib/utils";
 import type { TaskEntity, MasterSchedule } from "@/types/database";
 import { LogPhotoThumbnail } from "@/components/dashboard/log-photo-thumbnail";
 import { CancelRoutineButton } from "@/components/dashboard/cancel-routine-button";
+import { AddRoutineSheet, type AddRoutineTarget } from "@/components/dashboard/add-routine-sheet";
+import { routineIcon } from "@/lib/schedule-categories";
+import { groupRows, isOnceRow } from "@/lib/routine-groups";
+import { routineKindInfo } from "@/lib/pet-routine-kinds";
+import { useToday } from "@/hooks/use-today";
 
 const INTERVAL_HOUR_OPTIONS = [1, 2, 3, 4];
 export const DOSE_COUNT_OPTIONS = [1, 2, 3, 4];
@@ -182,6 +187,9 @@ export function ManageRoutinesSheet({
 }) {
   const { pets, schedules, createSchedule, createSchedulesBatch, deleteSchedule } = useHousehold();
   const tr = useT();
+  // The Add routine sheet (Phase 173), over this one: a new routine for this
+  // pet, or a routine from Other routines to edit.
+  const [routineTarget, setRoutineTarget] = useState<AddRoutineTarget | null>(null);
 
   // Claims its own history entry, so Back closes this sheet and leaves
   // whatever opened it (the picker, the profile sheet) standing.
@@ -207,6 +215,13 @@ export function ManageRoutinesSheet({
             </SheetHeader>
             <div className="flex-1 overflow-y-auto px-4 py-4">
               <div className="flex flex-col gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setRoutineTarget({ petIds: [entity.id] })}
+                  className="min-h-[48px] w-full rounded-xl"
+                >
+                  <Plus /> {tr("Add routine", "Tambah rutinitas")}
+                </Button>
                 <MealTimesCard
                   entity={entity}
                   meals={dogSchedules.filter((s) => categorizeSchedule(s) === "meal")}
@@ -240,11 +255,13 @@ export function ManageRoutinesSheet({
                   createSchedulesBatch={createSchedulesBatch}
                   deleteSchedule={deleteSchedule}
                 />
-                <OthersCard
+                {/* "Others" became Other routines (Phase 173, D5): routines from
+                    the Add routine sheet, and the old one-off rows, untouched. */}
+                <OtherRoutinesCard
                   entity={entity}
-                  tasks={dogSchedules.filter((s) => categorizeSchedule(s) === "temporary")}
-                  createSchedule={createSchedule}
-                  deleteSchedule={deleteSchedule}
+                  schedules={schedules}
+                  onAdd={() => setRoutineTarget({ petIds: [entity.id] })}
+                  onEdit={(rows) => setRoutineTarget({ rows })}
                 />
                 <CopyScheduleDrawer
                   entity={entity}
@@ -257,6 +274,7 @@ export function ManageRoutinesSheet({
           </>
         )}
       </SheetContent>
+      <AddRoutineSheet target={routineTarget} onClose={() => setRoutineTarget(null)} />
     </Sheet>
   );
 }
@@ -265,21 +283,34 @@ export function ScheduleEditor({ entity }: { entity: TaskEntity }) {
   const { schedules } = useHousehold();
   const tr = useT();
   const [manageEntity, setManageEntity] = useState<TaskEntity | null>(null);
+  const [routineTarget, setRoutineTarget] = useState<AddRoutineTarget | null>(null);
   const dogSchedules = schedules.filter((s) => s.entity_id === entity.id);
 
   return (
     <div className="flex flex-col gap-4">
       <LivePreviewCard entity={entity} schedules={dogSchedules} />
 
-      <Button
-        onClick={() => setManageEntity(entity)}
-        size="lg"
-        className="min-h-[52px] w-full bg-zinc-900 text-base text-white hover:bg-zinc-800"
-      >
-        <Settings2 /> {tr("Manage Routines", "Kelola Rutinitas")}
-      </Button>
+      {/* Add routine beside Manage routines (Phase 173, D1): for this pet. */}
+      <div className="flex gap-2">
+        <Button
+          onClick={() => setManageEntity(entity)}
+          size="lg"
+          className="min-h-[52px] flex-1 rounded-xl bg-zinc-900 text-base text-white hover:bg-zinc-800"
+        >
+          <Settings2 /> {tr("Manage Routines", "Kelola Rutinitas")}
+        </Button>
+        <Button
+          onClick={() => setRoutineTarget({ petIds: [entity.id] })}
+          size="lg"
+          variant="outline"
+          className="min-h-[52px] flex-1 rounded-xl text-base"
+        >
+          <Plus /> {tr("Add routine", "Tambah rutinitas")}
+        </Button>
+      </div>
 
       <ManageRoutinesSheet entity={manageEntity} onClose={() => setManageEntity(null)} />
+      <AddRoutineSheet target={routineTarget} onClose={() => setRoutineTarget(null)} />
     </div>
   );
 }
@@ -1113,121 +1144,109 @@ function VetVisitsCard({
   );
 }
 
-function OthersCard({
+/**
+ * Other routines / Rutinitas lain (Phase 173, D5; was "Others"): this pet's
+ * routines from the Add routine sheet, one row per routine (a routine for
+ * two pets is one row, edited for both), and the old one-off rows, untouched,
+ * with their "Until" line. A row opens the sheet filled in; the button opens
+ * it for this pet.
+ */
+function OtherRoutinesCard({
   entity,
-  tasks,
-  createSchedule,
-  deleteSchedule,
+  schedules,
+  onAdd,
+  onEdit,
 }: {
   entity: TaskEntity;
-  tasks: MasterSchedule[];
-  createSchedule: CreateScheduleFn;
-  deleteSchedule: DeleteScheduleFn;
+  schedules: MasterSchedule[];
+  onAdd: () => void;
+  onEdit: (rows: MasterSchedule[]) => void;
 }) {
   const formatTime = useFormatTime();
   const tr = useT();
-  const [title, setTitle] = useState("");
-  const [time, setTime] = useState("08:00");
-  const [expiresAt, setExpiresAt] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const locale = useOwnerLocale();
+  const { pets } = useHousehold();
+  const today = formatDateLocal(useToday());
 
-  async function handleAdd() {
-    if (!title || !expiresAt) {
-      toast.error(tr("Fill in a title and expiry date", "Isi judul dan tanggal berakhir"));
-      return;
+  const entries = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { key: string; rows: MasterSchedule[]; first: MasterSchedule }[] = [];
+    for (const row of schedules) {
+      if (row.entity_id !== entity.id) continue;
+      const category = categorizeSchedule(row);
+      if (category === "routine") {
+        // Ended by an edit, or a one-off already past: no longer a routine.
+        if (row.expires_at && row.expires_at < today) continue;
+      } else if (category !== "temporary") {
+        continue;
+      }
+      const key = row.routine_group_id ?? row.id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const rows = groupRows(schedules, row);
+      out.push({ key, rows, first: row });
     }
-    setSubmitting(true);
-    try {
-      await createSchedule({
-        entity_id: entity.id,
-        title,
-        module: "pet",
-        frequency_type: "fixed_time",
-        fixed_times: [time],
-        expires_at: expiresAt,
-      });
-      setTitle("");
-      setExpiresAt("");
-      toast.success(tr("Task added", "Tugas ditambahkan"));
-    } catch (err) {
-      console.error(err);
-      toast.error(tr("Failed to add task", "Tugas gagal ditambahkan"));
-    } finally {
-      setSubmitting(false);
-    }
-  }
+    return out.sort((a, b) =>
+      (a.first.fixed_times?.[0] ?? "").localeCompare(b.first.fixed_times?.[0] ?? "")
+    );
+  }, [schedules, entity.id, today]);
 
-  async function remove(id: string) {
-    try {
-      await deleteSchedule(id);
-    } catch (err) {
-      console.error(err);
-      toast.error(tr("Failed to remove task", "Tugas gagal dihapus"));
-    }
+  const days = (list: number[]) => {
+    const names = locale === "id" ? ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    return [...list].sort((a, b) => a - b).map((d) => names[d - 1]).join(", ");
+  };
+  function when(first: MasterSchedule): string {
+    const once = !!first.expires_at && first.expires_at === formatDateLocal(new Date(first.created_at));
+    if (once) return tr(`Once, ${formatDateShort(first.expires_at!, locale)}`, `Sekali, ${formatDateShort(first.expires_at!, locale)}`);
+    const repeat = first.days_of_week?.length ? days(first.days_of_week) : tr("Every day", "Setiap hari");
+    return first.expires_at
+      ? `${repeat} · ${tr("until", "sampai")} ${formatDateShort(first.expires_at, locale)}`
+      : repeat;
   }
 
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-1.5 text-base">
-          <List className="size-4" /> {tr("Others", "Lainnya")}
+          <List className="size-4" /> {tr("Other routines", "Rutinitas lain")}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-4">
         <div className="flex flex-col gap-2">
-          {tasks.map((t) => (
-            <div
-              key={t.id}
-              className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
-            >
-              <div>
-                <p className="font-medium">
-                  {t.fixed_times?.[0] ? formatTime(t.fixed_times[0]) : "—"} · {t.title}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {tr("Expires", "Berakhir")} {t.expires_at}
-                </p>
-              </div>
-              <Button variant="ghost" size="icon-sm" onClick={() => remove(t.id)}>
-                <X className="size-4" />
-              </Button>
-            </div>
-          ))}
-          {tasks.length === 0 && (
-            <p className="text-sm text-muted-foreground">{tr("No other tasks.", "Tidak ada tugas lain.")}</p>
+          {entries.map(({ key, rows, first }) => {
+            const Icon = routineIcon(categorizeSchedule(first), first.kind);
+            const times = [...new Set(rows.map((r) => r.fixed_times?.[0]).filter(Boolean) as string[])].sort();
+            const others = [...new Set(rows.map((r) => r.entity_id))]
+              .filter((id) => id !== entity.id)
+              .map((id) => pets.find((p) => p.id === id)?.name)
+              .filter(Boolean);
+            const title = first.kind && first.kind !== "other" ? (routineKindInfo(first.kind)?.[locale] ?? first.title) : first.title;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onEdit(rows)}
+                className="flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm active:bg-muted/60"
+              >
+                <Icon className="size-4 shrink-0 text-zinc-500" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium">
+                    {times.map((t) => formatTime(t)).join(", ") || "—"} · {title}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {when(first)}
+                    {others.length > 0 ? ` · ${tr("also", "juga")} ${others.join(", ")}` : ""}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+          {entries.length === 0 && (
+            <p className="text-sm text-muted-foreground">{tr("No other routines.", "Belum ada rutinitas lain.")}</p>
           )}
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">{tr("Task title", "Judul tugas")}</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={tr("e.g. Farm visit reminder", "mis. Pengingat kunjungan ke peternakan")}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">{tr("Time", "Jam")}</Label>
-            <input
-              type="time"
-              step={60}
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="min-h-[48px] rounded-lg border border-input bg-transparent px-2.5 text-base font-medium tabular-nums outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">{tr("Expires on", "Berakhir pada")}</Label>
-            <Input
-              type="date"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-            />
-          </div>
-        </div>
-        <Button onClick={handleAdd} disabled={submitting} className="min-h-[48px] w-fit">
-          {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
-          {tr("Add task", "Tambah tugas")}
+        <Button onClick={onAdd} variant="outline" className="min-h-[48px] w-fit rounded-xl">
+          <Plus /> {tr("Add routine", "Tambah rutinitas")}
         </Button>
       </CardContent>
     </Card>
@@ -1273,7 +1292,16 @@ function CopyScheduleDrawer({
     try {
       const entries: CreateScheduleInput[] = [];
       for (const targetId of selected) {
+        // Copies don't join the source's group (Phase 173): each copied group
+        // gets its own id per pet, so editing Mocha's lights later doesn't
+        // move Coco's.
+        const groupIds = new Map<string, string>();
         for (const s of sourceSchedules) {
+          let groupId: string | null = null;
+          if (s.routine_group_id) {
+            groupId = groupIds.get(s.routine_group_id) ?? crypto.randomUUID();
+            groupIds.set(s.routine_group_id, groupId);
+          }
           entries.push({
             entity_id: targetId,
             title: s.title,
@@ -1284,6 +1312,21 @@ function CopyScheduleDrawer({
             start_time: s.start_time,
             end_time: s.end_time,
             expires_at: s.expires_at,
+            // Without these a copied walk would become a meal.
+            ...(s.kind
+              ? {
+                  kind: s.kind,
+                  routine_group_id: groupId,
+                  days_of_week: s.days_of_week ?? null,
+                  note: s.note ?? null,
+                  staff_id: s.staff_id ?? null,
+                }
+              : {}),
+            ...(s.proof && s.proof !== "photo" ? { proof: s.proof } : {}),
+            // A start date that is part of the row: a one-off's day, or a
+            // visit anchored on a later day. Without it the copy starts today
+            // and shows every day until its end (Codex, PR #85).
+            ...(isOnceRow(s) || new Date(s.created_at).getTime() > Date.now() ? { created_at: s.created_at } : {}),
           });
         }
       }
@@ -1425,7 +1468,7 @@ function LivePreviewCard({
               return <MedicineGroupRow key={row.key} group={row.group} entity={entity} />;
             }
             const item = row.item;
-            const Icon = categoryIcon(item.category);
+            const Icon = routineIcon(item.category, item.kind);
             // Deeper than the dashboard's tint on purpose — see
             // categoryCardTintStrong. Padding and a transparent border on every
             // row so a tinted one lines up with its neighbours instead of
@@ -1460,7 +1503,7 @@ function LivePreviewCard({
                     "cancel the vet visit". Only offered for the generated
                     categories — meals and the potty routine are the standing
                     shape of the day and are edited, not cancelled. */}
-                {item.category !== "meal" && item.category !== "potty" && (
+                {item.category !== "meal" && item.category !== "potty" && item.category !== "routine" && (
                   <CancelRoutineButton
                     entity={entity}
                     title={item.title}
