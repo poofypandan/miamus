@@ -66,8 +66,8 @@
 --        account's language (for the ready message) and the WhatsApp number
 --        if they gave one. Return type changes, so it is dropped first.
 --   decide_household_access (113)    a rejection clears the number.
---   prune_household_access_requests (113)   also clears any number asked
---        for more than 30 days ago.
+--   prune_household_access_requests (116)   also clears any number asked
+--        for more than 30 days ago; 116's locked re-check is kept.
 --
 -- WITH THE SWITCH OFF (the default) nothing about signing up changes:
 -- my_household_access answers 'none' to a new account, it taps Request
@@ -559,7 +559,9 @@ $$;
 revoke all on function public.decide_household_access(uuid, boolean) from public, anon;
 grant execute on function public.decide_household_access(uuid, boolean) to authenticated, service_role;
 
--- --- 9. The nightly prune (113): numbers go after 30 days at the latest ---------------
+-- --- 9. The nightly prune (116, its newest definition): numbers go after 30 days -----
+-- 116's body unchanged (the request locked and its decision re-checked
+-- before the account is touched), plus one statement first.
 create or replace function public.prune_household_access_requests()
 returns integer
 language plpgsql
@@ -568,6 +570,8 @@ set search_path = ''
 as $$
 declare
   target record;
+  current_status text;
+  current_decided timestamptz;
   removed integer := 0;
 begin
   -- The WhatsApp number to tell them on is kept 30 days at most (privacy
@@ -584,6 +588,21 @@ begin
        and r.decided_at < now() - interval '30 days'
   loop
     begin
+      -- The request first, then a fresh look at it: a decision made since the
+      -- loop's query, or one waiting on this lock, decides what happens next.
+      select r.status, r.decided_at
+        into current_status, current_decided
+        from public.household_access_requests r
+       where r.user_id = target.user_id
+       for update;
+
+      if not found
+         or current_status <> 'rejected'
+         or current_decided >= now() - interval '30 days'
+      then
+        continue;
+      end if;
+
       perform 1 from auth.users u where u.id = target.user_id for update;
 
       if found

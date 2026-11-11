@@ -330,6 +330,9 @@ select pg_temp.ok((select notify_whatsapp = '6281433334444' from public.househol
   '... and keeps a recent one');
 select pg_temp.ok(pg_temp.err_as(:pa, 'select public.prune_household_access_requests()') like '%permission denied%',
   'no client runs the prune');
+select pg_temp.ok((select prosrc like '%current_status%' and prosrc like '%for update%'
+                     from pg_proc where oid = 'public.prune_household_access_requests()'::regprocedure),
+  '116''s locked re-check of the decision is still in the prune (its race test: 116_prune_rechecks_decision.sh)');
 do $$ begin
   update public.household_access_requests set notify_whatsapp = '+6281234' where user_id = '00000000-0000-0000-0000-0000000143a6';
   raise exception 'FAIL: a malformed number was stored';
