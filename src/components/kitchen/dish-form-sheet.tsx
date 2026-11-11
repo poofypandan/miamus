@@ -10,7 +10,20 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { useT, useOwnerLocale } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRecipes } from "@/hooks/use-recipes";
-import { MEALS, MEAL_LABELS, MENU_LIMITS, dayMonth, nextPosition, weekDays, weekStart, weekdayShort } from "@/lib/menu";
+import {
+  MEALS,
+  MEAL_LABELS,
+  MENU_LIMITS,
+  dayMonth,
+  dishSaveFields,
+  initialDishLink,
+  nextPosition,
+  weekDays,
+  weekStart,
+  weekdayShort,
+  type DishLink,
+} from "@/lib/menu";
+import { loadRecipes } from "@/lib/recipes-store";
 import { addDishes, deleteDishes, updateDish } from "@/lib/menu-store";
 import { servingsLabel, sortRecipes, type RecipeWithLines } from "@/lib/recipes";
 import type { MenuDish, MenuMeal } from "@/types/database";
@@ -51,39 +64,42 @@ export function DishFormSheet({
 function DishForm({ target, dishes, onDone }: { target: DishFormTarget; dishes: readonly MenuDish[]; onDone: () => void }) {
   const t = useT();
   const lang = useOwnerLocale();
-  const { recipes } = useRecipes();
+  const { recipes, fresh: recipesFresh, errored: recipesErrored } = useRecipes();
   const editing = "dish" in target ? target.dish : null;
-  const startRecipe = editing
-    ? (recipes.find((r) => r.id === editing.recipe_id) ?? null)
-    : "recipe" in target
-      ? (target.recipe ?? null)
-      : null;
+  const picked = !editing && "recipe" in target ? (target.recipe ?? null) : null;
 
   const [day, setDay] = useState(editing?.day ?? ("day" in target ? target.day : ""));
   const [meal, setMeal] = useState<MenuMeal>(editing?.meal ?? ("meal" in target ? target.meal : "lunch"));
-  const [recipe, setRecipe] = useState<RecipeWithLines | null>(startRecipe);
-  const [title, setTitle] = useState(editing?.title ?? startRecipe?.name ?? "");
-  const [servings, setServings] = useState<number | null>(editing?.servings ?? startRecipe?.servings ?? null);
+  // The link is held by id (Codex, PR #101): a dish opened before the recipes
+  // load keeps it, and only "Not this recipe" removes it.
+  const [link, setLink] = useState<DishLink | null>(() => initialDishLink(editing, recipes, picked));
+  const linked = link ? (recipes.find((r) => r.id === link.id) ?? null) : null;
+  const [title, setTitle] = useState(editing?.title ?? picked?.name ?? "");
+  const [servings, setServings] = useState<number | null>(editing?.servings ?? picked?.servings ?? null);
+  // A dish saved without its own servings shows (and keeps) the recipe's.
+  const shownServings = servings ?? linked?.servings ?? null;
   const [notes, setNotes] = useState(editing?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const days = weekDays(weekStart(day));
   const q = title.trim().toLowerCase();
+  // The picker offers recipes only once they came from the server (Codex, PR #101).
   const matches = useMemo(() => {
-    if (recipe) return [];
+    if (link || !recipesFresh) return [];
     const sorted = sortRecipes(recipes);
     return (q ? sorted.filter((r) => r.name.toLowerCase().includes(q) || (r.name_id ?? "").toLowerCase().includes(q)) : sorted).slice(0, 6);
-  }, [recipes, recipe, q]);
+  }, [recipes, recipesFresh, link, q]);
 
   function pick(next: RecipeWithLines) {
-    setRecipe(next);
+    setLink({ id: next.id, name: next.name });
     setTitle(next.name);
     setServings(next.servings);
   }
 
+  /** The owner's own choice: the only way a dish loses its recipe here. */
   function unpick() {
-    setRecipe(null);
+    setLink(null);
     setServings(null);
   }
 
@@ -93,14 +109,7 @@ function DishForm({ target, dishes, onDone }: { target: DishFormTarget; dishes: 
     event.preventDefault();
     if (!canSave) return;
     setSaving(true);
-    const input = {
-      day,
-      meal,
-      recipe_id: recipe?.id ?? null,
-      title: title.trim().slice(0, MENU_LIMITS.title),
-      servings: recipe ? servings : null,
-      notes: notes.trim().slice(0, MENU_LIMITS.notes) || null,
-    };
+    const input = dishSaveFields({ day, meal, link, title, servings, notes });
     try {
       if (editing) {
         const moved = editing.day !== day || editing.meal !== meal;
@@ -174,10 +183,10 @@ function DishForm({ target, dishes, onDone }: { target: DishFormTarget; dishes: 
           <label htmlFor="dish-title" className="text-sm font-medium text-gray-900">
             {t("Dish", "Masakan")}
           </label>
-          {recipe ? (
+          {link ? (
             <div className="flex min-h-12 items-center gap-3 rounded-xl border bg-card px-3">
               <BookOpen className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">{recipe.name}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">{linked?.name ?? link.name}</span>
               <button
                 type="button"
                 onClick={unpick}
@@ -198,6 +207,22 @@ function DishForm({ target, dishes, onDone }: { target: DishFormTarget; dishes: 
                 autoComplete="off"
                 className="min-h-12 rounded-xl"
               />
+              {!recipesFresh && recipes.length === 0 && (
+                <p className="flex items-center gap-2 px-1 text-xs text-muted-foreground" role="status">
+                  {recipesErrored ? (
+                    <>
+                      {t("Recipes couldn't load.", "Resep belum bisa dimuat.")}
+                      <button type="button" onClick={() => void loadRecipes(true)} className="font-medium text-gray-900 underline">
+                        {t("Try again", "Coba lagi")}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Loader2 className="size-3 animate-spin" /> {t("Loading recipes…", "Memuat resep…")}
+                    </>
+                  )}
+                </p>
+              )}
               {matches.length > 0 && (
                 <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
                   {matches.map((r) => (
@@ -218,7 +243,7 @@ function DishForm({ target, dishes, onDone }: { target: DishFormTarget; dishes: 
           )}
         </div>
 
-        {recipe && servings !== null && (
+        {link && shownServings !== null && (
           <div className="flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2">
             <span className="text-sm font-medium text-gray-900">{t("Servings", "Porsi")}</span>
             <div className="flex items-center gap-2">
@@ -226,21 +251,21 @@ function DishForm({ target, dishes, onDone }: { target: DishFormTarget; dishes: 
                 type="button"
                 variant="outline"
                 className="size-11 rounded-xl"
-                onClick={() => setServings((s) => Math.max(MENU_LIMITS.minServings, (s ?? 1) - 1))}
-                disabled={servings <= MENU_LIMITS.minServings}
+                onClick={() => setServings(Math.max(MENU_LIMITS.minServings, shownServings - 1))}
+                disabled={shownServings <= MENU_LIMITS.minServings}
                 aria-label={t("Fewer servings", "Kurangi porsi")}
               >
                 <Minus />
               </Button>
               <span className="min-w-24 text-center text-base font-semibold tabular-nums" aria-live="polite">
-                {servingsLabel(servings, lang)}
+                {servingsLabel(shownServings, lang)}
               </span>
               <Button
                 type="button"
                 variant="outline"
                 className="size-11 rounded-xl"
-                onClick={() => setServings((s) => Math.min(MENU_LIMITS.maxServings, (s ?? 1) + 1))}
-                disabled={servings >= MENU_LIMITS.maxServings}
+                onClick={() => setServings(Math.min(MENU_LIMITS.maxServings, shownServings + 1))}
+                disabled={shownServings >= MENU_LIMITS.maxServings}
                 aria-label={t("More servings", "Tambah porsi")}
               >
                 <Plus />

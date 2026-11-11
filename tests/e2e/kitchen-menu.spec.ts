@@ -462,3 +462,24 @@ test("Undo of a purchase puts the menu's shortfall back on the list (Codex, PR #
   expect(stub.supplies[0].stock_status).toBe("low");
   await expect(page.getByText(/Buy 6 pcs · Running low/)).toBeVisible();
 });
+
+test("editing a dish's note while recipes load keeps its recipe and servings (Codex, PR #101)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    features: { kitchen: true },
+    items: [chicken],
+    recipes: [soto],
+    menu: [dish(0, "lunch", "Chicken soto", { recipe_id: SOTO, servings: 6 })],
+    holdRecipes: true,
+  });
+  await page.goto("/dashboard?module=inventory&kitchen=menu");
+  await page.getByRole("button", { name: /Chicken soto/ }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Edit" }).click();
+  // Still linked, though the recipe hasn't arrived: the chip, not an empty picker.
+  await expect(page.getByRole("button", { name: "Not this recipe" })).toBeVisible();
+  await page.getByLabel("Note (optional)").fill("Less salt");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect.poll(() => stub.menu[0].notes).toBe("Less salt");
+  expect(stub.menu[0]).toMatchObject({ recipe_id: SOTO, servings: 6, title: "Chicken soto" });
+  stub.releaseRecipes();
+});

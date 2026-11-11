@@ -10,6 +10,8 @@ import {
   addDays,
   canCopyLastWeek,
   cookReadiness,
+  dishSaveFields,
+  initialDishLink,
   shortfallReadiness,
   copyLastWeek,
   cookLines,
@@ -304,6 +306,33 @@ describe("Undo of a purchase puts the menu's shortfall back (Codex, PR #101)", (
     const kg = { ...chicken, stock_status: "low" as const, to_buy_amount: 0.5, quantity: 1, track_amount: false };
     expect(undoPurchasePatch(kg, { ...kg, unit: "g" as const, stock_status: "ok", to_buy_amount: null }, null)).toEqual({ stock_status: "low", to_buy_amount: 500 });
     expect(undoPurchasePatch(kg, { ...kg, unit: "buah" as const, stock_status: "ok", to_buy_amount: null }, null)).toEqual({ stock_status: "low" });
+  });
+});
+
+describe("editing a dish never unlinks its recipe by accident (Codex, PR #101)", () => {
+  const linkedDish = dish({ recipe_id: "soto", title: "Chicken soto", servings: 6, notes: null });
+
+  it("a dish opened before the recipes load keeps its link, by id, with its title for a name", () => {
+    expect(initialDishLink(linkedDish, [])).toEqual({ id: "soto", name: "Chicken soto" });
+    expect(initialDishLink(linkedDish, [soto])).toEqual({ id: "soto", name: "Chicken soto" });
+    expect(initialDishLink(dish({ title: "Nasi goreng" }), [soto])).toBeNull();
+    expect(initialDishLink(null, [], soto)).toEqual({ id: "soto", name: "Chicken soto" });
+  });
+
+  it("saving a note keeps recipe_id and servings; only removing the link clears them", () => {
+    const link = initialDishLink(linkedDish, []);
+    const form = { day: linkedDish.day, meal: linkedDish.meal, title: "Chicken soto", servings: 6, notes: " less salt " };
+    expect(dishSaveFields({ ...form, link })).toEqual({
+      day: linkedDish.day,
+      meal: "lunch",
+      recipe_id: "soto",
+      title: "Chicken soto",
+      servings: 6,
+      notes: "less salt",
+    });
+    // A dish saved with the recipe's own servings keeps that (null), not a guess.
+    expect(dishSaveFields({ ...form, servings: null, link }).servings).toBeNull();
+    expect(dishSaveFields({ ...form, link: null })).toMatchObject({ recipe_id: null, servings: null });
   });
 });
 

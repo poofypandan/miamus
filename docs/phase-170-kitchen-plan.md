@@ -168,6 +168,9 @@ Undo and the What's new card.
   snapshot only once the week, the recipes and the items came from the
   server (Loading… / Try again until then); a Bought's Undo puts the
   menu's shortfall back (converted if the unit changed).
+- **Codex at ad81e21**: the dish editor holds a recipe link by id, so
+  editing a dish before the recipes load never unlinks it; only "Not this
+  recipe" does. The picker waits for the recipes from the server.
 - **Not in PR C (less typing / less reading)**: the addendum (Eat soon,
   leftover dishes, Ready to cook, packs, the Menu changed banner), the "won't
   come off" unit hint (the confirm sheet's *Tidak dihitung* says it), cooking

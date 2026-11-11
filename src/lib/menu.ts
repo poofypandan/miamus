@@ -155,6 +155,52 @@ export interface MenuDishInput {
   position: number;
 }
 
+/**
+ * The recipe a dish is linked to in the editor: its id and the name to show
+ * (Codex, PR #101). Held by id, so a dish opened before the recipes load
+ * keeps its link: the name falls back to the dish's title until they arrive.
+ * Only the owner's own "Not this recipe" removes it.
+ */
+export interface DishLink {
+  id: string;
+  name: string;
+}
+
+export function initialDishLink(
+  editing: Pick<MenuDish, "recipe_id" | "title"> | null,
+  recipes: readonly RecipeWithLines[],
+  picked: RecipeWithLines | null = null
+): DishLink | null {
+  if (editing) {
+    if (!editing.recipe_id) return null;
+    const recipe = recipes.find((r) => r.id === editing.recipe_id);
+    return { id: editing.recipe_id, name: recipe?.name ?? editing.title };
+  }
+  return picked ? { id: picked.id, name: picked.name } : null;
+}
+
+/**
+ * What the editor saves. recipe_id and servings come from the link as held:
+ * never null just because the recipes haven't loaded (Codex, PR #101).
+ */
+export function dishSaveFields(form: {
+  day: string;
+  meal: MenuMeal;
+  link: DishLink | null;
+  title: string;
+  servings: number | null;
+  notes: string;
+}): Omit<MenuDishInput, "position"> {
+  return {
+    day: form.day,
+    meal: form.meal,
+    recipe_id: form.link?.id ?? null,
+    title: form.title.trim().slice(0, MENU_LIMITS.title),
+    servings: form.link ? form.servings : null,
+    notes: form.notes.trim().slice(0, MENU_LIMITS.notes) || null,
+  };
+}
+
 /** The next position in a day's meal. */
 export function nextPosition(dishes: readonly MenuDish[], day: string, meal: MenuMeal): number {
   const taken = dishes.filter((d) => d.day === day && d.meal === meal).map((d) => d.position);
