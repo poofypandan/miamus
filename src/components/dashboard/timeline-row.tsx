@@ -34,9 +34,6 @@ import { useOwnerLocale } from "@/context/owner-locale-context";
  * rows in one chronological list, and a second implementation of the same row
  * would be the obvious place for the two to start looking different.
  */
-/** A three-photo routine's steps, in order (Phase 173). */
-const STEP_ORDER: Record<string, number> = { check_in: 0, arrived: 1, check_out: 2 };
-
 export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }) {
   const formatTime = useFormatTime();
   const lang = useScreenLang();
@@ -229,11 +226,9 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
           <LogPhotoThumbnail
             key={log.id}
             log={log}
-            // Every pet's log for this step and the steps after it: a walk's
-            // steps go in order, so taking back its start takes back the
-            // whole walk, and none is left pointing at a removed photo
-            // (Codex, PR #85).
-            logs={walk!.logs.filter((l) => STEP_ORDER[l.sub_type ?? ""] >= STEP_ORDER[log.sub_type ?? ""])}
+            // Every pet's log behind this photo; the later steps go with them
+            // (withLaterSteps, in the thumbnail's delete; Codex, PR #85).
+            logs={walk!.logs.filter((l) => l.photo_url === log.photo_url)}
             title={group.title}
             className="size-12 rounded-xl ring-2 ring-background"
           />

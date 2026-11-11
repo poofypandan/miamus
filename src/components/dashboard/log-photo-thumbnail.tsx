@@ -1,5 +1,6 @@
 "use client";
 
+import { withLaterSteps } from "@/lib/staff-agenda";
 import {
   useRef,
   useState,
@@ -116,7 +117,7 @@ export function LogPhotoThumbnail({
   logs,
 }: LogPhotoThumbnailProps) {
   const lang = useScreenLang();
-  const { userRole, deleteLogWithPhoto, schedules } = useHousehold();
+  const { userRole, deleteLogWithPhoto, schedules, logs: allLogs } = useHousehold();
   const t = useT();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -193,7 +194,7 @@ export function LogPhotoThumbnail({
       // staff card uses.
       // Several photos can be behind one delete (a walk's later steps go with
       // an earlier one, Phase 173): each file goes once, with its last row.
-      const rows = logs && logs.length > 0 ? logs : [log];
+      const rows = withLaterSteps(logs && logs.length > 0 ? logs : [log], allLogs);
       const lastByUrl = new Map<string, number>();
       rows.forEach((row, i) => {
         if (row.photo_url) lastByUrl.set(row.photo_url, i);

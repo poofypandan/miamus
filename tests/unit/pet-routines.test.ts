@@ -9,6 +9,7 @@ import {
   stepTime,
   threePhotoState,
   walkMinutes,
+  withLaterSteps,
 } from "@/lib/staff-agenda";
 import {
   dayBefore,
@@ -222,6 +223,35 @@ describe("cardWalkState: a pet left out of the first walk walks on its own", () 
     expect(state.logs).toEqual([]);
     const mochaStart = log({ id: "x", schedule_id: "wm", entity_id: "mocha", completed_at: at(MONDAY, "09:00"), sub_type: "check_in" });
     expect(cardWalkState(items, [...steps, mochaStart], MONDAY).next).toBe("arrived");
+  });
+});
+
+describe("walk deletes and the latest walk", () => {
+  const steps = (sid: string, pet: string, start: string) =>
+    (["check_in", "arrived", "check_out"] as const).map((sub, i) =>
+      log({ id: `${pet}${i}`, schedule_id: sid, entity_id: pet, completed_at: at(MONDAY, `${start}${i}`), sub_type: sub })
+    );
+  it("takes a pet's later steps with an earlier one, and leaves other pets and logs alone", () => {
+    const matcha = steps("wb", "matcha", "07:0");
+    const mocha = steps("wm", "mocha", "09:0");
+    const meal = log({ id: "meal", schedule_id: "m", entity_id: "matcha", completed_at: at(MONDAY, "08:00") });
+    const all = [...matcha, ...mocha, meal];
+    expect(withLaterSteps([matcha[1]], all).map((l) => l.id)).toEqual(["matcha1", "matcha2"]);
+    expect(withLaterSteps([matcha[0]], all).map((l) => l.id)).toEqual(["matcha0", "matcha1", "matcha2"]);
+    expect(withLaterSteps([matcha[2]], all).map((l) => l.id)).toEqual(["matcha2"]);
+    expect(withLaterSteps([meal], all).map((l) => l.id)).toEqual(["meal"]);
+  });
+  it("shows the walk that ended last when every pet has walked", () => {
+    const rows = [
+      row({ id: "wb", entity_id: "matcha", title: "Jalan-jalan", kind: "walk", fixed_times: ["07:00"], proof: "three" }),
+      row({ id: "wm", entity_id: "mocha", title: "Jalan-jalan", kind: "walk", fixed_times: ["07:00"], proof: "three" }),
+    ];
+    const logs = [...steps("wb", "matcha", "07:0"), ...steps("wm", "mocha", "09:0")];
+    const items = buildAgenda({ date: MONDAY, entities: [MOCHA, MATCHA], schedules: rows, logs, now: NOW })[0].items;
+    const state = cardWalkState(items, logs, MONDAY);
+    expect(state.next).toBeNull();
+    expect(state.end?.id).toBe("mocha2");
+    expect(state.logs.map((l) => l.id)).toEqual(["mocha0", "mocha1", "mocha2"]);
   });
 });
 

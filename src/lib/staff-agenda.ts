@@ -98,7 +98,44 @@ export function cardWalkState(items: AgendaItem[], logs: TaskLog[], date: string
   const all = threePhotoState(items, logs, date);
   if (all.next !== null) return all;
   const open = items.filter((i) => i.status !== "completed");
-  return open.length > 0 ? threePhotoState(open, logs, date) : all;
+  if (open.length > 0) return threePhotoState(open, logs, date);
+  // Every pet walked, perhaps in two walks: the card shows the latest, so
+  // its Batalkan jalan-jalan follows the walk that just ended (Codex, PR #85).
+  // A walk's end photo is one batch, saved at one moment for its pets.
+  const ends = all.logs.filter((l) => l.sub_type === "check_out");
+  const last = ends.reduce<TaskLog | null>((a, l) => (!a || l.completed_at > a.completed_at ? l : a), null);
+  if (!last) return all;
+  const walked = new Set(ends.filter((l) => l.completed_at === last.completed_at).map((l) => l.entity_id));
+  return threePhotoState(items.filter((i) => walked.has(i.entityId)), logs, date);
+}
+
+const STEP_RANK: Record<string, number> = { check_in: 0, arrived: 1, check_out: 2 };
+
+/**
+ * The logs a delete really removes (Phase 173): a three-photo routine's steps
+ * go in order, so taking back a start or arrived photo takes back the same
+ * pet's later steps that day too. Otherwise the end photo would keep the pet
+ * done while its walk reads as unfinished (Codex, PR #85). Every photo view
+ * deletes through this. Other logs pass through unchanged.
+ */
+export function withLaterSteps(rows: TaskLog[], logs: TaskLog[]): TaskLog[] {
+  const out = new Map(rows.map((r) => [r.id, r]));
+  for (const row of rows) {
+    const rank = STEP_RANK[row.sub_type ?? ""];
+    if (rank === undefined || rank === 2 || !row.schedule_id) continue;
+    const day = formatDateLocal(new Date(row.completed_at));
+    for (const l of logs) {
+      if (
+        l.schedule_id === row.schedule_id &&
+        l.entity_id === row.entity_id &&
+        (STEP_RANK[l.sub_type ?? ""] ?? -1) > rank &&
+        formatDateLocal(new Date(l.completed_at)) === day
+      ) {
+        out.set(l.id, l);
+      }
+    }
+  }
+  return [...out.values()];
 }
 
 /** A save that reached the server more than this after the phone's time was sent offline (D14 rule 3). */
