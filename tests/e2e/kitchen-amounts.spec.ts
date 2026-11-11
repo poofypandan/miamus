@@ -236,31 +236,99 @@ test("plus then Habis within the moment the taps wait: the item stays empty (Cod
   expect(stub.writes.filter(([, table]) => table === "rpc/adjust_inventory_quantity")).toHaveLength(0);
 });
 
-test("Habis after a plus already on its way waits for it, so the item still ends empty (code review, PR #93)", async ({ context, page }) => {
+// A slow signal for the stepper's batches: the first takes 2 s, later ones
+// 0.3 s, so without ordering a later batch would overtake the first.
+async function slowBatches(context: import("@playwright/test").BrowserContext) {
+  let n = 0;
+  await context.route("http://supabase.test/rest/v1/rpc/adjust_inventory_quantity*", async (route) => {
+    n += 1;
+    await new Promise((resolve) => setTimeout(resolve, n === 1 ? 2000 : 300));
+    await route.fallback();
+  });
+}
+
+async function openRiceAsStaff(page: import("@playwright/test").Page) {
+  await page.goto("/staff");
+  await page.getByRole("tab", { name: "Dapur" }).click();
+  await page.getByRole("region", { name: "Bahan masakan" }).getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
+}
+
+const stockOrder = (writes: [string, string][]) =>
+  writes.map(([, table]) => table).filter((t) => t === "rpc/adjust_inventory_quantity" || t === "inventory_items");
+
+test("two plus batches on their way, then Habis: Out still wins (Codex, PR #93)", async ({ context, page }) => {
   const stub = await installStub(context, {
     stored: freshSession(),
     staffPhone: true,
     features: { kitchen: true },
     items: [rice({ track_amount: true, quantity: 2, min_threshold: 0, amount_set_at: new Date().toISOString() })],
   });
-  // A slow signal: the plus batch takes 1.5 s to reach the server.
-  await context.route("http://supabase.test/rest/v1/rpc/adjust_inventory_quantity*", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    await route.fallback();
-  });
-  await page.goto("/staff");
-  await page.getByRole("tab", { name: "Dapur" }).click();
-  await page.getByRole("region", { name: "Bahan masakan" }).getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
+  await slowBatches(context);
+  await openRiceAsStaff(page);
 
+  // Plus, past the 600 ms wait (sent); plus again, sent too; then Habis.
   await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
-  // Past the taps' 600 ms wait: the batch is on its way, not queued.
+  await page.waitForTimeout(800);
+  await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
   await page.waitForTimeout(800);
   await page.getByRole("button", { name: "Habis", exact: true }).click();
 
-  await expect.poll(() => stub.supplies[0].stock_status, { timeout: 5_000 }).toBe("out");
-  await page.waitForTimeout(500);
+  await expect.poll(() => stockOrder(stub.writes), { timeout: 8_000 }).toEqual([
+    "rpc/adjust_inventory_quantity",
+    "rpc/adjust_inventory_quantity",
+    "inventory_items",
+  ]);
+  await page.waitForTimeout(300);
   expect(stub.supplies[0]).toMatchObject({ quantity: 0, stock_status: "out" });
-  // The increment reached the server first, then Out.
-  const order = stub.writes.map(([, table]) => table).filter((t) => t === "rpc/adjust_inventory_quantity" || t === "inventory_items");
-  expect(order).toEqual(["rpc/adjust_inventory_quantity", "inventory_items"]);
+  // The screen agrees: no batch's late answer over Out.
+  await page.getByRole("tab", { name: "Dapur" }).click();
+  await expect(page.getByRole("region", { name: "Bahan masakan" }).getByRole("button", { name: /Beras/ })).toContainText("Sisa 0 kg");
+});
+
+test("two plus batches on their way, then Set amount: the typed amount wins, on the server and the screen (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [rice({ track_amount: true, quantity: 2, min_threshold: 0, amount_set_at: new Date().toISOString() })],
+  });
+  await slowBatches(context);
+  await openRiceAsStaff(page);
+
+  await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
+  await page.waitForTimeout(800);
+  await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
+  await page.waitForTimeout(800);
+  await page.getByRole("button", { name: "Ubah jumlah" }).click();
+  await page.getByLabel("Jumlah sekarang").fill("3");
+  await page.getByRole("button", { name: "Simpan" }).click();
+
+  await expect.poll(() => stockOrder(stub.writes), { timeout: 8_000 }).toEqual([
+    "rpc/adjust_inventory_quantity",
+    "rpc/adjust_inventory_quantity",
+    "inventory_items",
+  ]);
+  await page.waitForTimeout(300);
+  expect(stub.supplies[0].quantity).toBe(3);
+  await expect(page.getByText("Sisa 3 kg").first()).toBeVisible();
+  await expect(page.getByText("Sisa 3,5 kg")).toHaveCount(0);
+});
+
+test("a plus batch stuck on a dead signal holds Habis back at most 15 s, then Habis goes (code review, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [rice({ track_amount: true, quantity: 2, min_threshold: 0, amount_set_at: new Date().toISOString() })],
+  });
+  // The batch never gets an answer.
+  await context.route("http://supabase.test/rest/v1/rpc/adjust_inventory_quantity*", () => new Promise<void>(() => undefined));
+  await openRiceAsStaff(page);
+
+  await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
+  await page.waitForTimeout(800);
+  await page.getByRole("button", { name: "Habis", exact: true }).click();
+
+  await expect.poll(() => stub.supplies[0].stock_status, { timeout: 25_000 }).toBe("out");
+  expect(stub.supplies[0].quantity).toBe(0);
 });

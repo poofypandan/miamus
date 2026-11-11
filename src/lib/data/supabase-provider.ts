@@ -98,6 +98,21 @@ function flattenAudit({ staff_profiles, ...audit }: AuditRow): InventoryAuditWit
   return { ...audit, staff_name: staff_profiles?.name ?? null };
 }
 
+/**
+ * Stock writes give up after this long (Phase 170 PR A, code review on #93).
+ * One phone's writes to an item go to the server one after another
+ * (lib/in-order), so a request stuck on a dead signal would otherwise hold
+ * Out or Set amount behind it for minutes. Given up, the write fails like
+ * any other: the screen is put back or refreshed, and the next write goes.
+ */
+export const STOCK_WRITE_TIMEOUT_MS = 15_000;
+
+function stockDeadline(): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), STOCK_WRITE_TIMEOUT_MS);
+  return controller.signal;
+}
+
 export const supabaseProvider: DataProvider = {
   async listEntities() {
     const { data, error } = await client()
@@ -359,6 +374,7 @@ export const supabaseProvider: DataProvider = {
       .from("inventory_items")
       .update(patch)
       .eq("id", id)
+      .abortSignal(stockDeadline())
       .select()
       .single();
     if (error) throw error;
@@ -373,6 +389,7 @@ export const supabaseProvider: DataProvider = {
       .from("inventory_items")
       .update({ stock_status: status, stock_status_by: staffId })
       .eq("id", id)
+      .abortSignal(stockDeadline())
       .select();
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Item was not updated");
@@ -384,6 +401,7 @@ export const supabaseProvider: DataProvider = {
     // deleted under us).
     const { data, error } = await client()
       .rpc("adjust_inventory_quantity", { p_item_id: id, p_delta: delta, p_staff_id: staffId })
+      .abortSignal(stockDeadline())
       .select()
       .single();
     if (error) throw error;
@@ -393,6 +411,7 @@ export const supabaseProvider: DataProvider = {
     // migrations/148: security invoker, so RLS and the owner guard apply.
     const { data, error } = await client()
       .rpc("record_purchase", { p_item_id: id, p_amount: amount, p_staff_id: staffId })
+      .abortSignal(stockDeadline())
       .select()
       .single();
     if (error) throw error;

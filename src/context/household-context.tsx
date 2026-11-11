@@ -25,6 +25,7 @@ import type {
 } from "@/lib/data";
 import { LEAVE_LOOKBACK_DAYS } from "@/lib/leave";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
+import { createInOrder } from "@/lib/in-order";
 import { applyAmountRules, lastBoughtInUnit, undoPurchasePatch } from "@/lib/kitchen-units";
 import {
   readCachedMemberProfile,
@@ -1122,59 +1123,38 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // them. Refs, not state: nothing renders from them.
   const pendingStock = useRef(new Map<string, { delta: number; timer: ReturnType<typeof setTimeout> }>());
 
-  // Minus/plus taps not sent yet stop counting once someone says what is
-  // there outright (Set amount, Out on a tracked item, Track amount's
-  // number): sent afterwards, they'd land on top of it (code review and
-  // Codex, PR #93). They're already on the screen, which the write replaces.
-  // A batch already on its way can't be called back: the outright write
-  // waits for it, so the server sees them in order, and the batch's late
-  // answer isn't shown over the newer value (code review, PR #93).
-  const sendingStock = useRef(new Map<string, Promise<unknown>>());
-  const stockOverrides = useRef(new Map<string, number>());
-  const dropPendingTaps = useCallback((id: string): Promise<unknown> => {
-    const pending = pendingStock.current.get(id);
-    if (pending) {
-      clearTimeout(pending.timer);
-      pendingStock.current.delete(id);
-    }
-    stockOverrides.current.set(id, (stockOverrides.current.get(id) ?? 0) + 1);
-    return sendingStock.current.get(id) ?? Promise.resolve();
-  }, []);
-
-  const setInventoryStatus = useCallback(async (id: string, status: StockStatus) => {
-    // Out empties a tracked item (migrations/148): unsent plus taps would
-    // put an amount back after it.
-    const settled =
-      status === "out" && inventoryItemsRef.current.find((i) => i.id === id)?.track_amount === true
-        ? dropPendingTaps(id)
-        : Promise.resolve();
-    // Shown at once; put back if the save fails.
-    let previous: InventoryItem | undefined;
-    setInventoryItems((prev) =>
-      prev.map((i) => {
-        if (i.id !== id) return i;
-        previous = i;
-        // On a tracked item, Out also empties it (migrations/148).
-        return applyAmountRules(i, { ...i, stock_status: status, stock_status_by: readActiveStaffId() });
-      })
-    );
-    try {
-      await settled;
-      const item = await dataProvider.setInventoryStatus(id, status, readActiveStaffId());
-      setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
-      return item;
-    } catch (err) {
-      if (previous) {
-        const restore = previous;
-        setInventoryItems((prev) => prev.map((i) => (i.id === id ? restore : i)));
+  // Every write to one item from this phone (taps, Out, Set amount, Bought,
+  // Undo, Track amount) goes to the server in the order it was made, one
+  // after another (lib/in-order): on a slow signal, an increment sent
+  // before Out can no longer land after it (Codex, PR #93). An answer is
+  // shown only if no newer write to that item is still on its way and no
+  // taps are waiting to be sent: those are already on the screen.
+  const stockWrites = useRef(createInOrder());
+  const sendStockWrite = useCallback(
+    async (id: string, send: () => Promise<InventoryItem>): Promise<InventoryItem> => {
+      const { value, latest } = await stockWrites.current.run(id, send);
+      if (latest && !pendingStock.current.has(id)) {
+        setInventoryItems((prev) => prev.map((i) => (i.id === id ? value : i)));
       }
-      throw err;
-    }
-  }, [dropPendingTaps]);
+      return value;
+    },
+    []
+  );
+
+  // Taps not sent yet stop counting once someone says what is there
+  // outright (Set amount, Out on a tracked item, Track amount's number):
+  // they're already on the screen, which the outright write replaces. Taps
+  // already sent are ahead of it in the queue, so it still wins.
+  const dropPendingTaps = useCallback((id: string) => {
+    const pending = pendingStock.current.get(id);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pendingStock.current.delete(id);
+  }, []);
 
   // Kitchen amounts (Phase 170 PR A): one optimistic write, mirrored
   // through the amount rules (lib/kitchen-units, as migrations/148's
-  // trigger), put back if it fails.
+  // trigger), sent in order, put back if it fails.
   const writeInventoryItem = useCallback(
     async (id: string, patch: InventoryItemPatch, send: () => Promise<InventoryItem>) => {
       let previous: InventoryItem | undefined;
@@ -1186,9 +1166,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         })
       );
       try {
-        const item = await send();
-        setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
-        return item;
+        return await sendStockWrite(id, send);
       } catch (err) {
         if (previous) {
           const restore = previous;
@@ -1197,18 +1175,31 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         throw err;
       }
     },
-    []
+    [sendStockWrite]
+  );
+
+  const setInventoryStatus = useCallback(
+    (id: string, status: StockStatus) => {
+      const staffId = readActiveStaffId();
+      // Out empties a tracked item (migrations/148): unsent plus taps would
+      // put an amount back after it.
+      if (status === "out" && inventoryItemsRef.current.find((i) => i.id === id)?.track_amount === true) {
+        dropPendingTaps(id);
+      }
+      // On a tracked item, the screen also empties it at once.
+      return writeInventoryItem(id, { stock_status: status, stock_status_by: staffId }, () =>
+        dataProvider.setInventoryStatus(id, status, staffId)
+      );
+    },
+    [dropPendingTaps, writeInventoryItem]
   );
 
   const setInventoryAmount = useCallback(
     (id: string, quantity: number) => {
       // The typed amount replaces any minus/plus taps not sent yet.
-      const settled = dropPendingTaps(id);
+      dropPendingTaps(id);
       const patch: InventoryItemPatch = { quantity: Math.max(0, quantity), amount_set_by: readActiveStaffId() };
-      return writeInventoryItem(id, patch, async () => {
-        await settled;
-        return dataProvider.updateInventoryItem(id, patch);
-      });
+      return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
     },
     [dropPendingTaps, writeInventoryItem]
   );
@@ -1238,9 +1229,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       // can't erase another phone's change (undoPurchasePatch).
       let now = inventoryItemsRef.current.find((i) => i.id === before.id) ?? before;
       if (before.track_amount === true && amount !== null) {
-        now = await dataProvider.adjustInventoryQuantity(before.id, -amount, staffId);
-        const fresh = now;
-        setInventoryItems((prev) => prev.map((i) => (i.id === before.id ? fresh : i)));
+        now = await sendStockWrite(before.id, () => dataProvider.adjustInventoryQuantity(before.id, -amount, staffId));
       }
       const back = undoPurchasePatch(before, now, amount);
       if (!back) return;
@@ -1249,13 +1238,13 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       const patch: InventoryItemPatch = { ...back, ...(back.stock_status ? { stock_status_by: staffId } : {}) };
       await writeInventoryItem(before.id, patch, () => dataProvider.updateInventoryItem(before.id, patch));
     },
-    [writeInventoryItem]
+    [sendStockWrite, writeInventoryItem]
   );
 
   const setTrackAmount = useCallback(
     (id: string, settings: TrackAmountSettings) => {
       // The number typed here is what's there now.
-      const settled = settings.track ? dropPendingTaps(id) : Promise.resolve();
+      if (settings.track) dropPendingTaps(id);
       const current = inventoryItemsRef.current.find((i) => i.id === id);
       const patch: InventoryItemPatch = settings.track
         ? {
@@ -1272,10 +1261,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
               : {}),
           }
         : { track_amount: false };
-      return writeInventoryItem(id, patch, async () => {
-        await settled;
-        return dataProvider.updateInventoryItem(id, patch);
-      });
+      return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
     },
     [dropPendingTaps, writeInventoryItem]
   );
@@ -1564,30 +1550,20 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     const timer = setTimeout(async () => {
       pending.delete(id);
       if (total === 0) return;
-      const overridesAtSend = stockOverrides.current.get(id) ?? 0;
-      const sending = dataProvider.adjustInventoryQuantity(id, total, staffId);
-      const tracked = sending.catch(() => undefined);
-      sendingStock.current.set(id, tracked);
       try {
-        const item = await sending;
-        // Only if no newer taps landed while this was in flight, and nobody
-        // has said the amount outright since (Set amount, Out): those are
-        // already on screen and on their way, and this answer predates them.
-        if (!pending.has(id) && (stockOverrides.current.get(id) ?? 0) === overridesAtSend) {
-          setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
-        }
+        // In order behind any earlier write to this item (lib/in-order);
+        // the answer is shown only if nothing newer is on its way.
+        await sendStockWrite(id, () => dataProvider.adjustInventoryQuantity(id, total, staffId));
       } catch (err) {
         console.error(err);
         toast.error(
           screenLocale() === "id" ? "Gagal memperbarui stok" : "Couldn't update the stock"
         );
         void refreshRef.current({ silent: true });
-      } finally {
-        if (sendingStock.current.get(id) === tracked) sendingStock.current.delete(id);
       }
     }, 600);
     pending.set(id, { delta: total, timer });
-  }, []);
+  }, [sendStockWrite]);
 
   // Online only, unlike task logging: the photo is the audit, and the offline
   // queue carries URLs rather than files — queueing it would mean holding the
