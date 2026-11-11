@@ -254,7 +254,10 @@ export function applyAmountRules(before: InventoryItem | null, after: InventoryI
     if (amountChanged || trackingOn) next.amount_set_at = stamp;
     if (amountChanged || trackingOn || next.min_threshold !== before?.min_threshold) {
       const derived = deriveStatus(next.quantity, next.min_threshold);
-      if (derived !== statusBefore) next.stock_status_by = next.amount_set_by ?? null;
+      if (derived !== statusBefore) {
+        const credited = amountChanged || trackingOn || next.amount_set_by !== before?.amount_set_by;
+        next.stock_status_by = credited ? (next.amount_set_by ?? null) : null;
+      }
       next.stock_status = derived;
     } else if (next.stock_status === "out" && statusBefore !== "out") {
       next.quantity = 0;

@@ -168,6 +168,8 @@ select pg_temp.ok((pg_temp.item(:rice)).quantity = 5 and (pg_temp.item(:rice)).s
   'staff buy 5 kg: added, enough, kept as the pre-fill');
 update public.inventory_items set min_threshold = 6 where id = :rice::uuid;
 select pg_temp.ok((pg_temp.item(:rice)).stock_status = 'low', 'raising the low level above the amount: running low');
+select pg_temp.ok((pg_temp.item(:rice)).stock_status_by is null,
+  '... credited to nobody, not to whoever last changed the amount (code review)');
 select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.record_purchase(%L, 0.2, %L) $q$, :rice, :s1)) = '', 'buying too little leaves it running low (runs)');
 select pg_temp.ok((pg_temp.item(:rice)).quantity = 5.2 and (pg_temp.item(:rice)).stock_status = 'low',
   'buying too little leaves it running low');

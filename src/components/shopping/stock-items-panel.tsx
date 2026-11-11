@@ -29,7 +29,8 @@ export function StockItemsPanel({
 }: {
   /** For the heading's aria link. */
   id: string;
-  title: string;
+  /** None on the staff's Belanja, which had no heading (no new reading for staff). */
+  title?: string;
   hint?: string;
   items: InventoryItem[];
   lang: "en" | "id";
@@ -53,21 +54,42 @@ export function StockItemsPanel({
   }
 
   return (
-    <section className="flex flex-col gap-2" aria-labelledby={id}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-col">
-          <h2 id={id} className="text-sm font-semibold text-gray-900">
-            {title}
-          </h2>
-          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    <section
+      className="flex flex-col gap-2"
+      aria-labelledby={title ? id : undefined}
+    >
+      {(title || (owner && addLabel)) && (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-col">
+            {title && (
+              <h2 id={id} className="text-sm font-semibold text-gray-900">
+                {title}
+              </h2>
+            )}
+            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+          </div>
+          {owner && addLabel && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-mr-2 min-h-10"
+              onClick={() => edit("new")}
+            >
+              <Plus /> {addLabel}
+            </Button>
+          )}
         </div>
-        {owner && addLabel && (
-          <Button variant="ghost" size="sm" className="-mr-2 min-h-10" onClick={() => edit("new")}>
-            <Plus /> {addLabel}
-          </Button>
-        )}
-      </div>
-      {items.length === 0 ? empty : <ItemList items={items} lang={lang} onPress={setChoosing} headings={headings} />}
+      )}
+      {items.length === 0 ? (
+        empty
+      ) : (
+        <ItemList
+          items={items}
+          lang={lang}
+          onPress={setChoosing}
+          headings={headings}
+        />
+      )}
 
       <StockStatusSheet
         item={choosing}

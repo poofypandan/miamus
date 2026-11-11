@@ -165,6 +165,13 @@ describe("the rules mirror (as migrations/148's trigger)", () => {
     expect(out.quantity).toBe(0);
   });
 
+  it("credits a low-level-only change to nobody, not the last person who moved the amount", () => {
+    const bySari = { ...tracked, amount_set_by: "sari", stock_status_by: "sari" };
+    const raised = applyAmountRules(bySari, { ...bySari, min_threshold: 5 }, NOW);
+    expect(raised.stock_status).toBe("low");
+    expect(raised.stock_status_by).toBeNull();
+  });
+
   it("leaves untracked items alone", () => {
     const plain = item({ quantity: 2 });
     const next = applyAmountRules(plain, { ...plain, quantity: 0, stock_status: "out" }, NOW);

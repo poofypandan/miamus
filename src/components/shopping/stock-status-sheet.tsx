@@ -174,10 +174,18 @@ export function StockStatusSheet({
  * The quiet word beside an item that needs buying; nothing for one that is
  * fine (Phase 153 colour rule: red only for out, amber for running low).
  */
-export function StockStatusText({ item, lang }: { item: InventoryItem; lang: "en" | "id" }) {
+export function StockStatusText({
+  item,
+  lang,
+  showAmounts = false,
+}: {
+  item: InventoryItem;
+  lang: "en" | "id";
+  /** Kitchen amounts on (read once by the list, not per row). */
+  showAmounts?: boolean;
+}) {
   const status = stockStatus(item);
-  const flags = useHouseholdFeatures();
-  if (amountsOn(flags) && isTracked(item)) {
+  if (showAmounts && isTracked(item)) {
     // "1,2 kg left", grey and "about …" once untouched for 14 days (D2),
     // with the status word when it's running low or out.
     const line = amountLine(item, lang);

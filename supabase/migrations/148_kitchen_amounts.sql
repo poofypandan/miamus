@@ -150,7 +150,8 @@ grant execute on function public.inventory_items_owner_guard() to service_role;
 --   * A tracked row's status follows its amount whenever the amount, the
 --     low level or tracking changed: nothing left → out; at or below
 --     min_threshold (when > 0) → low; else ok. When that changes the
---     status, it's credited to whoever changed the amount.
+--     status, it's credited to whoever changed the amount or settings in
+--     this write (nobody, if a low level alone moved it).
 --   * Otherwise, a tap on Out empties a tracked row; a tap on Running low
 --     only changes the status, and stays until the amount next changes.
 --   * Untracked rows: as 122 (the amount isn't read or shown).
@@ -196,8 +197,14 @@ begin
         when new.min_threshold > 0 and new.quantity <= new.min_threshold then 'low'
         else 'ok'
       end;
+      -- Credited to whoever changed the amount or the settings in this
+      -- write, never to the last person who happened to change the amount.
       if derived is distinct from old.stock_status then
-        new.stock_status_by := new.amount_set_by;
+        new.stock_status_by := case
+          when amount_changed or tracking_on or new.amount_set_by is distinct from old.amount_set_by
+            then new.amount_set_by
+          else null
+        end;
       end if;
       new.stock_status := derived;
     elsif new.stock_status = 'out' and old.stock_status is distinct from 'out' then

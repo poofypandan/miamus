@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { usePurchase } from "@/components/shopping/bought-sheet";
-import { ToBuyRow } from "@/components/shopping/shopping-tab";
+import { ToBuyRow } from "@/components/shopping/to-buy-row";
 import { StockItemsPanel } from "@/components/shopping/stock-items-panel";
 import { useHousehold } from "@/context/household-context";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
@@ -79,7 +79,6 @@ export function StaffShopping() {
 
       <StockItemsPanel
         id="staff-supplies"
-        title="Stok di rumah"
         items={items}
         lang="id"
         owner={false}

@@ -1142,6 +1142,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // The stepper's taps not yet sent, per item, and the timer that will send
+  // them. Refs, not state: nothing renders from them.
+  const pendingStock = useRef(new Map<string, { delta: number; timer: ReturnType<typeof setTimeout> }>());
+
   // Kitchen amounts (Phase 170 PR A): one optimistic write, mirrored
   // through the amount rules (lib/kitchen-units, as migrations/148's
   // trigger), put back if it fails.
@@ -1172,6 +1176,13 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
   const setInventoryAmount = useCallback(
     (id: string, quantity: number) => {
+      // The typed amount replaces any minus/plus taps not sent yet; sent
+      // after it, they'd land on top of the number the person typed.
+      const pending = pendingStock.current.get(id);
+      if (pending) {
+        clearTimeout(pending.timer);
+        pendingStock.current.delete(id);
+      }
       const patch: InventoryItemPatch = { quantity: Math.max(0, quantity), amount_set_by: readActiveStaffId() };
       return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
     },
@@ -1204,9 +1215,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         const item = await dataProvider.adjustInventoryQuantity(before.id, -amount, staffId);
         setInventoryItems((prev) => prev.map((i) => (i.id === before.id ? item : i)));
       }
+      // The status back, credited to whoever undid it: the earlier marker
+      // may have been removed since, and 148 refuses a removed person's id.
       const patch: InventoryItemPatch = {
         stock_status: before.stock_status ?? "ok",
-        stock_status_by: before.stock_status_by ?? null,
+        stock_status_by: staffId,
         last_bought_amount: before.last_bought_amount ?? null,
       };
       await writeInventoryItem(before.id, patch, () => dataProvider.updateInventoryItem(before.id, patch));
@@ -1475,9 +1488,6 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     refreshRef.current = refresh;
   }, [refresh]);
 
-  // The stepper's taps not yet sent, per item, and the timer that will send
-  // them. Refs, not state: nothing renders from them.
-  const pendingStock = useRef(new Map<string, { delta: number; timer: ReturnType<typeof setTimeout> }>());
 
   /**
    * A stepper tap (Phase 110).

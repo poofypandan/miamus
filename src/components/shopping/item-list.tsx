@@ -2,6 +2,8 @@
 
 import { ChevronRight } from "lucide-react";
 import { StockStatusText } from "@/components/shopping/stock-status-sheet";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { amountsOn } from "@/lib/features";
 import {
   CATEGORY_ICONS,
   INVENTORY_SCOPES,
@@ -31,6 +33,7 @@ export function ItemList({
   headings?: boolean;
 }) {
   const scopes = lang === "id" ? SCOPE_LABELS_ID : SCOPE_LABELS_EN;
+  const showAmounts = amountsOn(useHouseholdFeatures());
   return (
     <div className="flex flex-col gap-4">
       {INVENTORY_SCOPES.map((scope) => {
@@ -64,7 +67,7 @@ export function ItemList({
                       </span>
                     )}
                     <span className="min-w-0 flex-1 truncate">{stockItemName(item)}</span>
-                    <StockStatusText item={item} lang={lang} />
+                    <StockStatusText item={item} lang={lang} showAmounts={showAmounts} />
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                   </button>
                 );

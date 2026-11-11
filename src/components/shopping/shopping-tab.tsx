@@ -2,13 +2,14 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Circle, ClipboardCopy, Loader2, MessageCircle, Package, Plus } from "lucide-react";
+import { ClipboardCopy, Loader2, MessageCircle, Package, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { usePurchase } from "@/components/shopping/bought-sheet";
 import { StockItemsPanel } from "@/components/shopping/stock-items-panel";
+import { ToBuyRow } from "@/components/shopping/to-buy-row";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
@@ -27,7 +28,6 @@ import {
 } from "@/lib/inventory";
 import { isActiveAlert } from "@/lib/inventory-status";
 import { DATE_LOCALE } from "@/lib/owner-locale";
-import { cn } from "@/lib/utils";
 import type { InventoryAlert } from "@/types/database";
 
 /**
@@ -264,42 +264,6 @@ export function ShoppingTab() {
         }
       />
       {purchase.sheet}
-    </div>
-  );
-}
-
-/** One thing to buy: a round tick on the left, like a checklist. */
-export function ToBuyRow({
-  title,
-  detail,
-  out = false,
-  tickLabel,
-  onTick,
-}: {
-  title: string;
-  detail: string;
-  out?: boolean;
-  tickLabel: string;
-  onTick: () => void;
-}) {
-  return (
-    <div className="flex min-h-[56px] items-center gap-3 pr-3">
-      <button
-        type="button"
-        onClick={onTick}
-        aria-label={tickLabel}
-        className="flex size-12 shrink-0 items-center justify-center text-muted-foreground active:text-gray-900"
-      >
-        <Circle className="size-5" />
-      </button>
-      <span className="flex min-w-0 flex-1 flex-col py-2">
-        <span className="truncate text-sm font-medium">{title}</span>
-        {detail && (
-          <span className={cn("truncate text-xs", out ? "text-red-700" : "text-muted-foreground")}>
-            {detail}
-          </span>
-        )}
-      </span>
     </div>
   );
 }

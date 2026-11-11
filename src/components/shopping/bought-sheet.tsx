@@ -44,7 +44,11 @@ export function usePurchase(lang: "en" | "id"): { buy: (item: InventoryItem) => 
         toast.success(text, {
           action: {
             label: id ? "Batalkan" : "Undo",
-            onClick: () => void undoPurchase(before, amount).catch(() => undefined),
+            onClick: () =>
+              void undoPurchase(before, amount).catch((err) => {
+                console.error(err);
+                toast.error(id ? "Gagal membatalkan. Coba lagi." : "Couldn't undo. Try again.");
+              }),
           },
         });
         return true;
