@@ -89,6 +89,15 @@ export function awaitsReview(repair: Repair, walkIns: readonly RepairWalkIn[] = 
   return repair.status === "reported" && !walkIns.some((v) => v.repair_id === repair.id);
 }
 
+/**
+ * Owners may note its cost (repair_costs is owners-only, whatever the
+ * status): once it's no longer waiting for review, which a staff report
+ * with a walk-in never is (Codex, PR #94). Staff never see this section.
+ */
+export function costEntryOpen(repair: Repair, walkIns: readonly RepairWalkIn[] = []): boolean {
+  return !awaitsReview(repair, walkIns);
+}
+
 /** Open for the lists: an accepted repair, or a staff report with a walk-in. */
 export function isOpenRepair(repair: Repair, walkIns: readonly RepairWalkIn[] = []): boolean {
   return repair.status === "open" || (repair.status === "reported" && !awaitsReview(repair, walkIns));

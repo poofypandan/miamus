@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { expandChores } from "@/lib/chore-recurrence";
 import { buildAgenda } from "@/lib/scheduleEngine";
 import { buildStaffProgress } from "@/lib/staff-progress";
-import { awaitsReview, repairStage, repairsBoard, repairsToday, staffRepairStatus } from "@/lib/repairs";
+import { awaitsReview, costEntryOpen, repairStage, repairsBoard, repairsToday, staffRepairStatus } from "@/lib/repairs";
 import {
   DEVELOPER_CHIP,
   isForgotten,
@@ -171,6 +171,13 @@ describe("a repair's stage with walk-ins", () => {
     expect(board.toReview).toHaveLength(0);
     expect(board.open.map((r) => r.id)).toEqual(["r1"]);
     expect(repairsToday([report], [], [visit]).toReview).toBe(0);
+  });
+
+  it("owners can note the cost of a staff report with a walk-in, as of any accepted repair (Codex, PR #94)", () => {
+    const report = repair({ status: "reported" });
+    expect(costEntryOpen(report, [])).toBe(false);
+    expect(costEntryOpen(report, [walkIn()])).toBe(true);
+    expect(costEntryOpen(repair(), [])).toBe(true);
   });
 
   it("is working while a walk-in is open, then work done, unless coming back", () => {

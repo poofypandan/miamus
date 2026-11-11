@@ -5,11 +5,12 @@ import {
   outboxItems,
   SaveStillWaitingError,
   submitJob,
+  type OutboxJob,
   type SendResult,
   type SubmitOutcome,
 } from "@/lib/offline-queue";
 import { discardPhoto } from "@/lib/photo-queue";
-import { forgetWalkIn, keepWalkIn, loadRepairs } from "@/lib/repairs-store";
+import { forgetWalkIn, keepSent, loadRepairs } from "@/lib/repairs-store";
 
 /**
  * Walk-in saves (Phase 174), each through the save queue (Phase 161): kept
@@ -17,9 +18,12 @@ import { forgetWalkIn, keepWalkIn, loadRepairs } from "@/lib/repairs-store";
  * never loses one. The ids are made here, so a resend is "already saved".
  */
 
-function landed(result: SendResult) {
-  if (result.kind === "walkin" && result.walkIn) keepWalkIn(result.walkIn);
-  void loadRepairs(true);
+/** The save's whole effect stays on screen until a reload has the server's copy. */
+function landed(job: OutboxJob) {
+  return (result: SendResult) => {
+    keepSent(job, result.kind === "walkin" ? result.walkIn : null);
+    void loadRepairs(true);
+  };
 }
 
 /** "Ada tukang datang": the walk-in, and with "Baru" its repair first. */
@@ -27,7 +31,8 @@ export function startWalkIn(
   visit: WalkInStartInput,
   repair: (RepairInput & { id: string }) | null
 ): Promise<SubmitOutcome> {
-  return submitJob<SendResult>({ kind: "walkin_start", repair, visit }, landed);
+  const job: OutboxJob = { kind: "walkin_start", repair, visit };
+  return submitJob<SendResult>(job, landed(job));
 }
 
 /**
@@ -39,19 +44,18 @@ export function finishWalkIn(
   finish: WalkInFinishInput,
   releases: string | null
 ): Promise<SubmitOutcome> {
-  return submitJob<SendResult>({ kind: "walkin_finish", visitId, finish, releases }, landed);
+  const job: OutboxJob = { kind: "walkin_finish", visitId, finish, releases };
+  return submitJob<SendResult>(job, landed(job));
 }
 
 /** "Ganti yang mengawasi", from `releases` (the current supervisor) to `staffId`. */
 export function handOverSupervision(visitId: string, staffId: string, releases: string | null): Promise<SubmitOutcome> {
-  return submitJob<SendResult>(
-    {
-      kind: "supervision_handover",
-      input: { id: crypto.randomUUID(), visit_id: visitId, staff_id: staffId },
-      releases,
-    },
-    () => void loadRepairs(true)
-  );
+  const job: OutboxJob = {
+    kind: "supervision_handover",
+    input: { id: crypto.randomUUID(), visit_id: visitId, staff_id: staffId },
+    releases,
+  };
+  return submitJob<SendResult>(job, landed(job));
 }
 
 function dropPhoto(url: string | null | undefined) {

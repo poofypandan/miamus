@@ -1,7 +1,7 @@
 import { dataProvider } from "@/lib/data";
 import { waitForSession } from "@/lib/auth/device-session";
 import { getActiveHouseholdId } from "@/lib/tenant";
-import type { OfflineQueueItem } from "@/lib/offline-queue";
+import type { OfflineQueueItem, OutboxJob } from "@/lib/offline-queue";
 import type { HouseholdTask, Repair, RepairNote, RepairSupervision, RepairWalkIn } from "@/types/database";
 
 /**
@@ -159,10 +159,21 @@ export async function confirmRepairs(): Promise<void> {
   if (snapshot.failed) throw new Error("Repairs not reloaded");
 }
 
-/** A walk-in the server just answered with, on screen before the reload. */
-export function keepWalkIn(row: RepairWalkIn): void {
-  if (snapshot.household !== row.household_id) return;
-  emit({ ...snapshot, walkIns: [...snapshot.walkIns.filter((v) => v.id !== row.id), row] });
+/**
+ * A walk-in save the server just took (Phase 174): its whole effect (the
+ * "Baru" repair, the walk-in, the stretch opened, closed or handed over)
+ * is laid onto the cache, as overlayRepairsOutbox shows it while waiting,
+ * with the server's row for the walk-in where there is one. The save then
+ * leaves the queue; if the reload after it fails, nothing it made vanishes
+ * from the screen until the next one works (Codex, PR #94).
+ */
+export function keepSent(job: OutboxJob, walkIn: RepairWalkIn | null): void {
+  const household = currentHousehold();
+  if (!household || snapshot.household !== household) return;
+  const item: OfflineQueueItem = { id: `sent:${Date.now()}`, job, householdId: household, timestamp: Date.now() };
+  const next = overlayRepairsOutbox(snapshot, [item], household);
+  const walkIns = walkIn ? [...next.walkIns.filter((v) => v.id !== walkIn.id), walkIn] : next.walkIns;
+  emit({ ...snapshot, repairs: next.repairs, walkIns, supervision: next.supervision });
 }
 
 /** A walk-in taken back: off the screen at once (its stretches went with it). */

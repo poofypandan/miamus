@@ -20,7 +20,7 @@ import { useToday } from "@/hooks/use-today";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { dataProvider } from "@/lib/data";
 import { photoSrc } from "@/lib/photos";
-import { REPAIR_LIMITS, repairStage, visitNotes, visitTitle, visitsOf, walkInAsTask, warrantyLabel } from "@/lib/repairs";
+import { REPAIR_LIMITS, costEntryOpen, repairStage, visitNotes, visitTitle, visitsOf, walkInAsTask, warrantyLabel } from "@/lib/repairs";
 import {
   isOpenWalkIn,
   ownerOutcomeLabel,
@@ -279,7 +279,7 @@ function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallb
 
         {/* PR B (migrations/131): what it cost (owners only), and the thread —
             below the next step, which is what the sheet is opened for. */}
-        {repair.status !== "reported" && <RepairCostSection repairId={repair.id} />}
+        {costEntryOpen(repair, walkIns) && <RepairCostSection repairId={repair.id} />}
         <RepairNotes repairId={repair.id} locale={locale} />
 
         <div className="flex items-center justify-center gap-2 border-t pt-3">
