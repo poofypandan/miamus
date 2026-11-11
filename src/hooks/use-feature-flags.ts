@@ -121,6 +121,20 @@ export function useFeatureFlagsFor(householdId: string, tenantReady: boolean): {
   return { flags: entry.flags, ready: entry.ready };
 }
 
+/**
+ * Read the switches again for every household this page has read, keeping
+ * what's on screen until the answer lands (no flash). The household's
+ * foreground and reconnection refresh calls it, so a phone that was already
+ * open follows an owner's switch without a reload (Codex, PR #87).
+ */
+export function refreshFeatures() {
+  for (const [householdId, entry] of entries) {
+    if (!entry.fetched) continue;
+    entry.fetched = false;
+    void fetchFeatures(householdId);
+  }
+}
+
 /** For tests: forget everything read this page session. */
 export function resetHouseholdFeaturesCache() {
   entries.clear();

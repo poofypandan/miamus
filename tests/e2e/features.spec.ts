@@ -128,3 +128,24 @@ test("staff phone with everything on keeps both buttons", async ({ context, page
   await expect(sheet.getByRole("button", { name: /Lapor kerusakan/ })).toBeVisible();
   await expect(sheet.getByRole("button", { name: /Makanan masuk/ })).toBeVisible();
 });
+
+test("an open staff phone follows a switch on its next foreground refresh, no reload (Codex, PR #87)", async ({ context, page }) => {
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true, features: { food: false } });
+  await page.clock.install();
+  await page.goto("/staff");
+  await page.getByRole("button", { name: /^Lapor/ }).click({ timeout: 20_000 });
+  await expect(page.getByRole("dialog").getByRole("button", { name: /Lapor kerusakan/ })).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("button", { name: /Makanan masuk/ })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => ((window as unknown as { __noReload: boolean }).__noReload = true));
+
+  // The owner switches Food at home back on from another phone.
+  stub.features.food = true;
+  // The phone comes back to the front later (past the 30-second throttle).
+  await page.clock.fastForward("01:00");
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+
+  await page.getByRole("button", { name: /^Lapor/ }).click();
+  await expect(page.getByRole("dialog").getByRole("button", { name: /Makanan masuk/ })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __noReload?: boolean }).__noReload)).toBe(true);
+});
