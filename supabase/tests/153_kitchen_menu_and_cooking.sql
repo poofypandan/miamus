@@ -241,6 +241,41 @@ select pg_temp.ok((select cooked_at is null from public.menu_dishes where id = :
                   and (select quantity = 1.5 from public.inventory_items where id = :chicken::uuid),
   'none of the refused calls cooked anything or moved the chicken');
 
+-- ---- A unit changed between cooking and Undo (Codex, PR #101) ----------------------------
+-- Rice is in kg; cooking takes 0,5 kg and keeps the unit with it.
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.cook_menu_dish(%L, '[{"item_id":"%s","amount":0.5,"unit":"kg"}]'::jsonb, null) $q$, :lunch, :rice)) = '',
+  'cooking 0,5 kg of rice (runs)');
+select pg_temp.ok((select cooked_uses = '[{"item_id": "00000000-0000-0000-0000-0000000153e2", "amount": 0.5, "unit": "kg"}]'::jsonb from public.menu_dishes where id = :lunch::uuid),
+  '... cooked_uses keeps the unit');
+-- The owner switches rice to grams: 3,5 kg is 3500 g.
+select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set unit = 'g', quantity = 3500 where id = %L $q$, :rice)) = 1,
+  'the owner switches rice to grams (3500 g)');
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.uncook_menu_dish(%L) $q$, :lunch)) = '',
+  'Undo after the unit change (runs)');
+select pg_temp.ok((select quantity = 4000 and unit = 'g' from public.inventory_items where id = :rice::uuid),
+  '... puts back 500 g, not 0,5 g');
+-- Cooking 500 g asked in grams; the owner switches rice to buah; Undo skips it.
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.cook_menu_dish(%L, '[{"item_id":"%s","amount":500,"unit":"g"}]'::jsonb, null) $q$, :lunch, :rice)) = '',
+  'cooking 500 g of rice (runs)');
+select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set unit = 'buah', quantity = 7 where id = %L $q$, :rice)) = 1,
+  'the owner switches rice to buah (7)');
+select pg_temp.ok((pg_temp.json_as(:a1, format($q$ select public.uncook_menu_dish(%L) $q$, :lunch)) -> 'skipped' -> 0 ->> 'item_id') = '00000000-0000-0000-0000-0000000153e2',
+  'Undo across units that don''t convert skips rice and says so');
+select pg_temp.ok((select quantity = 7 and unit = 'buah' from public.inventory_items where id = :rice::uuid)
+                  and (select cooked_at is null from public.menu_dishes where id = :lunch::uuid),
+  '... rice keeps 7 buah (no wrong number), and the dish is not cooked any more');
+-- The phone saw grams; the item is in buah now: cooking refuses rather than guess.
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.cook_menu_dish(%L, '[{"item_id":"%s","amount":500,"unit":"g"}]'::jsonb, null) $q$, :lunch, :rice)) like '%unit_mismatch%',
+  'cooking in a unit that no longer converts is refused');
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.cook_menu_dish(%L, '[{"item_id":"%s","amount":1,"unit":"buah"},{"item_id":"%s","amount":1,"unit":"pcs"}]'::jsonb, null) $q$, :lunch, :rice, :rice)) like '%unit_mismatch%',
+  '... and so is one item in two units');
+select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set unit = 'kg', quantity = 4 where id = %L $q$, :rice)) = 1,
+  '(rice back to 4 kg)');
+select pg_temp.ok(public.convert_kitchen_amount(500, 'g', 'kg') = 0.5 and public.convert_kitchen_amount(1.5, 'L', 'ml') = 1500
+                  and public.convert_kitchen_amount(3, 'butir', 'pcs') = 3 and public.convert_kitchen_amount(2, 'ikat', 'ikat') = 2
+                  and public.convert_kitchen_amount(1, 'g', 'buah') is null and public.convert_kitchen_amount(1, 'ikat', 'siung') is null,
+  'convert_kitchen_amount: exact conversions only (D4)');
+
 -- ---- The shortfall (Add missing to Shopping) ---------------------------------------------
 select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set stock_status = 'low', to_buy_amount = 0.5 where id = %L $q$, :chicken)) = 1,
   'Add missing: the owner puts chicken on the list with 500 g to buy (runs)');
@@ -268,6 +303,23 @@ select pg_temp.ok((select to_buy_amount is null from public.inventory_items wher
   'a staff tap on Enough clears it too');
 select pg_temp.ok(pg_temp.rows_as(:p1, format($q$ update public.inventory_items set stock_status = 'low', to_buy_amount = 2 where id = %L $q$, :salt)) = 1,
   'to_buy_amount is not owner-only (staff phones may set and clear it)');
+-- An owner changes the unit: the shortfall follows it, or goes (Codex, PR #101).
+select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set stock_status = 'low', to_buy_amount = 0.5 where id = %L $q$, :chicken)) = 1,
+  '(chicken on the list, 0,5 kg to buy)');
+select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set unit = 'g', quantity = 2000, min_threshold = 300 where id = %L $q$, :chicken)) = 1,
+  'the owner switches chicken to grams (runs)');
+select pg_temp.ok((select to_buy_amount = 500 from public.inventory_items where id = :chicken::uuid),
+  '... and the shortfall reads 500 g, not 0,5 g');
+select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set unit = 'kg', quantity = 2, min_threshold = 0.3, to_buy_amount = 0.75 where id = %L $q$, :chicken)) = 1,
+  'back to kg, sending the shortfall too (runs)');
+select pg_temp.ok((select to_buy_amount = 0.75 from public.inventory_items where id = :chicken::uuid),
+  '... a write that sets the shortfall itself keeps what it sent');
+select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set unit = 'buah' where id = %L $q$, :chicken)) = 1,
+  'the owner switches chicken to buah (runs)');
+select pg_temp.ok((select to_buy_amount is null from public.inventory_items where id = :chicken::uuid),
+  '... units that don''t convert clear the shortfall');
+select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set unit = 'kg', quantity = 2, stock_status = 'ok' where id = %L $q$, :chicken)) = 1,
+  '(chicken back to 2 kg, enough)');
 
 -- ---- Kitchen notes ----------------------------------------------------------------------
 select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.set_kitchen_notes(%L, '  Tanpa babi. Raka alergi kacang. ', false) $q$, :f1)) = '',
@@ -353,6 +405,11 @@ select pg_temp.ok(not has_function_privilege('anon', 'public.set_kitchen_notes(u
                   and not has_function_privilege('public', 'public.set_kitchen_notes(uuid, text, boolean)', 'execute')
                   and has_function_privilege('authenticated', 'public.set_kitchen_notes(uuid, text, boolean)', 'execute'),
   'set_kitchen_notes: authenticated, not public or anon');
+select pg_temp.ok(not has_function_privilege('anon', 'public.convert_kitchen_amount(numeric, text, text)', 'execute')
+                  and not has_function_privilege('public', 'public.convert_kitchen_amount(numeric, text, text)', 'execute')
+                  and has_function_privilege('authenticated', 'public.convert_kitchen_amount(numeric, text, text)', 'execute')
+                  and (select not prosecdef and provolatile = 'i' and proconfig @> array['search_path=""'] from pg_proc where proname = 'convert_kitchen_amount'),
+  'convert_kitchen_amount: invoker, immutable, empty search_path; authenticated (the trigger calls it), not anon');
 select pg_temp.ok(not has_function_privilege('anon', 'public.prune_old_menu_dishes()', 'execute')
                   and not has_function_privilege('authenticated', 'public.prune_old_menu_dishes()', 'execute')
                   and has_function_privilege('service_role', 'public.prune_old_menu_dishes()', 'execute'),

@@ -19,7 +19,7 @@ import type { CookedUse, InventoryItem, MenuDish } from "@/types/database";
 export interface MenuSnapshot {
   household: string | null;
   dishes: MenuDish[];
-  /** Mondays whose seven days are loaded. */
+  /** Mondays whose seven days came from the server (Copy last week waits for both; Codex, PR #101). */
   weeks: string[];
   notes: KitchenNotes | null;
   loaded: boolean;
@@ -69,6 +69,14 @@ let mutations = 0;
 const MAX_REREADS = 3;
 const listeners = new Set<() => void>();
 const inflight = new Map<string, Promise<void>>();
+/**
+ * Every week a screen asked for, per household, loaded or not (Codex, PR
+ * #101): a week whose first read failed is read again on the household's
+ * refresh, when the phone comes back online and when the app comes back to
+ * the foreground, not left showing nothing.
+ */
+const requested = new Map<string, Set<string>>();
+let wakeListening = false;
 const loadedAt = new Map<string, number>();
 const FRESH_MS = 5000;
 
@@ -92,7 +100,32 @@ export function getMenuSnapshot(): MenuSnapshot {
 
 export function subscribeMenu(listener: () => void): () => void {
   listeners.add(listener);
+  listenForWake();
   return () => listeners.delete(listener);
+}
+
+/** The weeks asked for in this household that haven't loaded from the server. */
+export function missingWeeks(): string[] {
+  const household = currentHousehold();
+  if (!household) return [];
+  const asked = requested.get(household) ?? new Set<string>();
+  const loaded = snapshot.household === household ? snapshot.weeks : [];
+  return [...asked].filter((monday) => !loaded.includes(monday));
+}
+
+/** Read the weeks that failed again (online, back to the foreground). */
+export function retryMissingWeeks(): void {
+  if (listeners.size === 0) return;
+  for (const monday of missingWeeks()) void loadMenuWeek(monday, true);
+}
+
+function listenForWake() {
+  if (wakeListening || typeof window === "undefined") return;
+  wakeListening = true;
+  window.addEventListener("online", retryMissingWeeks);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") retryMissingWeeks();
+  });
 }
 
 /** Replaces one week's dishes with the server's, keeping every other week. */
@@ -118,6 +151,9 @@ export async function loadMenuWeek(day: string, force = false): Promise<void> {
   ensureHousehold(household);
   const monday = weekStart(day);
   const key = `${household}:${monday}`;
+  const asked = requested.get(household) ?? new Set<string>();
+  asked.add(monday);
+  requested.set(household, asked);
   const running = inflight.get(key);
   if (running) {
     if (!force) return running;
@@ -161,10 +197,15 @@ export async function loadMenuWeek(day: string, force = false): Promise<void> {
   return job;
 }
 
-/** Reload the weeks on screen (HouseholdProvider's refresh), if any screen shows the menu. */
+/**
+ * Reload every week a screen asked for (HouseholdProvider's refresh), loaded
+ * or not, so one whose first read failed is tried again (Codex, PR #101).
+ */
 export function refreshMenu(): void {
   if (listeners.size === 0) return;
-  for (const monday of snapshot.weeks) void loadMenuWeek(monday, true);
+  const household = currentHousehold();
+  const weeks = new Set([...(household ? (requested.get(household) ?? []) : []), ...snapshot.weeks]);
+  for (const monday of weeks) void loadMenuWeek(monday, true);
 }
 
 function applyDishes(changed: MenuDish[], removed: string[] = []) {
@@ -218,7 +259,7 @@ export async function cookDish(
 }
 
 /** Batalkan / Mark not cooked: puts back exactly what cooking took. */
-export async function uncookDish(id: string): Promise<{ dish: MenuDish; items: InventoryItem[] }> {
+export async function uncookDish(id: string): Promise<{ dish: MenuDish; items: InventoryItem[]; skipped: CookedUse[] }> {
   const result = await dataProvider.uncookMenuDish(id);
   applyDishes([result.dish]);
   return result;

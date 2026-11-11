@@ -28,7 +28,7 @@ import type {
 import { LEAVE_LOOKBACK_DAYS } from "@/lib/leave";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
 import { createInOrder } from "@/lib/in-order";
-import { applyAmountRules, lastBoughtInUnit, undoPurchasePatch } from "@/lib/kitchen-units";
+import { applyAmountRules, undoPurchasePatch, unitChangePatch } from "@/lib/kitchen-units";
 import {
   readCachedMemberProfile,
   setActiveMemberProfile,
@@ -186,6 +186,8 @@ interface HouseholdContextValue {
    * latter.
    */
   hasData: boolean;
+  /** The lists came from the server in this session (not only the phone's copy). */
+  listsFresh: boolean;
   /**
    * The latest load found no session on this device at all, so it sent
    * nothing (every query would have been refused). A staff phone in this
@@ -456,6 +458,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [syncFailed, setSyncFailed] = useState(false);
   const [hasData, setHasData] = useState(false);
+  // True once this household's lists came from the server in this session,
+  // not just from the phone's last copy (cooking needs the live items;
+  // Codex, PR #101).
+  const [listsFresh, setListsFresh] = useState(false);
   const [signedOut, setSignedOut] = useState(false);
 
   // Resolved before anything is fetched (Phase 86C). Every query is scoped to
@@ -513,6 +519,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     // Per household: a switch to one this device has never loaded starts
     // with nothing worth showing, whatever the previous one had.
     setHasData(!!cached);
+    setListsFresh(false);
     setTenantReady(true);
     // Both sources have now been read: localStorage above, membership here.
     setRoleHydrated(true);
@@ -710,6 +717,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       latestInventoryAudits: audits,
     });
     setHasData(true);
+    setListsFresh(true);
     setSyncFailed(false);
     // Silent or not: if skeletons are up, real data has just arrived to
     // replace them. When they are not, this changes nothing.
@@ -1299,10 +1307,9 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
             // Phase 110 default of 2 is never kept by accident (D14).
             min_threshold: Math.max(0, settings.lowAt),
             amount_set_by: readActiveStaffId(),
-            // The pre-fill follows the unit, or goes (Codex, PR #93).
-            ...(current && current.unit !== settings.unit
-              ? { last_bought_amount: lastBoughtInUnit(current.last_bought_amount, current.unit, settings.unit) }
-              : {}),
+            // The pre-fill and the menu's shortfall follow the unit, or go
+            // (Codex, PR #93 and PR #101).
+            ...(current ? unitChangePatch(current, settings.unit) : {}),
           }
         : { track_amount: false };
       return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
@@ -1931,6 +1938,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       loading,
       syncFailed,
       hasData,
+      listsFresh,
       signedOut,
       retrySync,
       isMockMode,
@@ -2024,6 +2032,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       loading,
       syncFailed,
       hasData,
+      listsFresh,
       signedOut,
       retrySync,
       activePetId,

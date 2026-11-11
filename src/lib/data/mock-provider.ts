@@ -1,5 +1,5 @@
 import { ChoreAlreadySettledError } from "@/lib/chore-settled";
-import { applyAmountRules } from "@/lib/kitchen-units";
+import { applyAmountRules, convertAmount } from "@/lib/kitchen-units";
 import type { RecipeWithLines } from "@/lib/recipes";
 import { MenuAlreadyCookedError, type KitchenNotes } from "./types";
 
@@ -14,6 +14,7 @@ import type {
   RoutineProposal,
   InventoryItem,
   MenuDish,
+  CookedUse,
   FoodItem,
   InventoryAuditWithStaff,
   StaffProfile,
@@ -679,18 +680,21 @@ export const mockProvider: DataProvider = {
     const index = dishes.findIndex((d) => d.id === id);
     if (index === -1) throw new Error("Dish not found");
     if (dishes[index].cooked_at) throw new MenuAlreadyCookedError();
-    const took: { item_id: string; amount: number }[] = [];
+    const took: CookedUse[] = [];
     const items: InventoryItem[] = [];
     for (const use of uses) {
       const at = db.inventoryItems.findIndex((i) => i.id === use.item_id);
       const current = db.inventoryItems[at];
       if (!current || current.track_amount !== true) throw new Error("item_not_tracked");
-      const taken = Math.min(current.quantity, use.amount);
+      // In the item's unit now (the server converts or refuses the same way).
+      const amount = use.unit ? convertAmount(use.amount, use.unit, current.unit) : use.amount;
+      if (amount === null) throw new Error("unit_mismatch");
+      const taken = Math.min(current.quantity, amount);
       if (taken <= 0) continue;
       const item = applyAmountRules(current, { ...current, quantity: current.quantity - taken, amount_set_by: staffId });
       db.inventoryItems[at] = item;
       items.push(item);
-      took.push({ item_id: item.id, amount: taken });
+      took.push({ item_id: item.id, amount: taken, unit: item.unit });
     }
     const dish: MenuDish = { ...dishes[index], cooked_at: new Date().toISOString(), cooked_by: staffId, cooked_uses: took };
     dishes[index] = dish;
@@ -704,11 +708,18 @@ export const mockProvider: DataProvider = {
     const index = dishes.findIndex((d) => d.id === id);
     if (index === -1) throw new Error("Dish not found");
     const items: InventoryItem[] = [];
+    const skipped: CookedUse[] = [];
     for (const use of dishes[index].cooked_uses ?? []) {
       const at = db.inventoryItems.findIndex((i) => i.id === use.item_id);
       const current = db.inventoryItems[at];
       if (!current || current.track_amount !== true) continue;
-      const item = applyAmountRules(current, { ...current, quantity: current.quantity + use.amount });
+      // Converted if the unit changed since; skipped when it no longer converts.
+      const back = use.unit ? convertAmount(use.amount, use.unit, current.unit) : use.amount;
+      if (back === null) {
+        skipped.push(use);
+        continue;
+      }
+      const item = applyAmountRules(current, { ...current, quantity: current.quantity + back });
       db.inventoryItems[at] = item;
       items.push(item);
     }
@@ -716,7 +727,7 @@ export const mockProvider: DataProvider = {
     dishes[index] = dish;
     db.menuDishes = dishes;
     saveDB(db);
-    return delay({ dish, items });
+    return delay({ dish, items, skipped });
   },
   async getKitchenNotes() {
     return delay(loadDB().kitchenNotes ?? { text: null, confirmedAt: null });

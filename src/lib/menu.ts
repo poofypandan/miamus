@@ -185,6 +185,15 @@ export function copyLastWeek(dishes: readonly MenuDish[], start: string): MenuDi
   return out;
 }
 
+/**
+ * Copy last week may run only once both weeks came from the server (Codex,
+ * PR #101): the phone's copy may not know a dish already planned this week,
+ * and copying over it would plan it twice.
+ */
+export function canCopyLastWeek(loadedWeeks: readonly string[], start: string, toCopy: readonly MenuDishInput[]): boolean {
+  return toCopy.length > 0 && loadedWeeks.includes(start) && loadedWeeks.includes(addDays(start, -7));
+}
+
 // --- Cooking ------------------------------------------------------------------------
 
 function isSpoon(unit: RecipeUnit | null): boolean {
@@ -261,11 +270,49 @@ export function cookLines(
   return { counted: [...counted.values()], uncounted };
 }
 
-/** What cook_menu_dish takes: the ticked lines, each > 0, at most 100,000. */
-export function usesFrom(lines: readonly { itemId: string; amount: number; on: boolean }[]): CookedUse[] {
+/**
+ * Whether Sudah dimasak may run yet (Codex, PR #101). Cooking takes off what
+ * the recipe says, from the items as the server holds them, so a recipe dish
+ * waits for both to come from the server in this session: the phone's last
+ * copy may miss a new recipe or a newly tracked item, and a dish marked
+ * cooked with nothing taken off stays that way.
+ *
+ *   - a dish without a recipe needs nothing: ready;
+ *   - its recipe isn't in a fresh list: deleted, so nothing to take off
+ *     (ready); in a list not fresh yet: loading, or failed if the read failed;
+ *   - a recipe with lines linked to items also needs the household's lists
+ *     fresh (loading, or failed when the household's read failed).
+ */
+export type CookReadiness = "ready" | "loading" | "failed";
+
+export function cookReadiness(
+  dish: Pick<MenuDish, "recipe_id">,
+  state: {
+    recipes: readonly RecipeWithLines[];
+    recipesFresh: boolean;
+    recipesErrored: boolean;
+    listsFresh: boolean;
+    listsFailed: boolean;
+  }
+): CookReadiness {
+  if (!dish.recipe_id) return "ready";
+  if (!state.recipesFresh) return state.recipesErrored ? "failed" : "loading";
+  const recipe = recipeOf(dish, state.recipes);
+  if (!recipe) return "ready";
+  if (!recipe.ingredients.some((line) => line.item_id)) return "ready";
+  if (!state.listsFresh) return state.listsFailed ? "failed" : "loading";
+  return "ready";
+}
+
+/**
+ * What cook_menu_dish takes: the ticked lines, each > 0, at most 100,000,
+ * with the unit the phone saw, so the server converts (or refuses) if an
+ * owner changed the item's unit meanwhile (Codex, PR #101).
+ */
+export function usesFrom(lines: readonly { itemId: string; amount: number; unit: InventoryUnit; on: boolean }[]): CookedUse[] {
   return lines
     .filter((line) => line.on && line.amount > 0)
-    .map((line) => ({ item_id: line.itemId, amount: Math.min(100_000, clean(line.amount)) }));
+    .map((line) => ({ item_id: line.itemId, amount: Math.min(100_000, clean(line.amount)), unit: line.unit }));
 }
 
 // --- Add missing to Shopping --------------------------------------------------------

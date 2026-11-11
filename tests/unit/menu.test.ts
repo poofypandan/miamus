@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
 import {
   MEALS,
   addDays,
+  canCopyLastWeek,
+  cookReadiness,
   copyLastWeek,
   cookLines,
   dishTitle,
@@ -27,7 +29,7 @@ import {
   weekRangeLabel,
   weekStart,
 } from "@/lib/menu";
-import { applyAmountRules } from "@/lib/kitchen-units";
+import { applyAmountRules, unitChangePatch } from "@/lib/kitchen-units";
 import { buildShoppingList } from "@/lib/inventory";
 import type { RecipeWithLines } from "@/lib/recipes";
 import type { InventoryItem, MenuDish, RecipeIngredient } from "@/types/database";
@@ -217,14 +219,57 @@ describe("cooking: what comes off stock", () => {
     expect(cookLines(null, null, items, true)).toEqual({ counted: [], uncounted: [] });
   });
 
-  it("sends only the ticked lines with an amount", () => {
+  it("sends only the ticked lines with an amount, with the unit the phone saw (Codex, PR #101)", () => {
     expect(
       usesFrom([
-        { itemId: "a", amount: 1.5, on: true },
-        { itemId: "b", amount: 2, on: false },
-        { itemId: "c", amount: 0, on: true },
+        { itemId: "a", amount: 1.5, unit: "kg", on: true },
+        { itemId: "b", amount: 2, unit: "kg", on: false },
+        { itemId: "c", amount: 0, unit: "g", on: true },
       ])
-    ).toEqual([{ item_id: "a", amount: 1.5 }]);
+    ).toEqual([{ item_id: "a", amount: 1.5, unit: "kg" }]);
+  });
+
+  it("cooks for the servings on the stepper, not the dish's (Codex, PR #101)", () => {
+    // The dish says 4; the cook stepped up to 8 on the recipe: 8 is what comes off.
+    const { counted } = cookLines(soto, 8, items, true);
+    expect(counted.find((l) => l.itemId === "chicken")?.amount).toBe(2);
+    expect(cookLines(soto, 4, items, true).counted.find((l) => l.itemId === "chicken")?.amount).toBe(1);
+  });
+});
+
+describe("cooking waits until the recipe and items have loaded (Codex, PR #101)", () => {
+  const state = { recipes: [soto], recipesFresh: true, recipesErrored: false, listsFresh: true, listsFailed: false };
+  const withRecipe = dish({ recipe_id: "soto" });
+  const plain = { ...soto, id: "plain", ingredients: [line({ name: "Garam" })] };
+
+  it("a dish without a recipe needs nothing", () => {
+    expect(cookReadiness(dish({}), { ...state, recipesFresh: false, listsFresh: false })).toBe("ready");
+  });
+
+  it("recipes only from the phone's copy: loading, or failed when the read failed", () => {
+    expect(cookReadiness(withRecipe, { ...state, recipesFresh: false })).toBe("loading");
+    expect(cookReadiness(withRecipe, { ...state, recipesFresh: false, recipesErrored: true })).toBe("failed");
+  });
+
+  it("a recipe with linked lines also waits for the household's items", () => {
+    expect(cookReadiness(withRecipe, { ...state, listsFresh: false })).toBe("loading");
+    expect(cookReadiness(withRecipe, { ...state, listsFresh: false, listsFailed: true })).toBe("failed");
+    expect(cookReadiness(withRecipe, state)).toBe("ready");
+  });
+
+  it("a recipe with only free lines doesn't need the items; a deleted recipe has nothing to take off", () => {
+    expect(cookReadiness(dish({ recipe_id: "plain" }), { ...state, recipes: [plain], listsFresh: false })).toBe("ready");
+    expect(cookReadiness(dish({ recipe_id: "gone" }), state)).toBe("ready");
+  });
+});
+
+describe("Copy last week waits for both weeks from the server (Codex, PR #101)", () => {
+  const toCopy = [{ day: "2026-11-09", meal: "lunch" as const, recipe_id: null, title: "Soto", servings: null, notes: null, position: 0 }];
+  it("only when this week and last week have loaded, and there's something to copy", () => {
+    expect(canCopyLastWeek(["2026-11-09", "2026-11-02"], "2026-11-09", toCopy)).toBe(true);
+    expect(canCopyLastWeek(["2026-11-02"], "2026-11-09", toCopy)).toBe(false);
+    expect(canCopyLastWeek(["2026-11-09"], "2026-11-09", toCopy)).toBe(false);
+    expect(canCopyLastWeek(["2026-11-09", "2026-11-02"], "2026-11-09", [])).toBe(false);
   });
 });
 
@@ -311,6 +356,31 @@ describe("the shortfall rules (mirrors migrations/153's trigger)", () => {
     expect(bought.to_buy_amount).toBeNull();
     const untracked = { ...shallots, stock_status: "low" as const, to_buy_amount: 6 };
     expect(applyAmountRules(untracked, { ...untracked, stock_status: "ok" }).to_buy_amount).toBeNull();
+  });
+});
+
+describe("a unit change converts the shortfall (Codex, PR #101)", () => {
+  const listed = { ...chicken, stock_status: "low" as const, to_buy_amount: 0.5, last_bought_amount: 2 };
+
+  it("setTrackAmount's patch converts the pre-fill and the shortfall, or drops them", () => {
+    expect(unitChangePatch(listed, "g")).toEqual({ last_bought_amount: 2000, to_buy_amount: 500 });
+    expect(unitChangePatch(listed, "buah")).toEqual({ last_bought_amount: null, to_buy_amount: null });
+    expect(unitChangePatch({ ...listed, to_buy_amount: null }, "g")).toEqual({ last_bought_amount: 2000 });
+    expect(unitChangePatch(listed, "kg")).toEqual({});
+  });
+
+  it("the screen's copy of the trigger converts it when a write changes only the unit", () => {
+    expect(applyAmountRules(listed, { ...listed, unit: "g", quantity: 1000 }).to_buy_amount).toBe(500);
+    expect(applyAmountRules(listed, { ...listed, unit: "buah" }).to_buy_amount).toBeNull();
+    // A write that sends the shortfall itself keeps it.
+    expect(applyAmountRules(listed, { ...listed, unit: "g", quantity: 1000, to_buy_amount: 750 }).to_buy_amount).toBe(750);
+  });
+
+  it("migrations/153's convert_kitchen_amount has the same exact conversions", () => {
+    const sql = readFileSync(join(process.cwd(), "supabase/migrations/153_kitchen_menu_and_cooking.sql"), "utf8");
+    expect(sql).toContain("when p_from in ('g', 'kg') and p_to in ('g', 'kg')");
+    expect(sql).toContain("when p_from in ('ml', 'L') and p_to in ('ml', 'L')");
+    expect(sql).toContain("when p_from in ('pcs', 'buah', 'butir') and p_to in ('pcs', 'buah', 'butir') then p_amount");
   });
 });
 

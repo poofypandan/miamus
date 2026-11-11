@@ -87,7 +87,8 @@ export function RecipeBody({
   servings?: number;
   title?: string;
   before?: ReactNode;
-  footer?: ReactNode;
+  /** A node, or a function of the servings on the stepper (cooking uses them; Codex, PR #101). */
+  footer?: ReactNode | ((servings: number) => ReactNode);
 }) {
   const { inventoryItems } = useHousehold();
   const id = lang === "id";
@@ -237,7 +238,7 @@ export function RecipeBody({
             <Pencil /> {tr("Edit recipe", "Ubah resep")}
           </Button>
         )}
-        {footer}
+        {typeof footer === "function" ? footer(servings) : footer}
       </div>
     </div>
   );

@@ -247,6 +247,10 @@ export function startingAmount(item: Pick<InventoryItem, "quantity" | "amount_se
 export function applyAmountRules(before: InventoryItem | null, after: InventoryItem, now: Date = new Date()): InventoryItem {
   const next: InventoryItem = { ...after, amount_set_at: before?.amount_set_at ?? null };
   const stamp = now.toISOString();
+  // (153) A unit change converts the shortfall, or clears it, unless this write set it.
+  if (before && next.unit !== before.unit && next.to_buy_amount != null && next.to_buy_amount === before.to_buy_amount) {
+    next.to_buy_amount = lastBoughtInUnit(next.to_buy_amount, before.unit, next.unit);
+  }
   const tracked = next.track_amount === true;
   const amountChanged = before === null || next.quantity !== before.quantity;
   const trackingOn = tracked && (before === null || before.track_amount !== true);
@@ -341,4 +345,21 @@ export function friendlyAmount(value: number, unit: InventoryUnit, lang: "en" | 
 /** On To buy and in the WhatsApp text: "500 g", or null without a shortfall. */
 export function toBuyAmountLabel(item: Pick<InventoryItem, "to_buy_amount" | "unit">, lang: "en" | "id"): string | null {
   return item.to_buy_amount ? friendlyAmount(item.to_buy_amount, item.unit, lang) : null;
+}
+
+/**
+ * What a unit change also writes (Codex, PR #93 and PR #101): the "How much
+ * did you buy?" pre-fill and the menu's shortfall, each converted exactly
+ * (5 kg → 5000 g) or dropped when the units don't convert, never read in
+ * the wrong unit. Empty when the unit stays.
+ */
+export function unitChangePatch(
+  item: Pick<InventoryItem, "unit" | "last_bought_amount" | "to_buy_amount">,
+  unit: InventoryUnit
+): { last_bought_amount?: number | null; to_buy_amount?: number | null } {
+  if (item.unit === unit) return {};
+  return {
+    last_bought_amount: lastBoughtInUnit(item.last_bought_amount, item.unit, unit),
+    ...(item.to_buy_amount != null ? { to_buy_amount: lastBoughtInUnit(item.to_buy_amount, item.unit, unit) } : {}),
+  };
 }

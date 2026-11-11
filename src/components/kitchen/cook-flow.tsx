@@ -13,8 +13,19 @@ import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useRecipes } from "@/hooks/use-recipes";
 import { MenuAlreadyCookedError } from "@/lib/data/types";
 import { clean, friendlyAmount } from "@/lib/kitchen-units";
-import { cookLines, dishServings, dishTitle, recipeOf, usesFrom, type CountedLine, type UncountedLine } from "@/lib/menu";
+import {
+  cookLines,
+  cookReadiness,
+  dishServings,
+  dishTitle,
+  recipeOf,
+  usesFrom,
+  type CookReadiness,
+  type CountedLine,
+  type UncountedLine,
+} from "@/lib/menu";
 import { cookDish, uncookDish } from "@/lib/menu-store";
+import { loadRecipes } from "@/lib/recipes-store";
 import { amountLabel, type RecipeLang } from "@/lib/recipes";
 import type { InventoryUnit, MenuDish } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -53,21 +64,59 @@ interface Pending {
  * A retry after a weak signal never takes things off twice: the server
  * refuses a dish already cooked. No prices anywhere.
  */
-export function useCookFlow(lang: RecipeLang, forStaff: boolean): { start: (dish: MenuDish) => void; busyId: string | null; sheets: ReactNode } {
+export function useCookFlow(
+  lang: RecipeLang,
+  forStaff: boolean
+): {
+  /** Sudah dimasak, for the servings on screen (the dish's stepper; Codex, PR #101). */
+  start: (dish: MenuDish, servings?: number | null) => void;
+  /** Whether a dish may be cooked yet: its recipe and the items loaded from the server. */
+  readiness: (dish: MenuDish) => CookReadiness;
+  /** Read the recipes and the household's lists again (the "Coba lagi" button). */
+  retry: () => void;
+  /** Undo: puts back what cooking took and says if an item couldn't be. */
+  undo: (dish: MenuDish, title: string) => Promise<void>;
+  busyId: string | null;
+  sheets: ReactNode;
+} {
   const id = lang === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { inventoryItems, applyInventoryRows } = useHousehold();
-  const { recipes } = useRecipes();
+  const { inventoryItems, applyInventoryRows, listsFresh, syncFailed, refresh } = useHousehold();
+  const { recipes, fresh: recipesFresh, errored: recipesErrored } = useRecipes();
   const { flags } = useHouseholdFeatures();
   const [pending, setPending] = useState<Pending | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [leftover, setLeftover] = useState<string | null>(null);
   const [foodName, setFoodName] = useState<string | null>(null);
 
+  function readiness(dish: MenuDish): CookReadiness {
+    return cookReadiness(dish, { recipes, recipesFresh, recipesErrored, listsFresh, listsFailed: syncFailed });
+  }
+
+  function retry() {
+    void loadRecipes(true);
+    void refresh({ silent: true }).catch(() => undefined);
+  }
+
   async function undo(dish: MenuDish, title: string) {
     try {
-      const { items } = await uncookDish(dish.id);
+      const { items, skipped } = await uncookDish(dish.id);
       applyInventoryRows(items);
+      if (skipped.length > 0) {
+        // An owner changed an item's unit to one that doesn't convert: that
+        // item is left as it is rather than given a wrong number.
+        const names = skipped
+          .map((use) => inventoryItems.find((i) => i.id === use.item_id)?.name)
+          .filter(Boolean)
+          .join(", ");
+        toast.warning(
+          tr(
+            `Not cooked — ${title}. ${names || "One item"} wasn't put back: its unit changed. Set its amount by hand.`,
+            `Dibatalkan — ${title}. ${names || "Satu bahan"} tidak dikembalikan karena satuannya berubah. Ubah jumlahnya sendiri.`
+          )
+        );
+        return;
+      }
       toast.success(tr(`Not cooked — ${title}`, `Dibatalkan — ${title}`));
     } catch (err) {
       console.error(err);
@@ -99,10 +148,17 @@ export function useCookFlow(lang: RecipeLang, forStaff: boolean): { start: (dish
     }
   }
 
-  function start(dish: MenuDish) {
+  function start(dish: MenuDish, servings?: number | null) {
+    // Never mark a dish cooked before what it takes off is known (Codex, PR #101).
+    const state = readiness(dish);
+    if (state !== "ready") {
+      toast(state === "loading" ? tr("Loading…", "Sedang memuat…") : tr("Couldn't load. Try again.", "Belum bisa dimuat. Coba lagi."));
+      if (state === "failed") retry();
+      return;
+    }
     const recipe = recipeOf(dish, recipes);
     const title = dishTitle(dish, recipe, forStaff);
-    const { counted, uncounted } = cookLines(recipe, dishServings(dish, recipe), inventoryItems, forStaff);
+    const { counted, uncounted } = cookLines(recipe, servings ?? dishServings(dish, recipe), inventoryItems, forStaff);
     if (counted.length === 0) {
       void finish(dish, title, []);
       return;
@@ -143,7 +199,7 @@ export function useCookFlow(lang: RecipeLang, forStaff: boolean): { start: (dish
     </>
   );
 
-  return { start, busyId, sheets };
+  return { start, readiness, retry, undo, busyId, sheets };
 }
 
 function ConfirmSheet({

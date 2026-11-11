@@ -14,6 +14,7 @@ import type { OrganiseRoomsMoved,
   Recipe,
   RecipeIngredient,
   MenuDish,
+  CookedUse,
   StaffProfile,
 } from "@/types/database";
 import { withLines } from "@/lib/recipes";
@@ -631,7 +632,8 @@ export const supabaseProvider: DataProvider = {
       client().rpc("uncook_menu_dish", { p_dish_id: id }).abortSignal(signal)
     );
     if (error) throw withStatus(error, status);
-    return data as { dish: MenuDish; items: InventoryItem[] };
+    const result = data as { dish: MenuDish; items: InventoryItem[]; skipped?: CookedUse[] };
+    return { ...result, skipped: result.skipped ?? [] };
   },
   async getKitchenNotes() {
     const { data, error } = await client()

@@ -22,7 +22,6 @@ import { DishFormSheet, type DishFormTarget } from "@/components/kitchen/dish-fo
 import { DishSheet } from "@/components/kitchen/dish-sheet";
 import { KitchenNotesSheet } from "@/components/kitchen/kitchen-notes-sheet";
 import { RecipesView } from "@/components/kitchen/recipes-view";
-import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useAllHeldDishes, useMenuWeek } from "@/hooks/use-menu";
 import { useRecipes } from "@/hooks/use-recipes";
@@ -32,6 +31,7 @@ import {
   MEALS,
   MEAL_LABELS,
   addDays,
+  canCopyLastWeek,
   copyLastWeek,
   dayMonth,
   dishServings,
@@ -42,7 +42,7 @@ import {
   weekStart,
   weekdayLong,
 } from "@/lib/menu";
-import { addDishes, deleteDishes, uncookDish } from "@/lib/menu-store";
+import { addDishes, deleteDishes } from "@/lib/menu-store";
 import { servingsLabel, type RecipeLang, type RecipeWithLines } from "@/lib/recipes";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { MenuDish, MenuMeal } from "@/types/database";
@@ -70,12 +70,11 @@ export function MenuView() {
   const monday = weekStart(weekParam && DAY.test(weekParam) ? weekParam : today);
   const showRecipes = params.get("recipes") === "1";
 
-  const { dishes, notes, loaded } = useMenuWeek(monday);
+  const { dishes, notes, loaded, weekLoaded } = useMenuWeek(monday);
   // Last week too, for Copy last week.
-  useMenuWeek(addDays(monday, -7));
+  const { weekLoaded: lastWeekLoaded } = useMenuWeek(addDays(monday, -7));
   const held = useAllHeldDishes();
   const { recipes } = useRecipes();
-  const { applyInventoryRows } = useHousehold();
   const cook = useCookFlow(lang, false);
 
   const [openId, setOpenId] = useState<string | null>(null);
@@ -110,12 +109,18 @@ export function MenuView() {
           : weekRangeLabel(monday, lang);
 
   const toCopy = useMemo(() => copyLastWeek(held, monday), [held, monday]);
+  // Only once both weeks came from the server, never from the phone's copy alone (Codex, PR #101).
+  const copyReady = canCopyLastWeek(
+    [...(weekLoaded ? [monday] : []), ...(lastWeekLoaded ? [addDays(monday, -7)] : [])],
+    monday,
+    toCopy
+  );
   const end = addDays(monday, 6);
   const from = today > monday ? today : monday;
   const anyLeft = dishes.some((d) => d.day >= from && !d.cooked_at && d.recipe_id);
 
   async function copy() {
-    if (toCopy.length === 0) return;
+    if (!copyReady) return;
     setCopying(true);
     try {
       const added = await addDishes(toCopy);
@@ -133,17 +138,6 @@ export function MenuView() {
       toast.error(t("Couldn't copy. Try again.", "Gagal menyalin. Coba lagi."));
     } finally {
       setCopying(false);
-    }
-  }
-
-  async function uncook(dish: MenuDish) {
-    try {
-      const { items } = await uncookDish(dish.id);
-      applyInventoryRows(items);
-      toast.success(t(`Not cooked — ${dish.title}`, `Belum dimasak — ${dish.title}`));
-    } catch (err) {
-      console.error(err);
-      toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
     }
   }
 
@@ -253,7 +247,7 @@ export function MenuView() {
         </div>
       )}
 
-      {toCopy.length > 0 && (
+      {copyReady && (
         <Button variant="outline" className="min-h-11 rounded-xl" onClick={copy} disabled={copying}>
           <CopyPlus /> {t("Copy last week", "Salin minggu lalu")}
         </Button>
@@ -286,11 +280,13 @@ export function MenuView() {
         kitchenNotes={notes?.text ?? null}
         canCook={!!open && open.day <= today}
         busy={!!open && cook.busyId === open.id}
-        onCook={(dish) => {
+        cookState={open ? cook.readiness(open) : "loading"}
+        onRetry={cook.retry}
+        onCook={(dish, servings) => {
           setOpenId(null);
-          cook.start(dish);
+          cook.start(dish, servings);
         }}
-        onUncook={(dish) => void uncook(dish)}
+        onUncook={(dish) => void cook.undo(dish, dish.title)}
         onEdit={(dish) => {
           setOpenId(null);
           setForm({ dish });

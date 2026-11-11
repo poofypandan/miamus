@@ -85,9 +85,11 @@ export function MenuTodayCard({ day, enabled = true }: { day: string; enabled?: 
         kitchenNotes={notes?.text ?? null}
         canCook={!!open && open.day <= today}
         busy={!!open && cook.busyId === open.id}
-        onCook={(dish) => {
+        cookState={open ? cook.readiness(open) : "loading"}
+        onRetry={cook.retry}
+        onCook={(dish, servings) => {
           setOpenId(null);
-          cook.start(dish);
+          cook.start(dish, servings);
         }}
         onClose={() => setOpenId(null)}
       />

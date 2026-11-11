@@ -19,9 +19,13 @@ export interface RecipesSnapshot {
   recipes: RecipeWithLines[];
   loaded: boolean;
   failed: boolean;
+  /** The list came from the server in this session, not only the phone's copy (Phase 170 PR C). */
+  fresh: boolean;
+  /** The last read from the server failed (the phone's copy may still show). */
+  errored: boolean;
 }
 
-export const EMPTY_RECIPES: RecipesSnapshot = { household: null, recipes: [], loaded: false, failed: false };
+export const EMPTY_RECIPES: RecipesSnapshot = { household: null, recipes: [], loaded: false, failed: false, fresh: false, errored: false };
 
 const CACHE_VERSION = 1;
 const cacheKey = (household: string) => `miamus_recipes_v${CACHE_VERSION}:${household}`;
@@ -91,7 +95,7 @@ export async function loadRecipes(force = false): Promise<void> {
     // Paint the phone's last copy first (or nothing: another household's never shows).
     const cached = typeof window === "undefined" ? null : readCache(household);
     snapshot = cached
-      ? { household, recipes: cached, loaded: true, failed: false }
+      ? { household, recipes: cached, loaded: true, failed: false, fresh: false, errored: false }
       : { ...EMPTY_RECIPES, household };
     listeners.forEach((listener) => listener());
   }
@@ -115,13 +119,13 @@ export async function loadRecipes(force = false): Promise<void> {
       if (started !== mutations) return;
       if (currentHousehold() === household) {
         loadedAt = Date.now();
-        emit({ household, recipes, loaded: true, failed: false });
+        emit({ household, recipes, loaded: true, failed: false, fresh: true, errored: false });
       }
     } catch (err) {
       console.error("Recipes not loaded", err);
       if (currentHousehold() === household) {
         // Keep whatever is showing (the phone's copy); say it failed only if there's nothing.
-        emit({ ...snapshot, household, loaded: true, failed: snapshot.recipes.length === 0 });
+        emit({ ...snapshot, household, loaded: true, failed: snapshot.recipes.length === 0, errored: true });
       }
     } finally {
       inflight = null;

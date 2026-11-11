@@ -13,8 +13,9 @@
 --        deleted recipe leaves the dish's title) or just a title, servings,
 --        a note, the position. cooked_at / cooked_by / cooked_uses are
 --        written ONLY by cook_menu_dish and uncook_menu_dish: cooked_uses is
---        what cooking actually took off stock, [{item_id, amount}] in each
---        item's unit, so Undo puts back exactly that.
+--        what cooking actually took off stock, [{item_id, amount, unit}] in
+--        the item's unit at the time, so Undo puts back exactly that, converted
+--        if an owner changed the unit since (Codex, PR #101).
 --   households.kitchen_notes (up to 300), kitchen_notes_confirmed_at /
 --        kitchen_notes_confirmed_by: the owner's one-time OK that the note
 --        may hold health information (D12), stamped by the server.
@@ -22,6 +23,9 @@
 --        stored, in the item's unit ("Chicken 500 g" on To buy and in the
 --        WhatsApp text). Staff-writable (a staff purchase clears it). Cleared
 --        by record_purchase and whenever the status goes back to Enough.
+--   convert_kitchen_amount(amount, from, to)  the exact conversions of D4
+--        (g <-> kg, ml <-> L, pcs/buah/butir 1 : 1, the same unit), null when
+--        the units don't convert; lib/kitchen-units.ts convertAmount's twin.
 --   cook_menu_dish(dish, uses, staff)  Sudah dimasak / Pakai bahan ini.
 --   uncook_menu_dish(dish)             Batalkan / Mark not cooked.
 --   set_kitchen_notes(household, notes, confirm)  owners only.
@@ -30,9 +34,11 @@
 --
 -- RE-CREATED (each from its newest definition)
 --   stamp_inventory_stock_status (148)  also clears to_buy_amount when the
---        status goes back to Enough, and keeps an item the menu review put on
+--        status goes back to Enough, keeps an item the menu review put on
 --        the list on it while cooking moves its amount (a shortfall stays
---        until it's bought or someone taps Enough).
+--        until it's bought or someone taps Enough), and converts the shortfall
+--        when an owner changes the unit (cleared when the units don't convert;
+--        Codex, PR #101).
 --   record_purchase (148)  also clears to_buy_amount.
 --   export_household_data (151)  adds the kitchen notes, 'menu' (every
 --        dish, who cooked it and what it took off) and, the follow-up 152
@@ -195,6 +201,34 @@ create policy "admin_delete_menu_dishes" on public.menu_dishes
 revoke all on table public.menu_dishes from public, anon;
 grant select, insert, update, delete on table public.menu_dishes to authenticated, service_role;
 
+-- --- 2b. Exact unit conversions (D4) ------------------------------------------------------
+-- An amount in another unit, or null when the two don't convert exactly:
+-- g <-> kg, ml <-> L, and pcs, buah and butir 1 : 1 with each other; any
+-- unit converts to itself; nothing else (no "1 egg = 60 g"). The twin of
+-- convertAmount in src/lib/kitchen-units.ts. Not SECURITY DEFINER: the
+-- amount rules trigger calls it as the writing role, so authenticated may
+-- execute it (it reads nothing).
+create or replace function public.convert_kitchen_amount(p_amount numeric, p_from text, p_to text)
+returns numeric
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when p_amount is null or p_from is null or p_to is null then null
+    when p_from = p_to then p_amount
+    when p_from in ('g', 'kg') and p_to in ('g', 'kg')
+      then trim_scale(round(p_amount * (case p_from when 'kg' then 1000 else 1 end) / (case p_to when 'kg' then 1000 else 1 end), 6))
+    when p_from in ('ml', 'L') and p_to in ('ml', 'L')
+      then trim_scale(round(p_amount * (case p_from when 'L' then 1000 else 1 end) / (case p_to when 'L' then 1000 else 1 end), 6))
+    when p_from in ('pcs', 'buah', 'butir') and p_to in ('pcs', 'buah', 'butir') then p_amount
+    else null
+  end
+$$;
+
+revoke all on function public.convert_kitchen_amount(numeric, text, text) from public, anon;
+grant execute on function public.convert_kitchen_amount(numeric, text, text) to authenticated, service_role;
+
 -- --- 3. The amount rules, plus the shortfall (148's body) --------------------------------
 -- As 148, and at the end:
 --   * a status back to Enough clears to_buy_amount (bought, or someone
@@ -202,7 +236,10 @@ grant select, insert, update, delete on table public.menu_dishes to authenticate
 --   * an item the menu review put on the list (to_buy_amount set) stays
 --     Running low when cooking or a minus tap moves its amount but it's
 --     still above its low level: the week still needs it bought. A purchase
---     clears to_buy_amount in the same write, so it goes back to Enough.
+--     clears to_buy_amount in the same write, so it goes back to Enough;
+--   * an owner changing the unit converts the shortfall (500 g -> 0,5 kg),
+--     or clears it when the units don't convert, unless the same write set
+--     it (the app sends it converted already).
 create or replace function public.stamp_inventory_stock_status()
 returns trigger
 language plpgsql
@@ -232,6 +269,14 @@ begin
   end if;
 
   new.amount_set_at := old.amount_set_at;
+
+  if new.unit is distinct from old.unit and new.to_buy_amount is not null
+     and new.to_buy_amount is not distinct from old.to_buy_amount then
+    new.to_buy_amount := public.convert_kitchen_amount(new.to_buy_amount, old.unit, new.unit);
+    if new.to_buy_amount is not null and (new.to_buy_amount <= 0 or new.to_buy_amount > 100000) then
+      new.to_buy_amount := null;
+    end if;
+  end if;
 
   if new.track_amount then
     amount_changed := new.quantity is distinct from old.quantity;
@@ -312,9 +357,11 @@ revoke all on function public.record_purchase(uuid, numeric, uuid) from public, 
 grant execute on function public.record_purchase(uuid, numeric, uuid) to authenticated, service_role;
 
 -- --- 5. Cooking, and its Undo --------------------------------------------------------------
--- cook_menu_dish(dish, uses, staff): uses = [{item_id, amount}, ...], each
--- amount in the item's own unit (the phone converts the recipe's line and
--- the person may adjust or untick it). One transaction:
+-- cook_menu_dish(dish, uses, staff): uses = [{item_id, amount, unit?}, ...],
+-- each amount in the unit the phone saw on the item (the phone converts the
+-- recipe's line and the person may adjust or untick it). If an owner changed
+-- the item's unit since, the amount is converted (refused, unit_mismatch,
+-- when it doesn't convert). One transaction:
 --   * the dish is locked; one already cooked is refused (already_cooked),
 --     so a retry after a weak signal never takes things off twice;
 --   * every item is a TRACKED item of the dish's household, every amount
@@ -322,8 +369,8 @@ grant execute on function public.record_purchase(uuid, numeric, uuid) to authent
 --   * the staff id is null or a non-archived member of the household;
 --   * each item: quantity = greatest(quantity - amount, 0); the amount rules
 --     trigger re-derives the status and stamps amount_set_at;
---   * what was actually taken (after the floor at 0) goes in cooked_uses,
---     with cooked_at = now() and cooked_by.
+--   * what was actually taken (after the floor at 0) goes in cooked_uses
+--     with the item's unit, with cooked_at = now() and cooked_by.
 -- Returns { dish, items } (the changed items' rows).
 create or replace function public.cook_menu_dish(p_dish_id uuid, p_uses jsonb default '[]'::jsonb, p_staff_id uuid default null)
 returns jsonb
@@ -336,6 +383,7 @@ declare
   v_uses jsonb := coalesce(p_uses, '[]'::jsonb);
   line record;
   it public.inventory_items;
+  amount numeric;
   taken numeric;
   took jsonb := '[]'::jsonb;
   changed jsonb := '[]'::jsonb;
@@ -360,8 +408,10 @@ begin
     raise exception 'bad_uses' using errcode = '22023';
   end if;
 
+  -- Lines of one item are summed (in one unit: two units for one item refuse).
   for line in
     select (e ->> 'item_id')::uuid as item_id, sum((e ->> 'amount')::numeric) as amount,
+           min(e ->> 'unit') as unit, count(distinct e ->> 'unit') as units,
            bool_or((e ->> 'amount') is null or (e ->> 'amount')::numeric <= 0 or (e ->> 'amount')::numeric > 100000) as bad
       from jsonb_array_elements(v_uses) e
      group by 1
@@ -376,14 +426,19 @@ begin
     if not found or not it.track_amount then
       raise exception 'item_not_tracked' using errcode = '42501';
     end if;
-    taken := least(it.quantity, line.amount);
+    amount := case when line.unit is null then line.amount
+                   else public.convert_kitchen_amount(line.amount, line.unit, it.unit) end;
+    if line.units > 1 or amount is null then
+      raise exception 'unit_mismatch' using errcode = '22023';
+    end if;
+    taken := least(it.quantity, amount);
     if taken > 0 then
       update public.inventory_items
-         set quantity = greatest(quantity - line.amount, 0),
+         set quantity = greatest(quantity - amount, 0),
              amount_set_by = p_staff_id
        where id = it.id
       returning * into it;
-      took := took || jsonb_build_array(jsonb_build_object('item_id', it.id, 'amount', taken));
+      took := took || jsonb_build_array(jsonb_build_object('item_id', it.id, 'amount', taken, 'unit', it.unit));
     end if;
     changed := changed || jsonb_build_array(to_jsonb(it));
   end loop;
@@ -397,8 +452,12 @@ end;
 $$;
 
 -- uncook_menu_dish(dish): puts back exactly what cooked_uses says was taken
--- (on items that still exist and are still tracked) and clears the three
--- columns. A dish that isn't cooked is returned as it is. Same check.
+-- (on items that still exist and are still tracked), converted to the
+-- item's unit now if an owner changed it since (500 g back as 0,5 kg). An
+-- item whose unit no longer converts (g -> buah) is skipped and listed in
+-- the answer's "skipped", never given a wrong number (Codex, PR #101). Then
+-- clears the three columns. A dish that isn't cooked is returned as it is.
+-- Same check. Returns { dish, items, skipped }.
 create or replace function public.uncook_menu_dish(p_dish_id uuid)
 returns jsonb
 language plpgsql
@@ -409,7 +468,9 @@ declare
   d public.menu_dishes;
   line record;
   it public.inventory_items;
+  back numeric;
   changed jsonb := '[]'::jsonb;
+  skipped jsonb := '[]'::jsonb;
 begin
   if auth.uid() is null then
     raise exception 'not_authenticated' using errcode = '28000';
@@ -419,35 +480,45 @@ begin
     raise exception 'not_found' using errcode = '42501';
   end if;
   if d.cooked_at is null then
-    return jsonb_build_object('dish', to_jsonb(d), 'items', changed);
+    return jsonb_build_object('dish', to_jsonb(d), 'items', changed, 'skipped', skipped);
   end if;
 
   for line in
-    select (e ->> 'item_id')::uuid as item_id, sum((e ->> 'amount')::numeric) as amount
+    select (e ->> 'item_id')::uuid as item_id, e ->> 'unit' as unit, sum((e ->> 'amount')::numeric) as amount
       from jsonb_array_elements(coalesce(d.cooked_uses, '[]'::jsonb)) e
-     group by 1
-     order by 1
+     group by 1, 2
+     order by 1, 2
   loop
+    select * into it from public.inventory_items
+     where id = line.item_id and household_id = d.household_id and track_amount
+     for update;
+    if not found then
+      continue;
+    end if;
+    back := case when line.unit is null then line.amount
+                 else public.convert_kitchen_amount(line.amount, line.unit, it.unit) end;
+    if back is null then
+      skipped := skipped || jsonb_build_array(jsonb_build_object('item_id', it.id, 'amount', line.amount, 'unit', line.unit));
+      continue;
+    end if;
     update public.inventory_items
-       set quantity = quantity + line.amount,
+       set quantity = quantity + back,
            amount_set_by = case
              when d.cooked_by is not null and exists (
                select 1 from public.staff_profiles s where s.id = d.cooked_by and s.archived_at is null
              ) then d.cooked_by
              else null
            end
-     where id = line.item_id and household_id = d.household_id and track_amount
+     where id = it.id
     returning * into it;
-    if found then
-      changed := changed || jsonb_build_array(to_jsonb(it));
-    end if;
+    changed := changed || jsonb_build_array(to_jsonb(it));
   end loop;
 
   update public.menu_dishes
      set cooked_at = null, cooked_by = null, cooked_uses = null
    where id = d.id
   returning * into d;
-  return jsonb_build_object('dish', to_jsonb(d), 'items', changed);
+  return jsonb_build_object('dish', to_jsonb(d), 'items', changed, 'skipped', skipped);
 end;
 $$;
 

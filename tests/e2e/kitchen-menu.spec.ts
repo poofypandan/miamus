@@ -372,3 +372,56 @@ test("Kitchen switched off: no menu on staff Today", async ({ context, page }) =
   await expect(page.getByText("Tugas Hari Ini").first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("region", { name: "Menu hari ini", exact: true })).toHaveCount(0);
 });
+
+test("cooking takes off what the stepper shows, not the dish's servings (Codex, PR #101)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [chicken, rice, shallots],
+    recipes: [soto],
+    menu: [dish(0, "lunch", "Chicken soto", { recipe_id: SOTO, servings: 2 })],
+  });
+  await page.goto("/staff");
+  const card = page.getByRole("region", { name: "Menu hari ini", exact: true });
+  await card.getByRole("button", { name: /Soto ayam/ }).click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByText("2 porsi", { exact: true })).toBeVisible();
+  // The cook makes 4 instead of 2: 1 kg chicken and 500 g rice, as shown.
+  await page.getByRole("button", { name: "Tambah porsi" }).click();
+  await page.getByRole("button", { name: "Tambah porsi" }).click();
+  await expect(sheet.getByText("4 porsi", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Sudah dimasak" }).click();
+  await expect(page.getByRole("heading", { name: "Bahan yang dipakai" })).toBeVisible();
+  await expect(page.getByText("500 g", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Pakai bahan ini" }).click();
+  await expect.poll(() => stub.supplies.find((r) => r.id === rice.id)?.quantity).toBe(3.5);
+  expect(stub.supplies.find((r) => r.id === chicken.id)).toMatchObject({ quantity: 0 });
+  expect(stub.menu[0].cooked_uses).toEqual([
+    { item_id: chicken.id, amount: 1, unit: "kg" },
+    { item_id: rice.id, amount: 0.5, unit: "kg" },
+  ]);
+});
+
+test("a dish can't be cooked before its recipe has loaded: Sedang memuat…, then Sudah dimasak (Codex, PR #101)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [chicken, rice, shallots],
+    recipes: [soto],
+    menu: [dish(0, "lunch", "Chicken soto", { recipe_id: SOTO, servings: 4 })],
+    holdRecipes: true,
+  });
+  await page.goto("/staff");
+  const card = page.getByRole("region", { name: "Menu hari ini", exact: true });
+  await card.getByRole("button", { name: /Chicken soto/ }).click({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Sedang memuat…" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Sudah dimasak" })).toHaveCount(0);
+  expect(stub.menu[0].cooked_at).toBeNull();
+
+  stub.releaseRecipes();
+  // The recipe arrives: the dish reads as the recipe, and cooking is open.
+  await expect(page.getByRole("button", { name: "Sudah dimasak" })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("heading", { name: "Soto ayam" })).toBeVisible();
+});

@@ -535,8 +535,12 @@ export interface DataProvider {
    * the dish cooked; refused (MenuAlreadyCookedError) if it already is.
    */
   cookMenuDish(id: string, uses: CookedUse[], staffId: string | null): Promise<{ dish: MenuDish; items: InventoryItem[] }>;
-  /** Any household session: puts back exactly what cooking took. */
-  uncookMenuDish(id: string): Promise<{ dish: MenuDish; items: InventoryItem[] }>;
+  /**
+   * Any household session: puts back exactly what cooking took, converted
+   * if an item's unit changed since; `skipped` lists the items whose unit no
+   * longer converts (nothing wrong is added to them).
+   */
+  uncookMenuDish(id: string): Promise<{ dish: MenuDish; items: InventoryItem[]; skipped: CookedUse[] }>;
   /** The household's kitchen note; null before 153. */
   getKitchenNotes(): Promise<KitchenNotes | null>;
   /** Owners only. `confirm`: the one-time health-data OK (D12). */

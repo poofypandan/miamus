@@ -127,7 +127,8 @@ Undo and the What's new card.
   and meal are taps. Owners only, through `is_household_admin()`.
 - **Cooking**: *Sudah dimasak* on a dish (staff on Menu hari ini, owners on
   the week, today or earlier). With tracked lines that convert, *Bahan yang
-  dipakai* lists them scaled and summed per item (minus/plus, untick),
+  dipakai* lists them scaled to the servings on screen and summed per item
+  (minus/plus, untick),
   *Tidak dihitung* the rest; a dish with nothing to take off is cooked in one
   tap. `cook_menu_dish` / `uncook_menu_dish` (SECURITY DEFINER, open to staff
   phones by design, household check); a trigger refuses any client write to
@@ -153,6 +154,16 @@ Undo and the What's new card.
   older than a year.
 - **Export**: `menu`, the kitchen notes and their confirmation, and 152's
   repair push switches in `my_notifications`.
+- **Codex round 1 on #101 (six P2s, all fixed)**: cooking takes off what
+  the dish's servings stepper shows; Sudah dimasak waits ("Sedang memuat…",
+  or "Belum bisa dimuat. Coba lagi") until the recipe and the items came
+  from the server in this session, never from the phone's copy alone;
+  `cooked_uses` keeps each item's unit and Undo converts it
+  (`convert_kitchen_amount`), skipping and saying so when the units no
+  longer convert; a menu week whose first read failed is read again on
+  refresh, online and back in the foreground; Copy last week waits for both
+  weeks from the server; a unit change converts `to_buy_amount` (in the app
+  and in the trigger) or clears it.
 - **Not in PR C (less typing / less reading)**: the addendum (Eat soon,
   leftover dishes, Ready to cook, packs, the Menu changed banner), the "won't
   come off" unit hint (the confirm sheet's *Tidak dihitung* says it), cooking

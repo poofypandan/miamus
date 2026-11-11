@@ -23,7 +23,14 @@ function household(): string | null {
 export function useMenuWeek(
   day: string,
   { enabled = true }: { enabled?: boolean } = {}
-): { dishes: MenuDish[]; notes: KitchenNotes | null; loaded: boolean; failed: boolean } {
+): {
+  dishes: MenuDish[];
+  notes: KitchenNotes | null;
+  loaded: boolean;
+  failed: boolean;
+  /** This week came from the server in this session (not only the phone's copy). */
+  weekLoaded: boolean;
+} {
   const state = useSyncExternalStore(subscribeMenu, getMenuSnapshot, () => EMPTY_MENU);
   const current = household();
   const monday = weekStart(day);
@@ -41,6 +48,7 @@ export function useMenuWeek(
     notes: mine ? state.notes : null,
     loaded: mine && state.loaded,
     failed: mine && state.failed,
+    weekLoaded: mine && state.weeks.includes(monday),
   };
 }
 

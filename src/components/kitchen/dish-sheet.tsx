@@ -1,13 +1,13 @@
 "use client";
 
-import { CheckCircle2, CookingPot, Loader2, NotebookPen, Pencil, RotateCcw } from "lucide-react";
+import { CheckCircle2, CookingPot, Loader2, NotebookPen, Pencil, RefreshCw, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { RecipeBody } from "@/components/kitchen/recipe-detail-sheet";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRecipes } from "@/hooks/use-recipes";
 import { useStaffProfiles, useStaffNameLookup } from "@/hooks/use-staff-profiles";
-import { MEAL_LABELS, dishServings, dishTitle, recipeOf, weekdayLong } from "@/lib/menu";
+import { MEAL_LABELS, dishServings, dishTitle, recipeOf, weekdayLong, type CookReadiness } from "@/lib/menu";
 import { servingsLabel, type RecipeLang } from "@/lib/recipes";
 import type { MenuDish } from "@/types/database";
 
@@ -25,6 +25,8 @@ export function DishSheet({
   kitchenNotes,
   canCook,
   busy,
+  cookState,
+  onRetry,
   onCook,
   onUncook,
   onEdit,
@@ -37,7 +39,11 @@ export function DishSheet({
   /** Today or earlier: a dish isn't cooked ahead of its day. */
   canCook: boolean;
   busy: boolean;
-  onCook: (dish: MenuDish) => void;
+  /** Whether the recipe and items have loaded from the server (Codex, PR #101). */
+  cookState: CookReadiness;
+  onRetry: () => void;
+  /** With the servings on the dish's stepper (Codex, PR #101). */
+  onCook: (dish: MenuDish, servings: number | null) => void;
   onUncook?: (dish: MenuDish) => void;
   onEdit?: (dish: MenuDish) => void;
   onClose: () => void;
@@ -55,6 +61,8 @@ export function DishSheet({
             kitchenNotes={kitchenNotes}
             canCook={canCook}
             busy={busy}
+            cookState={cookState}
+            onRetry={onRetry}
             onCook={onCook}
             onUncook={onUncook}
             onEdit={onEdit}
@@ -72,6 +80,8 @@ function DishBody({
   kitchenNotes,
   canCook,
   busy,
+  cookState,
+  onRetry,
   onCook,
   onUncook,
   onEdit,
@@ -82,13 +92,17 @@ function DishBody({
   kitchenNotes: string | null;
   canCook: boolean;
   busy: boolean;
-  onCook: (dish: MenuDish) => void;
+  /** Whether the recipe and items have loaded from the server (Codex, PR #101). */
+  cookState: CookReadiness;
+  onRetry: () => void;
+  /** With the servings on the dish's stepper (Codex, PR #101). */
+  onCook: (dish: MenuDish, servings: number | null) => void;
   onUncook?: (dish: MenuDish) => void;
   onEdit?: (dish: MenuDish) => void;
 }) {
   const id = lang === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { recipes } = useRecipes();
+  const { recipes, fresh: recipesFresh } = useRecipes();
   const { allProfiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(allProfiles, tr("Someone", "Seseorang"));
   const recipe = recipeOf(dish, recipes);
@@ -117,13 +131,14 @@ function DishBody({
           <span className="font-medium">{tr("Note", "Catatan")}:</span> {dish.notes}
         </p>
       )}
-      {dish.recipe_id && !recipe && (
+      {/* Only once the list came from the server: a recipe still loading isn't deleted. */}
+      {dish.recipe_id && !recipe && recipesFresh && (
         <p className="text-sm text-muted-foreground">{tr("Recipe deleted", "Resep sudah dihapus")}</p>
       )}
     </>
   );
 
-  const footer = (
+  const footer = (shown: number | null) => (
     <div className="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-2 border-t bg-background px-4 pt-3 pb-[env(safe-area-inset-bottom)]">
       {dish.cooked_at ? (
         <p className="flex min-h-11 items-center gap-2 text-base font-medium text-emerald-700">
@@ -134,8 +149,16 @@ function DishBody({
             {dish.cooked_by ? ` · ${staffName(dish.cooked_by)}` : ""}
           </span>
         </p>
+      ) : canCook && cookState === "loading" ? (
+        <Button className="min-h-12 rounded-xl text-base" disabled>
+          <Loader2 className="animate-spin" /> {tr("Loading…", "Sedang memuat…")}
+        </Button>
+      ) : canCook && cookState === "failed" ? (
+        <Button variant="outline" className="min-h-12 rounded-xl text-base" onClick={onRetry}>
+          <RefreshCw /> {tr("Couldn't load. Try again", "Belum bisa dimuat. Coba lagi")}
+        </Button>
       ) : canCook ? (
-        <Button className="min-h-12 rounded-xl text-base" onClick={() => onCook(dish)} disabled={busy}>
+        <Button className="min-h-12 rounded-xl text-base" onClick={() => onCook(dish, shown)} disabled={busy}>
           {busy ? <Loader2 className="animate-spin" /> : <CookingPot />} {tr("Cooked", "Sudah dimasak")}
         </Button>
       ) : null}
@@ -165,7 +188,7 @@ function DishBody({
         servings={servings ?? undefined}
         title={title}
         before={before}
-        footer={footer}
+        footer={(shown) => footer(shown)}
       />
     );
   }
@@ -178,7 +201,7 @@ function DishBody({
       </SheetHeader>
       <div className="flex flex-1 flex-col gap-4 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         {before}
-        {footer}
+        {footer(null)}
       </div>
     </div>
   );

@@ -417,8 +417,11 @@ export type RecipeIngredient = {
 /** A meal on the menu (migrations/153). */
 export type MenuMeal = "breakfast" | "lunch" | "dinner";
 
-/** What cooking took off one tracked item, in the item's unit (migrations/153). */
-export type CookedUse = { item_id: string; amount: number };
+/**
+ * What cooking took off one tracked item (migrations/153), in the unit the
+ * item had then: Undo converts it if an owner changed the unit since.
+ */
+export type CookedUse = { item_id: string; amount: number; unit?: InventoryUnit | null };
 
 /**
  * One dish on a day (Phase 170 PR C, migrations/153). Owners plan; every
@@ -1130,7 +1133,7 @@ export interface Database {
       };
       uncook_menu_dish: {
         Args: { p_dish_id: string };
-        Returns: { dish: MenuDish; items: InventoryItem[] };
+        Returns: { dish: MenuDish; items: InventoryItem[]; skipped?: CookedUse[] };
       };
       // The household's kitchen note (migrations/153); owners only.
       set_kitchen_notes: {
