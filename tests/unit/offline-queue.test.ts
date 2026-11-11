@@ -489,6 +489,61 @@ describe("portion taps waiting on the phone (Phase 170 PR A, Codex #93)", () => 
     expect(applyPortions([{ ...rendang, portions: 0 }], view.portions, () => false)[0].portions).toBe(0);
     expect(applyPortions([{ ...rendang, portions: null }], view.portions, () => false)[0].portions).toBeNull();
   });
+
+  it("one food's taps go in order; another food's, and other saves, don't wait (Codex P2, PR #93)", () => {
+    const tap = (op: string, food = "food-1") => ({ kind: "portion" as const, opId: op, foodId: food, staffId: null });
+    const undo = (op: string) => ({ kind: "portion-undo" as const, opId: op, foodId: "food-1" });
+    expect(queue.dependsOn(tap("op-2"), tap("op-1"))).toBe(true);
+    expect(queue.dependsOn(undo("op-1"), tap("op-1"))).toBe(true);
+    expect(queue.dependsOn(tap("op-3"), undo("op-1"))).toBe(true);
+    expect(queue.dependsOn(tap("op-2", "food-2"), tap("op-1"))).toBe(false);
+    expect(queue.dependsOn(logJob(), tap("op-1"))).toBe(false);
+    expect(queue.dependsOn(tap("op-1"), logJob())).toBe(false);
+  });
+
+  it("a lost reply, then a second tap: the second waits for the first, so the count is never one short (Codex P2, PR #93)", async () => {
+    // Three portions. The first tap reaches the server (2 left) but its
+    // reply is lost: it stays on the phone, unanswered.
+    let server = 3;
+    const applied = new Set<string>();
+    const eat = (_food: string, op: string) => {
+      if (!applied.has(op)) {
+        applied.add(op);
+        server -= 1;
+      }
+      return { food: { ...rendang, portions: server }, consumed: 1 };
+    };
+    provider.eatFoodPortion.mockImplementationOnce(async (food: string, op: string) => {
+      eat(food, op);
+      throw NO_ANSWER;
+    });
+    expect((await queue.submitJob({ kind: "portion", opId: "op-1", foodId: "food-1", staffId: null })).status).toBe("waiting");
+    expect(server).toBe(2);
+
+    // A second tap before the retry: held behind the first, not sent alongside it.
+    provider.eatFoodPortion.mockImplementation(async (food: string, op: string) => eat(food, op));
+    const second = await queue.submitJob({ kind: "portion", opId: "op-2", foodId: "food-1", staffId: null });
+    expect(second.status).toBe("waiting");
+    expect(provider.eatFoodPortion).toHaveBeenCalledTimes(1);
+
+    // The screen: its server copy (3) with both taps laid over it reads 1, the truth after both.
+    const waiting = outboxView(await stored(), "house-a", []);
+    expect(applyPortions([rendang], waiting.portions, queue.isAnswered)[0].portions).toBe(1);
+
+    // The drain resends the first (counted once), then the second; the
+    // screen takes each answer, and neither is laid over again.
+    let shown: import("@/types/database").FoodItem = rendang;
+    const stop = queue.onQueuedSaveSent((_item, result) => {
+      if (result.kind === "portion") shown = result.food;
+    });
+    const report = await queue.drainOutbox();
+    stop();
+    expect(report.sent.map((i) => (i.job as { opId: string }).opId)).toEqual(["op-1", "op-2"]);
+    expect(server).toBe(1);
+    expect(shown.portions).toBe(1);
+    const after = outboxView(await stored(), "house-a", []);
+    expect(applyPortions([shown], after.portions, queue.isAnswered)[0].portions).toBe(1);
+  });
 });
 
 describe("what the screen shows while saves wait", () => {

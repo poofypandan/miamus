@@ -631,6 +631,8 @@ type TryResult<T> = { ok: true; result: T } | { ok: false; err: unknown } | { ok
  *               a start (P must be free) and a hand-over to P. A release
  *               saved before its person was known (an older app) releases
  *               "person:*", which every person reference waits for.
+ *   portion:F   every portion tap and undo on food F (Phase 170 PR A;
+ *               Codex, PR #93): each waits for the earlier ones on F.
  *
  * Saves with no keys (logs, food, chores) never wait for anything.
  */
@@ -664,6 +666,13 @@ export function jobKeys(job: OutboxJob): JobKeys {
       };
     case "couldnt":
       return job.input.repair_visit_id ? { refs: [`visit:${job.input.repair_visit_id}`], effects: [] } : { refs: [], effects: [] };
+    case "portion":
+    case "portion-undo":
+      // One food's taps and undos go one after another (Codex, PR #93): the
+      // screen lays each waiting tap over the server's count, so a later
+      // tap's answer (which already counts an earlier tap whose reply was
+      // lost) must never arrive while that earlier tap is still unanswered.
+      return { refs: [`portion:${job.foodId}`], effects: [`portion:${job.foodId}`] };
     default:
       return { refs: [], effects: [] };
   }

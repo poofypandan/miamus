@@ -147,7 +147,13 @@ export const LEGAL = {
   // still stop at 9 PM); admins told when a chosen routine still isn't done
   // 30 minutes after its time, until 10:30 PM. No new service, no new kind
   // of personal data.
-  policyVersion: "2026-11-11.7",
+  // 2026-11-11.8: recipes (Phase 170 PR B, migrations/151) — recipes the
+  // household's admins write (name, servings, ingredients with amounts,
+  // steps, an optional Indonesian version for staff, who wrote it), read by
+  // every phone in the household, kept until an admin deletes them; in the
+  // household export. No photos, no prices, no new service, region or
+  // change to Kakak.
+  policyVersion: "2026-11-11.8",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

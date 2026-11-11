@@ -28,6 +28,28 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Phase 170 PR B: shown on Kitchen → Menu while the Kitchen switch is
+    // on, under the calm-start rules (one card a week, never to new
+    // households): Kitchen amounts' card had this week, so it waits.
+    id: "recipes-2026-11",
+    date: "2026-11-12",
+    audience: "owner",
+    title: { en: "New: recipes in Kitchen", id: "Baru: resep di Dapur" },
+    steps: {
+      en: [
+        "Kitchen → Menu → New recipe: a name, the servings and the ingredients from your list. Steps are optional.",
+        "Written in English? Add the Indonesian version for staff: their phones show Bahasa Indonesia only.",
+        "Whoever cooks opens it in Dapur → Menu, and can change the servings: the amounts follow.",
+      ],
+      id: [
+        "Dapur → Menu → Resep baru: nama, porsi, dan bahan dari daftar Anda. Cara membuat opsional.",
+        "Ditulis dalam bahasa Inggris? Tambahkan versi Bahasa Indonesia untuk staf: HP staf hanya menampilkan Bahasa Indonesia.",
+        "Yang memasak membukanya di Dapur → Menu, dan bisa mengubah porsinya: jumlah bahannya ikut berubah.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Phase 173 PR C (D7, D15). Listed in Household → What's new only, never
     // a card: this week's card already went out (one card a week). The two
     // switches explain themselves in the Add routine sheet. Staff need no
@@ -463,6 +485,16 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    // Phase 170 PR B: once the household has a recipe, while the Kitchen switch is on.
+    id: "staff-recipes-2026-11",
+    date: "2026-11-12",
+    title: "Baru: resep di Dapur",
+    lines: [
+      "Resep dari pemilik rumah ada di Dapur → Menu. Ketuk resepnya untuk melihat bahan dan cara membuat.",
+      "Masak lebih banyak? Tekan plus: jumlah bahannya ikut berubah.",
+    ],
+  },
   {
     // Phase 170 PR A: while Kitchen amounts is on for the household.
     id: "staff-kitchen-amounts-2026-11",

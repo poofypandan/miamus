@@ -1,5 +1,6 @@
 import { ChoreAlreadySettledError } from "@/lib/chore-settled";
 import { applyAmountRules } from "@/lib/kitchen-units";
+import type { RecipeWithLines } from "@/lib/recipes";
 
 /** Portion taps in mock mode, by op id (migrations/148's food_portion_ops). */
 const mockPortionOps = new Map<string, { consumed: number; finished: boolean; undone: boolean }>();
@@ -66,6 +67,8 @@ interface MockDB {
   /** Phase 165. Optional, as above. */
   taskExceptions?: TaskException[];
   notificationPrefs?: NotificationPrefs;
+  /** Phase 170 PR B. Optional, as above. */
+  recipes?: RecipeWithLines[];
 }
 
 function freshDB(): MockDB {
@@ -445,6 +448,11 @@ export const mockProvider: DataProvider = {
   async deleteInventoryItem(id) {
     const db = loadDB();
     db.inventoryItems = db.inventoryItems.filter((i) => i.id !== id);
+    // A recipe line keeps its name and loses the link (migrations/151).
+    db.recipes = (db.recipes ?? []).map((r) => ({
+      ...r,
+      ingredients: r.ingredients.map((line) => (line.item_id === id ? { ...line, item_id: null } : line)),
+    }));
     saveDB(db);
     return delay(undefined);
   },
@@ -574,6 +582,42 @@ export const mockProvider: DataProvider = {
   async deleteFoodItem(id) {
     const db = loadDB();
     db.foodItems = db.foodItems.filter((f) => f.id !== id);
+    saveDB(db);
+    return delay(undefined);
+  },
+  async listRecipes() {
+    return delay(loadDB().recipes ?? []);
+  },
+  async saveRecipe(payload) {
+    // save_recipe (migrations/151): the recipe and every line in one go.
+    const db = loadDB();
+    const now = new Date().toISOString();
+    const recipes = db.recipes ?? [];
+    const existing = payload.recipe.id ? recipes.find((r) => r.id === payload.recipe.id) : undefined;
+    const id = existing?.id ?? payload.recipe.id ?? uid("recipe");
+    const household = getActiveHouseholdId();
+    const saved: RecipeWithLines = {
+      ...payload.recipe,
+      id,
+      household_id: household,
+      created_by: existing?.created_by ?? null,
+      created_at: existing?.created_at ?? now,
+      updated_at: now,
+      ingredients: payload.ingredients.map((line, position) => ({
+        ...line,
+        id: uid("line"),
+        household_id: household,
+        recipe_id: id,
+        position,
+      })),
+    };
+    db.recipes = existing ? recipes.map((r) => (r.id === id ? saved : r)) : [...recipes, saved];
+    saveDB(db);
+    return delay(saved);
+  },
+  async deleteRecipe(id) {
+    const db = loadDB();
+    db.recipes = (db.recipes ?? []).filter((r) => r.id !== id);
     saveDB(db);
     return delay(undefined);
   },

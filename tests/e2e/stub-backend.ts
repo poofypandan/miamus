@@ -103,6 +103,12 @@ export interface StubOptions {
    * and owner guard (a staff phone can't change tracking, units or low levels).
    */
   items?: Record<string, unknown>[];
+  /**
+   * recipes rows, each with an `ingredients` array (Phase 170 PR B,
+   * migrations/151). save_recipe changes them in place (owners only, as the
+   * database), so a staff phone in the same test reads what the owner saved.
+   */
+  recipes?: Record<string, unknown>[];
   /** The VAPID public key get_push_public_key returns to the admin (push set up on the server). */
   pushKey?: string;
   /** Leave the Add to Home Screen tip showing (owner phones have it closed by default). */
@@ -229,6 +235,8 @@ export interface Stub {
   supervision: Record<string, unknown>[];
   /** The admin's notification switches as last saved (Phase 165). */
   notificationPrefs: { evening_summary_hour: number | null; staff_request_pushes: boolean };
+  /** recipes, each with its ingredients, as the stub holds them (Phase 170 PR B). */
+  recipes: Record<string, unknown>[];
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
   sessionUser(): Promise<string | null>;
@@ -261,6 +269,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const schedules: Record<string, unknown>[] = [...(SCHEDULES as unknown as Record<string, unknown>[]), ...(options.schedules ?? [])];
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [], portionCalls: [], portionUndos: [] };
   const foods: Record<string, unknown>[] = [];
+  const recipes: Record<string, unknown>[] = options.recipes ?? [];
   const portionOps = new Map<string, { consumed: number; finished: boolean; undone: boolean }>();
   /** eat_food_portion answers to drop after counting (a reply lost on the way back). */
   const portionTrouble = { lostReplies: 0 };
@@ -523,6 +532,58 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: object ? after : [after] });
       }
+      // Recipes (Phase 170 PR B, migrations/151): every session reads;
+      // owners write the recipe and all its lines through save_recipe.
+      if (table === "recipes" && request.method() === "GET") {
+        return route.fulfill({ json: recipes.map(({ ingredients: _lines, ...row }) => row) });
+      }
+      if (table === "recipe_ingredients" && request.method() === "GET") {
+        return route.fulfill({ json: recipes.flatMap((r) => (r.ingredients as Record<string, unknown>[]) ?? []) });
+      }
+      if (table === "rpc/save_recipe" || (table === "recipes" && request.method() === "DELETE")) {
+        if (who !== OWNER) {
+          return route.fulfill({ status: 403, json: { code: "42501", message: "recipes_owner_only", details: null, hint: null } });
+        }
+        if (table === "recipes") {
+          const id = (new URL(request.url()).searchParams.get("id") ?? "").replace(/^eq\./, "");
+          const index = recipes.findIndex((r) => r.id === id);
+          if (index < 0) return route.fulfill({ json: [] });
+          recipes.splice(index, 1);
+          return route.fulfill({ json: [{ id }] });
+        }
+        const body = request.postDataJSON() as { p_recipe: Record<string, unknown>; p_ingredients: Record<string, unknown>[] };
+        const id = (body.p_recipe.id as string | null) ?? `00000000-0000-4000-8000-${String(151000 + recipes.length).padStart(12, "0")}`;
+        const index = recipes.findIndex((r) => r.id === id);
+        const now = new Date().toISOString();
+        const ingredients = (body.p_ingredients ?? []).map((line, position) => ({
+          id: `${id.slice(0, 24)}${String(position).padStart(12, "0")}`,
+          household_id: HOUSEHOLD_ID,
+          recipe_id: id,
+          item_id: null,
+          name_id: null,
+          amount: null,
+          unit: null,
+          ...line,
+          position,
+        }));
+        const recipe = {
+          servings: 4,
+          steps: null,
+          written_in: "id",
+          name_id: null,
+          steps_id: null,
+          ...(index >= 0 ? recipes[index] : { created_at: now, created_by: OWNER }),
+          ...body.p_recipe,
+          id,
+          household_id: HOUSEHOLD_ID,
+          updated_at: now,
+          ingredients,
+        };
+        if (index >= 0) recipes[index] = recipe;
+        else recipes.push(recipe);
+        const { ingredients: lines, ...row } = recipe;
+        return route.fulfill({ json: { recipe: row, ingredients: lines } });
+      }
       // Ate 1 portion and its Undo (migrations/148): decided here, once per op id.
       if (table === "rpc/eat_food_portion" || table === "rpc/undo_food_portion") {
         const body = request.postDataJSON() as Record<string, unknown>;
@@ -667,6 +728,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     kakak,
     household,
     features,
+    recipes,
     setNetwork(up: boolean) {
       net.token = net.rest = net.signup = up;
     },

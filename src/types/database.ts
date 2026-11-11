@@ -366,6 +366,49 @@ export type FoodItem = {
   finished_by: string | null;
 };
 
+/** A recipe line's unit (migrations/151): the stock units plus sdm and sdt, never taken off stock. */
+export type RecipeUnit = InventoryUnit | "sdm" | "sdt";
+
+/**
+ * A recipe (Phase 170 PR B, migrations/151). Owners write; every staff phone
+ * reads. Written in English or Indonesian (`written_in`); staff phones read
+ * Indonesian only, so an English recipe can carry an Indonesian version
+ * (`name_id`, `steps_id`, and each line's `name_id`). No prices, ever.
+ */
+export type Recipe = {
+  id: string;
+  household_id: string;
+  name: string;
+  /** Portions the amounts are for (1–50). */
+  servings: number;
+  /** One text block, a step per line; null when there are none. */
+  steps: string | null;
+  written_in: "en" | "id";
+  /** The Indonesian version for staff, when written in English. */
+  name_id: string | null;
+  steps_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** One ingredient line, in order (migrations/151). */
+export type RecipeIngredient = {
+  id: string;
+  household_id: string;
+  recipe_id: string;
+  /** An item from the household's list; null for a free name, or once the item is deleted. */
+  item_id: string | null;
+  /** Kept even when linked, so a deleted item still reads. */
+  name: string;
+  /** The line's Indonesian name for staff (English recipes). */
+  name_id: string | null;
+  /** Null = to taste (secukupnya). */
+  amount: number | null;
+  unit: RecipeUnit | null;
+  position: number;
+};
+
 export type InventoryItem = {
   id: string;
   // The tenant (migrations/086).
@@ -846,6 +889,19 @@ export interface Database {
         Update: Partial<FoodItem>;
         Relationships: [];
       };
+      // Recipes (migrations/151): owners write, every session reads.
+      recipes: {
+        Row: Recipe;
+        Insert: Partial<Recipe> & Pick<Recipe, "household_id" | "name">;
+        Update: Partial<Recipe>;
+        Relationships: [];
+      };
+      recipe_ingredients: {
+        Row: RecipeIngredient;
+        Insert: Partial<RecipeIngredient> & Pick<RecipeIngredient, "household_id" | "recipe_id" | "name">;
+        Update: Partial<RecipeIngredient>;
+        Relationships: [];
+      };
       inventory_audit_logs: {
         Row: InventoryAuditLog;
         Insert: Partial<InventoryAuditLog> & Pick<InventoryAuditLog, "item_id">;
@@ -1005,6 +1061,11 @@ export interface Database {
       undo_food_portion: {
         Args: { p_food_id: string; p_op_id: string };
         Returns: { food: FoodItem; restored: number };
+      };
+      // A recipe and all its lines in one go (migrations/151); owners only.
+      save_recipe: {
+        Args: { p_recipe: Record<string, unknown>; p_ingredients?: Record<string, unknown>[] };
+        Returns: { recipe: Recipe; ingredients: RecipeIngredient[] };
       };
       // Bought (migrations/148): adds the amount on a tracked item, keeps it
       // as the next pre-fill, and puts the item back to enough.
