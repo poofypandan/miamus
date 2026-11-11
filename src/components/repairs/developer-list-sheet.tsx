@@ -52,12 +52,12 @@ function canShareFiles(): boolean {
 }
 
 /** A photo's bytes: the copy still on this phone, else the stored one at a size WhatsApp keeps sharp. */
-async function photoBlob(url: string): Promise<Blob | null> {
+async function photoBlob(url: string, signal: AbortSignal): Promise<Blob | null> {
   const local = await readQueuedPhoto(url).catch(() => null);
   if (local) return local;
   const src = photoSrc(url, 1280);
-  if (!src) return null;
-  const res = await fetch(src);
+  if (!src || signal.aborted) return null;
+  const res = await fetch(src, { signal });
   if (!res.ok) return null;
   const blob = await res.blob();
   return blob.type.startsWith("image/") ? blob : null;
@@ -92,9 +92,12 @@ export function DeveloperListSheet({
   const [sharing, setSharing] = useState(false);
   const [filesOk] = useState(canShareFiles);
   // Photos are fetched when the sheet opens, not on the tap: the share sheet
-  // must open straight from the tap, or the phone refuses it.
+  // must open straight from the tap, or the phone refuses it. Only while it
+  // is open: Repairs on its own downloads nothing (mobile data, Codex PR #99).
   const [blobs, setBlobs] = useState<ReadonlyMap<string, Blob>>(new Map());
   const [preparing, setPreparing] = useState(filesOk);
+  /** Photos already fetched for this opening, so a reload of the list fetches only new ones. */
+  const fetched = useRef(new Map<string, Blob>());
   const now = useMemo(() => new Date(), []);
 
   useBackToClose(open && !printing, onClose);
@@ -102,27 +105,32 @@ export function DeveloperListSheet({
   const photoUrls = useMemo(() => [...new Set(items.flatMap((i) => i.photos.map((p) => p.url)))], [items]);
   const photoKey = photoUrls.join("|");
   useEffect(() => {
-    if (!filesOk) return;
-    let cancelled = false;
-    const loaded = new Map<string, Blob>();
+    if (!filesOk || !open) return;
+    // Closing the sheet (or a new list) stops whatever is still downloading.
+    const controller = new AbortController();
+    const missing = photoUrls.filter((url) => !fetched.current.has(url));
     const work = Promise.allSettled(
-      photoUrls.map(async (url) => {
-        const blob = await photoBlob(url);
-        if (blob) loaded.set(url, blob);
+      missing.map(async (url) => {
+        const blob = await photoBlob(url, controller.signal);
+        if (blob && !controller.signal.aborted) fetched.current.set(url, blob);
       })
     );
-    const timeout = new Promise((resolve) => window.setTimeout(resolve, PREPARE_TIMEOUT_MS));
+    let timer = 0;
+    const timeout = new Promise((resolve) => {
+      timer = window.setTimeout(resolve, PREPARE_TIMEOUT_MS);
+    });
     void Promise.race([work, timeout]).then(() => {
-      if (cancelled) return;
-      setBlobs(new Map(loaded));
+      if (controller.signal.aborted) return;
+      setBlobs(new Map(fetched.current));
       setPreparing(false);
     });
     return () => {
-      cancelled = true;
+      controller.abort();
+      window.clearTimeout(timer);
     };
     // photoKey stands for photoUrls.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filesOk, photoKey]);
+  }, [filesOk, open, photoKey]);
 
   const chosen = items.filter((i) => !unticked.has(i.repair.id));
   const files = useMemo(() => {

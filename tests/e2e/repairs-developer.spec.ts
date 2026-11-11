@@ -70,12 +70,21 @@ const WALK_IN = {
   note: null,
 };
 
-async function setUp(context: BrowserContext, locale: "en" | "id", { share = true } = {}) {
+async function setUp(context: BrowserContext, locale: "en" | "id", { share = true, photoDelayMs = 0 } = {}) {
   await installStub(context, { owner: { locale }, rooms: [LT2, GUEST], chores: [], repairs: REPAIRS(), walkIns: [WALK_IN] });
   const jpeg = await sharp({ create: { width: 800, height: 600, channels: 3, background: { r: 150, g: 140, b: 120 } } })
     .jpeg()
     .toBuffer();
-  await context.route("**/api/photo**", (route) => route.fulfill({ contentType: "image/jpeg", body: jpeg }));
+  // Every photo asked for, and every one the page gave up on (closed sheet).
+  const photos = { requested: [] as string[], aborted: [] as string[] };
+  context.on("requestfailed", (request) => {
+    if (request.url().includes("/api/photo")) photos.aborted.push(request.url());
+  });
+  await context.route("**/api/photo**", async (route) => {
+    photos.requested.push(route.request().url());
+    if (photoDelayMs) await new Promise((resolve) => setTimeout(resolve, photoDelayMs));
+    await route.fulfill({ contentType: "image/jpeg", body: jpeg }).catch(() => undefined);
+  });
   await context.route("https://wa.me/**", (route) => route.fulfill({ contentType: "text/html", body: "<html></html>" }));
   await context.addInitScript(
     ({ share }) => {
@@ -103,6 +112,7 @@ async function setUp(context: BrowserContext, locale: "en" | "id", { share = tru
     },
     { share }
   );
+  return photos;
 }
 
 test("an owner sends the open repairs to the developer: untick one, share text and photos, Indonesian by default", async ({
@@ -238,4 +248,27 @@ test("with no open repairs there is nothing to send", async ({ context, page }) 
   await page.goto("/dashboard?module=chores&chores=repairs");
   await expect(page.getByRole("region", { name: "Fixed" }).getByText("Pintu seret")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Send to the developer" })).toHaveCount(0);
+});
+
+test("photos download only while the sheet is open, and closing it stops them (Codex, PR #99)", async ({ context, page }) => {
+  const photos = await setUp(context, "en", { photoDelayMs: 3_000 });
+  await page.goto("/dashboard?module=chores&chores=repairs");
+  const button = page.getByRole("button", { name: "Send to the developer" });
+  await expect(button).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("region", { name: "Open" }).getByText("Keran bocor")).toBeVisible();
+  // Repairs on its own, sheet closed: not one photo asked for.
+  await page.waitForTimeout(1_500);
+  expect(photos.requested).toEqual([]);
+
+  // Opening the sheet starts the full-size downloads for sharing.
+  await button.click();
+  const sheet = page.getByRole("dialog", { name: "Send to the developer" });
+  await expect(sheet.getByRole("button", { name: "Getting the photos ready…" })).toBeDisabled();
+  const fullSize = () => photos.requested.filter((url) => url.includes("w=1280"));
+  await expect.poll(() => fullSize().length).toBe(3);
+
+  // Closed before they arrive: the page stops waiting for them.
+  await sheet.getByRole("button", { name: "Close" }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect.poll(() => photos.aborted.filter((url) => url.includes("w=1280")).length).toBe(3);
 });
