@@ -118,7 +118,16 @@ export const LEGAL = {
   // home picked at sign-up (Phase 171 PR A, migrations/145; the kind of home
   // is household_setup.home_type, migrations/142). Switching off hides, never
   // deletes. No new service.
-  // 2026-11-11.4: walk-in repairs and supervising (Phase 174 PR A,
+  // 2026-11-11.4: pre-launch hardening (audit of 11 Nov, migrations/146) —
+  // a linked staff phone not used for 60 days is unlinked automatically; an
+  // admin account that no longer belongs to any household is deleted 30
+  // days later (with its request), unless it joins or asks again first; PIN
+  // lockouts grow (15 minutes, 1 hour, then until an admin sets a new PIN);
+  // each saved task notes which phone or account saved it (only that phone
+  // can undo it, for minutes, or a walk until shortly after it ends); whose
+  // PIN last opened a linked phone is kept while it is linked. No new
+  // service.
+  // 2026-11-11.5: walk-in repairs and supervising (Phase 174 PR A,
   // migrations/149) — a repair person's name or company (optional, typed by
   // staff or an admin; no phone number), when they arrived and left, before
   // and after photos of the work (not of people), an optional result and
@@ -126,7 +135,7 @@ export const LEGAL = {
   // closing). Who supervised a walk-in and from when to when (staff data),
   // kept 90 days; a couldn't-do reason "supervising a repair". No new
   // service; no new notification yet (owner pushes come with PR B).
-  policyVersion: "2026-11-11.4",
+  policyVersion: "2026-11-11.5",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

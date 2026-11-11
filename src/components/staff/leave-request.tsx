@@ -206,7 +206,14 @@ export function LeaveStatusBanner() {
       toast.success("Selamat datang kembali! Tugas Anda sudah kembali ke daftar.");
     } catch (err) {
       console.error(err);
-      toast.error("Gagal menyimpan. Periksa koneksi lalu coba lagi.");
+      // Only the person on leave, or an admin (migrations/146): this phone was
+      // last opened with someone else's PIN.
+      const message = (err as { message?: string } | null)?.message ?? "";
+      toast.error(
+        message.includes("not_your_leave")
+          ? "HP ini terakhir dibuka dengan PIN orang lain. Ganti ke nama Anda dan masukkan PIN Anda, lalu coba lagi."
+          : "Gagal menyimpan. Periksa koneksi lalu coba lagi."
+      );
     } finally {
       setEnding(false);
     }

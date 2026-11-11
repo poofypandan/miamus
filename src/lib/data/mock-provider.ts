@@ -1,3 +1,4 @@
+import { ChoreAlreadySettledError } from "@/lib/chore-settled";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -1083,6 +1084,20 @@ export const mockProvider: DataProvider = {
     const idx = db.householdTasks.findIndex((t) => t.id === id);
     if (idx === -1) throw new Error(`Household task ${id} not found`);
     const completing = status === "completed";
+    // The queued finish (audit M4), as the Supabase provider does it.
+    if (completing && patch?.onlyIfPending && db.householdTasks[idx].status !== "pending") {
+      const current = db.householdTasks[idx];
+      if (current.status === "cancelled") throw new ChoreAlreadySettledError("cancelled");
+      const ownPhoto = !!patch.after_photo_url && current.after_photo_url === patch.after_photo_url;
+      const same =
+        ownPhoto ||
+        current.completed_by === (patch.completed_by ?? null) &&
+        !!current.completed_at &&
+        !!patch.completed_at &&
+        new Date(current.completed_at).getTime() === new Date(patch.completed_at).getTime();
+      if (same) return delay(current);
+      throw new ChoreAlreadySettledError("completed");
+    }
     const updated: HouseholdTask = {
       ...db.householdTasks[idx],
       status,

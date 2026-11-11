@@ -36,7 +36,7 @@ export function HouseCodePanel() {
 }
 
 /** "K7M2QX" → "K7M-2QX", as people read it out. */
-function formatCode(code: string): string {
+export function formatCode(code: string): string {
   return `${code.slice(0, 3)}-${code.slice(3)}`;
 }
 

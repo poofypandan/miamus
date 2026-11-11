@@ -12,6 +12,8 @@ import { dataProvider } from "@/lib/data";
 import { isConnectionError } from "@/lib/network-errors";
 import { ensureUploaded, PhotoNotUploadedError } from "@/lib/photo-queue";
 import { getActiveHouseholdId } from "@/lib/tenant";
+import { isChoreAlreadySettled, type ChoreAlreadySettledError } from "@/lib/chore-settled";
+import { phoneLinkState, type PhoneLinkState } from "@/lib/phone-link";
 
 /**
  * Saves that wait on the phone until they reach the server (Phase 161, R10;
@@ -173,14 +175,37 @@ export function isRetryable(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const { code, message, status } = err as { code?: unknown; message?: unknown; status?: unknown };
   if (typeof status === "number" && RETRY_STATUSES.has(status)) return true;
-  // PostgREST: the access token ran out and has not been renewed yet.
-  if (code === "PGRST301" || code === "PGRST303") return true;
-  if (typeof message === "string" && /JWT expired/i.test(message)) return true;
+  if (isTokenNotRenewed(err)) return true;
   // A reply that is not PostgREST's at all (a proxy's HTML error page):
   // postgrest-js passes it on as `{ message: body }`, with no code. Our own
   // thrown errors are Error instances, and the database always sends a code.
   return !(err instanceof Error) && code === undefined && typeof message === "string";
 }
+
+/**
+ * The server refusing this phone's sign-in rather than the save (audit L4):
+ * a 401, an expired or unusable token, or "not allowed" (42501), which is
+ * what a phone that was unlinked gets back for every write.
+ */
+export function isSessionRefusal(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const { code, status } = err as { code?: unknown; status?: unknown };
+  return status === 401 || code === "42501" || isTokenNotRenewed(err);
+}
+
+/** PostgREST: the access token ran out and has not been renewed yet. */
+function isTokenNotRenewed(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const { code, message } = err as { code?: unknown; message?: unknown };
+  if (code === "PGRST301" || code === "PGRST303") return true;
+  return typeof message === "string" && /JWT expired/i.test(message);
+}
+
+/**
+ * Refusals of the sign-in in a row whose link check had no clear answer;
+ * past this many the phone is treated as unlinked (its saves still kept).
+ */
+export const UNLINKED_AFTER_REFUSALS = 5;
 
 /** Seconds between retries while something waits: 5, 10, 20, 40, then every 60. */
 export function retryDelayMs(failures: number): number {
@@ -190,6 +215,9 @@ export function retryDelayMs(failures: number): number {
 // --- What the screen subscribes to --------------------------------------------
 
 let items: OfflineQueueItem[] = [];
+let unlinked = false;
+let sessionRefusals = 0;
+let linkCheck: (householdId: string | null) => Promise<PhoneLinkState> = phoneLinkState;
 let hydrated = false;
 let hydrating: Promise<void> | null = null;
 const listeners = new Set<() => void>();
@@ -212,6 +240,27 @@ export function outboxVersion(): number {
 /** What is waiting, as this page last read it. */
 export function outboxItems(): readonly OfflineQueueItem[] {
   return items;
+}
+
+/**
+ * True once the last drain found this phone no longer linked (audit L4).
+ * The saves stay on the phone; they go after the phone is linked again.
+ */
+export function outboxUnlinked(): boolean {
+  return unlinked;
+}
+
+function setUnlinked(next: boolean) {
+  if (unlinked === next) return;
+  unlinked = next;
+  emit();
+}
+
+/** For tests: how the queue asks whether the phone is still linked. */
+export function setLinkCheckForTests(check: ((householdId: string | null) => Promise<PhoneLinkState>) | null): void {
+  linkCheck = check ?? phoneLinkState;
+  unlinked = false;
+  sessionRefusals = 0;
 }
 
 function available(): boolean {
@@ -428,14 +477,28 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
       const rowId =
         ready.rowId ?? (await dataProvider.materialiseChoreOccurrence(ready.templateId, ready.date, ready.assignedTo)).id;
       if (ready.takeOverAs) await dataProvider.updateHouseholdTask(rowId, { assigned_to: ready.takeOverAs });
-      const task = await dataProvider.updateHouseholdTaskStatus(rowId, "completed", {
-        before_photo_url: ready.before,
-        after_photo_url: ready.after,
-        photo_url: ready.after,
-        completed_by: ready.completedBy,
-        completed_at: ready.completedAt,
-      });
-      return { kind: "chore", task };
+      try {
+        const task = await dataProvider.updateHouseholdTaskStatus(rowId, "completed", {
+          // Never over a newer state (audit M4): a chore someone else
+          // finished, or an admin cancelled, while this waited stays so.
+          onlyIfPending: true,
+          before_photo_url: ready.before,
+          after_photo_url: ready.after,
+          photo_url: ready.after,
+          completed_by: ready.completedBy,
+          completed_at: ready.completedAt,
+        });
+        return { kind: "chore", task };
+      } catch (err) {
+        if (isChoreAlreadySettled(err)) {
+          // This phone's photos stay out of it. Best effort: the phone may
+          // delete its own fresh uploads; anything older is the clean-up's.
+          for (const url of [ready.before, ready.after]) {
+            if (url) void dataProvider.deletePhoto(url).catch(() => undefined);
+          }
+        }
+        throw err;
+      }
     }
   }
 }
@@ -574,8 +637,18 @@ async function withStableIds(item: OfflineQueueItem): Promise<OutboxJob> {
 
 export interface DrainReport {
   sent: OfflineQueueItem[];
-  /** Refused by the server and removed. */
+  /** Refused by the server and removed (including `settled`). */
   refused: OfflineQueueItem[];
+  /**
+   * Chores finished elsewhere or cancelled while this waited (audit M4):
+   * removed like a refusal, told apart so the screen can say why.
+   */
+  settled: { item: OfflineQueueItem; state: ChoreAlreadySettledError["state"] }[];
+  /**
+   * True when the server refused this phone's sign-in itself several times
+   * in a row (audit L4): it is probably no longer linked. The saves stay.
+   */
+  unlinked: boolean;
   /** Still waiting after this pass. */
   waiting: number;
   /**
@@ -598,7 +671,7 @@ export interface DrainReport {
 export async function drainOutbox(
   beforeClear?: (report: DrainReport) => Promise<void>
 ): Promise<DrainReport> {
-  const report: DrainReport = { sent: [], refused: [], waiting: 0, confirmed: true };
+  const report: DrainReport = { sent: [], refused: [], settled: [], unlinked: false, waiting: 0, confirmed: true };
   if (!available()) return report;
   const household = getActiveHouseholdId();
   const queue = await readAll();
@@ -616,13 +689,27 @@ export async function drainOutbox(
     try {
       await sendJob(await withStableIds(item));
       report.sent.push(item);
+      sessionRefusals = 0;
+      setUnlinked(false);
     } catch (err) {
-      if (isRetryable(err)) {
+      // The sign-in refused, not the save (audit L4): is the phone still
+      // linked? If not, everything stays for a re-link instead of being
+      // retried forever (a 401) or thrown away (a 42501).
+      const link = isSessionRefusal(err) ? await linkCheck(household) : null;
+      if (link === "unknown") sessionRefusals++;
+      else if (link === "linked") sessionRefusals = 0;
+      if (link === "unlinked" || (link === "unknown" && sessionRefusals >= UNLINKED_AFTER_REFUSALS)) {
+        setUnlinked(true);
+        report.unlinked = true;
+        stalled = true;
+        report.waiting++;
+      } else if (link === "unknown" || link === "no_answer" || isRetryable(err)) {
         stalled = true;
         report.waiting++;
       } else {
         console.error("A queued save was refused", item.id, err);
         report.refused.push(item);
+        if (isChoreAlreadySettled(err)) report.settled.push({ item, state: err.state });
       }
     } finally {
       inFlight.delete(item.id);

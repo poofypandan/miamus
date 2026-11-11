@@ -24,6 +24,7 @@ const provider = {
   materialiseChoreOccurrence: vi.fn(),
   updateHouseholdTaskStatus: vi.fn(),
   updateHouseholdTask: vi.fn(),
+  deletePhoto: vi.fn(async () => undefined),
 };
 vi.mock("@/lib/data", () => ({ dataProvider: provider }));
 
@@ -85,6 +86,7 @@ async function stored() {
 }
 
 beforeEach(() => {
+  queue.setLinkCheckForTests(async () => "linked");
   memory.clear();
   household = "house-a";
   (globalThis as { indexedDB?: unknown }).indexedDB = {};
@@ -330,6 +332,8 @@ describe("drainOutbox", () => {
     expect(report.sent).toHaveLength(1);
     expect(provider.materialiseChoreOccurrence).toHaveBeenCalledWith("tpl-1", "2026-11-09", "staff-1");
     expect(provider.updateHouseholdTaskStatus).toHaveBeenCalledWith("row-9", "completed", {
+      // Only over a chore still pending (pre-launch audit M4).
+      onlyIfPending: true,
       before_photo_url: "https://x/before.jpg",
       after_photo_url: "https://x/after.jpg",
       photo_url: "https://x/after.jpg",
@@ -467,5 +471,109 @@ describe("the write timeout", () => {
     ["POST", "http://s.test/auth/v1/token", false],
   ])("%s %s → %s", (method, url, expected) => {
     expect(isTableWrite(url, method)).toBe(expected);
+  });
+});
+
+// Pre-launch audit M4: the queued finish only completes a pending chore.
+const { ChoreAlreadySettledError } = await import("@/lib/chore-settled");
+describe("a finish that arrives after the chore was settled elsewhere", () => {
+  async function queueChore() {
+    provider.materialiseChoreOccurrence.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(choreJob());
+    for (const fn of Object.values(provider)) fn.mockReset();
+    provider.materialiseChoreOccurrence.mockResolvedValue({ id: "row-9" });
+  }
+
+  it.each(["completed", "cancelled"] as const)("leaves a %s chore as it is, says so, and keeps the photos out", async (state) => {
+    await queueChore();
+    provider.updateHouseholdTaskStatus.mockRejectedValue(new ChoreAlreadySettledError(state));
+    const report = await queue.drainOutbox();
+    expect(report.settled.map((s) => s.state)).toEqual([state]);
+    expect(report.refused).toHaveLength(1);
+    expect(report.sent).toEqual([]);
+    expect(await stored()).toEqual([]);
+    expect(provider.deletePhoto).toHaveBeenCalledWith("https://x/before.jpg");
+    expect(provider.deletePhoto).toHaveBeenCalledWith("https://x/after.jpg");
+  });
+
+  it("is refused at once when sent straight away, so the sheet can say why", async () => {
+    provider.materialiseChoreOccurrence.mockResolvedValue({ id: "row-9" });
+    provider.updateHouseholdTaskStatus.mockRejectedValue(new ChoreAlreadySettledError("completed"));
+    await expect(queue.submitJob(choreJob())).rejects.toBeInstanceOf(ChoreAlreadySettledError);
+    expect(await stored()).toEqual([]);
+  });
+});
+
+// Pre-launch audit L4: a phone that is no longer linked keeps its saves.
+describe("a phone that is no longer linked", () => {
+  const REFUSED_SESSION = { code: "42501", message: "new row violates row-level security policy", status: 403 };
+  const EXPIRED = { code: "PGRST303", message: "JWT expired", status: 401 };
+
+  async function queueLog() {
+    provider.createLogsBatch.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(logJob());
+    provider.createLogsBatch.mockReset();
+  }
+
+  it("tells the sign-in's refusals from the save's", () => {
+    expect(queue.isSessionRefusal(REFUSED_SESSION)).toBe(true);
+    expect(queue.isSessionRefusal(EXPIRED)).toBe(true);
+    expect(queue.isSessionRefusal({ status: 401, message: "Unauthorized" })).toBe(true);
+    expect(queue.isSessionRefusal({ code: "P0001", message: "staff_archived", status: 400 })).toBe(false);
+    expect(queue.isSessionRefusal(NO_ANSWER)).toBe(false);
+  });
+
+  it("keeps the saves and says so when the link check finds it unlinked", async () => {
+    queue.setLinkCheckForTests(async () => "unlinked");
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(REFUSED_SESSION);
+    const report = await queue.drainOutbox();
+    expect(report.unlinked).toBe(true);
+    expect(report.refused).toEqual([]);
+    expect(await stored()).toHaveLength(1);
+    expect(queue.outboxUnlinked()).toBe(true);
+  });
+
+  it("calls it unlinked after repeated sign-in refusals the check can't answer, never dropping the save", async () => {
+    queue.setLinkCheckForTests(async () => "unknown");
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(EXPIRED);
+    for (let i = 1; i < queue.UNLINKED_AFTER_REFUSALS; i++) {
+      expect((await queue.drainOutbox()).unlinked).toBe(false);
+    }
+    expect((await queue.drainOutbox()).unlinked).toBe(true);
+    expect(await stored()).toHaveLength(1);
+  });
+
+  it("never calls it unlinked when the check only gets no answer, however often", async () => {
+    queue.setLinkCheckForTests(async () => "no_answer");
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(EXPIRED);
+    for (let i = 0; i < queue.UNLINKED_AFTER_REFUSALS * 2; i++) {
+      const report = await queue.drainOutbox();
+      expect(report.unlinked).toBe(false);
+      expect(report.waiting).toBe(1);
+    }
+    expect(await stored()).toHaveLength(1);
+  });
+
+  it("still drops a real refusal while the phone is linked", async () => {
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(REFUSED_SESSION);
+    const report = await queue.drainOutbox();
+    expect(report.unlinked).toBe(false);
+    expect(report.refused).toHaveLength(1);
+  });
+
+  it("sends everything once linked again, and the notice goes", async () => {
+    queue.setLinkCheckForTests(async () => "unlinked");
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(REFUSED_SESSION);
+    await queue.drainOutbox();
+    provider.createLogsBatch.mockReset();
+    provider.createLogsBatch.mockResolvedValue([{ id: "id-dog-1" }]);
+    const report = await queue.drainOutbox();
+    expect(report.sent).toHaveLength(1);
+    expect(queue.outboxUnlinked()).toBe(false);
   });
 });
