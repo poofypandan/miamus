@@ -323,7 +323,7 @@ const T = {
     staffT: "Staff today", ari: "Supervising a repair since 10:00 AM", ariN: "4 of 9 done", syam: "Pets and kitchen", syamN: "7 of 8 done",
     sheetT: "3 not done today", grp: "Ari · supervising the AC repair · 10:00 AM–1:30 PM",
     t1a: "Mop the terrace", t1b: "10:30 AM", t2a: "Iron clothes", t2b: "11:00 AM",
-    plain: "Not done yet", t3a: "Water the garden", t3b: "4:00 PM · Syam", done: "12 done today", open: "Open the repair",
+    plain: "Not done yet", t3a: "Water the plants", t3b: "4:00 PM · Syam", done: "12 done today", open: "Open the repair",
   },
   id: {
     tag: "Owner · ID", date: "Selasa, 11 November", t1: "09.10", t2: "11.40", t3: "19.00",
@@ -346,7 +346,7 @@ const T = {
     staffT: "Staf hari ini", ari: "Mengawasi perbaikan sejak 10.00", ariN: "4 dari 9 selesai", syam: "Hewan dan dapur", syamN: "7 dari 8 selesai",
     sheetT: "3 belum selesai hari ini", grp: "Ari · mengawasi perbaikan AC · 10.00–13.30",
     t1a: "Pel teras", t1b: "10.30", t2a: "Setrika baju", t2b: "11.00",
-    plain: "Belum dikerjakan", t3a: "Siram taman", t3b: "16.00 · Syam", done: "12 selesai hari ini", open: "Buka perbaikan",
+    plain: "Belum dikerjakan", t3a: "Siram tanaman", t3b: "16.00 · Syam", done: "12 selesai hari ini", open: "Buka perbaikan",
   },
 };
 const tabIcons = ["calendar-days", "paw-print", "clipboard-list", "cooking-pot", "users"];
@@ -410,8 +410,8 @@ function tugasSupervising() {
     <div class="card done"><div class="top">${ic("clipboard-list")}<span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--muted)">08.00</span><div class="ti" style="color:var(--muted)">Sapu dan pel ruang tamu</div>${ic("circle-check")}</div></div>
     ${task("10.30", "Pel teras", "Mengawasi perbaikan")}
     ${task("11.00", "Setrika baju", "Mengawasi perbaikan")}
-    ${task("14.00", "Ganti sprei kamar tamu", "")}
-    ${task("16.00", "Lap jendela LT2", "")}
+    ${task("14.00", "Ganti seprai kamar tamu", "")}
+    ${task("16.00", "Lap kaca LT2", "")}
   </div></div>`;
 }
 function couldntSheet() {
