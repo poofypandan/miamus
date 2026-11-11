@@ -204,6 +204,24 @@ people are **staf** and **admin**.
 | Usage counts (privacy policy) | **Hitungan pemakaian** | Phase 172 PR 0: numbers about setup and first tasks, never content. |
 | North star (operator page) / North star numbers | **Ukuran utama** / **Angka ukuran utama** | Phase 172 PR 0: the platform admins' page of S1–S5. |
 | Below target · On target · No data yet | **Di bawah target · Sesuai target · Belum ada data** | Phase 172 PR 0, the north-star page. "Target" is the everyday word. |
+| Add routine / Edit routine / Remove routine | **Tambah rutinitas** / **Ubah rutinitas** / **Hapus rutinitas** | Phase 173: the sheet and its buttons. "Rutinitas" as in Kelola Rutinitas. |
+| Walk · Lights off · Play · Fresh water · Brush teeth · Other | **Jalan-jalan · Matikan lampu · Ajak main · Ganti air minum · Sikat gigi · Lainnya** | Phase 173 routine chips; also the saved titles staff read. "Ajak main", not "Main" alone, which reads as "play" for the staff themselves. |
+| What · For · When · Who | **Apa · Untuk · Kapan · Siapa** | Phase 173 sheet row labels. |
+| Every day · Some days · Once | **Setiap hari · Hari tertentu · Sekali saja** | Phase 173 repeat choices. |
+| Add time · Ends (optional) | **Tambah jam · Berakhir (opsional)** | Phase 173. Owner form, so "opsional". |
+| Note for staff | **Catatan untuk staf** | Phase 173: the label; staff see it under **Catatan**. |
+| Proof: Photo · Tick / 3 photos · 1 photo · Tick | **Bukti: Foto · Centang / 3 foto · 1 foto · Centang** | Phase 173. Photo first: the default (D6). 3 photos for walks (D14). |
+| Start · Got there · Back home (walk steps, staff buttons) | **Mulai · Sudah sampai · Sudah pulang** | Phase 173 (D14). Short verbs, no reading. |
+| Cancel the walk | **Batalkan jalan-jalan** | Phase 173 (D14), while a walk is in progress. Undo is **Batalkan**. |
+| Take the photo straight from the camera. | **Ambil foto langsung dari kamera.** | Phase 173 (D14): a gallery or old photo was refused. |
+| sent 7:50 AM / phone time | **terkirim 07.50** / **jam HP** | Phase 173 (D14): a step saved offline reached the server later, so its time is the phone's. "HP", never "ponsel". |
+| Walking · started 07.02 / Got there 07.15 (staff card) | **Sedang jalan · mulai 07.02** / **Sudah sampai 07.15** | Phase 173 (D14): between the walk's steps. |
+| Walk · 32 min (owner) | **Jalan-jalan · 32 menit** | Phase 173 (D14): from the first and last photos' server times. |
+| Started 07.02, no end photo | **Mulai 07.02, tanpa foto akhir** | Phase 173 (D14): a walk not finished by midnight. |
+| Add for 2 pets / Add for Matcha | **Tambah untuk 2 hewan / Tambah untuk Matcha** | Phase 173 button. |
+| Other routines | **Rutinitas lain** | Phase 173: replaces Others / Lainnya in Manage routines. |
+| Usual routines for Coco | **Rutinitas biasa untuk Coco** | Phase 173 PR B (planned): starter list after adding a pet. |
+| Remind staff at this time | **Ingatkan staf di jam ini** | Phase 173 PR C (planned). Push title **Pengingat**, as Phase 164. |
 
 ## Formatting
 

@@ -90,8 +90,16 @@ export const LEGAL = {
   // closed task counts (kept 400 days); numbers only, never content. Read by
   // Poofy Labs as totals across households, without names; kept while the
   // household exists, deleted with it. No new service.
-  policyVersion: "2026-11-10.7",
-  effectiveDate: { en: "10 November 2026", id: "10 November 2026" },
+  // 2026-11-11.2: any routine, for any pets (Phase 173 PR A, migrations/144)
+  // — walk photos are taken where the walk goes, so they may show a public
+  // place and the staff member; Miamus records no location (no GPS; a camera
+  // photo is re-encoded by compressPhoto before upload, which drops EXIF);
+  // each saved task also notes when it reached the server (a save time, as
+  // completed_at already is). A routine's note for staff and the person it
+  // is for are "tasks, routines, schedules and notes". Same 30-day photo
+  // rule; no new service.
+  policyVersion: "2026-11-11.2",
+  effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on
