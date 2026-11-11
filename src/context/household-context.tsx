@@ -16,6 +16,7 @@ import type {
   CreateMedicalRecordInput,
   CreateInventoryAlertInput,
   InventoryItemInput,
+  InventoryItemPatch,
   FoodItemInput,
   CreateRoutineProposalInput,
   CreateHouseholdTaskInput,
@@ -24,6 +25,7 @@ import type {
 } from "@/lib/data";
 import { LEAVE_LOOKBACK_DAYS } from "@/lib/leave";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
+import { applyAmountRules } from "@/lib/kitchen-units";
 import {
   readCachedMemberProfile,
   setActiveMemberProfile,
@@ -67,6 +69,7 @@ import type {
   InventoryAlert,
   RoutineProposal,
   InventoryItem,
+  InventoryUnit,
   FoodItem,
   FoodOutcome,
   StockStatus,
@@ -100,6 +103,11 @@ export type UserRole = "staff" | "owner";
 // Where the retired owner PIN used to leave its mark (Phase 108). Read only to
 // be deleted: see the role effect below.
 const LEGACY_OWNER_FLAG_KEY = "banyuwangi11:isOwner";
+
+/** Track amount as an owner sets it (Phase 170 PR A). Off keeps the numbers, unshown. */
+export type TrackAmountSettings =
+  | { track: false }
+  | { track: true; unit: InventoryUnit; quantity: number; lowAt: number };
 
 interface HouseholdContextValue {
   /**
@@ -304,6 +312,18 @@ interface HouseholdContextValue {
    * once; sent to the server in a batch — see the implementation.
    */
   adjustInventoryQuantity: (id: string, delta: number) => void;
+  /**
+   * Kitchen amounts (Phase 170 PR A, migrations/148). Anyone in the
+   * household: Set amount (the number typed), and Bought with how much
+   * (null = ticked without a number). Each shows at once and is put back if
+   * the save fails; the server's answer, with the status it derived, wins.
+   */
+  setInventoryAmount: (id: string, quantity: number) => Promise<InventoryItem>;
+  recordPurchase: (id: string, amount: number | null) => Promise<InventoryItem>;
+  /** The Bought toast's Undo: takes the amount back off and restores the status and pre-fill. */
+  undoPurchase: (before: InventoryItem, amount: number | null) => Promise<void>;
+  /** Owner only (the guard refuses staff): switch Track amount, with unit, amount and low level. */
+  setTrackAmount: (id: string, settings: TrackAmountSettings) => Promise<InventoryItem>;
   /**
    * Records a stock check: uploads the shelf photo, files the audit under
    * whoever is signed in on this device, and writes the count back onto the
@@ -1103,7 +1123,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       prev.map((i) => {
         if (i.id !== id) return i;
         previous = i;
-        return { ...i, stock_status: status };
+        // On a tracked item, Out also empties it (migrations/148).
+        return applyAmountRules(i, { ...i, stock_status: status, stock_status_by: readActiveStaffId() });
       })
     );
     try {
@@ -1118,6 +1139,96 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, []);
+
+  // Kitchen amounts (Phase 170 PR A): one optimistic write, mirrored
+  // through the amount rules (lib/kitchen-units, as migrations/148's
+  // trigger), put back if it fails.
+  const writeInventoryItem = useCallback(
+    async (id: string, patch: InventoryItemPatch, send: () => Promise<InventoryItem>) => {
+      let previous: InventoryItem | undefined;
+      setInventoryItems((prev) =>
+        prev.map((i) => {
+          if (i.id !== id) return i;
+          previous = i;
+          return applyAmountRules(i, { ...i, ...patch });
+        })
+      );
+      try {
+        const item = await send();
+        setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
+        return item;
+      } catch (err) {
+        if (previous) {
+          const restore = previous;
+          setInventoryItems((prev) => prev.map((i) => (i.id === id ? restore : i)));
+        }
+        throw err;
+      }
+    },
+    []
+  );
+
+  const setInventoryAmount = useCallback(
+    (id: string, quantity: number) => {
+      const patch: InventoryItemPatch = { quantity: Math.max(0, quantity), amount_set_by: readActiveStaffId() };
+      return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
+    },
+    [writeInventoryItem]
+  );
+
+  const recordPurchase = useCallback(
+    (id: string, amount: number | null) => {
+      const staffId = readActiveStaffId();
+      const current = inventoryItemsRef.current.find((i) => i.id === id);
+      const adds = current?.track_amount === true && amount !== null;
+      const patch: InventoryItemPatch = {
+        stock_status: "ok",
+        stock_status_by: staffId,
+        ...(adds && current
+          ? { quantity: current.quantity + amount!, last_bought_amount: amount, amount_set_by: staffId }
+          : {}),
+      };
+      return writeInventoryItem(id, patch, () => dataProvider.recordPurchase(id, amount, staffId));
+    },
+    [writeInventoryItem]
+  );
+
+  const undoPurchase = useCallback(
+    async (before: InventoryItem, amount: number | null) => {
+      const staffId = readActiveStaffId();
+      // Taken back off as an increment, so another phone's change in the
+      // meantime is kept; then the status and pre-fill as they were.
+      if (before.track_amount === true && amount !== null) {
+        const item = await dataProvider.adjustInventoryQuantity(before.id, -amount, staffId);
+        setInventoryItems((prev) => prev.map((i) => (i.id === before.id ? item : i)));
+      }
+      const patch: InventoryItemPatch = {
+        stock_status: before.stock_status ?? "ok",
+        stock_status_by: before.stock_status_by ?? null,
+        last_bought_amount: before.last_bought_amount ?? null,
+      };
+      await writeInventoryItem(before.id, patch, () => dataProvider.updateInventoryItem(before.id, patch));
+    },
+    [writeInventoryItem]
+  );
+
+  const setTrackAmount = useCallback(
+    (id: string, settings: TrackAmountSettings) => {
+      const patch: InventoryItemPatch = settings.track
+        ? {
+            track_amount: true,
+            unit: settings.unit,
+            quantity: Math.max(0, settings.quantity),
+            // Blank "Running low at" is 0: only Out, at nothing left. The
+            // Phase 110 default of 2 is never kept by accident (D14).
+            min_threshold: Math.max(0, settings.lowAt),
+            amount_set_by: readActiveStaffId(),
+          }
+        : { track_amount: false };
+      return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
+    },
+    [writeInventoryItem]
+  );
 
   const removeInventoryItem = useCallback(async (id: string) => {
     await dataProvider.deleteInventoryItem(id);
@@ -1378,10 +1489,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     const quantity = Math.max(0, current.quantity + delta);
     const applied = quantity - current.quantity;
     if (applied === 0) return;
-    inventoryItemsRef.current = inventoryItemsRef.current.map((item) =>
-      item.id === id ? { ...item, quantity } : item
-    );
-    setInventoryItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
+    // A tracked item's status follows its amount (migrations/148), shown at once.
+    const staffId = readActiveStaffId();
+    const moved = (item: InventoryItem) => applyAmountRules(item, { ...item, quantity, amount_set_by: staffId });
+    inventoryItemsRef.current = inventoryItemsRef.current.map((item) => (item.id === id ? moved(item) : item));
+    setInventoryItems((prev) => prev.map((item) => (item.id === id ? moved(item) : item)));
 
     const pending = pendingStock.current;
     const entry = pending.get(id);
@@ -1391,7 +1503,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       pending.delete(id);
       if (total === 0) return;
       try {
-        const item = await dataProvider.adjustInventoryQuantity(id, total);
+        const item = await dataProvider.adjustInventoryQuantity(id, total, staffId);
         // Only if no newer taps landed while this was in flight: those are
         // already on screen and on their way, and this answer predates them.
         if (!pending.has(id)) {
@@ -1715,6 +1827,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       returnFoodContainer,
       removeFood,
       adjustInventoryQuantity,
+      setInventoryAmount,
+      recordPurchase,
+      undoPurchase,
+      setTrackAmount,
       reloadTenant,
       submitInventoryAudit,
       submitRoutineProposal,
@@ -1797,6 +1913,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       returnFoodContainer,
       removeFood,
       adjustInventoryQuantity,
+      setInventoryAmount,
+      recordPurchase,
+      undoPurchase,
+      setTrackAmount,
       reloadTenant,
       submitInventoryAudit,
       submitRoutineProposal,

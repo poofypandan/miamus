@@ -1,3 +1,4 @@
+import { applyAmountRules } from "@/lib/kitchen-units";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -378,7 +379,8 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);
     if (index === -1) throw new Error("Item not found");
-    const item: InventoryItem = { ...db.inventoryItems[index], ...patch };
+    // The amount rules trigger (migrations/148), as the server would apply it.
+    const item: InventoryItem = applyAmountRules(db.inventoryItems[index], { ...db.inventoryItems[index], ...patch });
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);
@@ -387,23 +389,44 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);
     if (index === -1) throw new Error("Item not found");
-    const item: InventoryItem = {
+    const item: InventoryItem = applyAmountRules(db.inventoryItems[index], {
       ...db.inventoryItems[index],
       stock_status: status,
       stock_status_by: staffId,
-      stock_status_at: new Date().toISOString(),
-    };
+    });
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);
   },
-  async adjustInventoryQuantity(id, delta) {
+  async adjustInventoryQuantity(id, delta, staffId = null) {
     const db = loadDB();
     const index = db.inventoryItems.findIndex((i) => i.id === id);
     if (index === -1) throw new Error("Item not found");
-    // Floored at zero, like the RPC in migrations/099.
+    // Floored at zero, like the RPC in migrations/099 and 148.
     const current = db.inventoryItems[index];
-    const item: InventoryItem = { ...current, quantity: Math.max(0, current.quantity + delta) };
+    const item: InventoryItem = applyAmountRules(current, {
+      ...current,
+      quantity: Math.max(0, current.quantity + delta),
+      amount_set_by: staffId,
+    });
+    db.inventoryItems[index] = item;
+    saveDB(db);
+    return delay(item);
+  },
+  async recordPurchase(id, amount, staffId) {
+    const db = loadDB();
+    const index = db.inventoryItems.findIndex((i) => i.id === id);
+    if (index === -1) throw new Error("Item not found");
+    const current = db.inventoryItems[index];
+    const adds = current.track_amount === true && amount !== null;
+    const item: InventoryItem = applyAmountRules(current, {
+      ...current,
+      quantity: adds ? current.quantity + amount : current.quantity,
+      last_bought_amount: adds ? amount : (current.last_bought_amount ?? null),
+      amount_set_by: adds ? staffId : (current.amount_set_by ?? null),
+      stock_status: "ok",
+      stock_status_by: staffId,
+    });
     db.inventoryItems[index] = item;
     saveDB(db);
     return delay(item);

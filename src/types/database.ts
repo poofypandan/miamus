@@ -294,7 +294,17 @@ export type InventoryUnit =
   | "kg"
   | "g"
   | "L"
-  | "ml";
+  | "ml"
+  // Kitchen units (Phase 170 PR A, migrations/148): the words Indonesian
+  // kitchens use. sdm and sdt are recipe-only and never a stock unit.
+  | "buah"
+  | "butir"
+  | "ikat"
+  | "siung"
+  | "lembar"
+  | "batang"
+  | "bungkus"
+  | "sachet";
 
 /** Where an item stands on the shopping list (migrations/122, Phase 154). */
 export type StockStatus = "ok" | "low" | "out";
@@ -370,6 +380,19 @@ export type InventoryItem = {
   stock_status_at?: string | null;
   /** Who changed it, as selected on their phone (self-declared, cf. 071). */
   stock_status_by?: string | null;
+  /**
+   * Kitchen amounts (Phase 170 PR A, migrations/148). An owner opts an item
+   * in; `quantity` is then the amount left, in `unit`, and `min_threshold`
+   * its "Running low at" (0 = none). The database derives the status from
+   * them. Owner-only, like the unit and the low level.
+   */
+  track_amount?: boolean;
+  /** When the tracked amount last changed, by the server's clock. Drives "about … · 3 weeks ago". */
+  amount_set_at?: string | null;
+  /** Who changed it, as selected on their phone (self-declared, cf. 071). */
+  amount_set_by?: string | null;
+  /** The last purchase's amount, in `unit`: the "How much did you buy?" pre-fill. */
+  last_bought_amount?: number | null;
   // The Phase 83 box/loose ledger. Still in the table so a phone on the
   // previous build keeps working through the deploy; nothing reads them now.
   unit_type?: string;
@@ -880,8 +903,16 @@ export interface Database {
         Returns: boolean;
       };
       // The +/- stepper (migrations/099): an atomic increment, floored at 0.
+      // Phase 170 PR A (migrations/148): the person on duty is recorded
+      // with the change; two-argument calls still work.
       adjust_inventory_quantity: {
-        Args: { p_item_id: string; p_delta: number };
+        Args: { p_item_id: string; p_delta: number; p_staff_id?: string | null };
+        Returns: InventoryItem[];
+      };
+      // Bought (migrations/148): adds the amount on a tracked item, keeps it
+      // as the next pre-fill, and puts the item back to enough.
+      record_purchase: {
+        Args: { p_item_id: string; p_amount?: number | null; p_staff_id?: string | null };
         Returns: InventoryItem[];
       };
       // Finished work per staff member over a span, by completer

@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ITEM_TYPE_LABELS } from "@/lib/item-types";
+import { STOCK_UNITS, UNIT_LABELS, amountStep, unitLabel } from "@/lib/kitchen-units";
 import type {
   InventoryAlert,
   StockStatus,
@@ -42,33 +43,9 @@ export const SCOPE_CATEGORIES: Record<InventoryScope, InventoryCategory[]> = {
   home: ["fresh_food", "pantry", "household_supplies"],
 };
 
-export const INVENTORY_UNITS: InventoryUnit[] = [
-  "pcs",
-  "pack",
-  "box",
-  "bottle",
-  "roll",
-  "tube",
-  "kg",
-  "g",
-  "L",
-  "ml",
-];
-
-/**
- * How each unit reads (Phase 149). The stored value never changes; only the
- * label does. "pcs" stays as it is in Indonesian — it is what every shop,
- * receipt and marketplace listing in Indonesia says — and the metric units
- * are the same in both languages.
- */
-export const UNIT_LABELS: Record<"en" | "id", Record<InventoryUnit, string>> = {
-  en: { pcs: "pcs", pack: "pack", box: "box", bottle: "bottle", roll: "roll", tube: "tube", kg: "kg", g: "g", L: "L", ml: "ml" },
-  id: { pcs: "pcs", pack: "pak", box: "kotak", bottle: "botol", roll: "rol", tube: "tube", kg: "kg", g: "g", L: "L", ml: "ml" },
-};
-
-export function unitLabel(unit: InventoryUnit, lang: "en" | "id"): string {
-  return UNIT_LABELS[lang][unit] ?? unit;
-}
+/** Every stock unit (Phase 170 PR A adds the kitchen words); lib/kitchen-units holds the rules. */
+export const INVENTORY_UNITS: InventoryUnit[] = STOCK_UNITS;
+export { UNIT_LABELS, unitLabel };
 
 // Owner-facing, so English per the Phase 46 language boundary.
 export const SCOPE_LABELS_EN: Record<InventoryScope, string> = { pet: "Pets", home: "Home" };
@@ -139,13 +116,9 @@ export function isOutOfStock(item: InventoryItem): boolean {
   return stockStatus(item) === "out";
 }
 
-/**
- * How far one tap of the stepper moves the count. A unit of one for anything
- * counted whole or by the kilo/litre; a hundred for grams and millilitres,
- * where a tap of one would be a hundred taps per cup.
- */
+/** How far one tap of minus or plus moves an amount (lib/kitchen-units). */
 export function stepFor(unit: InventoryUnit): number {
-  return unit === "g" || unit === "ml" ? 100 : 1;
+  return amountStep(unit);
 }
 
 /**

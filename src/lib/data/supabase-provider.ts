@@ -372,11 +372,21 @@ export const supabaseProvider: DataProvider = {
     if (!data || data.length === 0) throw new Error("Item was not updated");
     return data[0];
   },
-  async adjustInventoryQuantity(id, delta) {
-    // migrations/099. Returns the updated row; none at all means RLS hid it
-    // (another household's id, or a row deleted under us).
+  async adjustInventoryQuantity(id, delta, staffId = null) {
+    // migrations/099, with who changed it since 148. Returns the updated
+    // row; none at all means RLS hid it (another household's id, or a row
+    // deleted under us).
     const { data, error } = await client()
-      .rpc("adjust_inventory_quantity", { p_item_id: id, p_delta: delta })
+      .rpc("adjust_inventory_quantity", { p_item_id: id, p_delta: delta, p_staff_id: staffId })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as InventoryItem;
+  },
+  async recordPurchase(id, amount, staffId) {
+    // migrations/148: security invoker, so RLS and the owner guard apply.
+    const { data, error } = await client()
+      .rpc("record_purchase", { p_item_id: id, p_amount: amount, p_staff_id: staffId })
       .select()
       .single();
     if (error) throw error;
