@@ -28,6 +28,8 @@ import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { buildEveningSummary, ownerReasonLabel, type SummaryRow } from "@/lib/couldnt-do";
 import { isAdmitted } from "@/lib/pets";
 import { cn } from "@/lib/utils";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { visibleChores } from "@/lib/features";
 import { dataProvider } from "@/lib/data";
 import { weekStartOf } from "@/lib/unified-agenda";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -102,6 +104,7 @@ function SummaryBody({
   const formatTime = useFormatTime();
   const { householdTasks, leaveRequests, pets, schedules, logs, routineProposals, selectedDate } = useHousehold();
   const { exceptions } = useTaskExceptions();
+  const { flags: featureFlags } = useHouseholdFeatures();
   const { allProfiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const today = useToday();
@@ -137,8 +140,9 @@ function SummaryBody({
     if (!fetched) return inWeek ? householdTasks : null;
     const byId = new Map(fetched.map((row) => [row.id, row] as const));
     if (inWeek) for (const row of householdTasks) byId.set(row.id, row);
-    return [...byId.values()];
-  }, [fetched, inWeek, householdTasks]);
+    // Bills off (Phase 171): the day's own read hides bill chores too.
+    return visibleChores([...byId.values()], featureFlags);
+  }, [fetched, inWeek, householdTasks, featureFlags]);
 
   const summary = useMemo(() => {
     if (!rows) return null;

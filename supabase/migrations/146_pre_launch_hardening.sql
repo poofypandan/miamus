@@ -75,7 +75,7 @@
 --   stamp_task_log_received_at (144).
 --
 -- NEW: is_household_admin, task_entities_staff_guard, task_log_undo_open,
---   unlink_idle_phones, account_deletions (+ two trigger functions),
+--   unlink_idle_phones, account_deletions (+ three trigger functions),
 --   delete_orphaned_accounts; columns task_logs.created_by,
 --   device_sessions.staff_id, staff_profiles.pin_lock_level / pin_locked_at.
 --   Every new or re-created SECURITY DEFINER function revokes EXECUTE from
@@ -1024,6 +1024,31 @@ create trigger household_members_unmark_orphan
   after insert on public.household_members
   for each row execute function public.household_members_unmark_orphan();
 
+-- Asking to set up a household again cancels the deletion in the same
+-- transaction as the request (Codex, PR #91); the nightly job re-checks under
+-- a lock as well.
+create or replace function public.household_access_requests_unmark_orphan()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.status = 'pending' then
+    delete from public.account_deletions where user_id = new.user_id;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.household_access_requests_unmark_orphan() from public, anon, authenticated;
+grant execute on function public.household_access_requests_unmark_orphan() to service_role;
+
+drop trigger if exists household_access_requests_unmark_orphan on public.household_access_requests;
+create trigger household_access_requests_unmark_orphan
+  after insert or update of status, requested_at on public.household_access_requests
+  for each row execute function public.household_access_requests_unmark_orphan();
+
 -- Nightly. Skips (and forgets) an account that has joined a household or
 -- asked to set one up since, and never touches the operator's accounts.
 --
@@ -1089,11 +1114,6 @@ begin
       raise warning 'Orphaned account % not deleted, will retry: %', target.user_id, sqlerrm;
     end;
   end loop;
-
-  -- Accounts that are no longer due for any reason are forgotten.
-  delete from public.account_deletions a
-   where exists (select 1 from public.household_members m where m.user_id = a.user_id)
-      or exists (select 1 from public.platform_admins p where p.user_id = a.user_id);
   return removed;
 end;
 $$;

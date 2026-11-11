@@ -6,6 +6,7 @@ import { ShoppingTab } from "@/components/shopping/shopping-tab";
 import { StaffShopping } from "@/components/shopping/staff-shopping";
 import { useOwnerLocale } from "@/context/owner-locale-context";
 import { useKitchenView } from "@/hooks/use-kitchen-view";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import type { FoodLocale } from "@/lib/food";
 
@@ -37,12 +38,16 @@ function KitchenSwitch({ locale }: { locale: FoodLocale }) {
 export function KitchenTab() {
   const locale = useOwnerLocale();
   const [view] = useKitchenView();
+  // Food at home off (Phase 171): Shopping alone, and one pill is no pills.
+  const { food } = useHouseholdFeatures();
   useScrollTopOnChange(view);
   return (
     <div className="flex flex-col gap-4 pb-6">
-      <div className="px-4">
-        <KitchenSwitch locale={locale} />
-      </div>
+      {food && (
+        <div className="px-4">
+          <KitchenSwitch locale={locale} />
+        </div>
+      )}
       {view === "food" ? (
         <div className="px-4">
           <FoodView locale={locale} canDelete />
@@ -61,10 +66,11 @@ export function KitchenTab() {
  */
 export function StaffKitchen() {
   const [view] = useKitchenView();
+  const { food } = useHouseholdFeatures();
   useScrollTopOnChange(view);
   return (
     <div className="flex flex-col gap-4">
-      <KitchenSwitch locale="id" />
+      {food && <KitchenSwitch locale="id" />}
       {view === "food" ? <FoodView locale="id" canDelete={false} /> : <StaffShopping />}
     </div>
   );

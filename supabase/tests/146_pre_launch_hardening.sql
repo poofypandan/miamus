@@ -422,6 +422,9 @@ select pg_temp.ok((select user_id is null and archived_at is not null and not ha
 delete from public.households where id = :f2;
 select pg_temp.ok(exists (select 1 from public.account_deletions where user_id = :a9::uuid),
   'M6: deleting a household starts the clock for its last admin');
+insert into public.household_access_requests (user_id, status, requested_at) values (:a9, 'pending', now());
+select pg_temp.ok(not exists (select 1 from public.account_deletions where user_id = :a9::uuid),
+  'M6: asking to set up a household again cancels it at once');
 
 -- ---- M7: idle phones -----------------------------------------------------------------
 update public.device_sessions set last_seen_at = now() - interval '61 days' where user_id = :p2;

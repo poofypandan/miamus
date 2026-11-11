@@ -67,7 +67,7 @@ async function readRows(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   householdId: string,
 ): Promise<ContextRows> {
-  const [staff, pets, rooms, items, household] = await Promise.all([
+  const [staff, pets, rooms, items, household, food] = await Promise.all([
     supabase
       .from("staff_profiles")
       // Named columns: pin is revoked from every client role (migrations/096).
@@ -78,11 +78,14 @@ async function readRows(
     supabase.from("inventory_items").select("id, name, scope, created_at").eq("household_id", householdId),
     // "Who lives here?" (Phase 162): pets switched off means no pet routines.
     supabase.from("households").select("has_pets").eq("id", householdId).maybeSingle(),
+    // Household → Features (Phase 171): Food at home switched off means no add_food.
+    supabase.from("household_features").select("enabled").eq("household_id", householdId).eq("feature", "food").maybeSingle(),
   ]);
   for (const result of [staff, pets, rooms, items]) if (result.error) throw result.error;
   // Optional: a failed read (or a database without migrations/133) leaves
   // pets on, as before this phase, rather than failing Kakak's turn.
   if (household.error) console.error("Kakak: who lives here not read", household.error.message);
+  if (food.error) console.error("Kakak: features not read", food.error.message);
   const petIds = (pets.data ?? []).map((p) => p.id as string);
   const schedules = petIds.length
     ? await supabase
@@ -98,6 +101,7 @@ async function readRows(
     rooms: rooms.data ?? [],
     items: items.data ?? [],
     hasPets: household.error ? null : ((household.data as { has_pets: boolean | null } | null)?.has_pets ?? null),
+    foodOn: food.error ? null : ((food.data as { enabled: boolean } | null)?.enabled ?? null),
   } as ContextRows;
 }
 

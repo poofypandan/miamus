@@ -12,7 +12,6 @@ import {
   Crown,
   DoorOpen,
   History,
-  House,
   Info,
   MessageSquareText,
   KeyRound,
@@ -25,6 +24,7 @@ import {
   RotateCcw,
   Send,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Trash2,
   UserMinus,
@@ -78,7 +78,9 @@ import { VideoTip } from "@/components/shared/video-tip";
 import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
 import { FeedbackSheet } from "@/components/shared/feedback-sheet";
 import { RoomsManager } from "@/components/dashboard/rooms-manager";
-import { WhoLivesHerePanel } from "@/components/dashboard/who-lives-here-panel";
+import { FeaturesPanel } from "@/components/dashboard/features-panel";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { featuresOnCount } from "@/lib/features";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { describeLog } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
@@ -127,7 +129,7 @@ const HOUSEHOLD_PAGES = [
   "about",
   "whats-new",
   "rooms",
-  "who-lives-here",
+  "features",
 ] as const;
 type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
 
@@ -205,8 +207,9 @@ export function StaffTab() {
   const locale = useOwnerLocale();
   const t = useT();
   const isOwner = useRequireOwner();
-  // "Who lives here?" row (Phase 162).
+  // Household → Features (Phase 171; it replaced "Who lives here"): "4 on".
   const { petsOn } = useHouseholdProfile();
+  const { flags: featureFlags } = useHouseholdFeatures();
   const { profiles, failed, reload, allProfiles } = useStaffProfiles();
   // Kakak's row only for a household on the family list (Phase 156 step 2).
   const { status: kakak, reload: reloadKakak } = useKakakStatus();
@@ -276,14 +279,16 @@ export function StaffTab() {
     );
   }
 
-  const page = HOUSEHOLD_PAGES.includes(pageParam as HouseholdPage) ? (pageParam as HouseholdPage) : null;
+  // ?page=who-lives-here (Phase 162's links, its What's new card) opens Features.
+  const pageName = pageParam === "who-lives-here" ? "features" : pageParam;
+  const page = HOUSEHOLD_PAGES.includes(pageName as HouseholdPage) ? (pageName as HouseholdPage) : null;
 
   if (!page) {
     const staffCount = (profiles ?? []).filter((p) => !p.user_id).length;
     return (
       <div className="flex flex-col gap-5">
-        {/* Where the switch lives, so the tutorial sits here (Phase 162). */}
-        <WhatsNewCard id="who-lives-here-2026-11" />
+        {/* Where the switches live, so the tutorial sits here (Phase 171, D8). */}
+        <WhatsNewCard id="features-2026-11" onTry={() => open("features")} />
         {deletion.status?.scheduled && deletion.status.deleteAfter && (
           <SettingsGroup>
             <SettingsRow
@@ -308,10 +313,10 @@ export function StaffTab() {
           />
           <SettingsRow icon={DoorOpen} label={t("Rooms", "Ruangan")} onPress={() => open("rooms")} />
           <SettingsRow
-            icon={House}
-            label={t("Who lives here", "Siapa yang tinggal di sini")}
-            detail={petsOn ? t("Pets", "Hewan") : t("Just people", "Hanya orang")}
-            onPress={() => open("who-lives-here")}
+            icon={SlidersHorizontal}
+            label={t("Features", "Fitur")}
+            detail={t(`${featuresOnCount(featureFlags, petsOn)} on`, `${featuresOnCount(featureFlags, petsOn)} aktif`)}
+            onPress={() => open("features")}
           />
           {openLeave > 0 && (
             <SettingsRow
@@ -414,7 +419,7 @@ export function StaffTab() {
       {page === "about" && <AboutMiamus />}
       {page === "whats-new" && <WhatsNewList />}
       {page === "rooms" && <RoomsManager />}
-      {page === "who-lives-here" && <WhoLivesHerePanel />}
+      {page === "features" && <FeaturesPanel />}
     </div>
   );
 }
