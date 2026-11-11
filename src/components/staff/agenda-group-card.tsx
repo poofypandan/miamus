@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Camera,
   CheckCircle2,
   ChevronRight,
+  Circle,
+  Clock,
   Home,
   Loader2,
   Stethoscope,
   Trash2,
   CircleSlash,
+  UserRound,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
@@ -38,10 +42,20 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useTapGuard } from "@/hooks/use-tap-guard";
 import { compressPhoto } from "@/lib/image";
 import { isAdmitted } from "@/lib/pets";
-import { categoryCardTint, categoryIcon, categoryIconColor } from "@/lib/schedule-categories";
+import { categoryCardTint, categoryIconColor, routineIcon } from "@/lib/schedule-categories";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { UNDO_WINDOW_MS } from "@/lib/undo-window";
+import {
+  cardWalkState,
+  isFreshCapture,
+  stepSubType,
+  stepTime,
+  walkMinutes,
+  type ThreePhotoStep,
+} from "@/lib/staff-agenda";
 import { vetVisitState } from "@/lib/staff-agenda";
+import { SaveStillWaitingError } from "@/lib/offline-queue";
+import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { LogSubType, TaskLog } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -96,6 +110,8 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // The card is a compact row on the list (Phase 130); everything it does —
   // photos, tagging, the vet flow, the 5-minute undo — happens in this sheet.
   const [sheetOpen, setSheetOpen] = useState(false);
+  // "Batalkan jalan-jalan" (Phase 173, D14): asks first, then removes the walk's photos.
+  const [confirmCancelWalk, setConfirmCancelWalk] = useState(false);
   // Only how an *open* visit is being closed — "Bawa Pulang" or "Rawat Inap".
   // Which half of the visit a photo records is derived from the card's own
   // state below, never from a click handler: the camera can be opened from a
@@ -117,6 +133,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   useBackToClose(sheetOpen, () => setSheetOpen(false));
   useBackToClose(!!capture, () => dropCapture());
   useBackToClose(confirmDelete, () => setConfirmDelete(false));
+  useBackToClose(confirmCancelWalk, () => setConfirmCancelWalk(false));
   // No useBackToClose for the lightbox: PhotoLightbox claims its own history
   // entry, and a second one here would need two Back presses to leave a photo.
 
@@ -222,6 +239,26 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // through this, or a dog would read as "done" while still at the clinic.
   const visitOpen = isVet && visit.checkedIn && !visit.closed;
 
+  // --- Routines from the Add routine sheet (Phase 173) ----------------------
+  // One photo, or one tap for a Tick routine, settles every open pet on the
+  // card (D4): the card's own round button opens the camera straight away,
+  // with no pet-picking step. A photo of the switched-off lamp proves the
+  // routine, not which dog was in frame. Meals, potty, medicines, vet and
+  // grooming keep the photo-then-pick flow below.
+  const isRoutine = group.category === "routine";
+  const three = isRoutine && group.proof === "three";
+  const tick = isRoutine && group.proof === "tick";
+  // Where a three-photo routine stands, from the day's logs (queued saves
+  // included), so closing the app at the park loses nothing.
+  const walk = useMemo(
+    () => (three ? cardWalkState(group.items, logs, date) : null),
+    [three, group.items, logs, date]
+  );
+  const walkStarted = !!walk?.start && !walk.end;
+  // A finished walk can still be taken back for 5 minutes from its end photo
+  // (UNDO_WINDOW_MS), from the card's sheet as well as the toast (Codex, PR #85).
+  const walkUndoable = !!walk?.end && now < deletableUntil(walk.end.completed_at);
+
   // Clamped, so deleting the last photo in the strip lands on the new last one
   // rather than reading past the end.
   const lightbox =
@@ -229,6 +266,17 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
 
   // Ticks only while the lightbox is open, so a photo that ages out of its
   // window while staff are looking at it loses the button there and then.
+  // Also while a finished walk's sheet is open: its Batalkan jalan-jalan
+  // leaves when the 5 minutes run out.
+  // And while a Tick routine's sheet is open: its Batalkan centang likewise.
+  const walkEndAt = walk?.end?.completed_at ?? null;
+  useEffect(() => {
+    if (!sheetOpen || (!walkEndAt && !tick)) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(timer);
+  }, [sheetOpen, walkEndAt, tick]);
+
   useEffect(() => {
     if (lightboxIndex === null) return;
     setNow(Date.now());
@@ -269,6 +317,128 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  // The card's round button (Phase 173, D4/D14): one photo (or none, for a
+  // Tick routine) saved for every open pet in one batch, through the save
+  // queue like every log. A walk's three steps are the same button.
+  async function quickSave(file: File | null, targetsOverride?: AgendaItem[]) {
+    const targets = targetsOverride ?? quickTargets;
+    if (busy || !targets.length) return;
+    const step: ThreePhotoStep | null = three ? (walk?.next ?? null) : null;
+    if (three && !step) return;
+    // Live camera only for a three-photo routine (D14 rule 2): a file more
+    // than 2 minutes from the phone's clock came from the gallery.
+    if (three && file && !isFreshCapture(file.lastModified)) {
+      toast.error("Ambil foto langsung dari kamera.");
+      return;
+    }
+    if (!tick && !file) return;
+    setBusy(true);
+    let photoUrl: string | null = null;
+    try {
+      if (file) {
+        const compressed = await compressPhoto(file);
+        photoUrl = await enqueuePhoto(compressed, `pet/batch-${group.time.replace(":", "")}`);
+      }
+      const saved = await logTasksBatch({
+        entries: targets.map((item) => ({ schedule_id: item.scheduleId, entity_id: item.entityId })),
+        module: group.module,
+        photo_url: photoUrl,
+        sub_type: step ? stepSubType(step) : "complete",
+      });
+      photoUrl = null; // the save holds it now
+      const names = [...new Set(targets.map((i) => i.entityName))].join(", ");
+      const message =
+        step === "start"
+          ? `${names} · ${cardTitle} dimulai`
+          : step === "arrived"
+            ? `${names} · sudah sampai`
+            : `${names} · ${cardTitle} selesai`;
+      // Mid-walk steps need no undo: the walk is cancelled from its sheet.
+      if (step === "start" || step === "arrived") toast.success(message);
+      else
+        toast.success(message, {
+          duration: 10_000,
+          action: { label: "Batalkan", onClick: () => void undoLogs(step === "end" ? walkLogsWith(saved) : saved) },
+        });
+    } catch (err) {
+      console.error(err);
+      if (photoUrl) void discardPhoto(photoUrl);
+      toast.error("Gagal menyimpan catatan");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Undo a quick save within its 5 minutes (UNDO_WINDOW_MS), or a whole walk
+  // after its end photo: the logs go, and each photo once.
+  async function undoLogs(toRemove: TaskLog[]) {
+    const fresh = toRemove.filter((log) => Date.now() < deletableUntil(log.completed_at) || three);
+    if (fresh.length === 0) {
+      toast.error("Batas waktu 5 menit sudah lewat");
+      return;
+    }
+    try {
+      await removeLogs(fresh);
+      toast.success("Dibatalkan");
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        err instanceof SaveStillWaitingError
+          ? "Foto ini belum terkirim. Tunggu sampai terkirim, lalu hapus."
+          : "Gagal membatalkan"
+      );
+    }
+  }
+
+  async function removeLogs(toRemove: TaskLog[]) {
+    // Nothing still waiting in the queue is removed: it would come back.
+    if (toRemove.some((log) => pendingIds.has(log.id))) throw new SaveStillWaitingError();
+    const lastByUrl = new Map<string, string>();
+    for (const log of toRemove) if (log.photo_url) lastByUrl.set(log.photo_url, log.id);
+    for (const log of toRemove) {
+      const isLast = !!log.photo_url && lastByUrl.get(log.photo_url) === log.id;
+      await deleteLogWithPhoto(isLast ? log : { ...log, photo_url: null });
+    }
+  }
+
+  // The whole walk behind an end photo: its start and arrived logs too.
+  function walkLogsWith(saved: TaskLog[]): TaskLog[] {
+    const ids = new Set(saved.map((l) => l.id));
+    return [...(walk?.logs ?? []).filter((l) => !ids.has(l.id)), ...saved];
+  }
+
+  async function cancelWalk() {
+    if (!walk) return;
+    // Re-checked at the tap: a finished walk is final after 5 minutes.
+    if (walk.end && Date.now() >= deletableUntil(walk.end.completed_at)) {
+      toast.error("Batas waktu 5 menit sudah lewat");
+      setConfirmCancelWalk(false);
+      setNow(Date.now());
+      return;
+    }
+    setBusy(true);
+    try {
+      await removeLogs(walk.logs);
+      toast.success(`${cardTitle} dibatalkan`);
+      setConfirmCancelWalk(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        err instanceof SaveStillWaitingError
+          ? "Foto ini belum terkirim. Tunggu sampai terkirim, lalu batalkan."
+          : "Gagal membatalkan"
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleQuickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (file) void quickSave(file);
   }
 
   function toggleDog(entityId: string) {
@@ -391,7 +561,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     }
   }
 
-  const CategoryIcon = categoryIcon(group.category);
+  const CategoryIcon = routineIcon(group.category, group.kind);
 
   // --- The row (Phase 130) ------------------------------------------------
   //
@@ -409,6 +579,51 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   const medicine = group.category === "medication";
   const couldntLine = explained.length > 0 ? staffCouldntLine(explained[0].exception, medicine) : null;
   const allExplained = !finished && explained.length > 0 && unexplained.length === 0;
+  // Every open pet (D4): not done, not at the clinic, nobody said it couldn't
+  // be done. A walk's later steps are for the pets that started it.
+  const walkPets = new Set((walk?.logs ?? []).filter((l) => l.sub_type === "check_in").map((l) => l.entity_id));
+  const quickTargets: AgendaItem[] = !isRoutine
+    ? []
+    : walk && walk.next !== "start"
+      ? walk.next
+        ? activeItems.filter((i) => walkPets.has(i.entityId))
+        : []
+      : unexplained;
+  // Only for today: a log is stamped now, so it can't settle another day.
+  const quick = isRoutine && !wholeCardSuspended && date === todayKey && quickTargets.length > 0;
+  // From the sheet, a routine every pet of which someone said couldn't be
+  // done can still be finished after all ("Selesaikan seperti biasa"): its
+  // action then covers those pets (Codex, PR #85). The card's own button
+  // stays for the open ones only.
+  const sheetTargets: AgendaItem[] =
+    quickTargets.length > 0
+      ? quickTargets
+      : isRoutine && (tick || walk?.next === "start")
+        ? pendingItems
+        : [];
+  const sheetAction = isRoutine && !wholeCardSuspended && date === todayKey && sheetTargets.length > 0;
+  // Ticks from the last 5 minutes (no photo, so no photo strip to undo them
+  // from): the sheet's Batalkan centang takes them back (Codex, PR #85).
+  const recentTicks = tick
+    ? group.items.flatMap((i) => (i.log && !i.log.photo_url && now < deletableUntil(i.log.completed_at) ? [i.log] : []))
+    : [];
+  function handleSheetFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (file) void quickSave(file, sheetTargets);
+  }
+  const stepLabel = walk?.next === "start" ? "Mulai" : walk?.next === "arrived" ? "Sudah sampai" : "Sudah pulang";
+  // "Sedang jalan · mulai 07.02", "Sudah sampai 07.15", then the walk's span.
+  const walkLine = !walk?.start
+    ? null
+    : walk.end
+      ? (() => {
+          const { minutes, phoneTime } = walkMinutes(walk.start!, walk.end!);
+          return `${formatTime(new Date(stepTime(walk.start!).at))} sampai ${formatTime(new Date(stepTime(walk.end!).at))} · ${minutes} menit${phoneTime ? " (jam HP)" : ""}`;
+        })()
+      : walk.arrived
+        ? `Sudah sampai ${formatTime(new Date(stepTime(walk.arrived).at))}`
+        : `Sedang jalan · mulai ${formatTime(new Date(stepTime(walk.start).at))}`;
   const rowHint = wholeCardSuspended ? (
     <span className="flex items-center gap-1 text-[10px] font-medium text-indigo-900">
       <Stethoscope className="size-3" /> Rawat inap · dijeda
@@ -422,7 +637,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     </span>
   ) : isVet ? (
     <TapHint label="Ketuk untuk check-in" icon={Stethoscope} />
-  ) : (
+  ) : quick ? null : (
     <TapHint />
   );
 
@@ -456,7 +671,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           className={cn(
             // Wrapped, not cut off (audit B1): the title is what to do.
             "min-w-0 flex-1 text-sm font-medium break-words",
-            finished && "text-muted-foreground"
+            finished && "text-muted-foreground",
+            // Room for the card's own button, which sits over this corner.
+            quick && (three ? "pr-28" : "pr-10")
           )}
         >
           {consolidated ? `${cardTitle} (${group.titles.length})` : cardTitle}
@@ -479,6 +696,24 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           {group.titles.join(" · ")}
         </span>
       )}
+      {/* The owner's note, as typed (Phase 173), and where a walk stands. */}
+      {group.note && (
+        <span className={cn("text-[13px] leading-snug", finished ? "text-muted-foreground" : "text-zinc-700")}>
+          {group.note}
+        </span>
+      )}
+      {walkLine && (
+        <span
+          className={cn(
+            "flex items-center gap-1 text-[13px] font-medium",
+            finished ? "text-emerald-700" : "text-zinc-800"
+          )}
+          data-testid="walk-line"
+        >
+          {finished ? <CheckCircle2 className="size-3.5 shrink-0" /> : <Clock className="size-3.5 shrink-0" />}
+          {walkLine}
+        </span>
+      )}
       <span className="flex flex-wrap items-center gap-1.5">
         {dogs.map((dog) => {
           const suspended = isSuspended(dog.items[0]);
@@ -498,6 +733,11 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             </Badge>
           );
         })}
+        {group.staffId && (
+          <Suspense fallback={null}>
+            <StaffNameChip id={group.staffId} />
+          </Suspense>
+        )}
         <span className="ml-auto">{rowHint}</span>
       </span>
       {couldntLine && !finished && (
@@ -511,9 +751,51 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
     </button>
   );
 
+  // The card's own button (D4): a round camera, a pill naming a walk's next
+  // step, or a circle for a Tick routine. A sibling over the row's corner,
+  // never inside it: a control inside a button is invalid and swallows taps.
+  const quickButton = !quick ? null : tick ? (
+    <button
+      type="button"
+      onClick={() => void quickSave(null)}
+      disabled={busy}
+      aria-label={`Centang ${cardTitle}`}
+      className="absolute top-2 right-2 flex size-11 items-center justify-center rounded-full border-2 border-zinc-900 bg-card text-zinc-900 active:scale-95"
+    >
+      {busy ? <Loader2 className="size-5 animate-spin" /> : <Circle className="size-5" />}
+    </button>
+  ) : (
+    <label
+      className={cn(
+        "absolute top-2 right-2 flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-zinc-900 text-sm font-medium text-white active:scale-95",
+        three && "px-3.5"
+      )}
+      aria-label={three ? `${stepLabel} · ${cardTitle}` : `Foto ${cardTitle}`}
+      data-testid="quick-camera"
+    >
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        disabled={busy}
+        onChange={handleQuickFile}
+      />
+      {busy ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
+      {three && <span>{stepLabel}</span>}
+    </label>
+  );
+
   return (
     <>
-      {row}
+      {quickButton ? (
+        <div className="relative">
+          {row}
+          {quickButton}
+        </div>
+      ) : (
+        row
+      )}
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
@@ -533,7 +815,11 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 ? "Semua selesai. Foto bisa dihapus dalam 5 menit setelah dicatat."
                 : visitOpen
                   ? "Hewan sedang di klinik. Selesaikan kunjungan saat dia pulang atau menginap."
-                  : "Ambil foto, lalu centang hewan yang ada di foto."}
+                  : three
+                    ? "Tiga foto dari kamera: di gerbang, di tempat tujuan, dan di gerbang saat pulang."
+                    : tick
+                      ? "Centang hewan yang sudah selesai."
+                      : "Ambil foto, lalu centang hewan yang ada di foto."}
             </SheetDescription>
           </SheetHeader>
         <div
@@ -582,11 +868,49 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             })}
           </div>
 
+          {group.note && (
+            <p className="text-sm text-zinc-700">
+              <span className="font-medium">Catatan: </span>
+              {group.note}
+            </p>
+          )}
+          {walk && (
+            <div className="grid grid-cols-3 gap-2" data-testid="walk-steps">
+              {(
+                [
+                  ["Mulai", walk.start],
+                  ["Sudah sampai", walk.arrived],
+                  ["Sudah pulang", walk.end],
+                ] as const
+              ).map(([label, log]) => {
+                const time = log ? stepTime(log) : null;
+                return (
+                  <figure key={label} className="flex flex-col gap-1">
+                    {log?.photo_url ? (
+                      <SyncedImg url={log.photo_url} size={320} alt={label} className="aspect-square w-full rounded-lg object-cover" />
+                    ) : (
+                      <div className="flex aspect-square w-full items-center justify-center rounded-lg border border-dashed text-muted-foreground">
+                        <Camera className="size-5" />
+                      </div>
+                    )}
+                    <figcaption className="text-[11px] leading-tight">
+                      <span className="block font-medium">{label}</span>
+                      <span className="block text-muted-foreground tabular-nums">
+                        {time ? formatTime(new Date(time.at)) : "belum"}
+                        {time?.sentAt ? ` · terkirim ${formatTime(new Date(time.sentAt))}` : ""}
+                      </span>
+                    </figcaption>
+                  </figure>
+                );
+              })}
+            </div>
+          )}
+
           {/* Every photo logged against this slot, not just the first — and
               each one carries the dogs it was tagged with, so a card with
               four separate shots reads at a glance. Sits outside the capture
               <label> so scrolling the strip can't trip the file input. */}
-          {photoGroups.length > 0 && (
+          {photoGroups.length > 0 && !walk && (
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {photoGroups.map((photo, index) => (
                 <figure key={photo.url} className="flex w-24 shrink-0 flex-col gap-1">
@@ -648,7 +972,49 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               An open visit outranks "all done": the check-in marks the task
               complete, but the dog is still at the clinic and the only useful
               control is the one that closes the visit. */}
-          {wholeCardSuspended ? null : visitOpen ? (
+          {wholeCardSuspended ? null : isRoutine && (three || tick) && !allDone ? (
+            // A walk's next step, or a Tick routine, for every open pet: the
+            // same action as the card's own button.
+            sheetAction ? (
+              tick ? (
+                <div className="flex flex-col gap-2">
+                  <Button onClick={() => void quickSave(null, sheetTargets)} disabled={busy} className="min-h-[48px] w-full">
+                    {busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 className="size-5" />}
+                    {sheetTargets.length > 1 ? `Centang ${sheetTargets.length} hewan` : "Centang selesai"}
+                  </Button>
+                  {/* One pet at a time, when only one was done (D4). */}
+                  {sheetTargets.length > 1 && (
+                    <div className="flex flex-wrap gap-2">
+                      {sheetTargets.map((item) => (
+                        <Button
+                          key={item.key}
+                          variant="outline"
+                          onClick={() => void quickSave(null, [item])}
+                          disabled={busy}
+                          className="min-h-11 flex-1"
+                        >
+                          <Circle className="size-4" /> Centang {item.entityName}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <label className="flex min-h-[48px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-900 text-sm font-medium text-white active:scale-[0.99]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    disabled={busy}
+                    onChange={handleSheetFile}
+                  />
+                  {busy ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
+                  {stepLabel}
+                </label>
+              )
+            ) : null
+          ) : visitOpen ? (
             // Checked in and still there. The only thing left to record is how
             // the visit ended, which is a question before it is a photo.
             <Button
@@ -695,7 +1061,27 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
               )}
             </label>
           )}
-          {!wholeCardSuspended && !visitOpen && !isVet && unexplained.length > 0 && canFileFor(date, todayKey) && (
+          {recentTicks.length > 0 && (
+            <Button
+              variant="outline"
+              className="min-h-12 w-full font-medium text-gray-700"
+              disabled={busy}
+              onClick={() => void undoLogs(recentTicks)}
+            >
+              <X /> Batalkan centang
+            </Button>
+          )}
+          {(walkStarted || walkUndoable) && (
+            <Button
+              variant="outline"
+              className="min-h-12 w-full font-medium text-gray-700"
+              disabled={busy}
+              onClick={() => setConfirmCancelWalk(true)}
+            >
+              <X /> Batalkan jalan-jalan
+            </Button>
+          )}
+          {!wholeCardSuspended && !visitOpen && !isVet && !walkStarted && unexplained.length > 0 && canFileFor(date, todayKey) && (
             <Button
               variant="outline"
               className="min-h-12 w-full font-medium text-gray-700"
@@ -903,6 +1289,24 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         }))}
       />
 
+      <Dialog open={confirmCancelWalk} onOpenChange={(open) => !open && setConfirmCancelWalk(false)}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Batalkan jalan-jalan?</DialogTitle>
+            <DialogDescription>Foto jalan-jalan ini dihapus, dan kartunya kembali ke Mulai.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-2">
+            <Button variant="outline" className="min-h-[48px] flex-1" onClick={() => setConfirmCancelWalk(false)} disabled={busy}>
+              Kembali
+            </Button>
+            <Button variant="destructive" className="min-h-[48px] flex-1" onClick={() => void cancelWalk()} disabled={busy}>
+              {busy ? <Loader2 className="animate-spin" /> : <X />}
+              Batalkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(false)}>
         <DialogContent className="sm:max-w-xs">
           <DialogHeader>
@@ -959,5 +1363,22 @@ function StripThumbnail({ url, label }: { url: string; label: string }) {
       title={label}
       className="size-24 rounded-lg object-cover ring-1 ring-emerald-500/40"
     />
+  );
+}
+
+/**
+ * The person a routine is for (Phase 173, D10), as chores show it. Nobody's
+ * view is filtered by it. Its own component, under Suspense: the roster is a
+ * Suspense resource, and a card must never wait for a name.
+ */
+function StaffNameChip({ id }: { id: string }) {
+  const { allProfiles } = useStaffProfiles();
+  const name = useStaffNameLookup(allProfiles, "")(id);
+  if (!name) return null;
+  return (
+    <span className="flex items-center gap-0.5 text-[11px] font-medium text-zinc-600">
+      <UserRound className="size-3" aria-hidden />
+      {name}
+    </span>
   );
 }

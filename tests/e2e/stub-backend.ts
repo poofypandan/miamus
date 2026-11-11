@@ -112,6 +112,12 @@ export interface StubOptions {
   linkedPhones?: Record<string, unknown>[];
   /** task_logs rows already on record (audit B1: a household past setup). */
   logs?: Record<string, unknown>[];
+  /**
+   * Routines on top of the fixture's (Phase 173). The stub then holds
+   * master_schedules itself: the admin adds, changes and removes rows; any
+   * other session is refused, as migrations/144's policies do.
+   */
+  schedules?: Record<string, unknown>[];
   /** task_exceptions rows already on record (Phase 165); changed in place. */
   exceptions?: Record<string, unknown>[];
   /** The admin's notification switches (Phase 165); changed in place. */
@@ -155,6 +161,8 @@ export interface Stub {
   writes: [string, string][];
   /** task_logs rows saved on this phone (Phase 161). */
   logs: Record<string, unknown>[];
+  /** master_schedules as the stub holds them (Phase 173): the fixture's, the test's, and the admin's writes. */
+  schedules: Record<string, unknown>[];
   seen: {
     signups: number;
     tokenRefreshes: number;
@@ -220,6 +228,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const trouble: Record<string, WriteTrouble> = {};
   const writes: [string, string][] = [];
   const logs: Record<string, unknown>[] = options.logs ?? [];
+  const schedules: Record<string, unknown>[] = [...(SCHEDULES as unknown as Record<string, unknown>[]), ...(options.schedules ?? [])];
   const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [] };
   const foods: Record<string, unknown>[] = [];
   const tasks: Record<string, unknown>[] = [];
@@ -405,6 +414,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         }
       }
       if (table === "task_logs") return answerLogs(route, logs);
+      if (table === "master_schedules") return answerSchedules(route, schedules, who === OWNER);
       // Supplies added here (Phase 164), and read back once there are any.
       if (table === "inventory_items" && request.method() === "POST") {
         const body = request.postDataJSON();
@@ -497,6 +507,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     trouble,
     writes,
     logs,
+    schedules,
     seen,
     foods,
     tasks,
@@ -985,7 +996,17 @@ function silent(route: Route): Route {
  */
 function answerLogs(route: Route, logs: Record<string, unknown>[]) {
   const request = route.request();
-  if (request.method() === "GET") return route.fulfill({ json: logs });
+  if (request.method() === "GET") {
+    // "Has this routine any history?" (Phase 173) asks per schedule_id.
+    const params = new URL(request.url()).searchParams;
+    return route.fulfill({ json: params.has("schedule_id") ? filterRows(logs, params) : logs });
+  }
+  // Deletes by id (an undo, a cancelled walk; Phase 173), answered with what went.
+  if (request.method() === "DELETE") {
+    const gone = filterRows(logs, new URL(request.url()).searchParams);
+    for (const row of gone) logs.splice(logs.indexOf(row), 1);
+    return route.fulfill({ json: gone });
+  }
   if (request.method() !== "POST") return route.fulfill({ json: [] });
   const body = request.postDataJSON();
   const rows: Record<string, unknown>[] = Array.isArray(body) ? body : [body];
@@ -994,9 +1015,61 @@ function answerLogs(route: Route, logs: Record<string, unknown>[]) {
     id: row.id ?? `00000000-0000-4000-8000-${String(800 + logs.length + i).padStart(12, "0")}`,
     sub_type: "complete",
     ...row,
+    // Stamped by the database whatever the phone sent (migrations/144).
+    received_at: new Date().toISOString(),
   }));
   logs.push(...saved);
   return route.fulfill({ json: saved });
+}
+
+/**
+ * master_schedules (Phase 173, migrations/144): everyone reads; only the
+ * household's admin writes (a staff phone is refused, as the policies do).
+ */
+function answerSchedules(route: Route, rows: Record<string, unknown>[], admin: boolean) {
+  const request = route.request();
+  const method = request.method();
+  const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
+  if (method === "GET") return route.fulfill({ json: one ? (rows[0] ?? null) : rows });
+  if (!admin) {
+    return route.fulfill({
+      status: 403,
+      json: { code: "42501", message: 'new row violates row-level security policy for table "master_schedules"' },
+    });
+  }
+  const params = new URL(request.url()).searchParams;
+  if (method === "POST") {
+    const body = request.postDataJSON();
+    const saved = (Array.isArray(body) ? body : [body]).map((row: Record<string, unknown>, i: number) => ({
+      id: `00000000-0000-4000-8000-${String(700 + rows.length + i).padStart(12, "0")}`,
+      interval_hours: null,
+      start_time: null,
+      end_time: null,
+      is_active: true,
+      expires_at: null,
+      created_at: new Date().toISOString(),
+      kind: null,
+      routine_group_id: null,
+      days_of_week: null,
+      note: null,
+      staff_id: null,
+      proof: "photo",
+      ...row,
+    }));
+    rows.push(...saved);
+    return route.fulfill({ json: one ? saved[0] : saved });
+  }
+  const matched = filterRows(rows, params);
+  if (method === "PATCH") {
+    const patch = request.postDataJSON();
+    for (const row of matched) Object.assign(row, patch);
+    return route.fulfill({ json: one ? (matched[0] ?? null) : matched });
+  }
+  if (method === "DELETE") {
+    for (const row of matched) rows.splice(rows.indexOf(row), 1);
+    return route.fulfill({ json: matched });
+  }
+  return route.fulfill({ json: [] });
 }
 
 /**

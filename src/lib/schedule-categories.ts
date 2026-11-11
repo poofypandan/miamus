@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import { AGENDA_TONES, routineTone } from "@/lib/agenda-tones";
 import { displayLogNote } from "@/lib/log-notes";
-import type { MasterSchedule, TaskLog } from "@/types/database";
+import { routineKindInfo } from "@/lib/pet-routine-kinds";
+import type { MasterSchedule, RoutineKind, TaskLog } from "@/types/database";
 
 // master_schedules has no dedicated "category" column, so potty/grooming/
 // medication entries are tagged through `title` itself: potty always uses
@@ -33,9 +34,16 @@ export type ScheduleCategory =
   | "grooming"
   | "medication"
   | "temporary"
-  | "vet";
+  | "vet"
+  // Made in the Add routine sheet (Phase 173): the row says what it is
+  // (`kind`), so nothing is guessed from its title or end date.
+  | "routine";
 
-export function categorizeSchedule(schedule: MasterSchedule): ScheduleCategory {
+export function categorizeSchedule(schedule: Pick<MasterSchedule, "title" | "expires_at" | "kind">): ScheduleCategory {
+  // First: a row from the new sheet is a routine whatever its title says, so
+  // a typed "Pipis & Pup" or "Vet: ..." can't pass for the old kinds, and a
+  // routine with no end date is no longer filed as a meal.
+  if (schedule.kind) return "routine";
   if (schedule.title === POTTY_TITLE) return "potty";
   if (schedule.title.startsWith(MEDICATION_PREFIX)) return "medication";
   if (schedule.title.startsWith(GROOMING_PREFIX)) return "grooming";
@@ -79,10 +87,16 @@ const CATEGORY_ICONS: Record<ScheduleCategory, LucideIcon> = {
   grooming: Scissors,
   temporary: List,
   vet: Stethoscope,
+  routine: List,
 };
 
 export function categoryIcon(category: ScheduleCategory): LucideIcon {
   return CATEGORY_ICONS[category];
+}
+
+/** A routine's own icon (footprints for a walk), else its category's. */
+export function routineIcon(category: ScheduleCategory, kind?: RoutineKind | null): LucideIcon {
+  return (category === "routine" && routineKindInfo(kind)?.icon) || CATEGORY_ICONS[category];
 }
 
 // The colours below are the Agenda's three-tone system (Phase 112), read from

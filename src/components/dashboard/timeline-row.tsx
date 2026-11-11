@@ -9,10 +9,11 @@ import { AGENDA_TONES, DONE_TONE, routineTone } from "@/lib/agenda-tones";
 import { isAdmitted } from "@/lib/pets";
 import {
   categoryCardTint,
-  categoryIcon,
   categoryIconColor,
+  routineIcon,
   type ScheduleCategory,
 } from "@/lib/schedule-categories";
+import { stepTime, threePhotoState, walkMinutes } from "@/lib/staff-agenda";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import { useFormatTime, useScreenLang } from "@/components/ui/ui-labels";
 import { cn } from "@/lib/utils";
@@ -36,7 +37,7 @@ import { useOwnerLocale } from "@/context/owner-locale-context";
 export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEntity[] }) {
   const formatTime = useFormatTime();
   const lang = useScreenLang();
-  const { schedules, selectedDate } = useHousehold();
+  const { schedules, selectedDate, logs } = useHousehold();
   const t = useT();
   const locale = useOwnerLocale();
   // Couldn't-do records on this block's open pets (Phase 165).
@@ -49,7 +50,40 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
   );
   const [couldntOpen, setCouldntOpen] = useState(false);
   const medicine = group.category === "medication";
-  const Icon = categoryIcon(group.category);
+  const Icon = routineIcon(group.category, group.kind);
+  // A three-photo routine (Phase 173, D14): the owner sees all three photos
+  // with their server times, and the minutes, on the row. No map, no location.
+  const dateKey = formatDateLocal(selectedDate);
+  const walk = useMemo(
+    () => (group.proof === "three" ? threePhotoState(group.items, logs, dateKey) : null),
+    [group.proof, group.items, logs, dateKey]
+  );
+  const walkLine = useMemo(() => {
+    if (!walk?.start) return null;
+    const time = (log: NonNullable<typeof walk.start>) => {
+      const at = stepTime(log);
+      return at.sentAt
+        ? `${formatTime(new Date(at.at))} (${t("sent", "terkirim")} ${formatTime(new Date(at.sentAt))})`
+        : formatTime(new Date(at.at));
+    };
+    const steps = [walk.start, walk.arrived, walk.end].filter(Boolean).map((l) => time(l!));
+    if (walk.end) {
+      const { minutes, phoneTime } = walkMinutes(walk.start, walk.end);
+      return `${steps.join(" · ")} · ${t(`${minutes} min`, `${minutes} menit`)}${phoneTime ? ` ${t("(phone time)", "(jam HP)")}` : ""}`;
+    }
+    // Not finished by the end of its day: started, with no end photo.
+    if (dateKey < formatDateLocal(new Date())) {
+      return t(
+        `Started ${formatTime(new Date(stepTime(walk.start).at))}, no end photo`,
+        `Mulai ${formatTime(new Date(stepTime(walk.start).at))}, tanpa foto akhir`
+      );
+    }
+    return steps.join(" · ");
+  }, [walk, formatTime, t, dateKey]);
+  // The start and arrived photos, ahead of the end photo the row already shows.
+  const walkPhotos = (walk ? [walk.start, walk.arrived] : []).filter((l) => l?.photo_url) as NonNullable<
+    NonNullable<typeof walk>["start"]
+  >[];
 
   // One row is one task at one time across every dog, so its photos are the
   // proof shots for that task — swiping moves between them. Merged by URL
@@ -174,10 +208,31 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
             {group.titles.join(" · ")}
           </span>
         </span>
+      ) : walkLine || group.note ? (
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate font-medium">{group.title}</span>
+          {walkLine && (
+            <span className="truncate text-xs text-muted-foreground tabular-nums" data-testid="owner-walk-line">
+              {walkLine}
+            </span>
+          )}
+          {!walkLine && group.note && <span className="truncate text-xs text-muted-foreground">{group.note}</span>}
+        </span>
       ) : (
         <span className="flex-1 truncate font-medium">{group.title}</span>
       )}
       <div className="flex shrink-0 -space-x-4">
+        {walkPhotos.map((log) => (
+          <LogPhotoThumbnail
+            key={log.id}
+            log={log}
+            // Every pet's log behind this photo; the later steps go with them
+            // (withLaterSteps, in the thumbnail's delete; Codex, PR #85).
+            logs={walk!.logs.filter((l) => l.photo_url === log.photo_url)}
+            title={group.title}
+            className="size-12 rounded-xl ring-2 ring-background"
+          />
+        ))}
         {marks.map((mark) =>
           mark.kind === "photo" ? (
             <LogPhotoThumbnail

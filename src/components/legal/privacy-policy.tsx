@@ -110,7 +110,7 @@ const COPY: Record<
           {
             ul: [
               "Tasks, chores, routines, schedules and notes.",
-              "Photos taken in the app: task proof photos, before and after photos, stock-check photos, pet photos and scans of pet documents.",
+              "Photos taken in the app: task proof photos, before and after photos, stock-check photos, pet photos and scans of pet documents. Walk photos are taken where the walk goes, so they may show a public place and the staff member; Miamus doesn't record location (the photo's own location data is removed on the phone before upload). For each saved task, Miamus also notes when it reached our servers.",
               "Details about your pets, including their vet and health records.",
               "The household's shopping list: which supplies are running low or out, and who said so.",
               "Food the household lists: what it is, an optional photo, where it came from (cooked at home, from someone, or bought), where it is kept, when it expires (or that nobody knows yet), who gave it (a name you type in), notes, who added it, and whether it was eaten, given away or thrown away. When staff add food, the household's admins get a notification saying so, and each morning a notification lists food that expires today or tomorrow.",
@@ -375,7 +375,7 @@ const COPY: Record<
           {
             ul: [
               "Tugas, pekerjaan rumah, rutinitas, jadwal, dan catatan.",
-              "Foto yang diambil di aplikasi: foto bukti tugas, foto sebelum dan sesudah, foto cek stok, foto hewan peliharaan, dan scan dokumen hewan.",
+              "Foto yang diambil di aplikasi: foto bukti tugas, foto sebelum dan sesudah, foto cek stok, foto hewan peliharaan, dan scan dokumen hewan. Foto jalan-jalan diambil di tempat yang dilalui, jadi bisa memperlihatkan tempat umum dan staf yang mengajak jalan; Miamus tidak mencatat lokasi. Untuk setiap tugas yang disimpan, Miamus juga mencatat kapan tugas itu sampai di server kami.",
               "Data hewan peliharaan Anda, termasuk catatan dokter hewan dan kesehatannya.",
               "Daftar belanja rumah: barang yang hampir habis atau habis, dan siapa yang memberi tahu.",
               "Makanan yang dicatat rumah tangga: makanan apa, foto (boleh tidak ada), dari mana (dimasak di rumah, dari orang, atau dibeli), disimpan di mana, kapan kedaluwarsa (atau belum ada yang tahu), dari siapa (nama yang Anda ketik), catatan, siapa yang menambahkan, dan apakah sudah dimakan, diberikan, atau dibuang. Kalau staf menambahkan makanan, admin rumah tangga mendapat notifikasi, dan setiap pagi ada notifikasi berisi makanan yang kedaluwarsa hari ini atau besok.",

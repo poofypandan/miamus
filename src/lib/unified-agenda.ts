@@ -57,8 +57,12 @@ export function buildUnifiedAgenda(params: {
   const entries: UnifiedAgendaEntry[] = [
     ...groups.map((group) => ({
       kind: "routine" as const,
-      // The same key the staff and owner feeds already used for a group.
-      key: `routine|${group.time}|${group.title}|${group.items[0]?.entityId ?? ""}`,
+      // The same key the staff and owner feeds already used for a group. A
+      // routine from the Add routine sheet (Phase 173) can share its time,
+      // title and first pet with another that differs only by note or person
+      // (two cards, see buildAgenda), so it adds its first row's id: each
+      // card keeps its own sheet and capture state (Codex, PR #85).
+      key: `routine|${group.time}|${group.title}|${group.items[0]?.entityId ?? ""}${group.kind ? `|${group.items[0]?.scheduleId ?? ""}` : ""}`,
       time: group.time,
       group,
     })),
