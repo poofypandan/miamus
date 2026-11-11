@@ -198,7 +198,12 @@ it.
    you're approved.**" Under it, one **optional** question: **How should we
    let you know?** with two chips:
    - **WhatsApp**: shows one field, **WhatsApp number** (`type="tel"`,
-     "0812…" or "+62 812…"), and **Save**;
+     "0812…" or "+62 812…"), and **Save**. Directly under the field, one
+     line, **no checkbox** (a just-in-time privacy note): "We'll use your
+     number only to tell you you're approved, then delete it. **Privacy
+     policy**", the link going to that section of the policy
+     (`/privacy#waiting-contact`, `/privasi#waiting-contact` in Indonesian;
+     PR A1 adds the anchor);
    - **Email**: shows their sign-up (Google) email, read-only; nothing to
      type.
 
@@ -750,6 +755,14 @@ setup should be no different.
 
 ## How it fits the five tabs and the stop rules
 
+- **Rule for every new optional personal field (owner, 2026-11-11):** where
+  the field is asked, one line says **why** it's asked, **how long** it's
+  kept, and **links** to that section of the privacy policy. No checkbox, no
+  extra screen. The WhatsApp number on the waiting screen is the first use.
+  The privacy policy gets an anchor for each such section so the link lands
+  on it. (Recommended for `AGENTS.md`'s Privacy rules, so Codex checks it;
+  that shared file is the manager's to change.)
+
 - **Five tabs, unchanged.** Setup lives at `/setup`, a full-screen flow
   before the dashboard, like `/onboarding`. Afterwards the **Starter list**
   is a quiet button on Chores → Today beside **Bills and upkeep**, and
@@ -779,7 +792,7 @@ setup should be no different.
 | Request sent | We'll let you know by WhatsApp or email as soon as you're approved. | Kami akan memberi tahu Anda lewat WhatsApp atau email begitu permintaan Anda disetujui. |
 | Contact question (optional) | How should we let you know? · WhatsApp · Email | Mau diberi tahu lewat apa? · WhatsApp · Email |
 | WhatsApp field | WhatsApp number · e.g. 0812 3456 7890 · Save | Nomor WhatsApp · mis. 0812 3456 7890 · Simpan |
-| Contact note | We use it once to tell you you're in, then delete it. | Hanya dipakai sekali untuk memberi tahu Anda, lalu dihapus. |
+| Contact note, under the number field (link to `/privacy#waiting-contact` or `/privasi#waiting-contact`) | We'll use your number only to tell you you're approved, then delete it. Privacy policy | Nomor Anda hanya dipakai untuk memberi tahu bahwa Anda disetujui, lalu dihapus. Kebijakan privasi |
 | Email chip detail | We'll write to {email}. | Kami akan menulis ke {email}. |
 | Approvals page | Prefers WhatsApp · Prefers email | Lewat WhatsApp · Lewat email |
 | Approvals page buttons | Send on WhatsApp · Email them · Copy link | Kirim lewat WhatsApp · Kirim email · Salin link |
@@ -898,6 +911,8 @@ Nothing below is created in this PR.
   Same revoke/grant, granted to authenticated (the check is inside).
 - `create_household` (re-created above anyway) nulls the caller's
   `notify_phone`.
+- Privacy policy component: an anchor `id="waiting-contact"` on the new
+  lines (both languages), for the note's link.
 - `prune_household_access_requests()` (113's nightly job) re-created to also
   null `notify_phone` where `contact_set_at` is more than 30 days ago; it
   keeps doing everything else. Same `service_role`-only grants.
@@ -1030,7 +1045,10 @@ only until they're told (30 days at most). Build order: PR 0 (145) → A1 → 17
   chat with a number, the share sheet without), **Email them** second,
   **Copy link** third (Email first if they chose it). The number is kept only
   until they're approved and told (or make their household), then deleted,
-  30 days at most; privacy-policy lines in PR A1. Sent by hand, no new
+  30 days at most; privacy-policy lines in PR A1, and a one-line
+  just-in-time note under the number field ("We'll use your number only to
+  tell you you're approved, then delete it. Privacy policy", linking to that
+  section; no checkbox). Sent by hand, no new
   service. Earlier options: email only (A on 10 Nov); WhatsApp share with
   no number (11 Nov morning); an email service (a new processor); no
   message (today).
