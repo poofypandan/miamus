@@ -6,6 +6,7 @@ import type { OrganiseRoomsMoved,
   HouseholdTask,
   BillPayment,
   NotificationPrefs,
+  RepairPushPrefs,
   InventoryAuditLog,
   InventoryAuditWithStaff,
   FoodItem,
@@ -1171,6 +1172,21 @@ export const supabaseProvider: DataProvider = {
     });
     if (error) throw error;
     const row = (Array.isArray(data) ? data[0] : data) as NotificationPrefs | undefined;
+    return row ?? prefs;
+  },
+  async getRepairPushPrefs() {
+    const { data, error } = await client().rpc("my_repair_push_prefs");
+    if (error) throw error;
+    const row = (Array.isArray(data) ? data[0] : data) as RepairPushPrefs | undefined;
+    return row ?? { repair_arrival_pushes: true, repair_done_pushes: true };
+  },
+  async setRepairPushPrefs(prefs) {
+    const { data, error } = await client().rpc("set_my_repair_push_prefs", {
+      p_arrival: prefs.repair_arrival_pushes,
+      p_done: prefs.repair_done_pushes,
+    });
+    if (error) throw error;
+    const row = (Array.isArray(data) ? data[0] : data) as RepairPushPrefs | undefined;
     return row ?? prefs;
   },
   async requestsPushOn() {

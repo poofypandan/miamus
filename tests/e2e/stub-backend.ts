@@ -235,6 +235,8 @@ export interface Stub {
   supervision: Record<string, unknown>[];
   /** The admin's notification switches as last saved (Phase 165). */
   notificationPrefs: { evening_summary_hour: number | null; staff_request_pushes: boolean };
+  /** The admin's walk-in repair push switches as last saved (Phase 174 PR B). */
+  repairPushPrefs: { repair_arrival_pushes: boolean; repair_done_pushes: boolean };
   /** recipes, each with its ingredients, as the stub holds them (Phase 170 PR B). */
   recipes: Record<string, unknown>[];
   setNetwork(up: boolean): void;
@@ -286,6 +288,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const walkIns: Record<string, unknown>[] = options.walkIns ?? [];
   const supervision: Record<string, unknown>[] = options.supervision ?? [];
   const notificationPrefs = options.notificationPrefs ?? { evening_summary_hour: 19, staff_request_pushes: true };
+  const repairPushPrefs = { repair_arrival_pushes: true, repair_done_pushes: true };
   const kakak = { allowed: false, enabled: false, ...options.kakak };
   // An established household by default (Phase 172's calm first screen
   // shows What's new only to households 14+ days old and past setup).
@@ -683,6 +686,13 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         notificationPrefs.staff_request_pushes = Boolean(body.p_requests);
         return route.fulfill({ json: [notificationPrefs] });
       }
+      if (table === "rpc/my_repair_push_prefs" && who === OWNER) return route.fulfill({ json: [repairPushPrefs] });
+      if (table === "rpc/set_my_repair_push_prefs" && who === OWNER) {
+        const body = request.postDataJSON() ?? {};
+        repairPushPrefs.repair_arrival_pushes = Boolean(body.p_arrival);
+        repairPushPrefs.repair_done_pushes = Boolean(body.p_done);
+        return route.fulfill({ json: [repairPushPrefs] });
+      }
       if (table === "rpc/household_requests_push_on") return route.fulfill({ json: Boolean(options.requestsPushOn) });
       if (table === "rpc/organise_rooms" && options.rooms) {
         return route.fulfill({ json: organise(request.postDataJSON()?.p_plan, options.rooms, options.chores ?? []) });
@@ -725,6 +735,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     walkIns,
     supervision,
     notificationPrefs,
+    repairPushPrefs,
     kakak,
     household,
     features,

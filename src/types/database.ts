@@ -733,6 +733,12 @@ export type NotificationPrefs = {
   staff_request_pushes: boolean;
 };
 
+/** An owner's two walk-in repair pushes (Phase 174 PR B, migrations/152). Both on by default. */
+export type RepairPushPrefs = {
+  repair_arrival_pushes: boolean;
+  repair_done_pushes: boolean;
+};
+
 /** A short note on a repair, by an owner or a staff phone (migrations/131). */
 export type RepairNote = {
   id: string;
@@ -1148,6 +1154,15 @@ export interface Database {
       set_my_notification_prefs: {
         Args: { p_hour: number | null; p_requests: boolean };
         Returns: NotificationPrefs[];
+      };
+      // Walk-in repair pushes (migrations/152): this owner's two switches.
+      my_repair_push_prefs: {
+        Args: Record<string, never>;
+        Returns: RepairPushPrefs[];
+      };
+      set_my_repair_push_prefs: {
+        Args: { p_arrival: boolean; p_done: boolean };
+        Returns: RepairPushPrefs[];
       };
       // For the staff's WhatsApp panel: will an admin get the request push?
       household_requests_push_on: {

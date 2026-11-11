@@ -319,6 +319,37 @@ export function supervisionExplains(
   return first;
 }
 
+/**
+ * The stretch that explains a row of the evening summary sheet (Phase 174
+ * PR B), as the push reads it (notify_evening_summary, migrations/152): a
+ * not-done row only (a couldn't-do record says why itself); a chore is for
+ * the person it's assigned to after leave; a routine for its own person
+ * unless they're on leave that day, otherwise anyone.
+ */
+export function summaryRowSupervision(
+  row: {
+    kind: "chore" | "routine";
+    time: string | null;
+    staffId: string | null;
+    routineStaffId?: string | null;
+    exception?: unknown;
+  },
+  date: string,
+  stretches: readonly SupervisionStretch[],
+  staffOnDuty: readonly string[],
+  isAway: (staffId: string) => boolean,
+  now: Date = new Date()
+): SupervisionStretch | null {
+  if (row.exception || stretches.length === 0) return null;
+  const owner =
+    row.kind === "chore"
+      ? row.staffId
+      : row.routineStaffId && !isAway(row.routineStaffId)
+        ? row.routineStaffId
+        : null;
+  return supervisionExplains({ staffId: owner, date, time: row.time }, stretches, staffOnDuty, now);
+}
+
 /** The staff label on a task explained by supervising. */
 export const STAFF_SUPERVISING_LABEL = "Mengawasi perbaikan";
 

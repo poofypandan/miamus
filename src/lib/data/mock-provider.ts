@@ -23,6 +23,7 @@ import type {
   BillPayment,
   TaskException,
   NotificationPrefs,
+  RepairPushPrefs,
   RepairNote,
   RepairSupervision,
   RepairWalkIn,
@@ -67,6 +68,7 @@ interface MockDB {
   /** Phase 165. Optional, as above. */
   taskExceptions?: TaskException[];
   notificationPrefs?: NotificationPrefs;
+  repairPushPrefs?: RepairPushPrefs;
   /** Phase 170 PR B. Optional, as above. */
   recipes?: RecipeWithLines[];
 }
@@ -1154,6 +1156,15 @@ export const mockProvider: DataProvider = {
   async setNotificationPrefs(prefs) {
     const db = loadDB();
     db.notificationPrefs = prefs;
+    saveDB(db);
+    return delay(prefs);
+  },
+  async getRepairPushPrefs() {
+    return delay(loadDB().repairPushPrefs ?? { repair_arrival_pushes: true, repair_done_pushes: true });
+  },
+  async setRepairPushPrefs(prefs) {
+    const db = loadDB();
+    db.repairPushPrefs = prefs;
     saveDB(db);
     return delay(prefs);
   },
