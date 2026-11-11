@@ -313,3 +313,43 @@ test("Today: Sari's phone is linked, and the owner can say Not Sari? Undo (audit
   await expect(page.getByText("Sari's phone is linked")).toHaveCount(0);
   expect(undone).toEqual([{ p_household: HOUSEHOLD_ID, p_staff_id: "00000000-0000-4000-8000-00000000c102" }]);
 });
+
+test("after archiving someone, the next WhatsApp message carries the new house code (Codex, PR #90)", async ({ context, page }) => {
+  const now = new Date().toISOString();
+  const staff: Record<string, unknown>[] = [
+    { id: "00000000-0000-4000-8000-00000000c201", household_id: HOUSEHOLD_ID, name: "Sari", has_pin: false, user_id: null, archived_at: null, created_at: now },
+    { id: "00000000-0000-4000-8000-00000000c202", household_id: HOUSEHOLD_ID, name: "Budi", has_pin: false, user_id: null, archived_at: null, created_at: now },
+  ];
+  await installStub(context, { owner: { locale: "en" }, staff });
+  let code = "AAAAAA";
+  await context.route(`${STUB_URL}/rest/v1/rpc/**`, async (route) => {
+    const name = new URL(route.request().url()).pathname.split("/").pop() ?? "";
+    if (name === "my_house_code") return route.fulfill({ json: code });
+    if (name === "staff_claim_link") return route.fulfill({ json: "ABCDEFGHJK" });
+    if (name === "archive_staff_profile") {
+      // As 146 does: archived, and the house gets a new code.
+      const budi = staff.find((p) => p.name === "Budi")!;
+      budi.archived_at = new Date().toISOString();
+      code = "BBBBBB";
+      return route.fulfill({ json: budi });
+    }
+    return route.fallback();
+  });
+  await context.route("https://wa.me/**", (route) => route.fulfill({ contentType: "text/html", body: "<html></html>" }));
+
+  await page.goto("/dashboard?module=access&page=staff");
+  const send = page.getByRole("button", { name: "Send one WhatsApp message" });
+  await expect(send).toBeEnabled({ timeout: 20_000 });
+
+  await page.getByRole("button", { name: "Remove Budi" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(page.getByText("Budi removed.", { exact: false })).toBeVisible();
+
+  await expect(send).toBeEnabled();
+  const popup = page.waitForEvent("popup");
+  await send.click();
+  const wa = await popup;
+  const text = new URL(wa.url()).searchParams.get("text") ?? "";
+  await wa.close();
+  expect(text).toContain("#c=BBB-BBB&k=ABCDEFGHJK");
+});
