@@ -185,8 +185,13 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async deleteLog(id) {
-    const { error } = await client().from("task_logs").delete().eq("id", id);
+    // .select() so a refused delete shows: RLS filters it to zero rows rather
+    // than failing. Since migrations/146 a staff phone may delete only a log
+    // it saved, within its undo window; without this the app would drop the
+    // log and its photo locally while the row stays.
+    const { data, error } = await client().from("task_logs").delete().eq("id", id).select("id");
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Log was not deleted");
   },
   async createSchedule(input) {
     const { data, error } = await client()

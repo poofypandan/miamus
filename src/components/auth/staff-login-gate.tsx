@@ -600,11 +600,19 @@ function PinStep({
 
 /**
  * What a staff member reads when a PIN is refused (Phase 151): the tries left
- * before the 5-try lock, or until when it is locked, in 24-hour time.
+ * before the 5-try lock, or until when it is locked, in 24-hour time. Since
+ * migrations/146 a third lock lasts until an admin sets a new PIN, and too
+ * many wrong PINs in an hour pause PIN tries.
  */
 export function pinFailureMessage(result: Exclude<PinCheck, { status: "ok" }>): string {
   if (result.status === "locked") {
+    if (result.until_reset || !result.locked_until) {
+      return "PIN terkunci karena terlalu sering salah. Minta admin rumah membuat PIN baru untuk Anda.";
+    }
     return `PIN terkunci karena 5 kali salah. Coba lagi pukul ${formatTime(new Date(result.locked_until), "id")}.`;
+  }
+  if (result.status === "too_many_attempts") {
+    return "Terlalu banyak PIN salah. Coba lagi 1 jam lagi.";
   }
   if (result.status === "wrong_pin" && result.attempts_left > 0) {
     return `PIN salah. Sisa ${result.attempts_left} kali coba.`;
