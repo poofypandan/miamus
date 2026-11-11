@@ -3,6 +3,7 @@
 // docs/phase-156-kakak-test-set.md ("How a case is marked").
 
 import { householdRefs, type KakakHousehold } from "@/lib/kakak/household";
+import { toIsoDays } from "@/lib/kakak/suggestions";
 import { newPetTimes, routineTitle } from "@/lib/kakak/validate";
 import type { ExpectedCall, ExpectedShoppingItem, ExpectedTurn, FieldMatcher, KakakCase } from "./types";
 
@@ -137,7 +138,8 @@ export function routeView(household: KakakHousehold, call: ToolCall): ToolCall {
   const pets = Array.isArray(call.input.pets) ? (call.input.pets as string[]) : [];
   const kind = String(call.input.kind);
   const title = routineTitle(kind, call.input.title);
-  const fresh = pets.map((pet) => ({ pet, times: newPetTimes(household, pet, kind, times, title) }));
+  const request = { days: toIsoDays(call.input.days), until: typeof call.input.until === "string" ? call.input.until : null };
+  const fresh = pets.map((pet) => ({ pet, times: newPetTimes(household, pet, kind, times, title, request) }));
   const kept = fresh.filter((p) => p.times.length > 0);
   return {
     name: call.name,

@@ -41,6 +41,10 @@ export interface ContextScheduleRow {
   expires_at: string | null;
   /** migrations/144; absent before it, which reads as an old row (no kind). */
   kind?: string | null;
+  /** migrations/144: ISO weekdays, or null for every day. */
+  days_of_week?: number[] | null;
+  /** The routine's first day (a one-off's is its day). */
+  created_at?: string | null;
 }
 
 export interface ContextRoomRow {
@@ -176,10 +180,18 @@ export function buildContext(
     for (const row of mine) {
       if (!row.kind || !ROUTINE_KIND_SET.has(row.kind) || (row.expires_at && row.expires_at.slice(0, 10) < today)) continue;
       const title = cleanName(row.title, 60);
-      const entry = routines.find((r) => r.kind === row.kind && r.title === title);
+      // When it happens, so the duplicate check only drops a time this
+      // routine really covers (Codex, PR #100). The first day is the Jakarta
+      // date of created_at, as the phones read it.
+      const days = row.days_of_week && row.days_of_week.length > 0 ? [...new Set(row.days_of_week)].sort((a, b) => a - b) : null;
+      const from = row.created_at ? jakartaNow(new Date(row.created_at)).today : today;
+      const until = row.expires_at ? row.expires_at.slice(0, 10) : null;
+      const same = (r: (typeof routines)[number]) =>
+        r.kind === row.kind && r.title === title && r.from === from && r.until === until && String(r.days) === String(days);
+      const entry = routines.find(same);
       const times = timesOf([row]);
       if (entry) entry.times = [...new Set([...entry.times, ...times])].sort();
-      else routines.push({ kind: row.kind as RoutineKind, title, times });
+      else routines.push({ kind: row.kind as RoutineKind, title, times, days, from, until });
     }
     const name = cleanName(pet.name);
     pets.push({ ref, name, kind: petKind(pet.metadata), meals, potty, ...(routines.length ? { routines } : {}) });

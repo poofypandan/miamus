@@ -12,6 +12,23 @@ import type { RoutineKind } from "@/types/database";
 
 export type KakakLocale = "id" | "en";
 
+/**
+ * One existing routine with a kind (Phase 173), as the duplicate check needs
+ * it: its times, and when it happens, so a Monday-only walk never hides a
+ * Tuesday one (Codex, PR #100).
+ */
+export interface KakakRoutine {
+  kind: RoutineKind;
+  title: string;
+  times: string[];
+  /** ISO weekdays (1 = Monday), or null for every day. */
+  days: number[] | null;
+  /** First day, YYYY-MM-DD in Jakarta. */
+  from: string;
+  /** Last day, or null for no end. */
+  until: string | null;
+}
+
 export interface KakakHousehold {
   /** Today in Asia/Jakarta, YYYY-MM-DD. */
   today: string;
@@ -33,7 +50,7 @@ export interface KakakHousehold {
      * catalogue's kinds go into the block (as "walk 06:30"); an Other
      * routine's typed title stays here, for the duplicate check only.
      */
-    routines?: { kind: RoutineKind; title: string; times: string[] }[];
+    routines?: KakakRoutine[];
   }[];
   /**
    * Places (migrations/129): `name` is the place's own name; a room on a
@@ -146,7 +163,7 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
     lines.push("Pets (current daily times):");
     for (const pet of household.pets) {
       lines.push(
-        `- ${pet.ref}: ${pet.name} (${pet.kind}). Meals: ${times(pet.meals)}. Potty: ${times(pet.potty)}.${routinesLine(pet.routines)}`,
+        `- ${pet.ref}: ${pet.name} (${pet.kind}). Meals: ${times(pet.meals)}. Potty: ${times(pet.potty)}.${routinesLine(pet.routines, household.today)}`,
       );
     }
     if (household.pets.length === 0) lines.push("- none");
@@ -178,22 +195,33 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
 }
 
 /**
- * " Routines: walk 06:30, 16:30; lights 21:30." for a pet's catalogue
+ * " Routines: walk 06:30, 16:30 (Mon); lights 21:30." for a pet's catalogue
  * routines, or nothing, so a pet with none reads exactly as before. Other
  * routines are left out: their titles are the owner's own words, which the
  * privacy policy doesn't list among what goes to Anthropic.
  */
-function routinesLine(routines: KakakHousehold["pets"][number]["routines"]): string {
+function routinesLine(routines: KakakHousehold["pets"][number]["routines"], today: string): string {
   const byKind = new Map<string, Set<string>>();
   for (const routine of routines ?? []) {
     if (routine.kind === "other") continue;
     const set = byKind.get(routine.kind) ?? new Set<string>();
-    for (const time of routine.times) set.add(time);
+    for (const time of routine.times) set.add(`${time}${when(routine, today)}`);
     byKind.set(routine.kind, set);
   }
   if (byKind.size === 0) return "";
   const parts = [...byKind.entries()].map(([kind, set]) => `${kind} ${[...set].sort().join(", ")}`);
   return ` Routines: ${parts.join("; ")}.`;
+}
+
+const ISO_DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** " (Mon, Wed)", " (from 2026-11-20)", " (until 2026-11-13)", or nothing for every day from now on. */
+function when(routine: KakakRoutine, today: string): string {
+  const parts: string[] = [];
+  if (routine.days) parts.push(routine.days.map((d) => ISO_DAYS[d] ?? "").join(", "));
+  if (routine.from > today) parts.push(`from ${routine.from}`);
+  if (routine.until) parts.push(`until ${routine.until}`);
+  return parts.length ? ` (${parts.join("; ")})` : "";
 }
 
 /**

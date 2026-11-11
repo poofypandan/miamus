@@ -7,7 +7,10 @@
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
 import { ROUTINE_NOTE_MAX, routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
-import { addDays, householdRefs, type KakakHousehold } from "./household";
+import { isScheduleActiveOn } from "@/lib/scheduleEngine";
+import { isoWeekday } from "@/lib/pet-routine-kinds";
+import type { MasterSchedule } from "@/types/database";
+import { addDays, householdRefs, type KakakHousehold, type KakakRoutine } from "./household";
 import { PET_ROUTINE_TOOL_KINDS, TOOL_WEEKDAYS, type KakakToolName, type PetRoutineToolKind } from "./tools";
 
 export type ValidationResult = { ok: true } | { ok: false; errors: string[] };
@@ -197,11 +200,47 @@ export function routineTitle(kind: string, title: unknown): string | null {
   return typed ?? routineKindInfo(kind as RoutineKind)?.title ?? null;
 }
 
+/** When a requested routine happens: from today, on these weekdays (null = every day), until this day (null = no end). */
+export interface RoutineRequest {
+  days: number[] | null;
+  until: string | null;
+}
+
+/**
+ * Whether an existing routine happens on every day the requested one does,
+ * with isScheduleActiveOn (lib/scheduleEngine), the rule Today and the staff
+ * card use. A request with no end is covered only by a routine with no end,
+ * and then two weeks from today settle it: past both start days the pattern
+ * repeats every week. A request with an end is checked day by day.
+ */
+export function routineCovers(existing: KakakRoutine, request: RoutineRequest, today: string): boolean {
+  if (request.until === null && existing.until !== null) return false;
+  const row = {
+    is_active: true,
+    // Local midnight of its first day: formatDateLocal reads it back as that day on any clock.
+    created_at: `${existing.from}T00:00:00`,
+    expires_at: existing.until,
+    days_of_week: existing.days,
+  } as MasterSchedule;
+  const last = request.until ?? addDays(maxDay(today, existing.from), 13);
+  for (let day = today; day <= last; day = addDays(day, 1)) {
+    if (request.days && !request.days.includes(isoWeekday(day))) continue;
+    if (!isScheduleActiveOn(row, day)) return false;
+  }
+  return true;
+}
+
+function maxDay(a: string, b: string): string {
+  return a > b ? a : b;
+}
+
 /**
  * The route drops a time the pet already has (and the card says so). Returns
  * the times that are new, in order. Meals and potty compare with the pet's
  * meal or potty times; another kind with a routine of the same kind (Other:
- * the same title) at that time, so "Jalan pagi 06:30" counts as a walk.
+ * the same title) at that time that happens on every day the request does,
+ * so "Jalan pagi 06:30" counts as a walk, but a Monday-only walk never hides
+ * a Tuesday one (Codex, PR #100).
  */
 export function newPetTimes(
   household: KakakHousehold,
@@ -209,15 +248,17 @@ export function newPetTimes(
   kind: string,
   times: string[],
   title: string | null = null,
+  request: RoutineRequest = { days: null, until: null },
 ): string[] {
   const pet = household.pets.find((p) => p.ref === petRef);
   if (!pet) return times;
-  let existing: Set<string>;
-  if (kind === "meal") existing = new Set(pet.meals);
-  else if (kind === "potty") existing = new Set(pet.potty);
-  else {
-    const same = (pet.routines ?? []).filter((r) => (kind !== "other" && r.kind === kind) || (title !== null && r.title === title));
-    existing = new Set(same.flatMap((r) => r.times));
+  if (kind === "meal" || kind === "potty") {
+    const existing = new Set(kind === "meal" ? pet.meals : pet.potty);
+    return times.filter((time) => !existing.has(time));
   }
+  const same = (pet.routines ?? []).filter(
+    (r) => ((kind !== "other" && r.kind === kind) || (title !== null && r.title === title)) && routineCovers(r, request, household.today),
+  );
+  const existing = new Set(same.flatMap((r) => r.times));
   return times.filter((time) => !existing.has(time));
 }

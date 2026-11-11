@@ -17,7 +17,7 @@ import { practiceClient } from "@/lib/kakak/practice";
 import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
 import { isSaveableSuggestion, toSuggestion, type PetRoutineSuggestion } from "@/lib/kakak/suggestions";
 import { KAKAK_TOOLS } from "@/lib/kakak/tools";
-import { validateToolCall } from "@/lib/kakak/validate";
+import { newPetTimes, validateToolCall } from "@/lib/kakak/validate";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -214,6 +214,76 @@ describe("the suggestion the phone gets", () => {
     const meal = suggest(call({ kind: "meal" }));
     expect(isSaveableSuggestion({ ...meal, days: [1] })).toBe(false);
     expect(isSaveableSuggestion({ ...meal, remindStaff: true })).toBe(false);
+  });
+});
+
+describe("already there only when an existing routine covers every day (Codex, PR #100)", () => {
+  // Matcha's walks as the route reads them: a Monday-only 07:00 walk, a
+  // daily 18:00 one, a one-off on 20 Nov at 09:00, and lights off that
+  // ended yesterday (ended rows never reach the block; one is added here to
+  // check the rule itself).
+  const withRoutines = (routines: NonNullable<(typeof household.pets)[number]["routines"]>) => ({
+    ...household,
+    pets: household.pets.map((p) => (p.ref === "P2" ? { ...p, routines } : p)),
+  });
+  const monday = { kind: "walk" as const, title: "Jalan-jalan", times: ["07:00"], days: [1], from: "2026-11-01", until: null };
+  const daily = { kind: "walk" as const, title: "Jalan-jalan", times: ["18:00"], days: null, from: "2026-11-01", until: null };
+  const oneOff = { kind: "walk" as const, title: "Jalan-jalan", times: ["09:00"], days: null, from: "2026-11-20", until: "2026-11-20" };
+  const ended = { kind: "lights" as const, title: "Matikan lampu", times: ["21:30"], days: null, from: "2026-10-01", until: "2026-11-10" };
+  const h = withRoutines([monday, daily, oneOff, ended]);
+
+  it("a Monday-only walk doesn't hide a Tuesday one, or a daily one", () => {
+    expect(newPetTimes(h, "P2", "walk", ["07:00"], "Jalan-jalan", { days: [2], until: null })).toEqual(["07:00"]);
+    expect(newPetTimes(h, "P2", "walk", ["07:00"], "Jalan-jalan", { days: null, until: null })).toEqual(["07:00"]);
+    // Mondays only, asked again: that one is there.
+    expect(newPetTimes(h, "P2", "walk", ["07:00"], "Jalan-jalan", { days: [1], until: null })).toEqual([]);
+  });
+
+  it("daily against daily: already there; a daily routine covers some days too", () => {
+    expect(newPetTimes(h, "P2", "walk", ["18:00"], "Jalan-jalan", { days: null, until: null })).toEqual([]);
+    expect(newPetTimes(h, "P2", "walk", ["18:00"], "Jalan-jalan", { days: [1, 3, 5], until: "2026-11-30" })).toEqual([]);
+  });
+
+  it("a future one-off doesn't block a new daily routine", () => {
+    expect(newPetTimes(h, "P2", "walk", ["09:00"], "Jalan-jalan", { days: null, until: null })).toEqual(["09:00"]);
+  });
+
+  it("a routine that ended doesn't block a new one", () => {
+    expect(newPetTimes(h, "P2", "lights", ["21:30"], "Matikan lampu", { days: null, until: null })).toEqual(["21:30"]);
+    // One that runs until a date covers a request ending sooner, not one with no end.
+    const until = withRoutines([{ ...ended, until: "2026-11-30" }]);
+    expect(newPetTimes(until, "P2", "lights", ["21:30"], "Matikan lampu", { days: null, until: "2026-11-20" })).toEqual([]);
+    expect(newPetTimes(until, "P2", "lights", ["21:30"], "Matikan lampu", { days: null, until: null })).toEqual(["21:30"]);
+  });
+
+  it("the card and the suggestion follow the same rule", () => {
+    const toS = (input: Record<string, unknown>) =>
+      toSuggestion(h, refs, names, "add_pet_routine", { ...call({ pets: ["P2"], kind: "walk", times: ["07:00"] }), ...input }) as PetRoutineSuggestion;
+    expect(toS({ days: ["tue"] }).pets[0]).toMatchObject({ times: [{ time: "07:00" }], alreadyThere: [] });
+    expect(toS({ days: ["mon"] }).pets[0]).toMatchObject({ times: [], alreadyThere: ["07:00"] });
+  });
+
+  it("the block tells Kakak when each routine happens", () => {
+    const block = renderHouseholdBlock(h);
+    expect(block).toContain("Routines: walk 07:00 (Mon), 09:00 (from 2026-11-20; until 2026-11-20), 18:00; lights 21:30 (until 2026-11-10).");
+  });
+
+  it("the context keeps each row's weekdays and first and last day", () => {
+    const ctx = buildContext(
+      {
+        ...rows,
+        schedules: [
+          { entity_id: id(10), title: "Jalan-jalan", frequency_type: "fixed_time", fixed_times: ["07:00"], is_active: true, expires_at: null, kind: "walk", days_of_week: [1], created_at: "2026-11-01T03:00:00Z" },
+          // 23:30 UTC on 19 Nov is 20 Nov in Jakarta.
+          { entity_id: id(10), title: "Jalan-jalan", frequency_type: "fixed_time", fixed_times: ["09:00"], is_active: true, expires_at: "2026-11-20", kind: "walk", days_of_week: null, created_at: "2026-11-19T23:30:00Z" },
+        ],
+      },
+      { today: "2026-11-11", now: "08:30", ownerLocale: "id", callerUserId: OWNER },
+    );
+    expect(ctx.household.pets[0].routines).toEqual([
+      { kind: "walk", title: "Jalan-jalan", times: ["07:00"], days: [1], from: "2026-11-01", until: null },
+      { kind: "walk", title: "Jalan-jalan", times: ["09:00"], days: null, from: "2026-11-20", until: "2026-11-20" },
+    ]);
   });
 });
 

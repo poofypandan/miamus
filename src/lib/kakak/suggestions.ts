@@ -202,11 +202,13 @@ export function toSuggestion(
       const asked = [...new Set((Array.isArray(input.times) ? (input.times as unknown[]) : []).filter(isTime))];
       const title = routineTitle(routine, input.title);
       const label = routine === "meal" ? str(input.title) : null;
+      // When the routine happens, so only a time an existing routine really covers is dropped.
+      const request = { days: basic ? null : toIsoDays(input.days), until: basic ? null : str(input.until) };
       const petRefs = [...new Set((Array.isArray(input.pets) ? (input.pets as unknown[]) : []).map(String))].filter(
         (ref) => refs.pets[ref],
       );
       const pets = petRefs.map((ref) => {
-        const fresh = newPetTimes(household, ref, routine, asked, title).sort();
+        const fresh = newPetTimes(household, ref, routine, asked, title, request).sort();
         return {
           petId: refs.pets[ref],
           petName: names.pets[ref],
@@ -234,7 +236,7 @@ export function toSuggestion(
           alertOwners: false,
         };
       }
-      const days = toIsoDays(input.days);
+      const days = request.days;
       const staff = str(input.staff);
       const kept = pets.filter((p) => p.times.length > 0);
       const times = [...new Set(kept.flatMap((p) => p.times.map((t) => t.time)))];
