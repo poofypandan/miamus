@@ -18,7 +18,8 @@
   .pair { display:flex; gap:20px; flex-wrap:wrap; }
   .phone { width:360px; max-width:100%; height:1025px; background:var(--bg); border-radius:36px; border:8px solid #111; overflow:hidden; position:relative; display:flex; flex-direction:column; }
   .phone.staff { height:600px; }
-  .phone.staff.walk { height:530px; }
+  .phone.staff.walk { height:600px; }
+  .phone.staff.hist { height:700px; }
   .tag { position:absolute; top:-2px; right:18px; background:#111; color:#fff; font-size:10px; padding:2px 8px; border-radius:0 0 8px 8px; z-index:6; }
   .status { height:22px; flex:none; }
   .appbar { background:#fff; border-bottom:1px solid var(--line); padding:6px 14px 8px; flex:none; }
@@ -85,6 +86,29 @@
   .card .state .ic { color:#b45309; width:13px; height:13px; }
   .card .meta { font-size:12.5px; color:var(--ok); font-weight:500; display:flex; align-items:center; gap:4px; }
   .card .meta .ic { color:var(--ok); width:13px; height:13px; }
+  .cambtn { margin:-4px 0 -4px auto; display:flex; align-items:center; gap:5px; border-radius:12px; background:var(--primary); color:#fff; font-size:12.5px; font-weight:600; padding:7px 11px; flex:none; white-space:nowrap; }
+  .cambtn .ic { color:#fff; width:15px; height:15px; }
+  .steps { display:flex; gap:6px; }
+  .steps span { flex:1; display:flex; align-items:center; gap:4px; font-size:11px; color:var(--muted); border-top:3px solid var(--line); padding-top:4px; white-space:nowrap; }
+  .steps span.on { border-color:#059669; color:var(--ink2); font-weight:500; }
+  .shots { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .shot { display:flex; flex-direction:column; gap:3px; }
+  .shot .img { aspect-ratio:1/1; border-radius:10px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#d6d3d1,#a8a29e); }
+  .shot .img.park { background:linear-gradient(135deg,#bbf7d0,#4d7c0f); }
+  .shot .img .ic { color:rgba(255,255,255,.9); width:26px; height:26px; }
+  .shot .img.empty { background:#fff; border:1.5px dashed #d1d5db; }
+  .shot .img.empty .ic { color:#9ca3af; }
+  .shot b { font-size:11.5px; font-weight:600; color:var(--ink2); }
+  .shot i { font-style:normal; font-size:11px; color:var(--muted); }
+  .shot i.late { color:#92400e; }
+  .orow { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  .orow .h { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; }
+  .orow .h span { margin-left:auto; font-size:12px; color:var(--muted); font-weight:400; }
+  .orow .h .ic { color:var(--ok); }
+  .orow .sub { font-size:11.5px; color:#92400e; margin-top:-4px; }
+  .linkbtn { display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border-radius:12px; border:1px solid var(--line); font-size:13.5px; font-weight:500; color:var(--ink2); }
+  .linkbtn.red { color:#b91c1c; border-color:#fecaca; }
+  .linkbtn.red .ic { color:#b91c1c; }
   .card.going { border-color:#fcd34d; border-left:3px solid #f59e0b; background:#fffbeb; }
   .seen { margin-left:auto; font-size:10.5px; color:var(--ok); font-weight:500; display:flex; align-items:center; gap:3px; }
   .seen .ic { color:var(--ok); width:12px; height:12px; }
@@ -128,6 +152,9 @@
   <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></symbol>
   <symbol id="i-undo-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol>
   <symbol id="i-sticky-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><path d="M15 3v5a1 1 0 0 0 1 1h5"/></symbol>
+  <symbol id="i-trees" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/></symbol>
+  <symbol id="i-door-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21H2"/><path d="M10 3H7a2 2 0 00-2 2v16"/><path d="M14 12h.01"/><path d="M19 21V5a2 2 0 00-1.675-1.974l-6.163-1.013A1 1 0 0010 3v18a1 1 0 001.124.992z"/><path d="M22 21h-3"/></symbol>
+  <symbol id="i-circle-slash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="9" x2="15" y1="15" y2="9"/></symbol>
 </svg>
 
 <header class="page">
@@ -143,7 +170,7 @@
 
 <section class="screen">
   <h2>2. Add routine: a walk for Matcha only, every day at 07:00 (owner)</h2>
-  <p>Opened from Matcha's page, so only Matcha is ticked. The Walk chip suggested 06:30; the owner moved it to 07:00. Proof for a walk is a photo at the start and one at the end, and Miamus notes the minutes; no location. Seven taps, nothing typed.</p>
+  <p>Opened from Matcha's page, so only Matcha is ticked. The Walk chip suggested 06:30; the owner moved it to 07:00. Proof for a walk is preset to three photos from the live camera (at the gate, where they walked to, back at the gate); Miamus shows the minutes. No location. Seven taps, nothing typed.</p>
   <div class="pair" id="s2"></div>
 </section>
 
@@ -154,9 +181,15 @@
 </section>
 
 <section class="screen">
-  <h2>4. Matcha's walk: start photo and end photo (staff, Bahasa Indonesia only)</h2>
-  <p>Left, 07:15: the start photo was taken at 07:02, so the card stays open and reads "Sedang jalan". Right, 07:34: the end photo closes it, and the card and the owner's history show 32 minutes, worked out from the two photo times. No location is read or stored.</p>
+  <h2>4. Matcha's walk in three photos (staff, Bahasa Indonesia only)</h2>
+  <p>Left, 07:05: Mulai was taken at the gate at 07:02; the card stays open, and its button names the next step. Middle, 07:20: the card's sheet after the photo at the park, with Sudah pulang next and a clear Batalkan jalan-jalan. Right, 07:34: Sudah pulang closes it with 32 minutes. Each step is the live camera only (gallery photos and files more than 2 minutes old are refused), and times come from the server. The step is worked out from the saved photos, so closing the app mid-walk loses nothing.</p>
   <div class="pair" id="s4"></div>
+</section>
+
+<section class="screen">
+  <h2>5. The owner sees the three photos with their times (owner)</h2>
+  <p>On Matcha's history and on Today: one row per walk, the three photos with server times, and the minutes. The second row shows a step saved without signal: its phone time is shown, with when it reached the server, and the minutes are marked as phone time. No map, no location.</p>
+  <div class="pair" id="s5"></div>
 </section>
 
 <script>
@@ -172,7 +205,8 @@ const T = {
     addTime: "Add time", repeat: ["Every day", "Some days", "Once"], ends: "Ends", never: "Never",
     anyone: "Anyone", tick: "Tick", photo: "Photo",
     noteHint: "Staff read it as you type it.",
-    walkHint: "A photo at the start and at the end. Miamus notes how long it took.",
+    walkHint: "Three photos from the camera: at the gate, where they walked to, back at the gate. Miamus notes how long it took.",
+    three: "3 photos", onePhoto: "1 photo",
     photoHint: "One photo covers every pet on the card.",
     preview: "Staff will see",
     btn1: "Add for 2 pets", btn2: "Add for Matcha",
@@ -187,7 +221,8 @@ const T = {
     addTime: "Tambah jam", repeat: ["Setiap hari", "Hari tertentu", "Sekali saja"], ends: "Berakhir", never: "Tidak",
     anyone: "Siapa saja", tick: "Centang", photo: "Foto",
     noteHint: "Staf membacanya persis seperti yang Anda tulis.",
-    walkHint: "Foto saat mulai dan saat selesai. Miamus mencatat berapa lama.",
+    walkHint: "Tiga foto dari kamera: di gerbang, di tempat tujuan, dan di gerbang saat pulang. Miamus mencatat berapa lama.",
+    three: "3 foto", onePhoto: "1 foto",
     photoHint: "Satu foto untuk semua hewan di kartu itu.",
     preview: "Yang dilihat staf",
     btn1: "Tambah untuk 2 hewan", btn2: "Tambah untuk Matcha",
@@ -212,15 +247,17 @@ function behind(t, petPage) {
 }
 
 // btn: "cam" (photo routine still open), "done" (finished), or none (old photo cards).
-function card({ time, title, icon, pets, done = [], note, who, finished, flash, seen, btn, state, meta }) {
+function card({ time, title, icon, pets, done = [], note, who, finished, flash, seen, btn, state, meta, step, steps }) {
   const allDone = finished;
-  const right = btn === "cam" ? `<span class="cam">${ic("camera")}</span>`
+  const right = step ? `<span class="cambtn">${ic("camera")}${step}</span>`
+    : btn === "cam" ? `<span class="cam">${ic("camera")}</span>`
     : btn === "done" ? `<span class="tick">${ic("circle-check")}</span>` : "";
   return `<div class="card ${allDone ? "done" : ""} ${state ? "going" : ""} ${flash ? "flash" : ""}">
     <div class="top">${ic(icon)}<span class="tm">${time}</span><span class="ti">${title}</span>${right}</div>
     ${note ? `<div class="note">${note}</div>` : ""}
     ${state ? `<div class="state">${ic("clock")}${state}</div>` : ""}
     ${meta ? `<div class="meta">${ic("check")}${meta}</div>` : ""}
+    ${steps ? `<div class="steps">${steps.map(([on, l]) => `<span class="${on ? "on" : ""}">${l}</span>`).join("")}</div>` : ""}
     <div class="badges">${pets.map((p) => done.includes(p) ? `<span class="bd done">${ic("check")}${p}</span>` : `<span class="bd">${p}</span>`).join("")}
       ${who ? `<span class="bd who">${who}</span>` : ""}
       ${seen ? `<span class="seen">${ic("check")}${seen}</span>` : ""}</div>
@@ -250,10 +287,10 @@ function ownerSheet(lang, ex) {
     <div class="field">${note}</div>
     <div class="hint">${t.noteHint}</div>
     <div class="label">${t.proof}</div>
-    ${seg([t.photo, t.tick], 0)}
+    ${one ? seg([t.photo, t.tick], 0) : seg([t.three, t.onePhoto, t.tick], 0)}
     <div class="hint">${one ? t.photoHint : t.walkHint}</div>
     <div class="preview"><span class="pl">${t.preview}</span>
-      ${card({ time: staffTime, title: staffTitle, icon: one ? "lightbulb-off" : "footprints", pets: one ? ["Mocha", "Matcha"] : ["Matcha"], note, btn: "cam" })}</div>
+      ${card({ time: staffTime, title: staffTitle, icon: one ? "lightbulb-off" : "footprints", pets: one ? ["Mocha", "Matcha"] : ["Matcha"], note, btn: "cam", step: one ? "" : "Mulai" })}</div>
     <div class="btn primary">${ic("plus")}${one ? t.btn1 : t.btn2}</div>
   </div>`;
   return `<div class="phone"><div class="tag">${t.tag}</div><div class="status"></div>${behind(t, !one)}${sheet}</div>`;
@@ -280,25 +317,63 @@ function staffPhone(after) {
 
 document.getElementById("s1").innerHTML = ownerSheet("en", 1) + ownerSheet("id", 1);
 document.getElementById("s2").innerHTML = ownerSheet("en", 2) + ownerSheet("id", 2);
-function walkPhone(ended) {
-  const walk = ended
-    ? { time: "07.00", title: "Jalan-jalan", icon: "footprints", pets: ["Matcha"], done: ["Matcha"], finished: true, flash: true, btn: "done",
-        note: "Pakai tali, sekitar 20 menit", meta: "07.02 sampai 07.34 · 32 menit", seen: "Lihat foto" }
-    : { time: "07.00", title: "Jalan-jalan", icon: "footprints", pets: ["Matcha"], btn: "cam",
-        note: "Pakai tali, sekitar 20 menit", state: "Sedang jalan · mulai 07.02" };
-  return `<div class="phone staff walk"><div class="tag">Staf · ID</div><div class="status"></div>
+const WALKNOTE = "Pakai tali, sekitar 20 menit";
+const staffShell = (inner, extra = "") => `<div class="phone staff walk"><div class="tag">Staf · ID</div><div class="status"></div>
     <div class="appbar"><div class="row"><h1>Hari ini</h1><span class="sub">Sel 10 Nov · Yanti</span></div></div>
     <div class="body">
       ${card({ time: "06.30", title: "Pipis &amp; Pup", icon: "droplets", pets: ["Mocha", "Matcha"], done: ["Mocha", "Matcha"], finished: true, seen: "Lihat foto" })}
-      ${card(walk)}
+      ${inner}
       ${card({ time: "08.00", title: "Makan pagi", icon: "utensils", pets: ["Mocha", "Matcha"] })}
-    </div>
-    ${ended ? `<div class="toast"><span class="ok">${ic("circle-check")}</span><span>Matcha · Jalan-jalan selesai · 32 menit</span><b>${ic("undo-2", "xs")}Batalkan</b></div>` : ""}
+    </div>${extra}</div>`;
+const shot = (cls, icon, label, time, late) => `<div class="shot"><div class="img ${cls}">${ic(icon)}</div><b>${label}</b><i class="${late ? "late" : ""}">${time}</i></div>`;
+
+function walkStarted() {
+  return staffShell(card({ time: "07.00", title: "Jalan-jalan", icon: "footprints", pets: ["Matcha"], note: WALKNOTE,
+    state: "Sedang jalan · mulai 07.02", step: "Sudah sampai",
+    steps: [[true, "Mulai 07.02"], [false, "Sampai"], [false, "Pulang"]] }));
+}
+function walkSheet() {
+  const sheet = `<div class="dim"></div><div class="sheet" style="top:150px">
+    <div class="grab"></div><h3>07.00 · Jalan-jalan · Matcha</h3>
+    <div class="note" style="font-size:13px;color:var(--ink2);text-align:center">${WALKNOTE}</div>
+    <div class="shots">${shot("", "door-open", "Mulai", "07.02")}${shot("park", "trees", "Sudah sampai", "07.15")}${shot("empty", "camera", "Sudah pulang", "belum")}</div>
+    <div class="btn primary">${ic("camera")}Sudah pulang</div>
+    <div class="linkbtn">${ic("circle-slash")}Tidak bisa dikerjakan</div>
+    <div class="linkbtn red">${ic("x")}Batalkan jalan-jalan</div>
+  </div>`;
+  return staffShell(card({ time: "07.00", title: "Jalan-jalan", icon: "footprints", pets: ["Matcha"], note: WALKNOTE,
+    state: "Sudah sampai 07.15", step: "Sudah pulang" }), sheet);
+}
+function walkEnded() {
+  return staffShell(card({ time: "07.00", title: "Jalan-jalan", icon: "footprints", pets: ["Matcha"], done: ["Matcha"], finished: true, flash: true, btn: "done",
+    note: WALKNOTE, meta: "07.02 sampai 07.34 · 32 menit", seen: "Lihat foto" }),
+    `<div class="toast"><span class="ok">${ic("circle-check")}</span><span>Matcha · Jalan-jalan selesai · 32 menit</span><b>${ic("undo-2", "xs")}Batalkan</b></div>`);
+}
+
+const O = {
+  en: { tag: "Owner · EN", head: "Matcha · history", walk: "Walk", min: (n) => `${n} min`, phone: "phone time",
+        steps: ["Start", "Got there", "Back home"], t: [["7:02 AM", "7:15 AM", "7:34 AM"], ["7:05 AM", "7:18 AM", "7:35 AM"]],
+        late: "sent 7:50 AM", day: ["Today", "Yesterday"] },
+  id: { tag: "Owner · ID", head: "Matcha · riwayat", walk: "Jalan-jalan", min: (n) => `${n} menit`, phone: "waktu HP",
+        steps: ["Mulai", "Sudah sampai", "Sudah pulang"], t: [["07.02", "07.15", "07.34"], ["07.05", "07.18", "07.35"]],
+        late: "terkirim 07.50", day: ["Hari ini", "Kemarin"] },
+};
+function ownerRows(lang) {
+  const o = O[lang], t = T[lang];
+  const row = (k, who, mins, lateIdx) => `<div class="orow">
+      <div class="h">${ic("footprints")}${o.walk} · ${o.min(mins)}${lateIdx != null ? ` (${o.phone})` : ""} · ${who}<span>${o.day[k]}</span></div>
+      <div class="shots">${shot("", "door-open", o.steps[0], o.t[k][0])}${shot("park", "trees", o.steps[1], o.t[k][1])}${shot("", "door-open", o.steps[2], lateIdx === 2 ? `${o.t[k][2]} · ${o.late}` : o.t[k][2], lateIdx === 2)}</div>
+    </div>`;
+  return `<div class="phone staff hist"><div class="tag">${o.tag}</div><div class="status"></div>
+    <div class="appbar"><div class="row"><h1>${o.head}</h1></div></div>
+    <div class="body">${row(0, "Yanti", 32, null)}${row(1, "Sari", 30, 2)}</div>
+    <div class="tabbar">${t.tabs.map((n, i) => `<span class="${i === 1 ? "on" : ""}">${ic(tabIcons[i])}${n}</span>`).join("")}</div>
   </div>`;
 }
 
 document.getElementById("s3").innerHTML = staffPhone(false) + staffPhone(true);
-document.getElementById("s4").innerHTML = walkPhone(false) + walkPhone(true);
+document.getElementById("s4").innerHTML = walkStarted() + walkSheet() + walkEnded();
+document.getElementById("s5").innerHTML = ownerRows("en") + ownerRows("id");
 </script>
 </body>
 </html>

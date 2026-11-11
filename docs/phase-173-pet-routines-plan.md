@@ -1,7 +1,7 @@
 # Phase 173 — Any routine, for any pets, in one easy sheet
 
 Status: **decided: owner chose all A except D6 = photo by default; D14 added
-(owner to confirm A)** (2026-11-11, through the manager). Docs only: no app
+(three photos for walks; owner to confirm A)** (2026-11-11, through the manager). Docs only: no app
 code, no migration applied. "147" below is a placeholder for PR A's
 migration: numbers are given in build order when the PR is built (rule of
 10 Nov).
@@ -102,8 +102,8 @@ Taps counted from the Pets tab. "Typed" means fields the owner types into
 | Entries made | 2, separately | **1** (two rows, one group) | 1 | **1** |
 | Shows as | An "Others" row (list icon), "Expires 31 Dec" | Light-off icon, no end | Same | Footprints icon, no end |
 | Note for staff | Not possible | Optional line | Not possible | Optional line |
-| Staff each time | 7 taps and a photo | **3 taps and one photo** (both pets) | 6 taps and a photo, no length | **6 taps and two photos** (start, end); "Jalan-jalan · 32 menit" recorded |
-| If the owner sets Tick | — | 1 tap | — | 1 tap |
+| Staff each time | 7 taps and a photo | **3 taps and one photo** (both pets) | 6 taps and a photo, no length, gallery photos possible on some phones | **9 taps and three live-camera photos** (gate, park, gate) over the walk; "Jalan-jalan · 32 menit" from server times |
+| If the owner sets 1 photo / Tick | — | — / 1 tap | — | 3 taps / 1 tap |
 
 How the "after" numbers add up:
 
@@ -118,10 +118,12 @@ How the "after" numbers add up:
   camera opens straight away; shutter (1) and use photo (1). The photo is
   saved for both dogs, with **Batalkan** (Undo) for 5 minutes. 3 taps, down
   from 7, because there's no pet-picking step.
-- **Staff, walk:** the same 3 taps at the start ("Sedang jalan · mulai
-  07.02" on the card), and 3 more at the end. Miamus records "Jalan-jalan ·
-  32 menit" from the two photo times (D14). Same taps as today's single
-  photo, plus proof of how long the walk was.
+- **Staff, walk:** the same 3 taps three times: **Mulai** at the gate
+  ("Sedang jalan · mulai 07.02" on the card), **Sudah sampai** at the park,
+  **Sudah pulang** back at the gate. Miamus records "Jalan-jalan · 32 menit"
+  from the server times of the first and last photos (D14). That's 3 more
+  taps than today's single photo, spread over the walk, in exchange for
+  proof the owner asked for.
 
 ## The sheet (mockup screens 1 and 2)
 
@@ -136,7 +138,7 @@ required (stop rule: no new required field).
 | **When** | The chip's time, **Every day**, no end | **Add time** (several times a day); **Every day · Some days · Once** (pill control; Some days shows Mon–Sun chips); **Ends** (optional, off). |
 | **Who** | **Anyone** | A staff chip. Staff still all see the card; it carries the name, as chores do. |
 | **Note for staff** | Empty | One line, up to 120 characters, shown as typed on the staff card. |
-| **Proof** | **Photo** (for Walk: a photo at the start and at the end, D14) | **Photo · Tick** (pill control). Tick is for routines the owner trusts without proof. |
+| **Proof** | **Photo**; for **Walk**, **3 photos** (D14) | **Photo · Tick** (pill control); for Walk and Other, **3 photos · 1 photo · Tick**. Tick is for routines the owner trusts without proof. |
 | Button | **Add for 2 pets** / **Add for Matcha** | |
 
 Owners see chip names in their language; the saved title is Indonesian
@@ -190,7 +192,7 @@ with Yanti, stay two cards, each showing its own note and name. Old rows
 (no `kind`, no note, no person) group exactly as now.
 
 **Copy schedule to…** (`CopyScheduleDrawer`) lists the columns it copies.
-PR A adds `kind`, `days_of_week`, `note`, `staff_id` and `needs_photo`, and
+PR A adds `kind`, `days_of_week`, `note`, `staff_id` and `proof`, and
 gives the copies a new `routine_group_id` per copied group (copies don't
 join the source's group). Without this, a copied walk would become a meal.
 The same goes for `CreateScheduleInput`, the mock provider and
@@ -233,6 +235,8 @@ which dogs ate).
   which dog was in frame. Toast: "Mocha, Matcha · Matikan lampu selesai"
   with **Batalkan** for 5 minutes (`UNDO_WINDOW_MS`). Offline, it waits in
   the save queue (161) like any photo.
+- **Three-photo walks** (D14): the same button, three times in a row over the
+  walk (Mulai, Sudah sampai, Sudah pulang), each saved for every open pet.
 - **Tick routines** (when the owner chose Tick): the same button is a
   circle; one tap logs every open pet with photo null.
 - **One pet only** (a walk done for one dog): tap the card itself. The
@@ -257,16 +261,20 @@ data migration.
 
 **Owner's choice (11 Nov): a photo by default for every routine,** lights off
 and walks included, "otherwise I wouldn't know they actually did it". The
-owner can switch any routine to **Tick** in the sheet. `needs_photo` defaults
-to true, so the database default, the sheet's default and every existing row
-agree. To keep it fast, the camera opens straight from the card's button and
+owner can switch any routine to **Tick** in the sheet. `proof` defaults to
+`photo`, so the database default, the sheet's default and every existing row
+agree; walks go further, with three photos (D14). To keep it fast, the camera opens straight from the card's button and
 one photo covers every pet on the card (D4): 3 taps for lights off, against
 7 today.
 
-## Walk proof (D14), owner to confirm A
+## Walk proof (D14): three photos, owner to confirm A
 
-The owner asked whether GPS could prove walks while keeping location private.
-What a web app (PWA) can and can't do:
+The owner asked whether GPS could prove walks while keeping location
+private, and then, of a start and end photo only: "they can still fake
+this". The answer is three photos from the live camera, with server times,
+and no location.
+
+**What a web app (PWA) can and can't do with location:**
 
 - It can read location **only while the page is open in the foreground**.
 - An iPhone Home Screen app, and Chrome on Android, **stop when the screen
@@ -281,33 +289,110 @@ What a web app (PWA) can and can't do:
 
 | Option | What it is | Location stored | Privacy policy |
 | --- | --- | --- | --- |
-| **A (recommended)** | A **start photo and an end photo**. Miamus shows "Jalan-jalan · 32 menit" from the two photo times. | **None** | No change: proof photos are already covered (30 days). |
-| B | A, plus an optional distance worked out **on the phone** while the screen is kept on (Wake Lock). Coordinates never leave the phone; only "1,2 km" and the minutes are saved. | None (distance only) | A new line and a consent screen on the staff phone, before first use. |
+| **A (recommended)** | **Three photos**: at the gate when leaving, at the place they walked to, at the gate when back. Miamus shows "Jalan-jalan · 32 menit" from the first to the last, and the owner sees all three with their times. | **None** | One added clause (below). |
+| B (later) | A, plus an optional distance worked out **on the phone** while the screen is kept on (Wake Lock). Coordinates never leave the phone; only "1,2 km" and the minutes are saved. | None (distance only) | A new line and a consent screen on the staff phone, before first use. |
 | C | A stored GPS route. | The route | Not recommended: tracking a worker's movements for a dog walk is out of proportion. |
 
 Later, with a native app (not planned): background distance with the screen
 locked.
 
-**How A works (no migration of its own):**
+### The staff flow (A)
 
-- A walk card's camera button takes the **start photo**, saved as a log with
-  `sub_type = 'check_in'` for every open pet; the card then reads "Sedang
-  jalan · mulai 07.02" and stays open. The next tap takes the **end photo**
-  (`sub_type = 'check_out'`). This is the two-part logging vet visits already
-  use (079; `vetVisitState`), so `task_logs` doesn't change.
-- **Done means the end photo**, as for a vet visit: `routine_slots_open`
-  (139) treats `kind = 'walk'` like `Vet: ` rows (done at `check_out`), and
-  the staff list's "Selesai" rule (`staff-agenda.ts`) keeps a started walk in
-  the day. Staff workload (100) already skips `check_in` logs, so a walk
-  counts once.
-- The owner sees "Jalan-jalan · 32 menit · Yanti" in the pet's history and on
-  Today, worked out from the two times; nothing new is stored. A walk with
-  no end photo by midnight shows "Mulai 07.02, tanpa foto akhir" and counts
-  as not done in the evening summary.
-- With **Tick** chosen, a walk is one tap and has no minutes.
-- **"Usually 30 minutes" nudge:** optional, not recommended now. It would
-  need a field in the sheet and a line for staff to read (two stop rules).
-  Revisit if walks come back short.
+One card that stays open between the steps. Each step is the card's camera
+button: tap (1), shutter (1), use photo (1).
+
+| Step | Card before the tap | Saved as (`task_logs.sub_type`) | Card after |
+| --- | --- | --- | --- |
+| 1 | **07.00 · Jalan-jalan** · button **Mulai** | `check_in` | **Sedang jalan · mulai 07.02** · button **Sudah sampai** |
+| 2 | button **Sudah sampai** | `arrived` (new value) | **Sudah sampai 07.15** · button **Sudah pulang** |
+| 3 | button **Sudah pulang** | `check_out` | Done: **07.02 sampai 07.34 · 32 menit** |
+
+- Each step saves one photo for every open pet on the card (D4), in one
+  batch. The steps go in order: **Sudah pulang** appears only after **Sudah
+  sampai**.
+- **Survives the app closing:** the card's step is worked out from that day's
+  logs (`walkState`, beside `vetVisitState` in `staff-agenda.ts`), including
+  saves still waiting in the offline queue (161). Close the app at the park,
+  open it later, and the card still says **Sudah sampai**. Nothing is kept
+  apart from the logs.
+- **Cancel:** the card's sheet has **Batalkan jalan-jalan** (with a confirm)
+  while a walk is in progress. It deletes that walk's logs and photos for
+  those pets (staff phones may already delete logs, 090), and the card goes
+  back to **Mulai**. After the end photo there is the usual 5-minute
+  **Batalkan**, then the walk is final. **Tidak bisa dikerjakan** (139) stays
+  in the sheet for a walk that can't happen.
+- **Done means the end photo**, as for a vet visit. A walk not finished by
+  midnight shows "Mulai 07.02, tanpa foto akhir" to the owner and counts as
+  not done in the evening summary.
+- **Per routine:** the sheet's **Proof** for a walk is **3 photos · 1 photo ·
+  Tick**, with **3 photos** preset. Every other kind is **Photo · Tick**,
+  with **Photo** preset (D6). The owner can choose 3 photos for an **Other**
+  routine too (say, a trip to the vet shop).
+
+### Anti-faking rules (A)
+
+What Miamus does, and what a browser can and can't promise:
+
+1. **Live camera only, never the gallery.** The button is the card's
+   existing `<input type="file" accept="image/*" capture="environment">`.
+   On iPhone (Safari and Home Screen apps) and Chrome on Android, `capture`
+   opens the camera directly, with no gallery choice. **What browsers don't
+   guarantee:** `capture` is a hint. Some Android browsers and file-picker
+   apps still offer the gallery, and desktop browsers ignore it.
+2. **Reject old files.** Before compressing, the app reads the file's
+   `lastModified`. A photo just taken has a time within seconds of now; if
+   it's more than **2 minutes** away from the phone's clock, the step is
+   refused: "Ambil foto langsung dari kamera." **What this can't guarantee:**
+   `lastModified` comes from the phone. iOS may give a gallery photo the
+   current time, and a phone with its clock moved can pass. It stops the
+   easy case (an old photo from the gallery), not a determined one.
+3. **Server time, not phone time.** The minutes and the times the owner
+   sees come from a new `task_logs.received_at`, set by the **database**
+   when the save arrives (a trigger overwrites whatever the phone sends;
+   `task_logs` has no update policy, so it can't be changed later). The
+   phone's `completed_at` stays as it is for everything else.
+   - **Offline saves:** a step saved without signal reaches the server
+     later, so its `received_at` is late. When `received_at` is more than 5
+     minutes after `completed_at`, the owner sees the phone time with
+     "terkirim 07.50" / "sent 7:50 AM" beside it, and the minutes are marked
+     "phone time". The walk isn't refused: weak signal at the park is
+     normal.
+4. **The owner sees all three photos in one row**, each with its server
+   time, on the walk's row in the pet's history and on Today: "Jalan-jalan ·
+   32 menit · Yanti" above **07.02 · 07.15 · 07.34**. The middle photo is
+   the proof they got somewhere; the times show how long it took. Three
+   photos inside a few minutes stand out on their own.
+
+Stronger options, not recommended now: an **in-app camera** (`getUserMedia`,
+the camera view drawn inside Miamus) makes the gallery impossible on every
+browser, at the cost of a camera permission prompt and more code. Worth it
+only if faked walks actually happen. A photo of a photo is still possible
+with any method; the owner's row of three is the check.
+
+The camera's own GPS tag never leaves the phone: `compressPhoto`
+(`browser-image-compression`, EXIF not preserved) redraws the image before
+upload, so EXIF, location included, is dropped.
+
+### "Usually 30 minutes" nudge
+
+Optional, not recommended now. It would need a field in the sheet and a line
+for staff to read (two stop rules). The owner's row already shows the
+minutes; revisit if walks come back short.
+
+### What else changes for walks (PR A)
+
+- `LogSubType` gains `arrived`. `sub_type` has no CHECK (079), so the
+  database needs no constraint change.
+- `routine_slots_open` (139) treats a walk as done only at `check_out`, as it
+  does for `Vet: ` rows.
+- **Staff workload** (`staff_workload`, 100, security invoker) counts pet
+  logs whose `sub_type` isn't `check_in`. It's re-created to skip `arrived`
+  too, so a three-photo walk counts once. Same `grant` as 100.
+- `buildAgenda` marks an item done on any log, so walk cards use `walkState`
+  (as vet cards use `vetVisitState`), and the staff list's "Selesai" rule
+  (`staff-agenda.ts`) keeps a walk in the day until its end photo.
+- The photo stream and the 30-day photo clean-up already handle several
+  photos per log day; a walk adds two more per pet.
 
 ## Timed reminders for staff (D7) — PR C
 
@@ -362,8 +447,8 @@ New input (strict schema, nullable fields as today):
 - Still never saves without the card. Meals and potty behave as now
   (per-pet new-time check, `newPetTimes`); other kinds skip a time the pet
   already has with the same title.
-- Proof from Kakak is always a photo (D6); the owner can switch a routine to
-  Tick in the sheet afterwards.
+- Proof from Kakak is the kind's default: 3 photos for a walk, a photo for
+  everything else (D6, D14). The owner can change it in the sheet afterwards.
 - Updated with it: the prompt's pet line, `validate.ts`, `suggestions.ts`,
   `describe.ts` (the card), `practice.ts`, and eval cases for both of the
   owner's sentences, "Matcha only", weekdays and "until Friday". The schema
@@ -413,7 +498,16 @@ files as meals. If 173 PR A lands first, 172 sets `kind: 'walk'` on them; if
     a subquery, so no `unnest`);
   - `note text` with a CHECK of up to 120 characters;
   - `staff_id uuid references staff_profiles(id) on delete set null`;
-  - `needs_photo boolean not null default true`.
+  - `proof text not null default 'photo'` with `check (proof in ('photo',
+    'tick', 'three'))`: every existing row stays `photo`; the sheet saves
+    `three` for a walk unless the owner changes it (D6, D14).
+- `task_logs` gains **`received_at timestamptz`**, added with no default so
+  old rows stay null, then `set default now()`, plus a `before insert`
+  trigger that sets `new.received_at := now()` whatever the phone sends
+  (D14 rule 3). `task_logs` has no update policy (090), so it can't be
+  changed afterwards. The trigger function is `security invoker` and
+  `set search_path = ''`; `revoke all … from public, anon, authenticated`
+  (only the trigger calls it).
 - Index on `routine_group_id`.
 - **Write guard (D13):** replace 090's insert, update and delete policies on
   `master_schedules` with ones that check the pet's household equals
@@ -434,8 +528,12 @@ files as meals. If 173 PR A lands first, 172 sets `kind: 'walk'` on them; if
 - **`routine_slots_open`** (139, the only version) is re-created to skip a
   day not in `days_of_week`, so the evening summary doesn't count Matcha's
   weekday walk on a Sunday, and to count a `kind = 'walk'` row as done only
-  at its end photo (`check_out`, D14), as it already does for vet visits. TypeScript's `isScheduleActiveOn` gets the same
-  rule, with unit tests (Jakarta weekday at midnight, null days, Once).
+  at its end photo (`check_out`, D14), as it already does for vet visits.
+  TypeScript's `isScheduleActiveOn` gets the weekday rule, with unit tests
+  (Jakarta weekday at midnight, null days, Once).
+- **`staff_workload`** (100, the only version, `security invoker`) is
+  re-created to skip `arrived` as well as `check_in`, so a three-photo walk
+  counts once. Same `grant execute … to authenticated` as 100.
 - The Phase 172 walk fix-up above, if 172's rows already exist.
 - No new `SECURITY DEFINER` function in 147. The one replaced,
   `archive_staff_profile`, repeats 119's `revoke all … from public, anon` and
@@ -454,19 +552,25 @@ so a rerun replaces rather than repeats.
 
 **Old app builds** (until the PWA updates on next open): ignore `kind` (a new
 routine shows with the meal icon), `days_of_week` (shows every day),
-`needs_photo` (a Tick routine asks for a photo) and walks (one photo, no end
-photo, so no minutes). Wrong for a few hours, harmless; noted in
+`proof` (a Tick routine asks for a photo) and walk steps (the first photo
+finishes the card; an `arrived` or `check_out` log reads as an extra photo). Wrong for a few hours, harmless; noted in
 the release.
 
 ## Privacy
 
-- **PR A and PR B: no new kind of personal data, no new service, no change
-  in where data lives or how long.** A note for staff and a chosen staff
-  person on a routine are covered by "Tasks, chores, routines, schedules and
-  notes" (policy, both languages). Walk start and end photos are "chore and
-  routine proof photos" (deleted after 30 days), and the minutes are worked
-  out from times already stored. **D14 A collects no location.** No policy
-  change.
+- **PR A and PR B: no new service, no change in how long data is kept.** A
+  note for staff and a chosen staff person on a routine are covered by
+  "Tasks, chores, routines, schedules and notes" (policy, both languages).
+- **Walk photos (D14 A) are taken outside the home.** They may show the
+  street or park, passers-by and the staff member. They're "chore and
+  routine proof photos", deleted after 30 days like the others, and only the
+  household sees them. **No location is read or stored**: no GPS, and
+  `compressPhoto` drops the photo's EXIF (location included) before upload.
+  `received_at` is a save time, as `completed_at` already is. **PR A adds
+  one clause to the policy** (both languages), in the routines and photos
+  lines: "Walk photos are taken where the walk goes, so they may show a
+  public place and the staff member; Miamus doesn't record location." It
+  also updates the policy date in `src/config/legal.ts`.
 - **D14 B, if ever chosen, changes the policy** (both languages): that a
   staff phone may measure a walk's distance while the screen is on, that the
   location stays on the phone and only the distance and minutes are saved,
@@ -475,14 +579,15 @@ the release.
   (privacy-policy.tsx, "They tell you about…") adds "a reminder at a
   routine's time, if the household turned it on for that routine", and "None
   are sent between 9 PM and 6 AM" becomes "Reminders an admin turned on may
-  come until 10 PM; nothing else is sent between 9 PM and 6 AM" if Q2 is A.
+  come until 10 PM; nothing else is sent between 9 PM and 6 AM" (D7 A, chosen).
   `src/config/legal.ts` (the policy's date) changes with it.
 
 ## Tutorials
 
 Per `feature-tutorials`: owners (EN/ID) a 20-second "Add routine" video tip in
 the Pets tab; staff, nothing to read (stop rule): the camera button explains
-itself, and "Sedang jalan" says a walk is waiting for its end photo;
+itself, and the walk card's button names the next step (Mulai, Sudah
+sampai, Sudah pulang);
 at most one What's new card that week.
 
 ## Glossary rows (go in with PR A)
@@ -495,9 +600,13 @@ at most one What's new card that week.
 | Every day · Some days · Once | **Setiap hari · Hari tertentu · Sekali saja** | Repeat choices. |
 | Add time · Ends (optional) | **Tambah jam · Berakhir (opsional)** | Owner form, so "opsional". |
 | Note for staff | **Catatan untuk staf** | The label; staff see it under **Catatan**. |
-| Proof: Photo · Tick | **Bukti: Foto · Centang** | Photo first: the default (D6). |
-| Walking · started 07.02 (staff card) | **Sedang jalan · mulai 07.02** | D14: between the start and end photos. |
-| Walk · 32 min (owner) | **Jalan-jalan · 32 menit** | D14: from the two photo times. |
+| Proof: Photo · Tick / 3 photos · 1 photo · Tick | **Bukti: Foto · Centang / 3 foto · 1 foto · Centang** | Photo first: the default (D6). 3 photos for walks (D14). |
+| Start · Got there · Back home (walk steps, staff buttons) | **Mulai · Sudah sampai · Sudah pulang** | D14. Short verbs, no reading. |
+| Cancel the walk | **Batalkan jalan-jalan** | D14, while a walk is in progress. Glossary: Undo is Batalkan. |
+| Take the photo straight from the camera. | **Ambil foto langsung dari kamera.** | D14: a gallery or old photo was refused. |
+| sent 7:50 AM | **terkirim 07.50** | D14: a step saved offline reached the server later. |
+| Walking · started 07.02 / Got there 07.15 (staff card) | **Sedang jalan · mulai 07.02** / **Sudah sampai 07.15** | D14: between the walk's steps. |
+| Walk · 32 min (owner) | **Jalan-jalan · 32 menit** | D14: from the first and last photos' server times. |
 | Started 07.02, no end photo | **Mulai 07.02, tanpa foto akhir** | D14: a walk not finished by midnight. |
 | Add for 2 pets / Add for Matcha | **Tambah untuk 2 hewan / Tambah untuk Matcha** | Button. |
 | Other routines | **Rutinitas lain** | Replaces Others / Lainnya in Manage routines. |
@@ -508,13 +617,16 @@ at most one What's new card that week.
 
 1. **PR A (migration 147):** the sheet, kinds, several pets, no forced end
    date, weekdays, once, note, who, photo proof by default (Tick
-   optional), one photo or tap for every pet on a staff card, walk start
-   and end photos with minutes (D14 A), Others becomes Other routines, the
-   write guard, the summary's weekdays and walks. Tests: unit
-   (`categorizeSchedule`, `isScheduleActiveOn`, walk minutes), SQL (guard,
-   weekdays and walks in `routine_slots_open`), Playwright (both examples
-   end to end, staff photo and undo, walk start and end, offline photo,
-   Tick).
+   optional), one photo or tap for every pet on a staff card, the
+   three-photo walk with live-camera checks, server times and minutes
+   (D14 A), Others becomes Other routines, the write guard, the summary's
+   weekdays and walks, the privacy clause. Tests: unit
+   (`categorizeSchedule`, `isScheduleActiveOn`, `walkState`, walk minutes
+   from `received_at`, the 2-minute file check), SQL (guard, weekdays and
+   walks in `routine_slots_open`, `received_at` can't be set by the phone,
+   `staff_workload` counts a walk once), Playwright (both examples end to
+   end, staff photo and undo, the three walk steps, closing the app mid-walk,
+   cancel, an offline step, Tick).
 2. **PR B (no migration):** Kakak's tool and its eval cases; starter routines
    after adding a pet.
 3. **PR C (next free migration):** timed reminders, after the owner answers
@@ -540,15 +652,15 @@ production; the migration on production before the merge.
 | D11 | Repeats | Every day, Some days, Once | B: also every N days. |
 | D12 | PR order | A (sheet and model, 147), B (Kakak and starters), C (reminders) | B: two PRs, Kakak and reminders together (reminders then wait on Q2 and hold Kakak back). |
 | D13 | Routine write guard | Close it in 147: only admins write `master_schedules` | B: leave it for a later security pass. |
-| D14 | Walk proof | Start and end photos, minutes from their times, no location | B: A plus an on-phone distance with Wake Lock (consent, policy line). C: stored GPS route (not recommended). Later: background distance with a native app. |
+| D14 | Walk proof | Three live-camera photos (gate, park, gate), server times, minutes, the owner's row of three; no location; per routine (walks preset to 3, others 1) | B (later): A plus an on-phone distance with Wake Lock (consent, policy line). C: stored GPS route (not recommended). Later: background distance with a native app; an in-app camera if faking persists. |
 
 ## Questions only the owner can answer
 
 1. **Who should "Lights off" be for at your house:** both dogs only, or every
    pet? (It decides whether the Pets tab's default of "every pet" is right,
    since production has 4 pets.)
-2. **Walk proof (D14):** start and end photos with the minutes, and no
-   location (A)? (Reminders until 22:00 were settled by choosing D7 A; D6 is
+2. **Walk proof (D14):** three photos (gate, park, gate) with the minutes,
+   and no location (A)? (Reminders until 22:00 were settled by choosing D7 A; D6 is
    photo.)
 3. **Starter list for dogs:** are Jalan pagi 06:30, Jalan sore 16:30 and
    Ganti air minum 08:00 the right usual ones?
