@@ -1,6 +1,13 @@
 import { get, update } from "idb-keyval";
-import type { CreateBatchLogInput, CreateTaskExceptionInput, FoodItemInput } from "@/lib/data";
-import type { FoodItem, HouseholdTask, TaskException, TaskLog } from "@/types/database";
+import type {
+  CreateBatchLogInput,
+  CreateTaskExceptionInput,
+  FoodItemInput,
+  RepairInput,
+  WalkInFinishInput,
+  WalkInStartInput,
+} from "@/lib/data";
+import type { FoodItem, HouseholdTask, RepairSupervision, RepairWalkIn, TaskException, TaskLog } from "@/types/database";
 import { dataProvider } from "@/lib/data";
 import { isConnectionError } from "@/lib/network-errors";
 import { ensureUploaded, PhotoNotUploadedError } from "@/lib/photo-queue";
@@ -94,7 +101,17 @@ export type OutboxJob =
        * (a resend is "already saved").
        */
       shopping?: { itemId?: string | null; noteId?: string; note?: string } | null;
-    };
+    }
+  /**
+   * "Ada tukang datang" (Phase 174): the walk-in, and with "Baru" the repair
+   * it is for, both under ids made on the phone, so a resend is "already
+   * saved" for each. The before photo goes first.
+   */
+  | { kind: "walkin_start"; repair: (RepairInput & { id: string }) | null; visit: WalkInStartInput }
+  /** Selesai: the database takes the same finish twice as one (migrations/149). */
+  | { kind: "walkin_finish"; visitId: string; finish: WalkInFinishInput }
+  /** "Ganti yang mengawasi": a new stretch under an id made on the phone. */
+  | { kind: "supervision_handover"; input: { id: string; visit_id: string; staff_id: string } };
 
 export interface OfflineQueueItem {
   id: string;
@@ -276,7 +293,9 @@ export type SendResult =
   | { kind: "logs"; logs: TaskLog[] }
   | { kind: "chore"; task: HouseholdTask }
   | { kind: "food"; food: FoodItem | null }
-  | { kind: "couldnt"; exception: TaskException | null };
+  | { kind: "couldnt"; exception: TaskException | null }
+  | { kind: "walkin"; walkIn: RepairWalkIn | null }
+  | { kind: "supervision"; row: RepairSupervision | null };
 
 /**
  * Thrown when something asks to delete a row that is still waiting in the
@@ -302,6 +321,12 @@ export function jobPhotos(job: OutboxJob): string[] {
       return [job.before, job.after].filter((url): url is string => !!url);
     case "couldnt":
       return job.input.photo_url ? [job.input.photo_url] : [];
+    case "walkin_start":
+      return [job.repair?.photo_url, job.visit.before_photo_url].filter((url): url is string => !!url);
+    case "walkin_finish":
+      return [job.finish.after_photo_url];
+    case "supervision_handover":
+      return [];
   }
 }
 
@@ -373,6 +398,32 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
       }
       return { kind: "couldnt", exception };
     }
+    case "walkin_start": {
+      // The repair first ("Baru"), then the walk-in on it. A resend finds
+      // either already there and goes on.
+      if (ready.repair) {
+        try {
+          await dataProvider.createRepair(ready.repair);
+        } catch (err) {
+          if (!isAlreadySaved(err)) throw err;
+        }
+      }
+      try {
+        return { kind: "walkin", walkIn: await dataProvider.createRepairWalkIn(ready.visit) };
+      } catch (err) {
+        if (isAlreadySaved(err)) return { kind: "walkin", walkIn: null };
+        throw err;
+      }
+    }
+    case "walkin_finish":
+      return { kind: "walkin", walkIn: await dataProvider.finishRepairWalkIn(ready.visitId, ready.finish) };
+    case "supervision_handover":
+      try {
+        return { kind: "supervision", row: await dataProvider.handOverSupervision(ready.input) };
+      } catch (err) {
+        if (isAlreadySaved(err)) return { kind: "supervision", row: null };
+        throw err;
+      }
     case "chore": {
       const rowId =
         ready.rowId ?? (await dataProvider.materialiseChoreOccurrence(ready.templateId, ready.date, ready.assignedTo)).id;

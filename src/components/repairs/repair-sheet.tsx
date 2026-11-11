@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { CalendarPlus, Check, Loader2, Pencil, RotateCcw, Siren, Trash2, X } from "lucide-react";
+import { Camera, CalendarPlus, Check, HardHat, Loader2, Pencil, RotateCcw, Siren, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -20,10 +20,21 @@ import { useToday } from "@/hooks/use-today";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { dataProvider } from "@/lib/data";
 import { photoSrc } from "@/lib/photos";
-import { REPAIR_LIMITS, repairStage, visitNotes, visitTitle, visitsOf, warrantyLabel } from "@/lib/repairs";
+import { REPAIR_LIMITS, repairStage, visitNotes, visitTitle, visitsOf, walkInAsTask, warrantyLabel } from "@/lib/repairs";
+import {
+  isOpenWalkIn,
+  ownerOutcomeLabel,
+  supervisedByLine,
+  supervisionStretches,
+  walkInSpanLabel,
+  walkInTime,
+  walkInsOf,
+  type SupervisionStretch,
+} from "@/lib/repair-walkins";
+import { WalkInFinishSheet } from "@/components/repairs/walkin-sheets";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { OwnerLocale } from "@/lib/owner-locale";
-import type { HouseholdTask, Repair } from "@/types/database";
+import type { HouseholdTask, Repair, RepairWalkIn } from "@/types/database";
 
 export function shortDate(iso: string, locale: OwnerLocale): string {
   const date = iso.length === 10 ? new Date(`${iso}T00:00:00`) : new Date(iso);
@@ -53,7 +64,7 @@ export function RepairSheet({ repair, onClose }: { repair: Repair | null; onClos
 }
 
 function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallback: Repair; onClose: () => void }) {
-  const { repairs, visits, reload } = useRepairs();
+  const { repairs, visits, walkIns, supervision, reload } = useRepairs();
   // The live row, so a decision made here shows at once after the reload.
   const repair = repairs.find((r) => r.id === repairId) ?? fallback;
   const locale = useOwnerLocale();
@@ -69,9 +80,12 @@ function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallb
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [scheduling, setScheduling] = useState(false);
+  const [finishing, setFinishing] = useState<RepairWalkIn | null>(null);
 
-  const stage = repairStage(repair, visits);
+  const stage = repairStage(repair, visits, today, walkIns);
   const mine = visitsOf(repair.id, visits);
+  const myWalkIns = walkInsOf(repair.id, walkIns);
+  const stretches = supervisionStretches(supervision, walkIns, repairs);
   const place = placeName(repair.location_id, repair.spot);
 
   async function act(run: () => Promise<unknown>, done: string, close = false) {
@@ -96,7 +110,23 @@ function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallb
     await act(async () => {
       await dataProvider.deleteRepair(repair.id);
       if (repair.photo_url) await dataProvider.deletePhoto(repair.photo_url).catch(() => undefined);
+      // Its walk-ins went with it (the cascade); their photos too.
+      for (const v of myWalkIns) {
+        for (const url of [v.before_photo_url, v.after_photo_url]) {
+          if (url) await dataProvider.deletePhoto(url).catch(() => undefined);
+        }
+      }
     }, t(`Deleted "${repair.title}"`, `"${repair.title}" dihapus`), true);
+  }
+
+  /** An owner may delete a single walk-in sooner than its repair (D8). */
+  async function removeWalkIn(visit: RepairWalkIn) {
+    await act(async () => {
+      if (!(await dataProvider.deleteRepairWalkIn(visit.id))) throw new Error("Walk-in was not deleted.");
+      for (const url of [visit.before_photo_url, visit.after_photo_url]) {
+        if (url) await dataProvider.deletePhoto(url).catch(() => undefined);
+      }
+    }, t("Visit deleted", "Kunjungan dihapus"));
   }
 
   const reporter = repair.reported_by_staff
@@ -124,13 +154,26 @@ function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallb
 
         <StageLine repair={repair} stage={stage} locale={locale} formatTime={formatTime} staffName={staffName} />
 
-        {mine.length > 0 && (
+        {mine.length + myWalkIns.length > 0 && (
           <section className="flex flex-col gap-3" aria-label={t("Visits", "Kunjungan")}>
             <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               {t("Visits", "Kunjungan")}
             </h3>
             {mine.map((visit) => (
               <VisitRow key={visit.id} visit={visit} locale={locale} formatTime={formatTime} staffName={staffName} />
+            ))}
+            {myWalkIns.map((visit) => (
+              <WalkInRow
+                key={visit.id}
+                visit={visit}
+                title={repair.title}
+                stretches={stretches}
+                locale={locale}
+                staffName={staffName}
+                busy={busy}
+                onFinish={() => setFinishing(visit)}
+                onDelete={() => void removeWalkIn(visit)}
+              />
             ))}
           </section>
         )}
@@ -268,6 +311,7 @@ function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallb
       </div>
 
       <RepairReportSheet open={editing} onClose={() => setEditing(false)} locale={locale} repair={repair} />
+      <WalkInFinishSheet visit={finishing} onClose={() => setFinishing(null)} locale={locale} asStaff={false} />
       <ChoreEditorDialog
         open={scheduling}
         onOpenChange={(open) => {
@@ -303,7 +347,10 @@ function StageLine({
   staffName: (id: string | null | undefined) => string;
 }) {
   const text = repairStageText(repair, stage, locale, formatTime, staffName);
-  const tint = stage.kind === "check" || stage.kind === "reported" ? "border-amber-200 bg-amber-50 text-amber-900" : "bg-muted/60 text-gray-700";
+  const tint =
+    stage.kind === "check" || stage.kind === "reported" || stage.kind === "working"
+      ? "border-amber-200 bg-amber-50 text-amber-900"
+      : "bg-muted/60 text-gray-700";
   return <p className={`rounded-xl border px-3 py-2 text-sm font-medium ${tint}`}>{text}</p>;
 }
 
@@ -321,6 +368,17 @@ export function repairStageText(
       return id ? "Perlu dicek: terima atau tolak" : "To review: accept or dismiss";
     case "unscheduled":
       return id ? "Belum dijadwalkan" : "Not scheduled";
+    case "working": {
+      const who = stage.walkIn.worker_name?.trim();
+      const since = walkInSpanLabel(stage.walkIn, locale);
+      return who
+        ? id
+          ? `${who} sedang bekerja · ${since}`
+          : `${who} is here · ${since}`
+        : id
+          ? `Tukang sedang bekerja · ${since}`
+          : `A repair person is here · ${since}`;
+    }
     case "scheduled": {
       const v = stage.next;
       const parts = [shortDate(v.due_date, locale), v.due_time ? formatTime(v.due_time.slice(0, 5)) : null].filter(Boolean).join(" ");
@@ -369,6 +427,88 @@ function VisitRow({
         {visit.assigned_to && ` · ${staffName(visit.assigned_to)}`} · <span className="text-muted-foreground">{status}</span>
       </p>
       {visit.status === "completed" && <ChoreProofPhotos row={visit} locale={locale} interactive />}
+    </div>
+  );
+}
+
+/**
+ * A walk-in in the repair's timeline (Phase 174, plan mockup 5): "Walk-in ·
+ * Pak Budi · Tue 9:10–11:40 AM · logged by Ari", who supervised, before and
+ * after side by side, the chip and the note. An open one can be finished
+ * here; an owner can delete a visit sooner than its repair (D8).
+ */
+function WalkInRow({
+  visit,
+  title,
+  stretches,
+  locale,
+  staffName,
+  busy,
+  onFinish,
+  onDelete,
+}: {
+  visit: RepairWalkIn;
+  title: string;
+  stretches: SupervisionStretch[];
+  locale: OwnerLocale;
+  staffName: (id: string | null | undefined) => string;
+  busy: boolean;
+  onFinish: () => void;
+  onDelete: () => void;
+}) {
+  const id = locale === "id";
+  const [confirm, setConfirm] = useState(false);
+  const arrived = walkInTime(visit, "in");
+  const head = [id ? "Datang langsung" : "Walk-in", visit.worker_name?.trim()].filter(Boolean).join(" · ");
+  const when = [
+    arrived ? shortDate(arrived.at, locale) : null,
+    walkInSpanLabel(visit, locale),
+    visit.logged_by_staff ? (id ? `dicatat ${staffName(visit.logged_by_staff)}` : `logged by ${staffName(visit.logged_by_staff)}`) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const sentLater = walkInTime(visit, "in")?.phoneTime || walkInTime(visit, "out")?.phoneTime;
+  const supervised = supervisedByLine(stretches, visit.id, (sid) => staffName(sid), locale);
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border p-3" data-testid="walkin-row">
+      <p className="flex items-start gap-1.5 text-sm">
+        <HardHat className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="flex min-w-0 flex-col">
+          <span className="font-medium">{head}</span>
+          <span className="text-xs text-muted-foreground">
+            {when}
+            {sentLater && (id ? " · jam HP, dikirim belakangan" : " · phone time, sent later")}
+          </span>
+          {supervised && <span className="text-xs text-muted-foreground">{supervised}</span>}
+        </span>
+      </p>
+      <ChoreProofPhotos row={walkInAsTask(visit, title)} locale={locale} interactive />
+      {visit.outcome && (
+        <p className="flex items-center gap-1 text-sm font-medium text-gray-800">
+          <Check className="size-4 shrink-0" aria-hidden /> {ownerOutcomeLabel(visit.outcome, locale)}
+        </p>
+      )}
+      {visit.note && <p className="text-sm text-gray-700">{visit.note}</p>}
+      <div className="flex flex-wrap items-center gap-2">
+        {isOpenWalkIn(visit) && (
+          <Button className="min-h-[44px] rounded-xl" onClick={onFinish}>
+            <Camera /> {id ? "Selesai" : "Finished"}
+          </Button>
+        )}
+        {confirm ? (
+          <Button variant="destructive" className="min-h-[44px] rounded-xl" disabled={busy} onClick={onDelete}>
+            <Trash2 /> {id ? "Hapus kunjungan ini" : "Delete this visit"}
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            className="min-h-[44px] text-destructive hover:text-destructive"
+            onClick={() => setConfirm(true)}
+          >
+            <Trash2 /> {id ? "Hapus" : "Delete"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

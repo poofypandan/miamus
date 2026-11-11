@@ -1,6 +1,7 @@
 import { nextOccurrence, occursOn, previousOccurrence, recurrenceOf } from "@/lib/chore-recurrence";
 import type { OwnerLocale } from "@/lib/owner-locale";
-import type { HouseholdTask, Repair } from "@/types/database";
+import { isOpenWalkIn, walkInsOf } from "@/lib/repair-walkins";
+import type { HouseholdTask, Repair, RepairWalkIn } from "@/types/database";
 
 /**
  * Repairs (Phase 159, docs/phase-159-repairs-plan.md): pure rules, tested
@@ -26,6 +27,8 @@ export const STAFF_UNDO_MS = 5 * 60 * 1000;
 export type RepairStage =
   | { kind: "reported" }
   | { kind: "unscheduled" }
+  /** A walk-in still open: someone is working on it now (Phase 174). */
+  | { kind: "working"; walkIn: RepairWalkIn }
   | { kind: "scheduled"; next: HouseholdTask }
   | { kind: "check"; last: HouseholdTask }
   | { kind: "fixed" }
@@ -78,10 +81,31 @@ function nextRepeatDay(template: HouseholdTask, rows: HouseholdTask[], today: st
   return null;
 }
 
-export function repairStage(repair: Repair, visits: HouseholdTask[], today: string = todayKey()): RepairStage {
-  if (repair.status === "reported") return { kind: "reported" };
+/**
+ * A staff report that already has a walk-in skips To review: someone is
+ * already fixing it (Phase 174). It reads as open from then on.
+ */
+export function awaitsReview(repair: Repair, walkIns: readonly RepairWalkIn[] = []): boolean {
+  return repair.status === "reported" && !walkIns.some((v) => v.repair_id === repair.id);
+}
+
+/** Open for the lists: an accepted repair, or a staff report with a walk-in. */
+export function isOpenRepair(repair: Repair, walkIns: readonly RepairWalkIn[] = []): boolean {
+  return repair.status === "open" || (repair.status === "reported" && !awaitsReview(repair, walkIns));
+}
+
+export function repairStage(
+  repair: Repair,
+  visits: HouseholdTask[],
+  today: string = todayKey(),
+  walkIns: readonly RepairWalkIn[] = []
+): RepairStage {
+  if (awaitsReview(repair, walkIns)) return { kind: "reported" };
   if (repair.status === "fixed") return { kind: "fixed" };
   if (repair.status === "dismissed") return { kind: "dismissed" };
+  const myWalkIns = walkInsOf(repair.id, walkIns);
+  const working = myWalkIns.filter(isOpenWalkIn);
+  if (working.length > 0) return { kind: "working", walkIn: working[working.length - 1] };
   const mine = visitsOf(repair.id, visits);
   // Days called off stay in for the recurrence: a skipped day is settled,
   // not still to come (Codex, PR #37). They're left out of the history.
@@ -101,8 +125,38 @@ export function repairStage(repair: Repair, visits: HouseholdTask[], today: stri
   );
   if (upcoming.length > 0) return { kind: "scheduled", next: upcoming[0] };
   const done = mine.filter((v) => v.status === "completed");
-  if (done.length > 0) return { kind: "check", last: done[done.length - 1] };
+  // The latest finished walk-in, unless a scheduled visit was finished after
+  // it: "work done — check the photos", except when the tukang is coming
+  // back (Phase 174, plan mockup 5).
+  const lastWalkIn = myWalkIns.filter((v) => !!v.left_at).at(-1) ?? null;
+  const lastDone = done.length > 0 ? done[done.length - 1] : null;
+  const walkInIsLatest =
+    !!lastWalkIn && (!lastDone || (lastWalkIn.left_at ?? "") >= (lastDone.completed_at ?? lastDone.due_date));
+  if (walkInIsLatest) return lastWalkIn.outcome === "come_back"
+      ? { kind: "unscheduled" }
+      : { kind: "check", last: walkInAsTask(lastWalkIn, repair.title) };
+  if (lastDone) return { kind: "check", last: lastDone };
   return { kind: "unscheduled" };
+}
+
+/**
+ * A walk-in in the shape of a finished visit (its photos and time), so the
+ * before-and-after picture (ChoreProofPhotos) and a "check" stage read it
+ * like a scheduled visit.
+ */
+export function walkInAsTask(visit: RepairWalkIn, title = ""): HouseholdTask {
+  return {
+    id: visit.id,
+    household_id: visit.household_id,
+    repair_id: visit.repair_id,
+    title,
+    status: "completed",
+    due_date: (visit.left_at ?? visit.arrived_at).slice(0, 10),
+    completed_at: visit.left_at,
+    before_photo_url: visit.before_photo_url,
+    after_photo_url: visit.after_photo_url,
+    photo_url: visit.after_photo_url,
+  } as HouseholdTask;
 }
 
 export interface RepairsBoard {
@@ -114,15 +168,24 @@ export interface RepairsBoard {
   fixed: Repair[];
 }
 
-export function repairsBoard(repairs: Repair[], visits: HouseholdTask[], now: Date = new Date()): RepairsBoard {
+export function repairsBoard(
+  repairs: Repair[],
+  visits: HouseholdTask[],
+  now: Date = new Date(),
+  walkIns: readonly RepairWalkIn[] = []
+): RepairsBoard {
   const since = now.getTime() - FIXED_LIST_DAYS * 24 * 60 * 60 * 1000;
   const urgentFirst = (a: Repair, b: Repair) => Number(b.urgent) - Number(a.urgent);
   const oldestFirst = (a: Repair, b: Repair) => a.created_at.localeCompare(b.created_at);
-  const stageRank = (r: Repair) => (repairStage(r, visits).kind === "check" ? 0 : 1);
+  // Someone working on it now first, then work to check, then the rest.
+  const stageRank = (r: Repair) => {
+    const kind = repairStage(r, visits, todayKey(now), walkIns).kind;
+    return kind === "working" ? 0 : kind === "check" ? 1 : 2;
+  };
   return {
-    toReview: repairs.filter((r) => r.status === "reported").sort((a, b) => urgentFirst(a, b) || oldestFirst(a, b)),
+    toReview: repairs.filter((r) => awaitsReview(r, walkIns)).sort((a, b) => urgentFirst(a, b) || oldestFirst(a, b)),
     open: repairs
-      .filter((r) => r.status === "open")
+      .filter((r) => isOpenRepair(r, walkIns))
       .sort((a, b) => urgentFirst(a, b) || stageRank(a) - stageRank(b) || oldestFirst(a, b)),
     fixed: repairs
       .filter((r) => r.status === "fixed" && r.closed_at && new Date(r.closed_at).getTime() >= since)
@@ -131,10 +194,16 @@ export function repairsBoard(repairs: Repair[], visits: HouseholdTask[], now: Da
 }
 
 /** What the owners' Today screen says, when there is anything (both counts may be 0). */
-export function repairsToday(repairs: Repair[], visits: HouseholdTask[]): { toReview: number; toCheck: number } {
+export function repairsToday(
+  repairs: Repair[],
+  visits: HouseholdTask[],
+  walkIns: readonly RepairWalkIn[] = []
+): { toReview: number; toCheck: number } {
   return {
-    toReview: repairs.filter((r) => r.status === "reported").length,
-    toCheck: repairs.filter((r) => r.status === "open" && repairStage(r, visits).kind === "check").length,
+    toReview: repairs.filter((r) => awaitsReview(r, walkIns)).length,
+    toCheck: repairs.filter(
+      (r) => isOpenRepair(r, walkIns) && repairStage(r, visits, todayKey(), walkIns).kind === "check"
+    ).length,
   };
 }
 
@@ -153,11 +222,17 @@ export function repairsTodayLabel(kind: "review" | "check", count: number, local
  * What a staff member sees beside their own report (Bahasa Indonesia only):
  * Menunggu dicek · Diterima · Dijadwalkan · Sudah diperbaiki · Tidak perlu.
  */
-export function staffRepairStatus(repair: Repair, visits: HouseholdTask[]): string {
-  const stage = repairStage(repair, visits);
+export function staffRepairStatus(
+  repair: Repair,
+  visits: HouseholdTask[],
+  walkIns: readonly RepairWalkIn[] = []
+): string {
+  const stage = repairStage(repair, visits, todayKey(), walkIns);
   switch (stage.kind) {
     case "reported":
       return "Menunggu dicek";
+    case "working":
+      return "Sedang dikerjakan";
     case "scheduled":
       return "Dijadwalkan";
     case "check":

@@ -14,6 +14,7 @@ import {
   Repeat,
   UserRound,
   Users,
+  Wrench,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ChoreProofPhotos, hasChoreProof } from "@/components/chores/chore-proof-photos";
@@ -82,6 +83,7 @@ export function ChoreCard({
   today,
   waitingToSend = false,
   couldnt = null,
+  supervising = null,
 }: {
   occurrence: ChoreOccurrence;
   locale: "en" | "id";
@@ -123,6 +125,12 @@ export function ChoreCard({
    * turns amber instead of reading as forgotten.
    */
   couldnt?: string | null;
+  /**
+   * Missed while its person was supervising a repair (Phase 174, D10): a
+   * quiet line, already in the screen's language. Nothing to tap; the card
+   * keeps its tone, and done wins.
+   */
+  supervising?: string | null;
 }) {
   const formatTime = useFormatTime();
   const t = COPY[locale];
@@ -240,6 +248,13 @@ export function ChoreCard({
         <p className="flex items-center gap-1 text-[13px] font-medium text-amber-800" data-testid="couldnt-line">
           <CircleSlash className="size-3.5 shrink-0" aria-hidden />
           {couldnt}
+        </p>
+      )}
+
+      {supervising && !couldnt && !done && (
+        <p className="flex items-center gap-1 text-[13px] font-medium text-gray-600" data-testid="supervising-line">
+          <Wrench className="size-3.5 shrink-0" aria-hidden />
+          {supervising}
         </p>
       )}
 

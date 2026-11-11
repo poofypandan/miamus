@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronRight, Plus, RefreshCw, Siren, Wrench } from "lucide-react";
+import { ChevronRight, HardHat, Plus, RefreshCw, Siren, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { RepairReportSheet } from "@/components/repairs/repair-report-sheet";
 import { RepairSheet, repairStageText } from "@/components/repairs/repair-sheet";
+import { WalkInFinishSheet, WalkInStartSheet } from "@/components/repairs/walkin-sheets";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useRepairs } from "@/hooks/use-repairs";
@@ -14,7 +15,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { repairStage, repairsBoard } from "@/lib/repairs";
 import { cn } from "@/lib/utils";
-import type { Repair } from "@/types/database";
+import type { Repair, RepairWalkIn } from "@/types/database";
 
 /**
  * Chores → Repairs (Phase 159, D1; mockup 2): Report a problem, then — each
@@ -25,9 +26,12 @@ import type { Repair } from "@/types/database";
 export function RepairsView() {
   const t = useT();
   const locale = useOwnerLocale();
-  const { repairs, visits, loaded, failed, reload } = useRepairs();
-  const board = useMemo(() => repairsBoard(repairs, visits), [repairs, visits]);
+  const { repairs, visits, walkIns, loaded, failed, reload } = useRepairs();
+  const board = useMemo(() => repairsBoard(repairs, visits, new Date(), walkIns), [repairs, visits, walkIns]);
   const [reporting, setReporting] = useState(false);
+  // "Someone's here" (Phase 174, D9): the staff's sheet, for a day an owner opens the gate.
+  const [walkIn, setWalkIn] = useState(false);
+  const [finishing, setFinishing] = useState<RepairWalkIn | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const openRepair = repairs.find((r) => r.id === openId) ?? null;
   const empty = board.toReview.length + board.open.length + board.fixed.length === 0;
@@ -35,9 +39,14 @@ export function RepairsView() {
   return (
     <div className="flex flex-col gap-4">
       <WhatsNewCard id="repair-costs-2026-11" />
-      <Button className="min-h-[48px] rounded-xl" onClick={() => setReporting(true)}>
-        <Plus /> {t("Report a problem", "Lapor kerusakan")}
-      </Button>
+      <div className="flex gap-2">
+        <Button className="min-h-[48px] flex-1 rounded-xl" onClick={() => setReporting(true)}>
+          <Plus /> {t("Report a problem", "Lapor kerusakan")}
+        </Button>
+        <Button variant="outline" className="min-h-[48px] flex-1 rounded-xl" onClick={() => setWalkIn(true)}>
+          <HardHat /> {t("Someone's here", "Ada tukang datang")}
+        </Button>
+      </div>
 
       {failed && repairs.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
@@ -64,6 +73,17 @@ export function RepairsView() {
       )}
 
       <RepairReportSheet open={reporting} onClose={() => setReporting(false)} locale={locale} />
+      <WalkInStartSheet
+        open={walkIn}
+        onClose={() => setWalkIn(false)}
+        locale={locale}
+        asStaff={false}
+        onFinishOther={(visit) => {
+          setWalkIn(false);
+          setFinishing(visit);
+        }}
+      />
+      <WalkInFinishSheet visit={finishing} onClose={() => setFinishing(null)} locale={locale} asStaff={false} />
       <RepairSheet repair={openRepair} onClose={() => setOpenId(null)} />
     </div>
   );
@@ -97,14 +117,14 @@ function RepairSection({
 export function RepairRow({ repair, onOpen, first }: { repair: Repair; onOpen: (id: string) => void; first?: boolean }) {
   const locale = useOwnerLocale();
   const t = useT();
-  const { visits } = useRepairs();
+  const { visits, walkIns } = useRepairs();
   const formatTime = useFormatTime();
   const placeName = useLocationName();
   const { allProfiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
-  const stage = repairStage(repair, visits);
+  const stage = repairStage(repair, visits, undefined, walkIns);
   const place = placeName(repair.location_id, repair.spot);
-  const attention = stage.kind === "check" || stage.kind === "reported";
+  const attention = stage.kind === "check" || stage.kind === "reported" || stage.kind === "working";
   return (
     <button
       type="button"

@@ -12,6 +12,7 @@ import {
   PawPrint,
   Pill,
   Users,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { reasonsFor, staffReasonLabel, type ExceptionKind } from "@/lib/couldnt-do";
+import { useRepairs } from "@/hooks/use-repairs";
+import { supervisionExplains, supervisionStretches } from "@/lib/repair-walkins";
 import { fileTaskException, withdrawTaskException } from "@/lib/task-exceptions-store";
 import { classifySubmitError } from "@/lib/submit-errors";
 import { SaveStillWaitingError } from "@/lib/offline-queue";
@@ -57,6 +60,7 @@ const REASON_ICONS: Record<TaskExceptionReason, LucideIcon> = {
   pet_refused: PawPrint,
   done_by_other: Users,
   other: MessageSquareText,
+  supervising_repair: Wrench,
 };
 
 const NOTE_LIMIT = 280;
@@ -98,7 +102,29 @@ function CouldntDoBody({
   const formatTime = useFormatTime();
   const { inventoryItems, refresh } = useHousehold();
   const { staffId } = useStaffIdentity();
-  const [reason, setReason] = useState<TaskExceptionReason | null>(null);
+
+  const kind: ExceptionKind = target.kind === "chore" ? "chore" : target.category;
+  const medicine = kind === "medication";
+  const title = target.kind === "chore" ? target.occurrence.task.title : target.title;
+  const time = target.kind === "chore" ? target.occurrence.task.due_time : target.time;
+  const day = target.kind === "chore" ? target.occurrence.date : target.date;
+
+  // "Mengawasi perbaikan" (Phase 174, D10): offered only on a day this person
+  // supervised a repair, and chosen already when the task's time falls in
+  // their stretch. It links the visit and needs no note.
+  const { repairs, walkIns, supervision } = useRepairs();
+  const supervisingVisit = useMemo(() => {
+    if (!staffId) return null;
+    const mine = supervisionStretches(supervision, walkIns, repairs).filter((s) => s.staffId === staffId);
+    const onDay = mine.filter((s) => s.start.slice(0, 10) <= day && (!s.end || s.end.slice(0, 10) >= day));
+    if (onDay.length === 0) return null;
+    const inside = supervisionExplains({ staffId, date: day, time: time ? time.slice(0, 5) : null }, onDay, []);
+    return { visitId: (inside ?? onDay[onDay.length - 1]).visitId, inside: !!inside };
+  }, [staffId, supervision, walkIns, repairs, day, time]);
+
+  const [reason, setReason] = useState<TaskExceptionReason | null>(() =>
+    supervisingVisit?.inside ? "supervising_repair" : null
+  );
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -107,10 +133,6 @@ function CouldntDoBody({
   const [otherItem, setOtherItem] = useState("");
   const [toList, setToList] = useState(true);
 
-  const kind: ExceptionKind = target.kind === "chore" ? "chore" : target.category;
-  const medicine = kind === "medication";
-  const title = target.kind === "chore" ? target.occurrence.task.title : target.title;
-  const time = target.kind === "chore" ? target.occurrence.task.due_time : target.time;
   const subtitle = [title, time ? formatTime(time) : null].filter(Boolean).join(" · ");
 
   // Which pets (routines): pre-picked when there is only one.
@@ -152,6 +174,8 @@ function CouldntDoBody({
         photo_url: photo,
         inventory_item_id: picked,
         staff_id: staffId,
+        // Only with this reason: a database before migrations/149 has no such column.
+        ...(reason === "supervising_repair" && supervisingVisit ? { repair_visit_id: supervisingVisit.visitId } : {}),
       };
       // On the shopping list (on by default): the item marked out, or the
       // other thing as a note. Sent with the first record, through the save
@@ -246,7 +270,7 @@ function CouldntDoBody({
           <SheetDescription className="text-center">{subtitle}</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-2 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-          {reasonsFor(kind).map((r) => {
+          {[...(supervisingVisit ? (["supervising_repair"] as const) : []), ...reasonsFor(kind)].map((r) => {
             const Icon = r === "pet_refused" && medicine ? Pill : REASON_ICONS[r];
             return (
               <button

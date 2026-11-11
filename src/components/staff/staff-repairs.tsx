@@ -42,7 +42,7 @@ export function StaffReportRepairButton({ onPress }: { onPress: () => void }) {
  * (migrations/130 allows exactly that).
  */
 export function MyRepairReports() {
-  const { repairs, visits, reload } = useRepairs();
+  const { repairs, visits, walkIns, reload } = useRepairs();
   const placeName = useLocationName();
   const [staffId, setStaffId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -90,7 +90,7 @@ export function MyRepairReports() {
             {placeName(repair.location_id, repair.spot) && (
               <span className="text-xs text-muted-foreground">{placeName(repair.location_id, repair.spot)}</span>
             )}
-            <span className="text-xs font-medium text-gray-700">{staffRepairStatus(repair, visits)}</span>
+            <span className="text-xs font-medium text-gray-700">{staffRepairStatus(repair, visits, walkIns)}</span>
           </div>
           {canUndoReport(repair, staffId, now) && (
             <button

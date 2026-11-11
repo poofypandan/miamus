@@ -10,7 +10,10 @@ import { useToday } from "@/hooks/use-today";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { isAdmitted } from "@/lib/pets";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
-import { buildStaffProgress, type StaffProgress } from "@/lib/staff-progress";
+import { buildStaffProgress, type StaffBusy, type StaffProgress } from "@/lib/staff-progress";
+import { useRepairs } from "@/hooks/use-repairs";
+import { ownerSupervisingBusyLabel, supervisingNow, supervisionStretches } from "@/lib/repair-walkins";
+import type { OwnerLocale } from "@/lib/owner-locale";
 
 /**
  * Staff progress for the day being browsed (lib/staff-progress): the owner's
@@ -25,7 +28,10 @@ import { buildStaffProgress, type StaffProgress } from "@/lib/staff-progress";
  * Ticks each minute while it shows today, so a task turns late on a screen
  * left open.
  */
-export function useStaffProgress({ petsOn = true }: { petsOn?: boolean } = {}): StaffProgress | null {
+export function useStaffProgress({
+  petsOn = true,
+  locale = "id",
+}: { petsOn?: boolean; locale?: OwnerLocale } = {}): StaffProgress | null {
   const { pets, schedules, logs, leaveRequests, selectedDate } = useHousehold();
   const chores = useChoreOccurrences();
   const { exceptions } = useTaskExceptions();
@@ -42,6 +48,22 @@ export function useStaffProgress({ petsOn = true }: { petsOn?: boolean } = {}): 
     [date, pets, schedules, logs]
   );
 
+  // Supervising a repair (Phase 174): the busy line, and the tasks it explains.
+  const { repairs, walkIns, supervision } = useRepairs();
+  const stretches = useMemo(() => supervisionStretches(supervision, walkIns, repairs), [supervision, walkIns, repairs]);
+  const busy = useMemo(() => {
+    const map = new Map<string, StaffBusy>();
+    // Only while showing today: "since 10:00" is about now.
+    if (date !== todayKey) return map;
+    for (const [staffId, stretch] of supervisingNow(stretches, walkIns)) {
+      // "HH:MM", as the row formats it in the reader's language.
+      const start = new Date(stretch.start);
+      const since = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
+      map.set(staffId, { label: ownerSupervisingBusyLabel(locale), since });
+    }
+    return map;
+  }, [stretches, walkIns, locale, date, todayKey]);
+
   return useMemo(() => {
     if (!profiles) return null;
     const now = new Date(clock);
@@ -57,6 +79,8 @@ export function useStaffProgress({ petsOn = true }: { petsOn?: boolean } = {}): 
       logs,
       roster: profiles,
       features: { pets: petsOn, repairs: repairsOn },
+      busy,
+      supervision: { stretches, now },
     });
-  }, [profiles, clock, date, todayKey, chores, groups, exceptions, leaveRequests, pets, logs, petsOn, repairsOn]);
+  }, [profiles, clock, date, todayKey, chores, groups, exceptions, leaveRequests, pets, logs, petsOn, repairsOn, busy, stretches]);
 }

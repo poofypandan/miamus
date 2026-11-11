@@ -18,6 +18,7 @@ import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { ANYONE_PERSON } from "@/hooks/use-staff-workload";
 import { useToday } from "@/hooks/use-today";
 import { ownerReasonLabel } from "@/lib/couldnt-do";
+import { ownerSupervisingLine } from "@/lib/repair-walkins";
 import { dayLabel } from "@/lib/date-label";
 import type { ProgressTask, ProgressTone } from "@/lib/staff-progress";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,7 @@ export function StaffPersonDay({ personId, onBack }: { personId: string; onBack:
   const t = useT();
   const locale = useOwnerLocale();
   const { petsOn } = useHouseholdProfile();
-  const progress = useStaffProgress({ petsOn });
+  const progress = useStaffProgress({ petsOn, locale });
   const { selectedDate } = useHousehold();
   const today = useToday();
   const label = dayLabel(selectedDate, today, locale);
@@ -142,7 +143,13 @@ function TaskRow({ task, ownerId }: { task: ProgressTask; ownerId: string | null
             .join(" · ")
         : task.carried
           ? t("From an earlier day", "Dari hari sebelumnya")
-          : task.late
+          : task.supervising
+            ? ownerSupervisingLine(
+                task.supervising,
+                task.supervising.staffId ? staffName(task.supervising.staffId) : null,
+                locale
+              )
+            : task.late
             ? t("Late", "Terlambat")
             : t("Not yet", "Belum");
 
