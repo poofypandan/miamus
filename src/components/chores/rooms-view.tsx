@@ -19,6 +19,7 @@ import { SortRoomsCard } from "@/components/chores/sort-rooms-card";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { RoomRepairs } from "@/components/repairs/room-repairs";
 import { useRepairs } from "@/hooks/use-repairs";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { canSortIntoFloors } from "@/lib/organise-rooms";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
@@ -44,6 +45,15 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import type { HouseholdTask } from "@/types/database";
+
+const NO_REPAIRS: ReturnType<typeof useRepairs>["repairs"] = [];
+
+/** Open repairs for the wrench counts; none while Repairs is off (Phase 171). */
+function useShownRepairs() {
+  const { repairs } = useRepairs();
+  const { repairs: repairsOn } = useHouseholdFeatures();
+  return repairsOn ? repairs : NO_REPAIRS;
+}
 
 /**
  * Chores → Rooms (Phase 158, PR A): every room, grouped by floor, with what's
@@ -401,7 +411,7 @@ function RoomRow({
   const groups = job ? [] : jobChips(entry.chores, locale, t("Other", "Lainnya"));
   const shown = groups.slice(0, 4);
   // Phase 159 PR B: a room with something broken says so at a glance.
-  const { repairs } = useRepairs();
+  const repairs = useShownRepairs();
   const openRepairs = repairs.filter(
     (r) => r.location_id === entry.id && (r.status === "reported" || r.status === "open")
   ).length;
@@ -520,6 +530,7 @@ function RoomSheet({
   onAdd: () => void;
 }) {
   const t = useT();
+  const { repairs: repairsOn } = useHouseholdFeatures();
   const groups = groupByJobs(chores, locale, t("Other", "Lainnya"));
   // Back closes the sheet, not the Rooms view under it (as every sheet does).
   useBackToClose(open, onClose);
@@ -566,7 +577,7 @@ function RoomSheet({
           ))}
           {inside.length > 0 && <RoomsInsideList rooms={inside} onOpen={onOpenRoom} />}
           {/* Phase 159: what's broken here, and what was fixed. */}
-          {locationId && <RoomRepairs locationId={locationId} />}
+          {locationId && repairsOn && <RoomRepairs locationId={locationId} />}
         </div>
         <SheetFooter>
           <Button className="min-h-[48px] w-full" onClick={onAdd}>
@@ -585,7 +596,7 @@ function RoomSheet({
  */
 function RoomsInsideList({ rooms, onOpen }: { rooms: RoomEntry[]; onOpen: (id: string) => void }) {
   const t = useT();
-  const { repairs } = useRepairs();
+  const repairs = useShownRepairs();
   return (
     <div className="flex flex-col gap-1.5">
       <h4 className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">

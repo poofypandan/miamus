@@ -223,7 +223,13 @@ function problemsWith(
 
 /** Every tool, less pet routines for a household that said it has no pets (Phase 162). */
 export function toolsFor(household: KakakHousehold): Anthropic.Tool[] {
-  return household.petsOff ? KAKAK_TOOLS.filter((tool) => tool.name !== "add_pet_routine") : KAKAK_TOOLS;
+  // A switched-off module's tool isn't offered: pets (Phase 162), Food at
+  // home (Phase 171). Every other household gets the list as it was.
+  if (!household.petsOff && !household.foodOff) return KAKAK_TOOLS;
+  return KAKAK_TOOLS.filter(
+    (tool) =>
+      !(household.petsOff && tool.name === "add_pet_routine") && !(household.foodOff && tool.name === "add_food"),
+  );
 }
 
 export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: string): Promise<TurnResult> {

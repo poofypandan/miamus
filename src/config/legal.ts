@@ -105,7 +105,20 @@ export const LEGAL = {
   // days after asking at the latest (migrations/143). We tell people by
   // WhatsApp or email. No new service (WhatsApp is opened on the operator's
   // own phone; Miamus sends nothing).
-  policyVersion: "2026-11-11.1",
+  // 2026-11-11.2: any routine, for any pets (Phase 173 PR A, migrations/144)
+  // — walk photos are taken where the walk goes, so they may show a public
+  // place and the staff member; Miamus records no location (no GPS; a camera
+  // photo is re-encoded by compressPhoto before upload, which drops EXIF);
+  // each saved task also notes when it reached the server (a save time, as
+  // completed_at already is). A routine's note for staff and the person it
+  // is for are "tasks, routines, schedules and notes". Same 30-day photo
+  // rule; no new service.
+  // 2026-11-11.3: which features a household has switched on (Household →
+  // Features: Repairs, Bills and upkeep, Food at home, Pets) and the kind of
+  // home picked at sign-up (Phase 171 PR A, migrations/145; the kind of home
+  // is household_setup.home_type, migrations/142). Switching off hides, never
+  // deletes. No new service.
+  policyVersion: "2026-11-11.3",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

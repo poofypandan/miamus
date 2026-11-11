@@ -111,7 +111,7 @@ test("Today: the day's routines for both pets, in the owner's language", async (
   await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true", {
     timeout: 20_000,
   });
-  await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
   for (const [time, routine] of [
     ["7:00 AM", "Pipis & Pup"],
     ["8:00 AM", "Obat Uji"],

@@ -114,15 +114,40 @@ export type MasterSchedule = {
   is_active: boolean;
   expires_at: string | null;
   created_at: string;
+  // Phase 173 (migrations/144). Optional because PostgREST omits them until
+  // the migration is applied, and old snapshots on phones lack them.
+  /** What the routine is, from the Add routine sheet. Null: the old title rules. */
+  kind?: RoutineKind | null;
+  /** Shared by the rows made together for several pets (one row per pet). */
+  routine_group_id?: string | null;
+  /** ISO weekdays, 1 = Monday ... 7 = Sunday. Null: every day. */
+  days_of_week?: number[] | null;
+  /** Up to 120 characters, shown to staff as typed. */
+  note?: string | null;
+  /** The person it is for; null for anyone. */
+  staff_id?: string | null;
+  /** How staff prove it. Absent reads as "photo", the column's default. */
+  proof?: RoutineProof | null;
 };
+
+/** Phase 173: the Add routine sheet's quick choices (lib/pet-routine-kinds). */
+export type RoutineKind = "walk" | "lights" | "play" | "water" | "teeth" | "other";
+
+/**
+ * How staff prove a routine (Phase 173): one photo (the default, D6), a tick
+ * with no photo, or three photos (start, arrived, back; D14), done at the third.
+ */
+export type RoutineProof = "photo" | "tick" | "three";
 
 /**
  * Which part of a task a log records.
  *
  * Every ordinary task writes "complete". A vet visit is the exception: it is
  * logged in two halves, so the dog's whereabouts are known between them.
+ * A three-photo routine (Phase 173, proof "three") is logged in three:
+ * "check_in" at the start, "arrived" where the walk went, "check_out" back.
  */
-export type LogSubType = "complete" | "check_in" | "check_out" | "admitted";
+export type LogSubType = "complete" | "check_in" | "check_out" | "admitted" | "arrived";
 
 export type TaskLog = {
   id: string;
@@ -139,6 +164,9 @@ export type TaskLog = {
   // Optional because PostgREST omits it until the Phase 79 migration is
   // applied; absent reads as "complete".
   sub_type?: LogSubType | null;
+  // When the save reached the database (migrations/144), set there whatever
+  // the phone sends. Null for older rows; absent while still queued.
+  received_at?: string | null;
 };
 
 export type MedicalRecord = {
@@ -665,7 +693,8 @@ export type ScheduleCategoryName =
   | "medication"
   | "grooming"
   | "temporary"
-  | "vet";
+  | "vet"
+  | "routine";
 
 export interface Database {
   public: {
@@ -786,6 +815,14 @@ export interface Database {
         Row: Household;
         Insert: Partial<Household> & Pick<Household, "name">;
         Update: Partial<Household>;
+        Relationships: [];
+      };
+      household_features: {
+        // Phase 171 PR A (migrations/145): read by members and staff phones;
+        // written only through set_household_feature().
+        Row: { household_id: string; feature: string; enabled: boolean; set_at: string; set_by: string | null };
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       household_members: {
@@ -1059,6 +1096,10 @@ export interface Database {
       };
       set_household_has_pets: {
         Args: { p_household: string; p_on: boolean };
+        Returns: undefined;
+      };
+      set_household_feature: {
+        Args: { p_household: string; p_feature: string; p_on: boolean };
         Returns: undefined;
       };
       set_kakak_enabled: {

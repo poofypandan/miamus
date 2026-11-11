@@ -211,6 +211,36 @@ people are **staf** and **admin**.
 | How should we let you know? · Your WhatsApp number | **Bagaimana kami memberi tahu Anda? · Nomor WhatsApp Anda** | Phase 172 PR A1, the waiting screen (owner, 2026-11-11). |
 | We'll use your number only to tell you you're approved, then delete it. | **Nomor Anda hanya kami pakai untuk memberi tahu bahwa Anda sudah disetujui, lalu kami hapus.** | The note under the number field; "Kebijakan privasi" links to the policy. |
 | Copy link · Link copied | **Salin link · Link disalin** | The approvals page's third button. |
+| Add routine / Edit routine / Remove routine | **Tambah rutinitas** / **Ubah rutinitas** / **Hapus rutinitas** | Phase 173: the sheet and its buttons. "Rutinitas" as in Kelola Rutinitas. |
+| Walk · Lights off · Play · Fresh water · Brush teeth · Other | **Jalan-jalan · Matikan lampu · Ajak main · Ganti air minum · Sikat gigi · Lainnya** | Phase 173 routine chips; also the saved titles staff read. "Ajak main", not "Main" alone, which reads as "play" for the staff themselves. |
+| What · For · When · Who | **Apa · Untuk · Kapan · Siapa** | Phase 173 sheet row labels. |
+| Every day · Some days · Once | **Setiap hari · Hari tertentu · Sekali saja** | Phase 173 repeat choices. |
+| Add time · Ends (optional) | **Tambah jam · Berakhir (opsional)** | Phase 173. Owner form, so "opsional". |
+| Note for staff | **Catatan untuk staf** | Phase 173: the label; staff see it under **Catatan**. |
+| Proof: Photo · Tick / 3 photos · 1 photo · Tick | **Bukti: Foto · Centang / 3 foto · 1 foto · Centang** | Phase 173. Photo first: the default (D6). 3 photos for walks (D14). |
+| Start · Got there · Back home (walk steps, staff buttons) | **Mulai · Sudah sampai · Sudah pulang** | Phase 173 (D14). Short verbs, no reading. |
+| Cancel the walk | **Batalkan jalan-jalan** | Phase 173 (D14), while a walk is in progress. Undo is **Batalkan**. |
+| Take the photo straight from the camera. | **Ambil foto langsung dari kamera.** | Phase 173 (D14): a gallery or old photo was refused. |
+| sent 7:50 AM / phone time | **terkirim 07.50** / **jam HP** | Phase 173 (D14): a step saved offline reached the server later, so its time is the phone's. "HP", never "ponsel". |
+| Walking · started 07.02 / Got there 07.15 (staff card) | **Sedang jalan · mulai 07.02** / **Sudah sampai 07.15** | Phase 173 (D14): between the walk's steps. |
+| Walk · 32 min (owner) | **Jalan-jalan · 32 menit** | Phase 173 (D14): from the first and last photos' server times. |
+| Started 07.02, no end photo | **Mulai 07.02, tanpa foto akhir** | Phase 173 (D14): a walk not finished by midnight. |
+| Add for 2 pets / Add for Matcha | **Tambah untuk 2 hewan / Tambah untuk Matcha** | Phase 173 button. |
+| Other routines | **Rutinitas lain** | Phase 173: replaces Others / Lainnya in Manage routines. |
+| Usual routines for Coco | **Rutinitas biasa untuk Coco** | Phase 173 PR B (planned): starter list after adding a pet. |
+| Remind staff at this time | **Ingatkan staf di jam ini** | Phase 173 PR C (planned). Push title **Pengingat**, as Phase 164. |
+| Today's progress · House 6/8 · Pets 12/14 | **Progres Hari ini · Rumah 6/8 · Hewan 12/14** | Staff progress on Today (owners, 11 Nov): one row per person, only the kinds they have. A staff phone shows its own line, grouped as **Progres Anda**. |
+| On leave (a person's progress row) | **Libur** | The everyday word for a day off on a row. **Cuti** stays the word for the leave request itself. |
+| N left · All done · N late · N couldn't be done · No tasks | **Sisa N · Semua selesai · N terlambat · N tidak bisa dikerjakan · Tidak ada tugas** | The calm line under a name. |
+| Anyone, not done yet | **Siapa saja, belum dikerjakan** | The small row for what nobody owns and nobody has done. |
+| Everyone (back from a person's day) · Not yet · From an earlier day | **Semua orang · Belum · Dari hari sebelumnya** | The person's day in Siapa mengerjakan apa. |
+| Supervising a repair since 10.00 (planned) | **Mengawasi perbaikan sejak 10.00** | Phase 174: the busy line's place is ready; nothing fills it yet. |
+| Features (Household row) | **Fitur** | Phase 171 PR A: Household → Fitur replaces "Siapa yang tinggal di sini". Everyday word. |
+| On / off (a feature) | **aktif / dimatikan** | Phase 171 PR A: "4 aktif" on the row; toasts "{Fitur} aktif" · "{Fitur} dimatikan". |
+| Food at home (feature) | **Makanan di rumah** | Phase 171 PR A, the Features row; the Kitchen pill stays **Makanan**. |
+| What kind of home? | **Rumah seperti apa?** | Phase 171 PR A, sign-up screen 2 (the brief's wording; Phase 172's plan drafted "Seperti apa rumah Anda?"). |
+| House with a garden · Big house, several floors · Apartment · Something else | **Rumah dengan taman · Rumah besar bertingkat · Apartemen · Lainnya** | Phase 172's four home types, drawn by Phase 171's screen. |
+| No thanks (offer, later) | **Tidak, terima kasih** | Phase 171 D7: the offer card, built with the first feature that starts off. |
 
 ## Formatting
 

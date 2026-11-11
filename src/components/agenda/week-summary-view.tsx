@@ -279,6 +279,7 @@ const RHYTHM_NOUNS: Record<"en" | "id", Record<RhythmRow["category"], string>> =
     vet: "vet",
     grooming: "grooming",
     temporary: "other",
+    routine: "routines",
   },
   id: {
     medication: "obat",
@@ -288,6 +289,7 @@ const RHYTHM_NOUNS: Record<"en" | "id", Record<RhythmRow["category"], string>> =
     vet: "dokter hewan",
     grooming: "grooming",
     temporary: "lainnya",
+    routine: "rutinitas",
   },
 };
 
@@ -316,7 +318,7 @@ function RhythmSection({
   const t = useT();
   const dateLocale = locale === "id" ? "id-ID" : "en-US";
   const nouns = joinNouns(
-    (["meal", "potty", "medication", "chore"] as const)
+    (["meal", "potty", "medication", "routine", "chore"] as const)
       .filter((c) => rows.some((r) => r.category === c))
       .map((c) => RHYTHM_NOUNS[locale][c])
   );
