@@ -2,6 +2,7 @@
 -- nothing, nothing duplicated, limits, assignees), staff in one go (a claim
 -- works once, inside 7 days, for an empty name, from a staff phone with the
 -- house code), who linked today, grants.
+-- Runs on top of 146 (the pre-launch security fixes, PR #91).
 -- LOCAL DATABASE ONLY. One transaction, rolled back:
 --   PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -X -q -t \
 --     -f supabase/tests/147_starter_templates_and_staff_claim.sql
@@ -266,8 +267,9 @@ delete from public.staff_sign_in_attempts where user_id = :p1::uuid;
 select pg_temp.ok(pg_temp.json_as(:p1, format($q$ select public.claim_staff_with_house_code('k7p-m2q', %L, '1234', (select token from pg_temp.claim)) $q$, :sari)) ->> 'status' = 'ok',
   'a staff phone with the house code claims Sari (added today, no PIN) and makes a PIN');
 select pg_temp.ok(exists (select 1 from public.staff_profiles where name = 'Mbak Sari' and has_pin), '... Sari has a PIN now');
-select pg_temp.ok(exists (select 1 from public.device_sessions where user_id = :p1::uuid and household_id = :f1::uuid),
-  '... the phone is linked to the household');
+select pg_temp.ok(exists (select 1 from public.device_sessions where user_id = :p1::uuid and household_id = :f1::uuid
+                                and staff_id = (select id from public.staff_profiles where name = 'Mbak Sari')),
+  '... the phone is linked to the household, with Sari (device_sessions.staff_id, as 146''s sign-in)');
 select pg_temp.ok((select extensions.crypt('1234', pin) = pin from public.staff_profiles where name = 'Mbak Sari'),
   '... the PIN is stored hashed');
 select pg_temp.ok(exists (select 1 from public.staff_sign_in_attempts where user_id = :p1::uuid and kind = 'claim' and success),
@@ -328,6 +330,13 @@ select pg_temp.ok(pg_temp.json_as(:p3, $q$ select public.claim_staff_with_house_
   'the 21st claim in an hour for a household is refused');
 delete from public.staff_sign_in_attempts where household_id = :f1::uuid and kind = 'claim' and not success;
 
+-- Ten refused claims an hour from one phone, and that phone is stopped.
+insert into public.staff_sign_in_attempts (user_id, household_id, kind, success)
+select '00000000-0000-0000-0000-0000000146b3', '00000000-0000-0000-0000-0000000146f2', 'claim', false from generate_series(1, 10);
+select pg_temp.ok(pg_temp.json_as(:p3, $q$ select public.claim_staff_with_house_code('K7PM2Q', '00000000-0000-0000-0000-0000000146c6', '1111', (select token from pg_temp.claim)) $q$) ->> 'status' = 'too_many_attempts',
+  'claims count their own failures: 10 refused in an hour stop that phone');
+delete from public.staff_sign_in_attempts where user_id = '00000000-0000-0000-0000-0000000146b3'::uuid and kind = 'claim' and not success;
+
 -- ---- Not Sari? Undo (audit L5) ---------------------------------------------------------
 select pg_temp.ok(pg_temp.err_as(:p3, format($q$ select public.undo_staff_claim(%L, %L) $q$, :f1, :sari)) like '%not_admin%',
   'a staff phone can''t undo a claim');
@@ -364,6 +373,8 @@ select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select * from public.staff_clai
 select pg_temp.ok(not has_function_privilege('anon', 'public.house_code_roster(text)', 'execute')
                   and has_function_privilege('authenticated', 'public.house_code_roster(text)', 'execute'),
   'house_code_roster keeps its grants');
+select pg_temp.ok(to_regprocedure('public.claim_staff_with_house_code(text, uuid, text)') is null,
+  'no 3-argument claim (without a claim code) is left behind');
 select pg_temp.ok(not has_function_privilege('anon', 'public.staff_claim_link(uuid)', 'execute')
                   and not has_function_privilege('anon', 'public.undo_staff_claim(uuid, uuid)', 'execute')
                   and not has_table_privilege('authenticated', 'public.staff_claim_links', 'select')

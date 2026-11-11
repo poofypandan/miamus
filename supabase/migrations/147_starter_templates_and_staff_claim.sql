@@ -6,7 +6,13 @@
 -- unticks what doesn't apply, types staff names, and sends one WhatsApp
 -- message; each person picks their name and makes a PIN.
 --
--- Numbered 147: 145 is Phase 171 PR A (PR #87); 146 is the security fixes, which go live first (manager, 11 Nov).
+-- Numbered 147: 145 is Phase 171 PR A (PR #87); 146 is the pre-launch
+-- security fixes (PR #91), which go live first (manager, 11 Nov). Built on
+-- 146: a claim links the phone with device_sessions.staff_id as 146's
+-- sign-in does, clears 146's lock fields, and counts its own failures
+-- (146's caps count 'pin' and 'code' only). staff_profiles inserts stay
+-- owner-side through RLS (146: admin_insert_staff_profiles) with only the
+-- (household_id, name) columns 096 grants.
 --
 -- NEW
 --   apply_household_setup(household, draft)   the reviewed list in ONE call,
@@ -348,6 +354,10 @@ $$;
 revoke all on function public.staff_claim_link(uuid) from public, anon;
 grant execute on function public.staff_claim_link(uuid) to authenticated, service_role;
 
+-- An earlier draft of this migration had a 3-argument claim with no claim
+-- code; drop it wherever that draft ran, so it can't be called around the
+-- guard (security review, PR #90). A no-op everywhere else.
+drop function if exists public.claim_staff_with_house_code(text, uuid, text);
 create or replace function public.claim_staff_with_house_code(
   p_code text, p_staff_id uuid, p_new_pin text, p_claim text
 )
@@ -375,10 +385,15 @@ begin
     return jsonb_build_object('status', 'wrong_code');
   end if;
 
-  -- At most 20 claims an hour per household, made or refused (audit L5).
+  -- At most 20 claims an hour per household, made or refused (audit L5),
+  -- and at most 10 refused claims an hour from one phone: claims count
+  -- their own failures (146's caps count 'pin' and 'code' only).
   if (select count(*) from public.staff_sign_in_attempts a
        where a.household_id = household and a.kind = 'claim'
-         and a.created_at > now() - interval '1 hour') >= 20 then
+         and a.created_at > now() - interval '1 hour') >= 20
+     or (select count(*) from public.staff_sign_in_attempts a
+          where a.user_id = uid and a.kind = 'claim' and not a.success
+            and a.created_at > now() - interval '1 hour') >= 10 then
     return jsonb_build_object('status', 'too_many_attempts');
   end if;
 
@@ -420,13 +435,18 @@ begin
      set pin = extensions.crypt(p_new_pin, extensions.gen_salt('bf')),
          has_pin = true,
          failed_pin_attempts = 0,
-         pin_locked_until = null
+         pin_locked_until = null,
+         pin_lock_level = 0,
+         pin_locked_at = null
    where id = person.id;
 
-  insert into public.device_sessions (user_id, household_id)
-  values (uid, household)
+  -- Linked as 146's sign_in_with_house_code links: with the person.
+  insert into public.device_sessions (user_id, household_id, staff_id)
+  values (uid, household, person.id)
   on conflict (user_id) do update
-    set household_id = excluded.household_id, last_seen_at = now();
+    set household_id = excluded.household_id,
+        staff_id = excluded.staff_id,
+        last_seen_at = now();
 
   insert into public.staff_sign_in_attempts (user_id, household_id, staff_id, kind, success)
   values (uid, household, person.id, 'claim', true);
@@ -471,7 +491,8 @@ begin
     return false;
   end if;
   update public.staff_profiles
-     set pin = null, has_pin = false, failed_pin_attempts = 0, pin_locked_until = null
+     set pin = null, has_pin = false, failed_pin_attempts = 0, pin_locked_until = null,
+         pin_lock_level = 0, pin_locked_at = null
    where id = p_staff_id and household_id = p_household;
   delete from public.device_sessions d where d.user_id = phone and d.household_id = p_household;
   delete from public.push_subscriptions ps where ps.user_id = phone and ps.household_id = p_household;
