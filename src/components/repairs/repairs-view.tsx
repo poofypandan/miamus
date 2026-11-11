@@ -38,6 +38,7 @@ export function RepairsView() {
 
   return (
     <div className="flex flex-col gap-4">
+      <WhatsNewCard id="walkins-2026-11" />
       <WhatsNewCard id="repair-costs-2026-11" />
       <div className="flex gap-2">
         <Button className="min-h-[48px] flex-1 rounded-xl" onClick={() => setReporting(true)}>

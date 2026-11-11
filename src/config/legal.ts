@@ -118,7 +118,15 @@ export const LEGAL = {
   // home picked at sign-up (Phase 171 PR A, migrations/145; the kind of home
   // is household_setup.home_type, migrations/142). Switching off hides, never
   // deletes. No new service.
-  policyVersion: "2026-11-11.3",
+  // 2026-11-11.4: walk-in repairs and supervising (Phase 174 PR A,
+  // migrations/149) — a repair person's name or company (optional, typed by
+  // staff or an admin; no phone number), when they arrived and left, before
+  // and after photos of the work (not of people), an optional result and
+  // note: third-party data, kept with the repair (while open, 2 years after
+  // closing). Who supervised a walk-in and from when to when (staff data),
+  // kept 90 days; a couldn't-do reason "supervising a repair". No new
+  // service; no new notification yet (owner pushes come with PR B).
+  policyVersion: "2026-11-11.4",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
