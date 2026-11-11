@@ -481,7 +481,8 @@ the release.
 ## Tutorials
 
 Per `feature-tutorials`: owners (EN/ID) a 20-second "Add routine" video tip in
-the Pets tab; staff, nothing to read (stop rule): the circle explains itself;
+the Pets tab; staff, nothing to read (stop rule): the camera button explains
+itself, and "Sedang jalan" says a walk is waiting for its end photo;
 at most one What's new card that week.
 
 ## Glossary rows (go in with PR A)
