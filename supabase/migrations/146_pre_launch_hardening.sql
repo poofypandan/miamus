@@ -1089,6 +1089,8 @@ begin
                     where r.user_id = target.user_id
                       and (r.status = 'pending' or r.requested_at > a.since))
          or exists (select 1 from public.platform_admins p where p.user_id = target.user_id)
+         -- As 143's prune: never an account a phone is still linked with.
+         or exists (select 1 from public.device_sessions d where d.user_id = target.user_id)
          or exists (select 1 from auth.users u where u.id = target.user_id and coalesce(u.is_anonymous, false))
          or not exists (select 1 from public.account_deletions a
                          where a.user_id = target.user_id and a.due_at <= now())
