@@ -25,7 +25,7 @@ import type {
 } from "@/lib/data";
 import { LEAVE_LOOKBACK_DAYS } from "@/lib/leave";
 import { readActiveStaffId } from "@/components/auth/staff-login-gate";
-import { applyAmountRules } from "@/lib/kitchen-units";
+import { applyAmountRules, lastBoughtInUnit, undoPurchasePatch } from "@/lib/kitchen-units";
 import {
   readCachedMemberProfile,
   setActiveMemberProfile,
@@ -1210,18 +1210,19 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     async (before: InventoryItem, amount: number | null) => {
       const staffId = readActiveStaffId();
       // Taken back off as an increment, so another phone's change in the
-      // meantime is kept; then the status and pre-fill as they were.
+      // meantime is kept; then the status and pre-fill, only where that
+      // can't erase another phone's change (undoPurchasePatch).
+      let now = inventoryItemsRef.current.find((i) => i.id === before.id) ?? before;
       if (before.track_amount === true && amount !== null) {
-        const item = await dataProvider.adjustInventoryQuantity(before.id, -amount, staffId);
-        setInventoryItems((prev) => prev.map((i) => (i.id === before.id ? item : i)));
+        now = await dataProvider.adjustInventoryQuantity(before.id, -amount, staffId);
+        const fresh = now;
+        setInventoryItems((prev) => prev.map((i) => (i.id === before.id ? fresh : i)));
       }
-      // The status back, credited to whoever undid it: the earlier marker
-      // may have been removed since, and 148 refuses a removed person's id.
-      const patch: InventoryItemPatch = {
-        stock_status: before.stock_status ?? "ok",
-        stock_status_by: staffId,
-        last_bought_amount: before.last_bought_amount ?? null,
-      };
+      const back = undoPurchasePatch(before, now, amount);
+      if (!back) return;
+      // Credited to whoever undid it: the earlier marker may have been
+      // removed since, and 148 refuses a removed person's id.
+      const patch: InventoryItemPatch = { ...back, ...(back.stock_status ? { stock_status_by: staffId } : {}) };
       await writeInventoryItem(before.id, patch, () => dataProvider.updateInventoryItem(before.id, patch));
     },
     [writeInventoryItem]
@@ -1229,6 +1230,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
   const setTrackAmount = useCallback(
     (id: string, settings: TrackAmountSettings) => {
+      const current = inventoryItemsRef.current.find((i) => i.id === id);
       const patch: InventoryItemPatch = settings.track
         ? {
             track_amount: true,
@@ -1238,6 +1240,10 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
             // Phase 110 default of 2 is never kept by accident (D14).
             min_threshold: Math.max(0, settings.lowAt),
             amount_set_by: readActiveStaffId(),
+            // The pre-fill follows the unit, or goes (Codex, PR #93).
+            ...(current && current.unit !== settings.unit
+              ? { last_bought_amount: lastBoughtInUnit(current.last_bought_amount, current.unit, settings.unit) }
+              : {}),
           }
         : { track_amount: false };
       return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));

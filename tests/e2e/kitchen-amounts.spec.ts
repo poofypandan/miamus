@@ -175,3 +175,42 @@ test("portions on food: set in the form, Ate 1 portion counts down (D7)", async 
   await expect(page.getByText("Rendang · sisa 2 porsi")).toBeVisible();
   await expect.poll(() => stub.foods[0].portions).toBe(2);
 });
+
+test("changing kg to g converts the amount and the Bought pre-fill (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    features: { kitchen: true },
+    items: [rice({ track_amount: true, quantity: 1.5, min_threshold: 0, amount_set_at: new Date().toISOString(), last_bought_amount: 5 })],
+  });
+  await page.goto("/dashboard?module=inventory");
+  const ingredients = page.getByRole("region", { name: "Ingredients" });
+  await ingredients.getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: /^Track amount/ }).click();
+  await page.getByRole("button", { name: "g", exact: true }).click();
+  await expect(page.getByLabel("How much is there now?")).toHaveValue("1500");
+  await page.getByRole("button", { name: "Save" }).click();
+
+  await expect(ingredients.getByRole("button", { name: /Beras/ })).toContainText("1,500 g left");
+  expect(stub.supplies[0]).toMatchObject({ unit: "g", quantity: 1500, last_bought_amount: 5000 });
+});
+
+test("Undo keeps another phone's purchase made in the meantime (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    features: { kitchen: true },
+    items: [rice({ track_amount: true, quantity: 0, min_threshold: 0, stock_status: "out", amount_set_at: new Date().toISOString(), last_bought_amount: 2 })],
+  });
+  await page.goto("/dashboard?module=inventory&kitchen=buy");
+  await page.getByRole("button", { name: "Bought Beras" }).click({ timeout: 20_000 });
+  await page.getByLabel("Amount bought").fill("5");
+  await page.getByRole("button", { name: "Bought", exact: true }).click();
+  await expect(page.getByText("Bought · Beras 5 kg")).toBeVisible();
+
+  // Another phone buys 3 kg before the Undo.
+  Object.assign(stub.supplies[0], { quantity: 8, last_bought_amount: 3 });
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => stub.supplies[0].quantity).toBe(3);
+  // Not emptied by writing Out back, and the other purchase's pre-fill stays.
+  await page.waitForTimeout(500);
+  expect(stub.supplies[0]).toMatchObject({ quantity: 3, stock_status: "ok", last_bought_amount: 3 });
+});

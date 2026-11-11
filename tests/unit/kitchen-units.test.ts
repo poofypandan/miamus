@@ -17,9 +17,11 @@ import {
   formatAmount,
   isIngredient,
   isStaleAmount,
+  lastBoughtInUnit,
   oldCountHint,
   parseAmount,
   startingAmount,
+  undoPurchasePatch,
 } from "@/lib/kitchen-units";
 import { amountsOn, ingredientsUnderFood } from "@/lib/features";
 import { PLANS_ENFORCED, PLUS_FEATURES, planFor } from "@/lib/plans";
@@ -178,6 +180,54 @@ describe("the rules mirror (as migrations/148's trigger)", () => {
     expect(next.amount_set_at).toBeNull();
     expect(next.stock_status).toBe("out");
     expect(next.quantity).toBe(0);
+  });
+});
+
+describe("undoing a purchase (Codex, PR #93)", () => {
+  const out = { track_amount: true, stock_status: "out" as const, last_bought_amount: 2 };
+
+  it("keeps another phone's purchase: no Out write while some is left", () => {
+    // 0 → bought 5 → another phone bought 3 → undo the 5: 3 left, not emptied.
+    const patch = undoPurchasePatch(out, { quantity: 3, stock_status: "ok", last_bought_amount: 3 }, 5);
+    expect(patch).toBeNull();
+  });
+
+  it("puts Out and the pre-fill back when nothing else happened", () => {
+    expect(undoPurchasePatch(out, { quantity: 0, stock_status: "out", last_bought_amount: 5 }, 5)).toEqual({
+      last_bought_amount: 2,
+    });
+    // Skip amount on a tracked item that was out: still nothing there.
+    expect(undoPurchasePatch(out, { quantity: 0, stock_status: "ok", last_bought_amount: 2 }, null)).toEqual({
+      stock_status: "out",
+    });
+  });
+
+  it("never writes over another phone's later tap", () => {
+    const low = { track_amount: false, stock_status: "low" as const, last_bought_amount: null };
+    expect(undoPurchasePatch(low, { quantity: 0, stock_status: "out", last_bought_amount: null }, null)).toBeNull();
+  });
+
+  it("puts a Running low tap back, and untracked items as before", () => {
+    const low = { track_amount: true, stock_status: "low" as const, last_bought_amount: null };
+    expect(undoPurchasePatch(low, { quantity: 3, stock_status: "ok", last_bought_amount: 5 }, 5)).toEqual({
+      stock_status: "low",
+      last_bought_amount: null,
+    });
+    const plain = { track_amount: false, stock_status: "out" as const, last_bought_amount: null };
+    expect(undoPurchasePatch(plain, { quantity: 0, stock_status: "ok", last_bought_amount: null }, null)).toEqual({
+      stock_status: "out",
+    });
+  });
+});
+
+describe("the pre-fill when the unit changes (Codex, PR #93)", () => {
+  it("converts exactly, or drops what can't be read in the new unit", () => {
+    expect(lastBoughtInUnit(5, "kg", "g")).toBe(5000);
+    expect(lastBoughtInUnit(500, "ml", "L")).toBe(0.5);
+    expect(lastBoughtInUnit(12, "butir", "pcs")).toBe(12);
+    expect(lastBoughtInUnit(5, "kg", "butir")).toBeNull();
+    expect(lastBoughtInUnit(200, "kg", "g")).toBeNull(); // 200,000 g: over a purchase's limit
+    expect(lastBoughtInUnit(null, "kg", "g")).toBeNull();
   });
 });
 

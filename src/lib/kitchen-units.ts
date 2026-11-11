@@ -272,3 +272,53 @@ export function applyAmountRules(before: InventoryItem | null, after: InventoryI
 export function isIngredient(item: Pick<InventoryItem, "category">): boolean {
   return item.category === "fresh_food" || item.category === "pantry";
 }
+
+/**
+ * What a Bought's Undo writes back once the amount is taken off again
+ * (Codex, PR #93). Built from the item as it stands now, so another
+ * phone's change in the meantime survives:
+ *
+ *   - the status goes back only if it is still what the purchase left
+ *     (Enough), never over another phone's later tap, and never Out on a
+ *     tracked item that still has some left: on a tracked item Out empties
+ *     it (148), which would erase another phone's purchase;
+ *   - the pre-fill goes back only if it is still this purchase's amount
+ *     (another phone's later purchase keeps its own);
+ *   - null = nothing to write.
+ */
+export function undoPurchasePatch(
+  before: Pick<InventoryItem, "stock_status" | "last_bought_amount" | "track_amount">,
+  now: Pick<InventoryItem, "quantity" | "stock_status" | "last_bought_amount">,
+  amount: number | null
+): { stock_status?: StockStatus; last_bought_amount?: number | null } | null {
+  const patch: { stock_status?: StockStatus; last_bought_amount?: number | null } = {};
+  const target = before.stock_status ?? "ok";
+  const current = now.stock_status ?? "ok";
+  const tookAmountBack = before.track_amount === true && amount !== null;
+  // Untracked, or no amount: the purchase left Enough. Anything else now is
+  // another phone's change since, and stays (code review).
+  // With an amount taken back: the status already follows the amount again;
+  // only a Running low tap (made above the low level) needs putting back.
+  const restore = tookAmountBack ? target === "low" && current === "ok" : current === "ok";
+  const erases = before.track_amount === true && target === "out" && now.quantity > 0;
+  if (restore && !erases && target !== current) patch.stock_status = target;
+  const ours = before.track_amount === true && amount !== null && now.last_bought_amount === amount;
+  if (ours && (before.last_bought_amount ?? null) !== amount) patch.last_bought_amount = before.last_bought_amount ?? null;
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/**
+ * The "How much did you buy?" pre-fill when an owner changes a tracked
+ * item's unit (Codex, PR #93): converted exactly (5 kg → 5000 g), or
+ * dropped when the units don't convert or the result falls outside what a
+ * purchase may be (0 < x ≤ 100,000), rather than read in the wrong unit.
+ */
+export function lastBoughtInUnit(
+  amount: number | null | undefined,
+  from: InventoryUnit,
+  to: InventoryUnit
+): number | null {
+  if (amount === null || amount === undefined) return null;
+  const converted = convertAmount(amount, from, to);
+  return converted !== null && converted > 0 && converted <= MAX_AMOUNT ? converted : null;
+}
