@@ -11,8 +11,11 @@ import type { OrganiseRoomsMoved,
   InventoryAuditWithStaff,
   FoodItem,
   InventoryItem,
+  Recipe,
+  RecipeIngredient,
   StaffProfile,
 } from "@/types/database";
+import { withLines } from "@/lib/recipes";
 import type { CreateHouseholdTaskInput, DataProvider, HouseCodeClaim, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
 import { longRepeatFloorFor, longestGapDays, LONGEST_REPEAT_GAP_DAYS, rolloverFloorFor } from "@/lib/chore-recurrence";
 
@@ -542,6 +545,36 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client().from("food_items").delete().eq("id", id).select();
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Food was not deleted");
+  },
+  async listRecipes() {
+    const household = getActiveHouseholdId();
+    const [recipes, lines] = await Promise.all([
+      client().from("recipes").select("*").eq("household_id", household),
+      client().from("recipe_ingredients").select("*").eq("household_id", household).order("position"),
+    ]);
+    // A database before migrations/151: no recipes yet, not a failure.
+    const missing = (e: { code?: string } | null) => e?.code === "PGRST205" || e?.code === "42P01";
+    if (recipes.error) {
+      if (missing(recipes.error)) return [];
+      throw recipes.error;
+    }
+    if (lines.error && !missing(lines.error)) throw lines.error;
+    return withLines((recipes.data ?? []) as Recipe[], (lines.data ?? []) as RecipeIngredient[]);
+  },
+  async saveRecipe(payload) {
+    const { data, error, status } = await client().rpc("save_recipe", {
+      p_recipe: { ...payload.recipe, household_id: getActiveHouseholdId() },
+      p_ingredients: payload.ingredients,
+    });
+    if (error) throw withStatus(error, status);
+    const saved = data as { recipe: Recipe; ingredients: RecipeIngredient[] };
+    return { ...saved.recipe, ingredients: saved.ingredients ?? [] };
+  },
+  async deleteRecipe(id) {
+    // Owners only (migrations/151); a staff phone's delete matches no rows.
+    const { data, error } = await client().from("recipes").delete().eq("id", id).select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Recipe was not deleted");
   },
   async listRoutineProposals() {
     const { data, error } = await client()

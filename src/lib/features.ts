@@ -77,9 +77,34 @@ export function ingredientsUnderFood(flags: Pick<FeatureFlags, "kitchen" | "food
   return flags.kitchen && flags.food;
 }
 
-/** The Kitchen pill: with Food at home off, Shopping alone. */
-export function kitchenViewFor(view: "food" | "buy", flags: FeatureFlags): "food" | "buy" {
+/**
+ * Recipes (Phase 170 PR B, migrations/151) belong to the Kitchen switch,
+ * like amounts: the Menu pill shows while it's on. Off hides the pill;
+ * the recipes stay saved and come back with the switch.
+ */
+export function recipesOn(flags: Pick<FeatureFlags, "kitchen">): boolean {
+  return flags.kitchen;
+}
+
+export type KitchenViewValue = "food" | "buy" | "menu";
+
+/**
+ * The Kitchen pill for a ?kitchen= value: with Food at home off there is no
+ * Food, and with the Kitchen switch off there is no Menu; either falls back
+ * to the first pill that's there.
+ */
+export function kitchenViewFor(view: KitchenViewValue, flags: FeatureFlags): KitchenViewValue {
+  if (view === "menu" && !recipesOn(flags)) return flags.food ? "food" : "buy";
   return view === "food" && !flags.food ? "buy" : view;
+}
+
+/** The Kitchen pills shown, in order (D5: Food · Shopping · Menu). One pill is no pills. */
+export function kitchenViews(flags: FeatureFlags): KitchenViewValue[] {
+  return [
+    ...(flags.food ? (["food"] as const) : []),
+    "buy" as const,
+    ...(recipesOn(flags) ? (["menu"] as const) : []),
+  ];
 }
 
 /** How many of the Features page's rows are on, Pets included: "4 on". */

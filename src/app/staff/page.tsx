@@ -25,7 +25,8 @@ import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
 import { StaffKitchen } from "@/components/kitchen/kitchen-tab";
-import { ingredientsUnderFood } from "@/lib/features";
+import { ingredientsUnderFood, recipesOn } from "@/lib/features";
+import { useRecipes } from "@/hooks/use-recipes";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { OutboxNotice } from "@/components/shared/outbox-notice";
@@ -338,6 +339,10 @@ function TasksView() {
   const repairsOn = repairsFeatureOn;
   // The tip says ingredients moved to Makanan: true only with Food at home on too.
   const kitchenAmountsOn = ingredientsUnderFood(featureFlags);
+  // The recipes tip (Phase 170 PR B) once the household has a recipe to open.
+  // Loading here also keeps the phone's copy fresh for a weak kitchen signal.
+  const { recipes: householdRecipes } = useRecipes({ enabled: recipesOn(featureFlags) });
+  const showRecipesTip = recipesOn(featureFlags) && householdRecipes.length > 0;
 
   // The floors tip (Phase 158) only once this phone's list actually shows a
   // floor or a spot: before the owner sorts rooms there is nothing to explain.
@@ -444,6 +449,8 @@ function TasksView() {
         <StaffTipCard
           tips={[
             // Phase 170 PR A: only while Kitchen amounts is on.
+            // Phase 170 PR B: once there is a recipe to open.
+            { id: "staff-recipes-2026-11", show: showRecipesTip },
             { id: "staff-kitchen-amounts-2026-11", show: kitchenAmountsOn },
             { id: "staff-couldnt-do-2026-11", show: true },
             { id: "staff-feedback-2026-11", show: true },

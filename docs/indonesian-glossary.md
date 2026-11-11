@@ -291,7 +291,17 @@ people are **staf** and **admin**.
 | Unit | **Satuan** | Phase 170 PR A, the Track amount chips. |
 | How much did you buy? / usually 5 kg / Skip amount / Bought | **Beli berapa?** / **biasanya 5 kg** / **Lewati jumlah** / **Sudah dibeli** | Phase 170 PR A; owners and staff. Toast: **Sudah dibeli · masih hampir habis**. |
 | Portions / Ate 1 portion | **Porsi** / **Dimakan 1 porsi** | Phase 170 PR A (D7): "Rendang · 3 porsi"; toast **sisa 2 porsi**. |
-| Kitchen units | **buah, butir, ikat, siung, lembar, batang, bungkus, sachet** (recipes later add **sdm, sdt**) | Phase 170 PR A: the words Indonesian kitchens use, kept in English too; the English picker adds a small second line (piece, egg, bunch, clove, leaf, stalk, packet, sachet). |
+| Kitchen units | **buah, butir, ikat, siung, lembar, batang, bungkus, sachet** (recipes add **sdm, sdt**, Phase 170 PR B) | Phase 170 PR A: the words Indonesian kitchens use, kept in English too; the English picker adds a small second line (piece, egg, bunch, clove, leaf, stalk, packet, sachet). |
+| Kitchen pill (third) | **Menu** | Phase 170 PR B: **Makanan · Belanja · Menu**. Until the weekly menu (PR C) it opens on the recipes. |
+| Recipe / Recipes / New recipe / Edit recipe | **Resep** / **Resep** / **Resep baru** / **Ubah resep** | Phase 170 PR B. |
+| Servings | **Porsi** | Phase 170 PR B: "untuk 4 porsi"; the stepper reads **Untuk 4 porsi**. |
+| Ingredients (recipe) / Steps | **Bahan** / **Cara membuat** | Phase 170 PR B: what Indonesian recipes print. "Bahan masakan" stays the Food group. |
+| To taste | **secukupnya** | Phase 170 PR B: a line with no amount, as every Indonesian recipe writes it. |
+| Recipe spoons | **sdm**, **sdt** | Phase 170 PR B: recipe lines only, never stock; the English picker adds (tbsp), (tsp). |
+| Written in · English · Bahasa Indonesia | **Ditulis dalam · English · Bahasa Indonesia** | Phase 170 PR B, the recipe form. Language names as each language calls itself. |
+| For staff, in Bahasa Indonesia / Indonesian version | **Untuk staf, dalam Bahasa Indonesia** / **versi Bahasa Indonesia** | Phase 170 PR B: the owner's note **Belum ada versi Bahasa Indonesia**; the preview switch **English · Untuk staf**. |
+| Add an ingredient / From your list | **Tambah bahan** / **Dari daftar** | Phase 170 PR B, the recipe form. |
+| One step per line | **Satu langkah per baris** | Phase 170 PR B, the recipe form. |
 
 ## Formatting
 

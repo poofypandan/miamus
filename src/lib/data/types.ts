@@ -1,3 +1,4 @@
+import type { RecipePayload, RecipeWithLines } from "@/lib/recipes";
 import type {
   TaskEntity,
   MasterSchedule,
@@ -489,6 +490,15 @@ export interface DataProvider {
   undoFoodPortion(id: string, opId: string): Promise<{ food: FoodItem; restored: number }>;
   /** Admins only (the delete policy); for food added by mistake. */
   deleteFoodItem(id: string): Promise<void>;
+  /**
+   * Recipes (Phase 170 PR B, migrations/151), each with its lines in order.
+   * Every session of the household reads; [] on a database before 151.
+   */
+  listRecipes(): Promise<RecipeWithLines[]>;
+  /** Owners only: the recipe and all its lines in one go (save_recipe). */
+  saveRecipe(payload: RecipePayload): Promise<RecipeWithLines>;
+  /** Owners only; its lines go with it. */
+  deleteRecipe(id: string): Promise<void>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
   createRoutineProposalsBatch(inputs: CreateRoutineProposalInput[]): Promise<RoutineProposal[]>;

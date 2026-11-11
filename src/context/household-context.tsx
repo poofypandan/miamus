@@ -5,6 +5,7 @@ import { addDays } from "date-fns";
 import { toast } from "sonner";
 import { dataProvider, isMockMode } from "@/lib/data";
 import { forgetDeletedChore, refreshRepairs } from "@/lib/repairs-store";
+import { refreshRecipes } from "@/lib/recipes-store";
 import { refreshBillPayments } from "@/lib/bill-payments";
 import { refreshTaskExceptions } from "@/lib/task-exceptions-store";
 import { screenLocale } from "@/lib/owner-locale";
@@ -706,6 +707,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     // Repairs live in their own cache (src/lib/repairs-store.ts); catch it
     // up with everything else (Codex, PR #37).
     refreshRepairs();
+    // Recipes (Phase 170 PR B), only while a screen shows them.
+    refreshRecipes();
     // Bill payments too (owners only; only while a screen shows them).
     refreshBillPayments();
     // Couldn't-do records (Phase 165), likewise only while a screen shows them.

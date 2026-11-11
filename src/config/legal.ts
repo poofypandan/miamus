@@ -155,7 +155,13 @@ export const LEGAL = {
   // with their notification choices). The evening summary can say a task
   // was missed while someone supervised a repair (names and times already
   // stored). No new service; the same push services.
-  policyVersion: "2026-11-11.8",
+  // 2026-11-11.9: recipes (Phase 170 PR B, migrations/151) — recipes the
+  // household's admins write (name, servings, ingredients with amounts,
+  // steps, an optional Indonesian version for staff, who wrote it), read by
+  // every phone in the household, kept until an admin deletes them; in the
+  // household export. No photos, no prices, no new service, region or
+  // change to Kakak.
+  policyVersion: "2026-11-11.9",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

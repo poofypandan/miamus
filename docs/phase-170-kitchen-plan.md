@@ -65,6 +65,48 @@ household:
   `record_purchase` run as the caller, so RLS and the owner guard apply. The
   archived-staff trigger also refuses another household's staff id.
 
+## As built in PR B (2026-11-11, migration 151)
+
+- **Recipes** (`recipes`, `recipe_ingredients`): name (required, the only
+  required field), servings (default 4), ingredient lines in order, steps
+  (optional, one per line). A line is an item from the household's list
+  (composite key on 148's `unique (id, household_id)`, so never another
+  household's item; a deleted item leaves the line's name) or a free name;
+  an amount (none = *secukupnya*) and a unit (the stock units plus `sdm`,
+  `sdt`).
+- **The Indonesian version** (answer 4): each recipe is *written in*
+  English or Bahasa Indonesia (the owner's language to start). An English
+  recipe keeps an optional `name_id`, `steps_id` and each free line's
+  `name_id`; staff phones show those, falling back to the English. Linked
+  lines read as the item does on the shopping list. The owner sees **No
+  Indonesian version yet** on the list and an amber note on the recipe with
+  **Add Indonesian version**, and an **English · For staff** switch to see
+  what the cook reads.
+- **Who**: owners write (`is_household_admin()` in every write policy and in
+  `save_recipe`, SECURITY INVOKER); every session of the household reads.
+  `save_recipe(recipe, ingredients)` saves the recipe and all its lines in
+  one transaction.
+- **Where**: the **Menu** pill (Food · Shopping · Menu, D5) opens straight on
+  the recipe box until PR C. It belongs to the Kitchen switch (Household →
+  Features, now *Kitchen amounts and recipes*), so households with it off
+  see no change. Staff get the same pill in *Dapur*, read only, with bigger
+  text; the servings stepper scales every amount (stored amounts never
+  change). The phone keeps its last copy of the recipes for a weak kitchen
+  signal.
+- **Not in PR B (decided while building, closest to "less typing")**: no
+  recipe photo or notes field (fewer fields; the photo clean-up functions
+  stay untouched; both can join later as optional), no *New item* from the
+  recipe form (a free name works; link it later), no Kakak **Translate for
+  staff** (it would send recipe text to Anthropic: a privacy-policy change
+  and a Plus feature, for the manager and owner to decide), no "won't come
+  off stock" unit hint (it only means something once cooking exists, PR C).
+- **Same PR, Codex P2 on #93**: one food's portion taps and undos now go to
+  the server strictly in order (the queue's `portion:<food>` key), so a lost
+  reply followed by a second tap never shows one portion too few.
+- **Tutorials**: an owner What's new entry (*New: recipes in Kitchen*) on the
+  Menu view, held by the calm-start rules (Kitchen amounts had this week's
+  card); a staff tip once the household has a recipe.
+
 Builds on **Phase 154** (the shopping list, migration 122, decision R3 in
 `docs/phase-153-review.md` section 4), **Phase 156** (Food at home, migrations
 123–124, `docs/phase-156-step1-food-plan.md`) and **Phase 110** (the counted
@@ -933,6 +975,71 @@ all A.** D17–D22 are in the addendum at the end: parked, not decided.
 4. **Which language will she write recipes in, and does the cook read it
    comfortably?** Recipe text isn't translated; an English recipe would
    reach a staff phone in English.
+
+## Later (ideas from the owner, 2026-11-11; not built, no decisions yet)
+
+Kept here so they aren't lost. None of these is in PR A, B or C; each needs
+the owner's decision (and, where marked, a privacy update) before building.
+Order the owner approved: PR A → PR B → PR C → the addendum (D17–D22) as
+optional switches → receipt reading.
+
+1. **A photo of a grocery receipt fills the stock (Kakak, Plus).** Kakak
+   suggests, a person confirms on a review card ("Wortel 0,5 kg → Carrots");
+   nothing is saved before confirm. Per-household aliases remember matches
+   ("WRTL IMP 0.512" → Carrots). Tracked items get amounts through
+   `record_purchase`; untracked items are just marked bought; unknown lines
+   ask "New item?" or are skipped, never created silently. Ambiguous units
+   ("1 pack") ask, or use pack sizes (D19). The by-hand Bought sheet stays
+   the main path (the pasar has no receipt). Add `receipts` to
+   `src/lib/plans.ts` when built.
+2. **Receipts as "snap and hand off".** *Free:* the owner taps **Foto
+   struk**; Miamus makes a staff task, **Cek belanjaan**, with the photo;
+   staff enter or confirm items, amounts, units and use-by dates; the owner
+   sees "Checked by Ari". *Plus:* Kakak reads the receipt first and pre-fills
+   the staff list, so staff only confirm. Same pattern later for bills (PLN,
+   PDAM) and food gifts ("Tante Rina kirim rendang").
+3. **Staff never see prices** (owner's standing rule): item prices, receipt
+   totals, grocery spending, bill amounts and budgets never reach a staff
+   screen, push, WhatsApp text or photo. The original receipt photo is
+   owner-only (an owner-only table and storage path, as `repair_costs` and
+   `bill_payments`), kept 90 days. *Free:* before the photo goes to staff,
+   the owner crops away the price column (**Hide the prices**); only the
+   cropped copy reaches the task. *Plus:* Kakak reads the original on the
+   server and staff get a text list only. Prices go in owner-only tables
+   (RLS through `household_members` / `caller_admin_household()`), tested in
+   SQL (a staff session reads 0 rows), never in a staff phone's offline
+   cache. Honest caveat: staff who pay at the till know those prices.
+4. **Grocery spending for owners**: an owner-only *Spending* view
+   (groceries from receipt totals, bill payments, repair costs, a month
+   total) belongs with household cash (roadmap item 15) and D13, not as a
+   "bill". Pasar purchases without a receipt: the owner types the amount, or
+   later "uang belanja".
+5. **Menus and recipes follow what's in stock** (the addendum D17–D22 plus
+   PR C's cooking and D10): exact only for tracked items, untracked ones
+   "not checked"; show what's missing rather than hiding recipes ("Missing
+   2"); "use soon" first.
+6. **Cook before it expires.** *Free:* recipes using something that expires
+   soon rank first, with a quiet line ("uses ayam, expires Thu"), and the
+   Menu planner gets a "Use soon" strip (D17). *Plus:* "What can I cook
+   before these expire?" gives ideas even without saved recipes; the chosen
+   dish goes on the menu through a review card. Needs an optional **use-by**
+   on tracked ingredients, set at Bought, or a per-item default shelf life
+   the owner sets once (ayam: 2 days in the fridge, 3 months in the
+   freezer); never required. Later outcome line: "3 things used before they
+   expired this week".
+7. **Gaps to raise with the owner**: "always have" staples (salt, oil,
+   sugar: a per-item flag so recipes never call them missing; could join
+   PR C), pack sizes (D19), use-by dates on raw ingredients (D17), prices and
+   budget (item 15, after D13), shopping by place (D21).
+
+**Privacy before building receipts:** the receipt photo goes to Anthropic
+only with Kakak switched on, to be read and then deleted; receipts carry
+prices, store names and card digits, so everything except item, amount and
+(if the owner wants it, owner-only) price is dropped; receipt photos get a
+retention period (90 days); the privacy policy (EN and ID) and `legal.ts`
+list it before it ships. **Kakak "Translate for staff"** (answer 4) is the
+same kind of change: recipe text sent to Anthropic, so a policy line and a
+Plus decision first.
 
 ## Not in this phase
 

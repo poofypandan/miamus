@@ -41,6 +41,12 @@ export interface PendingPortion {
  * PR A; Codex, PR #93). Relative, unlike the other waiting saves, so an
  * answered one is skipped: the server's copy already has it. Whether a tap
  * finishes the food is the server's call, so a count may show 0 until then.
+ *
+ * Safe to subtract every unanswered tap because the queue sends one food's
+ * taps strictly in order (offline-queue's "portion:<food>" key, Codex P2 on
+ * PR #93): a later tap is held until every earlier tap on that food is
+ * answered, so no server count can arrive that already includes a tap the
+ * screen is still laying over it (a reply lost, then a second tap).
  */
 export function applyPortions(
   foods: FoodItem[],
