@@ -36,6 +36,7 @@
 --        report is still saved and shows when Repairs is back).
 --   chore_days_open (139)         the evening summary's chores: bill chores
 --        leave it while Bills and upkeep is off (Codex, PR #87).
+--   staff_push_chore_today (141)  likewise for staff task pushes (Codex, PR #87).
 --
 -- "Off" isn't enforced on writes: off hides, it doesn't lock (plan, D6).
 -- Additive only: one table, new functions, four re-created functions.
@@ -558,3 +559,33 @@ $$;
 
 revoke all on function public.chore_days_open(date) from public, anon, authenticated;
 grant execute on function public.chore_days_open(date) to service_role;
+
+-- staff_push_chore_today (from 141): the test every staff task push uses
+-- (the added and changed triggers, and the 30-minute roll-up of new chores).
+-- A bill isn't "today's work" for a staff phone while Bills and upkeep is off
+-- (Codex, PR #87).
+create or replace function public.staff_push_chore_today(p_task public.household_tasks, p_day date)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  -- Bills and upkeep switched off (Phase 171): a bill is hidden on staff
+  -- phones, so no push names it, alone or among other new chores.
+  select (p_task.category is distinct from 'bill' or public.household_feature_on(p_task.household_id, 'bills'))
+     and case
+    when p_task.parent_task_id is not null or coalesce(p_task.recurrence, 'none') = 'none'
+      then p_task.due_date = p_day and p_task.status = 'pending'
+    else public.chore_occurs_on(p_task, p_day)
+         and p_task.status <> 'cancelled'
+         and (p_day <> p_task.due_date or p_task.status = 'pending')
+         and not exists (
+           select 1 from public.household_tasks x
+            where x.parent_task_id = p_task.id and x.due_date = p_day
+         )
+  end;
+$$;
+
+revoke all on function public.staff_push_chore_today(public.household_tasks, date) from public, anon, authenticated;
+grant execute on function public.staff_push_chore_today(public.household_tasks, date) to service_role;

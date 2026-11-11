@@ -178,6 +178,10 @@ select pg_temp.ok((select array_agg(title order by title) from public.chore_days
 select pg_temp.ok((select array_agg(title order by title) from public.chore_days_open((now() at time zone 'Asia/Jakarta')::date)
                     where household_id = :f2::uuid) = array['Bayar air', 'Siram tanaman'],
   'Bills on: both are still open in the summary');
+-- Staff task pushes (staff_push_chore_today, re-created from 141).
+select pg_temp.ok((select bool_and(public.staff_push_chore_today(t, (now() at time zone 'Asia/Jakarta')::date) = (t.title <> 'Bayar listrik'))
+                     from public.household_tasks t where t.household_id in (:f1::uuid, :f2::uuid)),
+  'Bills off: no staff push counts the hidden bill as today''s work; every other chore still counts');
 select pg_temp.ok(not has_function_privilege('authenticated', 'public.chore_days_open(date)', 'execute')
                   and has_function_privilege('service_role', 'public.chore_days_open(date)', 'execute'),
   'chore_days_open keeps its grants');

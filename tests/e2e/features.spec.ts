@@ -91,6 +91,11 @@ test("Bills off hides bill chores and the checklist; the other chores stay", asy
   await expect(page.getByText("Sapu teras")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Bayar listrik")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Bills and upkeep" })).toHaveCount(0);
+  // The chore form offers no Bill chip, so a new chore never hides as it's saved.
+  await page.getByRole("button", { name: "Add Chore" }).first().click();
+  const form = page.getByRole("dialog");
+  await expect(form.getByRole("button", { name: "Cleaning" })).toBeVisible();
+  await expect(form.getByRole("button", { name: "Bills", exact: true })).toHaveCount(0);
 });
 
 test("Food off: Kitchen opens on Shopping with no pills", async ({ context, page }) => {
