@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Loader2, X } from "lucide-react";
+import { ArrowLeft, ChartColumn, Check, ChevronRight, Loader2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/context/owner-locale-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { moduleHref } from "@/lib/dashboard-modules";
 import {
@@ -36,6 +37,7 @@ type Load =
 
 export default function HouseholdApprovalsPage() {
   const isOwner = useRequireOwner();
+  const t = useT();
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [deciding, setDeciding] = useState<string | null>(null);
 
@@ -117,6 +119,17 @@ export default function HouseholdApprovalsPage() {
         Approving lets that Google account set up one household. Rejected requests, and the
         sign-in they came from, are deleted after 30 days.
       </p>
+
+      {/* The north star in numbers (Phase 172 PR 0): only platform admins
+          get this far, and only they can read it. */}
+      <Link
+        href="/dashboard/north-star"
+        className="flex min-h-[44px] items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-medium text-gray-900"
+      >
+        <ChartColumn className="size-4 text-muted-foreground" aria-hidden />
+        <span className="flex-1">{t("North star numbers", "Angka ukuran utama")}</span>
+        <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+      </Link>
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-gray-900">Waiting</h2>

@@ -74,6 +74,7 @@ import { HouseholdDataPanel } from "@/components/dashboard/household-data-panel"
 import { useHouseholdDeletion } from "@/hooks/use-household-deletion";
 import { AboutMiamus } from "@/components/dashboard/about-miamus";
 import { WhatsNewCard, WhatsNewList } from "@/components/shared/whats-new";
+import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
 import { FeedbackSheet } from "@/components/shared/feedback-sheet";
 import { RoomsManager } from "@/components/dashboard/rooms-manager";
 import { WhoLivesHerePanel } from "@/components/dashboard/who-lives-here-panel";
@@ -514,6 +515,8 @@ function StaffRoster({
   );
   // Who is away today (Phase 140): a red badge on their row.
   const { leaveRequests } = useHousehold();
+  // Who has notifications on a phone (Phase 166): owners see it, never set it.
+  const staffPush = useStaffPushOverview();
   const today = formatDateLocal(useToday());
 
   async function addStaff() {
@@ -687,6 +690,14 @@ function StaffRoster({
                       {profile.has_pin
                         ? t("PIN set", "PIN sudah diatur")
                         : t("No PIN yet", "Belum ada PIN")}
+                      {staffPush.overview && !profile.user_id && (
+                        <>
+                          {" · "}
+                          {staffPush.isOn(profile.id)
+                            ? t("Notifications on", "Notifikasi aktif")
+                            : t("Notifications off", "Notifikasi mati")}
+                        </>
+                      )}
                     </span>
                   </span>
                   <>

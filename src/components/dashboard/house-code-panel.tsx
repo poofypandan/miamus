@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
 import { dataProvider } from "@/lib/data";
 import type { LinkedPhone } from "@/lib/data/types";
 import { DATE_LOCALE } from "@/lib/owner-locale";
@@ -153,6 +154,8 @@ function LinkedPhonesCard() {
   const [failed, setFailed] = useState(false);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  // Whose notifications each phone gives (Phase 166).
+  const { namesOn, reload: reloadPush } = useStaffPushOverview();
 
   const load = useCallback(async () => {
     setFailed(false);
@@ -183,7 +186,7 @@ function LinkedPhonesCard() {
     try {
       await dataProvider.removeLinkedPhone(id);
       toast.success(t("Phone removed", "HP dihapus"));
-      await load();
+      await Promise.all([load(), reloadPush()]);
     } catch (err) {
       console.error(err);
       toast.error(t("Couldn't remove the phone. Try again.", "HP gagal dihapus. Coba lagi."));
@@ -235,6 +238,11 @@ function LinkedPhonesCard() {
                     {t("Last sign-in", "Terakhir masuk")} {when(phone.last_seen_at)} ·{" "}
                     {t("linked", "terhubung")} {when(phone.linked_at)}
                   </span>
+                  {namesOn(phone.id).length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {t("Notifications for", "Notifikasi untuk")} {namesOn(phone.id).join(", ")}
+                    </span>
+                  )}
                 </div>
                 <Button
                   variant={confirmingId === phone.id ? "destructive" : "ghost"}

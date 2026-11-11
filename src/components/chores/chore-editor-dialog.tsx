@@ -32,12 +32,14 @@ import { LocationCombobox } from "@/components/chores/location-combobox";
 import { SpotField } from "@/components/chores/spot-field";
 import { dayKeyLabel } from "@/lib/date-label";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { choreSaveTellsStaff, staffWillBeNotified } from "@/lib/staff-push";
 import {
   REPEAT_CHOICES,
   intervalOf,
   repeatLabel,
   startAfterSkippingFirst,
   recurrenceOf,
+  occursOn,
 } from "@/lib/chore-recurrence";
 import { REMIND_CHOICES, remindLabel } from "@/lib/chore-reminders";
 import { useBillPayments } from "@/hooks/use-bill-payments";
@@ -274,18 +276,44 @@ export function ChoreEditorDialog({
             ? { spot: null }
             : {}),
       };
+      // Whether this save tells a staff phone (Phase 166, migrations/141):
+      // a chore for someone, still to do today, that is new or newly theirs,
+      // moved onto today or re-timed. The server decides who is told; this
+      // only words the toast, and never holds the save up.
+      const today = formatDateLocal(new Date());
+      // A repeat's day that has its own row is governed by that row.
+      const governed = (row: HouseholdTask) =>
+        !row.parent_task_id &&
+        recurrenceOf(row) !== "none" &&
+        householdTasks.some((r) => r.parent_task_id === row.id && r.due_date === today);
+      const isToday = (row: HouseholdTask) => occursOn(row, today) && !governed(row);
+      const next = { ...(task ?? {}), ...fields } as HouseholdTask;
+      const tellsStaff = choreSaveTellsStaff(task, next, isToday);
+      const announce = (message: string) => {
+        const id = toast.success(message);
+        const who = fields.assigned_to;
+        if (!tellsStaff || !who) return;
+        void staffWillBeNotified([who], true).then((reached) => {
+          const name = (profiles ?? []).find((p) => p.id === who)?.name;
+          if (!reached.includes(who) || !name) return;
+          toast.success(message, {
+            id,
+            description: t(`${name} will get a notification.`, `${name} akan mendapat notifikasi.`),
+          });
+        });
+      };
       if (task) {
         await updateHouseholdTask(task.id, fields);
         // A written day's reminder lives on its repeat.
         if (dayOfRepeat && reminderSource && (reminderSource.remind_days_before ?? null) !== remind) {
           await updateHouseholdTask(reminderSource.id, { remind_days_before: remind });
         }
-        toast.success(t(`Saved "${fields.title}"`, `"${fields.title}" disimpan`));
+        announce(t(`Saved "${fields.title}"`, `"${fields.title}" disimpan`));
       } else if (places.length > 1) {
         // One chore per room, saved together or not at all, so staff tick
         // each room off and the Rooms view counts each one.
         await createHouseholdTasks(places.map((place) => ({ ...fields, location_id: place.id })));
-        toast.success(
+        announce(
           t(
             `Added "${fields.title}" to ${places.length} rooms`,
             `"${fields.title}" ditambahkan ke ${places.length} ruangan`
@@ -293,7 +321,7 @@ export function ChoreEditorDialog({
         );
       } else {
         await createHouseholdTask(repairId ? { ...fields, repair_id: repairId } : fields);
-        toast.success(t(`Added "${fields.title}"`, `"${fields.title}" ditambahkan`));
+        announce(t(`Added "${fields.title}"`, `"${fields.title}" ditambahkan`));
       }
       onOpenChange(false);
     } catch (err) {

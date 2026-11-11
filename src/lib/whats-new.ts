@@ -28,6 +28,27 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Listed in Household → What's new only, never a card: Phase 165's
+    // couldn't-do card already went to the same admins this week, and the
+    // adopted rule is at most one card a week (docs/app-evaluation-2026-11-10.md).
+    // Staff get their own card on Today, which is the tutorial (D10).
+    id: "staff-notifications-2026-11",
+    date: "2026-11-10",
+    audience: "owner",
+    title: { en: "Staff get notifications", id: "Staf dapat notifikasi" },
+    steps: {
+      en: [
+        "Staff can now turn on notifications on their phone. They hear about new tasks for them today and your answers to their requests, never at night.",
+        "See who has them on under Staff. Turn them off for the whole household in Household → Notifications.",
+      ],
+      id: [
+        "Staf sekarang bisa mengaktifkan notifikasi di HP mereka. Mereka diberi tahu tentang tugas baru untuk mereka hari ini dan jawaban Anda atas permintaan mereka, tidak pernah malam hari.",
+        "Lihat siapa yang sudah mengaktifkannya di Staf. Matikan untuk seluruh rumah di Rumah → Notifikasi.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown on Today to admins of households with staff (Phase 165, D10).
     id: "couldnt-do-2026-11",
     date: "2026-11-10",
