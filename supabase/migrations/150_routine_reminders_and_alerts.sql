@@ -228,7 +228,9 @@ $$;
 -- Late runs: a reminder still goes up to 20 minutes after the routine's
 -- time, an alert up to 20 minutes after its own time (30 minutes after the
 -- routine's), so a short cron delay doesn't lose one and a long outage
--- doesn't send stale ones.
+-- doesn't send stale ones; never after the 22.00 run (reminders) or the
+-- 22.30 run (alerts). Once per occurrence of the card: a pet reopened after
+-- its push (a log undone) isn't pushed again.
 create or replace function public.notify_routines_due(p_now timestamptz default null)
 returns integer
 language plpgsql
@@ -284,6 +286,9 @@ begin
        and d.slot_time >= time '06:00' and d.slot_time < time '22:00'
        and at_jakarta >= today + d.slot_time
        and at_jakarta < today + d.slot_time + interval '20 minutes'
+       -- A late run never rings past the 22.00 run (one started a few
+       -- seconds late still counts, for a time of 21.56-21.59).
+       and at_jakarta < today + time '22:05'
      group by d.household_id, d.slot_time, d.title, d.note, d.staff_id
   loop
     begin
@@ -295,6 +300,20 @@ begin
       )
       select array_agg(schedule_id) into claimed from ins;
       if claimed is null then
+        continue;
+      end if;
+      -- Once per occurrence of the card, not just per pet: a pet reopened
+      -- after the push (its log undone) is marked, but not pushed again.
+      if exists (
+        select 1 from public.routine_push_sent s
+          join public.master_schedules m on m.id = s.schedule_id
+         where s.household_id = g.household_id
+           and s.occurs_on = today and s.slot_time = g.slot_time and s.push = 'staff_reminder'
+           and s.schedule_id <> all (claimed)
+           and m.title = g.title
+           and m.note is not distinct from g.note
+           and m.staff_id is not distinct from g.staff_id
+      ) then
         continue;
       end if;
 
@@ -333,6 +352,8 @@ begin
        and d.slot_time >= time '05:30' and d.slot_time <= time '22:00'
        and at_jakarta >= today + d.slot_time + interval '30 minutes'
        and at_jakarta < today + d.slot_time + interval '50 minutes'
+       -- Never past the 22.30 run, whatever the delay.
+       and at_jakarta < today + time '22:35'
      group by d.household_id, d.slot_time, d.title, d.kind, d.note, d.staff_id
   loop
     begin
@@ -344,6 +365,20 @@ begin
       )
       select array_agg(schedule_id) into claimed from ins;
       if claimed is null then
+        continue;
+      end if;
+      -- Once per occurrence of the card, not just per pet: a pet reopened
+      -- after the push (its log undone) is marked, but not pushed again.
+      if exists (
+        select 1 from public.routine_push_sent s
+          join public.master_schedules m on m.id = s.schedule_id
+         where s.household_id = g.household_id
+           and s.occurs_on = today and s.slot_time = g.slot_time and s.push = 'owner_alert'
+           and s.schedule_id <> all (claimed)
+           and m.title = g.title
+           and m.note is not distinct from g.note
+           and m.staff_id is not distinct from g.staff_id
+      ) then
         continue;
       end if;
 

@@ -190,6 +190,15 @@ select pg_temp.ok((select count(*) = 2 and bool_and(body = '21.30 · Matikan lam
 select pg_temp.ok((select count(*) = 1 from public.routine_push_sent),
   '... and only that pet''s row is marked sent');
 
+-- Matcha reopened after the push (her log undone): marked, not pushed again.
+delete from pushes;
+delete from public.task_logs where schedule_id = '00000000-0000-0000-0000-0000000150d1';
+select pg_temp.run(21, 35);
+select pg_temp.ok((select count(*) = 0 from pushes) and (select count(*) = 2 from public.routine_push_sent),
+  'a pet reopened after the push: no second reminder for the same 21.30');
+insert into public.task_logs (schedule_id, entity_id, module, completed_at)
+values ('00000000-0000-0000-0000-0000000150d1', :mocha, 'pet', pg_temp.at(21, 10));
+
 -- Both done: no reminder.
 select pg_temp.fresh();
 insert into public.task_logs (schedule_id, entity_id, module, completed_at)
@@ -274,6 +283,9 @@ select pg_temp.run(21, 55);
 select pg_temp.ok((select count(*) = 0 from pushes), '21.57: not at 21.55');
 select pg_temp.run(22, 0);
 select pg_temp.ok((select count(*) = 2 from pushes), '... it rings at the 22.00 run: its time is before 22.00');
+select pg_temp.fresh();
+select pg_temp.run(22, 5);
+select pg_temp.ok((select count(*) = 0 from pushes), '... but a run late past 22.05 never rings');
 
 update public.master_schedules set fixed_times = array['22:00']::time[]
  where routine_group_id = '00000000-0000-0000-0000-000000015091';
@@ -360,6 +372,9 @@ update public.master_schedules set fixed_times = array['22:00']::time[]
 select pg_temp.fresh();
 select pg_temp.run(22, 30);
 select pg_temp.ok((select count(*) = 2 from pushes), 'a 22.00 routine: the alert comes at 22.30');
+select pg_temp.fresh();
+select pg_temp.run(22, 40);
+select pg_temp.ok((select count(*) = 0 from pushes), '... a run late to 22.40 sends nothing');
 update public.master_schedules set fixed_times = array['22:05']::time[]
  where routine_group_id = '00000000-0000-0000-0000-000000015091';
 select pg_temp.fresh();
