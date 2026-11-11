@@ -91,8 +91,16 @@ function Detail({
 }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood, flagLowStock, pendingIds, eatFoodPortion } =
-    useHousehold();
+  const {
+    finishFood,
+    unfinishFood,
+    releaseFinishedFoodPhoto,
+    removeFood,
+    flagLowStock,
+    pendingIds,
+    eatFoodPortion,
+    undoFoodPortion,
+  } = useHousehold();
   // Added on this phone and not sent yet (Phase 161): nothing on the server to
   // finish, change or delete until it arrives.
   const waitingToSend = pendingIds.has(item.id);
@@ -151,29 +159,47 @@ function Detail({
     }
   }
 
-  // D7: one portion eaten; the last one finishes it as Eaten.
+  // D7: one portion eaten, decided on the server (migrations/148): it takes
+  // one if there is one, and the last finishes the food as Eaten, even when
+  // this phone's count is out of date (Codex, PR #93). Undo puts back only
+  // what this tap took.
   async function atePortion() {
     if (portions === null) return;
-    if (portions <= 1) return finish("eaten");
     setBusy("portion");
     try {
-      // A change made on the server (migrations/148): two phones at once each
-      // count, so the toast says what the server counted (code review).
-      const { food } = await eatFoodPortion(item.id, 1);
-      const left = food?.portions ?? portions - 1;
-      const text =
-        food?.outcome === "eaten"
-          ? `${FOOD_OUTCOME_LABELS[locale].eaten} — ${name}`
-          : tr(`${name} · ${left} ${left === 1 ? "portion" : "portions"} left`, `${name} · sisa ${left} porsi`);
-      toast.success(text, {
-        action: {
-          label: tr("Undo", "Batalkan"),
-          onClick: () =>
-            void eatFoodPortion(item.id, -1).catch(() =>
-              toast.error(tr("Couldn't undo. Try again.", "Gagal membatalkan. Coba lagi."))
-            ),
-        },
-      });
+      const tap = await eatFoodPortion(item.id);
+      const undo = {
+        label: tr("Undo", "Batalkan"),
+        onClick: () =>
+          void undoFoodPortion(tap).catch(() =>
+            toast.error(tr("Couldn't undo. Try again.", "Gagal membatalkan. Coba lagi."))
+          ),
+      };
+      if (tap.consumed === 0) {
+        // Nothing was taken here: someone else finished it meanwhile, or no
+        // portions were left to count.
+        toast.info(
+          tap.food?.outcome
+            ? tr(`${name} is already finished`, `${name} sudah habis`)
+            : tr(`${name}: no portions left`, `${name}: porsinya sudah habis`)
+        );
+        if (tap.food?.outcome) onClose();
+      } else if (tap.food?.outcome === "eaten") {
+        // This tap took the last portion: finished, as the Eaten button does.
+        onClose();
+        toast.success(`${FOOD_OUTCOME_LABELS[locale].eaten} — ${name}`, {
+          duration: FOOD_UNDO_TOAST_MS,
+          onAutoClose: () => releaseFinishedFoodPhoto(item.id),
+          onDismiss: () => releaseFinishedFoodPhoto(item.id),
+          action: undo,
+        });
+      } else {
+        const left = tap.food?.portions ?? Math.max(0, portions - 1);
+        toast.success(
+          tr(`${name} · ${left} ${left === 1 ? "portion" : "portions"} left`, `${name} · sisa ${left} porsi`),
+          { action: undo }
+        );
+      }
     } catch (err) {
       console.error(err);
       toast.error(tr("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));

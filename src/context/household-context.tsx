@@ -105,6 +105,15 @@ export type UserRole = "staff" | "owner";
 // be deleted: see the role effect below.
 const LEGACY_OWNER_FLAG_KEY = "banyuwangi11:isOwner";
 
+/** One "Ate 1 portion" tap (Phase 170 PR A): its op id and what the server said. */
+export interface PortionTap {
+  foodId: string;
+  opId: string;
+  status: "sent" | "waiting";
+  food: FoodItem | null;
+  consumed: number | null;
+}
+
 /** Track amount as an owner sets it (Phase 170 PR A). Off keeps the numbers, unshown. */
 export type TrackAmountSettings =
   | { track: false }
@@ -307,11 +316,15 @@ interface HouseholdContextValue {
   releaseFinishedFoodPhoto: (id: string) => void;
   returnFoodContainer: (id: string) => Promise<void>;
   /**
-   * Ate `delta` portions of a food, or -1 to undo one (Phase 170 PR A, D7):
-   * a change made on the server, kept on the phone on a weak signal and
-   * safe to resend (migrations/148). Anyone in the household.
+   * Ate 1 portion of a food (Phase 170 PR A, D7), decided on the server: it
+   * takes one if there is one, and the last one finishes the food as Eaten.
+   * Kept on the phone on a weak signal and safe to resend (migrations/148).
+   * `consumed` is what the server says this tap took; null while it waits.
+   * Anyone in the household.
    */
-  eatFoodPortion: (id: string, delta: number) => Promise<{ status: "sent" | "waiting"; food: FoodItem | null }>;
+  eatFoodPortion: (id: string) => Promise<PortionTap>;
+  /** Undo that tap: the server puts back exactly what it took, once. */
+  undoFoodPortion: (tap: PortionTap) => Promise<void>;
   /** Admins only: food added by mistake. Takes its photo with it. */
   removeFood: (id: string) => Promise<void>;
   /**
@@ -1415,24 +1428,58 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   );
 
   const eatFoodPortion = useCallback(
-    async (id: string, delta: number) => {
+    async (id: string): Promise<PortionTap> => {
+      const opId = crypto.randomUUID();
       const before = foodItemsRef.current.find((f) => f.id === id);
-      if (!before || before.portions === null || before.portions === undefined) {
-        return { status: "sent" as const, food: before ?? null };
-      }
       // Shown at once; the server's answer (with any other phone's taps)
-      // replaces it.
-      putFood({ ...before, portions: Math.min(99, Math.max(0, before.portions - delta)) });
+      // replaces it, and decides whether the last portion finishes it.
+      if (before && typeof before.portions === "number" && before.portions > 0) {
+        putFood({ ...before, portions: before.portions - 1 });
+      }
       try {
         const outcome = await submitJob<Extract<SendResult, { kind: "portion" }>>(
-          { kind: "portion", opId: crypto.randomUUID(), foodId: id, delta, staffId: readActiveStaffId() },
+          { kind: "portion", opId, foodId: id, staffId: readActiveStaffId() },
           ({ food }) => putFood(food)
         );
-        return outcome.status === "sent"
-          ? { status: "sent" as const, food: outcome.result.food }
-          : { status: "waiting" as const, food: null };
+        if (outcome.status !== "sent") return { foodId: id, opId, status: "waiting", food: null, consumed: null };
+        const { food, consumed } = outcome.result;
+        if (consumed === 1 && food.outcome === "eaten") {
+          // This tap finished it: its photo goes as with the Eaten button,
+          // when the toast closes (or the fallback), unless it is undone.
+          foodUndone.current.delete(id);
+          if (food.photo_url) {
+            foodPhotoTimers.current.set(id, setTimeout(() => deleteFinishedPhoto(id), FOOD_PHOTO_FALLBACK_MS));
+          }
+        }
+        return { foodId: id, opId, status: "sent", food, consumed };
       } catch (err) {
-        putFood(before);
+        if (before) putFood(before);
+        throw err;
+      }
+    },
+    [putFood, deleteFinishedPhoto]
+  );
+
+  const undoFoodPortion = useCallback(
+    async (tap: PortionTap) => {
+      // Nothing to put back when the server said this tap took nothing.
+      if (tap.consumed === 0) return;
+      const before = foodItemsRef.current.find((f) => f.id === tap.foodId);
+      if (before && typeof before.portions === "number" && !before.outcome) {
+        putFood({ ...before, portions: Math.min(99, before.portions + 1) });
+      } else if (before && before.outcome === "eaten" && tap.consumed === 1 && tap.food?.outcome === "eaten") {
+        // This tap finished it: back on the list at once, even before the
+        // undo reaches the server on a weak signal (code review).
+        putFood({ ...before, outcome: null, finished_at: null, finished_by: null, portions: 1 });
+      }
+      foodUndone.current.add(tap.foodId);
+      try {
+        await submitJob<Extract<SendResult, { kind: "portion-undo" }>>(
+          { kind: "portion-undo", opId: tap.opId, foodId: tap.foodId },
+          ({ food }) => putFood(food)
+        );
+      } catch (err) {
+        if (before) putFood(before);
         throw err;
       }
     },
@@ -1885,6 +1932,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       releaseFinishedFoodPhoto,
       returnFoodContainer,
       eatFoodPortion,
+      undoFoodPortion,
       removeFood,
       adjustInventoryQuantity,
       setInventoryAmount,
@@ -1972,6 +2020,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       releaseFinishedFoodPhoto,
       returnFoodContainer,
       eatFoodPortion,
+      undoFoodPortion,
       removeFood,
       adjustInventoryQuantity,
       setInventoryAmount,

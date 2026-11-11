@@ -446,11 +446,13 @@ export interface DataProvider {
   createFoodItem(input: FoodItemInput & { id?: string }, addedBy: string | null): Promise<FoodItem>;
   updateFoodItem(id: string, patch: FoodItemPatch): Promise<FoodItem>;
   /**
-   * Ate `delta` portions (negative to undo), as a change made on the server
-   * (migrations/148): two phones at once each count. `opId` is made on the
-   * phone per tap; sending it again changes nothing.
+   * Ate 1 portion (migrations/148): the server takes one if there is one and
+   * finishes the food at the last; `consumed` says what this tap took (0 or
+   * 1). `opId` is made on the phone per tap; sending it again changes nothing.
    */
-  eatFoodPortion(id: string, delta: number, opId: string, staffId: string | null): Promise<FoodItem>;
+  eatFoodPortion(id: string, opId: string, staffId: string | null): Promise<{ food: FoodItem; consumed: number }>;
+  /** Undo that tap: puts back exactly what it took (and the finish it made), once. */
+  undoFoodPortion(id: string, opId: string): Promise<{ food: FoodItem; restored: number }>;
   /** Admins only (the delete policy); for food added by mistake. */
   deleteFoodItem(id: string): Promise<void>;
   listRoutineProposals(): Promise<RoutineProposal[]>;

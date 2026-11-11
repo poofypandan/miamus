@@ -241,52 +241,103 @@ select pg_temp.ok(pg_temp.err_as(:p1, $q$ update public.food_items set portions 
 select pg_temp.ok(pg_temp.err_as(:p1, $q$ update public.food_items set portions = 100 where id = '00000000-0000-0000-0000-0000000148d1' $q$) like '%food_items_portions_check%',
   '... up to 99');
 
--- ---- Ate 1 portion: relative, retry-safe (Codex, PR #93) -----------------------------
+-- ---- Ate 1 portion and its Undo: decided on the server (Codex, PR #93) --------------
 \set rendang '''00000000-0000-0000-0000-0000000148d1'''
-select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a001', %L) $q$, :rendang, :s1)) = '',
-  'a staff phone eats one portion');
-select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a002') $q$, :rendang)) = '',
-  'an owner eats another, from a phone that still showed 3');
-select pg_temp.ok((select portions from public.food_items where id = :rendang::uuid) = 1,
-  'two taps at once take two portions: 3 → 1, none lost');
-select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a001', %L) $q$, :rendang, :s1)) = '',
-  'the first tap is retried after a lost answer (same op id)');
-select pg_temp.ok((select portions = 1 and outcome is null from public.food_items where id = :rendang::uuid),
-  '... and changes nothing');
-select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a003', %L) $q$, :rendang, :s1)) = '',
-  'the last portion is eaten');
-select pg_temp.ok((select portions = 0 and outcome = 'eaten' and finished_by = :s1::uuid and finished_at is not null
-                     from public.food_items where id = :rendang::uuid),
+create function pg_temp.eat(uid uuid, op text, staff uuid default null) returns jsonb language plpgsql as $$
+declare r jsonb;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  r := public.eat_food_portion('00000000-0000-0000-0000-0000000148d1', ('00000000-0000-0000-0000-00000148' || op)::uuid, staff);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', '', true);
+  return r;
+end $$;
+create function pg_temp.undo(uid uuid, op text) returns jsonb language plpgsql as $$
+declare r jsonb;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  r := public.undo_food_portion('00000000-0000-0000-0000-0000000148d1', ('00000000-0000-0000-0000-00000148' || op)::uuid);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', '', true);
+  return r;
+end $$;
+create function pg_temp.rendang() returns public.food_items language sql as $$
+  select * from public.food_items where id = '00000000-0000-0000-0000-0000000148d1'
+$$;
+
+select pg_temp.ok((pg_temp.eat(:p1, 'a001', :s1) ->> 'consumed')::int = 1, 'a staff phone eats one portion (it took 1)');
+select pg_temp.ok((pg_temp.eat(:a1, 'a002') ->> 'consumed')::int = 1, 'an owner eats another, from a phone that still showed 3');
+select pg_temp.ok((pg_temp.rendang()).portions = 1, 'two taps take two portions: 3 → 1, none lost');
+select pg_temp.ok((pg_temp.eat(:p1, 'a001', :s1) ->> 'consumed')::int = 1, 'the first tap resent after a lost answer reports what it took');
+select pg_temp.ok((pg_temp.rendang()).portions = 1, '... and takes nothing more');
+
+-- Race 1 (Codex): this phone shows 1, another phone undid a portion meanwhile.
+select pg_temp.ok((pg_temp.undo(:a1, 'a002') ->> 'restored')::int = 1, 'the owner undoes their tap: 1 → 2');
+select pg_temp.ok((pg_temp.eat(:p1, 'a003', :s1) ->> 'consumed')::int = 1
+                  and (pg_temp.rendang()).portions = 1 and (pg_temp.rendang()).outcome is null,
+  'a phone that still showed 1 taps: the server takes one (2 → 1) and does not finish the food');
+select pg_temp.ok((pg_temp.undo(:a1, 'a002') ->> 'restored')::int = 0 and (pg_temp.rendang()).portions = 1,
+  'the same undo resent restores nothing');
+
+-- The last portion finishes it; its undo brings it back.
+select pg_temp.ok((pg_temp.eat(:p1, 'a004', :s1) ->> 'consumed')::int = 1, 'the last portion is eaten');
+select pg_temp.ok((pg_temp.rendang()).portions = 0 and (pg_temp.rendang()).outcome = 'eaten'
+                  and (pg_temp.rendang()).finished_by = :s1::uuid and (pg_temp.rendang()).finished_at is not null,
   '... and the food is finished as Eaten, by Sari');
-select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a004') $q$, :rendang)) = ''
-                  , 'a late tap on finished food runs');
-select pg_temp.ok((select portions from public.food_items where id = :rendang::uuid) = 0,
-  '... and takes nothing below 0');
-select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, -1, '00000000-0000-0000-0000-00000148a005', %L) $q$, :rendang, :s1)) = '',
-  'Undo of the last portion');
-select pg_temp.ok((select portions = 1 and outcome is null and finished_at is null and finished_by is null
-                     from public.food_items where id = :rendang::uuid),
-  '... brings the food back with 1 portion');
-select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 0, '00000000-0000-0000-0000-00000148a006') $q$, :rendang)) like '%bad_value%',
-  'a count of 0 is refused');
-select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, null) $q$, :rendang)) like '%bad_value%',
-  '... and a tap with no op id');
-select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a007', %L) $q$, :rendang, :s2)) like '%staff_not_in_household%',
+
+-- Race 2 (Codex): another phone's tap on finished food took nothing, so its undo restores nothing.
+select pg_temp.ok((pg_temp.eat(:a1, 'a005') ->> 'consumed')::int = 0, 'a late tap on finished food takes nothing');
+select pg_temp.ok((pg_temp.undo(:a1, 'a005') ->> 'restored')::int = 0
+                  and (pg_temp.rendang()).portions = 0 and (pg_temp.rendang()).outcome = 'eaten',
+  '... and its undo restores nothing: still finished, 0 portions');
+select pg_temp.ok((pg_temp.undo(:p1, 'a004') ->> 'restored')::int = 1
+                  and (pg_temp.rendang()).portions = 1 and (pg_temp.rendang()).outcome is null
+                  and (pg_temp.rendang()).finished_at is null,
+  'undo of the tap that finished it: back with 1 portion, not finished');
+
+-- An undo that arrives before its tap.
+select pg_temp.ok((pg_temp.undo(:p1, 'a006') ->> 'restored')::int = 0, 'an undo whose tap has not arrived yet restores nothing');
+select pg_temp.ok((pg_temp.eat(:p1, 'a006', :s1) ->> 'consumed')::int = 0 and (pg_temp.rendang()).portions = 1,
+  '... and the late tap then takes nothing');
+
+-- A finish someone chose is never reversed by a portion undo.
+select pg_temp.ok((pg_temp.eat(:p1, 'a007', :s1) ->> 'consumed')::int = 1, 'the last portion is eaten again');
+update public.food_items set outcome = 'thrown_away' where id = :rendang::uuid;
+select pg_temp.ok((pg_temp.undo(:p1, 'a007') ->> 'restored')::int = 1 and (pg_temp.rendang()).outcome = 'thrown_away',
+  'its undo puts the portion back but keeps Thrown away, chosen since');
+update public.food_items set outcome = null, portions = 2 where id = :rendang::uuid;
+
+-- Refusals.
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, null) $q$, :rendang)) like '%bad_value%',
+  'a tap with no op id is refused');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, '00000000-0000-0000-0000-00000148a008', %L) $q$, :rendang, :s2)) like '%staff_not_in_household%',
   'a removed staff member''s id is refused');
-select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a008', %L) $q$, :rendang, :s9)) like '%staff_not_in_household%',
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, '00000000-0000-0000-0000-00000148a009', %L) $q$, :rendang, :s9)) like '%staff_not_in_household%',
   '... and another household''s');
-select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a009') $q$, :rendang)) like '%not_found%',
+select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select public.eat_food_portion(%L, '00000000-0000-0000-0000-00000148a010') $q$, :rendang)) like '%not_found%',
   'another household''s owner can''t eat this household''s food');
-select pg_temp.ok(pg_temp.err_as(null, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a010') $q$, :rendang)) like '%permission denied%',
-  'a logged-out caller can''t call it');
-select pg_temp.ok((select portions from public.food_items where id = :rendang::uuid) = 1,
-  'none of the refused calls changed anything');
+select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select public.undo_food_portion(%L, '00000000-0000-0000-0000-00000148a001') $q$, :rendang)) like '%not_found%',
+  '... nor undo a tap here');
+select pg_temp.ok(pg_temp.err_as(null, format($q$ select public.eat_food_portion(%L, '00000000-0000-0000-0000-00000148a011') $q$, :rendang)) like '%permission denied%',
+  'a logged-out caller can''t eat');
+select pg_temp.ok(pg_temp.err_as(null, format($q$ select public.undo_food_portion(%L, '00000000-0000-0000-0000-00000148a001') $q$, :rendang)) like '%permission denied%',
+  '... nor undo');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.food_for_portion(%L) $q$, :rendang)) like '%permission denied%',
+  'the helper food_for_portion is not callable by sessions');
+select pg_temp.ok((pg_temp.rendang()).portions = 2, 'none of the refused calls changed anything');
 select pg_temp.ok(pg_temp.err_as(:p1, $q$ select count(*) from public.food_portion_ops $q$) like '%permission denied%',
-  'the op ids are not readable by sessions');
-select pg_temp.ok(not has_function_privilege('anon', 'public.eat_food_portion(uuid, int, uuid, uuid)', 'execute')
-                  and has_function_privilege('authenticated', 'public.eat_food_portion(uuid, int, uuid, uuid)', 'execute')
-                  and (select prosecdef from pg_proc where proname = 'eat_food_portion'),
-  'eat_food_portion: security definer, authenticated, not anon');
+  'the op records are not readable by sessions');
+select pg_temp.ok(not has_function_privilege('anon', 'public.eat_food_portion(uuid, uuid, uuid)', 'execute')
+                  and has_function_privilege('authenticated', 'public.eat_food_portion(uuid, uuid, uuid)', 'execute')
+                  and not has_function_privilege('anon', 'public.undo_food_portion(uuid, uuid)', 'execute')
+                  and has_function_privilege('authenticated', 'public.undo_food_portion(uuid, uuid)', 'execute')
+                  and not has_function_privilege('authenticated', 'public.food_for_portion(uuid)', 'execute')
+                  and (select bool_and(prosecdef) from pg_proc where proname in ('eat_food_portion', 'undo_food_portion', 'food_for_portion')),
+  'grants: eat and undo for authenticated, never anon; the helper for service_role only; all security definer');
+select pg_temp.ok(not exists (select 1 from pg_proc where proname = 'eat_food_portion' and pronargs = 4),
+  'the earlier four-argument eat_food_portion is gone');
 
 -- ---- The Features switch -------------------------------------------------------------
 select pg_temp.ok((public.household_feature_defaults() ->> 'kitchen')::boolean = false,

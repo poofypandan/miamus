@@ -1,7 +1,8 @@
 #!/bin/sh
 # Migration 148 checks: "Ate 1 portion" from several phones at the same moment
-# takes one portion per tap, and the same tap sent twice at once (a retry
-# racing its own first try) takes one (Codex, PR #93).
+# takes one portion per tap, the same tap sent twice at once (a retry racing
+# its own first try) takes one, the last portion is finished once, and an
+# undo puts back exactly what its tap took (Codex, PR #93).
 # LOCAL DATABASE ONLY (supabase start). Needs 148 applied:
 #   sh supabase/tests/148_portion_race.sh
 # Prints "ok …" per check and stops at the first "FAIL". Cleans up after itself.
@@ -18,7 +19,6 @@ HH="00000000-0000-0000-0000-0000000148f8"
 OWNER="00000000-0000-0000-0000-0000000148a8"
 PHONE="00000000-0000-0000-0000-0000000148b8"
 FOOD="00000000-0000-0000-0000-0000000148d8"
-RETRY_OP="00000000-0000-0000-0000-00000148e800"
 
 cleanup() {
   $DB -c "delete from public.households where id = '$HH';
@@ -37,45 +37,69 @@ insert into public.device_sessions (user_id, household_id) values ('$PHONE', '$H
 insert into public.food_items (id, household_id, name, kept_in, portions) values ('$FOOD', '$HH', 'Rendang', 'fridge', 10);
 SQL
 
-# Each tap as its own session: the given user, its own op id.
+# Each call as its own session: the given user, the given op id.
 tap() { # user op
   $DB >/dev/null <<SQL
 select set_config('request.jwt.claims', json_build_object('sub', '$1', 'role', 'authenticated')::text, false);
 set role authenticated;
-select public.eat_food_portion('$FOOD', 1, '$2');
+select public.eat_food_portion('$FOOD', '$2');
 SQL
 }
+undo() { # user op
+  $DB >/dev/null <<SQL
+select set_config('request.jwt.claims', json_build_object('sub', '$1', 'role', 'authenticated')::text, false);
+set role authenticated;
+select public.undo_food_portion('$FOOD', '$2');
+SQL
+}
+portions() { $DB -c "select portions || ' ' || coalesce(outcome, '-') from public.food_items where id = '$FOOD'"; }
+op() { echo "00000000-0000-0000-0000-00000148e8$1"; }
 
 # Six taps at once, three from the owner's phone and three from the staff phone.
 PIDS=""
-for i in 1 2 3 4 5 6; do
-  if [ $((i % 2)) -eq 0 ]; then who=$OWNER; else who=$PHONE; fi
-  tap "$who" "00000000-0000-0000-0000-00000148e80$i" &
+for i in 01 02 03 04 05 06; do
+  case $i in 0[246]) who=$OWNER ;; *) who=$PHONE ;; esac
+  tap "$who" "$(op $i)" &
   PIDS="$PIDS $!"
 done
 for p in $PIDS; do wait "$p"; done
-
-left=$($DB -c "select portions from public.food_items where id = '$FOOD'")
-[ "$left" = "4" ] && echo "ok  six taps at once from two phones: 10 → 4, none lost" || { echo "FAIL: six taps left $left, not 4"; exit 1; }
+[ "$(portions)" = "4 -" ] && echo "ok  six taps at once from two phones: 10 → 4, none lost" || { echo "FAIL: six taps left '$(portions)'"; exit 1; }
 
 # One tap and its retry, sent at the same moment: one portion.
-tap "$PHONE" "$RETRY_OP" & A=$!
-tap "$PHONE" "$RETRY_OP" & B=$!
+tap "$PHONE" "$(op 07)" & A=$!
+tap "$PHONE" "$(op 07)" & B=$!
 wait $A; wait $B
-left=$($DB -c "select portions from public.food_items where id = '$FOOD'")
-[ "$left" = "3" ] && echo "ok  a tap and its retry racing each other take one portion: 4 → 3" || { echo "FAIL: retry race left $left, not 3"; exit 1; }
+[ "$(portions)" = "3 -" ] && echo "ok  a tap and its retry racing each other take one portion: 4 → 3" || { echo "FAIL: retry race left '$(portions)'"; exit 1; }
 
-# A retry long after: nothing.
-tap "$PHONE" "$RETRY_OP"
-left=$($DB -c "select portions from public.food_items where id = '$FOOD'")
-[ "$left" = "3" ] && echo "ok  the same tap replayed later changes nothing" || { echo "FAIL: replay left $left, not 3"; exit 1; }
+# Two undos of that tap at once: one portion back.
+undo "$PHONE" "$(op 07)" & A=$!
+undo "$OWNER" "$(op 07)" & B=$!
+wait $A; wait $B
+[ "$(portions)" = "4 -" ] && echo "ok  two undos of the same tap at once put back one portion: 3 → 4" || { echo "FAIL: undo race left '$(portions)'"; exit 1; }
 
-# The last three at once: finished as Eaten exactly once, never below 0.
+# Down to 1, then three phones tap the last portion at once.
+tap "$OWNER" "$(op 08)"; tap "$OWNER" "$(op 09)"; tap "$OWNER" "$(op 10)"
 PIDS=""
-for i in 7 8 9; do
-  tap "$OWNER" "00000000-0000-0000-0000-00000148e80$i" &
+for i in 11 12 13; do
+  tap "$PHONE" "$(op $i)" &
   PIDS="$PIDS $!"
 done
 for p in $PIDS; do wait "$p"; done
-row=$($DB -c "select portions || ' ' || coalesce(outcome, '-') from public.food_items where id = '$FOOD'")
-[ "$row" = "0 eaten" ] && echo "ok  the last three at once: 0 portions, finished as Eaten" || { echo "FAIL: last taps left '$row'"; exit 1; }
+[ "$(portions)" = "0 eaten" ] && echo "ok  three phones on the last portion: finished as Eaten once, never below 0" || { echo "FAIL: last portion left '$(portions)'"; exit 1; }
+took=$($DB -c "select string_agg(consumed::text, '' order by op_id) from public.food_portion_ops where op_id in ('$(op 11)','$(op 12)','$(op 13)')")
+[ "$(echo "$took" | tr -cd 1 | wc -c | tr -d ' ')" = "1" ] && echo "ok  ... exactly one of the three took it" || { echo "FAIL: consumed was '$took'"; exit 1; }
+
+# All three undo at once: only the one that took it puts it back.
+PIDS=""
+for i in 11 12 13; do
+  undo "$PHONE" "$(op $i)" &
+  PIDS="$PIDS $!"
+done
+for p in $PIDS; do wait "$p"; done
+[ "$(portions)" = "1 -" ] && echo "ok  their three undos at once: one portion back, not finished, nothing invented" || { echo "FAIL: undos left '$(portions)'"; exit 1; }
+
+# A tap and its undo racing: either order, they cancel out.
+tap "$PHONE" "$(op 14)" & A=$!
+undo "$PHONE" "$(op 14)" & B=$!
+wait $A; wait $B
+[ "$(portions)" = "1 -" ] && echo "ok  a tap and its own undo racing cancel out, whichever lands first" || { echo "FAIL: tap/undo race left '$(portions)'"; exit 1; }

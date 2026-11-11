@@ -514,16 +514,19 @@ export const supabaseProvider: DataProvider = {
     if (error) throw withStatus(error, status);
     return data;
   },
-  async eatFoodPortion(id, delta, opId, staffId) {
+  async eatFoodPortion(id, opId, staffId) {
     const { data, error, status } = await withRpcDeadline((signal) =>
-      client()
-        .rpc("eat_food_portion", { p_food_id: id, p_delta: delta, p_op_id: opId, p_staff_id: staffId })
-        .abortSignal(signal)
-        .select()
-        .single()
+      client().rpc("eat_food_portion", { p_food_id: id, p_op_id: opId, p_staff_id: staffId }).abortSignal(signal)
     );
     if (error) throw withStatus(error, status);
-    return data as FoodItem;
+    return data as { food: FoodItem; consumed: number };
+  },
+  async undoFoodPortion(id, opId) {
+    const { data, error, status } = await withRpcDeadline((signal) =>
+      client().rpc("undo_food_portion", { p_food_id: id, p_op_id: opId }).abortSignal(signal)
+    );
+    if (error) throw withStatus(error, status);
+    return data as { food: FoodItem; restored: number };
   },
   async updateFoodItem(id, patch) {
     // .select() so an RLS-filtered update (200, no rows) is an error rather

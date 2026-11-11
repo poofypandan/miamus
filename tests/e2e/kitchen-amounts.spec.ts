@@ -366,3 +366,62 @@ test("a plus batch stuck on a dead signal holds Habis back at most 20 s, then Ha
   await expect.poll(() => stub.supplies[0].stock_status, { timeout: 30_000 }).toBe("out");
   expect(stub.supplies[0].quantity).toBe(0);
 });
+
+async function foodWithPortions(page: import("@playwright/test").Page, name: string, portions: number) {
+  await page.goto("/staff?view=stok");
+  await expect(page.getByText("Belum ada makanan")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Tambah makanan" }).click();
+  await page.getByLabel(/Makanan apa\?/).fill(name);
+  await page.getByRole("button", { name: "Dimasak di rumah" }).click();
+  await page.getByRole("button", { name: "Besok" }).click();
+  for (let i = 0; i < portions; i++) await page.getByRole("button", { name: "Tambah 1 porsi" }).click();
+  await page.getByRole("button", { name: "Simpan" }).click();
+  await expect(page.getByRole("button", { name: new RegExp(name) })).toContainText(`${portions} porsi`);
+}
+
+test("the last portion on screen goes to the server too: another phone's Undo is kept (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true });
+  await foodWithPortions(page, "Sate", 1);
+
+  // Another phone undid a portion meanwhile: the server has 2, this phone shows 1.
+  stub.foods[0].portions = 2;
+  await page.getByRole("button", { name: /Sate/ }).click();
+  await page.getByRole("button", { name: "Dimakan 1 porsi" }).click();
+
+  // Not finished: the server took one of two.
+  await expect(page.getByText("Sate · sisa 1 porsi")).toBeVisible();
+  await expect.poll(() => stub.foods[0].portions).toBe(1);
+  expect(stub.foods[0].outcome ?? null).toBeNull();
+});
+
+test("Undo puts back only what the tap took: nothing, when another phone had finished it (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true });
+  await foodWithPortions(page, "Gulai", 2);
+
+  // Another phone finished it meanwhile.
+  Object.assign(stub.foods[0], { portions: 0, outcome: "eaten", finished_at: new Date().toISOString() });
+  await page.getByRole("button", { name: /Gulai/ }).click();
+  await page.getByRole("button", { name: "Dimakan 1 porsi" }).click();
+
+  await expect(page.getByText("Gulai sudah habis")).toBeVisible();
+  // No Undo is offered for a tap that took nothing, and nothing was put back.
+  await expect(page.getByRole("button", { name: "Batalkan" })).toHaveCount(0);
+  expect(stub.seen.portionUndos).toHaveLength(0);
+  expect(stub.foods[0]).toMatchObject({ portions: 0, outcome: "eaten" });
+});
+
+test("the tap that takes the last portion finishes the food, and its Undo brings it back (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true });
+  await foodWithPortions(page, "Pepes", 1);
+
+  await page.getByRole("button", { name: /Pepes/ }).click();
+  await page.getByRole("button", { name: "Dimakan 1 porsi" }).click();
+  await expect(page.getByText("Dimakan — Pepes")).toBeVisible();
+  await expect.poll(() => stub.foods[0].outcome).toBe("eaten");
+  await expect(page.getByRole("button", { name: /Pepes/ })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Batalkan" }).click();
+  await expect.poll(() => stub.foods[0].outcome ?? null).toBeNull();
+  expect(stub.foods[0].portions).toBe(1);
+  await expect(page.getByRole("button", { name: /Pepes/ })).toContainText("1 porsi");
+});

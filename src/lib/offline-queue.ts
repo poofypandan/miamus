@@ -83,11 +83,13 @@ export type OutboxJob =
   | ChoreFinishJob
   | { kind: "food"; id: string; input: FoodItemInput; addedBy: string | null }
   /**
-   * "Ate 1 portion" (Phase 170 PR A, migrations/148): a relative change with
-   * an op id made on the phone, so a resend after a lost answer, or one
-   * racing its own first try, counts once.
+   * "Ate 1 portion" and its Undo (Phase 170 PR A, migrations/148), decided
+   * on the server and keyed by an op id made on the phone: a resend after a
+   * lost answer, or one racing its own first try, counts once, and an Undo
+   * puts back exactly what its tap took, in whichever order they land.
    */
-  | { kind: "portion"; opId: string; foodId: string; delta: number; staffId: string | null }
+  | { kind: "portion"; opId: string; foodId: string; staffId: string | null }
+  | { kind: "portion-undo"; opId: string; foodId: string }
   /**
    * "Tidak bisa dikerjakan" (Phase 165): its id is made on the phone, so a
    * resend is told "already saved" by the primary key.
@@ -331,7 +333,8 @@ export type SendResult =
   | { kind: "logs"; logs: TaskLog[] }
   | { kind: "chore"; task: HouseholdTask }
   | { kind: "food"; food: FoodItem | null }
-  | { kind: "portion"; food: FoodItem }
+  | { kind: "portion"; food: FoodItem; consumed: number }
+  | { kind: "portion-undo"; food: FoodItem; restored: number }
   | { kind: "couldnt"; exception: TaskException | null };
 
 /**
@@ -359,6 +362,7 @@ export function jobPhotos(job: OutboxJob): string[] {
     case "couldnt":
       return job.input.photo_url ? [job.input.photo_url] : [];
     case "portion":
+    case "portion-undo":
       return [];
   }
 }
@@ -405,10 +409,9 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
         throw err;
       }
     case "portion":
-      return {
-        kind: "portion",
-        food: await dataProvider.eatFoodPortion(ready.foodId, ready.delta, ready.opId, ready.staffId),
-      };
+      return { kind: "portion", ...(await dataProvider.eatFoodPortion(ready.foodId, ready.opId, ready.staffId)) };
+    case "portion-undo":
+      return { kind: "portion-undo", ...(await dataProvider.undoFoodPortion(ready.foodId, ready.opId)) };
     case "couldnt": {
       let exception: TaskException | null = null;
       try {

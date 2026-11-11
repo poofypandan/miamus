@@ -919,11 +919,15 @@ export interface Database {
         Args: { p_item_id: string; p_delta: number; p_staff_id?: string | null };
         Returns: InventoryItem[];
       };
-      // Ate 1 portion (migrations/148): relative, retry-safe by op id; the
-      // last portion finishes the food as Eaten; a negative count undoes.
+      // Ate 1 portion and its Undo (migrations/148): decided on the server,
+      // keyed by an op id made on the phone, safe to resend.
       eat_food_portion: {
-        Args: { p_food_id: string; p_delta: number; p_op_id: string; p_staff_id?: string | null };
-        Returns: FoodItem[];
+        Args: { p_food_id: string; p_op_id: string; p_staff_id?: string | null };
+        Returns: { food: FoodItem; consumed: number };
+      };
+      undo_food_portion: {
+        Args: { p_food_id: string; p_op_id: string };
+        Returns: { food: FoodItem; restored: number };
       };
       // Bought (migrations/148): adds the amount on a tracked item, keeps it
       // as the next pre-fill, and puts the item back to enough.

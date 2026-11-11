@@ -26,6 +26,7 @@ const provider = {
   updateHouseholdTask: vi.fn(),
   deletePhoto: vi.fn(async () => undefined),
   eatFoodPortion: vi.fn(),
+  undoFoodPortion: vi.fn(),
 };
 vi.mock("@/lib/data", () => ({ dataProvider: provider }));
 
@@ -256,15 +257,21 @@ describe("drainOutbox", () => {
     for (const fn of Object.values(provider)) fn.mockReset();
   }
 
-  it("resends a portion tap with the same op id, so the server counts it once (Phase 170 PR A, Codex #93)", async () => {
+  it("resends a portion tap and its undo with their op id, so the server counts each once (Phase 170 PR A, Codex #93)", async () => {
     provider.eatFoodPortion.mockRejectedValue(NO_ANSWER);
-    const job = { kind: "portion" as const, opId: "op-1", foodId: "food-1", delta: 1, staffId: "staff-1" };
-    expect((await queue.submitJob(job)).status).toBe("waiting");
+    provider.undoFoodPortion.mockRejectedValue(NO_ANSWER);
+    const tap = { kind: "portion" as const, opId: "op-1", foodId: "food-1", staffId: "staff-1" };
+    const undo = { kind: "portion-undo" as const, opId: "op-1", foodId: "food-1" };
+    expect((await queue.submitJob(tap)).status).toBe("waiting");
+    expect((await queue.submitJob(undo)).status).toBe("waiting");
     provider.eatFoodPortion.mockReset();
-    provider.eatFoodPortion.mockResolvedValue({ id: "food-1", portions: 2 });
+    provider.undoFoodPortion.mockReset();
+    provider.eatFoodPortion.mockResolvedValue({ food: { id: "food-1", portions: 2 }, consumed: 1 });
+    provider.undoFoodPortion.mockResolvedValue({ food: { id: "food-1", portions: 3 }, restored: 1 });
     const report = await queue.drainOutbox();
-    expect(report.sent).toHaveLength(1);
-    expect(provider.eatFoodPortion).toHaveBeenCalledWith("food-1", 1, "op-1", "staff-1");
+    expect(report.sent).toHaveLength(2);
+    expect(provider.eatFoodPortion).toHaveBeenCalledWith("food-1", "op-1", "staff-1");
+    expect(provider.undoFoodPortion).toHaveBeenCalledWith("food-1", "op-1");
     expect(await stored()).toEqual([]);
   });
 
