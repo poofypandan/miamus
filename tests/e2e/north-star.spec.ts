@@ -79,6 +79,9 @@ test("a platform admin reads the north star from Household requests", async ({ c
   await page.getByRole("link", { name: "North star numbers" }).click({ timeout: 20_000 });
   await expect(page).toHaveURL(/\/dashboard\/north-star$/);
   await expect(page.getByRole("heading", { name: "North star", exact: true })).toBeVisible();
+  // The heading can paint before the request is on record: waited for, not
+  // read at once (a race that failed main's CI twice and #89's once).
+  await expect.poll(() => asked.length).toBeGreaterThan(0);
   expect(asked[0].body).toEqual({ p_weeks: 8 });
 
   await expect(page.getByText("Numbers only, from every household, as of 10 Nov. No names.")).toBeVisible();
