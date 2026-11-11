@@ -2,7 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { HOUSEHOLD_ID } from "../fixtures/household";
 import { STUB_URL, freshSession, installStub } from "./stub-backend";
 
-// Starter templates and staff in one go (Phase 172 PR A2, migrations/146):
+// Starter templates and staff in one go (Phase 172 PR A2, migrations/147):
 // the kind of home opens a ready list the owner unticks; staff names with a
 // job chip; one call adds it all; one WhatsApp message carries the house
 // link; a staff phone picks its name and makes a PIN. Existing households

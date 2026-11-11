@@ -620,7 +620,7 @@ export interface DataProvider {
   /** Code, name and PIN together; on "ok" this phone is linked to the household. */
   signInWithHouseCode(code: string, staffId: string, pin: string): Promise<HouseCodeSignIn>;
   /**
-   * Staff in one go (Phase 172 PR A2, migrations/146): a person with no PIN
+   * Staff in one go (Phase 172 PR A2, migrations/147): a person with no PIN
    * yet, added in the last 7 days, picks their name and makes a PIN; on
    * "ok" this phone is linked to the household.
    */
@@ -649,7 +649,7 @@ export type HouseCodePerson = {
   id: string;
   name: string;
   has_pin: boolean;
-  /** No PIN yet and added in the last 7 days: they can pick it (migrations/146). Absent before 146. */
+  /** No PIN yet and added in the last 7 days: they can pick it (migrations/147). Absent before 147. */
   claimable?: boolean;
 };
 

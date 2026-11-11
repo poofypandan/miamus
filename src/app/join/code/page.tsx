@@ -299,7 +299,7 @@ function PinStep({ code, person, onBack }: { code: string; person: HouseCodePers
 
 /**
  * Staff in one go (Phase 172 PR A2, D10): a name with no PIN yet. Make a
- * PIN, enter it again, and the phone is linked (migrations/146:
+ * PIN, enter it again, and the phone is linked (migrations/147:
  * claim_staff_with_house_code, only within 7 days of being added).
  */
 function ClaimStep({ code, person, onBack }: { code: string; person: HouseCodePerson; onBack: () => void }) {

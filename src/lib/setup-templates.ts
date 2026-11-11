@@ -563,7 +563,7 @@ export function assigneeFor(job: SetupJob, staff: DraftStaff[]): string | null {
 /** A draft person, the caller themself (resolved by the database), or Anyone. */
 export type ApplyAssignee = { staff: string } | { me: true } | null;
 
-/** What apply_household_setup (migrations/146) takes. */
+/** What apply_household_setup (migrations/147) takes. */
 export interface ApplyPayload {
   v: 1;
   floors: { key: string; name: string }[];

@@ -1006,7 +1006,7 @@ function SignOutRow({ locale }: { locale: "en" | "id" }) {
   );
 }
 
-/** Added less than 7 days ago: the claim window (migrations/146). */
+/** Added less than 7 days ago: the claim window (migrations/147). */
 function isClaimable(createdAt: string | null | undefined): boolean {
   if (!createdAt) return false;
   const at = new Date(createdAt).getTime();

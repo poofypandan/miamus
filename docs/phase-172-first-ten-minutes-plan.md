@@ -1,6 +1,6 @@
 # Phase 172 — The first 10 minutes
 
-Status: **PR A2 built 2026-11-11 as migration 146** (templates, Starter
+Status: **PR A2 built 2026-11-11 as migration 147** (templates, Starter
 list, staff in one go; the Pets step waits for PR #85's routine groups).
 **Decided: all A except D1 = manual approval kept and D2 = tell
 them by WhatsApp or email, 2026-11-11** (D1–D15 A on 2026-11-10; on

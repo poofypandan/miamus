@@ -1099,7 +1099,7 @@ export interface Database {
         Returns: undefined;
       };
       apply_household_setup: {
-        // Phase 172 PR A2 (migrations/146): the reviewed list in one call.
+        // Phase 172 PR A2 (migrations/147): the reviewed list in one call.
         Args: { p_household: string; p_draft: Record<string, unknown> };
         Returns: Record<string, unknown>;
       };

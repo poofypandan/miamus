@@ -1,12 +1,12 @@
 -- ============================================================================
--- 146 — Starter templates and staff in one go (Phase 172, PR A2)
+-- 147 — Starter templates and staff in one go (Phase 172, PR A2)
 -- ============================================================================
 -- docs/phase-172-first-ten-minutes-plan.md, sections 2 and 4; owner decisions
 -- (2026-11-10/11): A for D3–D7 and D10. The owner picks a kind of home,
 -- unticks what doesn't apply, types staff names, and sends one WhatsApp
 -- message; each person picks their name and makes a PIN.
 --
--- Numbered 146: the next free number above 145 (Phase 171 PR A, PR #87).
+-- Numbered 147: 145 is Phase 171 PR A (PR #87); 146 is the security fixes, which go live first (manager, 11 Nov).
 --
 -- NEW
 --   apply_household_setup(household, draft)   the reviewed list in ONE call,

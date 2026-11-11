@@ -1,10 +1,10 @@
--- Migration 146 checks: the reviewed list in one call (owners only, all or
+-- Migration 147 checks: the reviewed list in one call (owners only, all or
 -- nothing, nothing duplicated, limits, assignees), staff in one go (a claim
 -- works once, inside 7 days, for an empty name, from a staff phone with the
 -- house code), who linked today, grants.
 -- LOCAL DATABASE ONLY. One transaction, rolled back:
 --   PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -X -q -t \
---     -f supabase/tests/146_starter_templates_and_staff_claim.sql
+--     -f supabase/tests/147_starter_templates_and_staff_claim.sql
 \set ON_ERROR_STOP on
 \pset footer off
 begin;

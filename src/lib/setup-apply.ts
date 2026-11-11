@@ -1,6 +1,6 @@
 /**
  * The calls behind the starter templates (Phase 172 PR A2): apply the
- * reviewed list in one all-or-nothing call (migrations/146), and record the
+ * reviewed list in one all-or-nothing call (migrations/147), and record the
  * setup's own numbers (migrations/142). Counts only, never content.
  */
 import type { ApplyPayload, ApplyResult } from "@/lib/setup-templates";

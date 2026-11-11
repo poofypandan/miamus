@@ -5,7 +5,7 @@ import { useHousehold } from "@/context/household-context";
 
 /**
  * Who picked their name and made a PIN today (Phase 172 PR A2, D10;
- * migrations/146 staff_claims_today), for Today's quiet line "Sari's phone
+ * migrations/147 staff_claims_today), for Today's quiet line "Sari's phone
  * is linked". Owners only. A failed read shows nothing.
  */
 export type LinkedToday = { staffId: string; name: string };
