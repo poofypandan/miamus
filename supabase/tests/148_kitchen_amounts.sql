@@ -302,11 +302,26 @@ select pg_temp.ok((pg_temp.undo(:p1, 'a006') ->> 'restored')::int = 0, 'an undo 
 select pg_temp.ok((pg_temp.eat(:p1, 'a006', :s1) ->> 'consumed')::int = 0 and (pg_temp.rendang()).portions = 1,
   '... and the late tap then takes nothing');
 
--- A finish someone chose is never reversed by a portion undo.
+-- A finish someone chose after the tap is never reversed by its undo (Codex, PR #93).
 select pg_temp.ok((pg_temp.eat(:p1, 'a007', :s1) ->> 'consumed')::int = 1, 'the last portion is eaten again');
-update public.food_items set outcome = 'thrown_away' where id = :rendang::uuid;
-select pg_temp.ok((pg_temp.undo(:p1, 'a007') ->> 'restored')::int = 1 and (pg_temp.rendang()).outcome = 'thrown_away',
-  'its undo puts the portion back but keeps Thrown away, chosen since');
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ update public.food_items set outcome = 'thrown_away' where id = %L $q$, :rendang)) = '',
+  'the owner then chooses Thrown away');
+select pg_temp.ok((pg_temp.undo(:p1, 'a007') ->> 'restored')::int = 0
+                  and (pg_temp.rendang()).outcome = 'thrown_away' and (pg_temp.rendang()).portions = 0,
+  '... so the tap''s undo changes nothing: Thrown away stays');
+update public.food_items set outcome = null, portions = 1 where id = :rendang::uuid;
+select pg_temp.ok((pg_temp.eat(:p1, 'a012', :s1) ->> 'consumed')::int = 1 and (pg_temp.rendang()).outcome = 'eaten',
+  'phone A takes the last portion (finished by the server)');
+-- Phone B, still showing the food, taps Eaten itself: the same outcome, chosen.
+-- One transaction has one clock, so A's tap is moved a second earlier to
+-- stand for "B wrote after it" (in use they are separate transactions).
+update public.food_portion_ops set finished_food_at = finished_food_at - interval '1 second'
+ where op_id = '00000000-0000-0000-0000-00000148a012';
+update public.food_items set updated_at = updated_at - interval '1 second' where id = :rendang::uuid;
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ update public.food_items set outcome = 'eaten', finished_by = null where id = %L $q$, :rendang)) = '',
+  'phone B then chooses Eaten explicitly');
+select pg_temp.ok((pg_temp.undo(:p1, 'a012') ->> 'restored')::int = 0 and (pg_temp.rendang()).outcome = 'eaten',
+  '... and A''s undo keeps B''s Eaten: the food stays finished');
 update public.food_items set outcome = null, portions = 2 where id = :rendang::uuid;
 
 -- Refusals.

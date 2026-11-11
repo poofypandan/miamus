@@ -425,3 +425,32 @@ test("the tap that takes the last portion finishes the food, and its Undo brings
   expect(stub.foods[0].portions).toBe(1);
   await expect(page.getByRole("button", { name: /Pepes/ })).toContainText("1 porsi");
 });
+
+test("a portion tap waiting on a dead signal still shows after a reload, and is sent once (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true });
+  await foodWithPortions(page, "Soto", 3);
+
+  // Only this call has no signal; the rest of the app loads.
+  let blocked = true;
+  await context.route("http://supabase.test/rest/v1/rpc/eat_food_portion*", async (route) => {
+    if (blocked) return route.abort("internetdisconnected");
+    await route.fallback();
+  });
+  await page.getByRole("button", { name: /Soto/ }).click();
+  await page.getByRole("button", { name: "Dimakan 1 porsi" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: /Soto/ })).toContainText("2 porsi");
+
+  // Closed and opened again: the waiting tap is still counted.
+  await page.reload();
+  await page.getByRole("tab", { name: "Dapur" }).click();
+  await expect(page.getByRole("button", { name: /Soto/ })).toContainText("2 porsi", { timeout: 20_000 });
+  expect(stub.foods[0].portions).toBe(3);
+
+  // The signal comes back: sent once, and the screen shows the server's 2, not 1.
+  blocked = false;
+  await expect.poll(() => stub.foods[0].portions, { timeout: 60_000 }).toBe(2);
+  await page.waitForTimeout(1000);
+  await expect(page.getByRole("button", { name: /Soto/ })).toContainText("2 porsi");
+  expect(new Set(stub.seen.portionCalls).size).toBe(1);
+});

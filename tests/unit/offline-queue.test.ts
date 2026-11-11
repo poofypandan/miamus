@@ -48,7 +48,7 @@ const photos = (await import("@/lib/photo-queue")) as unknown as {
   ensureUploaded: ReturnType<typeof vi.fn>;
   PhotoNotUploadedError: new (reason: "pending" | "failed") => Error;
 };
-const { outboxView, overlay, pendingChoreRowId } = await import("@/lib/outbox-view");
+const { applyPortions, outboxView, overlay, pendingChoreRowId } = await import("@/lib/outbox-view");
 const { isTableWrite } = await import("@/lib/supabase/write-timeout");
 
 const NO_ANSWER = { message: "TypeError: Failed to fetch", details: "", hint: "", code: "" };
@@ -418,6 +418,53 @@ describe("drainOutbox", () => {
     const report = await queue.drainOutbox();
     expect(provider.createFoodItem).toHaveBeenCalledWith({ ...input, id: "food-1" }, "staff-1");
     expect(report.sent).toHaveLength(1);
+  });
+});
+
+describe("portion taps waiting on the phone (Phase 170 PR A, Codex #93)", () => {
+  const rendang = { id: "food-1", portions: 3, outcome: null, finished_at: null, finished_by: null } as unknown as import("@/types/database").FoodItem;
+  const item = (id: string, job: import("@/lib/offline-queue").OutboxJob) => ({ id, job, householdId: "house-a", timestamp: 0 });
+
+  it("are laid over the server's count, so a reload still shows them", () => {
+    const view = outboxView(
+      [
+        item("q1", { kind: "portion", opId: "op-1", foodId: "food-1", staffId: null }),
+        item("q2", { kind: "portion", opId: "op-2", foodId: "food-1", staffId: null }),
+      ],
+      "house-a",
+      []
+    );
+    expect(applyPortions([rendang], view.portions, () => false)[0].portions).toBe(1);
+  });
+
+  it("stop counting once the server has answered them (its copy already has them)", () => {
+    const view = outboxView([item("q1", { kind: "portion", opId: "op-1", foodId: "food-1", staffId: null })], "house-a", []);
+    expect(applyPortions([{ ...rendang, portions: 2 }], view.portions, (id) => id === "q1")[0].portions).toBe(2);
+  });
+
+  it("show an undo of the finishing tap back on the list, and a tap with its undo as no change", () => {
+    const finished = { ...rendang, portions: 0, outcome: "eaten" } as typeof rendang;
+    const undo = outboxView(
+      [item("q1", { kind: "portion-undo", opId: "op-1", foodId: "food-1", reopens: true })],
+      "house-a",
+      []
+    );
+    expect(applyPortions([finished], undo.portions, () => false)[0]).toMatchObject({ portions: 1, outcome: null });
+    const both = outboxView(
+      [
+        item("q1", { kind: "portion", opId: "op-2", foodId: "food-1", staffId: null }),
+        item("q2", { kind: "portion-undo", opId: "op-2", foodId: "food-1" }),
+      ],
+      "house-a",
+      []
+    );
+    expect(applyPortions([rendang], both.portions, () => false)[0].portions).toBe(3);
+  });
+
+  it("never take a count below 0 or touch food that isn't counted", () => {
+    const view = outboxView([item("q1", { kind: "portion", opId: "op-1", foodId: "food-1", staffId: null })], "house-a", []);
+    expect(applyPortions([{ ...rendang, portions: 0 }], view.portions, () => false)[0].portions).toBe(0);
+    expect(applyPortions([{ ...rendang, portions: null }], view.portions, () => false)[0].portions).toBeNull();
   });
 });
 

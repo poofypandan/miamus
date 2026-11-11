@@ -103,3 +103,15 @@ tap "$PHONE" "$(op 14)" & A=$!
 undo "$PHONE" "$(op 14)" & B=$!
 wait $A; wait $B
 [ "$(portions)" = "1 -" ] && echo "ok  a tap and its own undo racing cancel out, whichever lands first" || { echo "FAIL: tap/undo race left '$(portions)'"; exit 1; }
+
+# Phone A takes the last portion; phone B then chooses Eaten itself (its own
+# transaction); A's undo must keep B's choice (Codex, PR #93).
+tap "$PHONE" "$(op 15)"
+[ "$(portions)" = "0 eaten" ] || { echo "FAIL: last portion left '$(portions)'"; exit 1; }
+$DB >/dev/null <<SQL
+select set_config('request.jwt.claims', json_build_object('sub', '$OWNER', 'role', 'authenticated')::text, false);
+set role authenticated;
+update public.food_items set outcome = 'eaten', finished_by = null where id = '$FOOD';
+SQL
+undo "$PHONE" "$(op 15)"
+[ "$(portions)" = "0 eaten" ] && echo "ok  an explicit Eaten after the last portion wins over that tap's undo" || { echo "FAIL: undo after explicit Eaten left '$(portions)'"; exit 1; }

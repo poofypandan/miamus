@@ -347,7 +347,9 @@ grant execute on function public.record_purchase(uuid, numeric, uuid) to authent
 --        actually did under its op id (consumed 0 or 1, finished or not).
 --   undo_food_portion(food, op)        puts back exactly what that op took:
 --        nothing if it took nothing (another phone had already finished the
---        food), the portion and the unfinish if it took the last one.
+--        food), the portion and the unfinish if it took the last one, but
+--        only while the food is as that tap left it (a later explicit
+--        outcome or edit wins).
 -- Both are safe to resend: an op id counts once, and an undo counts once.
 -- An undo that arrives before its tap (a weak signal) leaves a marker, so
 -- the late tap then takes nothing. The phone makes the op id per tap and
@@ -367,6 +369,10 @@ create table if not exists public.food_portion_ops (
   household_id uuid not null references public.households (id) on delete cascade,
   consumed smallint not null default 0 check (consumed in (0, 1)),
   finished boolean not null default false,
+  -- The food's updated_at right after this tap finished it: its undo
+  -- reopens the food only if nothing has changed it since (an explicit
+  -- Eaten, an edit), so a later choice always wins (Codex, PR #93).
+  finished_food_at timestamptz,
   undone_at timestamptz,
   done_at timestamptz not null default now()
 );
@@ -432,9 +438,6 @@ begin
 
   takes := f.portions is not null and f.portions > 0 and f.outcome is null;
   ends := takes and f.portions = 1;
-  insert into public.food_portion_ops (op_id, food_id, household_id, consumed, finished)
-  values (p_op_id, f.id, f.household_id, case when takes then 1 else 0 end, ends);
-
   if takes then
     update public.food_items
        set portions = f.portions - 1,
@@ -443,6 +446,9 @@ begin
      where id = f.id
     returning * into f;
   end if;
+  insert into public.food_portion_ops (op_id, food_id, household_id, consumed, finished, finished_food_at)
+  values (p_op_id, f.id, f.household_id, case when takes then 1 else 0 end, ends,
+          case when ends then f.updated_at end);
   return jsonb_build_object('food', to_jsonb(f), 'consumed', case when takes then 1 else 0 end);
 end;
 $$;
@@ -477,15 +483,17 @@ begin
     return jsonb_build_object('food', to_jsonb(f), 'restored', 0);
   end if;
 
-  restores := op.consumed = 1;
+  -- A tap that finished the food is undone only while the food is exactly
+  -- as that tap left it; anyone's later change (an explicit Eaten, an edit,
+  -- Given away) wins, and nothing is put back (Codex, PR #93).
+  restores := op.consumed = 1
+    and (not op.finished or (f.outcome = 'eaten' and f.updated_at = op.finished_food_at));
   update public.food_portion_ops set undone_at = now() where op_id = p_op_id;
   if restores then
     update public.food_items
        set portions = least(coalesce(portions, 0) + 1, 99),
-           -- Only the finish this tap made comes back; one someone chose
-           -- (Eaten, Given away, Thrown away) since then stays.
-           outcome = case when op.finished and outcome = 'eaten' then null else outcome end,
-           finished_by = case when op.finished and outcome = 'eaten' then null else finished_by end
+           outcome = case when op.finished then null else outcome end,
+           finished_by = case when op.finished then null else finished_by end
      where id = f.id
     returning * into f;
   end if;

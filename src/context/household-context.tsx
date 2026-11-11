@@ -39,12 +39,13 @@ import {
   hydrateOutbox,
   outboxItems,
   submitJob,
+  isAnswered,
   subscribeOutbox,
   SaveStillWaitingError,
   type OfflineQueueItem,
   type SendResult,
 } from "@/lib/offline-queue";
-import { outboxView, overlay, pendingFood } from "@/lib/outbox-view";
+import { applyPortions, outboxView, overlay, pendingFood } from "@/lib/outbox-view";
 import { discardPhoto, enqueuePhoto } from "@/lib/photo-queue";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { AGENDA_WEEK_DAYS, weekStartOf } from "@/lib/unified-agenda";
@@ -1019,7 +1020,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     [queued, activeHouseholdId, householdTasks]
   );
   const shownLogs = useMemo(() => overlay(logs, waiting.logs), [logs, waiting.logs]);
-  const shownFoods = useMemo(() => overlay(foodItems, waiting.foods), [foodItems, waiting.foods]);
+  // Waiting portion taps over the counts (Phase 170 PR A): read at render,
+  // so a tap the server has just answered isn't counted twice.
+  const shownFoods = useMemo(
+    () => applyPortions(overlay(foodItems, waiting.foods), waiting.portions, isAnswered),
+    [foodItems, waiting.foods, waiting.portions]
+  );
   // Bills and upkeep switched off (Phase 171, migrations/145): its chores
   // hide from every screen, owners' and staff phones alike, and come back
   // with the switch. Saved rows are untouched; only what's shown changes.
@@ -1430,32 +1436,25 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const eatFoodPortion = useCallback(
     async (id: string): Promise<PortionTap> => {
       const opId = crypto.randomUUID();
-      const before = foodItemsRef.current.find((f) => f.id === id);
-      // Shown at once; the server's answer (with any other phone's taps)
-      // replaces it, and decides whether the last portion finishes it.
-      if (before && typeof before.portions === "number" && before.portions > 0) {
-        putFood({ ...before, portions: before.portions - 1 });
-      }
-      try {
-        const outcome = await submitJob<Extract<SendResult, { kind: "portion" }>>(
-          { kind: "portion", opId, foodId: id, staffId: readActiveStaffId() },
-          ({ food }) => putFood(food)
-        );
-        if (outcome.status !== "sent") return { foodId: id, opId, status: "waiting", food: null, consumed: null };
-        const { food, consumed } = outcome.result;
-        if (consumed === 1 && food.outcome === "eaten") {
-          // This tap finished it: its photo goes as with the Eaten button,
-          // when the toast closes (or the fallback), unless it is undone.
-          foodUndone.current.delete(id);
-          if (food.photo_url) {
-            foodPhotoTimers.current.set(id, setTimeout(() => deleteFinishedPhoto(id), FOOD_PHOTO_FALLBACK_MS));
-          }
+      // Shown at once by the queue's overlay (applyPortions), after a reload
+      // too; the server's answer (with any other phone's taps) replaces it,
+      // and decides whether the last portion finishes it. A refusal leaves
+      // the queue, and the overlay with it.
+      const outcome = await submitJob<Extract<SendResult, { kind: "portion" }>>(
+        { kind: "portion", opId, foodId: id, staffId: readActiveStaffId() },
+        ({ food }) => putFood(food)
+      );
+      if (outcome.status !== "sent") return { foodId: id, opId, status: "waiting", food: null, consumed: null };
+      const { food, consumed } = outcome.result;
+      if (consumed === 1 && food.outcome === "eaten") {
+        // This tap finished it: its photo goes as with the Eaten button,
+        // when the toast closes (or the fallback), unless it is undone.
+        foodUndone.current.delete(id);
+        if (food.photo_url) {
+          foodPhotoTimers.current.set(id, setTimeout(() => deleteFinishedPhoto(id), FOOD_PHOTO_FALLBACK_MS));
         }
-        return { foodId: id, opId, status: "sent", food, consumed };
-      } catch (err) {
-        if (before) putFood(before);
-        throw err;
       }
+      return { foodId: id, opId, status: "sent", food, consumed };
     },
     [putFood, deleteFinishedPhoto]
   );
@@ -1464,24 +1463,18 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     async (tap: PortionTap) => {
       // Nothing to put back when the server said this tap took nothing.
       if (tap.consumed === 0) return;
-      const before = foodItemsRef.current.find((f) => f.id === tap.foodId);
-      if (before && typeof before.portions === "number" && !before.outcome) {
-        putFood({ ...before, portions: Math.min(99, before.portions + 1) });
-      } else if (before && before.outcome === "eaten" && tap.consumed === 1 && tap.food?.outcome === "eaten") {
-        // This tap finished it: back on the list at once, even before the
-        // undo reaches the server on a weak signal (code review).
-        putFood({ ...before, outcome: null, finished_at: null, finished_by: null, portions: 1 });
-      }
+      // Shown at once by the queue's overlay, back on the list if this tap
+      // finished it (the server still checks nothing changed since).
       foodUndone.current.add(tap.foodId);
-      try {
-        await submitJob<Extract<SendResult, { kind: "portion-undo" }>>(
-          { kind: "portion-undo", opId: tap.opId, foodId: tap.foodId },
-          ({ food }) => putFood(food)
-        );
-      } catch (err) {
-        if (before) putFood(before);
-        throw err;
-      }
+      await submitJob<Extract<SendResult, { kind: "portion-undo" }>>(
+        {
+          kind: "portion-undo",
+          opId: tap.opId,
+          foodId: tap.foodId,
+          reopens: tap.consumed === 1 && tap.food?.outcome === "eaten",
+        },
+        ({ food }) => putFood(food)
+      );
     },
     [putFood]
   );

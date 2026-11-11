@@ -89,7 +89,13 @@ export type OutboxJob =
    * puts back exactly what its tap took, in whichever order they land.
    */
   | { kind: "portion"; opId: string; foodId: string; staffId: string | null }
-  | { kind: "portion-undo"; opId: string; foodId: string }
+  | {
+      kind: "portion-undo";
+      opId: string;
+      foodId: string;
+      /** The tap took the last portion and finished the food: shown reopened while this waits. */
+      reopens?: boolean;
+    }
   /**
    * "Tidak bisa dikerjakan" (Phase 165): its id is made on the phone, so a
    * resend is told "already saved" by the primary key.
@@ -322,9 +328,21 @@ export async function addToOutbox(item: OfflineQueueItem): Promise<boolean> {
 export async function clearFromQueue(id: string): Promise<void> {
   try {
     await mutate((current) => current.filter((item) => item.id !== id));
+    answered.delete(id);
   } catch (err) {
     console.error("Could not remove a sent save from the queue", err);
   }
+}
+
+/**
+ * Saves the server has answered that are still in the queue for a moment
+ * (until the screen has the server's copy and the queue is written). The
+ * screen stops laying a relative change (a portion) over the server's copy
+ * once it is answered, so it is never counted twice (Phase 170 PR A).
+ */
+const answered = new Set<string>();
+export function isAnswered(itemId: string): boolean {
+  return answered.has(itemId);
 }
 
 // --- Sending ------------------------------------------------------------------
@@ -540,6 +558,7 @@ export async function submitJob<T extends SendResult>(
 
   inFlight.delete(id);
   if (first.ok === true) {
+    answered.add(id);
     onSent?.(first.result);
     await clearFromQueue(id);
     return { status: "sent", result: first.result };
@@ -654,6 +673,7 @@ export async function drainOutbox(
     inFlight.add(item.id);
     try {
       await sendJob(await withStableIds(item));
+      answered.add(item.id);
       report.sent.push(item);
       sessionRefusals = 0;
       setUnlinked(false);
@@ -691,9 +711,9 @@ export async function drainOutbox(
       report.confirmed = false;
     }
     const done = new Set([...(report.confirmed ? report.sent : []), ...report.refused].map((item) => item.id));
-    await mutate((current) => current.filter((item) => !done.has(item.id))).catch((err) =>
-      console.error("Could not remove sent saves from the queue", err)
-    );
+    await mutate((current) => current.filter((item) => !done.has(item.id)))
+      .then(() => done.forEach((id) => answered.delete(id)))
+      .catch((err) => console.error("Could not remove sent saves from the queue", err));
   }
   return report;
 }
