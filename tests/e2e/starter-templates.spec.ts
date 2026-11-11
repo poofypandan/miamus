@@ -84,8 +84,9 @@ test("sign-up asks what kind of home, saves the answer and opens its starter lis
   const opened = page.waitForRequest((r) => r.url().includes("/setup?home=multi_floor"));
   await cont.click();
   await opened;
-  const record = calls.rpc.find((c) => c.name === "record_household_setup");
-  expect(record?.body.p_fields).toMatchObject({ home_type: "multi_floor", typed_fields: 1 });
+  const records = calls.rpc.filter((c) => c.name === "record_household_setup").map((c) => c.body.p_fields);
+  expect(records).toContainEqual({ home_type: "multi_floor", typed_fields: 1 });
+  expect(records.some((f) => (f as Record<string, unknown>).started_at)).toBe(true);
 });
 
 test("the review: untick a room, one stepper tap, two staff with jobs, Add, then one WhatsApp message", async ({ context, page }) => {
@@ -133,7 +134,8 @@ test("the review: untick a room, one stepper tap, two staff with jobs, Add, then
   // The setup's own numbers: the path, the two names typed, one untick.
   const finished = calls.rpc.filter((c) => c.name === "record_household_setup").map((c) => c.body.p_fields as Record<string, unknown>);
   expect(finished.some((f) => f.started_at)).toBe(true);
-  expect(finished.find((f) => f.finished_at)).toMatchObject({
+  expect(finished.some((f) => f.finished_at)).toBe(true);
+  expect(finished.find((f) => f.path === "template")).toMatchObject({
     path: "template",
     typed_fields: 2,
     unticked: 1,

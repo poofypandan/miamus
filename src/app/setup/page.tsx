@@ -142,11 +142,9 @@ function Setup() {
   }
 
   async function skip() {
-    void recordSetup(activeHouseholdId, {
-      path: "manual",
-      active_seconds: takeSeconds(),
-      finished_at: new Date().toISOString(),
-    });
+    void recordSetup(activeHouseholdId, { path: "manual", active_seconds: takeSeconds() }).then(() =>
+      recordSetup(activeHouseholdId, { finished_at: new Date().toISOString() })
+    );
     router.replace("/dashboard");
   }
 
@@ -165,6 +163,9 @@ function Setup() {
       return;
     }
     const r = outcome.result;
+    // Counts and the finish time go separately: the database takes a finish
+    // time only within a day of the household's creation, and a refused
+    // timestamp must not take the counts with it (an owner back days later).
     void recordSetup(activeHouseholdId, {
       path: "template",
       active_seconds: takeSeconds(),
@@ -174,8 +175,7 @@ function Setup() {
       chores_added: r.chores_added,
       bills_added: r.bills_added,
       staff_added: r.staff_added,
-      finished_at: new Date().toISOString(),
-    });
+    }).then(() => recordSetup(activeHouseholdId, { finished_at: new Date().toISOString() }));
     // The screens behind this one read their own copies: bring them up to date.
     await Promise.allSettled([refresh({ silent: true }), Promise.resolve(reloadRooms()), Promise.resolve(reloadStaff())]);
     setSentStaff(named.length);

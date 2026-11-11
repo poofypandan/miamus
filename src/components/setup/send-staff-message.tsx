@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,31 +15,49 @@ import { videoTip } from "@/lib/video-tips";
  * house link for everyone who still has to pick their name and make a PIN.
  * The message is Indonesian (staff read it); the button is the owner's
  * language.
+ *
+ * The house code is read before the tap, so WhatsApp opens inside the tap
+ * itself: iPhone Safari blocks a window opened after waiting on the network
+ * (Codex, PR #90), as the house-code and invite panels already avoid.
  */
 export function SendStaffMessageButton({ variant = "default" }: { variant?: "default" | "outline" }) {
   const t = useT();
-  const [opening, setOpening] = useState(false);
+  const [code, setCode] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
-  async function send() {
-    if (opening) return;
-    setOpening(true);
-    try {
-      const code = (await dataProvider.getHouseCode()) ?? (await dataProvider.rotateHouseCode());
-      const origin = window.location.origin;
-      const tip = videoTip("staff-house-code");
-      const message = staffInOneGoMessage(code, origin, tip?.ready ? `${origin}/tips/staff-house-code` : null);
-      window.open(whatsAppShareUrl(message), "_blank", "noopener,noreferrer");
-    } catch (err) {
-      console.error("Could not make the staff message", err);
+  useEffect(() => {
+    let live = true;
+    setFailed(false);
+    (async () => {
+      try {
+        const value = (await dataProvider.getHouseCode()) ?? (await dataProvider.rotateHouseCode());
+        if (live) setCode(value);
+      } catch (err) {
+        console.error("Could not get the house code", err);
+        if (live) setFailed(true);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
+
+  function send() {
+    if (!code) {
+      if (failed) setAttempt((n) => n + 1);
       toast.error(t("Couldn't get the house code. Try again.", "Kode rumah gagal diambil. Coba lagi."));
-    } finally {
-      setOpening(false);
+      return;
     }
+    const origin = window.location.origin;
+    const tip = videoTip("staff-house-code");
+    const message = staffInOneGoMessage(code, origin, tip?.ready ? `${origin}/tips/staff-house-code` : null);
+    window.open(whatsAppShareUrl(message), "_blank", "noopener,noreferrer");
   }
 
   return (
-    <Button variant={variant} className="min-h-[48px]" onClick={() => void send()} disabled={opening}>
-      {opening ? <Loader2 className="animate-spin" /> : <MessageCircle />}
+    <Button variant={variant} className="min-h-[48px]" onClick={send} disabled={!code && !failed}>
+      {!code && !failed ? <Loader2 className="animate-spin" /> : <MessageCircle />}
       {t("Send one WhatsApp message", "Kirim satu pesan WhatsApp")}
     </Button>
   );

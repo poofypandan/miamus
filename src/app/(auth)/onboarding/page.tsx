@@ -670,11 +670,8 @@ function HomeTypeScreen({
     // Best effort: the answer only picks a starting list, so a failed save
     // never holds the owner up. The household's name was setup's first
     // typed field (Phase 172 PR 0's count).
-    await recordSetup(householdId, {
-      ...(home ? { home_type: home } : {}),
-      started_at: new Date().toISOString(),
-      typed_fields: 1,
-    });
+    await recordSetup(householdId, { ...(home ? { home_type: home } : {}), typed_fields: 1 });
+    await recordSetup(householdId, { started_at: new Date().toISOString() });
     await onDone(home);
   }
 
