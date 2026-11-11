@@ -1,3 +1,4 @@
+import { WRITE_TIMEOUT_MS } from "@/lib/supabase/write-timeout";
 import { ChoreAlreadySettledError } from "@/lib/chore-settled";
 import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
@@ -7,6 +8,7 @@ import type { OrganiseRoomsMoved,
   NotificationPrefs,
   InventoryAuditLog,
   InventoryAuditWithStaff,
+  FoodItem,
   InventoryItem,
   StaffProfile,
 } from "@/types/database";
@@ -99,18 +101,25 @@ function flattenAudit({ staff_profiles, ...audit }: AuditRow): InventoryAuditWit
 }
 
 /**
- * Stock writes give up after this long (Phase 170 PR A, code review on #93).
- * One phone's writes to an item go to the server one after another
- * (lib/in-order), so a request stuck on a dead signal would otherwise hold
- * Out or Set amount behind it for minutes. Given up, the write fails like
- * any other: the screen is put back or refreshed, and the next write goes.
+ * The stock and portion RPCs give up like table writes do (Phase 170 PR A,
+ * code review on #93). Table writes already have lib/supabase/write-timeout;
+ * RPCs are left out of it (some are slow by design), so these few set their
+ * own. One phone's writes to an item go to the server one after another
+ * (lib/in-order), and a request stuck on a dead signal would otherwise hold
+ * Out or Set amount behind it for minutes. The reason is a TimeoutError, as
+ * write-timeout's, so it reads as "no answer" (retryable), not a cancel.
  */
-export const STOCK_WRITE_TIMEOUT_MS = 15_000;
-
-function stockDeadline(): AbortSignal {
+async function withRpcDeadline<T>(run: (signal: AbortSignal) => PromiseLike<T>): Promise<T> {
   const controller = new AbortController();
-  setTimeout(() => controller.abort(), STOCK_WRITE_TIMEOUT_MS);
-  return controller.signal;
+  const timer = setTimeout(
+    () => controller.abort(new DOMException("The save timed out", "TimeoutError")),
+    WRITE_TIMEOUT_MS
+  );
+  try {
+    return await run(controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export const supabaseProvider: DataProvider = {
@@ -374,7 +383,6 @@ export const supabaseProvider: DataProvider = {
       .from("inventory_items")
       .update(patch)
       .eq("id", id)
-      .abortSignal(stockDeadline())
       .select()
       .single();
     if (error) throw error;
@@ -389,7 +397,6 @@ export const supabaseProvider: DataProvider = {
       .from("inventory_items")
       .update({ stock_status: status, stock_status_by: staffId })
       .eq("id", id)
-      .abortSignal(stockDeadline())
       .select();
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Item was not updated");
@@ -399,21 +406,25 @@ export const supabaseProvider: DataProvider = {
     // migrations/099, with who changed it since 148. Returns the updated
     // row; none at all means RLS hid it (another household's id, or a row
     // deleted under us).
-    const { data, error } = await client()
-      .rpc("adjust_inventory_quantity", { p_item_id: id, p_delta: delta, p_staff_id: staffId })
-      .abortSignal(stockDeadline())
-      .select()
-      .single();
+    const { data, error } = await withRpcDeadline((signal) =>
+      client()
+        .rpc("adjust_inventory_quantity", { p_item_id: id, p_delta: delta, p_staff_id: staffId })
+        .abortSignal(signal)
+        .select()
+        .single()
+    );
     if (error) throw error;
     return data as InventoryItem;
   },
   async recordPurchase(id, amount, staffId) {
     // migrations/148: security invoker, so RLS and the owner guard apply.
-    const { data, error } = await client()
-      .rpc("record_purchase", { p_item_id: id, p_amount: amount, p_staff_id: staffId })
-      .abortSignal(stockDeadline())
-      .select()
-      .single();
+    const { data, error } = await withRpcDeadline((signal) =>
+      client()
+        .rpc("record_purchase", { p_item_id: id, p_amount: amount, p_staff_id: staffId })
+        .abortSignal(signal)
+        .select()
+        .single()
+    );
     if (error) throw error;
     return data as InventoryItem;
   },
@@ -502,6 +513,17 @@ export const supabaseProvider: DataProvider = {
       .single();
     if (error) throw withStatus(error, status);
     return data;
+  },
+  async eatFoodPortion(id, delta, opId, staffId) {
+    const { data, error, status } = await withRpcDeadline((signal) =>
+      client()
+        .rpc("eat_food_portion", { p_food_id: id, p_delta: delta, p_op_id: opId, p_staff_id: staffId })
+        .abortSignal(signal)
+        .select()
+        .single()
+    );
+    if (error) throw withStatus(error, status);
+    return data as FoodItem;
   },
   async updateFoodItem(id, patch) {
     // .select() so an RLS-filtered update (200, no rows) is an error rather

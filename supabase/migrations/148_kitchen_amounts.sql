@@ -32,6 +32,9 @@
 --        exists when this runs (only the founding household today, which
 --        asked for it). New households start off.
 --   record_purchase(item, amount, staff)  Bought.
+--   eat_food_portion(food, n, op, staff)  "Ate 1 portion" as a relative change,
+--        safe to retry (op ids in food_portion_ops); SECURITY DEFINER, open to
+--        the household's staff phones by design (section 6b).
 --
 -- RE-CREATED (each from its newest definition)
 --   inventory_items_owner_guard (099, revoked in 111)  owner-only list gains
@@ -55,7 +58,9 @@
 -- types today's amount when switching tracking on. inventory_audit_logs is
 -- untouched.
 --
--- SECURITY. No SECURITY DEFINER function is added. adjust_inventory_quantity
+-- SECURITY. One SECURITY DEFINER function, eat_food_portion (6b): household
+-- membership checked, staff id checked, revoked from public and anon.
+-- adjust_inventory_quantity
 -- and record_purchase are SECURITY INVOKER: RLS (090) and the owner guard
 -- apply to the caller, so a staff phone changes amounts and statuses only,
 -- never tracking, units or low levels (D3), and never another household's
@@ -331,6 +336,108 @@ $$;
 
 revoke all on function public.record_purchase(uuid, numeric, uuid) from public, anon;
 grant execute on function public.record_purchase(uuid, numeric, uuid) to authenticated, service_role;
+
+-- --- 6b. One portion eaten (D7; Codex, PR #93) ---------------------------------------
+-- "Ate 1 portion" is a relative change made on the server, so two phones
+-- tapping at once each take one (an absolute "portions = 2" from both lost
+-- one). The last portion finishes the food as Eaten. A negative count is
+-- the toast's Undo, and it brings back a food that a portion finished.
+--
+-- Safe to retry: the phone makes an op id for each tap and keeps it with
+-- the save while the signal is weak; the same id sent again changes
+-- nothing and returns the food as it is. Op ids live in food_portion_ops,
+-- written only by this function, deleted with the food (or after 30 days).
+--
+-- SECURITY DEFINER because the op table is written only here. Deliberately
+-- open to the household's staff phones (eating leftovers is staff work, and
+-- every session already updates food_items, 123), so the check is household
+-- membership (get_user_household_ids()), not admin. The staff id is checked
+-- here, since 123's people trigger only runs for the authenticated role.
+create table if not exists public.food_portion_ops (
+  op_id uuid primary key,
+  food_id uuid not null references public.food_items (id) on delete cascade,
+  household_id uuid not null references public.households (id) on delete cascade,
+  delta smallint not null,
+  done_at timestamptz not null default now()
+);
+create index if not exists food_portion_ops_food_id_idx on public.food_portion_ops (food_id);
+create index if not exists food_portion_ops_household_id_idx on public.food_portion_ops (household_id);
+create index if not exists food_portion_ops_done_at_idx on public.food_portion_ops (done_at);
+
+alter table public.food_portion_ops enable row level security;
+revoke all on public.food_portion_ops from public, anon, authenticated;
+grant select, insert, delete on public.food_portion_ops to service_role;
+
+create or replace function public.eat_food_portion(
+  p_food_id uuid,
+  p_delta int,
+  p_op_id uuid,
+  p_staff_id uuid default null
+)
+returns setof public.food_items
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  f public.food_items;
+  next_portions int;
+begin
+  if p_op_id is null or p_delta is null or p_delta = 0 or abs(p_delta) > 99 then
+    raise exception 'bad_value' using errcode = '22023';
+  end if;
+
+  select * into f from public.food_items where id = p_food_id for update;
+  if not found or not (f.household_id = any (public.get_user_household_ids())) then
+    raise exception 'not_found' using errcode = '42501';
+  end if;
+
+  if p_staff_id is not null and not exists (
+    select 1 from public.staff_profiles s
+     where s.id = p_staff_id and s.household_id = f.household_id and s.archived_at is null
+  ) then
+    raise exception 'staff_not_in_household' using errcode = '42501';
+  end if;
+
+  -- Old op ids are dropped as we go: a retry comes within minutes or hours.
+  delete from public.food_portion_ops where done_at < now() - interval '30 days';
+
+  insert into public.food_portion_ops (op_id, food_id, household_id, delta)
+  values (p_op_id, f.id, f.household_id, p_delta)
+  on conflict (op_id) do nothing;
+  if not found then
+    -- Already done (a retry after a lost answer): nothing changes.
+    return query select * from public.food_items where id = f.id;
+    return;
+  end if;
+
+  -- Not counted, or finished and someone else's tap arrives late: no change.
+  if f.portions is null or (f.outcome is not null and p_delta > 0) then
+    return query select * from public.food_items where id = f.id;
+    return;
+  end if;
+
+  next_portions := least(greatest(f.portions - p_delta, 0), 99);
+  update public.food_items
+     set portions = next_portions,
+         outcome = case
+           when next_portions = 0 and outcome is null then 'eaten'
+           when p_delta < 0 and next_portions > 0 and outcome = 'eaten' then null
+           else outcome
+         end,
+         finished_by = case
+           when next_portions = 0 and outcome is null then p_staff_id
+           when p_delta < 0 and next_portions > 0 and outcome = 'eaten' then null
+           else finished_by
+         end
+   where id = f.id;
+
+  return query select * from public.food_items where id = f.id;
+end;
+$$;
+
+revoke all on function public.eat_food_portion(uuid, int, uuid, uuid) from public, anon;
+grant execute on function public.eat_food_portion(uuid, int, uuid, uuid) to authenticated, service_role;
 
 -- --- 7. The Features switch (145) ---------------------------------------------------
 alter table public.household_features drop constraint if exists household_features_feature_check;

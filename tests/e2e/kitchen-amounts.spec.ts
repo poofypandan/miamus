@@ -171,9 +171,43 @@ test("portions on food: set in the form, Ate 1 portion counts down (D7)", async 
   expect(stub.foods[0]).toMatchObject({ portions: 3 });
 
   await row.click();
+  // Another phone ate one meanwhile; this phone still shows 3.
+  stub.foods[0].portions = 2;
   await page.getByRole("button", { name: "Dimakan 1 porsi" }).click();
-  await expect(page.getByText("Rendang · sisa 2 porsi")).toBeVisible();
-  await expect.poll(() => stub.foods[0].portions).toBe(2);
+  // The toast says what the server counted, with the other phone's portion.
+  await expect(page.getByText("Rendang · sisa 1 porsi")).toBeVisible();
+  // A change made on the server (Codex, PR #93): 2 → 1, not an absolute 2.
+  await expect.poll(() => stub.foods[0].portions).toBe(1);
+  expect(stub.seen.portionCalls).toHaveLength(1);
+  // The screen takes the server's answer, with the other phone's portion.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: /Rendang/ })).toContainText("1 porsi");
+});
+
+test("Ate 1 portion on a weak signal: kept on the phone, and the resend counts once (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true });
+  await page.goto("/staff?view=stok");
+  await expect(page.getByText("Belum ada makanan")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Tambah makanan" }).click();
+  await page.getByLabel(/Makanan apa\?/).fill("Opor");
+  await page.getByRole("button", { name: "Dimasak di rumah" }).click();
+  await page.getByRole("button", { name: "Besok" }).click();
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Tambah 1 porsi" }).click();
+  await page.getByRole("button", { name: "Simpan" }).click();
+  await expect(page.getByRole("button", { name: /Opor/ })).toContainText("3 porsi");
+
+  // The first try lands, but its answer is lost on the way back.
+  stub.portionTrouble.lostReplies = 1;
+
+  await page.getByRole("button", { name: /Opor/ }).click();
+  await page.getByRole("button", { name: "Dimakan 1 porsi" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: /Opor/ })).toContainText("2 porsi");
+
+  // The phone resends the same tap; the server counts it once.
+  await expect.poll(() => stub.seen.portionCalls.length, { timeout: 30_000 }).toBeGreaterThan(1);
+  expect(new Set(stub.seen.portionCalls).size).toBe(1);
+  expect(stub.foods[0].portions).toBe(2);
 });
 
 test("changing kg to g converts the amount and the Bought pre-fill (Codex, PR #93)", async ({ context, page }) => {
@@ -314,7 +348,7 @@ test("two plus batches on their way, then Set amount: the typed amount wins, on 
   await expect(page.getByText("Sisa 3,5 kg")).toHaveCount(0);
 });
 
-test("a plus batch stuck on a dead signal holds Habis back at most 15 s, then Habis goes (code review, PR #93)", async ({ context, page }) => {
+test("a plus batch stuck on a dead signal holds Habis back at most 20 s, then Habis goes (code review, PR #93)", async ({ context, page }) => {
   const stub = await installStub(context, {
     stored: freshSession(),
     staffPhone: true,
@@ -329,6 +363,6 @@ test("a plus batch stuck on a dead signal holds Habis back at most 15 s, then Ha
   await page.waitForTimeout(800);
   await page.getByRole("button", { name: "Habis", exact: true }).click();
 
-  await expect.poll(() => stub.supplies[0].stock_status, { timeout: 25_000 }).toBe("out");
+  await expect.poll(() => stub.supplies[0].stock_status, { timeout: 30_000 }).toBe("out");
   expect(stub.supplies[0].quantity).toBe(0);
 });

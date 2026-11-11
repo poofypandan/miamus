@@ -188,9 +188,13 @@ export interface Stub {
     realBackend: string[];
     /** set_my_push_person calls from a staff phone (Phase 166). */
     pushPeople: Record<string, unknown>[];
+    /** The op id of each eat_food_portion call, resends included (Phase 170 PR A). */
+    portionCalls: string[];
   };
   /** food_items rows as the stub holds them (Phase 156). */
   foods: Record<string, unknown>[];
+  /** Set lostReplies to drop that many eat_food_portion answers after counting them. */
+  portionTrouble: { lostReplies: number };
   /** household_tasks rows created on this phone (Kakak's saves). */
   tasks: Record<string, unknown>[];
   /** inventory_items rows added on this phone (Phase 164: gas and gallons). */
@@ -246,8 +250,11 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const writes: [string, string][] = [];
   const logs: Record<string, unknown>[] = options.logs ?? [];
   const schedules: Record<string, unknown>[] = [...(SCHEDULES as unknown as Record<string, unknown>[]), ...(options.schedules ?? [])];
-  const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [] };
+  const seen: Stub["seen"] = { signups: 0, tokenRefreshes: 0, redeemedAs: [], anonTables: [], realBackend: [], pushPeople: [], portionCalls: [] };
   const foods: Record<string, unknown>[] = [];
+  const portionOps = new Set<string>();
+  /** eat_food_portion answers to drop after counting (a reply lost on the way back). */
+  const portionTrouble = { lostReplies: 0 };
   const tasks: Record<string, unknown>[] = [];
   const supplies: Record<string, unknown>[] = options.items ? options.items.map((row) => ({ ...row })) : [];
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
@@ -505,6 +512,30 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: object ? after : [after] });
       }
+      // Ate 1 portion (migrations/148): relative, once per op id.
+      if (table === "rpc/eat_food_portion") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        const food = foods.find((row) => row.id === body.p_food_id);
+        if (!food) return route.fulfill({ status: 403, json: { code: "42501", message: "not_found", details: null, hint: null } });
+        const opId = String(body.p_op_id);
+        const delta = Number(body.p_delta);
+        if (!portionOps.has(opId) && typeof food.portions === "number" && !(food.outcome && delta > 0)) {
+          portionOps.add(opId);
+          const next = Math.min(99, Math.max(0, (food.portions as number) - delta));
+          food.portions = next;
+          if (next === 0 && !food.outcome) Object.assign(food, { outcome: "eaten", finished_at: new Date().toISOString() });
+          if (delta < 0 && next > 0 && food.outcome === "eaten") Object.assign(food, { outcome: null, finished_at: null });
+        } else {
+          portionOps.add(opId);
+        }
+        seen.portionCalls.push(opId);
+        if (portionTrouble.lostReplies > 0) {
+          portionTrouble.lostReplies -= 1;
+          return route.abort("connectionreset");
+        }
+        const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: object ? food : [food] });
+      }
       if (table === "inventory_items" && request.method() === "GET" && supplies.length > 0) {
         return route.fulfill({ json: supplies });
       }
@@ -586,6 +617,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     schedules,
     seen,
     foods,
+    portionTrouble,
     tasks,
     supplies,
     repairs,

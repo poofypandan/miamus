@@ -25,6 +25,7 @@ const provider = {
   updateHouseholdTaskStatus: vi.fn(),
   updateHouseholdTask: vi.fn(),
   deletePhoto: vi.fn(async () => undefined),
+  eatFoodPortion: vi.fn(),
 };
 vi.mock("@/lib/data", () => ({ dataProvider: provider }));
 
@@ -254,6 +255,18 @@ describe("drainOutbox", () => {
     for (const job of jobs) await queue.submitJob(job);
     for (const fn of Object.values(provider)) fn.mockReset();
   }
+
+  it("resends a portion tap with the same op id, so the server counts it once (Phase 170 PR A, Codex #93)", async () => {
+    provider.eatFoodPortion.mockRejectedValue(NO_ANSWER);
+    const job = { kind: "portion" as const, opId: "op-1", foodId: "food-1", delta: 1, staffId: "staff-1" };
+    expect((await queue.submitJob(job)).status).toBe("waiting");
+    provider.eatFoodPortion.mockReset();
+    provider.eatFoodPortion.mockResolvedValue({ id: "food-1", portions: 2 });
+    const report = await queue.drainOutbox();
+    expect(report.sent).toHaveLength(1);
+    expect(provider.eatFoodPortion).toHaveBeenCalledWith("food-1", 1, "op-1", "staff-1");
+    expect(await stored()).toEqual([]);
+  });
 
   it("treats a lost reply as saved: the retry is refused by the primary key, and nothing is saved twice", async () => {
     await queueUp(logJob());

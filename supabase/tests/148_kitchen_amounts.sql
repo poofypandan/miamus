@@ -241,6 +241,53 @@ select pg_temp.ok(pg_temp.err_as(:p1, $q$ update public.food_items set portions 
 select pg_temp.ok(pg_temp.err_as(:p1, $q$ update public.food_items set portions = 100 where id = '00000000-0000-0000-0000-0000000148d1' $q$) like '%food_items_portions_check%',
   '... up to 99');
 
+-- ---- Ate 1 portion: relative, retry-safe (Codex, PR #93) -----------------------------
+\set rendang '''00000000-0000-0000-0000-0000000148d1'''
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a001', %L) $q$, :rendang, :s1)) = '',
+  'a staff phone eats one portion');
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a002') $q$, :rendang)) = '',
+  'an owner eats another, from a phone that still showed 3');
+select pg_temp.ok((select portions from public.food_items where id = :rendang::uuid) = 1,
+  'two taps at once take two portions: 3 → 1, none lost');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a001', %L) $q$, :rendang, :s1)) = '',
+  'the first tap is retried after a lost answer (same op id)');
+select pg_temp.ok((select portions = 1 and outcome is null from public.food_items where id = :rendang::uuid),
+  '... and changes nothing');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a003', %L) $q$, :rendang, :s1)) = '',
+  'the last portion is eaten');
+select pg_temp.ok((select portions = 0 and outcome = 'eaten' and finished_by = :s1::uuid and finished_at is not null
+                     from public.food_items where id = :rendang::uuid),
+  '... and the food is finished as Eaten, by Sari');
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a004') $q$, :rendang)) = ''
+                  , 'a late tap on finished food runs');
+select pg_temp.ok((select portions from public.food_items where id = :rendang::uuid) = 0,
+  '... and takes nothing below 0');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, -1, '00000000-0000-0000-0000-00000148a005', %L) $q$, :rendang, :s1)) = '',
+  'Undo of the last portion');
+select pg_temp.ok((select portions = 1 and outcome is null and finished_at is null and finished_by is null
+                     from public.food_items where id = :rendang::uuid),
+  '... brings the food back with 1 portion');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 0, '00000000-0000-0000-0000-00000148a006') $q$, :rendang)) like '%bad_value%',
+  'a count of 0 is refused');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, null) $q$, :rendang)) like '%bad_value%',
+  '... and a tap with no op id');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a007', %L) $q$, :rendang, :s2)) like '%staff_not_in_household%',
+  'a removed staff member''s id is refused');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a008', %L) $q$, :rendang, :s9)) like '%staff_not_in_household%',
+  '... and another household''s');
+select pg_temp.ok(pg_temp.err_as(:a9, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a009') $q$, :rendang)) like '%not_found%',
+  'another household''s owner can''t eat this household''s food');
+select pg_temp.ok(pg_temp.err_as(null, format($q$ select public.eat_food_portion(%L, 1, '00000000-0000-0000-0000-00000148a010') $q$, :rendang)) like '%permission denied%',
+  'a logged-out caller can''t call it');
+select pg_temp.ok((select portions from public.food_items where id = :rendang::uuid) = 1,
+  'none of the refused calls changed anything');
+select pg_temp.ok(pg_temp.err_as(:p1, $q$ select count(*) from public.food_portion_ops $q$) like '%permission denied%',
+  'the op ids are not readable by sessions');
+select pg_temp.ok(not has_function_privilege('anon', 'public.eat_food_portion(uuid, int, uuid, uuid)', 'execute')
+                  and has_function_privilege('authenticated', 'public.eat_food_portion(uuid, int, uuid, uuid)', 'execute')
+                  and (select prosecdef from pg_proc where proname = 'eat_food_portion'),
+  'eat_food_portion: security definer, authenticated, not anon');
+
 -- ---- The Features switch -------------------------------------------------------------
 select pg_temp.ok((public.household_feature_defaults() ->> 'kitchen')::boolean = false,
   'Kitchen amounts defaults off for new households');

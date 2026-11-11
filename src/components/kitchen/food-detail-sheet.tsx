@@ -91,7 +91,7 @@ function Detail({
 }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood, flagLowStock, pendingIds, setFoodPortions } =
+  const { finishFood, unfinishFood, releaseFinishedFoodPhoto, removeFood, flagLowStock, pendingIds, eatFoodPortion } =
     useHousehold();
   // Added on this phone and not sent yet (Phase 161): nothing on the server to
   // finish, change or delete until it arrives.
@@ -157,11 +157,21 @@ function Detail({
     if (portions <= 1) return finish("eaten");
     setBusy("portion");
     try {
-      await setFoodPortions(item.id, portions - 1);
-      toast.success(tr(`${name} · ${portions - 1} ${portions - 1 === 1 ? "portion" : "portions"} left`, `${name} · sisa ${portions - 1} porsi`), {
+      // A change made on the server (migrations/148): two phones at once each
+      // count, so the toast says what the server counted (code review).
+      const { food } = await eatFoodPortion(item.id, 1);
+      const left = food?.portions ?? portions - 1;
+      const text =
+        food?.outcome === "eaten"
+          ? `${FOOD_OUTCOME_LABELS[locale].eaten} — ${name}`
+          : tr(`${name} · ${left} ${left === 1 ? "portion" : "portions"} left`, `${name} · sisa ${left} porsi`);
+      toast.success(text, {
         action: {
           label: tr("Undo", "Batalkan"),
-          onClick: () => void setFoodPortions(item.id, portions).catch(() => undefined),
+          onClick: () =>
+            void eatFoodPortion(item.id, -1).catch(() =>
+              toast.error(tr("Couldn't undo. Try again.", "Gagal membatalkan. Coba lagi."))
+            ),
         },
       });
     } catch (err) {

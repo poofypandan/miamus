@@ -1,5 +1,8 @@
 import { ChoreAlreadySettledError } from "@/lib/chore-settled";
 import { applyAmountRules } from "@/lib/kitchen-units";
+
+/** Portion taps already counted in mock mode (migrations/148's op ids). */
+const mockPortionOps = new Set<string>();
 import type {
   TaskEntity,
   MasterSchedule,
@@ -499,6 +502,24 @@ export const mockProvider: DataProvider = {
       finished_by: null,
     };
     db.foodItems.push(item);
+    saveDB(db);
+    return delay(item);
+  },
+  async eatFoodPortion(id, delta, opId, staffId) {
+    // migrations/148's rules: relative, once per op id, finished at 0.
+    const db = loadDB();
+    const index = db.foodItems.findIndex((f) => f.id === id);
+    if (index === -1) throw new Error("Food not found");
+    const before = db.foodItems[index];
+    if (mockPortionOps.has(opId) || before.portions === null || before.portions === undefined) return delay(before);
+    mockPortionOps.add(opId);
+    if (before.outcome && delta > 0) return delay(before);
+    const portions = Math.min(99, Math.max(0, before.portions - delta));
+    const now = new Date().toISOString();
+    const item: FoodItem = { ...before, portions, updated_at: now };
+    if (portions === 0 && !before.outcome) Object.assign(item, { outcome: "eaten", finished_at: now, finished_by: staffId });
+    if (delta < 0 && portions > 0 && before.outcome === "eaten") Object.assign(item, { outcome: null, finished_at: null, finished_by: null });
+    db.foodItems[index] = item;
     saveDB(db);
     return delay(item);
   },

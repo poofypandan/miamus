@@ -97,6 +97,10 @@ export function outboxView(
     } else if (job.kind === "couldnt") {
       // Laid over by the couldn't-do store itself (lib/task-exceptions-store.ts).
       continue;
+    } else if (job.kind === "portion") {
+      // Shown at the tap and confirmed by the server's answer; a portion
+      // waiting on the phone isn't laid over again (Phase 170 PR A).
+      continue;
     } else if (job.kind === "food") {
       pendingIds.add(job.id);
       foods.push(pendingFood(job.id, job.input, job.addedBy, householdId, new Date(item.timestamp).toISOString()));

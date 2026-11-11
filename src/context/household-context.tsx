@@ -306,8 +306,12 @@ interface HouseholdContextValue {
   /** Undo is gone (its toast closed): remove the finished food's photo now. */
   releaseFinishedFoodPhoto: (id: string) => void;
   returnFoodContainer: (id: string) => Promise<void>;
-  /** Portions left on a food (Phase 170 PR A, D7); anyone in the household. */
-  setFoodPortions: (id: string, portions: number | null) => Promise<void>;
+  /**
+   * Ate `delta` portions of a food, or -1 to undo one (Phase 170 PR A, D7):
+   * a change made on the server, kept on the phone on a weak signal and
+   * safe to resend (migrations/148). Anyone in the household.
+   */
+  eatFoodPortion: (id: string, delta: number) => Promise<{ status: "sent" | "waiting"; food: FoodItem | null }>;
   /** Admins only: food added by mistake. Takes its photo with it. */
   removeFood: (id: string) => Promise<void>;
   /**
@@ -1410,13 +1414,23 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     [putFood, deleteFinishedPhoto]
   );
 
-  const setFoodPortions = useCallback(
-    async (id: string, portions: number | null) => {
+  const eatFoodPortion = useCallback(
+    async (id: string, delta: number) => {
       const before = foodItemsRef.current.find((f) => f.id === id);
-      if (!before) return;
-      putFood({ ...before, portions });
+      if (!before || before.portions === null || before.portions === undefined) {
+        return { status: "sent" as const, food: before ?? null };
+      }
+      // Shown at once; the server's answer (with any other phone's taps)
+      // replaces it.
+      putFood({ ...before, portions: Math.min(99, Math.max(0, before.portions - delta)) });
       try {
-        putFood(await dataProvider.updateFoodItem(id, { portions }));
+        const outcome = await submitJob<Extract<SendResult, { kind: "portion" }>>(
+          { kind: "portion", opId: crypto.randomUUID(), foodId: id, delta, staffId: readActiveStaffId() },
+          ({ food }) => putFood(food)
+        );
+        return outcome.status === "sent"
+          ? { status: "sent" as const, food: outcome.result.food }
+          : { status: "waiting" as const, food: null };
       } catch (err) {
         putFood(before);
         throw err;
@@ -1870,7 +1884,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       unfinishFood,
       releaseFinishedFoodPhoto,
       returnFoodContainer,
-      setFoodPortions,
+      eatFoodPortion,
       removeFood,
       adjustInventoryQuantity,
       setInventoryAmount,
@@ -1957,7 +1971,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       unfinishFood,
       releaseFinishedFoodPhoto,
       returnFoodContainer,
-      setFoodPortions,
+      eatFoodPortion,
       removeFood,
       adjustInventoryQuantity,
       setInventoryAmount,

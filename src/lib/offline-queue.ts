@@ -83,6 +83,12 @@ export type OutboxJob =
   | ChoreFinishJob
   | { kind: "food"; id: string; input: FoodItemInput; addedBy: string | null }
   /**
+   * "Ate 1 portion" (Phase 170 PR A, migrations/148): a relative change with
+   * an op id made on the phone, so a resend after a lost answer, or one
+   * racing its own first try, counts once.
+   */
+  | { kind: "portion"; opId: string; foodId: string; delta: number; staffId: string | null }
+  /**
    * "Tidak bisa dikerjakan" (Phase 165): its id is made on the phone, so a
    * resend is told "already saved" by the primary key.
    */
@@ -325,6 +331,7 @@ export type SendResult =
   | { kind: "logs"; logs: TaskLog[] }
   | { kind: "chore"; task: HouseholdTask }
   | { kind: "food"; food: FoodItem | null }
+  | { kind: "portion"; food: FoodItem }
   | { kind: "couldnt"; exception: TaskException | null };
 
 /**
@@ -351,6 +358,8 @@ export function jobPhotos(job: OutboxJob): string[] {
       return [job.before, job.after].filter((url): url is string => !!url);
     case "couldnt":
       return job.input.photo_url ? [job.input.photo_url] : [];
+    case "portion":
+      return [];
   }
 }
 
@@ -395,6 +404,11 @@ export async function sendJob(job: OutboxJob): Promise<SendResult> {
         if (isAlreadySaved(err)) return { kind: "food", food: null };
         throw err;
       }
+    case "portion":
+      return {
+        kind: "portion",
+        food: await dataProvider.eatFoodPortion(ready.foodId, ready.delta, ready.opId, ready.staffId),
+      };
     case "couldnt": {
       let exception: TaskException | null = null;
       try {
