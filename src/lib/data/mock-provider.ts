@@ -1413,7 +1413,7 @@ export const mockProvider: DataProvider = {
     return delay(
       db.staffProfiles
         .filter((p) => !p.user_id)
-        .map((p) => ({ id: p.id, name: p.name, has_pin: p.has_pin }))
+        .map((p) => ({ id: p.id, name: p.name, has_pin: p.has_pin, claimable: !p.has_pin }))
     );
   },
   async signInWithHouseCode(code, staffId, pin) {
@@ -1424,6 +1424,20 @@ export const mockProvider: DataProvider = {
     if ((db.staffPins ?? {})[staffId] !== pin) {
       return delay({ status: "wrong_pin" as const, attempts_left: 4 });
     }
+    return delay({ status: "ok" as const, household_id: getActiveHouseholdId() });
+  },
+  async claimStaffWithHouseCode(code, staffId, pin, claim) {
+    const db = loadDB();
+    if (code.replace(/[^a-z0-9]/gi, "").toUpperCase() !== (db.houseCode ?? MOCK_HOUSE_CODE)) {
+      return delay({ status: "wrong_code" as const });
+    }
+    if (!claim) return delay({ status: "no_claim_link" as const });
+    const person = db.staffProfiles.find((p) => p.id === staffId && !p.user_id && !p.has_pin);
+    if (!person) return delay({ status: "not_claimable" as const });
+    if (!/^\d{4}$/.test(pin)) return delay({ status: "bad_pin" as const });
+    person.has_pin = true;
+    db.staffPins = { ...(db.staffPins ?? {}), [staffId]: pin };
+    saveDB(db);
     return delay({ status: "ok" as const, household_id: getActiveHouseholdId() });
   },
   async getHouseCode() {

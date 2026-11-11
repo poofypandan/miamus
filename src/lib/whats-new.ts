@@ -28,6 +28,21 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Shown on Chores → Today (Phase 172 PR A2), existing households only
+    // (the calm-start rules keep it from new ones, who get the list at
+    // sign-up). Show me opens the Starter list. One card a week: if the
+    // Features card (Phase 171) still holds this week, this one waits.
+    id: "starter-list-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: a starter list of the usual rooms and chores", id: "Baru: daftar awal ruangan dan tugas yang biasa" },
+    steps: {
+      en: ["Chores → Starter list: tick what's missing. What you already have is marked Added."],
+      id: ["Tugas → Daftar awal: centang yang belum ada. Yang sudah ada ditandai Sudah ditambahkan."],
+    },
+    tryLabel: { en: "Show me", id: "Lihat" },
+  },
+  {
     // Phase 174 PR A: the one owner card for walk-ins, in Chores → Repairs
     // (the calm-start rules hold it until the week is free). Staff get no
     // card: the Perbaikan pill's button says what to do (stop rule).
