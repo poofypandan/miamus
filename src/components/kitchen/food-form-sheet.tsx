@@ -110,7 +110,9 @@ function FoodForm({ item, locale, onDone }: { item: FoodItem | null; locale: Foo
       // review, PR #10).
       return_container: source === "gift" ? returnContainer : false,
       notes: notes.trim() ? notes.trim().slice(0, FOOD_LIMITS.notes) : null,
-      portions,
+      // Only a count the person changed here (Codex, PR #93): saving a note
+      // or a date must not overwrite a portion another phone took meanwhile.
+      ...(!item || portions !== (item.portions ?? null) ? { portions } : {}),
     };
     try {
       if (item) {

@@ -275,6 +275,25 @@ describe("drainOutbox", () => {
     expect(await stored()).toEqual([]);
   });
 
+  it("hands a drained portion's answer to the screen before it counts as answered (Codex, PR #93)", async () => {
+    provider.eatFoodPortion.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob({ kind: "portion", opId: "op-9", foodId: "food-1", staffId: null });
+    provider.eatFoodPortion.mockReset();
+    provider.eatFoodPortion.mockResolvedValue({ food: { id: "food-1", portions: 2 }, consumed: 1 });
+    const seen: { kind: string; answeredYet: boolean }[] = [];
+    const stop = queue.onQueuedSaveSent((item, result) => {
+      seen.push({ kind: result.kind, answeredYet: queue.isAnswered(item.id) });
+    });
+    // The reload after the drain fails: the screen still has the server's row.
+    const report = await queue.drainOutbox(async () => {
+      throw new Error("reload failed");
+    });
+    stop();
+    expect(seen).toEqual([{ kind: "portion", answeredYet: false }]);
+    expect(report.confirmed).toBe(false);
+    expect(queue.isAnswered(report.sent[0].id)).toBe(true);
+  });
+
   it("treats a lost reply as saved: the retry is refused by the primary key, and nothing is saved twice", async () => {
     await queueUp(logJob());
     provider.createLogsBatch.mockRejectedValue(LOST_REPLY);

@@ -454,3 +454,19 @@ test("a portion tap waiting on a dead signal still shows after a reload, and is 
   await expect(page.getByRole("button", { name: /Soto/ })).toContainText("2 porsi");
   expect(new Set(stub.seen.portionCalls).size).toBe(1);
 });
+
+test("editing a food's note keeps a portion another phone took meanwhile (Codex, PR #93)", async ({ context, page }) => {
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true });
+  await foodWithPortions(page, "Rawon", 3);
+
+  // Another phone ate one; this phone still shows 3 and edits the note only.
+  stub.foods[0].portions = 2;
+  await page.getByRole("button", { name: /Rawon/ }).click();
+  await page.getByRole("button", { name: "Ubah" }).click();
+  await page.getByRole("button", { name: "Tambah catatan" }).click();
+  await page.getByLabel(/Catatan/).fill("Panaskan dulu");
+  await page.getByRole("button", { name: "Simpan" }).click();
+
+  await expect.poll(() => stub.foods[0].notes).toBe("Panaskan dulu");
+  expect(stub.foods[0].portions).toBe(2);
+});

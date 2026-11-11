@@ -40,6 +40,7 @@ import {
   outboxItems,
   submitJob,
   isAnswered,
+  onQueuedSaveSent,
   subscribeOutbox,
   SaveStillWaitingError,
   type OfflineQueueItem,
@@ -1476,6 +1477,18 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         ({ food }) => putFood(food)
       );
     },
+    [putFood]
+  );
+
+  // A portion tap or undo sent later by the queue's drain: the screen takes
+  // the server's row before the queue stops laying the change over it
+  // (Codex, PR #93), even if the reload after the drain fails.
+  useEffect(
+    () =>
+      onQueuedSaveSent((item, result) => {
+        if (item.householdId && item.householdId !== getActiveHouseholdId()) return;
+        if (result.kind === "portion" || result.kind === "portion-undo") putFood(result.food);
+      }),
     [putFood]
   );
 

@@ -345,6 +345,19 @@ export function isAnswered(itemId: string): boolean {
   return answered.has(itemId);
 }
 
+/**
+ * Told each answer the drain gets, before it counts as answered (Codex,
+ * PR #93): the screen takes the server's row first (a portion's food), so
+ * it never shows the old count with the waiting change no longer laid over
+ * it, even when the reload after the drain fails.
+ */
+type SendListener = (item: OfflineQueueItem, result: SendResult) => void;
+const sendListeners = new Set<SendListener>();
+export function onQueuedSaveSent(listener: SendListener): () => void {
+  sendListeners.add(listener);
+  return () => sendListeners.delete(listener);
+}
+
 // --- Sending ------------------------------------------------------------------
 
 export type SendResult =
@@ -672,7 +685,14 @@ export async function drainOutbox(
     }
     inFlight.add(item.id);
     try {
-      await sendJob(await withStableIds(item));
+      const result = await sendJob(await withStableIds(item));
+      for (const listener of sendListeners) {
+        try {
+          listener(item, result);
+        } catch (err) {
+          console.error("A screen update after a queued save failed", err);
+        }
+      }
       answered.add(item.id);
       report.sent.push(item);
       sessionRefusals = 0;
