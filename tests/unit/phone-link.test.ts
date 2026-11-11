@@ -58,12 +58,12 @@ describe("phoneLinkState", () => {
     expect(await phoneLinkState("house-a")).toBe("unknown");
   });
 
-  it("gives up after its deadline as unknown, never unlinked, and aborts the request", async () => {
+  it("gives up after its deadline as no answer, never unlinked, and aborts the request", async () => {
     vi.useFakeTimers();
     fake.answer = () => new Promise(() => {}); // a request that never answers
     const pending = phoneLinkState("house-a");
     await vi.advanceTimersByTimeAsync(LINK_CHECK_MS);
-    expect(await pending).toBe("unknown");
+    expect(await pending).toBe("no_answer");
     expect(fake.signal?.aborted).toBe(true);
   });
 
@@ -72,7 +72,12 @@ describe("phoneLinkState", () => {
     fake.sessionHangs = true;
     const pending = phoneLinkState("house-a");
     await vi.advanceTimersByTimeAsync(LINK_CHECK_MS);
-    expect(await pending).toBe("unknown");
+    expect(await pending).toBe("no_answer");
+  });
+
+  it("reads a dropped connection as no answer, not as an unclear one", async () => {
+    fake.answer = async () => ({ data: null, error: { message: "TypeError: Failed to fetch", code: "" } });
+    expect(await phoneLinkState("house-a")).toBe("no_answer");
   });
 
   it("waits no longer than 8 seconds", () => {

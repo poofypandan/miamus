@@ -545,6 +545,18 @@ describe("a phone that is no longer linked", () => {
     expect(await stored()).toHaveLength(1);
   });
 
+  it("never calls it unlinked when the check only gets no answer, however often", async () => {
+    queue.setLinkCheckForTests(async () => "no_answer");
+    await queueLog();
+    provider.createLogsBatch.mockRejectedValue(EXPIRED);
+    for (let i = 0; i < queue.UNLINKED_AFTER_REFUSALS * 2; i++) {
+      const report = await queue.drainOutbox();
+      expect(report.unlinked).toBe(false);
+      expect(report.waiting).toBe(1);
+    }
+    expect(await stored()).toHaveLength(1);
+  });
+
   it("still drops a real refusal while the phone is linked", async () => {
     await queueLog();
     provider.createLogsBatch.mockRejectedValue(REFUSED_SESSION);

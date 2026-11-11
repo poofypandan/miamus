@@ -652,7 +652,7 @@ export async function drainOutbox(
         report.unlinked = true;
         stalled = true;
         report.waiting++;
-      } else if (link === "unknown" || isRetryable(err)) {
+      } else if (link === "unknown" || link === "no_answer" || isRetryable(err)) {
         stalled = true;
         report.waiting++;
       } else {

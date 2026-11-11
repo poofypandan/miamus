@@ -1,3 +1,4 @@
+import { isConnectionError } from "@/lib/network-errors";
 import { supabase } from "@/lib/supabase/client";
 
 /**
@@ -9,16 +10,18 @@ import { supabase } from "@/lib/supabase/client";
  *   "unlinked" — no sign-in on this phone any more, or it no longer reaches
  *                this household;
  *   "linked"   — it does, so the refusal was about the save itself;
- *   "unknown"  — the question got no clear answer (no signal, a token still
- *                being renewed, or no answer within LINK_CHECK_MS).
+ *   "unknown"  — the server answered, but not clearly (a token still being
+ *                renewed); repeated, the queue treats the phone as unlinked;
+ *   "no_answer" — no answer at all (no signal, or none within LINK_CHECK_MS):
+ *                only tried again later, never counted toward "unlinked".
  */
-export type PhoneLinkState = "linked" | "unlinked" | "unknown";
+export type PhoneLinkState = "linked" | "unlinked" | "unknown" | "no_answer";
 
 /**
  * The longest the check may take. RPCs are outside the write timeout
  * (lib/supabase/write-timeout.ts), and the queue waits on this answer before
  * the next save, so a stalled request must not hold up the drain (Codex,
- * PR #92). Past it: "unknown", tried again on the next pass.
+ * PR #92). Past it: "no_answer", tried again on the next pass.
  */
 export const LINK_CHECK_MS = 8_000;
 
@@ -34,7 +37,7 @@ export async function phoneLinkState(
   const deadline = new Promise<PhoneLinkState>((resolve) => {
     timer = setTimeout(() => {
       controller.abort();
-      resolve("unknown");
+      resolve("no_answer");
     }, timeoutMs);
   });
   try {
@@ -50,12 +53,13 @@ async function ask(householdId: string, signal: AbortSignal): Promise<PhoneLinkS
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (signal.aborted) return "unknown";
+    if (signal.aborted) return "no_answer";
     if (!session) return "unlinked";
     const { data, error } = await supabase.rpc("get_user_household_ids").abortSignal(signal);
+    if (signal.aborted || (error && isConnectionError(error))) return "no_answer";
     if (error || !Array.isArray(data)) return "unknown";
     return (data as string[]).includes(householdId) ? "linked" : "unlinked";
-  } catch {
-    return "unknown";
+  } catch (err) {
+    return isConnectionError(err) ? "no_answer" : "unknown";
   }
 }
