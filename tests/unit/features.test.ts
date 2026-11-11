@@ -144,7 +144,7 @@ describe("the kinds of home", () => {
     expect(isHomeType("castle")).toBe(false);
   });
 
-  it("aren't asked until the template they open exists (Phase 172 PR A2)", () => {
-    expect(SETUP_TEMPLATES_READY).toBe(false);
+  it("are asked now that the template they open exists (Phase 172 PR A2)", () => {
+    expect(SETUP_TEMPLATES_READY).toBe(true);
   });
 });
