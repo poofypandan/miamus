@@ -97,6 +97,14 @@ export async function undoWalkIn(visitId: string, createdRepairId: string | null
 export async function undoFinish(visitId: string, afterPhoto: string): Promise<boolean> {
   const queued = outboxItems().find((item) => item.job.kind === "walkin_finish" && item.job.visitId === visitId);
   if (queued && isSending(queued.id)) throw new SaveStillWaitingError();
+  // Its start is still on the phone too: neither has reached the server, so
+  // taking it back needs no signal at all.
+  const startWaits = outboxItems().some((item) => item.job.kind === "walkin_start" && item.job.visit.id === visitId);
+  if (queued && startWaits) {
+    await clearFromQueue(queued.id);
+    dropPhoto(afterPhoto);
+    return true;
+  }
   try {
     await dataProvider.reopenRepairWalkIn(visitId);
   } catch (err) {

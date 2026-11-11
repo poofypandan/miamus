@@ -1,7 +1,7 @@
 #!/bin/sh
 # Migration 149 checks: a hand-over racing a Selesai never leaves a stretch
 # open on a finished walk-in (Codex, PR #94). Two sessions, committed rows:
-#   1. Selesai first (still open, row held), hand-over meanwhile: the
+#   1. Selesai first (still open, row held for 5 s), hand-over 1 s in: the
 #      hand-over waits, then is refused (supervision_visit_finished).
 #   2. Hand-over first (still open), Selesai meanwhile: Selesai waits, then
 #      closes the new person's stretch too.
@@ -65,7 +65,7 @@ begin;
 $AS_PHONE
 update public.repair_visits set after_photo_url = '$PHOTO/a-1.webp', left_phone_at = now(), outcome = 'fixed'
  where id = '$V1';
-select pg_sleep(3);
+select pg_sleep(5);
 commit;
 SQL
 ) >/dev/null &
@@ -99,7 +99,7 @@ SQL
 begin;
 $AS_PHONE
 insert into public.repair_supervision (household_id, visit_id, staff_id) values ('$HH', '$V2', '$SYAM');
-select pg_sleep(3);
+select pg_sleep(5);
 commit;
 SQL
 ) >/dev/null &
