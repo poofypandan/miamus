@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import {
   RECIPE_LIMITS,
+  STAFF_STEPS_MISSING,
   amountLabel,
   lineName,
   missingIndonesian,
@@ -76,7 +78,8 @@ function RecipeBody({
   const english = recipe.written_in === "en";
   const [asStaff, setAsStaff] = useState(!owner);
   const forStaff = !owner || asStaff;
-  const text = forStaff ? staffText(recipe) : { name: recipe.name, steps: recipe.steps };
+  // Staff (and the owner's preview) only ever read Indonesian steps (Codex P1, PR #98).
+  const text = forStaff ? staffText(recipe) : { name: recipe.name, steps: recipe.steps, stepsMissing: false };
   // What the cook reads is always Indonesian, whatever the owner's language.
   const readLang: RecipeLang = forStaff ? "id" : lang;
   const steps = splitSteps(text.steps);
@@ -103,28 +106,7 @@ function RecipeBody({
           />
         )}
 
-        {missing && (
-          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
-            <Languages className="mt-0.5 size-5 shrink-0 text-amber-700" strokeWidth={1.75} />
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <p className="text-sm text-amber-900">
-                {tr(
-                  "Staff read Bahasa Indonesia. This recipe has no Indonesian version yet, so they see your English.",
-                  "Staf membaca Bahasa Indonesia. Resep ini belum ada versi Bahasa Indonesia, jadi staf melihat versi Inggrisnya."
-                )}
-              </p>
-              {onEdit && (
-                <Button
-                  variant="outline"
-                  className="min-h-11 self-start rounded-xl bg-card"
-                  onClick={() => onEdit(recipe, "indonesian")}
-                >
-                  <Languages /> {tr("Add Indonesian version", "Tambah versi Bahasa Indonesia")}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+        {missing && <IndonesianVersionNote onAdd={onEdit ? () => onEdit(recipe, "indonesian") : undefined} />}
 
         <div className="flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2">
           <span className={cn("font-medium text-gray-900", big ? "text-lg" : "text-base")}>
@@ -190,6 +172,15 @@ function RecipeBody({
           )}
         </section>
 
+        {text.stepsMissing && (
+          <section className="flex flex-col gap-2" aria-labelledby="recipe-steps">
+            <h3 id="recipe-steps" className={cn("font-semibold text-gray-900", big ? "text-lg" : "text-base")}>
+              Cara membuat
+            </h3>
+            <p className={cn("text-muted-foreground", big ? "text-lg" : "text-sm")}>{STAFF_STEPS_MISSING}</p>
+          </section>
+        )}
+
         {steps.length > 0 && (
           <section className="flex flex-col gap-2" aria-labelledby="recipe-steps">
             <h3 id="recipe-steps" className={cn("font-semibold text-gray-900", big ? "text-lg" : "text-base")}>
@@ -219,6 +210,33 @@ function RecipeBody({
         {owner && onEdit && (
           <Button variant="outline" className="min-h-12 rounded-xl text-base" onClick={() => onEdit(recipe)}>
             <Pencil /> {tr("Edit recipe", "Ubah resep")}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Owners only (mounted only on owner screens, so useT is safe): a gentle,
+ * non-blocking note on an English recipe still missing its Indonesian
+ * version. The Indonesian fields stay optional (no new required fields).
+ */
+function IndonesianVersionNote({ onAdd }: { onAdd?: () => void }) {
+  const t = useT();
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+      <Languages className="mt-0.5 size-5 shrink-0 text-amber-700" strokeWidth={1.75} />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <p className="text-sm text-amber-900">
+          {t(
+            "Add the Indonesian version so your staff can cook from it.",
+            "Tambahkan versi Bahasa Indonesia supaya staf bisa memasak dari resep ini."
+          )}
+        </p>
+        {onAdd && (
+          <Button variant="outline" className="min-h-11 self-start rounded-xl bg-card" onClick={onAdd}>
+            <Languages /> {t("Add Indonesian version", "Tambah versi Bahasa Indonesia")}
           </Button>
         )}
       </div>

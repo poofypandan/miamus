@@ -280,8 +280,8 @@ function RecipeForm({
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {t(
-                    "Staff phones show only Bahasa Indonesia. Anything left blank shows your English.",
-                    "HP staf hanya menampilkan Bahasa Indonesia. Yang dikosongkan tampil dalam bahasa Inggris."
+                    "Staff phones show only Bahasa Indonesia: without Indonesian steps, staff see the ingredients but no steps. A blank name shows as you wrote it.",
+                    "HP staf hanya menampilkan Bahasa Indonesia: tanpa cara membuat dalam Bahasa Indonesia, staf melihat bahannya saja. Nama yang dikosongkan tampil seperti yang Anda tulis."
                   )}
                 </span>
               </div>

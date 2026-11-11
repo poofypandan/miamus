@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   RECIPE_UNITS,
+  STAFF_STEPS_MISSING,
   amountLabel,
   draftFrom,
   emptyDraft,
@@ -108,13 +109,32 @@ describe("labels", () => {
 });
 
 describe("what staff phones read", () => {
-  it("an English recipe shows its Indonesian version where there is one", () => {
-    expect(staffText(recipe({ name_id: "Soto ayam", steps_id: "Rebus ayam." }))).toEqual({ name: "Soto ayam", steps: "Rebus ayam." });
-    expect(staffText(recipe())).toEqual({ name: "Chicken soto", steps: "Boil the chicken.\nAdd the spices." });
+  it("an English recipe with its Indonesian steps: staff read those (Codex P1, PR #98)", () => {
+    expect(staffText(recipe({ name_id: "Soto ayam", steps_id: "Rebus ayam." }))).toEqual({
+      name: "Soto ayam",
+      steps: "Rebus ayam.",
+      stepsMissing: false,
+    });
+  });
+
+  it("an English recipe without Indonesian steps: no steps at all, never the English (Codex P1, PR #98)", () => {
+    const text = staffText(recipe({ name_id: "Soto ayam" }));
+    expect(text).toEqual({ name: "Soto ayam", steps: null, stepsMissing: true });
+    expect(STAFF_STEPS_MISSING).toBe("Cara membuat belum ada dalam Bahasa Indonesia.");
+    // No steps written at all: nothing missing to say.
+    expect(staffText(recipe({ steps: null })).stepsMissing).toBe(false);
+  });
+
+  it("no Indonesian name: the name as written (household content, like task titles)", () => {
+    expect(staffText(recipe()).name).toBe("Chicken soto");
   });
 
   it("an Indonesian recipe is read as written", () => {
-    expect(staffText(recipe({ written_in: "id", name: "Soto ayam", name_id: "ignored" })).name).toBe("Soto ayam");
+    expect(staffText(recipe({ written_in: "id", name: "Soto ayam", name_id: "ignored", steps_id: "x" }))).toEqual({
+      name: "Soto ayam",
+      steps: "Boil the chicken.\nAdd the spices.",
+      stepsMissing: false,
+    });
   });
 
   it("a linked line reads as the item does; a free line in its Indonesian name for staff", () => {

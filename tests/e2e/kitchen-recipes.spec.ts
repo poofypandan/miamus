@@ -163,7 +163,8 @@ test("an English recipe without its Indonesian version: the owner is told, on th
   await page.keyboard.press("Escape");
 
   await rendang.click();
-  await expect(page.getByText(/This recipe has no Indonesian version yet/)).toBeVisible();
+  // A gentle, non-blocking note (Codex P1, PR #98); the fields stay optional.
+  await expect(page.getByText("Add the Indonesian version so your staff can cook from it.")).toBeVisible();
   await page.getByRole("button", { name: "Add Indonesian version" }).click();
   await expect(page.getByText("For staff, in Bahasa Indonesia")).toBeVisible();
   await shot(page, "owner-recipe-form-en");
@@ -211,6 +212,36 @@ test("a staff phone reads the recipe in Bahasa Indonesia, read only, and scales 
   await expect(page.getByText("6 porsi")).toBeVisible();
   await expect(page.getByText("1,5 kg", { exact: true })).toBeVisible();
   await expect(page.getByText("3 sdm", { exact: true })).toBeVisible();
+});
+
+test("an English recipe without Indonesian steps: staff see the ingredients and one Indonesian line, no English steps", async ({ context, page }) => {
+  await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [chicken],
+    recipes: [soto({ steps_id: null })],
+  });
+  await page.goto("/staff");
+  await page.getByRole("tab", { name: "Dapur" }).click();
+  await page.getByRole("tab", { name: "Menu" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: /Soto ayam/ }).click({ timeout: 20_000 });
+
+  await expect(page.getByRole("heading", { name: "Soto ayam" })).toBeVisible();
+  await expect(page.getByText("Kecap manis")).toBeVisible();
+  await expect(page.getByText("Cara membuat belum ada dalam Bahasa Indonesia.")).toBeVisible();
+  await expect(page.getByText(/Boil the chicken|Add the spices|Serve with rice/)).toHaveCount(0);
+});
+
+test("the owner's staff preview of a recipe without Indonesian steps shows what staff see", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [chicken], recipes: [soto({ steps_id: null })] });
+  await page.goto("/dashboard?module=inventory&kitchen=menu");
+  await page.getByRole("button", { name: /Chicken soto/ }).click({ timeout: 20_000 });
+  await expect(page.getByText("Add the Indonesian version so your staff can cook from it.")).toBeVisible();
+  await expect(page.getByText("Boil the chicken for 30 minutes.")).toBeVisible();
+  await page.getByRole("tab", { name: "For staff" }).click();
+  await expect(page.getByText("Cara membuat belum ada dalam Bahasa Indonesia.")).toBeVisible();
+  await expect(page.getByText("Boil the chicken for 30 minutes.")).toHaveCount(0);
 });
 
 test("Kitchen switched off: no Menu pill, and a Menu link opens Food", async ({ context, page }) => {

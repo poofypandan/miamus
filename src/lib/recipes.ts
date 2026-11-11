@@ -102,7 +102,9 @@ export function lineItem(line: Pick<RecipeIngredient, "item_id">, items: readonl
 /**
  * How a line's name reads. Linked lines read as the item does on the
  * shopping list (the same words staff already know). On a staff phone, an
- * English recipe's line shows its Indonesian name when it has one.
+ * English recipe's line shows its Indonesian name when it has one, and
+ * otherwise the name as the owner typed it: household content, like an
+ * item's name on the shopping list, not app text.
  */
 export function lineName(
   line: Pick<RecipeIngredient, "item_id" | "name" | "name_id">,
@@ -115,13 +117,35 @@ export function lineName(
   return item ? stockItemName(item) : line.name;
 }
 
-/** What a staff phone shows: the Indonesian version where there is one. */
+/** The one line a staff phone shows in place of steps that have no Indonesian version (glossary: Cara membuat). */
+export const STAFF_STEPS_MISSING = "Cara membuat belum ada dalam Bahasa Indonesia.";
+
+/**
+ * What a staff phone shows (Codex P1, PR #98; manager decision, 11 Nov).
+ * Staff screens are Indonesian only:
+ *
+ *   - a recipe written in Indonesian is shown as written;
+ *   - steps: only ever Indonesian. An English recipe without its Indonesian
+ *     steps shows none (`steps` null, `stepsMissing` true), and the screen
+ *     says so in one Indonesian line, STAFF_STEPS_MISSING. No English text;
+ *   - the name: the Indonesian name when there is one, otherwise the name
+ *     as the owner wrote it. That's household content, not app text, the
+ *     same as owner-typed task titles and item names everywhere else in the
+ *     app (lineName below follows the same rule for free-name ingredients).
+ */
 export function staffText(recipe: Pick<Recipe, "name" | "steps" | "written_in" | "name_id" | "steps_id">): {
   name: string;
   steps: string | null;
+  stepsMissing: boolean;
 } {
-  if (recipe.written_in === "id") return { name: recipe.name, steps: recipe.steps };
-  return { name: recipe.name_id || recipe.name, steps: recipe.steps_id || recipe.steps };
+  if (recipe.written_in === "id") return { name: recipe.name, steps: recipe.steps, stepsMissing: false };
+  const steps = recipe.steps_id || null;
+  return {
+    // Household content: shown as written when there's no Indonesian name, like task titles.
+    name: recipe.name_id || recipe.name,
+    steps,
+    stepsMissing: steps === null && !!recipe.steps,
+  };
 }
 
 /**
