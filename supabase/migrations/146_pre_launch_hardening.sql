@@ -452,6 +452,10 @@ alter default privileges for role postgres in schema public revoke all on functi
 alter default privileges for role postgres in schema public
   revoke truncate, references, trigger on tables from authenticated;
 
+-- The one foreign key 145 left without an index (134's rule: every foreign
+-- key indexed, except repair_costs_repair_fkey, which a unique index covers).
+create index if not exists household_features_set_by_idx on public.household_features (set_by);
+
 -- --- 10. M1: growing PIN lockouts, per-session and per-household caps -----------------
 -- No client grants (staff_profiles has column grants, 096): only the
 -- functions below read or write them.
