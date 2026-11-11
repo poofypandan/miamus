@@ -9,7 +9,7 @@ import type { OrganiseRoomsMoved,
   InventoryItem,
   StaffProfile,
 } from "@/types/database";
-import type { CreateHouseholdTaskInput, DataProvider, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
+import type { CreateHouseholdTaskInput, DataProvider, HouseCodeClaim, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
 import { longRepeatFloorFor, longestGapDays, LONGEST_REPEAT_GAP_DAYS, rolloverFloorFor } from "@/lib/chore-recurrence";
 
 function client() {
@@ -1293,6 +1293,15 @@ export const supabaseProvider: DataProvider = {
     });
     if (error) throw error;
     return data as unknown as HouseCodeSignIn;
+  },
+  async claimStaffWithHouseCode(code, staffId, pin) {
+    const { data, error } = await client().rpc("claim_staff_with_house_code", {
+      p_code: code,
+      p_staff_id: staffId,
+      p_new_pin: pin,
+    });
+    if (error) throw error;
+    return data as unknown as HouseCodeClaim;
   },
   async getHouseCode() {
     const { data, error } = await client().rpc("my_house_code", {

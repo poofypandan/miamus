@@ -39,7 +39,8 @@ import {
   type HouseholdAccess,
 } from "@/lib/household-access";
 import { clearCachedOwnerLocale, LOCALE_NAMES } from "@/lib/owner-locale";
-import { SETUP_TEMPLATES_READY, type HomeType } from "@/lib/setup-templates";
+import { SETUP_TEMPLATES_READY, setupHref, type HomeType } from "@/lib/setup-templates";
+import { recordSetup } from "@/lib/setup-apply";
 import { supabase } from "@/lib/supabase/client";
 
 /**
@@ -539,7 +540,19 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
     setSaving(false);
   }
 
-  if (created) return <HomeTypeScreen householdId={created} onDone={enterHousehold} />;
+  if (created) {
+    return (
+      <HomeTypeScreen
+        householdId={created}
+        onDone={async (home) => {
+          // As enterHousehold: the context learns the new household first.
+          await reloadTenant();
+          // The starter list for that home; Skip opens it with small defaults.
+          router.replace(setupHref(home));
+        }}
+      />
+    );
+  }
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 pb-[calc(3rem+env(safe-area-inset-bottom))]">
@@ -654,15 +667,14 @@ function HomeTypeScreen({
   async function finish(home: HomeType | null) {
     if (busy) return;
     setBusy(true);
-    if (home && supabase) {
-      // Best effort: the answer only picks a starting list, so a failed save
-      // never holds the owner up.
-      const { error } = await supabase.rpc("record_household_setup", {
-        p_household: householdId,
-        p_fields: { home_type: home },
-      });
-      if (error) console.error("Could not save the kind of home", error);
-    }
+    // Best effort: the answer only picks a starting list, so a failed save
+    // never holds the owner up. The household's name was setup's first
+    // typed field (Phase 172 PR 0's count).
+    await recordSetup(householdId, {
+      ...(home ? { home_type: home } : {}),
+      started_at: new Date().toISOString(),
+      typed_fields: 1,
+    });
     await onDone(home);
   }
 

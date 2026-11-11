@@ -603,6 +603,12 @@ export interface DataProvider {
   houseCodeRoster(code: string): Promise<HouseCodePerson[]>;
   /** Code, name and PIN together; on "ok" this phone is linked to the household. */
   signInWithHouseCode(code: string, staffId: string, pin: string): Promise<HouseCodeSignIn>;
+  /**
+   * Staff in one go (Phase 172 PR A2, migrations/146): a person with no PIN
+   * yet, added in the last 7 days, picks their name and makes a PIN; on
+   * "ok" this phone is linked to the household.
+   */
+  claimStaffWithHouseCode(code: string, staffId: string, pin: string): Promise<HouseCodeClaim>;
   /** Admins only, for the active household. */
   getHouseCode(): Promise<string | null>;
   rotateHouseCode(): Promise<string>;
@@ -630,6 +636,13 @@ export type HouseCodeSignIn =
   | { status: "ok"; household_id: string }
   | { status: "wrong_code" }
   | { status: "too_many_attempts" };
+
+export type HouseCodeClaim =
+  | { status: "ok"; household_id: string }
+  | { status: "wrong_code" }
+  | { status: "too_many_attempts" }
+  | { status: "not_claimable" }
+  | { status: "bad_pin" };
 
 /** A staff phone linked to the household (device_sessions). */
 export type LinkedPhone = { id: string; linked_at: string; last_seen_at: string };

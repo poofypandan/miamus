@@ -3,7 +3,7 @@
 import { startTransition, useMemo, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { Bell, CalendarDays, ChevronRight, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Sparkles, Wrench } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Smartphone, Sparkles, Wrench } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -38,6 +38,7 @@ import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { useRepairs } from "@/hooks/use-repairs";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { useStaffClaimsToday } from "@/hooks/use-staff-claims-today";
 import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores";
 import { useBillPayments } from "@/hooks/use-bill-payments";
 import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
@@ -216,6 +217,8 @@ export function AgendaTab() {
 
   // Repairs (Phase 159): staff reports to review, and work done to check.
   // Normal staff reports land here rather than as a push (D6).
+  // Staff in one go (Phase 172 PR A2): whose phone was linked today.
+  const linkedToday = useStaffClaimsToday();
   const { repairs, visits } = useRepairs();
   const repairLines = useMemo(
     () => (repairsOn ? repairsToday(repairs, visits) : { toReview: 0, toCheck: 0 }),
@@ -441,8 +444,14 @@ export function AgendaTab() {
             pet (Phase 162, D3). Renders nothing otherwise. */}
         <PetsQuestionCard />
 
-        {(notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
+        {(linkedToday.length > 0 || notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0) && (
           <div className="-my-1 flex flex-col">
+            {linkedToday.map((name) => (
+              <p key={name} className="flex min-h-11 items-center gap-2 px-1 text-sm text-gray-700">
+                <Smartphone className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="min-w-0 flex-1">{t(`${name}'s phone is linked`, `HP ${name} sudah terhubung`)}</span>
+              </p>
+            ))}
             {notDoneCount > 0 && (
               <button
                 type="button"

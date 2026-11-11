@@ -1254,6 +1254,19 @@ export const mockProvider: DataProvider = {
     }
     return delay({ status: "ok" as const, household_id: getActiveHouseholdId() });
   },
+  async claimStaffWithHouseCode(code, staffId, pin) {
+    const db = loadDB();
+    if (code.replace(/[^a-z0-9]/gi, "").toUpperCase() !== (db.houseCode ?? MOCK_HOUSE_CODE)) {
+      return delay({ status: "wrong_code" as const });
+    }
+    const person = db.staffProfiles.find((p) => p.id === staffId && !p.user_id && !p.has_pin);
+    if (!person) return delay({ status: "not_claimable" as const });
+    if (!/^\d{4}$/.test(pin)) return delay({ status: "bad_pin" as const });
+    person.has_pin = true;
+    db.staffPins = { ...(db.staffPins ?? {}), [staffId]: pin };
+    saveDB(db);
+    return delay({ status: "ok" as const, household_id: getActiveHouseholdId() });
+  },
   async getHouseCode() {
     return delay(loadDB().houseCode ?? MOCK_HOUSE_CODE);
   },
