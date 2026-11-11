@@ -297,8 +297,8 @@ function StaffPhonesSwitch() {
           title={t("Staff phones", "HP staf")}
           switchLabel={t("Send notifications to staff phones", "Kirim notifikasi ke HP staf")}
           detail={t(
-            "New tasks for them today, and your answers to their requests. Never between 9:00 PM and 6:00 AM.",
-            "Tugas baru untuk mereka hari ini, dan jawaban Anda atas permintaan mereka. Tidak pernah pukul 21.00–06.00."
+            "New tasks for them today, your answers to their requests, and the routine reminders you turn on. Never between 9:00 PM and 6:00 AM, except those reminders, until 10:00 PM.",
+            "Tugas baru untuk mereka hari ini, jawaban Anda atas permintaan mereka, dan pengingat rutinitas yang Anda nyalakan. Tidak pernah pukul 21.00–06.00, kecuali pengingat itu, sampai pukul 22.00."
           )}
           on={overview.enabled}
           disabled={saving}

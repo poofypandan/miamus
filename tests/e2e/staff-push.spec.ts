@@ -30,7 +30,7 @@ test("staff Today asks to turn notifications on, and 'Nanti saja' puts it off on
 
   const card = page.getByRole("region", { name: "Aktifkan notifikasi" });
   await expect(card).toBeVisible({ timeout: 20_000 });
-  await expect(card).toContainText("Tidak ada notifikasi pukul 21.00–06.00.");
+  await expect(card).toContainText("Tidak ada notifikasi pukul 22.00–06.00.");
   await expect(card).toContainText("HP ini dipakai bersama. Notifikasi hanya menyebut nama Anda.");
   await expect(card.getByRole("button", { name: "Aktifkan" })).toBeEnabled();
 
@@ -73,7 +73,7 @@ test("Lapor ends with 'Notifikasi di HP ini', which opens the settings", async (
   await expect(sheet.getByRole("switch", { name: "Untuk saya (Ari)" })).toHaveAttribute("aria-checked", "false");
   await expect(sheet).toContainText("Tugas baru untuk Anda hari ini");
   await expect(sheet).toContainText("Jam tenang");
-  await expect(sheet).toContainText("Tidak ada notifikasi pukul 21.00–06.00.");
+  await expect(sheet).toContainText("Tidak ada notifikasi pukul 22.00–06.00.");
 });
 
 test("a notification for Budi, opened on Ari's turn: says whose, and offers the switch", async ({ context, page }) => {

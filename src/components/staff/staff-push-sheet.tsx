@@ -201,7 +201,7 @@ function StaffPushSettings({ staffPush, onClose }: { staffPush: StaffPush; onClo
         <Moon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
         <div className="flex flex-col">
           <p className="text-sm font-medium">Jam tenang</p>
-          <p className="text-xs text-muted-foreground">Tidak ada notifikasi pukul 21.00–06.00.</p>
+          <p className="text-xs text-muted-foreground">Tidak ada notifikasi pukul 22.00–06.00.</p>
         </div>
       </div>
 

@@ -127,7 +127,13 @@ export const LEGAL = {
   // can undo it, for minutes, or a walk until shortly after it ends); whose
   // PIN last opened a linked phone is kept while it is linked. No new
   // service.
-  policyVersion: "2026-11-11.4",
+  // 2026-11-11.5: routine reminders and "not done" alerts (Phase 173 PR C,
+  // migrations/150) — a staff reminder at a routine's time when an admin
+  // turned it on and it isn't done, until 10 PM (other staff notifications
+  // still stop at 9 PM); admins told when a chosen routine still isn't done
+  // 30 minutes after its time, until 10:30 PM. No new service, no new kind
+  // of personal data.
+  policyVersion: "2026-11-11.5",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

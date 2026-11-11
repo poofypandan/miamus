@@ -28,6 +28,27 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Phase 173 PR C (D7, D15). Listed in Household → What's new only, never
+    // a card: this week's card already went out (one card a week). The two
+    // switches explain themselves in the Add routine sheet. Staff need no
+    // tutorial: a reminder is a notification that opens Today.
+    id: "routine-reminders-2026-11",
+    date: "2026-11-11",
+    audience: "owner",
+    title: { en: "New: reminders on routines", id: "Baru: pengingat pada rutinitas" },
+    steps: {
+      en: [
+        "Open a routine (Add routine, or one under Other routines). Under Notifications, turn on Remind staff at this time: staff get a notification at its time, only if it isn't done yet, until 10:00 PM.",
+        "Turn on Tell us if it's not done: if it still isn't done 30 minutes after its time, every owner gets one notification. Both are off unless you turn them on.",
+      ],
+      id: [
+        "Buka rutinitas (Tambah rutinitas, atau salah satu di Rutinitas lain). Di Notifikasi, nyalakan Ingatkan staf di jam ini: staf mendapat notifikasi pada jamnya, hanya jika belum dikerjakan, sampai pukul 22.00.",
+        "Nyalakan Kabari kami jika belum dikerjakan: kalau 30 menit setelah jamnya masih belum dikerjakan, semua pemilik mendapat satu notifikasi. Keduanya mati kecuali Anda nyalakan.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown on Chores → Today (Phase 172 PR A2), existing households only
     // (the calm-start rules keep it from new ones, who get the list at
     // sign-up). Show me opens the Starter list. One card a week: if the
