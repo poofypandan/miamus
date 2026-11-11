@@ -235,6 +235,17 @@ people are **staf** and **admin**.
 | What kind of home? | **Rumah seperti apa?** | Phase 171 PR A, sign-up screen 2 (the brief's wording; Phase 172's plan drafted "Seperti apa rumah Anda?"). |
 | House with a garden · Big house, several floors · Apartment · Something else | **Rumah dengan taman · Rumah besar bertingkat · Apartemen · Lainnya** | Phase 172's four home types, drawn by Phase 171's screen. |
 | No thanks (offer, later) | **Tidak, terima kasih** | Phase 171 D7: the offer card, built with the first feature that starts off. |
+| Kitchen amounts (feature) | **Jumlah bahan dapur** | Phase 170 PR A, the Features row under Dapur. |
+| Ready to eat · Ingredients (Food groups) | **Siap dimakan · Bahan masakan** | Phase 170 PR A (D6): fresh food and pantry items browse under Makanan. Hint: **Makanan segar dan bahan pokok**. |
+| Track amount / Set amount | **Catat jumlah** / **Ubah jumlah** | Phase 170 PR A. "Catat", as in Dicatat Sari. |
+| N left / about N · 3 weeks ago | **Sisa N** / **sekitar N · 3 minggu lalu** | Phase 170 PR A: "Sisa 1,2 kg"; the second in grey after 14 days, never red. |
+| How much is there now? / A guess is fine… | **Berapa yang ada sekarang?** / **Perkiraan juga boleh; nanti terkoreksi saat belanja.** | Phase 170 PR A, owner form. |
+| Running low at (optional) | **Hampir habis kalau tinggal (opsional)** | Phase 170 PR A, owner form; matches *Hampir habis*. |
+| Old count: 2 kg on 3 Oct, not used | **Hitungan lama: 2 kg pada 3 Okt, tidak dipakai** | Phase 170 PR A (D14). |
+| Unit | **Satuan** | Phase 170 PR A, the Track amount chips. |
+| How much did you buy? / usually 5 kg / Skip amount / Bought | **Beli berapa?** / **biasanya 5 kg** / **Lewati jumlah** / **Sudah dibeli** | Phase 170 PR A; owners and staff. Toast: **Sudah dibeli · masih hampir habis**. |
+| Portions / Ate 1 portion | **Porsi** / **Dimakan 1 porsi** | Phase 170 PR A (D7): "Rendang · 3 porsi"; toast **sisa 2 porsi**. |
+| Kitchen units | **buah, butir, ikat, siung, lembar, batang, bungkus, sachet** (recipes later add **sdm, sdt**) | Phase 170 PR A: the words Indonesian kitchens use, kept in English too; the English picker adds a small second line (piece, egg, bunch, clove, leaf, stalk, packet, sachet). |
 
 ## Formatting
 
