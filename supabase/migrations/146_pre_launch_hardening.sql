@@ -496,9 +496,10 @@ begin
     return jsonb_build_object('status', 'no_pin');
   end if;
 
+  -- Locked: nothing is checked, so nothing is recorded. 115 recorded these,
+  -- but since 146 every recorded wrong PIN counts toward the caps below, and
+  -- a locked person tapping on would pause PINs for the whole household.
   if person.pin_locked_until is not null and person.pin_locked_until > now() then
-    insert into public.staff_sign_in_attempts (user_id, household_id, staff_id, kind, success)
-    values (p_user_id, p_household_id, p_staff_id, 'pin', false);
     if person.pin_locked_until = 'infinity'::timestamptz then
       return jsonb_build_object('status', 'locked', 'locked_until', null, 'until_reset', true);
     end if;

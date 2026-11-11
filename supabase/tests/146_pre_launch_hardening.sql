@@ -316,8 +316,9 @@ select pg_temp.ok((:'j')::jsonb->>'status' = 'locked'
                          from public.staff_profiles where id = :budi::uuid),
   'M1: 5 wrong PINs lock for 15 minutes');
 select pg_temp.try_pin(:p4, :budi, '5678') as j \gset
-select pg_temp.ok((:'j')::jsonb->>'status' = 'locked',
-  'M1: while locked, even the right PIN is refused');
+select pg_temp.ok((:'j')::jsonb->>'status' = 'locked'
+                  and (select count(*) = 5 from public.staff_sign_in_attempts where staff_id = :budi::uuid and not success),
+  'M1: while locked, even the right PIN is refused, and the refusal isn''t counted toward the caps');
 -- The lock runs out; five more wrong from a second session: 1 hour.
 update public.staff_profiles set pin_locked_until = now() - interval '1 second' where id = :budi;
 select 'tries ' || count(pg_temp.try_pin(:p4, :budi, '0000')) from generate_series(1, 4);

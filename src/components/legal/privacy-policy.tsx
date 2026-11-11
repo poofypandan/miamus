@@ -136,7 +136,7 @@ const COPY: Record<
           { h: "Technical" },
           {
             ul: [
-              "A random ID for each staff phone, and when it was last used. Each saved task notes which phone (or admin account) saved it, so only that phone can undo it, for a few minutes. Once a phone is no longer linked to a household, its ID is deleted after 7 days without use.",
+              "A random ID for each staff phone, and when it was last used. Each saved task notes which phone (or admin account) saved it, so only that phone can undo it: for a few minutes, or for a walk, until shortly after it ends. Once a phone is no longer linked to a household, its ID is deleted after 7 days without use.",
               "Your browser's push-notification details, if you turn notifications on (on an admin's browser or a staff phone).",
               "Basic records our hosting providers keep when you use the app, such as IP address, browser type and time of access.",
             ],
@@ -403,7 +403,7 @@ const COPY: Record<
           { h: "Teknis" },
           {
             ul: [
-              "ID acak untuk setiap HP staf, dan kapan terakhir dipakai. Setiap tugas yang disimpan mencatat HP (atau akun admin) mana yang menyimpannya, supaya hanya HP itu yang bisa membatalkannya, dalam beberapa menit. Jika HP tidak lagi terhubung ke rumah tangga, ID-nya dihapus setelah 7 hari tidak dipakai.",
+              "ID acak untuk setiap HP staf, dan kapan terakhir dipakai. Setiap tugas yang disimpan mencatat HP (atau akun admin) mana yang menyimpannya, supaya hanya HP itu yang bisa membatalkannya: dalam beberapa menit, atau untuk jalan-jalan, sampai sesaat setelah selesai. Jika HP tidak lagi terhubung ke rumah tangga, ID-nya dihapus setelah 7 hari tidak dipakai.",
               "Data notifikasi browser Anda, jika Anda mengaktifkan notifikasi (di browser admin atau HP staf).",
               "Catatan dasar yang disimpan penyedia hosting saat Anda memakai aplikasi, seperti alamat IP, jenis browser, dan waktu akses.",
             ],
