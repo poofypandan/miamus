@@ -273,6 +273,19 @@ test("staff: a Tick routine is one tap for every pet, with no photo", async ({ c
   await expect(page.getByText("Bento, Mochi · Sikat gigi selesai")).toBeVisible();
   await expect.poll(() => stub.logs.length).toBe(2);
   expect(stub.logs.every((l) => l.photo_url === null && l.sub_type === "complete")).toBe(true);
+
+  // After the toast, the sheet takes the ticks back for 5 minutes (the done
+  // card is in Selesai)...
+  await page.getByRole("button", { name: /^Selesai · 1/ }).click();
+  await card(page, "19.00 Sikat gigi").click();
+  await page.getByRole("button", { name: "Batalkan centang" }).click();
+  await expect.poll(() => stub.logs.length).toBe(0);
+  // ...and ticks one pet on its own, when only one was done. (Undone, the card
+  // leaves Selesai, so it is opened again.)
+  await page.keyboard.press("Escape");
+  await card(page, "19.00 Sikat gigi").click();
+  await page.getByRole("button", { name: "Centang Mochi" }).click();
+  await expect.poll(() => stub.logs.map((l) => l.entity_id)).toEqual([MOCHI.id]);
 });
 
 test("staff: a Tick routine someone said couldn't be done can still be finished from its sheet", async ({ context, page }) => {

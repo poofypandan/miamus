@@ -268,13 +268,14 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // window while staff are looking at it loses the button there and then.
   // Also while a finished walk's sheet is open: its Batalkan jalan-jalan
   // leaves when the 5 minutes run out.
+  // And while a Tick routine's sheet is open: its Batalkan centang likewise.
   const walkEndAt = walk?.end?.completed_at ?? null;
   useEffect(() => {
-    if (!sheetOpen || !walkEndAt) return;
+    if (!sheetOpen || (!walkEndAt && !tick)) return;
     setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(timer);
-  }, [sheetOpen, walkEndAt]);
+  }, [sheetOpen, walkEndAt, tick]);
 
   useEffect(() => {
     if (lightboxIndex === null) return;
@@ -601,6 +602,11 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         ? pendingItems
         : [];
   const sheetAction = isRoutine && !wholeCardSuspended && date === todayKey && sheetTargets.length > 0;
+  // Ticks from the last 5 minutes (no photo, so no photo strip to undo them
+  // from): the sheet's Batalkan centang takes them back (Codex, PR #85).
+  const recentTicks = tick
+    ? group.items.flatMap((i) => (i.log && !i.log.photo_url && now < deletableUntil(i.log.completed_at) ? [i.log] : []))
+    : [];
   function handleSheetFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     e.target.value = "";
@@ -971,10 +977,28 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
             // same action as the card's own button.
             sheetAction ? (
               tick ? (
-                <Button onClick={() => void quickSave(null, sheetTargets)} disabled={busy} className="min-h-[48px] w-full">
-                  {busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 className="size-5" />}
-                  {sheetTargets.length > 1 ? `Centang ${sheetTargets.length} hewan` : "Centang selesai"}
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button onClick={() => void quickSave(null, sheetTargets)} disabled={busy} className="min-h-[48px] w-full">
+                    {busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 className="size-5" />}
+                    {sheetTargets.length > 1 ? `Centang ${sheetTargets.length} hewan` : "Centang selesai"}
+                  </Button>
+                  {/* One pet at a time, when only one was done (D4). */}
+                  {sheetTargets.length > 1 && (
+                    <div className="flex flex-wrap gap-2">
+                      {sheetTargets.map((item) => (
+                        <Button
+                          key={item.key}
+                          variant="outline"
+                          onClick={() => void quickSave(null, [item])}
+                          disabled={busy}
+                          className="min-h-11 flex-1"
+                        >
+                          <Circle className="size-4" /> Centang {item.entityName}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <label className="flex min-h-[48px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-900 text-sm font-medium text-white active:scale-[0.99]">
                   <input
@@ -1036,6 +1060,16 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                 </span>
               )}
             </label>
+          )}
+          {recentTicks.length > 0 && (
+            <Button
+              variant="outline"
+              className="min-h-12 w-full font-medium text-gray-700"
+              disabled={busy}
+              onClick={() => void undoLogs(recentTicks)}
+            >
+              <X /> Batalkan centang
+            </Button>
           )}
           {(walkStarted || walkUndoable) && (
             <Button
