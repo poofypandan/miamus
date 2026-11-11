@@ -1,6 +1,6 @@
 import { nextOccurrence, occursOn, previousOccurrence, recurrenceOf } from "@/lib/chore-recurrence";
 import type { OwnerLocale } from "@/lib/owner-locale";
-import { isOpenWalkIn, walkInsOf } from "@/lib/repair-walkins";
+import { dayKeyOf, isOpenWalkIn, walkInsOf } from "@/lib/repair-walkins";
 import type { HouseholdTask, Repair, RepairWalkIn } from "@/types/database";
 
 /**
@@ -151,7 +151,7 @@ export function walkInAsTask(visit: RepairWalkIn, title = ""): HouseholdTask {
     repair_id: visit.repair_id,
     title,
     status: "completed",
-    due_date: (visit.left_at ?? visit.arrived_at).slice(0, 10),
+    due_date: dayKeyOf(visit.left_at ?? visit.arrived_at),
     completed_at: visit.left_at,
     before_photo_url: visit.before_photo_url,
     after_photo_url: visit.after_photo_url,

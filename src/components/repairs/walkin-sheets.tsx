@@ -71,6 +71,28 @@ function useWords(locale: OwnerLocale, asStaff: boolean) {
   return (en: string, ind: string) => (id ? ind : en);
 }
 
+/**
+ * A photo taken in a sheet that was closed without Simpan is for nothing:
+ * off the phone, so it never uploads (as agenda-group-card's dropCapture).
+ * Returns the call to make once the save holds the photo.
+ */
+function useDropUnsavedPhoto(photo: string | null): () => void {
+  const photoRef = useRef(photo);
+  const savedRef = useRef(false);
+  useEffect(() => {
+    photoRef.current = photo;
+  }, [photo]);
+  useEffect(
+    () => () => {
+      if (!savedRef.current && photoRef.current) void discardPhoto(photoRef.current);
+    },
+    []
+  );
+  return () => {
+    savedRef.current = true;
+  };
+}
+
 // --- The live-camera tile ------------------------------------------------------
 
 /**
@@ -287,6 +309,7 @@ function StartForm({
   const [who, setWho] = useState<string | null>(null);
   const [otherName, setOtherName] = useState<string | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const markSaved = useDropUnsavedPhoto(photo);
   const [saving, setSaving] = useState(false);
   // The id the repair and the photo folder share, made once per opening.
   const [newRepairId] = useState(() => crypto.randomUUID());
@@ -352,6 +375,7 @@ function StartForm({
         },
         repair
       );
+      markSaved();
       rememberRoom(pick === "new" ? locationId : (repairs.find((r) => r.id === pick)?.location_id ?? null));
       const created = pick === "new" ? newRepairId : null;
       toast.success(
@@ -658,6 +682,7 @@ function FinishForm({
   const { repairs } = useRepairs();
   const repair = repairs.find((r) => r.id === visit.repair_id);
   const [photo, setPhoto] = useState<string | null>(null);
+  const markSaved = useDropUnsavedPhoto(photo);
   const [outcome, setOutcome] = useState<WalkInOutcome | null>(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -672,6 +697,7 @@ function FinishForm({
         outcome,
         note: note.trim() ? note.trim().slice(0, WALKIN_LIMITS.note) : null,
       });
+      markSaved();
       const after = photo;
       toast.success(
         result.status === "waiting"

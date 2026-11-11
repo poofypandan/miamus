@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -25,7 +25,7 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { reasonsFor, staffReasonLabel, type ExceptionKind } from "@/lib/couldnt-do";
 import { useRepairs } from "@/hooks/use-repairs";
-import { supervisionExplains, supervisionStretches } from "@/lib/repair-walkins";
+import { dayKeyOf, supervisionExplains, supervisionStretches } from "@/lib/repair-walkins";
 import { fileTaskException, withdrawTaskException } from "@/lib/task-exceptions-store";
 import { classifySubmitError } from "@/lib/submit-errors";
 import { SaveStillWaitingError } from "@/lib/offline-queue";
@@ -116,15 +116,27 @@ function CouldntDoBody({
   const supervisingVisit = useMemo(() => {
     if (!staffId) return null;
     const mine = supervisionStretches(supervision, walkIns, repairs).filter((s) => s.staffId === staffId);
-    const onDay = mine.filter((s) => s.start.slice(0, 10) <= day && (!s.end || s.end.slice(0, 10) >= day));
+    // The phone's own day for each end (Jakarta), never the UTC date of the timestamp.
+    const onDay = mine.filter((s) => dayKeyOf(s.start) <= day && (!s.end || dayKeyOf(s.end) >= day));
     if (onDay.length === 0) return null;
     const inside = supervisionExplains({ staffId, date: day, time: time ? time.slice(0, 5) : null }, onDay, []);
     return { visitId: (inside ?? onDay[onDay.length - 1]).visitId, inside: !!inside };
   }, [staffId, supervision, walkIns, repairs, day, time]);
 
-  const [reason, setReason] = useState<TaskExceptionReason | null>(() =>
+  const [reason, setReasonState] = useState<TaskExceptionReason | null>(() =>
     supervisingVisit?.inside ? "supervising_repair" : null
   );
+  // Chosen by hand: a later load of the stretches never overrides it.
+  const [picked, setPicked] = useState(false);
+  const setReason = (next: TaskExceptionReason | null) => {
+    setPicked(true);
+    setReasonState(next);
+  };
+  // The stretches can land after the sheet opened (a cold start): choose
+  // the reason then, unless someone already picked one.
+  useEffect(() => {
+    if (!picked && supervisingVisit?.inside) setReasonState("supervising_repair");
+  }, [picked, supervisingVisit?.inside]);
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);

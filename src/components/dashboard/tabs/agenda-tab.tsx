@@ -47,6 +47,7 @@ import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bi
 import { comingUpLabel, comingUpReminders } from "@/lib/chore-reminders";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import {
+  isForgotten,
   openWalkIns,
   ownerSupervisingLine,
   supervisionExplains,
@@ -241,7 +242,12 @@ export function AgendaTab() {
     [repairs, visits, walkIns, repairsOn]
   );
   // Someone working in the house now (Phase 174): "Pak Budi is here · Leaking tap, LT2".
-  const hereNow = useMemo(() => (repairsOn ? openWalkIns(walkIns) : []), [walkIns, repairsOn]);
+  // Only those who came today: a walk-in nobody closed since an earlier day
+  // isn't "here" (it never closes itself, D6; Repairs lists it).
+  const hereNow = useMemo(
+    () => (repairsOn ? openWalkIns(walkIns).filter((v) => !isForgotten(v, formatDateLocal(today))) : []),
+    [walkIns, repairsOn, today]
+  );
   // Supervising stretches (D10): a missed task due inside one says so on its row.
   const stretches = useMemo(
     () => (repairsOn ? supervisionStretches(supervision, walkIns, repairs) : []),

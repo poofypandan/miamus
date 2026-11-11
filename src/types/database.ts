@@ -529,6 +529,8 @@ export type RepairWalkIn = {
   left_at: string | null;
   left_phone_at: string | null;
   after_photo_url: string | null;
+  /** The session whose Selesai reached the server (only it may take it back). Absent on pending saves. */
+  finished_by?: string | null;
   outcome: WalkInOutcome | null;
   note: string | null;
 };

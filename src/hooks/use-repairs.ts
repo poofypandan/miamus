@@ -29,7 +29,7 @@ import type { HouseholdTask, Repair, RepairNote, RepairSupervision, RepairWalkIn
  * fresher: a visit finished on this phone shows as done straight away.
  */
 
-export function useRepairs(): {
+export function useRepairs({ enabled = true }: { enabled?: boolean } = {}): {
   repairs: Repair[];
   visits: HouseholdTask[];
   notes: RepairNote[];
@@ -50,9 +50,11 @@ export function useRepairs(): {
   const { householdTasks } = useHousehold();
   const household = currentHousehold();
 
+  // Off (Repairs switched off, Phase 171): read whatever the cache holds,
+  // but fetch nothing.
   useEffect(() => {
-    void loadRepairs();
-  }, [household]);
+    if (enabled) void loadRepairs();
+  }, [household, enabled]);
 
   const visits = useMemo(() => {
     const byId = new Map(state.visits.map((v) => [v.id, v]));

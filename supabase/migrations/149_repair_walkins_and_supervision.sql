@@ -25,8 +25,8 @@
 --        in the future. Read by every session of the household. Staff
 --        phones insert (an active staff profile of the household, on a
 --        repair that isn't fixed or dismissed) and finish once; they may
---        take back their own walk-in within 5 minutes (Undo) and a Selesai
---        within 5 minutes. Owners edit any column but the stamped ones and
+--        take back their own walk-in within 5 minutes (Undo), and the phone
+--        that sent Selesai may take it back within 5 minutes (finished_by). Owners edit any column but the stamped ones and
 --        the before photo, and delete. Kept with the repair (D8): deleting
 --        a repair cascades.
 --   repair_supervision    who supervised which walk-in, from when to when.
@@ -78,6 +78,8 @@ create table if not exists public.repair_visits (
   left_at timestamptz,
   left_phone_at timestamptz,
   after_photo_url text,
+  -- The session whose Selesai reached the server: only it may take it back.
+  finished_by uuid,
   outcome text,
   note text,
   constraint repair_visits_id_household_key unique (id, household_id),
@@ -167,7 +169,7 @@ declare
   repair_status text;
   finishing boolean;
   reopening boolean;
-  staff_columns constant text[] := array['after_photo_url', 'left_phone_at', 'outcome', 'note', 'left_at'];
+  staff_columns constant text[] := array['after_photo_url', 'left_phone_at', 'outcome', 'note', 'left_at', 'finished_by'];
 begin
   -- A session of another household learns nothing here: refused before any
   -- check that reads this household's rows (the policy would refuse it too,
@@ -192,6 +194,7 @@ begin
     new.left_at := null;
     new.left_phone_at := null;
     new.after_photo_url := null;
+    new.finished_by := null;
     new.outcome := null;
     new.note := null;
     if new.arrived_phone_at is not null
@@ -259,14 +262,16 @@ begin
     end if;
     if old.after_photo_url is not null then
       if reopening then
-        -- Batalkan: within 5 minutes of Selesai reaching the server.
-        if old.left_at < now() - interval '5 minutes' then
+        -- Batalkan: the phone that sent Selesai, within 5 minutes of it
+        -- reaching the server.
+        if old.left_at < now() - interval '5 minutes' or old.finished_by is distinct from auth.uid() then
           raise exception 'repair_visit_finished' using errcode = '23514';
         end if;
       elsif new.after_photo_url = old.after_photo_url
             and (new.outcome, new.note, new.left_phone_at) is not distinct from (old.outcome, old.note, old.left_phone_at) then
         -- The same Selesai sent again (the save queue): nothing changes.
         new.left_at := old.left_at;
+        new.finished_by := old.finished_by;
         return new;
       else
         raise exception 'repair_visit_finished' using errcode = '23514';
@@ -285,8 +290,10 @@ begin
       raise exception 'repair_visit_phone_time' using errcode = '22023';
     end if;
     new.left_at := now();
+    new.finished_by := auth.uid();
   elsif reopening then
     new.left_at := null;
+    new.finished_by := null;
     new.left_phone_at := null;
     new.outcome := null;
     new.note := null;
@@ -295,6 +302,7 @@ begin
     -- a better after photo): the times stay.
     new.left_at := old.left_at;
     new.left_phone_at := old.left_phone_at;
+    new.finished_by := old.finished_by;
     if new.after_photo_url is distinct from old.after_photo_url
        and not public.repair_visit_photo_ok(new.after_photo_url, new.household_id) then
       raise exception 'repair_visit_photo' using errcode = '42501';

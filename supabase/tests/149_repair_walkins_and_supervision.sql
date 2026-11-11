@@ -61,7 +61,8 @@ from (values
   ('00000000-0000-0000-0000-0000000149a1', 'one149@test.local', false),
   ('00000000-0000-0000-0000-0000000149a4', 'four149@test.local', false),
   ('00000000-0000-0000-0000-0000000149b1', null, true),
-  ('00000000-0000-0000-0000-0000000149b2', null, true)
+  ('00000000-0000-0000-0000-0000000149b2', null, true),
+  ('00000000-0000-0000-0000-0000000149b3', null, true)
 ) as u(id, email, anon);
 insert into public.households (id, name, owner_auth_id) values
   ('00000000-0000-0000-0000-0000000149f1', 'Rumah Melati', '00000000-0000-0000-0000-0000000149a1'),
@@ -71,7 +72,8 @@ insert into public.household_members (household_id, user_id, role) values
   ('00000000-0000-0000-0000-0000000149f2', '00000000-0000-0000-0000-0000000149a4', 'owner');
 insert into public.device_sessions (user_id, household_id) values
   ('00000000-0000-0000-0000-0000000149b1', '00000000-0000-0000-0000-0000000149f1'),
-  ('00000000-0000-0000-0000-0000000149b2', '00000000-0000-0000-0000-0000000149f2');
+  ('00000000-0000-0000-0000-0000000149b2', '00000000-0000-0000-0000-0000000149f2'),
+  ('00000000-0000-0000-0000-0000000149b3', '00000000-0000-0000-0000-0000000149f1');
 insert into public.staff_profiles (id, household_id, name, archived_at) values
   ('00000000-0000-0000-0000-0000000149c1', '00000000-0000-0000-0000-0000000149f1', 'Ari', null),
   ('00000000-0000-0000-0000-0000000149c2', '00000000-0000-0000-0000-0000000149f1', 'Syam', null),
@@ -98,6 +100,7 @@ set local session_replication_role = origin;
 \set a4 '''00000000-0000-0000-0000-0000000149a4'''
 \set staff '''00000000-0000-0000-0000-0000000149b1'''
 \set staff2 '''00000000-0000-0000-0000-0000000149b2'''
+\set phone2 '''00000000-0000-0000-0000-0000000149b3'''
 
 -- ---- A staff phone logs a walk-in ------------------------------------------------------
 select pg_temp.ok(pg_temp.err_as(:staff, format($q$
@@ -315,7 +318,14 @@ select pg_temp.ok(pg_temp.err_as(:staff, $q$
   values ('00000000-0000-0000-0000-0000000149f1', '00000000-0000-0000-0000-00000149e001', '00000000-0000-0000-0000-0000000149c2') $q$)
   like '%supervision_visit_finished%', 'a finished walk-in can''t be handed over');
 
--- Batalkan a Selesai: within 5 minutes only.
+-- Batalkan a Selesai: the phone that sent it, within 5 minutes only.
+select pg_temp.ok((select finished_by = '00000000-0000-0000-0000-0000000149b1'
+                     from public.repair_visits where id = '00000000-0000-0000-0000-00000149e001'),
+  'the server notes which phone sent Selesai');
+select pg_temp.ok(pg_temp.err_as(:phone2, $q$
+  update public.repair_visits set after_photo_url = null, left_phone_at = null, outcome = null, note = null
+   where id = '00000000-0000-0000-0000-00000149e001' $q$) like '%repair_visit_finished%',
+  'another phone of the household can''t take it back');
 select pg_temp.ok(pg_temp.err_as(:staff, $q$
   update public.repair_visits set after_photo_url = null, left_phone_at = null, outcome = null, note = null
    where id = '00000000-0000-0000-0000-00000149e001' $q$) = '',

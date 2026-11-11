@@ -50,11 +50,10 @@ import { PendingBar } from "@/components/shared/pending-bar";
 import { useScrollTopOnChange, useTabNavigation } from "@/hooks/use-tab-navigation";
 import { cn } from "@/lib/utils";
 import { useTaskExceptions } from "@/hooks/use-task-exceptions";
-import { choreException, groupExceptions, staffCouldntLine } from "@/lib/couldnt-do";
+import { choreException, groupExceptions, slotOf, staffCouldntLine } from "@/lib/couldnt-do";
 import { StaffRepairsView, SupervisingStrip } from "@/components/staff/staff-perbaikan";
 import { useRepairs } from "@/hooks/use-repairs";
 import { leaveCovering } from "@/lib/leave";
-import { slotOf } from "@/lib/couldnt-do";
 import { STAFF_SUPERVISING_LABEL, supervisionExplains, supervisionStretches } from "@/lib/repair-walkins";
 
 export default function StaffPage() {
@@ -267,9 +266,9 @@ function TasksView() {
   // Supervising a repair (Phase 174, D10): this person's tasks due inside
   // their stretch carry "Mengawasi perbaikan" instead of reading as
   // forgotten, with nothing to tap. Read at display time; done wins.
-  const { repairs: repairList, walkIns, supervision } = useRepairs();
-  const { leaveRequests, staffProfilesForDuty } = useDutyRoster();
   const { repairs: repairsFeatureOn } = useHouseholdFeatures();
+  const { repairs: repairList, walkIns, supervision } = useRepairs({ enabled: repairsFeatureOn });
+  const { leaveRequests, staffProfilesForDuty } = useDutyRoster();
   const stretches = useMemo(
     () => (repairsFeatureOn ? supervisionStretches(supervision, walkIns, repairList) : []),
     [repairsFeatureOn, supervision, walkIns, repairList]
@@ -282,7 +281,9 @@ function TasksView() {
     if (stretches.length === 0) return false;
     if (entry.kind === "chore") {
       const o = entry.occurrence;
-      if (o.status !== "pending" || choreException(exceptions, o)) return false;
+      // A chore carried over from an earlier day is owed, as staff progress
+      // reads it: never explained (one rule for both screens).
+      if (o.status !== "pending" || o.overdue || choreException(exceptions, o)) return false;
       return !!supervisionExplains(
         { staffId: o.task.assigned_to ?? null, date: o.date, time: slotOf(o.task.due_time) },
         stretches,
@@ -332,7 +333,7 @@ function TasksView() {
   // The repair-notes tip (Phase 159 PR B) only once a repair visit is on
   // this phone's list: that's where notes are written.
   const showRepairNotesTip = useMemo(() => chores.some((chore) => !!chore.task.repair_id), [chores]);
-  const { repairs: repairsOn } = useHouseholdFeatures();
+  const repairsOn = repairsFeatureOn;
 
   // The floors tip (Phase 158) only once this phone's list actually shows a
   // floor or a spot: before the owner sorts rooms there is nothing to explain.
