@@ -45,9 +45,19 @@ export function routineKindInfo(kind: RoutineKind | null | undefined): RoutineKi
   return kind ? (BY_KIND.get(kind) ?? null) : null;
 }
 
-/** Proofs the sheet offers for a kind: 3 photos only for walks and Other (D14). */
-export function proofChoices(kind: RoutineKind): RoutineProof[] {
-  return kind === "walk" || kind === "other" ? ["three", "photo", "tick"] : ["photo", "tick"];
+/**
+ * Proofs the sheet offers for a kind: 3 photos only for walks and Other (D14),
+ * and only for one pet. A walk shared by several pets is proven by one photo
+ * of them all; three-photo walks for several pets together are a follow-up
+ * (docs/phase-173-pet-routines-plan.md, "Multi-pet walks").
+ */
+export function proofChoices(kind: RoutineKind, petCount = 1): RoutineProof[] {
+  return (kind === "walk" || kind === "other") && petCount <= 1 ? ["three", "photo", "tick"] : ["photo", "tick"];
+}
+
+/** The proof a routine is saved with: 3 photos falls back to 1 for several pets. */
+export function effectiveProof(proof: RoutineProof, petCount: number): RoutineProof {
+  return proof === "three" && petCount > 1 ? "photo" : proof;
 }
 
 /** The longest note staff are shown (migrations/144's CHECK). */

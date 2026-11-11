@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { categorizeSchedule } from "@/lib/schedule-categories";
 import { buildAgenda, isScheduleActiveOn } from "@/lib/scheduleEngine";
 import { buildUnifiedAgenda } from "@/lib/unified-agenda";
-import { isoWeekday, proofChoices, strongestProof } from "@/lib/pet-routine-kinds";
+import { effectiveProof, isoWeekday, proofChoices, strongestProof } from "@/lib/pet-routine-kinds";
 import {
   cardWalkState,
   FRESH_PHOTO_MS,
@@ -199,6 +199,29 @@ describe("buildAgenda with routines", () => {
     expect(proofChoices("walk")).toEqual(["three", "photo", "tick"]);
     expect(proofChoices("lights")).toEqual(["photo", "tick"]);
   });
+
+  it("offers 3 photos for one pet only; several pets fall back to one photo", () => {
+    expect(proofChoices("walk", 2)).toEqual(["photo", "tick"]);
+    expect(proofChoices("other", 1)).toEqual(["three", "photo", "tick"]);
+    expect(effectiveProof("three", 2)).toBe("photo");
+    expect(effectiveProof("three", 1)).toBe("three");
+    expect(effectiveProof("tick", 3)).toBe("tick");
+  });
+
+  it("makes a three-photo routine one card per pet, so each walk is its own", () => {
+    const groups = buildAgenda({
+      date: MONDAY,
+      entities: [MOCHA, MATCHA],
+      schedules: [
+        row({ id: "w1", entity_id: "matcha", title: "Jalan-jalan", kind: "walk", fixed_times: ["07:00"], proof: "three" }),
+        row({ id: "w2", entity_id: "mocha", title: "Jalan-jalan", kind: "walk", fixed_times: ["07:00"], proof: "three" }),
+      ],
+      logs: [],
+      now: NOW,
+    });
+    expect(groups.map((g) => g.items.map((i) => i.entityName))).toEqual([["Matcha"], ["Mocha"]]);
+    expect(new Set(buildUnifiedAgenda({ groups, chores: [] }).map((e) => e.key)).size).toBe(2);
+  });
 });
 
 describe("threePhotoState", () => {
@@ -234,7 +257,8 @@ describe("cardWalkState: a pet left out of the first walk walks on its own", () 
     const steps = (["check_in", "arrived", "check_out"] as const).map((sub, i) =>
       log({ id: `m${i}`, schedule_id: "wb", entity_id: "matcha", completed_at: at(MONDAY, `07:0${i + 1}`), sub_type: sub })
     );
-    const items = buildAgenda({ date: MONDAY, entities: [MOCHA, MATCHA], schedules: rows, logs: steps, now: NOW })[0].items;
+    // Cards are per pet now; the helper stays safe for a card holding both.
+    const items = buildAgenda({ date: MONDAY, entities: [MOCHA, MATCHA], schedules: rows, logs: steps, now: NOW }).flatMap((g) => g.items);
     const state = cardWalkState(items, steps, MONDAY);
     expect(state.next).toBe("start");
     expect(state.logs).toEqual([]);
@@ -264,7 +288,7 @@ describe("walk deletes and the latest walk", () => {
       row({ id: "wm", entity_id: "mocha", title: "Jalan-jalan", kind: "walk", fixed_times: ["07:00"], proof: "three" }),
     ];
     const logs = [...steps("wb", "matcha", "07:0"), ...steps("wm", "mocha", "09:0")];
-    const items = buildAgenda({ date: MONDAY, entities: [MOCHA, MATCHA], schedules: rows, logs, now: NOW })[0].items;
+    const items = buildAgenda({ date: MONDAY, entities: [MOCHA, MATCHA], schedules: rows, logs, now: NOW }).flatMap((g) => g.items);
     const state = cardWalkState(items, logs, MONDAY);
     expect(state.next).toBeNull();
     expect(state.end?.id).toBe("mocha2");

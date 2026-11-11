@@ -32,6 +32,7 @@ import { dataProvider } from "@/lib/data";
 import {
   ROUTINE_KINDS,
   ROUTINE_NOTE_MAX,
+  effectiveProof,
   proofChoices,
   routineKindInfo,
 } from "@/lib/pet-routine-kinds";
@@ -162,7 +163,10 @@ export function AddRoutineSheet({
     set({ times: [...draft!.times, `${String(hour).padStart(2, "0")}:${last.slice(3, 5)}`] });
   }
 
-  const valid = { ...draft, petIds: chosenPets };
+  // 3 photos is for one pet; for several, one photo covers them all.
+  const proof = effectiveProof(draft.proof, chosenPets.length);
+  const threeForOneOnly = (picked === "walk" || picked === "other") && chosenPets.length > 1;
+  const valid = { ...draft, petIds: chosenPets, proof };
   const problem = picked ? draftProblem(valid) : "title";
   const kindInfo = picked ? routineKindInfo(picked) : null;
 
@@ -258,7 +262,7 @@ export function AddRoutineSheet({
   ];
   const proofLabel: Record<RoutineProof, string> = {
     three: t("3 photos", "3 foto"),
-    photo: picked === "walk" || picked === "other" ? t("1 photo", "1 foto") : t("Photo", "Foto"),
+    photo: (picked === "walk" || picked === "other") && chosenPets.length <= 1 ? t("1 photo", "1 foto") : t("Photo", "Foto"),
     tick: t("Tick", "Centang"),
   };
   const proofHint: Record<RoutineProof, string> = {
@@ -467,12 +471,19 @@ export function AddRoutineSheet({
             {picked && (
               <Row label={t("Proof", "Bukti")}>
                 <SegmentedControl
-                  segments={proofChoices(picked).map((p) => ({ value: p, label: proofLabel[p] }))}
-                  value={proofChoices(picked).includes(draft.proof) ? draft.proof : "photo"}
+                  segments={proofChoices(picked, chosenPets.length).map((p) => ({ value: p, label: proofLabel[p] }))}
+                  value={proofChoices(picked, chosenPets.length).includes(proof) ? proof : "photo"}
                   onChange={(proof) => set({ proof })}
                   ariaLabel={t("Proof", "Bukti")}
                 />
-                <p className="mt-1 text-xs text-muted-foreground">{proofHint[draft.proof]}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {threeForOneOnly
+                    ? t(
+                        "3 photos is for one pet at a time. For several pets, one photo covers them all.",
+                        "3 foto hanya untuk satu hewan. Untuk beberapa hewan, satu foto untuk semuanya."
+                      )
+                    : proofHint[proof]}
+                </p>
               </Row>
             )}
 
@@ -483,7 +494,7 @@ export function AddRoutineSheet({
                 title={draft.title.trim() || kindInfo.id}
                 note={draft.note.trim()}
                 pets={chosenPets.map((id) => petsById.get(id)!.name)}
-                proof={draft.proof}
+                proof={proof}
                 label={t("Staff will see", "Yang dilihat staf")}
               />
             )}

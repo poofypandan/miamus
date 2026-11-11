@@ -240,7 +240,10 @@ export function buildAgenda(params: {
       item.category === "medication"
         ? `${item.time}|medication|${item.entityId}`
         : item.kind
-          ? `${item.time}|${item.title}|routine|${item.note ?? ""}|${item.staffId ?? ""}`
+          ? // A three-photo routine is one card per pet: each pet's walk is
+            // its own sequence (multi-pet walks are a follow-up, plan
+            // "Multi-pet walks"; Codex, PR #85).
+            `${item.time}|${item.title}|routine|${item.note ?? ""}|${item.staffId ?? ""}${item.proof === "three" ? `|${item.entityId}` : ""}`
           : `${item.time}|${item.title}`;
     let group = groups.get(groupKey);
     if (!group) {

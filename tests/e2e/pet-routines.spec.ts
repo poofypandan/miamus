@@ -110,6 +110,26 @@ test("owner (Bahasa Indonesia): a daily walk for one dog at 07:00, three photos 
   ]);
 });
 
+test("owner: a walk for two pets falls back to one photo (3 photos is for one pet)", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" } });
+  await page.goto("/dashboard?module=pets");
+  await page.getByRole("button", { name: "Add routine" }).click({ timeout: 20_000 });
+  const sheet = page.getByTestId("add-routine-sheet");
+  await sheet.getByRole("button", { name: "Walk" }).click();
+  await expect(sheet.getByRole("tab", { name: "3 photos" })).toHaveCount(0);
+  await expect(sheet.getByRole("tab", { name: "Photo" })).toHaveAttribute("aria-selected", "true");
+  await expect(sheet.getByText("3 photos is for one pet at a time.", { exact: false })).toBeVisible();
+  // One pet again: 3 photos is back, and chosen.
+  await sheet.getByRole("button", { name: "Bento" }).click();
+  await expect(sheet.getByRole("tab", { name: "3 photos" })).toHaveAttribute("aria-selected", "true");
+  await sheet.getByRole("button", { name: "Bento" }).click();
+  await sheet.getByRole("button", { name: "Add for 2 pets" }).click();
+  await expect(page.getByText("Walk added")).toBeVisible();
+  const made = stub.schedules.filter((s) => s.kind === "walk");
+  expect(made).toHaveLength(2);
+  expect(made.every((s) => s.proof === "photo")).toBe(true);
+});
+
 test("owner: Others is now Other routines, and a routine opens the same sheet to edit", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, schedules: [lights(MOCHI), lights(BENTO)] });
   await page.goto("/dashboard?module=pets");
@@ -323,7 +343,7 @@ test("staff: a Tick routine someone said couldn't be done can still be finished 
   await expect.poll(() => stub.logs.length).toBe(2);
 });
 
-test("staff: a pet left out of a shared walk starts its own walk later", async ({ context, page }) => {
+test("staff: a three-photo walk is one card per pet, so a pet left out walks later on its own", async ({ context, page }) => {
   const group = "00000000-0000-4000-8000-0000000173e1";
   const bentoWalk = schedule(BENTO, "Jalan-jalan", ["07:00"], { kind: "walk", routine_group_id: group, proof: "three" });
   const mochiWalk = schedule(MOCHI, "Jalan-jalan", ["07:00"], { kind: "walk", routine_group_id: group, proof: "three" });
