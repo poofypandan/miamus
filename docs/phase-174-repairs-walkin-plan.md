@@ -1,6 +1,6 @@
 # Phase 174 — Repairs from the staff side: "Ada tukang datang"
 
-Status: **plan, waiting for the owner's decisions (D1–D10).** Docs only: no
+Status: **plan, waiting for the owner's decisions (D1–D12).** Docs only: no
 app code, no migration created or applied. Migration numbers are given in
 build order when each PR is built ("number at build"; rule of 10 Nov).
 Mockup: `docs/mockups/phase-174-repairs-walkin.html` (open in a browser,
@@ -80,6 +80,7 @@ before and after side by side, without creating anything first.
 | The before photo | Usually missed: the work started while the visit was being made | Taken at the gate, before the tools come out |
 | Who was in the house | In someone's memory | Name, time in, time out, per visit |
 | Owners hear | When staff remember to say | A push on arrival and one at the end (each can be off) |
+| Why a task wasn't done | "I was watching the tukang", said later, if at all | **Shown on its own**: tasks due while Ari was supervising read "Ari was supervising the AC repair 10:00 AM–1:30 PM" on Today and in the evening summary, with **0 extra taps** (D10 A) |
 
 ## What changes for people
 
@@ -87,9 +88,11 @@ before and after side by side, without creating anything first.
 | --- | --- |
 | Staff | A third pill, **Perbaikan**, shown only when Repairs is on: **Tugas Hari Ini · Dapur · Perbaikan**. |
 | Staff | One big button, **Ada tukang datang**: what, who (optional), before photo, **Simpan**. Later, **Selesai** on the card: after photo, an optional chip and note, **Simpan**. |
+| Staff | Whoever taps **Ada tukang datang** is **Mengawasi perbaikan** (supervising) until **Selesai**: a strip on top of Tugas Hari Ini with the start and running time, and their tasks due meanwhile marked **Mengawasi perbaikan**, with nothing to fill in. **Ganti yang mengawasi** hands over to someone else. |
 | Staff | The pill also lists today's scheduled visits, what's still broken, and what was fixed in the last 7 days. **Lapor kerusakan** (no tukang yet) is there too, and stays in the Lapor sheet. |
 | Owners | A push when someone arrives ("Pak Budi datang · keran LT2 · Kamar Tamu 1") and one when they finish, with before and after side by side on the repair. Each can be switched off in **Household → Notifications**; nothing between 21.00 and 06.00. |
-| Owners | On **Today**, a quiet line while someone is working: "Pak Budi is here · Tap, LT2". |
+| Owners | On **Today**, a quiet line while someone is working: "Pak Budi is here · Leaking tap, LT2". |
+| Owners | Missed tasks explain themselves: "Not done: Mop the terrace (Ari was supervising the AC repair 10:00 AM–1:30 PM)" in the evening summary and its sheet; and the queued **staff progress on Today** can show "Ari · Supervising a repair since 10:00 AM". |
 | Owners | On a repair, each walk-in visit in the timeline: who, time in and out, before and after, the staff's chip and note. |
 | Owners | **Send to the developer** in Chores → Repairs: the open problems with their photos, as a WhatsApp message or a page to save as PDF (owners only). |
 | Owners | Optional: the same **Someone's here** sheet from Chores → Repairs, for days an owner opens the gate. |
@@ -152,7 +155,7 @@ existing tips list is optional.
    the after photo where the browser shows images (Android Chrome); iPhone
    shows text only.
 6. **The repair, before and after.** The timeline gains walk-in visits:
-   "Walk-in · Pak Budi · Tue 09:10–11:40 · logged by Ari", before and after
+   "Walk-in · Pak Budi · Tue 9:10–11:40 AM · logged by Ari", before and after
    side by side, the chip ("Done" / "Coming back" / "Please check") and the
    note. A finished walk-in puts the repair in **Work done — check the
    photos** (the existing stage), unless the chip was "Coming back". Owner
@@ -167,6 +170,90 @@ existing tips list is optional.
 
 A staff report made with **Baru** while the tukang is there skips **To
 review** (someone is already fixing it): it shows in Open with its walk-in.
+
+## Supervising a repair: "Mengawasi perbaikan" (core)
+
+The owner, 11 Nov: "For repairs we usually have our maids monitor them, so
+we can also see why they can't do certain tasks because they're occupied
+doing this and that."
+
+**Who supervises.** Whoever taps **Ada tukang datang** supervises that visit
+from the save until **Selesai**. On the Selesai sheet and on the open card,
+**Ganti yang mengawasi** hands over to another staff member (or to an
+owner): Ari starts cooking, Syam takes over. Each person's stretch is kept
+with its own start and end, so each one's tasks are explained for their own
+time only (D11 A).
+
+**What staff see** (mockup 7):
+
+- On **Tugas Hari Ini**, a strip at the top for the supervising person
+  only: **Sedang mengawasi perbaikan** · AC menetes · sejak 10.00 · 1 jam 20 menit,
+  with **Selesai**. It's the same open visit as in the Perbaikan pill, so
+  Selesai works from either.
+- Their tasks due while they supervise carry a quiet label **Mengawasi
+  perbaikan** instead of turning late. Nothing to tap, nothing to type.
+  If they get to a task anyway, it's done as usual (**done wins**, Phase
+  165).
+- The **Tidak bisa dikerjakan** sheet (139) gains the reason **Mengawasi
+  perbaikan**, offered only on a day the person supervised, and chosen
+  already when the task's time falls in their stretch. It's for the edge
+  cases auto-explain doesn't cover (a task just after the tukang left, a
+  task with no time). Choosing it needs no note and links the visit.
+
+**Auto-explain (D10 A, recommended).** Miamus explains a missed task itself,
+at the moment it shows it; nothing is written for the staff member.
+
+- **Which tasks:** not done, not marked couldn't-do, due today with a time,
+  and that time inside the person's supervising stretch (from 15 minutes
+  before it started to when it ended, or now while it's open).
+- **Whose tasks:** a chore for that staff member. A chore for anyone, and a
+  pet routine (which has no assignee), only when **every** staff member on
+  duty that day (not on leave, 137's rule) was supervising at that time;
+  otherwise someone else could have done it, and it stays plainly "not
+  done".
+- **Tasks with no time** aren't explained; the summary shows the stretch as
+  context ("Ari supervised a repair for 3 h 20 min today").
+- **Still not done:** an explained task counts as not done everywhere
+  (counts, the evening summary's "Not done" part), with the reason beside
+  it. It never turns into done, and nothing is hidden from the owner.
+- **Why not write a couldn't-do row for each task automatically:** that
+  would put words in staff's mouth in a table that means "staff said so"
+  (139), and a task done later would leave a stale row. Reading it from the
+  stretches at display time keeps one source of truth, and a late "done"
+  wins on its own.
+
+**What owners see** (mockup 8):
+
+- **Evening summary push** (139's `notify_evening_summary`, re-created):
+  explained tasks go in "Not done" with the stretch in brackets, once per
+  stretch, not per task. EN: *Not done: Mop the terrace, Iron clothes (Ari
+  was supervising the AC repair 10:00 AM–1:30 PM).* ID: *Belum: Pel teras,
+  Setrika baju (Ari mengawasi perbaikan AC 10.00–13.30).*
+- **The summary sheet** groups them under the stretch: "Ari · supervising
+  the AC repair · 10:00 AM–1:30 PM" with the two tasks, and a tap opens the
+  repair with its before and after photos.
+- **Staff progress on Today** (queued build): one row per staff member, e.g.
+  **Ari · Supervising a repair since 10:00 AM** / **Ari · Mengawasi
+  perbaikan sejak 10.00**, beside "4 of 9 done". After Selesai the row goes
+  back to normal and the stretch shows in the day's detail.
+- **The repair's timeline**: "Supervised by Ari 9:10–10:30 AM, then Syam
+  10:30–11:40 AM".
+
+**The data the staff progress build needs** (built in PR A as pure
+functions in `src/lib/repairs.ts`, with unit tests, so that build only
+reads them):
+
+- `supervisingNow(spans, now)`: a map from staff id to `{ visitId,
+  repairId, repairTitle, placeLabel, since }` for open stretches. At most one
+  per person (a person who starts a second visit hands the first over or
+  closes it; the sheet asks).
+- `supervisionSpansOn(spans, day)`: per staff id, the day's stretches
+  `{ visitId, repairTitle, start, end | null }`, clipped to the day.
+- `supervisionExplains(task, spans, staffOnDuty)`: the stretch that
+  explains a missed task, or null (the rules above). Used by staff Today,
+  owner Today, the summary sheet and, mirrored in SQL, the summary push.
+- Source: `repair_supervision` rows (below), readable by every session of
+  the household, loaded with the repairs the dashboard already fetches.
 
 ## Who was in the house, and privacy
 
@@ -234,6 +321,51 @@ closes it as today.
 `worker_name`s from the last 90 days, most used first, up to 6, plus the
 fixed chip **Tim developer**. Names go when their visits go (D3 A).
 
+**Table `repair_supervision`** (who supervised, from when to when; PR A)
+
+| Column | |
+| --- | --- |
+| `id`, `household_id` | household FK, cascade |
+| `visit_id` | composite FK `(visit_id, household_id)` → `repair_visits (id, household_id)`, `on delete cascade` |
+| `staff_id` | `staff_profiles` FK, nullable, `on delete set null`; an active profile of the household. Null with `user_id` set for an owner. |
+| `user_id` | nullable; an owner (`household_members`) who took over |
+| `started_at`, `ended_at` | server times; `ended_at` null while open; `unique (visit_id) where ended_at is null`: one open stretch per visit |
+
+- **Opened and closed by triggers**, not by the app: inserting a walk-in
+  opens the logger's stretch; finishing the visit closes the open one;
+  inserting a new stretch for a visit (Ganti yang mengawasi) closes the
+  previous one at the same server time. So the times can't disagree with
+  the visit.
+- RLS: read by any session of the household (staff progress and the staff
+  strip need it). Insert by staff phones (an active profile) and owners, on
+  an unfinished visit of the household. **No update or delete policy for
+  clients**; only the triggers change `ended_at`. Owners correct a mistake
+  by editing the visit.
+- One person can't hold two open stretches: the insert trigger refuses it
+  (`supervision_busy`), and the sheet asks to hand over or finish the other
+  visit first.
+- **Kept 90 days**, like couldn't-do records (139, D4): a nightly job
+  deletes stretches older than that. They exist to explain a day's work,
+  not as a long record of staff time. The visit keeps who logged it for as
+  long as the repair is kept.
+- Trigger functions `security definer`, empty `search_path`, revoked from
+  `public, anon, authenticated`.
+
+**`task_exceptions` (139), the reason** (D10): `task_exceptions_reason_check`
+re-created with one more value, `supervising_repair`, and a nullable
+`repair_visit_id` with a composite FK to `repair_visits`, `on delete set
+null`. Recommended over reusing `other`, because `other` requires a note of
+at least 3 characters (`task_exceptions_other_has_note`), which is typing,
+and a typed reason can't link the visit or be counted. The guard checks the
+visit belongs to the household. `exception_reason_label` gains the label
+in both languages. Old app builds never send the value, so nothing breaks.
+
+**Evening summary** (PR B): `notify_evening_summary` re-created from its
+latest definition (not `security definer`, cron only, as in 139) so that a
+not-done chore or routine slot explained by a stretch is labelled with it,
+once per stretch: an SQL twin of `supervisionExplains`, tested against the
+same cases as the TypeScript one.
+
 **Pushes (PR B):** two `boolean not null default true` columns on
 `user_preferences`, `repair_arrival_pushes` and `repair_done_pushes`, read
 and written like 139's `staff_request_pushes`. An `after insert` trigger
@@ -276,6 +408,13 @@ setting on, none in quiet hours, none with Repairs off; retention keeps
 visit photos of an open repair (including a walk-in photo two days old,
 which `repairs_due` must not list) and lists those of a repair closed 2
 years ago; the export includes visits; every new function's grants.
+Supervision: a walk-in opens the logger's stretch, Selesai closes it, a
+hand-over closes one and opens the next at the same time; a person can't
+hold two; clients can't update or delete stretches; stretches older than
+90 days go; the `supervising_repair` reason links only a visit of the same
+household; the evening summary labels a chore due inside a stretch and not
+one outside it, a routine only when every staff member on duty was
+supervising, and nothing that was done.
 
 Applied: local first, then staging, then production with the owner's OK,
 before the merge.
@@ -296,6 +435,13 @@ Add to the repairs section of `src/components/legal/privacy-policy.tsx`:
   pekerjaan, bukan foto orang. Pemilik diberi tahu saat tukang datang dan
   saat pekerjaan selesai. Catatan ini disimpan bersama perbaikannya: selama
   masih terbuka dan 2 tahun setelah ditutup."
+- **Supervising (staff data):** "When a staff member supervises a repair,
+  Miamus notes who supervised and from when to when, to show owners why a
+  task wasn't done at that time. These times are kept 90 days." / "Saat staf
+  mengawasi perbaikan, Miamus mencatat siapa yang mengawasi dan dari jam
+  berapa sampai jam berapa, untuk menunjukkan kepada pemilik mengapa suatu
+  tugas belum dikerjakan pada waktu itu. Catatan waktu ini disimpan 90
+  hari."
 - **Developer list (PR C):** "An owner can share a list of open repairs
   with photos, for example with the developer. Miamus doesn't send it: you
   choose who receives it through your own WhatsApp or file." / "Pemilik
@@ -324,7 +470,13 @@ Add to the repairs section of `src/components/legal/privacy-policy.tsx`:
 | Push title, arrival | Repair person here | Tukang datang |
 | Push title, finished | Repair finished | Perbaikan selesai |
 | Today quiet line | Pak Budi is here · Leaking tap, LT2 | Pak Budi sedang bekerja · Keran bocor, LT2 |
-| Timeline row | Walk-in · Pak Budi · 09:10–11:40 · logged by Ari | Datang langsung · Pak Budi · 09.10–11.40 · dicatat Ari |
+| Timeline row | Walk-in · Pak Budi · 9:10–11:40 AM · logged by Ari | Datang langsung · Pak Budi · 09.10–11.40 · dicatat Ari |
+| Timeline, supervision | Supervised by Ari 9:10–10:30 AM, then Syam 10:30–11:40 AM | Diawasi Ari 09.10–10.30, lalu Syam 10.30–11.40 |
+| Evening summary, explained | Not done: Mop the terrace, Iron clothes (Ari was supervising the AC repair 10:00 AM–1:30 PM). | Belum: Pel teras, Setrika baju (Ari mengawasi perbaikan AC 10.00–13.30). |
+| Summary sheet group | Ari · supervising the AC repair · 10:00 AM–1:30 PM | Ari · mengawasi perbaikan AC · 10.00–13.30 |
+| No-time context | Ari supervised a repair for 3 h 20 min today | Ari mengawasi perbaikan 3 jam 20 menit hari ini |
+| Staff progress row | Ari · Supervising a repair since 10:00 AM | Ari · Mengawasi perbaikan sejak 10.00 |
+| Couldn't-do reason (owner label) | Supervising a repair | Mengawasi perbaikan |
 | Chips as owners read them | Done · Coming back · Please check | Sudah beres · Akan datang lagi · Mohon dicek |
 | Owner button | Someone's here | Ada tukang datang |
 | Notifications rows | When a repair person arrives · When a repair is finished | Saat tukang datang · Saat perbaikan selesai |
@@ -347,6 +499,10 @@ Add to the repairs section of `src/components/legal/privacy-policy.tsx`:
 | Note | Catatan (boleh dikosongkan) |
 | Toast | Tersimpan · Pemilik rumah diberi tahu · Batalkan |
 | Forgotten | Belum ditutup sejak kemarin |
+| Tugas Hari Ini strip | Sedang mengawasi perbaikan · sejak 10.00 · 1 jam 20 menit · Selesai |
+| Task label while supervising | Mengawasi perbaikan |
+| Hand-over | Ganti yang mengawasi |
+| Couldn't-do reason | Mengawasi perbaikan |
 
 "Perlu dicek pemilik rumah" instead of the brief's "Bapak/Ibu": the glossary
 calls owners **pemilik rumah** on staff screens ("Tunggu pemilik rumah"),
@@ -365,6 +521,9 @@ that setting exists, the chip can follow it.
 | Repair person here / Repair finished (pushes) | **Tukang datang** / **Perbaikan selesai** |
 | Send to the developer | **Kirim ke developer** |
 | Not closed since yesterday | **Belum ditutup sejak kemarin** |
+| Supervising a repair (staff strip, task label, couldn't-do reason) | **Mengawasi perbaikan** / **Sedang mengawasi perbaikan** |
+| Hand over supervision | **Ganti yang mengawasi** |
+| Supervised by | **Diawasi** |
 
 ## Decisions for the owner
 
@@ -399,25 +558,44 @@ that setting exists, the chip can follow it.
   years, names and times 1 year.
 - **D9 — Owners logging a walk-in.** **A (recommended):** the same sheet
   from Chores → Repairs (**Someone's here**), no extra screen. B: staff only.
-- **D10 — Order of PRs.** **A (recommended):** PR A walk-ins and the
+- **D10 — Explaining missed tasks while supervising.** **A
+  (recommended):** auto-explain: Miamus labels a missed task due inside the
+  person's supervising stretch by itself (0 taps), and the couldn't-do sheet
+  also offers a new reason **Mengawasi perbaikan** (no note, linked to the
+  visit) for the edge cases. B: manual only, the new reason pre-selected
+  inside the stretch (1–3 taps per task, and often skipped). C: auto only,
+  no new reason. D: manual, reusing **Lainnya** with a typed note (typing,
+  and no link).
+- **D11 — Who supervises.** **A (recommended):** whoever logged the visit,
+  with **Ganti yang mengawasi** to hand over; each stretch kept separately.
+  B: fixed to whoever logged it.
+- **D12 — Order of PRs.** **A (recommended):** PR A walk-ins and the
   Perbaikan pill (migration), PR B pushes and their settings (migration), PR
   C the developer list (no migration; can be built in parallel with B).
   B: the developer list first, as it needs no migration.
 
 ## Three PRs
 
-**PR A: the Perbaikan pill and walk-ins** (migration, number at build): the
-staff pill behind the Repairs switch, `?view=perbaikan` in the URL like the
+**PR A: the Perbaikan pill, walk-ins and supervising** (migration, number
+at build): the staff pill behind the Repairs switch, `?view=perbaikan` in the URL like the
 other two (State Persistence), **Ada tukang datang** and **Selesai** through
 the offline queue and photo queue, the live-camera rule from 173,
 `repair_visits` with its RLS, guard, server times, retention, export and
-tests; the owners' timeline rows, the Today quiet line, **Someone's here**
+tests; `repair_supervision` with its triggers and 90-day clean-up, the
+**Sedang mengawasi perbaikan** strip, the task label, **Ganti yang
+mengawasi**, the `supervising_repair` couldn't-do reason, the pure helpers
+the staff progress build reads, and the summary sheet's grouping; the
+owners' timeline rows, the Today quiet line, **Someone's here**
 for owners (D9); the privacy policy and `legal.ts`; the glossary rows; the
 owners' What's new card.
 
-**PR B: owner pushes** (migration, number at build): the two
-`user_preferences` columns, the two triggers, quiet hours, the two rows in
-Household → Notifications.
+**PR B: owner pushes and the evening summary** (migration, number at
+build): the two `user_preferences` columns, the two triggers, quiet hours,
+the two rows in Household → Notifications, and `notify_evening_summary`
+re-created to explain tasks missed while supervising.
+
+**Staff progress on Today** (queued separately) reads PR A's helpers; it
+needs nothing else from this phase.
 
 **PR C: send to the developer** (no migration): the sheet, the share text,
 the print page, the policy line.

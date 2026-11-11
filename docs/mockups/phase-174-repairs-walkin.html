@@ -186,6 +186,24 @@
   <div class="pair" id="s6"></div>
 </section>
 
+<section class="screen">
+  <h2>7. Staff: supervising the repair, "Mengawasi perbaikan" (Bahasa Indonesia only)</h2>
+  <p>Left: Ari's Tugas Hari Ini while she supervises the AC repair. The strip shows when it started and how long it has run, with Selesai. Her tasks due meanwhile carry a quiet "Mengawasi perbaikan" label instead of turning late: nothing to tap. Right: for an edge case auto-explain leaves alone (here a task with no time), the Tidak bisa dikerjakan sheet offers "Mengawasi perbaikan" on a day she supervised, linked to the visit, with no note to type. For a task whose time falls inside her stretch it is already chosen.</p>
+  <div class="pair" id="s7"></div>
+</section>
+
+<section class="screen">
+  <h2>8. Owners: the evening summary explains missed tasks</h2>
+  <p>139's evening push, re-created: tasks missed while Ari supervised are still "Not done", with the stretch in brackets once, not per task.</p>
+  <div class="pair" id="s8"></div>
+</section>
+
+<section class="screen">
+  <h2>9. Owners: staff progress on Today and the summary sheet</h2>
+  <p>Top: the queued staff progress card, one row per staff member, reading the active supervision from this phase. Below: the summary sheet groups the explained tasks under Ari's stretch; a tap opens the repair.</p>
+  <div class="pair" id="s9"></div>
+</section>
+
 <script>
 const ic = (n, cls = "") => `<svg class="ic ${cls}"><use href="#i-${n}"/></svg>`;
 const img = (label, after, small) => `<div class="img ${after ? "after" : ""} ${small ? "small" : ""}">${ic("image")}${small ? "" : label}</div>`;
@@ -200,7 +218,7 @@ function perbaikanList() {
     <div class="sec">Sedang dikerjakan</div>
     <div class="card going">
       <div class="top">${img("", false, true)}<div class="ti">Keran bocor<div class="sub">LT2 · Kamar Tamu 1 · Kamar Mandi</div></div><span class="pill-btn">${ic("camera")}Selesai</span></div>
-      <div class="state">${ic("hard-hat")}Pak Budi · sejak 09.10</div>
+      <div class="state">${ic("hard-hat")}Pak Budi · diawasi Ari · sejak 09.10</div>
     </div>
     <div class="sec">Hari ini</div>
     <div class="card"><div class="top">${ic("calendar-days")}<div class="ti">Awasi perbaikan: AC menetes<div class="sub">14.00 · LT3 · Kamar Utama · Tim developer</div></div>${ic("chevron-right")}</div></div>
@@ -229,7 +247,7 @@ function sheetPick() {
     <div class="label">Siapa? <em>(boleh dikosongkan)</em></div>
     <div class="chips"><span class="chip on">${ic("hard-hat")}Pak Budi</span><span class="chip">Tim developer</span><span class="chip">Pak Ujang · listrik</span><span class="chip">${ic("plus")}Nama lain</span></div>
     <div class="label">Foto sebelum diperbaiki</div>
-    <div class="pairimg">${img("09.10")}<div class="img empty">${ic("camera")}Ulangi foto</div></div>
+    <div class="pairimg">${img("09.10")}<div class="img empty">${ic("camera")}Foto ulang</div></div>
     <div class="btn">Simpan</div>
   </div></div>`;
 }
@@ -285,15 +303,15 @@ document.getElementById("s3").innerHTML = sheetDone() + finishedCard();
 /* ---------- owner text ---------- */
 const T = {
   en: {
-    tag: "Owner · EN", date: "Tuesday 11 November", t1: "9:10", t2: "11:40",
+    tag: "Owner · EN", date: "Tuesday 11 November", t1: "9:10", t2: "11:40", t3: "7:00",
     arrT: "Repair person here", arrB: "Pak Budi · Leaking tap · LT2 · Guest Bedroom 1 (Ari)",
     doneT: "Repair finished", doneB: "Leaking tap · Pak Budi · Done", now: "now", ago: "2h ago",
     tabs: ["Today", "Pets", "Chores", "Kitchen", "Household"],
     repair: "Leaking tap", place: "LT2 · Guest Bedroom 1 · Bathroom",
     stage: "Work done — check the photos",
-    reported: "Reported by Ari", reportedWhen: "Mon 10 Nov, 19:20",
-    walk: "Walk-in · Pak Budi", walkWhen: "Tue 09:10–11:40 · logged by Ari",
-    before: "Before · 09:10", after: "After · 11:40", chip: "Done",
+    reported: "Reported by Ari", reportedWhen: "Mon 10 Nov, 7:20 PM",
+    walk: "Walk-in · Pak Budi", walkWhen: "Tue 9:10–11:40 AM · logged by Ari", sup: "Supervised by Ari 9:10–10:30 AM, then Syam 10:30–11:40 AM",
+    before: "Before · 9:10 AM", after: "After · 11:40 AM", chip: "Done",
     note: "Washer replaced. Pak Budi says the pipe is fine.",
     fixed: "Fixed", again: "Needs another visit",
     devT: "Send to the developer", devLead: "Open problems with photos. Untick what isn't the developer's.",
@@ -301,16 +319,21 @@ const T = {
     share: "Share on WhatsApp", pdf: "Save as PDF", preview: "Message preview",
     wa: "Repair list, Rumah Melati, 11 Nov 2026: 3 items\n\n1. Leaking tap · LT2 · Guest Bedroom 1 · Bathroom · reported 10 Nov\n2. Cracked wall · LT3 · Music Room · reported 4 Nov\n3. Dripping AC · LT3 · Master Bedroom · reported 8 Nov\n\nPhotos attached, in the same order.",
     only: "Owners only. Miamus doesn't send this; you choose who receives it.",
+    sumT: "Not done today", sumB: "Not done: Mop the terrace, Iron clothes (Ari was supervising the AC repair 10:00 AM–1:30 PM). Waiting for you: Syam's leave.", date2: "Tuesday 11 November",
+    staffT: "Staff today", ari: "Supervising a repair since 10:00 AM", ariN: "4 of 9 done", syam: "Pets and kitchen", syamN: "7 of 8 done",
+    sheetT: "3 not done today", grp: "Ari · supervising the AC repair · 10:00 AM–1:30 PM",
+    t1a: "Mop the terrace", t1b: "10:30 AM", t2a: "Iron clothes", t2b: "11:00 AM",
+    plain: "Not done yet", t3a: "Water the garden", t3b: "4:00 PM · Syam", done: "12 done today", open: "Open the repair",
   },
   id: {
-    tag: "Owner · ID", date: "Selasa, 11 November", t1: "09.10", t2: "11.40",
+    tag: "Owner · ID", date: "Selasa, 11 November", t1: "09.10", t2: "11.40", t3: "19.00",
     arrT: "Tukang datang", arrB: "Pak Budi · Keran bocor · LT2 · Kamar Tamu 1 (Ari)",
     doneT: "Perbaikan selesai", doneB: "Keran bocor · Pak Budi · Sudah beres", now: "sekarang", ago: "2 jam lalu",
     tabs: ["Hari ini", "Hewan", "Tugas", "Dapur", "Rumah"],
     repair: "Keran bocor", place: "LT2 · Kamar Tamu 1 · Kamar Mandi",
     stage: "Pekerjaan selesai — cek fotonya",
     reported: "Dilaporkan Ari", reportedWhen: "Sen 10 Nov, 19.20",
-    walk: "Datang langsung · Pak Budi", walkWhen: "Sel 09.10–11.40 · dicatat Ari",
+    walk: "Datang langsung · Pak Budi", walkWhen: "Sel 09.10–11.40 · dicatat Ari", sup: "Diawasi Ari 09.10–10.30, lalu Syam 10.30–11.40",
     before: "Sebelum · 09.10", after: "Sesudah · 11.40", chip: "Sudah beres",
     note: "Karet keran diganti. Kata Pak Budi pipanya aman.",
     fixed: "Sudah diperbaiki", again: "Perlu datang lagi",
@@ -319,6 +342,11 @@ const T = {
     share: "Bagikan lewat WhatsApp", pdf: "Simpan sebagai PDF", preview: "Pratinjau pesan",
     wa: "Daftar perbaikan, Rumah Melati, 11 Nov 2026: 3 item\n\n1. Keran bocor · LT2 · Kamar Tamu 1 · Kamar Mandi · dilaporkan 10 Nov\n2. Dinding retak · LT3 · Ruang Musik · dilaporkan 4 Nov\n3. AC menetes · LT3 · Kamar Utama · dilaporkan 8 Nov\n\nFoto terlampir, dengan urutan yang sama.",
     only: "Hanya pemilik. Miamus tidak mengirimkannya; Anda yang memilih penerimanya.",
+    sumT: "Belum selesai hari ini", sumB: "Belum: Pel teras, Setrika baju (Ari mengawasi perbaikan AC 10.00–13.30). Menunggu Anda: cuti Syam.", date2: "Selasa, 11 November",
+    staffT: "Staf hari ini", ari: "Mengawasi perbaikan sejak 10.00", ariN: "4 dari 9 selesai", syam: "Hewan dan dapur", syamN: "7 dari 8 selesai",
+    sheetT: "3 belum selesai hari ini", grp: "Ari · mengawasi perbaikan AC · 10.00–13.30",
+    t1a: "Pel teras", t1b: "10.30", t2a: "Setrika baju", t2b: "11.00",
+    plain: "Belum dikerjakan", t3a: "Siram taman", t3b: "16.00 · Syam", done: "12 selesai hari ini", open: "Buka perbaikan",
   },
 };
 const tabIcons = ["calendar-days", "paw-print", "clipboard-list", "cooking-pot", "users"];
@@ -344,7 +372,7 @@ function repair(t) {
       <div class="card going"><div class="state">${ic("clock")}${t.stage}</div></div>
       <div class="tl">
         <div class="ev">${ic("flag")}<div class="w">${t.reported}<small>${t.reportedWhen}</small></div></div>
-        <div class="ev">${ic("hard-hat")}<div class="w"><b style="font-weight:600">${t.walk}</b><small>${t.walkWhen}</small>
+        <div class="ev">${ic("hard-hat")}<div class="w"><b style="font-weight:600">${t.walk}</b><small>${t.walkWhen}</small><small>${t.sup}</small>
           <div class="pairimg">${img(t.before)}${img(t.after, true)}</div>
           <div><span class="bd">${ic("check")}${t.chip}</span></div>
           <div class="note">${t.note}</div></div></div>
@@ -368,6 +396,69 @@ function dev(t) {
     </div></div>`;
 }
 document.getElementById("s6").innerHTML = dev(T.en) + dev(T.id);
+/* ---------- 7. supervising (staff) ---------- */
+const staffBarTugas = `<div class="appbar"><div class="row"><h1>Miamus</h1><span class="sub">${ic("user-round")}Ari</span></div>${seg3(0)}</div>`;
+function tugasSupervising() {
+  const task = (time, title, label) => `<div class="card"><div class="top">${ic("clipboard-list")}<span style="font-size:14px;font-weight:500;font-variant-numeric:tabular-nums">${time}</span><div class="ti">${title}</div></div>${label ? `<div class="state" style="color:var(--muted)">${ic("hard-hat")}${label}</div>` : ""}</div>`;
+  return `<div class="phone"><span class="tag">Staf · ID</span><div class="status"></div>${staffBarTugas}
+  <div class="body">
+    <div class="card going">
+      <div class="top">${ic("hard-hat")}<div class="ti">Sedang mengawasi perbaikan<div class="sub">AC menetes · LT3 · Kamar Utama · Tim developer</div></div><span class="pill-btn">${ic("camera")}Selesai</span></div>
+      <div class="state">${ic("clock")}sejak 10.00 · 1 jam 20 menit</div>
+    </div>
+    <div class="sec">Selasa, 11 Nov</div>
+    <div class="card done"><div class="top">${ic("clipboard-list")}<span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--muted)">08.00</span><div class="ti" style="color:var(--muted)">Sapu dan pel ruang tamu</div>${ic("circle-check")}</div></div>
+    ${task("10.30", "Pel teras", "Mengawasi perbaikan")}
+    ${task("11.00", "Setrika baju", "Mengawasi perbaikan")}
+    ${task("14.00", "Ganti sprei kamar tamu", "")}
+    ${task("16.00", "Lap jendela LT2", "")}
+  </div></div>`;
+}
+function couldntSheet() {
+  return `<div class="phone"><span class="tag">Staf · ID</span><div class="status"></div>${staffBarTugas}<div class="body"></div><div class="dim"></div>
+  <div class="sheet" style="top:300px"><div class="grab"></div><h3>Tidak bisa dikerjakan</h3>
+    <div class="card"><div class="top">${ic("clipboard-list")}<div class="ti">Rapikan lemari dapur<div class="sub">Tanpa jam</div></div></div></div>
+    <div class="label">Kenapa?</div>
+    <div class="chips"><span class="chip">Barang habis</span><span class="chip">Sudah dikerjakan orang lain</span><span class="chip on">${ic("hard-hat")}Mengawasi perbaikan</span><span class="chip">Lainnya</span></div>
+    <div class="hint">AC menetes · 10.00–13.40 · terhubung ke perbaikan ini</div>
+    <div class="btn">Simpan</div>
+  </div></div>`;
+}
+document.getElementById("s7").innerHTML = tugasSupervising() + couldntSheet();
+
+/* ---------- 8. evening summary push ---------- */
+function summaryLock(t) {
+  return `<div class="phone short lock"><span class="tag">${t.tag}</span><div class="status"></div>
+    <div class="clock">${t.t3}</div><div class="date">${t.date2}</div>
+    <div class="notif"><div class="app">${ic("clipboard-list")}</div><div class="w"><b>${t.sumT}<i>${t.now}</i></b>${t.sumB}</div></div>
+  </div>`;
+}
+document.getElementById("s8").innerHTML = summaryLock(T.en) + summaryLock(T.id);
+
+/* ---------- 9. staff progress + summary sheet ---------- */
+function progress(t) {
+  const row = (n, line, cnt, busy) => `<div class="opt" style="${busy ? "background:var(--warmbg);border-color:var(--warmline)" : ""}"><div class="av" style="width:32px;height:32px;border-radius:999px;background:#f4f4f5;display:flex;align-items:center;justify-content:center;font-weight:600;color:#52525b;flex:none">${n[0]}</div><div class="w">${n}<small style="${busy ? "color:var(--warm)" : ""}">${busy ? ic("hard-hat") + " " : ""}${line}</small></div><span style="font-size:12px;color:var(--muted)">${cnt}</span></div>`;
+  const tk = (a, b, note) => `<div class="dev"><div class="w">${a}<small>${b}</small></div></div>`;
+  return `<div class="phone"><span class="tag">${t.tag}</span><div class="status"></div>
+    <div class="appbar"><div class="row"><h1>${t.tabs[0]}</h1></div></div>
+    <div class="body">
+      <div class="sec">${t.staffT}</div>
+      ${row("Ari", t.ari, t.ariN, true)}
+      ${row("Syam", t.syam, t.syamN, false)}
+    </div>
+    <div class="dim" style="top:auto;height:0"></div>
+    <div class="sheet" style="top:330px;box-shadow:0 -8px 24px -8px rgba(17,24,39,.25)"><div class="grab"></div><h3>${t.sheetT}</h3>
+      <div class="card going"><div class="state">${ic("hard-hat")}${t.grp}</div>
+        ${tk(t.t1a, t.t1b)}${tk(t.t2a, t.t2b)}
+        <div class="sub" style="display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--ink2)">${ic("wrench")}${t.open}${ic("chevron-right")}</div>
+      </div>
+      <div class="label">${t.plain}</div>
+      ${tk(t.t3a, t.t3b)}
+      <div class="hint" style="margin-top:4px">${t.done}</div>
+    </div>
+    ${tabbar(t, 0)}</div>`;
+}
+document.getElementById("s9").innerHTML = progress(T.en) + progress(T.id);
 </script>
 <p class="legend" style="max-width:1100px;margin:16px auto 32px;padding:0 16px">Not shown: Household → Notifications gains two rows, "When a repair person arrives" and "When a repair is finished" (Saat tukang datang · Saat perbaikan selesai), both on by default. Today gains a quiet line while someone is working.</p>
 </body>
