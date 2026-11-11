@@ -2,9 +2,10 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Check, CircleCheck, Loader2, Plus, Trash2, X } from "lucide-react";
+import { BellRing, Camera, Check, CircleCheck, Loader2, MessageSquareWarning, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   Sheet,
@@ -45,6 +46,7 @@ import {
   type RoutineDraft,
   type RoutineRepeat,
 } from "@/lib/routine-groups";
+import { ownerAlertTimeAllowed, reminderTimeAllowed, switchState } from "@/lib/routine-alerts";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 import type { MasterSchedule, RoutineKind, RoutineProof } from "@/types/database";
@@ -265,6 +267,12 @@ export function AddRoutineSheet({
     photo: (picked === "walk" || picked === "other") && chosenPets.length <= 1 ? t("1 photo", "1 foto") : t("Photo", "Foto"),
     tick: t("Tick", "Centang"),
   };
+  // Reminders and "not done" alerts (Phase 173 PR C): greyed when no time of
+  // the routine can use them (lib/routine-alerts, the same rule as the SQL).
+  const reminderState = switchState(draft.times, reminderTimeAllowed);
+  const alertState = switchState(draft.times, ownerAlertTimeAllowed);
+  const lateReminders = draft.times.filter((x) => !reminderTimeAllowed(x)).map(formatTime).join(", ");
+  const lateAlerts = draft.times.filter((x) => !ownerAlertTimeAllowed(x)).map(formatTime).join(", ");
   const proofHint: Record<RoutineProof, string> = {
     three: t(
       "Three photos from the camera: at the gate, where they walked to, back at the gate. Miamus notes how long it took.",
@@ -487,6 +495,64 @@ export function AddRoutineSheet({
               </Row>
             )}
 
+            {picked && (
+              <Row label={t("Notifications", "Notifikasi")} optional={t("optional", "opsional")}>
+                <div className="flex flex-col divide-y rounded-xl border px-3">
+                  <AlertSwitch
+                    icon={BellRing}
+                    title={t("Remind staff at this time", "Ingatkan staf di jam ini")}
+                    on={draft.remindStaff}
+                    state={reminderState}
+                    onToggle={() => set({ remindStaff: !draft.remindStaff })}
+                    detail={
+                      reminderState === "none"
+                        ? t(
+                            "Too late for a reminder. Reminders ring from 6:00 AM to 10:00 PM.",
+                            "Terlalu malam untuk pengingat. Pengingat berbunyi pukul 06.00–22.00."
+                          )
+                        : reminderState === "some"
+                          ? t(
+                              `Only if it isn't done yet. None at ${lateReminders} (too late).`,
+                              `Hanya jika belum dikerjakan. Tidak ada pengingat pukul ${lateReminders} (terlalu malam).`
+                            )
+                          : draft.staffId
+                            ? t(
+                                "Only if it isn't done yet, on their phone if notifications are on.",
+                                "Hanya jika belum dikerjakan, ke HP-nya jika notifikasi aktif."
+                              )
+                            : t(
+                                "Only if it isn't done yet, on every staff phone with notifications on.",
+                                "Hanya jika belum dikerjakan, ke setiap HP staf yang notifikasinya aktif."
+                              )
+                    }
+                  />
+                  <AlertSwitch
+                    icon={MessageSquareWarning}
+                    title={t("Tell us if it's not done", "Kabari kami jika belum dikerjakan")}
+                    on={draft.alertOwners}
+                    state={alertState}
+                    onToggle={() => set({ alertOwners: !draft.alertOwners })}
+                    detail={
+                      alertState === "none"
+                        ? t(
+                            "Too late for an alert. Alerts come from 6:00 AM to 10:30 PM.",
+                            "Terlalu malam untuk kabar. Kabar dikirim pukul 06.00–22.30."
+                          )
+                        : alertState === "some"
+                          ? t(
+                              `30 minutes after its time, if it's still not done. None after ${lateAlerts} (too late).`,
+                              `30 menit setelah jamnya, jika masih belum dikerjakan. Tidak ada kabar untuk pukul ${lateAlerts} (terlalu malam).`
+                            )
+                          : t(
+                              "Every owner gets a notification 30 minutes after its time, if it's still not done.",
+                              "Semua pemilik mendapat notifikasi 30 menit setelah jamnya, jika masih belum dikerjakan."
+                            )
+                    }
+                  />
+                </div>
+              </Row>
+            )}
+
             {picked && kindInfo && (
               <StaffPreview
                 icon={kindInfo.icon}
@@ -558,6 +624,35 @@ function Row({ label, optional, children }: { label: string; optional?: string; 
       </h3>
       {children}
     </section>
+  );
+}
+
+/** One notification switch; greyed (and shown off) when no time can use it. */
+function AlertSwitch({
+  icon: Icon,
+  title,
+  detail,
+  on,
+  state,
+  onToggle,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  detail: string;
+  on: boolean;
+  state: "ok" | "some" | "none";
+  onToggle: () => void;
+}) {
+  const disabled = state === "none";
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className={cn("text-sm font-medium", disabled && "text-muted-foreground")}>{title}</p>
+        <p className="text-xs text-muted-foreground">{detail}</p>
+      </div>
+      <Switch on={on && !disabled} label={title} disabled={disabled} onToggle={onToggle} className="mt-0.5" />
+    </div>
   );
 }
 

@@ -447,6 +447,48 @@ The owner asked for routines, not reminders; this is optional. But
   two overloads; 141's triggers keep calling it with 8 arguments. Same
   revoke and grant as 141.
 
+**As built (PR C, migration 150, 2026-11-11):** as above, with three
+changes found while building. (1) `queue_staff_push` is **not** re-created:
+a reminder must show the same text on a shared phone, where 141 shows only
+"Untuk Sari", so it has its own small sender (`queue_staff_reminder_push`,
+141's phone choice, no 5-minute rule) and 141 stays untouched. (2) The
+reminder is per pet: a pet already done, or with a "couldn't do", isn't
+named, and the push goes only while one is still open. (3) A person on
+leave today: the reminder goes to whoever covers ("reassign"), otherwise to
+everyone, as 141 reads leave for chores. A reminder may still go up to 20
+minutes after its time if the cron run is late; the cut-off is the routine's
+time (before 22:00), not the moment it is sent. The staff card's quiet-hours
+line now reads "Tidak ada notifikasi pukul 22.00–06.00", true either way.
+
+## "Tell us if it's not done" for owners (D15) — PR C
+
+The owner asked on 11 Nov: "tell us if it's not done", for lights off at
+21:30, medicines, locking up.
+
+**Decided (owner, 11 Nov):**
+
+- A second switch per routine in the sheet: **Tell us if it's not done** /
+  **Kabari kami jika belum dikerjakan**. **Off by default.**
+- If a pet on the routine is still open **30 minutes after its time** (not
+  done, no "couldn't do" for that pet), **every owner with notifications
+  on** gets one push, in their own language:
+  "Lights off · Mocha & Matcha" / "Not done yet (9:30 PM)";
+  "Matikan lampu · Mocha & Matcha" / "Belum dikerjakan (21.30)". (Owner
+  pushes write English times as 9:30 PM, as every other owner push does.)
+- **Once per occurrence**, never repeated; nothing if it was done or a
+  "couldn't do" landed first. Pets already done aren't named.
+- **Quiet hours:** owners have no quiet hours of their own yet, so 166's
+  apply (21:00–06:00), stretched to **22:30** for an alert about a routine at
+  22:00 or earlier. So the routine's time must be 05:30 to 22:00; otherwise
+  the switch is greyed ("Too late for an alert"). If owners get their own
+  quiet hours later, the job should read them instead.
+- Built in the same 5-minute job as D7 (`notify_routines_due`), with the same
+  sent-log (`routine_push_sent`), so nothing doubles across retries or an
+  overlapping run. Routines only for now; a chore with a time could use the
+  same job later (its slots would come from `chore_days_open` instead of
+  `routine_slots_open`).
+- Privacy: the admins' notifications line adds it (both languages).
+
 ## Kakak (D8) — PR B
 
 **Recommended (A): extend `add_pet_routine`, same name.** Keeping the name
@@ -568,7 +610,7 @@ files as meals. If 173 PR A lands first, 172 sets `kind: 'walk'` on them; if
 
 **PR B:** no migration (Kakak and starters are app code).
 
-**PR C — timed reminders (next free number at build time):**
+**PR C — timed reminders (built as migration 150; see D7 "As built" and D15):**
 `master_schedules.remind_staff boolean not null default false`;
 `notify_routines_due()` (`security definer`, `set search_path = ''`,
 `revoke all … from public, anon, authenticated`, `grant execute … to
@@ -681,6 +723,7 @@ production; the migration on production before the merge.
 | D12 | PR order | A (sheet and model, 147), B (Kakak and starters), C (reminders) | B: two PRs, Kakak and reminders together (reminders then wait on Q2 and hold Kakak back). |
 | D13 | Routine write guard | Close it in 147: only admins write `master_schedules` | B: leave it for a later security pass. |
 | D14 | Walk proof | Three live-camera photos (gate, park, gate), server times, minutes, the owner's row of three; no location; per routine (walks preset to 3, others 1) | B (later): A plus an on-phone distance with Wake Lock (consent, policy line). C: stored GPS route (not recommended). Later: background distance with a native app; an in-app camera if faking persists. |
+| D15 | Owner alert if not done | **Decided (owner, 11 Nov):** per routine, off by default, every owner, 30 minutes after its time, once, cancelled by done or couldn't-do; until 22:30 for a routine at 22:00 or earlier | B: also chores with a time (later, same job). C: repeat until done (not chosen: noise). |
 
 ## Questions only the owner can answer
 

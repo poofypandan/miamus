@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  BellRing,
   CheckCircle2,
   Clock,
   Copy,
@@ -1230,8 +1231,15 @@ function OtherRoutinesCard({
               >
                 <Icon className="size-4 shrink-0 text-zinc-500" aria-hidden />
                 <span className="min-w-0 flex-1">
-                  <span className="block font-medium">
+                  <span className="flex items-center gap-1.5 font-medium">
                     {times.map((t) => formatTime(t)).join(", ") || "—"} · {title}
+                    {(first.remind_staff || first.alert_owners) && (
+                      <BellRing
+                        className="size-3.5 shrink-0 text-muted-foreground"
+                        role="img"
+                        aria-label={tr("Reminder or alert on", "Pengingat atau kabar aktif")}
+                      />
+                    )}
                   </span>
                   <span className="block text-xs text-muted-foreground">
                     {when(first)}
@@ -1322,6 +1330,9 @@ function CopyScheduleDrawer({
                   staff_id: s.staff_id ?? null,
                 }
               : {}),
+            // Reminders and "not done" alerts go with the copy (Phase 173 PR C).
+            ...(s.remind_staff ? { remind_staff: true } : {}),
+            ...(s.alert_owners ? { alert_owners: true } : {}),
             ...(s.proof && s.proof !== "photo" ? { proof: s.proof } : {}),
             // A start date that is part of the row: a one-off's day, or a
             // visit anchored on a later day. Without it the copy starts today

@@ -126,7 +126,7 @@ export function StaffPushCard({
             <>
               <p className="text-[13px] leading-snug text-gray-700">
                 Dapat kabar di HP ini kalau ada tugas baru untuk Anda, atau admin menjawab permintaan Anda. Tidak
-                ada notifikasi pukul 21.00–06.00.
+                ada notifikasi pukul 22.00–06.00.
               </p>
               {staffPush.people?.shared && (
                 <p className="text-[13px] leading-snug text-gray-700">

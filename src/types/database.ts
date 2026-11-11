@@ -130,6 +130,11 @@ export type MasterSchedule = {
   staff_id?: string | null;
   /** How staff prove it. Absent reads as "photo", the column's default. */
   proof?: RoutineProof | null;
+  // Phase 173 PR C (migrations/150). Absent reads as off, the default.
+  /** Push the staff at the routine's time if it isn't done yet (D7). */
+  remind_staff?: boolean;
+  /** Push every owner if it still isn't done 30 minutes after its time (D15). */
+  alert_owners?: boolean;
 };
 
 /** Phase 173: the Add routine sheet's quick choices (lib/pet-routine-kinds). */

@@ -176,7 +176,7 @@ people are **staf** and **admin**.
 | On · Off · Blocked (notification status) | **Aktif · Mati · Diblokir** | Phase 166, as in #50's settings card. |
 | Notifications on this phone | **Notifikasi di HP ini** | Phase 166: the staff row in the Lapor sheet. |
 | For (whose push, shared phone) | **Untuk Sari** | Phase 166: the push title on a phone several people use. |
-| Quiet hours | **Jam tenang** | Phase 166: "Tidak ada notifikasi pukul 21.00–06.00." |
+| Quiet hours | **Jam tenang** | Phase 166: "Tidak ada notifikasi pukul 21.00–06.00." Since Phase 173 PR C the staff card says **22.00–06.00**: a routine reminder the owner turned on may ring until 22.00. |
 | New task / New task for everyone | **Tugas baru** / **Tugas baru untuk semua** | Phase 166 push titles. |
 | A task for you (moved to you) / Task time changed | **Tugas untuk Anda** / **Jam tugas diubah** | Phase 166 push titles. |
 | Extra task (covering leave) | **Tugas tambahan** | Phase 166. |
@@ -228,7 +228,10 @@ people are **staf** and **admin**.
 | Add for 2 pets / Add for Matcha | **Tambah untuk 2 hewan / Tambah untuk Matcha** | Phase 173 button. |
 | Other routines | **Rutinitas lain** | Phase 173: replaces Others / Lainnya in Manage routines. |
 | Usual routines for Coco | **Rutinitas biasa untuk Coco** | Phase 173 PR B (planned): starter list after adding a pet. |
-| Remind staff at this time | **Ingatkan staf di jam ini** | Phase 173 PR C (planned). Push title **Pengingat**, as Phase 164. |
+| Remind staff at this time | **Ingatkan staf di jam ini** | Phase 173 PR C (D7). Push title **Pengingat**, as Phase 164; body "21.30 · Matikan lampu · Mocha & Matcha". |
+| Tell us if it's not done | **Kabari kami jika belum dikerjakan** | Phase 173 PR C (D15), owner sheet. The owner push: "Matikan lampu · Mocha & Matcha" / **Belum dikerjakan (21.30)**. |
+| Notifications (optional), sheet row | **Notifikasi (opsional)** | Phase 173 PR C: the row holding both switches. |
+| Too late for a reminder · Too late for an alert | **Terlalu malam untuk pengingat · Terlalu malam untuk kabar** | Phase 173 PR C: the greyed switch. Reminders ring 06.00–22.00; alerts come 06.00–22.30. "Kabar" matches "Kabari kami". |
 | Today's progress · House 6/8 · Pets 12/14 | **Progres Hari ini · Rumah 6/8 · Hewan 12/14** | Staff progress on Today (owners, 11 Nov): one row per person, only the kinds they have. A staff phone shows its own line, grouped as **Progres Anda**. |
 | On leave (a person's progress row) | **Libur** | The everyday word for a day off on a row. **Cuti** stays the word for the leave request itself. |
 | N left · All done · N late · N couldn't be done · No tasks | **Sisa N · Semua selesai · N terlambat · N tidak bisa dikerjakan · Tidak ada tugas** | The calm line under a name. |

@@ -134,6 +134,8 @@ function routineFields(input: CreateScheduleInput) {
     note: input.note ?? null,
     staff_id: input.staff_id ?? null,
     proof: input.proof ?? "photo",
+    remind_staff: input.remind_staff ?? false,
+    alert_owners: input.alert_owners ?? false,
   };
 }
 

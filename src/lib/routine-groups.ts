@@ -1,4 +1,5 @@
 import type { CreateScheduleInput } from "@/lib/data/types";
+import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
 import { routineKindInfo, ROUTINE_KINDS, proofOf } from "@/lib/pet-routine-kinds";
 import type { MasterSchedule, RoutineKind, RoutineProof } from "@/types/database";
 
@@ -32,6 +33,10 @@ export interface RoutineDraft {
   staffId: string | null;
   note: string;
   proof: RoutineProof;
+  /** Remind staff at this time, if it isn't done (Phase 173 PR C, D7). Off by default. */
+  remindStaff: boolean;
+  /** Tell the owners if it isn't done 30 minutes later (D15). Off by default. */
+  alertOwners: boolean;
 }
 
 export function newDraft(kind: RoutineKind, petIds: string[], today: string): RoutineDraft {
@@ -48,6 +53,8 @@ export function newDraft(kind: RoutineKind, petIds: string[], today: string): Ro
     staffId: null,
     note: "",
     proof: info.proof,
+    remindStaff: false,
+    alertOwners: false,
   };
 }
 
@@ -101,6 +108,8 @@ export function draftFromRows(rows: MasterSchedule[], today: string): RoutineDra
     staffId: first.staff_id ?? null,
     note: first.note ?? "",
     proof: proofOf(first),
+    remindStaff: rows.some((r) => r.remind_staff === true),
+    alertOwners: rows.some((r) => r.alert_owners === true),
   };
 }
 
@@ -125,6 +134,10 @@ function sharedFields(draft: RoutineDraft, groupId: string) {
     staff_id: draft.staffId,
     proof: draft.proof,
     expires_at: once ? draft.onceDate : draft.endsOn || null,
+    // A switch no time of the routine can use is saved off, so moving the
+    // time earlier later on never turns on something the owner saw greyed.
+    remind_staff: draft.remindStaff && draft.times.some(reminderTimeAllowed),
+    alert_owners: draft.alertOwners && draft.times.some(ownerAlertTimeAllowed),
   };
 }
 

@@ -119,6 +119,9 @@ export interface CreateScheduleInput {
   note?: string | null;
   staff_id?: string | null;
   proof?: RoutineProof;
+  // Phase 173 PR C (migrations/150): off unless the owner turns them on.
+  remind_staff?: boolean;
+  alert_owners?: boolean;
 }
 
 export interface CreateMedicalRecordInput {
