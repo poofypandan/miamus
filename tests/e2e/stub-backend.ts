@@ -1,6 +1,6 @@
 import type { BrowserContext, Route } from "@playwright/test";
 import { BENTO, HOUSEHOLD_ID, MOCHI, SCHEDULES } from "../fixtures/household";
-import { applyAmountRules } from "../../src/lib/kitchen-units";
+import { applyAmountRules, convertAmount } from "../../src/lib/kitchen-units";
 import type { InventoryItem } from "../../src/types/database";
 
 /**
@@ -109,6 +109,17 @@ export interface StubOptions {
    * database), so a staff phone in the same test reads what the owner saved.
    */
   recipes?: Record<string, unknown>[];
+  /**
+   * menu_dishes rows (Phase 170 PR C, migrations/153). Owners plan; the
+   * cook functions change them in place, so a staff phone and the owner in
+   * one test see the same menu. `kitchenNotes`: the household's note.
+   */
+  menu?: Record<string, unknown>[];
+  kitchenNotes?: string | null;
+  /** Hold the recipes read until `releaseRecipes()` (cooking must wait for it; Codex, PR #101). */
+  holdRecipes?: boolean;
+  /** Hold the kitchen notes read until `releaseKitchenNotes()` (the editor must wait for it). */
+  holdKitchenNotes?: boolean;
   /** The VAPID public key get_push_public_key returns to the admin (push set up on the server). */
   pushKey?: string;
   /** Leave the Add to Home Screen tip showing (owner phones have it closed by default). */
@@ -243,6 +254,13 @@ export interface Stub {
   repairPushPrefs: { repair_arrival_pushes: boolean; repair_done_pushes: boolean };
   /** recipes, each with its ingredients, as the stub holds them (Phase 170 PR B). */
   recipes: Record<string, unknown>[];
+  /** menu_dishes as the stub holds them, and the household's kitchen note (Phase 170 PR C). */
+  menu: Record<string, unknown>[];
+  kitchen: { notes: string | null; confirmedAt: string | null };
+  /** Answer the recipes reads held by `holdRecipes`. */
+  releaseRecipes(): void;
+  /** Answer the kitchen notes reads held by `holdKitchenNotes`. */
+  releaseKitchenNotes(): void;
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
   sessionUser(): Promise<string | null>;
@@ -284,6 +302,13 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const portionTrouble = { lostReplies: 0 };
   const tasks: Record<string, unknown>[] = [];
   const supplies: Record<string, unknown>[] = options.items ? options.items.map((row) => ({ ...row })) : [];
+  const alerts: Record<string, unknown>[] = [];
+  let release: () => void = () => undefined;
+  const recipesHeld = { on: !!options.holdRecipes, wait: new Promise<void>((r) => (release = r)) };
+  let releaseNotes: () => void = () => undefined;
+  const notesHeld = { on: !!options.holdKitchenNotes, wait: new Promise<void>((r) => (releaseNotes = r)) };
+  const menu: Record<string, unknown>[] = options.menu ? options.menu.map((row) => ({ ...row })) : [];
+  const kitchen = { notes: options.kitchenNotes ?? null, confirmedAt: options.kitchenNotes ? "2026-11-10T00:00:00Z" : null };
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
   const repairCosts: Record<string, unknown>[] = [];
   const billPayments: Record<string, unknown>[] = options.billPayments ? [...options.billPayments] : [];
@@ -460,7 +485,17 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         return route.fulfill({ json: one ? (options.staff[0] ?? null) : options.staff });
       }
       if (table === "households") {
-        const row = { id: HOUSEHOLD_ID, name: "Rumah Uji", has_pets: household.hasPets, created_at: household.createdAt };
+        if (notesHeld.on && (new URL(request.url()).searchParams.get("select") ?? "").includes("kitchen_notes")) {
+          await notesHeld.wait;
+        }
+        const row = {
+          id: HOUSEHOLD_ID,
+          name: "Rumah Uji",
+          has_pets: household.hasPets,
+          created_at: household.createdAt,
+          kitchen_notes: kitchen.notes,
+          kitchen_notes_confirmed_at: kitchen.confirmedAt,
+        };
         const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: one ? row : [row] });
       }
@@ -485,6 +520,26 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       }
       if (table === "task_logs") return answerLogs(route, logs);
       if (table === "master_schedules") return answerSchedules(route, schedules, who === OWNER);
+      // Shopping notes (Phase 154's quick add; the menu's "Not on your list",
+      // Phase 170 PR C): added here and read back once there are any.
+      if (table === "inventory_alerts" && request.method() === "POST") {
+        const body = request.postDataJSON();
+        const row: Record<string, unknown> = {
+          id: `00000000-0000-4000-8000-${String(700 + alerts.length).padStart(12, "0")}`,
+          household_id: HOUSEHOLD_ID,
+          status: "pending",
+          resolved: false,
+          staff_id: null,
+          created_at: new Date().toISOString(),
+          ...(Array.isArray(body) ? body[0] : body),
+        };
+        alerts.push(row);
+        const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
+        return route.fulfill({ json: object ? row : [row] });
+      }
+      if (table === "inventory_alerts" && request.method() === "GET" && alerts.length > 0) {
+        return route.fulfill({ json: alerts });
+      }
       if (table === "task_entities") return answerEntities(route, entities);
       // Supplies added here (Phase 164), and read back once there are any.
       if (table === "inventory_items" && request.method() === "POST") {
@@ -538,6 +593,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
             amount_set_by: adds ? ((body.p_staff_id as string | null) ?? null) : (before.amount_set_by ?? null),
             stock_status: "ok",
             stock_status_by: (body.p_staff_id as string | null) ?? null,
+            to_buy_amount: null,
           });
         }
         supplies[index] = after as unknown as Record<string, unknown>;
@@ -547,6 +603,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       // Recipes (Phase 170 PR B, migrations/151): every session reads;
       // owners write the recipe and all its lines through save_recipe.
       if (table === "recipes" && request.method() === "GET") {
+        if (recipesHeld.on) await recipesHeld.wait;
         return route.fulfill({ json: recipes.map(({ ingredients: _lines, ...row }) => row) });
       }
       if (table === "recipe_ingredients" && request.method() === "GET") {
@@ -595,6 +652,113 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         else recipes.push(recipe);
         const { ingredients: lines, ...row } = recipe;
         return route.fulfill({ json: { recipe: row, ingredients: lines } });
+      }
+      // The weekly menu (Phase 170 PR C, migrations/153): every session
+      // reads; owners write; anyone cooks through the two functions.
+      if (table === "menu_dishes") {
+        const params = new URL(request.url()).searchParams;
+        if (request.method() === "GET") return route.fulfill({ json: filterRows(menu, params) });
+        if (who !== OWNER) {
+          return route.fulfill({ status: 403, json: { code: "42501", message: "new row violates row-level security policy", details: null, hint: null } });
+        }
+        if (request.method() === "POST") {
+          const body = request.postDataJSON();
+          const rows = (Array.isArray(body) ? body : [body]).map((fields: Record<string, unknown>, i: number) => {
+            const now = new Date().toISOString();
+            const row = {
+              id: `00000000-0000-4000-8000-${String(153000 + menu.length + i).padStart(12, "0")}`,
+              household_id: HOUSEHOLD_ID,
+              notes: null,
+              servings: null,
+              recipe_id: null,
+              position: 0,
+              ...fields,
+              cooked_at: null,
+              cooked_by: null,
+              cooked_uses: null,
+              created_by: OWNER,
+              created_at: now,
+              updated_at: now,
+            };
+            return row;
+          });
+          menu.push(...rows);
+          return route.fulfill({ json: rows });
+        }
+        if (request.method() === "PATCH") {
+          const id = (params.get("id") ?? "").replace(/^eq\./, "");
+          const index = menu.findIndex((d) => d.id === id);
+          const patch = request.postDataJSON() as Record<string, unknown>;
+          if (["cooked_at", "cooked_by", "cooked_uses"].some((key) => key in patch)) {
+            return route.fulfill({ status: 403, json: { code: "42501", message: "cooked_through_functions_only", details: null, hint: null } });
+          }
+          if (index < 0) return route.fulfill({ status: 406, json: { code: "PGRST116", message: "no rows", details: null, hint: null } });
+          menu[index] = { ...menu[index], ...patch, updated_at: new Date().toISOString() };
+          return route.fulfill({ json: menu[index] });
+        }
+        if (request.method() === "DELETE") {
+          const raw = params.get("id") ?? "";
+          const ids = raw.startsWith("in.") ? raw.slice(4, -1).split(",").map((v) => v.replace(/"/g, "")) : [raw.replace(/^eq\./, "")];
+          const gone = menu.filter((d) => ids.includes(String(d.id)));
+          for (const dish of gone) menu.splice(menu.indexOf(dish), 1);
+          return route.fulfill({ json: gone.map((d) => ({ id: d.id })) });
+        }
+      }
+      if (table === "rpc/cook_menu_dish" || table === "rpc/uncook_menu_dish") {
+        const body = request.postDataJSON() as {
+          p_dish_id: string;
+          p_uses?: { item_id: string; amount: number; unit?: string }[];
+          p_staff_id?: string | null;
+        };
+        const index = menu.findIndex((d) => d.id === body.p_dish_id);
+        if (index < 0) return route.fulfill({ status: 403, json: { code: "42501", message: "not_found", details: null, hint: null } });
+        const dish = menu[index];
+        const changed: Record<string, unknown>[] = [];
+        const skipped: Record<string, unknown>[] = [];
+        if (table === "rpc/cook_menu_dish") {
+          if (dish.cooked_at) return route.fulfill({ status: 400, json: { code: "55000", message: "already_cooked", details: null, hint: null } });
+          const took: { item_id: string; amount: number; unit: string }[] = [];
+          for (const use of body.p_uses ?? []) {
+            const at = supplies.findIndex((row) => row.id === use.item_id);
+            const before = supplies[at] as unknown as InventoryItem | undefined;
+            if (!before || before.track_amount !== true) {
+              return route.fulfill({ status: 403, json: { code: "42501", message: "item_not_tracked", details: null, hint: null } });
+            }
+            const amount = use.unit ? convertAmount(use.amount, use.unit as InventoryItem["unit"], before.unit) : use.amount;
+            if (amount === null) {
+              return route.fulfill({ status: 400, json: { code: "22023", message: "unit_mismatch", details: null, hint: null } });
+            }
+            const taken = Math.min(before.quantity, amount);
+            if (taken <= 0) continue;
+            const after = applyAmountRules(before, { ...before, quantity: before.quantity - taken, amount_set_by: body.p_staff_id ?? null });
+            supplies[at] = after as unknown as Record<string, unknown>;
+            changed.push(supplies[at]);
+            took.push({ item_id: use.item_id, amount: taken, unit: before.unit });
+          }
+          menu[index] = { ...dish, cooked_at: new Date().toISOString(), cooked_by: body.p_staff_id ?? null, cooked_uses: took };
+        } else {
+          for (const use of (dish.cooked_uses as { item_id: string; amount: number; unit?: string }[] | null) ?? []) {
+            const at = supplies.findIndex((row) => row.id === use.item_id);
+            const before = supplies[at] as unknown as InventoryItem | undefined;
+            if (!before || before.track_amount !== true) continue;
+            const back = use.unit ? convertAmount(use.amount, use.unit as InventoryItem["unit"], before.unit) : use.amount;
+            if (back === null) {
+              skipped.push(use);
+              continue;
+            }
+            supplies[at] = applyAmountRules(before, { ...before, quantity: before.quantity + back }) as unknown as Record<string, unknown>;
+            changed.push(supplies[at]);
+          }
+          menu[index] = { ...dish, cooked_at: null, cooked_by: null, cooked_uses: null };
+        }
+        return route.fulfill({ json: { dish: menu[index], items: changed, skipped } });
+      }
+      if (table === "rpc/set_kitchen_notes") {
+        if (who !== OWNER) return route.fulfill({ status: 403, json: { code: "42501", message: "admins_only", details: null, hint: null } });
+        const body = request.postDataJSON() as { p_notes: string | null; p_confirm?: boolean };
+        kitchen.notes = body.p_notes?.trim() || null;
+        if (body.p_confirm && !kitchen.confirmedAt) kitchen.confirmedAt = new Date().toISOString();
+        return route.fulfill({ json: { kitchen_notes: kitchen.notes, kitchen_notes_confirmed_at: kitchen.confirmedAt } });
       }
       // Ate 1 portion and its Undo (migrations/148): decided here, once per op id.
       if (table === "rpc/eat_food_portion" || table === "rpc/undo_food_portion") {
@@ -750,6 +914,16 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     household,
     features,
     recipes,
+    menu,
+    kitchen,
+    releaseRecipes: () => {
+      recipesHeld.on = false;
+      release();
+    },
+    releaseKitchenNotes: () => {
+      notesHeld.on = false;
+      releaseNotes();
+    },
     setNetwork(up: boolean) {
       net.token = net.rest = net.signup = up;
     },

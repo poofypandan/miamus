@@ -6,8 +6,11 @@
  *
  * One path for owners and staff. It does more than end the session: a phone
  * can be handed to someone else, so what Miamus remembered about the
- * household on it goes too — the cached copy of the household, which staff
- * member this phone was, the household it was linked to, and app lock.
+ * household on it goes too — every cached copy of the household (lists,
+ * recipes, the menu and kitchen notes, names), which staff member this phone
+ * was, the household it was linked to, and app lock. Deny by default: every
+ * Miamus key goes except this phone's own display preferences
+ * (src/lib/local-data.ts; Codex P1, PR #101).
  * Nothing in the household itself changes; signing in again brings it all back.
  */
 
@@ -16,17 +19,9 @@ import { getOfflineQueue } from "@/lib/offline-queue";
 import { hasPendingPhotos } from "@/lib/photo-queue";
 import { clearCachedOwnerLocale } from "@/lib/owner-locale";
 import { setAppLockEnabled } from "@/lib/app-lock";
-import { TENANT_STORAGE_KEY } from "@/lib/tenant";
+import { clearHouseholdKeys } from "@/lib/local-data";
 
-/** Keys in this phone's storage that belong to the signed-in person. */
-const LOCAL_KEYS = [
-  TENANT_STORAGE_KEY,
-  "banyuwangi11:staffId",
-  "banyuwangi11:staffName",
-  "banyuwangi11:isOwner",
-];
 const SESSION_KEYS = ["miamus_owner_unlocked_at"];
-const SNAPSHOT_PREFIX = "miamus_snapshot_v";
 const CHORE_DRAFT_PREFIX = "miamus_chore_draft:";
 const OFFLINE_QUEUE_KEY = "b11-sync-queue";
 
@@ -46,18 +41,14 @@ export async function hasUnsavedWork(): Promise<boolean> {
 
 function clearLocalData(): void {
   try {
-    for (const key of LOCAL_KEYS) window.localStorage.removeItem(key);
-    for (let i = window.localStorage.length - 1; i >= 0; i--) {
-      const key = window.localStorage.key(i);
-      if (key?.startsWith(SNAPSHOT_PREFIX) || key?.startsWith(CHORE_DRAFT_PREFIX)) {
-        window.localStorage.removeItem(key);
-      }
-    }
+    // Every Miamus key but this phone's display preferences (local-data.ts).
+    clearHouseholdKeys(window.localStorage);
   } catch {
     // Storage blocked: nothing was stored to clear.
   }
   try {
     for (const key of SESSION_KEYS) window.sessionStorage.removeItem(key);
+    clearHouseholdKeys(window.sessionStorage);
   } catch {
     // As above.
   }

@@ -22,6 +22,10 @@ export function useRecipes({ enabled = true }: { enabled?: boolean } = {}): {
   recipes: RecipeWithLines[];
   loaded: boolean;
   failed: boolean;
+  /** From the server in this session (cooking waits for it). */
+  fresh: boolean;
+  /** The last server read failed. */
+  errored: boolean;
 } {
   const state = useSyncExternalStore(subscribeRecipes, getRecipesSnapshot, () => EMPTY_RECIPES);
   const current = household();
@@ -33,5 +37,7 @@ export function useRecipes({ enabled = true }: { enabled?: boolean } = {}): {
     recipes: mine ? state.recipes : [],
     loaded: mine && state.loaded,
     failed: mine && state.failed,
+    fresh: mine && state.fresh,
+    errored: mine && state.errored,
   };
 }

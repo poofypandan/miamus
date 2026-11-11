@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import type { InventoryItem } from "@/types/database";
 import { Package } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -12,7 +13,7 @@ import { useHousehold } from "@/context/household-context";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { amountsOn, ingredientsUnderFood } from "@/lib/features";
 import { STOCK_STATUS_LABELS, compareForList, isLowStock, stockItemName, stockStatus } from "@/lib/inventory";
-import { amountLine, isIngredient, isTracked } from "@/lib/kitchen-units";
+import { amountLine, isIngredient, isTracked, toBuyAmountLabel } from "@/lib/kitchen-units";
 
 /**
  * "Belanja" on the staff view (Phase 154; it replaced "Stok"): the household's
@@ -24,6 +25,12 @@ import { amountLine, isIngredient, isTracked } from "@/lib/kitchen-units";
  * while it's on, "Perlu dibeli" sits at the top with a tick per item (Beli
  * berapa? on tracked ones), and food items browse under Makanan (D6).
  */
+/** "Beli 500 g": the menu's shortfall (Phase 170 PR C), when there is one. */
+function buyLine(item: InventoryItem): string | null {
+  const amount = toBuyAmountLabel(item, "id");
+  return amount ? `Beli ${amount}` : null;
+}
+
 export function StaffShopping() {
   const { inventoryItems, loading } = useHousehold();
   const flags = useHouseholdFeatures();
@@ -62,7 +69,7 @@ export function StaffShopping() {
                 <ToBuyRow
                   key={item.id}
                   title={stockItemName(item)}
-                  detail={[STOCK_STATUS_LABELS.id[status], amount].filter(Boolean).join(" · ")}
+                  detail={[buyLine(item), STOCK_STATUS_LABELS.id[status], amount].filter(Boolean).join(" · ")}
                   out={status === "out"}
                   tickLabel={`${stockItemName(item)} sudah dibeli`}
                   onTick={() => purchase.buy(item)}

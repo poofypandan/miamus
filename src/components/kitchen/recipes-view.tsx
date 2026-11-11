@@ -16,13 +16,22 @@ import { missingIndonesian, servingsLabel, sortRecipes, staffText, type RecipeLa
 const SEARCH_FROM = 7;
 
 /**
- * Kitchen → Menu (Phase 170 PR B). Until the weekly menu arrives (PR C),
- * the Menu pill opens straight on the recipe box: no empty week, no
- * "coming soon" (plan, Rollout). Shared by the owner's Kitchen (their
+ * The recipe box (Phase 170 PR B). Since PR C it sits inside Kitchen → Menu
+ * (&recipes=1, a "Recipes · 12" row under the week) for owners, and under
+ * Menu hari ini in the staff's Dapur → Menu. Shared by the owner's Kitchen (their
  * language; New recipe, Edit) and the staff's Dapur (Bahasa Indonesia,
  * read only: every name in its Indonesian version where there is one).
  */
-export function RecipesView({ lang, owner }: { lang: RecipeLang; owner: boolean }) {
+export function RecipesView({
+  lang,
+  owner,
+  onPlan,
+}: {
+  lang: RecipeLang;
+  owner: boolean;
+  /** Owners: "Plan this" on a recipe puts it on the menu (Phase 170 PR C). */
+  onPlan?: (recipe: RecipeWithLines) => void;
+}) {
   const id = lang === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
   const { recipes, loaded, failed } = useRecipes();
@@ -145,6 +154,14 @@ export function RecipesView({ lang, owner }: { lang: RecipeLang; owner: boolean 
         lang={lang}
         owner={owner}
         onClose={() => setOpenId(null)}
+        onPlan={
+          owner && onPlan
+            ? (recipe) => {
+                setOpenId(null);
+                onPlan(recipe);
+              }
+            : undefined
+        }
         onEdit={
           owner
             ? (recipe, at) => {

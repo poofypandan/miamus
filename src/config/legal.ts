@@ -166,7 +166,15 @@ export const LEGAL = {
   // photos from their own phone (share sheet or a page saved as PDF);
   // Miamus sends nothing and makes no public link. No new data, storage or
   // service.
-  policyVersion: "2026-11-11.10",
+  // 2026-11-11.11: the weekly menu and cooking (Phase 170 PR C,
+  // migrations/153) — the menu plan (dishes per day and meal, servings, a
+  // note), which dishes were cooked, when, by whom, and what cooking took off
+  // stock, kept one year then deleted; the amount to buy that "Add missing"
+  // stores on an item; and kitchen notes, which may hold health information
+  // (an allergy), shown to staff, one per household, with the admin's
+  // one-time confirmation recorded (who and when). In the household export.
+  // No prices, no new service, region or change to Kakak.
+  policyVersion: "2026-11-11.11",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

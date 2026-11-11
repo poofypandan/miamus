@@ -3,8 +3,8 @@
 Status: **decided: owner chose all recommendations (D1–D16 A), 2026-11-10.
 PR A (amounts and units, D1–D4, D6, D7, D14) built 2026-11-11 with migration
 148** (the plan first reserved 144; 144–147 went to pet routines, features,
-security and templates). PR B (recipes) and PR C (menu and the cook's view)
-each take the next free number when built; the manager reserves it then.
+security and templates). PR B (recipes) took 151 and PR C (menu and the cook's view) 153, each
+reserved by the manager when built.
 **Addendum (2026-11-10, end of this file): Menu ↔ food ↔ shopping, D17–D22:
 parked after the 10 Nov evaluation; not built.** Roadmap item 20
 (`docs/roadmap-2026-11-09.md`, P3): "Daily menu for the cook. Ties Kitchen to
@@ -113,6 +113,74 @@ Builds on **Phase 154** (the shopping list, migration 122, decision R3 in
 inventory, migration 099, whose columns are still in the table). It reuses
 their sheets, rows, photo field, the `<SegmentedControl />`, the toast with
 Undo and the What's new card.
+
+## As built in PR C (2026-11-11, migration 153)
+
+- **The week** (Kitchen → Menu, owners): seven day cards, Senin first, each
+  with its meals and dishes, today marked, cooked dishes ticked; ‹ › for
+  other weeks (`&week=`), the kitchen notes above, **Copy last week** (only
+  when it would fill something), **Add missing to Shopping** (only while an
+  uncooked recipe dish is left this week) and a **Recipes · N** row
+  (`&recipes=1`) below. **Plan this** on a recipe opens the dish form.
+- **A dish** (`menu_dishes`): day, meal, a recipe (servings start at the
+  recipe's) or just a name, an optional note. Only the dish is typed: day
+  and meal are taps. Owners only, through `is_household_admin()`.
+- **Cooking**: *Sudah dimasak* on a dish (staff on Menu hari ini, owners on
+  the week, today or earlier). With tracked lines that convert, *Bahan yang
+  dipakai* lists them scaled to the servings on screen and summed per item
+  (minus/plus, untick),
+  *Tidak dihitung* the rest; a dish with nothing to take off is cooked in one
+  tap. `cook_menu_dish` / `uncook_menu_dish` (SECURITY DEFINER, open to staff
+  phones by design, household check); a trigger refuses any client write to
+  `cooked_*`, owners included. The toast's *Batalkan* and the owner's *Tandai
+  belum dimasak* put back exactly what was taken. *Ada sisa?* opens the Add
+  food sheet with the dish's name and *Dimasak di rumah* (Food at home on).
+- **Add missing**: the review sheet (To buy ticked with "Perlu 1,5 kg · ada
+  1 kg · beli 500 g", Enough shown, Check these and Not on your list
+  unticked). `inventory_items.to_buy_amount` stores the shortfall; To buy
+  (owner and staff) reads "Beli 500 g" and WhatsApp "- Ayam 500 g". Cleared
+  by a purchase or a tap on Enough; while it's set, cooking that leaves the
+  amount above the low level keeps the item on the list.
+- **Kitchen notes**: `set_kitchen_notes` (owners); neutral hint (the
+  household's answer 3), "Staff phones can read this", and a one-time
+  confirm about health information on the first save, stamped in
+  `kitchen_notes_confirmed_at` / `_by`. Shown on the week, Menu hari ini and
+  every dish.
+- **Staff**: *Menu hari ini* above the chores on Tugas Hari Ini (the selected
+  day; another day reads *Menu Kamis*), and on Dapur → Menu above the
+  recipes. Indonesian names of recipe dishes; no planning, no editing.
+- **Owners' Today**: one quiet line, "Menu today: …", to the week.
+- **Retention**: `prune_old_menu_dishes()` nightly (19:54 UTC), menu days
+  older than a year.
+- **Export**: `menu`, the kitchen notes and their confirmation, and 152's
+  repair push switches in `my_notifications`.
+- **Codex round 1 on #101 (six P2s, all fixed)**: cooking takes off what
+  the dish's servings stepper shows; Sudah dimasak waits ("Sedang memuat…",
+  or "Belum bisa dimuat. Coba lagi") until the recipe and the items came
+  from the server in this session, never from the phone's copy alone;
+  `cooked_uses` keeps each item's unit and Undo converts it
+  (`convert_kitchen_amount`), skipping and saying so when the units no
+  longer convert; a menu week whose first read failed is read again on
+  refresh, online and back in the foreground; Copy last week waits for both
+  weeks from the server; a unit change converts `to_buy_amount` (in the app
+  and in the trigger) or clears it.
+- **Codex final pass on #101 (two P2s, fixed)**: Add missing takes its
+  snapshot only once the week, the recipes and the items came from the
+  server (Loading… / Try again until then); a Bought's Undo puts the
+  menu's shortfall back (converted if the unit changed).
+- **Codex at ad81e21**: the dish editor holds a recipe link by id, so
+  editing a dish before the recipes load never unlinks it; only "Not this
+  recipe" does. The picker waits for the recipes from the server.
+- **Codex at f510cc4**: signing out removes every Miamus key on the phone
+  except its display preferences (`src/lib/local-data.ts`, deny by default;
+  the recipes cache from #98 had been missed); the kitchen notes editor opens
+  only on a note read from the server.
+- **Not in PR C (less typing / less reading)**: the addendum (Eat soon,
+  leftover dishes, Ready to cook, packs, the Menu changed banner), the "won't
+  come off" unit hint (the confirm sheet's *Tidak dihitung* says it), cooking
+  in the offline queue (a weak signal shows "Belum tersimpan. Coba lagi."; a
+  resend is refused as already cooked, so nothing comes off twice), a
+  portions pre-fill for leftovers (unknown; the person types it).
 
 ## The problem
 

@@ -240,11 +240,17 @@ export function startingAmount(item: Pick<InventoryItem, "quantity" | "amount_se
  *     low level or tracking changed (and is then credited to whoever changed
  *     the amount);
  *   - otherwise a tap on Out empties a tracked item, and a tap on Running
- *     low stays until the amount next changes.
+ *     low stays until the amount next changes;
+ *   - (153) a status back to Enough clears to_buy_amount, and an item with a
+ *     shortfall stays Running low while its amount moves above the low level.
  */
 export function applyAmountRules(before: InventoryItem | null, after: InventoryItem, now: Date = new Date()): InventoryItem {
   const next: InventoryItem = { ...after, amount_set_at: before?.amount_set_at ?? null };
   const stamp = now.toISOString();
+  // (153) A unit change converts the shortfall, or clears it, unless this write set it.
+  if (before && next.unit !== before.unit && next.to_buy_amount != null && next.to_buy_amount === before.to_buy_amount) {
+    next.to_buy_amount = lastBoughtInUnit(next.to_buy_amount, before.unit, next.unit);
+  }
   const tracked = next.track_amount === true;
   const amountChanged = before === null || next.quantity !== before.quantity;
   const trackingOn = tracked && (before === null || before.track_amount !== true);
@@ -253,7 +259,11 @@ export function applyAmountRules(before: InventoryItem | null, after: InventoryI
   if (tracked) {
     if (amountChanged || trackingOn) next.amount_set_at = stamp;
     if (amountChanged || trackingOn || next.min_threshold !== before?.min_threshold) {
-      const derived = deriveStatus(next.quantity, next.min_threshold);
+      let derived = deriveStatus(next.quantity, next.min_threshold);
+      // A shortfall from the menu review stays on the list until bought (migrations/153).
+      if (derived === "ok" && next.to_buy_amount != null && (statusBefore === "low" || statusBefore === "out")) {
+        derived = "low";
+      }
       if (derived !== statusBefore) {
         const credited = amountChanged || trackingOn || next.amount_set_by !== before?.amount_set_by;
         next.stock_status_by = credited ? (next.amount_set_by ?? null) : null;
@@ -264,6 +274,8 @@ export function applyAmountRules(before: InventoryItem | null, after: InventoryI
       next.amount_set_at = stamp;
     }
   }
+  // Back to Enough clears the shortfall (bought, or someone tapped Enough; migrations/153).
+  if ((next.stock_status ?? "ok") === "ok" && next.to_buy_amount != null) next.to_buy_amount = null;
   if (before === null || (next.stock_status ?? "ok") !== statusBefore) next.stock_status_at = stamp;
   return next;
 }
@@ -284,14 +296,21 @@ export function isIngredient(item: Pick<InventoryItem, "category">): boolean {
  *     it (148), which would erase another phone's purchase;
  *   - the pre-fill goes back only if it is still this purchase's amount
  *     (another phone's later purchase keeps its own);
+ *   - the menu's shortfall (to_buy_amount, Phase 170 PR C) goes back if the
+ *     purchase cleared it and nobody set a new one since, and only while the
+ *     item is back on the list (an Enough item can't hold one); converted if
+ *     an owner changed the unit meanwhile, dropped if the units no longer
+ *     convert (Codex, PR #101);
  *   - null = nothing to write.
  */
 export function undoPurchasePatch(
-  before: Pick<InventoryItem, "stock_status" | "last_bought_amount" | "track_amount">,
-  now: Pick<InventoryItem, "quantity" | "stock_status" | "last_bought_amount">,
+  before: Pick<InventoryItem, "stock_status" | "last_bought_amount" | "track_amount"> &
+    Partial<Pick<InventoryItem, "to_buy_amount" | "unit">>,
+  now: Pick<InventoryItem, "quantity" | "stock_status" | "last_bought_amount"> &
+    Partial<Pick<InventoryItem, "to_buy_amount" | "unit">>,
   amount: number | null
-): { stock_status?: StockStatus; last_bought_amount?: number | null } | null {
-  const patch: { stock_status?: StockStatus; last_bought_amount?: number | null } = {};
+): { stock_status?: StockStatus; last_bought_amount?: number | null; to_buy_amount?: number } | null {
+  const patch: { stock_status?: StockStatus; last_bought_amount?: number | null; to_buy_amount?: number } = {};
   const target = before.stock_status ?? "ok";
   const current = now.stock_status ?? "ok";
   const tookAmountBack = before.track_amount === true && amount !== null;
@@ -304,6 +323,13 @@ export function undoPurchasePatch(
   if (restore && !erases && target !== current) patch.stock_status = target;
   const ours = before.track_amount === true && amount !== null && now.last_bought_amount === amount;
   if (ours && (before.last_bought_amount ?? null) !== amount) patch.last_bought_amount = before.last_bought_amount ?? null;
+  const listed = (patch.stock_status ?? current) !== "ok";
+  if (before.to_buy_amount != null && now.to_buy_amount == null && listed) {
+    const from = before.unit;
+    const to = now.unit ?? from;
+    const back = from && to ? lastBoughtInUnit(before.to_buy_amount, from, to) : before.to_buy_amount;
+    if (back !== null) patch.to_buy_amount = back;
+  }
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
@@ -321,4 +347,33 @@ export function lastBoughtInUnit(
   if (amount === null || amount === undefined) return null;
   const converted = convertAmount(amount, from, to);
   return converted !== null && converted > 0 && converted <= MAX_AMOUNT ? converted : null;
+}
+
+/** "500 g" for 0.5 kg, "250 ml" for 0.25 L; otherwise the item's own unit. */
+export function friendlyAmount(value: number, unit: InventoryUnit, lang: "en" | "id"): string {
+  if (unit === "kg" && value < 1) return formatAmount(clean(value * 1000), "g", lang);
+  if (unit === "L" && value < 1) return formatAmount(clean(value * 1000), "ml", lang);
+  return formatAmount(value, unit, lang);
+}
+
+/** On To buy and in the WhatsApp text: "500 g", or null without a shortfall. */
+export function toBuyAmountLabel(item: Pick<InventoryItem, "to_buy_amount" | "unit">, lang: "en" | "id"): string | null {
+  return item.to_buy_amount ? friendlyAmount(item.to_buy_amount, item.unit, lang) : null;
+}
+
+/**
+ * What a unit change also writes (Codex, PR #93 and PR #101): the "How much
+ * did you buy?" pre-fill and the menu's shortfall, each converted exactly
+ * (5 kg → 5000 g) or dropped when the units don't convert, never read in
+ * the wrong unit. Empty when the unit stays.
+ */
+export function unitChangePatch(
+  item: Pick<InventoryItem, "unit" | "last_bought_amount" | "to_buy_amount">,
+  unit: InventoryUnit
+): { last_bought_amount?: number | null; to_buy_amount?: number | null } {
+  if (item.unit === unit) return {};
+  return {
+    last_bought_amount: lastBoughtInUnit(item.last_bought_amount, item.unit, unit),
+    ...(item.to_buy_amount != null ? { to_buy_amount: lastBoughtInUnit(item.to_buy_amount, item.unit, unit) } : {}),
+  };
 }

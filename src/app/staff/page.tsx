@@ -27,6 +27,9 @@ import { LeaveStatusBanner } from "@/components/staff/leave-request";
 import { StaffKitchen } from "@/components/kitchen/kitchen-tab";
 import { ingredientsUnderFood, recipesOn } from "@/lib/features";
 import { useRecipes } from "@/hooks/use-recipes";
+import { MenuTodayCard } from "@/components/kitchen/menu-today-card";
+import { useMenuWeek } from "@/hooks/use-menu";
+import { dishesOn } from "@/lib/menu";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { ConnectionNotice } from "@/components/shared/connection-notice";
 import { OutboxNotice } from "@/components/shared/outbox-notice";
@@ -343,6 +346,9 @@ function TasksView() {
   // Loading here also keeps the phone's copy fresh for a weak kitchen signal.
   const { recipes: householdRecipes } = useRecipes({ enabled: recipesOn(featureFlags) });
   const showRecipesTip = recipesOn(featureFlags) && householdRecipes.length > 0;
+  // The menu tip (Phase 170 PR C) once there is a menu on Today.
+  const { dishes: menuWeek } = useMenuWeek(dateStr, { enabled: recipesOn(featureFlags) });
+  const showMenuTip = recipesOn(featureFlags) && dishesOn(menuWeek, dateStr).length > 0;
 
   // The floors tip (Phase 158) only once this phone's list actually shows a
   // floor or a spot: before the owner sorts rooms there is nothing to explain.
@@ -449,6 +455,8 @@ function TasksView() {
         <StaffTipCard
           tips={[
             // Phase 170 PR A: only while Kitchen amounts is on.
+            // Phase 170 PR C: once Today has a menu.
+            { id: "staff-menu-2026-11", show: showMenuTip },
             // Phase 170 PR B: once there is a recipe to open.
             { id: "staff-recipes-2026-11", show: showRecipesTip },
             { id: "staff-kitchen-amounts-2026-11", show: kitchenAmountsOn },
@@ -463,6 +471,10 @@ function TasksView() {
           ]}
         />
         ) : null}
+
+        {/* Menu hari ini (Phase 170 PR C): above the chores, only when the
+            day has a plan and the Kitchen switch is on. */}
+        <MenuTodayCard day={dateStr} enabled={recipesOn(featureFlags)} />
 
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.
