@@ -43,6 +43,7 @@ import type {
   TaskException,
   TaskExceptionReason,
   NotificationPrefs,
+  RepairPushPrefs,
   WalkInOutcome,
 } from "@/types/database";
 
@@ -588,6 +589,9 @@ export interface DataProvider {
   /** The signed-in admin's notification switches. */
   getNotificationPrefs(): Promise<NotificationPrefs>;
   setNotificationPrefs(prefs: NotificationPrefs): Promise<NotificationPrefs>;
+  /** Walk-in repair pushes (Phase 174 PR B, migrations/152): owners only. */
+  getRepairPushPrefs(): Promise<RepairPushPrefs>;
+  setRepairPushPrefs(prefs: RepairPushPrefs): Promise<RepairPushPrefs>;
   /** Will an admin of this household get a push about a staff request? */
   requestsPushOn(): Promise<boolean>;
   /** Owner-only edit of a chore's own fields. */

@@ -11,6 +11,7 @@ import {
   Lightbulb,
   PawPrint,
   ShoppingBasket,
+  Wrench,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { OwnerCouldntSheet } from "@/components/agenda/owner-couldnt-sheet";
@@ -22,7 +23,7 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useToday } from "@/hooks/use-today";
 import { useMinuteClock } from "@/hooks/use-minute-clock";
 import { useFormatTime } from "@/components/ui/ui-labels";
-import { applyLeaveTriage, formatLeaveRange, leaveApprovalPath } from "@/lib/leave";
+import { applyLeaveTriage, formatLeaveRange, leaveApprovalPath, leaveCovering } from "@/lib/leave";
 import { expandChores, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { buildEveningSummary, ownerReasonLabel, type SummaryRow } from "@/lib/couldnt-do";
@@ -33,6 +34,8 @@ import { visibleChores } from "@/lib/features";
 import { dataProvider } from "@/lib/data";
 import { weekStartOf } from "@/lib/unified-agenda";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRepairs } from "@/hooks/use-repairs";
+import { ownerSupervisingLine, summaryRowSupervision, supervisionStretches } from "@/lib/repair-walkins";
 import type { HouseholdTask } from "@/types/database";
 
 /**
@@ -112,6 +115,32 @@ function SummaryBody({
   const [routineOpen, setRoutineOpen] = useState<SummaryRow | null>(null);
   // Today's "due by now" moves with the clock while the sheet is open.
   const clock = useMinuteClock(date === todayKey);
+  // Supervising a repair (Phase 174 PR B, D10 A): a task missed meanwhile
+  // says so on its row, as the evening push does. Repairs off: nothing.
+  const repairsOn = featureFlags.repairs;
+  const { repairs, walkIns, supervision } = useRepairs({ enabled: repairsOn });
+  const stretches = useMemo(
+    () => (repairsOn ? supervisionStretches(supervision, walkIns, repairs) : []),
+    [repairsOn, supervision, walkIns, repairs]
+  );
+  const onDuty = useMemo(
+    () =>
+      (allProfiles ?? [])
+        .filter((p) => !p.user_id && !p.archived_at && !leaveCovering(leaveRequests, p.id, date))
+        .map((p) => p.id),
+    [allProfiles, leaveRequests, date]
+  );
+  function supervisingLine(row: SummaryRow): string | null {
+    const stretch = summaryRowSupervision(
+      row,
+      date,
+      stretches,
+      onDuty,
+      (id) => !!leaveCovering(leaveRequests, id, date),
+      new Date(clock)
+    );
+    return stretch ? ownerSupervisingLine(stretch, stretch.staffId ? staffName(stretch.staffId) : null, locale) : null;
+  }
 
   // The day's own chores (Codex, PR #71): the household holds only the week
   // on screen, and the push may open this on another week. Read for the day,
@@ -242,27 +271,39 @@ function SummaryBody({
 
         {summary.notDone.length > 0 && (
           <Section label={t("Not done yet", "Belum dikerjakan")} count={summary.notDone.length}>
-            {summary.notDone.map((row) => (
-              <RowButton key={row.key} onClick={row.occurrence ? () => openRow(row) : undefined}>
-                {row.kind === "routine" ? (
-                  <PawPrint className="size-4 shrink-0 text-zinc-500" aria-hidden />
-                ) : (
-                  <Circle className="size-4 shrink-0 text-zinc-400" aria-hidden />
-                )}
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate font-medium">{rowTitle(row)}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {[
-                      row.time ? formatTime(row.time) : t("Anytime", "Kapan saja"),
-                      row.kind === "chore" ? (row.staffId ? staffName(row.staffId) : t("Anyone", "Siapa saja")) : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
+            {summary.notDone.map((row) => {
+              const supervising = supervisingLine(row);
+              return (
+                <RowButton key={row.key} onClick={row.occurrence ? () => openRow(row) : undefined}>
+                  {row.kind === "routine" ? (
+                    <PawPrint className="size-4 shrink-0 text-zinc-500" aria-hidden />
+                  ) : (
+                    <Circle className="size-4 shrink-0 text-zinc-400" aria-hidden />
+                  )}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-medium">{rowTitle(row)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {[
+                        row.time ? formatTime(row.time) : t("Anytime", "Kapan saja"),
+                        row.kind === "chore" && !supervising
+                          ? row.staffId
+                            ? staffName(row.staffId)
+                            : t("Anyone", "Siapa saja")
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                    {supervising && (
+                      <span className="flex items-center gap-1 text-xs text-gray-700" data-testid="summary-supervising">
+                        <Wrench className="size-3 shrink-0" aria-hidden /> {supervising}
+                      </span>
+                    )}
                   </span>
-                </span>
-                {row.occurrence && <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
-              </RowButton>
-            ))}
+                  {row.occurrence && <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
+                </RowButton>
+              );
+            })}
           </Section>
         )}
 

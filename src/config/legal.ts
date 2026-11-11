@@ -147,7 +147,15 @@ export const LEGAL = {
   // still stop at 9 PM); admins told when a chosen routine still isn't done
   // 30 minutes after its time, until 10:30 PM. No new service, no new kind
   // of personal data.
-  policyVersion: "2026-11-11.7",
+  // 2026-11-11.8: walk-in repair notifications (Phase 174 PR B,
+  // migrations/152) — admins are told when staff log a repair person
+  // arriving and when the visit is finished; the notification carries the
+  // repair, its place, the repair person's name if one was noted and who
+  // logged it; never 9 PM to 6 AM; each admin can turn either off (stored
+  // with their notification choices). The evening summary can say a task
+  // was missed while someone supervised a repair (names and times already
+  // stored). No new service; the same push services.
+  policyVersion: "2026-11-11.8",
   effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

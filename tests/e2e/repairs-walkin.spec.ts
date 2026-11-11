@@ -284,6 +284,46 @@ test.describe("a chore missed while supervising explains itself (D10)", () => {
     await expect(page.getByTestId("walkin-today-line")).toHaveText(/Pak Budi is here · Keran bocor/);
     await expect(page.getByTestId("supervising-line")).toHaveText("Ari has been supervising a repair since 10:00 AM");
   });
+
+  // Phase 174 PR B: the evening summary sheet says it too, as the push does.
+  test("in the evening summary: the not-done row says Ari was supervising", async ({ context, page }) => {
+    await page.clock.setFixedTime(new Date(at("19:30")));
+    const base = setup();
+    await installStub(context, {
+      owner: { locale: "id" },
+      ...base,
+      walkIns: [walkIn(at("10:00"), { left_at: at("13:30"), left_phone_at: at("13:30"), after_photo_url: "a" })],
+      supervision: [{ ...stretch(at("10:00")), ended_at: at("13:30") }],
+    });
+    await context.addInitScript(() => {
+      localStorage.setItem("miamus.whats-new.walkins-2026-11", "seen");
+    });
+    await page.goto(`/dashboard?module=agenda&summary=${today()}`);
+    const sheet = page.getByRole("dialog", { name: "Belum selesai hari ini" });
+    const row = sheet.getByRole("button", { name: /Pel teras/ });
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await expect(row.getByTestId("summary-supervising")).toHaveText("Ari mengawasi perbaikan 10.00–13.30");
+  });
+});
+
+test("owners switch walk-in repair pushes in Household → Notifications (D4)", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" } });
+  await page.goto("/dashboard?module=access&page=notifications");
+  const arrives = page.getByRole("switch", { name: "When a repair person arrives" });
+  const finished = page.getByRole("switch", { name: "When a repair is finished" });
+  await expect(arrives).toBeChecked({ timeout: 20_000 });
+  await expect(finished).toBeChecked();
+  await arrives.click();
+  await expect.poll(() => stub.repairPushPrefs.repair_arrival_pushes).toBe(false);
+  expect(stub.repairPushPrefs.repair_done_pushes).toBe(true);
+  await expect(arrives).not.toBeChecked();
+});
+
+test("with Repairs off, Notifications has no repair switches", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, features: { repairs: false } });
+  await page.goto("/dashboard?module=access&page=notifications");
+  await expect(page.getByRole("switch", { name: "Staff requests" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("repair-push-choices")).toHaveCount(0);
 });
 
 test("with Repairs switched off there is no Perbaikan pill", async ({ context, page }) => {
