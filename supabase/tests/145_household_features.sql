@@ -171,6 +171,16 @@ select pg_temp.ok((select body from pushes where household_id = :f1::uuid) like 
 select pg_temp.ok((select body from pushes where household_id = :f2::uuid) like '%Bayar air%'
                   and (select body from pushes where household_id = :f2::uuid) like '%Siram tanaman%',
   'Bills on: both');
+-- The evening summary's chores (chore_days_open, re-created from 139).
+select pg_temp.ok((select array_agg(title order by title) from public.chore_days_open((now() at time zone 'Asia/Jakarta')::date)
+                    where household_id = :f1::uuid) = array['Sapu teras'],
+  'Bills off: the evening summary leaves out the open bill, keeps the other chore');
+select pg_temp.ok((select array_agg(title order by title) from public.chore_days_open((now() at time zone 'Asia/Jakarta')::date)
+                    where household_id = :f2::uuid) = array['Bayar air', 'Siram tanaman'],
+  'Bills on: both are still open in the summary');
+select pg_temp.ok(not has_function_privilege('authenticated', 'public.chore_days_open(date)', 'execute')
+                  and has_function_privilege('service_role', 'public.chore_days_open(date)', 'execute'),
+  'chore_days_open keeps its grants');
 
 -- Food to eat today, in both households.
 insert into public.food_items (household_id, name, expires_on) values

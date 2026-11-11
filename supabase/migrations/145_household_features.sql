@@ -34,6 +34,8 @@
 --   notify_food_from_staff (123)  likewise (the food is still saved).
 --   notify_urgent_repair (130)    skips households with Repairs off (the
 --        report is still saved and shows when Repairs is back).
+--   chore_days_open (139)         the evening summary's chores: bill chores
+--        leave it while Bills and upkeep is off (Codex, PR #87).
 --
 -- "Off" isn't enforced on writes: off hides, it doesn't lock (plan, D6).
 -- Additive only: one table, new functions, four re-created functions.
@@ -482,3 +484,77 @@ end;
 $$;
 
 revoke all on function public.notify_urgent_repair() from public, anon, authenticated;
+
+-- chore_days_open (from 139): the evening summary's chores. Bill chores leave
+-- it while Bills and upkeep is off, so the summary never names a chore Today
+-- hides, and a day whose only open items are hidden bills sends nothing
+-- (Codex, PR #87). notify_evening_summary itself is unchanged.
+create or replace function public.chore_days_open(p_day date)
+returns table (household_id uuid, chore_id uuid, title text, due_time text, assignee uuid)
+language sql
+stable
+set search_path = ''
+as $$
+  with due as (
+    select t.id, t.household_id, t.title, t.due_time, t.due_date, t.status, t.assigned_to
+      from public.household_tasks t
+     where t.parent_task_id is null
+       and t.status <> 'cancelled'
+       -- Bills and upkeep switched off (Phase 171): its bills are hidden on
+       -- Today, so the evening summary doesn't name them either.
+       and (t.category is distinct from 'bill' or public.household_feature_on(t.household_id, 'bills'))
+       and public.chore_occurs_on(t, p_day)
+    union all
+    -- A written day off the repeat's pattern still shows and is owed (137).
+    select t.id, t.household_id, x.title, x.due_time, t.due_date, t.status, t.assigned_to
+      from public.household_tasks x
+      join public.household_tasks t
+        on t.id = x.parent_task_id and t.household_id = x.household_id and t.parent_task_id is null
+     where t.status <> 'cancelled'
+       and (t.category is distinct from 'bill' or public.household_feature_on(t.household_id, 'bills'))
+       and x.due_date = p_day
+       and not public.chore_occurs_on(t, p_day)
+  ),
+  open_days as (
+    -- A written day governs its own title, time and who it's for, as
+    -- expandChores reads it: an owner may have moved today's to 21:00
+    -- (Codex, PR #71).
+    select d.household_id, d.id,
+           case when r.id is not null then r.title else d.title end as title,
+           case when r.id is not null then r.due_time else d.due_time end as due_time,
+           case when r.id is not null then r.assigned_to else d.assigned_to end as assignee
+      from due d
+      left join lateral (
+        select x.id, x.status, x.assigned_to, x.title, x.due_time
+          from public.household_tasks x
+         where x.parent_task_id = d.id and x.due_date = p_day
+         order by x.created_at
+         limit 1
+      ) r on true
+     where coalesce(r.status, case when p_day = d.due_date then d.status else 'pending' end) = 'pending'
+  )
+  select o.household_id, o.id, o.title, o.due_time,
+         case
+           when lv.id is null then o.assignee
+           when coalesce(lv.fallback_action, 'unassign') = 'reassign' and lv.fallback_assignee_id is not null
+             then lv.fallback_assignee_id
+           else null
+         end
+    from open_days o
+    left join lateral (
+      select l.id, l.fallback_action, l.fallback_assignee_id
+        from public.leave_requests l
+       where o.assignee is not null
+         and l.staff_id = o.assignee
+         and l.household_id = o.household_id
+         and l.status in ('approved', 'ended_early')
+         and p_day between l.start_date and l.end_date
+         and (l.ended_on is null or p_day < l.ended_on)
+       order by l.created_at
+       limit 1
+    ) lv on true
+   where lv.id is null or coalesce(lv.fallback_action, 'unassign') <> 'pause';
+$$;
+
+revoke all on function public.chore_days_open(date) from public, anon, authenticated;
+grant execute on function public.chore_days_open(date) to service_role;
