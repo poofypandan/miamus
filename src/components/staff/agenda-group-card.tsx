@@ -321,8 +321,9 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
   // The card's round button (Phase 173, D4/D14): one photo (or none, for a
   // Tick routine) saved for every open pet in one batch, through the save
   // queue like every log. A walk's three steps are the same button.
-  async function quickSave(file: File | null) {
-    if (busy || !quickTargets.length) return;
+  async function quickSave(file: File | null, targetsOverride?: AgendaItem[]) {
+    const targets = targetsOverride ?? quickTargets;
+    if (busy || !targets.length) return;
     const step: ThreePhotoStep | null = three ? (walk?.next ?? null) : null;
     if (three && !step) return;
     // Live camera only for a three-photo routine (D14 rule 2): a file more
@@ -339,7 +340,6 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
         const compressed = await compressPhoto(file);
         photoUrl = await enqueuePhoto(compressed, `pet/batch-${group.time.replace(":", "")}`);
       }
-      const targets = quickTargets;
       const saved = await logTasksBatch({
         entries: targets.map((item) => ({ schedule_id: item.scheduleId, entity_id: item.entityId })),
         module: group.module,
@@ -590,6 +590,22 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
       : unexplained;
   // Only for today: a log is stamped now, so it can't settle another day.
   const quick = isRoutine && !wholeCardSuspended && date === todayKey && quickTargets.length > 0;
+  // From the sheet, a routine every pet of which someone said couldn't be
+  // done can still be finished after all ("Selesaikan seperti biasa"): its
+  // action then covers those pets (Codex, PR #85). The card's own button
+  // stays for the open ones only.
+  const sheetTargets: AgendaItem[] =
+    quickTargets.length > 0
+      ? quickTargets
+      : isRoutine && (tick || walk?.next === "start")
+        ? pendingItems
+        : [];
+  const sheetAction = isRoutine && !wholeCardSuspended && date === todayKey && sheetTargets.length > 0;
+  function handleSheetFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (file) void quickSave(file, sheetTargets);
+  }
   const stepLabel = walk?.next === "start" ? "Mulai" : walk?.next === "arrived" ? "Sudah sampai" : "Sudah pulang";
   // "Sedang jalan · mulai 07.02", "Sudah sampai 07.15", then the walk's span.
   const walkLine = !walk?.start
@@ -953,11 +969,11 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           {wholeCardSuspended ? null : isRoutine && (three || tick) && !allDone ? (
             // A walk's next step, or a Tick routine, for every open pet: the
             // same action as the card's own button.
-            quick ? (
+            sheetAction ? (
               tick ? (
-                <Button onClick={() => void quickSave(null)} disabled={busy} className="min-h-[48px] w-full">
+                <Button onClick={() => void quickSave(null, sheetTargets)} disabled={busy} className="min-h-[48px] w-full">
                   {busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 className="size-5" />}
-                  {quickTargets.length > 1 ? `Centang ${quickTargets.length} hewan` : "Centang selesai"}
+                  {sheetTargets.length > 1 ? `Centang ${sheetTargets.length} hewan` : "Centang selesai"}
                 </Button>
               ) : (
                 <label className="flex min-h-[48px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-900 text-sm font-medium text-white active:scale-[0.99]">
@@ -967,7 +983,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
                     capture="environment"
                     className="hidden"
                     disabled={busy}
-                    onChange={handleQuickFile}
+                    onChange={handleSheetFile}
                   />
                   {busy ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
                   {stepLabel}

@@ -3,8 +3,8 @@ import { mkdtempSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
-import { BENTO, MOCHI, schedule } from "../fixtures/household";
-import { freshSession, installStub } from "./stub-backend";
+import { BENTO, HOUSEHOLD_ID, MOCHI, schedule } from "../fixtures/household";
+import { STAFF_ID, freshSession, installStub } from "./stub-backend";
 
 // Phase 173 PR A (docs/phase-173-pet-routines-plan.md): the owner's two
 // examples end to end. "Lights off for both dogs at 21:30" and "a daily walk
@@ -273,4 +273,39 @@ test("staff: a Tick routine is one tap for every pet, with no photo", async ({ c
   await expect(page.getByText("Bento, Mochi · Sikat gigi selesai")).toBeVisible();
   await expect.poll(() => stub.logs.length).toBe(2);
   expect(stub.logs.every((l) => l.photo_url === null && l.sub_type === "complete")).toBe(true);
+});
+
+test("staff: a Tick routine someone said couldn't be done can still be finished from its sheet", async ({ context, page }) => {
+  const teeth = (pet: typeof MOCHI) =>
+    schedule(pet, "Sikat gigi", ["19:00"], { kind: "teeth", routine_group_id: "00000000-0000-4000-8000-0000000173d1", proof: "tick" });
+  const rows = [teeth(MOCHI), teeth(BENTO)];
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+  const said = (row: (typeof rows)[number], n: number) => ({
+    id: `00000000-0000-4000-8000-0000001739${n}0`,
+    household_id: HOUSEHOLD_ID,
+    chore_id: null,
+    schedule_id: row.id,
+    entity_id: row.entity_id,
+    occurs_on: today,
+    slot_time: "19:00",
+    reason: "out_of_stock",
+    note: null,
+    photo_url: null,
+    inventory_item_id: null,
+    staff_id: STAFF_ID,
+    created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+  });
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    schedules: rows,
+    exceptions: [said(rows[0], 1), said(rows[1], 2)],
+  });
+  await page.goto("/staff");
+  // Both pets explained: the card has no one-tap button, but its sheet still finishes it.
+  await expect(card(page, "19.00 Sikat gigi")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Centang Sikat gigi" })).toHaveCount(0);
+  await card(page, "19.00 Sikat gigi").click();
+  await page.getByRole("button", { name: "Centang 2 hewan" }).click();
+  await expect.poll(() => stub.logs.length).toBe(2);
 });
