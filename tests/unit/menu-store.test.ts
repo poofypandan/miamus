@@ -56,6 +56,9 @@ describe("a week whose first read failed is read again", () => {
     expect(store.missingWeeks()).toContain("2026-11-09");
     // Failed, so Add missing says Try again rather than Loading… forever.
     expect(store.getMenuSnapshot().failedWeeks).toContain("2026-11-09");
+    // The kitchen note never came in: the editor says Try again, never shows it empty.
+    expect(store.getMenuSnapshot().notesLoaded).toBe(false);
+    expect(store.getMenuSnapshot().notesFailed).toBe(true);
 
     provider.listMenuDishes.mockResolvedValueOnce([dish("d1", "2026-11-11", "Soto")]);
     store.refreshMenu();
@@ -63,6 +66,8 @@ describe("a week whose first read failed is read again", () => {
     expect(store.getMenuSnapshot().dishes.map((d) => d.title)).toContain("Soto");
     expect(store.missingWeeks()).not.toContain("2026-11-09");
     expect(store.getMenuSnapshot().failedWeeks).not.toContain("2026-11-09");
+    expect(store.getMenuSnapshot().notesLoaded).toBe(true);
+    expect(store.getMenuSnapshot().notesFailed).toBe(false);
   });
 
   it("coming back online retries only the weeks that failed", async () => {

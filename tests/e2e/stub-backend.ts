@@ -118,6 +118,8 @@ export interface StubOptions {
   kitchenNotes?: string | null;
   /** Hold the recipes read until `releaseRecipes()` (cooking must wait for it; Codex, PR #101). */
   holdRecipes?: boolean;
+  /** Hold the kitchen notes read until `releaseKitchenNotes()` (the editor must wait for it). */
+  holdKitchenNotes?: boolean;
   /** The VAPID public key get_push_public_key returns to the admin (push set up on the server). */
   pushKey?: string;
   /** Leave the Add to Home Screen tip showing (owner phones have it closed by default). */
@@ -257,6 +259,8 @@ export interface Stub {
   kitchen: { notes: string | null; confirmedAt: string | null };
   /** Answer the recipes reads held by `holdRecipes`. */
   releaseRecipes(): void;
+  /** Answer the kitchen notes reads held by `holdKitchenNotes`. */
+  releaseKitchenNotes(): void;
   setNetwork(up: boolean): void;
   /** Whose session the phone holds now, read from its cookie. */
   sessionUser(): Promise<string | null>;
@@ -301,6 +305,8 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   const alerts: Record<string, unknown>[] = [];
   let release: () => void = () => undefined;
   const recipesHeld = { on: !!options.holdRecipes, wait: new Promise<void>((r) => (release = r)) };
+  let releaseNotes: () => void = () => undefined;
+  const notesHeld = { on: !!options.holdKitchenNotes, wait: new Promise<void>((r) => (releaseNotes = r)) };
   const menu: Record<string, unknown>[] = options.menu ? options.menu.map((row) => ({ ...row })) : [];
   const kitchen = { notes: options.kitchenNotes ?? null, confirmedAt: options.kitchenNotes ? "2026-11-10T00:00:00Z" : null };
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
@@ -479,6 +485,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         return route.fulfill({ json: one ? (options.staff[0] ?? null) : options.staff });
       }
       if (table === "households") {
+        if (notesHeld.on && (new URL(request.url()).searchParams.get("select") ?? "").includes("kitchen_notes")) {
+          await notesHeld.wait;
+        }
         const row = {
           id: HOUSEHOLD_ID,
           name: "Rumah Uji",
@@ -910,6 +919,10 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     releaseRecipes: () => {
       recipesHeld.on = false;
       release();
+    },
+    releaseKitchenNotes: () => {
+      notesHeld.on = false;
+      releaseNotes();
     },
     setNetwork(up: boolean) {
       net.token = net.rest = net.signup = up;

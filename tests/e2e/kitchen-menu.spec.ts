@@ -483,3 +483,23 @@ test("editing a dish's note while recipes load keeps its recipe and servings (Co
   expect(stub.menu[0]).toMatchObject({ recipe_id: SOTO, servings: 6, title: "Chicken soto" });
   stub.releaseRecipes();
 });
+
+test("kitchen notes opened before they load: Loading…, then the note, and Save can't wipe it (Codex, PR #101)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    features: { kitchen: true },
+    kitchenNotes: "No pork.",
+    holdKitchenNotes: true,
+  });
+  await page.goto("/dashboard?module=inventory&kitchen=menu");
+  await page.getByRole("button", { name: /Kitchen notes/ }).click({ timeout: 20_000 });
+  // Not loaded is not empty: no editor, nothing to save.
+  await expect(page.getByRole("status").getByText("Loading…")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Kitchen notes" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0);
+
+  stub.releaseKitchenNotes();
+  await expect(page.getByRole("textbox", { name: "Kitchen notes" })).toHaveValue("No pork.", { timeout: 10_000 });
+  await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+  expect(stub.kitchen.notes).toBe("No pork.");
+});

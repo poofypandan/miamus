@@ -24,6 +24,10 @@ export interface MenuSnapshot {
   /** Mondays whose last read failed and hasn't come in since. */
   failedWeeks: string[];
   notes: KitchenNotes | null;
+  /** The kitchen note came from the server in this session (the editor waits for it; Codex, PR #101). */
+  notesLoaded: boolean;
+  /** The last read failed before the note ever came in. */
+  notesFailed: boolean;
   loaded: boolean;
   failed: boolean;
 }
@@ -34,6 +38,8 @@ export const EMPTY_MENU: MenuSnapshot = {
   weeks: [],
   failedWeeks: [],
   notes: null,
+  notesLoaded: false,
+  notesFailed: false,
   loaded: false,
   failed: false,
 };
@@ -149,7 +155,17 @@ function ensureHousehold(household: string) {
   if (snapshot.household === household) return;
   const cached = typeof window === "undefined" ? null : readCache(household);
   snapshot = cached
-    ? { household, dishes: cached.dishes, weeks: [], failedWeeks: [], notes: cached.notes, loaded: true, failed: false }
+    ? {
+        household,
+        dishes: cached.dishes,
+        weeks: [],
+        failedWeeks: [],
+        notes: cached.notes,
+        notesLoaded: false,
+        notesFailed: false,
+        loaded: true,
+        failed: false,
+      }
     : { ...EMPTY_MENU, household };
   listeners.forEach((listener) => listener());
 }
@@ -191,6 +207,8 @@ export async function loadMenuWeek(day: string, force = false): Promise<void> {
           weeks: snapshot.weeks.includes(monday) ? snapshot.weeks : [...snapshot.weeks, monday],
           failedWeeks: snapshot.failedWeeks.filter((w) => w !== monday),
           notes,
+          notesLoaded: true,
+          notesFailed: false,
           loaded: true,
           failed: false,
         });
@@ -202,6 +220,7 @@ export async function loadMenuWeek(day: string, force = false): Promise<void> {
           ...snapshot,
           loaded: true,
           failed: snapshot.dishes.length === 0,
+          notesFailed: !snapshot.notesLoaded,
           failedWeeks: snapshot.failedWeeks.includes(monday) ? snapshot.failedWeeks : [...snapshot.failedWeeks, monday],
         });
       }
@@ -286,6 +305,6 @@ export async function saveKitchenNotes(text: string | null, confirm: boolean): P
   const notes = await dataProvider.setKitchenNotes(text, confirm);
   mutations += 1;
   const household = currentHousehold();
-  if (household && snapshot.household === household) emit({ ...snapshot, notes });
+  if (household && snapshot.household === household) emit({ ...snapshot, notes, notesLoaded: true, notesFailed: false });
   return notes;
 }

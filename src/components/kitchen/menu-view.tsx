@@ -75,7 +75,9 @@ export function MenuView() {
   const monday = weekStart(weekParam && DAY.test(weekParam) ? weekParam : today);
   const showRecipes = params.get("recipes") === "1";
 
-  const { dishes, notes, loaded, weekLoaded, weekFailed } = useMenuWeek(monday);
+  const { dishes, notes, loaded, weekLoaded, weekFailed, notesLoaded, notesFailed } = useMenuWeek(monday);
+  // The notes editor opens only on a note read from the server (Codex, PR #101).
+  const notesReady = notesLoaded ? "ready" : notesFailed ? "failed" : "loading";
   // Last week too, for Copy last week.
   const { weekLoaded: lastWeekLoaded } = useMenuWeek(addDays(monday, -7));
   const held = useAllHeldDishes();
@@ -328,7 +330,13 @@ export function MenuView() {
       />
       {cook.sheets}
       <DishFormSheet target={form} dishes={held} onClose={() => setForm(null)} />
-      <KitchenNotesSheet open={notesOpen} notes={notes} onClose={() => setNotesOpen(false)} />
+      <KitchenNotesSheet
+        open={notesOpen}
+        notes={notes}
+        readiness={notesReady}
+        onRetry={() => void loadMenuWeek(monday, true)}
+        onClose={() => setNotesOpen(false)}
+      />
       <AddMissingSheet
         open={missingOpen}
         dishes={dishes}

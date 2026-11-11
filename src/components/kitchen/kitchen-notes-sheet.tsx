@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -11,6 +11,7 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { MENU_LIMITS } from "@/lib/menu";
 import { saveKitchenNotes } from "@/lib/menu-store";
 import type { KitchenNotes } from "@/lib/data/types";
+import type { CookReadiness } from "@/lib/menu";
 
 /**
  * Kitchen notes (owners, Phase 170 PR C, D12): one short note for whoever
@@ -24,19 +25,61 @@ import type { KitchenNotes } from "@/lib/data/types";
 export function KitchenNotesSheet({
   open,
   notes,
+  readiness,
+  onRetry,
   onClose,
 }: {
   open: boolean;
   notes: KitchenNotes | null;
+  /**
+   * Whether the note was read from the server in this session (Codex, PR
+   * #101). The editor opens only then: a note that hasn't loaded is never
+   * shown as empty, so Save can't wipe it.
+   */
+  readiness: CookReadiness;
+  onRetry: () => void;
   onClose: () => void;
 }) {
   useBackToClose(open, onClose);
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent side="bottom" className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl">
-        {open && <NotesForm notes={notes} onDone={onClose} />}
+        {open &&
+          (readiness === "ready" ? (
+            <NotesForm notes={notes} onDone={onClose} />
+          ) : (
+            <NotesWaiting failed={readiness === "failed"} onRetry={onRetry} />
+          ))}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function NotesWaiting({ failed, onRetry }: { failed: boolean; onRetry: () => void }) {
+  const t = useT();
+  return (
+    <div className="flex flex-col">
+      <SheetHeader>
+        <SheetTitle className="text-xl">{t("Kitchen notes", "Catatan dapur")}</SheetTitle>
+        <SheetDescription className="sr-only">{t("Kitchen notes", "Catatan dapur")}</SheetDescription>
+      </SheetHeader>
+      <div className="flex flex-col items-center gap-3 px-4 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        {failed ? (
+          <>
+            <p className="text-center text-sm text-muted-foreground">
+              {t("Couldn't load the kitchen notes.", "Catatan dapur belum bisa dimuat.")}
+            </p>
+            <Button variant="outline" className="min-h-11 rounded-xl" onClick={onRetry}>
+              <RefreshCw /> {t("Try again", "Coba lagi")}
+            </Button>
+          </>
+        ) : (
+          <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground" role="status">
+            <Loader2 className="size-4 animate-spin" /> {t("Loading…", "Memuat…")}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 

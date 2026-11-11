@@ -171,6 +171,10 @@ Undo and the What's new card.
 - **Codex at ad81e21**: the dish editor holds a recipe link by id, so
   editing a dish before the recipes load never unlinks it; only "Not this
   recipe" does. The picker waits for the recipes from the server.
+- **Codex at f510cc4**: signing out removes every Miamus key on the phone
+  except its display preferences (`src/lib/local-data.ts`, deny by default;
+  the recipes cache from #98 had been missed); the kitchen notes editor opens
+  only on a note read from the server.
 - **Not in PR C (less typing / less reading)**: the addendum (Eat soon,
   leftover dishes, Ready to cook, packs, the Menu changed banner), the "won't
   come off" unit hint (the confirm sheet's *Tidak dihitung* says it), cooking
