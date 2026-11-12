@@ -5,7 +5,8 @@ import { STAFF_ID, installStub } from "./stub-backend";
 // The calm first screen (Phase 172 PR A1, D11): a new household's Today is
 // the checklist alone, directly under the date; no What's new until it is 14
 // days old and past setup; Add to Home Screen and the notifications prompt
-// wait for a first task; "Any pets at home?" never asks a household made
+// wait for a first task, and since Phase 175 S2 for the checklist to go (it
+// has its own notifications row); "Any pets at home?" never asks a household made
 // since the sign-up question; and an established owner sees at most one
 // What's new card a week.
 
@@ -52,10 +53,13 @@ test("a brand-new household: the checklist alone, nothing above it, no tips", as
 
   const card = checklist(page);
   await expect(card).toBeVisible({ timeout: 20_000 });
-  // About 25 words, step names only: the title, the count, five step names,
-  // the household's name, one button and Not now (it was about 60).
+  // Step names only, under the three lines of how Miamus works (Phase 175
+  // S2): the title, the count, the three lines (16 words), five step names,
+  // the household's name, the open step's two buttons and Not now. About 40
+  // words of reading in the plan, 54 with the buttons; it was about 60
+  // before Phase 172, with no three lines.
   const words = ((await card.innerText()).match(/\S+/g) ?? []).length;
-  expect(words).toBeLessThanOrEqual(36);
+  expect(words).toBeLessThanOrEqual(56);
   await expect(whatsNew(page)).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Turn on notifications" })).toHaveCount(0);
   await expect(page.getByText("Add Miamus to your Home Screen for notifications.")).toHaveCount(0);
@@ -65,7 +69,7 @@ test("a brand-new household: the checklist alone, nothing above it, no tips", as
   expect(await page.evaluate((id) => localStorage.getItem(`miamus.setup-stage.${id}`), HOUSEHOLD_ID)).toBe("new");
 });
 
-test("once a first task is given, Add to Home Screen and notifications may ask; What's new still waits", async ({
+test("with a first task given, the prompts wait while the checklist asks itself; once it's hidden they may ask", async ({
   context,
   page,
 }) => {
@@ -106,8 +110,21 @@ test("once a first task is given, Add to Home Screen and notifications may ask; 
   });
   await page.goto("/dashboard");
 
-  await expect(checklist(page)).toBeVisible({ timeout: 20_000 });
+  const card = checklist(page);
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  // The card has its own "Turn on notifications" row: nothing above Today
+  // asks the same thing twice.
+  await expect(card).toContainText("Turn on notifications");
+  await expect(page.getByText("Add Miamus to your Home Screen for notifications.")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Turn on notifications" })).toHaveCount(0);
+  expect(await page.evaluate((id) => localStorage.getItem(`miamus.setup-stage.${id}`), HOUSEHOLD_ID)).toBe("new");
+
+  // Not now: the card goes, and the prompts take over.
+  await card.getByRole("button", { name: "Not now" }).click();
+  await expect(card).toHaveCount(0);
   await expect(page.getByText("Add Miamus to your Home Screen for notifications.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Turn on notifications" })).toBeVisible();
+  expect(await page.evaluate((id) => localStorage.getItem(`miamus.setup-stage.${id}`), HOUSEHOLD_ID)).toBe("task");
   await expect(whatsNew(page)).toHaveCount(0);
 });
 

@@ -9,8 +9,9 @@
  *      never shown to it.
  *   3. At most one card a week: the first card that may show claims the
  *      week on this phone; until 7 days have passed no other card shows.
- *   5. Add to Home Screen and the notifications prompt wait until the
- *      checklist's "first task" step is done.
+ *   5. Add to Home Screen and the notifications prompt wait until a first
+ *      task is given and the checklist is off screen (Phase 175 S2: while
+ *      it shows, its own "Turn on notifications" row asks instead).
  *   6. "Any pets at home?" never asks a household made since the sign-up
  *      question (Phase 162), which already answered.
  *
