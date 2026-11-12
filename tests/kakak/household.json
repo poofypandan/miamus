@@ -27,14 +27,17 @@
     { "ref": "R9", "name": "Kamar anak" }
   ],
   "items": [
-    { "ref": "I1", "name": "Telur", "pet": false },
+    { "ref": "I1", "name": "Telur", "pet": false, "ingredient": true, "keptIn": "fridge", "expiresOn": null },
     { "ref": "I2", "name": "Sabun cuci piring", "pet": false },
     { "ref": "I3", "name": "Deterjen", "pet": false },
-    { "ref": "I4", "name": "Beras", "pet": false },
+    { "ref": "I4", "name": "Beras", "pet": false, "ingredient": true, "keptIn": null, "expiresOn": null },
     { "ref": "I5", "name": "Makanan anjing", "pet": true },
     { "ref": "I6", "name": "Pee pad", "pet": true },
     { "ref": "I7", "name": "Tisu", "pet": false },
-    { "ref": "I8", "name": "Minyak goreng", "pet": false },
-    { "ref": "I9", "name": "Galon air", "pet": false }
-  ]
+    { "ref": "I8", "name": "Minyak goreng", "pet": false, "ingredient": true, "keptIn": null, "expiresOn": null },
+    { "ref": "I9", "name": "Galon air", "pet": false },
+    { "ref": "I10", "name": "Daging sapi", "pet": false, "ingredient": true, "keptIn": "freezer", "expiresOn": "2026-12-20" },
+    { "ref": "I11", "name": "Tomat", "pet": false, "ingredient": true, "keptIn": null, "expiresOn": null }
+  ],
+  "ingredientsOn": true
 }

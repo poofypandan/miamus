@@ -168,6 +168,37 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale): CardI
           : undefined,
       };
     }
+    case "ingredient": {
+      const place = (p: string) => t(...(PLACES[p] ?? [p, p]));
+      const rows: CardRow[] = [{ label: t("What", "Apa"), value: item.name }];
+      if (item.keptIn) {
+        const moved = item.fromPlace && item.fromPlace !== item.keptIn;
+        rows.push({
+          label: t("Kept in", "Disimpan di"),
+          value: moved
+            ? t(`${place(item.keptIn)} (was ${place(item.fromPlace!)})`, `${place(item.keptIn)} (sebelumnya ${place(item.fromPlace!)})`)
+            : place(item.keptIn),
+        });
+      }
+      if (item.expiry === "set" && item.expiresOn) {
+        rows.push({
+          label: t("Expires", "Kedaluwarsa"),
+          value: item.expiryIsGuess
+            ? `${cardDate(item.expiresOn, locale)} · ${t("Kakak's guess — check it", "Tebakan Kakak — cek lagi")}`
+            : cardDate(item.expiresOn, locale),
+          guess: item.expiryIsGuess,
+        });
+      } else if (item.expiry === "clear") {
+        rows.push({ label: t("Expires", "Kedaluwarsa"), value: t("No date", "Tidak ada") });
+      }
+      return {
+        heading: t("Ingredient", "Bahan masakan"),
+        rows,
+        note: item.expiryIsGuess
+          ? t("If it smells or looks off, throw it away.", "Kalau baunya atau tampilannya aneh, buang saja.")
+          : undefined,
+      };
+    }
   }
 }
 

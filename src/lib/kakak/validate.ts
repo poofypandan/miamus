@@ -2,9 +2,10 @@
 // the phone (docs/phase-156-step2-kakak-plan.md, section 4, "What comes back
 // to the phone"). Strict tool schemas guarantee the shape; this checks what
 // they can't: lengths, HH:mm, real dates in range, and references that exist
-// in this household. add_to_shopping_list and add_food aren't strict (the
-// API's limit on union types, tools.ts), so for them this also checks the
-// whole shape: every field there and no others, types and enums.
+// in this household. add_to_shopping_list, add_food and put_away_ingredient
+// aren't strict (the API's limit on union types, tools.ts), so for them this
+// also checks the whole shape: every field there and no others, types and
+// enums.
 
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
 import { ROUTINE_NOTE_MAX, routineKindInfo } from "@/lib/pet-routine-kinds";
@@ -13,7 +14,14 @@ import { isScheduleActiveOn } from "@/lib/scheduleEngine";
 import { isoWeekday } from "@/lib/pet-routine-kinds";
 import type { MasterSchedule } from "@/types/database";
 import { addDays, householdRefs, type KakakHousehold, type KakakRoutine } from "./household";
-import { PET_ROUTINE_TOOL_KINDS, TOOL_WEEKDAYS, type KakakToolName, type PetRoutineToolKind } from "./tools";
+import {
+  FOOD_PLACES,
+  INGREDIENT_EXPIRY,
+  PET_ROUTINE_TOOL_KINDS,
+  TOOL_WEEKDAYS,
+  type KakakToolName,
+  type PetRoutineToolKind,
+} from "./tools";
 
 export type ValidationResult = { ok: true } | { ok: false; errors: string[] };
 
@@ -112,6 +120,8 @@ const FOOD_FIELDS = [
   "return_container",
   "notes",
 ] as const;
+
+const INGREDIENT_FIELDS = ["item", "kept_in", "expiry", "expires_on", "expiry_is_guess"] as const;
 
 /** "Remind me" (migrations/137): on the day, or 1, 3 or 7 days before. */
 export const REMIND_DAYS = new Set([0, 1, 3, 7]);
@@ -214,7 +224,7 @@ export function validateToolCall(
       // Not strict (tools.ts): the shape is checked here.
       shape(errors, "input", input, FOOD_FIELDS);
       text(errors, "name", input.name, { max: 80, required: true });
-      oneOf(errors, "kept_in", input.kept_in, ["fridge", "freezer", "pantry", "counter"]);
+      oneOf(errors, "kept_in", input.kept_in, FOOD_PLACES);
       bool(errors, "expiry_unknown", input.expiry_unknown);
       bool(errors, "expiry_is_guess", input.expiry_is_guess);
       bool(errors, "return_container", input.return_container);
@@ -230,6 +240,38 @@ export function validateToolCall(
       }
       text(errors, "from_whom", input.from_whom, { max: 60, required: false });
       text(errors, "notes", input.notes, { max: 200, required: false });
+      break;
+    }
+    case "put_away_ingredient": {
+      // Not strict (tools.ts): the shape is checked here.
+      shape(errors, "input", input, INGREDIENT_FIELDS);
+      ref(errors, "item", input.item, refs.items, false);
+      const item = household.items.find((i) => i.ref === input.item);
+      if (item && !(household.ingredientsOn && item.ingredient)) {
+        errors.push(`item ${item.ref} is not marked (ingredient): use add_to_shopping_list to buy it, or say where to add it by hand`);
+      }
+      oneOf(errors, "kept_in", input.kept_in, FOOD_PLACES, true);
+      oneOf(errors, "expiry", input.expiry, INGREDIENT_EXPIRY);
+      bool(errors, "expiry_is_guess", input.expiry_is_guess);
+      if (input.expiry === "set") {
+        // A label may already be past, as for food.
+        dayInRange(errors, "expires_on", input.expires_on, addDays(today, -366), addDays(today, 3 * 366));
+      } else if (input.expires_on !== null && input.expires_on !== undefined) {
+        errors.push("expires_on must be null unless expiry is set");
+      }
+      if (input.expiry_is_guess === true && input.expiry !== "set") errors.push("expiry_is_guess without a date");
+      if (item?.out && input.expiry === "set") {
+        // The database clears an Out item's date on every write (migrations/154).
+        errors.push(`item ${item.ref} is marked out, so it keeps no date: leave expiry keep and say the date can be set once it is marked Sudah dibeli / Bought`);
+      }
+      if (item?.ingredient) {
+        const samePlace = input.kept_in === null || input.kept_in === item.keptIn;
+        const sameDate =
+          input.expiry === "keep" ||
+          (input.expiry === "set" && input.expires_on === item.expiresOn) ||
+          (input.expiry === "clear" && !item.expiresOn);
+        if (samePlace && sameDate) errors.push("nothing would change: it is already noted that way; say so in one line instead");
+      }
       break;
     }
     case "ask_question": {

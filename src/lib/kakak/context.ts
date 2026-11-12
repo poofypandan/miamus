@@ -11,10 +11,14 @@
 // same household gives the same references on every call of a conversation.
 
 import { ROUTINE_KINDS } from "@/lib/pet-routine-kinds";
-import type { RoutineKind } from "@/types/database";
+import { isIngredient } from "@/lib/kitchen-units";
+import type { FoodPlace, InventoryCategory, RoutineKind } from "@/types/database";
 import type { KakakHousehold, KakakLocale } from "./household";
+import { FOOD_PLACES } from "./tools";
 
 const ROUTINE_KIND_SET = new Set<string>(ROUTINE_KINDS.map((k) => k.kind));
+const PLACES = new Set<string>(FOOD_PLACES);
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface ContextStaffRow {
   id: string;
@@ -61,6 +65,14 @@ export interface ContextItemRow {
   name: string;
   scope: string;
   created_at: string;
+  /** Phase 176: which shelf; Fresh Food and Pantry are ingredients. Absent on an older read. */
+  category?: string | null;
+  /** migrations/154; absent before it, which reads as nobody has said. */
+  kept_in?: string | null;
+  /** migrations/154; absent before it, which reads as no date. */
+  expires_on?: string | null;
+  /** Enough, Running low or Out: an Out item keeps no date (migrations/154's trigger). */
+  stock_status?: string | null;
 }
 
 export interface ContextRows {
@@ -73,6 +85,8 @@ export interface ContextRows {
   hasPets?: boolean | null;
   /** household_features (migrations/145): only an explicit false switches Food at home off. */
   foodOn?: boolean | null;
+  /** household_features 'kitchen' (migrations/148): only an explicit true switches Kitchen amounts on. */
+  kitchenOn?: boolean | null;
 }
 
 export interface RefMap {
@@ -227,11 +241,28 @@ export function buildContext(
     refs.rooms[ref] = room.id;
   }
 
+  // Ingredients have a place and a date on screen only while Kitchen
+  // amounts and Food at home are both on (lib/features ingredientsUnderFood;
+  // Kitchen amounts starts off, so only an explicit true counts).
+  const ingredientsOn = rows.kitchenOn === true && rows.foodOn !== false;
   const items: KakakHousehold["items"] = [];
   for (const item of [...rows.items].sort(byAge)) {
     const ref = `I${items.length + 1}`;
     const name = cleanName(item.name, 60);
-    items.push({ ref, name, pet: item.scope === "pet" });
+    const ingredient = ingredientsOn && isIngredient({ category: item.category as InventoryCategory });
+    items.push({
+      ref,
+      name,
+      pet: item.scope === "pet",
+      ...(ingredient
+        ? {
+            ingredient: true,
+            ...(item.stock_status === "out" ? { out: true } : {}),
+            keptIn: PLACES.has(item.kept_in ?? "") ? (item.kept_in as FoodPlace) : null,
+            expiresOn: typeof item.expires_on === "string" && DAY.test(item.expires_on.slice(0, 10)) ? item.expires_on.slice(0, 10) : null,
+          }
+        : {}),
+    });
     refs.items[ref] = item.id;
     names.items[ref] = name;
   }
@@ -248,6 +279,7 @@ export function buildContext(
       items,
       ...(rows.hasPets === false ? { petsOff: true } : {}),
       ...(rows.foodOn === false ? { foodOff: true } : {}),
+      ...(ingredientsOn ? { ingredientsOn: true } : {}),
     },
     refs,
     names,

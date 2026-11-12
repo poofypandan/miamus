@@ -123,6 +123,32 @@ export function useKakakSave() {
               undos.push(() => household.removeFood(food.id));
               break;
             }
+            case "ingredient": {
+              // Phase 176: the two context actions, each sending only its own
+              // column. Undo puts back the place and the date as they were.
+              const before = household.inventoryItems.find((i) => i.id === item.itemId);
+              if (!before) throw new Error("Kakak's ingredient is not in this household's list");
+              const placeBefore = before.kept_in ?? null;
+              const dateBefore = before.expires_on ?? null;
+              if (item.keptIn) {
+                await household.setIngredientPlace(item.itemId, item.keptIn);
+                undos.push(() =>
+                  placeBefore
+                    ? household.setIngredientPlace(item.itemId, placeBefore)
+                    : household.updateInventoryItem(item.itemId, { kept_in: null }),
+                );
+              }
+              if (item.expiry !== "keep") {
+                const saved = await household.setIngredientExpiry(item.itemId, item.expiry === "set" ? item.expiresOn : null);
+                undos.push(() => household.setIngredientExpiry(item.itemId, dateBefore));
+                // An item marked Out keeps no date: the database clears it
+                // (migrations/154). Never report a date as saved that wasn't.
+                if ((saved.expires_on ?? null) !== item.expiresOn) {
+                  throw new Error("The ingredient's date was not kept (it is marked Out)");
+                }
+              }
+              break;
+            }
           }
         }
       } catch (error) {

@@ -221,14 +221,17 @@ function problemsWith(
   return problems;
 }
 
-/** Every tool, less pet routines for a household that said it has no pets (Phase 162). */
+/** Every tool this household can use: a switched-off module's tool isn't offered. */
 export function toolsFor(household: KakakHousehold): Anthropic.Tool[] {
-  // A switched-off module's tool isn't offered: pets (Phase 162), Food at
-  // home (Phase 171). Every other household gets the list as it was.
-  if (!household.petsOff && !household.foodOff) return KAKAK_TOOLS;
+  // Pets (Phase 162), Food at home (Phase 171), and ingredients' places
+  // (Phase 176), which exist only while Kitchen amounts and Food at home are
+  // both on. Every other household gets the list as it was.
+  if (!household.petsOff && !household.foodOff && household.ingredientsOn) return KAKAK_TOOLS;
   return KAKAK_TOOLS.filter(
     (tool) =>
-      !(household.petsOff && tool.name === "add_pet_routine") && !(household.foodOff && tool.name === "add_food"),
+      !(household.petsOff && tool.name === "add_pet_routine") &&
+      !(household.foodOff && tool.name === "add_food") &&
+      !(!household.ingredientsOn && tool.name === "put_away_ingredient"),
   );
 }
 

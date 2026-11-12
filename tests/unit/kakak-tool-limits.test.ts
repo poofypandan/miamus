@@ -54,6 +54,16 @@ describe("Kakak's strict tools fit the API's limits", () => {
     expect(totals.optional).toBeLessThanOrEqual(MAX_OPTIONAL_PARAMETERS);
   });
 
+  it("keeps the strict set as it is: put_away_ingredient (Phase 176) isn't strict", () => {
+    // 15 of 16 unions; a new strict tool with a nullable field would break every request.
+    expect(count(KAKAK_TOOLS)).toEqual({ strict: 3, unions: 15, optional: 0 });
+    expect(KAKAK_TOOLS.filter((tool) => tool.strict).map((tool) => tool.name)).toEqual([
+      "create_chore",
+      "add_pet_routine",
+      "ask_question",
+    ]);
+  });
+
   it("counts unions the way the API does, nested ones included", () => {
     const totals = count([
       {
@@ -95,7 +105,10 @@ describe("validateToolCall checks the whole shape of the tools that aren't stric
   };
   const newNote = { item: null, status: "low", note: "Gula 2 kg", pet: null };
 
+  const ingredient = { item: "I10", kept_in: "fridge", expiry: "set", expires_on: "2026-11-12", expiry_is_guess: false };
+
   it("accepts a well-formed call", () => {
+    expect(validateToolCall(household, "put_away_ingredient", ingredient)).toEqual({ ok: true });
     expect(validateToolCall(household, "add_food", food)).toEqual({ ok: true });
     expect(validateToolCall(household, "add_to_shopping_list", { items: [newNote] })).toEqual({ ok: true });
   });
@@ -110,6 +123,10 @@ describe("validateToolCall checks the whole shape of the tools that aren't stric
     expect(validateToolCall(household, "add_to_shopping_list", { items: [noPet] }).ok).toBe(false);
     expect(validateToolCall(household, "add_to_shopping_list", { items: [newNote], extra: 1 }).ok).toBe(false);
     expect(validateToolCall(household, "add_to_shopping_list", { items: ["Gula"] }).ok).toBe(false);
+    const { expiry: _expiry, ...noExpiry } = ingredient;
+    void _expiry;
+    expect(validateToolCall(household, "put_away_ingredient", noExpiry).ok).toBe(false);
+    expect(validateToolCall(household, "put_away_ingredient", { ...ingredient, notes: null }).ok).toBe(false);
   });
 
   it("rejects values outside the enums and wrong types", () => {
@@ -120,5 +137,9 @@ describe("validateToolCall checks the whole shape of the tools that aren't stric
     expect(validateToolCall(household, "add_food", { ...food, name: 5 }).ok).toBe(false);
     expect(validateToolCall(household, "add_to_shopping_list", { items: [{ ...newNote, status: "soon" }] }).ok).toBe(false);
     expect(validateToolCall(household, "add_to_shopping_list", { items: [{ ...newNote, note: 3 }] }).ok).toBe(false);
+    expect(validateToolCall(household, "put_away_ingredient", { ...ingredient, kept_in: "garage" }).ok).toBe(false);
+    expect(validateToolCall(household, "put_away_ingredient", { ...ingredient, expiry: "later" }).ok).toBe(false);
+    expect(validateToolCall(household, "put_away_ingredient", { ...ingredient, expires_on: null }).ok).toBe(false);
+    expect(validateToolCall(household, "put_away_ingredient", { ...ingredient, item: "I2" }).ok).toBe(false);
   });
 });

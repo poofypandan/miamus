@@ -183,8 +183,15 @@ export const LEGAL = {
   // 2026-11-12.2: wording only (Phase 175 tab names) — "Household → Your
   // data" now reads "Settings → Your data" / "Pengaturan → Data Anda".
   // Nothing stored, collected or shared changes.
-  policyVersion: "2026-11-12.2",
-  effectiveDate: { en: "12 November 2026", id: "12 November 2026" },
+  // 2026-11-13.1: Kakak puts ingredients away (Phase 176 PR 4,
+  // migrations/155) — while Kitchen amounts is on, each Kakak request also
+  // carries, for kitchen ingredients, where each is kept and its use-by date
+  // when someone has noted them (migrations/154), and Kakak may suggest a
+  // new place or date, saved only when the admin confirms. No new kind of
+  // personal data, no new service or region; Anthropic's retention is
+  // unchanged.
+  policyVersion: "2026-11-13.1",
+  effectiveDate: { en: "13 November 2026", id: "13 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on

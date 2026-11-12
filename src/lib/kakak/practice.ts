@@ -7,8 +7,10 @@
 // and no tokens used.
 //
 // It is not clever, and isn't meant to be: it recognises days, times, names,
-// rooms, "buy", food words and pet routines (meals, potty, walks, lights off…), asks one question when
-// the day or a food's date is missing, and otherwise suggests. What it
+// rooms, "buy", food words, pet routines (meals, potty, walks, lights off…)
+// and a listed ingredient put in a place, asks one question when the day, a
+// food's date or a thawed ingredient's date is missing, and otherwise
+// suggests. What it
 // tests is the app around Kakak, never Kakak's judgement — that needs the
 // real eval (tests/kakak).
 //
@@ -349,9 +351,36 @@ function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-type Intent = "shopping" | "food" | "pet" | "chore";
+type Intent = "shopping" | "food" | "ingredient" | "pet" | "chore";
+
+type Place = "fridge" | "freezer" | "pantry" | "counter";
+
+const PLACE_WORDS: [RegExp, Place][] = [
+  [/\b(kulkas|fridge)\b/g, "fridge"],
+  [/\bfreezer\b/g, "freezer"],
+  [/\b(lemari|cupboard|pantry)\b/g, "pantry"],
+  [/\b(meja|counter)\b/g, "counter"],
+];
+
+/** Where the text puts something: the last place named, after "dari freezer" / "out of the freezer". */
+function placeFrom(text: string): Place | null {
+  const t = text.toLowerCase().replace(/\b(?:dari|out of)(?: the)? (?:kulkas|fridge|freezer|lemari|cupboard|pantry|meja|counter)\b/g, " ");
+  let best: { at: number; place: Place } | null = null;
+  for (const [pattern, place] of PLACE_WORDS) {
+    for (const match of t.matchAll(pattern)) if (!best || match.index > best.at) best = { at: match.index, place };
+  }
+  return best?.place ?? null;
+}
+
+/** A listed ingredient (Phase 176) the text names, while ingredients are on. */
+function findIngredient(household: KakakHousehold, text: string): KakakHousehold["items"][number] | null {
+  return household.ingredientsOn ? findRef(household.items.filter((item) => item.ingredient), text) : null;
+}
 
 function intentOf(household: KakakHousehold, text: string): Intent {
+  // "Telur sudah di kulkas", "move the beef to the fridge": a listed
+  // ingredient with a place, before "beli" makes it shopping.
+  if (findIngredient(household, text) && (placeFrom(text) || has(text, /\b(dari|out of)( the)? freezer\b/))) return "ingredient";
   if (has(text, /\b(beli|belikan|buy|habis|abis|out of|running low|restock)\b/)) return "shopping";
   if (
     findPets(household, text).length > 0 &&
@@ -456,6 +485,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     tomorrow: "Tomorrow",
     everyDay: "Every day",
     expiry: "When does it need eating by?",
+    expiryNow: "When does it expire now?",
     in3: "In 3 days",
     dunno: "Don't know",
     stuck: "(Practice) I can't set that up in practice mode. Try: \"Ari mops the terrace every Monday at 9\".",
@@ -469,6 +499,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     tomorrow: "Besok",
     everyDay: "Setiap hari",
     expiry: "Harus dimakan kapan?",
+    expiryNow: "Sekarang kapan kedaluwarsa?",
     in3: "3 hari lagi",
     dunno: "Tidak tahu",
     stuck: "(Latihan) Ini belum bisa di mode latihan. Coba: \"Ari pel teras setiap Senin jam 9\".",
@@ -545,6 +576,39 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
         note: null,
         remind_staff: remind,
         alert_owners: alert,
+      }),
+    ]);
+  }
+
+  if (intent === "ingredient") {
+    const item = findIngredient(household, first);
+    if (!item) return message(model, [text(copy.stuck)]);
+    const place = placeFrom(first);
+    const t = all.toLowerCase();
+    const unknown = /\b(don't know|dont know|tidak tahu|nggak tahu|gak tahu|ga tau)\b/.test(t);
+    let expires: string | null = null;
+    if (/\b(in 3 days|3 hari)\b/.test(t)) expires = addDays(household.today, 3);
+    else if (/\b(tomorrow|besok)\b/.test(t)) expires = addDays(household.today, 1);
+    else if (/\b(today|hari ini)\b/.test(t)) expires = household.today;
+    // Out of the freezer with no date: ask once (Kakak's instructions, Ingredients).
+    const thawed = (item.keptIn === "freezer" || has(first, /\b(dari|out of)( the)? freezer\b/)) && place !== "freezer";
+    if (thawed && !expires && !unknown && canAsk) {
+      return message(model, [
+        toolUse("ask_question", {
+          question: copy.expiryNow,
+          answers: [copy.tomorrow, copy.in3, copy.dunno],
+          allow_typing: true,
+        }),
+      ]);
+    }
+    return message(model, [
+      text(copy.here),
+      toolUse("put_away_ingredient", {
+        item: item.ref,
+        kept_in: place,
+        expiry: expires ? "set" : "keep",
+        expires_on: expires,
+        expiry_is_guess: false,
       }),
     ]);
   }

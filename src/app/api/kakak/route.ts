@@ -66,6 +66,28 @@ function effortFromEnv(): KakakEffort {
   return effort && EFFORTS.includes(effort) ? effort : "low";
 }
 
+/** A feature's explicit switch from household_features rows, or null when it has no row. */
+function featureRow(rows: unknown, feature: string): boolean | null {
+  const row = ((rows ?? []) as { feature: string; enabled: boolean }[]).find((r) => r.feature === feature);
+  return typeof row?.enabled === "boolean" ? row.enabled : null;
+}
+
+/**
+ * Shopping items, with each one's shelf and, since migrations/154, where it
+ * is kept and its date (Phase 176). On a database without 154 the columns
+ * don't exist (Postgres 42703): read the items as before, so Kakak keeps
+ * working while the migration rolls out, with no ingredient places.
+ */
+async function readItems(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, householdId: string) {
+  const items = await supabase
+    .from("inventory_items")
+    .select("id, name, scope, created_at, category, stock_status, kept_in, expires_on")
+    .eq("household_id", householdId);
+  if (items.error?.code !== "42703") return items;
+  console.error("Kakak: ingredient places not read", items.error.message);
+  return supabase.from("inventory_items").select("id, name, scope, created_at, category, stock_status").eq("household_id", householdId);
+}
+
 async function readRows(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   householdId: string,
@@ -78,11 +100,12 @@ async function readRows(
       .eq("household_id", householdId),
     supabase.from("task_entities").select("id, name, created_at, entity_type, metadata").eq("household_id", householdId).eq("entity_type", "pet"),
     supabase.from("household_locations").select("id, name, created_at, kind, parent_id").eq("household_id", householdId),
-    supabase.from("inventory_items").select("id, name, scope, created_at").eq("household_id", householdId),
+    readItems(supabase, householdId),
     // "Who lives here?" (Phase 162): pets switched off means no pet routines.
     supabase.from("households").select("has_pets").eq("id", householdId).maybeSingle(),
-    // Household → Features (Phase 171): Food at home switched off means no add_food.
-    supabase.from("household_features").select("enabled").eq("household_id", householdId).eq("feature", "food").maybeSingle(),
+    // Household → Features (Phase 171): Food at home switched off means no
+    // add_food; Kitchen amounts on as well means ingredients (Phase 176).
+    supabase.from("household_features").select("feature, enabled").eq("household_id", householdId).in("feature", ["food", "kitchen"]),
   ]);
   for (const result of [staff, pets, rooms, items]) if (result.error) throw result.error;
   // Optional: a failed read (or a database without migrations/133) leaves
@@ -104,7 +127,8 @@ async function readRows(
     rooms: rooms.data ?? [],
     items: items.data ?? [],
     hasPets: household.error ? null : ((household.data as { has_pets: boolean | null } | null)?.has_pets ?? null),
-    foodOn: food.error ? null : ((food.data as { enabled: boolean } | null)?.enabled ?? null),
+    foodOn: food.error ? null : featureRow(food.data, "food"),
+    kitchenOn: food.error ? null : featureRow(food.data, "kitchen"),
   } as ContextRows;
 }
 
