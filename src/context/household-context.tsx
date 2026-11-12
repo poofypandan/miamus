@@ -374,9 +374,10 @@ interface HouseholdContextValue {
    * Where an ingredient is kept (Phase 176, migrations/154). Owners and
    * staff phones. Sends only kept_in, so another phone's change to the date
    * or the amount is never overwritten. Shows at once, put back if the save
-   * fails; the server's row wins.
+   * fails; the server's row wins. Null puts back "nobody has said" (Undo of
+   * a first move), so the category's default is never stored as a choice.
    */
-  setIngredientPlace: (id: string, place: FoodPlace) => Promise<InventoryItem>;
+  setIngredientPlace: (id: string, place: FoodPlace | null) => Promise<InventoryItem>;
   /**
    * An ingredient's use-by date, YYYY-MM-DD, or null for no date (Phase 176,
    * migrations/154). Owners and staff phones. Sends only expires_on; an
@@ -1341,7 +1342,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   // Phase 176 (migrations/154): one column per write, through the same
   // ordered, optimistic path as the amounts.
   const setIngredientPlace = useCallback(
-    (id: string, place: FoodPlace) => {
+    (id: string, place: FoodPlace | null) => {
       const patch: InventoryItemPatch = { kept_in: place };
       return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
     },

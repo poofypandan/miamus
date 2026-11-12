@@ -11,6 +11,8 @@ import {
   placeOf,
   sameName,
 } from "@/lib/ingredients";
+import { applyAmountRules } from "@/lib/kitchen-units";
+import type { InventoryItemPatch } from "@/lib/data/types";
 import type { InventoryItem } from "@/types/database";
 
 const TODAY = "2026-11-12";
@@ -51,6 +53,18 @@ describe("the place", () => {
     expect(placeOf(item("Beras", { category: "pantry", kept_in: null }))).toBe("pantry");
     expect(placeOf(item("Dada Ayam", { kept_in: "freezer" }))).toBe("freezer");
     expect(placeOf(item("Bawang", { category: "pantry", kept_in: "counter" }))).toBe("counter");
+  });
+
+  it("Undo of a first move puts back null, never the default as if someone chose it", () => {
+    // What setIngredientPlace writes and shows at once (writeInventoryItem
+    // runs every patch through applyAmountRules before the server answers).
+    const never = item("Tomat", { quantity: 3 });
+    const moved = applyAmountRules(never, { ...never, kept_in: "freezer" });
+    expect(placeOf(moved)).toBe("freezer");
+    const undo: InventoryItemPatch = { kept_in: null };
+    const back = applyAmountRules(moved, { ...moved, ...undo });
+    expect(back.kept_in).toBeNull();
+    expect(placeOf(back)).toBe("fridge");
   });
 });
 
