@@ -1,6 +1,8 @@
 # Phase 175 — Tabs, the one page, and Kakak first
 
-Status: **a plan for the owner to say yes to. Nothing is built.** Written
+Status: **decided by the owner on 12 November 2026: yes to the
+recommended answers (section 12), with the tab order and the Pets tab's
+future name answered in section 13. Nothing is built.** Written
 12 November 2026 from the code on `main` at `49e4e0d`. Design only: this PR
 changes this one file.
 
@@ -662,12 +664,16 @@ For the glossary, which the manager edits before any of this is built:
 
 ---
 
-## 12. Open questions for the owner
+## 12. Questions for the owner, and the answers
 
-| # | Question | Recommended answer |
+**Answered 12 November 2026:** "outside of my comments, yes to everything."
+The owner's two comments were questions back, on the order of the tabs
+(question 2) and on the Pets tab. Both are answered in section 13.
+
+| # | Question | Recommended answer (accepted) |
 | --- | --- | --- |
 | 1 | Rename Chores to **Home / Rumah** and Household to **Settings / Pengaturan**? | Yes |
-| 2 | Order **Today · Home · Pets · Kitchen · Settings** (Home before Pets)? | Yes. Say no if Pets is the tab your thumb goes to most; the order is one line of code |
+| 2 | Order **Today · Home · Pets · Kitchen · Settings** (Home before Pets)? | Yes. Say no if Pets is the tab your thumb goes to most; the order is one line of code. *The owner asked where Today should sit; see section 13. Build with this order unless the owner says otherwise* |
 | 3 | After Sunday, fold the day's full list on Today into "Next up" and "The whole day"? | Yes, after watching the family use Today on Sunday |
 | 4 | On a day when everything is done, should Miamus stay silent? | Yes. An optional "Tell me when everything is done" switch for owners who want it |
 | 5 | May an urgent repair or a sick pet ring during quiet hours? | Yes, those two only |
@@ -676,3 +682,52 @@ For the glossary, which the manager edits before any of this is built:
 | 8 | May Miamus tell you when a staff phone hasn't opened the app that day? It needs a privacy-policy line and a short video for staff | Yes, with both, and never on a day off |
 | 9 | "All on track" / "Semua lancar" as the calm line? | Yes |
 | 10 | If Today's new order (S3) isn't clean by Friday night, ship only the status line? | Yes |
+
+---
+
+## 13. Two questions the owner added (12 November)
+
+### Should Today be first on the left, or in the middle?
+
+**First, on the left. Keep it.**
+
+- **Today is where you land, not where you tap.** The app opens on it. The
+  easy-to-reach middle is better spent on the tabs you travel to.
+- **The middle isn't stable.** A home without pets has four tabs and no
+  middle. The left edge never moves.
+- **It was tried.** Today was the middle tab in Phase 100 and moved to the
+  left in Phase 111 (the notes are in `src/lib/dashboard-modules.ts` and
+  `agenda-tab.tsx`).
+- **The middle has a better use later.** If Kakak earns a place in the bar
+  (structure C), the middle is hers: the overview on the left, "tell
+  Kakak" in the centre.
+
+### Should Pets become "Family", for homes that look after children or grandparents?
+
+The owner's instinct is the rule: **the name changes only when more than
+one kind is switched on.**
+
+- **One slot: who you look after.** Pets, children and elders work the same
+  way: someone with routines, a carer, and proof. That is one tab and one
+  set of screens, not three.
+- **One kind on, its plain word:** Pets / Hewan, Kids / Anak, Elders /
+  Lansia (the words already in the glossary). A tab called "Family" that
+  holds only two dogs would puzzle a new owner.
+- **Two or more on:** **Family / Keluarga**, with a pill inside (Pets ·
+  Kids · Elders). Settings → Family (the owners' accounts) is then renamed
+  **Owners / Pemilik**, so "Keluarga" means one thing.
+- **No kind on:** no tab, as today. Four tabs.
+- **The URL key stays `pets`,** so no link breaks.
+
+**Not for Sunday, and not yet.** Nothing changes now: the tab stays Pets /
+Hewan. This replaces the "Care tab" idea noted beside Kids · Elders in the
+glossary. Building it waits for the stop rules (templates and Kakak setup
+shipped, three target homes live) and for two things first:
+
+1. **Privacy.** Children's data and health details are sensitive under
+   UU PDP. Photos of children taken on staff phones would be a new kind of
+   personal data: the privacy policy (both languages) and
+   `src/config/legal.ts` change before any of it is stored.
+2. **Words.** For people it is care, not monitoring: the routine belongs
+   to the carer ("Suster gives Oma her medicine at 08.00"), and the family
+   member is never the one being checked.
