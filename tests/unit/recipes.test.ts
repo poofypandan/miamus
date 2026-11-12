@@ -250,8 +250,8 @@ describe("units agree with migrations/151", () => {
 });
 
 describe("the Kitchen pills (D5)", () => {
-  it("Food · Shopping · Menu, Menu only with the Kitchen switch on", () => {
-    expect(kitchenViews({ ...FEATURE_DEFAULTS, kitchen: true })).toEqual(["food", "buy", "menu"]);
+  it("Food · Menu · Shopping, Menu only with the Kitchen switch on; Shopping first without Food", () => {
+    expect(kitchenViews({ ...FEATURE_DEFAULTS, kitchen: true })).toEqual(["food", "menu", "buy"]);
     expect(kitchenViews(FEATURE_DEFAULTS)).toEqual(["food", "buy"]);
     expect(kitchenViews({ ...FEATURE_DEFAULTS, food: false, kitchen: true })).toEqual(["buy", "menu"]);
     expect(kitchenViews({ ...FEATURE_DEFAULTS, food: false })).toEqual(["buy"]);

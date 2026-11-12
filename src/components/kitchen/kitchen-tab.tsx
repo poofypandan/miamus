@@ -22,7 +22,8 @@ const VIEW_LABELS = {
 
 /**
  * The pill itself, in the owner's language or (staff) Indonesian: Food ·
- * Shopping · Menu (D5), each only while its feature is on. "Shopping", not
+ * Menu · Shopping (Shopping · Menu without Food), each only while its
+ * feature is on. "Shopping", not
  * "To buy": it holds the list and the home's supplies (soap, pee pads) —
  * the old Inventory (owner, 2026-11-07). One pill is no pills.
  */
@@ -82,7 +83,7 @@ export function KitchenTab() {
 
 /**
  * "Dapur" on a staff phone (Phase 156; it replaced "Belanja"): the same
- * Makanan · Belanja · Menu pill. Staff add, edit and finish food; they do
+ * Makanan · Menu · Belanja pill. Staff add, edit and finish food; they do
  * not delete it. Menu opens today's menu and the recipes, read only
  * (Phase 170 PR B and C).
  * Bahasa Indonesia only.
