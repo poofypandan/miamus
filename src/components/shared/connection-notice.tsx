@@ -17,7 +17,7 @@ const COPY = {
   en: {
     bannerTitle: "Not connected",
     bannerBody: "Showing what this phone last loaded. Retrying automatically.",
-    cardTitle: "Couldn't load your household",
+    cardTitle: "Couldn't load your home",
     cardBody:
       "Check the Wi-Fi or mobile data. You're still signed in — the app keeps retrying on its own.",
     retry: "Try again",

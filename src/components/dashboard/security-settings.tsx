@@ -131,7 +131,7 @@ export function SecuritySettings() {
               database (Phase 88/90), which this setting does not touch. */}
           <p className="text-[11px] text-muted-foreground">
             {t(
-              "This protects the app on this phone only. Your household data stays protected by your Google sign-in either way.",
+              "This protects the app on this phone only. Your home's data stays protected by your Google sign-in either way.",
               "Ini hanya melindungi aplikasi di HP ini. Data rumah Anda tetap terlindungi oleh login Google Anda."
             )}
           </p>

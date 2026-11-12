@@ -61,7 +61,7 @@ test("by default a new account asks, and is told it will be emailed once approve
   await page.goto("/onboarding");
   const ask = page.getByRole("button", { name: "Request access" });
   await expect(ask).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByLabel("Name your household")).toHaveCount(0);
+  await expect(page.getByLabel("Name your home")).toHaveCount(0);
   await ask.click();
 
   await expect(page.getByRole("heading", { name: "Request sent" })).toBeVisible();
@@ -75,13 +75,13 @@ test("switched on: a new account names its household straight away, with no wait
   const calls = await signUp(context, "en", { status: 200, json: "00000000-0000-4000-8000-0000000000f1" });
 
   await page.goto("/onboarding");
-  await expect(page.getByLabel("Name your household")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByLabel("Name your home")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Request access" })).toHaveCount(0);
-  await expect(page.getByText("Creating a household shares your Google name and email with Poofy Labs, who runs Miamus.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Creating a home shares your Google name and email with Poofy Labs, who runs Miamus.", { exact: false })).toBeVisible();
 
-  await page.getByLabel("Name your household").fill("The Lee Residence");
+  await page.getByLabel("Name your home").fill("The Lee Residence");
   await page.getByRole("button", { name: "Pets" }).click();
-  await page.getByRole("button", { name: "Create household" }).click();
+  await page.getByRole("button", { name: "Create home" }).click();
 
   await expect.poll(() => calls.rpc.filter((c) => c.name === "create_household").length).toBe(1);
   expect(calls.rpc.find((c) => c.name === "create_household")?.body).toEqual({ p_name: "The Lee Residence", p_has_pets: true });
@@ -95,8 +95,8 @@ test("switched on, over the day's cap: the request is filed and the screen promi
   });
 
   await page.goto("/onboarding");
-  await page.getByLabel("Name your household").fill("The Lee Residence", { timeout: 20_000 });
-  await page.getByRole("button", { name: "Create household" }).click();
+  await page.getByLabel("Name your home").fill("The Lee Residence", { timeout: 20_000 });
+  await page.getByRole("button", { name: "Create home" }).click();
 
   await expect(page.getByRole("heading", { name: "Request sent" })).toBeVisible();
   await expect(page.getByText("We'll let you know by WhatsApp or email, usually within a day.")).toBeVisible();
@@ -139,12 +139,12 @@ test("switched on, refused, then approved after all: the form works again and th
   );
 
   await page.goto("/onboarding");
-  await page.getByLabel("Name your household").fill("The Lee Residence", { timeout: 20_000 });
-  const create = page.getByRole("button", { name: "Create household" });
+  await page.getByLabel("Name your home").fill("The Lee Residence", { timeout: 20_000 });
+  const create = page.getByRole("button", { name: "Create home" });
   await create.click();
   await expect.poll(() => calls.rpc.filter((c) => c.name === "request_household_access").length).toBe(1);
   await expect(create).toBeEnabled();
-  await expect(page.getByLabel("Name your household")).toHaveValue("The Lee Residence");
+  await expect(page.getByLabel("Name your home")).toHaveValue("The Lee Residence");
   await create.click();
   await expect.poll(() => calls.rpc.filter((c) => c.name === "create_household").length).toBe(2);
 });

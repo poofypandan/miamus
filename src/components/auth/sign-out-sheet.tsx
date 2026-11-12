@@ -65,7 +65,7 @@ export function SignOutSheet({
   const id = lang === "id";
   const comeBack = id
     ? "Rumah tangga dan semua datanya tetap aman. Masuk lagi kapan saja dengan Google. Notifikasi di HP ini berhenti sampai Anda masuk lagi."
-    : "Your household and everything in it stay safe. Sign in again any time with Google. Notifications on this phone stop until you do.";
+    : "Your home and everything in it stay safe. Sign in again any time with Google. Notifications on this phone stop until you do.";
 
   async function confirm() {
     setBusy(true);

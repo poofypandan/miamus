@@ -23,7 +23,7 @@ export function KakakThinking() {
     elapsed < 2500
       ? t("One moment…", "Sebentar…")
       : elapsed < 6000
-        ? t("Checking it against your household…", "Kakak mencocokkan dengan data rumah Anda…")
+        ? t("Checking it against your home…", "Kakak mencocokkan dengan data rumah Anda…")
         : elapsed < 12000
           ? t("Putting it together…", "Kakak sedang menyiapkan…")
           : t("Taking a little longer than usual…", "Sedikit lebih lama dari biasanya…");

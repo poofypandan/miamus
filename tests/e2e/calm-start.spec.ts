@@ -119,13 +119,29 @@ test("with a first task given, the prompts wait while the checklist asks itself;
   await expect(page.getByRole("region", { name: "Turn on notifications" })).toHaveCount(0);
   expect(await page.evaluate((id) => localStorage.getItem(`miamus.setup-stage.${id}`), HOUSEHOLD_ID)).toBe("new");
 
-  // Not now: the card goes, and the prompts take over.
+  // Not now: the card goes, and the prompts take over, one at a time
+  // (Phase 175 check, P2): notifications first, the Home Screen tip after.
   await card.getByRole("button", { name: "Not now" }).click();
   await expect(card).toHaveCount(0);
-  await expect(page.getByText("Add Miamus to your Home Screen for notifications.")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Turn on notifications" })).toBeVisible();
+  const prompt = page.getByRole("region", { name: "Turn on notifications" });
+  const tip = page.getByText("Add Miamus to your Home Screen for notifications.");
+  await expect(prompt).toBeVisible();
+  await expect(tip).toHaveCount(0);
   expect(await page.evaluate((id) => localStorage.getItem(`miamus.setup-stage.${id}`), HOUSEHOLD_ID)).toBe("task");
   await expect(whatsNew(page)).toHaveCount(0);
+
+  // Undo brings the card back, and both wait again while it asks itself.
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(card).toBeVisible();
+  await expect(prompt).toHaveCount(0);
+  await expect(tip).toHaveCount(0);
+
+  // Hidden again and the prompt put off: now the tip may ask.
+  await card.getByRole("button", { name: "Not now" }).click();
+  await expect(prompt).toBeVisible();
+  await prompt.getByRole("button", { name: "Not now" }).first().click();
+  await expect(prompt).toHaveCount(0);
+  await expect(tip).toBeVisible();
 });
 
 test("an established household sees one What's new card a week, not the backlog", async ({ context, page }) => {

@@ -1,4 +1,4 @@
-import { use, useEffect, useSyncExternalStore } from "react";
+import { use, useEffect, useRef, useSyncExternalStore } from "react";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { waitForSession } from "@/lib/auth/device-session";
 
@@ -112,6 +112,14 @@ export function createResource<T>(load: () => Promise<T>) {
 
   return function useResource(): ResourceState<T> {
     const key = getActiveHouseholdId();
+    // Whether this component is already on screen. Only its first render
+    // may suspend (Phase 175 check, P8): a component that suspends halfway
+    // through a later render (its household changed, or the cache was
+    // missing an entry) stops between hooks, and React warned "a change in
+    // the order of Hooks called by StaffTab" (hook 22 here, the next one
+    // after use()). On screen, it draws with no value and re-renders when
+    // the load lands, as after a slow first load (FIRST_READ_MAX_WAIT_MS).
+    const committed = useRef(false);
     // Re-render when any refresh lands.
     useSyncExternalStore(
       subscribe,
@@ -122,7 +130,7 @@ export function createResource<T>(load: () => Promise<T>) {
 
     // The first read suspends — but never on the server, where there is no
     // session to load with and nothing would ever resolve.
-    if (!entry.settled && typeof window !== "undefined") {
+    if (!entry.settled && !committed.current && typeof window !== "undefined") {
       // One promise per entry, kept: use() must be handed the same promise on
       // every render, or it suspends again on each one.
       entry.firstRead ??= Promise.race([
@@ -131,6 +139,10 @@ export function createResource<T>(load: () => Promise<T>) {
       ]);
       use(entry.firstRead);
     }
+
+    useEffect(() => {
+      committed.current = true;
+    }, []);
 
     useEffect(() => {
       const current = entryFor(key);

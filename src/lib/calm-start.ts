@@ -11,7 +11,10 @@
  *      week on this phone; until 7 days have passed no other card shows.
  *   5. Add to Home Screen and the notifications prompt wait until a first
  *      task is given and the checklist is off screen (Phase 175 S2: while
- *      it shows, its own "Turn on notifications" row asks instead).
+ *      it shows, its own "Turn on notifications" row asks instead). Then
+ *      one at a time, the notifications prompt first, and neither while the
+ *      checklist is back on screen after Undo (Phase 175 check, P2;
+ *      hooks/use-top-banners).
  *   6. "Any pets at home?" never asks a household made since the sign-up
  *      question (Phase 162), which already answered.
  *

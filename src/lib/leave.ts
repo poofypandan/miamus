@@ -107,6 +107,21 @@ export function ownLeaveStatus(
 }
 
 /** Where an admin approves or rejects a request: the WhatsApp deep link. */
+/**
+ * Requests still waiting for an owner's answer: pending, and not over yet
+ * (a request whose days have passed changes nothing any more). Oldest start
+ * first. The Settings → Leave row and Today's "Waiting for you" (Phase 175)
+ * both count these.
+ */
+export function pendingLeave<L extends Pick<LeaveRequest, "status" | "start_date" | "end_date">>(
+  leaves: L[],
+  today: string
+): L[] {
+  return leaves
+    .filter((l) => l.status === "pending" && l.end_date >= today)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+}
+
 export function leaveApprovalPath(id: string): string {
   return `/dashboard/leave/${id}`;
 }

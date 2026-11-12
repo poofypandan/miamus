@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2, PauseCircle, UserRoundCheck, Users, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +88,7 @@ const MAX_PREVIEW_DAYS = 62;
 function LeaveApproval() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const back = useBackTo();
   const isOwner = useRequireOwner();
   const { leaveRequests, decideLeave, householdTasks, memberProfile, tenantReady } = useHousehold();
   const { profiles, allProfiles } = useStaffProfiles();
@@ -202,7 +203,7 @@ function LeaveApproval() {
         });
         announce(t(`Leave for ${name} approved`, `Cuti ${name} disetujui`));
       }
-      router.push(moduleHref("access"));
+      router.push(back.href);
     } catch (err) {
       console.error(err);
       toast.error(
@@ -351,15 +352,26 @@ function LeaveApproval() {
   );
 }
 
+/**
+ * Where the page goes back to, and after a decision: Today when opened from
+ * its "Waiting for you" (Phase 175, `?from=today`), else Settings, where
+ * Leave lives (and where the push and WhatsApp links have always led).
+ */
+function useBackTo(): { href: string; fromToday: boolean } {
+  const fromToday = useSearchParams().get("from") === "today";
+  return { href: moduleHref(fromToday ? "agenda" : "access"), fromToday };
+}
+
 function Shell({ children }: { children: React.ReactNode }) {
   const t = useT();
+  const back = useBackTo();
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
       <Link
-        href={moduleHref("access")}
+        href={back.href}
         className="flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground"
       >
-        <ArrowLeft className="size-3.5" /> {t("People", "Orang")}
+        <ArrowLeft className="size-3.5" /> {back.fromToday ? t("Today", "Hari ini") : t("People", "Orang")}
       </Link>
       <h1 className="text-lg font-semibold text-gray-900">{t("Leave request", "Permintaan cuti")}</h1>
       {children}

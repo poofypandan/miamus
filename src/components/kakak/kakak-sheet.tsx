@@ -864,7 +864,7 @@ function refusal(reason: RefusalReason | "unavailable", t: T): { text: string; p
     case "off":
     case "not_allowed":
       return {
-        text: t("Kakak is turned off for this household.", "Kakak sedang dimatikan untuk rumah ini."),
+        text: t("Kakak is turned off for this home.", "Kakak sedang dimatikan untuk rumah ini."),
         problem: { icon: CircleAlert, next: "none" },
       };
     case "unavailable":
@@ -877,7 +877,7 @@ function refusal(reason: RefusalReason | "unavailable", t: T): { text: string; p
       };
     default:
       return {
-        text: t("Only an admin of this household can use Kakak.", "Hanya admin rumah ini yang bisa memakai Kakak."),
+        text: t("Only an admin of this home can use Kakak.", "Hanya admin rumah ini yang bisa memakai Kakak."),
         problem: { icon: CircleAlert, next: "none" },
       };
   }

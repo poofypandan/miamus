@@ -51,7 +51,7 @@ test("blocked: says so in the owner's language, and Details opens the settings",
 
   await expect(page).toHaveURL(/module=access&page=notifications/);
   await expect(page.getByText("Diblokir", { exact: true })).toBeVisible();
-  await expect(page.getByText(/diblokir di perangkat ini/)).toBeVisible();
+  await expect(page.getByText(/diblokir di HP ini/)).toBeVisible();
   // Not shown twice on the page that already explains it.
   await expect(page.getByRole("region", { name: "Notifikasi diblokir" })).toHaveCount(0);
 });

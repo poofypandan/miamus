@@ -75,7 +75,7 @@ test("a new household sees the first page, and its steps tick off from real data
   await expect(card).toContainText("You only hear about what didn't happen.");
   await expect(step(page, "home")).toHaveAttribute("data-done", "true");
   await expect(step(page, "home")).toContainText("Rumah Uji");
-  await expect(step(page, "setup")).toContainText("Set up your home");
+  await expect(step(page, "setup")).toContainText("Add your staff and chores");
   await expect(step(page, "setup").getByRole("button", { name: "Use the starter list" })).toBeVisible();
   // Nothing depends on Kakak: she isn't on in this home, so no button for her.
   await expect(card.getByRole("button", { name: "Or tell Kakak" })).toHaveCount(0);

@@ -208,17 +208,17 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
 
   return (
     <Screen icon={<UserRoundPlus className="size-5" />}>
-      <Heading>{t("Set up a household", "Buat rumah baru")}</Heading>
+      <Heading>{t("Set up a new home", "Buat rumah baru")}</Heading>
       <StaffHint />
       <Body>
         {t(
-          "Miamus is invite-only while it's in beta. Ask for access to set up a new household, and we'll review your request.",
+          "Miamus is invite-only while it's in beta. Ask for access to set up a new home, and we'll review your request.",
           "Miamus masih dalam tahap beta dan hanya dengan undangan. Minta akses untuk membuat rumah baru, dan kami akan meninjau permintaan Anda."
         )}
       </Body>
       <Body muted>
         {t(
-          "Joining someone else's household? Open the invite link they sent you.",
+          "Joining someone else's home? Open the invite link they sent you.",
           "Ingin bergabung ke rumah orang lain? Buka link undangan yang mereka kirim."
         )}
       </Body>
@@ -535,7 +535,7 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
         setFailed(t("Use a name of up to 60 characters.", "Gunakan nama paling banyak 60 karakter."));
         break;
       default:
-        setFailed(t("Couldn't create your household. Try again.", "Rumah gagal dibuat. Coba lagi."));
+        setFailed(t("Couldn't create your home. Try again.", "Rumah gagal dibuat. Coba lagi."));
     }
     setSaving(false);
   }
@@ -563,14 +563,14 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         {t(
-          "Let's set up your household. It takes one step — then you can add your chores, staff and family.",
+          "Let's set up your home. It takes one step — then you can add your chores, staff and family.",
           "Mari siapkan rumah Anda. Cukup satu langkah — lalu Anda bisa menambahkan tugas, staf dan keluarga."
         )}
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-3">
         <Label htmlFor="residence" className="text-sm font-medium text-gray-900">
-          {t("Name your household", "Beri nama rumah Anda")}
+          {t("Name your home", "Beri nama rumah Anda")}
         </Label>
         <Input
           id="residence"
@@ -590,14 +590,14 @@ function CreateHouseholdForm({ onNotApproved }: { onNotApproved: () => Promise<v
         </p>
         <WhoLivesHere hasPets={hasPets} onChange={setHasPets} />
         <Button type="submit" disabled={saving || !name.trim()} className="min-h-[52px]">
-          {saving && <Loader2 className="animate-spin" />} {t("Create household", "Buat rumah")}
+          {saving && <Loader2 className="animate-spin" />} {t("Create home", "Buat rumah")}
         </Button>
         {failed && <p className="text-sm text-destructive">{failed}</p>}
         <p className="text-xs leading-relaxed text-muted-foreground">
           {/* Moved here from the Request screen (Phase 172): creating a
               household is now what shares it. */}
           {t(
-            `Creating a household shares your Google name and email with ${LEGAL.operatorName}, who runs Miamus. By creating it, you confirm you've read the `,
+            `Creating a home shares your Google name and email with ${LEGAL.operatorName}, who runs Miamus. By creating it, you confirm you've read the `,
             `Membuat rumah membagikan nama dan email Google Anda kepada ${LEGAL.operatorName}, pengelola Miamus. Dengan membuatnya, Anda menyatakan sudah membaca `
           )}
           <PrivacyLink />
