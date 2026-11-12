@@ -41,6 +41,17 @@ function DashboardShell({ children }: { children: ReactNode }) {
   }, []);
 
   const ownerLocale = useOwnerLocale();
+  // The browser tab and the app switcher in the owner's language (demo check
+  // P-20). The page's own title stays Indonesian: it is also the WhatsApp
+  // link card, read before anyone has signed in.
+  useEffect(() => {
+    if (ownerLocale !== "en") return;
+    const before = document.title;
+    document.title = "Miamus for your home";
+    return () => {
+      document.title = before;
+    };
+  }, [ownerLocale]);
   useOfflineSync(ownerLocale);
   usePushResync();
   const { refresh, loading, tenantReady, roleHydrated } = useHousehold();

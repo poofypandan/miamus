@@ -100,3 +100,13 @@ export function codeFromFragment(hash: string): string | null {
   const code = match[1].toUpperCase().replace(/[^A-Z0-9]/g, "");
   return code.length === 6 ? `${code.slice(0, 3)}-${code.slice(3)}` : null;
 }
+
+/**
+ * The code as the owner's screen writes it, XM9-3P7, while it is typed
+ * (demo check P-7). Letters and digits only, six at most; the dash comes in
+ * after the third, so Backspace past it just works. The server ignores it.
+ */
+export function typedHouseCode(input: string): string {
+  const plain = input.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+  return plain.length > 3 ? `${plain.slice(0, 3)}-${plain.slice(3)}` : plain;
+}

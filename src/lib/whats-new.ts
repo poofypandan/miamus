@@ -737,3 +737,18 @@ export function whatsNewEntry(id: string): WhatsNewEntry | undefined {
 export function storageKey(id: string): string {
   return `miamus.whats-new.${id}`;
 }
+
+/**
+ * A staff phone joining (invite link, house code, the owner's WhatsApp link):
+ * every staff tip in the app is older than the phone, so none of them is
+ * "Baru" to it. Marked as closed with the cards' own keys, so day one opens
+ * on the tasks, not on "Baru: Menu hari ini" (demo check P-13). Tips added
+ * after today still show. Never throws.
+ */
+export function markStaffTipsSeenOnJoin(): void {
+  try {
+    for (const entry of STAFF_WHATS_NEW) window.localStorage.setItem(storageKey(entry.id), "seen");
+  } catch {
+    // Storage off: the tips show as before.
+  }
+}

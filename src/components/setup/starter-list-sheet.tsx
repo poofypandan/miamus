@@ -1,5 +1,6 @@
 "use client";
 
+import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -19,6 +20,7 @@ import {
   alreadyInHousehold,
   buildSetupDraft,
   countsFor,
+  setupAddLabel,
   shapeFromHousehold,
   toApplyPayload,
   type Shape,
@@ -48,6 +50,7 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
   // unlike a new household's review, where everything does.
   const [ticked, setTicked] = useState<Set<string>>(() => new Set());
   const [saving, setSaving] = useState(false);
+  const adding = useSubmitLock();
   // Opened again: start from the household as it is now.
   useEffect(() => {
     if (open) {
@@ -74,6 +77,15 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
     return new Set(keys.filter((k) => !added.has(k) && !ticked.has(k)));
   }, [draft, added, ticked]);
   const counts = countsFor(draft, unticked, added);
+  // Everything in the list is already in the household: say so, rather than
+  // a disabled "Add 0" (demo check F-6).
+  const allAdded =
+    draft.rooms.every((r) => added.has(r.key)) &&
+    draft.chores.every((c) => added.has(c.key)) &&
+    draft.bills.every((b) => added.has(`bill:${b.key}`));
+  const addLabel =
+    setupAddLabel(counts, 0, locale) ??
+    (allAdded ? t("Everything's added", "Semua sudah ditambahkan") : t("Tick what to add", "Centang yang mau ditambahkan"));
   // Until every set-up chore is read, "Added" can't be trusted: wait.
   const ready = loaded && locations !== null;
 
@@ -87,19 +99,22 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
   }
 
   async function add() {
-    if (saving || !ready) return;
+    // A ref, so two taps in one tick can't both send the list (demo check P-1).
+    if (saving || !ready || !adding.acquire()) return;
     setSaving(true);
     const outcome = await applyHouseholdSetup(
       activeHouseholdId,
       toApplyPayload(draft, unticked, added, [])
     );
     if (!outcome.ok) {
+      adding.release();
       setSaving(false);
       toast.error(t("Couldn't add the list. Nothing was added; try again.", "Daftar gagal ditambahkan. Belum ada yang ditambahkan; coba lagi."));
       return;
     }
     const n = outcome.result.rooms_added + outcome.result.chores_added + outcome.result.bills_added;
     await Promise.allSettled([refresh({ silent: true }), Promise.resolve(reloadRooms())]);
+    adding.release();
     setSaving(false);
     onOpenChange(false);
     toast.success(t(`Added ${n}`, `${n} ditambahkan`));
@@ -153,7 +168,7 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
           </p>
           <Button className="min-h-[48px]" disabled={!ready || saving || counts.total === 0} onClick={() => void add()}>
             {saving && <Loader2 className="animate-spin" />}
-            {t(`Add ${counts.total}`, `Tambah ${counts.total}`)}
+            {addLabel}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -283,3 +283,25 @@ describe("the evening summary", () => {
     expect(summaryHref(TODAY)).toBe("/dashboard?module=agenda&summary=2026-11-10");
   });
 });
+
+// Demo check P-9: nothing runs out on a walk, lights off or play.
+describe("reasonsFor a routine kind", () => {
+  it("leaves out Barang habis for a walk, keeps it for fresh water", () => {
+    expect(reasonsFor("routine", "walk")).toEqual(["done_by_other", "other"]);
+    expect(reasonsFor("routine", "lights")).not.toContain("out_of_stock");
+    expect(reasonsFor("routine", "water")).toContain("out_of_stock");
+    expect(reasonsFor("routine", null)).toContain("out_of_stock");
+  });
+});
+
+// Demo check P-10: the staff member's note is on the owner's row.
+describe("ownerCouldntRowLine with a note", () => {
+  it("quotes the note after the reason", () => {
+    const row = ownerCouldntRowLine(
+      { reason: "other", created_at: "2026-11-11T15:22:00Z", note: "  Hujan\n deras " },
+      "id",
+      "Syam"
+    );
+    expect(row.startsWith("Tidak bisa: lainnya · “Hujan deras” · Syam · ")).toBe(true);
+  });
+});

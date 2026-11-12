@@ -460,6 +460,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     dunno: "Don't know",
     stuck: "(Practice) I can't set that up in practice mode. Try: \"Ari mops the terrace every Monday at 9\".",
     noChange: "(Practice) In practice mode I can only change a chore's day, time or person. Cancel and type the whole thing again.",
+    already: "(Practice) That's already in your routines, at that time. Nothing to add.",
   },
   id: {
     here: "(Latihan) Ini yang akan Kakak tambahkan:",
@@ -472,6 +473,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     dunno: "Tidak tahu",
     stuck: "(Latihan) Ini belum bisa di mode latihan. Coba: \"Ari pel teras setiap Senin jam 9\".",
     noChange: "(Latihan) Di mode latihan, Kakak hanya bisa mengubah hari, jam atau orang untuk tugas. Batalkan lalu ketik ulang semuanya.",
+    already: "(Latihan) Itu sudah ada di rutinitas Anda, di jam itu. Tidak ada yang perlu ditambahkan.",
   },
 };
 
@@ -519,6 +521,9 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
     const asked = timesFrom(first).slice(0, 12);
     // Skips a time every named pet already has; the route drops the rest per pet.
     const times = asked.filter((time) => pets.some((pet) => newPetTimes(household, pet.ref, kind, [time]).length > 0));
+    // Every named pet already has it at every time asked: say so, rather
+    // than "can't do that in practice mode" (demo check P-21).
+    if (times.length === 0 && pets.length > 0 && asked.length > 0) return message(model, [text(copy.already)]);
     if (times.length === 0) return message(model, [text(copy.stuck)]);
     const basic = kind === "meal" || kind === "potty";
     // A person, a reminder and an alert only on a routine (meals and potty are for anyone).

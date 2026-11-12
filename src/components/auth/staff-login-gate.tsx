@@ -21,6 +21,11 @@ import { StaffSplash } from "@/components/staff/staff-splash";
 import { StaffLoadingScreen } from "@/components/brand/loading-screens";
 import { dataProvider } from "@/lib/data";
 import { readSessionState, waitForSession } from "@/lib/auth/device-session";
+import { clearHouseholdDataOnThisPhone, PHONE_REMOVED_KEY } from "@/lib/local-data";
+import { phoneLinkedAnywhere, phoneLinkState } from "@/lib/phone-link";
+import { forgetOutbox } from "@/lib/offline-queue";
+import { forgetPhotoQueue } from "@/lib/photo-queue";
+import { readStoredTenantId } from "@/lib/tenant";
 import { cn } from "@/lib/utils";
 import { activeMemberProfile } from "@/lib/member-identity";
 import type { PinCheck } from "@/lib/data/types";
@@ -112,7 +117,7 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
   // The remembered person was taken off the roster (migrations/109, /119):
   // forget them, so the phone asks "who is on duty?" again instead of
   // carrying on in a removed person's name.
-  const forget = useCallback(() => {
+  const forget = useCallback((quiet: boolean) => {
     setStaffId(null);
     setStaffName(null);
     try {
@@ -121,7 +126,7 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
     } catch {
       // Not stored, so nothing to forget.
     }
-    toast.info("Nama ini sudah tidak ada di daftar staf. Pilih nama Anda lagi.");
+    if (!quiet) toast.info("Nama ini sudah tidak ada di daftar staf. Pilih nama Anda lagi.");
   }, []);
 
   const identify = useCallback((profile: StaffProfile) => {
@@ -242,15 +247,54 @@ function RemovedFromRosterCheck({
   onRemoved,
 }: {
   staffId: string;
-  onRemoved: () => void;
+  /** quiet: the whole roster came back empty, so the phone itself was most
+   * likely removed; the gate says so instead of "pick your name again". */
+  onRemoved: (quiet: boolean) => void;
 }) {
   const { allProfiles } = useStaffProfiles();
   useEffect(() => {
     if (!allProfiles) return;
     const person = allProfiles.find((p) => p.id === staffId);
-    if (!person || person.archived_at) onRemoved();
+    if (!person || person.archived_at) onRemoved(allProfiles.length === 0);
   }, [allProfiles, staffId, onRemoved]);
   return null;
+}
+
+/**
+ * True only when the server says this phone no longer reaches its household:
+ * it was linked before (a stored household, or already found removed once),
+ * and get_user_household_ids now leaves that household out. "no_answer" and
+ * "unknown" are false, so a slow or offline load never reads as removed.
+ */
+async function wasRemoved(): Promise<boolean> {
+  let marked = false;
+  try {
+    marked = window.localStorage.getItem(PHONE_REMOVED_KEY) === "1";
+  } catch {
+    // Storage blocked: only the stored household can say.
+  }
+  const household = readStoredTenantId();
+  if (household) return (await phoneLinkState(household)) === "unlinked";
+  if (marked) return (await phoneLinkedAnywhere()) === "unlinked";
+  return false;
+}
+
+/**
+ * What owner sign-out removes, removed here too: the household's menu,
+ * recipes, features, snapshot, the household id and who this phone was
+ * (local-data.ts), and the saves and photos still waiting to be sent. The marker keeps the "removed" message on the next load.
+ */
+function forgetRemovedPhone() {
+  clearHouseholdDataOnThisPhone();
+  // Waiting saves and photos too, as sign-out clears them (Codex P2, PR #102):
+  // they can't be sent from a removed phone, and they hold household data.
+  void forgetOutbox();
+  void forgetPhotoQueue();
+  try {
+    window.localStorage.setItem(PHONE_REMOVED_KEY, "1");
+  } catch {
+    // Storage blocked: nothing was kept to begin with.
+  }
 }
 
 type GateStep =
@@ -264,6 +308,11 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
   // No session on this phone: it hasn't redeemed an invite or a house code,
   // so there is no roster it may read. Asked first, so nothing goes out.
   const [notLinked, setNotLinked] = useState(false);
+  // The owner removed this phone (Rumah → Masuk staf → HP yang terhubung →
+  // Hapus): it still has a sign-in, but the roster comes back empty because
+  // the phone no longer reaches the household (demo check F-4). Only set on
+  // the server's clear "unlinked"; offline or slow answers never set it.
+  const [removed, setRemoved] = useState(false);
   // Bumped to fetch the roster again — by the button, the timer and the
   // "online" event below (Phase 146).
   const [attempt, setAttempt] = useState(0);
@@ -298,10 +347,17 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
       // Archived people are off the roster (Phase 141) — their PIN is already
       // revoked, so leaving the name here would only offer a dead end, or
       // worse, let whoever holds the phone set a fresh PIN and come back.
-      .then(
-        (rows) =>
-          live && setProfiles(rows.filter((row) => !row.user_id && !row.archived_at))
-      )
+      .then(async (rows) => {
+        if (!live) return;
+        // An empty roster from a phone that was linked before: ask whether it
+        // still is, before telling anyone "nobody is registered".
+        if (rows.length === 0 && (await wasRemoved())) {
+          if (!live) return;
+          setRemoved(true);
+          forgetRemovedPhone();
+        }
+        if (live) setProfiles(rows.filter((row) => !row.user_id && !row.archived_at));
+      })
       .then(() => live && setFailed(false))
       .catch((err) => {
         console.error(err);
@@ -380,6 +436,15 @@ function StaffGateScreen({ onIdentified }: { onIdentified: (profile: StaffProfil
         <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Memuat…
         </p>
+      ) : removed ? (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-sm text-muted-foreground" data-testid="phone-removed">
+            HP ini sudah dihapus dari rumah. Minta link baru ke pemilik rumah.
+          </p>
+          <Button asChild variant="outline" className="min-h-[44px] rounded-lg">
+            <Link href="/join/code">Masuk dengan kode rumah</Link>
+          </Button>
+        </div>
       ) : profiles.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground">
           Belum ada nama terdaftar. Minta admin rumah menambahkan nama Anda dulu.
@@ -539,7 +604,7 @@ function PinStep({
           {creating
             ? confirming
               ? "Ulangi PIN untuk memastikan"
-              : "Buat PIN baru (4 Angka)"
+              : "Buat PIN baru (4 angka)"
             : "Masukkan PIN"}
         </p>
       </div>

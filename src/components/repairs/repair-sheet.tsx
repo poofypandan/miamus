@@ -136,10 +136,15 @@ function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallb
   return (
     <>
       <SheetHeader className="gap-1 border-b pb-3">
-        <SheetTitle className="flex items-center gap-2 pr-8 text-lg">
-          {repair.urgent && <Siren className="size-5 shrink-0 text-red-700" aria-label={t("Urgent", "Darurat")} />}
-          {repair.title}
-        </SheetTitle>
+        {/* The word as well as the siren (demo check P-15): an icon alone
+            didn't say "urgent" to anyone who hadn't learned it. */}
+        {repair.urgent && (
+          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+            <Siren className="size-3.5 shrink-0" aria-hidden />
+            {t("Urgent", "Darurat")}
+          </span>
+        )}
+        <SheetTitle className="pr-8 text-lg">{repair.title}</SheetTitle>
         <SheetDescription>
           {[place, `${reporter} · ${shortDate(repair.created_at, locale)}`].filter(Boolean).join(" · ")}
         </SheetDescription>

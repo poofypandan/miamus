@@ -283,6 +283,8 @@ function StartForm({
   const [staffId] = useState(() => readActiveStaffId());
   // An owner on either view files as an owner: their repair starts open.
   const owner = userRole === "owner";
+  // An owner is told it's saved, not that "the owners" can see it (demo check P-16).
+  const savedLine = owner ? t("Saved.", "Tersimpan.") : t("Saved. Shown to the owners.", "Tersimpan. Pemilik rumah bisa melihatnya.");
 
   // Open repairs without someone on them now, the last room's first.
   const choices = useMemo(() => {
@@ -381,7 +383,7 @@ function StartForm({
       toast.success(
         outcome.status === "waiting"
           ? t("Kept on this phone. It sends itself when there's signal.", "Tersimpan di HP. Terkirim otomatis saat ada sinyal.")
-          : t("Saved. Shown to the owners.", "Tersimpan. Pemilik rumah bisa melihatnya."),
+          : savedLine,
         {
           duration: 8000,
           action: {
@@ -680,6 +682,10 @@ function FinishForm({
   const t = useWords(locale, asStaff);
   const reader: OwnerLocale = asStaff ? "id" : locale;
   const { repairs, supervision } = useRepairs();
+  const { userRole } = useHousehold();
+  // An owner is told it's saved, not that "the owners" can see it (demo check P-16).
+  const savedLine =
+    userRole === "owner" ? t("Saved.", "Tersimpan.") : t("Saved. Shown to the owners.", "Tersimpan. Pemilik rumah bisa melihatnya.");
   const repair = repairs.find((r) => r.id === visit.repair_id);
   // Who this Selesai frees: their next walk-in waits behind it in the queue.
   const supervisor = supervision.find((s) => s.visit_id === visit.id && !s.ended_at)?.staff_id ?? null;
@@ -704,7 +710,7 @@ function FinishForm({
       toast.success(
         result.status === "waiting"
           ? t("Kept on this phone. It sends itself when there's signal.", "Tersimpan di HP. Terkirim otomatis saat ada sinyal.")
-          : t("Saved. Shown to the owners.", "Tersimpan. Pemilik rumah bisa melihatnya."),
+          : savedLine,
         {
           duration: 8000,
           action: {

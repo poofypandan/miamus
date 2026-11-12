@@ -26,6 +26,7 @@ import {
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
 import { useFormatTime } from "@/components/ui/ui-labels";
@@ -94,6 +95,9 @@ export function AddRoutineSheet({
   const editing = !!target && "rows" in target;
   const [draft, setDraft] = useState<RoutineDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  // Two taps in one tick must not save twice (demo check F-1); held while
+  // the sheet closes after a save, released when it opens again.
+  const lock = useSubmitLock();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [showEnds, setShowEnds] = useState(false);
   // The chip the owner picked; null until they pick one for a new routine, so
@@ -109,6 +113,8 @@ export function AddRoutineSheet({
       setDraft(null);
       return;
     }
+    lock.release();
+    setSaving(false);
     const next = "rows" in target ? draftFromRows(target.rows, today) : newDraft("walk", target.petIds, today);
     // For a new routine the draft's kind is a placeholder until a chip is picked.
     setDraft("rows" in target ? next : { ...next, title: "" });
@@ -116,7 +122,7 @@ export function AddRoutineSheet({
     setShowEnds(!!next.endsOn);
     setConfirmRemove(false);
     // `today` changes only at midnight; re-deriving then is fine.
-  }, [target, today]);
+  }, [target, today, lock]);
 
   const petsById = useMemo(() => new Map(pets.map((p) => [p.id, p])), [pets]);
   // An archived pet can still be on an old row; it isn't offered, and isn't saved.
@@ -188,6 +194,7 @@ export function AddRoutineSheet({
       );
       return;
     }
+    if (!lock.acquire()) return;
     setSaving(true);
     try {
       const existing = "rows" in target ? target.rows : [];
@@ -208,11 +215,12 @@ export function AddRoutineSheet({
           ? t("Routine saved", "Rutinitas disimpan")
           : t(`${kindLabel(picked!)} added`, `${kindLabel(picked!)} ditambahkan`)
       );
+      // Saving and the lock stay held while the sheet closes.
       onClose();
     } catch (err) {
       console.error(err);
       toast.error(t("Routine not saved. Try again.", "Rutinitas gagal disimpan. Coba lagi."));
-    } finally {
+      lock.release();
       setSaving(false);
     }
   }

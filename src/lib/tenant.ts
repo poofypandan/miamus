@@ -14,6 +14,8 @@
  * their next fetch would come back empty (Phase 86C).
  */
 
+import { PHONE_REMOVED_KEY } from "@/lib/local-data";
+
 /** Banyuwangi 11 — the household that existed before any of this. */
 export const DEFAULT_HOUSEHOLD_ID = "975f0914-4d0d-43ad-8dee-a967d9bd10cd";
 
@@ -44,6 +46,8 @@ export function readStoredTenantId(): string | null {
 export function storeTenantId(id: string): void {
   try {
     window.localStorage.setItem(TENANT_STORAGE_KEY, id);
+    // Linked again: no longer "this phone was removed" (demo check F-4).
+    window.localStorage.removeItem(PHONE_REMOVED_KEY);
   } catch {
     // The redirect still works; this phone just asks again next time.
   }

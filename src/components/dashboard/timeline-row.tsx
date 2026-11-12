@@ -159,6 +159,13 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
       ? "border-l-[3px] border-l-amber-500 bg-amber-50 pl-1.5"
       : categoryCardTint(group.category);
   const consolidated = group.category === "medication" && group.titles.length > 1;
+  // Which pet(s) the row is for, in words (demo check F-2): two dogs with the
+  // same starter walk drew two identical "06.30 Jalan pagi" rows, told apart
+  // only by an avatar that is the same grey placeholder for a pet with no photo.
+  const petNames = distinct(
+    group.items.map((item) => item.entityName || pets.find((p) => p.id === item.entityId)?.name).filter(Boolean)
+  ).join(", ");
+  const withPets = (text: string) => (petNames ? `${text} · ${petNames}` : text);
   const couldntLine =
     explained.length > 0
       ? ownerCouldntRowLine(
@@ -202,7 +209,7 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
       {consolidated ? (
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-medium">
-            {t("Medicines", "Obat")} ({group.titles.length})
+            {withPets(`${t("Medicines", "Obat")} (${group.titles.length})`)}
           </span>
           <span className="truncate text-xs text-muted-foreground">
             {group.titles.join(" · ")}
@@ -210,7 +217,7 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
         </span>
       ) : walkLine || group.note ? (
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-medium">{group.title}</span>
+          <span className="truncate font-medium">{withPets(group.title)}</span>
           {walkLine && (
             <span className="truncate text-xs text-muted-foreground tabular-nums" data-testid="owner-walk-line">
               {walkLine}
@@ -219,7 +226,7 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
           {!walkLine && group.note && <span className="truncate text-xs text-muted-foreground">{group.note}</span>}
         </span>
       ) : (
-        <span className="flex-1 truncate font-medium">{group.title}</span>
+        <span className="flex-1 truncate font-medium">{withPets(group.title)}</span>
       )}
       <div className="flex shrink-0 -space-x-4">
         {walkPhotos.map((log) => (
@@ -276,8 +283,10 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
         <CircleSlash className="size-3.5 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate">
           {couldntLine}
-          {explained.length > 0 && group.items.length > 1
-            ? ` · ${[...new Set(explained.map((e) => e.item.entityName))].join(", ")}`
+          {/* Always the pet, even on a one-pet row (F-2): "which one didn't
+              get walked?" is the first question. */}
+          {explained.length > 0
+            ? ` · ${distinct(explained.map((e) => e.item.entityName).filter(Boolean)).join(", ")}`
             : ""}
         </span>
       </button>
