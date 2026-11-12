@@ -1,6 +1,6 @@
 "use client";
 
-import { createStore, del, get, keys, set, type UseStore } from "idb-keyval";
+import { clear, createStore, del, get, keys, set, type UseStore } from "idb-keyval";
 import { dataProvider } from "@/lib/data";
 import { classifySubmitError } from "@/lib/submit-errors";
 
@@ -179,6 +179,21 @@ export async function discardPhoto(url: string): Promise<void> {
     await del(url, db());
   } catch (err) {
     console.error("Could not discard the queued photo", err);
+  }
+}
+
+/**
+ * Forgets every waiting photo, in memory and on the phone: a staff phone
+ * found removed from its household (demo check F-4, Codex P2 on PR #102).
+ * Never throws.
+ */
+export async function forgetPhotoQueue(): Promise<void> {
+  for (const url of [...states.keys()]) setState(url, null);
+  if (typeof indexedDB === "undefined") return;
+  try {
+    await clear(db());
+  } catch (err) {
+    console.error("Could not clear the photo queue", err);
   }
 }
 

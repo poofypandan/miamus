@@ -37,6 +37,28 @@ export function removedOnSignOut(key: string): boolean {
   return !KEPT_ON_SIGN_OUT.some((kept) => (kept.endsWith(".") ? key.startsWith(kept) : key === kept));
 }
 
+/**
+ * Set on a staff phone found removed from its household (demo check F-4),
+ * after its caches are cleared, so the next load still says "this phone was
+ * removed" rather than "nobody is registered". Holds only "1", no household
+ * data. Cleared when the phone is linked again (storeTenantId).
+ */
+export const PHONE_REMOVED_KEY = "miamus.phone-removed";
+
+/**
+ * Every household key signing out removes, from both storages on this phone
+ * (sessionStorage too: the owner's unlock time and the like). Never throws.
+ */
+export function clearHouseholdDataOnThisPhone(): void {
+  for (const storage of ["localStorage", "sessionStorage"] as const) {
+    try {
+      clearHouseholdKeys(window[storage]);
+    } catch {
+      // Storage blocked: nothing was stored to clear.
+    }
+  }
+}
+
 /** Removes every key signing out removes from `storage`; returns them. */
 export function clearHouseholdKeys(storage: Storage): string[] {
   const removed: string[] = [];

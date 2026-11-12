@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Archive, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { PhotoPicker } from "@/components/photo-picker";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { getPetMeta } from "@/lib/pets";
 import { photoSrc } from "@/lib/photos";
 import type { TaskEntity } from "@/types/database";
@@ -57,6 +58,9 @@ export function PetFormDialog({
     meta.full_image_url ?? null
   );
   const [submitting, setSubmitting] = useState(false);
+  // A double tap in one tick must not insert the pet twice (demo check F-1).
+  // Held after success while the dialog animates out; released on next open.
+  const lock = useSubmitLock();
   // True while a photo is being cropped or uploaded. Saving during that window
   // used to write the pet with no photo at all (Phase 104).
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -75,14 +79,19 @@ export function PetFormDialog({
       setFullImageUrl(meta.full_image_url ?? null);
       setPhotoBusy(false);
       setConfirmingDelete(false);
+      setSubmitting(false);
     }
   }
+  useEffect(() => {
+    if (open) lock.release();
+  }, [open, lock]);
 
   async function handleSubmit() {
     if (!name.trim()) {
       toast.error(t("Give the pet a name", "Beri nama hewannya"));
       return;
     }
+    if (!lock.acquire()) return;
     setSubmitting(true);
     try {
       const metadata = {
@@ -94,6 +103,7 @@ export function PetFormDialog({
       if (pet) {
         await updateEntity(pet.id, { name: name.trim(), metadata });
         toast.success(t("Pet updated", "Hewan diperbarui"));
+        onOpenChange(false);
       } else {
         const created = await createEntity({ entity_type: "pet", name: name.trim(), icon: "dog", metadata });
         // With the usual routines to offer, their sheet says the pet is in;
@@ -101,19 +111,19 @@ export function PetFormDialog({
         if (!onCreated) toast.success(t("Pet added", "Hewan ditambahkan"));
         onOpenChange(false);
         onCreated?.(created);
-        return;
       }
-      onOpenChange(false);
+      // Success: the button stays disabled (and the guard held) while the
+      // dialog animates out; the next open resets both.
     } catch (err) {
       console.error(err);
       toast.error(t("Failed to save pet", "Hewan gagal disimpan"));
-    } finally {
+      lock.release();
       setSubmitting(false);
     }
   }
 
   async function handleArchive() {
-    if (!pet) return;
+    if (!pet || !lock.acquire()) return;
     setSubmitting(true);
     try {
       await updateEntity(pet.id, { metadata: { ...pet.metadata, archived: true } });
@@ -122,13 +132,13 @@ export function PetFormDialog({
     } catch (err) {
       console.error(err);
       toast.error(t("Failed to archive pet", "Hewan gagal diarsipkan"));
-    } finally {
+      lock.release();
       setSubmitting(false);
     }
   }
 
   async function handleDelete() {
-    if (!pet) return;
+    if (!pet || !lock.acquire()) return;
     setSubmitting(true);
     try {
       await deleteEntity(pet.id);
@@ -137,7 +147,7 @@ export function PetFormDialog({
     } catch (err) {
       console.error(err);
       toast.error(t("Failed to delete pet", "Hewan gagal dihapus"));
-    } finally {
+      lock.release();
       setSubmitting(false);
     }
   }

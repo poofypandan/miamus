@@ -324,6 +324,10 @@ people are **staf** and **admin**.
 | Kitchen notes | **Catatan dapur** | Phase 170 PR C: neutral, never names the cook's role ("untuk yang memasak"). |
 | Add missing to Shopping / To buy / Check these / Not on your list / Enough | **Tambahkan yang kurang ke Belanja** / **Perlu dibeli** / **Cek dulu** / **Belum ada di daftar** / **Cukup** | Phase 170 PR C, the review sheet. Line: **Perlu 1,5 kg · ada 1 kg · beli 500 g**; on To buy **Beli 500 g**. |
 | Copy last week | **Salin minggu lalu** | Phase 170 PR C. |
+| This phone was removed from the house. Ask the owner for a new link. | **HP ini sudah dihapus dari rumah. Minta link baru ke pemilik rumah.** | Demo fixes F-4 (staff): a phone the owner removed, in place of "Belum ada nama terdaftar". |
+| No PIN yet? Open the link from the owner's WhatsApp. | **Belum punya PIN? Buka link dari WhatsApp pemilik rumah.** | Demo fixes F-3 (staff): the names screen after a typed house code, which can't set a first PIN. |
+| Add 19 rooms and 52 chores · Set up my home · Everything's added · Tick what to add | **Tambah 19 ruangan dan 52 tugas** · **Siapkan rumah** · **Semua sudah ditambahkan** · **Centang yang mau ditambahkan** | Demo fixes F-6: the setup and starter-list Add button, never a bare number. |
+| One more step, asked only once · Yes, save the note | **Satu langkah lagi, hanya ditanyakan sekali** · **Ya, simpan catatan** | Demo fixes F-5: the kitchen notes' health-data question, in the same sheet. |
 
 ## Formatting
 

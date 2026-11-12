@@ -19,6 +19,7 @@ import {
   alreadyInHousehold,
   buildSetupDraft,
   countsFor,
+  setupAddLabel,
   shapeFromHousehold,
   toApplyPayload,
   type Shape,
@@ -74,6 +75,15 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
     return new Set(keys.filter((k) => !added.has(k) && !ticked.has(k)));
   }, [draft, added, ticked]);
   const counts = countsFor(draft, unticked, added);
+  // Everything in the list is already in the household: say so, rather than
+  // a disabled "Add 0" (demo check F-6).
+  const allAdded =
+    draft.rooms.every((r) => added.has(r.key)) &&
+    draft.chores.every((c) => added.has(c.key)) &&
+    draft.bills.every((b) => added.has(`bill:${b.key}`));
+  const addLabel =
+    setupAddLabel(counts, 0, locale) ??
+    (allAdded ? t("Everything's added", "Semua sudah ditambahkan") : t("Tick what to add", "Centang yang mau ditambahkan"));
   // Until every set-up chore is read, "Added" can't be trusted: wait.
   const ready = loaded && locations !== null;
 
@@ -153,7 +163,7 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
           </p>
           <Button className="min-h-[48px]" disabled={!ready || saving || counts.total === 0} onClick={() => void add()}>
             {saving && <Loader2 className="animate-spin" />}
-            {t(`Add ${counts.total}`, `Tambah ${counts.total}`)}
+            {addLabel}
           </Button>
         </SheetFooter>
       </SheetContent>

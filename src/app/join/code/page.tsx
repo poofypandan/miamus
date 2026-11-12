@@ -70,6 +70,7 @@ function JoinWithCode() {
     return (
       <NamesStep
         people={step.people}
+        canClaim={!!claim}
         onPick={(person) => {
           if (person.has_pin) setStep({ ...step, kind: "pin", person });
           else if (person.claimable && claim) setStep({ ...step, kind: "claim", person });
@@ -199,19 +200,29 @@ function CodeStep({
 
 function NamesStep({
   people,
+  canClaim,
   onPick,
   onBack,
 }: {
   people: HouseCodePerson[];
+  /** Opened from the owner's WhatsApp link, which carries the claim code. */
+  canClaim: boolean;
   onPick: (person: HouseCodePerson) => void;
   onBack: () => void;
 }) {
+  // A typed code can never set a first PIN (audit L5), so this screen only
+  // promises "buat PIN" when the link's claim code is here (demo check F-3).
+  const claimHere = canClaim && people.some((p) => p.claimable);
+  const someoneWithoutPin = people.some((p) => !p.has_pin);
   return (
     <Screen>
       <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Siapa yang bertugas?</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        {people.some((p) => p.claimable) ? "Pilih nama Anda, lalu buat PIN." : "Pilih nama Anda."}
+        {claimHere ? "Pilih nama Anda, lalu buat PIN." : "Pilih nama Anda."}
       </p>
+      {!claimHere && someoneWithoutPin && (
+        <p className="mt-1 text-sm text-muted-foreground">Belum punya PIN? Buka link dari WhatsApp pemilik rumah.</p>
+      )}
       <div className="mt-6 flex flex-col gap-2">
         {people.map((person) => (
           <button
@@ -225,7 +236,7 @@ function NamesStep({
             </span>
             <span className="flex-1">{person.name}</span>
             {!person.has_pin &&
-              (person.claimable ? (
+              (person.claimable && canClaim ? (
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Buat PIN</span>
               ) : (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">Belum punya PIN</span>
@@ -233,7 +244,7 @@ function NamesStep({
           </button>
         ))}
       </div>
-      {people.some((p) => p.claimable) && (
+      {claimHere && (
         <div className="mt-4">
           <VideoTip id="staff-house-code" locale="id" />
         </div>

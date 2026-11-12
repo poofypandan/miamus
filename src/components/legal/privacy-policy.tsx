@@ -153,7 +153,7 @@ const COPY: Record<
           {
             ul: [
               "Your sign-in session, which staff name is selected on a shared phone, app-lock settings, and the language you picked (on the sign-in screen, and a copy of your account's language).",
-              "To keep working on bad Wi-Fi: a copy of the household data this phone last loaded (replaced on every load, and not used after 24 hours), routines, finished chores and food saved with no signal or a signal too weak to send, and photos waiting to upload, until they are sent, and the photos of a chore still in progress until it is finished. Signing out deletes all of these from the phone, including anything not yet sent.",
+              "To keep working on bad Wi-Fi: a copy of the household data this phone last loaded (replaced on every load, and not used after 24 hours), routines, finished chores and food saved with no signal or a signal too weak to send, and photos waiting to upload, until they are sent, and the photos of a chore still in progress until it is finished. Signing out deletes all of these from the phone, including anything not yet sent. When an admin removes a staff phone from the household, the next time it opens it deletes its copies of the household (lists, the menu, recipes, kitchen notes and names) and anything not yet sent, and remembers only that it was removed.",
               "Which medicine-course reminders you closed on this phone.",
               "Whether Kakak's replies are read aloud on this phone.",
               "Whether you turned notifications on in this browser (so Miamus can renew them if the browser drops them), and when you last said \"Not now\" to the notifications reminder.",
@@ -430,7 +430,7 @@ const COPY: Record<
           {
             ul: [
               "Sesi login, nama staf yang dipilih di HP bersama, pengaturan kunci aplikasi, dan bahasa yang Anda pilih (di halaman masuk, dan salinan bahasa akun Anda).",
-              "Supaya tetap bisa dipakai saat sinyal jelek: salinan data rumah yang terakhir dimuat di HP ini (diganti setiap kali dimuat, dan tidak dipakai setelah 24 jam), catatan rutinitas, tugas yang diselesaikan, dan makanan yang disimpan saat tidak ada sinyal atau sinyal terlalu lemah untuk mengirim, serta foto yang menunggu diunggah, sampai terkirim, serta foto tugas yang sedang dikerjakan sampai tugasnya selesai. Jika Anda keluar, semuanya dihapus dari HP ini, termasuk yang belum terkirim.",
+              "Supaya tetap bisa dipakai saat sinyal jelek: salinan data rumah yang terakhir dimuat di HP ini (diganti setiap kali dimuat, dan tidak dipakai setelah 24 jam), catatan rutinitas, tugas yang diselesaikan, dan makanan yang disimpan saat tidak ada sinyal atau sinyal terlalu lemah untuk mengirim, serta foto yang menunggu diunggah, sampai terkirim, serta foto tugas yang sedang dikerjakan sampai tugasnya selesai. Jika Anda keluar, semuanya dihapus dari HP ini, termasuk yang belum terkirim. Jika admin menghapus HP staf dari rumah tangga, saat HP itu dibuka lagi salinan data rumahnya (daftar, menu, resep, catatan dapur, dan nama) serta yang belum terkirim dihapus, dan HP itu hanya mengingat bahwa ia sudah dihapus.",
               "Pengingat pengobatan mana yang sudah Anda tutup di HP ini.",
               "Apakah jawaban Kakak dibacakan di HP ini.",
               "Apakah Anda menyalakan notifikasi di browser ini (agar Miamus bisa memperbaruinya kalau browser menghapusnya), dan kapan terakhir Anda memilih \"Nanti saja\" pada pengingat notifikasi.",

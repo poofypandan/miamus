@@ -244,17 +244,22 @@ test("kitchen notes: the first save asks once about health information", async (
   await page.goto("/dashboard?module=inventory&kitchen=menu");
   await page.getByRole("button", { name: /Add a note for whoever cooks/ }).click({ timeout: 20_000 });
   await page.getByRole("textbox", { name: "Kitchen notes" }).fill("No pork. Raka is allergic to peanuts.");
-  await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText(/may include health information/)).toBeVisible();
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  // Asked in the same sheet, under the note it is about (demo check F-5).
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByText(/may include health information/)).toBeVisible();
+  await expect(sheet.getByRole("textbox", { name: "Kitchen notes" })).toHaveValue("No pork. Raka is allergic to peanuts.");
+  await expect(sheet.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+  await sheet.getByRole("button", { name: "Yes, save the note" }).click();
   await expect.poll(() => stub.kitchen.notes).toBe("No pork. Raka is allergic to peanuts.");
   expect(stub.kitchen.confirmedAt).not.toBeNull();
+  await expect(sheet).toBeHidden();
   await expect(page.getByText("No pork. Raka is allergic to peanuts.")).toBeVisible();
 
   // A later edit doesn't ask again.
   await page.getByRole("button", { name: /Kitchen notes/ }).click();
   await page.getByRole("textbox", { name: "Kitchen notes" }).fill("No pork.");
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect.poll(() => stub.kitchen.notes).toBe("No pork.");
 });
 

@@ -116,7 +116,8 @@ test("the review: untick a room, one stepper tap, two staff with jobs, Add, then
   await page.getByLabel("Staff name 2").fill("Budi");
   await page.getByRole("group", { name: "Job" }).nth(1).getByRole("button", { name: "Garden" }).click();
 
-  await page.getByRole("button", { name: "Add 81" }).click();
+  // Four kinds would wrap: the button says what it does (demo check F-6).
+  await page.getByRole("button", { name: "Set up my home" }).click();
   await expect(page.getByRole("heading", { name: "Your home is ready" })).toBeVisible();
 
   const apply = calls.rpc.find((c) => c.name === "apply_household_setup");
@@ -189,10 +190,10 @@ test("Starter list on Chores: what the household has is Added and never sent aga
   await expect(sheet.getByText("Cuci piring")).toBeVisible();
   await expect(sheet.getByText("Added").first()).toBeVisible();
   // Nothing starts ticked for an existing household.
-  await expect(sheet.getByRole("button", { name: "Add 0" })).toBeDisabled();
+  await expect(sheet.getByRole("button", { name: "Tick what to add" })).toBeDisabled();
 
   await sheet.getByRole("checkbox", { name: "Bersihkan kulkas" }).click();
-  await sheet.getByRole("button", { name: "Add 1" }).click();
+  await sheet.getByRole("button", { name: "Add 1 chore" }).click();
   await expect(page.getByText("Added 1")).toBeVisible();
 
   const draft = calls.rpc.find((c) => c.name === "apply_household_setup")?.body.p_draft as Payload;
@@ -281,6 +282,10 @@ test("the house code alone can't claim a name: the link from the owner is needed
     return route.fallback();
   });
   await page.goto("/join/code#c=K7PM2Q");
+  // No promise of a PIN here (demo check F-3): the way to one is the owner's link.
+  await expect(page.getByText("Belum punya PIN? Buka link dari WhatsApp pemilik rumah.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Pilih nama Anda, lalu buat PIN.")).toHaveCount(0);
+  await expect(page.getByText("Buat PIN", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: /Sari/ }).click({ timeout: 20_000 });
   await expect(page.getByText("Buka link dari WhatsApp pemilik rumah untuk membuat PIN.")).toBeVisible();
   await expect(page.getByText("Ulangi PIN")).toHaveCount(0);

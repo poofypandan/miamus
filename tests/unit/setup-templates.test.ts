@@ -316,3 +316,21 @@ describe("an older household's room named like a floor (code review, PR #90)", (
     expect(added.has("r:bed1")).toBe(true);
   });
 });
+
+// Demo check F-6: the Add button says what it adds, never "Add 71" or "Add 0".
+describe("setupAddLabel", () => {
+  it("names up to two kinds, in both languages", async () => {
+    const { setupAddLabel } = await import("@/lib/setup-templates");
+    const counts = { rooms: 19, chores: 52, bills: 0, total: 71 };
+    expect(setupAddLabel(counts, 0, "id")).toBe("Tambah 19 ruangan dan 52 tugas");
+    expect(setupAddLabel(counts, 0, "en")).toBe("Add 19 rooms and 52 chores");
+    expect(setupAddLabel({ rooms: 1, chores: 0, bills: 0, total: 1 }, 0, "en")).toBe("Add 1 room");
+    expect(setupAddLabel({ rooms: 0, chores: 0, bills: 0, total: 0 }, 2, "id")).toBe("Tambah 2 staf");
+  });
+  it("says Set up my home for three kinds or more, and null for nothing", async () => {
+    const { setupAddLabel } = await import("@/lib/setup-templates");
+    expect(setupAddLabel({ rooms: 19, chores: 52, bills: 3, total: 74 }, 0, "id")).toBe("Siapkan rumah");
+    expect(setupAddLabel({ rooms: 19, chores: 52, bills: 0, total: 71 }, 2, "en")).toBe("Set up my home");
+    expect(setupAddLabel({ rooms: 0, chores: 0, bills: 0, total: 0 }, 0, "en")).toBeNull();
+  });
+});

@@ -10,6 +10,7 @@ import { useFormatTime } from "@/components/ui/ui-labels";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { useToday } from "@/hooks/use-today";
 import { routineKindInfo, type StarterSpecies } from "@/lib/pet-routine-kinds";
 import { starterOptions, starterRows, type StarterOption } from "@/lib/pet-starters";
@@ -38,13 +39,17 @@ export function StarterRoutinesSheet({ pet, onClose }: { pet: TaskEntity | null;
   // The owner's own changes to the ticks, by option key; the rest follow the defaults.
   const [toggled, setToggled] = useState<Set<string>>(() => new Set());
   const [saving, setSaving] = useState(false);
+  // Two taps in one tick must not add every routine twice (demo check F-1).
+  const lock = useSubmitLock();
   useBackToClose(!!pet, onClose);
 
   useEffect(() => {
     if (!pet) return;
+    lock.release();
+    setSaving(false);
     setSpecies(pet.metadata?.species === "cat" ? "cat" : "dog");
     setToggled(new Set());
-  }, [pet]);
+  }, [pet, lock]);
 
   const options = useMemo(
     () =>
@@ -72,7 +77,7 @@ export function StarterRoutinesSheet({ pet, onClose }: { pet: TaskEntity | null;
   }
 
   async function add() {
-    if (!pet || saving || chosen.length === 0) return;
+    if (!pet || saving || chosen.length === 0 || !lock.acquire()) return;
     setSaving(true);
     try {
       const rows = starterRows({
@@ -96,11 +101,12 @@ export function StarterRoutinesSheet({ pet, onClose }: { pet: TaskEntity | null;
           `${chosen.length} rutinitas ditambahkan untuk ${pet.name}`
         )
       );
+      // Saving and the lock stay held while the sheet closes.
       onClose();
     } catch (err) {
       console.error(err);
       toast.error(t("Routines not added. Try again.", "Rutinitas gagal ditambahkan. Coba lagi."));
-    } finally {
+      lock.release();
       setSaving(false);
     }
   }
