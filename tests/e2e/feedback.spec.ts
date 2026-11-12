@@ -70,7 +70,7 @@ test("an owner sends feedback from About Miamus", async ({ context, page }) => {
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-test("the Household list opens it too, over the list", async ({ context, page }) => {
+test("the Settings list opens it too, over the list", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" } });
   const sent = await catchFeedback(context);
 

@@ -41,7 +41,7 @@ people are **staf** and **admin**.
 | Sign in / Sign out (buttons) | **Masuk** / **Keluar** | Standard in Indonesian apps. "login" is fine inside a sentence. |
 | Continue with Google | **Lanjutkan dengan Google** | Google's own Indonesian wording. |
 | Leave | **Cuti** | The legal term in UU PPRT (Pasal 1). |
-| Chores | **Tugas** (tab) / **tugas rumah** | |
+| Chores | **Tugas** (Home's pill) / **tugas rumah** | Phase 175: no longer a tab name; the tab is Home / **Rumah**. |
 | Inventory / stock | **Stok** | Everyday loanword (staff "Stok" tab matches). |
 | Units | **pcs**, **pak**, **kotak**, **botol**, **rol**, **tube**, kg, g, L, ml | "pcs" is what every shop and receipt says. |
 | Potty | **Pipis & Pup** | Matches the routine's stored title and the staff screen. |
@@ -61,7 +61,7 @@ people are **staf** and **admin**.
 | Activity | **Aktivitas** | Replaced "Audit Log" / "Log Aktivitas". |
 | Invite family / Link a staff phone | **Undang keluarga / Hubungkan HP staf** | Replaced "Invite Admin" / "Invite Device". |
 | At the vet / Back home from the vet | **Dirawat di klinik / Sudah pulang dari klinik** | |
-| Tabs: Today, Household | **Hari ini, Rumah** | Replaced "Agenda" and "Access" / "Akses". |
+| Tabs: Today, Home, Pets, Kitchen, Settings | **Hari ini, Rumah, Hewan, Dapur, Pengaturan** | Phase 175 (12 Nov), in that order. Home / **Rumah** replaced Chores / Tugas; Settings / **Pengaturan** replaced Household / Rumah (which had replaced "Access" / "Akses"). "Rumah" now means the house only, as in "Rumah 6/8". |
 | Kakak (the AI helper) / Tell Kakak | **Kakak / Bilang ke Kakak** | Poofy Labs' elder-sister character; the face of all AI help (Phase 156 plan, section 0b). A caring, loving older sister: warm, short, never bossy, and says she is an AI helper if asked. Calls herself *Kakak*; addresses the owner as *Anda*, or *Bu* / *Pak* once the owner has used it for themselves (never guessed from a name). Her mark is a heart inside the Miamus house, no face (2026-11-11). |
 | Kitchen (tab) / Food · Shopping | **Dapur** / **Makanan · Belanja** | Phase 156: the Shopping tab became Kitchen; the staff header says Tugas Hari Ini · Dapur. Shopping holds the list and the home's supplies. |
 | Supplies at home | **Stok di rumah** | Soap, pee pads, dog food — the old Inventory, under Shopping. |
@@ -90,7 +90,7 @@ people are **staf** and **admin**.
 | Or type your answer | **Atau ketik jawaban** | Under Kakak's answer buttons. |
 | Let Kakak help (household switch) | **Izinkan Kakak membantu** | The opt-in switch; says what is sent and to whom. |
 | Kakak's guess — check it | **Tebakan Kakak — cek lagi** | Marks a field Kakak guessed (a date, a room) so the owner looks again. |
-| Today · Rooms (Chores pill) | **Hari ini · Ruangan** | Phase 158. "Ruangan", not "Kamar": a lounge or a terrace isn't a kamar. |
+| Chores · Rooms · Repairs (Home pill) | **Tugas · Ruangan · Perbaikan** | Phase 175: was Today · Rooms (Phase 158) and Repairs (Phase 159). "Ruangan", not "Kamar": a lounge or a terrace isn't a kamar. |
 | Room / Rooms | **Ruangan** | Phase 158. |
 | Whole floor | **Seluruh lantai** | Phase 158: chores for a room named just "LT2". |
 | Other rooms / No room | **Ruangan lain** / **Tanpa ruangan** | Phase 158. |
@@ -104,12 +104,12 @@ people are **staf** and **admin**.
 | No floor yet | **Belum ada lantai** | Rooms not on a floor. |
 | Sort your rooms into floors / Sort rooms | **Kelompokkan ruangan per lantai** / **Kelompokkan** | The one-time card. |
 | Spot (part of a room) | **Bagian** | On chores: "LT2 · GB2 Bathroom · Wastafel". |
-| Add a room / Add a floor | **Tambah ruangan** / **Tambah lantai** | Household → Ruangan. |
+| Add a room / Add a floor | **Tambah ruangan** / **Tambah lantai** | Rumah → Ruangan → Ubah ruangan. |
 | Room (optional) | **Ruangan (opsional)** | Phase 158 PR B2, the chore form. Replaces "Lokasi (opsional)". |
 | More rooms (pick several when adding) | **Pilih ruangan lain** | Phase 158 PR B2. Not "Ruangan lain", which is the "Other rooms" section. |
 | Spot (optional) / New spot | **Bagian (opsional)** / **Bagian baru** | Phase 158 PR B2, the chore form's chips. |
-| Inside (optional) — a room inside a room | **Di dalam (opsional)** | Phase 168. Household → Ruangan, owners only. First option: **Tidak di dalam ruangan** (Not inside a room). |
-| Rooms inside / Add a room inside | **Ruangan di dalamnya** / **Tambah ruangan di dalamnya** | Phase 168. A room's sheet and Household → Ruangan. "{n} inside" on a row: **{n} di dalamnya**. |
+| Inside (optional) — a room inside a room | **Di dalam (opsional)** | Phase 168. Rumah → Ruangan → Ubah ruangan, owners only. First option: **Tidak di dalam ruangan** (Not inside a room). |
+| Rooms inside / Add a room inside | **Ruangan di dalamnya** / **Tambah ruangan di dalamnya** | Phase 168. A room's sheet and Rumah → Ruangan → Ubah ruangan. "{n} inside" on a row: **{n} di dalamnya**. |
 | Bathroom / Walk-in closet / Balcony (quick names) | **Kamar mandi / Ruang ganti / Balkon** | Phase 168 quick names for a room inside; households keep what they type. "Lemari" stays Cupboard (Kitchen). Other name: **Nama lain**. |
 | Master bedroom / Guest bedroom (examples) | **Kamar Utama / Kamar Tamu** | Phase 168, examples in help text and mockups. Room names stay as households type them. |
 | A room inside has its own door, like a bathroom. A sink or a shower is a spot. | **Ruangan di dalam punya pintu sendiri, seperti kamar mandi. Wastafel atau shower adalah bagian.** | Phase 168, the helper under Di dalam. |
@@ -131,15 +131,15 @@ people are **staf** and **admin**.
 | Notes (on a repair) / Send | **Catatan** / **Kirim** | The repair's thread, owners and staff. |
 | Warranty until / Under warranty until / Warranty ended | **Garansi sampai** / **Garansi sampai** / **Garansi berakhir** | |
 | Owners only | **Hanya pemilik** | Marks what staff never see. |
-| Who lives here? | **Siapa yang tinggal di sini?** | Phase 162: the sign-up question and the Household row. |
-| Just people (no pets) | **Hanya orang** | The Household row's detail when pets are off. |
-| Send feedback | **Kirim masukan** | Roadmap item 9: owners in Household and About Miamus, staff in the Lapor sheet. Not "umpan balik". |
+| Who lives here? | **Siapa yang tinggal di sini?** | Phase 162: the sign-up question and the Settings row. |
+| Just people (no pets) | **Hanya orang** | The Settings row's detail when pets are off. |
+| Send feedback | **Kirim masukan** | Roadmap item 9: owners in Settings and About Miamus, staff in the Lapor sheet. Not "umpan balik". |
 | Idea / Problem / Other (feedback type) | **Ide** / **Masalah** / **Lainnya** | The optional type on the feedback form. On staff forms the label is "Jenis (boleh dikosongkan)". |
 | Kids · Elders | **Anak · Lansia** | Shown greyed as "Soon" until the Care tab. "Lansia" is the everyday word; "orang tua" also means parents. |
 | Soon (a greyed choice) | **Segera** | |
 | Any pets at home? / We have pets · No pets | **Ada hewan di rumah?** / **Ada hewan · Tidak ada** | The one-time card on Today. |
 | Bills (chore category) / Bill | **Tagihan** | Phase 164. |
-| Upkeep / Bills and upkeep | **Perawatan rumah** / **Tagihan dan perawatan** | Phase 164: the checklist on Tugas → Hari ini. The Maintenance category stays **Perbaikan**. |
+| Upkeep / Bills and upkeep | **Perawatan rumah** / **Tagihan dan perawatan** | Phase 164: the checklist on Rumah → Tugas. The Maintenance category stays **Perbaikan**. |
 | Runs out by use (gas, gallons) | **Habis karena dipakai** | Phase 164: the checklist's third group; these go to Stok di rumah. |
 | Remind me / Reminder (push title) | **Ingatkan saya** / **Pengingat** | Phase 164. Choices: **Mati · Pada harinya · 1 hari sebelumnya · 3 hari sebelumnya · 1 minggu sebelumnya**. |
 | Coming up (Today line) | **Segera** | "Segera: PBB · Kam, 26 Nov". |
@@ -165,7 +165,7 @@ people are **staf** and **admin**.
 | Add to the shopping list | **Masukkan ke daftar belanja** | Phase 165: on by default under "Barang habis". |
 | Turned out you can? Finish as usual. | **Ternyata sudah bisa? Selesaikan seperti biasa.** | Phase 165: a couldn't-do task can still be finished. |
 | The admin has been told | **Admin sudah diberi tahu lewat notifikasi.** | Phase 165: the staff panel after leave or a suggestion, when an admin gets the push. **Kirim WA juga** keeps WhatsApp as a second option. |
-| Evening summary | **Ringkasan malam** | Phase 165: Household → Notifications. |
+| Evening summary | **Ringkasan malam** | Phase 165: Pengaturan → Notifikasi. |
 | Not done today | **Belum selesai hari ini** | Phase 165: the push title and Today's quiet line ("3 belum selesai hari ini"). |
 | Not done yet (section) | **Belum dikerjakan** | Phase 165: the summary sheet. |
 | To buy (section) | **Perlu dibeli** | Phase 165: the summary sheet; matches "2 barang perlu dibeli". |
@@ -246,7 +246,7 @@ people are **staf** and **admin**.
 | Anyone, not done yet | **Siapa saja, belum dikerjakan** | The small row for what nobody owns and nobody has done. |
 | Everyone (back from a person's day) · Not yet · From an earlier day | **Semua orang · Belum · Dari hari sebelumnya** | The person's day in Siapa mengerjakan apa. |
 | Supervising a repair since 10.00 | **Mengawasi perbaikan sejak 10.00** | Phase 174 PR A: the busy line on a person's progress row, while they supervise a walk-in. |
-| A repair person is here (staff button) / Someone's here (owner button) | **Ada tukang datang** | Phase 174 PR A. The staff's big button on Perbaikan; the owners' button in Tugas → Perbaikan. "Tukang" is the everyday word. |
+| A repair person is here (staff button) / Someone's here (owner button) | **Ada tukang datang** | Phase 174 PR A. The staff's big button on Perbaikan; the owners' button in Rumah → Perbaikan. "Tukang" is the everyday word. |
 | In progress · Today · Still broken · Fixed (staff sections) | **Sedang dikerjakan · Hari ini · Masih rusak · Sudah diperbaiki** | Phase 174 PR A: the sections of the staff's Perbaikan pill. |
 | What's being fixed? · New · What's broken? | **Apa yang diperbaiki? · Baru · Apa yang rusak?** | Phase 174 PR A, the Ada tukang datang sheet. |
 | Who? (optional, staff) / Other name | **Siapa? (boleh dikosongkan)** / **Nama lain** | Phase 174 PR A. Names only, never a number. |
@@ -267,14 +267,14 @@ people are **staf** and **admin**.
 | Send to the developer | **Kirim ke developer** | Phase 174 PR C: the quiet button under the Repairs list, and the sheet's title. |
 | Share on WhatsApp · Save as PDF · Copy text · Message language | **Bagikan lewat WhatsApp · Simpan sebagai PDF · Salin teks · Bahasa pesan** | Phase 174 PR C, the developer sheet. The language toggle reads **Bahasa Indonesia · English** (each as it calls itself), Indonesian first. |
 | Repair list (message and PDF head) · Reported 9 Nov · Not started yet | **Daftar perbaikan · Dilaporkan 9 Nov · Belum dikerjakan** | Phase 174 PR C, text for the developer. Other statuses: **Sedang dikerjakan · Dijadwalkan 12 Nov · Sudah dikerjakan, masih kami cek · Belum selesai, perlu datang lagi**. Addressed **Pak/Bu** (who the developer is isn't known); the owner can change it in WhatsApp. |
-| Features (Household row) | **Fitur** | Phase 171 PR A: Household → Fitur replaces "Siapa yang tinggal di sini". Everyday word. |
+| Features (Settings row) | **Fitur** | Phase 171 PR A: Pengaturan → Fitur replaces "Siapa yang tinggal di sini". Everyday word. |
 | On / off (a feature) | **aktif / dimatikan** | Phase 171 PR A: "4 aktif" on the row; toasts "{Fitur} aktif" · "{Fitur} dimatikan". |
 | Food at home (feature) | **Makanan di rumah** | Phase 171 PR A, the Features row; the Kitchen pill stays **Makanan**. |
 | What kind of home? | **Rumah seperti apa?** | Phase 171 PR A, sign-up screen 2 (the brief's wording; Phase 172's plan drafted "Seperti apa rumah Anda?"). |
 | House with a garden · Big house, several floors · Apartment · Something else | **Rumah dengan taman · Rumah besar bertingkat · Apartemen · Lainnya** | Phase 172's four home types, drawn by Phase 171's screen. |
 | No thanks (offer, later) | **Tidak, terima kasih** | Phase 171 D7: the offer card, built with the first feature that starts off. |
 | Your home (setup review) · Untick what you don't have. | **Rumah Anda** · **Hapus centang yang tidak ada.** | Phase 172 PR A2, `/setup`. |
-| Starter list | **Daftar awal** | Phase 172 PR A2: the button on Chores → Today for existing households. |
+| Starter list | **Daftar awal** | Phase 172 PR A2: the button on Rumah → Tugas for existing households. |
 | Floors · Bedrooms · Bathrooms (shape row) | **Lantai · Kamar tidur · Kamar mandi** | Phase 172 PR A2, the steppers. |
 | Garden · Pool · Carport · Rooftop · Staff room · Laundry room | **Taman · Kolam · Carport · Rooftop · Kamar staf · Ruang cuci** | Phase 172 PR A2, the chips. "Kamar staf", never "Kamar ART" or "Kamar pembantu". |
 | Whole house · Outside | **Seluruh rumah · Luar rumah** | Phase 172 PR A2, review groups (Whole floor stays **Seluruh lantai**). |
@@ -328,6 +328,31 @@ people are **staf** and **admin**.
 | No PIN yet? Open the link from the owner's WhatsApp. | **Belum punya PIN? Buka link dari WhatsApp pemilik rumah.** | Demo fixes F-3 (staff): the names screen after a typed house code, which can't set a first PIN. |
 | Add 19 rooms and 52 chores · Set up my home · Everything's added · Tick what to add | **Tambah 19 ruangan dan 52 tugas** · **Siapkan rumah** · **Semua sudah ditambahkan** · **Centang yang mau ditambahkan** | Demo fixes F-6: the setup and starter-list Add button, never a bare number. |
 | One more step, asked only once · Yes, save the note | **Satu langkah lagi, hanya ditanyakan sekali** · **Ya, simpan catatan** | Demo fixes F-5: the kitchen notes' health-data question, in the same sheet. |
+| Home (tab) | **Rumah** | Phase 175. Was Household's label; replaced Chores / Tugas. Lucide `House`. |
+| Settings (tab) | **Pengaturan** | Phase 175. The phone's own word; replaced Household / Rumah. Lucide `Settings`. |
+| All on track | **Semua lancar** | Phase 175, Today's status line. Not "Semua selesai", which means all done. |
+| N waiting for you | **N menunggu Anda** | Phase 175. Reuses "Menunggu Anda". |
+| Nothing late | **Tidak ada yang terlambat** | Phase 175, under the status line. |
+| Coming up (heading) | **Segera** | Phase 175. Already the word on Today's line. |
+| The day / The whole day | **Hari ini** / **Semua hari ini** | Phase 175: the list's heading; the folded day (later). |
+| Kakak is watching N things | **Kakak memantau N hal** | Phase 175, homes with Kakak. |
+| You'll hear if any of N things isn't done | **Anda dikabari jika ada dari N hal yang belum dikerjakan** | Phase 175, homes without Kakak; matches "Kabari kami jika belum dikerjakan". |
+| Tell it once. Staff do it, with a photo. You only hear about what didn't happen. | **Bilang sekali. Staf mengerjakan, dengan foto. Anda hanya dikabari kalau ada yang belum.** | Phase 175, the Set up card. |
+| Use the starter list / Or tell Kakak | **Pakai daftar awal** / **Atau bilang ke Kakak** | Phase 175, the Set up card. |
+| Set up your home (the step) | **Siapkan rumah** | Phase 175. The card's title stays "Siapkan rumah Anda". |
+| Send your staff the link | **Kirim link ke staf Anda** | Phase 175, the step. Its button keeps "Kirim satu pesan WhatsApp". |
+| N of M phones linked | **N dari M HP terhubung** | Phase 175, under the button. |
+| See the first task done | **Lihat tugas pertama selesai** | Phase 175. Was "See it done / Lihat hasilnya". |
+| Ready for your staff today | **Siap untuk staf hari ini** | Phase 175: a new home, above the progress rows. |
+| Phone not linked yet | **HP belum terhubung** | Phase 175, on a person's row. |
+| Next up | **Berikutnya** | Phase 175, the folded day (later). |
+| How Miamus works here (Settings group) | **Cara Miamus bekerja di sini** | Phase 175: Features, Notifications, Kakak, Language, App lock. |
+| Activity and data (Settings group) | **Aktivitas dan data** | Phase 175. Not "Catatan", which already means Notes. |
+| Edit rooms | **Ubah ruangan** | Phase 175: the link on Rumah → Ruangan to the rooms editor. |
+| People (Settings group) | **Orang di rumah** | Phase 175: Family, Staff, Leave, Invite. |
+| All N staff phones opened today | **Semua N HP staf dibuka hari ini** | Phase 175, later. "HP", never "ponsel". |
+| Away | **Sedang pergi** | Phase 175, later. |
+| Weekly check-in | **Kabar mingguan** | Phase 175, later. |
 
 ## Formatting
 

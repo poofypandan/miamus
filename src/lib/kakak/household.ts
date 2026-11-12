@@ -67,7 +67,7 @@ export interface KakakHousehold {
    */
   petsOff?: boolean;
   /**
-   * Household → Features (Phase 171, migrations/145): true only when the
+   * Settings → Features (Phase 171, migrations/145): true only when the
    * owner switched Food at home off. Absent otherwise, so the block is
    * exactly what it was for every other household.
    */
@@ -158,7 +158,7 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   for (const person of household.people) lines.push(`- ${person.ref}: ${person.name}`);
   lines.push("");
   if (household.petsOff) {
-    lines.push("Pets: switched off for this household (Household → Features). No pet routines.");
+    lines.push("Pets: switched off for this household (Settings → Features). No pet routines.");
   } else {
     lines.push("Pets (current daily times):");
     for (const pet of household.pets) {
@@ -170,7 +170,7 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   }
   if (household.foodOff) {
     lines.push("");
-    lines.push("Food at home: switched off for this household (Household → Features). No food.");
+    lines.push("Food at home: switched off for this household (Settings → Features). No food.");
   }
   lines.push("");
   lines.push("Rooms:");

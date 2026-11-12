@@ -124,7 +124,7 @@ test("Rooms: which rooms get vacuumed, and adding it where it's missing", async 
   await editor.locator('input[type="date"]').first().fill(today());
   await editor.getByRole("button", { name: "Save Changes" }).click();
   await expect(editor).toHaveCount(0);
-  await page.getByRole("tab", { name: "Today" }).click();
+  await page.getByRole("tab", { name: "Chores", exact: true }).click();
   // The chore card itself (the saved toast also names it).
   await expect(page.locator("span", { hasText: /^Vacuum kamar musik$/ }).first()).toBeVisible();
 
@@ -147,9 +147,9 @@ test("Rooms in Bahasa Indonesia, with its What's new card shown once", async ({ 
   await expect(page.getByText(/di 3 dari 4\s+ruangan/)).toBeVisible();
   await expect(page.getByText("Belum ada vakum").first()).toBeVisible();
 
-  // Closed once, it stays closed on this phone; Household → Yang baru keeps it.
+  // Closed once, it stays closed on this phone; Pengaturan → Yang baru keeps it.
   await page.goto("/dashboard?module=chores");
-  await expect(page.getByRole("tab", { name: "Hari ini" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("tab", { name: "Tugas", exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("region", { name: "Baru: Ruangan" })).toHaveCount(0);
   await page.goto("/dashboard?module=access&page=whats-new");
   await expect(page.getByRole("heading", { name: "Baru: Ruangan" })).toBeVisible({ timeout: 20_000 });

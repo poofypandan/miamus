@@ -173,9 +173,9 @@ function LanguageScreen() {
         </p>
       </div>
       <p className="text-sm leading-relaxed text-gray-700">
-        <span lang="en">You can change it later under Household.</span>{" "}
+        <span lang="en">You can change it later in Settings.</span>{" "}
         <span lang="id" className="text-muted-foreground">
-          Bisa diubah nanti di tab Rumah.
+          Bisa diubah nanti di tab Pengaturan.
         </span>
       </p>
       <LanguageChoice />
@@ -762,8 +762,8 @@ function WhoLivesHere({
       </legend>
       <p className="text-xs text-muted-foreground">
         {t(
-          "Miamus shows only what fits your home. Change it any time under Household.",
-          "Miamus hanya menampilkan yang sesuai dengan rumah Anda. Bisa diubah kapan saja di tab Rumah."
+          "Miamus shows only what fits your home. Change it any time in Settings.",
+          "Miamus hanya menampilkan yang sesuai dengan rumah Anda. Bisa diubah kapan saja di tab Pengaturan."
         )}
       </p>
       <div className="flex flex-wrap gap-2">
