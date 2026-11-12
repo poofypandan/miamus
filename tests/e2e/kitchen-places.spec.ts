@@ -145,6 +145,23 @@ test("Undo after a date was set puts back the place and the date", async ({ cont
   await expect.poll(() => chicken().expires_on).toBeNull();
 });
 
+test("Undo after closing and reopening the sheet still puts back the date (Codex, PR #116)", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: kitchen() });
+  const ingredients = await openOwnerFood(page);
+  const chicken = () => stub.supplies.find((row) => row.name === "Dada Ayam")!;
+
+  await ingredients.getByRole("button", { name: /Dada Ayam/ }).click();
+  await page.getByRole("dialog", { name: "Dada Ayam" }).getByRole("button", { name: "Fridge" }).click();
+  await expect.poll(() => chicken().kept_in).toBe("fridge");
+  await page.keyboard.press("Escape");
+  await ingredients.getByRole("button", { name: /Dada Ayam/ }).click();
+  await page.getByRole("dialog", { name: "Dada Ayam" }).getByRole("button", { name: "Tomorrow" }).click();
+  await expect.poll(() => chicken().expires_on).toBe(jakartaDay(1));
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => chicken().kept_in).toBe("freezer");
+  await expect.poll(() => chicken().expires_on).toBeNull();
+});
+
 test("into the freezer keeps the date with a hint; Out hides the date and clears it", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: kitchen() });
   const ingredients = await openOwnerFood(page);

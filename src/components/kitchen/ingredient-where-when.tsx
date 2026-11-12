@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { ExpiryChips } from "@/components/kitchen/expiry-chips";
 import { PlacePicker } from "@/components/kitchen/place-picker";
@@ -32,10 +32,6 @@ export function IngredientWhereWhen({ item, lang }: { item: InventoryItem; lang:
   const { setIngredientPlace, setIngredientExpiry } = useHousehold();
   const today = formatDateLocal(useToday());
   const [hint, setHint] = useState<"thawed" | "frozen" | null>(null);
-  // As it is now, for an Undo tapped after a date was set (the toast's
-  // handler would otherwise see the item as it was at the move).
-  const latest = useRef(item);
-  latest.current = item;
   const id = lang === "id";
   const name = stockItemName(item);
   const place = placeOf(item);
@@ -45,10 +41,11 @@ export function IngredientWhereWhen({ item, lang }: { item: InventoryItem; lang:
   async function undo(before: { kept_in: FoodPlace | null; expires_on: string | null }) {
     setHint(null);
     try {
+      // Both, always: the toast can outlive this sheet (closed and opened
+      // again, a date set meanwhile), so nothing here can say whether the
+      // date changed (Codex, PR #116). The writes go out in order.
       await setIngredientPlace(item.id, before.kept_in);
-      if ((latest.current.expires_on ?? null) !== before.expires_on) {
-        await setIngredientExpiry(item.id, before.expires_on);
-      }
+      await setIngredientExpiry(item.id, before.expires_on);
     } catch (err) {
       console.error(err);
       toast.error(id ? "Gagal membatalkan. Coba lagi." : "Couldn't undo. Try again.", sheetToast);
