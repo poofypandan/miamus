@@ -348,7 +348,8 @@ interface HouseholdContextValue {
    * Moves a ready-to-eat food to another place (Phase 176). Anyone in the
    * household. Sends only kept_in: editFood sends the whole form and would
    * overwrite a portion another phone took meanwhile. Shows at once, put
-   * back if the save fails.
+   * back if the save fails; only the place, never the rest of the row.
+   * Callers send one food's moves one at a time (FoodDetailSheet).
    */
   moveFood: (id: string, place: FoodPlace) => Promise<FoodItem>;
   /** Admins only: food added by mistake. Takes its photo with it. */
@@ -1610,21 +1611,23 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     [putFood]
   );
 
-  const moveFood = useCallback(
-    async (id: string, place: FoodPlace) => {
-      const before = foodItemsRef.current.find((f) => f.id === id);
-      if (before) putFood({ ...before, kept_in: place });
-      try {
-        const item = await dataProvider.updateFoodItem(id, { kept_in: place });
-        putFood(item);
-        return item;
-      } catch (err) {
-        if (before) putFood(before);
-        throw err;
-      }
-    },
-    [putFood]
-  );
+  const moveFood = useCallback(async (id: string, place: FoodPlace) => {
+    // Only the place changes on screen, on the row as it is by then, so a
+    // portion or a finish saved while the move was on its way is kept, both
+    // when the move lands and when it fails (Codex, PR #116).
+    const setPlace = (keptIn: FoodPlace) =>
+      setFoodItems((prev) => prev.map((f) => (f.id === id ? { ...f, kept_in: keptIn } : f)));
+    const before = foodItemsRef.current.find((f) => f.id === id)?.kept_in;
+    setPlace(place);
+    try {
+      const item = await dataProvider.updateFoodItem(id, { kept_in: place });
+      setPlace(item.kept_in);
+      return item;
+    } catch (err) {
+      if (before) setPlace(before);
+      throw err;
+    }
+  }, []);
 
   const removeFood = useCallback(
     async (id: string) => {
