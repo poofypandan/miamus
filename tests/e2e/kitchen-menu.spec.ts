@@ -222,14 +222,35 @@ test("Add missing to Shopping: a review first, then To buy and WhatsApp read the
   });
   await page.goto("/dashboard?module=inventory&kitchen=menu");
   await page.getByRole("button", { name: "Add missing to Shopping" }).click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByText("Ticked items go on the shopping list.", { exact: false })).toBeVisible();
+  // From "will be added" to "won't be added".
+  await expect(sheet.getByRole("heading", { level: 3 })).toHaveText([
+    "To buy",
+    "Not in your Ingredients",
+    "In your Ingredients",
+    "Enough for this week",
+  ]);
   // 6 servings of a 4-serving recipe: 1.5 kg chicken against 1 kg.
-  await expect(page.getByText("Need 1.5 kg · have 1 kg · buy 500 g")).toBeVisible();
-  await expect(page.getByText("Enough · need 750 g · have 4 kg")).toBeVisible();
-  await expect(page.getByText("Check these")).toBeVisible();
-  await expect(page.getByText("Not on your list")).toBeVisible();
-  await page.getByRole("button", { name: "Lime leaves" }).click();
+  await expect(sheet.getByText("Need 1.5 kg · have 1 kg · buy 500 g")).toBeVisible();
+  await expect(sheet.getByText("need 750 g · have 4 kg", { exact: true })).toBeVisible();
+  await expect(sheet.getByText("Miamus doesn't know if you have these. Untick what's at home.")).toBeVisible();
+  await expect(sheet.getByText("Marked as enough. Tick any that are running out.")).toBeVisible();
+  // An untracked item under In your Ingredients has no bare "Enough" under it.
+  await expect(sheet.getByText("Enough", { exact: true })).toHaveCount(0);
+  await expect(sheet.getByRole("button", { name: "Bawang merah" })).toHaveAttribute("aria-pressed", "false");
+  // Names Miamus has no item for come ticked, and the button counts them:
+  // chicken, lime leaves and salt.
+  const lime = sheet.getByRole("button", { name: "Lime leaves" });
+  await expect(lime).toHaveAttribute("aria-pressed", "true");
+  await expect(sheet.getByRole("button", { name: "Salt" })).toHaveAttribute("aria-pressed", "true");
+  await expect(sheet.getByRole("button", { name: "Add 3 to Shopping" })).toBeVisible();
+  // Salt is at home: untick it, and the count drops.
+  await sheet.getByRole("button", { name: "Salt" }).click();
+  await expect(sheet.getByRole("button", { name: "Salt" })).toHaveAttribute("aria-pressed", "false");
+  await expect(sheet.getByRole("button", { name: "Add 2 to Shopping" })).toBeVisible();
   await shot(page, "owner-add-missing-en");
-  await page.getByRole("button", { name: "Add 2 to Shopping" }).click();
+  await sheet.getByRole("button", { name: "Add 2 to Shopping" }).click();
   await expect.poll(() => stub.supplies.find((r) => r.id === chicken.id)?.to_buy_amount).toBe(0.5);
   expect(stub.supplies.find((r) => r.id === chicken.id)).toMatchObject({ stock_status: "low", quantity: 1 });
   expect(stub.supplies.find((r) => r.id === shallots.id)).toMatchObject({ stock_status: "ok" });
@@ -237,6 +258,63 @@ test("Add missing to Shopping: a review first, then To buy and WhatsApp read the
   await page.getByRole("tab", { name: "Shopping" }).click();
   await expect(page.getByText(/Buy 500 g · Running low/)).toBeVisible();
   await expect(page.getByText("Lime leaves", { exact: true })).toBeVisible();
+  await expect(page.getByText("Salt", { exact: true })).toHaveCount(0);
+});
+
+test("Add missing to Shopping in Indonesian: the headings, the grey lines, a tracked item's amount", async ({ context, page }) => {
+  // Lime leaves are now in Ingredients, tracked in kg: the recipe's lembar
+  // doesn't convert and the free name matches it, so it waits under Ada di
+  // Bahan masakan with what's left, never pre-ticked.
+  const limeLeaves = item("00000000-0000-4000-8000-000000153004", "Lime leaves", 1.2, "kg", { category: "pantry" });
+  await installStub(context, {
+    owner: { locale: "id" },
+    features: { kitchen: true },
+    items: [chicken, rice, shallots, limeLeaves],
+    recipes: [soto],
+    menu: [dish(0, "lunch", "Chicken soto", { recipe_id: SOTO, servings: 6 })],
+  });
+  await page.goto("/dashboard?module=inventory&kitchen=menu");
+  await page.getByRole("button", { name: "Tambahkan yang kurang ke Belanja" }).click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByText("Untuk masakan minggu ini yang belum dimasak. Yang dicentang masuk daftar belanja.")).toBeVisible();
+  await expect(sheet.getByRole("heading", { level: 3 })).toHaveText([
+    "Perlu dibeli",
+    "Belum ada di Bahan masakan",
+    "Ada di Bahan masakan",
+    "Cukup untuk minggu ini",
+  ]);
+  await expect(sheet.getByText("Perlu 1,5 kg · ada 1 kg · beli 500 g")).toBeVisible();
+  await expect(sheet.getByText("perlu 750 g · ada 4 kg", { exact: true })).toBeVisible();
+  await expect(sheet.getByText("Tercatat masih ada. Centang yang ternyata hampir habis.")).toBeVisible();
+  await expect(sheet.getByText("Sisa 1,2 kg")).toBeVisible();
+  await expect(sheet.getByText("Miamus belum tahu apakah ini ada di rumah. Hapus centang yang sudah ada.")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Lime leaves" })).toHaveAttribute("aria-pressed", "false");
+  await expect(sheet.getByRole("button", { name: "Salt" })).toHaveAttribute("aria-pressed", "true");
+  // Chicken and salt; lime leaves wait for a tick.
+  await expect(sheet.getByRole("button", { name: "Tambah 2 ke Belanja" })).toBeVisible();
+  await shot(page, "owner-add-missing-id");
+});
+
+test("Add missing to Shopping with Food at home off names Supplies at home", async ({ context, page }) => {
+  await installStub(context, {
+    owner: { locale: "id" },
+    features: { kitchen: true, food: false },
+    items: [chicken, rice, shallots],
+    recipes: [soto],
+    menu: [dish(0, "lunch", "Chicken soto", { recipe_id: SOTO, servings: 6 })],
+  });
+  await page.goto("/dashboard?module=inventory&kitchen=menu");
+  await page.getByRole("button", { name: "Tambahkan yang kurang ke Belanja" }).click({ timeout: 20_000 });
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("heading", { level: 3 })).toHaveText([
+    "Perlu dibeli",
+    "Belum ada di Stok di rumah",
+    "Ada di Stok di rumah",
+    "Cukup untuk minggu ini",
+  ]);
+  await expect(sheet.getByText("Miamus belum tahu apakah ini ada di rumah. Hapus centang yang sudah ada.")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Lime leaves" })).toHaveAttribute("aria-pressed", "true");
+  await expect(sheet.getByRole("button", { name: "Tambah 3 ke Belanja" })).toBeVisible();
 });
 
 test("kitchen notes: the first save asks once about health information", async ({ context, page }) => {
