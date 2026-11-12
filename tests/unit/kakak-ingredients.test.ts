@@ -4,6 +4,8 @@
 // tool is offered only then, it isn't strict (the union limit), so
 // validateToolCall checks all of it, and the card saves through the two
 // context actions.
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildContext, type ContextRows } from "@/lib/kakak/context";
 import { describeSuggestion, savedSummary } from "@/lib/kakak/describe";
@@ -12,7 +14,7 @@ import { renderHouseholdBlock } from "@/lib/kakak/household";
 import { practiceClient } from "@/lib/kakak/practice";
 import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
 import { isSaveableSuggestion, toSuggestion, type IngredientSuggestion } from "@/lib/kakak/suggestions";
-import { KAKAK_TOOLS } from "@/lib/kakak/tools";
+import { KAKAK_TOOL_NAMES, KAKAK_TOOLS } from "@/lib/kakak/tools";
 import { validateToolCall } from "@/lib/kakak/validate";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -249,5 +251,23 @@ describe("practice mode", () => {
     expect(items(second)).toEqual([
       expect.objectContaining({ kind: "ingredient", itemId: id(30), keptIn: "fridge", fromPlace: "freezer", expiry: "set", expiresOn: "2026-11-12" }),
     ]);
+  });
+});
+
+describe("the database records every tool Kakak has", () => {
+  it("kakak_record and the tools check in the newest migration list exactly KAKAK_TOOL_NAMES", () => {
+    // A name missing there makes kakak_record raise bad_tools, and the call's
+    // tokens and cost are never written (Codex, PR #115; migrations/155).
+    const dir = join(__dirname, "..", "..", "supabase", "migrations");
+    const newest = readdirSync(dir)
+      .filter((name) => /^\d+_.*\.sql$/.test(name) && readFileSync(join(dir, name), "utf8").includes("kakak_requests_tools_check"))
+      .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+      .pop()!;
+    const sql = readFileSync(join(dir, newest), "utf8");
+    const lists = [...sql.matchAll(/tools <@ array\[([^\]]*)\]::text\[\]/g)].map((m) =>
+      m[1].split(",").map((name) => name.trim().replace(/^'|'$/g, "")),
+    );
+    expect(lists).toHaveLength(2); // the column's check and kakak_record's
+    for (const list of lists) expect([...list].sort()).toEqual([...KAKAK_TOOL_NAMES].sort());
   });
 });
