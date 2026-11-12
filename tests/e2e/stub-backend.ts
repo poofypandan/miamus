@@ -410,7 +410,13 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     if (path.startsWith("/auth/v1/token")) {
       if (!net.token) return route.abort("internetdisconnected");
       seen.tokenRefreshes += 1;
-      return route.fulfill({ json: session(options.stored?.user.id ?? USER, nowSeconds() + 3600) });
+      // The same person, still signed in the same way, as the real auth
+      // server does. A refreshed owner used to come back anonymous, and the
+      // middleware then sent the next owner page to /staff. A test that fixes
+      // the page clock later in the day than the real one (10.00 WIB, run
+      // after midnight) sees the stored token as expired and refreshes at once.
+      const stored = options.stored?.user;
+      return route.fulfill({ json: session(stored?.id ?? USER, nowSeconds() + 3600, stored?.is_anonymous ?? true) });
     }
     // Storage (Phase 164 PR B): uploads and removals, recorded.
     if (path.startsWith("/storage/v1/object/")) {
