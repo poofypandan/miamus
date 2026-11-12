@@ -347,3 +347,81 @@ test("Remind me Off on the card saves no reminder", async ({ context, page }) =>
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0].remind_days_before ?? null).toBeNull();
 });
+
+test("an ingredient card moves it and sets its date through the two kitchen actions, and Undo puts both back", async ({ context, page }) => {
+  // Phase 176 (put_away_ingredient): beef from the freezer to the fridge, use by tomorrow.
+  const BEEF = "00000000-0000-4000-8000-000000176001";
+  const beef = {
+    id: BEEF,
+    household_id: HOUSEHOLD_ID,
+    scope: "home",
+    name: "Daging sapi",
+    category: "fresh_food",
+    quantity: 1,
+    unit: "kg",
+    min_threshold: 0,
+    photo_url: null,
+    created_at: "2026-10-01T00:00:00Z",
+    variant: null,
+    audit_frequency_days: 30,
+    last_audited_at: null,
+    notes: null,
+    stock_status: "ok",
+    stock_status_at: null,
+    stock_status_by: null,
+    track_amount: false,
+    amount_set_at: null,
+    amount_set_by: null,
+    last_bought_amount: null,
+    kept_in: "freezer",
+    expires_on: "2026-12-20",
+  };
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [beef],
+  });
+  await page.route("**/api/kakak", (route) =>
+    route.fulfill({
+      json: {
+        kind: "suggestions",
+        text: "Here's what I'll note:",
+        items: [
+          {
+            kind: "ingredient",
+            itemId: BEEF,
+            name: "Daging sapi",
+            keptIn: "fridge",
+            fromPlace: "freezer",
+            expiry: "set",
+            expiresOn: "2026-11-12",
+            expiryIsGuess: false,
+          },
+        ],
+        requestId: "00000000-0000-4000-8000-0000000000a7",
+        history: { messages: [] },
+      },
+    }),
+  );
+  await page.route("**/api/kakak/outcome", (route) => route.fulfill({ json: { ok: true } }));
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("The beef is out of the freezer, in the fridge, use it by tomorrow");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("Fridge (was Freezer)")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Thursday 12 Nov")).toBeVisible();
+  expect(stub.supplies[0]).toMatchObject({ kept_in: "freezer", expires_on: "2026-12-20" }); // nothing saved yet
+
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ kept_in: "fridge", expires_on: "2026-11-12" });
+  // Only the place and the date were sent: the amount and status are as they were.
+  expect(stub.supplies[0]).toMatchObject({ quantity: 1, stock_status: "ok", name: "Daging sapi" });
+  await expect(page.getByText("Saved — Daging sapi")).toBeVisible();
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ kept_in: "freezer", expires_on: "2026-12-20" });
+  expect(stub.seen.realBackend).toEqual([]);
+});

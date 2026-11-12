@@ -8,7 +8,7 @@
 // their weekdays, worked out here in code, instead of leaving the arithmetic
 // to the model.
 
-import type { RoutineKind } from "@/types/database";
+import type { FoodPlace, RoutineKind } from "@/types/database";
 
 export type KakakLocale = "id" | "en";
 
@@ -59,7 +59,20 @@ export interface KakakHousehold {
    * room it is in as `inside`.
    */
   rooms: { ref: string; name: string; floor?: string | null; inside?: string | null; wholeFloor?: boolean }[];
-  items: { ref: string; name: string; pet: boolean }[];
+  items: {
+    ref: string;
+    name: string;
+    pet: boolean;
+    /**
+     * Phase 176: a Fresh Food or Pantry item while ingredients are on
+     * (ingredientsOn). Absent otherwise, so every other item reads as before.
+     */
+    ingredient?: boolean;
+    /** Its stored place, only when someone noted one; a default is never sent. */
+    keptIn?: FoodPlace | null;
+    /** Its stored date, YYYY-MM-DD, only when there is one. */
+    expiresOn?: string | null;
+  }[];
   /**
    * "Who lives here?" (Phase 162, migrations/133): true only when the owner
    * said the household has no pets. Absent otherwise, so the block for every
@@ -72,6 +85,13 @@ export interface KakakHousehold {
    * exactly what it was for every other household.
    */
   foodOff?: boolean;
+  /**
+   * Phase 176: true while Kitchen amounts and Food at home are both on
+   * (lib/features ingredientsUnderFood), the only time ingredients have a
+   * place and a date on screen. Absent otherwise, so the block and the
+   * tools are exactly what they were for every other household.
+   */
+  ingredientsOn?: boolean;
 }
 
 const WEEKDAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -179,9 +199,14 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   lines.push("");
   lines.push("Shopping items already in the app:");
   for (const item of household.items) {
-    lines.push(`- ${item.ref}: ${item.name}${item.pet ? " (pet)" : ""}`);
+    lines.push(`- ${item.ref}: ${item.name}${item.pet ? " (pet)" : ""}${household.ingredientsOn ? ingredientLine(item) : ""}`);
   }
   if (household.items.length === 0) lines.push("- none");
+  if (household.ingredientsOn) {
+    lines.push(
+      "Ingredients: on. Items marked (ingredient) are under Dapur / Kitchen → Makanan / Food → Bahan masakan / Ingredients; a place or date is listed only when someone noted it.",
+    );
+  }
   lines.push("");
   // Today and the calendar go last so the shared instructions before this
   // block, and the rest of this block within a conversation, stay cached.
@@ -232,4 +257,17 @@ function roomLine(room: KakakHousehold["rooms"][number]): string {
   if (room.wholeFloor) return `${room.name} (whole floor)`;
   const path = [room.floor, room.inside, room.name].filter(Boolean).join(" · ");
   return room.inside ? `${path} (inside ${room.inside})` : path;
+}
+
+/**
+ * " (ingredient) · freezer · expires 2026-11-20", " (ingredient)", or
+ * nothing for an item that isn't one. Only what is stored: a default place
+ * is never sent, so Kakak never states a guess as a fact.
+ */
+function ingredientLine(item: KakakHousehold["items"][number]): string {
+  if (!item.ingredient) return "";
+  const parts = [" (ingredient)"];
+  if (item.keptIn) parts.push(item.keptIn);
+  if (item.expiresOn) parts.push(`expires ${item.expiresOn}`);
+  return parts.join(" · ");
 }

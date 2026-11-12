@@ -4930,6 +4930,140 @@
         ]
       ],
       "note": "Demo second example (EN)."
+    },
+    {
+      "id": "K113",
+      "sentence": "Daging sapi sudah saya keluarkan dari freezer, sekarang di kulkas",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "when it expires now",
+            "answersInclude": [
+              [
+                "Tidak tahu",
+                "Nggak tahu",
+                "Tidak tau",
+                "Gak tahu",
+                "Ga tahu"
+              ]
+            ],
+            "reply": "Besok"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": "I10",
+                  "kept_in": "fridge",
+                  "expiry": "set",
+                  "expires_on": "2026-11-12",
+                  "expiry_is_guess": {
+                    "anyOf": [
+                      true,
+                      false
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Phase 176: a listed ingredient out of the freezer with no date. Kakak asks for the new date, never keeps the frozen one by guessing, and never uses add_food."
+    },
+    {
+      "id": "K114",
+      "sentence": "We bought eggs, they're in the fridge, good until the 25th",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": "I1",
+                  "kept_in": {
+                    "anyOf": [
+                      "fridge",
+                      null
+                    ]
+                  },
+                  "expiry": "set",
+                  "expires_on": "2026-11-25"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Phase 176: Telur is marked (ingredient), so put away, not add_food. The date is the owner's. Already in the fridge, so kept_in may be null."
+    },
+    {
+      "id": "K115",
+      "sentence": "Ada ikan tongkol di freezer, kedaluwarsa 30 November",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Bahan masakan"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Phase 176: a raw ingredient that isn't listed is never add_food; Kakak says it can be added in Dapur → Makanan → Tambah bahan masakan."
+    },
+    {
+      "id": "K116",
+      "sentence": "My sister gave us a chocolate cake, it's in the fridge, eat it by Saturday",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_food",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "cake",
+                        "kue"
+                      ]
+                    ]
+                  },
+                  "kept_in": "fridge",
+                  "expires_on": "2026-11-14",
+                  "source": "gift"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Phase 176: a cake is food ready to eat, so still add_food while ingredients are on."
     }
   ]
 }

@@ -116,6 +116,9 @@ export const DEFAULTS: Record<string, Record<string, FieldMatcher>> = {
     return_container: false,
     expiry_is_guess: false,
   },
+  put_away_ingredient: {
+    expiry_is_guess: false,
+  },
   add_to_shopping_list: {},
   add_pet_routine: {
     days: null,
