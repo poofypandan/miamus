@@ -4780,6 +4780,156 @@
         ]
       ],
       "note": "Tell us if it's not done (migrations/150): 21:30 is before 22:00, so the alert can come."
+    },
+    {
+      "id": "K109",
+      "sentence": "Lampu dimatikan untuk Mochi dan Kopi jam 21.30, pakai foto. Budi yang kerjakan. Ingatkan Budi, kabari saya kalau belum.",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P1",
+                      "P2"
+                    ]
+                  },
+                  "kind": "lights",
+                  "times": {
+                    "sameSet": [
+                      "21:30"
+                    ]
+                  },
+                  "days": null,
+                  "staff": "S3",
+                  "note": null,
+                  "remind_staff": true,
+                  "alert_owners": true
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "The demo sentence (ID): no day words means every day; 'pakai foto' is the default proof, not a note."
+    },
+    {
+      "id": "K110",
+      "sentence": "Lights off for Mochi and Kopi at 9:30 pm, with a photo. Budi does it. Remind Budi, and tell me if it isn't done.",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P1",
+                      "P2"
+                    ]
+                  },
+                  "kind": "lights",
+                  "times": {
+                    "sameSet": [
+                      "21:30"
+                    ]
+                  },
+                  "days": null,
+                  "staff": "S3",
+                  "note": null,
+                  "remind_staff": true,
+                  "alert_owners": true
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "The demo sentence (EN)."
+    },
+    {
+      "id": "K111",
+      "sentence": "Jalan-jalan Kopi tiap sore jam 5, Mochi tidak usah.",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
+                  "kind": "walk",
+                  "times": {
+                    "sameSet": [
+                      "17:00"
+                    ]
+                  },
+                  "days": null
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Demo second example: 'sore' settles jam 5 as 17:00, no question."
+    },
+    {
+      "id": "K112",
+      "sentence": "Walk Kopi every evening at 5, not Mochi.",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "pet_routine",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_pet_routine",
+                "fields": {
+                  "pets": {
+                    "sameSet": [
+                      "P2"
+                    ]
+                  },
+                  "kind": "walk",
+                  "times": {
+                    "sameSet": [
+                      "17:00"
+                    ]
+                  },
+                  "days": null
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Demo second example (EN)."
     }
   ]
 }

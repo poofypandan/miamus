@@ -2,7 +2,9 @@
 // the phone (docs/phase-156-step2-kakak-plan.md, section 4, "What comes back
 // to the phone"). Strict tool schemas guarantee the shape; this checks what
 // they can't: lengths, HH:mm, real dates in range, and references that exist
-// in this household.
+// in this household. add_to_shopping_list and add_food aren't strict (the
+// API's limit on union types, tools.ts), so for them this also checks the
+// whole shape: every field there and no others, types and enums.
 
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
 import { ROUTINE_NOTE_MAX, routineKindInfo } from "@/lib/pet-routine-kinds";
@@ -64,6 +66,53 @@ function dayInRange(errors: string[], field: string, value: unknown, from: strin
   if (value < from || value > to) errors.push(`${field} ${value} is outside ${from} to ${to}`);
 }
 
+/**
+ * For a tool that isn't strict: an object with exactly these fields, as its
+ * schema requires (null counts as there). Returns it, or null when it isn't
+ * an object at all.
+ */
+function shape(
+  errors: string[],
+  field: string,
+  value: unknown,
+  keys: readonly string[],
+): Record<string, unknown> | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    errors.push(`${field} must be an object`);
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const missing = keys.filter((key) => record[key] === undefined);
+  if (missing.length) errors.push(`${field} is missing ${missing.join(", ")}`);
+  const extra = Object.keys(record).filter((key) => !keys.includes(key));
+  if (extra.length) errors.push(`${field} has unknown fields: ${extra.join(", ")}`);
+  return record;
+}
+
+function oneOf(errors: string[], field: string, value: unknown, allowed: readonly unknown[], nullable = false) {
+  if (nullable && value === null) return;
+  if (!allowed.includes(value)) {
+    errors.push(`${field} must be ${allowed.join(", ")}${nullable ? " or null" : ""}`);
+  }
+}
+
+function bool(errors: string[], field: string, value: unknown) {
+  if (typeof value !== "boolean") errors.push(`${field} must be true or false`);
+}
+
+const SHOPPING_ITEM_FIELDS = ["item", "status", "note", "pet"] as const;
+const FOOD_FIELDS = [
+  "name",
+  "kept_in",
+  "expires_on",
+  "expiry_unknown",
+  "expiry_is_guess",
+  "source",
+  "from_whom",
+  "return_container",
+  "notes",
+] as const;
+
 /** "Remind me" (migrations/137): on the day, or 1, 3 or 7 days before. */
 export const REMIND_DAYS = new Set([0, 1, 3, 7]);
 
@@ -104,9 +153,14 @@ export function validateToolCall(
       break;
     }
     case "add_to_shopping_list": {
-      const items = Array.isArray(input.items) ? (input.items as Record<string, unknown>[]) : [];
+      // Not strict (tools.ts): the shape is checked here.
+      shape(errors, "input", input, ["items"]);
+      const items = Array.isArray(input.items) ? (input.items as unknown[]) : [];
       if (items.length < 1 || items.length > 10) errors.push("items must have 1 to 10 entries");
-      items.forEach((item, index) => {
+      items.forEach((entry, index) => {
+        const item = shape(errors, `items[${index}]`, entry, SHOPPING_ITEM_FIELDS);
+        if (!item) return;
+        oneOf(errors, `items[${index}].status`, item.status, ["low", "out"]);
         ref(errors, `items[${index}].item`, item.item, refs.items, true);
         if (item.item === null) text(errors, `items[${index}].note`, item.note, { max: 120, required: true });
         else text(errors, `items[${index}].note`, item.note, { max: 120, required: false });
@@ -157,7 +211,14 @@ export function validateToolCall(
       break;
     }
     case "add_food": {
+      // Not strict (tools.ts): the shape is checked here.
+      shape(errors, "input", input, FOOD_FIELDS);
       text(errors, "name", input.name, { max: 80, required: true });
+      oneOf(errors, "kept_in", input.kept_in, ["fridge", "freezer", "pantry", "counter"]);
+      bool(errors, "expiry_unknown", input.expiry_unknown);
+      bool(errors, "expiry_is_guess", input.expiry_is_guess);
+      bool(errors, "return_container", input.return_container);
+      oneOf(errors, "source", input.source, ["home", "gift", "bought"], true);
       if (input.expires_on !== null) {
         // A label may already be past (food found at the back of the cupboard).
         dayInRange(errors, "expires_on", input.expires_on, addDays(today, -366), addDays(today, 3 * 366));

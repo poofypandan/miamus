@@ -57,7 +57,7 @@ const SCRIPT = {
     box: "Mau Kakak atur apa?",
     send: "Kirim",
     ask: "Lampu dimatikan untuk Mocha dan Matcha jam 21.30, pakai foto. Syam yang kerjakan. Ingatkan Syam, kabari saya kalau belum.",
-    reply: "Baik, Bu. Kakak siapkan: Syam mematikan lampu untuk Mocha dan Matcha setiap malam jam 21.30, dengan foto.",
+    reply: "Baik. Kakak siapkan: Syam mematikan lampu untuk Mocha dan Matcha setiap malam jam 21.30, dengan foto.",
     heading: "Rutinitas · Mocha & Matcha",
     save: "Simpan",
     done: "Beres. Syam diingatkan jam 21.30; Kakak hanya mengabari Anda jika belum dikerjakan.",

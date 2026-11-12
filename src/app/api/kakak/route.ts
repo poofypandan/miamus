@@ -40,6 +40,9 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Seconds Vercel lets this route run (route segment config, Next 15). A slow
+// call plus the engine's one retry must not be cut off by the Hobby default.
+export const maxDuration = 60;
 
 const MAX_BODY_BYTES = 256_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -70,8 +70,8 @@ The manager will ask before each of these, because they change production:
 
 ## D. Turn Kakak on (you, 30 seconds)
 
-On your phone, signed in as yourself: **Household → Kakak → Let Kakak
-help** (*Rumah → Kakak → Izinkan Kakak membantu*). The page says what is
+On your phone, signed in as yourself: **Settings → Kakak → Let Kakak
+help** (*Pengaturan → Kakak → Izinkan Kakak membantu*). The page says what is
 sent to Anthropic and links the privacy policy. The **Tell Kakak** button
 then appears at the bottom right of Today.
 
@@ -101,7 +101,7 @@ because that's what the weekend will be like.
 
 If step 2 says "Kakak isn't available right now", the key or
 `KAKAK_ENABLED` isn't in effect yet (redeploy, or check the spelling). If
-the Kakak row isn't in Household at all, step C.1 hasn't been done.
+the Kakak row isn't in Settings at all, step C.1 hasn't been done.
 
 ## F. Turning her off fast
 
@@ -109,7 +109,7 @@ Pick the one you need. None of them lose any data.
 
 | How fast | What | Effect |
 | --- | --- | --- |
-| Instant | **Household → Kakak → switch off** | Off for your household. The button disappears from Today. |
+| Instant | **Settings → Kakak → switch off** | Off for your household. The button disappears from Today. |
 | Instant | **Console → API keys → Disable** the `vercel-production` key | Off for everyone. Kakak says "isn't available right now". No redeploy needed. |
 | A few minutes | Vercel → `KAKAK_ENABLED` to `false`, then redeploy | Off for everyone, cleanly. |
 | Automatic | The US$20 monthly limit | Anthropic stops answering for the rest of the month. |
@@ -181,10 +181,11 @@ something Kakak can't do, an attempt to override her rules, and a bare
 
 Pet routines (Phase 173 PR B: lights off for both dogs, a walk for one dog,
 a question when no time is given, weekdays, "until Friday", a person with a
-reminder, an alert), about US$0.15–0.50:
+reminder, an alert, and the demo's own sentences in both languages:
+K109–K112), about US$0.25–0.80:
 
 ```bash
-npm run eval:kakak -- --model opus --effort low --cases K101,K102,K103,K104,K105,K106,K107,K108 --budget 2
+npm run eval:kakak -- --model opus --effort low --cases K101,K102,K103,K104,K105,K106,K107,K108,K109,K110,K111,K112 --budget 2
 ```
 
 Optional, the same sentences on Sonnet 5.5 for comparison (about
@@ -203,7 +204,7 @@ The full comparison (70 sentences, seven setups, about US$5–8) is in
 
 Say these to Kakak (typed, or with the phone keyboard's dictation key).
 Replace the names in brackets with your own staff and pets. Each one shows
-something different. Nothing is saved until you tap **Looks right**, so a
+something different. Nothing is saved until you tap **Looks right** (**Save** on a routine card), so a
 wrong card costs nothing: tap **Cancel**.
 
 | # | Bahasa Indonesia | English | What it shows |

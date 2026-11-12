@@ -14,7 +14,7 @@ import { DATE_LOCALE } from "@/lib/owner-locale";
 import { cn } from "@/lib/utils";
 
 /**
- * The Household tab's Kakak page (plan screen 9): what she does, what is
+ * The Settings tab's Kakak page (plan screen 9): what she does, what is
  * sent and to whom, and one switch. Off by default; any admin can turn it on
  * or off, and the page says who changed it last and when. Shown only for a
  * household on the family list (the row is hidden otherwise).

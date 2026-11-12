@@ -93,11 +93,13 @@ describe("household dates", () => {
 });
 
 describe("tool definitions", () => {
-  it("are strict, closed, and require every property", () => {
+  it("are closed and require every property; strict except the two validate.ts checks in full", () => {
     expect(KAKAK_TOOLS).toHaveLength(5);
     for (const tool of KAKAK_TOOLS) {
       if (!("input_schema" in tool)) throw new Error("custom tools only");
-      expect(tool.strict).toBe(true);
+      // The API's limit of 16 union-typed parameters (tools.ts, kakak-tool-limits.test.ts).
+      const loose = tool.name === "add_to_shopping_list" || tool.name === "add_food";
+      expect(tool.strict).toBe(loose ? undefined : true);
       expect(tool.input_schema.additionalProperties).toBe(false);
       expect([...(tool.input_schema.required ?? [])].sort()).toEqual(
         Object.keys(tool.input_schema.properties ?? {}).sort(),
@@ -361,7 +363,7 @@ describe("runner helpers", () => {
 describe("the test set", () => {
   it("is consistent with the household and the tools", () => {
     expect(checkTestSet(household, testSet)).toEqual([]);
-    expect(testSet.cases).toHaveLength(108);
+    expect(testSet.cases).toHaveLength(112);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 
