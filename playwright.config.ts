@@ -1,5 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// The browser runs in Asia/Jakarta (timezoneId below). Node must agree: the
+// stub backend and the tests compute "today" too, and on a UTC machine
+// (GitHub's runners) the two sides disagree from 17:00 to 24:00 UTC.
+process.env.TZ = "Asia/Jakarta";
+
 /**
  * Browser tests against a stubbed Supabase (tests/e2e/stub-backend.ts).
  *
@@ -48,6 +53,7 @@ export default defineConfig({
       // screens can be tested too (R6). Test-only; see the file.
       NODE_OPTIONS: "--require ./tests/e2e/server-stub.cjs",
       E2E_SERVER_STUB: "1",
+      TZ: "Asia/Jakarta",
       // Kakak's practice mode: the real /api/kakak route with scripted
       // answers, so a test can go through it with no key and no tokens.
       KAKAK_PRACTICE: "true",
