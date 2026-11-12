@@ -1,5 +1,6 @@
 "use client";
 
+import type { RoutineKind } from "@/types/database";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -51,6 +52,8 @@ export type CouldntDoTarget =
       title: string;
       time: string;
       category: ExceptionKind;
+      /** What the routine is (Phase 173), when it is one: a walk offers no "Barang habis". */
+      routineKind?: RoutineKind | null;
       /** The pets still open on this block. */
       items: AgendaItem[];
     };
@@ -282,7 +285,7 @@ function CouldntDoBody({
           <SheetDescription className="text-center">{subtitle}</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-2 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-          {[...(supervisingVisit ? (["supervising_repair"] as const) : []), ...reasonsFor(kind)].map((r) => {
+          {[...(supervisingVisit ? (["supervising_repair"] as const) : []), ...reasonsFor(kind, target.kind === "routine" ? target.routineKind : null)].map((r) => {
             const Icon = r === "pet_refused" && medicine ? Pill : REASON_ICONS[r];
             return (
               <button

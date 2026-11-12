@@ -14,7 +14,8 @@ import { ensureAnonymousSession } from "@/lib/auth/device-session";
 import { dataProvider } from "@/lib/data";
 import type { HouseCodePerson } from "@/lib/data/types";
 import { storeTenantId } from "@/lib/tenant";
-import { claimFromFragment, codeFromFragment } from "@/lib/setup-apply";
+import { markStaffTipsSeenOnJoin } from "@/lib/whats-new";
+import { claimFromFragment, codeFromFragment, typedHouseCode } from "@/lib/setup-apply";
 import { VideoTip } from "@/components/shared/video-tip";
 
 /**
@@ -120,7 +121,7 @@ function CodeStep({
     if (!fromLink) return;
     onClaim(claimFromFragment(window.location.hash));
     window.history.replaceState(window.history.state, "", window.location.pathname);
-    setCode(fromLink);
+    setCode(typedHouseCode(fromLink));
     void check(fromLink);
     // check is stable enough for a once-on-mount fill: it reads only its argument.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,7 +169,7 @@ function CodeStep({
       <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
         <Input
           value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          onChange={(e) => setCode(typedHouseCode(e.target.value))}
           placeholder="XXX-XXX"
           aria-label="Kode rumah"
           autoCapitalize="characters"
@@ -282,6 +283,7 @@ function PinStep({ code, person, onBack }: { code: string; person: HouseCodePers
       if (result.status === "ok") {
         storeTenantId(result.household_id);
         rememberStaffOnThisPhone(person);
+        markStaffTipsSeenOnJoin();
         // A full load, as after an invite link: HouseholdProvider resolves the
         // household once at startup.
         window.location.replace("/staff");
@@ -364,6 +366,7 @@ function ClaimStep({
       if (result.status === "ok") {
         storeTenantId(result.household_id);
         rememberStaffOnThisPhone(person);
+        markStaffTipsSeenOnJoin();
         // A full load, as after an invite link.
         window.location.replace("/staff");
         return;

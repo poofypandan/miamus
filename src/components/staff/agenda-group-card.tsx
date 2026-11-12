@@ -1102,6 +1102,7 @@ export function AgendaGroupCard({ group }: { group: AgendaGroup }) {
           title: cardTitle,
           time: group.time,
           category: group.category,
+          routineKind: group.kind,
           items: unexplained,
         }}
         open={couldntOpen}

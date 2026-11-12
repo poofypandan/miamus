@@ -160,11 +160,12 @@ test("owners see a couldn't-do chore in amber, open what was said, and reach the
   // My tasks counts it.
   const card = page.getByRole("region", { name: "My tasks" });
   await expect(card).toContainText("0 of 1 done · 1 couldn't", { timeout: 20_000 });
-  await expect(card.getByTestId("couldnt-line")).toContainText("Couldn't: other · Ari");
+  // What Ari wrote is on the row itself (demo check P-10), not only behind a tap.
+  await expect(card.getByTestId("couldnt-line")).toContainText("Couldn't: other · \u201cOffice closed today\u201d · Ari");
 
   // The day's row: amber, with the reason.
   const row = page.getByRole("button", { name: /Laundry/ }).first();
-  await expect(row.getByTestId("couldnt-line")).toContainText(/Couldn't: out of stock · Ari · \d{1,2}:\d{2}/);
+  await expect(row.getByTestId("couldnt-line")).toContainText(/Couldn't: out of stock · “Only a little left” · Ari · \d{1,2}:\d{2}/);
   await row.click();
   const sheet = page.getByRole("dialog", { name: "Laundry" });
   await expect(sheet.getByTestId("couldnt-do-note")).toContainText("Couldn't be done: out of stock");
