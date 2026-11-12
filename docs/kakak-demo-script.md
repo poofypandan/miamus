@@ -35,7 +35,7 @@ nothing else.
   does it. Remind Syam, and tell me if it isn't done.
 
 Kakak's reply (shot 3) is written by the AI, so the exact words vary; she is
-told to answer in one warm sentence, for example *"Baik, Bu. Kakak siapkan:
+told to answer in one warm sentence, for example *"Baik. Kakak siapkan:
 Syam mematikan lampu untuk Mocha dan Matcha setiap malam jam 21.30, dengan
 foto."* The card and the "Done" line are the app's own words and are always:
 
@@ -52,7 +52,7 @@ A second example, if there's time (one dog only, three photos):
 ### Things to check before filming
 
 - The real Kakak is on (Vercel: `KAKAK_ENABLED`, the key; see
-  `docs/kakak-weekend-go-live.md`) and switched on in Household → Kakak.
+  `docs/kakak-weekend-go-live.md`) and switched on in Settings → Kakak (Pengaturan → Kakak).
 - Syam is on the household's list and Syam's phone is linked, with
   notifications on, so the reminder can arrive at 21.30.
 - Delete any old "Matikan lampu" routine first (Pets → a dog → Manage

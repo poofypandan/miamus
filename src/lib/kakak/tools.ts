@@ -7,6 +7,19 @@ import type Anthropic from "@anthropic-ai/sdk";
 //
 // strict: true guarantees the shape. Strict schemas can't express lengths or
 // patterns, so those are checked after the call (validate.ts).
+//
+// The API limits strict tools in one request (Anthropic, "Structured
+// outputs", platform.claude.com/docs/en/build-with-claude/structured-outputs):
+// at most 20 strict tools, 24 optional parameters, and 16 parameters with a
+// union type (anyOf, or a type array) across all strict schemas together;
+// past that the request fails with a 400. Every nullable field here is a
+// union, so only three tools are strict: create_chore (9 unions),
+// add_pet_routine (6) and ask_question (0), 15 in all. They are the ones
+// whose shape matters most (dates, recurrence, routine switches) or that
+// every turn may use. add_to_shopping_list and add_food are not strict:
+// validate.ts checks their whole shape (fields, types, enums), and a call
+// that fails goes back to Kakak once like any other mistake.
+// tests/unit/kakak-tool-limits.test.ts keeps the strict set under the limits.
 
 const nullableString = (description: string) => ({
   anyOf: [{ type: "string" }, { type: "null" }],
@@ -102,7 +115,6 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
     name: "add_to_shopping_list",
     description:
       "Suggest things to buy. Match an existing shopping item when the owner clearly means it; otherwise write a short new note. Never saves anything.",
-    strict: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
@@ -188,7 +200,6 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
     name: "add_food",
     description:
       "Suggest one food in the house (a gift, leftovers, something bought). If no date was given, ask first; you may offer a cautious guess as one answer. Never saves anything.",
-    strict: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
