@@ -95,6 +95,18 @@ test("nothing tapped: saved as before, no place stored, no date, not tracked", a
   await expect(ingredients.getByRole("group", { name: "Fridge" }).getByRole("button", { name: /Tomat/ })).toBeVisible();
 });
 
+test("a tap on the default place is a choice: it stays when the category changes (Codex, PR #117)", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [chicken] });
+  const { form } = await openAddIngredient(page);
+  await form.getByRole("button", { name: "Fridge" }).click();
+  await form.getByRole("button", { name: "Pantry" }).click();
+  await expect(form.getByRole("button", { name: "Fridge" })).toHaveAttribute("aria-pressed", "true");
+  await form.getByLabel("Name").fill("Santan");
+  await form.getByRole("button", { name: "Add item" }).click();
+  await expect.poll(() => stub.supplies.length).toBe(2);
+  expect(stub.supplies[1]).toMatchObject({ name: "Santan", category: "pantry", kept_in: "fridge" });
+});
+
 test("Household Supplies and Shopping show the form as before", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [chicken] });
   const { form } = await openAddIngredient(page);

@@ -288,7 +288,7 @@ export function InventoryItemForm({
 
           {showPlaces && (
             <>
-              <PlacePicker value={keptIn ?? defaultPlace(category)} onChange={setKeptIn} locale={locale} />
+              <PlacePicker value={keptIn ?? defaultPlace(category)} onChange={setKeptIn} locale={locale} tapSelected />
               {item?.stock_status !== "out" && (
                 <ExpiryChips value={expiresOn} onChange={setExpiresOn} today={today} locale={locale} />
               )}
