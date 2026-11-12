@@ -60,6 +60,10 @@ test("Home → Rooms → Edit rooms opens the rooms editor, and its back link re
   await page.getByRole("button", { name: "Ubah ruangan" }).click({ timeout: 20_000 });
   await expect(page).toHaveURL(/module=access&page=rooms/);
   await expect(page.getByRole("button", { name: "Tambah lantai" })).toBeVisible();
+  // The tab bar lights Home, where it was opened from (Phase 175 check, P7).
+  const bar = page.getByRole("navigation", { name: "Bagian" });
+  await expect(bar.getByRole("link", { name: "Rumah" })).toHaveAttribute("aria-current", "page");
+  await expect(bar.getByRole("link", { name: "Pengaturan" })).not.toHaveAttribute("aria-current", "page");
 
   await page.getByRole("button", { name: "Rumah", exact: true }).click();
   await expect(page).toHaveURL(/module=chores&chores=rooms/);
@@ -72,6 +76,11 @@ test("Home → Rooms → Edit rooms opens the rooms editor, and its back link re
 test("the rooms editor from Settings still goes back to Settings", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, rooms: [], chores: [] });
   await page.goto("/dashboard?module=access&page=rooms");
+  await expect(page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Settings" })).toHaveAttribute(
+    "aria-current",
+    "page",
+    { timeout: 20_000 },
+  );
   await page.getByRole("button", { name: "Settings", exact: true }).click({ timeout: 20_000 });
   await expect(page).not.toHaveURL(/page=rooms/);
   await expect(page.getByRole("button", { name: /^Rooms/ })).toBeVisible();

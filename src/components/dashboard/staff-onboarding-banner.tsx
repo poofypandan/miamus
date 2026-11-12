@@ -6,6 +6,7 @@ import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { useSetupStage } from "@/hooks/use-setup-stage";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { homeScreenTipAllowed } from "@/lib/calm-start";
+import { useBannerShowing } from "@/hooks/use-top-banners";
 import { VideoTip } from "@/components/shared/video-tip";
 
 export const INSTALL_TIP_DISMISSED_KEY = "b11_onboarding_dismissed";
@@ -33,6 +34,10 @@ export function StaffOnboardingBanner() {
   const t = useT();
   const locale = useOwnerLocale();
   const stage = useSetupStage();
+  // One ask at a time (Phase 175 check, P2): not with the notifications
+  // prompt, which goes first, nor over Today's Set up card.
+  const pushPromptShowing = useBannerShowing("pushPrompt");
+  const setupCardShowing = useBannerShowing("setupCard");
 
   useEffect(() => {
     try {
@@ -57,7 +62,7 @@ export function StaffOnboardingBanner() {
 
   // Already installed: the tip has done its job, so it never shows inside the
   // home-screen app regardless of whether it was ever dismissed.
-  if (!visible || isStandalone || !homeScreenTipAllowed(stage)) return null;
+  if (!visible || isStandalone || !homeScreenTipAllowed(stage) || pushPromptShowing || setupCardShowing) return null;
 
   return (
     // standalone:hidden backs up the JS check with a pure CSS guard.

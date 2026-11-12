@@ -1,5 +1,6 @@
 "use client";
 
+import { startTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import {
   enabledModules,
+  highlightedTab,
   moduleFromParam,
   moduleHref,
   type DashboardModule,
@@ -21,7 +23,7 @@ import { useTabNavigation } from "@/hooks/use-tab-navigation";
 import { moduleFlagsFrom, useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useOwnerLocale } from "@/context/owner-locale-context";
 import type { OwnerLocale } from "@/lib/owner-locale";
-import { isPlainClick } from "@/lib/in-place-navigation";
+import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
 import { cn } from "@/lib/utils";
 
 // Labels and icons only; the order is DASHBOARD_MODULES' (Phase 175).
@@ -60,7 +62,9 @@ export function BottomTabBar() {
   const locale = useOwnerLocale();
   // No Pets tab for a household that said it has none (Phase 162).
   const flags = moduleFlagsFrom(useHouseholdProfile().hasPets);
-  const routeModule = moduleFromParam(searchParams.get("module"), flags);
+  const urlModule = moduleFromParam(searchParams.get("module"), flags);
+  // Edit rooms opened from Home lights Home (Phase 175 check, P7).
+  const routeModule = highlightedTab(urlModule, searchParams);
   // The tapped tab lights at once; the content follows when it is ready —
   // see useTabNavigation (Phase 125).
   const {
@@ -95,6 +99,12 @@ export function BottomTabBar() {
               onClick={(event) => {
                 if (!isPlainClick(event)) return;
                 event.preventDefault();
+                // On a page another tab lends (Edit rooms, under Home), the
+                // lit tab still goes to its own first screen.
+                if (module === activeModule && module !== urlModule) {
+                  startTransition(() => pushInPlace(moduleHref(module)));
+                  return;
+                }
                 navigate(module);
               }}
               aria-current={active ? "page" : undefined}

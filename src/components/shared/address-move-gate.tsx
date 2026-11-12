@@ -430,7 +430,7 @@ function signInAgain(t: Translate, audience: MoveAudience): string {
   switch (audience) {
     case "owner":
       return t(
-        "Sign in again with Google. Your household and everything in it are already there.",
+        "Sign in again with Google. Your home and everything in it are already there.",
         "Masuk lagi dengan Google. Rumah Anda dan semua isinya sudah ada di sana."
       );
     case "staff":

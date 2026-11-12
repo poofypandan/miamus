@@ -55,7 +55,7 @@ export function DeleteHouseholdSheet({
         message === "name_mismatch"
           ? t("That name doesn't match.", "Nama itu tidak cocok.")
           : message === "founder_only"
-            ? t("Only the person who created this household can delete it.", "Hanya orang yang membuat rumah tangga ini yang bisa menghapusnya.")
+            ? t("Only the person who created this home can delete it.", "Hanya orang yang membuat rumah tangga ini yang bisa menghapusnya.")
             : t("Couldn't schedule the deletion. Check your connection and try again.", "Penghapusan gagal dijadwalkan. Periksa internet, lalu coba lagi.")
       );
     } finally {
@@ -78,7 +78,7 @@ export function DeleteHouseholdSheet({
         <div className="flex flex-col gap-3 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           <p className="text-sm text-gray-700">
             {t(
-              "It happens 7 days from now. Until then the other admins are told and anyone can cancel. Your Google sign-in stays, so you can start a new household later.",
+              "It happens 7 days from now. Until then the other admins are told and anyone can cancel. Your Google sign-in stays, so you can start a new home later.",
               "Penghapusan terjadi 7 hari lagi. Sampai saat itu admin lain diberi tahu dan siapa pun bisa membatalkan. Akun Google Anda tetap ada, jadi Anda bisa membuat rumah tangga baru nanti."
             )}
           </p>

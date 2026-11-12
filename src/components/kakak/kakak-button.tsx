@@ -53,28 +53,39 @@ export function KakakButton() {
 
   return (
     <>
-      {/* Room under the tab's last row, so the button never covers it. */}
+      {/* Room under the tab's last row: the band below is 4.75rem tall, so
+          the last row ends above it once scrolled to the bottom. */}
       <div aria-hidden="true" className="h-20 shrink-0" />
       {/* On document.body: the pull-to-refresh wrapper is transformed, which
-          would make position: fixed relative to it instead of the screen. */}
+          would make position: fixed relative to it instead of the screen.
+
+          A band in the page's own colour, directly above the tab bar (Phase
+          175 check, F1): the button and its first-time hint sit inside it,
+          side by side, so neither floats over a row or a button. Content
+          scrolls under the band as it does under the tab bar, fading out at
+          its top edge, and the band takes the taps there, so a half-hidden
+          row is never pressed by mistake. */}
       {createPortal(
-        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom)+1rem)] z-30 mx-auto flex w-full max-w-md flex-col items-end gap-1.5 px-4">
-          {showHint && (
-            <p className="pointer-events-none max-w-[15rem] rounded-xl border bg-background px-3 py-2 text-xs text-gray-900 shadow-sm">
-              {t(
-                "Kakak can set things up for you — just tell her.",
-                "Kakak bisa mengaturnya untuk Anda — cukup bilang saja.",
-              )}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={press}
-            className="pointer-events-auto flex min-h-12 items-center gap-2 rounded-full border bg-background py-1.5 pl-1.5 pr-4 text-sm font-semibold text-gray-900 shadow-lg active:scale-[0.98]"
+        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 mx-auto w-full max-w-md">
+          <div aria-hidden="true" className="h-3 bg-gradient-to-t from-slate-50 to-slate-50/0" />
+          <div
+            data-testid="kakak-band"
+            className="pointer-events-auto flex items-center justify-end gap-3 bg-slate-50 px-4 pt-1 pb-3"
           >
-            <KakakAvatar className="size-9" />
-            {t("Tell Kakak", "Bilang ke Kakak")}
-          </button>
+            {showHint && (
+              <p className="min-w-0 flex-1 text-right text-xs leading-snug text-gray-600">
+                {t("Kakak can set things up for you.", "Kakak bisa mengaturnya untuk Anda.")}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={press}
+              className="flex min-h-12 shrink-0 items-center gap-2 rounded-full border bg-background py-1.5 pl-1.5 pr-4 text-sm font-semibold text-gray-900 shadow-sm active:scale-[0.98]"
+            >
+              <KakakAvatar className="size-9" />
+              {t("Tell Kakak", "Bilang ke Kakak")}
+            </button>
+          </div>
         </div>,
         document.body,
       )}

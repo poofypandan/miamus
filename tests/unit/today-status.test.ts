@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dayTotals,
+  leaveRowLabel,
   slipLabel,
   slipOwners,
   slipRow,
@@ -10,6 +11,7 @@ import {
   type WaitingInput,
 } from "@/lib/today-status";
 import type { PersonProgress, ProgressTask, StaffProgress } from "@/lib/staff-progress";
+import { pendingLeave } from "@/lib/leave";
 
 // Today's status line (Phase 175, S3): the day's counts come from the same
 // rows as the progress card; "waiting for you" counts rows, not items; one
@@ -48,6 +50,7 @@ function person(id: string, tasks: ProgressTask[]): PersonProgress {
 
 const NOTHING: WaitingInput = {
   approvals: 0,
+  leave: 0,
   medicine: 0,
   late: 0,
   couldnt: 0,
@@ -151,6 +154,50 @@ describe("waitingRows", () => {
   it("never counts the evening line and the late row together", () => {
     expect(waitingRows({ ...NOTHING, late: 2, couldnt: 1, notDone: 3 })).toBe(1);
   });
+
+  // Plan section 3, row 3b (Phase 175 check, F2): a leave request needs the
+  // owner's answer, so it is a row of its own, one per request.
+  it("counts one row per leave request waiting for an answer", () => {
+    expect(waitingRows({ ...NOTHING, leave: 1 })).toBe(1);
+    expect(waitingRows({ ...NOTHING, leave: 2, approvals: 1, repairsToReview: 3 })).toBe(4);
+  });
+
+  it("no longer says All on track on a finished day while leave waits", () => {
+    const day = { done: 18, total: 18, late: 0, couldnt: 0 };
+    const waiting = waitingRows({ ...NOTHING, leave: 1 });
+    expect(statusTitle(waiting, "en")).toBe("1 waiting for you");
+    expect(statusTitle(waiting, "id")).toBe("1 menunggu Anda");
+    // The day's own count is unchanged: the leave is a decision, not a task.
+    expect(statusDetail(day, "id")).toBe("18 dari 18 selesai · tidak ada yang terlambat");
+  });
+});
+
+describe("pendingLeave", () => {
+  const leave = (id: string, status: string, start: string, end: string) =>
+    ({ id, status, start_date: start, end_date: end }) as {
+      id: string;
+      status: "pending" | "approved" | "rejected" | "ended_early";
+      start_date: string;
+      end_date: string;
+    };
+
+  it("keeps only requests still waiting for an answer, soonest first", () => {
+    const rows = [
+      leave("later", "pending", "2026-11-20", "2026-11-21"),
+      leave("approved", "approved", "2026-11-13", "2026-11-14"),
+      leave("rejected", "rejected", "2026-11-13", "2026-11-13"),
+      leave("soon", "pending", "2026-11-15", "2026-11-16"),
+    ];
+    expect(pendingLeave(rows, "2026-11-12").map((l) => l.id)).toEqual(["soon", "later"]);
+  });
+
+  it("drops a pending request whose days are over, and keeps one under way", () => {
+    const rows = [
+      leave("past", "pending", "2026-11-01", "2026-11-02"),
+      leave("today", "pending", "2026-11-10", "2026-11-12"),
+    ];
+    expect(pendingLeave(rows, "2026-11-12").map((l) => l.id)).toEqual(["today"]);
+  });
 });
 
 describe("slipRow", () => {
@@ -193,6 +240,11 @@ describe("the words", () => {
     expect(statusDetail({ done: 0, total: 0, late: 0, couldnt: 0 }, "en")).toBeNull();
     // Only carried-over work: nothing falls on the day, but it is late.
     expect(statusDetail({ done: 0, total: 0, late: 2, couldnt: 0 }, "id")).toBe("2 terlambat");
+  });
+
+  it("names a leave request as its decision page does", () => {
+    expect(leaveRowLabel("Syam", "Nov 15 – Nov 16", "en")).toBe("Syam is asking for leave · Nov 15 – Nov 16");
+    expect(leaveRowLabel("Syam", "15 Nov – 16 Nov", "id")).toBe("Syam mengajukan cuti · 15 Nov – 16 Nov");
   });
 
   it("names what slipped as the progress card does", () => {

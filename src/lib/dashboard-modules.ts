@@ -72,3 +72,17 @@ export function moduleHref(module: DashboardModule): string {
   // should be the screen it opens on, not a redirect to one.
   return module === DEFAULT_MODULE ? "/dashboard" : `/dashboard?module=${module}`;
 }
+
+/**
+ * Which tab the bar lights for a URL: the module's own, except the room
+ * editor opened from Home → Rooms (`?module=access&page=rooms&from=home`),
+ * which belongs to Home, where its back link goes (Phase 175 check, P7).
+ * The same editor opened from Settings stays under Settings.
+ */
+export function highlightedTab(
+  module: DashboardModule,
+  params: { get(name: string): string | null }
+): DashboardModule {
+  if (module === "access" && params.get("page") === "rooms" && params.get("from") === "home") return "chores";
+  return module;
+}

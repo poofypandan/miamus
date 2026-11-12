@@ -59,7 +59,7 @@ export function HouseholdDataPanel({
     try {
       const { error } = await supabase.rpc("cancel_household_deletion");
       if (error) throw error;
-      toast.success(t("Deletion cancelled. Your household stays.", "Penghapusan dibatalkan. Rumah tangga Anda tetap ada."));
+      toast.success(t("Deletion cancelled. Your home stays.", "Penghapusan dibatalkan. Rumah tangga Anda tetap ada."));
       await reload();
     } catch (err) {
       console.error(err);
@@ -76,7 +76,7 @@ export function HouseholdDataPanel({
       {status?.scheduled && (
         <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm font-medium text-amber-900">
-            {t(`This household will be deleted on ${deleteDate}.`, `Rumah tangga ini akan dihapus pada ${deleteDate}.`)}
+            {t(`This home will be deleted on ${deleteDate}.`, `Rumah tangga ini akan dihapus pada ${deleteDate}.`)}
           </p>
           <p className="text-sm text-amber-900">
             {t(
@@ -101,7 +101,7 @@ export function HouseholdDataPanel({
           <p className="text-sm font-medium text-gray-900">{t("Download a copy", "Unduh salinan")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {t(
-              "Everything your household has recorded — pets, routines, chores, kitchen, staff and logs — in one file you can keep.",
+              "Everything recorded in your home — pets, routines, chores, kitchen, staff and logs — in one file you can keep.",
               "Semua yang dicatat rumah tangga Anda — hewan, rutinitas, tugas, dapur, staf, dan catatan — dalam satu file yang bisa Anda simpan."
             )}
           </p>
@@ -127,17 +127,17 @@ export function HouseholdDataPanel({
               className="flex min-h-[52px] items-center gap-3 rounded-xl border bg-card px-4 text-left text-sm active:bg-muted"
             >
               <Trash2 className="size-4 shrink-0 text-red-600" />
-              <span className="font-medium text-red-600">{t("Delete this household", "Hapus rumah tangga ini")}</span>
+              <span className="font-medium text-red-600">{t("Delete this home", "Hapus rumah tangga ini")}</span>
             </button>
           ) : null}
           <p className="px-1 text-xs text-muted-foreground">
             {status.canSchedule
               ? t(
-                  "Deletes the household and everything in it for everyone, 7 days after you confirm.",
+                  "Deletes the home and everything in it for everyone, 7 days after you confirm.",
                   "Menghapus rumah tangga dan semua isinya untuk semua orang, 7 hari setelah Anda konfirmasi."
                 )
               : t(
-                  "Only the person who created this household can delete it.",
+                  "Only the person who created this home can delete it.",
                   "Hanya orang yang membuat rumah tangga ini yang bisa menghapusnya."
                 )}
           </p>

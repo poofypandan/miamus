@@ -339,7 +339,7 @@ people are **staf** and **admin**.
 | You'll hear if any of N things isn't done | **Anda dikabari jika ada dari N hal yang belum dikerjakan** | Phase 175, homes without Kakak; matches "Kabari kami jika belum dikerjakan". |
 | Tell it once. Staff do it, with a photo. You only hear about what didn't happen. | **Bilang sekali. Staf mengerjakan, dengan foto. Anda hanya dikabari kalau ada yang belum.** | Phase 175, the Set up card. |
 | Use the starter list / Or tell Kakak | **Pakai daftar awal** / **Atau bilang ke Kakak** | Phase 175, the Set up card. |
-| Set up your home (the step) | **Siapkan rumah** | Phase 175. The card's title stays "Siapkan rumah Anda". |
+| Add your staff and chores (the step) | **Siapkan rumah** | Phase 175. The card's title stays "Siapkan rumah Anda". English was "Set up your home", the same words as the card's title (Phase 175 check, P3); the Indonesian already differs. |
 | Send your staff the link | **Kirim link ke staf Anda** | Phase 175, the step. Its button keeps "Kirim satu pesan WhatsApp". |
 | N of M phones linked | **N dari M HP terhubung** | Phase 175, under the button. |
 | See the first task done | **Lihat tugas pertama selesai** | Phase 175. Was "See it done / Lihat hasilnya". |
@@ -353,6 +353,11 @@ people are **staf** and **admin**.
 | All N staff phones opened today | **Semua N HP staf dibuka hari ini** | Phase 175, later. "HP", never "ponsel". |
 | Away | **Sedang pergi** | Phase 175, later. |
 | Weekly check-in | **Kabar mingguan** | Phase 175, later. |
+| Home (owner English text, for the household as a whole) | **Rumah** | Phase 175 check, P4: "Name your home", "Create home", "Delete this home", Activity's "· Home". English owner text says home, not household. The privacy policy keeps its own wording. |
+| {name} is asking for leave · 15–16 Nov | **{name} mengajukan cuti · 15–16 Nov** | Phase 175 check, F2: the row under Today's "Waiting for you"; the leave decision page's own words. Back from that page: **Hari ini**. |
+| Kakak can set things up for you. | **Kakak bisa mengaturnya untuk Anda.** | Phase 175 check, F1: Kakak's first-time hint, beside her button. Shortened from "… — cukup bilang saja." |
+| Notifications on for this phone · Turn on notifications for this phone | **Notifikasi aktif di HP ini** · **Aktifkan notifikasi di HP ini** | Phase 175 check, P5: Settings → Notifikasi and the Set up card. "HP", never "perangkat". |
+| Untick what you don't have. (starter list, a home with no rooms yet) | **Hapus centang yang tidak ada.** | Phase 175 check, F3: the card's starter list starts ticked, as /setup does. |
 
 ## Formatting
 

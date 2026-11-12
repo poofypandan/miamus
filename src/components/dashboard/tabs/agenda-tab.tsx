@@ -3,7 +3,7 @@
 import { startTransition, useMemo, useRef, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { Bell, CalendarDays, ChevronRight, Clock, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Smartphone, Sparkles, Wrench } from "lucide-react";
+import { Bell, CalendarDays, CalendarOff, ChevronRight, Clock, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Smartphone, Sparkles, Wrench } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores
 import { useBillPayments } from "@/hooks/use-bill-payments";
 import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
 import { comingUpLabel, comingUpReminders, comingUpText } from "@/lib/chore-reminders";
-import { dayTotals, slipLabel, slipOwners, slipRow, waitingRows } from "@/lib/today-status";
+import { dayTotals, leaveRowLabel, slipLabel, slipOwners, slipRow, waitingRows } from "@/lib/today-status";
 import { cn } from "@/lib/utils";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import {
@@ -61,7 +61,7 @@ import {
   supervisionStretches,
   walkInTodayLine,
 } from "@/lib/repair-walkins";
-import { leaveCovering } from "@/lib/leave";
+import { formatLeaveRange, leaveApprovalPath, leaveCovering, pendingLeave } from "@/lib/leave";
 import { slotOf } from "@/lib/couldnt-do";
 import { HardHat, UtensilsCrossed } from "lucide-react";
 import { useMenuWeek } from "@/hooks/use-menu";
@@ -405,6 +405,9 @@ export function AgendaTab() {
   // What waits for this owner (Phase 175, plan section 3): the rows of the
   // "Waiting for you" group, counted for its heading and the status line.
   const approvalCount = useMemo(() => pendingBatches(routineProposals).length, [routineProposals]);
+  // Leave requests waiting for an answer (plan, section 3, row 3b): one row
+  // each, to the decision page, which brings the owner back here.
+  const leaveWaiting = useMemo(() => pendingLeave(leaveRequests, todayKey), [leaveRequests, todayKey]);
   // Medicine alerts remember what was dismissed on this phone, so the
   // component reports how many it shows.
   const [medicineCount, setMedicineCount] = useState(0);
@@ -430,6 +433,7 @@ export function AgendaTab() {
   const slip = slipRow({ notDone: notDoneCount, late: totals.late, couldnt: totals.couldnt });
   const waiting = waitingRows({
     approvals: approvalCount,
+    leave: leaveWaiting.length,
     medicine: medicineCount,
     late: totals.late,
     couldnt: totals.couldnt,
@@ -638,6 +642,27 @@ export function AgendaTab() {
 
           {/* A pending proposal blocks someone else's work, so it leads. */}
           <ApprovalQueue heading={false} />
+
+          {/* Leave requests (plan, section 3, row 3b): a decision staff are
+              waiting on, so with the approvals. The decision page is where
+              cover is chosen; it comes back to Today. */}
+          {leaveWaiting.length > 0 && (
+            <div className="-my-1 flex flex-col" data-testid="leave-waiting">
+              {leaveWaiting.map((leave) => (
+                <Link
+                  key={leave.id}
+                  href={`${leaveApprovalPath(leave.id)}?from=today`}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-amber-800 active:bg-muted"
+                >
+                  <CalendarOff className="size-4 shrink-0 text-amber-700" aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    {leaveRowLabel(staffName(leave.staff_id), formatLeaveRange(leave, locale), locale)}
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-amber-700" aria-hidden />
+                </Link>
+              ))}
+            </div>
+          )}
 
           {/* A medicine course ending, ended or never started (Phase 144).
               Here rather than on the Pets tab because this is the screen the
@@ -913,7 +938,7 @@ export function AgendaTab() {
                 // a new owner sees jump.
                 title={
                   householdName === APP_NAME
-                    ? t("Welcome to your new household!", "Selamat datang di rumah baru Anda!")
+                    ? t("Welcome to your new home!", "Selamat datang di rumah baru Anda!")
                     : t(`Welcome to ${householdName}!`, `Selamat datang di ${householdName}!`)
                 }
                 description={

@@ -62,6 +62,8 @@ export function slipOwners(progress: StaffProgress | null, anyoneId: string): st
 export interface WaitingInput {
   /** Staff suggestions waiting for a decision: one row each. */
   approvals: number;
+  /** Leave requests waiting for a decision (lib/leave pendingLeave): one row each. */
+  leave: number;
   /** Medicine courses ending, ended or never started: one row each. */
   medicine: number;
   /** Open and late today. */
@@ -97,6 +99,7 @@ export function slipRow(input: Pick<WaitingInput, "notDone" | "late" | "couldnt"
 export function waitingRows(input: WaitingInput): number {
   return (
     input.approvals +
+    input.leave +
     input.medicine +
     (slipRow(input) ? 1 : 0) +
     (input.repairsToReview > 0 ? 1 : 0) +
@@ -128,6 +131,11 @@ export function statusDetail(totals: DayTotals, locale: OwnerLocale): string | n
   if (totals.total === 0) return totals.late > 0 ? late : null;
   const done = id ? `${totals.done} dari ${totals.total} selesai` : `${totals.done} of ${totals.total} done`;
   return `${done} · ${late}`;
+}
+
+/** A leave request's row: "Syam is asking for leave · Nov 15 – Nov 16", the decision page's own words. */
+export function leaveRowLabel(name: string, range: string, locale: OwnerLocale): string {
+  return locale === "id" ? `${name} mengajukan cuti · ${range}` : `${name} is asking for leave · ${range}`;
 }
 
 /** The late row's words: "1 late · 2 couldn't be done", as the progress card says them. */

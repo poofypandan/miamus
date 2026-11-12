@@ -13,6 +13,7 @@ import { useT } from "@/context/owner-locale-context";
 import { usePushStatus } from "@/hooks/use-push-status";
 import { useSetupStage } from "@/hooks/use-setup-stage";
 import { homeScreenTipAllowed } from "@/lib/calm-start";
+import { useBannerShowing, useReportBanner } from "@/hooks/use-top-banners";
 import { pushInPlace } from "@/lib/in-place-navigation";
 import { readSnooze, shouldShowPushPrompt, snoozeUntil, writeSnooze } from "@/lib/push-prompt";
 
@@ -60,14 +61,18 @@ export function PushPrompt() {
     return () => window.removeEventListener(INSTALL_TIP_DISMISSED_EVENT, onTipDismissed);
   }, []);
 
-  if (
-    onSettingsPage ||
-    snoozed === undefined ||
-    !homeScreenTipAllowed(stage) ||
-    !shouldShowPushPrompt(status, snoozed, Date.now(), tipShowing)
-  ) {
-    return null;
-  }
+  // Not over Today's Set up card, whose own row asks the same (Phase 175
+  // check, P2); the Add to Home Screen tip waits while this shows.
+  const setupCardShowing = useBannerShowing("setupCard");
+  const shows =
+    !onSettingsPage &&
+    snoozed !== undefined &&
+    !setupCardShowing &&
+    homeScreenTipAllowed(stage) &&
+    shouldShowPushPrompt(status, snoozed, Date.now(), tipShowing);
+  useReportBanner("pushPrompt", shows);
+
+  if (!shows) return null;
 
   function later() {
     const until = snoozeUntil(status, Date.now());
@@ -81,7 +86,7 @@ export function PushPrompt() {
     try {
       const result = await enable();
       if (result === "enabled") {
-        toast.success(t("Notifications on for this device", "Notifikasi aktif di perangkat ini"));
+        toast.success(t("Notifications on for this phone", "Notifikasi aktif di HP ini"));
       } else if (result === "denied") {
         toast.error(t("Notifications weren't allowed", "Notifikasi tidak diizinkan"));
       }

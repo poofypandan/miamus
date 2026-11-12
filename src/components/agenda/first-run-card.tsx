@@ -23,6 +23,7 @@ import { StarterListSheet } from "@/components/setup/starter-list-sheet";
 import { VideoTip } from "@/components/shared/video-tip";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useKakakStatus } from "@/hooks/use-kakak-status";
+import { useReportBanner } from "@/hooks/use-top-banners";
 import { nextFirstRunStep, type FirstRunStepId } from "@/lib/first-run";
 import type { FirstRun } from "@/hooks/use-first-run";
 import { moduleHref } from "@/lib/dashboard-modules";
@@ -43,8 +44,9 @@ const SECONDARY = "min-h-[40px] px-3.5 text-sm";
  *
  * Only the next step to do is open, with its one button (and, for Set up,
  * the starter list beside it); done steps stay as a quiet tick. "Use the
- * starter list" opens the Starter list sheet from Chores, which marks what
- * the home already has and adds only what is ticked. State and
+ * starter list" opens the Starter list sheet from Home → Chores, which marks
+ * what the home already has and adds only what is ticked; for a home with no
+ * rooms yet it starts with everything ticked, as /setup does. State and
  * rules live in useFirstRun and lib/first-run.
  */
 export function FirstRunCard({
@@ -71,6 +73,9 @@ export function FirstRunCard({
     setSheet(which);
   }
   const closeSheet = () => setSheet(null);
+  // While the checklist shows, the banners above it wait (P2): its own
+  // notifications row asks instead.
+  useReportBanner("setupCard", view === "checklist");
 
   if (view === "hidden") return null;
 
@@ -113,7 +118,8 @@ export function FirstRunCard({
   const copy: Record<FirstRunStepId, { title: string; detail?: string | null }> = {
     home: { title: t("Name your home", "Beri nama rumah"), detail: householdName },
     setup: {
-      title: t("Set up your home", "Siapkan rumah"),
+      // Not the card's own title again (Phase 175 check, P3): what the step is.
+      title: t("Add your staff and chores", "Siapkan rumah"),
       detail: staff.length > 0 ? staff.map((person) => person.name).join(", ") : null,
     },
     phone: {
@@ -272,7 +278,11 @@ export function FirstRunCard({
         </button>
       </div>
       {mounted.starter && (
-        <StarterListSheet open={sheet === "starter"} onOpenChange={(open) => setSheet(open ? "starter" : null)} />
+        <StarterListSheet
+          open={sheet === "starter"}
+          onOpenChange={(open) => setSheet(open ? "starter" : null)}
+          startTicked
+        />
       )}
       {mounted.kakak && <KakakSheet open={sheet === "kakak"} onClose={closeSheet} />}
     </section>
@@ -339,7 +349,7 @@ function NotifyAction({ firstRun }: { firstRun: FirstRun }) {
     try {
       const result = await enablePush();
       if (result === "enabled") {
-        toast.success(t("Notifications on for this device", "Notifikasi aktif di perangkat ini"));
+        toast.success(t("Notifications on for this phone", "Notifikasi aktif di HP ini"));
       } else if (result === "denied") {
         toast.error(t("Notifications weren't allowed", "Notifikasi tidak diizinkan"));
       }

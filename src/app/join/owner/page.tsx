@@ -14,15 +14,15 @@ type Stage = "checking" | "needs-login" | "redeeming" | "failed" | "already-memb
 const COPY = {
   en: {
     expiredTitle: "Invalid or expired link",
-    expiredBody: "This invite has already been used or has expired. Ask a household admin for a new one.",
-    alreadyTitle: "This account already has a household",
+    expiredBody: "This invite has already been used or has expired. Ask an admin of that home for a new one.",
+    alreadyTitle: "This account already has a home",
     alreadyBody:
-      "For now, a Google account can belong to one household only. Sign in with a different Google account, or ask the person who invited you to invite that one. The invite still works.",
+      "For now, a Google account can belong to one home only. Sign in with a different Google account, or ask the person who invited you to invite that one. The invite still works.",
     backToSignIn: "Back to sign in",
     invitedTitle: "You've been invited",
-    invitedBody: "Sign in with Google to join this household as an admin.",
+    invitedBody: "Sign in with Google to join this home as an admin.",
     google: "Continue with Google",
-    joining: "Joining the household…",
+    joining: "Joining the home…",
     checking: "Checking your invite…",
   },
   id: {

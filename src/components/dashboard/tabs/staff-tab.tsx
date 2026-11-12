@@ -67,7 +67,7 @@ import { useToday } from "@/hooks/use-today";
 import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { pushInPlace } from "@/lib/in-place-navigation";
-import { isOnLeave } from "@/lib/leave";
+import { isOnLeave, pendingLeave } from "@/lib/leave";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { LeavePanel } from "@/components/dashboard/leave-panel";
 import { SignOutSheet } from "@/components/auth/sign-out-sheet";
@@ -208,7 +208,7 @@ export function StaffTab() {
   const openLeave = leaveRequests.filter(
     (l) => (l.status === "pending" || l.status === "approved") && l.end_date >= today
   ).length;
-  const pendingLeave = leaveRequests.filter((l) => l.status === "pending" && l.end_date >= today).length;
+  const pendingLeaveCount = pendingLeave(leaveRequests, today).length;
   const locale = useOwnerLocale();
   const t = useT();
   const isOwner = useRequireOwner();
@@ -230,7 +230,7 @@ export function StaffTab() {
 
   const petName = useMemo(() => {
     const byId = new Map(pets.map((p) => [p.id, p.name]));
-    return (id: string | null) => (id ? (byId.get(id) ?? t("Unknown pet", "Hewan tidak dikenal")) : t("Household", "Rumah"));
+    return (id: string | null) => (id ? (byId.get(id) ?? t("Unknown pet", "Hewan tidak dikenal")) : t("Home", "Rumah"));
   }, [pets, t]);
 
   // Three tables, one chronology. Built from data the dashboard already holds
@@ -299,7 +299,7 @@ export function StaffTab() {
           <SettingsGroup>
             <SettingsRow
               icon={Trash2}
-              label={t("Household will be deleted", "Rumah tangga akan dihapus")}
+              label={t("Home will be deleted", "Rumah tangga akan dihapus")}
               detail={new Date(deletion.status.deleteAfter).toLocaleDateString(DATE_LOCALE[locale], {
                 day: "numeric",
                 month: "short",
@@ -329,11 +329,11 @@ export function StaffTab() {
               icon={CalendarOff}
               label={t("Leave", "Cuti")}
               detail={
-                pendingLeave > 0
-                  ? t(`${pendingLeave} to decide`, `${pendingLeave} perlu keputusan`)
+                pendingLeaveCount > 0
+                  ? t(`${pendingLeaveCount} to decide`, `${pendingLeaveCount} perlu keputusan`)
                   : String(openLeave)
               }
-              waiting={pendingLeave > 0}
+              waiting={pendingLeaveCount > 0}
               onPress={() => open("leave")}
             />
           )}
@@ -422,7 +422,7 @@ export function StaffTab() {
           <KakakSettings status={kakak} reload={reloadKakak} />
         ) : (
           <p className="text-sm text-muted-foreground">
-            {t("Kakak isn't available for this household yet.", "Kakak belum tersedia untuk rumah ini.")}
+            {t("Kakak isn't available for this home yet.", "Kakak belum tersedia untuk rumah ini.")}
           </p>
         ))}
       {page === "activity" && <ActivityPage entries={entries} />}

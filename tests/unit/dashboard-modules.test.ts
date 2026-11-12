@@ -2,7 +2,7 @@
 // Kitchen · Settings), but no URL key changed. Old links, saved PWA state and
 // the staff phones' back link must all still land on the same screen.
 import { describe, expect, it } from "vitest";
-import { DASHBOARD_MODULES, moduleFromParam, moduleHref } from "@/lib/dashboard-modules";
+import { DASHBOARD_MODULES, highlightedTab, moduleFromParam, moduleHref } from "@/lib/dashboard-modules";
 
 describe("dashboard tabs (Phase 175)", () => {
   it("orders the bar Today, Home, Pets, Kitchen, Settings", () => {
@@ -28,5 +28,13 @@ describe("dashboard tabs (Phase 175)", () => {
     expect(moduleHref("agenda")).toBe("/dashboard");
     expect(moduleHref("chores")).toBe("/dashboard?module=chores");
     expect(moduleHref("access")).toBe("/dashboard?module=access");
+  });
+
+  it("lights Home for the room editor opened from Home → Rooms, and Settings otherwise", () => {
+    const q = (query: string) => new URLSearchParams(query);
+    expect(highlightedTab("access", q("module=access&page=rooms&from=home"))).toBe("chores");
+    expect(highlightedTab("access", q("module=access&page=rooms"))).toBe("access");
+    expect(highlightedTab("access", q("module=access&page=staff&from=home"))).toBe("access");
+    expect(highlightedTab("chores", q("module=chores&chores=rooms"))).toBe("chores");
   });
 });

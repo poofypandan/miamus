@@ -73,8 +73,8 @@ test("sign-up asks what kind of home, saves the answer and opens its starter lis
   );
 
   await page.goto("/onboarding");
-  await page.getByLabel("Name your household").fill("The Lee Residence", { timeout: 20_000 });
-  await page.getByRole("button", { name: "Create household" }).click();
+  await page.getByLabel("Name your home").fill("The Lee Residence", { timeout: 20_000 });
+  await page.getByRole("button", { name: "Create home" }).click();
 
   // Screen 2: one choice, nothing pre-selected, Skip in the corner.
   await expect(page.getByRole("heading", { name: "What kind of home?" })).toBeVisible();

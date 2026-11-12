@@ -81,7 +81,7 @@ export function PushNotificationSettings() {
         return;
       }
       if (result === "enabled") {
-        toast.success(t("Notifications on for this device", "Notifikasi aktif di perangkat ini"));
+        toast.success(t("Notifications on for this phone", "Notifikasi aktif di HP ini"));
       }
     } catch (err) {
       console.error(err);
@@ -96,7 +96,7 @@ export function PushNotificationSettings() {
     setBusy("disable");
     try {
       await disablePush();
-      toast.success(t("Notifications off for this device", "Notifikasi mati di perangkat ini"));
+      toast.success(t("Notifications off for this phone", "Notifikasi mati di HP ini"));
     } catch (err) {
       console.error(err);
       toast.error(t("Couldn't turn off notifications", "Notifikasi gagal dimatikan"));
@@ -116,8 +116,8 @@ export function PushNotificationSettings() {
         markOff();
         toast.error(
           t(
-            "This device isn't registered any more. Turn notifications on again.",
-            "Perangkat ini sudah tidak terdaftar. Aktifkan lagi notifikasinya."
+            "This phone isn't registered any more. Turn notifications on again.",
+            "HP ini sudah tidak terdaftar. Aktifkan lagi notifikasinya."
           )
         );
         return;
@@ -125,7 +125,7 @@ export function PushNotificationSettings() {
       toast.success(
         devices === 1
           ? t("Test sent", "Tes terkirim")
-          : t(`Test sent to ${devices} devices`, `Tes terkirim ke ${devices} perangkat`)
+          : t(`Test sent to ${devices} phones`, `Tes terkirim ke ${devices} HP`)
       );
     } catch (err) {
       console.error(err);
@@ -147,8 +147,8 @@ export function PushNotificationSettings() {
             </div>
             <p className="text-xs text-muted-foreground">
               {t(
-                "An alert on this device the moment staff report something urgent, like a leak or a pet that wouldn't take its medicine, when staff add food, each morning for food about to expire, and what you choose below.",
-                "Peringatan di perangkat ini begitu staf melaporkan hal darurat, misalnya kebocoran atau hewan yang tidak mau minum obat, saat staf menambahkan makanan, setiap pagi untuk makanan yang hampir kedaluwarsa, dan yang Anda pilih di bawah."
+                "An alert on this phone the moment staff report something urgent, like a leak or a pet that wouldn't take its medicine, when staff add food, each morning for food about to expire, and what you choose below.",
+                "Peringatan di HP ini begitu staf melaporkan hal darurat, misalnya kebocoran atau hewan yang tidak mau minum obat, saat staf menambahkan makanan, setiap pagi untuk makanan yang hampir kedaluwarsa, dan yang Anda pilih di bawah."
               )}
             </p>
           </div>
@@ -204,8 +204,8 @@ export function PushNotificationSettings() {
             <p className="flex items-start gap-1.5 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
               <BellOff className="mt-px size-3.5 shrink-0" />
               {t(
-                "Notifications are blocked for Miamus on this device. Allow them in your browser or system settings, then come back here.",
-                "Notifikasi untuk Miamus diblokir di perangkat ini. Izinkan di pengaturan browser atau sistem, lalu kembali ke sini."
+                "Notifications are blocked for Miamus on this phone. Allow them in your browser or system settings, then come back here.",
+                "Notifikasi untuk Miamus diblokir di HP ini. Izinkan di pengaturan browser atau sistem, lalu kembali ke sini."
               )}
             </p>
           )}
@@ -217,7 +217,7 @@ export function PushNotificationSettings() {
               disabled={busy !== null || !canEnable}
             >
               {busy === "enable" ? <Loader2 className="animate-spin" /> : <BellRing />}
-              {t("Enable Notifications on this Device", "Aktifkan Notifikasi di Perangkat Ini")}
+              {t("Turn on notifications for this phone", "Aktifkan notifikasi di HP ini")}
             </Button>
           )}
 
@@ -225,7 +225,7 @@ export function PushNotificationSettings() {
             <>
               <p className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
                 <BellRing className="size-3.5 shrink-0" />{" "}
-                {t("On for this device.", "Aktif di perangkat ini.")}
+                {t("On for this phone.", "Aktif di HP ini.")}
               </p>
               <div className="flex gap-2">
                 <Button

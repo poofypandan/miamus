@@ -55,7 +55,7 @@ test("Settings tab: settings list, and Sign out with its confirmation", async ({
   await expect(signOutRow).toContainText("owner@example.test");
   await signOutRow.click();
   await expect(page.getByRole("heading", { name: "Sign out of Miamus on this phone?" })).toBeVisible();
-  await expect(page.getByText(/Your household and everything in it stay safe/)).toBeVisible();
+  await expect(page.getByText(/Your home and everything in it stay safe/)).toBeVisible();
 
   // Cancel keeps everything as it was.
   await page.getByRole("button", { name: "Cancel" }).click();
