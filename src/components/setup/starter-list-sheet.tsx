@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useSubmitLock } from "@/hooks/use-submit-lock";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
   // unlike a new household's review, where everything does.
   const [ticked, setTicked] = useState<Set<string>>(() => new Set());
   const [saving, setSaving] = useState(false);
-  const adding = useRef(false);
+  const adding = useSubmitLock();
   // Opened again: start from the household as it is now.
   useEffect(() => {
     if (open) {
@@ -99,22 +100,21 @@ export function StarterListSheet({ open, onOpenChange }: { open: boolean; onOpen
 
   async function add() {
     // A ref, so two taps in one tick can't both send the list (demo check P-1).
-    if (saving || !ready || adding.current) return;
-    adding.current = true;
+    if (saving || !ready || !adding.acquire()) return;
     setSaving(true);
     const outcome = await applyHouseholdSetup(
       activeHouseholdId,
       toApplyPayload(draft, unticked, added, [])
     );
     if (!outcome.ok) {
-      adding.current = false;
+      adding.release();
       setSaving(false);
       toast.error(t("Couldn't add the list. Nothing was added; try again.", "Daftar gagal ditambahkan. Belum ada yang ditambahkan; coba lagi."));
       return;
     }
     const n = outcome.result.rooms_added + outcome.result.chores_added + outcome.result.bills_added;
     await Promise.allSettled([refresh({ silent: true }), Promise.resolve(reloadRooms())]);
-    adding.current = false;
+    adding.release();
     setSaving(false);
     onOpenChange(false);
     toast.success(t(`Added ${n}`, `${n} ditambahkan`));

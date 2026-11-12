@@ -1,5 +1,6 @@
 "use client";
 
+import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, ChevronLeft, Loader2, Plus, X } from "lucide-react";
@@ -118,7 +119,7 @@ function Setup() {
   // Set at once on the first tap: `saving` disables the button only on the
   // next render, so a double tap sent the list twice and the second, refused
   // as a repeat, put an error toast over "Your home is ready" (demo check P-1).
-  const adding = useRef(false);
+  const adding = useSubmitLock();
   const [sentStaff, setSentStaff] = useState(0);
 
   const draft = useMemo(
@@ -157,13 +158,12 @@ function Setup() {
   }
 
   async function add() {
-    if (saving || adding.current) return;
-    adding.current = true;
+    if (saving || !adding.acquire()) return;
     setSaving(true);
     const payload = toApplyPayload(draft, unticked, added, staff);
     const outcome = await applyHouseholdSetup(activeHouseholdId, payload);
     if (!outcome.ok) {
-      adding.current = false;
+      adding.release();
       setSaving(false);
       toast.error(
         outcome.reason === "offline"
