@@ -98,13 +98,14 @@ export function kitchenViewFor(view: KitchenViewValue, flags: FeatureFlags): Kit
   return view === "food" && !flags.food ? "buy" : view;
 }
 
-/** The Kitchen pills shown, in order (D5: Food · Shopping · Menu). One pill is no pills. */
+/**
+ * The Kitchen pills shown, in order: Food · Menu · Shopping. With Food at
+ * home off it stays Shopping · Menu, so the pill it opens on stays first.
+ * One pill is no pills.
+ */
 export function kitchenViews(flags: FeatureFlags): KitchenViewValue[] {
-  return [
-    ...(flags.food ? (["food"] as const) : []),
-    "buy" as const,
-    ...(recipesOn(flags) ? (["menu"] as const) : []),
-  ];
+  const menu = recipesOn(flags) ? (["menu"] as const) : [];
+  return flags.food ? ["food", ...menu, "buy"] : ["buy", ...menu];
 }
 
 /** How many of the Features page's rows are on, Pets included: "4 on". */

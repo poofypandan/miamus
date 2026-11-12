@@ -70,8 +70,8 @@ export const FOOD_LIMITS = { name: 80, fromWhom: 60, notes: 200 } as const;
 export type FoodGroup = "today" | "week" | "later";
 
 export const FOOD_GROUP_LABELS: Record<FoodLocale, Record<FoodGroup, string>> = {
-  en: { today: "Eat today", week: "This week", later: "Later" },
-  id: { today: "Makan hari ini", week: "Minggu ini", later: "Nanti" },
+  en: { today: "Eat today", week: "This week", later: "Later or no date" },
+  id: { today: "Makan hari ini", week: "Minggu ini", later: "Nanti atau tanpa tanggal" },
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;

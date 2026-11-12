@@ -71,6 +71,40 @@ test("an owner tracks rice under Food → Ingredients; the old count is only a h
   await expect(page.getByRole("button", { name: /Beras/ })).toHaveCount(0);
 });
 
+test("Food · Menu · Shopping, and Food's buttons say what they add", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [rice(), soap] });
+  await page.goto("/dashboard?module=inventory");
+
+  const pills = page.getByRole("tablist", { name: "Kitchen" }).getByRole("tab");
+  await expect(pills).toHaveText(["Food", "Menu", "Shopping"], { timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Add ready-to-eat food" })).toBeVisible();
+  // Ingredients as large as Ready to eat, with its own full-width button.
+  const ingredients = page.getByRole("region", { name: "Ingredients" });
+  await expect(ingredients.getByRole("heading", { name: "Ingredients" })).toHaveClass(/text-base/);
+  await ingredients.getByRole("button", { name: "Add ingredient" }).click();
+  await expect(page.getByRole("dialog", { name: "Add item" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // Shopping's supplies keep the small corner button.
+  await page.getByRole("tab", { name: "Shopping" }).click();
+  await expect(page.getByRole("button", { name: "Add item" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add ingredient" })).toHaveCount(0);
+});
+
+test("staff see Makanan · Menu · Belanja and the larger Bahan masakan heading, with no add button", async ({ context, page }) => {
+  await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: true }, items: [rice()] });
+  await page.goto("/staff");
+  await page.getByRole("tab", { name: "Dapur" }).click();
+
+  await expect(page.getByRole("tablist", { name: "Dapur" }).getByRole("tab")).toHaveText(["Makanan", "Menu", "Belanja"], {
+    timeout: 20_000,
+  });
+  await expect(page.getByRole("button", { name: "Tambah makanan siap dimakan" })).toBeVisible();
+  const bahan = page.getByRole("region", { name: "Bahan masakan" });
+  await expect(bahan.getByRole("heading", { name: "Bahan masakan" })).toHaveClass(/text-base/);
+  await expect(bahan.getByRole("button", { name: /Tambah/ })).toHaveCount(0);
+});
+
 test("Bought asks how much, with last time pre-filled, and adds it; Undo puts it back", async ({ context, page }) => {
   const stub = await installStub(context, {
     owner: { locale: "en" },
