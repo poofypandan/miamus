@@ -162,6 +162,32 @@ test("Undo after closing and reopening the sheet still puts back the date (Codex
   await expect.poll(() => chicken().expires_on).toBeNull();
 });
 
+test("a date chosen right after Undo, on a slow signal, is kept (Codex, PR #116)", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: kitchen() });
+  const ingredients = await openOwnerFood(page);
+  const chicken = () => stub.supplies.find((row) => row.name === "Dada Ayam")!;
+
+  await ingredients.getByRole("button", { name: /Dada Ayam/ }).click();
+  const sheet = page.getByRole("dialog", { name: "Dada Ayam" });
+  await sheet.getByRole("button", { name: "Fridge" }).click();
+  await expect.poll(() => chicken().kept_in).toBe("fridge");
+
+  // Every save is slow from here: Undo's writes are still on their way when
+  // the date is chosen.
+  await page.route(/\/rest\/v1\/inventory_items/, async (route) => {
+    if (route.request().method() !== "PATCH") return route.fallback();
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    return route.fallback();
+  });
+  await page.getByRole("button", { name: "Undo" }).click();
+  await sheet.getByRole("button", { name: "1 week" }).click();
+  await expect.poll(() => chicken().kept_in, { timeout: 10_000 }).toBe("freezer");
+  await expect.poll(() => chicken().expires_on, { timeout: 10_000 }).toBe(jakartaDay(7));
+  await page.waitForTimeout(1500);
+  expect(chicken().expires_on).toBe(jakartaDay(7));
+  await expect(sheet.getByRole("button", { name: "1 week" })).toHaveAttribute("aria-pressed", "true");
+});
+
 test("into the freezer keeps the date with a hint; Out hides the date and clears it", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: kitchen() });
   const ingredients = await openOwnerFood(page);

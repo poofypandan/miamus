@@ -43,9 +43,13 @@ export function IngredientWhereWhen({ item, lang }: { item: InventoryItem; lang:
     try {
       // Both, always: the toast can outlive this sheet (closed and opened
       // again, a date set meanwhile), so nothing here can say whether the
-      // date changed (Codex, PR #116). The writes go out in order.
-      await setIngredientPlace(item.id, before.kept_in);
-      await setIngredientExpiry(item.id, before.expires_on);
+      // date changed (Codex, PR #116). Both join the item's write queue now,
+      // together, so a date chosen right after Undo goes after the whole
+      // Undo, not between its two writes.
+      await Promise.all([
+        setIngredientPlace(item.id, before.kept_in),
+        setIngredientExpiry(item.id, before.expires_on),
+      ]);
     } catch (err) {
       console.error(err);
       toast.error(id ? "Gagal membatalkan. Coba lagi." : "Couldn't undo. Try again.", sheetToast);
