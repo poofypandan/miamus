@@ -330,10 +330,10 @@ people are **staf** and **admin**.
 | One more step, asked only once · Yes, save the note | **Satu langkah lagi, hanya ditanyakan sekali** · **Ya, simpan catatan** | Demo fixes F-5: the kitchen notes' health-data question, in the same sheet. |
 | Home (tab) | **Rumah** | Phase 175. Was Household's label; replaced Chores / Tugas. Lucide `House`. |
 | Settings (tab) | **Pengaturan** | Phase 175. The phone's own word; replaced Household / Rumah. Lucide `Settings`. |
-| All on track | **Semua lancar** | Phase 175, Today's status line. Not "Semua selesai", which means all done. |
-| N waiting for you | **N menunggu Anda** | Phase 175. Reuses "Menunggu Anda". |
-| Nothing late | **Tidak ada yang terlambat** | Phase 175, under the status line. |
-| Coming up (heading) | **Segera** | Phase 175. Already the word on Today's line. |
+| All on track | **Semua lancar** | Phase 175 S3, Today's status line. Not "Semua selesai", which means all done. Its other states reuse **N terlambat** and **N tidak bisa dikerjakan** (the calm line's words). |
+| N waiting for you | **N menunggu Anda** | Phase 175 S3, the status line and the group heading. Reuses "Menunggu Anda". |
+| Nothing late | **Tidak ada yang terlambat** | Phase 175 S3, under the status line; lower case after a dot mid-line ("Semua lancar · tidak ada yang terlambat"). |
+| Coming up (group heading) | **Segera** | Phase 175 S3, a group heading on Today. Already the word on Today's line. |
 | The day / The whole day | **Hari ini** / **Semua hari ini** | Phase 175: the list's heading; the folded day (later). |
 | Kakak is watching N things | **Kakak memantau N hal** | Phase 175, homes with Kakak. |
 | You'll hear if any of N things isn't done | **Anda dikabari jika ada dari N hal yang belum dikerjakan** | Phase 175, homes without Kakak; matches "Kabari kami jika belum dikerjakan". |
