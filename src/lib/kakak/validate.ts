@@ -260,6 +260,10 @@ export function validateToolCall(
         errors.push("expires_on must be null unless expiry is set");
       }
       if (input.expiry_is_guess === true && input.expiry !== "set") errors.push("expiry_is_guess without a date");
+      if (item?.out && input.expiry === "set") {
+        // The database clears an Out item's date on every write (migrations/154).
+        errors.push(`item ${item.ref} is marked out, so it keeps no date: leave expiry keep and say the date can be set once it is marked Sudah dibeli / Bought`);
+      }
       if (item?.ingredient) {
         const samePlace = input.kept_in === null || input.kept_in === item.keptIn;
         const sameDate =

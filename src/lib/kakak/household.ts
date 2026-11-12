@@ -68,6 +68,8 @@ export interface KakakHousehold {
      * (ingredientsOn). Absent otherwise, so every other item reads as before.
      */
     ingredient?: boolean;
+    /** Marked Out: it keeps no date until it is bought again (migrations/154). */
+    out?: boolean;
     /** Its stored place, only when someone noted one; a default is never sent. */
     keptIn?: FoodPlace | null;
     /** Its stored date, YYYY-MM-DD, only when there is one. */
@@ -260,13 +262,14 @@ function roomLine(room: KakakHousehold["rooms"][number]): string {
 }
 
 /**
- * " (ingredient) · freezer · expires 2026-11-20", " (ingredient)", or
+ * " (ingredient) · freezer · expires 2026-11-20", " (ingredient) · out", or
  * nothing for an item that isn't one. Only what is stored: a default place
  * is never sent, so Kakak never states a guess as a fact.
  */
 function ingredientLine(item: KakakHousehold["items"][number]): string {
   if (!item.ingredient) return "";
   const parts = [" (ingredient)"];
+  if (item.out) parts.push("out");
   if (item.keptIn) parts.push(item.keptIn);
   if (item.expiresOn) parts.push(`expires ${item.expiresOn}`);
   return parts.join(" · ");

@@ -71,6 +71,8 @@ export interface ContextItemRow {
   kept_in?: string | null;
   /** migrations/154; absent before it, which reads as no date. */
   expires_on?: string | null;
+  /** Enough, Running low or Out: an Out item keeps no date (migrations/154's trigger). */
+  stock_status?: string | null;
 }
 
 export interface ContextRows {
@@ -255,6 +257,7 @@ export function buildContext(
       ...(ingredient
         ? {
             ingredient: true,
+            ...(item.stock_status === "out" ? { out: true } : {}),
             keptIn: PLACES.has(item.kept_in ?? "") ? (item.kept_in as FoodPlace) : null,
             expiresOn: typeof item.expires_on === "string" && DAY.test(item.expires_on.slice(0, 10)) ? item.expires_on.slice(0, 10) : null,
           }

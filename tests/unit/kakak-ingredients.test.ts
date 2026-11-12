@@ -32,6 +32,8 @@ const rows: ContextRows = {
     { id: id(32), name: "Sabun cuci", scope: "home", created_at: "2026-01-03", category: "household_supplies", kept_in: null, expires_on: null },
     // I4: a pet item.
     { id: id(33), name: "Makanan anjing", scope: "pet", created_at: "2026-01-04", category: "dog_food", kept_in: null, expires_on: null },
+    // I5: an ingredient marked Out: it keeps no date.
+    { id: id(34), name: "Telur", scope: "home", created_at: "2026-01-05", category: "fresh_food", stock_status: "out", kept_in: "fridge", expires_on: null },
   ],
 } as ContextRows;
 
@@ -56,6 +58,7 @@ describe("the household block", () => {
     expect(block).toContain("- I2: Beras (ingredient)\n");
     expect(block).toContain("- I3: Sabun cuci\n");
     expect(block).toContain("- I4: Makanan anjing (pet)\n");
+    expect(block).toContain("- I5: Telur (ingredient) · out · fridge\n");
     expect(block).toContain("Ingredients: on.");
   });
 
@@ -136,6 +139,11 @@ describe("validateToolCall for put_away_ingredient", () => {
     expect(check(call({ item: "I9" })).ok).toBe(false);
     // Ingredients off: nothing is marked.
     expect(validateToolCall(buildContext(rows, opts).household, "put_away_ingredient", call()).ok).toBe(false);
+  });
+
+  it("refuses a date for an ingredient marked Out, which the database would clear", () => {
+    expect(check(call({ item: "I5", kept_in: "counter" })).ok).toBe(false);
+    expect(check(call({ item: "I5", kept_in: "counter", expiry: "keep", expires_on: null }))).toEqual({ ok: true });
   });
 
   it("refuses a call that changes nothing", () => {

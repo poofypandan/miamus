@@ -81,11 +81,11 @@ function featureRow(rows: unknown, feature: string): boolean | null {
 async function readItems(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, householdId: string) {
   const items = await supabase
     .from("inventory_items")
-    .select("id, name, scope, created_at, category, kept_in, expires_on")
+    .select("id, name, scope, created_at, category, stock_status, kept_in, expires_on")
     .eq("household_id", householdId);
   if (items.error?.code !== "42703") return items;
   console.error("Kakak: ingredient places not read", items.error.message);
-  return supabase.from("inventory_items").select("id, name, scope, created_at, category").eq("household_id", householdId);
+  return supabase.from("inventory_items").select("id, name, scope, created_at, category, stock_status").eq("household_id", householdId);
 }
 
 async function readRows(

@@ -139,8 +139,13 @@ export function useKakakSave() {
                 );
               }
               if (item.expiry !== "keep") {
-                await household.setIngredientExpiry(item.itemId, item.expiry === "set" ? item.expiresOn : null);
+                const saved = await household.setIngredientExpiry(item.itemId, item.expiry === "set" ? item.expiresOn : null);
                 undos.push(() => household.setIngredientExpiry(item.itemId, dateBefore));
+                // An item marked Out keeps no date: the database clears it
+                // (migrations/154). Never report a date as saved that wasn't.
+                if ((saved.expires_on ?? null) !== item.expiresOn) {
+                  throw new Error("The ingredient's date was not kept (it is marked Out)");
+                }
               }
               break;
             }
