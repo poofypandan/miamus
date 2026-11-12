@@ -497,6 +497,19 @@ export type InventoryItem = {
    * bought or set back to Enough.
    */
   to_buy_amount?: number | null;
+  /**
+   * Where an ingredient is kept (Phase 176, migrations/154): the same four
+   * places as food. Null = nobody has said; the app shows the category's
+   * default (lib/ingredients placeOf) without storing it. Optional because a
+   * row cached by an older build lacks it. Staff phones may set it.
+   */
+  kept_in?: FoodPlace | null;
+  /**
+   * YYYY-MM-DD: the earliest use-by date among what is there, or null for no
+   * date (migrations/154). The server clears it whenever the item is Out.
+   * Staff phones may set it.
+   */
+  expires_on?: string | null;
   // The Phase 83 box/loose ledger. Still in the table so a phone on the
   // previous build keeps working through the deploy; nothing reads them now.
   unit_type?: string;

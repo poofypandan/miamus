@@ -388,6 +388,9 @@ export const mockProvider: DataProvider = {
       id: uid("item"),
       household_id: getActiveHouseholdId(),
       ...input,
+      // As the server's row (migrations/154): null when not given.
+      kept_in: input.kept_in ?? null,
+      expires_on: input.expires_on ?? null,
       created_at: new Date().toISOString(),
       variant: null,
       last_audited_at: null,

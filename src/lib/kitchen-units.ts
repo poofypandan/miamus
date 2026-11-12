@@ -242,7 +242,8 @@ export function startingAmount(item: Pick<InventoryItem, "quantity" | "amount_se
  *   - otherwise a tap on Out empties a tracked item, and a tap on Running
  *     low stays until the amount next changes;
  *   - (153) a status back to Enough clears to_buy_amount, and an item with a
- *     shortfall stays Running low while its amount moves above the low level.
+ *     shortfall stays Running low while its amount moves above the low level;
+ *   - (154) an item that is Out has no date: expires_on is cleared.
  */
 export function applyAmountRules(before: InventoryItem | null, after: InventoryItem, now: Date = new Date()): InventoryItem {
   const next: InventoryItem = { ...after, amount_set_at: before?.amount_set_at ?? null };
@@ -276,6 +277,8 @@ export function applyAmountRules(before: InventoryItem | null, after: InventoryI
   }
   // Back to Enough clears the shortfall (bought, or someone tapped Enough; migrations/153).
   if ((next.stock_status ?? "ok") === "ok" && next.to_buy_amount != null) next.to_buy_amount = null;
+  // An item that is Out has no date (migrations/154).
+  if (next.stock_status === "out" && next.expires_on != null) next.expires_on = null;
   if (before === null || (next.stock_status ?? "ok") !== statusBefore) next.stock_status_at = stamp;
   return next;
 }

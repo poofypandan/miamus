@@ -386,6 +386,10 @@ export const supabaseProvider: DataProvider = {
     return data;
   },
   async updateInventoryItem(id, patch) {
+    // Sends only the keys given. kept_in and expires_on (migrations/154) go
+    // only when a caller sets them, so every other write works with or
+    // without 154 applied; staff phones may send them (the owner guard
+    // leaves them out of its owner-only list).
     const { data, error } = await client()
       .from("inventory_items")
       .update(patch)

@@ -318,12 +318,16 @@ export interface InventoryItemInput {
   min_threshold: number;
   photo_url: string | null;
   audit_frequency_days: number;
+  /** Where it is kept (Phase 176, migrations/154); left out = not sent. */
+  kept_in?: FoodPlace | null;
+  /** Its use-by date, YYYY-MM-DD (migrations/154); left out = not sent. */
+  expires_on?: string | null;
 }
 
 /**
  * A change to an item. Owners may change anything; a staff phone only the
- * amount, the status and the purchase columns (inventory_items_owner_guard,
- * migrations/099 and 148).
+ * amount, the status, the purchase columns, and an ingredient's place and
+ * date (inventory_items_owner_guard, migrations/099, 148 and 154).
  */
 export type InventoryItemPatch = Partial<InventoryItemInput> &
   Partial<

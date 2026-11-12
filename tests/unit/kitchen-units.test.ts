@@ -183,6 +183,55 @@ describe("the rules mirror (as migrations/148's trigger)", () => {
   });
 });
 
+describe("an item that is Out has no date (as migrations/154's trigger)", () => {
+  const dated = item({
+    track_amount: true,
+    quantity: 3,
+    min_threshold: 1,
+    kept_in: "freezer",
+    expires_on: "2026-11-20",
+    amount_set_at: "2026-10-01T00:00:00Z",
+  });
+
+  it("clears the date on a tap on Out, and keeps the place", () => {
+    const out = applyAmountRules(dated, { ...dated, stock_status: "out" }, NOW);
+    expect(out.expires_on).toBeNull();
+    expect(out.kept_in).toBe("freezer");
+  });
+
+  it("clears it when the amount reaches nothing", () => {
+    const used = applyAmountRules(dated, { ...dated, quantity: 0 }, NOW);
+    expect(used.stock_status).toBe("out");
+    expect(used.expires_on).toBeNull();
+  });
+
+  it("clears it on an untracked item, and on a new item that starts Out", () => {
+    const plain = item({ expires_on: "2026-11-20" });
+    expect(applyAmountRules(plain, { ...plain, stock_status: "out" }, NOW).expires_on).toBeNull();
+    const added = applyAmountRules(null, item({ track_amount: true, quantity: 0, expires_on: "2026-12-01" }), NOW);
+    expect(added.stock_status).toBe("out");
+    expect(added.expires_on).toBeNull();
+  });
+
+  it("keeps the date on Running low, on a move, and on Enough", () => {
+    expect(applyAmountRules(dated, { ...dated, stock_status: "low" }, NOW).expires_on).toBe("2026-11-20");
+    expect(applyAmountRules(dated, { ...dated, quantity: 1 }, NOW).expires_on).toBe("2026-11-20");
+    const moved = applyAmountRules(dated, { ...dated, kept_in: "fridge" }, NOW);
+    expect(moved.expires_on).toBe("2026-11-20");
+    expect(moved.stock_status_at).toBeUndefined();
+  });
+
+  it("matches the migration: the rule before both of the trigger's exits", () => {
+    const sql = readFileSync(join(__dirname, "../../supabase/migrations/154_ingredient_place_and_date.sql"), "utf8");
+    const body = /create or replace function public\.stamp_inventory_stock_status\(\)[\s\S]*?\n\$\$;/.exec(sql)?.[0] ?? "";
+    const exits = body.split("return new;").slice(0, -1);
+    expect(exits).toHaveLength(2);
+    for (const before of exits) {
+      expect(before.trimEnd()).toMatch(/if new\.stock_status = 'out' then\s+new\.expires_on := null;\s+end if;[\s\S]*$/);
+    }
+  });
+});
+
 describe("undoing a purchase (Codex, PR #93)", () => {
   const out = { track_amount: true, stock_status: "out" as const, last_bought_amount: 2 };
 
