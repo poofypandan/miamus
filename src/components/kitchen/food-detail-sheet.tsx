@@ -3,12 +3,16 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { CloudUpload, HandHeart, Loader2, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
+import { PlacePicker } from "@/components/kitchen/place-picker";
+import { keepOpenForToasts, sheetToast } from "@/components/kitchen/sheet-toast";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
 import { SyncedImg } from "@/components/shared/synced-img";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useToday } from "@/hooks/use-today";
+import { ingredientsUnderFood } from "@/lib/features";
 import {
   FOOD_OUTCOMES,
   FOOD_OUTCOME_LABELS,
@@ -25,7 +29,7 @@ import {
 import { DATE_LOCALE } from "@/lib/owner-locale";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
-import type { FoodItem, FoodOutcome } from "@/types/database";
+import type { FoodItem, FoodOutcome, FoodPlace } from "@/types/database";
 
 const OUTCOME_ICONS: Record<FoodOutcome, typeof Trash2> = {
   eaten: UtensilsCrossed,
@@ -57,7 +61,11 @@ export function FoodDetailSheet({
   useBackToClose(item !== null, onClose);
   return (
     <Sheet open={item !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="bottom" className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl">
+      <SheetContent
+        side="bottom"
+        className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl"
+        onInteractOutside={keepOpenForToasts}
+      >
         {item && (
           <Detail
             key={item.id}
@@ -100,7 +108,11 @@ function Detail({
     pendingIds,
     eatFoodPortion,
     undoFoodPortion,
+    moveFood,
   } = useHousehold();
+  // Phase 176: the four place buttons, where Food → Ingredients shows too
+  // (Kitchen amounts and Food at home on), so a home without it sees no change.
+  const canMove = ingredientsUnderFood(useHouseholdFeatures());
   // Added on this phone and not sent yet (Phase 161): nothing on the server to
   // finish, change or delete until it arrives.
   const waitingToSend = pendingIds.has(item.id);
@@ -208,6 +220,35 @@ function Detail({
     }
   }
 
+  // Phase 176 (plan 5b): a tap moves it at once, kept_in only (moveFood), so
+  // a portion another phone took meanwhile is kept. Undo puts the place back.
+  async function move(place: FoodPlace) {
+    const before = item.kept_in;
+    const label = FOOD_PLACE_LABELS[locale][place];
+    const toastId = toast.success(tr(`${name} · moved to ${label}`, `${name} · dipindahkan ke ${label}`), {
+      ...sheetToast,
+      duration: FOOD_UNDO_TOAST_MS,
+      action: {
+        label: tr("Undo", "Batalkan"),
+        onClick: () =>
+          void moveFood(item.id, before).catch(() =>
+            toast.error(tr("Couldn't undo. Try again.", "Gagal membatalkan. Coba lagi."), sheetToast)
+          ),
+      },
+    });
+    try {
+      await moveFood(item.id, place);
+    } catch (err) {
+      console.error(err);
+      toast.error(tr("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."), {
+        ...sheetToast,
+        id: toastId,
+        action: undefined,
+        duration: undefined,
+      });
+    }
+  }
+
   async function remove() {
     setBusy("delete");
     try {
@@ -247,7 +288,10 @@ function Detail({
           {portions !== null && portions > 0 && (
             <Fact label={tr("Portions", "Porsi")}>{portionsLabel(portions, locale)}</Fact>
           )}
-          <Fact label={tr("Kept in", "Disimpan di")}>{FOOD_PLACE_LABELS[locale][item.kept_in]}</Fact>
+          {/* With the place buttons below, the place is said there instead. */}
+          {!(canMove && !waitingToSend) && (
+            <Fact label={tr("Kept in", "Disimpan di")}>{FOOD_PLACE_LABELS[locale][item.kept_in]}</Fact>
+          )}
           {(item.from_whom || item.source) && (
             <Fact label={tr("From", "Dari")}>
               {item.from_whom ?? (item.source ? FOOD_SOURCE_LABELS[locale][item.source] : null)}
@@ -303,6 +347,10 @@ function Detail({
             })}
           </div>
         </div>
+
+        {canMove && (
+          <PlacePicker value={item.kept_in} onChange={(place) => void move(place)} locale={locale} disabled={busy !== null} />
+        )}
 
         <Button variant="ghost" className="min-h-11 text-gray-700" onClick={() => onEdit(item)} disabled={busy !== null}>
           <Pencil /> {tr("Edit", "Ubah")}

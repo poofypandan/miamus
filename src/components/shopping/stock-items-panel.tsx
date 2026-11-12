@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InventoryItemForm } from "@/components/inventory/inventory-item-form";
+import { IngredientList } from "@/components/kitchen/ingredient-list";
 import { ItemList } from "@/components/shopping/item-list";
 import { StockStatusSheet } from "@/components/shopping/stock-status-sheet";
 import { TrackAmountSheet } from "@/components/shopping/track-amount-sheet";
@@ -27,6 +28,7 @@ export function StockItemsPanel({
   empty,
   headings = true,
   prominent = false,
+  places = false,
 }: {
   /** For the heading's aria link. */
   id: string;
@@ -48,6 +50,12 @@ export function StockItemsPanel({
    * in the corner. Shopping's supplies keep the small one.
    */
   prominent?: boolean;
+  /**
+   * Food → Ingredients (Phase 176): grouped by place with Use soon on top
+   * (IngredientList), and the sheet says where each one is kept and when it
+   * expires. Shopping's supplies and the staff's Belanja keep ItemList.
+   */
+  places?: boolean;
 }) {
   const [choosing, setChoosing] = useState<InventoryItem | null>(null);
   const [tracking, setTracking] = useState<InventoryItem | null>(null);
@@ -108,6 +116,8 @@ export function StockItemsPanel({
       )}
       {items.length === 0 ? (
         empty
+      ) : places ? (
+        <IngredientList items={items} lang={lang} onPress={setChoosing} showAmounts />
       ) : (
         <ItemList
           items={items}
@@ -120,6 +130,7 @@ export function StockItemsPanel({
       <StockStatusSheet
         item={choosing}
         lang={lang}
+        places={places}
         onClose={() => setChoosing(null)}
         onEdit={
           owner

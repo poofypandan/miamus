@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Check, ChevronRight, CircleAlert, Loader2, PackageX, Pencil, Scale } from "lucide-react";
+import { IngredientWhereWhen } from "@/components/kitchen/ingredient-where-when";
+import { keepOpenForToasts } from "@/components/kitchen/sheet-toast";
 import { AmountControls } from "@/components/shopping/amount-controls";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +17,10 @@ import {
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { useToday } from "@/hooks/use-today";
 import { amountsOn } from "@/lib/features";
+import { FOOD_PLACE_LABELS } from "@/lib/food";
+import { ingredientDaysLeft, ingredientExpiryText, placeOf } from "@/lib/ingredients";
 import { amountLine, formatAmount, isTracked } from "@/lib/kitchen-units";
 import {
   CATEGORY_LABELS_EN,
@@ -26,6 +31,7 @@ import {
   stockStatus,
 } from "@/lib/inventory";
 import { photoSrc } from "@/lib/photos";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 import type { InventoryItem, StockStatus } from "@/types/database";
 
@@ -43,6 +49,10 @@ const ICONS: Record<StockStatus, typeof Check> = {
  * Kitchen amounts (Phase 170 PR A): a tracked item also shows its amount,
  * minus, plus and Set amount, for owners and staff; owners get a Track
  * amount row. The item is read live, so the sheet follows every change.
+ *
+ * Food → Ingredients (Phase 176, `places`): where it is kept and when it
+ * expires follow the status, for owners and staff (IngredientWhereWhen).
+ * A place tap keeps the sheet open; a status tap still closes it.
  */
 export function StockStatusSheet({
   item: picked,
@@ -50,6 +60,7 @@ export function StockStatusSheet({
   onClose,
   onEdit,
   onTrack,
+  places = false,
 }: {
   item: InventoryItem | null;
   lang: "en" | "id";
@@ -58,7 +69,14 @@ export function StockStatusSheet({
   onEdit?: (item: InventoryItem) => void;
   /** Owner only: opens Track amount (Kitchen amounts on). */
   onTrack?: (item: InventoryItem) => void;
+  /**
+   * An ingredient under Food (Phase 176): the place and date blocks, and the
+   * sheet's small line says where it is and when it expires. Only where the
+   * Ingredients section shows (Kitchen amounts and Food at home both on).
+   */
+  places?: boolean;
 }) {
+  const today = formatDateLocal(useToday());
   const { setInventoryStatus, inventoryItems } = useHousehold();
   const flags = useHouseholdFeatures();
   const showAmounts = amountsOn(flags);
@@ -92,11 +110,22 @@ export function StockStatusSheet({
 
   return (
     <Sheet open={item !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="bottom">
+      <SheetContent
+        side="bottom"
+        className={places ? "max-h-[92dvh] overflow-y-auto" : undefined}
+        onInteractOutside={places ? keepOpenForToasts : undefined}
+      >
         <SheetHeader>
           <SheetTitle>{item ? stockItemName(item) : ""}</SheetTitle>
           <SheetDescription>
-            {item && (id ? CATEGORY_LABELS_ID : CATEGORY_LABELS_EN)[item.category]}
+            {item &&
+              [
+                (id ? CATEGORY_LABELS_ID : CATEGORY_LABELS_EN)[item.category],
+                places ? FOOD_PLACE_LABELS[lang][placeOf(item)] : null,
+                places && current !== "out" ? ingredientExpiryText(ingredientDaysLeft(item, today), lang) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-2 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
@@ -128,6 +157,11 @@ export function StockStatusSheet({
               </Button>
             );
           })}
+          {places && item && (
+            <div className="mt-3">
+              <IngredientWhereWhen key={item.id} item={item} lang={lang} />
+            </div>
+          )}
           {onTrack && showAmounts && item && (
             <button
               type="button"

@@ -13,6 +13,9 @@ import { isIngredient } from "@/lib/kitchen-units";
  * Shown while Kitchen amounts and Food at home are both on; Shopping then
  * lists only the non-food supplies, so each item lives in one browsing place.
  *
+ * Phase 176: grouped by place, Use soon on top, each item once; its sheet
+ * moves it between places and sets its date (owners and staff).
+ *
  * Shared by the owner's Kitchen (owner, in their language) and the staff's
  * Dapur (Bahasa Indonesia, no editing).
  */
@@ -32,6 +35,7 @@ export function IngredientsSection({ lang, owner }: { lang: "en" | "id"; owner: 
       addLabel={id ? "Tambah bahan masakan" : "Add ingredient"}
       headings={false}
       prominent
+      places
       empty={
         <p className="rounded-xl border border-dashed px-3 py-5 text-center text-sm text-muted-foreground">
           {owner
