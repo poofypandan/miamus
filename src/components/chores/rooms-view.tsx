@@ -144,7 +144,7 @@ export function RoomsView() {
           <Button className="min-h-[44px]" onClick={() => openEditor(null, null)}>
             <Plus /> {t("Add Chore", "Tambah Tugas")}
           </Button>
-          <EditRoomsButton />
+          <EditRoomsButton large />
         </EmptyState>
         <RoomsEditor editor={editor} onClose={() => setEditor(null)} today={today} />
       </>
@@ -373,15 +373,16 @@ function jobChips(chores: RoomChore[], locale: OwnerLocale, other: string) {
  */
 const EDIT_ROOMS_HREF = "/dashboard?module=access&page=rooms&from=home";
 
-function EditRoomsButton() {
+function EditRoomsButton({ large = false }: { large?: boolean }) {
   const t = useT();
   return (
     <Button
       variant="outline"
-      className="min-h-[36px] shrink-0 px-3 text-xs"
+      // Large beside the empty state's Add Chore; small above the room list.
+      className={large ? "min-h-[44px]" : "min-h-[36px] shrink-0 px-3 text-xs"}
       onClick={() => pushInPlace(EDIT_ROOMS_HREF)}
     >
-      <Pencil className="size-3.5" /> {t("Edit rooms", "Ubah ruangan")}
+      <Pencil className={large ? undefined : "size-3.5"} /> {t("Edit rooms", "Ubah ruangan")}
     </Button>
   );
 }
