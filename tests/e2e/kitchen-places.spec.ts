@@ -192,6 +192,40 @@ test("ready-to-eat food moves the same way, and only its place is sent", async (
   await expect.poll(() => stub.foods[0].kept_in).toBe("fridge");
 });
 
+test("two quick moves on a slow signal land in the order tapped (Codex, PR #116)", async ({ context, page }) => {
+  const stub = await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: true } });
+  await page.goto("/staff");
+  await page.getByRole("tab", { name: "Dapur" }).click();
+  await page.getByRole("button", { name: "Tambah makanan siap dimakan" }).click({ timeout: 20_000 });
+  await page.getByLabel(/Makanan apa\?/).fill("Rendang");
+  await page.getByRole("button", { name: "Dimasak di rumah" }).click();
+  await page.getByRole("button", { name: "Besok" }).click();
+  await page.getByRole("button", { name: "Simpan" }).click();
+  await expect.poll(() => stub.foods.length).toBe(1);
+
+  // The first move's save is slow; the second must still land last.
+  const sent: unknown[] = [];
+  let first = true;
+  await page.route(/\/rest\/v1\/food_items/, async (route) => {
+    if (route.request().method() !== "PATCH") return route.fallback();
+    sent.push((route.request().postDataJSON() as { kept_in?: string }).kept_in);
+    if (first) {
+      first = false;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    return route.fallback();
+  });
+  await page.getByRole("button", { name: /Rendang/ }).click();
+  const sheet = page.getByRole("dialog", { name: "Rendang" });
+  await sheet.getByRole("button", { name: "Freezer" }).click();
+  await sheet.getByRole("button", { name: "Lemari" }).click();
+  // The latest tap shows at once.
+  await expect(sheet.getByRole("button", { name: "Lemari" })).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => sent).toEqual(["freezer", "pantry"]);
+  await expect.poll(() => stub.foods[0].kept_in).toBe("pantry");
+  await expect(sheet.getByRole("button", { name: "Lemari" })).toHaveAttribute("aria-pressed", "true");
+});
+
 test("staff see the same groups in Indonesian, move and date an item, and cannot add", async ({ context, page }) => {
   const stub = await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: true }, items: kitchen() });
   await page.goto("/staff");

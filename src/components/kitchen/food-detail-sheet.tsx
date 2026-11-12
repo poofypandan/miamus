@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { CloudUpload, HandHeart, Loader2, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
 import { PlacePicker } from "@/components/kitchen/place-picker";
@@ -30,6 +30,23 @@ import { DATE_LOCALE } from "@/lib/owner-locale";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 import type { FoodItem, FoodOutcome, FoodPlace } from "@/types/database";
+
+/**
+ * One food's moves, and their Undo, go to the server one at a time in the
+ * order tapped (Codex, PR #116): on a slow signal two taps sent side by side
+ * could land out of order and leave the earlier place. Module level, so a
+ * move still waiting when the sheet closes keeps its turn.
+ */
+const moveTurns = new Map<string, Promise<unknown>>();
+function inTurn<T>(foodId: string, run: () => Promise<T>): Promise<T> {
+  const next = (moveTurns.get(foodId) ?? Promise.resolve()).then(run);
+  const tail = next.catch(() => undefined);
+  moveTurns.set(foodId, tail);
+  void tail.then(() => {
+    if (moveTurns.get(foodId) === tail) moveTurns.delete(foodId);
+  });
+  return next;
+}
 
 const OUTCOME_ICONS: Record<FoodOutcome, typeof Trash2> = {
   eaten: UtensilsCrossed,
@@ -222,8 +239,22 @@ function Detail({
 
   // Phase 176 (plan 5b): a tap moves it at once, kept_in only (moveFood), so
   // a portion another phone took meanwhile is kept. Undo puts the place back.
+  // The buttons show the latest tap while earlier ones are still on their way.
+  const [shownPlace, setShownPlace] = useState<FoodPlace | null>(null);
+  const movesOnTheirWay = useRef(0);
+  async function sendMove(place: FoodPlace) {
+    movesOnTheirWay.current += 1;
+    setShownPlace(place);
+    try {
+      await inTurn(item.id, () => moveFood(item.id, place));
+    } finally {
+      movesOnTheirWay.current -= 1;
+      if (movesOnTheirWay.current === 0) setShownPlace(null);
+    }
+  }
+
   async function move(place: FoodPlace) {
-    const before = item.kept_in;
+    const before = shownPlace ?? item.kept_in;
     const label = FOOD_PLACE_LABELS[locale][place];
     const toastId = toast.success(tr(`${name} · moved to ${label}`, `${name} · dipindahkan ke ${label}`), {
       ...sheetToast,
@@ -231,13 +262,13 @@ function Detail({
       action: {
         label: tr("Undo", "Batalkan"),
         onClick: () =>
-          void moveFood(item.id, before).catch(() =>
+          void sendMove(before).catch(() =>
             toast.error(tr("Couldn't undo. Try again.", "Gagal membatalkan. Coba lagi."), sheetToast)
           ),
       },
     });
     try {
-      await moveFood(item.id, place);
+      await sendMove(place);
     } catch (err) {
       console.error(err);
       toast.error(tr("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."), {
@@ -349,7 +380,7 @@ function Detail({
         </div>
 
         {canMove && (
-          <PlacePicker value={item.kept_in} onChange={(place) => void move(place)} locale={locale} disabled={busy !== null} />
+          <PlacePicker value={shownPlace ?? item.kept_in} onChange={(place) => void move(place)} locale={locale} disabled={busy !== null} />
         )}
 
         <Button variant="ghost" className="min-h-11 text-gray-700" onClick={() => onEdit(item)} disabled={busy !== null}>
