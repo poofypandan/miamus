@@ -520,7 +520,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       }
       if (table === "task_logs") return answerLogs(route, logs);
       if (table === "master_schedules") return answerSchedules(route, schedules, who === OWNER);
-      // Shopping notes (Phase 154's quick add; the menu's "Not on your list",
+      // Shopping notes (Phase 154's quick add; the menu's "Not in your Ingredients",
       // Phase 170 PR C): added here and read back once there are any.
       if (table === "inventory_alerts" && request.method() === "POST") {
         const body = request.postDataJSON();

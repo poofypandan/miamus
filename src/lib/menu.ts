@@ -415,9 +415,13 @@ export interface MenuShortfall {
   toBuy: ToBuyLine[];
   /** Tracked items with enough: shown, not added. */
   enough: { item: InventoryItem; need: number; have: number }[];
-  /** Linked items that aren't tracked (or whose line doesn't convert). Unticked. */
+  /**
+   * Items she keeps but the amounts can't count: linked lines whose item
+   * isn't tracked (or whose unit doesn't convert), and free-name lines whose
+   * name is exactly one item's. Unticked.
+   */
   check: InventoryItem[];
-  /** Free-name ingredients (or a deleted item's). Unticked; added as notes. */
+  /** Free-name ingredients Miamus has no item for (or a deleted item's). Ticked; added as notes. */
   unlisted: string[];
 }
 
@@ -436,6 +440,16 @@ export function menuShortfall(
   const need = new Map<string, number>();
   const check = new Map<string, InventoryItem>();
   const unlisted = new Map<string, string>();
+  // A free name that is exactly one item's name ("Garam" once Garam is in
+  // Ingredients) is that item to check, not unlisted. Trimmed, lower-cased,
+  // inner spaces collapsed; two items with the name match neither. It never
+  // counts towards To buy or Enough, and lineItem (cooking) is unchanged.
+  const norm = (name: string) => name.trim().toLowerCase().replace(/\s+/g, " ");
+  const byItemName = new Map<string, InventoryItem | null>();
+  for (const item of items) {
+    const key = norm(item.name);
+    if (key) byItemName.set(key, byItemName.has(key) ? null : item);
+  }
   for (const dish of dishes) {
     if (dish.day < from || dish.day > to || dish.cooked_at) continue;
     const recipe = recipeOf(dish, recipes);
@@ -444,6 +458,11 @@ export function menuShortfall(
     for (const line of recipe.ingredients) {
       const item = lineItem(line, items);
       if (!item) {
+        const match = line.item_id ? null : byItemName.get(norm(line.name));
+        if (match) {
+          check.set(match.id, match);
+          continue;
+        }
         const key = line.name.trim().toLowerCase();
         if (key && !unlisted.has(key)) unlisted.set(key, line.name.trim());
         continue;
