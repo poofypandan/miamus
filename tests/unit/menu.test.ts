@@ -368,9 +368,35 @@ describe("Add missing to Shopping", () => {
     expect(result.unlisted).toEqual(["Lime leaves", "Salt"]);
   });
 
-  it("a tracked item counted by one line isn't also a Check these, even when another line is in spoons", () => {
+  it("a tracked item counted by one line isn't also under In your Ingredients, even when another line is in spoons", () => {
     const result = menuShortfall(dishes, [soto], items, "2026-11-11", "2026-11-15");
     expect(result.check.some((i) => i.id === "chicken")).toBe(false);
+  });
+
+  it("a free name that is exactly one item's name goes to check, not unlisted", () => {
+    const salt = item({ id: "salt", name: "  salt ", track_amount: false });
+    const leaves = item({ id: "leaves", name: "Lime   Leaves", track_amount: false, unit: "pcs" });
+    const result = menuShortfall(dishes, [soto], [...items, salt, leaves], "2026-11-11", "2026-11-15");
+    expect(result.check.map((i) => i.id).sort()).toEqual(["leaves", "salt", "shallots"]);
+    expect(result.unlisted).toEqual([]);
+  });
+
+  it("two items with the same name: no match, the name stays unlisted", () => {
+    const saltA = item({ id: "salt-a", name: "Salt", track_amount: false });
+    const saltB = item({ id: "salt-b", name: "salt", variant: "Coarse", track_amount: false });
+    const result = menuShortfall(dishes, [soto], [...items, saltA, saltB], "2026-11-11", "2026-11-15");
+    expect(result.check.map((i) => i.id)).toEqual(["shallots"]);
+    expect(result.unlisted).toEqual(["Lime leaves", "Salt"]);
+  });
+
+  it("a name-matched tracked item never enters the amounts: never To buy or Enough", () => {
+    // Tracked with none left: a linked line would make it To buy, a name match never does.
+    const leaves = item({ id: "leaves", name: "Lime leaves", quantity: 0, unit: "pcs", track_amount: true });
+    const result = menuShortfall(dishes, [soto], [...items, leaves], "2026-11-11", "2026-11-15");
+    expect(result.toBuy.some((l) => l.item.id === "leaves")).toBe(false);
+    expect(result.enough.some((l) => l.item.id === "leaves")).toBe(false);
+    expect(result.check.some((i) => i.id === "leaves")).toBe(true);
+    expect(result.unlisted).toEqual(["Salt"]);
   });
 
   it("nothing in the window: nothing to add", () => {

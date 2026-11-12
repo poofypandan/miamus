@@ -6,26 +6,35 @@ import { CheckCircle2, Circle, Loader2, RefreshCw, ShoppingBasket } from "lucide
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRecipes } from "@/hooks/use-recipes";
-import { STOCK_STATUS_LABELS, isLowStock, stockItemName, stockStatus } from "@/lib/inventory";
+import { ingredientsUnderFood } from "@/lib/features";
+import { isLowStock, stockItemName } from "@/lib/inventory";
 import { isActiveAlert } from "@/lib/inventory-status";
+import { amountLine, isTracked } from "@/lib/kitchen-units";
 import { friendlyAmount, menuShortfall, shortfallLine, toBuyPatch, type CookReadiness } from "@/lib/menu";
 import type { MenuDish } from "@/types/database";
-import { cn } from "@/lib/utils";
 
 /**
  * Add missing to Shopping (owners, Phase 170 PR C, D10; mockup screen 5).
  * The dishes from `from` to `to` that aren't cooked yet, added up against
- * what's at home, then a review. Nothing is added without it:
+ * what's at home, then a review. Nothing is added without it. A tick always
+ * means "put it on the shopping list", and the sections go from "will be
+ * added" to "won't be added" (owner, 2026-11-12):
  *
- *   - To buy: tracked items short of what the week needs, ticked, with the
- *     shortfall ("Need 1.5 kg · have 1 kg · buy 500 g"), stored as
- *     to_buy_amount so To buy and the WhatsApp text read "Chicken 500 g";
- *   - Enough: shown, never added;
- *   - Check these: linked items that aren't tracked; tick to put on the list;
- *   - Not on your list: free-name ingredients; tick to add them as notes.
+ *   1. To buy: tracked items short of what the week needs, ticked, with the
+ *      shortfall ("Need 1.5 kg · have 1 kg · buy 500 g"), stored as
+ *      to_buy_amount so To buy and the WhatsApp text read "Chicken 500 g";
+ *   2. Not in your Ingredients: names Miamus has no item for, ticked
+ *      (untick what's at home); added as notes;
+ *   3. In your Ingredients: items she keeps but the amounts can't count,
+ *      unticked (tick any that are running out);
+ *   4. Enough for this week: tracked items with enough, never added.
+ *
+ * With Food at home off the items sit under Shopping → Supplies at home, so
+ * 2 and 3 name that instead.
  */
 export function AddMissingSheet({
   open,
@@ -116,6 +125,8 @@ function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; fro
   const lang = useOwnerLocale();
   const { inventoryItems, inventoryAlerts, markToBuy, flagLowStock } = useHousehold();
   const { recipes } = useRecipes();
+  const { flags } = useHouseholdFeatures();
+  const underFood = ingredientsUnderFood(flags);
   // Worked out once when the sheet opens, so the list doesn't move under a finger.
   const [result] = useState(() => menuShortfall(dishes, recipes, inventoryItems, from, to));
   const noted = useMemo(
@@ -124,7 +135,10 @@ function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; fro
   );
   const [buy, setBuy] = useState<Set<string>>(() => new Set(result.toBuy.map((l) => l.item.id)));
   const [check, setCheck] = useState<Set<string>>(() => new Set());
-  const [names, setNames] = useState<Set<string>>(() => new Set());
+  // Names Miamus has no item for start ticked: untick what's at home.
+  const [names, setNames] = useState<Set<string>>(
+    () => new Set(result.unlisted.filter((name) => !noted.has(name.toLowerCase())))
+  );
   const [saving, setSaving] = useState(false);
 
   const toggle = (set: Set<string>, key: string, apply: (next: Set<string>) => void) => {
@@ -133,7 +147,11 @@ function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; fro
     else next.add(key);
     apply(next);
   };
-  const count = buy.size + check.size + names.size;
+  // Only what will really be added: never a row already on the list.
+  const buyLines = result.toBuy.filter((l) => buy.has(l.item.id));
+  const checkItems = result.check.filter((i) => check.has(i.id) && !isLowStock(i));
+  const pickedNames = result.unlisted.filter((n) => names.has(n) && !noted.has(n.toLowerCase()));
+  const count = buyLines.length + checkItems.length + pickedNames.length;
   const empty =
     result.toBuy.length === 0 && result.enough.length === 0 && result.check.length === 0 && result.unlisted.length === 0;
 
@@ -141,15 +159,15 @@ function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; fro
     if (count === 0) return;
     setSaving(true);
     let failed = 0;
-    for (const line of result.toBuy.filter((l) => buy.has(l.item.id))) {
+    for (const line of buyLines) {
       await markToBuy(line.item.id, toBuyPatch(line)).catch(() => (failed += 1));
     }
-    for (const item of result.check.filter((i) => check.has(i.id))) {
+    for (const item of checkItems) {
       await markToBuy(item.id, { stock_status: item.track_amount && item.quantity <= 0 ? "out" : "low", to_buy_amount: null }).catch(
         () => (failed += 1)
       );
     }
-    for (const name of result.unlisted.filter((n) => names.has(n))) {
+    for (const name of pickedNames) {
       await flagLowStock({ pet_id: null, item_type: "other", note: name.slice(0, 120) }).catch(() => (failed += 1));
     }
     setSaving(false);
@@ -163,6 +181,7 @@ function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; fro
 
   const section = "flex flex-col gap-1.5";
   const heading = "text-sm font-semibold text-gray-900";
+  const hint = "text-xs text-muted-foreground";
   const list = "flex flex-col divide-y overflow-hidden rounded-xl border bg-card";
   const row = "flex min-h-14 items-center gap-1 pr-3";
 
@@ -171,7 +190,10 @@ function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; fro
       <SheetHeader>
         <SheetTitle className="text-xl">{t("Add missing to Shopping", "Tambahkan yang kurang ke Belanja")}</SheetTitle>
         <SheetDescription>
-          {t("For the dishes not cooked yet this week.", "Untuk masakan minggu ini yang belum dimasak.")}
+          {t(
+            "For the dishes not cooked yet this week. Ticked items go on the shopping list.",
+            "Untuk masakan minggu ini yang belum dimasak. Yang dicentang masuk daftar belanja."
+          )}
         </SheetDescription>
       </SheetHeader>
       <div className="flex flex-col gap-5 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
@@ -184,7 +206,7 @@ function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; fro
           </p>
         ) : (
           <>
-            {(result.toBuy.length > 0 || result.enough.length > 0) && (
+            {result.toBuy.length > 0 && (
               <section className={section} aria-labelledby="missing-to-buy">
                 <h3 id="missing-to-buy" className={heading}>
                   {t("To buy", "Perlu dibeli")}
@@ -205,63 +227,36 @@ function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; fro
                       </span>
                     </div>
                   ))}
-                  {result.enough.map(({ item, need, have }) => (
-                    <div key={item.id} className={cn(row, "pl-12")}>
-                      <span className="flex min-w-0 flex-1 flex-col py-2">
-                        <span className="truncate text-sm text-gray-700">{stockItemName(item)}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {t(
-                            `Enough · need ${friendlyAmount(need, item.unit, lang)} · have ${friendlyAmount(have, item.unit, lang)}`,
-                            `Cukup · perlu ${friendlyAmount(need, item.unit, lang)} · ada ${friendlyAmount(have, item.unit, lang)}`
-                          )}
-                        </span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {result.check.length > 0 && (
-              <section className={section} aria-labelledby="missing-check">
-                <h3 id="missing-check" className={heading}>
-                  {t("Check these", "Cek dulu")}
-                </h3>
-                <div className={list}>
-                  {result.check.map((item) => {
-                    const listed = isLowStock(item);
-                    return (
-                      <div key={item.id} className={row}>
-                        <Tick
-                          on={check.has(item.id)}
-                          label={stockItemName(item)}
-                          disabled={listed}
-                          onClick={() => toggle(check, item.id, setCheck)}
-                        />
-                        <span className="flex min-w-0 flex-1 flex-col py-2">
-                          <span className="truncate text-sm font-medium">{stockItemName(item)}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {listed ? t("Already on the list", "Sudah di daftar") : STOCK_STATUS_LABELS[lang][stockStatus(item)]}
-                          </span>
-                        </span>
-                      </div>
-                    );
-                  })}
                 </div>
               </section>
             )}
 
             {result.unlisted.length > 0 && (
               <section className={section} aria-labelledby="missing-unlisted">
-                <h3 id="missing-unlisted" className={heading}>
-                  {t("Not on your list", "Belum ada di daftar")}
-                </h3>
+                <div className="flex flex-col gap-0.5">
+                  <h3 id="missing-unlisted" className={heading}>
+                    {underFood
+                      ? t("Not in your Ingredients", "Belum ada di Bahan masakan")
+                      : t("Not in your supplies", "Belum ada di Stok di rumah")}
+                  </h3>
+                  <p className={hint}>
+                    {t(
+                      "Miamus doesn't know if you have these. Untick what's at home.",
+                      "Miamus belum tahu apakah ini ada di rumah. Hapus centang yang sudah ada."
+                    )}
+                  </p>
+                </div>
                 <div className={list}>
                   {result.unlisted.map((name) => {
                     const listed = noted.has(name.toLowerCase());
                     return (
                       <div key={name} className={row}>
-                        <Tick on={names.has(name)} label={name} disabled={listed} onClick={() => toggle(names, name, setNames)} />
+                        <Tick
+                          on={names.has(name) && !listed}
+                          label={name}
+                          disabled={listed}
+                          onClick={() => toggle(names, name, setNames)}
+                        />
                         <span className="flex min-w-0 flex-1 flex-col py-2">
                           <span className="truncate text-sm font-medium">{name}</span>
                           {listed && <span className="text-xs text-muted-foreground">{t("Already on the list", "Sudah di daftar")}</span>}
@@ -269,6 +264,67 @@ function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; fro
                       </div>
                     );
                   })}
+                </div>
+              </section>
+            )}
+
+            {result.check.length > 0 && (
+              <section className={section} aria-labelledby="missing-check">
+                <div className="flex flex-col gap-0.5">
+                  <h3 id="missing-check" className={heading}>
+                    {underFood ? t("In your Ingredients", "Ada di Bahan masakan") : t("In your supplies", "Ada di Stok di rumah")}
+                  </h3>
+                  <p className={hint}>
+                    {t("Marked as enough. Tick any that are running out.", "Tercatat masih ada. Centang yang ternyata hampir habis.")}
+                  </p>
+                </div>
+                <div className={list}>
+                  {result.check.map((item) => {
+                    const listed = isLowStock(item);
+                    // A tracked item lands here when its recipe unit doesn't convert: show what's left.
+                    const sub = listed
+                      ? t("Already on the list", "Sudah di daftar")
+                      : isTracked(item)
+                        ? amountLine(item, lang).text
+                        : null;
+                    return (
+                      <div key={item.id} className={row}>
+                        <Tick
+                          on={check.has(item.id) && !listed}
+                          label={stockItemName(item)}
+                          disabled={listed}
+                          onClick={() => toggle(check, item.id, setCheck)}
+                        />
+                        <span className="flex min-w-0 flex-1 flex-col py-2">
+                          <span className="truncate text-sm font-medium">{stockItemName(item)}</span>
+                          {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {result.enough.length > 0 && (
+              <section className={section} aria-labelledby="missing-enough">
+                <h3 id="missing-enough" className={heading}>
+                  {t("Enough for this week", "Cukup untuk minggu ini")}
+                </h3>
+                <div className={list}>
+                  {result.enough.map(({ item, need, have }) => (
+                    <div key={item.id} className="flex min-h-14 items-center px-3">
+                      <span className="flex min-w-0 flex-1 flex-col py-2">
+                        <span className="truncate text-sm text-gray-700">{stockItemName(item)}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t(
+                            `need ${friendlyAmount(need, item.unit, lang)} · have ${friendlyAmount(have, item.unit, lang)}`,
+                            `perlu ${friendlyAmount(need, item.unit, lang)} · ada ${friendlyAmount(have, item.unit, lang)}`
+                          )}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </section>
             )}
