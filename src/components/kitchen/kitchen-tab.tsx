@@ -3,6 +3,7 @@
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FoodView } from "@/components/kitchen/food-view";
 import { IngredientsSection } from "@/components/kitchen/ingredients-section";
+import { IngredientOpenerProvider } from "@/components/kitchen/ingredient-opener";
 import { MenuView } from "@/components/kitchen/menu-view";
 import { StaffMenu } from "@/components/kitchen/menu-today-card";
 import { WhatsNewCard } from "@/components/shared/whats-new";
@@ -71,8 +72,15 @@ export function KitchenTab() {
         </div>
       ) : view === "food" ? (
         <div className="flex flex-col gap-6 px-4">
-          <FoodView locale={locale} canDelete readyHeading={ingredients} />
-          {ingredients && <IngredientsSection lang={locale} owner />}
+          {ingredients ? (
+            // "Open it" from the add-food sheet opens an ingredient here (Phase 176).
+            <IngredientOpenerProvider>
+              <FoodView locale={locale} canDelete readyHeading />
+              <IngredientsSection lang={locale} owner />
+            </IngredientOpenerProvider>
+          ) : (
+            <FoodView locale={locale} canDelete readyHeading={false} />
+          )}
         </div>
       ) : (
         <ShoppingTab />
@@ -100,8 +108,14 @@ export function StaffKitchen() {
         <StaffMenu />
       ) : view === "food" ? (
         <div className="flex flex-col gap-6">
-          <FoodView locale="id" canDelete={false} readyHeading={ingredients} />
-          {ingredients && <IngredientsSection lang="id" owner={false} />}
+          {ingredients ? (
+            <IngredientOpenerProvider>
+              <FoodView locale="id" canDelete={false} readyHeading />
+              <IngredientsSection lang="id" owner={false} />
+            </IngredientOpenerProvider>
+          ) : (
+            <FoodView locale="id" canDelete={false} readyHeading={false} />
+          )}
         </div>
       ) : (
         <StaffShopping />

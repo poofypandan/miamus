@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Archive, Check, ChevronDown, Loader2, Minus, Plus, Refrigerator, Snowflake, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,9 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { FoodPhotoField } from "@/components/kitchen/food-photo-field";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useToday } from "@/hooks/use-today";
+import { ingredientsUnderFood } from "@/lib/features";
 import {
   EXPIRY_CHOICES,
   FOOD_LIMITS,
@@ -23,6 +25,9 @@ import {
   addDaysTo,
   type FoodLocale,
 } from "@/lib/food";
+import { sameName } from "@/lib/ingredients";
+import { stockItemName } from "@/lib/inventory";
+import { isIngredient } from "@/lib/kitchen-units";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 import type { FoodItem, FoodPlace, FoodSource } from "@/types/database";
@@ -42,6 +47,10 @@ const PLACE_ICONS: Record<FoodPlace, typeof Refrigerator> = {
  * appears once "From someone" is chosen; notes are one tap away. Shared by
  * the owner's Kitchen tab, the staff's Dapur and the staff's Lapor button —
  * staff screens pass "id".
+ *
+ * Phase 176 (5d): adding a name that is already an ingredient says so,
+ * while Ingredients shows (Kitchen amounts and Food at home on). Where that
+ * list is on the page, `onOpenIngredient` adds Open it; Save still works.
  */
 export function FoodFormSheet({
   open,
@@ -49,6 +58,7 @@ export function FoodFormSheet({
   locale,
   onClose,
   prefill,
+  onOpenIngredient,
 }: {
   open: boolean;
   /** The food being edited; null to add one. */
@@ -57,13 +67,24 @@ export function FoodFormSheet({
   onClose: () => void;
   /** A new food's starting name and source (a cooked dish's leftovers, Phase 170 PR C). */
   prefill?: { name: string; source: FoodSource };
+  /** Opens an ingredient's sheet in the list beside it (Kitchen → Food); none elsewhere. */
+  onOpenIngredient?: (id: string) => void;
 }) {
   useBackToClose(open, onClose);
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent side="bottom" className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl">
         {/* Keyed so each opening starts from that food's values. */}
-        {open && <FoodForm key={item?.id ?? "new"} item={item} locale={locale} onDone={onClose} prefill={prefill} />}
+        {open && (
+          <FoodForm
+            key={item?.id ?? "new"}
+            item={item}
+            locale={locale}
+            onDone={onClose}
+            prefill={prefill}
+            onOpenIngredient={onOpenIngredient}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -74,15 +95,18 @@ function FoodForm({
   locale,
   onDone,
   prefill,
+  onOpenIngredient,
 }: {
   item: FoodItem | null;
   locale: FoodLocale;
   onDone: () => void;
   prefill?: { name: string; source: FoodSource };
+  onOpenIngredient?: (id: string) => void;
 }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { addFoodFromForm, editFood } = useHousehold();
+  const { addFoodFromForm, editFood, inventoryItems } = useHousehold();
+  const checkIngredients = ingredientsUnderFood(useHouseholdFeatures());
   const today = formatDateLocal(useToday());
 
   const [photo, setPhoto] = useState<File | string | null>(item?.photo_url ?? null);
@@ -105,6 +129,15 @@ function FoodForm({
   const [portions, setPortions] = useState<number | null>(item?.portions ?? null);
   const [notesOpen, setNotesOpen] = useState(!!item?.notes);
   const [saving, setSaving] = useState(false);
+
+  // "Is in Ingredients" (5d): exact names only, while adding.
+  const ingredient = useMemo(
+    () =>
+      !item && checkIngredients
+        ? (inventoryItems.find((i) => isIngredient(i) && sameName(i.name, name)) ?? null)
+        : null,
+    [item, checkIngredients, inventoryItems, name]
+  );
 
   const canSave = (name.trim().length > 0 || photo !== null) && !photoBusy && !saving;
 
@@ -191,6 +224,27 @@ function FoodForm({
             enterKeyHint="done"
             className="min-h-12 rounded-xl"
           />
+          {ingredient && (
+            <div role="status" className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+              <p className="min-w-0 flex-1 text-sm text-amber-900">
+                {tr(
+                  `${stockItemName(ingredient)} is in Ingredients. Open it there to say where it is or when it expires.`,
+                  `${stockItemName(ingredient)} ada di Bahan masakan. Buka di sana untuk mencatat tempat atau tanggal kedaluwarsanya.`
+                )}
+              </p>
+              {onOpenIngredient && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-10 shrink-0 rounded-lg bg-white"
+                  onClick={() => onOpenIngredient(ingredient.id)}
+                >
+                  {tr("Open it", "Buka")}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         <fieldset className="flex flex-col gap-1.5">

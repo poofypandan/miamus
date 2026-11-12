@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InventoryItemForm } from "@/components/inventory/inventory-item-form";
 import { IngredientList } from "@/components/kitchen/ingredient-list";
+import { useRegisterIngredientOpener } from "@/components/kitchen/ingredient-opener";
 import { ItemList } from "@/components/shopping/item-list";
 import { StockStatusSheet } from "@/components/shopping/stock-status-sheet";
 import { TrackAmountSheet } from "@/components/shopping/track-amount-sheet";
@@ -67,6 +68,19 @@ export function StockItemsPanel({
     setFormItem(next === "new" ? null : next);
     setEditing(next);
   }
+  // "Open it" (Phase 176, 5d): straight to that ingredient's sheet, from the
+  // add form here or the add-food sheet beside this list.
+  const openItem = useCallback(
+    (itemId: string) => {
+      const found = items.find((i) => i.id === itemId);
+      if (!found) return;
+      setEditing(null);
+      setTracking(null);
+      setChoosing(found);
+    },
+    [items]
+  );
+  useRegisterIngredientOpener(places ? openItem : null);
 
   return (
     <section
@@ -159,6 +173,8 @@ export function StockItemsPanel({
             onOpenChange={(open) => !open && setEditing(null)}
             item={formItem}
             defaultScope={defaultScope}
+            ingredient={places}
+            onOpenExisting={places ? (existing) => openItem(existing.id) : undefined}
           />
         </>
       )}

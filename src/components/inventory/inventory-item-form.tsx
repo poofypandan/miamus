@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,17 @@ import {
 } from "@/components/ui/dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PhotoPicker } from "@/components/photo-picker";
+import { ExpiryChips } from "@/components/kitchen/expiry-chips";
+import { PlacePicker } from "@/components/kitchen/place-picker";
+import { UnitChips } from "@/components/shopping/track-amount-sheet";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useToday } from "@/hooks/use-today";
+import { defaultPlace, sameName } from "@/lib/ingredients";
+import { isIngredient, parseAmount, unitLabel } from "@/lib/kitchen-units";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import {
   CATEGORY_LABELS_EN,
   CATEGORY_LABELS_ID,
@@ -26,11 +33,14 @@ import {
   SCOPE_CATEGORIES,
   SCOPE_LABELS_EN,
   SCOPE_LABELS_ID,
+  stockItemName,
 } from "@/lib/inventory";
 import type {
+  FoodPlace,
   InventoryCategory,
   InventoryItem,
   InventoryScope,
+  InventoryUnit,
 } from "@/types/database";
 
 /**
@@ -40,12 +50,21 @@ import type {
  * regardless (migrations/099).
  *
  * Owner-facing: English or Bahasa Indonesia, as the owner chose (Phase 149).
+ *
+ * Opened from Food → Ingredients (Phase 176, `ingredient`; plan 5c and 5d),
+ * a Fresh Food or Pantry item also says where it is kept (starting on, and
+ * following, the category's default until a tap), when it expires (No date
+ * to start) and, when adding, an optional amount: a number tracks it, in one
+ * sheet. Adding a name already in Ingredients says so, with Open it; Save
+ * still works. Household Supplies, and Shopping, show the form as before.
  */
 export function InventoryItemForm({
   open,
   onOpenChange,
   item,
   defaultScope,
+  ingredient = false,
+  onOpenExisting,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,8 +72,13 @@ export function InventoryItemForm({
   item: InventoryItem | null;
   /** The tab the owner was on, so "Add item" under Home starts as a Home item. */
   defaultScope: InventoryScope;
+  /** Opened from Food → Ingredients (Phase 176): place, date, amount, no doubles. */
+  ingredient?: boolean;
+  /** "Open it": closes the form and opens that ingredient's sheet. */
+  onOpenExisting?: (item: InventoryItem) => void;
 }) {
-  const { addInventoryItem, updateInventoryItem, removeInventoryItem } = useHousehold();
+  const { addInventoryItem, updateInventoryItem, removeInventoryItem, setTrackAmount, inventoryItems } = useHousehold();
+  const today = formatDateLocal(useToday());
   // "Who lives here?" (Phase 162): a home without pets gets no Pets | Home
   // switch, so every new item is a home item. An existing pet item keeps it,
   // so it can still be moved.
@@ -73,6 +97,12 @@ export function InventoryItemForm({
   const [photoBusy, setPhotoBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Phase 176. Null place: nobody has tapped one, so the category's default
+  // shows and nothing is stored (the list shows the default the same way).
+  const [keptIn, setKeptIn] = useState<FoodPlace | null>(null);
+  const [expiresOn, setExpiresOn] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
+  const [unit, setUnit] = useState<InventoryUnit>("pcs");
 
   // Reset on every open, from the item or from blank. The component stays
   // mounted between uses, so this is what stops one item's values leaking
@@ -89,8 +119,23 @@ export function InventoryItemForm({
       setPhotoBusy(false);
       setSaving(false);
       setConfirmingDelete(false);
+      setKeptIn(item?.kept_in ?? null);
+      setExpiresOn(item?.expires_on ?? null);
+      setAmount("");
+      setUnit("pcs");
     }
   }
+
+  const showPlaces = ingredient && isIngredient({ category });
+  // Amount is set here only when adding; Track amount keeps it after that,
+  // so a number has one place to change.
+  const showAmount = showPlaces && !item;
+  const typedAmount = amount.trim() === "" ? null : parseAmount(amount);
+  // "Already in Ingredients" (5d): exact names only, while adding.
+  const existing = useMemo(
+    () => (ingredient && !item ? (inventoryItems.find((i) => isIngredient(i) && sameName(i.name, name)) ?? null) : null),
+    [ingredient, item, inventoryItems, name]
+  );
 
   function changeScope(next: InventoryScope) {
     setScope(next);
@@ -101,6 +146,9 @@ export function InventoryItemForm({
 
   async function handleSave() {
     if (!name.trim()) return void toast.error(t("Give the item a name", "Beri nama barangnya"));
+    if (showAmount && amount.trim() !== "" && typedAmount === null) {
+      return void toast.error(t("Check the amount", "Cek jumlahnya"));
+    }
 
     setSaving(true);
     // No counts or thresholds since Phase 154 (a shopping list, not a
@@ -109,16 +157,39 @@ export function InventoryItemForm({
     const details = { scope, name: name.trim(), category, photo_url: photoUrl };
     try {
       if (item) {
-        await updateInventoryItem(item.id, details);
+        // Only what changed here (Phase 176): a staff phone may have moved
+        // or dated it meanwhile.
+        await updateInventoryItem(item.id, {
+          ...details,
+          ...(showPlaces && keptIn !== (item.kept_in ?? null) ? { kept_in: keptIn } : {}),
+          ...(showPlaces && expiresOn !== (item.expires_on ?? null) ? { expires_on: expiresOn } : {}),
+        });
         toast.success(t(`${details.name} updated`, `${details.name} diperbarui`));
       } else {
-        await addInventoryItem({
+        const added = await addInventoryItem({
           ...details,
           quantity: 0,
           unit: "pcs",
           min_threshold: 0,
           audit_frequency_days: 30,
+          ...(showPlaces ? { kept_in: keptIn, expires_on: expiresOn } : {}),
         });
+        if (showAmount && typedAmount !== null) {
+          // With a number it is tracked, as Track amount would do it.
+          try {
+            await setTrackAmount(added.id, { track: true, unit, quantity: typedAmount, lowAt: 0 });
+          } catch (err) {
+            console.error(err);
+            toast.error(
+              t(
+                `${details.name} added, but the amount wasn't saved. Set it in Track amount.`,
+                `${details.name} ditambahkan, tapi jumlahnya gagal disimpan. Atur di Catat jumlah.`
+              )
+            );
+            onOpenChange(false);
+            return;
+          }
+        }
         toast.success(t(`${details.name} added`, `${details.name} ditambahkan`));
       }
       onOpenChange(false);
@@ -173,6 +244,27 @@ export function InventoryItemForm({
               }
               className="min-h-[48px]"
             />
+            {existing && (
+              <div role="status" className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                <p className="min-w-0 flex-1 text-sm text-amber-900">
+                  {t(
+                    `${stockItemName(existing)} is already in Ingredients.`,
+                    `${stockItemName(existing)} sudah ada di Bahan masakan.`
+                  )}
+                </p>
+                {onOpenExisting && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="min-h-10 shrink-0 rounded-lg bg-white"
+                    onClick={() => onOpenExisting(existing)}
+                  >
+                    {t("Open it", "Buka")}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -193,6 +285,33 @@ export function InventoryItemForm({
               ))}
             </div>
           </div>
+
+          {showPlaces && (
+            <>
+              <PlacePicker value={keptIn ?? defaultPlace(category)} onChange={setKeptIn} locale={locale} />
+              {item?.stock_status !== "out" && (
+                <ExpiryChips value={expiresOn} onChange={setExpiresOn} today={today} locale={locale} />
+              )}
+            </>
+          )}
+
+          {showAmount && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="inv-amount">{t("Amount (optional)", "Jumlah (opsional)")}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="inv-amount"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  className="min-h-11 flex-1 rounded-xl"
+                />
+                <span className="w-14 text-sm text-muted-foreground">{unitLabel(unit, locale)}</span>
+              </div>
+              <UnitChips value={unit} onChange={setUnit} lang={locale} />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label>{t("Reference photo (optional)", "Foto contoh (opsional)")}</Label>
