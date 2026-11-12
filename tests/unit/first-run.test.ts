@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  firstRunFacts,
   firstRunSteps,
   firstRunView,
   isPastFirstRun,
   nextFirstRunMemory,
   nextFirstRunStep,
+  notifyStepShown,
   parseFirstRunMemory,
   staffOf,
   type FirstRunInput,
@@ -12,15 +14,16 @@ import {
 } from "@/lib/first-run";
 import { STAFF_WHATS_NEW, WHATS_NEW, pickStaffTip, staffTipResting } from "@/lib/whats-new";
 
-// Audit batch B1: the owner's first-run checklist (item 3) and the staff's
-// one tip at a time (item 5).
+// Audit batch B1: the owner's first-run checklist (item 3), as Phase 175 S2
+// made it the first page, and the staff's one tip at a time (item 5).
 
 const OWNER: FirstRunPerson = { id: "owner", name: "Owner", user_id: "user-1", archived_at: null };
 const SARI: FirstRunPerson = { id: "sari", name: "Sari", user_id: null, archived_at: null };
 const GONE: FirstRunPerson = { id: "gone", name: "Rina", user_id: null, archived_at: "2026-10-01T00:00:00Z" };
+const TASK = { assigned_to: "sari", status: "pending" };
 
 function input(over: Partial<FirstRunInput> = {}): FirstRunInput {
-  return { people: [OWNER], linkedPhones: 0, chores: [], petRoutines: 0, logs: 0, ...over };
+  return { people: [OWNER], linkedPhones: 0, chores: [], petRoutines: 0, logs: 0, push: "off", ...over };
 }
 
 function doneIds(over: Partial<FirstRunInput>) {
@@ -30,42 +33,71 @@ function doneIds(over: Partial<FirstRunInput>) {
 }
 
 describe("first-run steps", () => {
-  it("a brand-new household has only its name", () => {
+  it("has five rows in the plan's order, and a brand-new household has only its name", () => {
+    expect(firstRunSteps(input()).map((step) => step.id)).toEqual(["home", "setup", "phone", "notify", "done"]);
     expect(doneIds({})).toEqual(["home"]);
-    expect(nextFirstRunStep(firstRunSteps(input()))).toBe("staff");
+    expect(nextFirstRunStep(firstRunSteps(input()))).toBe("setup");
   });
 
   it("staff means someone on the roster who isn't an admin and isn't archived", () => {
     expect(staffOf([OWNER, SARI, GONE]).map((p) => p.id)).toEqual(["sari"]);
-    expect(doneIds({ people: [OWNER, GONE] })).toEqual(["home"]);
-    expect(doneIds({ people: [OWNER, SARI] })).toEqual(["home", "staff"]);
+    expect(firstRunFacts(input({ people: [OWNER, GONE] })).staff).toBe(false);
+    expect(firstRunFacts(input({ people: [OWNER, SARI] })).staff).toBe(true);
     // Still loading: not done, never a crash.
-    expect(doneIds({ people: null })).toEqual(["home"]);
+    expect(firstRunFacts(input({ people: null })).staff).toBe(false);
   });
 
-  it("a phone is linked once list_linked_phones has one; unknown counts as not yet", () => {
-    expect(doneIds({ people: [OWNER, SARI], linkedPhones: 1 })).toEqual(["home", "staff", "phone"]);
-    expect(doneIds({ people: [OWNER, SARI], linkedPhones: null })).toEqual(["home", "staff"]);
+  it("Set up your home is ticked only when there are staff and a first task", () => {
+    expect(doneIds({ people: [OWNER, SARI] })).toEqual(["home"]);
+    expect(doneIds({ chores: [{ assigned_to: null, status: "pending" }] })).toEqual(["home"]);
+    expect(doneIds({ people: [OWNER, SARI], chores: [TASK] })).toEqual(["home", "setup"]);
+    // Whichever is missing is what the open row offers.
+    expect(firstRunFacts(input({ people: [OWNER, SARI] }))).toMatchObject({ staff: true, task: false });
+    expect(firstRunFacts(input({ chores: [{ assigned_to: null, status: "pending" }] }))).toMatchObject({
+      staff: false,
+      task: true,
+    });
+    expect(nextFirstRunStep(firstRunSteps(input({ people: [OWNER, SARI], chores: [TASK] })))).toBe("phone");
   });
 
   it("a first task is a chore that isn't the admin's own, or a pet routine", () => {
-    const base = { people: [OWNER, SARI], linkedPhones: 1 };
-    expect(doneIds({ ...base, chores: [{ assigned_to: "owner", status: "pending" }] })).not.toContain("task");
-    expect(doneIds({ ...base, chores: [{ assigned_to: "sari", status: "pending" }] })).toContain("task");
-    expect(doneIds({ ...base, chores: [{ assigned_to: null, status: "pending" }] })).toContain("task");
-    expect(doneIds({ ...base, chores: [{ assigned_to: "sari", status: "cancelled" }] })).not.toContain("task");
-    expect(doneIds({ ...base, petRoutines: 2 })).toContain("task");
-    expect(nextFirstRunStep(firstRunSteps(input({ ...base, petRoutines: 2 })))).toBe("done");
+    const facts = (over: Partial<FirstRunInput>) => firstRunFacts(input({ people: [OWNER, SARI], ...over }));
+    expect(facts({ chores: [{ assigned_to: "owner", status: "pending" }] }).task).toBe(false);
+    expect(facts({ chores: [TASK] }).task).toBe(true);
+    expect(facts({ chores: [{ assigned_to: null, status: "pending" }] }).task).toBe(true);
+    expect(facts({ chores: [{ assigned_to: "sari", status: "cancelled" }] }).task).toBe(false);
+    expect(facts({ petRoutines: 2 }).task).toBe(true);
   });
 
-  it("the last step ticks on the first finished task, by anyone", () => {
-    expect(doneIds({ people: [OWNER, SARI], linkedPhones: 1, chores: [{ assigned_to: "sari", status: "completed" }] })).toEqual([
-      "home",
-      "staff",
-      "phone",
-      "task",
-      "done",
-    ]);
+  it("a phone is linked once list_linked_phones has one; unknown counts as not yet", () => {
+    const base = { people: [OWNER, SARI], chores: [TASK] };
+    expect(doneIds({ ...base, linkedPhones: 1 })).toEqual(["home", "setup", "phone"]);
+    expect(doneIds({ ...base, linkedPhones: null })).toEqual(["home", "setup"]);
+  });
+
+  it("notifications come before the last step, and tick only when on for this phone", () => {
+    const base = { people: [OWNER, SARI], chores: [TASK], linkedPhones: 1 };
+    expect(nextFirstRunStep(firstRunSteps(input({ ...base, push: "off" })))).toBe("notify");
+    expect(nextFirstRunStep(firstRunSteps(input({ ...base, push: "ios-install-first" })))).toBe("notify");
+    expect(nextFirstRunStep(firstRunSteps(input({ ...base, push: "denied" })))).toBe("notify");
+    expect(doneIds({ ...base, push: "on" })).toEqual(["home", "setup", "phone", "notify"]);
+    expect(nextFirstRunStep(firstRunSteps(input({ ...base, push: "on" })))).toBe("done");
+  });
+
+  it("no notifications row where nothing can be done; still loading keeps the row", () => {
+    expect(notifyStepShown("unsupported")).toBe(false);
+    expect(notifyStepShown("unconfigured")).toBe(false);
+    expect(notifyStepShown("loading")).toBe(true);
+    expect(notifyStepShown(undefined)).toBe(true);
+    const steps = firstRunSteps(input({ people: [OWNER, SARI], chores: [TASK], linkedPhones: 1, push: "unsupported" }));
+    expect(steps.map((step) => step.id)).toEqual(["home", "setup", "phone", "done"]);
+    expect(nextFirstRunStep(steps)).toBe("done");
+  });
+
+  it("the last step ticks on the first finished task, by anyone, even with notifications off", () => {
+    expect(
+      doneIds({ people: [OWNER, SARI], linkedPhones: 1, chores: [{ assigned_to: "sari", status: "completed" }] })
+    ).toEqual(["home", "setup", "phone", "done"]);
     expect(isPastFirstRun({ chores: [], logs: 1 })).toBe(true);
     // A chore finished on a day Today hasn't loaded still counts (Claude review, #62).
     expect(isPastFirstRun({ chores: [], logs: 0, finishedChore: true })).toBe(true);
