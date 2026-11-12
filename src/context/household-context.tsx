@@ -77,6 +77,7 @@ import type {
   InventoryUnit,
   FoodItem,
   FoodOutcome,
+  FoodPlace,
   StockStatus,
   InventoryAuditWithStaff,
   ProposalStatus,
@@ -343,6 +344,13 @@ interface HouseholdContextValue {
   eatFoodPortion: (id: string) => Promise<PortionTap>;
   /** Undo that tap: the server puts back exactly what it took, once. */
   undoFoodPortion: (tap: PortionTap) => Promise<void>;
+  /**
+   * Moves a ready-to-eat food to another place (Phase 176). Anyone in the
+   * household. Sends only kept_in: editFood sends the whole form and would
+   * overwrite a portion another phone took meanwhile. Shows at once, put
+   * back if the save fails.
+   */
+  moveFood: (id: string, place: FoodPlace) => Promise<FoodItem>;
   /** Admins only: food added by mistake. Takes its photo with it. */
   removeFood: (id: string) => Promise<void>;
   /**
@@ -362,6 +370,20 @@ interface HouseholdContextValue {
   undoPurchase: (before: InventoryItem, amount: number | null) => Promise<void>;
   /** Owner only (the guard refuses staff): switch Track amount, with unit, amount and low level. */
   setTrackAmount: (id: string, settings: TrackAmountSettings) => Promise<InventoryItem>;
+  /**
+   * Where an ingredient is kept (Phase 176, migrations/154). Owners and
+   * staff phones. Sends only kept_in, so another phone's change to the date
+   * or the amount is never overwritten. Shows at once, put back if the save
+   * fails; the server's row wins. Null puts back "nobody has said" (Undo of
+   * a first move), so the category's default is never stored as a choice.
+   */
+  setIngredientPlace: (id: string, place: FoodPlace | null) => Promise<InventoryItem>;
+  /**
+   * An ingredient's use-by date, YYYY-MM-DD, or null for no date (Phase 176,
+   * migrations/154). Owners and staff phones. Sends only expires_on; an
+   * item that is Out keeps no date (the server clears it).
+   */
+  setIngredientExpiry: (id: string, date: string | null) => Promise<InventoryItem>;
   /**
    * Records a stock check: uploads the shelf photo, files the audit under
    * whoever is signed in on this device, and writes the count back onto the
@@ -1317,6 +1339,24 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     [dropPendingTaps, writeInventoryItem]
   );
 
+  // Phase 176 (migrations/154): one column per write, through the same
+  // ordered, optimistic path as the amounts.
+  const setIngredientPlace = useCallback(
+    (id: string, place: FoodPlace | null) => {
+      const patch: InventoryItemPatch = { kept_in: place };
+      return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
+    },
+    [writeInventoryItem]
+  );
+
+  const setIngredientExpiry = useCallback(
+    (id: string, date: string | null) => {
+      const patch: InventoryItemPatch = { expires_on: date };
+      return writeInventoryItem(id, patch, () => dataProvider.updateInventoryItem(id, patch));
+    },
+    [writeInventoryItem]
+  );
+
   const applyInventoryRows = useCallback((rows: InventoryItem[]) => {
     const fresh = rows.filter((row) => !pendingStock.current.has(row.id));
     if (fresh.length === 0) return;
@@ -1562,6 +1602,22 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         const item = await dataProvider.updateFoodItem(id, { container_returned_at: new Date().toISOString() });
         // Done with: it leaves the list on the next load anyway.
         setFoodItems((prev) => prev.filter((f) => f.id !== item.id));
+      } catch (err) {
+        if (before) putFood(before);
+        throw err;
+      }
+    },
+    [putFood]
+  );
+
+  const moveFood = useCallback(
+    async (id: string, place: FoodPlace) => {
+      const before = foodItemsRef.current.find((f) => f.id === id);
+      if (before) putFood({ ...before, kept_in: place });
+      try {
+        const item = await dataProvider.updateFoodItem(id, { kept_in: place });
+        putFood(item);
+        return item;
       } catch (err) {
         if (before) putFood(before);
         throw err;
@@ -1985,12 +2041,15 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       returnFoodContainer,
       eatFoodPortion,
       undoFoodPortion,
+      moveFood,
       removeFood,
       adjustInventoryQuantity,
       setInventoryAmount,
       recordPurchase,
       undoPurchase,
       setTrackAmount,
+      setIngredientPlace,
+      setIngredientExpiry,
       reloadTenant,
       submitInventoryAudit,
       submitRoutineProposal,
@@ -2076,12 +2135,15 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       returnFoodContainer,
       eatFoodPortion,
       undoFoodPortion,
+      moveFood,
       removeFood,
       adjustInventoryQuantity,
       setInventoryAmount,
       recordPurchase,
       undoPurchase,
       setTrackAmount,
+      setIngredientPlace,
+      setIngredientExpiry,
       reloadTenant,
       submitInventoryAudit,
       submitRoutineProposal,

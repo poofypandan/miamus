@@ -554,6 +554,9 @@ export async function installStub(context: BrowserContext, options: StubOptions 
           id: `00000000-0000-4000-8000-${String(600 + supplies.length).padStart(12, "0")}`,
           household_id: HOUSEHOLD_ID,
           stock_status: "ok",
+          // Null until someone says (migrations/154).
+          kept_in: null,
+          expires_on: null,
           created_at: new Date().toISOString(),
           ...(Array.isArray(body) ? body[0] : body),
         };
