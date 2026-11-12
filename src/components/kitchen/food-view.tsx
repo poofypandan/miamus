@@ -41,9 +41,10 @@ const PLACE_ICONS: Record<FoodPlace, typeof Refrigerator> = {
 const GROUPS: FoodGroup[] = ["today", "week", "later"];
 
 /**
- * Food at home, by hand (Phase 156; mockup 1). One main action — Add food —
- * then containers to return (only when there are any), then the food in
- * three groups, soonest first. Red only for food past its date.
+ * Food at home, by hand (Phase 156; mockup 1). One main action — Add food,
+ * or "Add ready-to-eat food" while Ingredients follow so it doesn't read as
+ * adding ingredients — then containers to return (only when there are any),
+ * then the food in three groups, soonest first. Red only for food past its date.
  *
  * Shared by the owner's Kitchen tab and the staff's Dapur: staff screens
  * pass "id" and canDelete={false}.
@@ -113,7 +114,10 @@ export function FoodView({
         <h2 className="text-base font-semibold text-gray-900">{tr("Ready to eat", "Siap dimakan")}</h2>
       )}
       <Button className="min-h-12 w-full rounded-xl text-base" onClick={() => setAdding(true)}>
-        <Plus /> {tr("Add food", "Tambah makanan")}
+        <Plus />{" "}
+        {readyHeading
+          ? tr("Add ready-to-eat food", "Tambah makanan siap dimakan")
+          : tr("Add food", "Tambah makanan")}
       </Button>
 
       {containers.length > 0 && (

@@ -26,6 +26,7 @@ export function StockItemsPanel({
   addLabel,
   empty,
   headings = true,
+  prominent = false,
 }: {
   /** For the heading's aria link. */
   id: string;
@@ -41,6 +42,12 @@ export function StockItemsPanel({
   /** Shown instead of the list when it's empty. */
   empty: ReactNode;
   headings?: boolean;
+  /**
+   * A main section (Food → Ingredients): the heading as large as Ready to
+   * eat's, and the owner's add button full width under it instead of small
+   * in the corner. Shopping's supplies keep the small one.
+   */
+  prominent?: boolean;
 }) {
   const [choosing, setChoosing] = useState<InventoryItem | null>(null);
   const [tracking, setTracking] = useState<InventoryItem | null>(null);
@@ -55,10 +62,29 @@ export function StockItemsPanel({
 
   return (
     <section
-      className="flex flex-col gap-2"
+      className={prominent ? "flex flex-col gap-4" : "flex flex-col gap-2"}
       aria-labelledby={title ? id : undefined}
     >
-      {(title || (owner && addLabel)) && (
+      {prominent && (title || hint) && (
+        <div className="flex flex-col">
+          {title && (
+            <h2 id={id} className="text-base font-semibold text-gray-900">
+              {title}
+            </h2>
+          )}
+          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        </div>
+      )}
+      {prominent && owner && addLabel && (
+        <Button
+          variant="outline"
+          className="min-h-12 w-full rounded-xl text-base"
+          onClick={() => edit("new")}
+        >
+          <Plus /> {addLabel}
+        </Button>
+      )}
+      {!prominent && (title || (owner && addLabel)) && (
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-col">
             {title && (

@@ -63,7 +63,7 @@ people are **staf** and **admin**.
 | At the vet / Back home from the vet | **Dirawat di klinik / Sudah pulang dari klinik** | |
 | Tabs: Today, Home, Pets, Kitchen, Settings | **Hari ini, Rumah, Hewan, Dapur, Pengaturan** | Phase 175 (12 Nov), in that order. Home / **Rumah** replaced Chores / Tugas; Settings / **Pengaturan** replaced Household / Rumah (which had replaced "Access" / "Akses"). "Rumah" now means the house only, as in "Rumah 6/8". |
 | Kakak (the AI helper) / Tell Kakak | **Kakak / Bilang ke Kakak** | Poofy Labs' elder-sister character; the face of all AI help (Phase 156 plan, section 0b). A caring, loving older sister: warm, short, never bossy, and says she is an AI helper if asked. Calls herself *Kakak*; addresses the owner as *Anda*, or *Bu* / *Pak* once the owner has used it for themselves (never guessed from a name). Her mark is a heart inside the Miamus house, no face (2026-11-11). |
-| Kitchen (tab) / Food · Shopping | **Dapur** / **Makanan · Belanja** | Phase 156: the Shopping tab became Kitchen; the staff header says Tugas Hari Ini · Dapur. Shopping holds the list and the home's supplies. |
+| Kitchen (tab) / Food · Menu · Shopping | **Dapur** / **Makanan · Menu · Belanja** | Phase 156: the Shopping tab became Kitchen; the staff header says Tugas Hari Ini · Dapur. Shopping holds the list and the home's supplies. Pill order Food · Menu · Shopping since 2026-11-12 (Menu only with Kitchen amounts on); with Food at home off it stays **Belanja · Menu**. |
 | Supplies at home | **Stok di rumah** | Soap, pee pads, dog food — the old Inventory, under Shopping. |
 | Cooked at home · From someone · Bought | **Dimasak di rumah · Dari orang · Dibeli** | Where a food came from; "Dimasak di rumah" is leftovers. In a row: "masakan rumah", "dari Tante Rina", "dibeli". |
 | Food came in (staff button; owner push) | **Makanan masuk** | First in the staff's Lapor sheet. |
@@ -293,6 +293,9 @@ people are **staf** and **admin**.
 | Room names saved by the templates | **Ruang Tamu · Ruang Keluarga · Ruang Keluarga Atas · Ruang Makan · Dapur · Dapur Kotor · Kamar Utama · Kamar Tidur 2 · Kamar Mandi · Kamar Staf · Kamar Mandi Staf · Ruang Cuci · Gudang · Balkon · Teras · Taman · Kolam Renang** | Phase 172 Appendix A1; floors **LT1, LT2…** and **Rooftop**. Owners rename any room later. |
 | Kitchen amounts (feature) | **Jumlah bahan dapur** | Phase 170 PR A, the Features row under Dapur. |
 | Ready to eat · Ingredients (Food groups) | **Siap dimakan · Bahan masakan** | Phase 170 PR A (D6): fresh food and pantry items browse under Makanan. Hint: **Makanan segar dan bahan pokok**. |
+| Add ready-to-eat food (Food, with Ingredients below) | **Tambah makanan siap dimakan** | 2026-11-12: the top button while Ingredients show, so it doesn't read as adding ingredients. Otherwise **Tambah makanan**; the sheet title stays **Tambah makanan**. |
+| Add ingredient (Food group) | **Tambah bahan masakan** | 2026-11-12: the owner's button under Bahan masakan. **Tambah bahan** stays the recipe form's. |
+| Eat today · This week · Later or no date (Food) | **Makan hari ini · Minggu ini · Nanti atau tanpa tanggal** | When to eat it. The last group is food with no date or more than a week left (was "Later / Nanti" until 2026-11-12). |
 | Track amount / Set amount | **Catat jumlah** / **Ubah jumlah** | Phase 170 PR A. "Catat", as in Dicatat Sari. |
 | N left / about N · 3 weeks ago | **Sisa N** / **sekitar N · 3 minggu lalu** | Phase 170 PR A: "Sisa 1,2 kg"; the second in grey after 14 days, never red. |
 | How much is there now? / A guess is fine… | **Berapa yang ada sekarang?** / **Perkiraan juga boleh; nanti terkoreksi saat belanja.** | Phase 170 PR A, owner form. |
@@ -302,7 +305,7 @@ people are **staf** and **admin**.
 | How much did you buy? / usually 5 kg / Skip amount / Bought | **Beli berapa?** / **biasanya 5 kg** / **Lewati jumlah** / **Sudah dibeli** | Phase 170 PR A; owners and staff. Toast: **Sudah dibeli · masih hampir habis**. |
 | Portions / Ate 1 portion | **Porsi** / **Dimakan 1 porsi** | Phase 170 PR A (D7): "Rendang · 3 porsi"; toast **sisa 2 porsi**. |
 | Kitchen units | **buah, butir, ikat, siung, lembar, batang, bungkus, sachet** (recipes add **sdm, sdt**, Phase 170 PR B) | Phase 170 PR A: the words Indonesian kitchens use, kept in English too; the English picker adds a small second line (piece, egg, bunch, clove, leaf, stalk, packet, sachet). |
-| Kitchen pill (third) | **Menu** | Phase 170 PR B: **Makanan · Belanja · Menu**. Since PR C it opens on the week (owners) or Menu hari ini and the recipes (staff). |
+| Kitchen pill (Menu) | **Menu** | Phase 170 PR B; since 2026-11-12 the middle pill: **Makanan · Menu · Belanja**. Since PR C it opens on the week (owners) or Menu hari ini and the recipes (staff). |
 | Recipe / Recipes / New recipe / Edit recipe | **Resep** / **Resep** / **Resep baru** / **Ubah resep** | Phase 170 PR B. |
 | Servings | **Porsi** | Phase 170 PR B: "untuk 4 porsi"; the stepper reads **Untuk 4 porsi**. |
 | Ingredients (recipe) / Steps | **Bahan** / **Cara membuat** | Phase 170 PR B: what Indonesian recipes print. "Bahan masakan" stays the Food group. |
