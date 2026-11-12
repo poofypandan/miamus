@@ -263,7 +263,7 @@ export function AgendaTab() {
     }
     setConfirmingUndo(null);
     const ok = await undoClaim(staffId);
-    // The roster (Household → Staff) shows the name without a PIN again.
+    // The roster (Settings → Staff) shows the name without a PIN again.
     if (ok) reloadRoster();
     if (ok) {
       toast.success(
@@ -1045,7 +1045,7 @@ export function AgendaTab() {
         {range === "day" && mine.some((o) => isBill(o.task)) && <WhatsNewCard id="bill-payments-2026-11" />}
         {/* Couldn't-do and the evening summary (Phase 165, D10): for homes with staff. */}
         {range === "day" && hasStaff && <WhatsNewCard id="couldnt-do-2026-11" />}
-        {/* Bills and upkeep (Phase 164, D9): Show me opens the checklist on Chores. */}
+        {/* Bills and upkeep (Phase 164, D9): Show me opens the checklist on Home (was Chores). */}
         {range === "day" && (
           <WhatsNewCard
             id="bills-2026-11"
