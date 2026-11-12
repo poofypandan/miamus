@@ -455,6 +455,8 @@ function TasksView() {
         <StaffTipCard
           tips={[
             // Phase 170 PR A: only while Kitchen amounts is on.
+            // Phase 176: while Bahan masakan shows under Makanan.
+            { id: "staff-kitchen-places-2026-11", show: kitchenAmountsOn },
             // Phase 170 PR C: once Today has a menu.
             { id: "staff-menu-2026-11", show: showMenuTip },
             // Phase 170 PR B: once there is a recipe to open.
