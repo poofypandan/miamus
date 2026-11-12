@@ -25,6 +25,9 @@ import type { FoodPlace, InventoryItem } from "@/types/database";
  *   apply. The date is kept: a printed date is often still right.
  * - The date chips save at once. Hidden while the item is Out, which has no
  *   date (migrations/154).
+ * - Nothing stored yet (the category's default shown outlined): a tap on that
+ *   default saves it, quietly. Nothing moved, so no toast; but now it is
+ *   noted, as the add form does (Phase 176 follow-ups).
  *
  * Give it `key={item.id}`, so the lines start fresh for each item.
  */
@@ -56,7 +59,17 @@ export function IngredientWhereWhen({ item, lang }: { item: InventoryItem; lang:
     }
   }
 
+  async function confirmDefault(next: FoodPlace) {
+    try {
+      await setIngredientPlace(item.id, next);
+    } catch (err) {
+      console.error(err);
+      toast.error(failed, sheetToast);
+    }
+  }
+
   async function move(next: FoodPlace) {
+    if (next === place) return void confirmDefault(next);
     const before = { kept_in: item.kept_in ?? null, expires_on: item.expires_on ?? null };
     // Freezer to fridge then to the counter still wants the new date.
     setHint((h) => (place === "freezer" ? "thawed" : next === "freezer" ? "frozen" : h === "thawed" ? h : null));
@@ -89,7 +102,7 @@ export function IngredientWhereWhen({ item, lang }: { item: InventoryItem; lang:
 
   return (
     <div className="flex flex-col gap-4">
-      <PlacePicker value={place} onChange={(next) => void move(next)} locale={lang} />
+      <PlacePicker value={place} onChange={(next) => void move(next)} locale={lang} tapSelected={item.kept_in == null} />
       {!out && (
         <div className="flex flex-col gap-2">
           {hint === "thawed" && (

@@ -45,7 +45,10 @@ test("staff get the tip on Today, in Indonesian, while Bahan masakan shows", asy
   const tip = page.getByRole("region", { name: OWNER_ID });
   await expect(tip).toBeVisible({ timeout: 20_000 });
   await expect(tip).toContainText("Ketuk bahannya, lalu ketuk tempat barunya.");
-  await expect(tip).toContainText("Ketuk Buka untuk mencatatnya di sana.");
+  // Only Dapur → Makanan has the Buka button; Lapor → Makanan masuk has none.
+  await expect(tip).toContainText(
+    "Di Dapur → Makanan, kalau makanan yang ditambahkan sudah ada di Bahan masakan, ketuk Buka untuk mencatatnya di sana."
+  );
 });
 
 test("staff without Kitchen amounts never get it", async ({ context, page }) => {

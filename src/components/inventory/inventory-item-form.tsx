@@ -130,7 +130,10 @@ export function InventoryItemForm({
   // Amount is set here only when adding; Track amount keeps it after that,
   // so a number has one place to change.
   const showAmount = showPlaces && !item;
-  const typedAmount = amount.trim() === "" ? null : parseAmount(amount);
+  const parsedAmount = amount.trim() === "" ? null : parseAmount(amount);
+  // 0 reads as blank: not tracked, and the date kept. Tracked at 0 it would
+  // go Out, which has no date, so a date given here would be lost.
+  const typedAmount = parsedAmount === 0 ? null : parsedAmount;
   // "Already in Ingredients" (5d): exact names only, while adding.
   const existing = useMemo(
     () => (ingredient && !item ? (inventoryItems.find((i) => isIngredient(i) && sameName(i.name, name)) ?? null) : null),
@@ -146,7 +149,7 @@ export function InventoryItemForm({
 
   async function handleSave() {
     if (!name.trim()) return void toast.error(t("Give the item a name", "Beri nama barangnya"));
-    if (showAmount && amount.trim() !== "" && typedAmount === null) {
+    if (showAmount && amount.trim() !== "" && parsedAmount === null) {
       return void toast.error(t("Check the amount", "Cek jumlahnya"));
     }
 

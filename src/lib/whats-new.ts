@@ -630,7 +630,7 @@ export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
     lines: [
       "Bahan masakan di Dapur → Makanan dikelompokkan menurut tempat: Kulkas, Freezer, Meja, Lemari. Yang Segera dipakai ada di paling atas.",
       "Memindahkan bahan? Ketuk bahannya, lalu ketuk tempat barunya. Keluar dari freezer, pilih tanggal kedaluwarsanya.",
-      "Makanan yang ditambahkan sudah ada di Bahan masakan? Ketuk Buka untuk mencatatnya di sana.",
+      "Di Dapur → Makanan, kalau makanan yang ditambahkan sudah ada di Bahan masakan, ketuk Buka untuk mencatatnya di sana.",
     ],
   },
   {
