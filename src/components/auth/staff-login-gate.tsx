@@ -23,6 +23,8 @@ import { dataProvider } from "@/lib/data";
 import { readSessionState, waitForSession } from "@/lib/auth/device-session";
 import { clearHouseholdDataOnThisPhone, PHONE_REMOVED_KEY } from "@/lib/local-data";
 import { phoneLinkedAnywhere, phoneLinkState } from "@/lib/phone-link";
+import { forgetOutbox } from "@/lib/offline-queue";
+import { forgetPhotoQueue } from "@/lib/photo-queue";
 import { readStoredTenantId } from "@/lib/tenant";
 import { cn } from "@/lib/utils";
 import { activeMemberProfile } from "@/lib/member-identity";
@@ -280,10 +282,14 @@ async function wasRemoved(): Promise<boolean> {
 /**
  * What owner sign-out removes, removed here too: the household's menu,
  * recipes, features, snapshot, the household id and who this phone was
- * (local-data.ts). The marker keeps the "removed" message on the next load.
+ * (local-data.ts), and the saves and photos still waiting to be sent. The marker keeps the "removed" message on the next load.
  */
 function forgetRemovedPhone() {
   clearHouseholdDataOnThisPhone();
+  // Waiting saves and photos too, as sign-out clears them (Codex P2, PR #102):
+  // they can't be sent from a removed phone, and they hold household data.
+  void forgetOutbox();
+  void forgetPhotoQueue();
   try {
     window.localStorage.setItem(PHONE_REMOVED_KEY, "1");
   } catch {

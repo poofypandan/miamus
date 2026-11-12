@@ -20,9 +20,44 @@ async function seedCaches(context: BrowserContext) {
       sessionStorage.setItem("cache-seeded", "1");
       localStorage.setItem(menuKey, JSON.stringify({ dishes: [{ name: "Soto ayam" }] }));
       localStorage.setItem("miamus.public-locale", "id");
+      // A save and a photo left waiting (idb-keyval's stores, as the app writes them).
+      const put = (dbName: string, storeName: string, key: string, value: unknown) => {
+        const open = indexedDB.open(dbName);
+        open.onupgradeneeded = () => open.result.createObjectStore(storeName);
+        open.onsuccess = () => {
+          const tx = open.result.transaction(storeName, "readwrite");
+          tx.objectStore(storeName).put(value, key);
+          tx.oncomplete = () => open.result.close();
+        };
+      };
+      put("keyval-store", "keyval", "b11-sync-queue", [{ id: "waiting-1", job: { kind: "chore_finish" } }]);
+      put("miamus-photo-queue", "photos", "http://supabase.test/storage/v1/object/public/photos/x.jpg", {
+        path: "x.jpg",
+        data: new ArrayBuffer(4),
+        type: "image/jpeg",
+        createdAt: Date.now(),
+      });
     },
     [MENU_KEY]
   );
+}
+
+/** How many saves and photos are still kept in IndexedDB. */
+async function readQueues() {
+  const count = (dbName: string, storeName: string, key?: string) =>
+    new Promise<number>((resolve) => {
+      const open = indexedDB.open(dbName);
+      open.onupgradeneeded = () => open.result.createObjectStore(storeName);
+      open.onsuccess = () => {
+        const store = open.result.transaction(storeName, "readonly").objectStore(storeName);
+        const req = key ? store.get(key) : store.count();
+        req.onsuccess = () => {
+          open.result.close();
+          resolve(key ? ((req.result as unknown[] | undefined) ?? []).length : (req.result as number));
+        };
+      };
+    });
+  return { outbox: await count("keyval-store", "keyval", "b11-sync-queue"), photos: await count("miamus-photo-queue", "photos") };
 }
 
 test("a removed staff phone says so and forgets the household", async ({ context, page }) => {
@@ -43,6 +78,9 @@ test("a removed staff phone says so and forgets the household", async ({ context
     marker: localStorage.getItem("miamus.phone-removed"),
   }), MENU_KEY);
   expect(stored).toEqual({ tenant: null, staff: null, menu: null, locale: "id", marker: "1" });
+
+  // Saves and photos waiting to be sent go too, as on sign-out (Codex P2, PR #102).
+  await expect.poll(() => page.evaluate(readQueues)).toEqual({ outbox: 0, photos: 0 });
 
   // Opened again (no household id left on the phone): still "removed".
   await page.reload();

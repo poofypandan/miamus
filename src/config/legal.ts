@@ -177,7 +177,7 @@ export const LEGAL = {
   // 2026-11-12.1: a removed staff phone forgets the household (demo-day
   // fixes, no migration) — when an admin removes a staff phone, the phone
   // deletes its copies of the household (lists, menu, recipes, kitchen notes,
-  // names, the household id) the next time it opens, and keeps only a "this
+  // names, the household id, and saves and photos not yet sent) the next time it opens, and keeps only a "this
   // phone was removed" flag until it is linked again. Less kept, nothing new
   // collected, no new service.
   policyVersion: "2026-11-12.1",
