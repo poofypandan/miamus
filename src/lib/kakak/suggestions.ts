@@ -12,13 +12,14 @@ import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts
 import type { RoutineKind, RoutineProof } from "@/types/database";
 import type { RefMap, RefNames } from "./context";
 import type { KakakHousehold } from "./household";
-import { PET_ROUTINE_TOOL_KINDS, TOOL_WEEKDAYS, type PetRoutineToolKind } from "./tools";
+import { FOOD_PLACES, INGREDIENT_EXPIRY, PET_ROUTINE_TOOL_KINDS, TOOL_WEEKDAYS, type PetRoutineToolKind } from "./tools";
 import { REMIND_DAYS, isDay, isTime, newPetTimes, routineTitle } from "./validate";
 
 export type ChoreCategory = "cleaning" | "maintenance" | "errand" | "groceries";
 export type ChoreRecurrence = "none" | "daily" | "weekly" | "monthly";
 export type FoodPlace = "fridge" | "freezer" | "pantry" | "counter";
 export type FoodSource = "home" | "gift" | "bought";
+export type IngredientExpiry = (typeof INGREDIENT_EXPIRY)[number];
 
 export interface ChoreSuggestion {
   kind: "chore";
@@ -103,7 +104,27 @@ export interface FoodSuggestion {
   notes: string | null;
 }
 
-export type KakakSuggestion = ChoreSuggestion | ShoppingSuggestion | PetRoutineSuggestion | FoodSuggestion;
+/**
+ * Where an ingredient is kept and when it expires (Phase 176): saved
+ * through setIngredientPlace and setIngredientExpiry, each sending only its
+ * own column, so another phone's amount or status is never overwritten.
+ */
+export interface IngredientSuggestion {
+  kind: "ingredient";
+  itemId: string;
+  name: string;
+  /** Where it goes; null leaves the place as it is. */
+  keptIn: FoodPlace | null;
+  /** The place stored when Kakak read the household (null: nobody had said), for the card. */
+  fromPlace: FoodPlace | null;
+  expiry: IngredientExpiry;
+  /** YYYY-MM-DD with "set", else null. */
+  expiresOn: string | null;
+  /** Labels the date "Kakak's guess — check it"; not saved. */
+  expiryIsGuess: boolean;
+}
+
+export type KakakSuggestion = ChoreSuggestion | ShoppingSuggestion | PetRoutineSuggestion | FoodSuggestion | IngredientSuggestion;
 
 /** The potty title the app writes (lib/schedule-categories.ts). */
 export const POTTY_TITLE = "Pipis & Pup";
@@ -271,6 +292,22 @@ export function toSuggestion(
         returnContainer: input.return_container === true,
         notes: str(input.notes),
       };
+    case "put_away_ingredient": {
+      const item = str(input.item);
+      const listed = item ? household.items.find((i) => i.ref === item) : undefined;
+      if (!item || !refs.items[item]) return null;
+      const expiry = (INGREDIENT_EXPIRY as readonly unknown[]).includes(input.expiry) ? (input.expiry as IngredientExpiry) : "keep";
+      return {
+        kind: "ingredient",
+        itemId: refs.items[item],
+        name: names.items[item],
+        keptIn: PLACES.has(String(input.kept_in)) ? (input.kept_in as FoodPlace) : null,
+        fromPlace: listed?.keptIn ?? null,
+        expiry,
+        expiresOn: expiry === "set" ? str(input.expires_on) : null,
+        expiryIsGuess: expiry === "set" && input.expiry_is_guess === true,
+      };
+    }
     default:
       return null;
   }
@@ -278,7 +315,7 @@ export function toSuggestion(
 
 const CATEGORIES = new Set(["cleaning", "maintenance", "errand", "groceries"]);
 const RECURRENCES = new Set(["none", "daily", "weekly", "monthly"]);
-const PLACES = new Set(["fridge", "freezer", "pantry", "counter"]);
+const PLACES = new Set<string>(FOOD_PLACES);
 const SOURCES = new Set(["home", "gift", "bought"]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -373,6 +410,18 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         okText(s.fromWhom, 60, true) &&
         typeof s.returnContainer === "boolean" &&
         okText(s.notes, 200, true)
+      );
+    case "ingredient":
+      return (
+        okId(s.itemId, false) &&
+        okText(s.name, 60, false) &&
+        (s.keptIn === null || (typeof s.keptIn === "string" && PLACES.has(s.keptIn))) &&
+        (s.fromPlace === null || (typeof s.fromPlace === "string" && PLACES.has(s.fromPlace))) &&
+        (s.expiry === "set" ? isDay(s.expiresOn) : (s.expiry === "clear" || s.expiry === "keep") && s.expiresOn === null) &&
+        typeof s.expiryIsGuess === "boolean" &&
+        !(s.expiryIsGuess && s.expiry !== "set") &&
+        // A card that changes nothing is never saved.
+        !(s.keptIn === null && s.expiry === "keep")
       );
     default:
       return false;

@@ -106,7 +106,14 @@ describe("playConversation", () => {
     expect(first.tool_choice).toEqual({ type: "auto" });
     expect(first).not.toHaveProperty("temperature");
     const tools = first.tools as { name: string; strict: boolean }[];
-    expect(tools.map((t) => t.name)).toEqual(["create_chore", "add_to_shopping_list", "add_pet_routine", "add_food", "ask_question"]);
+    expect(tools.map((t) => t.name)).toEqual([
+      "create_chore",
+      "add_to_shopping_list",
+      "add_pet_routine",
+      "add_food",
+      "put_away_ingredient",
+      "ask_question",
+    ]);
     expect(tools.filter((t) => t.strict).map((t) => t.name)).toEqual(["create_chore", "add_pet_routine", "ask_question"]);
     const system = first.system as { text: string; cache_control?: unknown }[];
     expect(system).toHaveLength(2);

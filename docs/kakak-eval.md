@@ -16,7 +16,7 @@ run costs money and needs keys, so it is run by hand.
 
 | File | What |
 | --- | --- |
-| `src/lib/kakak/tools.ts` | The five tools, as planned (section 3 of the plan). Shared with the app later. |
+| `src/lib/kakak/tools.ts` | The tools, as planned (section 3 of the plan), plus `put_away_ingredient` (Phase 176, not strict). Shared with the app. |
 | `src/lib/kakak/prompt.ts` | Kakak's instructions, the same for every household. |
 | `src/lib/kakak/household.ts` | The household block: short references (S1, P1, R1, I1, M1), first names only. It also lists the next 14 dates with their weekdays, so the model doesn't have to work out "Sabtu ini" itself. |
 | `src/lib/kakak/validate.ts` | The checks the route will run on every tool call: lengths, times, real dates, references that exist. |

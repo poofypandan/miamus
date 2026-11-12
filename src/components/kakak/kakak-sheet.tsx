@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import {
+  Carrot,
   Check,
   CheckCircle2,
   CircleAlert,
@@ -839,6 +840,7 @@ const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
   shopping: ShoppingCart,
   pet_routine: PawPrint,
   food: Refrigerator,
+  ingredient: Carrot,
 };
 
 type T = (en: string, id: string) => string;

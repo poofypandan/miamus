@@ -1,7 +1,8 @@
 import type Anthropic from "@anthropic-ai/sdk";
 
-// The five tools Kakak gets (docs/phase-156-step2-kakak-plan.md, section 3).
-// The list is identical for every household so it caches once for everyone:
+// The tools Kakak gets (docs/phase-156-step2-kakak-plan.md, section 3; the
+// sixth, put_away_ingredient, Phase 176). The list is identical for every
+// household with the same switches, so it caches once for all of them:
 // names of people, pets and rooms never appear here, only short references
 // (S1, P1, R1, I1, M1) that the household block defines.
 //
@@ -16,9 +17,10 @@ import type Anthropic from "@anthropic-ai/sdk";
 // union, so only three tools are strict: create_chore (9 unions),
 // add_pet_routine (6) and ask_question (0), 15 in all. They are the ones
 // whose shape matters most (dates, recurrence, routine switches) or that
-// every turn may use. add_to_shopping_list and add_food are not strict:
-// validate.ts checks their whole shape (fields, types, enums), and a call
-// that fails goes back to Kakak once like any other mistake.
+// every turn may use. add_to_shopping_list, add_food and put_away_ingredient
+// are not strict: validate.ts checks their whole shape (fields, types,
+// enums), and a call that fails goes back to Kakak once like any other
+// mistake.
 // tests/unit/kakak-tool-limits.test.ts keeps the strict set under the limits.
 
 const nullableString = (description: string) => ({
@@ -31,6 +33,7 @@ export const KAKAK_TOOL_NAMES = [
   "add_to_shopping_list",
   "add_pet_routine",
   "add_food",
+  "put_away_ingredient",
   "ask_question",
 ] as const;
 
@@ -42,6 +45,12 @@ export type KakakToolName = (typeof KAKAK_TOOL_NAMES)[number];
  */
 export const PET_ROUTINE_TOOL_KINDS = ["meal", "potty", "walk", "lights", "play", "water", "teeth", "other"] as const;
 export type PetRoutineToolKind = (typeof PET_ROUTINE_TOOL_KINDS)[number];
+
+/** Where food and ingredients are kept (food_items.kept_in, inventory_items.kept_in). */
+export const FOOD_PLACES = ["fridge", "freezer", "pantry", "counter"] as const;
+
+/** put_away_ingredient's date: a new one, none any more, or leave it alone. */
+export const INGREDIENT_EXPIRY = ["set", "clear", "keep"] as const;
 
 /** Weekdays as the tool writes them; ISO order (1 = Monday ... 7 = Sunday). */
 export const TOOL_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -216,7 +225,7 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
       ],
       properties: {
         name: { type: "string", description: "As the owner said it ('Lapis legit'). Max 80 characters." },
-        kept_in: { type: "string", enum: ["fridge", "freezer", "pantry", "counter"] },
+        kept_in: { type: "string", enum: [...FOOD_PLACES] },
         expires_on: { anyOf: [{ type: "string", format: "date" }, { type: "null" }] },
         expiry_unknown: {
           type: "boolean",
@@ -233,6 +242,38 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
           description: "True when the container goes back to the giver.",
         },
         notes: nullableString("Max 200 characters."),
+      },
+    },
+  },
+  {
+    // Phase 176 (docs/phase-176-kitchen-places-plan.md, section 10). Not
+    // strict, so the strict union count stays 15 (tools header).
+    name: "put_away_ingredient",
+    description:
+      "Suggest where a listed ingredient is kept and when it expires: bought and put away, moved, or taken out to thaw. Only for an item marked (ingredient). Never saves anything.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["item", "kept_in", "expiry", "expires_on", "expiry_is_guess"],
+      properties: {
+        item: { type: "string", description: "An item reference marked (ingredient): I1, …" },
+        kept_in: {
+          anyOf: [{ type: "string", enum: [...FOOD_PLACES] }, { type: "null" }],
+          description: "Where it is now. Null leaves the place as it is.",
+        },
+        expiry: {
+          type: "string",
+          enum: [...INGREDIENT_EXPIRY],
+          description: "set: expires_on is its date now. clear: it has no date any more. keep: the date stays as it is.",
+        },
+        expires_on: {
+          anyOf: [{ type: "string", format: "date" }, { type: "null" }],
+          description: "YYYY-MM-DD with set; null otherwise.",
+        },
+        expiry_is_guess: {
+          type: "boolean",
+          description: "True when expires_on is Kakak's cautious guess, not a label or the owner's date.",
+        },
       },
     },
   },
