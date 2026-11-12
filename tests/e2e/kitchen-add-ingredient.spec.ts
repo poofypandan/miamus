@@ -40,7 +40,7 @@ const chicken = {
 
 async function openAddIngredient(page: Page) {
   await page.goto("/dashboard?module=inventory");
-  const ingredients = page.getByRole("region", { name: "Ingredients" });
+  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
   await ingredients.getByRole("button", { name: "Add ingredient" }).click({ timeout: 20_000 });
   const form = page.getByRole("dialog", { name: "Add item" });
   await expect(form).toBeVisible();
@@ -128,7 +128,7 @@ test("Household Supplies and Shopping show the form as before", async ({ context
 test("editing an ingredient shows its place and date, and sends only what changed", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [chicken] });
   await page.goto("/dashboard?module=inventory");
-  const ingredients = page.getByRole("region", { name: "Ingredients" });
+  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
   await ingredients.getByRole("button", { name: /Dada Ayam/ }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Edit item" }).click();
   const form = page.getByRole("dialog", { name: "Edit item" });

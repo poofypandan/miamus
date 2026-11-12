@@ -57,8 +57,8 @@ function kitchen() {
 
 async function openOwnerFood(page: Page) {
   await page.goto("/dashboard?module=inventory");
-  const ingredients = page.getByRole("region", { name: "Ingredients" });
-  await expect(ingredients.getByRole("heading", { name: "Ingredients" })).toBeVisible({ timeout: 20_000 });
+  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
+  await expect(ingredients.getByRole("heading", { name: "Ingredients", exact: true })).toBeVisible({ timeout: 20_000 });
   return ingredients;
 }
 
@@ -310,7 +310,7 @@ test("staff see the same groups in Indonesian, move and date an item, and cannot
   await page.goto("/staff");
   await page.getByRole("tab", { name: "Dapur" }).click();
 
-  const bahan = page.getByRole("region", { name: "Bahan masakan" });
+  const bahan = page.getByRole("region", { name: "Bahan masakan", exact: true });
   await expect(bahan.locator("h3")).toHaveText(["Segera dipakai", "Kulkas", "Freezer", "Meja", "Lemari"], { timeout: 20_000 });
   await expect(bahan.getByRole("button", { name: /Santan/ })).toContainText("Kulkas · Lewat 2 hari — cek dulu");
   await expect(bahan.getByRole("button", { name: /Daging sapi/ })).toContainText("Kedaluwarsa 40 hari lagi");

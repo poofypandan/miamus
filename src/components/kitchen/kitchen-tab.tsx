@@ -61,6 +61,12 @@ export function KitchenTab() {
       <div className="px-4 empty:hidden">
         <KitchenSwitch locale={locale} />
       </div>
+      {/* Phase 176: first, so on a fresh week it claims the one card. */}
+      {ingredients && view === "food" && (
+        <div className="px-4 empty:hidden">
+          <WhatsNewCard id="kitchen-places-2026-11" />
+        </div>
+      )}
       {amountsOn(flags) && view !== "menu" && (
         <div className="px-4 empty:hidden">
           <WhatsNewCard id="kitchen-amounts-2026-11" />

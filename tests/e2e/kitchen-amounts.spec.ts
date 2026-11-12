@@ -46,7 +46,7 @@ test("an owner tracks rice under Food → Ingredients; the old count is only a h
   await page.goto("/dashboard?module=inventory");
 
   // D6: rice browses under Food → Ingredients; soap stays under Shopping.
-  const ingredients = page.getByRole("region", { name: "Ingredients" });
+  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
   await expect(page.getByRole("heading", { name: "Ready to eat" })).toBeVisible({ timeout: 20_000 });
   await expect(ingredients.getByRole("button", { name: /Beras/ })).toBeVisible();
   await expect(ingredients.getByRole("button", { name: /Sabun cuci/ })).toHaveCount(0);
@@ -79,8 +79,8 @@ test("Food · Menu · Shopping, and Food's buttons say what they add", async ({ 
   await expect(pills).toHaveText(["Food", "Menu", "Shopping"], { timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Add ready-to-eat food" })).toBeVisible();
   // Ingredients as large as Ready to eat, with its own full-width button.
-  const ingredients = page.getByRole("region", { name: "Ingredients" });
-  await expect(ingredients.getByRole("heading", { name: "Ingredients" })).toHaveClass(/text-base/);
+  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
+  await expect(ingredients.getByRole("heading", { name: "Ingredients", exact: true })).toHaveClass(/text-base/);
   await ingredients.getByRole("button", { name: "Add ingredient" }).click();
   await expect(page.getByRole("dialog", { name: "Add item" })).toBeVisible();
   await page.keyboard.press("Escape");
@@ -100,8 +100,8 @@ test("staff see Makanan · Menu · Belanja and the larger Bahan masakan heading,
     timeout: 20_000,
   });
   await expect(page.getByRole("button", { name: "Tambah makanan siap dimakan" })).toBeVisible();
-  const bahan = page.getByRole("region", { name: "Bahan masakan" });
-  await expect(bahan.getByRole("heading", { name: "Bahan masakan" })).toHaveClass(/text-base/);
+  const bahan = page.getByRole("region", { name: "Bahan masakan", exact: true });
+  await expect(bahan.getByRole("heading", { name: "Bahan masakan", exact: true })).toHaveClass(/text-base/);
   await expect(bahan.getByRole("button", { name: /Tambah/ })).toHaveCount(0);
 });
 
@@ -147,7 +147,7 @@ test("a staff phone moves the amount with minus and plus, and can't switch track
   await page.goto("/staff");
   await page.getByRole("tab", { name: "Dapur" }).click();
 
-  const bahan = page.getByRole("region", { name: "Bahan masakan" });
+  const bahan = page.getByRole("region", { name: "Bahan masakan", exact: true });
   await expect(bahan.getByRole("button", { name: /Beras/ })).toContainText("Sisa 2 kg", { timeout: 20_000 });
   await bahan.getByRole("button", { name: /Beras/ }).click();
   await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
@@ -175,7 +175,7 @@ test("Kitchen amounts off hides the amounts, Track amount and Ingredients", asyn
   });
   await page.goto("/dashboard?module=inventory");
   await expect(page.getByRole("button", { name: "Add food" })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("heading", { name: "Ingredients" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Ingredients", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Ready to eat" })).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Shopping" }).click();
@@ -251,7 +251,7 @@ test("changing kg to g converts the amount and the Bought pre-fill (Codex, PR #9
     items: [rice({ track_amount: true, quantity: 1.5, min_threshold: 0, amount_set_at: new Date().toISOString(), last_bought_amount: 5 })],
   });
   await page.goto("/dashboard?module=inventory");
-  const ingredients = page.getByRole("region", { name: "Ingredients" });
+  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
   await ingredients.getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: /^Track amount/ }).click();
   await page.getByRole("button", { name: "g", exact: true }).click();
@@ -292,7 +292,7 @@ test("plus then Habis within the moment the taps wait: the item stays empty (Cod
   });
   await page.goto("/staff");
   await page.getByRole("tab", { name: "Dapur" }).click();
-  await page.getByRole("region", { name: "Bahan masakan" }).getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
+  await page.getByRole("region", { name: "Bahan masakan", exact: true }).getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
 
   // Plus, then Habis straight away, before the tap is sent.
   await page.getByRole("button", { name: "Tambah 0,5 kg" }).click();
@@ -318,7 +318,7 @@ async function slowBatches(context: import("@playwright/test").BrowserContext) {
 async function openRiceAsStaff(page: import("@playwright/test").Page) {
   await page.goto("/staff");
   await page.getByRole("tab", { name: "Dapur" }).click();
-  await page.getByRole("region", { name: "Bahan masakan" }).getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
+  await page.getByRole("region", { name: "Bahan masakan", exact: true }).getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
 }
 
 const stockOrder = (writes: [string, string][]) =>
@@ -350,7 +350,7 @@ test("two plus batches on their way, then Habis: Out still wins (Codex, PR #93)"
   expect(stub.supplies[0]).toMatchObject({ quantity: 0, stock_status: "out" });
   // The screen agrees: no batch's late answer over Out.
   await page.getByRole("tab", { name: "Dapur" }).click();
-  await expect(page.getByRole("region", { name: "Bahan masakan" }).getByRole("button", { name: /Beras/ })).toContainText("Sisa 0 kg");
+  await expect(page.getByRole("region", { name: "Bahan masakan", exact: true }).getByRole("button", { name: /Beras/ })).toContainText("Sisa 0 kg");
 });
 
 test("two plus batches on their way, then Set amount: the typed amount wins, on the server and the screen (Codex, PR #93)", async ({ context, page }) => {

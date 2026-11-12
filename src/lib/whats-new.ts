@@ -28,6 +28,28 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // Phase 176: shown on Kitchen → Food while Ingredients shows (Kitchen
+    // amounts and Food at home on), under the calm-start rules (one card a
+    // week, never to new households), so it may wait behind this week's card.
+    id: "kitchen-places-2026-11",
+    date: "2026-11-13",
+    audience: "owner",
+    title: { en: "New: where ingredients are kept", id: "Baru: tempat simpan bahan masakan" },
+    steps: {
+      en: [
+        "Ingredients are grouped by where they're kept: Fridge, Freezer, Counter, Cupboard. Use soon, on top, shows what expires within a week.",
+        "Tap an ingredient, then tap another place to move it; Undo puts it back. Out of the freezer, it asks for the new date and never fills one in.",
+        "Add ingredient asks where it's kept, when it expires and how much, all optional. A name that's already there says so, with Open it.",
+      ],
+      id: [
+        "Bahan masakan dikelompokkan menurut tempat simpannya: Kulkas, Freezer, Meja, Lemari. Segera dipakai, di paling atas, menunjukkan yang kedaluwarsa dalam seminggu.",
+        "Ketuk bahan, lalu ketuk tempat lain untuk memindahkannya; Batalkan mengembalikannya. Keluar dari freezer, Miamus menanyakan tanggal kedaluwarsa yang baru dan tidak pernah mengisinya sendiri.",
+        "Tambah bahan masakan menanyakan tempat simpan, tanggal kedaluwarsa dan jumlahnya, semuanya opsional. Kalau namanya sudah ada, Miamus memberi tahu, dengan tombol Buka.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Phase 170 PR C: shown on Kitchen → Menu's week while the Kitchen switch
     // is on, under the calm-start rules (one card a week, never to new
     // households), so it waits its turn behind this week's card.
@@ -599,6 +621,18 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    // Phase 176: while Bahan masakan shows under Makanan (Kitchen amounts and
+    // Food at home on).
+    id: "staff-kitchen-places-2026-11",
+    date: "2026-11-13",
+    title: "Baru: tempat simpan bahan masakan",
+    lines: [
+      "Bahan masakan di Dapur → Makanan dikelompokkan menurut tempat: Kulkas, Freezer, Meja, Lemari. Yang Segera dipakai ada di paling atas.",
+      "Memindahkan bahan? Ketuk bahannya, lalu ketuk tempat barunya. Keluar dari freezer, pilih tanggal kedaluwarsanya.",
+      "Makanan yang ditambahkan sudah ada di Bahan masakan? Ketuk Buka untuk mencatatnya di sana.",
+    ],
+  },
   {
     // Phase 170 PR C: once Today has a menu, while the Kitchen switch is on.
     id: "staff-menu-2026-11",
