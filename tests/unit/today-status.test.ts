@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { dayTotals, slipLabel, slipRow, statusDetail, statusTitle, waitingRows, type WaitingInput } from "@/lib/today-status";
+import {
+  dayTotals,
+  slipLabel,
+  slipOwners,
+  slipRow,
+  statusDetail,
+  statusTitle,
+  waitingRows,
+  type WaitingInput,
+} from "@/lib/today-status";
 import type { PersonProgress, ProgressTask, StaffProgress } from "@/lib/staff-progress";
 
 // Today's status line (Phase 175, S3): the day's counts come from the same
@@ -83,6 +92,42 @@ describe("dayTotals", () => {
       day: { done: 1, total: 1 },
     };
     expect(dayTotals(progress)).toEqual({ done: 1, total: 1, late: 1, couldnt: 0 });
+  });
+});
+
+describe("slipOwners", () => {
+  // The late row opens the work it counts (Codex, PR #105).
+  it("is nobody until the roster has loaded, or on a calm day", () => {
+    expect(slipOwners(null, "anyone")).toEqual([]);
+    const calm: StaffProgress = { people: [person("sari", [task({ state: "done" })])], anyone: null, day: { done: 1, total: 1 } };
+    expect(slipOwners(calm, "anyone")).toEqual([]);
+  });
+
+  it("names the one person whose work slipped, so a tap opens their day", () => {
+    const progress: StaffProgress = {
+      people: [person("sari", [task({ late: true })]), person("budi", [task({ state: "done" })])],
+      anyone: null,
+      day: { done: 1, total: 2 },
+    };
+    expect(slipOwners(progress, "anyone")).toEqual(["sari"]);
+  });
+
+  it("lists everyone with late or couldn't-do work, unowned work last", () => {
+    const progress: StaffProgress = {
+      people: [person("sari", [task({ late: true })]), person("budi", [task({ state: "couldnt" })])],
+      anyone: { open: 1, late: 1, couldnt: 0, tone: "red", tasks: [task({ late: true })] },
+      day: { done: 0, total: 3 },
+    };
+    expect(slipOwners(progress, "anyone")).toEqual(["sari", "budi", "anyone"]);
+  });
+
+  it("leaves out unowned work that is only still open", () => {
+    const progress: StaffProgress = {
+      people: [],
+      anyone: { open: 1, late: 0, couldnt: 0, tone: "neutral", tasks: [task({})] },
+      day: { done: 0, total: 1 },
+    };
+    expect(slipOwners(progress, "anyone")).toEqual([]);
   });
 });
 

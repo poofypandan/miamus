@@ -149,9 +149,34 @@ test("Bahasa Indonesia, a busy day: the rows waiting are counted once, in one gr
   expect(await top(page, status(page))).toBeLessThan(await top(page, waiting));
   expect(await top(page, waiting)).toBeLessThan(await top(page, progress));
 
-  // The late row opens Who did what.
+  // The late row opens the work it counts (Codex, PR #105): it is all
+  // Sari's, so her day, where the late chore is listed.
   await waiting.getByTestId("late-line").click();
-  await expect(page).toHaveURL(/workload=/);
+  await expect(page).toHaveURL(new RegExp(`workload=today&person=${STAFF_ID}`));
+  const day = page.getByRole("dialog", { name: "Sari" }).getByTestId("staff-person-day");
+  await expect(day.getByTestId("staff-person-task").filter({ hasText: "Cuci mobil" })).toBeVisible();
+});
+
+test("late work spread over several people: the late row goes to the progress card", async ({ context, page }) => {
+  await installStub(context, {
+    owner: { locale: "en" },
+    household: { hasPets: false },
+    staff: STAFF,
+    chores: [
+      sweep(),
+      chore({ title: "Wash the car", due_time: "08:00:00" }),
+      chore({ title: "Clean the pool", assigned_to: BUDI, due_time: "08:30:00" }),
+    ],
+  });
+  await at10(page);
+  await page.goto("/dashboard");
+
+  const line = page.getByTestId("late-line");
+  await expect(line).toHaveText("2 late", { timeout: 20_000 });
+  await line.click();
+  // No sheet: each person with something late is one tap away on the card.
+  await expect(page).not.toHaveURL(/workload=/);
+  await expect(page.getByRole("region", { name: "Today's progress" })).toBeInViewport();
 });
 
 test("an older home whose finished work is weeks back still gets its status line (Codex, PR #105)", async ({

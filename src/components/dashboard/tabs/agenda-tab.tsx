@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useMemo, useRef, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
 import { Bell, CalendarDays, ChevronRight, Clock, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Smartphone, Sparkles, Wrench } from "lucide-react";
@@ -27,7 +27,7 @@ import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { StaffProgressCard } from "@/components/dashboard/staff-progress-card";
 import { StaffWorkloadSheet } from "@/components/dashboard/staff-workload-sheet";
 import { useStaffProgress } from "@/hooks/use-staff-progress";
-import { useWorkloadParam } from "@/hooks/use-staff-workload";
+import { ANYONE_PERSON, useWorkloadParam } from "@/hooks/use-staff-workload";
 import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
@@ -50,7 +50,7 @@ import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores
 import { useBillPayments } from "@/hooks/use-bill-payments";
 import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
 import { comingUpLabel, comingUpReminders, comingUpText } from "@/lib/chore-reminders";
-import { dayTotals, slipLabel, slipRow, waitingRows } from "@/lib/today-status";
+import { dayTotals, slipLabel, slipOwners, slipRow, waitingRows } from "@/lib/today-status";
 import { cn } from "@/lib/utils";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import {
@@ -409,6 +409,22 @@ export function AgendaTab() {
   // component reports how many it shows.
   const [medicineCount, setMedicineCount] = useState(0);
   const workload = useWorkloadParam();
+  // The late row leads to the work it counts (Codex, PR #105): one person's
+  // day when it is all theirs, else the progress card, where each person
+  // with something late is one tap away.
+  const progressCard = useRef<HTMLDivElement>(null);
+  const lateOwners = useMemo(
+    () => slipOwners(showsToday ? progress : null, ANYONE_PERSON),
+    [showsToday, progress]
+  );
+  function openSlipped() {
+    if (lateOwners.length === 1) {
+      workload.openPerson(lateOwners[0]);
+      return;
+    }
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    progressCard.current?.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
+  }
   // Late and couldn't-do are about now: only while Today shows today.
   const totals = useMemo(() => dayTotals(showsToday ? progress : null), [showsToday, progress]);
   const slip = slipRow({ notDone: notDoneCount, late: totals.late, couldnt: totals.couldnt });
@@ -651,7 +667,7 @@ export function AgendaTab() {
                 (hasStaff ? (
                   <button
                     type="button"
-                    onClick={() => workload.open()}
+                    onClick={openSlipped}
                     data-testid="late-line"
                     className={cn(
                       "flex min-h-11 items-center gap-2 rounded-xl px-1 text-left text-sm font-medium active:bg-muted",
@@ -752,7 +768,12 @@ export function AgendaTab() {
         {/* Who is on track, at a glance (owners, 11 Nov): what Today is
             opened for in a home with staff. A row opens that person's day
             in the Who did what sheet. */}
-        {range === "day" && hasStaff && progress && <StaffProgressCard progress={progress} dayLabel={label} />}
+        {range === "day" && hasStaff && progress && (
+          // scroll-mt: the late row scrolls here, clear of the sticky header.
+          <div ref={progressCard} className="scroll-mt-24 empty:hidden">
+            <StaffProgressCard progress={progress} dayLabel={label} />
+          </div>
+        )}
 
         {/* Someone working in the house now (Phase 174), under the people
             it keeps busy: "Pak Budi is here · Leaking tap, LT2". */}

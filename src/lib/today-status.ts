@@ -42,6 +42,22 @@ export function dayTotals(progress: StaffProgress | null): DayTotals {
   };
 }
 
+/**
+ * Whose rows the late row is about: each person with something late or
+ * couldn't-do, then `anyoneId` for unowned work, in the progress card's
+ * order. One owner: a tap opens that person's day, where the late tasks and
+ * the couldn't-do notes are. Several: a tap goes to the progress card,
+ * where each is one tap away. (Who did what's first page counts finished
+ * work only, so it can't answer "what is late"; Codex, PR #105.)
+ */
+export function slipOwners(progress: StaffProgress | null, anyoneId: string): string[] {
+  if (!progress) return [];
+  return [
+    ...progress.people.filter((person) => person.late > 0 || person.couldnt > 0).map((person) => person.id),
+    ...(progress.anyone && (progress.anyone.late > 0 || progress.anyone.couldnt > 0) ? [anyoneId] : []),
+  ];
+}
+
 /** What can put a row under "Waiting for you". Counts, never content. */
 export interface WaitingInput {
   /** Staff suggestions waiting for a decision: one row each. */
