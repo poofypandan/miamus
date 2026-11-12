@@ -5,6 +5,7 @@ import type { OwnerLocale } from "@/lib/owner-locale";
 import { formatTime } from "@/lib/time";
 import type { LeaveRequest, RoutineProposal, TaskException, TaskExceptionReason, TaskLog } from "@/types/database";
 import { vetVisitState } from "@/lib/staff-agenda";
+import type { RoutineKind } from "@/types/database";
 
 /**
  * "Tidak bisa dikerjakan" and the evening summary (Phase 165,
@@ -26,11 +27,19 @@ function canRefuse(kind: ExceptionKind): boolean {
   return kind === "meal" || kind === "medication" || kind === "temporary";
 }
 
+/**
+ * Routines with nothing to run out of: a walk, lights off, play. "Barang
+ * habis" read oddly under a dog walk (demo check P-9). Fresh water, teeth and
+ * Other keep it (no water, no toothpaste, whatever Other needs).
+ */
+const NOTHING_TO_RUN_OUT: ReadonlySet<RoutineKind> = new Set(["walk", "lights", "play"]);
+
 /** The reasons offered, in order (D2 A: the audit's four, where they fit). */
-export function reasonsFor(kind: ExceptionKind): TaskExceptionReason[] {
-  return canRefuse(kind)
+export function reasonsFor(kind: ExceptionKind, routineKind?: RoutineKind | null): TaskExceptionReason[] {
+  const reasons: TaskExceptionReason[] = canRefuse(kind)
     ? ["out_of_stock", "pet_refused", "done_by_other", "other"]
     : ["out_of_stock", "done_by_other", "other"];
+  return routineKind && NOTHING_TO_RUN_OUT.has(routineKind) ? reasons.filter((r) => r !== "out_of_stock") : reasons;
 }
 
 /** Staff screens: Bahasa Indonesia only. */
@@ -86,12 +95,20 @@ export function staffCouldntLine(exception: Pick<TaskException, "reason" | "crea
 
 /** An owner row's line: "Couldn't: out of stock · Sari · 9:10 AM". */
 export function ownerCouldntRowLine(
-  exception: Pick<TaskException, "reason" | "created_at">,
+  exception: Pick<TaskException, "reason" | "created_at"> & { note?: string | null },
   locale: OwnerLocale,
   who: string | null,
   medicine = false
 ): string {
-  return [ownerCouldntLine(exception.reason, locale, medicine), who, formatTime(new Date(exception.created_at), locale)]
+  // What staff wrote, on the row itself (demo check P-10): "Hujan deras" used
+  // to show only after a tap. Quoted, so it reads as their words.
+  const note = exception.note?.trim().replace(/\s+/g, " ");
+  return [
+    ownerCouldntLine(exception.reason, locale, medicine),
+    note ? `\u201c${note}\u201d` : null,
+    who,
+    formatTime(new Date(exception.created_at), locale),
+  ]
     .filter(Boolean)
     .join(" · ");
 }

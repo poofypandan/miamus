@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase/client";
 import { ensureAnonymousSession } from "@/lib/auth/device-session";
 import { isConnectionError } from "@/lib/network-errors";
+import { markStaffTipsSeenOnJoin } from "@/lib/whats-new";
 import { storeTenantId } from "@/lib/tenant";
 
 /**
@@ -105,6 +106,7 @@ function JoinScreen() {
       const { data, error } = await client.rpc("redeem_staff_invite", { p_token: token! });
       if (!error && data) {
         storeTenantId(data);
+        markStaffTipsSeenOnJoin();
         // A full page load, not router.replace: HouseholdProvider resolves the
         // household once at startup and is already mounted, so a client-side
         // navigation would land on /staff still pointed at the previous

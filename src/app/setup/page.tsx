@@ -114,6 +114,10 @@ function Setup() {
   const [step, setStep] = useState<Step>("review");
   const [staff, setStaff] = useState<DraftStaff[]>([{ key: "s1", name: "", job: null }]);
   const [saving, setSaving] = useState(false);
+  // Set at once on the first tap: `saving` disables the button only on the
+  // next render, so a double tap sent the list twice and the second, refused
+  // as a repeat, put an error toast over "Your home is ready" (demo check P-1).
+  const adding = useRef(false);
   const [sentStaff, setSentStaff] = useState(0);
 
   const draft = useMemo(
@@ -152,11 +156,13 @@ function Setup() {
   }
 
   async function add() {
-    if (saving) return;
+    if (saving || adding.current) return;
+    adding.current = true;
     setSaving(true);
     const payload = toApplyPayload(draft, unticked, added, staff);
     const outcome = await applyHouseholdSetup(activeHouseholdId, payload);
     if (!outcome.ok) {
+      adding.current = false;
       setSaving(false);
       toast.error(
         outcome.reason === "offline"
@@ -348,7 +354,7 @@ function StaffStep({
           </Button>
         )}
         <p className="text-xs text-muted-foreground">
-          {t("Chores without a matching job stay for anyone.", "Tugas tanpa tugas utama yang cocok untuk siapa saja.")}
+          {t("Chores no one has the job for go to anyone on staff.", "Tugas yang tidak cocok dengan tugas utama siapa pun bisa dikerjakan siapa saja.")}
         </p>
       </div>
     </>

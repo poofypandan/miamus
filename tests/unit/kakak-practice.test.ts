@@ -164,6 +164,13 @@ describe("practice conversations", () => {
     expect(times).toEqual(["17:00"]);
   });
 
+  it("a time the pet already has is answered as already there (demo check P-21)", async () => {
+    const { deps } = setup("id");
+    const result = await runKakakTurn(deps, null, "Mochi makan jam 7");
+    expect(result).toMatchObject({ kind: "message" });
+    expect(result.kind === "message" ? result.text : "").toMatch(/sudah ada di rutinitas/);
+  });
+
   it("a correction's time replaces the first one", async () => {
     const { deps } = setup("id");
     const first = suggestions(await runKakakTurn(deps, null, "Pel teras besok jam 9"));

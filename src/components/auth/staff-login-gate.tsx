@@ -539,7 +539,7 @@ function PinStep({
           {creating
             ? confirming
               ? "Ulangi PIN untuk memastikan"
-              : "Buat PIN baru (4 Angka)"
+              : "Buat PIN baru (4 angka)"
             : "Masukkan PIN"}
         </p>
       </div>
