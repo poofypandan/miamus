@@ -79,8 +79,8 @@ test("the rooms editor from Settings still goes back to Settings", async ({ cont
 
 test("Kakak's button is on Today, Home, Pets and Kitchen, not Settings (S4)", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
-  for (const module of ["agenda", "chores", "pets", "inventory"]) {
-    await page.goto(`/dashboard?module=${module}`);
+  for (const key of ["agenda", "chores", "pets", "inventory"]) {
+    await page.goto(`/dashboard?module=${key}`);
     await expect(page.getByRole("button", { name: "Tell Kakak" })).toBeVisible({ timeout: 20_000 });
   }
   await page.goto("/dashboard?module=access");
