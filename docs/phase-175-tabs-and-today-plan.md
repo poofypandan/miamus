@@ -475,7 +475,7 @@ live on production yet.
 | "Add Yanti, she cooks" | No | A staff tool. Leave for later: it creates a person | Medium |
 | "Plan this week's menu" · a recipe from a photo | No | Kitchen tools; only for homes with the menu on | Medium |
 | One voice note sets up the whole home | No | Phase 172 PR B, already planned for December | Medium–large |
-| A recorded voice note (audio kept) | No, **and not recommended** | The phone's own dictation already turns speech into text, and Miamus never receives audio. Keeping audio would be a new kind of personal data for no gain the owner would notice |
+| A recorded voice note (audio kept) | No, **and not recommended** | The phone's own dictation already turns speech into text, and Miamus never receives audio. Keeping audio would be a new kind of personal data for no gain the owner would notice | — |
 
 ---
 
