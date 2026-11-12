@@ -130,6 +130,36 @@ test("Freezer to Fridge: the toast and Undo, then the date question, and Tomorro
   await expect(ingredients.getByRole("button", { name: /Dada Ayam/ })).toHaveCount(1);
 });
 
+test("nothing stored: a tap on the outlined default place saves it, with no toast (Phase 176 follow-ups)", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: kitchen() });
+  const ingredients = await openOwnerFood(page);
+  const eggs = () => stub.supplies.find((row) => row.name === "Telur")!;
+  const patches: Record<string, unknown>[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PATCH" && request.url().includes("/inventory_items")) patches.push(request.postDataJSON());
+  });
+
+  await ingredients.getByRole("group", { name: "Fridge" }).getByRole("button", { name: /Telur/ }).click();
+  const sheet = page.getByRole("dialog", { name: "Telur" });
+  await expect(sheet.getByRole("button", { name: "Fridge" })).toHaveAttribute("aria-pressed", "true");
+  expect(eggs().kept_in).toBeNull();
+
+  await sheet.getByRole("button", { name: "Fridge" }).click();
+  await expect.poll(() => eggs().kept_in).toBe("fridge");
+  expect(patches).toHaveLength(1);
+  expect(patches[0]).toEqual({ kept_in: "fridge" });
+  // Nothing moved: no toast, no Undo, no date question.
+  await expect(page.getByText("moved to")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0);
+  await expect(sheet.getByText("When does it expire now?")).toHaveCount(0);
+  await expect(sheet.getByRole("button", { name: "Fridge" })).toHaveAttribute("aria-pressed", "true");
+
+  // Stored now: another tap on it sends nothing.
+  await sheet.getByRole("button", { name: "Fridge" }).click();
+  await page.waitForTimeout(300);
+  expect(patches).toHaveLength(1);
+});
+
 test("Undo after a date was set puts back the place and the date", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: kitchen() });
   const ingredients = await openOwnerFood(page);

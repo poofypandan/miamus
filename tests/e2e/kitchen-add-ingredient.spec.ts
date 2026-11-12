@@ -95,6 +95,24 @@ test("nothing tapped: saved as before, no place stored, no date, not tracked", a
   await expect(ingredients.getByRole("group", { name: "Fridge" }).getByRole("button", { name: /Tomat/ })).toBeVisible();
 });
 
+test("an amount of 0 reads as blank: not tracked, and the date kept (Phase 176 follow-ups)", async ({ context, page }) => {
+  const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [chicken] });
+  const { ingredients, form } = await openAddIngredient(page);
+  await form.getByLabel("Name").fill("Kemangi");
+  await form.getByRole("button", { name: "Tomorrow" }).click();
+  await form.getByLabel("Amount (optional)").fill("0");
+  await form.getByRole("button", { name: "Add item" }).click();
+
+  await expect.poll(() => stub.supplies.length).toBe(2);
+  await expect(page.getByRole("dialog", { name: "Add item" })).toHaveCount(0);
+  expect(stub.supplies[1]).toMatchObject({ name: "Kemangi", expires_on: jakartaDay(1) });
+  expect(stub.supplies[1].track_amount ?? false).toBe(false);
+  expect(stub.supplies[1].stock_status).not.toBe("out");
+  const row = ingredients.getByRole("group", { name: "Use soon" }).getByRole("button", { name: /Kemangi/ });
+  await expect(row).toContainText("Expires tomorrow");
+  await expect(row).not.toContainText("Out");
+});
+
 test("a tap on the default place is a choice: it stays when the category changes (Codex, PR #117)", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [chicken] });
   const { form } = await openAddIngredient(page);
