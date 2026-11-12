@@ -23,16 +23,20 @@ export interface DayTotals {
 }
 
 /**
- * The day's counts, from the same rows the progress card shows
+ * The day's counts, from the same reading of the day as the progress card
  * (lib/staff-progress), so the status line and the card never disagree.
+ *
+ * Done and total are the household's whole day (`progress.day`): the rows
+ * leave out a finished task that nobody is credited with, which was still
+ * done. Late and couldn't-do are open work, and every open task is on a row
+ * (a person's, or Anyone's), so those are counted there.
  */
 export function dayTotals(progress: StaffProgress | null): DayTotals {
   if (!progress) return { done: 0, total: 0, late: 0, couldnt: 0 };
   const tasks = [...progress.people.flatMap((person) => person.tasks), ...(progress.anyone?.tasks ?? [])];
-  const onDay = tasks.filter((task) => !task.carried);
   return {
-    done: onDay.filter((task) => task.state === "done").length,
-    total: onDay.length,
+    done: progress.day.done,
+    total: progress.day.total,
     late: tasks.filter((task) => task.late).length,
     couldnt: tasks.filter((task) => task.state === "couldnt").length,
   };

@@ -50,7 +50,6 @@ import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores
 import { useBillPayments } from "@/hooks/use-bill-payments";
 import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
 import { comingUpLabel, comingUpReminders, comingUpText } from "@/lib/chore-reminders";
-import { isPastFirstRun } from "@/lib/first-run";
 import { dayTotals, slipLabel, slipRow, waitingRows } from "@/lib/today-status";
 import { cn } from "@/lib/utils";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
@@ -423,14 +422,17 @@ export function AgendaTab() {
     repairsToCheck: repairLines.toCheck,
     foodNeedsDate: needsDate,
   });
-  // The status line: today only, and only in a home where something has
-  // ever been finished. Before that the Set up card is the page, and "All
-  // on track" would be said of a home that hasn't started.
-  const pastSetup = useMemo(
-    () => isPastFirstRun({ chores: householdTasks, logs: logs.length }),
-    [householdTasks, logs.length]
-  );
-  const showStatus = showsToday && pastSetup && progress !== null && (totals.total > 0 || waiting > 0);
+  // The status line: today only, and never with the Set up card, which is
+  // the whole page for a home that hasn't started. Whether the card shows is
+  // useFirstRun's to say (it reads whether a chore was ever finished, on
+  // any date; the chores loaded here are only the days around this one),
+  // so the line waits until that is settled (Codex, PR #105).
+  const showStatus =
+    showsToday &&
+    firstRun.ready &&
+    firstRun.view !== "checklist" &&
+    progress !== null &&
+    (totals.total > 0 || waiting > 0);
   const waitingLines = slip !== null || repairLines.toReview > 0 || repairLines.toCheck > 0 || needsDate > 0;
   const comingLines = comingUp.length > 0 || !!menuLine || eatSoon > 0 || toBuy > 0;
 

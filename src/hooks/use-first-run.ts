@@ -41,6 +41,13 @@ function writeMemory(key: string, value: Exclude<FirstRunMemory, null>) {
 
 export interface FirstRun {
   view: FirstRunView;
+  /**
+   * True once `view` is settled for this load. Before that "hidden" only
+   * means not known yet: whether the household ever finished a chore is a
+   * read of its own (Phase 175: Today's status line waits for it, so it
+   * never shows for a moment above a Set up card that is about to appear).
+   */
+  ready: boolean;
   steps: FirstRunStep[];
   /** Staff on the roster, for the step's detail and the new chore's assignee. */
   staff: FirstRunPerson[];
@@ -213,6 +220,7 @@ export function useFirstRun(active = true): FirstRun {
 
   return {
     view,
+    ready,
     steps,
     staff,
     linkedPhones: phones ?? 0,

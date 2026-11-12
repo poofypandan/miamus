@@ -154,6 +154,38 @@ test("Bahasa Indonesia, a busy day: the rows waiting are counted once, in one gr
   await expect(page).toHaveURL(/workload=/);
 });
 
+test("an older home whose finished work is weeks back still gets its status line (Codex, PR #105)", async ({
+  context,
+  page,
+}) => {
+  // Nothing finished in what Today loads: today's chore is open, and the
+  // finished one is a one-off from October, outside every read. Whether the
+  // Set up card is past is useFirstRun's read, not the chores on screen.
+  await installStub(context, {
+    owner: { locale: "en" },
+    firstRun: true,
+    household: { hasPets: false, pets: false },
+    staff: STAFF,
+    chores: [
+      mop(),
+      chore({
+        title: "Wash the curtains",
+        due_date: "2026-10-05",
+        status: "completed",
+        completed_by: STAFF_ID,
+        completed_at: "2026-10-05T03:00:00Z",
+      }),
+    ],
+  });
+  await at10(page);
+  await page.goto("/dashboard");
+
+  await expect(status(page)).toBeVisible({ timeout: 20_000 });
+  await expect(status(page)).toContainText("All on track");
+  await expect(status(page)).toContainText("0 of 1 done · nothing late");
+  await expect(page.getByRole("region", { name: "Set up your home" })).toHaveCount(0);
+});
+
 test("a home that hasn't finished anything yet: the Set up card, no status line", async ({ context, page }) => {
   await installStub(context, {
     owner: { locale: "en" },

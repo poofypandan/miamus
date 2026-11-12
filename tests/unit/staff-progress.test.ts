@@ -389,6 +389,39 @@ describe("buildStaffProgress", () => {
     });
     expect(progress.anyone!.tasks.map((t) => t.title)).toEqual(["Open"]);
   });
+
+  // The household's whole day (Phase 175, Today's status line): counted
+  // before any row is dropped, so work that belongs to no row still counts.
+  it("counts the whole day, including finished work that no row is credited with", () => {
+    const lunch = routine(MOCHA, "Makan Siang", ["12:00"]);
+    const progress = build({
+      schedules: [lunch],
+      // Logged with no name: on nobody's row, but done.
+      logs: [logOf(lunch, "12:05", null)],
+      rows: [
+        chore({ title: "Open", assigned_to: ARI }),
+        // Finished by someone no longer on the roster: forgotten by the rows, still done today.
+        chore({ title: "Done", assigned_to: "gone", status: "completed", completed_by: "gone" }),
+      ],
+    });
+    expect(progress.day).toEqual({ done: 2, total: 3 });
+  });
+
+  it("keeps carried-over chores out of the whole day's count", () => {
+    const old = chore({ title: "Lap kaca", assigned_to: ARI, due_date: "2026-11-09" });
+    const today = chore({ title: "Sapu", assigned_to: ARI, status: "completed", completed_by: ARI });
+    expect(build({ rows: [old, today] }).day).toEqual({ done: 1, total: 1 });
+  });
+
+  it("counts no pet routines in the whole day with Pets off", () => {
+    const lunch = routine(MOCHA, "Makan Siang", ["12:00"]);
+    const progress = build({
+      schedules: [lunch],
+      rows: [chore({ title: "Sapu", assigned_to: ARI })],
+      features: { pets: false, repairs: true },
+    });
+    expect(progress.day).toEqual({ done: 0, total: 1 });
+  });
 });
 
 describe("isLate", () => {

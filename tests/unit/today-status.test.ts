@@ -53,21 +53,34 @@ describe("dayTotals", () => {
     expect(dayTotals(null)).toEqual({ done: 0, total: 0, late: 0, couldnt: 0 });
   });
 
-  it("counts every person's tasks and the unowned ones", () => {
+  it("takes done and total from the whole day, late and couldn't-do from the rows", () => {
     const progress: StaffProgress = {
       people: [
         person("sari", [task({ state: "done" }), task({ state: "done" }), task({ late: true })]),
         person("budi", [task({ state: "couldnt" }), task({ kind: "routine", state: "done" })]),
       ],
       anyone: { open: 1, late: 0, couldnt: 0, tone: "neutral", tasks: [task({})] },
+      day: { done: 3, total: 6 },
     };
     expect(dayTotals(progress)).toEqual({ done: 3, total: 6, late: 1, couldnt: 1 });
+  });
+
+  it("counts finished work that is on nobody's row (Codex, PR #105)", () => {
+    // One task finished with no name on it, one still open: the rows hold
+    // only the open one, the day holds both.
+    const progress: StaffProgress = {
+      people: [],
+      anyone: { open: 1, late: 0, couldnt: 0, tone: "neutral", tasks: [task({})] },
+      day: { done: 1, total: 2 },
+    };
+    expect(dayTotals(progress)).toEqual({ done: 1, total: 2, late: 0, couldnt: 0 });
   });
 
   it("keeps a carried-over chore out of the day's total, but counts it late", () => {
     const progress: StaffProgress = {
       people: [person("sari", [task({ carried: true, late: true }), task({ state: "done" })])],
       anyone: null,
+      day: { done: 1, total: 1 },
     };
     expect(dayTotals(progress)).toEqual({ done: 1, total: 1, late: 1, couldnt: 0 });
   });
