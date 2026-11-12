@@ -241,6 +241,10 @@ function Detail({
   // a portion another phone took meanwhile is kept. Undo puts the place back.
   // The buttons show the latest tap while earlier ones are still on their way.
   const [shownPlace, setShownPlace] = useState<FoodPlace | null>(null);
+  // While a move is on its way, the other buttons wait, as the place buttons
+  // wait for them: a portion or finish answered after the move would put the
+  // old place back on screen (Codex, PR #116).
+  const moving = shownPlace !== null;
   const movesOnTheirWay = useRef(0);
   async function sendMove(place: FoodPlace) {
     movesOnTheirWay.current += 1;
@@ -351,7 +355,7 @@ function Detail({
           <Button
             variant="outline"
             className="min-h-12 rounded-xl text-base"
-            disabled={busy !== null}
+            disabled={busy !== null || moving}
             onClick={() => void atePortion()}
           >
             {busy === "portion" ? <Loader2 className="animate-spin" /> : <UtensilsCrossed />}
@@ -367,7 +371,7 @@ function Detail({
                 <Button
                   key={outcome}
                   variant="outline"
-                  disabled={busy !== null}
+                  disabled={busy !== null || moving}
                   onClick={() => finish(outcome)}
                   className="h-auto min-h-16 flex-col gap-1 rounded-xl px-1 text-[13px] font-semibold whitespace-normal"
                 >
@@ -383,18 +387,18 @@ function Detail({
           <PlacePicker value={shownPlace ?? item.kept_in} onChange={(place) => void move(place)} locale={locale} disabled={busy !== null} />
         )}
 
-        <Button variant="ghost" className="min-h-11 text-gray-700" onClick={() => onEdit(item)} disabled={busy !== null}>
+        <Button variant="ghost" className="min-h-11 text-gray-700" onClick={() => onEdit(item)} disabled={busy !== null || moving}>
           <Pencil /> {tr("Edit", "Ubah")}
         </Button>
 
         {canDelete &&
           (confirmingDelete ? (
             <div className="flex gap-2">
-              <Button variant="destructive" className="min-h-11 flex-1 rounded-xl" onClick={remove} disabled={busy !== null}>
+              <Button variant="destructive" className="min-h-11 flex-1 rounded-xl" onClick={remove} disabled={busy !== null || moving}>
                 {busy === "delete" && <Loader2 className="animate-spin" />}
                 {tr("Yes, delete", "Ya, hapus")}
               </Button>
-              <Button variant="ghost" className="min-h-11" onClick={() => setConfirmingDelete(false)} disabled={busy !== null}>
+              <Button variant="ghost" className="min-h-11" onClick={() => setConfirmingDelete(false)} disabled={busy !== null || moving}>
                 {tr("Cancel", "Batal")}
               </Button>
             </div>

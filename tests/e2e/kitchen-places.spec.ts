@@ -269,7 +269,7 @@ test("two quick moves on a slow signal land in the order tapped (Codex, PR #116)
   await expect(sheet.getByRole("button", { name: "Lemari" })).toHaveAttribute("aria-pressed", "true");
 });
 
-test("a move that fails puts back only the place: a portion eaten meanwhile stays eaten (Codex, PR #116)", async ({ context, page }) => {
+test("while a move is on its way the other buttons wait; a failed move puts back only the place (Codex, PR #116)", async ({ context, page }) => {
   const stub = await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: true } });
   await page.goto("/staff");
   await page.getByRole("tab", { name: "Dapur" }).click();
@@ -290,13 +290,19 @@ test("a move that fails puts back only the place: a portion eaten meanwhile stay
   await page.getByRole("button", { name: /Rendang/ }).click();
   const sheet = page.getByRole("dialog", { name: "Rendang" });
   await sheet.getByRole("button", { name: "Freezer" }).click();
-  await sheet.getByRole("button", { name: "Dimakan 1 porsi" }).click();
-  await expect.poll(() => stub.foods[0].portions).toBe(2);
+  await expect(sheet.getByRole("button", { name: "Dimakan 1 porsi" })).toBeDisabled();
+  await expect(sheet.getByRole("button", { name: "Dimakan", exact: true })).toBeDisabled();
 
   await expect(page.getByText("Gagal menyimpan. Coba lagi.")).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Kulkas" })).toHaveAttribute("aria-pressed", "true");
-  await expect(sheet.getByText("2 porsi")).toBeVisible();
-  expect(stub.foods[0].kept_in).toBe("fridge");
+  await expect(sheet.getByRole("button", { name: "Dimakan 1 porsi" })).toBeEnabled();
+  await expect(sheet.getByText("3 porsi")).toBeVisible();
+  expect(stub.foods[0]).toMatchObject({ kept_in: "fridge", portions: 3 });
+
+  // Afterwards a portion goes through, and the place stays.
+  await sheet.getByRole("button", { name: "Dimakan 1 porsi" }).click();
+  await expect.poll(() => stub.foods[0].portions).toBe(2);
+  await expect(sheet.getByRole("button", { name: "Kulkas" })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("staff see the same groups in Indonesian, move and date an item, and cannot add", async ({ context, page }) => {
