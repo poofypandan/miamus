@@ -61,14 +61,24 @@ function scheduleFromProposal(proposal: RoutineProposal): CreateScheduleInput {
   return { ...base, created_at: parseLocalDate(date).toISOString(), expires_at: date };
 }
 
+/** The staff suggestions waiting for a decision, grouped as the queue shows them. */
+export function pendingBatches(routineProposals: RoutineProposal[]): ProposalBatch[] {
+  return groupProposals(routineProposals.filter((p) => p.status === "pending"));
+}
+
 // Owner-facing, in the language the owner chose (Phase 149).
-export function ApprovalQueue() {
+export function ApprovalQueue({
+  heading = true,
+}: {
+  /**
+   * False inside Today's "Waiting for you" group (Phase 175), whose own
+   * heading counts every row waiting, these included.
+   */
+  heading?: boolean;
+} = {}) {
   const { routineProposals } = useHousehold();
   const t = useT();
-  const batches = useMemo(
-    () => groupProposals(routineProposals.filter((p) => p.status === "pending")),
-    [routineProposals]
-  );
+  const batches = useMemo(() => pendingBatches(routineProposals), [routineProposals]);
 
   if (batches.length === 0) return null;
 
@@ -76,9 +86,11 @@ export function ApprovalQueue() {
     // No extra margin: the Agenda's own gap spaces it, and an mb-6 here left a
     // hole above the next line ("3 things to buy", Phase 154).
     <section className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-gray-900">
-        {t("Waiting for you", "Menunggu Anda")} <span className="text-gray-400">({batches.length})</span>
-      </h3>
+      {heading && (
+        <h3 className="text-sm font-semibold text-gray-900">
+          {t("Waiting for you", "Menunggu Anda")} <span className="text-gray-400">({batches.length})</span>
+        </h3>
+      )}
       <div className="flex flex-col gap-2">
         {batches.map((batch) => (
           <BatchRow key={batch.key} batch={batch} />
