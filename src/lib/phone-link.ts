@@ -32,6 +32,24 @@ export async function phoneLinkState(
   // Mock mode has no sign-in to lose.
   if (!supabase) return "linked";
   if (!householdId) return "unknown";
+  return withDeadline((signal) => ask(householdId, signal), timeoutMs);
+}
+
+/**
+ * The same question for a phone that no longer knows which household it was
+ * in (its stored id was cleared when it was found removed): linked if its
+ * sign-in still reaches any household at all. Used by the staff gate to tell
+ * "this phone was removed" from "nobody is on the list yet" (demo check F-4).
+ */
+export async function phoneLinkedAnywhere(timeoutMs: number = LINK_CHECK_MS): Promise<PhoneLinkState> {
+  if (!supabase) return "linked";
+  return withDeadline((signal) => ask(null, signal), timeoutMs);
+}
+
+async function withDeadline(
+  run: (signal: AbortSignal) => Promise<PhoneLinkState>,
+  timeoutMs: number
+): Promise<PhoneLinkState> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<PhoneLinkState>((resolve) => {
@@ -41,13 +59,14 @@ export async function phoneLinkState(
     }, timeoutMs);
   });
   try {
-    return await Promise.race([ask(householdId, controller.signal), deadline]);
+    return await Promise.race([run(controller.signal), deadline]);
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function ask(householdId: string, signal: AbortSignal): Promise<PhoneLinkState> {
+/** `householdId` null: linked to any household counts. */
+async function ask(householdId: string | null, signal: AbortSignal): Promise<PhoneLinkState> {
   if (!supabase) return "linked";
   try {
     const {
@@ -58,7 +77,9 @@ async function ask(householdId: string, signal: AbortSignal): Promise<PhoneLinkS
     const { data, error } = await supabase.rpc("get_user_household_ids").abortSignal(signal);
     if (signal.aborted || (error && isConnectionError(error))) return "no_answer";
     if (error || !Array.isArray(data)) return "unknown";
-    return (data as string[]).includes(householdId) ? "linked" : "unlinked";
+    const ids = data as string[];
+    if (householdId === null) return ids.length > 0 ? "linked" : "unlinked";
+    return ids.includes(householdId) ? "linked" : "unlinked";
   } catch (err) {
     return isConnectionError(err) ? "no_answer" : "unknown";
   }

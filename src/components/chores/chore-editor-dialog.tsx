@@ -26,6 +26,7 @@ import { useHousehold } from "@/context/household-context";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { assigneeOptions } from "@/lib/leave";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
@@ -160,6 +161,9 @@ export function ChoreEditorDialog({
   const [until, setUntil] = useState("");
   const [supervision, setSupervision] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Two taps in one tick must not save twice (demo check F-1); held while
+  // the sheet closes after a save, released when it opens again.
+  const lock = useSubmitLock();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Everyone in the house, admins included (Phase 139; migrations/106 put
@@ -185,6 +189,8 @@ export function ChoreEditorDialog({
   // inherit the edited chore's fields.
   useEffect(() => {
     if (!open) return;
+    lock.release();
+    setSaving(false);
     setConfirmDelete(false);
     if (task) {
       setTitle(task.title);
@@ -244,6 +250,7 @@ export function ChoreEditorDialog({
       toast.error(t("The repeat cannot end before it starts", "Pengulangan tidak bisa berakhir sebelum dimulai"));
       return;
     }
+    if (!lock.acquire()) return;
     setSaving(true);
     try {
       // The interval belongs to weekly and monthly repeats only.
@@ -325,6 +332,7 @@ export function ChoreEditorDialog({
         await createHouseholdTask(repairId ? { ...fields, repair_id: repairId } : fields);
         announce(t(`Added "${fields.title}"`, `"${fields.title}" ditambahkan`));
       }
+      // Saving and the lock stay held while the dialog closes.
       onOpenChange(false);
     } catch (err) {
       console.error(err);
@@ -333,7 +341,7 @@ export function ChoreEditorDialog({
           ? t("Failed to save the chore", "Tugas gagal disimpan")
           : t("Failed to add the chore", "Tugas gagal ditambahkan")
       );
-    } finally {
+      lock.release();
       setSaving(false);
     }
   }

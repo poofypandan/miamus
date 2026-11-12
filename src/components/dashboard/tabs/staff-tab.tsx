@@ -64,6 +64,7 @@ import { dataProvider } from "@/lib/data";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { useStaffProfiles, useStaffNameLookup } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
+import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { pushInPlace } from "@/lib/in-place-navigation";
 import { isOnLeave } from "@/lib/leave";
@@ -511,6 +512,7 @@ function StaffRoster({
   const locale = useOwnerLocale();
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
+  const addLock = useSubmitLock();
   const [resetting, setResetting] = useState<string | null>(null);
   const [pinTarget, setPinTarget] = useState<StaffProfile | null>(null);
   // Who the owner is about to take off the roster, held until they confirm.
@@ -532,6 +534,8 @@ function StaffRoster({
       toast.error(t("Enter a name first", "Masukkan nama dulu"));
       return;
     }
+    // Two taps in one tick must not add the same person twice (demo check F-1).
+    if (!addLock.acquire()) return;
     setAdding(true);
     try {
       await dataProvider.createStaffProfile(name);
@@ -547,6 +551,7 @@ function StaffRoster({
       console.error(err);
       toast.error(t("Failed to add this person", "Gagal menambahkan orang ini"));
     } finally {
+      addLock.release();
       setAdding(false);
     }
   }

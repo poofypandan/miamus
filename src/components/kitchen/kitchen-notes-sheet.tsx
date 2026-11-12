@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -91,7 +91,12 @@ function NotesForm({ notes, onDone }: { notes: KitchenNotes | null; onDone: () =
   const confirmed = !!notes?.confirmedAt;
   const changed = text.trim() !== (notes?.text ?? "");
 
+  // One save at a time, even for two taps in one tick (demo check F-1).
+  const inFlight = useRef(false);
+
   async function save(confirm: boolean) {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setSaving(true);
     try {
       await saveKitchenNotes(text.trim() || null, confirm);
@@ -100,6 +105,7 @@ function NotesForm({ notes, onDone }: { notes: KitchenNotes | null; onDone: () =
     } catch (err) {
       console.error(err);
       toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+      inFlight.current = false;
       setSaving(false);
     }
   }
@@ -113,35 +119,6 @@ function NotesForm({ notes, onDone }: { notes: KitchenNotes | null; onDone: () =
       return;
     }
     void save(false);
-  }
-
-  if (asking) {
-    return (
-      <div className="flex flex-col">
-        <SheetHeader>
-          <SheetTitle className="text-xl">{t("Before you save", "Sebelum disimpan")}</SheetTitle>
-          <SheetDescription className="sr-only">{t("Kitchen notes", "Catatan dapur")}</SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-4 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-          <div className="flex items-start gap-3 rounded-xl border bg-card p-3">
-            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-            <p className="text-sm leading-relaxed text-gray-800">
-              {t(
-                "This note may include health information about your family, such as allergies. It's shown to your staff so they can cook safely. Save?",
-                "Catatan ini bisa berisi informasi kesehatan keluarga Anda, misalnya alergi. Catatan ditampilkan kepada staf agar mereka bisa memasak dengan aman. Simpan?"
-              )}
-            </p>
-          </div>
-          <Button className="min-h-12 rounded-xl text-base" onClick={() => void save(true)} disabled={saving}>
-            {saving && <Loader2 className="animate-spin" />}
-            {t("Save", "Simpan")}
-          </Button>
-          <Button variant="outline" className="min-h-11 rounded-xl" onClick={() => setAsking(false)} disabled={saving}>
-            {t("Back", "Kembali")}
-          </Button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -159,6 +136,9 @@ function NotesForm({ notes, onDone }: { notes: KitchenNotes | null; onDone: () =
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
+          // Held while the one-time question is up, so what is asked about
+          // is exactly what gets saved.
+          readOnly={asking}
           maxLength={MENU_LIMITS.kitchenNotes}
           rows={4}
           placeholder={t("No pork. Not too spicy for the kids.", "Tanpa babi. Jangan terlalu pedas untuk anak-anak.")}
@@ -171,10 +151,52 @@ function NotesForm({ notes, onDone }: { notes: KitchenNotes | null; onDone: () =
             "HP staf bisa membaca catatan ini. Tulis hanya yang perlu diketahui oleh yang memasak."
           )}
         </p>
-        <Button type="submit" className="min-h-12 rounded-xl text-base" disabled={!changed || saving}>
-          {saving && <Loader2 className="animate-spin" />}
-          {t("Save", "Simpan")}
-        </Button>
+        {asking ? (
+          // The one-time health-data question (D12, migrations/153), asked in
+          // place, under the note it is about: it used to replace the whole
+          // sheet with "Before you save", and the first Save read as if it
+          // hadn't worked (demo check F-5).
+          <div
+            role="group"
+            aria-labelledby="kitchen-notes-confirm"
+            className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3"
+            data-testid="kitchen-notes-confirm"
+          >
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-amber-700" strokeWidth={1.75} />
+              <p id="kitchen-notes-confirm" className="text-sm leading-relaxed text-amber-950">
+                {t(
+                  "One more step, asked only once: this note may include health information about your family, such as allergies. It's shown to your staff so they can cook safely.",
+                  "Satu langkah lagi, hanya ditanyakan sekali: catatan ini bisa berisi informasi kesehatan keluarga Anda, misalnya alergi. Catatan ditampilkan kepada staf agar mereka bisa memasak dengan aman."
+                )}
+              </p>
+            </div>
+            <Button
+              type="button"
+              className="min-h-12 rounded-xl text-base"
+              onClick={() => void save(true)}
+              disabled={saving}
+              autoFocus
+            >
+              {saving && <Loader2 className="animate-spin" />}
+              {t("Yes, save the note", "Ya, simpan catatan")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="min-h-11 rounded-xl"
+              onClick={() => setAsking(false)}
+              disabled={saving}
+            >
+              {t("Back", "Kembali")}
+            </Button>
+          </div>
+        ) : (
+          <Button type="submit" className="min-h-12 rounded-xl text-base" disabled={!changed || saving}>
+            {saving && <Loader2 className="animate-spin" />}
+            {t("Save", "Simpan")}
+          </Button>
+        )}
       </div>
     </form>
   );
