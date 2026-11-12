@@ -42,7 +42,9 @@ const SECONDARY = "min-h-[40px] px-3.5 text-sm";
  * mockups.
  *
  * Only the next step to do is open, with its one button (and, for Set up,
- * the starter list beside it); done steps stay as a quiet tick. State and
+ * the starter list beside it); done steps stay as a quiet tick. "Use the
+ * starter list" opens the Starter list sheet from Chores, which marks what
+ * the home already has and adds only what is ticked. State and
  * rules live in useFirstRun and lib/first-run.
  */
 export function FirstRunCard({
@@ -57,6 +59,18 @@ export function FirstRunCard({
 }) {
   const t = useT();
   const { view, steps, facts, staff, linkedPhones } = firstRun;
+  // The Set up row's two sheets live here, not in the row: saving in either
+  // can finish the row (a first chore or pet routine), which stops rendering
+  // its buttons, and the sheet must stay open for its saved note and Undo
+  // until the owner closes it (Codex, #107). Each mounts on its first tap,
+  // so a card that never needs one reads nothing for it.
+  const [sheet, setSheet] = useState<"starter" | "kakak" | null>(null);
+  const [mounted, setMounted] = useState<{ starter: boolean; kakak: boolean }>({ starter: false, kakak: false });
+  function openSheet(which: "starter" | "kakak") {
+    setMounted((known) => ({ ...known, [which]: true }));
+    setSheet(which);
+  }
+  const closeSheet = () => setSheet(null);
 
   if (view === "hidden") return null;
 
@@ -133,9 +147,15 @@ export function FirstRunCard({
       return (
         <div className="mt-1.5 flex flex-wrap gap-2">
           {!facts.staff && addPerson}
-          <StarterListButton primary={facts.staff} />
+          <Button
+            variant={facts.staff ? "default" : "outline"}
+            className={facts.staff ? PRIMARY : SECONDARY}
+            onClick={() => openSheet("starter")}
+          >
+            <ListChecks /> {t("Use the starter list", "Pakai daftar awal")}
+          </Button>
           {facts.staff && !facts.task && addTask}
-          <TellKakakButton />
+          <TellKakakButton onOpen={() => openSheet("kakak")} />
         </div>
       );
     }
@@ -251,54 +271,28 @@ export function FirstRunCard({
           {t("Not now", "Nanti saja")}
         </button>
       </div>
+      {mounted.starter && (
+        <StarterListSheet open={sheet === "starter"} onOpenChange={(open) => setSheet(open ? "starter" : null)} />
+      )}
+      {mounted.kakak && <KakakSheet open={sheet === "kakak"} onClose={closeSheet} />}
     </section>
   );
 }
 
 /**
- * "Use the starter list" (plan, section 4): the Starter list sheet from
- * Chores, here on the card. It marks what the home already has and adds only
- * what is ticked. Mounted on the first tap, so a card that never needs it
- * reads nothing.
+ * "Or tell Kakak" (plan, section 4): opens her sheet, as the Tell Kakak
+ * button does. Only in a home with Kakak on; nothing here depends on her.
+ * The sheet itself is the card's (see FirstRunCard).
  */
-function StarterListButton({ primary }: { primary: boolean }) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  return (
-    <>
-      <Button
-        variant={primary ? "default" : "outline"}
-        className={primary ? PRIMARY : SECONDARY}
-        onClick={() => {
-          setMounted(true);
-          setOpen(true);
-        }}
-      >
-        <ListChecks /> {t("Use the starter list", "Pakai daftar awal")}
-      </Button>
-      {mounted && <StarterListSheet open={open} onOpenChange={setOpen} />}
-    </>
-  );
-}
-
-/**
- * "Or tell Kakak" (plan, section 4): her sheet, as the Tell Kakak button
- * opens it. Only in a home with Kakak on; nothing here depends on her.
- */
-function TellKakakButton() {
+function TellKakakButton({ onOpen }: { onOpen: () => void }) {
   const t = useT();
   const { status } = useKakakStatus();
-  const [open, setOpen] = useState(false);
   if (!status?.allowed || !status.enabled) return null;
   return (
-    <>
-      <Button variant="outline" className={cn(SECONDARY, "pl-2")} onClick={() => setOpen(true)}>
-        <KakakAvatar className="size-6" />
-        {t("Or tell Kakak", "Atau bilang ke Kakak")}
-      </Button>
-      <KakakSheet open={open} onClose={() => setOpen(false)} />
-    </>
+    <Button variant="outline" className={cn(SECONDARY, "pl-2")} onClick={onOpen}>
+      <KakakAvatar className="size-6" />
+      {t("Or tell Kakak", "Atau bilang ke Kakak")}
+    </Button>
   );
 }
 

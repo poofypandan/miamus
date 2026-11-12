@@ -193,6 +193,78 @@ test("Bahasa Indonesia: the three lines, the starter list, and Nanti saja hides 
   await expect(card).toHaveCount(0);
 });
 
+test("with Kakak on, Or tell Kakak opens her sheet, which stays open for Saved and Undo when the row ticks", async ({
+  context,
+  page,
+}) => {
+  // Codex, #107: a save that finishes the Set up row must not close the
+  // sheet before its saved note and Undo.
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    firstRun: true,
+    kakak: { allowed: true, enabled: true },
+    household: { hasPets: false, pets: false },
+    staff: [SARI],
+    linkedPhones: [],
+    chores: [],
+  });
+  await page.route("**/api/kakak", (route) =>
+    route.fulfill({
+      json: {
+        kind: "suggestions",
+        text: "Here's what I'll add:",
+        items: [
+          {
+            kind: "chore",
+            title: "Sapu teras",
+            titleEn: "Sweep the terrace",
+            category: "cleaning",
+            assignedTo: STAFF_ID,
+            assignToSelf: false,
+            assigneeName: "Sari",
+            dueDate: today(),
+            dueTime: null,
+            recurrence: "daily",
+            recurrenceUntil: null,
+            requiresSupervision: false,
+            locationId: null,
+            roomName: null,
+            newRoomName: null,
+            newRoomFloorId: null,
+            newRoomFloorName: null,
+            notes: null,
+          },
+        ],
+        requestId: "00000000-0000-4000-8000-0000000000c1",
+        history: { messages: [] },
+      },
+    })
+  );
+  await page.route("**/api/kakak/outcome", (route) => route.fulfill({ json: { ok: true } }));
+  await page.goto("/dashboard");
+
+  const card = checklist(page);
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  // Sari is there; the first task is what's missing.
+  await expect(step(page, "setup").getByRole("button", { name: "Use the starter list" })).toBeVisible();
+  await expect(step(page, "setup").getByRole("button", { name: "Add a task" })).toBeVisible();
+  await step(page, "setup").getByRole("button", { name: "Or tell Kakak" }).click();
+
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("textbox", { name: "What should I set up?" }).fill("Sari sweeps the terrace every day");
+  await sheet.getByRole("button", { name: "Send" }).click();
+  await sheet.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.tasks.length).toBe(1);
+
+  // The row ticks behind the sheet, and the sheet stays open with Saved and
+  // Undo (before the fix, the tick unmounted it).
+  await expect(step(page, "setup")).toHaveAttribute("data-done", "true");
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText("Nothing is saved until you confirm.")).toBeVisible();
+  await expect(page.getByText("Saved — Sweep the terrace, Sari")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
+});
+
 test("on an iPhone in the browser, the notifications step says Add to Home Screen first", async ({ context, page }) => {
   await context.addInitScript(() => {
     Object.defineProperty(navigator, "userAgent", {
