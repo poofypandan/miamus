@@ -130,31 +130,7 @@ function TrackAmountForm({ item, onClose }: { item: InventoryItem; onClose: () =
           <>
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 text-sm font-medium">{t("Unit", "Satuan")}</legend>
-              <div className="flex flex-wrap gap-1.5">
-                {STOCK_UNITS.map((value) => {
-                  const selected = value === unit;
-                  const sub = lang === "en" ? UNIT_HINTS_EN[value] : undefined;
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => pickUnit(value)}
-                      aria-pressed={selected}
-                      className={cn(
-                        "flex min-h-11 min-w-12 flex-col items-center justify-center rounded-lg border px-2.5 text-sm",
-                        selected ? "border-primary bg-primary text-primary-foreground" : "bg-card text-gray-900"
-                      )}
-                    >
-                      <span>{unitLabel(value, lang)}</span>
-                      {sub && sub !== unitLabel(value, lang) && (
-                        <span className={cn("text-[10px] leading-none", selected ? "opacity-80" : "text-muted-foreground")}>
-                          {sub}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              <UnitChips value={unit} onChange={pickUnit} lang={lang} />
             </fieldset>
 
             <div className="flex flex-col gap-1.5">
@@ -209,5 +185,47 @@ function TrackAmountForm({ item, onClose }: { item: InventoryItem; onClose: () =
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * The unit chips (g, kg, ml, L, pcs, butir…), with the English hint line.
+ * Shared with the add-ingredient form's Amount (Phase 176, 5c).
+ */
+export function UnitChips({
+  value,
+  onChange,
+  lang,
+}: {
+  value: InventoryUnit;
+  onChange: (unit: InventoryUnit) => void;
+  lang: "en" | "id";
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {STOCK_UNITS.map((unit) => {
+        const selected = unit === value;
+        const sub = lang === "en" ? UNIT_HINTS_EN[unit] : undefined;
+        return (
+          <button
+            key={unit}
+            type="button"
+            onClick={() => onChange(unit)}
+            aria-pressed={selected}
+            className={cn(
+              "flex min-h-11 min-w-12 flex-col items-center justify-center rounded-lg border px-2.5 text-sm",
+              selected ? "border-primary bg-primary text-primary-foreground" : "bg-card text-gray-900"
+            )}
+          >
+            <span>{unitLabel(unit, lang)}</span>
+            {sub && sub !== unitLabel(unit, lang) && (
+              <span className={cn("text-[10px] leading-none", selected ? "opacity-80" : "text-muted-foreground")}>
+                {sub}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }

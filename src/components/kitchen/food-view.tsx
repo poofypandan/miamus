@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FoodDetailSheet } from "@/components/kitchen/food-detail-sheet";
 import { FoodFormSheet } from "@/components/kitchen/food-form-sheet";
+import { useOpenIngredient } from "@/components/kitchen/ingredient-opener";
 import { SyncedImg } from "@/components/shared/synced-img";
 import { useHousehold } from "@/context/household-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
@@ -74,6 +75,8 @@ export function FoodView({
   }, [allProfiles, lookup]);
 
   const [adding, setAdding] = useState(false);
+  // Phase 176 (5d): the Ingredients list beside this one, when it shows.
+  const openIngredient = useOpenIngredient();
   const [editing, setEditing] = useState<FoodItem | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   // Looked up live, so the sheet shows the food as it is now.
@@ -200,6 +203,17 @@ export function FoodView({
           setAdding(false);
           setEditing(null);
         }}
+        onOpenIngredient={
+          openIngredient
+            ? (ingredientId) => {
+                // Straight from this sheet to the ingredient's, as the
+                // detail sheet goes to Edit.
+                setAdding(false);
+                setEditing(null);
+                openIngredient(ingredientId);
+              }
+            : undefined
+        }
       />
     </div>
   );

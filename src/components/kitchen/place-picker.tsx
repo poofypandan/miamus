@@ -25,6 +25,7 @@ export function PlacePicker({
   locale,
   disabled = false,
   legend,
+  tapSelected = false,
 }: {
   value: FoodPlace;
   onChange: (place: FoodPlace) => void;
@@ -32,6 +33,11 @@ export function PlacePicker({
   disabled?: boolean;
   /** Defaults to "Where is it kept?" / "Disimpan di mana?". */
   legend?: string;
+  /**
+   * Call onChange for a tap on the selected place too: the add form shows a
+   * default nobody chose, and a tap on it is a choice (Codex, PR #117).
+   */
+  tapSelected?: boolean;
 }) {
   return (
     <fieldset className="flex flex-col gap-1.5" disabled={disabled}>
@@ -48,7 +54,7 @@ export function PlacePicker({
               type="button"
               aria-pressed={on}
               onClick={() => {
-                if (!on) onChange(place);
+                if (!on || tapSelected) onChange(place);
               }}
               className={cn(
                 "flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border px-1 text-xs font-medium disabled:opacity-50",
