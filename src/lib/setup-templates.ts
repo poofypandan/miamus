@@ -564,6 +564,26 @@ export function countsFor(draft: SetupDraft, unticked: ReadonlySet<string>, adde
   return { rooms, chores, bills, total: rooms + chores + bills };
 }
 
+/**
+ * What the Add button says it will add (demo check F-6): "Add 19 rooms and
+ * 52 chores", not "Add 71", which meant nothing to anyone watching. More than
+ * two kinds would wrap on a phone, so those read "Set up my home" (the counts
+ * line above the button has the detail). Null when there is nothing to add;
+ * the caller says why (everything added, or nothing ticked).
+ */
+export function setupAddLabel(counts: SetupCounts, staff: number, locale: OwnerLocale): string | null {
+  const en = locale === "en";
+  const parts = [
+    counts.rooms > 0 ? (en ? `${counts.rooms} ${counts.rooms === 1 ? "room" : "rooms"}` : `${counts.rooms} ruangan`) : null,
+    counts.chores > 0 ? (en ? `${counts.chores} ${counts.chores === 1 ? "chore" : "chores"}` : `${counts.chores} tugas`) : null,
+    counts.bills > 0 ? (en ? `${counts.bills} ${counts.bills === 1 ? "bill" : "bills"}` : `${counts.bills} tagihan`) : null,
+    staff > 0 ? (en ? `${staff} ${staff === 1 ? "staff member" : "staff"}` : `${staff} staf`) : null,
+  ].filter((part): part is string => part !== null);
+  if (parts.length === 0) return null;
+  if (parts.length > 2) return en ? "Set up my home" : "Siapkan rumah";
+  return en ? `Add ${parts.join(" and ")}` : `Tambah ${parts.join(" dan ")}`;
+}
+
 // --- Staff and the call ----------------------------------------------------------------
 
 export interface DraftStaff {

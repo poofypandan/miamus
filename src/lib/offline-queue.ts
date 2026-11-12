@@ -369,6 +369,25 @@ export async function clearFromQueue(id: string): Promise<void> {
 }
 
 /**
+ * Forgets every waiting save, in memory and on the phone: a staff phone found
+ * removed from its household (demo check F-4, Codex P2 on PR #102). The
+ * saves can't be sent any more, and the phone must keep nothing of the
+ * household. Never throws.
+ */
+export async function forgetOutbox(): Promise<void> {
+  try {
+    if (available()) await mutate(() => []);
+    else {
+      items = [];
+      emit();
+    }
+  } catch (err) {
+    console.error("Could not clear the save queue", err);
+  }
+  answered.clear();
+}
+
+/**
  * Saves the server has answered that are still in the queue for a moment
  * (until the screen has the server's copy and the queue is written). The
  * screen stops laying a relative change (a portion) over the server's copy

@@ -174,8 +174,14 @@ export const LEGAL = {
   // (an allergy), shown to staff, one per household, with the admin's
   // one-time confirmation recorded (who and when). In the household export.
   // No prices, no new service, region or change to Kakak.
-  policyVersion: "2026-11-11.11",
-  effectiveDate: { en: "11 November 2026", id: "11 November 2026" },
+  // 2026-11-12.1: a removed staff phone forgets the household (demo-day
+  // fixes, no migration) — when an admin removes a staff phone, the phone
+  // deletes its copies of the household (lists, menu, recipes, kitchen notes,
+  // names, the household id, and saves and photos not yet sent) the next time it opens, and keeps only a "this
+  // phone was removed" flag until it is linked again. Less kept, nothing new
+  // collected, no new service.
+  policyVersion: "2026-11-12.1",
+  effectiveDate: { en: "12 November 2026", id: "12 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on

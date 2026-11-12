@@ -27,6 +27,7 @@ import {
   assigneeFor,
   buildSetupDraft,
   countsFor,
+  setupAddLabel,
   isHomeType,
   leftOut,
   shapeFor,
@@ -258,7 +259,7 @@ function Setup() {
             onClick={() => void add()}
           >
             {saving && <Loader2 className="animate-spin" />}
-            {t(`Add ${counts.total}`, `Tambah ${counts.total}`)}
+            {setupAddLabel(counts, named.length, locale) ?? t("Everything's added", "Semua sudah ditambahkan")}
           </Button>
         )}
       </div>
