@@ -105,7 +105,7 @@ test("an owner reviews a staff report, schedules a visit, and reports a problem"
   );
 
   // Deleting the visit from Today: Repairs says so at once (Codex, PR #37).
-  await page.getByRole("tab", { name: "Today" }).click();
+  await page.getByRole("tab", { name: "Chores", exact: true }).click();
   await page.getByText("Perbaiki: Dinding retak").first().click();
   const chore = page.getByRole("dialog", { name: "Edit Chore" });
   await chore.getByRole("button", { name: "Delete chore" }).click();

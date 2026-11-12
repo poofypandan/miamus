@@ -101,8 +101,8 @@ export function SignOutSheet({
           )}
           <p className="text-xs text-muted-foreground">
             {id
-              ? `Ingin mengunduh atau menghapus data rumah tangga? Buka Rumah → Data Anda. Pertanyaan lain: ${LEGAL.contactEmail}.`
-              : `Want to download or delete your household's data? Open Household → Your data. Anything else: ${LEGAL.contactEmail}.`}
+              ? `Ingin mengunduh atau menghapus data rumah tangga? Buka Pengaturan → Data Anda. Pertanyaan lain: ${LEGAL.contactEmail}.`
+              : `Want to download or delete your household's data? Open Settings → Your data. Anything else: ${LEGAL.contactEmail}.`}
           </p>
           <Button
             variant="destructive"

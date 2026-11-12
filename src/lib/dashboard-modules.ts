@@ -1,14 +1,18 @@
 /**
- * The owner dashboard's tabs (Phase 100), in bar order (Phase 111).
+ * The owner dashboard's tabs (Phase 100), in bar order (Phase 111, Phase 175).
  *
- * Agenda anchors the left edge and Access the right: Agenda is the screen
- * people open the app for, so it is the first tab and the default, and Access
- * — members, staff, invites, the app lock — is the rarely-visited settings
- * end. They are the two fixed points. Everything between them is the
- * household's own modules, which is where a future "Kids" tab joins and where
- * a household without pets could drop Pets.
+ * Today anchors the left edge and Settings the right: Today is the screen
+ * people open the app for, so it is the first tab and the default, and
+ * Settings — members, staff, invites, the app lock — is the rarely-visited
+ * end. They are the two fixed points. Between them are the areas of the home:
+ * Home second, because every home has one; then Pets, the only tab a home can
+ * switch off, so only Kitchen ever changes place (Phase 175 plan, section 2).
+ *
+ * The keys are the URL's ?module= values and never change; only labels,
+ * icons and this order do (bottom-tab-bar.tsx has the labels). To reorder the
+ * bar, reorder this one line.
  */
-export const DASHBOARD_MODULES = ["agenda", "pets", "chores", "inventory", "access"] as const;
+export const DASHBOARD_MODULES = ["agenda", "chores", "pets", "inventory", "access"] as const;
 export type DashboardModule = (typeof DASHBOARD_MODULES)[number];
 
 export const DEFAULT_MODULE: DashboardModule = "agenda";
@@ -36,12 +40,13 @@ export function enabledModules(flags: ModuleFlags = DEFAULT_MODULE_FLAGS): Dashb
 }
 
 /**
- * Query-param values from before this phase, kept working.
+ * Query-param values from before Phase 100, kept working.
  *
  * These are in live history entries, in the PWA's saved state, and in the
  * "← Owner Dashboard" link on every staff phone. "household" opened on its
- * Chores panel by default, so that is where it still lands; "staff" was
- * relabelled Access in Phase 96 without the param ever changing.
+ * Chores panel by default, so it still lands on that panel's tab (Home since
+ * Phase 175); "staff" was relabelled Access in Phase 96, Household in Phase
+ * 155 and Settings in Phase 175, without the param ever changing.
  */
 const LEGACY_MODULES: Record<string, DashboardModule> = {
   household: "chores",

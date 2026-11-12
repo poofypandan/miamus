@@ -8,7 +8,7 @@ import { installStub } from "./stub-backend";
 // The tab bar is labelled in the owner's language.
 const tabs = (page: import("@playwright/test").Page, name = "Sections") => page.getByRole("navigation", { name });
 
-test("no pets: four tabs, a chore-only welcome, and Pets back from Household", async ({ context, page }) => {
+test("no pets: four tabs, a chore-only welcome, and Pets back from Settings", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, household: { hasPets: false, pets: false } });
   await page.goto("/dashboard");
 
@@ -23,9 +23,9 @@ test("no pets: four tabs, a chore-only welcome, and Pets back from Household", a
   await page.goto("/dashboard?module=pets");
   await expect(page.getByText("Let's start by adding a chore.", { exact: false })).toBeVisible({ timeout: 20_000 });
 
-  // Household → Features → Pets on (Phase 171 moved the switch there): the
+  // Settings → Features → Pets on (Phase 171 moved the switch there): the
   // tab is back, no reload.
-  await tabs(page).getByRole("link", { name: "Household" }).click();
+  await tabs(page).getByRole("link", { name: "Settings" }).click();
   const row = page.getByRole("button", { name: /^Features/ });
   await expect(row).toContainText("3 on");
   await row.click();
