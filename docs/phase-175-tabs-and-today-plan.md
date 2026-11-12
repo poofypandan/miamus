@@ -183,8 +183,9 @@ merges after Sunday. Keep C as the next step if Kakak earns it.
   the progress card ("Rumah 6/8") and the Features heading, which already
   mean "the house".
 - **Pengaturan** is the phone's own word for Settings. Ten letters; it fits
-  the bar at the size used today (the code comment allows about 70px a tab
-  on a 360px phone; "Pengaturan" needs about 55px).
+  the bar at the size used today in the mockup at 375px. The bar's code
+  allows about 70px a tab on a 360px phone and cuts a longer label with
+  "…", so check it on a 360px phone when built.
 - The pill **Tugas · Ruangan · Perbaikan** has no clash once the tab is no
   longer "Tugas".
 - Glossary rows to change (the glossary is a shared file; the manager owns
@@ -208,7 +209,7 @@ Everything else is detail and sits below.
 | # | Block | Shows when | Calm state | Its one action |
 | --- | --- | --- | --- | --- |
 | 0 | Date ribbon | Always | — | Pick a day |
-| 1 | **Status line** | Always (today only) | "All on track" with a green tick, and under it "31 of 46 done · nothing late" | Tap opens Who did what |
+| 1 | **Status line** | On today's date, once the Set up card is gone | "All on track" with a green tick, and under it "31 of 39 done · nothing late" | Tap opens Who did what |
 | 2 | **Set up your home** | A new home, until the first task is finished | Gone | The open step's one button (section 4) |
 | 3 | **Waiting for you** | Any item below exists | The whole block is absent | Each row has one action |
 | 3a | Urgent repair, sick pet, medicine not taken | As reported | — | Open it |
@@ -295,7 +296,7 @@ step is open, with one button, as now.
 | Step | Without Kakak | With Kakak |
 | --- | --- | --- |
 | Set up your home | **Use the starter list** opens `/setup` (ticks, no typing). Already done for anyone who came through sign-up | The same button, and under it **Or tell Kakak** opens her sheet. Sunday: she adds chores, routines, shopping and food one sentence at a time. December (Phase 172 PR B): one voice note sets up the whole home |
-| Send your staff the link | **Send on WhatsApp** (the button from `/setup`, `SendStaffMessageButton`). Shows "2 of 4 phones linked" | The same |
+| Send your staff the link | **Send one WhatsApp message** (the button from `/setup`, `SendStaffMessageButton`, with its label as it is). Shows "2 of 4 phones linked" | The same |
 | Turn on notifications | **Turn on**. On an iPhone not yet on the Home Screen: the 15-second video tip | The same |
 | See the first task done | Waits. Says "Waiting for the first photo" | The same |
 
@@ -368,17 +369,19 @@ So:
 
 ### 5b. Notification policy
 
-| When | What | Who |
-| --- | --- | --- |
-| **At once**, 06.00–22.30 | Urgent repair (Darurat). Pet reported sick. Medicine not taken. A watched task not done by its time. Something not working (5c) | Every owner, unless they turned that kind off |
-| **At once, opt-in** | Leave and schedule requests. A repair person arrived; a repair finished | Each owner's own switch (built) |
-| **07.00** | Bills and upkeep due. Food to eat soon | The owner the bill belongs to; food to all |
-| **Evening summary** (each owner's hour, 19.00 by default) | Not done, couldn't be done, to buy, repairs to check. **Only when something is open** | Each owner |
-| **Weekly, Sunday 17.00** | The check-in (5e) | Each owner |
-| **Never** | A task finished. A phone linked. What's new. Anything promotional | — |
-| **Quiet hours**, 22.30–06.00 | Everything waits for 06.00, except urgent repair and a sick pet | Owner's choice (question 5) |
+| When | What | Who | Today |
+| --- | --- | --- | --- |
+| **At once**, 06.00–22.30 | Urgent repair (Darurat). Pet reported sick. Medicine not taken. A pet routine with "Tell us if it's not done" missed | Every owner | Built |
+| **At once**, 06.00–22.30 | A chore with the same switch missed (step 6). Something not working (5c, step 4) | Every owner, unless they turned that kind off | New |
+| **At once, opt-in** | Leave and schedule requests. A repair person arrived; a repair finished | Each owner's own switch | Built |
+| **07.00** | Bills and upkeep due. Food to eat soon | The owner the bill belongs to; food to all | Built |
+| **Evening summary** (each owner's hour, 19.00 by default) | Not done, couldn't be done, to buy, repairs to check. **Only when something is open** | Each owner | Built |
+| **Weekly, Sunday 17.00** | The check-in (5e) | Each owner | New (step 7) |
+| **Never** | A task finished. A phone linked. What's new. Anything promotional | — | As now |
+| **Quiet hours**, 22.30–06.00 | Everything waits for 06.00, except urgent repair and a sick pet | Owner's choice (question 5) | Part built: routine alerts already stop at 22.30. The setting and the two exceptions are new (step 5) |
 
-- **Per owner.** The first three switches are already per owner
+- **Per owner.** The evening summary's hour, the staff-requests switch and
+  the two repair switches are already per owner
   (`notification_prefs`, migrations 139 and 152). Step 5 after Sunday adds
   kinds (Pets, Home, Kitchen, Repairs, Staff requests) so two owners can
   split the house. Default: both get everything, so nothing is missed.
@@ -558,6 +561,15 @@ then "Tugas →" becomes "Rumah →".
 **If Friday runs short,** ship in this order: S1, S2a, S3a. The rest of
 S2 and S3, and S4, wait.
 
+**What to watch on Sunday** (it decides the order of the steps below):
+
+1. Does a new owner get a staff phone linked without help? If not, the
+   first page still isn't one page.
+2. Did notifications get turned on, on iPhones especially?
+3. Where does the eye go on Today: the status line, or the long list?
+   That answers question 3.
+4. Do they tell Kakak something a second time, unprompted?
+
 ### After Sunday
 
 | # | Step | Files | Migration | Risks | Tests |
@@ -596,6 +608,15 @@ For the glossary, which the manager edits before any of this is built:
 | You'll hear if any of N things isn't done | **Anda dikabari jika ada dari N hal yang belum dikerjakan** | Homes without Kakak; matches "Kabari kami jika belum dikerjakan" |
 | Tell it once. Staff do it, with a photo. You only hear about what didn't happen. | **Bilang sekali. Staf mengerjakan, dengan foto. Anda hanya dikabari kalau ada yang belum.** | The Set up card |
 | Use the starter list / Or tell Kakak | **Pakai daftar awal** / **Atau bilang ke Kakak** | The Set up card |
+| Set up your home (the step) | **Siapkan rumah** | The card's title stays "Siapkan rumah Anda" |
+| Send your staff the link | **Kirim link ke staf Anda** | The step. Its button keeps "Kirim satu pesan WhatsApp" |
+| N of M phones linked | **N dari M HP terhubung** | Under the button |
+| See the first task done | **Lihat tugas pertama selesai** | Was "See it done / Lihat hasilnya" |
+| Ready for your staff today | **Siap untuk staf hari ini** | A new home, above the progress rows |
+| Phone not linked yet | **HP belum terhubung** | On a person's row |
+| Next up | **Berikutnya** | Step 1, the folded day |
+| How Miamus works here (Settings group) | **Cara Miamus bekerja di sini** | Features, Notifications, Kakak, Language, App lock |
+| Activity and data (Settings group) | **Aktivitas dan data** | Not "Catatan", which already means Notes |
 | Edit rooms | **Ubah ruangan** | Home → Rooms |
 | People (Settings group) | **Orang di rumah** | Family, Staff, Leave, Invite |
 | All N staff phones opened today | **Semua N HP staf dibuka hari ini** | Step 4. "HP", never "ponsel" |
