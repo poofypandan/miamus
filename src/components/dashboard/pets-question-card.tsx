@@ -49,8 +49,8 @@ export function PetsQuestionCard() {
         <p className="text-sm text-amber-900">
           <span className="block font-medium">{t("Any pets at home?", "Ada hewan di rumah?")}</span>
           {t(
-            "Miamus can hide the Pets tab if not. Change it any time under Household.",
-            "Kalau tidak, Miamus bisa menyembunyikan tab Hewan. Bisa diubah kapan saja di tab Rumah."
+            "Miamus can hide the Pets tab if not. Change it any time in Settings.",
+            "Kalau tidak, Miamus bisa menyembunyikan tab Hewan. Bisa diubah kapan saja di tab Pengaturan."
           )}
         </p>
       </div>

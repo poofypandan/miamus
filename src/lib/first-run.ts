@@ -1,21 +1,40 @@
 /**
  * The first-run checklist on an owner's Today (audit batch B1, item 3 of
- * docs/product-audit-2026-11-09.md): household → staff → their phone → a
- * first task → the first finished task.
+ * docs/product-audit-2026-11-09.md), as Phase 175 S2 made it the first page
+ * (docs/phase-175-tabs-and-today-plan.md, section 4): name the home → set it
+ * up (staff and a first task) → send staff the link → turn on notifications
+ * → see the first task done.
  *
  * Every step is read from data the app already holds; nothing here is
  * stored except whether this owner closed the card on this phone. Pure, so
  * the rules are unit-tested (tests/unit/first-run.test.ts).
  */
 
-export type FirstRunStepId = "home" | "staff" | "phone" | "task" | "done";
+import type { PushStatus } from "@/lib/push-prompt";
 
-export const FIRST_RUN_STEPS: readonly FirstRunStepId[] = ["home", "staff", "phone", "task", "done"];
+/** The card's rows, in order. */
+export type FirstRunStepId = "home" | "setup" | "phone" | "notify" | "done";
+
+export const FIRST_RUN_STEPS: readonly FirstRunStepId[] = ["home", "setup", "phone", "notify", "done"];
 
 export interface FirstRunStep {
   id: FirstRunStepId;
   done: boolean;
 }
+
+/**
+ * What the rows are made from. "Set up your home" is two of them, staff and
+ * a first task, shown as one row that is ticked when both are true.
+ */
+export interface FirstRunFacts {
+  staff: boolean;
+  task: boolean;
+  phone: boolean;
+  notify: boolean;
+  done: boolean;
+}
+
+export type FirstRunFact = keyof FirstRunFacts;
 
 /** The roster row fields the rules read. */
 export interface FirstRunPerson {
@@ -48,6 +67,8 @@ export interface FirstRunInput {
    * can't say: it holds only the days around the one on screen.
    */
   finishedChore?: boolean | null;
+  /** This phone's notifications (usePushStatus); undefined counts as still loading. */
+  push?: PushStatus;
 }
 
 /** Staff: on the roster, not an admin (migrations/106), not archived (109). */
@@ -67,7 +88,7 @@ export function isPastFirstRun(input: Pick<FirstRunInput, "chores" | "logs" | "f
   );
 }
 
-export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
+export function firstRunFacts(input: FirstRunInput): FirstRunFacts {
   const staff = staffOf(input.people);
   const admins = new Set((input.people ?? []).filter((person) => !!person.user_id).map((person) => person.id));
   // A task the staff will see: a chore that isn't an admin's own (theirs, or
@@ -76,17 +97,49 @@ export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
     input.chores.some(
       (chore) => chore.status !== "cancelled" && !(chore.assigned_to && admins.has(chore.assigned_to))
     ) || input.petRoutines > 0;
-  const done: Record<FirstRunStepId, boolean> = {
-    home: true,
+  return {
     staff: staff.length > 0,
-    phone: (input.linkedPhones ?? 0) > 0,
     task: hasTask,
+    phone: (input.linkedPhones ?? 0) > 0,
+    notify: input.push === "on",
     done: isPastFirstRun(input),
   };
-  return FIRST_RUN_STEPS.map((id) => ({ id, done: done[id] }));
 }
 
-/** The step the card opens: the first one not done, in order. */
+/**
+ * Whether "Turn on notifications" is a row on this phone: not where nothing
+ * can be done (a browser without push, or push not set up on the server).
+ * Still loading counts as a row, so the card doesn't grow one later.
+ */
+export function notifyStepShown(push: PushStatus | undefined): boolean {
+  return push !== "unsupported" && push !== "unconfigured";
+}
+
+/** The rows, from the facts. "Name your home" is always done. */
+export function stepsFromFacts(facts: FirstRunFacts, push: PushStatus | undefined): FirstRunStep[] {
+  const done: Record<FirstRunStepId, boolean> = {
+    home: true,
+    setup: facts.staff && facts.task,
+    phone: facts.phone,
+    notify: facts.notify,
+    done: facts.done,
+  };
+  return FIRST_RUN_STEPS.filter((id) => id !== "notify" || notifyStepShown(push)).map((id) => ({
+    id,
+    done: done[id],
+  }));
+}
+
+export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
+  return stepsFromFacts(firstRunFacts(input), input.push);
+}
+
+/**
+ * The step the card opens: the first one not done, in order. Notifications
+ * come before the last step on purpose (plan, section 4): the owner turns
+ * them on while waiting for staff, and the card still ends the moment the
+ * first task is finished.
+ */
 export function nextFirstRunStep(steps: FirstRunStep[]): FirstRunStepId | null {
   return steps.find((step) => !step.done)?.id ?? null;
 }

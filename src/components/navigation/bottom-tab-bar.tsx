@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   CalendarDays,
-  ClipboardList,
   CookingPot,
+  House,
   PawPrint,
-  Users,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -24,20 +24,24 @@ import type { OwnerLocale } from "@/lib/owner-locale";
 import { isPlainClick } from "@/lib/in-place-navigation";
 import { cn } from "@/lib/utils";
 
+// Labels and icons only; the order is DASHBOARD_MODULES' (Phase 175).
 const TABS: Record<DashboardModule, { label: Record<OwnerLocale, string>; icon: LucideIcon }> = {
-  pets: { label: { en: "Pets", id: "Hewan" }, icon: PawPrint },
-  chores: { label: { en: "Chores", id: "Tugas" }, icon: ClipboardList },
   agenda: { label: { en: "Today", id: "Hari ini" }, icon: CalendarDays },
+  // Home (Phase 175; Chores / Tugas until then): chores, rooms and repairs.
+  chores: { label: { en: "Home", id: "Rumah" }, icon: House },
+  pets: { label: { en: "Pets", id: "Hewan" }, icon: PawPrint },
   // Kitchen (Phase 156): food at home and the shopping list.
   inventory: { label: { en: "Kitchen", id: "Dapur" }, icon: CookingPot },
-  // Holds household members, staff profiles, invite links and the app lock.
-  access: { label: { en: "Household", id: "Rumah" }, icon: Users },
+  // Settings (Phase 175; Household / Rumah until then): family, staff,
+  // invite links, notifications, the app lock and the rest.
+  access: { label: { en: "Settings", id: "Pengaturan" }, icon: Settings },
 };
 
 /**
  * The owner dashboard's tab bar, in the thumb zone (Phase 84), five tabs wide
- * (Phase 100): Agenda anchored left, Access right, the household's modules
- * between (Phase 111). Which middles appear is enabledModules' decision.
+ * (Phase 100): Today anchored left, Settings right, the areas of the home
+ * between (Phase 111, Phase 175). Which middles appear is enabledModules'
+ * decision.
  *
  * Sticky to the bottom of the dashboard's column (Phase 113), not fixed to
  * the window. Fixed, it had `w-full` but no `left`, so the browser placed it

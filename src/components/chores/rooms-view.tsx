@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronRight, DoorOpen, Plus, Wrench } from "lucide-react";
+import { Check, ChevronRight, DoorOpen, Pencil, Plus, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -42,6 +42,7 @@ import {
   type RoomEntry,
 } from "@/lib/rooms-view";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { pushInPlace } from "@/lib/in-place-navigation";
 import { cn } from "@/lib/utils";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import type { HouseholdTask } from "@/types/database";
@@ -56,7 +57,7 @@ function useShownRepairs() {
 }
 
 /**
- * Chores → Rooms (Phase 158, PR A): every room, grouped by floor, with what's
+ * Home → Rooms (Phase 158, PR A): every room, grouped by floor, with what's
  * set up in it — and, with a job chip tapped, which rooms have that job and
  * which don't ("which rooms get vacuumed?").
  *
@@ -143,6 +144,7 @@ export function RoomsView() {
           <Button className="min-h-[44px]" onClick={() => openEditor(null, null)}>
             <Plus /> {t("Add Chore", "Tambah Tugas")}
           </Button>
+          <EditRoomsButton large />
         </EmptyState>
         <RoomsEditor editor={editor} onClose={() => setEditor(null)} today={today} />
       </>
@@ -154,6 +156,9 @@ export function RoomsView() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <EditRoomsButton />
+      </div>
       {failed && (
         <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           {t(
@@ -358,6 +363,28 @@ function jobChips(chores: RoomChore[], locale: OwnerLocale, other: string) {
   return [...byJob.entries()]
     .sort(([a], [b]) => order(a) - order(b))
     .map(([key, { label, tasks }]) => ({ key, label: `${label} · ${scheduleSummary(tasks, locale)}` }));
+}
+
+/**
+ * Edit rooms (Phase 175, plan section 2): the rooms editor that lives in
+ * Settings → Rooms, reached from where rooms are looked at. `from=home` gives
+ * the editor's back link the way back here. Later the editor moves here and
+ * the Settings row goes (step 3 after Sunday).
+ */
+const EDIT_ROOMS_HREF = "/dashboard?module=access&page=rooms&from=home";
+
+function EditRoomsButton({ large = false }: { large?: boolean }) {
+  const t = useT();
+  return (
+    <Button
+      variant="outline"
+      // Large beside the empty state's Add Chore; small above the room list.
+      className={large ? "min-h-[44px]" : "min-h-[36px] shrink-0 px-3 text-xs"}
+      onClick={() => pushInPlace(EDIT_ROOMS_HREF)}
+    >
+      <Pencil className={large ? undefined : "size-3.5"} /> {t("Edit rooms", "Ubah ruangan")}
+    </Button>
+  );
 }
 
 /** The chores of one room, grouped by the jobs they do ("Vacuum · Mop"). */

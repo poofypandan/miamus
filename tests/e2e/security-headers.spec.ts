@@ -44,7 +44,7 @@ test("the owner's tabs: nothing for the policy to report", async ({ context, pag
   await installStub(context, { owner: { locale: "en" } });
   await page.goto("/dashboard");
   await expect(page.getByRole("navigation", { name: "Sections" })).toBeVisible({ timeout: 20_000 });
-  for (const name of ["Kitchen", "Household", "Today"]) {
+  for (const name of ["Home", "Kitchen", "Settings", "Today"]) {
     await page.getByRole("navigation", { name: "Sections" }).getByRole("link", { name }).click();
     await page.waitForLoadState("networkidle");
   }

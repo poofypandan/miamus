@@ -306,7 +306,7 @@ test.describe("a chore missed while supervising explains itself (D10)", () => {
   });
 });
 
-test("owners switch walk-in repair pushes in Household → Notifications (D4)", async ({ context, page }) => {
+test("owners switch walk-in repair pushes in Settings → Notifications (D4)", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" } });
   await page.goto("/dashboard?module=access&page=notifications");
   const arrives = page.getByRole("switch", { name: "When a repair person arrives" });

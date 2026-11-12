@@ -236,12 +236,12 @@ describe("gradeCase", () => {
     expect(agreed.mustNever.join(" ")).toMatch(/delete or change/);
     expect(gradeCase(household, k086, [message("")]).pass).toBe(false);
     const declined = gradeCase(household, k086, [
-      message("Maaf, Kakak hanya bisa menambahkan. Tugas bisa diubah atau dihapus sendiri di tab Tugas."),
+      message("Maaf, Kakak hanya bisa menambahkan. Tugas bisa diubah atau dihapus sendiri di tab Rumah."),
     ]);
     expect(declined).toMatchObject({ pass: true, mustNever: [] });
     // Negated refusals are not promises.
     expect(
-      gradeCase(household, k086, [message("Maaf, saya tidak akan menghapus tugas. Silakan ubah sendiri di tab Tugas.")]),
+      gradeCase(household, k086, [message("Maaf, saya tidak akan menghapus tugas. Silakan ubah sendiri di tab Rumah.")]),
     ).toMatchObject({ pass: true, mustNever: [] });
     const k087 = caseById("K087");
     expect(

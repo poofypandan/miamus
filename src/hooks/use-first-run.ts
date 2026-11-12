@@ -5,20 +5,24 @@ import { useHousehold } from "@/context/household-context";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { recordSetupStage } from "@/hooks/use-setup-stage";
 import { stageFrom } from "@/lib/calm-start";
+import { usePushStatus } from "@/hooks/use-push-status";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { dataProvider } from "@/lib/data";
+import type { PushStatus } from "@/lib/push-prompt";
 import {
-  firstRunSteps,
+  firstRunFacts,
   firstRunStorageKey,
   firstRunView,
   isPastFirstRun,
   nextFirstRunMemory,
   parseFirstRunMemory,
   staffOf,
+  stepsFromFacts,
+  type FirstRunFact,
+  type FirstRunFacts,
   type FirstRunMemory,
   type FirstRunPerson,
   type FirstRunStep,
-  type FirstRunStepId,
   type FirstRunView,
 } from "@/lib/first-run";
 
@@ -49,9 +53,16 @@ export interface FirstRun {
    */
   ready: boolean;
   steps: FirstRunStep[];
+  /** What the rows are made from: the Set up row shows whichever of staff and task is missing. */
+  facts: FirstRunFacts;
   /** Staff on the roster, for the step's detail and the new chore's assignee. */
   staff: FirstRunPerson[];
   linkedPhones: number;
+  /** This phone's notifications, for the "Turn on notifications" row. */
+  push: PushStatus;
+  canEnablePush: boolean;
+  /** Straight from the tap (Safari asks only inside one). */
+  enablePush: () => Promise<"enabled" | "denied" | "unavailable">;
   /** Not now. */
   dismiss: () => void;
   /** Takes Not now back (the toast's Undo). */
@@ -65,7 +76,7 @@ export interface FirstRun {
  * which steps are done, read from what the household already holds, and
  * whether this owner has closed the card on this phone (lib/first-run).
  *
- * Linked phones are the one extra read (list_linked_phones, admins only),
+ * Linked phones are one extra read (list_linked_phones, admins only),
  * made only while the checklist could still show, and again whenever the
  * owner comes back to the app: the usual way through step 3 is "send the
  * link on WhatsApp, wait, come back".
@@ -87,7 +98,7 @@ export function useFirstRun(active = true): FirstRun {
   const [memory, setMemory] = useState<Keyed<FirstRunMemory> | null>(null);
   const [phonesRead, setPhonesRead] = useState<Keyed<number> | null>(null);
   const [finishedRead, setFinishedRead] = useState<Keyed<boolean> | null>(null);
-  const [tickedRead, setTickedRead] = useState<Keyed<ReadonlySet<FirstRunStepId>> | null>(null);
+  const [tickedRead, setTickedRead] = useState<Keyed<ReadonlySet<FirstRunFact>> | null>(null);
   const current = forKey(memory, ownerKey);
   const phones = forKey(phonesRead, ownerKey) ?? null;
   const finishedChore = forKey(finishedRead, ownerKey) ?? null;
@@ -101,6 +112,11 @@ export function useFirstRun(active = true): FirstRun {
   // What's loaded already settles it, when it can.
   const pastOnScreen = isPastFirstRun({ chores: householdTasks, logs: logs.length });
   const open = !!ownerKey && current !== undefined && !closed && !pastOnScreen;
+
+  // This phone's notifications (Phase 175 S2): asked only while the
+  // checklist could show. It re-checks on its own when the owner comes back
+  // from the phone's settings or turns them on anywhere in the app.
+  const { status: push, canEnable: canEnablePush, enable: enablePush } = usePushStatus(open);
 
   // Ever finished a chore, on any date: once per owner key, only while the
   // checklist could still show. A failed read counts as no.
@@ -150,38 +166,47 @@ export function useFirstRun(active = true): FirstRun {
 
   const raw = useMemo(
     () =>
-      firstRunSteps({
+      firstRunFacts({
         people: allProfiles,
         linkedPhones: phones,
         chores: householdTasks,
         petRoutines: petsOn ? schedules.length : 0,
         logs: logs.length,
         finishedChore,
+        push,
       }),
-    [allProfiles, phones, householdTasks, petsOn, schedules.length, logs.length, finishedChore]
+    [allProfiles, phones, householdTasks, petsOn, schedules.length, logs.length, finishedChore, push]
   );
 
-  // A step once ticked stays ticked for the visit: Today reads chores around
-  // the day on screen, and a first chore set for today shouldn't untick when
-  // the owner looks at tomorrow.
+  // A fact once true stays true for the visit: Today reads chores around the
+  // day on screen, and a first chore set for today shouldn't untick when the
+  // owner looks at tomorrow. Notifications are the exception: they are read
+  // live from this phone, and turning them off should show.
   useEffect(() => {
     if (!ownerKey) return;
-    const fresh = raw.filter((step) => step.done && !ticked.has(step.id));
+    const fresh = STICKY.filter((fact) => raw[fact] && !ticked.has(fact));
     if (fresh.length > 0) {
-      setTickedRead({ key: ownerKey, value: new Set([...ticked, ...fresh.map((step) => step.id)]) });
+      setTickedRead({ key: ownerKey, value: new Set([...ticked, ...fresh]) });
     }
   }, [raw, ticked, ownerKey]);
-  const steps = useMemo(
-    () => raw.map((step) => (step.done || ticked.has(step.id) ? { ...step, done: true } : step)),
+  const facts = useMemo<FirstRunFacts>(
+    () => ({
+      staff: raw.staff || ticked.has("staff"),
+      task: raw.task || ticked.has("task"),
+      phone: raw.phone || ticked.has("phone"),
+      notify: raw.notify,
+      done: raw.done || ticked.has("done"),
+    }),
     [raw, ticked]
   );
+  const steps = useMemo(() => stepsFromFacts(facts, push), [facts, push]);
 
   const past = pastOnScreen || finishedChore === true;
   const ready =
     !loading &&
     current !== undefined &&
     allProfiles !== null &&
-    (closed || pastOnScreen || (finishedChore !== null && (past || phones !== null)));
+    (closed || pastOnScreen || (finishedChore !== null && (past || (phones !== null && push !== "loading"))));
   const view: FirstRunView = ready ? firstRunView(steps, current ?? null) : "hidden";
 
   useEffect(() => {
@@ -194,18 +219,26 @@ export function useFirstRun(active = true): FirstRun {
   }, [ready, ownerKey, current, steps, view]);
 
   // What the rest of the app waits on (Phase 172, lib/calm-start): What's
-  // new until past setup, Add to Home Screen until a first task is given.
-  // A checklist this phone already closed as done counts as past.
+  // new until past setup, Add to Home Screen and the notifications prompt
+  // until a first task is given. A checklist this phone already closed as
+  // done counts as past.
+  //
+  // Phase 175 S2: while the checklist is on screen it has its own "Turn on
+  // notifications" row (with the iPhone's Add to Home Screen first), so the
+  // two prompts above Today wait for the card to go: Not now, or the first
+  // finished task. If notifications are still off then, the prompt takes
+  // over (plan, section 4).
+  const taskGiven = facts.task && view !== "checklist";
   useEffect(() => {
     if (!ready || !tenantReady) return;
     recordSetupStage(
       activeHouseholdId,
       stageFrom({
         past: past || current === "finished" || current === "completed",
-        taskGiven: steps.some((step) => step.id === "task" && step.done),
+        taskGiven,
       })
     );
-  }, [ready, tenantReady, activeHouseholdId, past, current, steps]);
+  }, [ready, tenantReady, activeHouseholdId, past, current, taskGiven]);
 
   const remember = useCallback(
     (value: Exclude<FirstRunMemory, null>) => {
@@ -222,8 +255,12 @@ export function useFirstRun(active = true): FirstRun {
     view,
     ready,
     steps,
+    facts,
     staff,
     linkedPhones: phones ?? 0,
+    push,
+    canEnablePush,
+    enablePush,
     dismiss: () => remember("dismissed"),
     // Not now's Undo: back to the checklist, as already seen.
     undoDismiss: () => remember("shown"),
@@ -241,4 +278,7 @@ function forKey<T>(read: Keyed<T> | null, key: string | null): T | undefined {
   return read && key && read.key === key ? read.value : undefined;
 }
 
-const NONE_TICKED: ReadonlySet<FirstRunStepId> = new Set();
+const NONE_TICKED: ReadonlySet<FirstRunFact> = new Set();
+
+/** Facts that stay ticked for the visit once true (all but notifications). */
+const STICKY: readonly FirstRunFact[] = ["staff", "task", "phone", "done"];

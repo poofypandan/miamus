@@ -37,7 +37,7 @@ const chore = (over: Record<string, unknown>): Record<string, unknown> => ({
 
 const SEEN = ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "repairs-2026-11", "rooms-inside-2026-11", "bills-2026-11"];
 
-test("Household → Rooms: put a bathroom inside its bedroom, add a closet, then delete the bedroom", async ({ context, page }) => {
+test("Settings → Rooms: put a bathroom inside its bedroom, add a closet, then delete the bedroom", async ({ context, page }) => {
   const LT2 = place(1, "LT2", { kind: "floor" });
   const GB1 = place(2, "GB1", { parent_id: LT2.id, sort_order: 1 });
   const BATH = place(3, "GB1 Bathroom", { parent_id: LT2.id, sort_order: 2 });

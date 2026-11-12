@@ -232,7 +232,7 @@ test("the quiet line on Today after the summary hour opens the sheet", async ({ 
   await expect(page.getByRole("dialog", { name: "Not done today" }).getByRole("button", { name: /Mop the terrace/ })).toBeVisible();
 });
 
-test("owners set the evening summary and staff requests in Household → Notifications", async ({ context, page }) => {
+test("owners set the evening summary and staff requests in Settings → Notifications", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" } });
   await page.goto("/dashboard?module=access&page=notifications");
 

@@ -178,7 +178,8 @@ function SettingsRow({
 }
 
 /**
- * The Household tab (Phase 155; "Access" until Phase 153): a short list in
+ * The Settings tab (Phase 175; "Household" from Phase 155, "Access" before
+ * that; still ?module=access in the URL): a short list in
  * four groups — people; inviting and staff sign-in; this phone's settings;
  * activity — each row opening its own page. It was one page with ten
  * sections in a single scroll.
@@ -187,7 +188,7 @@ function SettingsRow({
  */
 export function StaffTab() {
   const { logs, routineProposals, inventoryAlerts, pets, schedules, loading, leaveRequests } = useHousehold();
-  // Which page of the Household tab, in the URL like the tab itself
+  // Which page of the Settings tab, in the URL like the tab itself
   // (CLAUDE.md, State Persistence): ?module=access&page=staff. None = the list.
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -197,6 +198,8 @@ export function StaffTab() {
     const params = new URLSearchParams(searchParams.toString());
     if (next) params.set("page", next);
     else params.delete("page");
+    // Only Home → Rooms → Edit rooms sets it, for the back link below.
+    params.delete("from");
     pushInPlace(`${pathname}?${params.toString()}`);
   }
   const today = formatDateLocal(useToday());
@@ -209,7 +212,7 @@ export function StaffTab() {
   const locale = useOwnerLocale();
   const t = useT();
   const isOwner = useRequireOwner();
-  // Household → Features (Phase 171; it replaced "Who lives here"): "4 on".
+  // Settings → Features (Phase 171; it replaced "Who lives here"): "4 on".
   const { petsOn } = useHouseholdProfile();
   const { flags: featureFlags } = useHouseholdFeatures();
   const { profiles, failed, reload, allProfiles } = useStaffProfiles();
@@ -284,6 +287,7 @@ export function StaffTab() {
   // ?page=who-lives-here (Phase 162's links, its What's new card) opens Features.
   const pageName = pageParam === "who-lives-here" ? "features" : pageParam;
   const page = HOUSEHOLD_PAGES.includes(pageName as HouseholdPage) ? (pageName as HouseholdPage) : null;
+  const backToHomeRooms = page === "rooms" && searchParams.get("from") === "home";
 
   if (!page) {
     const staffCount = (profiles ?? []).filter((p) => !p.user_id).length;
@@ -385,12 +389,17 @@ export function StaffTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Back to the list, or — for the rooms editor opened from Home →
+          Rooms → Edit rooms (Phase 175) — back to Home → Rooms. */}
       <button
         type="button"
-        onClick={() => open(null)}
+        onClick={() =>
+          backToHomeRooms ? pushInPlace("/dashboard?module=chores&chores=rooms") : open(null)
+        }
         className="-ml-2 flex min-h-11 items-center gap-0.5 self-start rounded-lg px-2 text-sm font-medium text-muted-foreground active:bg-muted"
       >
-        <ChevronLeft className="size-4" /> {t("Household", "Rumah")}
+        <ChevronLeft className="size-4" />{" "}
+        {backToHomeRooms ? t("Home", "Rumah") : t("Settings", "Pengaturan")}
       </button>
 
       {page === "family" && <HouseholdMembersPanel />}
@@ -975,7 +984,7 @@ function SetPinDialog({
 }
 
 /**
- * The last row of the Household tab: who is signed in on this phone, and the
+ * The last row of the Settings tab: who is signed in on this phone, and the
  * way out (owner request, 2026-11-08). Red text and a confirmation sheet, so
  * it is easy to find and hard to hit by accident.
  */

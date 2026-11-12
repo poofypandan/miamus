@@ -180,7 +180,10 @@ export const LEGAL = {
   // names, the household id, and saves and photos not yet sent) the next time it opens, and keeps only a "this
   // phone was removed" flag until it is linked again. Less kept, nothing new
   // collected, no new service.
-  policyVersion: "2026-11-12.1",
+  // 2026-11-12.2: wording only (Phase 175 tab names) — "Household → Your
+  // data" now reads "Settings → Your data" / "Pengaturan → Data Anda".
+  // Nothing stored, collected or shared changes.
+  policyVersion: "2026-11-12.2",
   effectiveDate: { en: "12 November 2026", id: "12 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
