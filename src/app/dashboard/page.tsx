@@ -64,10 +64,11 @@ function DashboardCanvas() {
           Agenda's summary card and from the Pets tab, and it should survive
           switching between them. */}
       <PetProfileSheet />
-      {/* Tell Kakak (Phase 156 step 2): Today only, and only when the
-          household has Kakak on. Outside the tab so position: fixed is
-          relative to the screen. */}
-      {activeModule === "agenda" && <KakakButton />}
+      {/* Tell Kakak (Phase 156 step 2; Phase 175 S4): on Today, Home, Pets
+          and Kitchen, where she can add things, but not Settings; and only
+          when the household has Kakak on. Outside the tab so position: fixed
+          is relative to the screen. */}
+      {activeModule !== "access" && <KakakButton />}
     </>
   );
 }

@@ -174,7 +174,7 @@ test("the monthly spend limit reads as a plain sentence, with no Try again", asy
   await expect(page.getByRole("textbox", { name: "Mau Kakak atur apa?" })).toHaveCount(0);
 });
 
-test("Kakak is off until an admin turns her on in the Household tab", async ({ context, page }) => {
+test("Kakak is off until an admin turns her on in the Settings tab", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: false } });
   await page.goto("/dashboard");
   await expect(page.getByRole("tab", { name: /Hari ini/ }).or(page.getByText("Hari ini").first())).toBeVisible({ timeout: 20_000 });

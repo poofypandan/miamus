@@ -25,7 +25,7 @@ test("the middleware lets the household's admin in, and nobody else", async ({ c
   await expect(page.getByRole("button", { name: "Family" })).toBeVisible({ timeout: 20_000 });
 });
 
-test("Household tab: settings list, and Sign out with its confirmation", async ({ context, page }) => {
+test("Settings tab: settings list, and Sign out with its confirmation", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" } });
   await page.goto("/dashboard?module=access");
 

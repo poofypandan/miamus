@@ -21,8 +21,8 @@ describe("pets on or off", () => {
 
   it("shows four tabs without pets, five otherwise", () => {
     expect(enabledModules(moduleFlagsFrom(false))).toEqual(["agenda", "chores", "inventory", "access"]);
-    expect(enabledModules(moduleFlagsFrom(null))).toEqual(["agenda", "pets", "chores", "inventory", "access"]);
-    expect(enabledModules(moduleFlagsFrom(true))).toEqual(["agenda", "pets", "chores", "inventory", "access"]);
+    expect(enabledModules(moduleFlagsFrom(null))).toEqual(["agenda", "chores", "pets", "inventory", "access"]);
+    expect(enabledModules(moduleFlagsFrom(true))).toEqual(["agenda", "chores", "pets", "inventory", "access"]);
   });
 
   it("opens Today for ?module=pets when pets are off", () => {

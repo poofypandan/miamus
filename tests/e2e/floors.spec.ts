@@ -81,7 +81,7 @@ test("Sort rooms into floors: preview, one tap, the right rooms and spots, and U
   expect(stub.seen.realBackend).toEqual([]);
 });
 
-test("Household → Rooms: add a floor and a room on it, then delete the floor", async ({ context, page }) => {
+test("Settings → Rooms: add a floor and a room on it, then delete the floor", async ({ context, page }) => {
   const rooms: Record<string, unknown>[] = [
     { ...room(10, "LT1"), kind: "floor", parent_id: null, sort_order: 1 },
     { ...room(11, "Dapur"), kind: "room", parent_id: id(10), sort_order: 0 },

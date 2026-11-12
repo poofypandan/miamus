@@ -4,7 +4,7 @@ import type { OwnerLocale } from "@/lib/owner-locale";
  * Short tutorials for new features (owner, 2026-11-09: "when new features
  * come to the app, please give a short tutorial for owners and staff, if it
  * impacts them"). One entry per feature, newest first. Each is shown once as
- * a card where the feature lives, then stays readable in Household → What's
+ * a card where the feature lives, then stays readable in Settings → What's
  * new.
  *
  * Owner entries carry both languages (docs/indonesian-glossary.md); a staff
@@ -21,7 +21,7 @@ export interface WhatsNewEntry {
   tryLabel: Record<OwnerLocale, string>;
   /**
    * Only for households with Kakak (on the family list): shown as the card in
-   * the Kakak sheet, and left out of Household → What's new for everyone else.
+   * the Kakak sheet, and left out of Settings → What's new for everyone else.
    */
   kakakOnly?: boolean;
 }
@@ -74,7 +74,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
-    // Phase 173 PR B (D9). Listed in Household → What's new only, never a
+    // Phase 173 PR B (D9). Listed in Settings → What's new only, never a
     // card: the list appears by itself after Add pet and explains itself.
     // Staff need no tutorial: the routines show on Today like any other.
     id: "pet-starters-2026-11",
@@ -118,7 +118,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
-    // Phase 174 PR C (D7 A). Listed in Household → What's new only, never a
+    // Phase 174 PR C (D7 A). Listed in Settings → What's new only, never a
     // card: this week's card already went to walk-ins (walkins-2026-11; one
     // card a week). The button sits under the Repairs list and explains
     // itself. Owners only; staff see nothing new.
@@ -128,12 +128,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: send repairs to the developer", id: "Baru: kirim perbaikan ke developer" },
     steps: {
       en: [
-        "Chores → Repairs → Send to the developer: every open repair with its photos, all ticked. Untick what isn't the developer's.",
+        "Home → Repairs → Send to the developer: every open repair with its photos, all ticked. Untick what isn't the developer's.",
         "Share on WhatsApp sends a short, polite list with the photos, in Bahasa Indonesia (English is one tap away). Save as PDF makes a page to send as a file.",
         "Miamus doesn't send it: you choose who gets it.",
       ],
       id: [
-        "Tugas → Perbaikan → Kirim ke developer: semua perbaikan yang masih terbuka beserta fotonya, sudah dicentang. Hapus centang yang bukan urusan developer.",
+        "Rumah → Perbaikan → Kirim ke developer: semua perbaikan yang masih terbuka beserta fotonya, sudah dicentang. Hapus centang yang bukan urusan developer.",
         "Bagikan lewat WhatsApp mengirim daftar singkat dan sopan beserta fotonya, dalam Bahasa Indonesia (bahasa Inggris tinggal satu ketukan). Simpan sebagai PDF membuat halaman untuk dikirim sebagai berkas.",
         "Miamus tidak mengirimkannya: Anda yang memilih penerimanya.",
       ],
@@ -141,9 +141,9 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
-    // Phase 174 PR B (D4, D10). Listed in Household → What's new only, never
+    // Phase 174 PR B (D4, D10). Listed in Settings → What's new only, never
     // a card: this week's card already went to walk-ins (walkins-2026-11; one
-    // card a week). The two switches explain themselves in Household →
+    // card a week). The two switches explain themselves in Settings →
     // Notifications. Staff need no tutorial: nothing changes on their phones.
     id: "repair-pushes-2026-11",
     date: "2026-11-11",
@@ -152,19 +152,19 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     steps: {
       en: [
         "When staff log a repair person at the gate, you get a notification: who came and what for. When they tap Selesai, another one, with the before and after photos on the repair. Never between 9:00 PM and 6:00 AM.",
-        "Don't want one of them? Household → Notifications: When a repair person arrives, When a repair is finished.",
+        "Don't want one of them? Settings → Notifications: When a repair person arrives, When a repair is finished.",
         "The evening summary now says when a task was missed because someone was supervising a repair.",
       ],
       id: [
         "Saat staf mencatat tukang di gerbang, Anda mendapat notifikasi: siapa yang datang dan untuk apa. Saat staf mengetuk Selesai, satu lagi, dengan foto sebelum dan sesudah di perbaikannya. Tidak pernah pukul 21.00–06.00.",
-        "Tidak mau salah satunya? Rumah → Notifikasi: Saat tukang datang, Saat perbaikan selesai.",
+        "Tidak mau salah satunya? Pengaturan → Notifikasi: Saat tukang datang, Saat perbaikan selesai.",
         "Ringkasan malam kini menyebutkan tugas yang terlewat karena staf sedang mengawasi perbaikan.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
-    // Phase 173 PR C (D7, D15). Listed in Household → What's new only, never
+    // Phase 173 PR C (D7, D15). Listed in Settings → What's new only, never
     // a card: this week's card already went out (one card a week). The two
     // switches explain themselves in the Add routine sheet. Staff need no
     // tutorial: a reminder is a notification that opens Today.
@@ -206,7 +206,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
-    // Shown on Chores → Today (Phase 172 PR A2), existing households only
+    // Shown on Home → Chores (Phase 172 PR A2), existing households only
     // (the calm-start rules keep it from new ones, who get the list at
     // sign-up). Show me opens the Starter list. One card a week: if the
     // Features card (Phase 171) still holds this week, this one waits.
@@ -215,13 +215,13 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     audience: "owner",
     title: { en: "New: a starter list of the usual rooms and chores", id: "Baru: daftar awal ruangan dan tugas yang biasa" },
     steps: {
-      en: ["Chores → Starter list: tick what's missing. What you already have is marked Added."],
-      id: ["Tugas → Daftar awal: centang yang belum ada. Yang sudah ada ditandai Sudah ditambahkan."],
+      en: ["Home → Starter list: tick what's missing. What you already have is marked Added."],
+      id: ["Rumah → Daftar awal: centang yang belum ada. Yang sudah ada ditandai Sudah ditambahkan."],
     },
     tryLabel: { en: "Show me", id: "Lihat" },
   },
   {
-    // Phase 174 PR A: the one owner card for walk-ins, in Chores → Repairs
+    // Phase 174 PR A: the one owner card for walk-ins, in Home → Repairs
     // (the calm-start rules hold it until the week is free). Staff get no
     // card: the Perbaikan pill's button says what to do (stop rule).
     id: "walkins-2026-11",
@@ -243,7 +243,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
-    // Shown in Household, where the switches live (Phase 171 PR A, D8): this
+    // Shown in Settings, where the switches live (Phase 171 PR A, D8): this
     // week's one card, for existing households only (the calm-start rules
     // keep it from new ones). Staff get none.
     id: "features-2026-11",
@@ -251,13 +251,13 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     audience: "owner",
     title: { en: "New: choose what Miamus shows", id: "Baru: pilih yang ditampilkan Miamus" },
     steps: {
-      en: ["Household → Features: switch off what you don't use. Nothing is deleted."],
-      id: ["Rumah → Fitur: matikan yang tidak Anda pakai. Tidak ada yang dihapus."],
+      en: ["Settings → Features: switch off what you don't use. Nothing is deleted."],
+      id: ["Pengaturan → Fitur: matikan yang tidak Anda pakai. Tidak ada yang dihapus."],
     },
     tryLabel: { en: "Show me", id: "Lihat" },
   },
   {
-    // Listed in Household → What's new only, never a card: Phase 165's
+    // Listed in Settings → What's new only, never a card: Phase 165's
     // couldn't-do card already went to the same admins this week, and the
     // adopted rule is at most one card a week (docs/app-evaluation-2026-11-10.md).
     // Staff get their own card on Today, which is the tutorial (D10).
@@ -268,11 +268,11 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     steps: {
       en: [
         "Staff can now turn on notifications on their phone. They hear about new tasks for them today and your answers to their requests, never at night.",
-        "See who has them on under Staff. Turn them off for the whole household in Household → Notifications.",
+        "See who has them on under Staff. Turn them off for the whole household in Settings → Notifications.",
       ],
       id: [
         "Staf sekarang bisa mengaktifkan notifikasi di HP mereka. Mereka diberi tahu tentang tugas baru untuk mereka hari ini dan jawaban Anda atas permintaan mereka, tidak pernah malam hari.",
-        "Lihat siapa yang sudah mengaktifkannya di Staf. Matikan untuk seluruh rumah di Rumah → Notifikasi.",
+        "Lihat siapa yang sudah mengaktifkannya di Staf. Matikan untuk seluruh rumah di Pengaturan → Notifikasi.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },
@@ -287,30 +287,30 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       en: [
         "Staff can now tell you why a task couldn't be done, like out of stock or the pet wouldn't eat. It shows in amber on Today; tap it to see their note and photo.",
         "Each evening at 7:00 PM, one notification lists what's still open, only if something is. Nothing open, no notification.",
-        "You're also told when staff ask for leave or suggest a schedule change. Change the time or turn either off in Household → Notifications.",
+        "You're also told when staff ask for leave or suggest a schedule change. Change the time or turn either off in Settings → Notifications.",
       ],
       id: [
         "Staf sekarang bisa memberi tahu kenapa tugas tidak bisa dikerjakan, misalnya barang habis atau hewan tidak mau makan. Tugasnya ditandai kuning di Hari ini; ketuk untuk melihat catatan dan fotonya.",
         "Setiap malam pukul 19.00, satu notifikasi berisi yang belum selesai, hanya kalau ada. Kalau semua selesai, tidak ada notifikasi.",
-        "Anda juga diberi tahu saat staf minta cuti atau mengusulkan perubahan jadwal. Ubah jamnya atau matikan di Rumah → Notifikasi.",
+        "Anda juga diberi tahu saat staf minta cuti atau mengusulkan perubahan jadwal. Ubah jamnya atau matikan di Pengaturan → Notifikasi.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
-    // Shown in Chores → Rooms (Phase 168 PR A, docs/phase-168-suites-plan.md).
+    // Shown in Home → Rooms (Phase 168 PR A, docs/phase-168-suites-plan.md).
     id: "rooms-inside-2026-11",
     date: "2026-11-10",
     audience: "owner",
     title: { en: "New: a bathroom inside its bedroom", id: "Baru: kamar mandi di dalam kamarnya" },
     steps: {
       en: [
-        "A room can now have rooms inside it. Put each bathroom inside its bedroom in Household → Rooms.",
+        "A room can now have rooms inside it. Put each bathroom inside its bedroom in Home → Rooms → Edit rooms.",
         "They show under their room everywhere, like GB1 · Bathroom.",
         "A spot is still a thing in a room, like the sink.",
       ],
       id: [
-        "Ruangan sekarang bisa punya ruangan di dalamnya. Masukkan kamar mandi ke kamarnya di Rumah → Ruangan.",
+        "Ruangan sekarang bisa punya ruangan di dalamnya. Masukkan kamar mandi ke kamarnya di Rumah → Ruangan → Ubah ruangan.",
         "Ruangan itu tampil di bawah kamarnya, misalnya Kamar Tamu 1 · Kamar Mandi.",
         "Bagian tetap untuk benda di ruangan, seperti wastafel.",
       ],
@@ -359,19 +359,19 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
-    // Shown on Chores → Today and on Today; Show me opens the checklist (Phase 164, D9).
+    // Shown on Home → Chores and on Today; Show me opens the checklist (Phase 164, D9).
     id: "bills-2026-11",
     date: "2026-11-10",
     audience: "owner",
     title: { en: "New: bills and upkeep", id: "Baru: tagihan dan perawatan" },
     steps: {
       en: [
-        "Never miss a bill: Chores → Bills and upkeep, tick what your home pays or services, then Add.",
+        "Never miss a bill: Home → Bills and upkeep, tick what your home pays or services, then Add.",
         "We remind you at 7:00 AM on the day, or a few days before, and Today shows what's coming up.",
         "Any chore can now repeat every 3 months or every year, and remind you. Bills given to you show in My tasks.",
       ],
       id: [
-        "Jangan sampai telat bayar: Tugas → Tagihan dan perawatan, centang yang rutin dibayar atau dirawat, lalu Tambah.",
+        "Jangan sampai telat bayar: Rumah → Tagihan dan perawatan, centang yang rutin dibayar atau dirawat, lalu Tambah.",
         "Kami ingatkan pukul 07.00 saat jatuh tempo, atau beberapa hari sebelumnya, dan Hari ini menampilkan yang segera tiba.",
         "Setiap tugas kini bisa berulang tiap 3 bulan atau tiap tahun, dan mengingatkan Anda. Tagihan untuk Anda muncul di Tugas saya.",
       ],
@@ -421,11 +421,11 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: send us feedback", id: "Baru: kirim masukan" },
     steps: {
       en: [
-        "Household → Send feedback (also in About Miamus): an idea, or something that went wrong. A few words are enough.",
+        "Settings → Send feedback (also in About Miamus): an idea, or something that went wrong. A few words are enough.",
         "Staff can send too, from Lapor → Kirim masukan. It goes to the Miamus team; staff can't read anyone else's.",
       ],
       id: [
-        "Rumah → Kirim masukan (juga di Tentang Miamus): ide, atau sesuatu yang tidak beres. Beberapa kata sudah cukup.",
+        "Pengaturan → Kirim masukan (juga di Tentang Miamus): ide, atau sesuatu yang tidak beres. Beberapa kata sudah cukup.",
         "Staf juga bisa mengirim, lewat Lapor → Kirim masukan. Masukan sampai ke tim Miamus; staf tidak bisa membaca masukan orang lain.",
       ],
     },
@@ -440,12 +440,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       en: [
         "Tap Turn on in the card at the top of the app, then Allow: urgent repairs, sick pets and food reminders reach this phone.",
         "On iPhone, first tap Share → Add to Home Screen, and open Miamus from there.",
-        "Each phone is turned on separately. Household → Notifications shows On, Off or Blocked, and sends a test.",
+        "Each phone is turned on separately. Settings → Notifications shows On, Off or Blocked, and sends a test.",
       ],
       id: [
         "Ketuk Aktifkan di kartu paling atas aplikasi, lalu Izinkan: perbaikan darurat, hewan sakit, dan pengingat makanan masuk ke HP ini.",
         "Di iPhone, ketuk dulu Bagikan → Tambahkan ke Layar Utama, lalu buka Miamus dari sana.",
-        "Setiap HP diaktifkan sendiri-sendiri. Rumah → Notifikasi menunjukkan Aktif, Mati, atau Diblokir, dan bisa kirim tes.",
+        "Setiap HP diaktifkan sendiri-sendiri. Pengaturan → Notifikasi menunjukkan Aktif, Mati, atau Diblokir, dan bisa kirim tes.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },
@@ -457,12 +457,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: hide Pets if you don't have any", id: "Baru: sembunyikan Hewan kalau tidak ada" },
     steps: {
       en: [
-        "Household → Features: switch Pets off, and the Pets tab and every pet line disappear, for staff too.",
+        "Settings → Features: switch Pets off, and the Pets tab and every pet line disappear, for staff too.",
         "Have pets? Nothing changes for you.",
         "New households answer this when they sign up. Kids and Elders come later.",
       ],
       id: [
-        "Rumah → Fitur: matikan Hewan, tab Hewan dan semua baris hewan hilang, juga di HP staf.",
+        "Pengaturan → Fitur: matikan Hewan, tab Hewan dan semua baris hewan hilang, juga di HP staf.",
         "Punya hewan? Tidak ada yang berubah.",
         "Rumah baru menjawab ini saat mendaftar. Anak dan Lansia menyusul.",
       ],
@@ -514,12 +514,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: Repairs", id: "Baru: Perbaikan" },
     steps: {
       en: [
-        "Something broken? Chores → Repairs → Report a problem: pick the room, add a photo.",
+        "Something broken? Home → Repairs → Report a problem: pick the room, add a photo.",
         "Staff can report too: you accept or dismiss in To review.",
         "Schedule a visit and staff take before and after photos while the repair person works. Each room keeps its repair history.",
       ],
       id: [
-        "Ada yang rusak? Tugas → Perbaikan → Lapor kerusakan: pilih ruangan, tambahkan foto.",
+        "Ada yang rusak? Rumah → Perbaikan → Lapor kerusakan: pilih ruangan, tambahkan foto.",
         "Staf juga bisa melapor: terima atau tolak di Perlu dicek.",
         "Jadwalkan perbaikan, staf mengambil foto sebelum dan sesudah selama tukang bekerja. Riwayat perbaikan tersimpan per ruangan.",
       ],
@@ -552,14 +552,14 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: floors and spots", id: "Baru: lantai dan bagian" },
     steps: {
       en: [
-        "In Chores → Rooms, tap Sort rooms once: your rooms are grouped by floor, and Undo is there if you change your mind.",
+        "In Home → Rooms, tap Sort rooms once: your rooms are grouped by floor, and Undo is there if you change your mind.",
         "Rooms that were really parts of one room (toilet, sink) become one room, with each part kept on its chores.",
-        "Rename, move or add floors and rooms any time in Household → Rooms.",
+        "Rename, move or add floors and rooms any time in Home → Rooms → Edit rooms.",
       ],
       id: [
-        "Di Tugas → Ruangan, ketuk Kelompokkan sekali: ruangan Anda dikelompokkan per lantai, dan ada Batalkan kalau berubah pikiran.",
+        "Di Rumah → Ruangan, ketuk Kelompokkan sekali: ruangan Anda dikelompokkan per lantai, dan ada Batalkan kalau berubah pikiran.",
         "Ruangan yang sebenarnya bagian dari satu ruangan (toilet, wastafel) jadi satu ruangan, dengan bagiannya tetap di tugasnya.",
-        "Ubah nama, pindahkan, atau tambah lantai dan ruangan kapan saja di Rumah → Ruangan.",
+        "Ubah nama, pindahkan, atau tambah lantai dan ruangan kapan saja di Rumah → Ruangan → Ubah ruangan.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },
@@ -571,12 +571,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: Rooms", id: "Baru: Ruangan" },
     steps: {
       en: [
-        "Chores now has Rooms: tap it to see every room and what's set up there.",
+        "Home now has Rooms: tap it to see every room and what's set up there.",
         "Tap Vacuum (or Mop, Dust…) to see which rooms have it and which don't.",
         "Tap Add next to a room to set it up there.",
       ],
       id: [
-        "Tugas sekarang punya Ruangan: ketuk untuk melihat setiap ruangan dan tugasnya.",
+        "Rumah sekarang punya Ruangan: ketuk untuk melihat setiap ruangan dan tugasnya.",
         "Ketuk Vakum (atau Pel, Lap debu…) untuk melihat ruangan mana yang sudah dan belum.",
         "Ketuk Tambah di samping ruangan untuk menambahkannya.",
       ],

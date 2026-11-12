@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { HOUSEHOLD_ID } from "../fixtures/household";
 import { OWNER_PROFILE_ID, freshSession, installStub } from "./stub-backend";
 
-// Household → Features (Phase 171 PR A, migrations/145): turning Repairs off
+// Settings → Features (Phase 171 PR A, migrations/145): turning Repairs off
 // takes its pill away at once and a stale ?chores=repairs link falls back to
 // Today; turning it on brings it back, with no reload. Bills off hides bill
 // chores and the checklist. Staff phones lose the buttons of what's off and
@@ -58,26 +58,26 @@ test("Repairs off hides its pill at once; on brings it back, no reload", async (
   await expect(repairs).toHaveAttribute("aria-checked", "false");
   expect(stub.features.repairs).toBe(false);
 
-  await tabs(page).getByRole("link", { name: "Chores" }).click();
-  const pills = page.getByRole("tablist", { name: "Chores" });
+  await tabs(page).getByRole("link", { name: "Home" }).click();
+  const pills = page.getByRole("tablist", { name: "Home" });
   await expect(pills.getByRole("tab", { name: "Rooms" })).toBeVisible({ timeout: 20_000 });
   await expect(pills.getByRole("tab", { name: "Repairs" })).toHaveCount(0);
 
-  // Back on, from Household: the pill returns without a reload.
-  await tabs(page).getByRole("link", { name: "Household" }).click();
+  // Back on, from Settings: the pill returns without a reload.
+  await tabs(page).getByRole("link", { name: "Settings" }).click();
   await page.getByRole("button", { name: /^Features/ }).click();
   await page.getByRole("switch", { name: "Repairs" }).click();
   await expect(page.getByText("Repairs is on")).toBeVisible();
-  await tabs(page).getByRole("link", { name: "Chores" }).click();
-  await expect(page.getByRole("tablist", { name: "Chores" }).getByRole("tab", { name: "Repairs" })).toBeVisible();
+  await tabs(page).getByRole("link", { name: "Home" }).click();
+  await expect(page.getByRole("tablist", { name: "Home" }).getByRole("tab", { name: "Repairs" })).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { __noReload?: boolean }).__noReload)).toBe(true);
 });
 
-test("a stale Repairs link opens Chores → Today while Repairs is off", async ({ context, page }) => {
+test("a stale Repairs link opens Home → Chores while Repairs is off", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, features: { repairs: false } });
   await page.goto("/dashboard?module=chores&chores=repairs");
-  const pills = page.getByRole("tablist", { name: "Chores" });
-  await expect(pills.getByRole("tab", { name: "Today" })).toHaveAttribute("aria-selected", "true", { timeout: 20_000 });
+  const pills = page.getByRole("tablist", { name: "Home" });
+  await expect(pills.getByRole("tab", { name: "Chores", exact: true })).toHaveAttribute("aria-selected", "true", { timeout: 20_000 });
   await expect(pills.getByRole("tab", { name: "Repairs" })).toHaveCount(0);
 });
 

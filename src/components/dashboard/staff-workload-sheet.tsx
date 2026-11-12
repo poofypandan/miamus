@@ -137,8 +137,8 @@ function EveryoneWorkload() {
             icon={BarChart3}
             title={t("Nobody on the roster yet", "Belum ada orang di daftar")}
             description={t(
-              "Add your staff on the Household tab. What they finish will be counted here.",
-              "Tambahkan staf di tab Rumah. Yang mereka selesaikan akan dihitung di sini."
+              "Add your staff in Settings. What they finish will be counted here.",
+              "Tambahkan staf di tab Pengaturan. Yang mereka selesaikan akan dihitung di sini."
             )}
           />
         ) : (

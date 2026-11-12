@@ -29,13 +29,13 @@ test("push off: the dashboard asks, Not now puts it off on this phone", async ({
   await expect(prompt.getByRole("button", { name: "Turn on" })).toBeEnabled();
 
   // Household lists it as Off, waiting on the owner.
-  await tabs(page).getByRole("link", { name: "Household" }).click();
+  await tabs(page).getByRole("link", { name: "Settings" }).click();
   await expect(page.getByRole("button", { name: /^Notifications/ })).toContainText("Off");
 
   await prompt.getByRole("button", { name: "Not now" }).last().click();
   await expect(prompt).toHaveCount(0);
   await page.reload();
-  await expect(tabs(page).getByRole("link", { name: "Household" })).toBeVisible({ timeout: 20_000 });
+  await expect(tabs(page).getByRole("link", { name: "Settings" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: /^Notifications/ })).toContainText("Off");
   await expect(page.getByRole("region", { name: "Turn on notifications" })).toHaveCount(0);
 });

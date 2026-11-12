@@ -18,12 +18,13 @@ function hintSeen(): boolean {
 }
 
 /**
- * Today's one main action when Kakak is on (Phase 156 step 2, plan screen 1):
- * her avatar and "Tell Kakak", bottom right, above the tab bar. Rendered only
- * on Today in the owner dashboard, and only when kakak_status says this
+ * The one main action when Kakak is on (Phase 156 step 2, plan screen 1):
+ * her avatar and "Tell Kakak", bottom right, above the tab bar. Rendered on
+ * Today, Home, Pets and Kitchen in the owner dashboard (Phase 175 S4; never
+ * Settings), and only when kakak_status says this
  * household is on the family list and an owner turned Kakak on — a staff
- * phone gets no status at all, so it never sees the button. Otherwise Today
- * looks exactly as before.
+ * phone gets no status at all, so it never sees the button. Otherwise the tabs
+ * look exactly as before.
  */
 export function KakakButton() {
   const t = useT();
@@ -52,7 +53,7 @@ export function KakakButton() {
 
   return (
     <>
-      {/* Room under the last row of Today, so the button never covers it. */}
+      {/* Room under the tab's last row, so the button never covers it. */}
       <div aria-hidden="true" className="h-20 shrink-0" />
       {/* On document.body: the pull-to-refresh wrapper is transformed, which
           would make position: fixed relative to it instead of the screen. */}

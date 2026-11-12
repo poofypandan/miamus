@@ -32,8 +32,9 @@ import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { HouseholdTask } from "@/types/database";
 
 /**
- * The owner's chore desk: what the house owes on the selected day, and the
- * only place chores are created, edited or deleted (Phase 100).
+ * The Home tab (Phase 175; the Chores tab until then): the owner's chore
+ * desk — what the house owes on the selected day, and the only place chores
+ * are created, edited or deleted (Phase 100) — with the rooms and repairs.
  *
  * Owner-facing, in the language the owner chose (Phase 149), and
  * owner-only in capability: the staff view imports none of this.
@@ -47,12 +48,14 @@ export function ChoresTab() {
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
-      {/* Today · Rooms (Phase 158): the same chores, by day or by room. The
-          pill reads ?chores= from the URL, like the Kitchen's. */}
+      {/* Chores · Rooms · Repairs (Phase 158, 159; renamed in Phase 175, when
+          this tab became Home): the same chores, by day or by room. The pill
+          reads ?chores= from the URL, like the Kitchen's; "today" stays the
+          first segment's value so old links keep working. */}
       <SegmentedControl
-        ariaLabel={t("Chores", "Tugas")}
+        ariaLabel={t("Home", "Rumah")}
         segments={[
-          { value: "today", label: t("Today", "Hari ini") },
+          { value: "today", label: t("Chores", "Tugas") },
           { value: "rooms", label: t("Rooms", "Ruangan") },
           ...(repairsOn ? [{ value: "repairs" as const, label: t("Repairs", "Perbaikan") }] : []),
         ]}
