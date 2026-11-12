@@ -152,14 +152,21 @@ export function comingUpDay(date: string, today: string, locale: OwnerLocale): s
  * "Segera: PBB, Servis AC, dan 1 lagi" (as the push lists them).
  */
 export function comingUpLabel(items: ComingUp[], today: string, locale: OwnerLocale): string {
+  return `${locale === "id" ? "Segera" : "Coming up"}: ${comingUpText(items, today, locale)}`;
+}
+
+/**
+ * The same line without its "Coming up:" lead, for Today's Coming up group
+ * (Phase 175), whose heading already says it.
+ */
+export function comingUpText(items: ComingUp[], today: string, locale: OwnerLocale): string {
   const id = locale === "id";
-  const lead = id ? "Segera" : "Coming up";
   if (items.length === 1) {
-    return `${lead}: ${items[0].task.title} · ${comingUpDay(items[0].date, today, locale)}`;
+    return `${items[0].task.title} · ${comingUpDay(items[0].date, today, locale)}`;
   }
   const titles = items.map((i) => i.task.title);
   const shown = titles.slice(0, 2);
   const extra = titles.length - shown.length;
-  if (extra === 0) return `${lead}: ${shown[0]}${id ? " dan " : " and "}${shown[1]}`;
-  return `${lead}: ${shown.join(", ")}${id ? `, dan ${extra} lagi` : ` and ${extra} more`}`;
+  if (extra === 0) return `${shown[0]}${id ? " dan " : " and "}${shown[1]}`;
+  return `${shown.join(", ")}${id ? `, dan ${extra} lagi` : ` and ${extra} more`}`;
 }

@@ -97,6 +97,13 @@ export interface StaffProgress {
   people: PersonProgress[];
   /** Null when nothing unowned is left. */
   anyone: AnyoneProgress | null;
+  /**
+   * The household's whole day, counted before any row is dropped (Phase 175,
+   * the status line): a finished task nobody is credited with, or one
+   * finished by someone no longer on the roster, belongs to no row above but
+   * was still done today. Carried-over chores aren't the day's own.
+   */
+  day: KindCount;
 }
 
 /**
@@ -269,6 +276,7 @@ export function buildStaffProgress(params: {
   const anyoneCouldnt = unowned.filter((t) => t.state === "couldnt").length;
   return {
     people,
+    day: { done: day.filter((task) => task.state === "done").length, total: day.length },
     anyone:
       unowned.length === 0
         ? null

@@ -1,9 +1,9 @@
 "use client";
 
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useMemo, useRef, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
-import { Bell, CalendarDays, ChevronRight, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Smartphone, Sparkles, Wrench } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, Clock, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Smartphone, Sparkles, Wrench } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,19 +13,22 @@ import { FilterPill } from "@/components/shared/filter-pill";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { MyTasksCard } from "@/components/agenda/my-tasks-card";
 import { FirstRunCard } from "@/components/agenda/first-run-card";
+import { TodayStatus } from "@/components/agenda/today-status";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { OwnerFinishSheet } from "@/components/chores/owner-finish-sheet";
 import { WeekPager } from "@/components/agenda/week-pager";
 import { WeekSummaryView } from "@/components/agenda/week-summary-view";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateRibbon } from "@/components/date-ribbon";
-import { ApprovalQueue } from "@/components/dashboard/approval-queue";
+import { ApprovalQueue, pendingBatches } from "@/components/dashboard/approval-queue";
 import { MedicationCourseAlerts } from "@/components/dashboard/medication-course-alerts";
 import { PetsQuestionCard } from "@/components/dashboard/pets-question-card";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { StaffProgressCard } from "@/components/dashboard/staff-progress-card";
 import { StaffWorkloadSheet } from "@/components/dashboard/staff-workload-sheet";
 import { useStaffProgress } from "@/hooks/use-staff-progress";
+import { ANYONE_PERSON, useWorkloadParam } from "@/hooks/use-staff-workload";
+import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
@@ -46,7 +49,9 @@ import { useStaffClaimsToday } from "@/hooks/use-staff-claims-today";
 import { useSetUpChores, useWrittenOccurrences } from "@/hooks/use-set-up-chores";
 import { useBillPayments } from "@/hooks/use-bill-payments";
 import { isBill, lastAmount, lastTimeLine, paidLine, paymentFor } from "@/lib/bill-payments";
-import { comingUpLabel, comingUpReminders } from "@/lib/chore-reminders";
+import { comingUpLabel, comingUpReminders, comingUpText } from "@/lib/chore-reminders";
+import { dayTotals, slipLabel, slipOwners, slipRow, waitingRows } from "@/lib/today-status";
+import { cn } from "@/lib/utils";
 import { repairsToday, repairsTodayLabel } from "@/lib/repairs";
 import {
   isForgotten,
@@ -128,6 +133,7 @@ export function AgendaTab() {
     memberProfile,
     pendingIds,
     leaveRequests,
+    routineProposals,
   } = useHousehold();
   const householdName = useHouseholdName();
   // "Who lives here?" (Phase 162): with pets off, Today says nothing about
@@ -172,6 +178,9 @@ export function AgendaTab() {
   const myOpen = useMemo(() => mine.find((o) => o.key === myOpenKey) ?? null, [mine, myOpenKey]);
 
   const [range, setRange] = useAgendaRange();
+  // Day's pill sits with the list, Week's on top (Phase 175): a switch made
+  // halfway down the page starts the other view from its top.
+  useScrollTopOnChange(range);
   const week = useAgendaWeek(selectedDate);
 
   const [editing, setEditing] = useState<HouseholdTask | null>(null);
@@ -254,7 +263,7 @@ export function AgendaTab() {
     }
     setConfirmingUndo(null);
     const ok = await undoClaim(staffId);
-    // The roster (Household → Staff) shows the name without a PIN again.
+    // The roster (Settings → Staff) shows the name without a PIN again.
     if (ok) reloadRoster();
     if (ok) {
       toast.success(
@@ -393,6 +402,56 @@ export function AgendaTab() {
     startTransition(() => pushInPlace(menuHref));
   }
 
+  // What waits for this owner (Phase 175, plan section 3): the rows of the
+  // "Waiting for you" group, counted for its heading and the status line.
+  const approvalCount = useMemo(() => pendingBatches(routineProposals).length, [routineProposals]);
+  // Medicine alerts remember what was dismissed on this phone, so the
+  // component reports how many it shows.
+  const [medicineCount, setMedicineCount] = useState(0);
+  const workload = useWorkloadParam();
+  // The late row leads to the work it counts (Codex, PR #105): one person's
+  // day when it is all theirs, else the progress card, where each person
+  // with something late is one tap away.
+  const progressCard = useRef<HTMLDivElement>(null);
+  const lateOwners = useMemo(
+    () => slipOwners(showsToday ? progress : null, ANYONE_PERSON),
+    [showsToday, progress]
+  );
+  function openSlipped() {
+    if (lateOwners.length === 1) {
+      workload.openPerson(lateOwners[0]);
+      return;
+    }
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    progressCard.current?.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
+  }
+  // Late and couldn't-do are about now: only while Today shows today.
+  const totals = useMemo(() => dayTotals(showsToday ? progress : null), [showsToday, progress]);
+  const slip = slipRow({ notDone: notDoneCount, late: totals.late, couldnt: totals.couldnt });
+  const waiting = waitingRows({
+    approvals: approvalCount,
+    medicine: medicineCount,
+    late: totals.late,
+    couldnt: totals.couldnt,
+    notDone: notDoneCount,
+    repairsToReview: repairLines.toReview,
+    repairsToCheck: repairLines.toCheck,
+    foodNeedsDate: needsDate,
+  });
+  // The status line: today only, and never with the Set up card, which is
+  // the whole page for a home that hasn't started. Whether the card shows is
+  // useFirstRun's to say (it reads whether a chore was ever finished, on
+  // any date; the chores loaded here are only the days around this one),
+  // so the line waits until that is settled (Codex, PR #105).
+  const showStatus =
+    showsToday &&
+    firstRun.ready &&
+    firstRun.view !== "checklist" &&
+    progress !== null &&
+    (totals.total > 0 || waiting > 0);
+  const waitingLines = slip !== null || repairLines.toReview > 0 || repairLines.toCheck > 0 || needsDate > 0;
+  const comingLines = comingUp.length > 0 || !!menuLine || eatSoon > 0 || toBuy > 0;
+
   function switchToFood(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;
     event.preventDefault();
@@ -474,23 +533,33 @@ export function AgendaTab() {
     );
   }
 
+  // Day | Week (Phase 112): which view. On top of the Week view, which is
+  // the whole page; with the list on the Day view (Phase 175), where the
+  // top of the page belongs to what needs the owner.
+  const rangePill = (size: "md" | "sm") => (
+    <SegmentedControl
+      ariaLabel={t("Agenda range", "Rentang agenda")}
+      size={size}
+      segments={[
+        { value: "day", label: t("Day", "Hari") },
+        { value: "week", label: t("Week", "Minggu") },
+      ]}
+      value={range}
+      onChange={setRange}
+    />
+  );
+
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
-      {/* Day | Week (Phase 112): which view. What the view shows is the
-          filter row further down, with the list it narrows (Phase 134). */}
-      <SegmentedControl
-        ariaLabel={t("Agenda range", "Rentang agenda")}
-        segments={[
-          { value: "day", label: t("Day", "Hari") },
-          { value: "week", label: t("Week", "Minggu") },
-        ]}
-        value={range}
-        onChange={setRange}
-      />
+      {range === "week" && rangePill("md")}
 
-      {/* Everything under the toggle fades in afresh when the range changes
-          or Today is tapped (Phase 115) — keyed, so it remounts: the ribbon
-          re-centres and the grid scrolls back to today. */}
+      {/* Everything fades in afresh when the range changes or Today is
+          tapped (Phase 115) — keyed, so it remounts: the ribbon re-centres
+          and the grid scrolls back to today.
+
+          The Day view's order (Phase 175, plan section 3): the date, the
+          status line, what waits for the owner, their own tasks, how each
+          person is doing, what's coming, then the day's list. */}
       <div
         key={`${range}|${todayJumps}`}
         className="flex animate-view-fade flex-col gap-4 motion-reduce:animate-none"
@@ -517,27 +586,9 @@ export function AgendaTab() {
           />
         )}
 
-        {/* A pending proposal is the only thing here blocking someone else's
-            work, so it outranks the day itself. Renders nothing when the queue
-            is empty. */}
-        <ApprovalQueue />
-
-        {/* A medicine course ending, ended or never started (Phase 144). Here
-            rather than on the Pets tab because this is the screen the owner
-            opens every day, and a course stops without a word otherwise.
-            Renders nothing when there is nothing to ask. */}
-        <MedicationCourseAlerts />
-
-        {/* Asked once, of a household that never answered and never had a
-            pet (Phase 162, D3). Renders nothing otherwise. */}
-        <PetsQuestionCard />
-
-        {/* Who is on track, at a glance (owners, 11 Nov): above the quiet
-            lines, since it is what Today is opened for in a home with staff.
-            A row opens that person's day in the Who did what sheet. */}
-        {range === "day" && hasStaff && progress && <StaffProgressCard progress={progress} dayLabel={label} />}
-
-        {(linkedToday.length > 0 || !!menuLine || notDoneCount > 0 || comingUp.length > 0 || needsDate > 0 || eatSoon > 0 || toBuy > 0 || repairLines.toReview > 0 || repairLines.toCheck > 0 || (showsToday && hereNow.length > 0)) && (
+        {/* Staff in one go (Phase 172 PR A2): whose phone was linked today.
+            With the Set up card, whose step it finishes. */}
+        {linkedToday.length > 0 && (
           <div className="-my-1 flex flex-col">
             {linkedToday.map(({ staffId, name }) => (
               <div key={staffId} className="flex min-h-11 items-center gap-2 px-1 text-sm text-gray-700">
@@ -555,150 +606,137 @@ export function AgendaTab() {
                 </button>
               </div>
             ))}
-            {showsToday &&
-              hereNow.map((visit) => {
-                const repair = repairs.find((r) => r.id === visit.repair_id);
-                return (
-                  <Link
-                    key={visit.id}
-                    href={repairsHref}
-                    scroll={false}
-                    onClick={switchToRepairs}
-                    data-testid="walkin-today-line"
-                    className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
-                  >
-                    <HardHat className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                    <span className="min-w-0 flex-1 truncate">
-                      {walkInTodayLine(visit, repair?.title ?? "", repair ? roomName(repair.location_id, null) : null, locale)}
-                    </span>
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  </Link>
-                );
-              })}
-            {notDoneCount > 0 && (
-              <button
-                type="button"
-                onClick={openSummary}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-left text-sm text-gray-700 active:bg-muted"
-              >
-                <Moon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="min-w-0 flex-1">
-                  {t(`${notDoneCount} not done today`, `${notDoneCount} belum selesai hari ini`)}
-                </span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              </button>
-            )}
-            {comingUp.length > 0 && (
-              <button
-                type="button"
-                onClick={showComingUp}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-left text-sm font-medium text-amber-800 active:bg-muted"
-              >
-                <Bell className="size-4 shrink-0 text-amber-700" aria-hidden />
-                <span className="min-w-0 flex-1">{comingUpLabel(comingUp, todayKey, locale)}</span>
-                <ChevronRight className="size-4 shrink-0 text-amber-700" aria-hidden />
-              </button>
-            )}
-            {repairLines.toReview > 0 && (
-              <Link
-                href={repairsHref}
-                scroll={false}
-                onClick={switchToRepairs}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-amber-800 active:bg-muted"
-              >
-                <Wrench className="size-4 shrink-0 text-amber-700" />
-                <span className="flex-1">{repairsTodayLabel("review", repairLines.toReview, locale)}</span>
-                <ChevronRight className="size-4 shrink-0 text-amber-700" />
-              </Link>
-            )}
-            {repairLines.toCheck > 0 && (
-              <Link
-                href={repairsHref}
-                scroll={false}
-                onClick={switchToRepairs}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
-              >
-                <Wrench className="size-4 shrink-0 text-muted-foreground" />
-                <span className="flex-1">{repairsTodayLabel("check", repairLines.toCheck, locale)}</span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              </Link>
-            )}
-            {needsDate > 0 && (
-              <Link
-                href={moduleHref("inventory")}
-                scroll={false}
-                onClick={switchToFood}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-amber-800 active:bg-muted"
-              >
-                <CookingPot className="size-4 shrink-0 text-amber-700" />
-                <span className="flex-1">{needsDateLabel(needsDate, locale)}</span>
-                <ChevronRight className="size-4 shrink-0 text-amber-700" />
-              </Link>
-            )}
-            {menuLine && (
-              <Link
-                href={menuHref}
-                scroll={false}
-                onClick={switchToMenu}
-                data-testid="menu-today-line"
-                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
-              >
-                <UtensilsCrossed className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="min-w-0 flex-1 truncate">{menuLine}</span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              </Link>
-            )}
-            {eatSoon > 0 && (
-              <Link
-                href={moduleHref("inventory")}
-                scroll={false}
-                onClick={switchToFood}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
-              >
-                <CookingPot className="size-4 shrink-0 text-muted-foreground" />
-                <span className="flex-1">{eatSoonLabel(eatSoon, locale)}</span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              </Link>
-            )}
-
-            {toBuy > 0 && (
-              <Link
-                href={toBuyHref}
-                scroll={false}
-                onClick={switchToShopping}
-                className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
-              >
-                <ShoppingBasket className="size-4 shrink-0 text-muted-foreground" />
-                <span className="flex-1">
-                  {t(
-                    `${toBuy} thing${toBuy === 1 ? "" : "s"} to buy`,
-                    `${toBuy} barang perlu dibeli`
-                  )}
-                </span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              </Link>
-            )}
           </div>
         )}
 
+        {/* The one line an owner reads first (Phase 175): "All on track", or
+            how many rows wait below. A tap opens Who did what in a home
+            with staff. */}
+        {showStatus && (
+          <TodayStatus waiting={waiting} totals={totals} onPress={hasStaff ? () => workload.open() : undefined} />
+        )}
+
+        {/* Asked once, of a household that never answered and never had a
+            pet (Phase 162, D3). Renders nothing otherwise. */}
+        <PetsQuestionCard />
+
+        {/* Waiting for you (Phase 175): everything that needs this owner,
+            in one group, counted in its heading. Empty, the whole group is
+            gone. The two cards are always mounted, since each renders
+            nothing by itself when it has nothing to ask. */}
+        <section
+          aria-label={t("Waiting for you", "Menunggu Anda")}
+          data-testid="waiting-for-you"
+          className="flex flex-col gap-2 empty:hidden"
+        >
+          {waiting > 0 && (
+            <h2 className="text-sm font-semibold text-amber-900">
+              {t("Waiting for you", "Menunggu Anda")}{" "}
+              <span className="font-medium text-amber-700/80 tabular-nums">({waiting})</span>
+            </h2>
+          )}
+
+          {/* A pending proposal blocks someone else's work, so it leads. */}
+          <ApprovalQueue heading={false} />
+
+          {/* A medicine course ending, ended or never started (Phase 144).
+              Here rather than on the Pets tab because this is the screen the
+              owner opens every day, and a course stops without a word
+              otherwise. */}
+          <MedicationCourseAlerts onCount={setMedicineCount} />
+
+          {waitingLines && (
+            <div className="-my-1 flex flex-col">
+              {/* What slipped today. After the summary hour the evening line
+                  says it (Phase 165); before, what is late or couldn't be
+                  done. Never both: they are the same tasks. */}
+              {slip === "evening" && (
+                <button
+                  type="button"
+                  onClick={openSummary}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-left text-sm text-gray-700 active:bg-muted"
+                >
+                  <Moon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    {t(`${notDoneCount} not done today`, `${notDoneCount} belum selesai hari ini`)}
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </button>
+              )}
+              {slip === "late" &&
+                (hasStaff ? (
+                  <button
+                    type="button"
+                    onClick={openSlipped}
+                    data-testid="late-line"
+                    className={cn(
+                      "flex min-h-11 items-center gap-2 rounded-xl px-1 text-left text-sm font-medium active:bg-muted",
+                      totals.late > 0 ? "text-red-700" : "text-amber-800"
+                    )}
+                  >
+                    <Clock className="size-4 shrink-0" aria-hidden />
+                    <span className="min-w-0 flex-1">{slipLabel(totals, locale)}</span>
+                    <ChevronRight className="size-4 shrink-0" aria-hidden />
+                  </button>
+                ) : (
+                  // No staff, so no Who did what behind it: the rows are in the list below.
+                  <p
+                    data-testid="late-line"
+                    className={cn(
+                      "flex min-h-11 items-center gap-2 px-1 text-sm font-medium",
+                      totals.late > 0 ? "text-red-700" : "text-amber-800"
+                    )}
+                  >
+                    <Clock className="size-4 shrink-0" aria-hidden />
+                    <span className="min-w-0 flex-1">{slipLabel(totals, locale)}</span>
+                  </p>
+                ))}
+              {/* Repairs (Phase 159): staff reports to review. Normal staff
+                  reports land here rather than as a push (D6). */}
+              {repairLines.toReview > 0 && (
+                <Link
+                  href={repairsHref}
+                  scroll={false}
+                  onClick={switchToRepairs}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-amber-800 active:bg-muted"
+                >
+                  <Wrench className="size-4 shrink-0 text-amber-700" />
+                  <span className="flex-1">{repairsTodayLabel("review", repairLines.toReview, locale)}</span>
+                  <ChevronRight className="size-4 shrink-0 text-amber-700" />
+                </Link>
+              )}
+              {/* Staff answered "don't know" for a date (Phase 156). */}
+              {needsDate > 0 && (
+                <Link
+                  href={moduleHref("inventory")}
+                  scroll={false}
+                  onClick={switchToFood}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-amber-800 active:bg-muted"
+                >
+                  <CookingPot className="size-4 shrink-0 text-amber-700" />
+                  <span className="flex-1">{needsDateLabel(needsDate, locale)}</span>
+                  <ChevronRight className="size-4 shrink-0 text-amber-700" />
+                </Link>
+              )}
+              {/* Repair work done, photos to check. */}
+              {repairLines.toCheck > 0 && (
+                <Link
+                  href={repairsHref}
+                  scroll={false}
+                  onClick={switchToRepairs}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+                >
+                  <Wrench className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="flex-1">{repairsTodayLabel("check", repairLines.toCheck, locale)}</span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                </Link>
+              )}
+            </div>
+          )}
+        </section>
 
         {/* My tasks (Phase 163): below what waits on a decision, above the
             household's day. Renders nothing on a day with none of mine. */}
-        {/* Its tutorial, only for an admin who has a chore of their own (D5). */}
-        {range === "day" && hasOwnChores && <WhatsNewCard id="my-tasks-2026-11" />}
-        {/* Marking a bill paid (Phase 164 PR B): for an admin with a bill of their own. */}
-        {range === "day" && mine.some((o) => isBill(o.task)) && <WhatsNewCard id="bill-payments-2026-11" />}
-        {/* Couldn't-do and the evening summary (Phase 165, D10): for homes with staff. */}
-        {range === "day" && (allProfiles ?? []).some((p) => !p.user_id && !p.archived_at) && (
-          <WhatsNewCard id="couldnt-do-2026-11" />
-        )}
-        {/* Bills and upkeep (Phase 164, D9): Show me opens the checklist on Chores. */}
-        {range === "day" && (
-          <WhatsNewCard
-            id="bills-2026-11"
-            onTry={() => startTransition(() => pushInPlace(`${moduleHref("chores")}&bills=open`))}
-          />
-        )}
         {range === "day" && (
           <MyTasksCard
             billLine={(occurrence, done) =>
@@ -727,11 +765,115 @@ export function AgendaTab() {
           />
         )}
 
+        {/* Who is on track, at a glance (owners, 11 Nov): what Today is
+            opened for in a home with staff. A row opens that person's day
+            in the Who did what sheet. */}
+        {range === "day" && hasStaff && progress && (
+          // scroll-mt: the late row scrolls here, clear of the sticky header.
+          <div ref={progressCard} className="scroll-mt-24 empty:hidden">
+            <StaffProgressCard progress={progress} dayLabel={label} />
+          </div>
+        )}
+
+        {/* Someone working in the house now (Phase 174), under the people
+            it keeps busy: "Pak Budi is here · Leaking tap, LT2". */}
+        {showsToday && hereNow.length > 0 && (
+          <div className="-my-1 flex flex-col">
+            {hereNow.map((visit) => {
+              const repair = repairs.find((r) => r.id === visit.repair_id);
+              return (
+                <Link
+                  key={visit.id}
+                  href={repairsHref}
+                  scroll={false}
+                  onClick={switchToRepairs}
+                  data-testid="walkin-today-line"
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+                >
+                  <HardHat className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">
+                    {walkInTodayLine(visit, repair?.title ?? "", repair ? roomName(repair.location_id, null) : null, locale)}
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Coming up (Phase 175): the next few days and the kitchen's quiet
+            lines, in one calm group. Nothing here waits on a decision. */}
+        {comingLines && (
+          <section aria-label={t("Coming up", "Segera")} data-testid="coming-up" className="flex flex-col gap-1">
+            <h2 className="text-sm font-semibold text-gray-900">{t("Coming up", "Segera")}</h2>
+            <div className="-my-1 flex flex-col">
+              {/* Bills and upkeep inside their reminder window (Phase 164).
+                  Named in full for screen readers; the heading is the lead
+                  for the eye. */}
+              {comingUp.length > 0 && (
+                <button
+                  type="button"
+                  onClick={showComingUp}
+                  aria-label={comingUpLabel(comingUp, todayKey, locale)}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-left text-sm text-gray-700 active:bg-muted"
+                >
+                  <Bell className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="min-w-0 flex-1">{comingUpText(comingUp, todayKey, locale)}</span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </button>
+              )}
+              {menuLine && (
+                <Link
+                  href={menuHref}
+                  scroll={false}
+                  onClick={switchToMenu}
+                  data-testid="menu-today-line"
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+                >
+                  <UtensilsCrossed className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{menuLine}</span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              )}
+              {eatSoon > 0 && (
+                <Link
+                  href={moduleHref("inventory")}
+                  scroll={false}
+                  onClick={switchToFood}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+                >
+                  <CookingPot className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="flex-1">{eatSoonLabel(eatSoon, locale)}</span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                </Link>
+              )}
+              {toBuy > 0 && (
+                <Link
+                  href={toBuyHref}
+                  scroll={false}
+                  onClick={switchToShopping}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-gray-700 active:bg-muted"
+                >
+                  <ShoppingBasket className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="flex-1">
+                    {t(
+                      `${toBuy} thing${toBuy === 1 ? "" : "s"} to buy`,
+                      `${toBuy} barang perlu dibeli`
+                    )}
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
+
         {range === "day" ? (
           <>
-            <h2 className="text-sm font-semibold text-gray-900">
-              {label}
-            </h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-gray-900">{label}</h2>
+              {rangePill("sm")}
+            </div>
             {/* Under the heading, as the Pets tab's photo filters sit under
                 theirs (Phase 134). Not on an empty day — unless a filter is
                 on, which must stay reachable to be turned off. */}
@@ -892,6 +1034,23 @@ export function AgendaTab() {
               />
             </div>
           </>
+        )}
+
+        {/* What's new (one a week at most, never for a new home): under the
+            day since Phase 175, so a tutorial never sits above what needs
+            the owner. */}
+        {/* My tasks' tutorial, only for an admin who has a chore of their own (D5). */}
+        {range === "day" && hasOwnChores && <WhatsNewCard id="my-tasks-2026-11" />}
+        {/* Marking a bill paid (Phase 164 PR B): for an admin with a bill of their own. */}
+        {range === "day" && mine.some((o) => isBill(o.task)) && <WhatsNewCard id="bill-payments-2026-11" />}
+        {/* Couldn't-do and the evening summary (Phase 165, D10): for homes with staff. */}
+        {range === "day" && hasStaff && <WhatsNewCard id="couldnt-do-2026-11" />}
+        {/* Bills and upkeep (Phase 164, D9): Show me opens the checklist on Home (was Chores). */}
+        {range === "day" && (
+          <WhatsNewCard
+            id="bills-2026-11"
+            onTry={() => startTransition(() => pushInPlace(`${moduleHref("chores")}&bills=open`))}
+          />
         )}
       </div>
 

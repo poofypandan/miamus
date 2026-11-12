@@ -81,7 +81,17 @@ function shortDate(key: string, locale: "en" | "id"): string {
  *
  * Owner-facing: English or Bahasa Indonesia, as the owner chose (Phase 149).
  */
-export function MedicationCourseAlerts() {
+export function MedicationCourseAlerts({
+  onCount,
+}: {
+  /**
+   * Told how many alerts are showing, whenever that changes (Phase 175):
+   * Today counts them among the rows waiting for the owner. What has been
+   * dismissed is remembered here, on this phone, so the count is this
+   * component's to give.
+   */
+  onCount?: (count: number) => void;
+} = {}) {
   const { schedules, pets } = useHousehold();
   const today = formatDateLocal(useToday());
   const { dismissed, dismiss } = useDismissed();
@@ -96,6 +106,11 @@ export function MedicationCourseAlerts() {
       ),
     [schedules, pets, today, dismissed]
   );
+
+  const count = alerts.length;
+  useEffect(() => {
+    onCount?.(count);
+  }, [count, onCount]);
 
   if (alerts.length === 0) return null;
 
