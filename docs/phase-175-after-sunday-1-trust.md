@@ -250,12 +250,17 @@ functions forward. Instead **the policy lives in one function**:
 
 - `queue_owner_push` is **re-created from its newest definition, same
   signature**. For each owner with a device it now:
-  1. skips the owner if the tag's kind is in their `push_kinds_off`;
-  2. if the tag is not urgent and it is 22.30 to 06.00 in Jakarta, writes
-     the push to `owner_push_held` instead of sending it;
-  3. otherwise sends it as today.
+  1. if the tag is **urgent**, sends it as today, whatever the owner
+     switched off and whatever the hour (a sick pet reaches an owner who
+     turned Pets off);
+  2. otherwise skips the owner if the tag's kind is in their
+     `push_kinds_off`;
+  3. otherwise, if it is 22.30 to 06.00 in Jakarta, writes the push to
+     `owner_push_held` instead of sending it;
+  4. otherwise sends it as today.
 - `queue_staff_request_push` (139) and `queue_repair_visit_push` (152) get
-  step 2 only (they have their own switches).
+  step 3 only (they have their own switches, and neither sends anything
+  urgent).
 - A sender that already stays silent at night by its own rule (the repair
   pushes from 21.00, routine alerts after 22.30) keeps that rule: it never
   reaches these functions at those hours, and this version does not change
