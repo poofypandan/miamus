@@ -111,3 +111,53 @@ test("Bahasa Indonesia: the same switches; Repairs and Pet routines only while t
   // No English anywhere in the dialog.
   await expect(syam).not.toContainText(/Chores|Kitchen|Repairs|Nobody|sees/);
 });
+
+test("Undo reverses only its own switch, and a slow save never lands on someone else (Codex, #131)", async ({ context, page }) => {
+  const staff = roster();
+  await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true }, features: { repairs: true } });
+  await page.goto("/dashboard?module=access&page=staff");
+  await expect(page.getByRole("button", { name: "Add Person" })).toBeVisible({ timeout: 20_000 });
+
+  // Kitchen off, then Repairs off; Undo on the Kitchen toast brings back
+  // only Kitchen.
+  await page.getByRole("button", { name: "What Ari sees" }).click();
+  const ari = page.getByRole("dialog", { name: "What Ari sees" });
+  await ari.getByRole("switch", { name: "Kitchen" }).click();
+  await expect(page.getByText("Kitchen off for Ari")).toBeVisible();
+  await ari.getByRole("switch", { name: "Repairs" }).click();
+  await expect(page.getByText("Repairs off for Ari")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(ari).toHaveCount(0);
+  // Toasts stack; hovering fans them out so the older one can be reached.
+  await page.locator("[data-sonner-toast]", { hasText: "Repairs off for Ari" }).hover();
+  await page
+    .locator("[data-sonner-toast]", { hasText: "Kitchen off for Ari" })
+    .getByRole("button", { name: "Undo" })
+    .click();
+  await expect.poll(() => staff.find((p) => p.id === STAFF_ID)?.hidden_areas).toEqual(["repairs"]);
+  await page.getByRole("button", { name: "What Ari sees" }).click();
+  await expect(ari.getByRole("switch", { name: "Kitchen" })).toHaveAttribute("aria-checked", "true");
+  await expect(ari.getByRole("switch", { name: "Repairs" })).toHaveAttribute("aria-checked", "false");
+
+  // A slow save for Ari finishes while Syam's dialog is open: Syam's
+  // switches stay his own.
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route("**/rest/v1/staff_profiles*", async (route) => {
+    if (route.request().method() === "PATCH") await held;
+    await route.fallback();
+  });
+  await ari.getByRole("switch", { name: "Chores for anyone" }).click();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "What Syam sees" }).click();
+  const syam = page.getByRole("dialog", { name: "What Syam sees" });
+  await expect(syam.getByRole("switch", { name: "Pet routines" })).toHaveAttribute("aria-checked", "false");
+  release();
+  await expect.poll(() => staff.find((p) => p.id === STAFF_ID)?.hidden_areas).toEqual(["home", "repairs"]);
+  await expect(syam.getByRole("switch", { name: "Chores for anyone" })).toHaveAttribute("aria-checked", "true");
+  await expect(syam.getByRole("switch", { name: "Repairs" })).toHaveAttribute("aria-checked", "true");
+  await expect(syam.getByRole("switch", { name: "Pet routines" })).toHaveAttribute("aria-checked", "false");
+  // And Syam's own switch still saves Syam's list.
+  await syam.getByRole("switch", { name: "Kitchen" }).click();
+  await expect.poll(() => staff.find((p) => p.id === SYAM)?.hidden_areas).toEqual(["pets", "kitchen"]);
+});

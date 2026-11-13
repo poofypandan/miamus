@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Eye, Loader2 } from "lucide-react";
 import {
@@ -91,13 +91,26 @@ export function StaffAreasDialog({
   const switches = useStaffAreaSwitches();
   const { leaveRequests } = useHousehold();
   const today = formatDateLocal(useToday());
-  // What is hidden for this person, as last saved from here; the roster
-  // catches up on reload.
+  // What is hidden for the person whose dialog is open, as last saved from
+  // here; the roster catches up on reload.
   const [hidden, setHidden] = useState<StaffArea[]>([]);
-  const [busy, setBusy] = useState<StaffArea | null>(null);
+  // A save in flight, and for whom: switches lock only for that person.
+  const [busy, setBusy] = useState<{ id: string; area: StaffArea } | null>(null);
+  // Who is open now, for completions that land after the dialog moved on
+  // (Codex, PR #131): a slow save for Ari must never repaint Syam's switches.
+  const openId = useRef<string | null>(null);
+  // Each person's list as last saved from this dialog, so a toast's Undo
+  // reverses only its own area against the latest state, open or not.
+  const saved = useRef(new Map<string, StaffArea[]>());
 
   useEffect(() => {
-    setHidden(hiddenAreasOf(profile));
+    openId.current = profile?.id ?? null;
+    if (!profile) return;
+    // What this dialog saved last wins over the row it was opened from,
+    // which may predate the reload that save started.
+    const fresh = saved.current.get(profile.id) ?? hiddenAreasOf(profile);
+    saved.current.set(profile.id, fresh);
+    setHidden(fresh);
     // Re-read only when the dialog opens on someone else: a reload after a
     // save must not flash the switch back.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,43 +125,41 @@ export function StaffAreasDialog({
     (area) => switches.includes(area) && areaHasNobody(area, roster, leaveRequests, today)
   );
 
-  async function save(person: StaffProfile, next: StaffArea[]): Promise<boolean> {
+  /** Shows (`visible`) or hides one area for one person, on top of their latest list. */
+  async function setArea(person: StaffProfile, area: StaffArea, visible: boolean): Promise<boolean> {
+    const base = saved.current.get(person.id) ?? hiddenAreasOf(person);
+    const next = withArea(base, area, visible);
     try {
       await dataProvider.setStaffHiddenAreas(person.id, next);
-      return true;
     } catch (err) {
       console.error(err);
       toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
       return false;
     }
+    saved.current.set(person.id, next);
+    if (openId.current === person.id) setHidden(next);
+    void reload();
+    return true;
   }
 
   async function toggle(area: StaffArea) {
-    if (!profile || busy) return;
+    if (!profile || busy?.id === profile.id) return;
     const person = profile;
-    const before = hidden;
-    const on = before.includes(area);
-    const next = withArea(before, area, on);
-    setBusy(area);
-    const saved = await save(person, next);
-    setBusy(null);
-    if (!saved) return;
-    setHidden(next);
-    void reload();
+    const visible = hidden.includes(area);
+    setBusy({ id: person.id, area });
+    const ok = await setArea(person, area, visible);
+    setBusy((current) => (current?.id === person.id && current.area === area ? null : current));
+    if (!ok) return;
     const name = areaLabel(area, t);
     toast.success(
-      on
+      visible
         ? t(`${name} on for ${person.name}`, `${name} aktif untuk ${person.name}`)
         : t(`${name} off for ${person.name}`, `${name} dimatikan untuk ${person.name}`),
       {
         action: {
           label: t("Undo", "Batalkan"),
           onClick: () => {
-            void save(person, before).then((ok) => {
-              if (!ok) return;
-              setHidden((current) => (current === next ? before : current));
-              void reload();
-            });
+            void setArea(person, area, !visible);
           },
         },
       }
@@ -186,9 +197,9 @@ export function StaffAreasDialog({
                 <Switch
                   on={on}
                   label={label}
-                  disabled={busy !== null}
+                  disabled={!!profile && busy?.id === profile.id}
                   onToggle={() => void toggle(area)}
-                  busy={busy === area ? <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" /> : undefined}
+                  busy={busy?.id === profile?.id && busy?.area === area ? <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" /> : undefined}
                 />
               </div>
             );
