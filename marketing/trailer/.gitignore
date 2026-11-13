@@ -1,0 +1,5 @@
+node_modules/
+out/
+review/*.png
+public/shots/
+.remotion/
