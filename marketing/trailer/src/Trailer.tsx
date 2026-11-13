@@ -449,7 +449,7 @@ function Shot7Short({ dir }: { dir: string }) {
   const camera = useCamera([
     { at: 0, scale: 1, fy: 180 },
     { at: 12, scale: 1, fy: 180 },
-    { at: 40, scale: 1.35, fy: 180, ty: liftFor(180) * 0.4 },
+    { at: 40, scale: 1.25, fy: 180, ty: -60 },
   ]);
   return (
     <Phone x={slide.x} opacity={slide.opacity} camera={camera}>

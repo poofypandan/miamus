@@ -1,7 +1,8 @@
 # Miamus trailer
 
 A 60-second and a 15-second vertical trailer (1080 × 1920, 30 fps), in
-Bahasa Indonesia and English, made from real app screens. The storyboard is
+English (the primary version, owner 13 Nov) and Bahasa Indonesia, made from
+real app screens. Staff screens stay Indonesian in both. The storyboard is
 the design lead's (private: `docs/private/marketing/trailer-storyboard-2026-11-14.md`).
 
 It lives apart from the app: its own `package.json` and lockfile, nothing
@@ -24,7 +25,9 @@ added to the app's dependencies, no app code changed.
    - Photos are drawn in `capture/photos.ts` (soft illustrations of a terrace,
      rooms, a bowl, a tap), not photographed and not stock.
    - Nothing real is reached: the stub aborts any supabase.co request.
-2. **Compose** (`src/`, Remotion): the stills in a plain phone outline on a
+2. **Compose** (`src/`, Remotion; every timing in `src/timeline.ts`, on an
+   86 BPM grid so music drops in on the beat; all words in `src/copy.ts`, the
+   end-card lines at the top as `END_LINES`): the stills in a plain phone outline on a
    soft background, with typing, cards, tap circles, a shutter flash, two
    notification cards drawn in the app's own style (not a phone maker's lock
    screen), captions in the safe area, the end card.
@@ -39,6 +42,7 @@ From `marketing/trailer/`:
     npm run render -- --only=trailer-60-id
     npm run render -- --music=music/track.mp3
     npm run studio                     # preview and scrub in the browser
+    npm run cues                       # rewrite public/music/cue-sheet.md from the timeline
 
 `npm run capture` needs the app built against the stub host first (from the
 repo root):
@@ -54,16 +58,16 @@ Rendering reuses the headless Chromium that the repo's Playwright installed
 
 ## Outputs
 
-- `out/miamus-60-id-nomusic.mp4`, `out/miamus-60-en-nomusic.mp4`,
-  `out/miamus-15-id-nomusic.mp4`, `out/miamus-15-en-nomusic.mp4`
+- `out/miamus-60-en-nomusic.mp4` (primary), `out/miamus-60-id-nomusic.mp4`,
+  `out/miamus-15-en-nomusic.mp4`, `out/miamus-15-id-nomusic.mp4`
 - `review/*.png`: key frames for review.
 
 Both folders are git-ignored.
 
 ## What is not here yet
 
-- **Music:** none licensed. See `public/music/README.md` (the music slot, the
-  ducking under shot 8, and the sound-effect cue sheet).
+- **Music:** none licensed. See `public/music/README.md` (the slot and the
+  brief) and `public/music/cue-sheet.md` (the arc, cuts and sound effects).
 - **Real phone clips:** the storyboard's lock screens are replaced by plain
   notification cards; real recordings can be cut in later.
 - **The "Tambah" button** in the storyboard is "Sudah benar" / "Simpan" /

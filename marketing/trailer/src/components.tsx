@@ -22,6 +22,8 @@ export const PHONE_W = SCREEN_W + BEZEL * 2;
 export const PHONE_H = SCREEN_H + BEZEL * 2;
 export const PHONE_TOP = 236;
 export const PHONE_LEFT = CX - PHONE_W / 2;
+/** Where the caption panel starts (under the phone at rest). */
+export const CAPTION_TOP = PHONE_TOP + PHONE_H + 22;
 /** Where a CSS point of the app lands on the frame (phone at rest). */
 export function onFrame(x: number, y: number) {
   return { x: PHONE_LEFT + BEZEL + x * K, y: PHONE_TOP + BEZEL + INSET_TOP + y * K };
@@ -128,7 +130,13 @@ export function Phone({
 }) {
   const ox = BEZEL + camera.fx * K;
   const oy = BEZEL + INSET_TOP + camera.fy * K;
+  // Zoomed in, the phone's lower edge fades into the background above the
+  // caption, so a caption never sits on the app's own white screen.
+  const z = Math.max(0, Math.min(1, (camera.scale - 1) / 0.12));
+  const capTop = CAPTION_TOP - 6;
+  const mask = z > 0 ? `linear-gradient(to bottom, #000 0px, #000 ${capTop - 70}px, rgba(0,0,0,${1 - z}) ${capTop}px)` : undefined;
   return (
+    <AbsoluteFill style={mask ? { WebkitMaskImage: mask, maskImage: mask } : undefined}>
     <div
       style={{
         position: "absolute",
@@ -167,6 +175,7 @@ export function Phone({
         {overlay}
       </div>
     </div>
+    </AbsoluteFill>
   );
 }
 
@@ -236,7 +245,7 @@ export function Caption({
         position: "absolute",
         left: SAFE.left,
         width: SAFE.right - SAFE.left,
-        top: PHONE_TOP + PHONE_H + 22,
+        top: CAPTION_TOP,
         display: "flex",
         justifyContent: "center",
         opacity: o,
@@ -248,7 +257,10 @@ export function Caption({
           maxWidth: 820,
           padding: "20px 30px 22px",
           borderRadius: 28,
-          background: "rgba(255,255,255,0.94)",
+          // Warm off-white with a hairline edge: it stays apart from the app's
+          // white screen when a zoomed phone passes behind it.
+          background: "rgba(247,245,241,0.97)",
+          border: "1.5px solid rgba(23,23,23,0.09)",
           fontFamily: FONT,
           textAlign: "center",
           color: C.ink,
