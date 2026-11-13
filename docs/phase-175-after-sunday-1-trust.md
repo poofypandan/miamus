@@ -466,7 +466,7 @@ needs it.
 
 - **SQL 157:** a staff phone marks its own person; it cannot mark a person
   of another household, an archived person or an owner's roster row; an
-  owner's session marking does nothing; `staff_app_today` refuses a staff
+  owner's session cannot mark anyone; `staff_app_today` refuses a staff
   phone and returns no timestamp; `anon` can execute neither; the job
   pushes once for a quiet person with a late task and not again that day,
   never for someone on leave, never before 10.00, never without a late task;
