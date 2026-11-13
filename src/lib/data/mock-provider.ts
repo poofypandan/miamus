@@ -1,5 +1,6 @@
 import { ChoreAlreadySettledError } from "@/lib/chore-settled";
-import { applyAmountRules, convertAmount } from "@/lib/kitchen-units";
+import { applyAmountRules } from "@/lib/kitchen-units";
+import { applyCook, applyUncook, applyUsesChange } from "@/lib/cooked-uses";
 import type { RecipeWithLines } from "@/lib/recipes";
 import { MenuAlreadyCookedError, type KitchenNotes } from "./types";
 
@@ -14,7 +15,7 @@ import type {
   RoutineProposal,
   InventoryItem,
   MenuDish,
-  CookedUse,
+  Recipe,
   FoodItem,
   InventoryAuditWithStaff,
   StaffProfile,
@@ -130,6 +131,18 @@ function loadDB(): MockDB {
 function saveDB(db: MockDB) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+/** A dish and the items cooking (or its Undo, or a change) wrote, back into the demo data. */
+function writeCooking(db: MockDB, index: number, dish: MenuDish, items: InventoryItem[]) {
+  const dishes = db.menuDishes ?? [];
+  dishes[index] = dish;
+  db.menuDishes = dishes;
+  for (const item of items) {
+    const at = db.inventoryItems.findIndex((i) => i.id === item.id);
+    if (at >= 0) db.inventoryItems[at] = item;
+  }
+  saveDB(db);
 }
 
 function uid(prefix: string) {
@@ -677,60 +690,59 @@ export const mockProvider: DataProvider = {
     return delay(undefined);
   },
   async cookMenuDish(id, uses, staffId) {
-    // cook_menu_dish (migrations/153): tracked items only, floored at 0, once.
+    // cook_menu_dish (migrations/153, 156): tracked items only, floored at 0, once.
     const db = loadDB();
     const dishes = db.menuDishes ?? [];
     const index = dishes.findIndex((d) => d.id === id);
     if (index === -1) throw new Error("Dish not found");
     if (dishes[index].cooked_at) throw new MenuAlreadyCookedError();
-    const took: CookedUse[] = [];
-    const items: InventoryItem[] = [];
-    for (const use of uses) {
-      const at = db.inventoryItems.findIndex((i) => i.id === use.item_id);
-      const current = db.inventoryItems[at];
-      if (!current || current.track_amount !== true) throw new Error("item_not_tracked");
-      // In the item's unit now (the server converts or refuses the same way).
-      const amount = use.unit ? convertAmount(use.amount, use.unit, current.unit) : use.amount;
-      if (amount === null) throw new Error("unit_mismatch");
-      const taken = Math.min(current.quantity, amount);
-      if (taken <= 0) continue;
-      const item = applyAmountRules(current, { ...current, quantity: current.quantity - taken, amount_set_by: staffId });
-      db.inventoryItems[at] = item;
-      items.push(item);
-      took.push({ item_id: item.id, amount: taken, unit: item.unit });
-    }
-    const dish: MenuDish = { ...dishes[index], cooked_at: new Date().toISOString(), cooked_by: staffId, cooked_uses: took };
-    dishes[index] = dish;
-    db.menuDishes = dishes;
-    saveDB(db);
-    return delay({ dish, items });
+    const result = applyCook(dishes[index], uses, db.inventoryItems, staffId);
+    writeCooking(db, index, result.dish, result.items);
+    return delay(result);
   },
   async uncookMenuDish(id) {
+    // uncook_menu_dish (migrations/153, 156): what each entry took, and a cleared date.
     const db = loadDB();
     const dishes = db.menuDishes ?? [];
     const index = dishes.findIndex((d) => d.id === id);
     if (index === -1) throw new Error("Dish not found");
-    const items: InventoryItem[] = [];
-    const skipped: CookedUse[] = [];
-    for (const use of dishes[index].cooked_uses ?? []) {
-      const at = db.inventoryItems.findIndex((i) => i.id === use.item_id);
-      const current = db.inventoryItems[at];
-      if (!current || current.track_amount !== true) continue;
-      // Converted if the unit changed since; skipped when it no longer converts.
-      const back = use.unit ? convertAmount(use.amount, use.unit, current.unit) : use.amount;
-      if (back === null) {
-        skipped.push(use);
-        continue;
-      }
-      const item = applyAmountRules(current, { ...current, quantity: current.quantity + back });
-      db.inventoryItems[at] = item;
-      items.push(item);
-    }
-    const dish: MenuDish = { ...dishes[index], cooked_at: null, cooked_by: null, cooked_uses: null };
-    dishes[index] = dish;
-    db.menuDishes = dishes;
+    const result = applyUncook(dishes[index], db.inventoryItems);
+    writeCooking(db, index, result.dish, result.items);
+    return delay(result);
+  },
+  async changeCookedUses(id, uses, staffId, was) {
+    // change_cooked_uses (migrations/156): only the difference reaches the stock.
+    const db = loadDB();
+    const dishes = db.menuDishes ?? [];
+    const index = dishes.findIndex((d) => d.id === id);
+    if (index === -1) throw new Error("Dish not found");
+    const result = applyUsesChange(dishes[index], uses, db.inventoryItems, staffId, new Date(), was);
+    writeCooking(db, index, result.dish, result.items);
+    return delay(result);
+  },
+  async listCookedDishes() {
+    const since = new Date(Date.now() - 120 * 86_400_000).toISOString();
+    return delay(
+      (loadDB().menuDishes ?? [])
+        .filter((d) => d.cooked_at && d.cooked_at >= since)
+        .sort((a, b) => (b.cooked_at ?? "").localeCompare(a.cooked_at ?? ""))
+        .slice(0, 300)
+        .map(({ id, recipe_id, cooked_at, cooked_uses }) => ({ id, recipe_id, cooked_at, cooked_uses }))
+    );
+  },
+  async setRecipeHintsOff(recipeId, itemIds) {
+    const db = loadDB();
+    const recipes = db.recipes ?? [];
+    const index = recipes.findIndex((r) => r.id === recipeId);
+    if (index === -1) throw new Error("Recipe not found");
+    // An ordinary update: the recipe's updated_at moves (migrations/151's trigger).
+    const recipe: RecipeWithLines = { ...recipes[index], hints_off: itemIds.slice(0, 200), updated_at: new Date().toISOString() };
+    recipes[index] = recipe;
+    db.recipes = recipes;
     saveDB(db);
-    return delay({ dish, items, skipped });
+    const row: Recipe = { ...recipe };
+    delete (row as Partial<RecipeWithLines>).ingredients;
+    return delay(row);
   },
   async getKitchenNotes() {
     return delay(loadDB().kitchenNotes ?? { text: null, confirmedAt: null });

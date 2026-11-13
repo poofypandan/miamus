@@ -14,6 +14,7 @@ import {
   initialDishLink,
   shortfallReadiness,
   copyLastWeek,
+  changeLines,
   cookLines,
   dishTitle,
   dishesOn,
@@ -208,10 +209,10 @@ describe("cooking: what comes off stock", () => {
   it("lists the tracked lines scaled and summed per item, and the rest as not counted", () => {
     const { counted, uncounted } = cookLines(soto, 6, items, true);
     expect(counted).toEqual([
-      { itemId: "chicken", name: "Ayam", amount: 1.5, unit: "kg", have: 1 },
+      { itemId: "chicken", name: "Ayam", amount: 1.5, planned: 1.5, unit: "kg", have: 1 },
       // 500 g + 250 g for 4 → 750 g + 375 g for 6 = 1,125 kg (375 rounds to the nearest 5)
-      { itemId: "rice", name: "Beras", amount: 1.125, unit: "kg", have: 4 },
-      { itemId: "eggs", name: "Telur", amount: 6, unit: "butir", have: 10 },
+      { itemId: "rice", name: "Beras", amount: 1.125, planned: 1.125, unit: "kg", have: 4 },
+      { itemId: "eggs", name: "Telur", amount: 6, planned: 6, unit: "butir", have: 10 },
     ]);
     // Staff read the Indonesian names of free lines; linked lines read as the item.
     expect(uncounted.map((l) => l.name)).toEqual(["Ayam", "Bawang merah", "Daun jeruk", "Garam"]);
@@ -230,6 +231,23 @@ describe("cooking: what comes off stock", () => {
         { itemId: "c", amount: 0, unit: "g", on: true },
       ])
     ).toEqual([{ item_id: "a", amount: 1.5, unit: "kg" }]);
+  });
+
+  it("sends what the recipe asked for (planned) with each line, when known (migrations/156)", () => {
+    expect(
+      usesFrom([
+        { itemId: "a", amount: 1.8, unit: "kg", on: true, planned: 1.5 },
+        { itemId: "b", amount: 2, unit: "kg", on: true, planned: null },
+        { itemId: "c", amount: 3, unit: "pcs", on: true, planned: 200_000 },
+      ])
+    ).toEqual([
+      { item_id: "a", amount: 1.8, unit: "kg", planned: 1.5 },
+      { item_id: "b", amount: 2, unit: "kg" },
+      { item_id: "c", amount: 3, unit: "pcs", planned: 100_000 },
+    ]);
+    // The confirm sheet's lines keep planned as the recipe's amount while the person taps.
+    const lines = cookLines(soto, 4, items, true).counted.map((l) => ({ ...l, on: true, amount: l.itemId === "chicken" ? 1.2 : l.amount }));
+    expect(usesFrom(lines).find((u) => u.item_id === "chicken")).toEqual({ item_id: "chicken", amount: 1.2, unit: "kg", planned: 1 });
   });
 
   it("cooks for the servings on the stepper, not the dish's (Codex, PR #101)", () => {
@@ -491,5 +509,67 @@ describe("the menu's limits agree with migrations/153", () => {
     expect(sql).toContain("servings between 1 and 50");
     expect(sql).toContain("char_length(notes) <= 200");
     expect(sql).toContain("char_length(kitchen_notes) <= 300");
+  });
+});
+
+describe("change what was used: the sheet's lines (Phase 177, plan 3b)", () => {
+  const cooked = (uses: MenuDish["cooked_uses"], servings: number | null = 4) =>
+    dish({ recipe_id: "soto", servings, cooked_at: "2026-11-11T05:00:00Z", cooked_uses: uses });
+
+  it("ticks what came off at what was said, unticks the recipe's other lines, in the recipe's order", () => {
+    const { lines, uncounted } = changeLines(
+      cooked([
+        { item_id: "eggs", amount: 5, unit: "butir", said: 5, planned: 4 },
+        { item_id: "chicken", amount: 1, unit: "kg", said: 1.4, short: 0.4, planned: 1 },
+      ]),
+      soto,
+      items,
+      false
+    );
+    expect(lines.map((l) => [l.itemId, l.amount, l.on, l.planned])).toEqual([
+      ["chicken", 1.4, true, 1],
+      ["rice", 0.75, false, 0.75], // the cook unticked it: shown at the recipe's amount
+      ["eggs", 5, true, 4],
+    ]);
+    expect(lines[0].have).toBe(1);
+    expect(uncounted.map((l) => l.name)).toContain("Salt");
+  });
+
+  it("reads an entry from before 156 (no said) as its amount, and converts to the item's unit now", () => {
+    const { lines } = changeLines(cooked([{ item_id: "rice", amount: 600, unit: "g" }]), soto, items, false);
+    expect(lines.find((l) => l.itemId === "rice")).toMatchObject({ amount: 0.6, on: true, unit: "kg" });
+  });
+
+  it("an entry unticked in an earlier change (said 0) is an unticked recipe line again", () => {
+    const { lines } = changeLines(cooked([{ item_id: "chicken", amount: 0, unit: "kg", said: 0, short: 0.2 }]), soto, items, false);
+    expect(lines.find((l) => l.itemId === "chicken")).toMatchObject({ amount: 1, on: false });
+  });
+
+  it("keeps an ingredient the recipe no longer lists, after the recipe's lines", () => {
+    const flour = item({ id: "flour", name: "Tepung", quantity: 2, unit: "kg" });
+    const { lines } = changeLines(cooked([{ item_id: "flour", amount: 0.3, unit: "kg", said: 0.3 }]), soto, [...items, flour], false);
+    expect(lines.at(-1)).toMatchObject({ itemId: "flour", name: "Tepung", amount: 0.3, on: true, planned: null, have: 2 });
+  });
+
+  it("hides an entry whose item was deleted, is no longer tracked, or whose unit no longer converts", () => {
+    const { lines } = changeLines(
+      cooked([
+        { item_id: "gone", amount: 1, unit: "kg", said: 1 },
+        { item_id: "shallots", amount: 2, unit: "pcs", said: 2 },
+        { item_id: "rice", amount: 2, unit: "pcs", said: 2 },
+      ]),
+      soto,
+      items,
+      false
+    );
+    // Rice's entry is in pieces now that rice is in kg: not even the recipe's rice line is offered (Codex, PR #124).
+    expect(lines.map((l) => l.itemId)).toEqual(["chicken", "eggs"]);
+    expect(lines.every((l) => !l.on)).toBe(true);
+  });
+
+  it("a dish without a recipe shows only what came off; with nothing, no lines", () => {
+    const plain = dish({ cooked_at: "2026-11-11T05:00:00Z", cooked_uses: [{ item_id: "rice", amount: 0.2, unit: "kg", said: 0.2 }] });
+    expect(changeLines(plain, null, items, true).lines.map((l) => l.itemId)).toEqual(["rice"]);
+    expect(changeLines(dish({ cooked_at: "2026-11-11T05:00:00Z", cooked_uses: [] }), null, items, true).lines).toEqual([]);
   });
 });

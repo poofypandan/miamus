@@ -371,6 +371,18 @@ people are **staf** and **admin**.
 | {name} is already in Ingredients. | **{name} sudah ada di Bahan masakan.** | Phase 176: Add ingredient, the same name typed again (exact names only). |
 | {name} is in Ingredients. Open it there to say where it is or when it expires. | **{name} ada di Bahan masakan. Buka di sana untuk mencatat tempat atau tanggal kedaluwarsanya.** | Phase 176: Add ready-to-eat food, a name that is an ingredient. |
 | Open it | **Buka** | Phase 176: the button beside both lines above. |
+| Change what was used | **Ubah bahan yang dipakai** | Phase 177: the button on a cooked dish, and the sheet's title. Owners and staff. |
+| {dish}. Only the difference is added to or taken off what's at home. | **{dish}. Hanya selisihnya yang ditambah atau dikurangi dari stok di rumah.** | Phase 177: under the sheet's title. |
+| {dish} · ingredients updated | **{dish} · bahan diperbarui** | Phase 177: the toast after saving, with Undo / **Batalkan**. |
+| Changed on another phone. Open it again. | **Sudah diubah di HP lain. Buka lagi.** | Phase 177: toast. "HP", never "ponsel". |
+| This dish was marked not cooked. | **Masakan ini sudah ditandai belum dimasak.** | Phase 177: toast. |
+| A day has passed. Change the amount on the ingredient itself. | **Sudah lewat sehari. Ubah jumlahnya langsung di bahannya.** | Phase 177: toast. |
+| The last 3 times, this used a different amount than the recipe says. | **3 kali terakhir, jumlah yang dipakai berbeda dari resepnya.** | Phase 177: the suggestion card. Owners. |
+| recipe 500 g · used about 600 g | **resep 500 g · dipakai sekitar 600 g** | Phase 177: one line per ingredient on the card. |
+| Update recipe / Keep recipe | **Perbarui resep** / **Biarkan resep** | Phase 177: the card's two buttons. |
+| {recipe} updated | **Resep {recipe} diperbarui** | Phase 177: toast, with Undo / **Batalkan**. |
+| Too late to undo. The owner can mark it not cooked. | **Sudah terlalu lama untuk dibatalkan. Minta pemilik rumah menandainya belum dimasak.** | Phase 177 (audit D1): a staff phone's Undo of cooking more than 10 minutes later. Only owners may mark a dish not cooked after that. |
+| Recipe kept. Miamus won't suggest this again. | **Resep tidak diubah. Miamus tidak akan menyarankan ini lagi.** | Phase 177: toast after Keep recipe. |
 
 ## Formatting
 

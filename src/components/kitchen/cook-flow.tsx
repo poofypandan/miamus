@@ -11,6 +11,7 @@ import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useRecipes } from "@/hooks/use-recipes";
+import { CookingRuleError } from "@/lib/cooked-uses";
 import { MenuAlreadyCookedError } from "@/lib/data/types";
 import { clean, friendlyAmount } from "@/lib/kitchen-units";
 import {
@@ -119,6 +120,16 @@ export function useCookFlow(
       }
       toast.success(tr(`Not cooked — ${title}`, `Dibatalkan — ${title}`));
     } catch (err) {
+      if (err instanceof CookingRuleError && err.code === "too_late") {
+        // Audit D1: a staff phone may Undo only shortly after cooking.
+        toast.error(
+          tr(
+            "Too late to undo. The owner can mark it not cooked.",
+            "Sudah terlalu lama untuk dibatalkan. Minta pemilik rumah menandainya belum dimasak."
+          )
+        );
+        return;
+      }
       console.error(err);
       toast.error(tr("Couldn't undo. Try again.", "Gagal membatalkan. Coba lagi."));
     }
