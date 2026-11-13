@@ -13,6 +13,7 @@ import {
   listenUntilDone,
   pickVoice,
   readSpeakChoice,
+  sendsSnapshots,
   speakable,
   voiceReducer,
   writeSpeakChoice,
@@ -109,6 +110,7 @@ function Voice({
     speaker.hush();
     setReviewing(false);
     dispatch({ type: "listen" });
+    const snapshots = sendsSnapshots(navigator.userAgent);
     listening.current = listenUntilDone(Ctor, VOICE_LANG[locale], {
       onHeard: (text) => dispatch({ type: "heard", transcript: text }),
       onFinished: (text) => {
@@ -121,7 +123,7 @@ function Voice({
         listening.current = null;
         dispatch({ type: "problem", problem });
       },
-    });
+    }, { snapshots });
   }, [locale, speaker]);
 
   const stop = useCallback(() => {

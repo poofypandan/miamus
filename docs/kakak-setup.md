@@ -67,7 +67,8 @@ where the owner can fix a misheard name, then **Send** takes them to
 `/api/kakak` exactly as if typed. Listening runs until Done, or 60 seconds
 at most. Chrome on Android (and Safari on iPhone) end a recognizer session
 at a pause even in continuous mode, so the app starts a new one quietly and
-joins the words without repeating any (`appendHeard`). On Android each
+adds its words after the ones before; on Android, whose results each hold
+everything heard so far, they replace rather than repeat (`joinSession`). On Android each
 restart may play the system's short mic sound. **Cancel** drops the words. **Read replies aloud** reads her question, message or card
 aloud with the phone's own voice; the choice is remembered on that phone.
 Code: `src/components/kakak/kakak-voice.tsx` (UI) and

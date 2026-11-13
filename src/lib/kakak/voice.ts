@@ -142,42 +142,43 @@ function wordKey(word: string): string {
   return word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 }
 
-/**
- * `next` added after `base`, without saying anything twice. Browsers repeat
- * themselves in three ways, and each is joined, not doubled:
- * - `next` says all of `base` again and goes on (Chrome on Android, in
- *   continuous mode, sends each result as everything so far): `next`;
- * - `next` is already the end of `base` (a restarted recognizer hearing the
- *   last words again): `base`;
- * - `next` starts with the last two or more words of `base`: joined on them.
- * A single shared word is left alone ("put it on the / the table" is rare,
- * but "Ari / Ari's room" isn't), unless it is all of `next`.
- */
-export function appendHeard(base: string, next: string): string {
-  const a = splitWords(base);
-  const b = splitWords(next);
-  if (!b.length) return a.join(" ");
-  if (!a.length) return b.join(" ");
-  const ka = a.map(wordKey);
-  const kb = b.map(wordKey);
-  if (kb.length >= ka.length && ka.every((key, i) => key === kb[i])) return b.join(" ");
-  const tail = ka.length - kb.length;
-  if (tail >= 0 && kb.every((key, i) => key === ka[tail + i])) return a.join(" ");
-  for (let k = Math.min(ka.length, kb.length - 1); k >= 2; k--) {
-    if (kb.slice(0, k).every((key, i) => key === ka[ka.length - k + i])) return [...a, ...b.slice(k)].join(" ");
-  }
-  return [...a, ...b].join(" ");
+function sameWords(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((word, i) => wordKey(word) === wordKey(b[i]));
+}
+
+function startsWithWords(text: string[], start: string[]): boolean {
+  return start.length > 0 && start.length <= text.length && start.every((word, i) => wordKey(word) === wordKey(text[i]));
+}
+
+/** Two stretches of words as one tidy line. */
+export function joinWords(base: string, next: string): string {
+  return [...splitWords(base), ...splitWords(next)].join(" ");
 }
 
 /**
  * One recognizer session's results as one line: final words, then the guess
  * still forming. Read from the whole list each time, so a guess the browser
- * corrects is replaced, never added to.
+ * corrects is replaced, never added to, and an event sent twice adds nothing.
+ * Each result is the owner's next words, so they are joined as they are,
+ * except:
+ * - a result that only repeats the one before word for word (a browser
+ *   sending a result twice) is dropped;
+ * - with `snapshots` (Chrome on Android, whose results in continuous mode
+ *   each hold everything heard so far), a result that starts with all the
+ *   words so far replaces them instead of repeating them.
+ * Only on Android: elsewhere "Feed Mocha at seven" then "Feed Mocha at seven
+ * thirty tomorrow" are two requests, and both are kept.
  */
-export function joinSession(results: RecognitionResultEventLike["results"]): string {
-  let line = "";
-  for (let i = 0; i < results.length; i++) line = appendHeard(line, results[i][0]?.transcript ?? "");
-  return line;
+export function joinSession(results: RecognitionResultEventLike["results"], snapshots = false): string {
+  let line: string[] = [];
+  let previous: string[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const words = splitWords(results[i][0]?.transcript ?? "");
+    if (!words.length || sameWords(words, previous)) continue;
+    line = snapshots && startsWithWords(words, line) ? words : [...line, ...words];
+    previous = words;
+  }
+  return line.join(" ");
 }
 
 // ---- Listening until Done ---------------------------------------------------
@@ -212,20 +213,34 @@ export const MAX_LISTEN_MS = 60_000;
 export const QUICK_END_MS = 500;
 export const MAX_STUMBLES = 3;
 
+export interface ListenOptions {
+  /** The browser sends each result as everything so far (Chrome on Android): see `joinSession`. */
+  snapshots?: boolean;
+  /** The clock, for the tests. */
+  now?: () => number;
+}
+
+/** Chrome on Android, whose continuous results are snapshots of everything so far. */
+export function sendsSnapshots(userAgent: string): boolean {
+  return /android/i.test(userAgent);
+}
+
 /**
  * Tap to start, tap Done to stop. Listens until `finish()` (or
  * MAX_LISTEN_MS), however long the owner pauses to think. Chrome on Android
  * ends a session at a pause even in continuous mode, and Safari on iPhone
  * has its own limits, so when the browser ends by itself a new recognizer
- * starts quietly and its words are added to the ones before
- * (`appendHeard`, so nothing is said twice). A new recognizer each time,
- * because Safari on iPhone doesn't reliably start a used one again.
+ * starts quietly and its words are added after the ones before. Nothing is
+ * said twice: a session's words are frozen when it ends, an ended session's
+ * late results are ignored, and each session is read from its own full list
+ * (`joinSession`). A new recognizer each time, because Safari on iPhone
+ * doesn't reliably start a used one again.
  */
 export function listenUntilDone(
   Ctor: RecognitionCtor,
   lang: string,
   handlers: ListenHandlers,
-  now: () => number = Date.now
+  { snapshots = false, now = Date.now }: ListenOptions = {}
 ): Listening {
   /** Words from the sessions that ended. */
   let kept = "";
@@ -279,9 +294,9 @@ export function listenUntilDone(
 
     recognition.onresult = (event) => {
       if (current !== recognition) return; // an old session, or listening is over
-      const session = joinSession(event.results);
+      const session = joinSession(event.results, snapshots);
       if (session) gotWords = true;
-      const next = appendHeard(kept, session);
+      const next = joinWords(kept, session);
       if (next !== heard) {
         heard = next;
         handlers.onHeard(heard);

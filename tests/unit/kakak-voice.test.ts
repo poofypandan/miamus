@@ -5,16 +5,17 @@ import {
   MAX_STUMBLES,
   QUICK_END_MS,
   SPEAK_KEY,
-  appendHeard,
   findRecognition,
   initialVoiceState,
   joinSession,
+  joinWords,
   kakakWords,
   listenUntilDone,
   pickVoice,
   voiceScore,
   problemFor,
   readSpeakChoice,
+  sendsSnapshots,
   speakable,
   voiceReducer,
   writeSpeakChoice,
@@ -147,28 +148,11 @@ describe("problemFor", () => {
   });
 });
 
-describe("appendHeard", () => {
-  it("adds new words with one space between", () => {
-    expect(appendHeard("", " Beli  telur ")).toBe("Beli telur");
-    expect(appendHeard("Beli telur", "")).toBe("Beli telur");
-    expect(appendHeard("Ari pel teras", "setiap Senin jam 9")).toBe("Ari pel teras setiap Senin jam 9");
-  });
-
-  it("takes the longer line when it repeats everything so far (Chrome on Android)", () => {
-    expect(appendHeard("Buy eggs", "buy eggs and sugar")).toBe("buy eggs and sugar");
-  });
-
-  it("drops a restart that only says the last words again", () => {
-    expect(appendHeard("Feed Mocha at 7", "at 7.")).toBe("Feed Mocha at 7");
-    expect(appendHeard("Feed Mocha at 7", "Feed Mocha at 7")).toBe("Feed Mocha at 7");
-  });
-
-  it("joins on two or more shared words", () => {
-    expect(appendHeard("Syam walks Matcha at", "Matcha at six every evening")).toBe("Syam walks Matcha at six every evening");
-  });
-
-  it("keeps a single shared word that goes on: it may really be said twice", () => {
-    expect(appendHeard("Clean Ari", "Ari's room too")).toBe("Clean Ari Ari's room too");
+describe("joinWords", () => {
+  it("joins two stretches with one space between", () => {
+    expect(joinWords("", " Beli  telur ")).toBe("Beli telur");
+    expect(joinWords("Beli telur", "")).toBe("Beli telur");
+    expect(joinWords("Ari pel teras", "setiap Senin jam 9")).toBe("Ari pel teras setiap Senin jam 9");
   });
 });
 
@@ -179,10 +163,32 @@ describe("joinSession", () => {
     expect(joinSession([result(" Beli  telur", true), result("dan gula ", false)])).toBe("Beli telur dan gula");
   });
 
-  it("doesn't double results that each hold everything so far (Chrome on Android)", () => {
-    expect(joinSession([result("buy", true), result("buy eggs", true), result("buy eggs and sugar", false)])).toBe(
-      "buy eggs and sugar"
+  it("keeps two requests that start the same (Codex, PR #141)", () => {
+    const results = [result("Feed Mocha at seven.", true), result("Feed Mocha at seven thirty tomorrow.", true)];
+    expect(joinSession(results)).toBe("Feed Mocha at seven. Feed Mocha at seven thirty tomorrow.");
+  });
+
+  it("drops a result the browser sent twice", () => {
+    expect(joinSession([result("Buy eggs.", true), result("buy eggs", true), result("and sugar", false)])).toBe(
+      "Buy eggs. and sugar"
     );
+  });
+
+  it("on Android, results that each hold everything so far replace it rather than repeat it", () => {
+    const results = [result("buy", true), result("buy eggs", true), result("buy eggs and sugar", false)];
+    expect(joinSession(results, true)).toBe("buy eggs and sugar");
+    expect(joinSession(results, false)).toBe("buy buy eggs buy eggs and sugar");
+  });
+
+  it("on Android, a result that doesn't repeat the words so far is added", () => {
+    expect(joinSession([result("Ari pel teras", true), result("setiap Senin", true)], true)).toBe("Ari pel teras setiap Senin");
+  });
+});
+
+describe("sendsSnapshots", () => {
+  it("is Android only", () => {
+    expect(sendsSnapshots("Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36")).toBe(true);
+    expect(sendsSnapshots("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile Safari/604.1")).toBe(false);
   });
 });
 
@@ -240,17 +246,29 @@ describe("listenUntilDone", () => {
     expect(h.onFinished).toHaveBeenCalledWith("Syam walks Matcha at six");
   });
 
-  it("doesn't repeat words a restarted recognizer hears again", () => {
+  it("doesn't repeat words when the browser resends a session's results, or a session ends twice", () => {
     const h = handlers();
     const listening = listenUntilDone(FakeRecognition, "en-US", h);
-    FakeRecognition.last!.hear(["Feed Mocha at 7", true]);
-    FakeRecognition.last!.end();
-    FakeRecognition.last!.hear(["at 7", true]);
-    FakeRecognition.last!.end();
-    FakeRecognition.last!.hear(["at 7 and 6 PM", true]);
+    const first = FakeRecognition.last!;
+    first.hear(["Feed Mocha at 7", true]);
+    first.hear(["Feed Mocha at 7", true]); // the same list again
+    first.end();
+    first.end(); // a second end from the old session
+    FakeRecognition.last!.hear(["and 6 PM", true]);
     listening.finish();
     FakeRecognition.last!.end();
     expect(h.onFinished).toHaveBeenCalledWith("Feed Mocha at 7 and 6 PM");
+  });
+
+  it("on Android, joins each session's snapshots without repeating them", () => {
+    const h = handlers();
+    const listening = listenUntilDone(FakeRecognition, "id-ID", h, { snapshots: true });
+    FakeRecognition.last!.hear(["Syam", true], ["Syam jalan-jalan", true], ["Syam jalan-jalan dengan Matcha", false]);
+    FakeRecognition.last!.end();
+    FakeRecognition.last!.hear(["jam 6", true], ["jam 6 sore", true]);
+    listening.finish();
+    FakeRecognition.last!.end();
+    expect(h.onFinished).toHaveBeenCalledWith("Syam jalan-jalan dengan Matcha jam 6 sore");
   });
 
   it("ignores words from a session that already ended", () => {
@@ -289,7 +307,7 @@ describe("listenUntilDone", () => {
   it("stops starting again when the browser keeps ending at once with nothing heard", () => {
     let clock = 0;
     const h = handlers();
-    listenUntilDone(FakeRecognition, "en-US", h, () => clock);
+    listenUntilDone(FakeRecognition, "en-US", h, { now: () => clock });
     for (let i = 0; i < MAX_STUMBLES; i++) {
       clock += QUICK_END_MS - 100;
       FakeRecognition.last!.end();
@@ -303,7 +321,7 @@ describe("listenUntilDone", () => {
   it("a restart that fails before hearing anything starts again, then stops after the stumble limit, keeping the words", () => {
     let clock = 0;
     const h = handlers();
-    listenUntilDone(FakeRecognition, "en-US", h, () => clock);
+    listenUntilDone(FakeRecognition, "en-US", h, { now: () => clock });
     FakeRecognition.last!.hear(["Buy eggs", true]);
     clock += 5000;
     FakeRecognition.last!.end();
@@ -340,7 +358,7 @@ describe("listenUntilDone", () => {
   it("a slow end (a real pause) is not a stumble", () => {
     let clock = 0;
     const h = handlers();
-    listenUntilDone(FakeRecognition, "en-US", h, () => clock);
+    listenUntilDone(FakeRecognition, "en-US", h, { now: () => clock });
     for (let i = 0; i < MAX_STUMBLES + 2; i++) {
       clock += 8000;
       FakeRecognition.last!.end();
