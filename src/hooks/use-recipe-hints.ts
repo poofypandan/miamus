@@ -27,6 +27,8 @@ interface CookedState {
 let state: CookedState = { household: null, dishes: [] };
 const listeners = new Set<() => void>();
 let inflight: string | null = null;
+/** Every read gets a number; only the newest one may land (Codex, PR #127). */
+let latestRead = 0;
 
 function household(): string | null {
   try {
@@ -40,9 +42,12 @@ async function loadCooked(key: string): Promise<void> {
   const current = household();
   if (!current || inflight === `${current}|${key}`) return;
   inflight = `${current}|${key}`;
+  const read = ++latestRead;
   try {
     const dishes = await dataProvider.listCookedDishes();
-    if (household() !== current) return;
+    // A newer read started meanwhile (a dish was cooked, changed or
+    // un-cooked): this answer may hold the old amounts, so it never lands.
+    if (read !== latestRead || household() !== current) return;
     state = { household: current, dishes };
     listeners.forEach((l) => l());
   } catch (err) {
