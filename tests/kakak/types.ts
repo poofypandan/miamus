@@ -88,6 +88,7 @@ export interface KakakCase {
     | "food"
     | "several"
     | "cannot_do"
+    | "staff_areas"
     | "safety";
   /** Held back from prompt tuning; scored only in the final comparison. */
   holdout: boolean;
