@@ -4,3 +4,6 @@ review/*.png
 public/shots/
 .remotion/
 test-results/
+
+.tools/
+audio/out/
