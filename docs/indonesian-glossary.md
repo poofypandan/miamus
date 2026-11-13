@@ -391,6 +391,7 @@ people are **staf** and **admin**.
 | Nobody sees pet routines now, so every staff member sees them. | **Sekarang tidak ada yang melihat rutinitas hewan, jadi semua staf melihatnya.** | Phase 178: under the block, when nobody working has the area on. |
 | Nobody sees chores for anyone now, so every staff member sees them. | **Sekarang tidak ada yang melihat tugas untuk siapa saja, jadi semua staf melihatnya.** | Phase 178: the same, for chores. |
 | Doesn't see: Kitchen, Repairs | **Tidak melihat: Dapur, Perbaikan** | Phase 178: the staff list, under a name with anything off. |
+| Kitchen off for Sari / Kitchen on for Sari | **Dapur dimatikan untuk Sari** / **Dapur aktif untuk Sari** | Phase 178: the toast after a switch, with Undo / **Batalkan**. Same verbs as the Features switches. |
 
 ## Formatting
 
