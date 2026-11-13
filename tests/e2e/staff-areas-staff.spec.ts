@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { HOUSEHOLD_ID, MOCHI, schedule } from "../fixtures/household";
+import { BENTO, HOUSEHOLD_ID, MOCHI, schedule } from "../fixtures/household";
 import { STAFF_ID, freshSession, installStub } from "./stub-backend";
 
 // What each staff member sees (Phase 178, V3): the staff page follows the
@@ -160,4 +160,45 @@ test("a shared phone follows whoever is signed in", async ({ page }) => {
   await expect(pill(page, "Perbaikan")).toBeVisible();
   // Ari's own chore is not Syam's.
   await expect(page.getByText("Setrika baju")).toHaveCount(0);
+});
+
+test("Pet routines off: a routine of Ari's with one pet at the clinic is done once the other is (Codex, #136)", async ({ page }) => {
+  const evening = [
+    schedule(MOCHI, "Jalan sore Ari", ["05:00"], { kind: "walk", proof: "tick", staff_id: STAFF_ID }),
+    schedule(BENTO, "Jalan sore Ari", ["05:00"], { kind: "walk", proof: "tick", staff_id: STAFF_ID }),
+  ];
+  await installStub(page.context(), {
+    stored: freshSession(),
+    staffPhone: true,
+    staff: [person(STAFF_ID, "Ari", ["pets"]), person(SYAM, "Syam")],
+    schedules: evening,
+    logs: [
+      {
+        id: "00000000-0000-4000-8000-000000178a01",
+        schedule_id: evening[1].id,
+        entity_id: BENTO.id,
+        module: "pet",
+        photo_url: null,
+        notes: null,
+        completed_at: `${today()}T05:10:00+07:00`,
+        staff_id: STAFF_ID,
+        sub_type: "complete",
+        received_at: `${today()}T05:10:01+07:00`,
+      },
+    ],
+  });
+  // Mochi is at the clinic.
+  await page.route("**/rest/v1/task_entities*", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill({ json: [{ ...MOCHI, status: "admitted" }, BENTO] });
+  });
+  await page.goto("/staff");
+  await expect(page.getByRole("tab", { name: "Tugas Hari Ini" })).toBeVisible({ timeout: 20_000 });
+  // Ari has Pet routines off: no clinic notice for her...
+  await expect(page.getByText("sedang dirawat di klinik")).toHaveCount(0);
+  // ...but her own routine still counts Mochi as away, so it is finished.
+  const done = page.getByRole("region", { name: /^Selesai/ });
+  await expect(done).toBeVisible();
+  await done.getByRole("button").first().click();
+  await expect(done.getByText("Jalan sore Ari")).toBeVisible();
 });

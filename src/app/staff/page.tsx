@@ -234,8 +234,12 @@ function TasksView() {
   // What the owner lets this person see on the ribbon's day (Phase 178).
   const sees = useStaffVisibility(dateStr);
 
-  // "Sedang dirawat di klinik" and its button: pet business (Phase 178).
-  const admittedPets = useMemo(() => (sees.pets ? pets.filter(isAdmitted) : []), [pets, sees.pets]);
+  // Every admitted pet, for whether a routine is finished (isEntrySettled
+  // leaves admitted pets out of a group); only the "sedang dirawat di
+  // klinik" notices and their button follow Pet routines (Phase 178; Codex,
+  // PR #136).
+  const admittedPets = useMemo(() => pets.filter(isAdmitted), [pets]);
+  const clinicPets = sees.pets ? admittedPets : [];
 
   // Pet routines: one set for this person always shows; the rest with Pet
   // routines on (Phase 178, rules 1 and 2; rule 3 is folded into sees.pets).
@@ -509,9 +513,9 @@ function TasksView() {
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.
             Staff-facing, so Bahasa Indonesia. */}
-        {admittedPets.length > 0 && (
+        {clinicPets.length > 0 && (
           <section className="flex flex-col gap-2">
-            {admittedPets.map((pet) => (
+            {clinicPets.map((pet) => (
               <div
                 key={pet.id}
                 className="flex flex-col gap-2 rounded-xl border bg-card p-3"
