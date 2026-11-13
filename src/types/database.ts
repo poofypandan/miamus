@@ -254,6 +254,16 @@ export type StaffProfile = {
    * Optional: absent until that migration is applied, which reads as active.
    */
   archived_at?: string | null;
+  /**
+   * The parts of the staff app an owner switched off for this person
+   * (migrations/165, Phase 178): any of "home", "pets", "kitchen",
+   * "repairs". Empty sees everything. The app hides; it does not lock (see
+   * lib/staff-areas.ts). Owners write it; a staff phone's write is refused.
+   *
+   * Optional: a row cached by an older build, or read before 165 is
+   * applied, lacks it and reads as nothing hidden.
+   */
+  hidden_areas?: string[] | null;
 };
 
 // Note: unlike every other table here, this one's foreign key column is
