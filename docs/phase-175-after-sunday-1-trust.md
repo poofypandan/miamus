@@ -9,8 +9,9 @@ Part 2 (the Away sheet, the weekly check-in, Kakak's tools) is its own
 document. Steps 1 to 3 of the table need no migration and are specified
 enough where they stand.
 
-Migrations: **157** (silence), **158** (notification policy), **159**
-(watches). 156 is Phase 177. The manager confirms numbers and phase names.
+Migrations: **157** (watching the jobs), **158** (silence), **159**
+(notification policy), **160** (watches). 156 is Phase 177. The manager
+confirms numbers and phase names.
 
 ## 0. North star first
 
@@ -44,7 +45,54 @@ What a home notices when all three are live:
 | Kinds per owner: Pets, Home, Kitchen, Repairs, Staff requests | Three new switches (Pets, Home, Kitchen). Repairs and Staff requests keep the switches they have | No second switch for the same thing |
 | The evening summary follows the kinds | Not in this version: the summary stays whole | It is one push a day, and splitting it means rewriting the longest function in the database. Listed under *Later* |
 
-## 2. Silence you can trust (migration 157)
+## 1b. First: know when a job fails (migration 157)
+
+Everything below promises that silence means "done". That promise rests on
+scheduled jobs (the five-minute alerts, the evening summary, the morning
+pushes). Today, if one stops, nobody is told (the audit's H2). So this goes
+first. Nothing in it is visible to a household.
+
+**No new log table.** `pg_cron` already keeps one row per run in
+`cron.job_run_details` (status and message). The check reads that, so no job
+function is re-created and no schedule is changed. The executor confirms the
+view's columns on the local stack before writing the function.
+
+```sql
+create table if not exists public.job_alerts_sent (
+  job text not null,
+  day date not null,
+  sent_at timestamptz not null default now(),
+  primary key (job, day)
+);
+alter table public.job_alerts_sent enable row level security;
+revoke all on public.job_alerts_sent from public, anon, authenticated;
+grant select, insert, delete on public.job_alerts_sent to service_role;
+```
+
+`check_scheduled_jobs(p_now timestamptz default null) returns integer`, not
+`security definer`, `revoke … from public, anon, authenticated`, `grant … to
+service_role`, on the hour from 06.00 to 22.00 Jakarta (`0 23,0-15 * * *`).
+For each active job in `cron.job`:
+
+- **failed:** its latest finished run has status `failed`;
+- **missing:** no `succeeded` run within its longest allowed gap: 30 minutes
+  for `notify-routines-due` (and the two five-minute jobs sections 2 and 4
+  add), 26 hours for every other job.
+
+For each such job not yet in `job_alerts_sent` today: one push to the
+platform admins (`platform_admins`, as 113's request push reaches them),
+*Miamus: a job needs a look* with the job's name and the first 200
+characters of its message, then the row. It also deletes
+`cron.job_run_details` rows older than 14 days and its own rows older than
+30.
+
+Limits, stated in the migration's header: a job that catches its own errors
+per household (most do, with `raise warning`) still counts as succeeded, and
+a push that the push service refused is not seen here. Both are in *Later*.
+Nothing watches the watcher; an outside uptime check is the operator's to
+add.
+
+## 2. Silence you can trust (migration 158)
 
 ### 2a. The owner's own notifications (no migration; can ship first)
 
@@ -195,7 +243,7 @@ writes it, pruned after 35 days by the nightly job this migration adds
   definition with `'staff_app_days'` (person's name, day, waiting; no
   times), so a staff member's data can be handed over (UU PDP).
 
-## 3. Notification policy (migration 158)
+## 3. Notification policy (migration 159)
 
 ### 3a. The rules
 
@@ -331,7 +379,7 @@ push is the text of a notification, kept at most until 06.00 (24 hours if
 the job fails). My reading is one sentence in the policy's notifications
 paragraph; the manager decides, and owns the file.
 
-## 4. Watches (migration 159)
+## 4. Watches (migration 160)
 
 A watch is a task that tells the owners when it slips. Pet routines have
 the switch (150). Chores get the same one.
@@ -445,17 +493,24 @@ stuck), `Bell` (the staff card and the sheet).
 3. A per-household time zone.
 4. Staff notifications off, named in the weekly check-in (part 2 covers the
    check-in).
+5. Jobs writing their own per-household warnings where the check can see
+   them, and the push service reporting a refused push.
+6. From the audit of 13 Nov: checking that the staff id a phone sends is the
+   person whose PIN last opened it (`device_sessions.staff_id`), function by
+   function as each is next re-created. It belongs with the database work of
+   whichever phase next touches those functions, not with these screens.
 
 ## 8. Build: PRs, and what runs side by side
 
 | PR | What | Files | Runs |
 |---|---|---|---|
+| **J1** | 1b: migration 157 and its test | `supabase/migrations/157_*.sql`, `supabase/tests/157_*.sql` | **First.** Nothing visible. Side by side with T1 |
 | **T1** | 2a: the notifications row | `agenda-tab.tsx`, `src/lib/today-status.ts` and its test, the dashboard prompt's component, the `push-prompt` spec | Any time. No migration |
-| **T2** | Migration 157 and its test; `mark_staff_app_open` from the staff app; data providers and the stub; privacy policy, `legal.ts`, glossary rows | `supabase/migrations/157_*.sql`, `supabase/tests/157_*.sql`, `src/app/staff/page.tsx`, `src/lib/data/*`, `tests/e2e/stub-backend.ts`, the manager's three files | First of this section. Nothing visible to owners |
+| **T2** | Migration 158 and its test; `mark_staff_app_open` from the staff app; data providers and the stub; privacy policy, `legal.ts`, glossary rows | `supabase/migrations/158_*.sql`, `supabase/tests/158_*.sql`, `src/app/staff/page.tsx`, `src/lib/data/*`, `tests/e2e/stub-backend.ts`, the manager's three files | First of this section. Nothing visible to owners |
 | **T3** | 2c: `silence.ts`, the rows, the grey line; the staff tip | new `src/lib/silence.ts` and its test, `agenda-tab.tsx`, `today-status.ts`, `today-status.tsx`, `src/lib/whats-new.ts` (shared) | After T1 and T2 (`agenda-tab.tsx`) |
-| **P1** | Migration 158 and its test | `supabase/migrations/158_*.sql`, `supabase/tests/158_*.sql` | **Side by side with T1 to T3**: no shared file |
+| **P1** | Migration 159 and its test | `supabase/migrations/159_*.sql`, `supabase/tests/159_*.sql` | **Side by side with T1 to T3**: no shared file |
 | **P2** | 3f: the settings group | `push-notification-settings.tsx`, `src/lib/data/*`, a spec for two owners | After P1 |
-| **W1** | Migration 159 and its test; the chore editor's switch | `supabase/migrations/159_*.sql`, `supabase/tests/159_*.sql`, `chore-editor-dialog.tsx`, types | After P1 (its tag is in 158's table). Side by side with T3 and P2 |
+| **W1** | Migration 160 and its test; the chore editor's switch | `supabase/migrations/160_*.sql`, `supabase/tests/160_*.sql`, `chore-editor-dialog.tsx`, types | After P1 (its tag is in 159's table). Side by side with T3 and P2 |
 | **W2** | 4c and 4d: the count, its sheet, the staff bell | `silence.ts`, `agenda-tab.tsx`, `today-status.tsx`, the staff task card | After T3 and W1 |
 
 Three executors can work at once: one on T1 → T2 → T3 → W2, one on
@@ -469,21 +524,26 @@ needs it.
 
 ## 9. Tests
 
-- **SQL 157:** a staff phone marks its own person; it cannot mark a person
+- **SQL 157:** a failed run alerts once and not again that day; a
+  five-minute job with no good run for 31 minutes alerts, and a daily job
+  with none for 25 hours does not; a job that ran well alerts nobody; no
+  client role can read `job_alerts_sent` or execute the check; old history
+  rows are deleted.
+- **SQL 158:** a staff phone marks its own person; it cannot mark a person
   of another household, an archived person or an owner's roster row; an
   owner's session cannot mark anyone; `staff_app_today` refuses a staff
   phone and returns no timestamp; `anon` can execute neither; the job
   pushes once for a quiet person with a late task and not again that day,
   never for someone on leave, never before 10.00, never without a late task;
   rows older than 14 days go; the export holds `staff_app_days`.
-- **SQL 158:** every tag in the header's list maps to its kind; an owner
+- **SQL 159:** every tag in the header's list maps to its kind; an owner
   with `pets` off gets no routine alert while the other owner does; a sick
   report reaches both whatever is off and at 02.00; a staff request at 23.00
   is held and arrives at 06.00 as itself; three held arrive as one;
   a held row 25 hours old is deleted unsent; `set_my_push_policy` refuses a
   staff phone and an unknown kind; *All done* goes only to an owner who
   asked, only when nothing is open, once.
-- **SQL 159:** a staff phone cannot change `alert_owners`; a chore 30
+- **SQL 160:** a staff phone cannot change `alert_owners`; a chore 30
   minutes late alerts once; done, couldn't-do, on a paused leave, without a
   time, or after 22.35: nothing; a written day's own time is the one used.
 - **Unit:** `silence` (each condition of "quiet" on and off, stuck, the grey
