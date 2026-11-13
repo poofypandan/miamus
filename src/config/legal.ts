@@ -190,7 +190,12 @@ export const LEGAL = {
   // new place or date, saved only when the admin confirms. No new kind of
   // personal data, no new service or region; Anthropic's retention is
   // unchanged.
-  policyVersion: "2026-11-13.1",
+  // 2026-11-13.2: wording only (audit D4) — "What we store" now names, for
+  // kitchen ingredients on the shopping list, where each is kept (fridge,
+  // freezer, cupboard or counter) and its use-by date once noted. The
+  // storage was already live (migrations/154); nothing stored, collected or
+  // shared changes.
+  policyVersion: "2026-11-13.2",
   effectiveDate: { en: "13 November 2026", id: "13 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
