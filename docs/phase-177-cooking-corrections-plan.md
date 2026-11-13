@@ -100,7 +100,9 @@ The lines, from a new pure function `changeLines(dish, recipe, items,
 forStaff)` in `src/lib/menu.ts`:
 
 1. Every ingredient this dish's cooking took off (`cooked_uses`), **ticked**,
-   at the amount the person said last time (`said`, section 6).
+   at the amount the person said last time (`said`, section 6). An entry
+   whose `said` is 0 (unticked in an earlier change) is not one of these; it
+   falls under 2 if the recipe still lists it.
 2. Every other line of the recipe that could come off stock now (`cookLines`
    at the dish's servings), **unticked**, at the recipe's amount. These are
    the ones the cook unticked.
@@ -208,11 +210,15 @@ ratios, rounded so it reads like a recipe:
 
 | Unit of the recipe's line | Rounded to |
 |---|---|
-| g, ml | 5 below 100; 10 from 100 to 999; 50 from 1,000 |
+| g, ml | 1 below 10; 5 from 10 to 99; 10 from 100 to 999; 50 from 1,000 |
 | kg, L | 0.05 |
-| anything counted (pcs, buah, butir, siung, …) | 1, and never below 1 |
+| anything counted (pcs, buah, butir, siung, …) | 1 |
 
-If the rounded amount equals the recipe's, there is no suggestion.
+A rounded amount is never below one step of its row (1 g, 0.05 kg, 1 piece)
+and never above 100,000, the limits a recipe line may hold: a result outside
+them is brought to the nearest limit. If the rounded amount then equals the
+recipe's, there is no suggestion for that ingredient. So a card never holds
+an amount `save_recipe` would refuse.
 
 What never counts: a line the cook unticked (that says "not from this stock",
 not "a different amount"); dishes cooked before this phase or by a phone
@@ -334,7 +340,7 @@ four optional keys:
 |---|---|
 | `item_id`, `unit` | As now. |
 | `amount` | As now: what came off stock, which is what Undo puts back. May now be 0 (nothing was there). |
-| `said` | What the person confirmed, in the item's unit. Equal to `amount` unless the stock ran out. An entry without it (cooked before 156) reads as `amount`. |
+| `said` | What the person confirmed, in the item's unit. Equal to `amount` unless the stock ran out. An entry without it (cooked before 156) reads as `amount`. 0 after the ingredient was unticked in a change: the entry stays, and every reader treats it as not used (the change sheet shows the line unticked, the suggestions skip it, un-cook has nothing to put back). |
 | `short` | What was missing when the ingredient first came off for this dish: `said − amount` at that moment. Written once, when the entry is created, and never changed. Absent means 0. |
 | `planned` | What the recipe asked for at the servings cooked, in the item's unit, as the phone sent it. Null when the phone did not send it. |
 | `cleared_date` | The date the item had when this dish emptied it. Absent otherwise. |
@@ -419,10 +425,13 @@ change_cooked_uses(
    - `target > took`: take `least(quantity, target − took)`; `amount` grows
      by what was taken. If that emptied a dated item, set `cleared_date`.
    - equal: the item is not written.
-5. `want > 0`: the entry is kept with `said = want`, the item's unit, `short`
-   as it was, and `planned` (the old one, converted; else the one the phone
-   sent). A **new** entry (no old one) gets `short = want − amount` when that
-   is above 0. `want = 0`: the entry is removed.
+5. The entry is kept with `said = want`, the item's unit, `short` as it was,
+   and `planned` (the old one, converted; else the one the phone sent). A
+   **new** entry (no old one) gets `short = want − amount` when that is above
+   0. An unticked ingredient (`want = 0`) **keeps its entry**, with `said` 0
+   and `amount` 0: removing it would lose `short`, and ticking it again (or
+   Undo) would then take the missing part from stock bought since. Such an
+   entry reads as "not used" everywhere (6b).
 6. Every item written gets `amount_set_by = p_staff_id`. The amount-rules
    trigger does the rest (status, `amount_set_at`, the Out rule), as for any
    amount change.
@@ -552,6 +561,8 @@ merges after it is on production, as 154 did.
     when stock was bought in between;
   - a change that runs the stock out, then the previous list sent again (the
     toast's Undo): exactly what the change took comes back;
+  - cook 500 with 300 there, buy more, untick, then send 500 again (Undo):
+    the stock and the entry end as they were before the untick;
   - an ingredient whose amount is unchanged is not written, though another
     line changed;
   - the same list sent twice changes nothing the second time;
@@ -572,8 +583,10 @@ merges after it is on production, as 154 did.
   runs out and its Undo, the date);
   `recipeHints` (three more, three less, two is not enough, a mixed third
   breaks it, exactly 10%, an unticked dish is skipped, two lines for one
-  item, `hints_off`, dishes before the recipe's `updated_at`, the rounding
-  table, a rounded amount equal to the recipe's).
+  item, `hints_off`, dishes before the recipe's `updated_at`, an entry with
+  `said` 0, the rounding table, a small amount that would round to 0 (2 g
+  down a quarter stays at least 1 g), a rounded amount equal to the
+  recipe's).
 - **Browser, owner (EN):** cook, open the dish, change one amount up and one
   down, save, the stock shows only the differences; Undo; untick everything;
   the button is gone on a dish cooked yesterday; another phone's change is
