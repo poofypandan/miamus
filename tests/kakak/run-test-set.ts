@@ -21,6 +21,7 @@ import {
   makeClient,
   MODELS,
   playConversation,
+  pool,
   variantLabel,
   type Effort,
   type Variant,
@@ -42,18 +43,6 @@ export function loadHousehold(): KakakHousehold {
 
 function loadTestSet(): KakakTestSet {
   return JSON.parse(readFileSync(join(here, "test-set.json"), "utf8")) as KakakTestSet;
-}
-
-async function pool<T>(items: T[], size: number, work: (item: T) => Promise<void>): Promise<void> {
-  let next = 0;
-  const workers = Array.from({ length: Math.min(size, items.length) }, async () => {
-    while (next < items.length) {
-      const item = items[next];
-      next += 1;
-      await work(item);
-    }
-  });
-  await Promise.all(workers);
 }
 
 async function main() {
