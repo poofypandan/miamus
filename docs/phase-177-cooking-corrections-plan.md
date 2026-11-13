@@ -133,15 +133,29 @@ Only the difference, per ingredient:
 | unticked | 100 g, ticked | 100 g comes off, as in cooking. |
 | 500 g | 2 kg, with 1 kg at home | 1 kg comes off (never below zero, as cooking); the item is Out. |
 
-One case needs a rule of its own. If cooking asked for 500 g when only 300 g
-was on record, 300 g came off and the entry remembers both numbers. A later
-change never takes the missing 200 g from stock that was bought since:
+An ingredient whose amount was not changed on the sheet is never written,
+whatever else was changed.
 
-- less than what came off (say 200 g): the difference to what came off goes
-  back (100 g);
-- more than what the person said before (say 600 g): only the extra comes
-  off (100 g, if it is there);
-- anything in between: the stock is not touched.
+One case needs a rule of its own. If cooking asked for 500 g when only 300 g
+was on record, 300 g came off and the entry remembers that 200 g was
+**missing**. That 200 g stays out of every later sum, so a change never
+takes it from stock that was bought since:
+
+- saying 600 g takes 100 g more (if it is there);
+- saying 400 g puts 100 g back;
+- going back to 500 g ends exactly where it started, which is also what
+  **Undo** on the toast does.
+
+In words: what should be off the stock is what the person now says, less
+what was missing when it first came off.
+
+**One known limit.** If a *change* (not the cooking) asks for more than is at
+home, it takes what is there, as the last row of the table says. Undo, or
+changing it back, returns exactly that. But if more of that ingredient is
+bought later the same day and the same ingredient is changed again, the
+change takes the rest then. It needs three things in one day (a change that
+ran out, a purchase, a second change of the same line), and closing it would
+mean a second remembered number per line. The plan accepts it.
 
 ### 3d. When it cannot save
 
@@ -314,13 +328,14 @@ id of an item deleted later is harmless.
 
 `menu_dishes.cooked_uses` stays a jsonb array, written only by the cooking
 functions (the trigger of 153 refuses every other writer). An entry gains
-three optional keys:
+four optional keys:
 
 | Key | Meaning |
 |---|---|
 | `item_id`, `unit` | As now. |
 | `amount` | As now: what came off stock, which is what Undo puts back. May now be 0 (nothing was there). |
 | `said` | What the person confirmed, in the item's unit. Equal to `amount` unless the stock ran out. An entry without it (cooked before 156) reads as `amount`. |
+| `short` | What was missing when the ingredient first came off for this dish: `said − amount` at that moment. Written once, when the entry is created, and never changed. Absent means 0. |
 | `planned` | What the recipe asked for at the servings cooked, in the item's unit, as the phone sent it. Null when the phone did not send it. |
 | `cleared_date` | The date the item had when this dish emptied it. Absent otherwise. |
 
@@ -332,7 +347,8 @@ As 153, plus:
   most 100,000 (`bad_amount` otherwise). Lines of one item are summed, and
   `planned` is converted with the line's unit, exactly as `amount` is;
 - an entry is written for **every** line sent, also when nothing was there to
-  take (`amount` 0), with `said` and `planned`;
+  take (`amount` 0), with `said`, `planned` and, when less came off than was
+  said, `short`;
 - if the item had a date before the update and has none after (it went Out),
   the entry gets `cleared_date`.
 
@@ -390,27 +406,38 @@ change_cooked_uses(
    (`item_not_tracked`, `unit_mismatch`); otherwise keep the old entry as it
    is and go on.
 2. In the item's unit now: `took` (the old `amount`, 0 without an entry),
-   `said_before` (the old `said`, or `amount`), `want` (the new amount, 0
-   when the item is not in `p_uses`).
-3. `want < took`: add `took − want` to the quantity; `amount` becomes `want`.
-   If the entry has `cleared_date` and the item has no date, put the date
-   back and drop the key.
-4. Else `want > said_before`: take `least(quantity, want − said_before)`;
-   `amount` grows by what was taken. If that emptied a dated item, set
-   `cleared_date`.
-5. Else: the item is not written.
-6. `want > 0`: the entry is kept with `said = want`, the item's unit, and
-   `planned` (the old one, converted; else the one the phone sent).
-   `want = 0`: the entry is removed.
-7. Every item written gets `amount_set_by = p_staff_id`. The amount-rules
+   `said_before` (the old `said`, or `amount`; 0 without an entry), `short`
+   (the old `short`, or 0), `want` (the new amount, 0 when the item is not in
+   `p_uses`).
+3. `want = said_before`: the person did not change this ingredient. The item
+   is not written and the entry stays as it is.
+4. Otherwise `target = greatest(want − short, 0)`: what should be off the
+   stock now.
+   - `target < took`: add `took − target` to the quantity; `amount` becomes
+     `target`. If the entry has `cleared_date` and the item has no date, put
+     the date back and drop the key.
+   - `target > took`: take `least(quantity, target − took)`; `amount` grows
+     by what was taken. If that emptied a dated item, set `cleared_date`.
+   - equal: the item is not written.
+5. `want > 0`: the entry is kept with `said = want`, the item's unit, `short`
+   as it was, and `planned` (the old one, converted; else the one the phone
+   sent). A **new** entry (no old one) gets `short = want − amount` when that
+   is above 0. `want = 0`: the entry is removed.
+6. Every item written gets `amount_set_by = p_staff_id`. The amount-rules
    trigger does the rest (status, `amount_set_at`, the Out rule), as for any
    amount change.
+
+Why this shape: for one entry, what is off the stock depends only on what the
+person says now and on `short`, which never moves. So changing an amount and
+changing it back, or Undo, returns exactly what the change took or gave,
+also when the cooking or the change ran the stock out. The one exception is
+the known limit in 3c.
 
 `cooked_at` and `cooked_by` are not touched: the cook stays the cook.
 
 ### 6f. The app's twins
 
-- `CookedUse` (`src/types/database.ts`) gains `said?`, `planned?`,
+- `CookedUse` (`src/types/database.ts`) gains `said?`, `short?`, `planned?`,
   `cleared_date?`; `Recipe` gains `hints_off?`.
 - `CountedLine` gains `planned` (the recipe's amount before the person's
   taps); `usesFrom` sends it.
@@ -520,7 +547,13 @@ merges after it is on production, as 154 did.
     cannot; `anon` cannot execute any of the three functions;
   - more comes off, less goes back, untick puts all back, a new tick takes
     off; never below zero;
-  - the 300-of-500 case of section 3c, all three branches;
+  - the 300-of-500 case of section 3c: 600 takes 100 more, 400 puts 100
+    back, and back to 500 leaves the stock and the entry as they were, also
+    when stock was bought in between;
+  - a change that runs the stock out, then the previous list sent again (the
+    toast's Undo): exactly what the change took comes back;
+  - an ingredient whose amount is unchanged is not written, though another
+    line changed;
   - the same list sent twice changes nothing the second time;
   - `p_was` that no longer matches is refused; a dish not cooked is refused;
     a dish cooked 31 hours ago is refused;
@@ -535,7 +568,8 @@ merges after it is on production, as 154 did.
   - the export holds `said`, `planned` and `hints_off`.
 - **Unit:** `changeLines` (ticked from the dish, unticked from the recipe,
   hidden when untracked or the unit no longer converts); `applyUsesChange`
-  (every row of the table in 3c, the 300-of-500 case, the date);
+  (every row of the table in 3c, the 300-of-500 round trip, a change that
+  runs out and its Undo, the date);
   `recipeHints` (three more, three less, two is not enough, a mixed third
   breaks it, exactly 10%, an unticked dish is skipped, two lines for one
   item, `hints_off`, dishes before the recipe's `updated_at`, the rounding
