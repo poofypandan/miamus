@@ -75,9 +75,18 @@ service_role`, on the hour from 06.00 to 22.00 Jakarta (`0 23,0-15 * * *`).
 For each active job in `cron.job`:
 
 - **failed:** its latest finished run has status `failed`;
-- **missing:** no `succeeded` run within its longest allowed gap: 30 minutes
-  for `notify-routines-due` (and the two five-minute jobs sections 2 and 4
-  add), 26 hours for every other job.
+- **missing:** no `succeeded` run within its longest allowed gap, read from
+  the job's own schedule in `cron.job` so a job added later needs no change
+  here:
+  - a schedule that runs every five minutes around the clock (`*/5 * * * *`:
+    `notify-routines-due` today, and `notify-chores-late` from section 4):
+    30 minutes;
+  - a schedule limited to some days of the week (its last field is not
+    `*`: part 2's weekly check-in): 8 days;
+  - every other schedule, which runs at least once a day, including one
+    that only runs in a window of hours (the evening summary; the hourly
+    10.00 to 17.00 job of section 2d, silent overnight by design): 26
+    hours.
 
 For each such job not yet in `job_alerts_sent` today: one push to the
 platform admins (`platform_admins`, as 113's request push reaches them),
@@ -534,7 +543,9 @@ needs it.
 
 - **SQL 157:** a failed run alerts once and not again that day; a
   five-minute job with no good run for 31 minutes alerts, and a daily job
-  with none for 25 hours does not; a job that ran well alerts nobody; no
+  with none for 25 hours does not; a job that runs only from 10.00 to 17.00
+  is not reported at 06.00 the next morning; a weekly job is not reported
+  six days after its run; a job that ran well alerts nobody; no
   client role can read `job_alerts_sent` or execute the check; old history
   rows are deleted.
 - **SQL 158:** a staff phone marks its own person; it cannot mark a person
