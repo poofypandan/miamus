@@ -14,6 +14,7 @@ import { costMicroUsd, type KakakModel } from "./cost";
 import { jakartaNow, type RefMap, type RefNames } from "./context";
 import { renderHouseholdBlock, type KakakHousehold } from "./household";
 import { KAKAK_SYSTEM_PROMPT } from "./prompt";
+import { guardReplyText } from "./reply-guard";
 import { toSuggestion, type KakakSuggestion } from "./suggestions";
 import { KAKAK_TOOLS, KAKAK_TOOL_NAMES } from "./tools";
 import { validateToolCall } from "./validate";
@@ -340,12 +341,31 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
     if (calls.length === 0 || items.length === 0) {
       record.outcome = "message";
       await deps.record(begun.requestId, record);
-      return { kind: "message", text, requestId: begun.requestId, history: out };
+      return { kind: "message", text: shownText("message", text, deps.household), requestId: begun.requestId, history: out };
     }
     record.outcome = "suggestion";
     await deps.record(begun.requestId, record);
-    return { kind: "suggestions", text, items, requestId: begun.requestId, history: out };
+    return {
+      kind: "suggestions",
+      text: shownText("suggestions", text, deps.household),
+      items,
+      requestId: begun.requestId,
+      history: out,
+    };
   }
+}
+
+/**
+ * The model's text as the owner may see it (reply-guard.ts): a note to self,
+ * a reference or the wrong language never reaches the phone. A question turn
+ * returns no text at all: the question says it. The history keeps the text
+ * unchanged, as the API requires. Logged without the text, so drops can be
+ * counted.
+ */
+function shownText(kind: "suggestions" | "message", text: string, household: KakakHousehold): string {
+  const guarded = guardReplyText(kind, text, household.ownerLocale);
+  if (guarded.tells.length > 0) console.warn("kakak: reply text dropped", kind, guarded.tells.join(","));
+  return guarded.text;
 }
 
 function emptyRecord(model: string, latencyMs: number): CallRecord {

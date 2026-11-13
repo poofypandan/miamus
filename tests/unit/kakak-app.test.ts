@@ -265,6 +265,69 @@ describe("runKakakTurn", () => {
   });
 });
 
+describe("runKakakTurn never shows a note to self (tonight's eval)", () => {
+  const k021 =
+    "'Sabun cuci' most likely means I2 Sabun cuci piring, though it could be detergent. It's ambiguous: sabun cuci could be laundry soap. I2 is \"Sabun cuci piring\", I3 is \"Deterjen\". I'll treat it as close enough to I2.";
+  const quiet = <T,>(run: () => Promise<T>) => {
+    const warn = console.warn;
+    const logged: unknown[][] = [];
+    console.warn = (...args: unknown[]) => void logged.push(args);
+    return run().then(
+      (value) => ((console.warn = warn), { value, logged }),
+      (error) => {
+        console.warn = warn;
+        throw error;
+      },
+    );
+  };
+
+  it("drops a card's note (K021) and keeps the card; the log has no text", async () => {
+    const { deps } = fake([{ content: [{ type: "text", text: k021 }, chore("S1")], stop_reason: "tool_use" }]);
+    const { value: result, logged } = await quiet(() => runKakakTurn(deps, null, "Beli sabun cuci"));
+    if (result.kind !== "suggestions") throw new Error(result.kind);
+    expect(result.text).toBe("");
+    expect(result.items).toHaveLength(1);
+    expect(logged).toEqual([["kakak: reply text dropped", "suggestions", "reference,too_long,language"]]);
+    expect(JSON.stringify(logged)).not.toContain("Sabun");
+    // The history keeps the model's words unchanged, as the API requires.
+    expect(JSON.stringify(result.history.messages[1])).toContain("I'll treat it as close enough");
+  });
+
+  it("drops an English note with a reference and a date for an English owner (K114)", async () => {
+    const { deps } = fake([
+      { content: [{ type: "text", text: "Eggs I1 already in fridge; set expiry 2026-11-25." }, chore("S1")], stop_reason: "tool_use" },
+    ]);
+    deps.household = { ...deps.household, ownerLocale: "en" };
+    const { value: result } = await quiet(() => runKakakTurn(deps, null, "We bought eggs"));
+    expect(result).toMatchObject({ kind: "suggestions", text: "" });
+  });
+
+  it("keeps a question and its answers, never the text beside it (K104)", async () => {
+    const q = { type: "tool_use", id: "toolu_q", name: "ask_question", input: { question: "Jam berapa?", answers: ["16.00", "17.00"], allow_typing: true } };
+    const { deps } = fake([{ content: [{ type: "text", text: "Need time: ask." }, q], stop_reason: "tool_use" }]);
+    const result = await runKakakTurn(deps, null, "Jalan-jalan Kopi tiap sore");
+    expect(result).toEqual(expect.objectContaining({ kind: "question", question: "Jam berapa?", answers: ["16.00", "17.00"] }));
+    expect(result).not.toHaveProperty("text");
+  });
+
+  it("keeps a good sentence beside a card", async () => {
+    const good = "Baik. Kakak siapkan: Sari mengepel teras setiap Senin jam 09.00.";
+    const { deps } = fake([{ content: [{ type: "text", text: good }, chore("S1")], stop_reason: "tool_use" }]);
+    expect(await runKakakTurn(deps, null, "Mbak Sari pel teras tiap Senin jam 9")).toMatchObject({ kind: "suggestions", text: good });
+  });
+
+  it("replaces a plain reply that is a note with the safe line, in the owner's language", async () => {
+    const { deps } = fake([{ content: [{ type: "text", text: "No tool fits; reply that P1 medicine is unsupported." }], stop_reason: "end_turn" }]);
+    const { value: id } = await quiet(() => runKakakTurn(deps, null, "obat Mochi"));
+    expect(id).toMatchObject({ kind: "message", text: "Maaf, Kakak belum paham. Bisa Anda katakan dengan cara lain?" });
+
+    const english = fake([{ content: [{ type: "text", text: "Use add_food with expires_on today." }], stop_reason: "end_turn" }]);
+    english.deps.household = { ...english.deps.household, ownerLocale: "en" };
+    const { value: en } = await quiet(() => runKakakTurn(english.deps, null, "rice"));
+    expect(en).toMatchObject({ kind: "message", text: "Sorry, I didn't catch that. Could you say it another way?" });
+  });
+});
+
 describe("isSaveableSuggestion", () => {
   const good: KakakSuggestion = {
     kind: "food",
