@@ -164,7 +164,12 @@ describe("the suggestion", () => {
       nobody: [],
     });
     // Repairs and Pet routines only when the home has them, as on the owner's dialog.
-    expect(suggest(call(), { repairsOn: false, hasPets: false }).areas).toEqual(["home", "kitchen"]);
+    expect(suggest(call({ hide: ["kitchen"] }), { repairsOn: false, hasPets: false }).areas).toEqual(["home", "kitchen"]);
+    // An area the card changes always shows, even with its feature off, so
+    // the owner sees everything Save writes (Codex, PR #140).
+    const offRepairs = suggest(call({ hide: ["kitchen", "repairs"] }), { repairsOn: false });
+    expect(offRepairs.areas).toEqual(["home", "pets", "kitchen", "repairs"]);
+    expect(describeSuggestion(offRepairs, "en").rows.at(-1)).toEqual({ label: "Repairs", value: "Off (was on)" });
   });
 
   it("never maps an owner or an unknown reference", () => {

@@ -141,7 +141,7 @@ export interface StaffAreasSuggestion {
   hide: StaffArea[];
   /** What was hidden when Kakak read the household, for the card's "was". */
   before: StaffArea[];
-  /** The rows the card shows: the switches this household has, as on the owner's dialog. */
+  /** The rows the card shows: the switches this household has, as on the owner's dialog, and any area the card changes. */
   areas: StaffArea[];
   /**
    * Chores for anyone or pet routines that no staff member would see once
@@ -361,7 +361,10 @@ export function toSuggestion(
         show,
         hide,
         before,
-        areas: householdAreas(household),
+        // The household's switches, plus any area the card changes even if
+        // its feature is off (Repairs), so the owner sees all that Save
+        // writes (Codex, PR #140).
+        areas: AREAS.filter((area) => householdAreas(household).includes(area) || show.includes(area) || hide.includes(area)),
         nobody: (["home", "pets"] as const).filter(
           (area) => (area !== "pets" || !household.petsOff) && !seesAfter(area),
         ),
