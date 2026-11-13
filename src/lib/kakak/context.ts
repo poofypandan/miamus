@@ -12,6 +12,7 @@
 
 import { ROUTINE_KINDS } from "@/lib/pet-routine-kinds";
 import { isIngredient } from "@/lib/kitchen-units";
+import { hiddenAreasOf } from "@/lib/staff-areas";
 import type { FoodPlace, InventoryCategory, RoutineKind } from "@/types/database";
 import type { KakakHousehold, KakakLocale } from "./household";
 import { FOOD_PLACES } from "./tools";
@@ -26,6 +27,8 @@ export interface ContextStaffRow {
   created_at: string;
   user_id?: string | null;
   archived_at?: string | null;
+  /** migrations/165; absent before it (or on an older read), which reads as nothing hidden. */
+  hidden_areas?: string[] | null;
 }
 
 export interface ContextPetRow {
@@ -87,6 +90,8 @@ export interface ContextRows {
   foodOn?: boolean | null;
   /** household_features 'kitchen' (migrations/148): only an explicit true switches Kitchen amounts on. */
   kitchenOn?: boolean | null;
+  /** household_features 'repairs' (migrations/145): only an explicit false switches Repairs off. */
+  repairsOn?: boolean | null;
 }
 
 export interface RefMap {
@@ -169,7 +174,10 @@ export function buildContext(
     if (person === self) continue;
     const ref = `S${people.length + 1}`;
     const name = firstName(person.name);
-    people.push({ ref, name });
+    // What an owner switched off (Phase 178). A co-owner's row is never
+    // limited, so it carries nothing, and is marked so Kakak can't limit it.
+    const hidden = hiddenAreasOf(person);
+    people.push({ ref, name, ...(hidden.length ? { hidden } : {}), ...(person.user_id ? { owner: true as const } : {}) });
     refs.people[ref] = person.id;
     names.people[ref] = name;
   }
@@ -280,6 +288,7 @@ export function buildContext(
       ...(rows.hasPets === false ? { petsOff: true } : {}),
       ...(rows.foodOn === false ? { foodOff: true } : {}),
       ...(ingredientsOn ? { ingredientsOn: true } : {}),
+      ...(rows.repairsOn === false ? { repairsOff: true } : {}),
     },
     refs,
     names,

@@ -7,6 +7,7 @@ import {
   Check,
   CheckCircle2,
   CircleAlert,
+  Eye,
   Gauge,
   Hourglass,
   ListChecks,
@@ -625,7 +626,7 @@ function SuggestionCard({
                 <Check className="size-5" aria-hidden="true" />
                 {saveable > 1
                   ? t(`Save ${saveable}`, `Simpan ${saveable}`)
-                  : items.some((item) => item.kind === "pet_routine")
+                  : items.some((item) => item.kind === "pet_routine" || item.kind === "staff_areas")
                     ? t("Save", "Simpan")
                     : t("Looks right", "Sudah benar")}
               </>
@@ -841,6 +842,7 @@ const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
   pet_routine: PawPrint,
   food: Refrigerator,
   ingredient: Carrot,
+  staff_areas: Eye,
 };
 
 type T = (en: string, id: string) => string;

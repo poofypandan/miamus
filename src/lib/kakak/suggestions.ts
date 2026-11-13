@@ -9,6 +9,7 @@
 
 import { effectiveProof, routineKindInfo } from "@/lib/pet-routine-kinds";
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
+import { AREAS, isStaffArea, withAreas, type StaffArea } from "@/lib/staff-areas";
 import type { RoutineKind, RoutineProof } from "@/types/database";
 import type { RefMap, RefNames } from "./context";
 import type { KakakHousehold } from "./household";
@@ -124,7 +125,39 @@ export interface IngredientSuggestion {
   expiryIsGuess: boolean;
 }
 
-export type KakakSuggestion = ChoreSuggestion | ShoppingSuggestion | PetRoutineSuggestion | FoodSuggestion | IngredientSuggestion;
+/**
+ * What one staff member sees (Phase 178 follow-up): saved through
+ * setStaffHiddenAreas, the owner's own switches' path, on top of the list
+ * as it is when the card is saved, so an area the card doesn't name stays
+ * as it is.
+ */
+export interface StaffAreasSuggestion {
+  kind: "staff_areas";
+  staffId: string;
+  staffName: string;
+  /** Areas the card switches on, as Kakak asked. */
+  show: StaffArea[];
+  /** Areas the card switches off, as Kakak asked. */
+  hide: StaffArea[];
+  /** What was hidden when Kakak read the household, for the card's "was". */
+  before: StaffArea[];
+  /** The rows the card shows: the switches this household has, as on the owner's dialog. */
+  areas: StaffArea[];
+  /**
+   * Chores for anyone or pet routines that no staff member would see once
+   * this is saved, so every staff member sees them (rule 3). Leave isn't
+   * known here, so this can only under-warn.
+   */
+  nobody: StaffArea[];
+}
+
+export type KakakSuggestion =
+  | ChoreSuggestion
+  | ShoppingSuggestion
+  | PetRoutineSuggestion
+  | FoodSuggestion
+  | IngredientSuggestion
+  | StaffAreasSuggestion;
 
 /** The potty title the app writes (lib/schedule-categories.ts). */
 export const POTTY_TITLE = "Pipis & Pup";
@@ -308,9 +341,46 @@ export function toSuggestion(
         expiryIsGuess: expiry === "set" && input.expiry_is_guess === true,
       };
     }
+    case "set_staff_areas": {
+      const ref = str(input.staff);
+      const person = ref ? household.people.find((p) => p.ref === ref && !p.owner) : undefined;
+      const staffId = ref ? refs.people[ref] : null;
+      if (!ref || !person || !staffId) return null;
+      const show = areasFrom(input.show);
+      const hide = areasFrom(input.hide).filter((area) => !show.includes(area));
+      const before = person.hidden ?? [];
+      const after = withAreas(before, show, hide);
+      // Rule 3, for the household as Kakak read it: nobody else on staff
+      // with the area on, once this person's change is in.
+      const seesAfter = (area: StaffArea) =>
+        household.people.some((p) => !p.owner && !(p.ref === ref ? after : (p.hidden ?? [])).includes(area));
+      return {
+        kind: "staff_areas",
+        staffId,
+        staffName: names.people[ref] ?? person.name,
+        show,
+        hide,
+        before,
+        areas: householdAreas(household),
+        nobody: (["home", "pets"] as const).filter(
+          (area) => (area !== "pets" || !household.petsOff) && !seesAfter(area),
+        ),
+      };
+    }
     default:
       return null;
   }
+}
+
+/** A list of areas from a tool call, each once, in AREAS order; anything else dropped. */
+function areasFrom(value: unknown): StaffArea[] {
+  const list = Array.isArray(value) ? value.filter(isStaffArea) : [];
+  return AREAS.filter((area) => list.includes(area));
+}
+
+/** The switches a household has, as the owner's dialog shows them: Pet routines only with pets, Repairs only while on. */
+export function householdAreas(household: Pick<KakakHousehold, "petsOff" | "repairsOff">): StaffArea[] {
+  return AREAS.filter((area) => !(area === "pets" && household.petsOff) && !(area === "repairs" && household.repairsOff));
 }
 
 const CATEGORIES = new Set(["cleaning", "maintenance", "errand", "groceries"]);
@@ -423,6 +493,21 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         // A card that changes nothing is never saved.
         !(s.keptIn === null && s.expiry === "keep")
       );
+    case "staff_areas": {
+      const lists = [s.show, s.hide, s.before, s.areas, s.nobody];
+      if (!lists.every((list) => Array.isArray(list) && list.every(isStaffArea) && new Set(list).size === list.length)) {
+        return false;
+      }
+      const show = s.show as StaffArea[];
+      const hide = s.hide as StaffArea[];
+      return (
+        okId(s.staffId, false) &&
+        okText(s.staffName, 40, false) &&
+        show.length + hide.length > 0 &&
+        !show.some((area) => hide.includes(area)) &&
+        (s.nobody as StaffArea[]).every((area) => area === "home" || area === "pets")
+      );
+    }
     default:
       return false;
   }

@@ -2,10 +2,10 @@
 // the phone (docs/phase-156-step2-kakak-plan.md, section 4, "What comes back
 // to the phone"). Strict tool schemas guarantee the shape; this checks what
 // they can't: lengths, HH:mm, real dates in range, and references that exist
-// in this household. add_to_shopping_list, add_food and put_away_ingredient
-// aren't strict (the API's limit on union types, tools.ts), so for them this
-// also checks the whole shape: every field there and no others, types and
-// enums.
+// in this household. add_to_shopping_list, add_food, put_away_ingredient and
+// set_staff_areas aren't strict (the API's limit on union types, tools.ts),
+// so for them this also checks the whole shape: every field there and no
+// others, types and enums.
 
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
 import { ROUTINE_NOTE_MAX, routineKindInfo } from "@/lib/pet-routine-kinds";
@@ -13,6 +13,7 @@ import type { RoutineKind } from "@/types/database";
 import { isScheduleActiveOn } from "@/lib/scheduleEngine";
 import { isoWeekday } from "@/lib/pet-routine-kinds";
 import type { MasterSchedule } from "@/types/database";
+import { AREAS, isStaffArea, withAreas, type StaffArea } from "@/lib/staff-areas";
 import { addDays, householdRefs, type KakakHousehold, type KakakRoutine } from "./household";
 import {
   FOOD_PLACES,
@@ -122,6 +123,22 @@ const FOOD_FIELDS = [
 ] as const;
 
 const INGREDIENT_FIELDS = ["item", "kept_in", "expiry", "expires_on", "expiry_is_guess"] as const;
+
+const STAFF_AREA_FIELDS = ["staff", "show", "hide"] as const;
+
+/** set_staff_areas' show or hide: a list of areas, each once. Null when it isn't one. */
+function areaList(errors: string[], field: string, value: unknown): StaffArea[] | null {
+  if (!Array.isArray(value)) {
+    errors.push(`${field} must be a list (empty for none)`);
+    return null;
+  }
+  if (!value.every(isStaffArea)) {
+    errors.push(`${field} must hold only ${AREAS.join(", ")}`);
+    return null;
+  }
+  if (new Set(value).size !== value.length) errors.push(`${field} repeats an area`);
+  return value;
+}
 
 /** "Remind me" (migrations/137): on the day, or 1, 3 or 7 days before. */
 export const REMIND_DAYS = new Set([0, 1, 3, 7]);
@@ -271,6 +288,34 @@ export function validateToolCall(
           (input.expiry === "set" && input.expires_on === item.expiresOn) ||
           (input.expiry === "clear" && !item.expiresOn);
         if (samePlace && sameDate) errors.push("nothing would change: it is already noted that way; say so in one line instead");
+      }
+      break;
+    }
+    case "set_staff_areas": {
+      // Not strict (tools.ts): the shape is checked here.
+      shape(errors, "input", input, STAFF_AREA_FIELDS);
+      const person = household.people.find((p) => p.ref === input.staff);
+      // Owners are never limited (Phase 178, rule 6): M1, and a co-owner's row.
+      if (input.staff === household.owner.ref || person?.owner) {
+        errors.push(`staff ${input.staff} is an owner, and owners always see everything: say so in one line instead`);
+      } else {
+        ref(errors, "staff", input.staff, refs.staff, false);
+      }
+      const show = areaList(errors, "show", input.show);
+      const hide = areaList(errors, "hide", input.hide);
+      if (!show || !hide) break;
+      if (show.length === 0 && hide.length === 0) errors.push("show and hide are both empty: list what changes");
+      const both = show.filter((area) => hide.includes(area));
+      if (both.length) errors.push(`${both.join(", ")} is in both show and hide`);
+      if (household.petsOff && [...show, ...hide].includes("pets")) {
+        errors.push("pets are switched off for this household: leave pets out");
+      }
+      if (person && !person.owner && both.length === 0) {
+        const before = person.hidden ?? [];
+        const after = withAreas(before, show, hide);
+        if (after.join() === before.join()) {
+          errors.push(`nothing would change: ${person.ref} already sees it that way; say so in one line instead`);
+        }
       }
       break;
     }

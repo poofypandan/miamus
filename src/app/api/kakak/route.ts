@@ -88,24 +88,41 @@ async function readItems(supabase: Awaited<ReturnType<typeof createSupabaseServe
   return supabase.from("inventory_items").select("id, name, scope, created_at, category, stock_status").eq("household_id", householdId);
 }
 
+/**
+ * The roster, with what each person sees (Phase 178, migrations/165). On a
+ * database without 165 the column doesn't exist (Postgres 42703): read the
+ * roster as before, so Kakak keeps working with everyone seeing everything.
+ */
+async function readStaff(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, householdId: string) {
+  // Named columns: pin is revoked from every client role (migrations/096).
+  const staff = await supabase
+    .from("staff_profiles")
+    .select("id, name, created_at, user_id, archived_at, hidden_areas")
+    .eq("household_id", householdId);
+  if (staff.error?.code !== "42703") return staff;
+  console.error("Kakak: staff areas not read", staff.error.message);
+  return supabase.from("staff_profiles").select("id, name, created_at, user_id, archived_at").eq("household_id", householdId);
+}
+
 async function readRows(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   householdId: string,
 ): Promise<ContextRows> {
   const [staff, pets, rooms, items, household, food] = await Promise.all([
-    supabase
-      .from("staff_profiles")
-      // Named columns: pin is revoked from every client role (migrations/096).
-      .select("id, name, created_at, user_id, archived_at")
-      .eq("household_id", householdId),
+    readStaff(supabase, householdId),
     supabase.from("task_entities").select("id, name, created_at, entity_type, metadata").eq("household_id", householdId).eq("entity_type", "pet"),
     supabase.from("household_locations").select("id, name, created_at, kind, parent_id").eq("household_id", householdId),
     readItems(supabase, householdId),
     // "Who lives here?" (Phase 162): pets switched off means no pet routines.
     supabase.from("households").select("has_pets").eq("id", householdId).maybeSingle(),
     // Household → Features (Phase 171): Food at home switched off means no
-    // add_food; Kitchen amounts on as well means ingredients (Phase 176).
-    supabase.from("household_features").select("feature, enabled").eq("household_id", householdId).in("feature", ["food", "kitchen"]),
+    // add_food; Kitchen amounts on as well means ingredients (Phase 176);
+    // Repairs off leaves its row off the staff-areas card (Phase 178).
+    supabase
+      .from("household_features")
+      .select("feature, enabled")
+      .eq("household_id", householdId)
+      .in("feature", ["food", "kitchen", "repairs"]),
   ]);
   for (const result of [staff, pets, rooms, items]) if (result.error) throw result.error;
   // Optional: a failed read (or a database without migrations/133) leaves
@@ -129,6 +146,7 @@ async function readRows(
     hasPets: household.error ? null : ((household.data as { has_pets: boolean | null } | null)?.has_pets ?? null),
     foodOn: food.error ? null : featureRow(food.data, "food"),
     kitchenOn: food.error ? null : featureRow(food.data, "kitchen"),
+    repairsOn: food.error ? null : featureRow(food.data, "repairs"),
   } as ContextRows;
 }
 

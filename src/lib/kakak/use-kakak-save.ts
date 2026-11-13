@@ -10,9 +10,11 @@
 import { useCallback } from "react";
 import { useHousehold } from "@/context/household-context";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
+import { reloadStaffProfiles } from "@/hooks/use-staff-profiles";
 import { dataProvider } from "@/lib/data";
 import { stockStatus } from "@/lib/inventory";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { hiddenAreasOf, withAreas, type StaffArea } from "@/lib/staff-areas";
 import { petRoutineRows } from "./pet-routine-rows";
 import { isSaveableSuggestion, type KakakSuggestion } from "./suggestions";
 import type { StockStatus } from "@/types/database";
@@ -22,6 +24,18 @@ export interface SaveResult {
   undo: () => Promise<boolean>;
   /** How many suggestions were saved (all of them, or an error was thrown). */
   saved: number;
+}
+
+/**
+ * What a staff member has switched off right now, read fresh from the
+ * roster rather than from what Kakak read: another owner may have changed it
+ * since. Someone removed, or an owner's row (never limited), is refused.
+ */
+async function currentHiddenAreas(staffId: string): Promise<StaffArea[]> {
+  const person = (await dataProvider.listStaffProfiles()).find((p) => p.id === staffId && !p.archived_at);
+  if (!person) throw new Error("Kakak's staff member is not on this household's roster");
+  if (person.user_id) throw new Error("Owners always see everything");
+  return hiddenAreasOf(person);
 }
 
 export function useKakakSave() {
@@ -147,6 +161,24 @@ export function useKakakSave() {
                   throw new Error("The ingredient's date was not kept (it is marked Out)");
                 }
               }
+              break;
+            }
+            case "staff_areas": {
+              // Phase 178: the owner's switches' own path, on top of the
+              // person's list as it is now, so an area the card doesn't name
+              // stays as it is. Undo reverses only what this card changed,
+              // again on top of the latest list, as the switches' Undo does.
+              const current = await currentHiddenAreas(item.staffId);
+              const shown = item.show.filter((area) => current.includes(area));
+              const hidden = item.hide.filter((area) => !current.includes(area));
+              if (shown.length + hidden.length === 0) break; // already so
+              await dataProvider.setStaffHiddenAreas(item.staffId, withAreas(current, item.show, item.hide));
+              undos.push(async () => {
+                const latest = await currentHiddenAreas(item.staffId);
+                await dataProvider.setStaffHiddenAreas(item.staffId, withAreas(latest, hidden, shown));
+                void reloadStaffProfiles();
+              });
+              void reloadStaffProfiles();
               break;
             }
           }

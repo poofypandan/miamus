@@ -392,6 +392,9 @@ people are **staf** and **admin**.
 | Nobody sees chores for anyone now, so every staff member sees them. | **Sekarang tidak ada yang melihat tugas untuk siapa saja, jadi semua staf melihatnya.** | Phase 178: the same, for chores. |
 | Doesn't see: Kitchen, Repairs | **Tidak melihat: Dapur, Perbaikan** | Phase 178: the staff list, under a name with anything off. |
 | Kitchen off for Sari / Kitchen on for Sari | **Dapur dimatikan untuk Sari** / **Dapur aktif untuk Sari** | Phase 178: the toast after a switch, with Undo / **Batalkan**. Same verbs as the Features switches. |
+| On · Off · On (was off) · Off (was on) | **Aktif · Mati · Aktif (sebelumnya mati) · Mati (sebelumnya aktif)** | Phase 178 follow-up: Kakak's "What {name} sees" card, one row per switch. "Aktif · Mati" as the notification status; "(sebelumnya …)" as the ingredient card's "(sebelumnya Freezer)". Buttons **Simpan · Ubah · Batal**. |
+| Nobody would see pet routines, so every staff member will see them. | **Tidak ada yang akan melihat rutinitas hewan, jadi semua staf akan melihatnya.** | Phase 178 follow-up: under Kakak's card, before saving. The same for **tugas untuk siapa saja**. |
+| Saved — What Syam sees | **Tersimpan — Yang dilihat Syam** | Phase 178 follow-up: the toast after Kakak's card, with Undo / **Batalkan**. |
 
 ## Formatting
 

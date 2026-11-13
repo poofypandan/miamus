@@ -1,13 +1,15 @@
 // The household block sent to Claude after the shared, cached instructions
 // (docs/phase-156-step2-kakak-plan.md, section 4, "What is sent to Claude").
-// Only short references and first names; never database ids, emails, notes,
-// logs or anything else from the household.
+// Only short references and first names (and, for a staff member with parts
+// of the staff app switched off, which parts: Phase 178); never database
+// ids, emails, notes, logs or anything else from the household.
 //
 // Relative days ("besok", "Sabtu ini", "akhir bulan") are the commonest
 // mistake for a language model, so the block lists the next 14 dates with
 // their weekdays, worked out here in code, instead of leaving the arithmetic
 // to the model.
 
+import type { StaffArea } from "@/lib/staff-areas";
 import type { FoodPlace, RoutineKind } from "@/types/database";
 
 export type KakakLocale = "id" | "en";
@@ -37,7 +39,21 @@ export interface KakakHousehold {
   ownerLocale: KakakLocale;
   /** The owner's own roster row, always M1. */
   owner: { ref: "M1"; name: string };
-  people: { ref: string; name: string }[];
+  people: {
+    ref: string;
+    name: string;
+    /**
+     * What an owner switched off for this person (Phase 178,
+     * migrations/165), in AREAS order. Absent when nothing is, so the block
+     * for everyone who sees everything reads exactly as before.
+     */
+    hidden?: StaffArea[];
+    /**
+     * Another owner's roster row (a co-owner): never limited (rule 6), so
+     * set_staff_areas refuses them. Not written into the block.
+     */
+    owner?: true;
+  }[];
   pets: {
     ref: string;
     name: string;
@@ -94,6 +110,12 @@ export interface KakakHousehold {
    * tools are exactly what they were for every other household.
    */
   ingredientsOn?: boolean;
+  /**
+   * Settings → Features: true only when the owner switched Repairs off.
+   * Not written into the block; the staff-areas card leaves the Repairs row
+   * out, as the owner's switches do.
+   */
+  repairsOff?: boolean;
 }
 
 const WEEKDAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -153,6 +175,8 @@ function times(list: string[]): string {
 /** Every reference the household block defines, for checking a reply. */
 export function householdRefs(household: KakakHousehold): {
   people: Set<string>;
+  /** Staff only (S1, …): the people whose areas can be set; never M1 or a co-owner. */
+  staff: Set<string>;
   pets: Set<string>;
   rooms: Set<string>;
   /** The references that are a floor (whole floor), which a new room may sit on. */
@@ -161,6 +185,7 @@ export function householdRefs(household: KakakHousehold): {
 } {
   return {
     people: new Set([household.owner.ref, ...household.people.map((p) => p.ref)]),
+    staff: new Set(household.people.filter((p) => !p.owner).map((p) => p.ref)),
     pets: new Set(household.pets.map((p) => p.ref)),
     rooms: new Set(household.rooms.map((r) => r.ref)),
     floors: new Set(household.rooms.filter((r) => r.wholeFloor).map((r) => r.ref)),
@@ -177,7 +202,7 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   lines.push("");
   lines.push("People who can be given chores:");
   lines.push(`- ${household.owner.ref}: the owner (${household.owner.name})`);
-  for (const person of household.people) lines.push(`- ${person.ref}: ${person.name}`);
+  for (const person of household.people) lines.push(`- ${person.ref}: ${person.name}${hiddenLine(person.hidden)}`);
   lines.push("");
   if (household.petsOff) {
     lines.push("Pets: switched off for this household (Settings → Features). No pet routines.");
@@ -219,6 +244,15 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   lines.push(`First day of next month: ${dayLine(firstDayOfNextMonth(household.today))}.`);
   lines.push("</household>");
   return lines.join("\n");
+}
+
+/**
+ * " (doesn't see: kitchen, repairs)" for a staff member with areas switched
+ * off (Phase 178), or nothing, so everyone who sees everything reads as
+ * before.
+ */
+function hiddenLine(hidden: StaffArea[] | undefined): string {
+  return hidden && hidden.length ? ` (doesn't see: ${hidden.join(", ")})` : "";
 }
 
 /**
