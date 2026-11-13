@@ -300,6 +300,43 @@ describe("listenUntilDone", () => {
     expect(FakeRecognition.last).toBe(last); // no more restarts
   });
 
+  it("a restart that fails before hearing anything starts again, then stops after the stumble limit, keeping the words", () => {
+    let clock = 0;
+    const h = handlers();
+    listenUntilDone(FakeRecognition, "en-US", h, () => clock);
+    FakeRecognition.last!.hear(["Buy eggs", true]);
+    clock += 5000;
+    FakeRecognition.last!.end();
+    // Android still holds the mic: the restart fails, slowly.
+    FakeRecognition.last!.fail("audio-capture");
+    clock += 2000;
+    FakeRecognition.last!.end();
+    expect(h.onFinished).not.toHaveBeenCalled();
+    expect(h.onProblem).not.toHaveBeenCalled();
+    FakeRecognition.last!.hear(["and sugar", true]); // it recovers
+    clock += 5000;
+    FakeRecognition.last!.end();
+    for (let i = 0; i < MAX_STUMBLES; i++) {
+      FakeRecognition.last!.fail("network");
+      clock += 2000;
+      FakeRecognition.last!.end();
+    }
+    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs and sugar");
+    expect(h.onProblem).not.toHaveBeenCalled();
+  });
+
+  it("a refused microphone on a restart ends listening, keeping the words", () => {
+    const h = handlers();
+    listenUntilDone(FakeRecognition, "en-US", h);
+    FakeRecognition.last!.hear(["Buy eggs", true]);
+    FakeRecognition.last!.end();
+    const second = FakeRecognition.last!;
+    second.fail("not-allowed");
+    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs");
+    second.end();
+    expect(FakeRecognition.last).toBe(second);
+  });
+
   it("a slow end (a real pause) is not a stumble", () => {
     let clock = 0;
     const h = handlers();

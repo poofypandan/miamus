@@ -204,8 +204,9 @@ export const FINISH_GRACE_MS = 1500;
 export const MAX_LISTEN_MS = 60_000;
 
 /**
- * A session that ends this soon with nothing heard is a stumble; this many
- * in a row means the browser won't keep listening, so it stops instead of
+ * A session that ends this soon with nothing heard, or a restart that fails
+ * before hearing anything, is a stumble; this many in a row means the
+ * browser won't keep listening, so it stops (keeping the words) instead of
  * starting again forever.
  */
 export const QUICK_END_MS = 500;
@@ -271,6 +272,8 @@ export function listenUntilDone(
     recognition.maxAlternatives = 1;
     const startedAt = now();
     let gotWords = false;
+    /** A restart that failed before hearing anything: try again, within the stumble limit. */
+    let stumbled = false;
     current = recognition;
     sessions++;
 
@@ -290,13 +293,20 @@ export function listenUntilDone(
       // Silence isn't a problem while listening: the session ends and the
       // next one starts. Aborted is one of ours.
       if (!problem || problem === "quiet") return;
+      // A restarted recognizer can fail while Android still holds the mic
+      // from the last one: start again (counted as a stumble) rather than
+      // end what the owner is saying. A refused microphone always ends it.
+      if (sessions > 1 && !gotWords && problem !== "blocked") {
+        stumbled = true;
+        return;
+      }
       fail(problem);
     };
     recognition.onend = () => {
       if (current !== recognition) return;
       kept = heard; // the session's words, its last guess included
       if (state === "finishing") return handOver();
-      const quick = !gotWords && now() - startedAt < QUICK_END_MS;
+      const quick = !gotWords && (stumbled || now() - startedAt < QUICK_END_MS);
       stumbles = quick ? stumbles + 1 : 0;
       if (stumbles >= MAX_STUMBLES) return handOver();
       begin();
