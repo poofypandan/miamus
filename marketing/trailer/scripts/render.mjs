@@ -36,12 +36,12 @@ if (!args["frames-only"]) {
 
 // Key frames for review: the moment each shot is clearest (frame numbers at 30 fps).
 const SIXTY = {
-  "01-hook": 48, "02-today-push-in": 140, "03-kakak-card-ai-tag": 323, "04-looks-right": 352, "05-lights-card": 533,
-  "06-two-cards": 717, "07-staff-photos": 865, "08-staff-tick": 938, "09-staff-reminder": 1024, "10-lights-tick": 1116,
-  "11-all-on-track": 1190, "12-scroll": 1300, "13-owner-alert": 1440, "14-glimpse-kitchen": 1590, "15-glimpse-pets": 1625,
-  "16-glimpse-repairs": 1660, "17-end-card": 1790,
+  "01-hook": 48, "02-today-push-in": 140, "03-kakak-card-ai-tag": 298, "04-looks-right": 352, "05-lights-card": 533,
+  "06-two-cards": 717, "07-two-phones": 800, "08-staff-photos": 899, "09-staff-tick": 965, "10-staff-reminder": 1024,
+  "11-lights-tick": 1116, "12-all-on-track": 1190, "13-scroll": 1300, "14-owner-alert": 1440, "15-glimpse-kitchen": 1590,
+  "16-glimpse-pets": 1625, "17-glimpse-repairs": 1660, "18-end-card": 1790,
 };
-const FIFTEEN = { "01-hook": 48, "02-kakak-ai-tag": 123, "03-looks-right": 151, "04-staff": 243, "05-staff-tick": 266, "06-all-on-track": 340, "07-end-card": 445 };
+const FIFTEEN = { "01-hook": 48, "02-kakak-ai-tag": 123, "03-looks-right": 178, "04-staff": 243, "05-staff-tick": 266, "06-all-on-track": 340, "07-end-card": 445 };
 const FRAMES = { "trailer-60-en": SIXTY, "trailer-60-id": SIXTY, "trailer-15-en": FIFTEEN, "trailer-15-id": FIFTEEN };
 for (const id of cuts) {
   for (const [name, frame] of Object.entries(FRAMES[id] ?? {})) {

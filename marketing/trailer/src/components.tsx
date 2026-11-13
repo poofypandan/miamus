@@ -1,33 +1,25 @@
-import React from "react";
+import React, { createContext, useContext } from "react";
 import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { C, CX, FONT, SAFE } from "./theme";
+import { C, FONT, H, SAFE, W } from "./theme";
 
 /* ------------------------------------------------------------------ */
-/* Geometry of the phone on the frame                                  */
+/* Geometry                                                            */
 /* ------------------------------------------------------------------ */
 
 /** Captured screens are 390 × 844 CSS px (1170 × 2532 at 3×). */
 export const CSS_W = 390;
 export const CSS_H = 844;
-/** On the frame the screen is drawn this wide; everything else follows. */
-export const SCREEN_W = 452;
-export const K = SCREEN_W / CSS_W; // video px per CSS px
-export const IMG_H = Math.round(CSS_H * K);
-/** Plain strips above and below the app (no status bar: none is faked). */
-export const INSET_TOP = 26;
-export const INSET_BOTTOM = 16;
-export const SCREEN_H = IMG_H + INSET_TOP + INSET_BOTTOM;
-export const BEZEL = 12;
-export const PHONE_W = SCREEN_W + BEZEL * 2;
-export const PHONE_H = SCREEN_H + BEZEL * 2;
-export const PHONE_TOP = 236;
-export const PHONE_LEFT = CX - PHONE_W / 2;
-/** Where the caption panel starts (under the phone at rest). */
-export const CAPTION_TOP = PHONE_TOP + PHONE_H + 22;
-/** Where a CSS point of the app lands on the frame (phone at rest). */
-export function onFrame(x: number, y: number) {
-  return { x: PHONE_LEFT + BEZEL + x * K, y: PHONE_TOP + BEZEL + INSET_TOP + y * K };
-}
+
+/**
+ * Full-bleed (owner, 14 Nov: "imagine viewing this on the phone"): the app's
+ * screen fills the frame's width, so its text is as large as on a phone held
+ * in the hand. 2.77 video px per CSS px; the screen is taller than the frame,
+ * and the camera chooses which part shows.
+ */
+export const KB = W / CSS_W;
+export const BLEED_H = Math.round(CSS_H * KB);
+/** The highest the screen's bottom edge may rise (video px). */
+const BOTTOM_EDGE_MIN = 1300;
 
 export const ease = Easing.bezier(0.33, 0, 0.2, 1);
 
@@ -36,18 +28,20 @@ export function ramp(frame: number, from: number, to: number) {
   return interpolate(frame, [from, to], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
 }
 
+/** How the current screen is drawn: px per CSS px, and the plain strip above the app (framed phones only). */
+const Geo = createContext({ k: KB, inset: 0 });
+
 /* ------------------------------------------------------------------ */
 /* Background                                                          */
 /* ------------------------------------------------------------------ */
 
-/** A plain soft background; `evening` (0–1) dims it for the two notification shots. */
+/** Warm white by day (seen around the hook, the two-phone moment and the end card). */
 export function Backdrop({ evening = 0 }: { evening?: number }) {
   const mix = (a: string, b: string) => {
     const pa = a.match(/\w\w/g)!.map((h) => parseInt(h, 16));
     const pb = b.match(/\w\w/g)!.map((h) => parseInt(h, 16));
     return `rgb(${pa.map((v, i) => Math.round(v + (pb[i] - v) * evening)).join(",")})`;
   };
-  // Warm white by day; dark only for the two evening notifications (design lead, v2).
   return (
     <AbsoluteFill
       style={{
@@ -73,6 +67,7 @@ export interface Cue {
 /** Plays a list of stills: each one from its frame on, crossfading over the one before. */
 export function ScreenTrack({ cues }: { cues: Cue[] }) {
   const frame = useCurrentFrame();
+  const { k, inset } = useContext(Geo);
   const sorted = [...cues].sort((a, b) => a.at - b.at);
   let current = -1;
   sorted.forEach((c, i) => {
@@ -83,7 +78,7 @@ export function ScreenTrack({ cues }: { cues: Cue[] }) {
   const prev = sorted[current - 1];
   const fade = cur.fade ?? 8;
   const t = fade > 0 ? ramp(frame, cur.at, cur.at + fade) : 1;
-  const style: React.CSSProperties = { position: "absolute", left: 0, top: INSET_TOP, width: SCREEN_W, height: IMG_H };
+  const style: React.CSSProperties = { position: "absolute", left: 0, top: inset, width: CSS_W * k, height: CSS_H * k };
   return (
     <>
       {prev && t < 1 && <Img src={staticFile(prev.src)} style={style} />}
@@ -95,110 +90,129 @@ export function ScreenTrack({ cues }: { cues: Cue[] }) {
 }
 
 export interface Camera {
-  /** Zoom, 1 = at rest. */
+  /** Zoom, 1 = the screen exactly as wide as the frame. */
   scale: number;
   /** The CSS point of the screen the zoom keeps in place. */
   fx: number;
   fy: number;
-  /** Lifts the phone (video px, negative = up), so a zoomed detail sits mid-frame. */
-  ty?: number;
+  /** Where that row lands on the frame (video px). */
+  y: number;
 }
 
 /**
- * A plain phone outline (no notch, no maker's shape, no status bar): the
- * app's screen inside a rounded frame. `x` shifts it sideways for the
- * owner/staff hand-over; `dim` darkens the screen for the evening shots.
+ * The app's screen, full-bleed: as wide as the frame, pushed in on what
+ * matters. The camera never lets the frame's edges show past the screen.
+ * `x` slides it sideways (owner ↔ staff); `dim` darkens it for the evening.
  */
-export function Phone({
+export function Screen({
   children,
+  camera,
   x = 0,
-  y = 0,
   opacity = 1,
-  camera = { scale: 1, fx: CSS_W / 2, fy: CSS_H / 2 },
-  bezel = C.ink,
   dim = 0,
   overlay,
 }: {
   children: React.ReactNode;
+  camera: Camera;
   x?: number;
-  y?: number;
   opacity?: number;
-  camera?: Camera;
-  bezel?: string;
   dim?: number;
-  /** Drawn above the dimmed screen (notification cards, tap rings). */
   overlay?: React.ReactNode;
 }) {
-  const ox = BEZEL + camera.fx * K;
-  const oy = BEZEL + INSET_TOP + camera.fy * K;
-  // Zoomed in, the phone's lower edge fades into the background above the
-  // caption, so a caption never sits on the app's own white screen.
-  const z = Math.max(0, Math.min(1, (camera.scale - 1) / 0.12));
-  const capTop = CAPTION_TOP - 6;
-  const mask = z > 0 ? `linear-gradient(to bottom, #000 0px, #000 ${capTop - 150}px, rgba(0,0,0,${1 - z}) ${capTop - 8}px)` : undefined;
+  const s = Math.max(1, camera.scale);
+  const ox = camera.fx * KB;
+  const oy = camera.fy * KB;
+  // translateY(ty) scale(s) about (ox, oy): a row y lands at ty + oy + (y - oy) * s.
+  // The screen may leave a margin only where it doesn't matter: its top edge
+  // no lower than the platforms' top 220 px, its bottom edge no higher than
+  // the caption's band (so a toast at the very bottom of the app can rise
+  // above the caption). Most of the time it covers the frame.
+  let ty = camera.y - oy;
+  const maxTy = SAFE.top + oy * (s - 1);
+  const minTy = BOTTOM_EDGE_MIN - oy - (BLEED_H - oy) * s;
+  ty = Math.min(maxTy, Math.max(minTy, ty));
   return (
-    <AbsoluteFill style={mask ? { WebkitMaskImage: mask, maskImage: mask } : undefined}>
-    <div
-      style={{
-        position: "absolute",
-        left: PHONE_LEFT + x,
-        top: PHONE_TOP + y,
-        width: PHONE_W,
-        height: PHONE_H,
-        opacity,
-        transform: `translateY(${camera.ty ?? 0}px) scale(${camera.scale})`,
-        transformOrigin: `${ox}px ${oy}px`,
-      }}
-    >
+    <AbsoluteFill style={{ opacity, transform: `translateX(${x}px)`, overflow: "hidden" }}>
       <div
         style={{
           position: "absolute",
-          inset: 0,
-          borderRadius: 64,
-          background: bezel,
-          boxShadow: "0 40px 80px rgba(23,23,23,0.16), 0 8px 24px rgba(23,23,23,0.10)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: BEZEL,
-          top: BEZEL,
-          width: SCREEN_W,
-          height: SCREEN_H,
-          borderRadius: 52,
-          overflow: "hidden",
+          left: 0,
+          top: 0,
+          width: W,
+          height: BLEED_H,
+          transform: `translateY(${ty}px) scale(${s})`,
+          transformOrigin: `${ox}px ${oy}px`,
           background: C.paper,
         }}
       >
-        {children}
-        {dim > 0 && <div style={{ position: "absolute", inset: 0, background: `rgba(16,17,19,${dim})` }} />}
-        {overlay}
+        <Geo.Provider value={{ k: KB, inset: 0 }}>
+          {children}
+          {dim > 0 && <div style={{ position: "absolute", inset: 0, background: `rgba(16,17,19,${dim})` }} />}
+          {overlay}
+        </Geo.Provider>
+      </div>
+    </AbsoluteFill>
+  );
+}
+
+/**
+ * A plain phone outline (no notch, no maker's shape, no status bar), used
+ * only where a device helps: the owner's phone beside the staff phone.
+ */
+export function FramedPhone({
+  children,
+  left,
+  top,
+  screenW,
+  bezel = C.ink,
+  opacity = 1,
+  overlay,
+}: {
+  children: React.ReactNode;
+  left: number;
+  top: number;
+  screenW: number;
+  bezel?: string;
+  opacity?: number;
+  overlay?: React.ReactNode;
+}) {
+  const k = screenW / CSS_W;
+  const inset = Math.round(22 * k);
+  const screenH = Math.round(CSS_H * k) + inset + Math.round(14 * k);
+  const b = Math.round(10 * k);
+  return (
+    <div style={{ position: "absolute", left, top, width: screenW + 2 * b, height: screenH + 2 * b, opacity }}>
+      <div style={{ position: "absolute", inset: 0, borderRadius: 55 * k, background: bezel, boxShadow: "0 40px 80px rgba(23,23,23,0.16), 0 8px 24px rgba(23,23,23,0.10)" }} />
+      <div style={{ position: "absolute", left: b, top: b, width: screenW, height: screenH, borderRadius: 45 * k, overflow: "hidden", background: C.paper }}>
+        <Geo.Provider value={{ k, inset }}>
+          {children}
+          {overlay}
+        </Geo.Provider>
       </div>
     </div>
-    </AbsoluteFill>
   );
 }
 
 /** A soft circle where a tap lands (phones don't show touches; storyboard). */
 export function TapRing({ x, y, at }: { x: number; y: number; at: number }) {
   const frame = useCurrentFrame();
+  const { k, inset } = useContext(Geo);
   const t = frame - at;
   if (t < -2 || t > 18) return null;
   const grow = interpolate(t, [-2, 4, 18], [0.55, 0.9, 1.35], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const fade = interpolate(t, [-2, 2, 18], [0, 0.55, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const d = 44 * K * grow;
+  const d = 44 * k * grow;
   return (
     <div
       style={{
         position: "absolute",
-        left: x * K - d / 2,
-        top: INSET_TOP + y * K - d / 2,
+        left: x * k - d / 2,
+        top: inset + y * k - d / 2,
         width: d,
         height: d,
         borderRadius: "50%",
         background: "rgba(23,23,23,0.18)",
-        border: "2px solid rgba(255,255,255,0.9)",
+        border: `${Math.max(2, k)}px solid rgba(255,255,255,0.9)`,
         opacity: fade,
       }}
     />
@@ -218,9 +232,10 @@ export function Shutter({ at }: { at: number }) {
 /* ------------------------------------------------------------------ */
 
 /**
- * The caption under the phone: dark text on a soft light panel with rounded
- * corners, the app's typeface at medium weight, no outline, no shadow.
- * Stays at least 1.5 s (storyboard). `label` is the AI disclosure line.
+ * The caption: one line, in the app's typeface, low in the safe area that
+ * Reels, TikTok and Shorts leave free (above the bottom 420 px, clear of the
+ * right 160 px). Over a full-bleed white screen a light panel would vanish,
+ * so it is the app's ink with white text. `sub` only where it adds something.
  */
 export function Caption({ text, sub, from, to }: { text: string; sub?: string; from: number; to: number }) {
   const frame = useCurrentFrame();
@@ -234,7 +249,7 @@ export function Caption({ text, sub, from, to }: { text: string; sub?: string; f
         position: "absolute",
         left: SAFE.left,
         width: SAFE.right - SAFE.left,
-        top: CAPTION_TOP,
+        bottom: H - SAFE.bottom + 10,
         display: "flex",
         justifyContent: "center",
         opacity: o,
@@ -244,18 +259,16 @@ export function Caption({ text, sub, from, to }: { text: string; sub?: string; f
       <div
         style={{
           maxWidth: 840,
-          padding: "20px 32px 22px",
-          borderRadius: 28,
-          // Warm off-white with a hairline edge, apart from the app's white screen.
-          background: "rgba(255,253,249,0.97)",
-          border: "1.5px solid rgba(23,23,23,0.08)",
+          padding: "22px 34px 24px",
+          borderRadius: 30,
+          background: "rgba(23,23,23,0.9)",
           fontFamily: FONT,
           textAlign: "center",
-          color: C.ink,
+          color: "#fff",
         }}
       >
-        <div style={{ fontSize: 44, fontWeight: 600, lineHeight: 1.18, letterSpacing: -0.4, textWrap: "balance" } as React.CSSProperties}>{text}</div>
-        {sub && <div style={{ marginTop: 8, fontSize: 28, fontWeight: 500, color: C.inkSoft, lineHeight: 1.3 }}>{sub}</div>}
+        <div style={{ fontSize: 46, fontWeight: 600, lineHeight: 1.18, letterSpacing: -0.4, textWrap: "balance" } as React.CSSProperties}>{text}</div>
+        {sub && <div style={{ marginTop: 10, fontSize: 30, fontWeight: 500, color: "rgba(255,255,255,0.78)", lineHeight: 1.3 }}>{sub}</div>}
       </div>
     </div>
   );
@@ -268,26 +281,27 @@ export function Caption({ text, sub, from, to }: { text: string; sub?: string; f
  */
 export function AiTag({ text, x, y, from, to }: { text: string; x: number; y: number; from: number; to: number }) {
   const frame = useCurrentFrame();
+  const { k, inset } = useContext(Geo);
   const o = ramp(frame, from, from + 8) * (1 - ramp(frame, to - 8, to));
   if (o <= 0) return null;
   return (
     <div
       style={{
         position: "absolute",
-        left: (x + 8) * K,
-        top: INSET_TOP + y * K,
+        left: (x + 8) * k,
+        top: inset + y * k,
         transform: `translateY(-50%) scale(${0.9 + 0.1 * o})`,
         transformOrigin: "left center",
         opacity: o,
         fontFamily: FONT,
-        fontSize: 11.5 * K,
+        fontSize: 11.5 * k,
         fontWeight: 600,
         lineHeight: 1,
         color: C.ink,
         background: "#f1efeb",
-        border: "1px solid rgba(23,23,23,0.12)",
+        border: `${Math.max(1, k * 0.8)}px solid rgba(23,23,23,0.12)`,
         borderRadius: 999,
-        padding: `${4 * K}px ${8 * K}px`,
+        padding: `${4 * k}px ${8 * k}px`,
         whiteSpace: "nowrap",
       }}
     >
@@ -315,11 +329,12 @@ export function BrandMark({ size, radius = 0.2237 }: { size: number; radius?: nu
 /**
  * A notification, drawn plainly in the app's own style (white card, the
  * Miamus mark, the title and body as the app sends them). Deliberately not
- * a phone maker's lock screen or banner.
+ * a phone maker's lock screen or banner. Sized in CSS px of the screen.
  */
-export function NotificationCard({ title, body, time, at, until }: { title: string; body: string; time: string; at: number; until?: number }) {
+export function NotificationCard({ title, body, time, at, until, top = 84 }: { title: string; body: string; time: string; at: number; until?: number; top?: number }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const { k, inset } = useContext(Geo);
   const s0 = spring({ frame: frame - at, fps, config: { damping: 18, stiffness: 120, mass: 0.8 } });
   // Tapped: it lifts away.
   const gone = until === undefined ? 0 : ramp(frame, until, until + 8);
@@ -329,25 +344,25 @@ export function NotificationCard({ title, body, time, at, until }: { title: stri
     <div
       style={{
         position: "absolute",
-        left: 14,
-        right: 14,
-        top: INSET_TOP + 96,
-        transform: `translateY(${(1 - s) * -60}px)`,
+        left: 12 * k,
+        right: 12 * k,
+        top: inset + top * k,
+        transform: `translateY(${(1 - s) * -50 * k}px)`,
         opacity: Math.min(1, s * 1.4),
-        background: "rgba(255,255,255,0.97)",
-        borderRadius: 24,
-        padding: "16px 18px 18px",
+        background: "rgba(255,255,255,0.98)",
+        borderRadius: 20 * k,
+        padding: `${14 * k}px ${16 * k}px ${15 * k}px`,
         fontFamily: FONT,
-        boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
+        boxShadow: `0 ${15 * k}px ${34 * k}px rgba(0,0,0,0.28)`,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <BrandMark size={30} />
-        <div style={{ fontSize: 17, fontWeight: 600, color: C.ink, flex: 1, letterSpacing: 0.2 }}>Miamus</div>
-        <div style={{ fontSize: 15, color: C.inkMute }}>{time}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 9 * k }}>
+        <BrandMark size={26 * k} />
+        <div style={{ fontSize: 14.5 * k, fontWeight: 600, color: C.ink, flex: 1, letterSpacing: 0.2 }}>Miamus</div>
+        <div style={{ fontSize: 13 * k, color: C.inkMute }}>{time}</div>
       </div>
-      <div style={{ marginTop: 10, fontSize: 20, fontWeight: 600, color: C.ink, lineHeight: 1.25 }}>{title}</div>
-      <div style={{ marginTop: 4, fontSize: 19, color: C.inkSoft, lineHeight: 1.3 }}>{body}</div>
+      <div style={{ marginTop: 9 * k, fontSize: 17 * k, fontWeight: 600, color: C.ink, lineHeight: 1.25 }}>{title}</div>
+      <div style={{ marginTop: 3 * k, fontSize: 16 * k, color: C.inkSoft, lineHeight: 1.3 }}>{body}</div>
     </div>
   );
 }
@@ -370,13 +385,13 @@ export function HookBubbles({ lines, leaveAt, stagger = 14, first = 0 }: { lines
             <div
               style={{
                 fontFamily: FONT,
-                fontSize: 54,
+                fontSize: 58,
                 fontWeight: 500,
                 color: C.ink,
                 background: C.paper,
                 border: `1.5px solid ${C.border}`,
-                borderRadius: 40,
-                padding: "26px 40px",
+                borderRadius: 42,
+                padding: "28px 42px",
                 transform: `translateY(${(1 - s) * 30}px) scale(${0.92 + s * 0.08})`,
                 opacity: Math.min(1, s * 1.5),
               }}
@@ -390,7 +405,7 @@ export function HookBubbles({ lines, leaveAt, stagger = 14, first = 0 }: { lines
   );
 }
 
-/** The end card: the mark, the name, the line, the address (the AI note is in shot 2 now). */
+/** The end card: the mark, the name, the line, the address (the AI note is in shot 2). */
 export function EndCard({ line, from }: { line: string; from: number }) {
   const frame = useCurrentFrame();
   const a = ramp(frame, from, from + 16);
@@ -402,8 +417,8 @@ export function EndCard({ line, from }: { line: string; from: number }) {
         <BrandMark size={150} />
         <div style={{ marginTop: 34, fontSize: 84, fontWeight: 700, letterSpacing: -1.5 }}>Miamus</div>
       </div>
-      <div style={{ opacity: b, transform: `translateY(${(1 - b) * 12}px)`, marginTop: 28, fontSize: 46, fontWeight: 500, lineHeight: 1.25, maxWidth: 760, color: C.ink, textWrap: "balance" } as React.CSSProperties}>
-        {/* Words joined by a hyphen ("benar-benar") never break across lines. */}
+      <div style={{ opacity: b, transform: `translateY(${(1 - b) * 12}px)`, marginTop: 28, fontSize: 48, fontWeight: 500, lineHeight: 1.25, maxWidth: 780, color: C.ink, textWrap: "balance" } as React.CSSProperties}>
+        {/* Words joined by a hyphen never break across lines. */}
         {line.split(" ").map((word, i) => (
           <React.Fragment key={i}>
             {i > 0 && " "}
@@ -411,7 +426,7 @@ export function EndCard({ line, from }: { line: string; from: number }) {
           </React.Fragment>
         ))}
       </div>
-      <div style={{ opacity: c, marginTop: 40, fontSize: 36, fontWeight: 500, color: C.inkSoft, letterSpacing: 0.5 }}>miamus.app</div>
+      <div style={{ opacity: c, marginTop: 40, fontSize: 38, fontWeight: 500, color: C.inkSoft, letterSpacing: 0.5 }}>miamus.app</div>
     </div>
   );
 }

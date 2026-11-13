@@ -27,10 +27,13 @@ added to the app's dependencies, no app code changed.
    - Nothing real is reached: the stub aborts any supabase.co request.
 2. **Compose** (`src/`, Remotion; every timing in `src/timeline.ts`, on an
    86 BPM grid so music drops in on the beat; all words in `src/copy.ts`, the
-   end-card lines at the top as `END_LINES`): the stills in a plain phone outline on a
-   soft background, with typing, cards, tap circles, a shutter flash, two
-   notification cards drawn in the app's own style (not a phone maker's lock
-   screen), captions in the safe area, the end card.
+   end-card lines at the top as `END_LINES`): the app's screen full-bleed
+   (as wide as the frame, so its text is as large as on a phone in the hand),
+   pushed in on what matters, with typing, cards, tap circles, a shutter
+   flash, two notification cards drawn in the app's own style (not a phone
+   maker's lock screen), one caption per shot low in the platforms' safe
+   area, and the end card. A device outline appears once: the owner's phone
+   beside the staff phone, at the start of the staff shot.
 
 ## Commands
 
@@ -81,7 +84,12 @@ Both folders are git-ignored.
 - **The staff photos:** the app always asks for a before and an after photo
   (Phase 127), so shot 5 shows both.
 
-## v2 (design lead's review, 14 Nov)
+## v2 (design lead's review and the owner's note, 14 Nov)
+
+Full-bleed screens (owner: legible as if watched on a phone); captions in
+the app's ink with white text, since a light panel vanishes over a white
+screen; a device outline only for the two-phone moment.
+
 
 Every shot pushed in at least as far as the Kakak shots; one line per caption
 (the English cut's second line in shot 6 translates the Indonesian reminder);

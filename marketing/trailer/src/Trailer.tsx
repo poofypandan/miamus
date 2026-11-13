@@ -10,18 +10,18 @@ import {
   type Camera,
   type Cue,
   EndCard,
+  FramedPhone,
   HookBubbles,
   NotificationCard,
-  Phone,
+  Screen,
   ScreenTrack,
   Shutter,
   TapRing,
-  onFrame,
   ramp,
 } from "./components";
 import { COPY, type Locale } from "./copy";
 import { loadFonts } from "./theme";
-import { HOOK, K15, K60, type KakakTimes, S1, S6, S7, S8, S9, SHOTS_15, SHOTS_60, STAFF15, STAFF60, type Span, type StaffTimes, len } from "./timeline";
+import { HOOK, K15, K60, type KakakTimes, S1, S6, S7, S8, S9, SHOTS_15, SHOTS_60, STAFF15, STAFF60, TWO_PHONES, type Span, type StaffTimes, len } from "./timeline";
 
 loadFonts();
 
@@ -50,14 +50,15 @@ export type TrailerProps = {
 /* ------------------------------------------------------------------ */
 
 /**
- * Every shot is pushed in (design lead, v2: the phone never smaller than in
- * the Kakak shots). A key says which CSS row of the screen to look at, how
- * close, and where on the frame that row should sit (default: the middle of
- * the room above the caption).
+ * The screen fills the frame (scale 1 = as wide as the frame, as large as on
+ * a phone in the hand); the camera pushes in on what matters. A key says
+ * which CSS row of the screen to look at (`fy`), how close, and where on the
+ * frame that row should land (`y`). Everything that must be read lands
+ * between 220 and about 1,350 px, clear of the caption and the platforms'
+ * buttons.
  */
-type Key = { at: number; fy: number; scale: number; y?: number };
-const LOOK_Y = 720;
-const cam = (at: number, fy: number, scale = 1.36, y = LOOK_Y): Key => ({ at, fy, scale, y });
+type Key = { at: number; fy: number; scale: number; y: number };
+const cam = (at: number, fy: number, y = 780, scale = 1): Key => ({ at, fy, scale, y });
 
 function useCamera(keys: Key[]): Camera {
   const frame = useCurrentFrame();
@@ -67,16 +68,14 @@ function useCamera(keys: Key[]): Camera {
   const b = keys[Math.min(keys.length - 1, i)];
   const t = a === b ? 1 : ramp(frame, a.at, b.at);
   const lerp = (p: number, q: number) => p + (q - p) * t;
-  const fy = lerp(a.fy, b.fy);
-  const y = lerp(a.y ?? LOOK_Y, b.y ?? LOOK_Y);
-  return { scale: lerp(a.scale, b.scale), fx: CSS_W / 2, fy, ty: y - onFrame(0, fy).y };
+  return { scale: lerp(a.scale, b.scale), fx: CSS_W / 2, fy: lerp(a.fy, b.fy), y: lerp(a.y, b.y) };
 }
 
-/** The phone sliding in from one side at the start of a shot. */
+/** The screen sliding in from one side at the start of a shot. */
 function useSlideIn(from: number, duration = 14, side: 1 | -1 = 1) {
   const frame = useCurrentFrame();
   const t = ramp(frame, from, from + duration);
-  return { x: (1 - t) * 760 * side, opacity: t };
+  return { x: (1 - t) * 1080 * side, opacity: 1 };
 }
 
 function Shot({ span, children }: { span: Span; children: React.ReactNode }) {
@@ -91,27 +90,10 @@ function Shot({ span, children }: { span: Span; children: React.ReactNode }) {
 /* The owner's three sentences to Kakak                                */
 /* ------------------------------------------------------------------ */
 
-/** Where to look on each of the three cards, and on what follows the save. */
-const CARD_FOCUS = [380, 400, 410];
-const SAVED_FOCUS = [600, 470, 600];
-const TYPING_FOCUS = 420;
+/** What follows each save: the toast on Today (status card out of view), or Kakak's "Done". */
+const SAVED: Key[] = [cam(0, 609, 1000, 1.1), cam(0, 470, 780), cam(0, 609, 1000, 1.1)];
 
-function KakakShot({
-  locale,
-  k,
-  t,
-  startTyped = false,
-  rise = false,
-  aiTag,
-}: {
-  locale: Locale;
-  k: 0 | 1 | 2;
-  t: KakakTimes;
-  startTyped?: boolean;
-  rise?: boolean;
-  /** The AI tag's text: only the first time Kakak appears. */
-  aiTag?: string;
-}) {
+function KakakShot({ locale, k, t, startTyped = false, aiTag }: { locale: Locale; k: 0 | 1 | 2; t: KakakTimes; startTyped?: boolean; aiTag?: string }) {
   const dir = `shots/${locale}`;
   const n = TYPING_FRAMES[k];
   const cues: Cue[] = [];
@@ -131,23 +113,34 @@ function KakakShot({
   const c = tap(`${locale}.k${k}.confirm`);
   const s = tap(`${locale}.k${k}.send`);
   const name = tap(`${locale}.k${k}.name`);
-  const beforeConfirm = t.scrollLength ? t.scrollFrom : t.confirm - 18;
-  const camera = useCamera([
-    cam(0, TYPING_FOCUS, 1.32),
-    cam(t.card + 2, TYPING_FOCUS, 1.32),
-    cam(t.card + 22, CARD_FOCUS[k], 1.36),
-    cam(beforeConfirm, CARD_FOCUS[k], 1.36),
-    // Down to the button (sentence 1 scrolls the sheet there), then the tap.
-    cam(t.scrollLength ? t.scrollFrom + t.scrollLength : t.confirm - 4, c.y - 110, 1.36),
-    cam(t.saved + 4, c.y - 110, 1.36),
-    cam(t.saved + 22, SAVED_FOCUS[k], k === 1 ? 1.36 : 1.5),
-  ]);
-  const slide = useSlideIn(0, 16, 1);
+  // The confirm button sits just above the caption, so the card's rows, its
+  // switches and the button show together.
+  const BUTTON_Y = 1270;
+  const saved = SAVED[k];
+  const camera = useCamera(
+    t.scrollLength
+      ? [
+          cam(0, 440, 820),
+          cam(t.card, 440, 820),
+          // Sentence 1: the card's top first, Kakak's name with the AI tag
+          // and her reply; then the sheet scrolls down to "Looks right".
+          cam(t.card + 18, name.y, 260),
+          cam(t.scrollFrom, name.y, 260),
+          cam(t.scrollFrom + t.scrollLength, c.y, BUTTON_Y),
+          cam(t.saved + 4, c.y, BUTTON_Y),
+          { ...saved, at: t.saved + 20 },
+        ]
+      : [
+          cam(0, 440, 820),
+          cam(t.card, 440, 820),
+          cam(t.card + 20, c.y, BUTTON_Y),
+          cam(t.saved + 4, c.y, BUTTON_Y),
+          { ...saved, at: t.saved + 20 },
+        ]
+  );
   return (
-    <Phone
+    <Screen
       camera={camera}
-      y={rise ? (1 - slide.opacity) * 120 : 0}
-      opacity={rise ? slide.opacity : 1}
       overlay={
         <>
           {aiTag && <AiTag text={aiTag} x={name.x} y={name.y} from={t.tag[0]} to={t.tag[1]} />}
@@ -157,7 +150,7 @@ function KakakShot({
       }
     >
       <ScreenTrack cues={cues} />
-    </Phone>
+    </Screen>
   );
 }
 
@@ -167,7 +160,7 @@ function KakakShot({
 
 const STAFF_BEZEL = "#7d7770";
 
-function StaffShot({ t }: { t: StaffTimes }) {
+function StaffScreen({ t, from = 0 }: { t: StaffTimes; from?: number }) {
   const cues: Cue[] = [
     { src: "shots/staff/list.png", at: 0, fade: 0 },
     { src: "shots/staff/sheet.png", at: t.sheet, fade: 8 },
@@ -175,23 +168,20 @@ function StaffShot({ t }: { t: StaffTimes }) {
     { src: "shots/staff/photo-after.png", at: t.afterIn, fade: 4 },
     { src: "shots/staff/done.png", at: t.done, fade: 9 },
   ];
-  const slide = useSlideIn(0, 14, 1);
   const p = (k: string) => tap(`staff.${k}`);
   const camera = useCamera([
-    cam(0, p("card").y, 1.4),
-    cam(t.sheet, p("card").y, 1.4),
-    cam(t.sheet + 10, 500, 1.34),
+    cam(from, p("card").y, 700),
+    cam(t.sheet, p("card").y, 700),
+    cam(t.sheet + 10, 490, 760),
     // The two finished photos, each with its tick and its time.
-    cam(t.afterIn + 4, 500, 1.34),
-    cam(t.finish - 6, 560, 1.34),
-    cam(t.done + 4, 560, 1.34),
-    cam(t.done + 24, 700, 1.4),
+    cam(t.finish - 16, 490, 760),
+    cam(t.finish - 4, p("finish").y, 1150),
+    cam(t.done + 4, p("finish").y, 1150),
+    // Done: the toast with its tick.
+    cam(t.done + 20, 801, 1150, 1.06),
   ]);
   return (
-    <Phone
-      x={slide.x}
-      opacity={slide.opacity}
-      bezel={STAFF_BEZEL}
+    <Screen
       camera={camera}
       overlay={
         <>
@@ -205,7 +195,33 @@ function StaffShot({ t }: { t: StaffTimes }) {
       }
     >
       <ScreenTrack cues={cues} />
-    </Phone>
+    </Screen>
+  );
+}
+
+/** 5. The owner's phone beside Sari's: what was said to Kakak, and her list. Then her screen fills the frame. */
+function Shot5({ locale }: { locale: Locale }) {
+  const frame = useCurrentFrame();
+  const owner = ramp(frame, 0, 10);
+  const staff = ramp(frame, 4, 18);
+  const handover = ramp(frame, TWO_PHONES.until, TWO_PHONES.until + 12);
+  const W2 = 380;
+  return (
+    <>
+      <AbsoluteFill style={{ opacity: 1 - handover }}>
+        <FramedPhone left={60} top={300 + (1 - owner) * 60} screenW={W2} opacity={owner}>
+          <ScreenTrack cues={[{ src: `shots/${locale}/k0-card.png`, at: 0, fade: 0 }]} />
+        </FramedPhone>
+        <FramedPhone left={500 + (1 - staff) * 300} top={300} screenW={W2} bezel={STAFF_BEZEL} opacity={staff}>
+          <ScreenTrack cues={[{ src: "shots/staff/list.png", at: 0, fade: 0 }]} />
+        </FramedPhone>
+      </AbsoluteFill>
+      {frame >= TWO_PHONES.until && (
+        <AbsoluteFill style={{ opacity: handover, transform: `scale(${0.94 + 0.06 * handover})` }}>
+          <StaffScreen t={STAFF60} from={TWO_PHONES.until} />
+        </AbsoluteFill>
+      )}
+    </>
   );
 }
 
@@ -247,7 +263,7 @@ export const Trailer: React.FC<TrailerProps> = ({ locale, cut, music }) => {
 
       {cut === "60" ? <Sixty locale={locale} /> : <Fifteen locale={locale} />}
 
-      {/* One caption per shot, in the safe area, above everything. */}
+      {/* One caption per shot, low in the platforms' safe area, above everything. */}
       {cut === "60" ? (
         <>
           <Shot span={S.s1}><Caption {...copy.s1} from={4} to={len(S.s1)} /></Shot>
@@ -293,7 +309,7 @@ function Sixty({ locale }: { locale: Locale }) {
         <KakakShot locale={locale} k={2} t={K60[2]} />
       </Shot>
       <Shot span={S.s5}>
-        <StaffShot t={STAFF60} />
+        <Shot5 locale={locale} />
       </Shot>
       <Shot span={S.s6}>
         <Shot6 locale={locale} />
@@ -308,7 +324,7 @@ function Sixty({ locale }: { locale: Locale }) {
         <Shot9 dir={dir} />
       </Shot>
       <Shot span={S.end}>
-        <Outro line={copy.endLine60} last={`${dir}/glimpse-repairs.png`} lastFocus={GLIMPSE.repairs} />
+        <Outro line={copy.endLine60} last={`${dir}/glimpse-repairs.png`} lastCam={GLIMPSE.repairs} />
       </Shot>
     </>
   );
@@ -318,18 +334,20 @@ function Sixty({ locale }: { locale: Locale }) {
 function Shot1({ locale }: { locale: Locale }) {
   const dir = `shots/${locale}`;
   const frame = useCurrentFrame();
-  const rise = ramp(frame, 0, 18);
+  const rise = ramp(frame, 0, 16);
   const open = tap(`${locale}.open`);
-  const camera = useCamera([cam(0, open.y - 60, 1.42), cam(S1.tap - 6, open.y - 50, 1.52), cam(S1.sheet + 4, open.y - 50, 1.52), cam(S1.sheet + 20, TYPING_FOCUS, 1.32)]);
+  const camera = useCamera([cam(0, 600, 820), cam(S1.tap - 8, open.y, 1050, 1.14), cam(S1.sheet + 4, open.y, 1050, 1.14), cam(S1.sheet + 20, 440, 820)]);
   return (
-    <Phone y={(1 - rise) * 140} opacity={rise} camera={camera} overlay={<TapRing x={open.x} y={open.y} at={S1.tap} />}>
-      <ScreenTrack
-        cues={[
-          { src: `${dir}/today.png`, at: 0, fade: 0 },
-          { src: `${dir}/k0-open.png`, at: S1.sheet, fade: 10 },
-        ]}
-      />
-    </Phone>
+    <AbsoluteFill style={{ opacity: rise, transform: `translateY(${(1 - rise) * 80}px)` }}>
+      <Screen camera={camera} overlay={<TapRing x={open.x} y={open.y} at={S1.tap} />}>
+        <ScreenTrack
+          cues={[
+            { src: `${dir}/today.png`, at: 0, fade: 0 },
+            { src: `${dir}/k0-open.png`, at: S1.sheet, fade: 10 },
+          ]}
+        />
+      </Screen>
+    </AbsoluteFill>
   );
 }
 
@@ -341,28 +359,28 @@ function Shot6({ locale }: { locale: Locale }) {
   const lights = tap("staff.lights");
   const save = tap("staff.lightsSave");
   const camera = useCamera([
-    cam(0, 330, 1.36),
-    cam(S6.push - 2, 330, 1.36),
-    cam(S6.push + 14, 140, 1.42, 560),
-    cam(S6.open, 140, 1.42, 560),
-    cam(S6.open + 10, lights.y, 1.42),
-    cam(S6.picked, lights.y, 1.42),
-    cam(S6.picked + 10, 470, 1.34),
-    cam(S6.done, 470, 1.34),
-    cam(S6.done + 14, 560, 1.3),
+    cam(0, 320, 760),
+    cam(S6.push - 2, 320, 760),
+    cam(S6.push + 12, 130, 560, 1.08),
+    cam(S6.open, 130, 560, 1.08),
+    cam(S6.open + 10, lights.y, 700),
+    cam(S6.picked, lights.y, 700),
+    cam(S6.picked + 10, save.y - 120, 920),
+    cam(S6.done, save.y - 120, 920),
+    // Done: "every task today is done", and the green tick.
+    cam(S6.done + 14, 360, 700),
+    cam(S6.done + 40, 801, 1150, 1.06),
   ]);
   const dim = 0.5 * ramp(frame, 8, 22) * (1 - ramp(frame, S6.open, S6.open + 8));
   return (
-    <Phone
+    <Screen
       x={slide.x}
-      opacity={slide.opacity}
-      bezel={STAFF_BEZEL}
       camera={camera}
       dim={dim}
       overlay={
         <>
           <NotificationCard {...copy.staffPush} at={S6.push} until={S6.open + 2} />
-          <TapRing x={CSS_W / 2} y={150} at={S6.open} />
+          <TapRing x={CSS_W / 2} y={130} at={S6.open} />
           <TapRing x={lights.x} y={lights.y} at={S6.camera} />
           <Shutter at={S6.picked - 2} />
           <TapRing x={save.x} y={save.y} at={S6.save} />
@@ -376,7 +394,7 @@ function Shot6({ locale }: { locale: Locale }) {
           { src: "shots/staff/lights-done.png", at: S6.done, fade: 8 },
         ]}
       />
-    </Phone>
+    </Screen>
   );
 }
 
@@ -386,11 +404,11 @@ function Shot7({ locale }: { locale: Locale }) {
   const slide = useSlideIn(0, 16, -1);
   const cues: Cue[] = [{ src: `${dir}/status.png`, at: 0, fade: 0 }];
   for (let i = 0; i < SCROLL_FRAMES; i++) cues.push({ src: `${dir}/scroll/${pad(i)}.jpg`, at: S7.scrollFrom + Math.round((S7.scrollLength * i) / SCROLL_FRAMES), fade: 0 });
-  const camera = useCamera([cam(0, 175, 1.5, 560), cam(S7.scrollFrom - 8, 175, 1.5, 560), cam(S7.scrollFrom + 24, 300, 1.34), cam(S7.scrollFrom + S7.scrollLength, 300, 1.34)]);
+  const camera = useCamera([cam(0, 172, 560, 1.18), cam(S7.scrollFrom - 8, 172, 560, 1.18), cam(S7.scrollFrom + 24, 330, 780), cam(S7.scrollFrom + S7.scrollLength, 330, 780)]);
   return (
-    <Phone x={slide.x} opacity={slide.opacity} camera={camera}>
+    <Screen x={slide.x} camera={camera}>
       <ScreenTrack cues={cues} />
-    </Phone>
+    </Screen>
   );
 }
 
@@ -399,28 +417,28 @@ function Shot8({ locale }: { locale: Locale }) {
   const copy = COPY[locale];
   const dir = `shots/${locale}`;
   const frame = useCurrentFrame();
-  const camera = useCamera([cam(0, 300, 1.34), cam(S8.push - 4, 300, 1.34), cam(S8.push + 20, 140, 1.46, 560)]);
+  const camera = useCamera([cam(0, 330, 780), cam(S8.push - 4, 330, 780), cam(S8.push + 20, 130, 560, 1.1)]);
   return (
-    <Phone camera={camera} dim={0.62 * ramp(frame, 0, 24)} overlay={<NotificationCard {...copy.ownerPush} at={S8.push} />}>
+    <Screen camera={camera} dim={0.62 * ramp(frame, 0, 24)} overlay={<NotificationCard {...copy.ownerPush} at={S8.push} />}>
       <ScreenTrack cues={[{ src: `${dir}/scroll/${pad(SCROLL_FRAMES - 1)}.jpg`, at: 0, fade: 0 }]} />
-    </Phone>
+    </Screen>
   );
 }
 
 /** Where to look on each glimpse. */
-const GLIMPSE = { kitchen: 330, pets: 380, repairs: 250 };
+const GLIMPSE = { kitchen: cam(0, 330, 780), pets: cam(0, 390, 780), repairs: cam(0, 210, 640, 1.12) };
 
 /** 9. Kitchen, Pets, Repairs: a beat or two each, read at a glance. */
 function Shot9({ dir }: { dir: string }) {
   const camera = useCamera([
-    cam(0, GLIMPSE.kitchen, 1.38),
-    cam(S9.pets - 4, GLIMPSE.kitchen, 1.38),
-    cam(S9.pets + 4, GLIMPSE.pets, 1.32),
-    cam(S9.repairs - 4, GLIMPSE.pets, 1.32),
-    cam(S9.repairs + 4, GLIMPSE.repairs, 1.46),
+    { ...GLIMPSE.kitchen, at: 0 },
+    { ...GLIMPSE.kitchen, at: S9.pets - 4 },
+    { ...GLIMPSE.pets, at: S9.pets + 4 },
+    { ...GLIMPSE.pets, at: S9.repairs - 4 },
+    { ...GLIMPSE.repairs, at: S9.repairs + 4 },
   ]);
   return (
-    <Phone camera={camera}>
+    <Screen camera={camera}>
       <ScreenTrack
         cues={[
           { src: `${dir}/glimpse-kitchen.png`, at: 0, fade: 6 },
@@ -428,19 +446,19 @@ function Shot9({ dir }: { dir: string }) {
           { src: `${dir}/glimpse-repairs.png`, at: S9.repairs - 3, fade: 6 },
         ]}
       />
-    </Phone>
+    </Screen>
   );
 }
 
-function Outro({ line, last, lastFocus }: { line: string; last: string; lastFocus: number }) {
+function Outro({ line, last, lastCam }: { line: string; last: string; lastCam: Key }) {
   const frame = useCurrentFrame();
   const out = ramp(frame, 0, 14);
-  const camera = useCamera([cam(0, lastFocus, 1.46)]);
+  const camera = useCamera([{ ...lastCam, at: 0 }]);
   return (
     <>
-      <Phone opacity={1 - out} y={out * 60} camera={camera}>
+      <Screen camera={camera} opacity={1 - out}>
         <ScreenTrack cues={[{ src: last, at: 0, fade: 0 }]} />
-      </Phone>
+      </Screen>
       <EndCard line={line} from={10} />
     </>
   );
@@ -456,27 +474,36 @@ function Fifteen({ locale }: { locale: Locale }) {
         <HookBubbles lines={copy.hook} leaveAt={HOOK.leaveAt} stagger={HOOK.stagger} first={HOOK.first} />
       </Shot>
       <Shot span={Q.s2}>
-        <KakakShot locale={locale} k={0} t={K15} startTyped rise aiTag={copy.aiTag} />
+        <Rise>
+          <KakakShot locale={locale} k={0} t={K15} startTyped aiTag={copy.aiTag} />
+        </Rise>
       </Shot>
       <Shot span={Q.s5}>
-        <StaffShot t={STAFF15} />
+        <StaffScreen t={STAFF15} />
       </Shot>
       <Shot span={Q.s7}>
         <Shot7Short dir={dir} />
       </Shot>
       <Shot span={Q.end}>
-        <Outro line={copy.endLine15} last={`${dir}/status.png`} lastFocus={175} />
+        <Outro line={copy.endLine15} last={`${dir}/status.png`} lastCam={cam(0, 172, 560, 1.18)} />
       </Shot>
     </>
   );
 }
 
+/** The screen rising in after the hook. */
+function Rise({ children }: { children: React.ReactNode }) {
+  const frame = useCurrentFrame();
+  const rise = ramp(frame, 0, 16);
+  return <AbsoluteFill style={{ opacity: rise, transform: `translateY(${(1 - rise) * 80}px)` }}>{children}</AbsoluteFill>;
+}
+
 function Shot7Short({ dir }: { dir: string }) {
   const slide = useSlideIn(0, 12, -1);
-  const camera = useCamera([cam(0, 175, 1.5, 560)]);
+  const camera = useCamera([cam(0, 172, 560, 1.18)]);
   return (
-    <Phone x={slide.x} opacity={slide.opacity} camera={camera}>
+    <Screen x={slide.x} camera={camera}>
       <ScreenTrack cues={[{ src: `${dir}/status.png`, at: 0, fade: 0 }]} />
-    </Phone>
+    </Screen>
   );
 }

@@ -76,12 +76,17 @@ export interface KakakTimes {
 }
 
 /** Shots 2–4 (and the 15-second cut's shot 2): taps on beats, everything else follows them. */
-export function kakakTimes(span: Span, typingFrom: number, typingLength: number, opts: { startTyped?: boolean; scroll?: boolean; scrollGap?: number } = {}): KakakTimes {
+export function kakakTimes(
+  span: Span,
+  typingFrom: number,
+  typingLength: number,
+  opts: { startTyped?: boolean; scroll?: boolean; scrollGap?: number; think?: number } = {}
+): KakakTimes {
   const [start] = span;
   const length = len(span);
   const typed = opts.startTyped ? typingFrom : typingFrom + typingLength;
   const send = snapUp(start + typed + 6) - start;
-  const card = send + 18;
+  const card = send + (opts.think ?? 18);
   const scrollFrom = opts.scroll ? card + (opts.scrollGap ?? 34) : 0;
   const scrollLength = opts.scroll ? 16 : 0;
   const earliest = opts.scroll ? scrollFrom + scrollLength + 10 : card + 40;
@@ -100,11 +105,12 @@ export function kakakTimes(span: Span, typingFrom: number, typingLength: number,
 }
 
 export const K60: [KakakTimes, KakakTimes, KakakTimes] = [
-  kakakTimes(SHOTS_60.s2, 10, 60, { scroll: true }),
+  // The AI tag holds its full two seconds before the sheet scrolls away from it.
+  kakakTimes(SHOTS_60.s2, 10, 46, { scroll: true, scrollGap: 60 }),
   kakakTimes(SHOTS_60.s3, 8, 62),
   kakakTimes(SHOTS_60.s4, 6, 46),
 ];
-export const K15 = kakakTimes(SHOTS_15.s2, 14, 0, { startTyped: true, scroll: true, scrollGap: 26 });
+export const K15 = kakakTimes(SHOTS_15.s2, 14, 0, { startTyped: true, scroll: true, scrollGap: 60, think: 12 });
 
 export interface StaffTimes {
   card: number;
@@ -125,12 +131,14 @@ export interface StaffTimes {
 export const STAFF60: StaffTimes = (() => {
   const [start] = SHOTS_60.s5;
   const at = (f: number) => snapHalf(start + f) - start;
-  const card = at(24);
-  const before = at(40);
-  const after = at(60);
-  const finish = at(130);
+  const card = at(56);
+  const before = at(76);
+  const after = at(96);
+  const finish = at(146);
   return { card, sheet: card + 8, before, beforeIn: before + 8, after, afterIn: after + 8, finish, done: finish + 8 };
 })();
+/** Shot 5 opens on the two phones side by side (owner, staff) until this frame, then the staff screen fills the frame. */
+export const TWO_PHONES = { until: 34 };
 export const STAFF15: StaffTimes = { card: 8, sheet: 14, before: 22, beforeIn: 28, after: 36, afterIn: 42, finish: 60, done: 66 };
 
 /**
