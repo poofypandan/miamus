@@ -134,8 +134,8 @@ export function isScheduleActiveOn(schedule: MasterSchedule, dateStr: string): b
  * today to one already past still counts today. Only the day it is made is
  * covered.
  *
- * The server's routine_slots_open (migrations/144), which the evening push
- * and the routine reminders and alerts read, doesn't know this rule yet.
+ * The server reads the same rule in routine_slots_open (migrations/170), so
+ * the evening push, the routine reminders and the owner alerts agree.
  */
 export function isSlotOwed(schedule: Pick<MasterSchedule, "created_at">, dateStr: string, slotMinutes: number): boolean {
   if (!isSameLocalDay(schedule.created_at, dateStr)) return true;
