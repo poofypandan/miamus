@@ -14,6 +14,7 @@ import {
   COULDNT_CHANGED_MESSAGE_ID,
 } from "@/lib/chore-settled";
 import { getActiveHouseholdId } from "@/lib/tenant";
+import { recordChoreRefusal, refusalOf } from "@/lib/chore-refusals";
 
 /**
  * One drain at a time, across every mount on the page. Overlapping drains
@@ -130,6 +131,16 @@ export function useOfflineSync(lang: "en" | "id") {
       // so its photos are still on the phone, and the message says so.
       let told = result.settled.length;
       for (const item of result.changed) {
+        const job = item.job;
+        if (job.kind === "chore") {
+          recordChoreRefusal(
+            refusalOf("queued_finish", { templateId: job.templateId, rowId: job.rowId, date: job.date }, null)
+          );
+        } else if (job.kind === "couldnt") {
+          recordChoreRefusal(
+            refusalOf("queued_couldnt", { choreId: job.input.chore_id ?? null, date: job.input.occurs_on }, null)
+          );
+        }
         if (item.job.kind === "chore") {
           const withPhotos = !!(item.job.before || item.job.after);
           toast.info(choreChangedMessage(id ? "id" : "en", item.job.title, withPhotos), { duration: 10_000 });

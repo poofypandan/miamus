@@ -33,6 +33,7 @@ import { SaveStillWaitingError } from "@/lib/offline-queue";
 import { cn } from "@/lib/utils";
 import { seriesIdOf, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { COULDNT_CHANGED_MESSAGE_ID, isChoreChanged } from "@/lib/chore-settled";
+import { recordChoreRefusal, refusalOf } from "@/lib/chore-refusals";
 import type { AgendaItem } from "@/lib/scheduleEngine";
 import type { TaskExceptionReason } from "@/types/database";
 
@@ -273,6 +274,12 @@ function CouldntDoBody({
       const failure = classifySubmitError(err);
       const code = (err as { code?: string } | null)?.code;
       if (isChoreChanged(err)) {
+        if (target.kind === "chore") {
+          const o = target.occurrence;
+          recordChoreRefusal(
+            refusalOf("couldnt", { templateId: o.template.id, choreId: seriesIdOf(o), rowId: o.row?.id ?? null, date: o.date }, err)
+          );
+        }
         // The task changed, or is done, since this phone loaded it: sending
         // again only gets the same "no". Say so, and show the list as it is.
         toast.info(COULDNT_CHANGED_MESSAGE_ID, { duration: 10_000 });

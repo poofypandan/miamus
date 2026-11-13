@@ -27,6 +27,7 @@ import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from 
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
 import { choreChangedMessage, choreSettledMessageId, isChoreAlreadySettled, isChoreChanged } from "@/lib/chore-settled";
 import { discardPhoto } from "@/lib/photo-queue";
+import { recordChoreRefusal, refusalOf } from "@/lib/chore-refusals";
 import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import { CouldntDoSheet } from "@/components/staff/couldnt-do-sheet";
@@ -182,7 +183,10 @@ function FinishChoreBody({
    * list, reopening it finds them in place; if not, nothing was thrown away
    * without saying so, and the draft expires on its own (lib/chore-draft).
    */
-  function refusedAsChanged() {
+  function refusedAsChanged(kind: "finish" | "claim", err: unknown) {
+    recordChoreRefusal(
+      refusalOf(kind, { templateId: occurrence.template.id, rowId: occurrence.row?.id ?? null, date: occurrence.date }, err)
+    );
     toast.info(choreChangedMessage("id", task.title, !!(beforeUrl || afterUrl)), { duration: 10_000 });
     onOpenChange(false);
     void refresh({ silent: true });
@@ -214,7 +218,7 @@ function FinishChoreBody({
       toast.success(`"${task.title}" jadi tugas Anda`);
     } catch (err) {
       if (isChoreChanged(err)) {
-        refusedAsChanged();
+        refusedAsChanged("claim", err);
         return;
       }
       // A dropped connection is not a lost race; say which it was.
@@ -283,7 +287,7 @@ function FinishChoreBody({
         return;
       }
       if (isChoreChanged(err)) {
-        refusedAsChanged();
+        refusedAsChanged("finish", err);
         return;
       }
       const handled = explainFailure(err);
