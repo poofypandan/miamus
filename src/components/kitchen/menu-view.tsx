@@ -202,6 +202,9 @@ export function MenuView() {
   return (
     <div className="flex flex-col gap-4">
       <div className="empty:hidden">
+        <WhatsNewCard id="cooking-changes-2026-11" />
+      </div>
+      <div className="empty:hidden">
         <WhatsNewCard id="menu-2026-11" />
       </div>
 
