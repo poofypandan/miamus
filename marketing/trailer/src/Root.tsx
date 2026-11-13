@@ -6,10 +6,10 @@ import { FPS, H, W } from "./theme";
 
 /** The four cuts. English 60 s is the primary version; Indonesian second. */
 export const CUTS: { id: string; props: FilmProps; seconds: number }[] = [
-  { id: "film-60-en", props: { locale: "en", cut: "60", audio: null }, seconds: 60 },
-  { id: "film-60-id", props: { locale: "id", cut: "60", audio: null }, seconds: 60 },
-  { id: "film-15-en", props: { locale: "en", cut: "15", audio: null }, seconds: 15 },
-  { id: "film-15-id", props: { locale: "id", cut: "15", audio: null }, seconds: 15 },
+  { id: "film-60-en", props: { locale: "en", cut: "60", audio: "audio/mix-60-en.wav" }, seconds: 60 },
+  { id: "film-60-id", props: { locale: "id", cut: "60", audio: "audio/mix-60-id.wav" }, seconds: 60 },
+  { id: "film-15-en", props: { locale: "en", cut: "15", audio: "audio/mix-15-en.wav" }, seconds: 15 },
+  { id: "film-15-id", props: { locale: "id", cut: "15", audio: "audio/mix-15-id.wav" }, seconds: 15 },
 ];
 
 export const RemotionRoot: React.FC = () => (

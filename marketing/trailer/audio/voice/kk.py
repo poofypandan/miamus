@@ -33,14 +33,28 @@ def pipe(lang="a"):
     return _pipes[lang]
 
 
-def voice_tensor(spec):
-    """A voice name ("af_heart") or a blend ("af_heart:0.6,af_bella:0.4")."""
+def _blend(spec):
     p = pipe("a")
     if ":" not in spec:
         return p.load_voice(spec)
-    parts = [s.split(":") for s in spec.split(",")]
+    parts = [x.split(":") for x in spec.split(",")]
     total = sum(float(w) for _, w in parts)
     return sum(p.load_voice(n) * (float(w) / total) for n, w in parts)
+
+
+def voice_tensor(spec):
+    """A voice name ("af_heart"), a blend ("af_heart:0.6,af_bella:0.4"), or "A/B".
+
+    A Kokoro voice is 256 numbers: the first 128 shape the sound of the voice
+    (who is speaking), the last 128 shape its melody and timing (how she
+    speaks). "A/B" takes the sound from A and the melody from B, so one
+    speaker can carry another language's rhythm. A and B may be blends.
+    """
+    if "/" not in spec:
+        return _blend(spec)
+    who, how = spec.split("/")
+    a, b = _blend(who), _blend(how)
+    return torch.cat([a[..., :128], b[..., 128:]], dim=-1)
 
 
 def say_text(text, voice, speed=1.0, lang="a"):

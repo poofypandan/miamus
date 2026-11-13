@@ -157,7 +157,7 @@ function Birds({ light, frame, show }: { light: Light; frame: number; show: numb
     const row = Math.ceil(i / 2);
     const side = i % 2 === 0 ? 1 : -1;
     const x = 560 - frame * 0.8 + row * 46 + R(`bx${i}`) * 14;
-    const y = 420 - frame * 0.14 + side * row * 22 + R(`by${i}`) * 10;
+    const y = 300 - frame * 0.1 + side * row * 22 + R(`by${i}`) * 10;
     const flap = Math.sin(frame * 0.36 + i * 1.3);
     const s = 0.8 + R(`bs${i}`) * 0.5;
     birds.push(
@@ -522,8 +522,10 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
   // The low sun also draws a thin bright edge on the side that faces it.
   const rim = { dx: light.sunX < 540 ? -1.9 : 1.9, o: sunUp, fill: css(mix(light.sun, [255, 255, 255], 0.2), 0.6 * sunUp) };
   // Mama comes out across the terrace and down to the child.
-  const mamaX = MAMA_AT.x + (1 - mama) * 430;
-  const mamaY = MAMA_AT.y - (1 - mama) * 146;
+  const mamaX = MAMA_AT.x + (1 - mama) * 452;
+  const mamaY = MAMA_AT.y - (1 - mama) * 98;
+  // Smaller at the door, full height beside the child: she is walking toward us.
+  const mamaS = 0.62 + 0.38 * mama;
   const svg = (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0 }}>
       <g transform={layer(cam, 0.1)}>
@@ -567,7 +569,7 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
               </g>
             )}
             {mama > 0.02 && (
-              <g transform={`translate(${mamaX} ${mamaY}) matrix(1 0 ${-shadow.kx} ${-shadow.ky} 0 0)`} opacity={mama}>
+              <g transform={`translate(${mamaX} ${mamaY}) scale(${mamaS}) matrix(1 0 ${-shadow.kx} ${-shadow.ky} 0 0)`} opacity={mama}>
                 <Mama flat frame={frame} arrive={mama} />
               </g>
             )}
@@ -610,7 +612,7 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
           </g>
         )}
         {mama > 0.02 && (
-          <g transform={`translate(${mamaX} ${mamaY})`} opacity={Math.min(1, mama * 14)}>
+          <g transform={`translate(${mamaX} ${mamaY}) scale(${mamaS})`} opacity={Math.min(1, mama * 14)}>
             {rim.o > 0.05 && (
               <g transform={`translate(${rim.dx} -1)`} fill={rim.fill} stroke={rim.fill}>
                 <Mama flat frame={frame} arrive={mama} />
@@ -636,7 +638,8 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
           <Kite light={light} frame={frame} pose={pose} cam={cam} handAt={{ x: CHILD_AT.x + 37, y: CHILD_AT.y - 152 }} />
         </g>
       )}
-      <g transform={layer(cam, 1.3)}>
+      {/* The grass at our feet stays at the bottom of the frame when the camera looks down, and falls away when it rises. */}
+      <g transform={layer({ ...cam, y: Math.min(cam.y, 0) }, 1.3)}>
         <Grass light={light} frame={frame} />
       </g>
       <g transform={layer(cam, 1.15)}>

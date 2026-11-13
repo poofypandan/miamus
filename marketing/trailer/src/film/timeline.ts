@@ -81,11 +81,11 @@ export const SARI = { card: 8, sheet: 14, before: 30, beforeIn: 38, after: 54, a
 export const SARI15 = { card: 6, sheet: 12, before: 22, beforeIn: 28, after: 38, afterIn: 44, finish: 58, done: 64 };
 
 /** All on track; the phone sleeps; the one notification; the garden comes back (frames in "quiet"). */
-export const QUIET = { scroll: [36, 84] as Span, sleep: [92, 122] as Span, ping: 136, call: 196, away: [204, 240] as Span };
+export const QUIET = { scroll: [36, 84] as Span, sleep: [92, 122] as Span, ping: 136, call: 204, away: [210, 240] as Span };
 
 /** The ending (frames in "ending"): Mama walks out, they look up, the camera follows the kite, the name. */
 export const ENDING = { mama: [14, 110] as Span, lift: [120, 250] as Span, crane: [150, 262] as Span, mark: 258, name: 276, line: 292, url: 310 };
-export const ENDING15 = { mama: [-40, 30] as Span, lift: [36, 96] as Span, crane: [44, 100] as Span, mark: 92, name: 102, line: 112, url: 122 };
+export const ENDING15 = { mama: [-40, 26] as Span, lift: [28, 90] as Span, crane: [34, 86] as Span, mark: 70, name: 80, line: 90, url: 100 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */
 export function soundCues(cut: "60" | "15") {

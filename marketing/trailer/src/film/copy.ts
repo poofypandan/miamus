@@ -130,7 +130,7 @@ export const COPY: Record<Locale, Copy> = {
       L9: "…kalau ada yang belum dikerjakan.",
       L10: "Yang ini bagian Anda.",
       L11: "Miamus. Lebih banyak waktu untuk keluarga.",
-      S1: "Ini Kakak, asisten AI Miamus. Bilang sekali,",
+      S1: "Ini Kakak, asisten AI di Miamus. Bilang sekali,",
       S2: "dan semua orang di rumah tahu harus apa.",
       S3: "Miamus. Lebih banyak waktu untuk keluarga.",
     },

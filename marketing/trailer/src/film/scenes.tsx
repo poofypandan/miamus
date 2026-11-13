@@ -20,6 +20,15 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /** The night the hook falls into, and the dawn that follows it. */
 const NIGHT = "#0e0f24";
 
+/**
+ * The family's framing: the camera looks down a little, so the child, her
+ * mother and the dogs stand in the middle of the frame, above the captions
+ * and clear of the platforms' own buttons, with the kite high over them.
+ */
+const GARDEN: Cam = { x: -20, y: 340, z: 1.06 };
+/** The child's call sits in the sky, left of the kite's string. */
+const CALL = { x: 92, y: 452, size: 104 };
+
 /** Kakak's voice, for the things that move with it: how loud she is this frame, and when each line is said. */
 export const Voice = createContext<{ level: number; cue: (id: string) => { from: number; to: number } | null }>({ level: 0, cue: () => null });
 
@@ -51,7 +60,7 @@ export function Hook({ locale, t0, fast }: SceneProps) {
   const T = fast ? HOOK15 : HOOK;
   const end = fast ? len(S15.hook) : len(S60.hook);
   const push = frame / end;
-  const cam = { x: -24 * push, y: 50 * push, z: 1 + 0.09 * push };
+  const cam = { x: -24 * push, y: 328 + 20 * push, z: 1 + 0.07 * push };
   const cover = ramp(frame, T.at[2], T.slam);
   const out = ramp(frame, T.fall + 2, end - 2);
   return (
@@ -59,7 +68,7 @@ export function Hook({ locale, t0, fast }: SceneProps) {
       <AbsoluteFill style={{ opacity: 1 - out }}>
         <World light={lightAt(17.62)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} birds={1} />
         <Vignette />
-        <Hand text={copy.child} x={96} y={600} size={118} at={T.call} />
+        <Hand text={copy.child} {...CALL} at={T.call} />
         <AbsoluteFill style={{ background: `rgba(18,14,30,${(0.44 * cover).toFixed(3)})` }} />
       </AbsoluteFill>
       <Pile bubbles={copy.bubbles} slam={copy.slam} at={T.at} slamAt={T.slam} fall={T.fall} />
@@ -86,7 +95,7 @@ export function Turn({ locale, t0 }: SceneProps) {
         <World light={lightAt(lerp(4.75, 5.55, p))} frame={frame + t0} cam={{ x: 0, y: lerp(-440, -390, p), z: 1 }} />
         <Vignette />
       </AbsoluteFill>
-      <BigLine rows={copy.big.rows} word={copy.big.word} from={from} to={to - 6} out={total - 14} />
+      <BigLine rows={copy.big.rows} word={copy.big.word} from={from} to={to - 6} out={total - 7} />
     </AbsoluteFill>
   );
 }
@@ -190,9 +199,9 @@ export function Tell({ locale, t0, fast }: SceneProps) {
       look(T.down1[1], 2.35, 548, 720),
       look(T.saved1 + 2, 2.35, 548, 720),
       // Saved: her "Done", and the routine now in the list.
-      look(T.saved1 + 12, 2.35, 300, 700),
+      look(T.saved1 + 12, 2.35, 520, 700),
       // The second sentence: a cut, as it is said again for something else.
-      look(T.cut2 - 1, 2.35, 300, 700),
+      look(T.cut2 - 1, 2.35, 520, 700),
       look(T.cut2, 2.35, 400, 720),
       look(T.card2, 2.35, 400, 720),
       look(T.card2 + 10, 2.35, 262, 700),
@@ -380,9 +389,6 @@ export function Day({ locale, t0 }: SceneProps) {
 /* 8. Quiet, and the one notification                                  */
 /* ------------------------------------------------------------------ */
 
-/** Where the ending's camera starts: the quiet scene's garden comes into focus on the same frame. */
-const GARDEN: Cam = { x: -40, y: 130, z: 1.22 };
-
 export function Quiet({ locale, t0 }: SceneProps) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -422,7 +428,7 @@ export function Quiet({ locale, t0 }: SceneProps) {
       >
         <ScreenTrack cues={cues} />
       </Phone>
-      <Hand text={copy.child} x={lerp(150, 96, away)} y={lerp(1000, 600, away)} size={lerp(104, 118, away)} at={Q.call} />
+      <Hand text={copy.child} x={lerp(150, CALL.x, away)} y={lerp(1000, CALL.y, away)} size={CALL.size} at={Q.call} />
     </AbsoluteFill>
   );
 }
@@ -438,7 +444,7 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   const tod = fast ? lerp(17.74, 18.42, ramp(frame, 24, 112, (t) => t)) : lerp(17.64, 18.42, ramp(frame, 30, 300, (t) => t));
   const cam = keys<Cam>(frame, [
     { at: 0, ...GARDEN },
-    { at: E.crane[0], x: -30, y: 118, z: 1.2 },
+    { at: E.crane[0], x: -16, y: 330, z: 1.05 },
     { at: E.crane[1], x: 0, y: -1150, z: 1 },
   ]);
   const walk = ramp(frame, E.mama[0], E.mama[1], (t) => 1 - (1 - t) * (1 - t));
@@ -447,7 +453,7 @@ export function Ending({ locale, t0, fast }: SceneProps) {
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       <World light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} kiteLift={lift} birds={1} />
       <Vignette />
-      <Hand text={copy.child} x={96} y={600} size={118} at={fast ? 3 : -40} out={E.crane[0] + (fast ? 0 : 8)} />
+      <Hand text={copy.child} {...CALL} at={fast ? 3 : -40} out={E.crane[0] + (fast ? 0 : 8)} />
       <EndCard line={copy.end.line} url={copy.end.url} mark={E.mark} name={E.name} lineAt={E.line} urlAt={E.url} />
     </AbsoluteFill>
   );

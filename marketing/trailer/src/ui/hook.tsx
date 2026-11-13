@@ -45,11 +45,14 @@ function One({ text, reply, x, y, rot, size, at, fall, i, big }: { text: string;
   const drop = t * t * 1.25;
   const spin = t * (i % 2 === 0 ? 0.8 : -0.8);
   const gone = ramp(frame, fall + 3, fall + 17);
+  // Long questions stay inside the frame: the pile is in the way, not off the edge.
+  const wide = text.length * size * 0.54 + size * 1.5;
+  const cx = wide >= 1040 ? 540 : Math.max(wide / 2 + 20, Math.min(1080 - wide / 2 - 20, x));
   return (
     <div
       style={{
         position: "absolute",
-        left: x,
+        left: cx,
         top: y + drop,
         transform: `translate(-50%, -50%) rotate(${rot + spin}deg) scale(${(big ? 0.3 : 0.45) + (big ? 0.7 : 0.55) * s})`,
         opacity: Math.min(1, s * 2.2) * (1 - gone),
