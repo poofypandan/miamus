@@ -6,7 +6,13 @@ import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
 import { dataProvider } from "@/lib/data";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
-import { choreSettledMessageEn, choreSettledMessageId, isChoreAlreadySettled } from "@/lib/chore-settled";
+import {
+  choreChangedMessage,
+  choreSettledMessageEn,
+  choreSettledMessageId,
+  isChoreAlreadySettled,
+  isChoreChanged,
+} from "@/lib/chore-settled";
 import { coverTakeover, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { isBill, loadBillPayments } from "@/lib/bill-payments";
 import type { HouseholdTask } from "@/types/database";
@@ -41,7 +47,7 @@ export interface MyChorePhotos {
  * queue's retry.
  */
 export function useFinishMyChore() {
-  const { finishChore, reopenBillDay, pendingIds, memberProfile } = useHousehold();
+  const { finishChore, reopenBillDay, pendingIds, memberProfile, refresh } = useHousehold();
   const t = useT();
   // Read at the moment of a tap, not from the render that made the toast.
   const pendingRef = useRef(pendingIds);
@@ -58,6 +64,15 @@ export function useFinishMyChore() {
         toast.info(t(choreSettledMessageEn(err.state), choreSettledMessageId(err.state)), { duration: 8000 });
         return false;
       }
+      // The repeat changed since this phone loaded it (its days, ended, off):
+      // retrying gets the same "no". Say so and show the list as it is now.
+      if (isChoreChanged(err)) {
+        toast.info(t(choreChangedMessage("en", undefined, false), choreChangedMessage("id", undefined, false)), {
+          duration: 8000,
+        });
+        void refresh({ silent: true });
+        return false;
+      }
       const failure = classifySubmitError(err);
       if (failure === "update" && reloadForUpdate()) {
         toast.info(t("Miamus was updated. Reloading…", "Miamus diperbarui. Memuat ulang…"));
@@ -70,7 +85,7 @@ export function useFinishMyChore() {
       );
       return false;
     },
-    [t]
+    [t, refresh]
   );
 
   const reopen = useCallback(

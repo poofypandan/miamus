@@ -31,7 +31,8 @@ import { fileTaskException, withdrawTaskException } from "@/lib/task-exceptions-
 import { classifySubmitError } from "@/lib/submit-errors";
 import { SaveStillWaitingError } from "@/lib/offline-queue";
 import { cn } from "@/lib/utils";
-import type { ChoreOccurrence } from "@/lib/chore-recurrence";
+import { seriesIdOf, type ChoreOccurrence } from "@/lib/chore-recurrence";
+import { COULDNT_CHANGED_MESSAGE_ID, isChoreChanged } from "@/lib/chore-settled";
 import type { AgendaItem } from "@/lib/scheduleEngine";
 import type { TaskExceptionReason } from "@/types/database";
 
@@ -212,7 +213,9 @@ function CouldntDoBody({
           {
             ...base,
             id,
-            chore_id: target.occurrence.template.id,
+            // The repeat (or the one-off) the server knows, never a written
+            // day's own id: task_exceptions_guard refuses that.
+            chore_id: seriesIdOf(target.occurrence),
             occurs_on: target.occurrence.date,
           },
           shopping
@@ -269,7 +272,13 @@ function CouldntDoBody({
       console.error(err);
       const failure = classifySubmitError(err);
       const code = (err as { code?: string } | null)?.code;
-      if (code === "23505") toast.error("Sudah ada yang memberi tahu untuk tugas ini.");
+      if (isChoreChanged(err)) {
+        // The task changed, or is done, since this phone loaded it: sending
+        // again only gets the same "no". Say so, and show the list as it is.
+        toast.info(COULDNT_CHANGED_MESSAGE_ID, { duration: 10_000 });
+        void refresh({ silent: true });
+        onDone();
+      } else if (code === "23505") toast.error("Sudah ada yang memberi tahu untuk tugas ini.");
       else if (failure !== "other") toast.error("Koneksi terputus. Coba lagi.");
       else toast.error("Gagal mengirim. Coba lagi.");
     } finally {

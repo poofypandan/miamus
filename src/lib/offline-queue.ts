@@ -12,7 +12,7 @@ import { dataProvider } from "@/lib/data";
 import { isConnectionError } from "@/lib/network-errors";
 import { ensureUploaded, PhotoNotUploadedError } from "@/lib/photo-queue";
 import { getActiveHouseholdId } from "@/lib/tenant";
-import { isChoreAlreadySettled, type ChoreAlreadySettledError } from "@/lib/chore-settled";
+import { isChoreAlreadySettled, isChoreChanged, type ChoreAlreadySettledError } from "@/lib/chore-settled";
 import { phoneLinkState, type PhoneLinkState } from "@/lib/phone-link";
 
 /**
@@ -217,9 +217,16 @@ export function isRetryable(err: unknown): boolean {
  * The server refusing this phone's sign-in rather than the save (audit L4):
  * a 401, an expired or unusable token, or "not allowed" (42501), which is
  * what a phone that was unlinked gets back for every write.
+ *
+ * Not a guard's own refusal of what the save says (chore_owner_only,
+ * task_exception_task: isChoreChanged), which is also 42501: that is the
+ * chore having changed, not the phone. Read as the sign-in, a link check
+ * with no clear answer kept it queued and resent it, refused each time,
+ * until the phone was wrongly called unlinked.
  */
 export function isSessionRefusal(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
+  if (isChoreChanged(err)) return false;
   const { code, status } = err as { code?: unknown; status?: unknown };
   return status === 401 || code === "42501" || isTokenNotRenewed(err);
 }
@@ -833,6 +840,13 @@ export interface DrainReport {
    */
   settled: { item: OfflineQueueItem; state: ChoreAlreadySettledError["state"] }[];
   /**
+   * Refused because the task changed since it was saved on the phone, or the
+   * phone's copy was wrong (isChoreChanged): removed like a refusal, never
+   * retried, told apart so the screen can say so and that the photos are
+   * still on the phone (a chore's draft is kept).
+   */
+  changed: OfflineQueueItem[];
+  /**
    * True when the server refused this phone's sign-in itself several times
    * in a row (audit L4): it is probably no longer linked. The saves stay.
    */
@@ -859,7 +873,7 @@ export interface DrainReport {
 export async function drainOutbox(
   beforeClear?: (report: DrainReport) => Promise<void>
 ): Promise<DrainReport> {
-  const report: DrainReport = { sent: [], refused: [], settled: [], unlinked: false, waiting: 0, confirmed: true };
+  const report: DrainReport = { sent: [], refused: [], settled: [], changed: [], unlinked: false, waiting: 0, confirmed: true };
   if (!available()) return report;
   const household = getActiveHouseholdId();
   const queue = await readAll();
@@ -912,6 +926,7 @@ export async function drainOutbox(
         console.error("A queued save was refused", item.id, err);
         report.refused.push(item);
         if (isChoreAlreadySettled(err)) report.settled.push({ item, state: err.state });
+        else if (isChoreChanged(err)) report.changed.push(item);
       }
     } finally {
       inFlight.delete(item.id);

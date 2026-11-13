@@ -7,7 +7,12 @@ import { choreDraftKey, clearChoreDraft } from "@/lib/chore-draft";
 import { drainOutbox, onNewWaiting, outboxItems, retryDelayMs, type DrainReport } from "@/lib/offline-queue";
 import { confirmTaskExceptions } from "@/lib/task-exceptions-store";
 import { confirmRepairs } from "@/lib/repairs-store";
-import { choreSettledMessageEn, choreSettledMessageId } from "@/lib/chore-settled";
+import {
+  choreChangedMessage,
+  choreSettledMessageEn,
+  choreSettledMessageId,
+  COULDNT_CHANGED_MESSAGE_ID,
+} from "@/lib/chore-settled";
 import { getActiveHouseholdId } from "@/lib/tenant";
 
 /**
@@ -120,7 +125,26 @@ export function useOfflineSync(lang: "en" | "id") {
             : "This phone is no longer linked to the household. Waiting saves are kept on it."
         );
       }
-      if (result.refused.length > result.settled.length) {
+      // Refused because the task changed (isChoreChanged): never retried, and
+      // the list was just reloaded (afterSend). A chore's draft is left alone,
+      // so its photos are still on the phone, and the message says so.
+      let told = result.settled.length;
+      for (const item of result.changed) {
+        if (item.job.kind === "chore") {
+          const withPhotos = !!(item.job.before || item.job.after);
+          toast.info(choreChangedMessage(id ? "id" : "en", item.job.title, withPhotos), { duration: 10_000 });
+          told++;
+        } else if (item.job.kind === "couldnt") {
+          toast.info(
+            id
+              ? COULDNT_CHANGED_MESSAGE_ID
+              : "Not sent because the task was changed or is already done. The list has been refreshed.",
+            { duration: 10_000 }
+          );
+          told++;
+        }
+      }
+      if (result.refused.length > told) {
         toast.error(
           id
             ? "Ada catatan yang ditolak server dan tidak tersimpan. Coba catat lagi."

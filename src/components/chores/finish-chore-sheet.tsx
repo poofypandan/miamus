@@ -25,7 +25,7 @@ import { RepairNotes } from "@/components/repairs/repair-notes";
 import { cn } from "@/lib/utils";
 import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
 import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
-import { choreSettledMessageId, isChoreAlreadySettled } from "@/lib/chore-settled";
+import { choreChangedMessage, choreSettledMessageId, isChoreAlreadySettled, isChoreChanged } from "@/lib/chore-settled";
 import { discardPhoto } from "@/lib/photo-queue";
 import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
@@ -174,6 +174,21 @@ function FinishChoreBody({
   }
 
   /**
+   * The server will never take this save: the chore changed since the phone
+   * loaded it (its days, turned off, done), or the day was never one of its
+   * days (isChoreChanged). Trying again only bounced the photos back with
+   * "Gagal", so: say what happened, close, and reload the list as it is now.
+   * The draft and its photos stay on the phone — if the chore is still on the
+   * list, reopening it finds them in place; if not, nothing was thrown away
+   * without saying so, and the draft expires on its own (lib/chore-draft).
+   */
+  function refusedAsChanged() {
+    toast.info(choreChangedMessage("id", task.title, !!(beforeUrl || afterUrl)), { duration: 10_000 });
+    onOpenChange(false);
+    void refresh({ silent: true });
+  }
+
+  /**
    * The row this day's work belongs to, creating it if the occurrence is
    * still virtual. Everything that writes goes through here.
    */
@@ -198,6 +213,10 @@ function FinishChoreBody({
       await claimHouseholdTask(await rowId());
       toast.success(`"${task.title}" jadi tugas Anda`);
     } catch (err) {
+      if (isChoreChanged(err)) {
+        refusedAsChanged();
+        return;
+      }
       // A dropped connection is not a lost race; say which it was.
       const handled = explainFailure(err);
       reloading = handled === "reloading";
@@ -261,6 +280,10 @@ function FinishChoreBody({
         toast.info(choreSettledMessageId(err.state, task.title), { duration: 8000 });
         onOpenChange(false);
         void refresh({ silent: true });
+        return;
+      }
+      if (isChoreChanged(err)) {
+        refusedAsChanged();
         return;
       }
       const handled = explainFailure(err);
