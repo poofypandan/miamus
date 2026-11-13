@@ -19,7 +19,8 @@ import type { OrganiseRoomsMoved,
 } from "@/types/database";
 import { withLines } from "@/lib/recipes";
 import { MenuAlreadyCookedError } from "./types";
-import type { CreateHouseholdTaskInput, DataProvider, HouseCodeClaim, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
+import { CookingRuleError, cookingRefusal } from "@/lib/cooked-uses";
+import type { CookedDish, CreateHouseholdTaskInput, DataProvider, HouseCodeClaim, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
 import { longRepeatFloorFor, longestGapDays, LONGEST_REPEAT_GAP_DAYS, rolloverFloorFor } from "@/lib/chore-recurrence";
 
 function client() {
@@ -638,6 +639,47 @@ export const supabaseProvider: DataProvider = {
     if (error) throw withStatus(error, status);
     const result = data as { dish: MenuDish; items: InventoryItem[]; skipped?: CookedUse[] };
     return { ...result, skipped: result.skipped ?? [] };
+  },
+  async changeCookedUses(id, uses, staffId, was) {
+    const { data, error, status } = await withRpcDeadline((signal) =>
+      client()
+        .rpc("change_cooked_uses", { p_dish_id: id, p_uses: uses, p_staff_id: staffId, p_was: was })
+        .abortSignal(signal)
+    );
+    if (error) {
+      const refusal = cookingRefusal(error.message);
+      if (refusal) throw new CookingRuleError(refusal);
+      throw withStatus(error, status);
+    }
+    return data as { dish: MenuDish; items: InventoryItem[] };
+  },
+  async listCookedDishes() {
+    const since = new Date(Date.now() - 120 * 86_400_000).toISOString();
+    const { data, error } = await client()
+      .from("menu_dishes")
+      .select("id, recipe_id, cooked_at, cooked_uses")
+      .eq("household_id", getActiveHouseholdId())
+      .not("cooked_at", "is", null)
+      .gte("cooked_at", since)
+      .order("cooked_at", { ascending: false })
+      .limit(300);
+    // A database before migrations/153: no menu yet, not a failure.
+    if (error) {
+      if (error.code === "PGRST205" || error.code === "42P01") return [];
+      throw error;
+    }
+    return (data ?? []) as CookedDish[];
+  },
+  async setRecipeHintsOff(recipeId, itemIds) {
+    // Owners only (admin_update_recipes); a staff phone's update matches no rows.
+    const { data, error, status } = await client()
+      .from("recipes")
+      .update({ hints_off: itemIds.slice(0, 200) })
+      .eq("id", recipeId)
+      .select()
+      .single();
+    if (error) throw withStatus(error, status);
+    return data as Recipe;
   },
   async getKitchenNotes() {
     const { data, error } = await client()

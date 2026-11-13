@@ -392,6 +392,11 @@ export type Recipe = {
   /** The Indonesian version for staff, when written in English. */
   name_id: string | null;
   steps_id: string | null;
+  /**
+   * The items the owner said "Keep recipe" for: no amount is suggested for
+   * them again (migrations/156; at most 200). Absent before 156.
+   */
+  hints_off?: string[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -420,8 +425,25 @@ export type MenuMeal = "breakfast" | "lunch" | "dinner";
 /**
  * What cooking took off one tracked item (migrations/153), in the unit the
  * item had then: Undo converts it if an owner changed the unit since.
+ * Migrations/156 (Phase 177) added four optional keys, all in that unit.
  */
-export type CookedUse = { item_id: string; amount: number; unit?: InventoryUnit | null };
+export type CookedUse = {
+  item_id: string;
+  /** What came off stock (what Undo puts back). May be 0 (nothing was there). */
+  amount: number;
+  unit?: InventoryUnit | null;
+  /**
+   * What the person confirmed. Absent before 156 (read it as `amount`); 0
+   * once unticked in a change: the entry stays and reads as "not used".
+   */
+  said?: number;
+  /** What was missing when it first came off (said - amount then). Never changes. Absent means 0. */
+  short?: number;
+  /** What the recipe asked for at the servings cooked; on the phone's lines, before the person's taps. */
+  planned?: number | null;
+  /** The date the item had when this dish emptied it (YYYY-MM-DD). */
+  cleared_date?: string;
+};
 
 /**
  * One dish on a day (Phase 170 PR C, migrations/153). Owners plan; every
@@ -1147,6 +1169,11 @@ export interface Database {
       uncook_menu_dish: {
         Args: { p_dish_id: string };
         Returns: { dish: MenuDish; items: InventoryItem[]; skipped?: CookedUse[] };
+      };
+      // Change what was used, the same day (migrations/156); any household session.
+      change_cooked_uses: {
+        Args: { p_dish_id: string; p_uses: CookedUse[]; p_staff_id?: string | null; p_was?: CookedUse[] | null };
+        Returns: { dish: MenuDish; items: InventoryItem[] };
       };
       // The household's kitchen note (migrations/153); owners only.
       set_kitchen_notes: {

@@ -1,7 +1,8 @@
 import type { BrowserContext, Route } from "@playwright/test";
 import { BENTO, HOUSEHOLD_ID, MOCHI, SCHEDULES } from "../fixtures/household";
-import { applyAmountRules, convertAmount } from "../../src/lib/kitchen-units";
-import type { InventoryItem } from "../../src/types/database";
+import { applyAmountRules } from "../../src/lib/kitchen-units";
+import { CookingRuleError, applyCook, applyUncook, applyUsesChange } from "../../src/lib/cooked-uses";
+import type { CookedUse, InventoryItem, MenuDish } from "../../src/types/database";
 
 /**
  * A pretend Supabase for the browser tests (Phases 146–147).
@@ -615,6 +616,19 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         if (recipesHeld.on) await recipesHeld.wait;
         return route.fulfill({ json: recipes.map(({ ingredients: _lines, ...row }) => row) });
       }
+      // Keep recipe (migrations/156): an ordinary update of hints_off, owners only.
+      if (table === "recipes" && request.method() === "PATCH") {
+        const id = (new URL(request.url()).searchParams.get("id") ?? "").replace(/^eq\./, "");
+        const index = recipes.findIndex((r) => r.id === id);
+        if (who !== OWNER || index < 0) {
+          return route.fulfill({ status: 406, json: { code: "PGRST116", message: "no rows", details: null, hint: null } });
+        }
+        const patch = request.postDataJSON() as Record<string, unknown>;
+        recipes[index] = { ...recipes[index], ...patch, updated_at: new Date().toISOString() };
+        const row = { ...recipes[index] };
+        delete row.ingredients;
+        return route.fulfill({ json: row });
+      }
       if (table === "recipe_ingredients" && request.method() === "GET") {
         return route.fulfill({ json: recipes.flatMap((r) => (r.ingredients as Record<string, unknown>[]) ?? []) });
       }
@@ -713,54 +727,37 @@ export async function installStub(context: BrowserContext, options: StubOptions 
           return route.fulfill({ json: gone.map((d) => ({ id: d.id })) });
         }
       }
-      if (table === "rpc/cook_menu_dish" || table === "rpc/uncook_menu_dish") {
+      // Cooking, its Undo and changing what was used (migrations/153, 156):
+      // the same rules as the demo data (src/lib/cooked-uses.ts).
+      if (table === "rpc/cook_menu_dish" || table === "rpc/uncook_menu_dish" || table === "rpc/change_cooked_uses") {
         const body = request.postDataJSON() as {
           p_dish_id: string;
-          p_uses?: { item_id: string; amount: number; unit?: string }[];
+          p_uses?: unknown;
           p_staff_id?: string | null;
+          p_was?: CookedUse[] | null;
         };
         const index = menu.findIndex((d) => d.id === body.p_dish_id);
         if (index < 0) return route.fulfill({ status: 403, json: { code: "42501", message: "not_found", details: null, hint: null } });
-        const dish = menu[index];
-        const changed: Record<string, unknown>[] = [];
-        const skipped: Record<string, unknown>[] = [];
-        if (table === "rpc/cook_menu_dish") {
-          if (dish.cooked_at) return route.fulfill({ status: 400, json: { code: "55000", message: "already_cooked", details: null, hint: null } });
-          const took: { item_id: string; amount: number; unit: string }[] = [];
-          for (const use of body.p_uses ?? []) {
-            const at = supplies.findIndex((row) => row.id === use.item_id);
-            const before = supplies[at] as unknown as InventoryItem | undefined;
-            if (!before || before.track_amount !== true) {
-              return route.fulfill({ status: 403, json: { code: "42501", message: "item_not_tracked", details: null, hint: null } });
-            }
-            const amount = use.unit ? convertAmount(use.amount, use.unit as InventoryItem["unit"], before.unit) : use.amount;
-            if (amount === null) {
-              return route.fulfill({ status: 400, json: { code: "22023", message: "unit_mismatch", details: null, hint: null } });
-            }
-            const taken = Math.min(before.quantity, amount);
-            if (taken <= 0) continue;
-            const after = applyAmountRules(before, { ...before, quantity: before.quantity - taken, amount_set_by: body.p_staff_id ?? null });
-            supplies[at] = after as unknown as Record<string, unknown>;
-            changed.push(supplies[at]);
-            took.push({ item_id: use.item_id, amount: taken, unit: before.unit });
+        const dish = menu[index] as unknown as MenuDish;
+        const items = supplies as unknown as InventoryItem[];
+        try {
+          const result =
+            table === "rpc/cook_menu_dish"
+              ? applyCook(dish, body.p_uses ?? [], items, body.p_staff_id ?? null)
+              : table === "rpc/change_cooked_uses"
+                ? applyUsesChange(dish, body.p_uses ?? [], items, body.p_staff_id ?? null, new Date(), body.p_was)
+                : applyUncook(dish, items);
+          menu[index] = result.dish as unknown as Record<string, unknown>;
+          for (const item of result.items) {
+            const at = supplies.findIndex((row) => row.id === item.id);
+            if (at >= 0) supplies[at] = item as unknown as Record<string, unknown>;
           }
-          menu[index] = { ...dish, cooked_at: new Date().toISOString(), cooked_by: body.p_staff_id ?? null, cooked_uses: took };
-        } else {
-          for (const use of (dish.cooked_uses as { item_id: string; amount: number; unit?: string }[] | null) ?? []) {
-            const at = supplies.findIndex((row) => row.id === use.item_id);
-            const before = supplies[at] as unknown as InventoryItem | undefined;
-            if (!before || before.track_amount !== true) continue;
-            const back = use.unit ? convertAmount(use.amount, use.unit as InventoryItem["unit"], before.unit) : use.amount;
-            if (back === null) {
-              skipped.push(use);
-              continue;
-            }
-            supplies[at] = applyAmountRules(before, { ...before, quantity: before.quantity + back }) as unknown as Record<string, unknown>;
-            changed.push(supplies[at]);
-          }
-          menu[index] = { ...dish, cooked_at: null, cooked_by: null, cooked_uses: null };
+          return route.fulfill({ json: { skipped: [], ...result } });
+        } catch (err) {
+          if (!(err instanceof CookingRuleError)) throw err;
+          const code = err.code === "item_not_tracked" ? "42501" : err.code.startsWith("bad_") || err.code === "unit_mismatch" ? "22023" : "55000";
+          return route.fulfill({ status: code === "42501" ? 403 : 400, json: { code, message: err.code, details: null, hint: null } });
         }
-        return route.fulfill({ json: { dish: menu[index], items: changed, skipped } });
       }
       if (table === "rpc/set_kitchen_notes") {
         if (who !== OWNER) return route.fulfill({ status: 403, json: { code: "42501", message: "admins_only", details: null, hint: null } });

@@ -300,6 +300,31 @@ export async function uncookDish(id: string): Promise<{ dish: MenuDish; items: I
   return result;
 }
 
+/**
+ * Change what was used (Phase 177, migrations/156), the day a dish was
+ * cooked: `uses` is the whole new list, `was` the dish's cooked_uses as the
+ * phone read it. Only the difference reaches the stock. Returns the items
+ * written, for the household's list. Any refusal (another phone changed it,
+ * it was marked not cooked, a day has passed, no signal) reads the menu
+ * again and passes the error on.
+ */
+export async function changeDishUses(
+  id: string,
+  uses: CookedUse[],
+  staffId: string | null,
+  was: CookedUse[] | null
+): Promise<{ dish: MenuDish; items: InventoryItem[] }> {
+  try {
+    const result = await dataProvider.changeCookedUses(id, uses, staffId, was);
+    applyDishes([result.dish]);
+    return result;
+  } catch (err) {
+    const dish = snapshot.dishes.find((d) => d.id === id);
+    if (dish) void loadMenuWeek(dish.day, true);
+    throw err;
+  }
+}
+
 /** Owners: the kitchen note (blank clears it); `confirm` is the one-time health-data OK. */
 export async function saveKitchenNotes(text: string | null, confirm: boolean): Promise<KitchenNotes> {
   const notes = await dataProvider.setKitchenNotes(text, confirm);

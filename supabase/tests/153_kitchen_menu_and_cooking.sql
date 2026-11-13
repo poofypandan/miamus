@@ -245,7 +245,10 @@ select pg_temp.ok((select cooked_at is null from public.menu_dishes where id = :
 -- Rice is in kg; cooking takes 0,5 kg and keeps the unit with it.
 select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.cook_menu_dish(%L, '[{"item_id":"%s","amount":0.5,"unit":"kg"}]'::jsonb, null) $q$, :lunch, :rice)) = '',
   'cooking 0,5 kg of rice (runs)');
-select pg_temp.ok((select cooked_uses = '[{"item_id": "00000000-0000-0000-0000-0000000153e2", "amount": 0.5, "unit": "kg"}]'::jsonb from public.menu_dishes where id = :lunch::uuid),
+-- (156 adds keys to each entry, such as "said": contained, not equal.)
+select pg_temp.ok((select jsonb_array_length(cooked_uses) = 1
+                          and cooked_uses @> '[{"item_id": "00000000-0000-0000-0000-0000000153e2", "amount": 0.5, "unit": "kg"}]'::jsonb
+                     from public.menu_dishes where id = :lunch::uuid),
   '... cooked_uses keeps the unit');
 -- The owner switches rice to grams: 3,5 kg is 3500 g.
 select pg_temp.ok(pg_temp.rows_as(:a1, format($q$ update public.inventory_items set unit = 'g', quantity = 3500 where id = %L $q$, :rice)) = 1,

@@ -480,10 +480,40 @@ test("cooking takes off what the stepper shows, not the dish's servings (Codex, 
   await page.getByRole("button", { name: "Pakai bahan ini" }).click();
   await expect.poll(() => stub.supplies.find((r) => r.id === rice.id)?.quantity).toBe(3.5);
   expect(stub.supplies.find((r) => r.id === chicken.id)).toMatchObject({ quantity: 0 });
+  // said and planned (migrations/156): what the cook confirmed, and the recipe at 4 servings.
   expect(stub.menu[0].cooked_uses).toEqual([
-    { item_id: chicken.id, amount: 1, unit: "kg" },
-    { item_id: rice.id, amount: 0.5, unit: "kg" },
+    { item_id: chicken.id, amount: 1, unit: "kg", said: 1, planned: 1 },
+    { item_id: rice.id, amount: 0.5, unit: "kg", said: 0.5, planned: 0.5 },
   ]);
+});
+
+test("Undo of cooking puts back the date cooking cleared (Phase 177, migrations/156)", async ({ context, page }) => {
+  // The last kilo of a dated chicken: cooking empties it, so it loses its
+  // date (154); Batalkan brings back the amount and the date.
+  const datedChicken = { ...chicken, expires_on: "2026-12-01" };
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [datedChicken, rice, shallots],
+    recipes: [soto],
+    menu: [dish(0, "lunch", "Chicken soto", { recipe_id: SOTO, servings: 4 })],
+  });
+  await page.goto("/staff");
+  const card = page.getByRole("region", { name: "Menu hari ini", exact: true });
+  await card.getByRole("button", { name: /Soto ayam/ }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Sudah dimasak" }).click();
+  await page.getByRole("button", { name: "Pakai bahan ini" }).click();
+  await expect.poll(() => stub.supplies.find((r) => r.id === chicken.id)?.quantity).toBe(0);
+  expect(stub.supplies.find((r) => r.id === chicken.id)).toMatchObject({ stock_status: "out", expires_on: null });
+  expect((stub.menu[0].cooked_uses as Record<string, unknown>[]).find((u) => u.item_id === chicken.id)).toMatchObject({
+    amount: 1,
+    cleared_date: "2026-12-01",
+  });
+  await page.getByRole("button", { name: "Tidak ada sisa" }).click();
+  await page.getByRole("button", { name: "Batalkan" }).click();
+  await expect.poll(() => stub.supplies.find((r) => r.id === chicken.id)?.quantity).toBe(1);
+  expect(stub.supplies.find((r) => r.id === chicken.id)).toMatchObject({ stock_status: "ok", expires_on: "2026-12-01" });
 });
 
 test("a dish can't be cooked before its recipe has loaded: Sedang memuat…, then Sudah dimasak (Codex, PR #101)", async ({ context, page }) => {

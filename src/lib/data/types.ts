@@ -15,6 +15,7 @@ import type {
   InventoryItem,
   CookedUse,
   MenuDish,
+  Recipe,
   FoodItem,
   FoodOutcome,
   FoodPlace,
@@ -343,6 +344,12 @@ export interface KitchenNotes {
   confirmedAt: string | null;
 }
 
+/**
+ * What "recipes that learn" reads (Phase 177, migrations/156): a cooked
+ * dish's recipe, when, and what it took off. Owners only.
+ */
+export type CookedDish = Pick<MenuDish, "id" | "recipe_id" | "cooked_at" | "cooked_uses">;
+
 /** cook_menu_dish refused a dish that is already cooked (another phone, or a resend). */
 export class MenuAlreadyCookedError extends Error {
   constructor() {
@@ -545,6 +552,26 @@ export interface DataProvider {
    * longer converts (nothing wrong is added to them).
    */
   uncookMenuDish(id: string): Promise<{ dish: MenuDish; items: InventoryItem[]; skipped: CookedUse[] }>;
+  /**
+   * Any household session, the day a dish was cooked: `uses` is the whole
+   * new list and only the difference reaches the stock (change_cooked_uses,
+   * migrations/156). `was` is cooked_uses as the phone read it. Refusals
+   * come as CookingRuleError: changed_elsewhere, not_cooked, too_late (and
+   * the line checks cooking has).
+   */
+  changeCookedUses(
+    id: string,
+    uses: CookedUse[],
+    staffId: string | null,
+    was: CookedUse[] | null
+  ): Promise<{ dish: MenuDish; items: InventoryItem[] }>;
+  /**
+   * Owners: the household's dishes cooked in the last 120 days, newest
+   * first, at most 300 (what a recipe learns from). [] before 153.
+   */
+  listCookedDishes(): Promise<CookedDish[]>;
+  /** Owners only: the items a recipe should never suggest an amount for again (Keep recipe). */
+  setRecipeHintsOff(recipeId: string, itemIds: string[]): Promise<Recipe>;
   /** The household's kitchen note; null before 153. */
   getKitchenNotes(): Promise<KitchenNotes | null>;
   /** Owners only. `confirm`: the one-time health-data OK (D12). */

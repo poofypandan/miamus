@@ -2,6 +2,17 @@ import { stockItemName } from "@/lib/inventory";
 import { clean, convertAmount, friendlyAmount, isTracked } from "@/lib/kitchen-units";
 
 export { friendlyAmount, toBuyAmountLabel } from "@/lib/kitchen-units";
+export {
+  CHANGE_WINDOW_HOURS,
+  CookingRuleError,
+  applyCook,
+  applyUncook,
+  applyUsesChange,
+  saidOf,
+  wasUsed,
+  type CookingRefusal,
+} from "@/lib/cooked-uses";
+import { saidOf } from "@/lib/cooked-uses";
 import { lineItem, lineName, scaleAmount, staffText, type RecipeLang, type RecipeWithLines } from "@/lib/recipes";
 import type { CookedUse, InventoryItem, InventoryUnit, MenuDish, MenuMeal, RecipeUnit } from "@/types/database";
 
@@ -269,6 +280,11 @@ export interface CountedLine {
   name: string;
   /** In the item's unit, scaled to the dish's servings, lines of one item summed. */
   amount: number;
+  /**
+   * What the recipe asked for, before the person's taps (sent as `planned`,
+   * migrations/156). Null when the recipe doesn't list it now.
+   */
+  planned: number | null;
   unit: InventoryUnit;
   /** What's there now (the item's tracked amount). */
   have: number;
@@ -302,8 +318,12 @@ export function cookLines(
     const amount = lineInItemUnit(line, item, recipe.servings, target);
     if (item && amount !== null) {
       const existing = counted.get(item.id);
-      if (existing) existing.amount = clean(existing.amount + amount);
-      else counted.set(item.id, { itemId: item.id, name: stockItemName(item), amount, unit: item.unit, have: item.quantity });
+      if (existing) {
+        existing.amount = clean(existing.amount + amount);
+        existing.planned = existing.amount;
+      } else {
+        counted.set(item.id, { itemId: item.id, name: stockItemName(item), amount, planned: amount, unit: item.unit, have: item.quantity });
+      }
     } else {
       uncounted.push({
         key: line.id,
@@ -377,14 +397,80 @@ export function shortfallReadiness(state: {
 }
 
 /**
- * What cook_menu_dish takes: the ticked lines, each > 0, at most 100,000,
- * with the unit the phone saw, so the server converts (or refuses) if an
- * owner changed the item's unit meanwhile (Codex, PR #101).
+ * What cook_menu_dish (and change_cooked_uses) takes: the ticked lines, each
+ * > 0, at most 100,000, with the unit the phone saw, so the server converts
+ * (or refuses) if an owner changed the item's unit meanwhile (Codex, PR
+ * #101). `planned`, what the recipe asked for before the person's taps,
+ * goes with it when known (migrations/156: the recipe learns from the two).
  */
-export function usesFrom(lines: readonly { itemId: string; amount: number; unit: InventoryUnit; on: boolean }[]): CookedUse[] {
+export function usesFrom(
+  lines: readonly { itemId: string; amount: number; unit: InventoryUnit; on: boolean; planned?: number | null }[]
+): CookedUse[] {
   return lines
     .filter((line) => line.on && line.amount > 0)
-    .map((line) => ({ item_id: line.itemId, amount: Math.min(100_000, clean(line.amount)), unit: line.unit }));
+    .map((line) => {
+      const use: CookedUse = { item_id: line.itemId, amount: Math.min(100_000, clean(line.amount)), unit: line.unit };
+      if (line.planned != null && line.planned > 0) use.planned = Math.min(100_000, clean(line.planned));
+      return use;
+    });
+}
+
+/**
+ * The lines of "Change what was used" (Phase 177, plan 3b): the cook's
+ * confirm sheet again, as it was saved.
+ *
+ *   1. every ingredient this dish's cooking took off and still counts as
+ *      used (said > 0), ticked, at what the person said last time, in the
+ *      item's unit now;
+ *   2. every other line of the recipe that could come off stock now
+ *      (cookLines at the dish's servings), unticked, at the recipe's amount:
+ *      the ones the cook unticked (an entry unticked in an earlier change is
+ *      one of these);
+ *   3. in the recipe's order, then anything in 1 the recipe no longer lists.
+ *
+ * Never shown: an ingredient deleted since, no longer tracked, or whose
+ * unit no longer converts (the server leaves those entries as they are).
+ * `planned` is the recipe's amount now, else the entry's.
+ */
+export function changeLines(
+  dish: Pick<MenuDish, "cooked_uses" | "servings">,
+  recipe: RecipeWithLines | null,
+  items: readonly InventoryItem[],
+  forStaff: boolean
+): { lines: (CountedLine & { on: boolean })[]; uncounted: UncountedLine[] } {
+  const { counted, uncounted } = cookLines(recipe, dishServings(dish, recipe), items, forStaff);
+  const used = new Map<string, { amount: number; planned: number | null; item: InventoryItem }>();
+  for (const use of dish.cooked_uses ?? []) {
+    const item = items.find((i) => i.id === use.item_id);
+    if (!item || !isTracked(item)) continue;
+    const from = (use.unit ?? item.unit) as InventoryUnit;
+    const said = convertAmount(saidOf(use), from, item.unit);
+    if (said === null) continue;
+    const planned = use.planned != null ? convertAmount(use.planned, from, item.unit) : null;
+    const existing = used.get(item.id);
+    used.set(item.id, {
+      item,
+      amount: clean((existing?.amount ?? 0) + said),
+      planned: existing ? null : planned,
+    });
+  }
+  const lines: (CountedLine & { on: boolean })[] = counted.map((line) => {
+    const entry = used.get(line.itemId);
+    return entry && entry.amount > 0 ? { ...line, amount: entry.amount, on: true } : { ...line, on: false };
+  });
+  for (const [itemId, entry] of used) {
+    if (entry.amount <= 0 || counted.some((line) => line.itemId === itemId)) continue;
+    lines.push({
+      itemId,
+      name: stockItemName(entry.item),
+      amount: entry.amount,
+      planned: entry.planned,
+      unit: entry.item.unit,
+      have: entry.item.quantity,
+      on: true,
+    });
+  }
+  return { lines, uncounted };
 }
 
 // --- Add missing to Shopping --------------------------------------------------------
