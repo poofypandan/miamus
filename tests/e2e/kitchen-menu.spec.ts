@@ -131,6 +131,8 @@ async function shot(page: Page, name: string, tall = false) {
 }
 
 test("the owner's week reads at a glance: days, meals, dishes, today, cooked, kitchen notes", async ({ context, page }) => {
+  // Phase 177's card (newer) would hold this week's slot on Menu: seen, so the menu card shows.
+  await context.addInitScript(() => localStorage.setItem("miamus.whats-new.cooking-changes-2026-11", "seen"));
   await installStub(context, {
     owner: { locale: "en" },
     features: { kitchen: true },
