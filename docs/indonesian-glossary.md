@@ -383,6 +383,15 @@ people are **staf** and **admin**.
 | {recipe} updated | **Resep {recipe} diperbarui** | Phase 177: toast, with Undo / **Batalkan**. |
 | Too late to undo. The owner can mark it not cooked. | **Sudah terlalu lama untuk dibatalkan. Minta pemilik rumah menandainya belum dimasak.** | Phase 177 (audit D1): a staff phone's Undo of cooking more than 10 minutes later. Only owners may mark a dish not cooked after that. |
 | Recipe kept. Miamus won't suggest this again. | **Resep tidak diubah. Miamus tidak akan menyarankan ini lagi.** | Phase 177: toast after Keep recipe. |
+| What {name} sees | **Yang dilihat {name}** | Phase 178: the heading of the owner's block on a staff member (Settings → Staff). |
+| Chores for anyone | **Tugas untuk siapa saja** | Phase 178: switch. "Siapa saja" is the Anyone assignee. |
+| Pet routines | **Rutinitas hewan** | Phase 178: switch. |
+| Kitchen / Repairs | **Dapur** / **Perbaikan** | Phase 178: switches; the staff pills' own words. |
+| Anything you give {name} by name always shows. | **Tugas yang Anda berikan langsung ke {name} selalu terlihat.** | Phase 178: under the switches. |
+| Nobody sees pet routines now, so every staff member sees them. | **Sekarang tidak ada yang melihat rutinitas hewan, jadi semua staf melihatnya.** | Phase 178: under the block, when nobody working has the area on. |
+| Nobody sees chores for anyone now, so every staff member sees them. | **Sekarang tidak ada yang melihat tugas untuk siapa saja, jadi semua staf melihatnya.** | Phase 178: the same, for chores. |
+| Doesn't see: Kitchen, Repairs | **Tidak melihat: Dapur, Perbaikan** | Phase 178: the staff list, under a name with anything off. |
+| Kitchen off for Sari / Kitchen on for Sari | **Dapur dimatikan untuk Sari** / **Dapur aktif untuk Sari** | Phase 178: the toast after a switch, with Undo / **Batalkan**. Same verbs as the Features switches. |
 
 ## Formatting
 

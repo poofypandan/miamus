@@ -37,6 +37,7 @@ import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { CreateScheduleInput, DataProvider } from "./types";
 import { isTemplate, longRepeatFloorFor } from "@/lib/chore-recurrence";
 import { isSetUp } from "@/lib/rooms-view";
+import { AREAS } from "@/lib/staff-areas";
 
 const STORAGE_KEY = "maimus_mock_db_v1";
 // The preview household's house code, as an admin would read it out: MIA-M23.
@@ -1639,6 +1640,18 @@ export const mockProvider: DataProvider = {
     profile.archived_at = null;
     saveDB(db);
     return delay(profile);
+  },
+  async setStaffHiddenAreas(id, areas) {
+    const db = loadDB();
+    const profile = db.staffProfiles.find((s) => s.id === id);
+    if (!profile) throw new Error("Staff profile not found");
+    // Mirrors staff_profiles_hidden_areas_check (migrations/165).
+    if (areas.some((a) => !(AREAS as readonly string[]).includes(a))) {
+      throw new Error("Unknown staff area");
+    }
+    profile.hidden_areas = [...areas];
+    saveDB(db);
+    await delay(undefined);
   },
   async setStaffPin(id, pin) {
     const db = loadDB();

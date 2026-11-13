@@ -1,5 +1,6 @@
 import type { OwnerLocale } from "@/lib/owner-locale";
 import type { ChoreRecurrence, HouseholdTask, HouseholdTaskStatus } from "@/types/database";
+import { showsChore } from "@/lib/staff-areas";
 
 
 export const CHORE_RECURRENCES: ChoreRecurrence[] = ["none", "daily", "weekly", "monthly"];
@@ -499,14 +500,18 @@ export function compareOccurrences(a: ChoreOccurrence, b: ChoreOccurrence): numb
  * A chore someone else has claimed disappears from this feed: it is no longer
  * this person's business, and leaving it visible invites two people doing the
  * same job.
+ *
+ * `anyone` (Phase 178, lib/staff-areas.ts): whether chores for Anyone show
+ * for this person — staffVisibility().home, which already folds in covering
+ * someone on leave and "nothing hidden from everybody". A chore given to the
+ * person by name shows either way. Defaults to true, as before.
  */
 export function occurrencesForStaff(
   occurrences: ChoreOccurrence[],
-  staffId: string | null
+  staffId: string | null,
+  anyone = true
 ): ChoreOccurrence[] {
-  return occurrences.filter(
-    (o) => !o.task.assigned_to || o.task.assigned_to === staffId
-  );
+  return occurrences.filter((o) => showsChore(o.task.assigned_to, staffId, { home: anyone }));
 }
 
 /**

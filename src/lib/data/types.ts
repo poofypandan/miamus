@@ -781,6 +781,13 @@ export interface DataProvider {
   archiveStaffProfile(id: string): Promise<StaffProfile>;
   /** Puts an archived person back on the roster. They re-choose a PIN. */
   restoreStaffProfile(id: string): Promise<StaffProfile>;
+  /**
+   * Owner-only: the parts of the staff app this person doesn't see
+   * (migrations/165, Phase 178; lib/staff-areas.ts). The whole list, as it
+   * should be stored. Throws when nothing was saved (a staff phone, or the
+   * person is not in this household).
+   */
+  setStaffHiddenAreas(id: string, areas: string[]): Promise<void>;
   /** Checks a PIN against its hash (migrations/095). */
   verifyStaffPin(id: string, pin: string): Promise<boolean>;
   /** The same check with the reason when it fails: tries left, or locked (migrations/115). */
