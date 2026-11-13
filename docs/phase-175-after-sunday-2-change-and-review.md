@@ -183,9 +183,12 @@ mingguan Miamus* · *Lihat bagaimana minggu ini berjalan. Buka Hari Ini.*
   marked "couldn't be done" as closed, so a number worked out there could
   disagree with the card (a week of couldn't-do would read 100% in the push
   and 0% on the card). One place counts: the card.
-- "At least one task due that week" is read from `north_star_days`
-  (any `due` above 0, Monday to Saturday), or from `chore_days_open` and
-  `routine_slots_open` for the Sunday itself.
+- "At least one task due that week" is read from `north_star_days` (any
+  `due` above 0, Monday to Saturday), or, for the Sunday itself, from the
+  `due` count of `north_star_day()` (144), which counts every task due that
+  day, finished or not. Not from `chore_days_open` or `routine_slots_open`:
+  those list only what is still open, so a home that finished its Sunday by
+  17.00 would look as if it had no tasks.
 - Claimed in `owner_push_sent` (part 1; `weekly_checkin`, key the Monday's
   date), tag `weekly-<monday>`.
 - **A switch.** 162 adds `'weekly'` to the allowed values of
@@ -381,7 +384,8 @@ steps are the manager's, on the owner's OK.
   their own roster row hands their tasks over in `chore_days_open`; a second
   household sees none of it.
 - **SQL 162:** one push per household per week, not again on a second run;
-  none for a household with no tasks; an owner with `weekly` off gets none
+  none for a household with no tasks; a household whose only tasks were on
+  Sunday and were all finished before 17.00 still gets it; an owner with `weekly` off gets none
   while the other owner does; an unknown kind is still refused.
 - **SQL 163:** the four names are accepted by the column check and by
   `kakak_record`; an unknown name is still refused; `anon` cannot execute
