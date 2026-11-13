@@ -3,3 +3,4 @@ out/
 review/*.png
 public/shots/
 .remotion/
+test-results/
