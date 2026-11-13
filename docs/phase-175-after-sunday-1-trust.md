@@ -127,20 +127,26 @@ document):
 create table if not exists public.staff_app_days (
   household_id uuid not null references public.households (id) on delete cascade,
   staff_id uuid not null references public.staff_profiles (id) on delete cascade,
+  -- The phone that said so: one person may use two phones.
+  device_user_id uuid not null references public.device_sessions (user_id) on delete cascade,
   day date not null,                         -- the Jakarta calendar day
   waiting_to_send smallint not null default 0,
   updated_at timestamptz not null default now(),
   constraint staff_app_days_waiting_check check (waiting_to_send between 0 and 999),
-  primary key (staff_id, day)
+  primary key (staff_id, day, device_user_id)
 );
 create index if not exists staff_app_days_household_idx on public.staff_app_days (household_id, day);
+create index if not exists staff_app_days_device_idx on public.staff_app_days (device_user_id);
 alter table public.staff_app_days enable row level security;
 revoke all on public.staff_app_days from public, anon, authenticated;
 grant select, insert, update, delete on public.staff_app_days to service_role;
 ```
 
-One row per person per day: that they opened Miamus, and how many photos
-or finished tasks were still waiting to send when the phone last said so.
+One row per person, per phone, per day: that they opened Miamus on it, and
+how many photos or finished tasks were still waiting to send when **that
+phone** last said so. A second phone with an empty outbox therefore never
+clears the count of the first. Owners see one answer per person: opened on
+any phone, and the sum of what is waiting.
 **No time is ever shown to an owner** (`updated_at` is for the server only):
 the plan's promise to staff was "opened today, yes or no", never when, never
 for how long, never where. Kept **14 days**, pruned nightly.
@@ -155,10 +161,12 @@ the migration:
   session is refused, as that helper already does). The person must be in
   that household, not archived, and not an owner's roster row
   (`user_id is null`); otherwise nothing is written. Upserts
-  today's row with `waiting_to_send = least(greatest(p_waiting, 0), 999)`.
+  today's row **for this phone** (`auth.uid()` is its session) with
+  `waiting_to_send = least(greatest(p_waiting, 0), 999)`.
 - `staff_app_today() returns jsonb`. For owners:
   `[{ "staff_id": …, "opened": true, "waiting": 0 }, …]` for today, one
-  entry per person with a row. Guarded by `caller_admin_household()`, never
+  entry per person with a row on any phone; `waiting` is the sum over that
+  person's phones, capped at 999. Guarded by `caller_admin_household()`, never
   `get_user_household_ids()` (staff phones pass that). No timestamps in the
   answer.
 
@@ -548,7 +556,9 @@ needs it.
   six days after its run; a job that ran well alerts nobody; no
   client role can read `job_alerts_sent` or execute the check; old history
   rows are deleted.
-- **SQL 158:** a staff phone marks its own person; it cannot mark a person
+- **SQL 158:** a staff phone marks its own person; a second phone of the
+  same person reporting 0 does not clear the first phone's 3 (the owner
+  still reads 3), and the first reporting 0 then clears it; it cannot mark a person
   of another household, an archived person or an owner's roster row; an
   owner's session cannot mark anyone; `staff_app_today` refuses a staff
   phone and returns no timestamp; `anon` can execute neither; the job
