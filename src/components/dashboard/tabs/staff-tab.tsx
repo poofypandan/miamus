@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Crown,
   DoorOpen,
+  Eye,
   History,
   Info,
   MessageSquareText,
@@ -80,6 +81,7 @@ import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
 import { FeedbackSheet } from "@/components/shared/feedback-sheet";
 import { RoomsManager } from "@/components/dashboard/rooms-manager";
 import { FeaturesPanel } from "@/components/dashboard/features-panel";
+import { StaffAreasDialog, StaffAreasLine } from "@/components/dashboard/staff-areas-dialog";
 import { SendStaffMessageButton } from "@/components/setup/send-staff-message";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { featuresOnCount } from "@/lib/features";
@@ -526,6 +528,8 @@ function StaffRoster({
   const [pinTarget, setPinTarget] = useState<StaffProfile | null>(null);
   // Who the owner is about to take off the roster, held until they confirm.
   const [removeTarget, setRemoveTarget] = useState<StaffProfile | null>(null);
+  // Whose "What Sari sees" is open (Phase 178).
+  const [areasTarget, setAreasTarget] = useState<StaffProfile | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const archived = useMemo(
     () => (allProfiles ?? []).filter((p) => p.archived_at),
@@ -676,6 +680,13 @@ function StaffRoster({
         onSubmit={(pin) => pinTarget && applyPin(pinTarget, pin)}
       />
 
+      <StaffAreasDialog
+        profile={areasTarget}
+        staff={profiles ?? []}
+        onClose={() => setAreasTarget(null)}
+        reload={reload}
+      />
+
       {failed ? (
         <p className="text-sm text-destructive">
           {t("Couldn't load the list of people.", "Daftar orang gagal dimuat.")}
@@ -694,7 +705,8 @@ function StaffRoster({
               </p>
             ) : (
               staff.map((profile) => (
-                <div key={profile.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                <div key={profile.id} className="flex flex-col">
+                <div className="flex items-center gap-3 px-4 py-3 text-sm">
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
                     <UserRound className="size-4" />
                   </span>
@@ -742,6 +754,15 @@ function StaffRoster({
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="min-h-[40px] shrink-0 px-2"
+                        onClick={() => setAreasTarget(profile)}
+                        aria-label={t(`What ${profile.name} sees`, `Yang dilihat ${profile.name}`)}
+                      >
+                        <Eye className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="min-h-[40px] shrink-0 px-2 text-destructive"
                         onClick={() => setRemoveTarget(profile)}
                         disabled={busyId === profile.id}
@@ -754,6 +775,9 @@ function StaffRoster({
                         )}
                       </Button>
                     </>
+                </div>
+                {/* Its own line, so the buttons don't squeeze it (Phase 178). */}
+                <StaffAreasLine profile={profile} />
                 </div>
               ))
             )}
