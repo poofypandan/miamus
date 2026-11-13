@@ -47,7 +47,18 @@ describe("toSpeech: Indonesian times, as people say them", () => {
     expect(toSpeech("07.00–09.00", "id")).toBe("jam tujuh pagi sampai jam sembilan pagi");
   });
 
-  it("leaves prices and other numbers alone", () => {
+  it("keeps the part of the day the reply named, on the right half of the day", () => {
+    expect(toSpeech("Ingatkan Syam jam 7.30 malam.", "id")).toBe("Ingatkan Syam jam setengah delapan malam.");
+    expect(toSpeech("jam 1.00 siang", "id")).toBe("jam satu siang");
+    expect(toSpeech("jam 6.00 sore", "id")).toBe("jam enam sore");
+    expect(toSpeech("jam 12.00 malam", "id")).toBe("jam dua belas malam");
+    expect(toSpeech("jam 9.15 pagi", "id")).toBe("jam sembilan lewat seperempat pagi");
+    expect(toSpeech("jam 9.30 malam", "id")).toBe(toSpeech("jam 21.30", "id"));
+  });
+
+  it("leaves prices, amounts and other numbers alone", () => {
+    expect(toSpeech("Rp 12.50", "id")).toBe("Rp 12.50");
+    expect(toSpeech("12.50 kg", "id")).toBe("12.50 kg");
     expect(toSpeech("Rp 25.000", "id")).toBe("Rp 25.000");
     expect(toSpeech("1.250.000", "id")).toBe("1.250.000");
     expect(toSpeech("2,5 kg", "id")).toBe("2,5 kg");
@@ -74,6 +85,14 @@ describe("toSpeech: English times", () => {
       "Every day at seven in the morning, five in the afternoon."
     );
     expect(toSpeech("1.25 kg", "en")).toBe("1.25 kg");
+  });
+
+  it("reads a dotted number as a time only when something says it is one", () => {
+    expect(toSpeech("There is 12.50 kg of rice.", "en")).toBe("There is 12.50 kg of rice.");
+    expect(toSpeech("It costs 12.50 now.", "en")).toBe("It costs 12.50 now.");
+    expect(toSpeech("$12.50", "en")).toBe("$12.50");
+    expect(toSpeech("Remind Ari at 12.30.", "en")).toBe("Remind Ari at twelve thirty in the afternoon.");
+    expect(toSpeech("07.00–09.00", "en")).toBe("seven in the morning until nine in the morning");
     expect(enTime(18, 0)).toBe("six in the evening");
   });
 });

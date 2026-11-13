@@ -62,10 +62,10 @@ function idPartOfDay(hour: number): string {
 /**
  * A time as Indonesians say it: 21.30 is "jam setengah sepuluh malam"
  * (setengah X is half an hour before X), 07.15 "jam tujuh lewat
- * seperempat pagi", 09.45 "jam sepuluh kurang seperempat pagi".
+ * seperempat pagi", 09.45 "jam sepuluh kurang seperempat pagi". `part`
+ * keeps the part of the day the reply itself named ("jam 6 sore").
  */
-export function idTime(hour: number, minute: number): string {
-  const part = idPartOfDay(hour);
+export function idTime(hour: number, minute: number, part: string = idPartOfDay(hour)): string {
   const now = idNumber(twelve(hour));
   const next = idNumber(twelve(hour + 1));
   if (minute === 0) return `jam ${now} ${part}`;
@@ -74,6 +74,28 @@ export function idTime(hour: number, minute: number): string {
   if (minute === 45) return `jam ${next} kurang seperempat ${part}`;
   if (minute >= 50) return `jam ${next} kurang ${idNumber(60 - minute)} ${part}`;
   return `jam ${now} lewat ${idNumber(minute)} ${part}`;
+}
+
+/**
+ * A twelve-hour time with the part of the day written after it, on the
+ * 24-hour clock: "7.30 malam" is 19.30, "1.00 siang" 13.00, "12.00 malam"
+ * midnight. A 24-hour time (13 and up) is already unambiguous.
+ */
+function idHour(hour: number, part: string | undefined): number {
+  if (!part || hour > 12) return hour;
+  switch (part) {
+    case "pagi":
+      return hour === 12 ? 0 : hour;
+    case "siang":
+      return hour >= 1 && hour <= 5 ? hour + 12 : hour;
+    case "sore":
+      return hour < 12 ? hour + 12 : hour;
+    case "malam":
+      if (hour === 12) return 0;
+      return hour >= 5 ? hour + 12 : hour; // "jam 1 malam" is 01.00
+    default:
+      return hour;
+  }
 }
 
 function enPartOfDay(hour: number): string {
@@ -91,40 +113,47 @@ export function enTime(hour: number, minute: number): string {
   return `${enNumber(twelve(hour))}${mins} ${enPartOfDay(hour)}`;
 }
 
-// A clock time, not part of a bigger number: "21.30" but not "1.250.000",
-// "2.5" or "13/11.30". Indonesian writes 21.30 (or 21:30); English 21:30.
-const NOT_AFTER = String.raw`(?<![\d.,:/$])`;
+// A clock time, not part of a bigger number or an amount: "21.30" but not
+// "1.250.000", "2.5", "13/11.30", "Rp 12.50" or "12.50 kg".
+const NOT_AFTER = String.raw`(?<![\d.,:/$])(?<!(?:Rp|IDR|USD|SGD)\s?)`;
 const NOT_BEFORE = String.raw`(?![\d]|[.:,]\d)`;
+const NOT_AMOUNT = String.raw`(?!\s*(?:%|(?:kg|kilos?|g|gr|grams?|l|lt|liters?|litres?|ml|cc|mm|cm|m|km|pcs|lbs?|oz|cups?|units?|buah|butir|bungkus|ikat|porsi|rupiah|dollars?)(?![A-Za-z])))`;
 const ID_TIME = new RegExp(
-  String.raw`(?:\b(?:[Jj]am|[Pp]ukul)\s+)?${NOT_AFTER}([01]?\d|2[0-3])[.:]([0-5]\d)${NOT_BEFORE}(?:\s+(?:pagi|siang|sore|malam)\b)?(?:\s+WIB\b)?`,
+  String.raw`(?:\b(?:[Jj]am|[Pp]ukul)\s+)?${NOT_AFTER}([01]?\d|2[0-3])[.:]([0-5]\d)${NOT_BEFORE}${NOT_AMOUNT}(?:\s+(pagi|siang|sore|malam)\b)?(?:\s+WIB\b)?`,
   "g"
 );
-// English: 9:30 or 21:30, or 21.30 with a two-digit hour (so "1.25 kg"
-// stays a number); an optional am/pm sets the half of the day.
+// English: 9:30 or 21:30, or a dotted 21.30 with a two-digit hour; an
+// optional am/pm sets the half of the day.
 const EN_TIME = new RegExp(
-  String.raw`(?:\bat\s+)?${NOT_AFTER}(?:([01]?\d|2[0-3]):([0-5]\d)|([01]\d|2[0-3])\.([0-5]\d))${NOT_BEFORE}(?:\s?([AaPp])\.?[Mm]\.?(?![A-Za-z]))?`,
+  String.raw`(?:\b(at|by|until|till|from|before|after|around|between)\s+)?${NOT_AFTER}(?:([01]?\d|2[0-3]):([0-5]\d)|([01]\d|2[0-3])\.([0-5]\d))${NOT_BEFORE}${NOT_AMOUNT}(?:\s?([AaPp])\.?[Mm]\.?(?![A-Za-z]))?`,
   "g"
 );
 
 function speakTimes(text: string, locale: SpeechLocale): string {
   // A range, "07.00–09.00": "from one until the other".
-  const until = locale === "id" ? "sampai" : "to";
+  const until = locale === "id" ? "sampai" : "until";
   const ranged = text.replace(/(\d{1,2}[.:]\d{2})\s*[–—-]\s*(?=\d{1,2}[.:]\d{2})/g, `$1 ${until} `);
   if (locale === "id") {
-    return ranged.replace(ID_TIME, (_, h: string, m: string) => idTime(Number(h), Number(m)));
+    // Indonesian writes decimals with a comma, so a dotted h.mm is a time.
+    return ranged.replace(ID_TIME, (_, h: string, m: string, part?: string) =>
+      idTime(idHour(Number(h), part), Number(m), part)
+    );
   }
   return ranged.replace(
     EN_TIME,
-    (match: string, h1?: string, m1?: string, h2?: string, m2?: string, half?: string) => {
+    (match: string, pre?: string, h1?: string, m1?: string, h2?: string, m2?: string, half?: string) => {
       let hour = Number(h1 ?? h2);
       const minute = Number(m1 ?? m2);
+      // In English a dotted "12.50" is more often an amount than a time: read
+      // it as a time only when something says so (a leading zero, a 24-hour
+      // hour, am/pm, or "at", "until"... before it).
+      if (h2 !== undefined && !half && !pre && !h2.startsWith("0") && hour < 13) return match;
       if (half) {
         if (hour < 1 || hour > 12) return match;
         hour = (hour % 12) + (half.toLowerCase() === "p" ? 12 : 0);
       }
       const said = enTime(hour, minute);
-      // "at noon", "at midnight", but "at nine in the morning" reads as well without "at".
-      return /^\s*at\s/i.test(match) ? `at ${said}` : said;
+      return pre ? `${pre} ${said}` : said;
     }
   );
 }
