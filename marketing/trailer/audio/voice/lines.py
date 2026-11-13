@@ -19,6 +19,7 @@ EN = {
     "L2": "What if you only had to say it once?",
     "L3": f"Hi. I'm {KAKAK_EN}, the A.I. helper inside {MIAMUS_EN}.",
     "L4": "Tell me once.",
+    "L4b": "I'll take it from there.",
     "L5": "And everyone at home knows what to do.",
     "L6": "In their own language. On their own phone.",
     "L7a": "They run the home.",
@@ -38,6 +39,7 @@ ID_TEXT = {
     "L2": "Bagaimana kalau cukup bilang sekali?",
     "L3": "Halo. Ini Kakak, asisten AI di Miamus.",
     "L4": "Bilang sekali ke Kakak.",
+    "L4b": "Sisanya, Kakak yang atur.",
     "L5": "Dan semua orang di rumah tahu harus apa.",
     "L6": "Dalam bahasa mereka. Di HP masing-masing.",
     "L7a": "Merekalah yang mengurus rumah.",
@@ -56,6 +58,7 @@ ID = {
     "L2": "baɡaɪmˈana kˈalaʊ ʧˈukup bˈilaŋ səkˈali?",
     "L3": "hˈalo. ˈini kˌakak, asˈistən ˈeɪ ˈaɪ di miˈamus.",
     "L4": "bˈilaŋ səkˈali kə kˌakak.",
+    "L4b": "sisˈaɲa, kˌakak jaŋ ˈatur.",
     "L5": "dan səmˈua ˈoraŋ di rˈumah tˈaʊ hˈarus ˈapa.",
     "L6": "dˈalam bahˈasa mərˈeka. di hapˈe mˈasiŋ mˈasiŋ.",
     "L7a": "mərˈekalah jaŋ məŋˈurus rˈumah.",
@@ -83,6 +86,6 @@ AUDITION_ID_TEXT = [
 ]
 AUDITION_ID = [
     "bˈaɪʔ. kˌakak siˈapkan: sˈari məmatˈikan lˈampu ˈuntuʔ kˈoko dan brˈuno sətˈiap mˈalam ʤam sətˈəŋah səpˈuluh, dəŋan fˈoto.",
-    "bərˈes. sˈari diiŋˈatkan ʤam sətˈəŋah səpˈuluh mˈalam; kˌakak hˈaɲa məŋabˈari ˈanda kˈalaʊ bəlˈum dikərʤˈakan.",
-    "tˈantə rˈina bˈawa ˈopor? ˈenaʔɲa dihabˈiskan sˈampaɪ hˈari rˈabu, ja.",
+    "bərˈɛs. sˈari diiŋˈatkan ʤam sətˈəŋah səpˈuluh mˈalam; kˌakak hˈaɲa məŋabˈari ˈanda kˈalaʊ bəlˈum dikərʤˈakan.",
+    "tˈantə rˈina bˈawa ˈopor? ˈenakɲa dihabˈiskan sˈampaɪ hˈari rˈabu, ja.",
 ]

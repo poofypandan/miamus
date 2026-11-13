@@ -18,6 +18,7 @@ import sys
 
 import numpy as np
 import soundfile as sf
+from scipy.signal import resample_poly
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "audio", "music"))
@@ -26,7 +27,7 @@ from dsp import SR, bandpass, db, highpass, lowpass, pan, reverb, soft_limit
 FPS = 30
 # When each line starts, in seconds. One plan for both languages: every slot is long enough for the longer one.
 CUES = {
-    "60": {"L1": 5.15, "L2": 7.7, "L3": 11.2, "L4": 15.25, "L5": 25.05, "L6": 28.15, "L7a": 31.7, "L7b": 35.3, "L8": 39.4, "L9": 44.05, "L10": 48.3, "L11": 55.75},
+    "60": {"L1": 5.15, "L2": 7.7, "L3": 11.2, "L4": 15.25, "L4b": 19.55, "L5": 25.05, "L6": 28.15, "L7a": 31.7, "L7b": 35.3, "L8": 39.4, "L9": 44.05, "L10": 48.3, "L11": 55.75},
     "15": {"S1": 3.15, "S2": 7.1, "S3": 11.85},
 }
 
@@ -103,19 +104,25 @@ def mix(cut, locale, voice, music_style):
     presence = follow(v)
     v2 = reverb(pan(v, 0.0), 0.55, 0.05)
 
-    # The music steps back under her (about 7 dB), the effects a little.
-    duck = 1 - 0.56 * presence
-    bed = music * duck[:, None] * db(-2.5) + sfx * (1 - 0.2 * presence)[:, None] * db(-3.0) + air
-    out = soft_limit(v2 * db(2.5) + bed, 0.97, 0.75)
+    # The music steps back under her (about 10 dB, so she stays clear on a phone's speaker), the effects a little.
+    duck = 1 - 0.7 * presence
+    bed = music * duck[:, None] * db(-3.5) + sfx * (1 - 0.25 * presence)[:, None] * db(-3.0) + air
+    out = soft_limit(v2 * db(4.0) + bed, 0.97, 0.75)
 
     os.makedirs(os.path.join(ROOT, "public", "audio"), exist_ok=True)
     path = os.path.join(ROOT, "public", "audio", f"mix-{cut}-{locale}.wav")
     sf.write(path, out.astype("float32"), SR, subtype="PCM_24")
     i_lufs, tp, lra = loudness(path)
     gain = -14.0 - i_lufs
-    out = soft_limit(out * db(gain), 0.885, 0.7)  # 0.885 = -1.06 dBFS: room for the true peak
+    # Limit on a 4× finer grid, where the peaks between samples show, then trim if any is still over -1 dBTP.
+    fine = soft_limit(resample_poly(out * db(gain), 4, 1, axis=0), db(-1.3), db(-1.3) * 0.8)
+    out = resample_poly(fine, 1, 4, axis=0)
     sf.write(path, out.astype("float32"), SR, subtype="PCM_24")
     i2, tp2, lra2 = loudness(path)
+    if tp2 > -1.0:
+        out = out * db(-1.0 - tp2 - 0.05)
+        sf.write(path, out.astype("float32"), SR, subtype="PCM_24")
+        i2, tp2, lra2 = loudness(path)
     print(f"mix-{cut}-{locale}: {i_lufs:.1f} LUFS → {i2:.1f} LUFS, true peak {tp2:.1f} dBTP, range {lra2:.1f} LU", flush=True)
 
     # For the picture: how loud she is in each frame.

@@ -157,8 +157,8 @@ export function Tell({ locale, t0, fast }: SceneProps) {
       look(T.card, 2.35, 400, 720),
       look(T.card + 10, 2.35, 262, 700),
       look(T.scroll[0], 2.35, 262, 700),
-      look(T.scroll[1], 2.35, 548, 720),
-      look(T.saved + 2, 2.35, 548, 720),
+      look(T.scroll[1], 2.35, 566, 720),
+      look(T.saved + 2, 2.35, 566, 720),
       look(T.saved + 12, 2.2, 660, 780),
     ]);
     const name = tap(`${locale}.k0.name`);
@@ -196,8 +196,8 @@ export function Tell({ locale, t0, fast }: SceneProps) {
       // Her answer and the card's first rows; then down to the two switches and Save.
       look(T.card1 + 12, 2.35, 330, 700),
       look(T.down1[0], 2.35, 330, 700),
-      look(T.down1[1], 2.35, 548, 720),
-      look(T.saved1 + 2, 2.35, 548, 720),
+      look(T.down1[1], 2.35, 560, 720),
+      look(T.saved1 + 2, 2.35, 560, 720),
       // Saved: her "Done", and the routine now in the list.
       look(T.saved1 + 12, 2.35, 520, 700),
       // The second sentence: a cut, as it is said again for something else.
@@ -206,8 +206,8 @@ export function Tell({ locale, t0, fast }: SceneProps) {
       look(T.card2, 2.35, 400, 720),
       look(T.card2 + 10, 2.35, 262, 700),
       look(T.scroll2[0], 2.35, 262, 700),
-      look(T.scroll2[1], 2.35, 548, 720),
-      look(T.saved2 + 2, 2.35, 548, 720),
+      look(T.scroll2[1], 2.35, 566, 720),
+      look(T.saved2 + 2, 2.35, 566, 720),
       look(T.saved2 + 11, 2.2, 660, 780),
     ]);
     overlay = (
@@ -367,7 +367,7 @@ export function Day({ locale, t0 }: SceneProps) {
       <World
         light={lightAt(tod)}
         frame={frame * 3 + t0}
-        cam={{ x: 0, y: 150, z: lerp(1, 1.06, frame / total) }}
+        cam={{ x: 30, y: 236, z: lerp(1.26, 1.34, frame / total) }}
         laundry={clamp01((14.4 - tod) * 1.5)}
         sprinkler={clamp01((tod - 9.6) * 2) * clamp01((12.2 - tod) * 2)}
         birds={0}

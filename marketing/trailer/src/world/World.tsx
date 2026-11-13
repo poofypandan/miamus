@@ -303,6 +303,23 @@ function Plant({ x, y, s, light }: { x: number; y: number; s: number; light: Lig
   );
 }
 
+/** Bougainvillea over the pergola: the pink that grows on every Indonesian terrace. */
+function Bougainvillea({ light }: { light: Light }) {
+  const blooms = [];
+  const pinks = ["#d6478f", "#e56aa6", "#c23a7f", "#ee86b8"];
+  for (let i = 0; i < 70; i++) {
+    // Along the beam, thick at the corner, trailing down the left post.
+    const along = R(`bv${i}`);
+    const down = R(`bw${i}`) ** 2;
+    const onPost = i % 4 === 0;
+    const x = onPost ? 442 + (R(`bx${i}`) - 0.5) * 34 : 414 + along * 170 + (R(`bx${i}`) - 0.5) * 10;
+    const y = onPost ? 1150 + down * 110 : 1112 + (R(`by${i}`) - 0.3) * 34 * (1 - along * 0.6);
+    const leaf = i % 5 === 1;
+    blooms.push(<circle key={i} cx={x} cy={y} r={leaf ? 9 + R(`br${i}`) * 5 : 6 + R(`br${i}`) * 6} fill={shade(leaf ? "#4f8a4f" : pinks[i % 4], light, 0.12, leaf ? 0 : 0.42)} />);
+  }
+  return <g>{blooms}</g>;
+}
+
 function House({ light }: { light: Light }) {
   const wall = shade("#f5eddf", light, 0.12);
   const wallShade = shade("#dccfbc", light, 0.12);
@@ -353,6 +370,7 @@ function House({ light }: { light: Light }) {
       <rect x={410} y={1298} width={760} height={20} rx={3} fill={deck} />
       <rect x={410} y={1314} width={760} height={6} fill={shade("#c9bca6", light, 0.1)} />
       <rect x={486} y={1318} width={96} height={10} rx={2} fill={deck} />
+      <Bougainvillea light={light} />
       <Plant x={476} y={1240} s={0.62} light={light} />
       <Plant x={866} y={1246} s={0.5} light={light} />
       <Plant x={1048} y={1236} s={0.66} light={light} />
@@ -373,7 +391,7 @@ function House({ light }: { light: Light }) {
 
 function Lawn({ light }: { light: Light }) {
   const far = shadeRgb("#8eb565", light, 0.2, 0.4);
-  const near = shadeRgb("#4f7a3c", light, 0, 0.3);
+  const near = shadeRgb("#55823f", light, 0, 0.42);
   return (
     <g>
       <defs>
@@ -388,6 +406,19 @@ function Lawn({ light }: { light: Light }) {
       </defs>
       <path d="M -400 1296 C 0 1280 300 1286 620 1300 L 1500 1300 L 1500 2400 L -400 2400 Z" fill="url(#lawn)" />
       <path d="M -400 1296 C 0 1280 300 1286 620 1300 L 1500 1300 L 1500 2400 L -400 2400 Z" fill="url(#lawnSun)" />
+      {/* Mown in stripes: wider as they come toward us. */}
+      {[0, 1, 2, 3, 4, 5, 6].map((k) => {
+        const y0 = GROUND + 10 + 26 * (1.62 ** k - 1);
+        const y1 = GROUND + 10 + 26 * (1.62 ** (k + 0.5) - 1);
+        return <rect key={k} x={-400} y={y0} width={W + 800} height={y1 - y0} fill="rgba(255,255,255,0.032)" />;
+      })}
+      {/* Small flowers in the grass. */}
+      {Array.from({ length: 54 }, (_, i) => {
+        const y = GROUND + 30 + R(`fy${i}`) ** 1.6 * 620;
+        const x = -60 + R(`fx${i}`) * (W + 120);
+        const r = 1.6 + (y - GROUND) / 150;
+        return <circle key={i} cx={x} cy={y} r={r} fill={shade(i % 3 === 0 ? "#f6d77a" : "#fbf7ee", light, 0.02, 0.35)} opacity={0.78} />;
+      })}
       {/* Low sun through the trees: long bars of light across the grass. */}
       <g filter="url(#soft)">
       {light.glow > 0.4 &&
@@ -409,15 +440,15 @@ function Lawn({ light }: { light: Light }) {
 
 function Grass({ light, frame }: { light: Light; frame: number }) {
   const blades = [];
-  const fill = shade("#2f5529", light, 0, 0);
-  const tip = shade("#4f7f3c", light, 0, 0);
+  const fill = shade("#2f5529", light, 0, 0.1);
+  const tip = css(mix(shadeRgb("#5a8a44", light, 0, 0.2), light.sun, 0.22 * light.glow));
   for (let i = 0; i < 120; i++) {
     // Tufts: blades gather around a few roots, tall in the middle of each.
     const tuft = Math.floor(R(`gt${i}`) * 13);
     const root = -80 + (tuft / 12) * (W + 160) + (R(`gu${tuft}`) - 0.5) * 60;
     const off = (R(`gx${i}`) - 0.5) * 150;
     const x = root + off;
-    const h = (46 + R(`gh${i}`) * 150) * (1 - Math.min(0.6, Math.abs(off) / 150));
+    const h = (90 + R(`gh${i}`) * 230) * (1 - Math.min(0.6, Math.abs(off) / 150));
     const lean = off * 0.32 + Math.sin(frame * 0.05 + R(`gp${i}`) * 6.28) * 9 + 4;
     const w = 4 + R(`gw${i}`) * 5;
     blades.push(

@@ -32,6 +32,8 @@ VOICES = {
 }
 # Unhurried: a little under Kokoro's natural pace. The 15-second cut's lines (S…) are a touch quicker.
 SPEED = {"en": 0.84, "id": 0.9, "en-short": 0.88, "id-short": 0.95}
+# One candidate speaks slowly by nature: bring it up to the others' pace.
+FASTER = {"kakak-d": {"en": 1.3}}
 OUT_SR = 48000
 
 
@@ -60,7 +62,7 @@ def speak(name, what="film"):
         jobs = [("en", f"A{i + 1}", ("text", v)) for i, v in enumerate(lines.AUDITION_EN)] + [("id", f"A{i + 1}", ("phon", v)) for i, v in enumerate(lines.AUDITION_ID)]
     for locale, key, (kind, content) in jobs:
         spec = f"{sound}/{mel_en if locale == 'en' else mel_id}"
-        speed = SPEED[f"{locale}-short" if key.startswith("S") else locale]
+        speed = SPEED[f"{locale}-short" if key.startswith("S") else locale] * FASTER.get(name, {}).get(locale, 1.0)
         a = kk.say_text(content, spec, speed)[0] if kind == "text" else kk.say_phonemes(content, spec, speed)
         a = tidy(a)
         os.makedirs(os.path.join(out, locale), exist_ok=True)
