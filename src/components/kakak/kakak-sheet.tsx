@@ -30,6 +30,8 @@ import { KakakExamples } from "@/components/kakak/kakak-examples";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { KakakThinking } from "@/components/kakak/kakak-thinking";
 import { KakakVoice } from "@/components/kakak/kakak-voice";
+import { KakakVoiceNew } from "@/components/kakak/kakak-voice-new";
+import { useNewVoice } from "@/components/kakak/new-voice-switch";
 import { KakakRemindChips } from "@/components/kakak/kakak-remind-chips";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
@@ -112,6 +114,8 @@ function Conversation({ onClose }: { onClose: () => void }) {
   const locale = useOwnerLocale();
   const { activeHouseholdId } = useHousehold();
   const save = useKakakSave();
+  /** The new voice flow (tap Done, check, then Send), opt-in on this phone with ?newvoice=1. */
+  const newVoice = useNewVoice();
   const [screen, setScreen] = useState<Screen>({ kind: "typing" });
   const [history, setHistory] = useState<KakakHistory | null>(null);
   /** What the owner wrote, kept on screen so they see what Kakak read. */
@@ -383,17 +387,28 @@ function Conversation({ onClose }: { onClose: () => void }) {
       {/* Kakak's pet routines (Phase 173 PR B): once, before the first try, under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-routines-2026-11" />}
 
-      {/* Talk to Kakak (voice beta): Done puts the spoken words in the typing
-          box, to check (a misheard name) and send like typed ones. */}
-      <KakakVoice
-        screen={screen}
-        listenHere={showTyping || screen.kind === "question"}
-        onReview={(text) => {
-          setDraft((typed) => (typed.trim() ? `${typed.trim()} ${text}` : text).slice(0, MAX_TYPED));
-          // Kakak's question has no typing box until asked for: open it.
-          if (screen.kind === "question" || screen.kind === "card") setTypingAnswer(true);
-        }}
-      />
+      {/* Talk to Kakak (voice beta): spoken words go through send() like typed ones. */}
+      {newVoice ? (
+        // Done puts the spoken words in the typing box, to check (a misheard
+        // name) and send like typed ones.
+        <KakakVoiceNew
+          screen={screen}
+          listenHere={showTyping || screen.kind === "question"}
+          onReview={(text) => {
+            setDraft((typed) => (typed.trim() ? `${typed.trim()} ${text}` : text).slice(0, MAX_TYPED));
+            // Kakak's question has no typing box until asked for: open it.
+            if (screen.kind === "question" || screen.kind === "card") setTypingAnswer(true);
+          }}
+        />
+      ) : (
+        <KakakVoice
+          screen={screen}
+          listenHere={showTyping || screen.kind === "question"}
+          inputShown={showTyping}
+          onHeard={setDraft}
+          onSpoken={(text) => void send(text)}
+        />
+      )}
 
       {(screen.kind === "typing" ||
         (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||

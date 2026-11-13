@@ -186,19 +186,19 @@ export function joinSession(results: RecognitionResultEventLike["results"], snap
 export interface ListenHandlers {
   /** Every change in what was heard, for the live words. */
   onHeard: (transcript: string) => void;
-  /** The owner tapped Done (or the time ran out): the words, to check before sending. */
+  /** Listening finished (Done or the time limit in the new flow, Stop or the browser's end in the current one): the words heard. */
   onFinished: (transcript: string) => void;
   onProblem: (problem: VoiceProblem) => void;
 }
 
 export interface Listening {
-  /** Stop listening and hand over what was heard (Done). */
+  /** Stop listening and hand over what was heard (Done, or Stop in the current flow). */
   finish: () => void;
   /** Stop and drop what was heard. */
   cancel: () => void;
 }
 
-/** How long Done waits for the browser's own end before ending itself. */
+/** How long Done (or Stop) waits for the browser's own end before ending itself. */
 export const FINISH_GRACE_MS = 1500;
 
 /** The safety limit: listening ends by itself after this long, as if Done was tapped. */
@@ -366,6 +366,132 @@ export function listenUntilDone(
       }
     },
   };
+}
+
+// ---- The current flow (switch off) ------------------------------------------
+
+/** All results so far, as one line: final words, then the guess forming. */
+export function joinResults(results: RecognitionResultEventLike["results"]): string {
+  const parts: string[] = [];
+  for (let i = 0; i < results.length; i++) parts.push(results[i][0]?.transcript ?? "");
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * One utterance: start, report what is heard as it forms, and on the
+ * browser's end hand over the words. A new recognizer each time, because
+ * Safari on iPhone doesn't reliably start a used one again.
+ */
+export function listenOnce(Ctor: RecognitionCtor, lang: string, handlers: ListenHandlers): Listening {
+  let heard = "";
+  let cancelled = false;
+  let failed = false;
+  let ended = false;
+  const recognition = new Ctor();
+  recognition.lang = lang;
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (event) => {
+    if (cancelled || ended) return; // late words after Stop's grace: already sent
+    heard = joinResults(event.results);
+    handlers.onHeard(heard);
+  };
+  recognition.onerror = (event) => {
+    if (cancelled || ended) return;
+    const problem = problemFor(event.error);
+    if (!problem) return;
+    // Silence after some words isn't a problem: send the words.
+    if (problem === "quiet" && heard) return;
+    failed = true;
+    handlers.onProblem(problem);
+  };
+  const end = () => {
+    if (ended) return;
+    ended = true;
+    if (cancelled || failed) return;
+    if (heard) handlers.onFinished(heard);
+    else handlers.onProblem("quiet");
+  };
+  recognition.onend = end;
+
+  try {
+    recognition.start();
+  } catch {
+    // Safari throws when the service is off (Siri and Dictation disabled).
+    failed = true;
+    ended = true;
+    handlers.onProblem("unavailable");
+  }
+
+  return {
+    finish() {
+      if (cancelled || ended) return;
+      try {
+        recognition.stop();
+      } catch {
+        // already stopping
+      }
+      // Safari on iPhone sometimes never fires end after stop().
+      setTimeout(end, FINISH_GRACE_MS);
+    },
+    cancel() {
+      if (cancelled || ended) return;
+      cancelled = true;
+      try {
+        recognition.abort();
+      } catch {
+        // already stopped
+      }
+    },
+  };
+}
+
+// ---- The switch --------------------------------------------------------------
+
+/**
+ * The new voice flow (tap Done, check, then Send) is opt-in per phone while
+ * the owner tries it: opening any Miamus address with ?newvoice=1 turns it
+ * on for this phone, ?newvoice=0 turns it off. Off by default, and then the
+ * current flow above runs unchanged.
+ */
+export const NEW_VOICE_KEY = "miamus.kakak.newVoice";
+export const NEW_VOICE_PARAM = "newvoice";
+
+/** What the address asks for: on, off, or nothing. */
+export function newVoiceFromUrl(search: string): boolean | null {
+  let value: string | null = null;
+  try {
+    value = new URLSearchParams(search).get(NEW_VOICE_PARAM);
+  } catch {
+    return null;
+  }
+  return value === "1" ? true : value === "0" ? false : null;
+}
+
+export function readNewVoice(storage: Pick<Storage, "getItem"> | undefined): boolean {
+  try {
+    return storage?.getItem(NEW_VOICE_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Applies ?newvoice= from the address, if there is one, and says whether the
+ * new flow is on for this phone.
+ */
+export function syncNewVoice(search: string, storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | undefined): boolean {
+  const asked = newVoiceFromUrl(search);
+  if (asked === null) return readNewVoice(storage);
+  try {
+    if (asked) storage?.setItem(NEW_VOICE_KEY, "on");
+    else storage?.removeItem(NEW_VOICE_KEY);
+  } catch {
+    // storage blocked: the choice lasts this visit only
+  }
+  return asked;
 }
 
 // ---- Reading aloud ---------------------------------------------------------

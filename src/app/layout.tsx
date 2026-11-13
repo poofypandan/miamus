@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers";
 import { ServiceWorkerRegistrar } from "@/components/shared/service-worker-registrar";
 import { UpdatePrompt } from "@/components/shared/update-prompt";
 import { NavigationCover } from "@/components/brand/brand-cover";
+import { NewVoiceSwitch } from "@/components/kakak/new-voice-switch";
 import "./globals.css";
 
 // Named "--font-sans" (not the font's own "--font-plus-jakarta-sans") to
@@ -112,6 +113,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             staff switch — and only a slow one (Phases 132, 134). Here, above
             both views, so it survives a switch's route change. */}
         <NavigationCover />
+        {/* ?newvoice=1 / ?newvoice=0 on any address turns Kakak's new voice
+            flow on or off for this phone. Renders nothing. */}
+        <NewVoiceSwitch />
       </body>
     </html>
   );

@@ -3,19 +3,25 @@ import {
   FINISH_GRACE_MS,
   MAX_LISTEN_MS,
   MAX_STUMBLES,
+  NEW_VOICE_KEY,
   QUICK_END_MS,
   SPEAK_KEY,
   findRecognition,
   initialVoiceState,
+  joinResults,
   joinSession,
   joinWords,
   kakakWords,
+  listenOnce,
   listenUntilDone,
+  newVoiceFromUrl,
   pickVoice,
   voiceScore,
   problemFor,
+  readNewVoice,
   readSpeakChoice,
   sendsSnapshots,
+  syncNewVoice,
   speakable,
   voiceReducer,
   writeSpeakChoice,
@@ -452,12 +458,180 @@ describe("listenUntilDone", () => {
   });
 });
 
+describe("listenOnce", () => {
+  it("sets the owner's language and asks for live words, one utterance at a time", () => {
+    listenOnce(FakeRecognition, "id-ID", handlers());
+    const r = FakeRecognition.last!;
+    expect(r).toMatchObject({ lang: "id-ID", continuous: false, interimResults: true, maxAlternatives: 1, started: 1 });
+  });
+
+  it("reports words as they form and sends them when the browser ends", () => {
+    const h = handlers();
+    listenOnce(FakeRecognition, "en-US", h);
+    const r = FakeRecognition.last!;
+    r.hear(["Buy eggs", false]);
+    r.hear(["Buy eggs and", true], [" sugar", false]);
+    expect(h.onHeard).toHaveBeenLastCalledWith("Buy eggs and sugar");
+    r.end();
+    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs and sugar");
+    expect(h.onProblem).not.toHaveBeenCalled();
+  });
+
+  it("says 'didn't hear anything' when the browser ends with no words", () => {
+    const h = handlers();
+    listenOnce(FakeRecognition, "en-US", h);
+    FakeRecognition.last!.fail("no-speech");
+    FakeRecognition.last!.end();
+    expect(h.onProblem).toHaveBeenCalledTimes(1);
+    expect(h.onProblem).toHaveBeenCalledWith("quiet");
+    expect(h.onFinished).not.toHaveBeenCalled();
+  });
+
+  it("still sends the words if silence follows them", () => {
+    const h = handlers();
+    listenOnce(FakeRecognition, "en-US", h);
+    const r = FakeRecognition.last!;
+    r.hear(["Feed Mochi at 7", true]);
+    r.fail("no-speech");
+    r.end();
+    expect(h.onFinished).toHaveBeenCalledWith("Feed Mochi at 7");
+    expect(h.onProblem).not.toHaveBeenCalled();
+  });
+
+  it("reports a refused microphone and sends nothing", () => {
+    const h = handlers();
+    listenOnce(FakeRecognition, "en-US", h);
+    const r = FakeRecognition.last!;
+    r.hear(["half", false]);
+    r.fail("not-allowed");
+    r.end();
+    expect(h.onProblem).toHaveBeenCalledWith("blocked");
+    expect(h.onFinished).not.toHaveBeenCalled();
+  });
+
+  it("treats a recognizer that won't start (Siri off, Home Screen app) as unavailable", () => {
+    FakeRecognition.throwOnStart = true;
+    const h = handlers();
+    listenOnce(FakeRecognition, "id-ID", h);
+    expect(h.onProblem).toHaveBeenCalledWith("unavailable");
+  });
+
+  it("cancel drops what was heard: aborted, nothing sent, no problem shown", () => {
+    const h = handlers();
+    const listening = listenOnce(FakeRecognition, "en-US", h);
+    const r = FakeRecognition.last!;
+    r.hear(["Beli", false]);
+    listening.cancel();
+    r.fail("aborted");
+    r.end();
+    expect(r.aborted).toBe(1);
+    expect(h.onFinished).not.toHaveBeenCalled();
+    expect(h.onProblem).not.toHaveBeenCalled();
+  });
+
+  it("Stop (finish) asks the browser to stop and sends what was heard on its end", () => {
+    const h = handlers();
+    const listening = listenOnce(FakeRecognition, "en-US", h);
+    const r = FakeRecognition.last!;
+    r.hear(["Sari mops the terrace", false]);
+    listening.finish();
+    expect(r.stopped).toBe(1);
+    r.hear(["Sari mops the terrace", true]);
+    r.end();
+    expect(h.onFinished).toHaveBeenCalledTimes(1);
+    expect(h.onFinished).toHaveBeenCalledWith("Sari mops the terrace");
+  });
+
+  it("Stop still sends if the browser never fires its end (Safari on iPhone)", () => {
+    vi.useFakeTimers();
+    const h = handlers();
+    const listening = listenOnce(FakeRecognition, "id-ID", h);
+    FakeRecognition.last!.hear(["Beli gula", false]);
+    listening.finish();
+    expect(h.onFinished).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(FINISH_GRACE_MS);
+    expect(h.onFinished).toHaveBeenCalledWith("Beli gula");
+    FakeRecognition.last!.hear(["Beli gula pasir", true]); // late words aren't shown again
+    FakeRecognition.last!.fail("network");
+    FakeRecognition.last!.end(); // a late end changes nothing
+    expect(h.onFinished).toHaveBeenCalledTimes(1);
+    expect(h.onHeard).toHaveBeenCalledTimes(1);
+    expect(h.onProblem).not.toHaveBeenCalled();
+  });
+});
+
+describe("the new-voice switch", () => {
+  function memory(initial: Record<string, string> = {}) {
+    const data = { ...initial };
+    return {
+      data,
+      getItem: (key: string) => data[key] ?? null,
+      setItem: (key: string, value: string) => {
+        data[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete data[key];
+      },
+    };
+  }
+
+  it("reads ?newvoice=1 as on, ?newvoice=0 as off, and anything else as nothing", () => {
+    expect(newVoiceFromUrl("?newvoice=1")).toBe(true);
+    expect(newVoiceFromUrl("?tab=today&newvoice=0")).toBe(false);
+    expect(newVoiceFromUrl("?newvoice=yes")).toBeNull();
+    expect(newVoiceFromUrl("")).toBeNull();
+  });
+
+  it("is off by default", () => {
+    expect(syncNewVoice("", memory())).toBe(false);
+    expect(syncNewVoice("", undefined)).toBe(false);
+    expect(readNewVoice(memory())).toBe(false);
+  });
+
+  it("?newvoice=1 turns it on for this phone, and it stays on without the parameter", () => {
+    const storage = memory();
+    expect(syncNewVoice("?newvoice=1", storage)).toBe(true);
+    expect(storage.data[NEW_VOICE_KEY]).toBe("on");
+    expect(syncNewVoice("?tab=today", storage)).toBe(true);
+  });
+
+  it("?newvoice=0 turns it off again", () => {
+    const storage = memory({ [NEW_VOICE_KEY]: "on" });
+    expect(syncNewVoice("?newvoice=0", storage)).toBe(false);
+    expect(storage.data[NEW_VOICE_KEY]).toBeUndefined();
+    expect(syncNewVoice("", storage)).toBe(false);
+  });
+
+  it("with storage blocked, the address still decides for this visit", () => {
+    const blocked = {
+      getItem: () => {
+        throw new Error("blocked");
+      },
+      setItem: () => {
+        throw new Error("blocked");
+      },
+      removeItem: () => {
+        throw new Error("blocked");
+      },
+    };
+    expect(syncNewVoice("?newvoice=1", blocked)).toBe(true);
+    expect(syncNewVoice("", blocked)).toBe(false);
+  });
+});
+
 describe("findRecognition", () => {
   it("finds the standard or the webkit-prefixed recognizer, or none", () => {
     expect(findRecognition({ SpeechRecognition: FakeRecognition })).toBe(FakeRecognition);
     expect(findRecognition({ webkitSpeechRecognition: FakeRecognition })).toBe(FakeRecognition);
     expect(findRecognition({})).toBeNull();
     expect(findRecognition(undefined)).toBeNull();
+  });
+});
+
+describe("joinResults", () => {
+  it("joins segments into one tidy line", () => {
+    const results = [Object.assign([{ transcript: " Beli  telur" }], { isFinal: true }), Object.assign([{ transcript: "dan gula " }], { isFinal: false })];
+    expect(joinResults(results)).toBe("Beli telur dan gula");
   });
 });
 

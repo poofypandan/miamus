@@ -61,15 +61,9 @@ real sentences is what the eval (`tests/kakak`) is for, against the real API.
 ## Talk to Kakak (voice beta)
 
 The first, lightweight step towards roadmap item 23 ("Call Kakak"). A large
-mic in the Kakak sheet: tap, talk (pauses to think are fine), and the words
-appear live under the mic; tap **Done** and they go into the typing box,
-where the owner can fix a misheard name, then **Send** takes them to
-`/api/kakak` exactly as if typed. Listening runs until Done, or 60 seconds
-at most. Chrome on Android (and Safari on iPhone) end a recognizer session
-at a pause even in continuous mode, so the app starts a new one quietly and
-adds its words after the ones before; on Android, whose results each hold
-everything heard so far, they replace rather than repeat (`joinSession`). On Android each
-restart may play the system's short mic sound. **Cancel** drops the words. **Read replies aloud** reads her question, message or card
+mic in the Kakak sheet: tap, talk, and the words appear live in the typing
+box; tap **Stop** (or just stop talking) and they go to `/api/kakak` exactly
+as if typed. **Read replies aloud** reads her question, message or card
 aloud with the phone's own voice; the choice is remembered on that phone.
 Code: `src/components/kakak/kakak-voice.tsx` (UI) and
 `src/lib/kakak/voice.ts` (state machine, unit-tested).
@@ -91,6 +85,20 @@ Code: `src/components/kakak/kakak-voice.tsx` (UI) and
   | iPhone, Safari tab (iOS 14.5+) | Yes, if Siri and Dictation are on | Yes |
   | iPhone, Miamus on the Home Screen | No: WebKit doesn't offer it to Home Screen apps (bug 225298). The sheet shows the tip to use the keyboard's mic key. | Yes |
   | Firefox, older browsers | No: keyboard-mic tip | Usually yes |
+- **New flow, opt-in per phone** (2026-11-13, PR #141): opening any Miamus
+  address with `?newvoice=1` turns it on for that phone (saved in
+  localStorage, `miamus.kakak.newVoice`); `?newvoice=0` turns it off. Off by
+  default, and then the flow above runs unchanged. With it on: tap, talk
+  (pauses to think are fine), and the words appear live under the mic; tap
+  **Done** and they go into the typing box, where the owner can fix a
+  misheard name, then **Send** takes them to `/api/kakak`. Listening runs
+  until Done, or 60 seconds at most. Chrome on Android (and Safari on
+  iPhone) end a recognizer session at a pause even in continuous mode, so
+  the app starts a new one quietly and adds its words after the ones
+  before; on Android, whose results each hold everything heard so far, they
+  replace rather than repeat (`joinSession`). Each restart may play
+  Android's short mic sound. **Cancel** drops the words. Code:
+  `kakak-voice-new.tsx`, `new-voice-switch.tsx`, `listenUntilDone`.
 - **Practice mode** works as usual: speech becomes text on the phone, and
   the scripted Kakak answers it.
 - **Turning it off**: `NEXT_PUBLIC_KAKAK_VOICE=false` on the server, then
