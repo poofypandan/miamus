@@ -76,6 +76,9 @@ describe("toSpeech: English times", () => {
     ["00:00", "midnight"],
     ["7:30 pm", "seven thirty in the evening"],
     ["11:15 AM", "eleven fifteen in the morning"],
+    ["Come at 7:30 PM. Thanks.", "Come at seven thirty in the evening. Thanks."],
+    ["Come at 7:30 p.m. Thanks.", "Come at seven thirty in the evening. Thanks."],
+    ["7:30 a.m. tomorrow", "seven thirty in the morning tomorrow"],
   ])("%s → %s", (written, said) => {
     expect(toSpeech(written, "en")).toBe(said);
   });
@@ -93,6 +96,15 @@ describe("toSpeech: English times", () => {
     expect(toSpeech("$12.50", "en")).toBe("$12.50");
     expect(toSpeech("Remind Ari at 12.30.", "en")).toBe("Remind Ari at twelve thirty in the afternoon.");
     expect(toSpeech("07.00–09.00", "en")).toBe("seven in the morning until nine in the morning");
+  });
+
+  it("shares a range's trailing am/pm or day part with its first time", () => {
+    expect(toSpeech("The visit is 7:00–9:00 PM.", "en")).toBe(
+      "The visit is seven in the evening until nine in the evening."
+    );
+    expect(toSpeech("11:00–1:00 PM", "en")).toBe("eleven in the morning until one in the afternoon");
+    expect(toSpeech("7.00–9.00 malam", "id")).toBe("jam tujuh malam sampai jam sembilan malam");
+    expect(toSpeech("19.00–21.00", "id")).toBe("jam tujuh malam sampai jam sembilan malam");
     expect(enTime(18, 0)).toBe("six in the evening");
   });
 });

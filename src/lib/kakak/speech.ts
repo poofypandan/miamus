@@ -125,14 +125,43 @@ const ID_TIME = new RegExp(
 // English: 9:30 or 21:30, or a dotted 21.30 with a two-digit hour; an
 // optional am/pm sets the half of the day.
 const EN_TIME = new RegExp(
-  String.raw`(?:\b(at|by|until|till|from|before|after|around|between)\s+)?${NOT_AFTER}(?:([01]?\d|2[0-3]):([0-5]\d)|([01]\d|2[0-3])\.([0-5]\d))${NOT_BEFORE}${NOT_AMOUNT}(?:\s?([AaPp])\.?[Mm]\.?(?![A-Za-z]))?`,
+  String.raw`(?:\b(at|by|until|till|from|before|after|around|between)\s+)?${NOT_AFTER}(?:([01]?\d|2[0-3]):([0-5]\d)|([01]\d|2[0-3])\.([0-5]\d))${NOT_BEFORE}${NOT_AMOUNT}(?:\s?([AaPp])(?:[Mm]|\.[Mm]\.?)(?![A-Za-z]))?`,
   "g"
 );
 
-function speakTimes(text: string, locale: SpeechLocale): string {
-  // A range, "07.00–09.00": "from one until the other".
+// A range of two times, "07.00–09.00", each with the half or part of the day
+// written after it, if any ("7:00–9:00 PM", "7.00–9.00 malam").
+const RANGE: Record<SpeechLocale, RegExp> = {
+  en: /(\d{1,2})([.:]\d{2})(\s?[AaPp](?:[Mm]|\.[Mm]\.?)(?![A-Za-z]))?\s*[–—-]\s*(\d{1,2})([.:]\d{2})(\s?([AaPp])(?:[Mm]|\.[Mm]\.?)(?![A-Za-z]))?/g,
+  id: /(\d{1,2})([.:]\d{2})(\s+(?:pagi|siang|sore|malam)\b)?\s*[–—-]\s*(\d{1,2})([.:]\d{2})(\s+(pagi|siang|sore|malam)\b)?/g,
+};
+
+/**
+ * "From one until the other". A half or part of the day written only after
+ * the second time is shared with the first when the first comes earlier on
+ * the same twelve-hour face: "7:00–9:00 PM" is 7 PM until 9 PM, while
+ * "11:00–1:00 PM" is 11 AM until 1 PM.
+ */
+function speakRanges(text: string, locale: SpeechLocale): string {
   const until = locale === "id" ? "sampai" : "until";
-  const ranged = text.replace(/(\d{1,2}[.:]\d{2})\s*[–—-]\s*(?=\d{1,2}[.:]\d{2})/g, `$1 ${until} `);
+  return text.replace(
+    RANGE[locale],
+    (_: string, h1: string, m1: string, q1: string | undefined, h2: string, m2: string, q2: string | undefined, word: string | undefined) => {
+      let first = q1 ?? "";
+      const a = Number(h1);
+      const b = Number(h2);
+      if (!q1 && word && a <= 12 && b <= 12) {
+        const sameHalf = a % 12 <= b % 12;
+        if (locale === "id") first = sameHalf ? ` ${word}` : "";
+        else first = ` ${sameHalf === (word.toLowerCase() === "p") ? "PM" : "AM"}`;
+      }
+      return `${h1}${m1}${first} ${until} ${h2}${m2}${q2 ?? ""}`;
+    }
+  );
+}
+
+function speakTimes(text: string, locale: SpeechLocale): string {
+  const ranged = speakRanges(text, locale);
   if (locale === "id") {
     // Indonesian writes decimals with a comma, so a dotted h.mm is a time.
     return ranged.replace(ID_TIME, (_, h: string, m: string, part?: string) =>
@@ -141,7 +170,17 @@ function speakTimes(text: string, locale: SpeechLocale): string {
   }
   return ranged.replace(
     EN_TIME,
-    (match: string, pre?: string, h1?: string, m1?: string, h2?: string, m2?: string, half?: string) => {
+    (
+      match: string,
+      pre: string | undefined,
+      h1: string | undefined,
+      m1: string | undefined,
+      h2: string | undefined,
+      m2: string | undefined,
+      half: string | undefined,
+      offset: number,
+      whole: string
+    ) => {
       let hour = Number(h1 ?? h2);
       const minute = Number(m1 ?? m2);
       // In English a dotted "12.50" is more often an amount than a time: read
@@ -152,8 +191,11 @@ function speakTimes(text: string, locale: SpeechLocale): string {
         if (hour < 1 || hour > 12) return match;
         hour = (hour % 12) + (half.toLowerCase() === "p" ? 12 : 0);
       }
+      // "p.m." closing a sentence: its last dot is also the full stop.
+      const after = whole.slice(offset + match.length);
+      const stop = half && match.endsWith(".") && /^(\s+[A-Z]|\s*$)/.test(after) ? "." : "";
       const said = enTime(hour, minute);
-      return pre ? `${pre} ${said}` : said;
+      return `${pre ? `${pre} ` : ""}${said}${stop}`;
     }
   );
 }
