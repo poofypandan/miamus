@@ -8,6 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { costMicroUsd, type KakakModel } from "@/lib/kakak/cost";
 import { renderHouseholdBlock, type KakakHousehold } from "@/lib/kakak/household";
 import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
+import { guardReplyText } from "@/lib/kakak/reply-guard";
 import { KAKAK_TOOLS } from "@/lib/kakak/tools";
 import { validateToolCall } from "@/lib/kakak/validate";
 import { scriptedReply, type ActualTurn, type RejectedAttempt, type ToolCall } from "./grade";
@@ -52,6 +53,8 @@ export function checkVariant(variant: Variant): void {
 }
 
 export interface CallRecord {
+  /** When the call started (ms since the epoch), to set the run's first, cold call apart. */
+  startedAt?: number;
   ms: number;
   costMicroUsd: number;
   inputTokens: number;
@@ -74,6 +77,24 @@ export interface ConversationResult {
   calls: CallRecord[];
   /** Set when the conversation stopped for a reason other than its end. */
   error?: string;
+  /** The HTTP status of an API error, when there was one (400: the API refused the settings). */
+  apiStatus?: number;
+}
+
+/**
+ * Rate limits (429) and overloads (529) the API answered with, including the
+ * ones the SDK retried by itself. Read before and after a run.
+ */
+export const apiPressure = { rateLimited: 0, overloaded: 0 };
+
+/** `base` with every 429 and 529 counted in apiPressure. */
+export function countingFetch(base: typeof fetch = fetch): typeof fetch {
+  return async (input, init) => {
+    const response = await base(input, init);
+    if (response.status === 429) apiPressure.rateLimited += 1;
+    if (response.status === 529) apiPressure.overloaded += 1;
+    return response;
+  };
 }
 
 /**
@@ -93,7 +114,21 @@ export function makeClient(): Anthropic {
     authToken: null,
     baseURL: "https://api.anthropic.com",
     maxRetries: 3,
+    fetch: countingFetch(),
   });
+}
+
+/** Runs `work` over the items, `size` at a time, starting them in order. */
+export async function pool<T>(items: T[], size: number, work: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(size, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next];
+      next += 1;
+      await work(item);
+    }
+  });
+  await Promise.all(workers);
 }
 
 const MAX_QUESTIONS = 3;
@@ -151,6 +186,7 @@ export async function playConversation(
 
   while (result.calls.length < MAX_CALLS) {
     const started = performance.now();
+    const startedAt = Date.now();
     let response: Anthropic.Message;
     try {
       response = await client.messages.create({
@@ -165,10 +201,12 @@ export async function playConversation(
       });
     } catch (error) {
       result.error = `API error: ${error instanceof Error ? error.message : String(error)}`;
+      if (error instanceof Anthropic.APIError && typeof error.status === "number") result.apiStatus = error.status;
       return result;
     }
     const usage = response.usage;
     const record: CallRecord = {
+      startedAt,
       ms: Math.round(performance.now() - started),
       costMicroUsd: costMicroUsd(variant.model, usage),
       inputTokens: usage.input_tokens,
@@ -233,7 +271,17 @@ export async function playConversation(
     }
 
     const plain = calls.map(({ name, input }) => ({ name, input }));
-    const turn: ActualTurn = { ...classify(plain), calls: plain, text };
+    const classified = classify(plain);
+    // What the owner would see: the route's guard on the model's words.
+    const guarded =
+      classified.kind === "invalid" ? { text, tells: [] } : guardReplyText(classified.kind, text, caseHousehold.ownerLocale);
+    const turn: ActualTurn = {
+      ...classified,
+      calls: plain,
+      text: guarded.text,
+      ...(guarded.text !== text ? { rawText: text } : {}),
+      ...(guarded.tells.length ? { guarded: guarded.tells } : {}),
+    };
     result.turns.push(turn);
     if (turn.kind !== "question") return result;
 

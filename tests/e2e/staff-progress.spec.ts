@@ -272,3 +272,54 @@ test("with Pets switched off, no pet counts and no pet routines on the Anyone ro
   // The fixture's routines are anyone's; with Pets off they aren't counted.
   await expect(page.getByTestId("staff-progress-anyone")).toHaveCount(0);
 });
+
+// A slot is owed only if the routine existed before its time (owner, 13 Nov):
+// a 07.00 walk added at 09.30 starts tomorrow, so at 10.00 it isn't late,
+// isn't counted, and isn't on the owner's list or a staff phone.
+const newWalk = () =>
+  schedule(MOCHI, "Jalan-jalan", ["07:00"], {
+    id: "00000000-0000-4000-8000-000000174d01",
+    kind: "walk",
+    proof: "tick",
+    staff_id: SYAM,
+    created_at: `${today()}T09:30:00+07:00`,
+  });
+
+test("a routine added after its time today isn't late, counted or listed until tomorrow", async ({ context, page }) => {
+  await installStub(context, {
+    owner: { locale: "en" },
+    staff: [person(STAFF_ID, "Ari"), person(SYAM, "Syam")],
+    chores: [sweep()],
+    schedules: [newWalk(), WATER],
+  });
+  await at10(page);
+  await page.goto("/dashboard");
+
+  const syam = row(page, "Syam");
+  await expect(syam.getByTestId("progress-pets")).toHaveText("Pets 0/1", { timeout: 20_000 });
+  await expect(syam).toHaveAttribute("data-tone", "neutral");
+  await expect(syam.getByTestId("staff-progress-line")).not.toContainText("late");
+  await expect(page.getByText("Ganti air minum").first()).toBeVisible();
+  await expect(page.getByText("Jalan-jalan")).toHaveCount(0);
+
+  // Syam's day holds only the water, not yet due.
+  await syam.click();
+  const day = page.getByRole("dialog", { name: "Syam" }).getByTestId("staff-person-day");
+  await expect(day.getByTestId("staff-person-task")).toHaveCount(1);
+  await expect(day.getByTestId("staff-person-task")).toContainText("Ganti air minum · Bento");
+});
+
+test("a staff phone doesn't list a routine added after its time today", async ({ context, page }) => {
+  await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    staff: [person(STAFF_ID, "Ari"), person(SYAM, "Syam")],
+    chores: [sweep()],
+    schedules: [newWalk(), WATER],
+  });
+  await at10(page);
+  await page.goto("/staff");
+
+  await expect(page.getByText("Ganti air minum").first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Jalan-jalan")).toHaveCount(0);
+});

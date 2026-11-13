@@ -90,11 +90,13 @@ const STAFF_COLUMNS = "id, household_id, name, created_at, has_pin";
 // had 106 refuses the column, and the roster falls back to the list above.
 const STAFF_COLUMNS_WITH_MEMBER = `${STAFF_COLUMNS}, user_id`;
 // Richest first. Each later entry drops the column set of a migration that
-// may not be applied yet — 109 (archived_at), then 106 (user_id) — so a
-// client running ahead of its database degrades a feature at a time instead
-// of failing the whole roster read, which is what the sign-in screen needs
-// to draw at all. A dropped archived_at reads as "active" everywhere.
+// may not be applied yet — 165 (hidden_areas), 109 (archived_at), then 106
+// (user_id) — so a client running ahead of its database degrades a feature
+// at a time instead of failing the whole roster read, which is what the
+// sign-in screen needs to draw at all. A dropped archived_at reads as
+// "active" everywhere; a dropped hidden_areas as "sees everything".
 const STAFF_COLUMN_SETS = [
+  `${STAFF_COLUMNS_WITH_MEMBER}, archived_at, hidden_areas`,
   `${STAFF_COLUMNS_WITH_MEMBER}, archived_at`,
   STAFF_COLUMNS_WITH_MEMBER,
   STAFF_COLUMNS,
@@ -1605,6 +1607,18 @@ export const supabaseProvider: DataProvider = {
     const { data, error } = await client().rpc("restore_staff_profile", { p_staff_id: id });
     if (error) throw error;
     return data;
+  },
+  async setStaffHiddenAreas(id, areas) {
+    // A plain update under admin_update_staff_profiles (migrations/146,
+    // 165): a staff phone's write matches no row. .select() so that is an
+    // error here, not a silent success.
+    const { data, error } = await client()
+      .from("staff_profiles")
+      .update({ hidden_areas: areas })
+      .eq("id", id)
+      .select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Staff areas not saved");
   },
   async setStaffPin(id, pin) {
     // Through the function, not the table: `pin` is write-protected as well as

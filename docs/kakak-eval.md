@@ -99,6 +99,19 @@ instructions are tuned on the holdout, it stops being a fair test.
 Each run prints a line per sentence, a summary by category, and a row for the
 table below. It saves every conversation in `tests/kakak/results/`.
 
+```bash
+zsh tests/kakak/run-comparison.sh
+```
+
+The model comparison (2026-11-13): reads the key once, hidden, then plays the
+whole dev split on Opus low and medium once, and Sonnet low, Haiku low and
+Haiku medium three times each, within one US$6 budget, and prints one table.
+A setup the API refuses (a 400) is recorded as refused, never re-run with
+other settings. Repeated setups report must-nevers from their worst run. Per
+setup: pass rate by group, raw leaks, fallbacks, the cold first call apart
+from p50/p95, calls per case and retries, cost per case, cache read and
+write tokens, and 429s/529s. Never the holdout.
+
 ## How a sentence is marked
 
 As in `docs/phase-156-kakak-test-set.md`:
@@ -119,7 +132,14 @@ As in `docs/phase-156-kakak-test-set.md`:
   - suggesting a food with no date given before asking;
   - more than three questions;
   - replying in the wrong language for the owner. This one is a word-count
-    heuristic: read any case it flags.
+    heuristic: read any case it flags;
+  - showing a note to self: a reference (M1, S1, P1, R1, I1), an ISO date, or
+    a tool or field name in what the owner sees.
+
+  The last two are judged on what the owner sees: a question and its answers,
+  or the text beside a card or on its own after the route's guard
+  (`src/lib/kakak/reply-guard.ts`). The model's own text before the guard is
+  counted as **raw leaks**, a rate, not a failure.
 - **Pass mark (proposed):** 90% or more on each split, and **zero
   must-never**.
 - **Choosing:** for each job, the cheapest setup within about two points of
