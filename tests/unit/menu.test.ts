@@ -562,7 +562,8 @@ describe("change what was used: the sheet's lines (Phase 177, plan 3b)", () => {
       items,
       false
     );
-    expect(lines.map((l) => l.itemId)).toEqual(["chicken", "rice", "eggs"]);
+    // Rice's entry is in pieces now that rice is in kg: not even the recipe's rice line is offered (Codex, PR #124).
+    expect(lines.map((l) => l.itemId)).toEqual(["chicken", "eggs"]);
     expect(lines.every((l) => !l.on)).toBe(true);
   });
 

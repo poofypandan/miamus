@@ -429,7 +429,9 @@ export function usesFrom(
  *   3. in the recipe's order, then anything in 1 the recipe no longer lists.
  *
  * Never shown: an ingredient deleted since, no longer tracked, or whose
- * unit no longer converts (the server leaves those entries as they are).
+ * entry's unit no longer converts, not even as the recipe's line (the
+ * server leaves those entries as they are, and refuses to be told about
+ * them).
  * `planned` is the recipe's amount now, else the entry's.
  */
 export function changeLines(
@@ -440,12 +442,19 @@ export function changeLines(
 ): { lines: (CountedLine & { on: boolean })[]; uncounted: UncountedLine[] } {
   const { counted, uncounted } = cookLines(recipe, dishServings(dish, recipe), items, forStaff);
   const used = new Map<string, { amount: number; planned: number | null; item: InventoryItem }>();
+  // An item with an entry the server can't read (its unit no longer
+  // converts) is never offered, not even as the recipe's unticked line:
+  // naming it would be refused, and the whole save with it (Codex, PR #124).
+  const unreadable = new Set<string>();
   for (const use of dish.cooked_uses ?? []) {
     const item = items.find((i) => i.id === use.item_id);
     if (!item || !isTracked(item)) continue;
     const from = (use.unit ?? item.unit) as InventoryUnit;
     const said = convertAmount(saidOf(use), from, item.unit);
-    if (said === null) continue;
+    if (said === null) {
+      unreadable.add(item.id);
+      continue;
+    }
     const planned = use.planned != null ? convertAmount(use.planned, from, item.unit) : null;
     const existing = used.get(item.id);
     used.set(item.id, {
@@ -454,10 +463,13 @@ export function changeLines(
       planned: existing ? null : planned,
     });
   }
-  const lines: (CountedLine & { on: boolean })[] = counted.map((line) => {
-    const entry = used.get(line.itemId);
-    return entry && entry.amount > 0 ? { ...line, amount: entry.amount, on: true } : { ...line, on: false };
-  });
+  for (const id of unreadable) used.delete(id);
+  const lines: (CountedLine & { on: boolean })[] = counted
+    .filter((line) => !unreadable.has(line.itemId))
+    .map((line) => {
+      const entry = used.get(line.itemId);
+      return entry && entry.amount > 0 ? { ...line, amount: entry.amount, on: true } : { ...line, on: false };
+    });
   for (const [itemId, entry] of used) {
     if (entry.amount <= 0 || counted.some((line) => line.itemId === itemId)) continue;
     lines.push({
