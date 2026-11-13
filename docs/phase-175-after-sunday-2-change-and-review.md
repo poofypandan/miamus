@@ -295,7 +295,7 @@ done are left out; at most 80 lines, the most recently changed first.
 | Tool | Fields | Saved through |
 |---|---|---|
 | `move_task` | `task` (reference); `time` (HH:mm or null to leave it); `assignee` (reference, `anyone`, or null to leave it). At least one of the two | The chore's or routine's own edit |
-| `stop_task` | `task`; `from` (a date; today by default) | Ending the repeat (`recurrence_until`) or switching the routine off, as the editor does |
+| `stop_task` | `task`; `from` (a date; today by default): the first day it no longer happens | **An end date, never a switch.** A chore: `recurrence_until` is the day before `from`. A routine: `expires_at` is the day before `from`. Switching a routine off (`is_active`) would hide it on every day, past days included (`isScheduleActiveOn()` rejects an inactive schedule for any day), and would stop it today when the owner said "from Monday" |
 
 Card: the task's name with **before and after** in words (*Time: 16.00,
 was 15.00*). Undo puts back exactly the fields the card changed. Kakak never
@@ -403,7 +403,9 @@ steps are the manager's, on the owner's OK.
   not slipped, the suggestion's threshold, no suggestion, the notifications
   line); `validateToolCall` for each new tool (a good call, an unknown
   field, a bad reference, `give` without `give_to`, a person with a reason,
-  `move_task` with nothing to change); the limits test unchanged.
+  `move_task` with nothing to change); stopping a routine from next Monday
+  leaves it on every day before that, and last week's Week view still shows
+  it; the limits test unchanged.
 - **Kakak eval:** the cases in each tool's PR, including one that must
   *not* use the tool (a leave question that is only a question; "the tap is
   fine now").
