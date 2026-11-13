@@ -195,7 +195,13 @@ export const LEGAL = {
   // freezer, cupboard or counter) and its use-by date once noted. The
   // storage was already live (migrations/154); nothing stored, collected or
   // shared changes.
-  policyVersion: "2026-11-13.2",
+  // 2026-11-13.3: what each staff member sees (Phase 178, migrations/165)
+  // — which parts of the staff app an admin lets each person see (chores
+  // for anyone, pet routines, kitchen, repairs), kept on their staff
+  // profile while it exists. It changes only what the phone shows, never
+  // what staff can report. No new service, nothing sent to Kakak; not yet in
+  // the household export (added when the export is next re-created).
+  policyVersion: "2026-11-13.3",
   effectiveDate: { en: "13 November 2026", id: "13 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
