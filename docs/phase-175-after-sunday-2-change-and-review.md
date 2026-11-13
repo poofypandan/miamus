@@ -263,8 +263,9 @@ the 24th to the 2nd."
 
 Kakak asks at most one question: what happens to the tasks, with the three
 answers as taps. The card is the Away sheet's summary; saving goes through
-the sheet's own save (section 2b). "We're away" with several pets is one
-call per pet, shown as one card.
+the sheet's own save (section 2b). Several pets leaving today is one
+call per pet, shown as one card. "We're away from the 24th" is a call for
+the owner only; for the pets Kakak says to tell her on the day (2a).
 
 ### 4e. `move_task` and `stop_task`
 
