@@ -37,7 +37,8 @@ Less typing, no new required fields, no new module.
 ```
 Away
 Who?            [ Sari ] [ Yanti ] [ Coco ] [ Bruno ] [ Me ]
-From – to       [ Today ] [ Tomorrow ] [ Pick dates ]   to   [ date ]
+From – to       [ Today ] [ Tomorrow ] [ Pick dates ]   to   [ date ]   (a person)
+Until           [ date ]   or   [ Until I say ]                           (a pet)
 (a person)      What happens to their tasks?
                 ( Give to… ) ( Anyone can do them ) ( Pause them )
 (a pet)         Why?   ( At the vet ) ( Boarding ) ( Travelling with us )
@@ -46,8 +47,12 @@ From – to       [ Today ] [ Tomorrow ] [ Pick dates ]   to   [ date ]
 ```
 
 - **Who** lists the staff, the pets and "Me" (this owner). One at a time.
-- **From – to.** The end date may be left empty for a pet at the vet
-  ("until I say they are back", as today).
+- **From – to**, for a person, as leave has it. **A pet is away from the
+  moment it is saved**, so it is asked only **Until**: marking a pet away
+  pauses its routines at once, as *At the vet* does today, and a date set
+  ahead would pause them by itself on a day when plans may have changed.
+  For next week's boarding, the owner says so on the day. *Until I say*
+  leaves the end open, as today.
 - **Give to** shows the other staff; it is the `reassign` that leave
   already has. **Anyone** is `unassign`. **Pause** is `pause`.
 - Saving shows a toast with **Undo**: *Sari is away until Monday* / *Sari
@@ -108,7 +113,8 @@ unit-tested.
 
 Staff see what they see today: their tasks move, pause and return through
 leave as now, and a pet that is away shows no routine cards. The pet's row
-on a staff phone reads *Di dokter hewan*, *Dititipkan* or *Ikut bepergian*.
+on a staff phone reads *Dirawat di klinik* (the glossary's words, unchanged), *Dititipkan* or
+*Ikut bepergian*.
 Staff can still admit a pet to the vet and bring it home; they cannot set a
 reason or a date. Staff asking for their own leave is unchanged.
 
@@ -151,9 +157,15 @@ Sari's phone has notifications off.
   one line per person, from `staff_push_overview()`. A tap opens Settings →
   Staff.
 - Everything is worked out on the phone by a pure function
-  `weeklyCheckin(week, staffPush)` in `src/lib/weekly-checkin.ts`, from the
-  rows the Week view already loads (`use-agenda-week`,
-  `lib/week-summary.ts`). No AI, and nothing new is stored.
+  `weeklyCheckin(days, staffPush)` in `src/lib/weekly-checkin.ts`, with the
+  rules of `lib/week-summary.ts`. No AI, and nothing new is stored.
+- **The window is the card's own: Monday to Sunday**, ending on the most
+  recent Sunday whose 17.00 has passed (`checkinWeek(now)`, in the same
+  file). The Week view's own week starts on Sunday (`weekStartOf()` in
+  `src/lib/unified-agenda.ts`), so its rows are **not** reused as they are:
+  the card loads its seven days through the same day loader the Week view
+  uses, for those seven dates. On Monday the card still shows the week that
+  ended yesterday, the same seven days the push counted.
 
 ### 3b. The push
 
@@ -244,7 +256,7 @@ the 24th to the 2nd."
 | Field | |
 |---|---|
 | `who` | A staff reference, a pet reference, or the owner's own reference |
-| `from`, `to` | Dates. `to` may be null only for a pet at the vet |
+| `from`, `to` | Dates. For a pet, `from` is null (it is away from now) and `to` may be null. A pet that will be away later is not a call: Kakak says to tell her on the day |
 | `work` | `give`, `anyone` or `pause` for a person; null for a pet |
 | `give_to` | A staff reference with `give`, else null |
 | `reason` | `vet`, `boarding` or `travel` for a pet; null for a person |
@@ -302,7 +314,7 @@ words on screen today.
 |---|---|---|
 | Who? / From – to / What happens to their tasks? | Siapa? / Dari – sampai / Tugasnya bagaimana? | The Away sheet |
 | Give to… / Anyone can do them / Pause them | Berikan ke… / Siapa saja boleh / Jeda dulu | Its three answers |
-| Why? · At the vet · Boarding · Travelling with us | Kenapa? · Di dokter hewan · Dititipkan · Ikut bepergian | A pet |
+| Why? · At the vet · Boarding · Travelling with us | Kenapa? · Dirawat di klinik · Dititipkan · Ikut bepergian | A pet. *Dirawat di klinik* is the glossary's existing row for "At the vet"; the other two are new |
 | Their routines pause until they are back. | Rutinitasnya dijeda sampai kembali. | A pet |
 | Me | Saya | The owner in "Who?" |
 | {name} is away until {day} | {name} pergi sampai {day} | Toast |
@@ -368,7 +380,7 @@ steps are the manager's, on the owner's OK.
   `kakak_record`; an unknown name is still refused; `anon` cannot execute
   it; every name 155 accepted still is.
 - **Unit:** `returning` (the day before, the day, a pet without a date);
-  `weeklyCheckin` (the percentage, the three most slipped, fewer than two is
+  `checkinWeek` (Sunday 16.59 is still last week; Sunday 17.00 and all of Monday are the week just ended); `weeklyCheckin` (the percentage, the three most slipped, fewer than two is
   not slipped, the suggestion's threshold, no suggestion, the notifications
   line); `validateToolCall` for each new tool (a good call, an unknown
   field, a bad reference, `give` without `give_to`, a person with a reason,
