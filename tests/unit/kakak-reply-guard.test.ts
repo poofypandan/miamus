@@ -33,7 +33,7 @@ const GOOD_EN = [
 describe("the guard's tells", () => {
   it("catches all three notes from tonight's eval", () => {
     expect(replyTells(K021, "id")).toEqual(["reference", "too_long", "language"]);
-    expect(replyTells(K114, "en")).toEqual(["reference", "date", "internal_name"]);
+    expect(replyTells(K114, "en")).toEqual(["reference", "date"]);
     // K104 has no tell of its own: it came with a question, whose text is always dropped.
     expect(guardReplyText("question", K104, "id")).toEqual({ text: "", tells: [] });
   });
@@ -73,13 +73,18 @@ describe("the guard's tells", () => {
     expect(noteTells("Beli kotak P3K dan plester.")).toEqual([]);
     expect(noteTells("Jam 21.30 dan 07:00, tanggal 25 Nov.")).toEqual([]);
     expect(noteTells("Add a note and a title to the room.")).toEqual([]);
+    // The Ingredients rule's own explanation (Codex, PR #138).
+    const outItem = "You can set the expiry date once the eggs are marked Bought.";
+    expect(replyTells(outItem, "en")).toEqual([]);
+    expect(guardReplyText("suggestions", outItem, "en").text).toBe(outItem);
     expect(MAX_REPLY_CHARS).toBe(200);
   });
 
   it("knows the tools' snake_case fields from tools.ts", () => {
-    for (const name of ["create_chore", "ask_question", "kept_in", "expires_on", "due_time", "remind_staff", "alert_owners", "assignee", "expiry"]) {
+    for (const name of ["create_chore", "ask_question", "kept_in", "expires_on", "due_time", "remind_staff", "alert_owners", "assignee", "expiry_is_guess"]) {
       expect(INTERNAL_NAMES).toContain(name);
     }
+    expect(INTERNAL_NAMES).not.toContain("expiry");
     expect(INTERNAL_NAMES).not.toContain("title");
     expect(INTERNAL_NAMES).not.toContain("note");
   });

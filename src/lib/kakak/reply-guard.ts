@@ -31,8 +31,10 @@ function propertyNames(schema: unknown, into: Set<string>): Set<string> {
 
 /**
  * The tools' names and their snake_case field names (kept_in, due_time…),
- * plus the two plain-word fields no one says to an owner. Ordinary words that
- * are also fields (title, note, room, days) are left out.
+ * plus "assignee", which no one says to an owner. Ordinary words that are
+ * also fields (title, note, room, days, expiry) are left out: "You can set the
+ * expiry date once it is marked Bought" is a reply the prompt asks for (Codex,
+ * PR #138).
  */
 export const INTERNAL_NAMES: readonly string[] = [
   ...KAKAK_TOOL_NAMES,
@@ -40,7 +42,6 @@ export const INTERNAL_NAMES: readonly string[] = [
     n.includes("_"),
   ),
   "assignee",
-  "expiry",
 ];
 const INTERNAL_NAME = new RegExp(`\\b(?:${[...new Set(INTERNAL_NAMES)].join("|")})\\b`, "i");
 
