@@ -10,7 +10,8 @@ document. Steps 1 to 3 of the table need no migration and are specified
 enough where they stand.
 
 Migrations: **157** (watching the jobs), **158** (silence), **159**
-(notification policy), **160** (watches). 156 is Phase 177. The manager
+(notification policy), **160** (watches), and **168** (refused saves, added
+13 Nov; 161 to 167 were taken by then). 156 is Phase 177. The manager
 confirms numbers and phase names.
 
 ## 0. North star first
@@ -100,6 +101,76 @@ per household (most do, with `raise warning`) still counts as succeeded, and
 a push that the push service refused is not seen here. Both are in *Later*.
 Nothing watches the watcher; an outside uptime check is the operator's to
 add.
+
+## 1c. Know when a phone keeps being refused (migration 168)
+
+Added 13 Nov, after a staff phone's saves were refused by the database's
+own checks several times in a row and nobody was told. The owner chose not
+to ask staff how Miamus is going (Phase 179): staff problems are to be
+caught by a signal, and this is the signal. Nothing in it is visible to a
+household.
+
+**Why the server cannot count refusals by itself:** a refused save raises
+an error and rolls back, so it leaves no row. Only the server's log has it.
+So the app says so.
+
+```sql
+create table if not exists public.client_refusals (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households (id) on delete cascade,
+  device_user_id uuid not null default auth.uid(),   -- the session that was refused
+  staff_id uuid references public.staff_profiles (id) on delete set null,
+  code text not null,          -- the SQLSTATE and the error's own name: '42501 chore_owner_only'
+  action text not null,        -- which save: 'finish_chore', 'couldnt_do', …
+  app_version text,
+  created_at timestamptz not null default now(),
+  constraint client_refusals_code_length check (char_length(code) between 1 and 80),
+  constraint client_refusals_action_check check (action ~ '^[a-z][a-z_]{1,39}$'),
+  constraint client_refusals_app_version_length check (app_version is null or char_length(app_version) <= 64)
+);
+create index if not exists client_refusals_recent_idx on public.client_refusals (created_at);
+create index if not exists client_refusals_household_idx on public.client_refusals (household_id);
+create index if not exists client_refusals_staff_idx on public.client_refusals (staff_id);
+alter table public.client_refusals enable row level security;
+revoke all on public.client_refusals from public, anon, authenticated;
+grant select, insert, update, delete on public.client_refusals to service_role;
+```
+
+Internal: no client role reads or writes it. Kept **30 days** (the nightly
+prune of 157 gains it).
+
+- `report_refusal(p_household uuid, p_code text, p_action text, p_staff_id
+  uuid, p_app_version text) returns void`: `security definer`,
+  `set search_path = ''`, `revoke all … from public, anon;` `grant execute …
+  to authenticated;`. **Deliberately open to staff phones** (the household
+  is one of the caller's, `get_user_household_ids()`): it can only add one
+  line about the caller's own failed save. The staff id is kept only if it
+  is a non-archived person of that household, else null. At most 20 an hour
+  per session; past that it does nothing, silently. It never raises: a
+  report about an error must not cause another.
+- **The app** calls it from one place, the data provider's error path for
+  **writes**: when the database answered with an error that has a SQLSTATE
+  and the caller does not already treat that answer as expected (a dish
+  already cooked, a duplicate, a wrong PIN). It sends the SQLSTATE and the
+  first 60 characters of the error's `message` (the guards' own names, such
+  as `chore_owner_only`), never `details` or `hint`, which can hold data. A
+  network failure or a timeout is not a refusal and is not sent. The
+  report is fire-and-forget; the person sees what they see today.
+- **The check.** `check_scheduled_jobs` (1b) gains a second pass: any phone
+  with **three or more refusals of the same code in the last hour** pushes
+  the platform admins once per household, code and day (`job_alerts_sent`,
+  job `refused:<household>:<code>`): *Miamus: a phone keeps being refused*
+  · *chore_owner_only · finish_chore · 4 times in an hour*. No name in the
+  push; the row holds which person was signed in, for whoever follows up.
+
+**Privacy.** A technical record of a failed save: which phone, which staff
+member was signed in, which action, the error's name; 30 days; read by
+Poofy Labs only. One sentence in the policy's technical section, both
+languages, and a new `legal.ts` version, in this PR (the manager's files).
+
+**Limits.** It counts only what the app reports: an app version from
+before this change reports nothing, and a phone that is offline cannot
+report until it is back.
 
 ## 2. Silence you can trust (migration 158)
 
@@ -554,6 +625,7 @@ stuck), `Bell` (the staff card and the sheet).
 | PR | What | Files | Runs |
 |---|---|---|---|
 | **J1** | 1b: migration 157 and its test | `supabase/migrations/157_*.sql`, `supabase/tests/157_*.sql` | **First.** Nothing visible. Side by side with T1 |
+| **J2** | 1c: migration 168 and its test; the report from the data provider's write path; the privacy sentence | `supabase/migrations/168_*.sql`, `supabase/tests/168_*.sql`, `src/lib/data/supabase-provider.ts`, the manager's two files | After J1 (it extends J1's check). Nothing visible |
 | **T1** | 2a: the notifications row | `agenda-tab.tsx`, `src/lib/today-status.ts` and its test, the dashboard prompt's component, the `push-prompt` spec | Any time. No migration |
 | **T2** | Migration 158 and its test; `mark_staff_app_open` from the staff app; data providers and the stub; privacy policy, `legal.ts`, glossary rows | `supabase/migrations/158_*.sql`, `supabase/tests/158_*.sql`, `src/app/staff/page.tsx`, `src/lib/data/*`, `tests/e2e/stub-backend.ts`, the manager's three files | First of this section. Nothing visible to owners |
 | **T3** | 2c: `silence.ts`, the rows, the grey line; the staff tip | new `src/lib/silence.ts` and its test, `agenda-tab.tsx`, `today-status.ts`, `today-status.tsx`, `src/lib/whats-new.ts` (shared) | After T1 and T2 (`agenda-tab.tsx`) |
@@ -580,6 +652,13 @@ needs it.
   six days after its run; a job that ran well alerts nobody; no
   client role can read `job_alerts_sent` or execute the check; old history
   rows are deleted.
+- **SQL 168:** a staff phone and an owner can each report a refusal for
+  their own household and not for another; no client role can read the
+  table; a staff id of another household is stored as null; the 21st report
+  in an hour is dropped without an error; three of one code from one phone
+  in an hour push the platform admins once, a fourth does not push again
+  that day, and two do not push at all; three different codes do not; rows
+  older than 30 days go; `anon` cannot execute it.
 - **SQL 158:** a staff phone marks its own person; a second phone of the
   same person reporting 0 does not clear the first phone's 3, and the first
   reporting 0 then clears it; on a shared phone, Sari reports 3, Yanti
