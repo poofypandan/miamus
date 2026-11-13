@@ -549,7 +549,8 @@ export interface DataProvider {
   /**
    * Any household session: puts back exactly what cooking took, converted
    * if an item's unit changed since; `skipped` lists the items whose unit no
-   * longer converts (nothing wrong is added to them).
+   * longer converts (nothing wrong is added to them). A staff phone only
+   * within 10 minutes of cooking (CookingRuleError "too_late"; audit D1).
    */
   uncookMenuDish(id: string): Promise<{ dish: MenuDish; items: InventoryItem[]; skipped: CookedUse[] }>;
   /**

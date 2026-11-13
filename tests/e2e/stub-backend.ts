@@ -746,7 +746,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
               ? applyCook(dish, body.p_uses ?? [], items, body.p_staff_id ?? null)
               : table === "rpc/change_cooked_uses"
                 ? applyUsesChange(dish, body.p_uses ?? [], items, body.p_staff_id ?? null, new Date(), body.p_was)
-                : applyUncook(dish, items);
+                : applyUncook(dish, items, new Date(), who === OWNER);
           menu[index] = result.dish as unknown as Record<string, unknown>;
           for (const item of result.items) {
             const at = supplies.findIndex((row) => row.id === item.id);

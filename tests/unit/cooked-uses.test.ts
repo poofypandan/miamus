@@ -148,6 +148,15 @@ describe("un-cook", () => {
     expect(k.get("tahu")).toMatchObject({ quantity: 6, expires_on: "2026-11-25" });
   });
 
+  it("a staff phone only within 10 minutes of cooking; an owner any time (audit D1)", () => {
+    const k = new Kitchen([item({ id: "tahu", unit: "pcs", quantity: 4 })]);
+    k.cook([{ item_id: "tahu", amount: 1, unit: "pcs" }]);
+    const at = (minutes: number) => new Date(new Date(k.dish.cooked_at!).getTime() + minutes * 60_000);
+    expect(applyUncook(k.dish, k.items, at(9), false).dish.cooked_at).toBeNull();
+    expect(() => applyUncook(k.dish, k.items, at(11), false)).toThrow("too_late");
+    expect(applyUncook(k.dish, k.items, at(60 * 24 * 3), true).items[0].quantity).toBe(4);
+  });
+
   it("lists an item whose unit no longer converts instead of giving it a wrong number", () => {
     const k = new Kitchen([beef(1000)]);
     k.cook([g("beef", 200)]);

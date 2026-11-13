@@ -636,7 +636,11 @@ export const supabaseProvider: DataProvider = {
     const { data, error, status } = await withRpcDeadline((signal) =>
       client().rpc("uncook_menu_dish", { p_dish_id: id }).abortSignal(signal)
     );
-    if (error) throw withStatus(error, status);
+    if (error) {
+      // A staff phone more than 10 minutes after cooking (audit D1).
+      if (cookingRefusal(error.message) === "too_late") throw new CookingRuleError("too_late");
+      throw withStatus(error, status);
+    }
     const result = data as { dish: MenuDish; items: InventoryItem[]; skipped?: CookedUse[] };
     return { ...result, skipped: result.skipped ?? [] };
   },

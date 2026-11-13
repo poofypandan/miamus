@@ -6,7 +6,8 @@
 -- change_cooked_uses applies only the difference (more off, less back,
 -- untick, new tick, never below zero, the missing part never taken from
 -- stock bought since, Undo exact), refuses by name, keeps entries it can't
--- read, never touches cooked_at / cooked_by; anon gets none of the three;
+-- read, never touches cooked_at / cooked_by; un-cook by a staff phone only
+-- within 10 minutes of cooking, an owner any time (audit D1); anon gets none of the three;
 -- the export carries the new keys and hints_off.
 -- LOCAL DATABASE ONLY. One transaction, rolled back. Run after 156 is
 -- applied:
@@ -403,6 +404,36 @@ select pg_temp.ok((select not exists (select 1 from jsonb_array_elements(j -> 'i
   'un-cooking rendang skips the candlenuts (amount 0): not written');
 select pg_temp.ok((pg_temp.item(:beef)).quantity = 1200 and (pg_temp.item(:santan)).quantity = 700 and (pg_temp.item(:shallot)).quantity = 1000,
   '... and puts back what the entries say came off (beef 300, santan 200, shallots 600)');
+
+-- ---- Un-cook: owners any time, a staff phone only within 10 minutes (audit D1) -------------
+select pg_temp.ok(pg_temp.cook(:p1, :tahugoreng, format('[{"item_id":"%s","amount":1,"unit":"pcs"}]', :tahu), :s1) is not null
+                  and (pg_temp.item(:tahu)).quantity = 5,
+  'tofu goreng is cooked again by a staff phone (1 tofu; 5 left)');
+update public.menu_dishes set cooked_at = now() - interval '9 minutes' where id = :tahugoreng::uuid;
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.uncook_menu_dish(%L) $q$, :tahugoreng)) = ''
+                  and (pg_temp.item(:tahu)).quantity = 6 and (pg_temp.dish(:tahugoreng)).cooked_at is null,
+  'a staff phone may still Undo 9 minutes after cooking');
+select pg_temp.ok(pg_temp.cook(:p1, :tahugoreng, format('[{"item_id":"%s","amount":1,"unit":"pcs"}]', :tahu), :s1) is not null,
+  '(cooked again)');
+update public.menu_dishes set cooked_at = now() - interval '11 minutes' where id = :tahugoreng::uuid;
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.uncook_menu_dish(%L) $q$, :tahugoreng)) like '%too_late%',
+  'a staff phone can''t un-cook it 11 minutes after cooking (too_late)');
+select pg_temp.ok((pg_temp.item(:tahu)).quantity = 5 and (pg_temp.dish(:tahugoreng)).cooked_by = :s1::uuid
+                  and (pg_temp.dish(:tahugoreng)).cooked_at is not null,
+  '... nothing went back, and Sari is still the cook');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.change_cooked_uses(%L, '[{"item_id":"%s","amount":2,"unit":"pcs"}]'::jsonb, %L, %L::jsonb) $q$,
+                                             :tahugoreng, :tahu, :s1, pg_temp.was(:tahugoreng))) = ''
+                  and (pg_temp.item(:tahu)).quantity = 4,
+  '... but it may still change what was used, the same day (no 10-minute limit there)');
+select pg_temp.ok(pg_temp.err_as(:a1, format($q$ select public.uncook_menu_dish(%L) $q$, :tahugoreng)) = ''
+                  and (pg_temp.item(:tahu)).quantity = 6 and (pg_temp.dish(:tahugoreng)).cooked_at is null,
+  'an owner may mark it not cooked after 10 minutes (Mark not cooked)');
+update public.menu_dishes set cooked_at = now() - interval '3 days', cooked_by = :s1::uuid, cooked_uses = '[]' where id = :raw::uuid;
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.uncook_menu_dish(%L) $q$, :raw)) like '%too_late%'
+                  and (pg_temp.dish(:raw)).cooked_by = :s1::uuid,
+  'a staff phone can''t erase who cooked a dish 3 days ago');
+select pg_temp.ok(pg_temp.err_as(:p1, format($q$ select public.uncook_menu_dish(%L) $q$, :opor)) = '',
+  'a staff phone may Undo a dish an owner cooked a moment ago');
 
 -- ---- Export ------------------------------------------------------------------------------
 select pg_temp.ok((select exists (select 1 from jsonb_array_elements(j -> 'menu') m, jsonb_array_elements(m -> 'cooked_uses') u

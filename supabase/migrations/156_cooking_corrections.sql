@@ -34,7 +34,16 @@
 --        gets `cleared_date` on its entry.
 --   uncook_menu_dish  as 153, plus: an entry with amount 0 is skipped, and an
 --        entry's `cleared_date` goes back on the item in the same update as
---        the amount, if the item has no date by then.
+--        the amount, if the item has no date by then. AUDIT D1 (security
+--        check, 13 Nov): 153 let any household session un-cook any dish on
+--        any day, so a staff phone calling it directly could undo a dish
+--        cooked days ago and erase who cooked it. Now an owner
+--        (is_household_admin of the dish's household) may un-cook as before
+--        (Mark not cooked); any other caller only within 10 minutes of
+--        cooked_at, which covers the app's Undo (an 8-second toast), else
+--        'too_late' (42501). change_cooked_uses is NOT limited this way:
+--        staff may change what was used for the rest of that day (plan
+--        section 13, default 2), with the 30-hour backstop.
 --
 -- A cooked_uses ENTRY (menu_dishes.cooked_uses stays a jsonb array, written
 -- only by these three functions; 153's trigger refuses every other writer):
@@ -64,6 +73,8 @@
 --        be a non-archived member of the dish's household. cooked_at and
 --        cooked_by are never touched: the cook stays the cook.
 --   cook_menu_dish / uncook_menu_dish keep 153's grants (re-stated below).
+--        uncook_menu_dish stays open to staff phones only for the app's Undo:
+--        10 minutes after cooking (audit D1, above).
 --   No new table, no new policy, no change to RLS. anon gets nothing.
 --
 -- ORDER OF LOCKS. change_cooked_uses locks the dish, then each item in item
@@ -203,7 +214,9 @@ $$;
 -- listed in "skipped". An entry with amount 0 has nothing to put back. An
 -- entry's cleared_date goes back on the item if it has no date now (a date
 -- someone set meanwhile is kept). Then clears the three columns. A dish
--- that isn't cooked is returned as it is. Returns { dish, items, skipped }.
+-- that isn't cooked is returned as it is. Owners may un-cook any time; a
+-- staff phone only within 10 minutes of cooked_at (audit D1): too_late.
+-- Returns { dish, items, skipped }.
 create or replace function public.uncook_menu_dish(p_dish_id uuid)
 returns jsonb
 language plpgsql
@@ -227,6 +240,10 @@ begin
   end if;
   if d.cooked_at is null then
     return jsonb_build_object('dish', to_jsonb(d), 'items', changed, 'skipped', skipped);
+  end if;
+  -- Audit D1: Mark not cooked is an owner's; a staff phone only Undoes.
+  if not public.is_household_admin(d.household_id) and d.cooked_at <= now() - interval '10 minutes' then
+    raise exception 'too_late' using errcode = '42501';
   end if;
 
   for line in

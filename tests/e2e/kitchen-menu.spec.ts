@@ -516,6 +516,33 @@ test("Undo of cooking puts back the date cooking cleared (Phase 177, migrations/
   expect(stub.supplies.find((r) => r.id === chicken.id)).toMatchObject({ stock_status: "ok", expires_on: "2026-12-01" });
 });
 
+test("a staff phone's Undo more than 10 minutes after cooking is refused with an Indonesian line (audit D1)", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    features: { kitchen: true },
+    items: [chicken, rice, shallots],
+    recipes: [soto],
+    menu: [dish(0, "lunch", "Chicken soto", { recipe_id: SOTO, servings: 4 })],
+  });
+  await page.goto("/staff");
+  const card = page.getByRole("region", { name: "Menu hari ini", exact: true });
+  await card.getByRole("button", { name: /Soto ayam/ }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Sudah dimasak" }).click();
+  await page.getByRole("button", { name: "Pakai bahan ini" }).click();
+  await expect.poll(() => stub.supplies.find((r) => r.id === rice.id)?.quantity).toBe(3.5);
+  await page.getByRole("button", { name: "Tidak ada sisa" }).click();
+  // The server's clock: cooked 11 minutes ago (a very slow signal, or a stale toast).
+  stub.menu[0].cooked_at = new Date(Date.now() - 11 * 60 * 1000).toISOString();
+  await page.getByRole("button", { name: "Batalkan" }).click();
+  await expect(page.getByText("Sudah terlalu lama untuk dibatalkan. Minta pemilik rumah menandainya belum dimasak.")).toBeVisible();
+  expect(stub.supplies.find((r) => r.id === rice.id)).toMatchObject({ quantity: 3.5 });
+  expect(stub.menu[0].cooked_at).not.toBeNull();
+  // Staff never get Mark not cooked on the dish.
+  await card.getByRole("button", { name: /Soto ayam/ }).click();
+  await expect(page.getByRole("button", { name: "Tandai belum dimasak" })).toHaveCount(0);
+});
+
 test("a dish can't be cooked before its recipe has loaded: Sedang memuat…, then Sudah dimasak (Codex, PR #101)", async ({ context, page }) => {
   const stub = await installStub(context, {
     stored: freshSession(),

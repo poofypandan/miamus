@@ -381,6 +381,7 @@ people are **staf** and **admin**.
 | recipe 500 g · used about 600 g | **resep 500 g · dipakai sekitar 600 g** | Phase 177: one line per ingredient on the card. |
 | Update recipe / Keep recipe | **Perbarui resep** / **Biarkan resep** | Phase 177: the card's two buttons. |
 | {recipe} updated | **Resep {recipe} diperbarui** | Phase 177: toast, with Undo / **Batalkan**. |
+| Too late to undo. The owner can mark it not cooked. | **Sudah terlalu lama untuk dibatalkan. Minta pemilik rumah menandainya belum dimasak.** | Phase 177 (audit D1): a staff phone's Undo of cooking more than 10 minutes later. Only owners may mark a dish not cooked after that. |
 | Recipe kept. Miamus won't suggest this again. | **Resep tidak diubah. Miamus tidak akan menyarankan ini lagi.** | Phase 177: toast after Keep recipe. |
 
 ## Formatting

@@ -49,6 +49,9 @@ export function cookingRefusal(message: string | null | undefined): CookingRefus
   return REFUSALS.find((code) => new RegExp(`\\b${code}\\b`).test(message)) ?? null;
 }
 
+/** A staff phone may un-cook (Undo) only this long after cooked_at; owners any time (audit D1). */
+export const UNCOOK_STAFF_MINUTES = 10;
+
 /** The server refuses a change this long after cooked_at (the screen offers it only that day). */
 export const CHANGE_WINDOW_HOURS = 30;
 const MAX_LINES = 200;
@@ -171,14 +174,19 @@ export function applyCook(
  * uncook_menu_dish: puts back what each entry says came off (amount 0 has
  * nothing), converted to the item's unit now; an item whose unit no longer
  * converts is skipped and listed. A cleared date goes back if the item has
- * no date by then. A dish that isn't cooked is returned as it is.
+ * no date by then. A dish that isn't cooked is returned as it is. A caller
+ * who isn't an owner only within UNCOOK_STAFF_MINUTES of cooking (audit D1).
  */
 export function applyUncook(
   dish: MenuDish,
   items: readonly InventoryItem[],
-  now: Date = new Date()
+  now: Date = new Date(),
+  asOwner = true
 ): { dish: MenuDish; items: InventoryItem[]; skipped: CookedUse[] } {
   if (!dish.cooked_at) return { dish, items: [], skipped: [] };
+  if (!asOwner && now.getTime() - new Date(dish.cooked_at).getTime() >= UNCOOK_STAFF_MINUTES * 60_000) {
+    throw new CookingRuleError("too_late");
+  }
   const groups = new Map<string, { item_id: string; unit: InventoryUnit | null; amount: number; cleared: string | null }>();
   for (const use of dish.cooked_uses ?? []) {
     const key = `${use.item_id}|${use.unit ?? ""}`;
