@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   FINISH_GRACE_MS,
+  MAX_LISTEN_MS,
+  MAX_STUMBLES,
+  QUICK_END_MS,
   SPEAK_KEY,
+  appendHeard,
   findRecognition,
   initialVoiceState,
-  joinResults,
+  joinSession,
   kakakWords,
-  listenOnce,
+  listenUntilDone,
   pickVoice,
   voiceScore,
   problemFor,
@@ -143,94 +147,242 @@ describe("problemFor", () => {
   });
 });
 
-describe("listenOnce", () => {
-  it("sets the owner's language and asks for live words, one utterance at a time", () => {
-    listenOnce(FakeRecognition, "id-ID", handlers());
-    const r = FakeRecognition.last!;
-    expect(r).toMatchObject({ lang: "id-ID", continuous: false, interimResults: true, maxAlternatives: 1, started: 1 });
+describe("appendHeard", () => {
+  it("adds new words with one space between", () => {
+    expect(appendHeard("", " Beli  telur ")).toBe("Beli telur");
+    expect(appendHeard("Beli telur", "")).toBe("Beli telur");
+    expect(appendHeard("Ari pel teras", "setiap Senin jam 9")).toBe("Ari pel teras setiap Senin jam 9");
   });
 
-  it("reports words as they form and sends them when the browser ends", () => {
-    const h = handlers();
-    listenOnce(FakeRecognition, "en-US", h);
+  it("takes the longer line when it repeats everything so far (Chrome on Android)", () => {
+    expect(appendHeard("Buy eggs", "buy eggs and sugar")).toBe("buy eggs and sugar");
+  });
+
+  it("drops a restart that only says the last words again", () => {
+    expect(appendHeard("Feed Mocha at 7", "at 7.")).toBe("Feed Mocha at 7");
+    expect(appendHeard("Feed Mocha at 7", "Feed Mocha at 7")).toBe("Feed Mocha at 7");
+  });
+
+  it("joins on two or more shared words", () => {
+    expect(appendHeard("Syam walks Matcha at", "Matcha at six every evening")).toBe("Syam walks Matcha at six every evening");
+  });
+
+  it("keeps a single shared word that goes on: it may really be said twice", () => {
+    expect(appendHeard("Clean Ari", "Ari's room too")).toBe("Clean Ari Ari's room too");
+  });
+});
+
+describe("joinSession", () => {
+  const result = (transcript: string, isFinal: boolean) => Object.assign([{ transcript }], { isFinal });
+
+  it("joins final words and the guess still forming into one tidy line", () => {
+    expect(joinSession([result(" Beli  telur", true), result("dan gula ", false)])).toBe("Beli telur dan gula");
+  });
+
+  it("doesn't double results that each hold everything so far (Chrome on Android)", () => {
+    expect(joinSession([result("buy", true), result("buy eggs", true), result("buy eggs and sugar", false)])).toBe(
+      "buy eggs and sugar"
+    );
+  });
+});
+
+describe("listenUntilDone", () => {
+  it("listens continuously in the owner's language, with live words", () => {
+    listenUntilDone(FakeRecognition, "id-ID", handlers());
     const r = FakeRecognition.last!;
+    expect(r).toMatchObject({ lang: "id-ID", continuous: true, interimResults: true, maxAlternatives: 1, started: 1 });
+  });
+
+  it("shows the guess as it forms, replaced (not added to) as the browser corrects it", () => {
+    const h = handlers();
+    listenUntilDone(FakeRecognition, "en-US", h);
+    const r = FakeRecognition.last!;
+    r.hear(["Buy x", false]);
     r.hear(["Buy eggs", false]);
     r.hear(["Buy eggs and", true], [" sugar", false]);
-    expect(h.onHeard).toHaveBeenLastCalledWith("Buy eggs and sugar");
-    r.end();
-    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs and sugar");
-    expect(h.onProblem).not.toHaveBeenCalled();
+    expect(h.onHeard.mock.calls.map((call) => call[0])).toEqual(["Buy x", "Buy eggs", "Buy eggs and sugar"]);
+    expect(h.onFinished).not.toHaveBeenCalled();
   });
 
-  it("says 'didn't hear anything' when the browser ends with no words", () => {
+  it("keeps listening through a pause: the browser's own end starts a new recognizer, and the words are joined", () => {
     const h = handlers();
-    listenOnce(FakeRecognition, "en-US", h);
-    FakeRecognition.last!.fail("no-speech");
+    const listening = listenUntilDone(FakeRecognition, "id-ID", h);
+    const first = FakeRecognition.last!;
+    first.hear(["Ari pel teras", true]);
+    first.fail("no-speech"); // a pause to think
+    first.end();
+    const second = FakeRecognition.last!;
+    expect(second).not.toBe(first);
+    expect(second.started).toBe(1);
+    expect(h.onFinished).not.toHaveBeenCalled();
+    expect(h.onProblem).not.toHaveBeenCalled();
+
+    second.hear(["setiap Senin", false]);
+    expect(h.onHeard).toHaveBeenLastCalledWith("Ari pel teras setiap Senin");
+    second.hear(["setiap Senin jam 9", true]);
+    expect(h.onHeard).toHaveBeenLastCalledWith("Ari pel teras setiap Senin jam 9");
+
+    listening.finish();
+    expect(second.stopped).toBe(1);
+    second.end();
+    expect(h.onFinished).toHaveBeenCalledTimes(1);
+    expect(h.onFinished).toHaveBeenCalledWith("Ari pel teras setiap Senin jam 9");
+  });
+
+  it("keeps the last guess of a session that ended before it was final (Safari)", () => {
+    const h = handlers();
+    const listening = listenUntilDone(FakeRecognition, "en-US", h);
+    FakeRecognition.last!.hear(["Syam walks Matcha", false]);
+    FakeRecognition.last!.end();
+    FakeRecognition.last!.hear(["at six", false]);
+    listening.finish();
+    FakeRecognition.last!.end();
+    expect(h.onFinished).toHaveBeenCalledWith("Syam walks Matcha at six");
+  });
+
+  it("doesn't repeat words a restarted recognizer hears again", () => {
+    const h = handlers();
+    const listening = listenUntilDone(FakeRecognition, "en-US", h);
+    FakeRecognition.last!.hear(["Feed Mocha at 7", true]);
+    FakeRecognition.last!.end();
+    FakeRecognition.last!.hear(["at 7", true]);
+    FakeRecognition.last!.end();
+    FakeRecognition.last!.hear(["at 7 and 6 PM", true]);
+    listening.finish();
+    FakeRecognition.last!.end();
+    expect(h.onFinished).toHaveBeenCalledWith("Feed Mocha at 7 and 6 PM");
+  });
+
+  it("ignores words from a session that already ended", () => {
+    const h = handlers();
+    listenUntilDone(FakeRecognition, "en-US", h);
+    const first = FakeRecognition.last!;
+    first.hear(["Buy eggs", true]);
+    first.end();
+    first.hear(["Buy eggs again", true]);
+    expect(h.onHeard).toHaveBeenLastCalledWith("Buy eggs");
+  });
+
+  it("ends by itself after the safety limit, as if Done was tapped", () => {
+    vi.useFakeTimers();
+    const h = handlers();
+    listenUntilDone(FakeRecognition, "en-US", h);
+    FakeRecognition.last!.hear(["Beli gula", true]);
+    vi.advanceTimersByTime(MAX_LISTEN_MS - 1);
+    expect(FakeRecognition.last!.stopped).toBe(0);
+    vi.advanceTimersByTime(1);
+    expect(FakeRecognition.last!.stopped).toBe(1);
+    FakeRecognition.last!.end();
+    expect(h.onFinished).toHaveBeenCalledWith("Beli gula");
+  });
+
+  it("says 'didn't hear anything' when Done is tapped with no words", () => {
+    const h = handlers();
+    const listening = listenUntilDone(FakeRecognition, "en-US", h);
+    listening.finish();
     FakeRecognition.last!.end();
     expect(h.onProblem).toHaveBeenCalledTimes(1);
     expect(h.onProblem).toHaveBeenCalledWith("quiet");
     expect(h.onFinished).not.toHaveBeenCalled();
   });
 
-  it("still sends the words if silence follows them", () => {
+  it("stops starting again when the browser keeps ending at once with nothing heard", () => {
+    let clock = 0;
     const h = handlers();
-    listenOnce(FakeRecognition, "en-US", h);
-    const r = FakeRecognition.last!;
-    r.hear(["Feed Mochi at 7", true]);
-    r.fail("no-speech");
-    r.end();
-    expect(h.onFinished).toHaveBeenCalledWith("Feed Mochi at 7");
-    expect(h.onProblem).not.toHaveBeenCalled();
+    listenUntilDone(FakeRecognition, "en-US", h, () => clock);
+    for (let i = 0; i < MAX_STUMBLES; i++) {
+      clock += QUICK_END_MS - 100;
+      FakeRecognition.last!.end();
+    }
+    expect(h.onProblem).toHaveBeenCalledWith("quiet");
+    const last = FakeRecognition.last!;
+    last.end();
+    expect(FakeRecognition.last).toBe(last); // no more restarts
   });
 
-  it("reports a refused microphone and sends nothing", () => {
+  it("a slow end (a real pause) is not a stumble", () => {
+    let clock = 0;
     const h = handlers();
-    listenOnce(FakeRecognition, "en-US", h);
+    listenUntilDone(FakeRecognition, "en-US", h, () => clock);
+    for (let i = 0; i < MAX_STUMBLES + 2; i++) {
+      clock += 8000;
+      FakeRecognition.last!.end();
+    }
+    expect(h.onProblem).not.toHaveBeenCalled();
+    expect(FakeRecognition.last!.started).toBe(1);
+  });
+
+  it("reports a refused microphone and hands over nothing", () => {
+    const h = handlers();
+    listenUntilDone(FakeRecognition, "en-US", h);
     const r = FakeRecognition.last!;
-    r.hear(["half", false]);
     r.fail("not-allowed");
     r.end();
     expect(h.onProblem).toHaveBeenCalledWith("blocked");
     expect(h.onFinished).not.toHaveBeenCalled();
+    expect(FakeRecognition.last).toBe(r); // not started again
+  });
+
+  it("keeps the words already heard if the connection drops", () => {
+    const h = handlers();
+    listenUntilDone(FakeRecognition, "en-US", h);
+    const r = FakeRecognition.last!;
+    r.hear(["Buy eggs", true]);
+    r.fail("network");
+    r.end();
+    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs");
+    expect(h.onProblem).not.toHaveBeenCalled();
   });
 
   it("treats a recognizer that won't start (Siri off, Home Screen app) as unavailable", () => {
     FakeRecognition.throwOnStart = true;
     const h = handlers();
-    listenOnce(FakeRecognition, "id-ID", h);
+    listenUntilDone(FakeRecognition, "id-ID", h);
     expect(h.onProblem).toHaveBeenCalledWith("unavailable");
   });
 
-  it("cancel drops what was heard: aborted, nothing sent, no problem shown", () => {
+  it("hands over the words if a restart won't start", () => {
     const h = handlers();
-    const listening = listenOnce(FakeRecognition, "en-US", h);
+    listenUntilDone(FakeRecognition, "id-ID", h);
+    FakeRecognition.last!.hear(["Beli telur", true]);
+    FakeRecognition.throwOnStart = true;
+    FakeRecognition.last!.end();
+    expect(h.onFinished).toHaveBeenCalledWith("Beli telur");
+    expect(h.onProblem).not.toHaveBeenCalled();
+  });
+
+  it("cancel drops what was heard: aborted, nothing handed over, no problem shown, no restart", () => {
+    const h = handlers();
+    const listening = listenUntilDone(FakeRecognition, "en-US", h);
     const r = FakeRecognition.last!;
     r.hear(["Beli", false]);
     listening.cancel();
     r.fail("aborted");
     r.end();
     expect(r.aborted).toBe(1);
+    expect(FakeRecognition.last).toBe(r);
     expect(h.onFinished).not.toHaveBeenCalled();
     expect(h.onProblem).not.toHaveBeenCalled();
   });
 
-  it("Stop (finish) asks the browser to stop and sends what was heard on its end", () => {
+  it("Done keeps the browser's last words, arriving between stop and end", () => {
     const h = handlers();
-    const listening = listenOnce(FakeRecognition, "en-US", h);
+    const listening = listenUntilDone(FakeRecognition, "en-US", h);
     const r = FakeRecognition.last!;
-    r.hear(["Sari mops the terrace", false]);
+    r.hear(["Ari mops the terrace", false]);
     listening.finish();
     expect(r.stopped).toBe(1);
-    r.hear(["Sari mops the terrace", true]);
+    r.hear(["Ari mops the terrace on Monday", true]);
     r.end();
     expect(h.onFinished).toHaveBeenCalledTimes(1);
-    expect(h.onFinished).toHaveBeenCalledWith("Sari mops the terrace");
+    expect(h.onFinished).toHaveBeenCalledWith("Ari mops the terrace on Monday");
+    expect(FakeRecognition.last).toBe(r); // not started again after Done
   });
 
-  it("Stop still sends if the browser never fires its end (Safari on iPhone)", () => {
+  it("Done still hands over if the browser never fires its end (Safari on iPhone)", () => {
     vi.useFakeTimers();
     const h = handlers();
-    const listening = listenOnce(FakeRecognition, "id-ID", h);
+    const listening = listenUntilDone(FakeRecognition, "id-ID", h);
     FakeRecognition.last!.hear(["Beli gula", false]);
     listening.finish();
     expect(h.onFinished).not.toHaveBeenCalled();
@@ -251,13 +403,6 @@ describe("findRecognition", () => {
     expect(findRecognition({ webkitSpeechRecognition: FakeRecognition })).toBe(FakeRecognition);
     expect(findRecognition({})).toBeNull();
     expect(findRecognition(undefined)).toBeNull();
-  });
-});
-
-describe("joinResults", () => {
-  it("joins segments into one tidy line", () => {
-    const results = [Object.assign([{ transcript: " Beli  telur" }], { isFinal: true }), Object.assign([{ transcript: "dan gula " }], { isFinal: false })];
-    expect(joinResults(results)).toBe("Beli telur dan gula");
   });
 });
 

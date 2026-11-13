@@ -61,9 +61,14 @@ real sentences is what the eval (`tests/kakak`) is for, against the real API.
 ## Talk to Kakak (voice beta)
 
 The first, lightweight step towards roadmap item 23 ("Call Kakak"). A large
-mic in the Kakak sheet: tap, talk, and the words appear live in the typing
-box; tap **Stop** (or just stop talking) and they go to `/api/kakak` exactly
-as if typed. **Read replies aloud** reads her question, message or card
+mic in the Kakak sheet: tap, talk (pauses to think are fine), and the words
+appear live under the mic; tap **Done** and they go into the typing box,
+where the owner can fix a misheard name, then **Send** takes them to
+`/api/kakak` exactly as if typed. Listening runs until Done, or 60 seconds
+at most. Chrome on Android (and Safari on iPhone) end a recognizer session
+at a pause even in continuous mode, so the app starts a new one quietly and
+joins the words without repeating any (`appendHeard`). On Android each
+restart may play the system's short mic sound. **Cancel** drops the words. **Read replies aloud** reads her question, message or card
 aloud with the phone's own voice; the choice is remembered on that phone.
 Code: `src/components/kakak/kakak-voice.tsx` (UI) and
 `src/lib/kakak/voice.ts` (state machine, unit-tested).

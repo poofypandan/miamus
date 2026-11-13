@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
-import { AudioLines, Keyboard, Loader2, Mic, Square, Volume2, VolumeX } from "lucide-react";
+import { AudioLines, Check, Keyboard, Loader2, Mic, Square, Volume2, VolumeX } from "lucide-react";
 import { VideoTip } from "@/components/shared/video-tip";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
@@ -10,7 +10,7 @@ import {
   findRecognition,
   initialVoiceState,
   kakakWords,
-  listenOnce,
+  listenUntilDone,
   pickVoice,
   readSpeakChoice,
   speakable,
@@ -32,10 +32,11 @@ export function KakakVoice(props: Parameters<typeof Voice>[0]) {
 }
 
 /**
- * Talk to Kakak (voice beta). A large mic in the Kakak sheet: press and
- * talk, the words appear live in the typing box, and when the owner stops
- * they go to Kakak as a typed request through the same route. Her replies
- * can be read aloud; the speaker switch is remembered on this phone.
+ * Talk to Kakak (voice beta). A large mic in the Kakak sheet: tap it and
+ * talk, as long as needed, pauses included; the words appear live under the
+ * mic. Tap Done and they go into the typing box, where the owner can fix a
+ * misheard name before tapping Send, as if typed. Her replies can be read
+ * aloud; the speaker switch is remembered on this phone.
  *
  * The phone's own speech features only (src/lib/kakak/voice.ts): the
  * browser may send the audio to Apple or Google to turn it into text, but
@@ -44,34 +45,28 @@ export function KakakVoice(props: Parameters<typeof Voice>[0]) {
 function Voice({
   screen,
   listenHere,
-  inputShown,
-  onHeard,
-  onSpoken,
+  onReview,
 }: {
   screen: VoiceScreen;
   /** Whether a spoken answer makes sense on this screen. */
   listenHere: boolean;
-  /** The sheet's typing box is on screen and shows the live words. */
-  inputShown: boolean;
-  /** What was heard so far, for the sheet's typing box. */
-  onHeard: (text: string) => void;
-  /** The owner finished speaking: send these words to Kakak. */
-  onSpoken: (text: string) => void;
+  /** Done: put these words in the typing box, to check and send. Nothing is sent. */
+  onReview: (text: string) => void;
 }) {
   const t = useT();
   const locale = useOwnerLocale();
   const [state, dispatch] = useReducer(voiceReducer, true, initialVoiceState);
   const [ready, setReady] = useState(false);
-  /** The request in flight was spoken: show "thinking" under the mic. */
-  const [spoke, setSpoke] = useState(false);
+  /** Spoken words are in the typing box, waiting for Send. */
+  const [reviewing, setReviewing] = useState(false);
   const listening = useRef<Listening | null>(null);
   const speaker = useReadAloud(locale, (on) => dispatch({ type: "speaking", on }));
 
-  // The latest callbacks, so the recognizer's handlers never call stale ones.
-  const handlers = useRef({ onHeard, onSpoken });
+  // The latest callback, so the recognizer's handlers never call a stale one.
+  const review = useRef(onReview);
   useEffect(() => {
-    handlers.current = { onHeard, onSpoken };
-  }, [onHeard, onSpoken]);
+    review.current = onReview;
+  }, [onReview]);
 
   // Whether this browser can listen at all, known only in the browser.
   useEffect(() => {
@@ -90,7 +85,7 @@ function Voice({
       dispatch({ type: "stop" });
     }
     dispatch({ type: "thinking", on: busy });
-    if (!busy) setSpoke(false);
+    if (busy) setReviewing(false);
   }, [busy]);
 
   // Read each new reply aloud, if the speaker is on. Keyed by the reply
@@ -112,17 +107,15 @@ function Voice({
     }
     speaker.unlock();
     speaker.hush();
+    setReviewing(false);
     dispatch({ type: "listen" });
-    listening.current = listenOnce(Ctor, VOICE_LANG[locale], {
-      onHeard: (text) => {
-        dispatch({ type: "heard", transcript: text });
-        handlers.current.onHeard(text);
-      },
+    listening.current = listenUntilDone(Ctor, VOICE_LANG[locale], {
+      onHeard: (text) => dispatch({ type: "heard", transcript: text }),
       onFinished: (text) => {
         listening.current = null;
         dispatch({ type: "done" });
-        setSpoke(true);
-        handlers.current.onSpoken(text);
+        setReviewing(true);
+        review.current(text);
       },
       onProblem: (problem) => {
         listening.current = null;
@@ -145,7 +138,7 @@ function Voice({
   if (!ready) return null;
 
   const { phase } = state;
-  const showMic = state.canListen && (listenHere || phase === "listening" || (phase === "thinking" && spoke));
+  const showMic = state.canListen && (listenHere || phase === "listening");
   const showBig = showMic || phase === "speaking";
   const showTip = !state.canListen && listenHere;
   if (!showBig && !showTip && !speaker.supported) return null;
@@ -167,22 +160,28 @@ function Voice({
           <>
             <BigButton phase={phase} onListen={start} onStop={stop} />
             <p role="status" aria-live="polite" className="min-h-5 text-center text-sm font-medium text-gray-900">
-              {phaseLabel(phase, t)}
+              {phaseLabel(phase, reviewing, t)}
             </p>
-            {phase === "listening" && !inputShown && state.transcript && (
-              // No typing box on this screen (Kakak's question): the live
-              // words show here, so nothing heard is hidden.
-              <p className="max-w-full rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900">
-                {state.transcript}
-              </p>
+            {phase === "listening" && (
+              // The words as they are heard, marked as still listening. Not
+              // in the typing box yet: that waits for Done.
+              <div
+                data-testid="kakak-live-words"
+                className="flex w-full items-start gap-2 rounded-2xl border border-primary/20 bg-card px-3 py-2 text-sm"
+              >
+                <AudioLines className="mt-0.5 size-4 shrink-0 text-primary motion-safe:animate-pulse" aria-hidden="true" />
+                <p className={cn("min-w-0 flex-1 break-words", state.transcript ? "text-gray-900" : "text-muted-foreground")}>
+                  {state.transcript || t("Say what you need. Pauses are fine.", "Sebutkan yang Anda perlukan. Boleh sambil berpikir.")}
+                </p>
+              </div>
             )}
             {phase === "listening" && (
               <button
                 type="button"
                 onClick={cancel}
-                className="-mt-1 text-xs font-medium text-muted-foreground underline-offset-4 active:underline"
+                className="min-h-9 text-xs font-medium text-muted-foreground underline-offset-4 active:underline"
               >
-                {t("Cancel, don't send", "Batal, jangan kirim")}
+                {t("Cancel", "Batalkan")}
               </button>
             )}
             {state.problem && phase === "idle" && state.canListen && (
@@ -225,6 +224,7 @@ function Voice({
 function BigButton({ phase, onListen, onStop }: { phase: string; onListen: () => void; onStop: () => void }) {
   const t = useT();
   const active = phase === "listening" || phase === "speaking";
+  const done = t("Done", "Selesai");
   return (
     <div className="relative flex size-24 items-center justify-center">
       {phase === "listening" && (
@@ -245,7 +245,9 @@ function BigButton({ phase, onListen, onStop }: { phase: string; onListen: () =>
         disabled={phase === "thinking"}
         onClick={active ? onStop : onListen}
         aria-label={
-          active
+          phase === "listening"
+            ? done
+            : active
             ? t("Stop", "Berhenti")
             : phase === "thinking"
               ? t("Kakak is thinking", "Kakak sedang berpikir")
@@ -258,6 +260,11 @@ function BigButton({ phase, onListen, onStop }: { phase: string; onListen: () =>
       >
         {phase === "thinking" ? (
           <Loader2 className="size-7 motion-safe:animate-spin" aria-hidden="true" />
+        ) : phase === "listening" ? (
+          <span className="flex flex-col items-center gap-0.5" aria-hidden="true">
+            <Check className="size-6" />
+            <span className="text-[11px] font-semibold leading-none">{done}</span>
+          </span>
         ) : active ? (
           <Square className="size-6 fill-current" aria-hidden="true" />
         ) : (
@@ -269,10 +276,10 @@ function BigButton({ phase, onListen, onStop }: { phase: string; onListen: () =>
   );
 }
 
-function phaseLabel(phase: string, t: (en: string, id: string) => string): React.ReactNode {
+function phaseLabel(phase: string, reviewing: boolean, t: (en: string, id: string) => string): React.ReactNode {
   switch (phase) {
     case "listening":
-      return t("Listening… tap Stop when you're done", "Kakak mendengarkan… ketuk Berhenti kalau sudah");
+      return t("Listening. Tap Done when you're finished.", "Kakak mendengarkan. Ketuk Selesai kalau sudah.");
     case "thinking":
       return t("Kakak is thinking…", "Kakak sedang berpikir…");
     case "speaking":
@@ -283,14 +290,16 @@ function phaseLabel(phase: string, t: (en: string, id: string) => string): React
         </span>
       );
     default:
-      return t("Tap and talk", "Ketuk lalu bicara");
+      return reviewing
+        ? t("Check the words, then tap Send.", "Cek kata-katanya, lalu ketuk Kirim.")
+        : t("Tap and talk", "Ketuk lalu bicara");
   }
 }
 
 function problemText(problem: VoiceProblem, t: (en: string, id: string) => string): string {
   switch (problem) {
     case "quiet":
-      return t("I didn't hear anything. Tap the mic and try again.", "Kakak belum mendengar apa-apa. Ketuk mikrofon dan coba lagi.");
+      return t("I didn't hear anything. Tap the mic and try again, or type.", "Kakak belum mendengar apa-apa. Ketuk mikrofon dan coba lagi, atau ketik saja.");
     case "blocked":
       return t(
         "Miamus can't use the microphone. Allow it in your browser's settings, or type instead.",

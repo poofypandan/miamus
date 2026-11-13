@@ -383,13 +383,16 @@ function Conversation({ onClose }: { onClose: () => void }) {
       {/* Kakak's pet routines (Phase 173 PR B): once, before the first try, under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-routines-2026-11" />}
 
-      {/* Talk to Kakak (voice beta): spoken words go through send() like typed ones. */}
+      {/* Talk to Kakak (voice beta): Done puts the spoken words in the typing
+          box, to check (a misheard name) and send like typed ones. */}
       <KakakVoice
         screen={screen}
         listenHere={showTyping || screen.kind === "question"}
-        inputShown={showTyping}
-        onHeard={setDraft}
-        onSpoken={(text) => void send(text)}
+        onReview={(text) => {
+          setDraft((typed) => (typed.trim() ? `${typed.trim()} ${text}` : text).slice(0, MAX_TYPED));
+          // Kakak's question has no typing box until asked for: open it.
+          if (screen.kind === "question" || screen.kind === "card") setTypingAnswer(true);
+        }}
       />
 
       {(screen.kind === "typing" ||

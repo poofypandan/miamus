@@ -131,95 +131,211 @@ export function findRecognition(scope: unknown = typeof window === "undefined" ?
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-/** All results so far, as one line: final words, then the guess forming. */
-export function joinResults(results: RecognitionResultEventLike["results"]): string {
-  const parts: string[] = [];
-  for (let i = 0; i < results.length; i++) parts.push(results[i][0]?.transcript ?? "");
-  return parts.join(" ").replace(/\s+/g, " ").trim();
+// ---- Joining what was heard ------------------------------------------------
+
+function splitWords(text: string): string[] {
+  return text.split(/\s+/).filter(Boolean);
 }
 
+/** A word as compared: case and punctuation don't make it a different word. */
+function wordKey(word: string): string {
+  return word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+/**
+ * `next` added after `base`, without saying anything twice. Browsers repeat
+ * themselves in three ways, and each is joined, not doubled:
+ * - `next` says all of `base` again and goes on (Chrome on Android, in
+ *   continuous mode, sends each result as everything so far): `next`;
+ * - `next` is already the end of `base` (a restarted recognizer hearing the
+ *   last words again): `base`;
+ * - `next` starts with the last two or more words of `base`: joined on them.
+ * A single shared word is left alone ("put it on the / the table" is rare,
+ * but "Ari / Ari's room" isn't), unless it is all of `next`.
+ */
+export function appendHeard(base: string, next: string): string {
+  const a = splitWords(base);
+  const b = splitWords(next);
+  if (!b.length) return a.join(" ");
+  if (!a.length) return b.join(" ");
+  const ka = a.map(wordKey);
+  const kb = b.map(wordKey);
+  if (kb.length >= ka.length && ka.every((key, i) => key === kb[i])) return b.join(" ");
+  const tail = ka.length - kb.length;
+  if (tail >= 0 && kb.every((key, i) => key === ka[tail + i])) return a.join(" ");
+  for (let k = Math.min(ka.length, kb.length - 1); k >= 2; k--) {
+    if (kb.slice(0, k).every((key, i) => key === ka[ka.length - k + i])) return [...a, ...b.slice(k)].join(" ");
+  }
+  return [...a, ...b].join(" ");
+}
+
+/**
+ * One recognizer session's results as one line: final words, then the guess
+ * still forming. Read from the whole list each time, so a guess the browser
+ * corrects is replaced, never added to.
+ */
+export function joinSession(results: RecognitionResultEventLike["results"]): string {
+  let line = "";
+  for (let i = 0; i < results.length; i++) line = appendHeard(line, results[i][0]?.transcript ?? "");
+  return line;
+}
+
+// ---- Listening until Done ---------------------------------------------------
+
 export interface ListenHandlers {
-  /** Every change in what was heard, for the live transcript. */
+  /** Every change in what was heard, for the live words. */
   onHeard: (transcript: string) => void;
-  /** The owner finished speaking: the words to send ("" if none). */
+  /** The owner tapped Done (or the time ran out): the words, to check before sending. */
   onFinished: (transcript: string) => void;
   onProblem: (problem: VoiceProblem) => void;
 }
 
 export interface Listening {
-  /** Stop listening and send what was heard (the big Stop button). */
+  /** Stop listening and hand over what was heard (Done). */
   finish: () => void;
-  /** Stop and drop what was heard: nothing is sent. */
+  /** Stop and drop what was heard. */
   cancel: () => void;
 }
 
-/** How long Stop waits for the browser's own end before ending itself. */
+/** How long Done waits for the browser's own end before ending itself. */
 export const FINISH_GRACE_MS = 1500;
 
-/**
- * One utterance: start, report what is heard as it forms, and on the
- * browser's end hand over the words. A new recognizer each time, because
- * Safari on iPhone doesn't reliably start a used one again.
- */
-export function listenOnce(Ctor: RecognitionCtor, lang: string, handlers: ListenHandlers): Listening {
-  let heard = "";
-  let cancelled = false;
-  let failed = false;
-  let ended = false;
-  const recognition = new Ctor();
-  recognition.lang = lang;
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
+/** The safety limit: listening ends by itself after this long, as if Done was tapped. */
+export const MAX_LISTEN_MS = 60_000;
 
-  recognition.onresult = (event) => {
-    if (cancelled || ended) return; // late words after Stop's grace: already sent
-    heard = joinResults(event.results);
-    handlers.onHeard(heard);
-  };
-  recognition.onerror = (event) => {
-    if (cancelled || ended) return;
-    const problem = problemFor(event.error);
-    if (!problem) return;
-    // Silence after some words isn't a problem: send the words.
-    if (problem === "quiet" && heard) return;
-    failed = true;
-    handlers.onProblem(problem);
-  };
+/**
+ * A session that ends this soon with nothing heard is a stumble; this many
+ * in a row means the browser won't keep listening, so it stops instead of
+ * starting again forever.
+ */
+export const QUICK_END_MS = 500;
+export const MAX_STUMBLES = 3;
+
+/**
+ * Tap to start, tap Done to stop. Listens until `finish()` (or
+ * MAX_LISTEN_MS), however long the owner pauses to think. Chrome on Android
+ * ends a session at a pause even in continuous mode, and Safari on iPhone
+ * has its own limits, so when the browser ends by itself a new recognizer
+ * starts quietly and its words are added to the ones before
+ * (`appendHeard`, so nothing is said twice). A new recognizer each time,
+ * because Safari on iPhone doesn't reliably start a used one again.
+ */
+export function listenUntilDone(
+  Ctor: RecognitionCtor,
+  lang: string,
+  handlers: ListenHandlers,
+  now: () => number = Date.now
+): Listening {
+  /** Words from the sessions that ended. */
+  let kept = "";
+  /** `kept` plus the session listening now: what the owner sees. */
+  let heard = "";
+  let state: "on" | "finishing" | "over" = "on";
+  let current: RecognitionLike | null = null;
+  let stumbles = 0;
+  let sessions = 0;
+  let graceTimer: ReturnType<typeof setTimeout> | undefined;
+
   const end = () => {
-    if (ended) return;
-    ended = true;
-    if (cancelled || failed) return;
+    state = "over";
+    current = null;
+    clearTimeout(graceTimer);
+    clearTimeout(limitTimer);
+  };
+  /** Hand over the words, or say nothing was heard. */
+  const handOver = () => {
+    if (state === "over") return;
+    end();
     if (heard) handlers.onFinished(heard);
     else handlers.onProblem("quiet");
   };
-  recognition.onend = end;
+  /** A real problem: keep what was heard if anything was, so no words are lost. */
+  const fail = (problem: VoiceProblem) => {
+    if (state === "over") return;
+    const r = current;
+    end();
+    try {
+      r?.abort();
+    } catch {
+      // already stopped
+    }
+    if (heard) handlers.onFinished(heard);
+    else handlers.onProblem(problem);
+  };
 
-  try {
-    recognition.start();
-  } catch {
-    // Safari throws when the service is off (Siri and Dictation disabled).
-    failed = true;
-    ended = true;
-    handlers.onProblem("unavailable");
-  }
+  const begin = () => {
+    const recognition = new Ctor();
+    recognition.lang = lang;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    const startedAt = now();
+    let gotWords = false;
+    current = recognition;
+    sessions++;
+
+    recognition.onresult = (event) => {
+      if (current !== recognition) return; // an old session, or listening is over
+      const session = joinSession(event.results);
+      if (session) gotWords = true;
+      const next = appendHeard(kept, session);
+      if (next !== heard) {
+        heard = next;
+        handlers.onHeard(heard);
+      }
+    };
+    recognition.onerror = (event) => {
+      if (current !== recognition) return;
+      const problem = problemFor(event.error);
+      // Silence isn't a problem while listening: the session ends and the
+      // next one starts. Aborted is one of ours.
+      if (!problem || problem === "quiet") return;
+      fail(problem);
+    };
+    recognition.onend = () => {
+      if (current !== recognition) return;
+      kept = heard; // the session's words, its last guess included
+      if (state === "finishing") return handOver();
+      const quick = !gotWords && now() - startedAt < QUICK_END_MS;
+      stumbles = quick ? stumbles + 1 : 0;
+      if (stumbles >= MAX_STUMBLES) return handOver();
+      begin();
+    };
+
+    try {
+      recognition.start();
+    } catch {
+      // Safari throws when the service is off (Siri and Dictation disabled).
+      current = null;
+      if (sessions === 1) fail("unavailable");
+      else handOver();
+    }
+  };
+
+  const finish = () => {
+    if (state !== "on") return;
+    state = "finishing";
+    const r = current;
+    try {
+      r?.stop();
+    } catch {
+      // already stopping
+    }
+    // Safari on iPhone sometimes never fires end after stop().
+    graceTimer = setTimeout(handOver, FINISH_GRACE_MS);
+  };
+
+  const limitTimer = setTimeout(finish, MAX_LISTEN_MS);
+  begin();
 
   return {
-    finish() {
-      if (cancelled || ended) return;
-      try {
-        recognition.stop();
-      } catch {
-        // already stopping
-      }
-      // Safari on iPhone sometimes never fires end after stop().
-      setTimeout(end, FINISH_GRACE_MS);
-    },
+    finish,
     cancel() {
-      if (cancelled || ended) return;
-      cancelled = true;
+      if (state === "over") return;
+      const r = current;
+      end();
       try {
-        recognition.abort();
+        r?.abort();
       } catch {
         // already stopped
       }

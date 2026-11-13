@@ -390,13 +390,13 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: talk to Kakak", id: "Baru: bicara dengan Kakak" },
     steps: {
       en: [
-        "Tap the mic and say what you need. Your words appear as you speak.",
-        "Tap Stop when you're done. Kakak shows her card; nothing is saved until you confirm.",
+        "Tap the mic and say what you need. Pause to think if you like: your words appear as you speak.",
+        "Tap Done when you're finished. Check the words, fix a name if needed, then tap Send. Nothing is saved until you confirm.",
         "Want to hear her answers? Turn on Read replies aloud. This phone remembers it.",
       ],
       id: [
-        "Ketuk mikrofon lalu sebutkan yang Anda perlukan. Kata-kata Anda muncul saat Anda bicara.",
-        "Ketuk Berhenti kalau sudah. Kakak menunjukkan kartunya; tidak ada yang disimpan sebelum Anda konfirmasi.",
+        "Ketuk mikrofon lalu sebutkan yang Anda perlukan. Boleh sambil berpikir: kata-kata Anda muncul saat Anda bicara.",
+        "Ketuk Selesai kalau sudah. Cek kata-katanya, perbaiki nama kalau perlu, lalu ketuk Kirim. Tidak ada yang disimpan sebelum Anda konfirmasi.",
         "Mau mendengar jawaban Kakak? Nyalakan Bacakan jawaban Kakak. HP ini akan mengingatnya.",
       ],
     },
