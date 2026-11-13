@@ -115,12 +115,13 @@ def mix(cut, locale, voice, music_style):
     i_lufs, tp, lra = loudness(path)
     gain = -14.0 - i_lufs
     # Limit on a 4× finer grid, where the peaks between samples show, then trim if any is still over -1 dBTP.
-    fine = soft_limit(resample_poly(out * db(gain), 4, 1, axis=0), db(-1.3), db(-1.3) * 0.8)
+    # (The ceiling is -1.8 dB here because AAC encoding lifts peaks by a few tenths; the MP4s then stay under -1 dBTP.)
+    fine = soft_limit(resample_poly(out * db(gain), 4, 1, axis=0), db(-1.8), db(-1.8) * 0.8)
     out = resample_poly(fine, 1, 4, axis=0)
     sf.write(path, out.astype("float32"), SR, subtype="PCM_24")
     i2, tp2, lra2 = loudness(path)
-    if tp2 > -1.0:
-        out = out * db(-1.0 - tp2 - 0.05)
+    if tp2 > -1.5:
+        out = out * db(-1.5 - tp2 - 0.05)
         sf.write(path, out.astype("float32"), SR, subtype="PCM_24")
         i2, tp2, lra2 = loudness(path)
     print(f"mix-{cut}-{locale}: {i_lufs:.1f} LUFS → {i2:.1f} LUFS, true peak {tp2:.1f} dBTP, range {lra2:.1f} LU", flush=True)

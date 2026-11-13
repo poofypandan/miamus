@@ -12,27 +12,29 @@ import { easeOut, ramp } from "./kit";
  * along. It was the asking that never stopped.
  */
 const PLACES: { x: number; y: number; rot: number; size: number }[] = [
-  { x: 310, y: 420, rot: -4, size: 58 },
+  // The first ones land around the child's call and around her, so both can still be seen…
+  { x: 700, y: 1290, rot: -4, size: 58 },
   { x: 640, y: 1500, rot: 3, size: 58 },
   { x: 250, y: 1650, rot: -2, size: 44 },
-  { x: 590, y: 322, rot: 2, size: 52 },
+  { x: 610, y: 760, rot: 2, size: 52 },
   { x: 210, y: 1380, rot: -5, size: 62 },
-  { x: 640, y: 1296, rot: 2, size: 54 },
+  { x: 700, y: 930, rot: 2, size: 54 },
   { x: 262, y: 868, rot: -3, size: 60 },
-  { x: 800, y: 772, rot: 4, size: 44 },
-  { x: 730, y: 540, rot: -2, size: 58 },
-  { x: 404, y: 1160, rot: 3, size: 56 },
-  { x: 540, y: 980, rot: -3, size: 54 },
-  { x: 340, y: 640, rot: 2, size: 60 },
+  { x: 800, y: 620, rot: 4, size: 44 },
+  // …then the kite goes, then the child, then the call itself.
+  { x: 730, y: 300, rot: -2, size: 58 },
+  { x: 404, y: 1210, rot: 3, size: 56 },
+  { x: 520, y: 1050, rot: -3, size: 54 },
+  { x: 340, y: 470, rot: 2, size: 60 },
   { x: 770, y: 1136, rot: -4, size: 64 },
-  { x: 520, y: 762, rot: 3, size: 52 },
+  { x: 500, y: 566, rot: 3, size: 52 },
   { x: 290, y: 1262, rot: -2, size: 44 },
   { x: 560, y: 1436, rot: 2, size: 58 },
   { x: 250, y: 1548, rot: -3, size: 52 },
   { x: 262, y: 262, rot: 3, size: 50 },
-  { x: 812, y: 930, rot: -2, size: 50 },
+  { x: 820, y: 450, rot: -2, size: 50 },
   { x: 214, y: 1052, rot: 4, size: 50 },
-  { x: 790, y: 404, rot: -3, size: 54 },
+  { x: 430, y: 372, rot: -3, size: 54 },
 ];
 
 function One({ text, reply, x, y, rot, size, at, fall, i, big }: { text: string; reply?: boolean; x: number; y: number; rot: number; size: number; at: number; fall: number; i: number; big?: boolean }) {
