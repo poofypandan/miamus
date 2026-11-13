@@ -186,7 +186,10 @@ export function StaffAreasDialog({
     );
   }
 
-  const name = profile?.name ?? "";
+  // Kept through the close animation, when `profile` is already null.
+  const lastName = useRef("");
+  if (profile) lastName.current = profile.name;
+  const name = profile?.name ?? lastName.current;
 
   return (
     <Dialog open={!!profile} onOpenChange={(open) => !open && onClose()}>
