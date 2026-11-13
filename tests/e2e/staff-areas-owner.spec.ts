@@ -15,7 +15,7 @@ const person = (id: string, name: string, over: Record<string, unknown> = {}) =>
   has_pin: true,
   user_id: null,
   archived_at: null,
-  hidden_areas: [],
+  hidden_areas: [] as string[],
   created_at: "2026-10-01T00:00:00Z",
   ...over,
 });
