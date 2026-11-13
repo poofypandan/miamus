@@ -151,6 +151,24 @@ export async function saveRecipe(payload: RecipePayload): Promise<RecipeWithLine
   return saved;
 }
 
+/**
+ * Owners: Keep recipe (Phase 177, migrations/156). The items are added to
+ * the recipe's hints_off, so no amount is suggested for them again; the
+ * recipe shows the change everywhere at once (its lines are unchanged).
+ */
+export async function keepRecipeAmounts(recipe: RecipeWithLines, itemIds: string[]): Promise<RecipeWithLines> {
+  const ids = [...new Set([...(recipe.hints_off ?? []), ...itemIds])].slice(0, 200);
+  const row = await dataProvider.setRecipeHintsOff(recipe.id, ids);
+  mutations += 1;
+  const household = currentHousehold();
+  const current = snapshot.recipes.find((r) => r.id === recipe.id) ?? recipe;
+  const kept: RecipeWithLines = { ...current, ...row, hints_off: row.hints_off ?? ids, ingredients: current.ingredients };
+  if (household && snapshot.household === household) {
+    emit({ ...snapshot, recipes: snapshot.recipes.map((r) => (r.id === recipe.id ? kept : r)) });
+  }
+  return kept;
+}
+
 /** Owners: delete a recipe (its lines go with it). */
 export async function deleteRecipe(id: string): Promise<void> {
   await dataProvider.deleteRecipe(id);
