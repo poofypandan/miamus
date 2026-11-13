@@ -21,12 +21,12 @@ export const UI = {
 export const TYPED: Record<Locale, [string, string, string]> = {
   id: [
     "Minta Sari pel teras setiap Senin jam 9.",
-    "Matikan lampu untuk Coco dan Bruno jam 21.30. Ingatkan staf, dan kabari saya kalau belum dikerjakan.",
+    "Ajak main Coco dan Bruno setiap hari jam 5 sore. Ingatkan staf, dan kabari saya kalau belum dikerjakan.",
     "Beli telur dan sabun cuci piring. Tante Rina juga bawa opor, simpan di kulkas, tahan sampai Rabu.",
   ],
   en: [
     "Have Sari mop the terrace every Monday at 9.",
-    "Lights off for Coco and Bruno at 9:30 pm. Remind staff, and tell me if it isn't done.",
+    "Play with Coco and Bruno every day at 5. Remind staff, and tell me if it isn't done.",
     "Buy eggs and dish soap. Aunt Rina also brought opor; it's in the fridge, good until Wednesday.",
   ],
 };
@@ -34,12 +34,12 @@ export const TYPED: Record<Locale, [string, string, string]> = {
 const REPLY: Record<Locale, [string, string, string]> = {
   id: [
     "Baik. Sari mengepel teras setiap Senin jam 09.00.",
-    "Baik. Lampu untuk Coco dan Bruno dimatikan setiap malam jam 21.30, dengan foto. Staf diingatkan, dan Anda dikabari kalau belum dikerjakan.",
+    "Baik. Ajak main Coco dan Bruno setiap hari jam 17.00, dengan foto. Staf diingatkan, dan Anda dikabari kalau belum dikerjakan.",
     "Baik. Telur dan sabun cuci piring masuk daftar belanja, dan opor dari Tante Rina dicatat di kulkas sampai Rabu.",
   ],
   en: [
     "Sure. Sari mops the terrace every Monday at 9:00.",
-    "Sure. Lights off for Coco and Bruno every night at 9:30 pm, with a photo. Staff get a reminder, and you'll hear only if it isn't done.",
+    "Sure. Playtime for Coco and Bruno every day at 5:00 pm, with a photo. Staff get a reminder, and you'll hear only if it isn't done.",
     "Sure. Eggs and dish soap are on the shopping list, and Aunt Rina's opor is noted in the fridge until Wednesday.",
   ],
 };
@@ -66,10 +66,10 @@ function items(locale: Locale, k: 0 | 1 | 2) {
   if (k === 1) {
     return [
       {
-        kind: "pet_routine", routine: "lights", title: "Matikan lampu", titleEn: null,
+        kind: "pet_routine", routine: "play", title: "Ajak main", titleEn: null,
         pets: [
-          { petId: COCO, petName: "Coco", times: [{ time: "21:30", title: "Matikan lampu" }], alreadyThere: [] },
-          { petId: BRUNO, petName: "Bruno", times: [{ time: "21:30", title: "Matikan lampu" }], alreadyThere: [] },
+          { petId: COCO, petName: "Coco", times: [{ time: "17:00", title: "Ajak main" }], alreadyThere: [] },
+          { petId: BRUNO, petName: "Bruno", times: [{ time: "17:00", title: "Ajak main" }], alreadyThere: [] },
         ],
         days: null, until: null, staffId: null, staffName: null, note: null, proof: "photo",
         remindStaff: true, alertOwners: true,

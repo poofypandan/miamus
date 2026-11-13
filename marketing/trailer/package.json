@@ -13,6 +13,8 @@
     "cues": "node scripts/cues.ts"
   },
   "dependencies": {
+    "@fontsource/fraunces": "5.3.0",
+    "@fontsource/mali": "5.3.0",
     "@fontsource/plus-jakarta-sans": "5.2.8",
     "@remotion/cli": "4.0.539",
     "react": "19.2.0",

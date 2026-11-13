@@ -140,15 +140,27 @@ export const LIGHTS = [MOCHI, BENTO].map((p) =>
   } as never)
 );
 
-/**
- * The evening walk, 17.00, both dogs, with "tell me if it isn't done" on: the
- * routine the owner hears about in shot 8 (meals can't carry that switch in
- * the app; walks and lights can).
- */
+/** The morning walk, 06.30, both dogs: a plain routine, done before the film's day begins. */
 export const WALKS = [MOCHI, BENTO].map((p) =>
-  schedule(p, "Jalan-jalan", ["17:00"], {
+  schedule(p, "Jalan-jalan", ["06:30"], {
     kind: "walk",
     routine_group_id: id(0x17d3),
+    staff_id: null,
+    proof: "photo",
+    remind_staff: false,
+    alert_owners: false,
+  } as never)
+);
+
+/**
+ * Playtime, 17.00, both dogs, with a reminder for staff and "tell me if it
+ * isn't done" on (v4): the one routine the owner hears about, at 17.30, and
+ * the one she then does herself, in the garden, with her child.
+ */
+export const PLAY = [MOCHI, BENTO].map((p) =>
+  schedule(p, "Ajak main", ["17:00"], {
+    kind: "play",
+    routine_group_id: id(0x17d4),
     staff_id: null,
     proof: "photo",
     remind_staff: true,
@@ -255,12 +267,12 @@ export async function installDemo(
   context: BrowserContext,
   page: Page,
   as: { owner: "id" | "en" } | { staff: true },
-  extra: { lights?: boolean; terraceToDo?: boolean; kakak?: boolean; at?: string; open?: string[] } = {}
+  extra: { lights?: boolean; play?: boolean; terraceToDo?: boolean; kakak?: boolean; at?: string; open?: string[] } = {}
 ): Promise<Stub> {
   // A token good for a year: the browser's clock is pinned to NOW and must
   // never think it ran out (a refresh loop would follow).
   const yearFromNow = Math.floor(Date.now() / 1000) + 365 * 86400;
-  const schedules = [...BREAKFASTS, ...WALKS, ...(extra.lights ? LIGHTS : [])] as unknown as Record<string, unknown>[];
+  const schedules = [...BREAKFASTS, ...WALKS, ...(extra.lights ? LIGHTS : []), ...(extra.play ? PLAY : [])] as unknown as Record<string, unknown>[];
   const stub = await installStub(context, {
     ...("owner" in as
       ? { owner: { locale: as.owner }, stored: session(OWNER, yearFromNow, false) }
@@ -280,7 +292,7 @@ export async function installDemo(
     if (String(stub.schedules[i].title).startsWith("Medication")) stub.schedules.splice(i, 1);
   }
   const at = extra.at ?? "16:30";
-  stub.logs.push(...petLogs(stub.schedules, at, extra.open ?? ["lights", "walk"]));
+  stub.logs.push(...petLogs(stub.schedules, at, extra.open ?? ["lights", "play"]));
   await page.clock.setFixedTime(new Date(`${DAY}T${at}:00+07:00`));
   return stub;
 }

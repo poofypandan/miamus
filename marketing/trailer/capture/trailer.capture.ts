@@ -8,8 +8,8 @@
  * screens once, in Indonesian (shots/staff), as staff screens always are.
  *
  * The day, Monday 16 Nov 2026: the owner tells Kakak at 07.45, Sari mops the
- * terrace from 09.00, Today is all on track at 16.30, the lights reminder
- * rings on Sari's phone at 21.30.
+ * terrace from 09.00, Today is all on track at 16.30, and the 17.00 playtime
+ * for Coco and Bruno is the one routine still open at 17.30 (v4).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -70,7 +70,7 @@ for (const locale of ["en", "id"] as Locale[]) {
   const ui = UI[locale];
 
   test(`owner ${locale}: Today and the three sentences to Kakak`, async ({ context, page }) => {
-    await installDemo(context, page, { owner: locale }, { lights: false, at: "07:45" });
+    await installDemo(context, page, { owner: locale }, { at: "07:45" });
     await servePhotos(page);
     let k: 0 | 1 | 2 = 0;
     let hold = Promise.resolve();
@@ -143,7 +143,7 @@ for (const locale of ["en", "id"] as Locale[]) {
   });
 
   test(`owner ${locale}: all on track, and the scroll past each person`, async ({ context, page }) => {
-    await installDemo(context, page, { owner: locale }, { lights: true });
+    await installDemo(context, page, { owner: locale }, { play: true });
     await servePhotos(page);
     await page.goto("/dashboard");
     await page.getByRole("button", { name: ui.open }).waitFor({ timeout: 30_000 });
@@ -156,7 +156,7 @@ for (const locale of ["en", "id"] as Locale[]) {
   });
 
   test(`owner ${locale}: Kitchen, Pets, Repairs`, async ({ context, page }) => {
-    const stub = await installDemo(context, page, { owner: locale }, { lights: true });
+    const stub = await installDemo(context, page, { owner: locale }, { play: true });
     await servePhotos(page);
     stub.foods.push(...foods(locale));
     const tabs = locale === "id" ? { kitchen: "Dapur", pets: "Hewan", home: "Rumah", repairs: "Perbaikan" } : { kitchen: "Kitchen", pets: "Pets", home: "Home", repairs: "Repairs" };
@@ -176,7 +176,7 @@ for (const locale of ["en", "id"] as Locale[]) {
 }
 
 test("staff: Pel teras, with photos", async ({ context, page }) => {
-  await installDemo(context, page, { staff: true }, { lights: true, terraceToDo: true, at: "08:58" });
+  await installDemo(context, page, { staff: true }, { play: true, terraceToDo: true, at: "08:58" });
   await servePhotos(page);
   await page.goto("/staff");
   const card = page.getByRole("button", { name: /Pel teras/ }).first();
@@ -205,33 +205,4 @@ test("staff: Pel teras, with photos", async ({ context, page }) => {
   await tapAt("staff.finish", finish);
   await finish.click();
   await still(page, "staff", "done", 900);
-});
-
-test("staff: the 17.00 walk reminder, the photo and the tick", async ({ context, page }) => {
-  await installDemo(context, page, { staff: true }, { lights: true, at: "17:00", open: ["walk", "lights"] });
-  await servePhotos(page);
-  await page.goto("/staff");
-  const card = page.getByRole("button", { name: /Jalan-jalan/ }).first();
-  await card.waitFor({ timeout: 30_000 });
-  await still(page, "staff", "walk-list", 2000);
-  // The round camera button at the card's right.
-  const box = await card.boundingBox();
-  if (box) taps["staff.walk"] = { x: Math.round(box.x + box.width - 26), y: Math.round(box.y + box.height / 2) };
-  saveTaps();
-  await card.click();
-  const take = page.getByText(/Ambil Foto untuk/);
-  await take.waitFor();
-  const chooser = page.waitForEvent("filechooser", { timeout: 10_000 });
-  await take.click();
-  await (await chooser).setFiles({ name: "path.jpg", mimeType: "image/jpeg", buffer: await photo("path") });
-  const boxes = page.getByRole("checkbox");
-  await boxes.first().waitFor();
-  const count = await boxes.count();
-  for (let i = 0; i < count; i++) await boxes.nth(i).click();
-  await still(page, "staff", "walk-picked", 600);
-  const save = page.getByRole("button", { name: "Simpan" });
-  await tapAt("staff.walkSave", save);
-  await save.click();
-  await page.getByText(/Menyimpan foto/).first().waitFor({ state: "detached", timeout: 20_000 }).catch(() => undefined);
-  await still(page, "staff", "walk-done", 1500);
 });
