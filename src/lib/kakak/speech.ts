@@ -165,14 +165,24 @@ const MONTHS: Record<SpeechLocale, string[]> = {
   en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
 };
 
-/** "13/11" (day, month, as Miamus writes them) as "13 November". */
+// Words that say the next "d/m" is a date, not a fraction.
+const DATE_WORD = /\b(?:tanggal|tgl\.?|sejak|mulai|sampai|hingga|on|from|until|since|starting|starts)\s+$/i;
+const DATE = new RegExp(String.raw`(?<![\d.,:/])(\d{1,2})\/(\d{1,2})(?:\/(\d{4}|\d{2}))?(?![\d/])${NOT_AMOUNT}`, "g");
+
+/**
+ * "13/11" (day, month, as Miamus writes them) as "13 November". An amount
+ * ("1/2 kg") is never a date, and a bare small fraction ("1/2", "3/4") is
+ * read as a date only when a word before it says so ("tanggal 1/2").
+ */
 function speakDates(text: string, locale: SpeechLocale): string {
   return text.replace(
-    /(?<![\d.,:/])(\d{1,2})\/(\d{1,2})(?:\/(\d{4}|\d{2}))?(?![\d/])/g,
-    (match: string, d: string, m: string, y?: string) => {
+    DATE,
+    (match: string, d: string, m: string, y: string | undefined, offset: number, whole: string) => {
       const day = Number(d);
       const month = Number(m);
       if (day < 1 || day > 31 || month < 1 || month > 12) return match;
+      const fraction = !y && day < month && month <= 8;
+      if (fraction && !DATE_WORD.test(whole.slice(Math.max(0, offset - 20), offset))) return match;
       const name = MONTHS[locale][month - 1];
       const year = y ? (y.length === 2 ? `20${y}` : y) : "";
       if (locale === "id") return `${day} ${name}${year ? ` ${year}` : ""}`;

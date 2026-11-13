@@ -128,6 +128,14 @@ describe("toSpeech: symbols and words", () => {
     expect(toSpeech("32/13", "id")).toBe("32/13");
   });
 
+  it("never turns an amount or a bare fraction into a date", () => {
+    expect(toSpeech("Do you mean 1/2 kg of rice or 1/4 kg?", "en")).toBe("Do you mean 1/2 kg of rice or 1/4 kg?");
+    expect(toSpeech("Beli 1/2 kg atau 1/4?", "id")).toBe("Beli 1/2 kg atau 1/4?");
+    expect(toSpeech("12/10 kg", "id")).toBe("12/10 kg");
+    expect(toSpeech("Mulai tanggal 1/2.", "id")).toBe("Mulai tanggal 1 Februari.");
+    expect(toSpeech("Starts on 3/4.", "en")).toBe("Starts on April 3.");
+  });
+
   it("reads a slash between words, an ampersand and '2x'", () => {
     expect(toSpeech("Ari/Syam", "id")).toBe("Ari atau Syam");
     expect(toSpeech("Mocha & Matcha 2x sehari", "id")).toBe("Mocha dan Matcha 2 kali sehari");
