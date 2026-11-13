@@ -197,3 +197,32 @@ test("Undo tapped while another switch is still saving keeps both (Codex, #131)"
   await expect(ari.getByRole("switch", { name: "Kitchen" })).toHaveAttribute("aria-checked", "true");
   await expect(ari.getByRole("switch", { name: "Repairs" })).toHaveAttribute("aria-checked", "false");
 });
+
+test("reopening reads the roster again: a change from another owner's phone isn't undone (Codex, #131)", async ({ context, page }) => {
+  const staff = roster();
+  await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true }, features: { repairs: true } });
+  await page.goto("/dashboard?module=access&page=staff");
+  await expect(page.getByRole("button", { name: "Add Person" })).toBeVisible({ timeout: 20_000 });
+
+  // Open Ari and close without changing anything.
+  await page.getByRole("button", { name: "What Ari sees" }).click();
+  const ari = page.getByRole("dialog", { name: "What Ari sees" });
+  await expect(ari.getByRole("switch", { name: "Kitchen" })).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+
+  // Another owner turns Kitchen off for Ari; this phone's roster reloads
+  // after a change to Syam.
+  staff.find((p) => p.id === STAFF_ID)!.hidden_areas = ["kitchen"];
+  await page.getByRole("button", { name: "What Syam sees" }).click();
+  const syam = page.getByRole("dialog", { name: "What Syam sees" });
+  await syam.getByRole("switch", { name: "Repairs" }).click();
+  await expect(page.getByText("Repairs off for Syam")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("Doesn't see: Kitchen", { exact: true })).toBeVisible();
+
+  // Reopening Ari shows the other owner's change, and the next switch keeps it.
+  await page.getByRole("button", { name: "What Ari sees" }).click();
+  await expect(ari.getByRole("switch", { name: "Kitchen" })).toHaveAttribute("aria-checked", "false");
+  await ari.getByRole("switch", { name: "Repairs" }).click();
+  await expect.poll(() => staff.find((p) => p.id === STAFF_ID)?.hidden_areas).toEqual(["kitchen", "repairs"]);
+});

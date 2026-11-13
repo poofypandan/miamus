@@ -102,13 +102,17 @@ export function StaffAreasDialog({
   // Each person's list as last saved from this dialog, so a toast's Undo
   // reverses only its own area against the latest state, open or not.
   const saved = useRef(new Map<string, StaffArea[]>());
+  // Saves per person not yet landed and read back into the roster.
+  const pending = useRef(new Map<string, number>());
 
   useEffect(() => {
     openId.current = profile?.id ?? null;
     if (!profile) return;
-    // What this dialog saved last wins over the row it was opened from,
-    // which may predate the reload that save started.
-    const fresh = saved.current.get(profile.id) ?? hiddenAreasOf(profile);
+    // The row it was opened from is the truth (another owner may have
+    // changed it since; Codex, PR #131), unless a save of this dialog's for
+    // the person hasn't landed and been read back yet: then that save's list.
+    const inFlight = (pending.current.get(profile.id) ?? 0) > 0;
+    const fresh = (inFlight && saved.current.get(profile.id)) || hiddenAreasOf(profile);
     saved.current.set(profile.id, fresh);
     setHidden(fresh);
     // Re-read only when the dialog opens on someone else: a reload after a
@@ -132,6 +136,8 @@ export function StaffAreasDialog({
 
   /** Shows (`visible`) or hides one area for one person, on top of their latest list. */
   function setArea(person: StaffProfile, area: StaffArea, visible: boolean): Promise<boolean> {
+    pending.current.set(person.id, (pending.current.get(person.id) ?? 0) + 1);
+    const done = () => pending.current.set(person.id, (pending.current.get(person.id) ?? 1) - 1);
     const run = (queues.current.get(person.id) ?? Promise.resolve()).then(async () => {
       const base = saved.current.get(person.id) ?? hiddenAreasOf(person);
       const next = withArea(base, area, visible);
@@ -140,11 +146,16 @@ export function StaffAreasDialog({
       } catch (err) {
         console.error(err);
         toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+        done();
         return false;
       }
       saved.current.set(person.id, next);
       if (openId.current === person.id) setHidden(next);
-      void reload();
+      // Pending until the roster has it, so a reopen in between still shows
+      // this save; the toast doesn't wait for the read.
+      void reload()
+        .catch(() => {})
+        .finally(done);
       return true;
     });
     queues.current.set(person.id, run);
