@@ -156,8 +156,14 @@ Sari's phone has notifications off.
 - **The number** is the week's tasks finished on their day, of those due
   (Monday to Sunday so far). A task marked "couldn't be done" is due and
   not finished. It is the plan's signal S3, shown to the owner.
+- **"Finished on its day" is checked, not assumed.** `summarizeWeek()`
+  treats a chore as done once its status is completed, whenever that
+  happened. The check-in adds its own test, `doneOnItsDay(occurrence)`: a
+  chore counts only if `completed_at` falls on the day it was due (the
+  phone's calendar); finished a day late, it is due, not done, and a slip
+  for that day. A pet routine's log is on its day by construction.
 - **Slipped most:** up to three repeating tasks with the most days not
-  done this week, at least two each. None: the block is absent and the card
+  done on their day this week, at least two each. None: the block is absent and the card
   says *Nothing slipped twice.* / *Tidak ada yang terlewat dua kali.*
 - **One suggestion at most:** the first slipped task, if it was not done on
   half its days or more. Its button opens that task's editor.
@@ -295,7 +301,7 @@ done are left out; at most 80 lines, the most recently changed first.
 | Tool | Fields | Saved through |
 |---|---|---|
 | `move_task` | `task` (reference); `time` (HH:mm or null to leave it); `assignee` (reference, `anyone`, or null to leave it). At least one of the two | The chore's or routine's own edit |
-| `stop_task` | `task`; `from` (a date; today by default): the first day it no longer happens | **An end date, never a switch.** A chore: `recurrence_until` is the day before `from`. A routine: `expires_at` is the day before `from`. Switching a routine off (`is_active`) would hide it on every day, past days included (`isScheduleActiveOn()` rejects an inactive schedule for any day), and would stop it today when the owner said "from Monday" |
+| `stop_task` | `task`; `from` (a date; today by default): the first day it no longer happens | **An end date, never a switch.** A chore: `recurrence_until` is the day before `from`; if `from` is on or before the chore's first due date, nothing has happened yet and the series is cancelled as a whole (status `cancelled`, the editor's own cancel; the row stays), because `expandChores()` shows the first date whatever the end date says. Days before `from` are never touched: one that is late stays late until someone finishes or removes it. A routine: `expires_at` is the day before `from`. Switching a routine off (`is_active`) would hide it on every day, past days included (`isScheduleActiveOn()` rejects an inactive schedule for any day), and would stop it today when the owner said "from Monday" |
 
 Card: the task's name with **before and after** in words (*Time: 16.00,
 was 15.00*). Undo puts back exactly the fields the card changed. Kakak never
@@ -399,13 +405,15 @@ steps are the manager's, on the owner's OK.
   `kakak_record`; an unknown name is still refused; `anon` cannot execute
   it; every name 155 accepted still is.
 - **Unit:** `returning` (the day before, the day, a pet without a date);
-  `checkinWeek` (Sunday 16.59 is still last week; Sunday 17.00 and all of Monday are the week just ended); `weeklyCheckin` (the percentage, the three most slipped, fewer than two is
+  `doneOnItsDay` (a chore due Friday and finished Saturday is not done and is
+  a slip for Friday; finished Friday at 23.50 is done); `checkinWeek` (Sunday 16.59 is still last week; Sunday 17.00 and all of Monday are the week just ended); `weeklyCheckin` (the percentage, the three most slipped, fewer than two is
   not slipped, the suggestion's threshold, no suggestion, the notifications
   line); `validateToolCall` for each new tool (a good call, an unknown
   field, a bad reference, `give` without `give_to`, a person with a reason,
   `move_task` with nothing to change); stopping a routine from next Monday
   leaves it on every day before that, and last week's Week view still shows
-  it; the limits test unchanged.
+  it; stopping a chore before its first date leaves no occurrence at all,
+  and Undo brings the series back; the limits test unchanged.
 - **Kakak eval:** the cases in each tool's PR, including one that must
   *not* use the tool (a leave question that is only a question; "the tap is
   fine now").
