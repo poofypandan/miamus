@@ -26,8 +26,8 @@ print "Key received. Running every setup back to back (US\$6 total budget)."
 
 npx tsx tests/kakak/run-test-set.ts --check || { unset ANTHROPIC_API_KEY; exit 1; }
 npx tsx tests/kakak/run-comparison.ts --budget 6
-status=$?
+run_status=$?
 
 unset ANTHROPIC_API_KEY
 print "Done. Details are in tests/kakak/results/."
-exit $status
+exit $run_status

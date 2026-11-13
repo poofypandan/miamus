@@ -83,16 +83,25 @@ async function main() {
       const pressureBefore = { ...apiPressure };
       const outcomes: CaseOutcome[] = [];
       let runMicro = 0;
+      let done = 0;
+      let inFlight = 0;
       let stoppedForBudget = false;
       let refused: string | undefined;
       console.log(`\n${setup.label} run ${n}/${setup.runs}: ${cases.length} dev cases, up to $${(capMicro / 1_000_000).toFixed(2)}…`);
       await pool(cases, concurrency, async (kakakCase) => {
         if (refused) return;
-        if (runMicro >= capMicro) {
+        // Conversations still running count at the run's average so far (or
+        // twice the planned average before the first one ends), so several
+        // workers can't all start on the same last few cents (Codex, PR #138).
+        const perCase = done > 0 ? runMicro / done : (2 * capMicro) / cases.length;
+        if (runMicro + (inFlight + 1) * perCase > capMicro) {
           stoppedForBudget = true;
           return;
         }
+        inFlight += 1;
         const conversation = await playConversation(client, setup.variant, household, kakakCase, kakakCase.sentence);
+        inFlight -= 1;
+        done += 1;
         const cost = conversation.calls.reduce((sum, c) => sum + c.costMicroUsd, 0);
         runMicro += cost;
         spentMicro += cost;
