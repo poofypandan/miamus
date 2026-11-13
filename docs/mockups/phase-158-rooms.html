@@ -102,7 +102,8 @@
   .jobs { display: flex; flex-wrap: wrap; gap: 4px; }
   .job { background: var(--track); border-radius: 999px; padding: 3px 8px; font-size: 11.5px; color: var(--ink2); }
   .yes { font-size: 12.5px; color: var(--ink2); }
-  .yes::before { content: "✓ "; color: #15803d; font-weight: 700; }
+  .yes::before { content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 5px; vertical-align: -1px; background: #15803d; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.125em; flex: none; }
   .no { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
   .addsm { border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; font-size: 12px; color: var(--ink); font-weight: 500; background: #fff; }
   .whole { background: #fafafa; }
@@ -142,7 +143,7 @@
 </header>
 
 <section class="screen">
-  <h2>1. Chores → Rooms (All)</h2>
+  <h2>1. Chores / Rooms (All)</h2>
   <p>A second pill in the Chores tab. Floors are sections; each room shows its jobs and days. Whole-floor chores come first in each floor.</p>
   <div class="pair">
     <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
@@ -152,15 +153,15 @@
         <div class="scrollchips"><span class="chip on">All</span><span class="chip">Vacuum</span><span class="chip">Mop</span><span class="chip">Dust</span><span class="chip">Toilet</span><span class="chip">Towels</span></div>
         <div class="fl"><b>LT1</b><span>1 room</span></div>
         <div class="group">
-          <div class="room"><div class="top"><b>Service Area</b><span class="chev">›</span></div><div class="jobs"><span class="job">Supplies · Sat</span></div></div>
+          <div class="room"><div class="top"><b>Service Area</b><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="jobs"><span class="job">Supplies · Sat</span></div></div>
         </div>
         <div class="fl"><b>LT2</b><span>13 rooms</span></div>
         <div class="group">
-          <div class="room whole"><div class="top"><b>Whole floor</b><span class="chev">›</span></div><div class="jobs"><span class="job">Trash · daily</span></div></div>
-          <div class="room"><div class="top"><b>Lounge</b><span class="chev">›</span></div><div class="jobs"><span class="job">Vacuum · Mon Thu</span><span class="job">Mop · Mon Thu</span><span class="job">Dust · Mon</span></div></div>
-          <div class="room"><div class="top"><b>Master Bedroom</b><span class="chev">›</span></div><div class="jobs"><span class="job">Vacuum · Tue</span><span class="job">Sheets · Sat</span></div></div>
-          <div class="room"><div class="top"><b>Master Bathroom</b><span class="chev">›</span></div><div class="jobs"><span class="job">Towels · daily</span><span class="job">Toilet · Wed</span></div></div>
-          <div class="room"><div class="top"><b>Playroom</b><span class="chev">›</span></div><div class="jobs"><span class="job">Vacuum · Fri</span><span class="job">Mop · Fri</span></div></div>
+          <div class="room whole"><div class="top"><b>Whole floor</b><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="jobs"><span class="job">Trash · daily</span></div></div>
+          <div class="room"><div class="top"><b>Lounge</b><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="jobs"><span class="job">Vacuum · Mon Thu</span><span class="job">Mop · Mon Thu</span><span class="job">Dust · Mon</span></div></div>
+          <div class="room"><div class="top"><b>Master Bedroom</b><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="jobs"><span class="job">Vacuum · Tue</span><span class="job">Sheets · Sat</span></div></div>
+          <div class="room"><div class="top"><b>Master Bathroom</b><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="jobs"><span class="job">Towels · daily</span><span class="job">Toilet · Wed</span></div></div>
+          <div class="room"><div class="top"><b>Playroom</b><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="jobs"><span class="job">Vacuum · Fri</span><span class="job">Mop · Fri</span></div></div>
         </div>
       </div>
       <div class="tabbar"><span><i></i>Today</span><span><i></i>Pets</span><span class="on"><i></i>Chores</span><span><i></i>Kitchen</span><span><i></i>Household</span></div>
@@ -170,7 +171,7 @@
 
 <section class="screen">
   <h2>1b. Tap "Vacuum": which rooms have it</h2>
-  <p>Each room shows ✓ with days and who does it, or a quiet "No vacuum yet" with Add (room and title filled in). Not red: some rooms don't need it.</p>
+  <p>Each room shows a green check with days and who does it, or a quiet "No vacuum yet" with Add (room and title filled in). Not red: some rooms don't need it.</p>
   <div class="pair">
     <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
       <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
@@ -182,9 +183,9 @@
         <div class="group">
           <div class="room"><div class="top"><b>Lounge</b></div><div class="yes">Mon, Thu · Ari</div></div>
           <div class="room"><div class="top"><b>Master Bedroom</b></div><div class="yes">Tue · Sari</div></div>
-          <div class="room"><div class="top"><b>Walk-in closet</b></div><div class="no"><span>No vacuum yet</span><span class="addsm">＋ Add</span></div></div>
+          <div class="room"><div class="top"><b>Walk-in closet</b></div><div class="no"><span>No vacuum yet</span><span class="addsm"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Add</span></div></div>
           <div class="room"><div class="top"><b>Playroom</b></div><div class="yes">Fri · Ari</div></div>
-          <div class="room"><div class="top"><b>Guest Bedroom 2</b></div><div class="no"><span>No vacuum yet</span><span class="addsm">＋ Add</span></div></div>
+          <div class="room"><div class="top"><b>Guest Bedroom 2</b></div><div class="no"><span>No vacuum yet</span><span class="addsm"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Add</span></div></div>
         </div>
         <div class="fl"><b>LT3</b><span>Vacuum in 2 of 4</span></div>
         <div class="group">
@@ -203,9 +204,9 @@
         <div class="group">
           <div class="room"><div class="top"><b>Lounge</b></div><div class="yes">Sen, Kam · Ari</div></div>
           <div class="room"><div class="top"><b>Master Bedroom</b></div><div class="yes">Sel · Sari</div></div>
-          <div class="room"><div class="top"><b>Walk-in closet</b></div><div class="no"><span>Belum ada vakum</span><span class="addsm">＋ Tambah</span></div></div>
+          <div class="room"><div class="top"><b>Walk-in closet</b></div><div class="no"><span>Belum ada vakum</span><span class="addsm"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Tambah</span></div></div>
           <div class="room"><div class="top"><b>Playroom</b></div><div class="yes">Jum · Ari</div></div>
-          <div class="room"><div class="top"><b>Guest Bedroom 2</b></div><div class="no"><span>Belum ada vakum</span><span class="addsm">＋ Tambah</span></div></div>
+          <div class="room"><div class="top"><b>Guest Bedroom 2</b></div><div class="no"><span>Belum ada vakum</span><span class="addsm"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Tambah</span></div></div>
         </div>
         <div class="fl"><b>LT3</b><span>Vakum di 2 dari 4</span></div>
         <div class="group">
@@ -231,15 +232,15 @@
         <h3>LT2 · Lounge</h3>
         <div class="jh">Vacuum · Mop · Dust</div>
         <div class="card">
-          <div class="ch"><div class="t"><b>Vacuum &amp; pel, dusting plafon</b><span>Every Monday · 09:00 · Ari</span></div><span class="chev">›</span></div>
-          <div class="ch"><div class="t"><b>Vacuum &amp; pel</b><span>Every Thursday · Ari</span></div><span class="chev">›</span></div>
+          <div class="ch"><div class="t"><b>Vacuum &amp; pel, dusting plafon</b><span>Every Monday · 09:00 · Ari</span></div><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div>
+          <div class="ch"><div class="t"><b>Vacuum &amp; pel</b><span>Every Thursday · Ari</span></div><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div>
         </div>
         <div class="jh">Other</div>
         <div class="card">
-          <div class="ch"><div class="t"><b>Vacuum sofa</b><span>Sat 14 Nov · Sari</span></div><span class="chev">›</span></div>
+          <div class="ch"><div class="t"><b>Vacuum sofa</b><span>Sat 14 Nov · Sari</span></div><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div>
         </div>
         <div class="spacer"></div>
-        <div class="btn primary">＋ Add chore here</div>
+        <div class="btn primary"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Add chore here</div>
       </div>
     </div>
   </div>
@@ -261,9 +262,9 @@
           <div class="pick">
             <div class="ph">LT2</div>
             <div class="po"><span class="box"></span>Whole floor</div>
-            <div class="po"><span class="box on">✓</span>Lounge</div>
-            <div class="po"><span class="box on">✓</span>Master Bedroom</div>
-            <div class="po"><span class="box on">✓</span>Playroom</div>
+            <div class="po"><span class="box on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>Lounge</div>
+            <div class="po"><span class="box on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>Master Bedroom</div>
+            <div class="po"><span class="box on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>Playroom</div>
             <div class="po"><span class="box"></span>Walk-in closet</div>
             <div class="ph">LT3</div>
             <div class="po"><span class="box"></span>Creative Space</div>
@@ -290,14 +291,14 @@
         <h3>Sort your rooms into floors</h3>
         <div class="note">Your room names start with a floor. Miamus can group them — names stay as you typed, without the floor.</div>
         <div class="card">
-          <div class="split"><s>LT2</s><span class="arrow">→</span><b>Floor LT2</b></div>
-          <div class="split"><s>LT2 Lounge</s><span class="arrow">→</span><b>LT2 · Lounge</b></div>
-          <div class="split"><s>LT2 Master Bedroom</s><span class="arrow">→</span><b>LT2 · Master Bedroom</b></div>
-          <div class="split"><s>LT1 Service Area</s><span class="arrow">→</span><b>LT1 · Service Area</b></div>
-          <div class="split"><s>LT2 Service Area</s><span class="arrow">→</span><b>LT2 · Service Area</b></div>
+          <div class="split"><s>LT2</s><span class="arrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span><b>Floor LT2</b></div>
+          <div class="split"><s>LT2 Lounge</s><span class="arrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span><b>LT2 · Lounge</b></div>
+          <div class="split"><s>LT2 Master Bedroom</s><span class="arrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span><b>LT2 · Master Bedroom</b></div>
+          <div class="split"><s>LT1 Service Area</s><span class="arrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span><b>LT1 · Service Area</b></div>
+          <div class="split"><s>LT2 Service Area</s><span class="arrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span><b>LT2 · Service Area</b></div>
           <div class="split"><s>…16 more</s></div>
         </div>
-        <div class="quiet"><span class="box on">✓</span><span>Also link 31 older chores whose title names a room (finished ones stay as they are)</span></div>
+        <div class="quiet"><span class="box on"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span>Also link 31 older chores whose title names a room (finished ones stay as they are)</span></div>
         <div class="spacer"></div>
         <div class="btn primary">Sort rooms</div>
         <div class="link">Not now</div>
@@ -307,30 +308,30 @@
 </section>
 
 <section class="screen">
-  <h2>5. Household → Rooms</h2>
+  <h2>5. Household / Rooms</h2>
   <p>Floors and rooms: add, rename, move to another floor, reorder, delete (chores stay, they just lose the room).</p>
   <div class="pair">
     <div class="phone"><div class="tag">Owner · Indonesia</div><div class="status"></div>
-      <div class="appbar"><div class="row"><div class="back">‹ Ruangan</div></div></div>
+      <div class="appbar"><div class="row"><div class="back"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg> Ruangan</div></div></div>
       <div class="body">
-        <div class="fl"><b>LT1</b><span>⋯</span></div>
+        <div class="fl"><b>LT1</b><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></span></div>
         <div class="group">
-          <div class="mgr"><span>Service Area</span><i>2 tugas</i><i>›</i></div>
+          <div class="mgr"><span>Service Area</span><i>2 tugas</i><i><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></i></div>
         </div>
-        <div class="fl"><b>LT2</b><span>⋯</span></div>
+        <div class="fl"><b>LT2</b><span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></span></div>
         <div class="group">
-          <div class="mgr"><span>Lounge</span><i>6 tugas</i><i>›</i></div>
-          <div class="mgr"><span>Master Bedroom</span><i>4 tugas</i><i>›</i></div>
-          <div class="mgr"><span>Playroom</span><i>3 tugas</i><i>›</i></div>
-          <div class="mgr"><span>Walk-in closet</span><i>2 tugas</i><i>›</i></div>
+          <div class="mgr"><span>Lounge</span><i>6 tugas</i><i><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></i></div>
+          <div class="mgr"><span>Master Bedroom</span><i>4 tugas</i><i><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></i></div>
+          <div class="mgr"><span>Playroom</span><i>3 tugas</i><i><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></i></div>
+          <div class="mgr"><span>Walk-in closet</span><i>2 tugas</i><i><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></i></div>
         </div>
         <div class="fl"><b>Belum ada lantai</b><span></span></div>
         <div class="group">
-          <div class="mgr"><span>Teras</span><i>1 tugas</i><i>›</i></div>
+          <div class="mgr"><span>Teras</span><i>1 tugas</i><i><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></i></div>
         </div>
         <div class="spacer"></div>
-        <div class="btn outline">＋ Tambah ruangan</div>
-        <div class="btn outline">＋ Tambah lantai</div>
+        <div class="btn outline"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Tambah ruangan</div>
+        <div class="btn outline"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Tambah lantai</div>
       </div>
       <div class="tabbar"><span><i></i>Hari ini</span><span><i></i>Hewan</span><span><i></i>Tugas</span><span><i></i>Dapur</span><span class="on"><i></i>Rumah</span></div>
     </div>
