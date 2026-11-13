@@ -387,6 +387,56 @@ describe("Kakak's Done (the benefit, not the mechanics)", () => {
     expect(routineListLine(item, "id")).toEqual({ title: "Matikan lampu · 21.30", detail: "Mocha & Luna · Sen, Rab" });
     expect(routineListLine(suggest(call({ kind: "potty" })), "en")).toBeNull();
   });
+
+  // The line says what was saved (owner, 13 Nov): the reminder only with
+  // Remind staff on, "you'll only hear from me" only with Tell us on, and
+  // both follow a switch flipped on the card before Save. Kakak proposes the
+  // opposite of each case, so every case goes through the card's switches.
+  const at = { newGroupId: () => "group-1", today: "2026-11-11", nowIso: "2026-11-11T01:00:00.000Z" };
+  const lines = {
+    "on/on": [
+      "Done. Syam gets a reminder at 15:00; you'll only hear from me if it isn't done.",
+      "Beres. Syam diingatkan jam 15.00; Kakak hanya mengabari Anda jika belum dikerjakan.",
+    ],
+    "on/off": [
+      "Done. Syam gets a reminder at 15:00; a photo comes back each time.",
+      "Beres. Syam diingatkan jam 15.00; fotonya masuk setiap kali.",
+    ],
+    "off/on": [
+      "Done. Syam sees it on Today at 15:00; you'll only hear from me if it isn't done.",
+      "Beres. Syam melihatnya di Hari ini jam 15.00; Kakak hanya mengabari Anda jika belum dikerjakan.",
+    ],
+    "off/off": [
+      "Done. Syam sees it on Today at 15:00; a photo comes back each time.",
+      "Beres. Syam melihatnya di Hari ini jam 15.00; fotonya masuk setiap kali.",
+    ],
+  } as const;
+  for (const remind of [true, false]) {
+    for (const alert of [true, false]) {
+      const key = `${remind ? "on" : "off"}/${alert ? "on" : "off"}` as keyof typeof lines;
+      it(`Remind staff ${remind ? "on" : "off"}, Tell us ${alert ? "on" : "off"}, as flipped on the card`, () => {
+        const proposed = suggest(
+          call({ pets: ["P2"], kind: "walk", times: ["15:00"], staff: "S1", remind_staff: !remind, alert_owners: !alert }),
+        );
+        const saved = refinePetRoutine(refinePetRoutine(proposed, { remindStaff: remind }), { alertOwners: alert });
+        expect(savedBenefit([saved], "en")).toBe(lines[key][0]);
+        expect(savedBenefit([saved], "id")).toBe(lines[key][1]);
+        // The rows written say the same as the line.
+        expect(petRoutineRows(saved, at)).toEqual([
+          expect.objectContaining({ entity_id: id(11), fixed_times: ["15:00"], remind_staff: remind, alert_owners: alert }),
+        ]);
+        // Unflipped, Kakak's own proposal says the opposite.
+        expect(savedBenefit([proposed], "en")).toBe(lines[`${!remind ? "on" : "off"}/${!alert ? "on" : "off"}` as keyof typeof lines][0]);
+      });
+    }
+  }
+
+  it("a switch no time can use is saved off, and the line doesn't promise it", () => {
+    const late = suggest(call({ pets: ["P1"], times: ["22:30"], staff: "S1", remind_staff: true, alert_owners: true }));
+    const flipped = refinePetRoutine(refinePetRoutine(late, { remindStaff: true }), { alertOwners: true });
+    expect(savedBenefit([flipped], "en")).toBe("Done. Syam sees it on Today at 22:30; a photo comes back each time.");
+    expect(petRoutineRows(flipped, at)).toEqual([expect.objectContaining({ remind_staff: false, alert_owners: false })]);
+  });
 });
 
 describe("the rows a confirmed card writes (the Add routine sheet's planner)", () => {

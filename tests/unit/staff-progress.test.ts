@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { expandChores } from "@/lib/chore-recurrence";
 import { applyLeaveTriage } from "@/lib/leave";
-import { buildAgenda } from "@/lib/scheduleEngine";
+import { buildAgenda, isSlotOwed } from "@/lib/scheduleEngine";
+import { dayTotals } from "@/lib/today-status";
 import { buildEveningSummary, classifyDay, summaryOpenCount } from "@/lib/couldnt-do";
 import { LATE_GRACE_MINUTES, buildStaffProgress, isLate, type StaffBusy } from "@/lib/staff-progress";
 import type { HouseholdTask, LeaveRequest, MasterSchedule, TaskEntity, TaskException, TaskLog } from "@/types/database";
@@ -431,5 +432,85 @@ describe("isLate", () => {
     expect(isLate({ date: TODAY, today: TODAY, nowMinutes: 1439, time: null })).toBe(false);
     expect(isLate({ date: TODAY, today: TODAY, nowMinutes: 7 * 60 + LATE_GRACE_MINUTES, time: "07:00" })).toBe(false);
     expect(isLate({ date: TODAY, today: TODAY, nowMinutes: 7 * 60 + LATE_GRACE_MINUTES + 1, time: "07:00" })).toBe(true);
+  });
+});
+
+// A slot is owed only if the routine existed, with that time, before the
+// slot's time (owner, 13 Nov): a walk added at 22.37 for 15.00 isn't late
+// today, isn't in Today's counts or the evening summary, and starts tomorrow.
+describe("a routine made today owes only the slots after it was made", () => {
+  const madeAt = (time: string, day = TODAY) => `${day}T${time}:00+07:00`;
+
+  it("isSlotOwed: made after the slot is not owed that day; any other day is", () => {
+    const s = { created_at: madeAt("22:37") };
+    expect(isSlotOwed(s, TODAY, 15 * 60)).toBe(false);
+    expect(isSlotOwed(s, TODAY, 22 * 60 + 36)).toBe(false);
+    expect(isSlotOwed(s, TODAY, 22 * 60 + 37)).toBe(true);
+    expect(isSlotOwed(s, TODAY, 23 * 60)).toBe(true);
+    expect(isSlotOwed(s, "2026-11-12", 15 * 60)).toBe(true);
+    // Made before the slot: owed as usual.
+    expect(isSlotOwed({ created_at: madeAt("09:00") }, TODAY, 15 * 60)).toBe(true);
+    // A one-off anchored at its day's midnight owes every slot.
+    expect(isSlotOwed({ created_at: new Date(`${TODAY}T00:00:00`).toISOString() }, TODAY, 7 * 60)).toBe(true);
+  });
+
+  it("leaves a slot made after its time off today's list, and shows it from tomorrow", () => {
+    const walk = routine(MATCHA, "Jalan-jalan", ["15:00"], { kind: "walk", staff_id: SYAM, created_at: madeAt("22:37") });
+    const now = new Date(madeAt("22:40"));
+    expect(buildAgenda({ date: TODAY, entities: [MATCHA], schedules: [walk], logs: [], now })).toEqual([]);
+    const tomorrow = buildAgenda({ date: "2026-11-12", entities: [MATCHA], schedules: [walk], logs: [], now });
+    expect(tomorrow.map((g) => [g.time, g.items[0].status])).toEqual([["15:00", "pending"]]);
+  });
+
+  it("keeps a later slot of the same routine, and a slot someone did anyway", () => {
+    const twice = routine(MATCHA, "Jalan-jalan", ["07:00", "23:00"], { kind: "walk", created_at: madeAt("12:00") });
+    const groups = buildAgenda({ date: TODAY, entities: [MATCHA], schedules: [twice], logs: [], now: new Date(madeAt("12:05")) });
+    expect(groups.map((g) => g.time)).toEqual(["23:00"]);
+    const once = routine(MATCHA, "Jalan-jalan", ["15:00"], { kind: "walk", created_at: madeAt("22:37") });
+    const done = buildAgenda({
+      date: TODAY,
+      entities: [MATCHA],
+      schedules: [once],
+      logs: [logOf(once, "22:50", SYAM)],
+      now: new Date(madeAt("22:55")),
+    });
+    expect(done.map((g) => [g.time, g.items[0].status])).toEqual([["15:00", "completed"]]);
+  });
+
+  it("isn't late, isn't in the day's counts and isn't in the evening summary", () => {
+    const old = routine(MOCHA, "Makan Malam", ["18:00"]);
+    const fresh = routine(MATCHA, "Jalan-jalan", ["15:00"], { kind: "walk", staff_id: SYAM, created_at: madeAt("22:37") });
+    const schedules = [old, fresh];
+    const progress = build({ schedules, logs: [logOf(old, "18:05", ARI)], now: "22:40" });
+    expect(dayTotals(progress)).toEqual({ done: 1, total: 1, late: 0, couldnt: 0 });
+    expect(progress.people.find((p) => p.id === SYAM)?.late ?? 0).toBe(0);
+    expect(progress.anyone).toBeNull();
+
+    const groups = buildAgenda({ date: TODAY, entities: [MOCHA, MATCHA], schedules, logs: [], now: new Date(madeAt("22:40")) });
+    const summary = buildEveningSummary({
+      date: TODAY,
+      chores: [],
+      groups,
+      exceptions: [],
+      leaves: [],
+      proposals: [],
+      admittedIds: new Set(),
+      untilMinutes: 22 * 60 + 40,
+      logs: [],
+    });
+    // Only the old dinner is open; the new walk isn't owed.
+    expect(summaryOpenCount(summary)).toBe(1);
+  });
+
+  it("made before its time today, it is owed and late as usual", () => {
+    const walk = routine(MATCHA, "Jalan-jalan", ["15:00"], { kind: "walk", staff_id: SYAM, created_at: madeAt("09:00") });
+    expect(dayTotals(build({ schedules: [walk], now: "22:40" }))).toEqual({ done: 0, total: 1, late: 1, couldnt: 0 });
+  });
+
+  it("a time edited today to one already past still counts: no timestamp says when it moved", () => {
+    // Made two days ago, moved today to 16:00 at 22:37: the row keeps its
+    // created_at (planRoutineSave), so the 16:00 slot is owed and late.
+    const walk = routine(MATCHA, "Jalan-jalan", ["16:00"], { kind: "walk", staff_id: SYAM, created_at: madeAt("10:00", "2026-11-09") });
+    expect(dayTotals(build({ schedules: [walk], now: "22:40" })).late).toBe(1);
   });
 });

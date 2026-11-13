@@ -115,6 +115,33 @@ export function isScheduleActiveOn(schedule: MasterSchedule, dateStr: string): b
   return true;
 }
 
+/**
+ * Whether a slot is owed (owner, 13 Nov): only if the routine existed, with
+ * that time, before the slot's time. A walk added at 22.37 for 15.00 starts
+ * tomorrow: on the day it is made, its earlier slots aren't on the list at
+ * all, so they are never late, never in Today's counts or the evening
+ * summary, and never on a staff phone. Hidden rather than shown as "starts
+ * tomorrow": every list, count and summary reads buildAgenda, so one rule
+ * here keeps them all agreeing, and the routine itself stays in the pet's
+ * routines, where it is edited.
+ *
+ * Read from created_at, on this phone's clock (the app runs on Jakarta
+ * time). A one-off or a generated visit is anchored at its day's midnight,
+ * so every slot of it is owed, as before.
+ *
+ * Moving a routine's time keeps its row and its created_at (planRoutineSave),
+ * and master_schedules has no "times changed" timestamp, so a time edited
+ * today to one already past still counts today. Only the day it is made is
+ * covered.
+ *
+ * The server's routine_slots_open (migrations/144), which the evening push
+ * and the routine reminders and alerts read, doesn't know this rule yet.
+ */
+export function isSlotOwed(schedule: Pick<MasterSchedule, "created_at">, dateStr: string, slotMinutes: number): boolean {
+  if (!isSameLocalDay(schedule.created_at, dateStr)) return true;
+  return slotMinutes >= localMinutesOfDay(schedule.created_at);
+}
+
 export function buildAgenda(params: {
   date: string; // "YYYY-MM-DD"
   entities: TaskEntity[];
@@ -184,6 +211,9 @@ export function buildAgenda(params: {
 
       const matchedLog = bestIdx >= 0 ? dayLogs[bestIdx].log : null;
       if (bestIdx >= 0) claimed.add(bestIdx);
+      // Not owed (made after its time, on its first day): left out, unless
+      // someone did it anyway, which stays on the list as done.
+      if (!matchedLog && !isSlotOwed(schedule, date, slotMinutes)) continue;
 
       let status: AgendaStatus;
       if (matchedLog) {
