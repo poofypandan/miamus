@@ -202,7 +202,8 @@ export const LEGAL = {
   // what staff can report. No new service, nothing sent to Kakak; not yet in
   // the household export (added when the export is next re-created).
   // 2026-11-13.4: Kakak sets what a staff member sees (Phase 178
-  // follow-up, no migration) — each Kakak request now also carries, for a
+  // follow-up; migrations/171 only lets the request record name the new
+  // tool) — each Kakak request now also carries, for a
   // staff member with parts of the staff app switched off, which parts
   // they don't see (chores for anyone, pet routines, kitchen, repairs), and
   // Kakak may suggest a change, saved only when the admin confirms. No new
