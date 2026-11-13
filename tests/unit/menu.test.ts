@@ -15,6 +15,7 @@ import {
   shortfallReadiness,
   copyLastWeek,
   changeLines,
+  changeReadiness,
   cookLines,
   dishTitle,
   dishesOn,
@@ -571,5 +572,38 @@ describe("change what was used: the sheet's lines (Phase 177, plan 3b)", () => {
     const plain = dish({ cooked_at: "2026-11-11T05:00:00Z", cooked_uses: [{ item_id: "rice", amount: 0.2, unit: "kg", said: 0.2 }] });
     expect(changeLines(plain, null, items, true).lines.map((l) => l.itemId)).toEqual(["rice"]);
     expect(changeLines(dish({ cooked_at: "2026-11-11T05:00:00Z", cooked_uses: [] }), null, items, true).lines).toEqual([]);
+  });
+});
+
+describe("change what was used: when the button shows (Phase 177, plan 3a)", () => {
+  const at = (h: number) => new Date(2026, 10, 11, h, 0).toISOString(); // 11 Nov, the phone's local time
+  const base = { recipes: [soto], recipesFresh: true, recipesErrored: false, listsFresh: true, listsFailed: false, items };
+  const uses = [{ item_id: "chicken", amount: 1, unit: "kg" as const, said: 1 }];
+
+  it("only on a dish cooked today on this phone's calendar", () => {
+    expect(changeReadiness(dish({ recipe_id: "soto" }), "2026-11-11", base)).toBe("hidden");
+    expect(changeReadiness(dish({ recipe_id: "soto", cooked_at: at(23), cooked_uses: uses }), "2026-11-11", base)).toBe("ready");
+    expect(changeReadiness(dish({ recipe_id: "soto", cooked_at: at(23), cooked_uses: uses }), "2026-11-12", base)).toBe("hidden");
+  });
+
+  it("waits for the recipe and the lists, as cooking does", () => {
+    const cooked = dish({ recipe_id: "soto", cooked_at: at(9), cooked_uses: uses });
+    expect(changeReadiness(cooked, "2026-11-11", { ...base, recipesFresh: false })).toBe("loading");
+    expect(changeReadiness(cooked, "2026-11-11", { ...base, recipesFresh: false, recipesErrored: true })).toBe("failed");
+    expect(changeReadiness(cooked, "2026-11-11", { ...base, listsFresh: false })).toBe("loading");
+    expect(changeReadiness(cooked, "2026-11-11", { ...base, listsFresh: false, listsFailed: true })).toBe("failed");
+    // A dish without a recipe that took something off still waits for the lists.
+    const plain = dish({ cooked_at: at(9), cooked_uses: uses });
+    expect(changeReadiness(plain, "2026-11-11", { ...base, listsFresh: false })).toBe("loading");
+  });
+
+  it("hidden with nothing to show: no recipe and nothing taken off, or a recipe with nothing that counts", () => {
+    expect(changeReadiness(dish({ cooked_at: at(9), cooked_uses: [] }), "2026-11-11", { ...base, listsFresh: false })).toBe("hidden");
+    const plainRecipe = { ...soto, id: "plain", ingredients: [line({ name: "Garam" })] };
+    expect(
+      changeReadiness(dish({ recipe_id: "plain", cooked_at: at(9), cooked_uses: [] }), "2026-11-11", { ...base, recipes: [plainRecipe] })
+    ).toBe("hidden");
+    // A deleted recipe whose dish took something: the entries still show.
+    expect(changeReadiness(dish({ recipe_id: "gone", cooked_at: at(9), cooked_uses: uses }), "2026-11-11", base)).toBe("ready");
   });
 });
