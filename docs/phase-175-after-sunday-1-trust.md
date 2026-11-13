@@ -130,11 +130,18 @@ create table if not exists public.staff_app_days (
   -- The phone that said so: one person may use two phones.
   device_user_id uuid not null references public.device_sessions (user_id) on delete cascade,
   day date not null,                         -- the Jakarta calendar day
-  waiting_to_send smallint not null default 0,
   updated_at timestamptz not null default now(),
-  constraint staff_app_days_waiting_check check (waiting_to_send between 0 and 999),
   primary key (staff_id, day, device_user_id)
 );
+
+-- What is waiting to send belongs to the phone, not to a person: two people
+-- may share one phone and its one outbox.
+alter table public.device_sessions
+  add column if not exists waiting_to_send smallint not null default 0,
+  add column if not exists waiting_on date;
+alter table public.device_sessions drop constraint if exists device_sessions_waiting_check;
+alter table public.device_sessions add constraint device_sessions_waiting_check
+  check (waiting_to_send between 0 and 999);
 create index if not exists staff_app_days_household_idx on public.staff_app_days (household_id, day);
 create index if not exists staff_app_days_device_idx on public.staff_app_days (device_user_id);
 alter table public.staff_app_days enable row level security;
@@ -142,11 +149,16 @@ revoke all on public.staff_app_days from public, anon, authenticated;
 grant select, insert, update, delete on public.staff_app_days to service_role;
 ```
 
-One row per person, per phone, per day: that they opened Miamus on it, and
-how many photos or finished tasks were still waiting to send when **that
-phone** last said so. A second phone with an empty outbox therefore never
-clears the count of the first. Owners see one answer per person: opened on
-any phone, and the sum of what is waiting.
+Two facts, kept apart on purpose:
+
+- **Who opened Miamus today**: one row per person, per phone, per day. A
+  person is "opened" when they have a row on any phone.
+- **What a phone still has to send**: one number on the phone's own row
+  (`device_sessions`), with the day it was reported. The outbox is the
+  phone's, whoever is signed in. So a second phone with an empty outbox
+  never clears the first phone's count, and on a shared phone the count
+  clears when the outbox empties, whoever is using it then.
+
 **No time is ever shown to an owner** (`updated_at` is for the server only):
 the plan's promise to staff was "opened today, yes or no", never when, never
 for how long, never where. Kept **14 days**, pruned nightly.
@@ -160,15 +172,17 @@ the migration:
   (141): a linked phone's session, never an owner's account (an owner's
   session is refused, as that helper already does). The person must be in
   that household, not archived, and not an owner's roster row
-  (`user_id is null`); otherwise nothing is written. Upserts
-  today's row **for this phone** (`auth.uid()` is its session) with
-  `waiting_to_send = least(greatest(p_waiting, 0), 999)`.
-- `staff_app_today() returns jsonb`. For owners:
-  `[{ "staff_id": …, "opened": true, "waiting": 0 }, …]` for today, one
-  entry per person with a row on any phone; `waiting` is the sum over that
-  person's phones, capped at 999. Guarded by `caller_admin_household()`, never
-  `get_user_household_ids()` (staff phones pass that). No timestamps in the
-  answer.
+  (`user_id is null`); otherwise nothing is written. It upserts today's
+  row for this person on this phone (`auth.uid()` is the phone's session),
+  and sets this phone's `waiting_to_send = least(greatest(p_waiting, 0),
+  999)` and `waiting_on` to today.
+- `staff_app_today() returns jsonb`. For owners, for today:
+  `{ "opened": [staff ids], "phones": [{ "staff_ids": […], "waiting": 3 }] }`.
+  `opened` is everyone with a row on any phone. `phones` lists each phone of
+  the household whose `waiting_on` is today and whose count is above 0, with
+  the people who opened Miamus on it today. Guarded by
+  `caller_admin_household()`, never `get_user_household_ids()` (staff phones
+  pass that). No timestamps and no phone identifiers in the answer.
 
 **The staff phone** calls `mark_staff_app_open` with the signed-in person
 (`readActiveStaffId()`) and the count of its outbox (what the weak-signal
@@ -192,7 +206,8 @@ owner the same true thing: something is wrong with that phone.
 
 ### 2c. What the owner sees
 
-A pure function `silence(people, marks, now)` in a new
+A pure function `silence(people, today, now)` (`today` is what
+`staff_app_today()` returns) in a new
 `src/lib/silence.ts`, unit-tested, fed by Today's progress card
 (`lib/staff-progress`) and `staff_app_today()` (read with the household's
 other data, refreshed on the silent sync).
@@ -203,19 +218,20 @@ A person is **quiet** when all of these are true:
 - they are not on approved leave today;
 - at least one task of **theirs** (not Anyone's) is open and its time
   passed 30 minutes ago or more;
-- they have no row for today.
+- they are not in `opened`.
 
-A person is **stuck** when they have a row and `waiting > 0`.
+A phone is **stuck** when it is in `phones` (it reported something waiting
+today).
 
 | On Today | When | Words |
 |---|---|---|
 | A row in *Waiting for you*, one per person | quiet | *Sari hasn't opened Miamus today* / *Sari belum membuka Miamus hari ini*. A tap opens Sari's day |
-| A row in *Waiting for you*, one per person | stuck, and it is 10.00 or later | *3 on Sari's phone are waiting to send* / *3 di HP Sari menunggu dikirim*. A tap opens Sari's day |
-| A grey line under the status line | nobody is quiet or stuck, and every person with a task today has a row | *All 3 staff opened Miamus today* / *Semua 3 staf sudah membuka Miamus hari ini* |
+| A row in *Waiting for you*, **one per phone** | stuck, and it is 10.00 or later | *3 on Sari's phone are waiting to send* / *3 di HP Sari menunggu dikirim*; a shared phone names both, *Sari and Yanti's phone* / *HP Sari dan Yanti*. A tap opens the first person's day |
+| A grey line under the status line | nobody is quiet, no phone is stuck, and every person with a task today is in `opened` | *All 3 staff opened Miamus today* / *Semua 3 staf sudah membuka Miamus hari ini* |
 | Nothing | otherwise (before 10.00, a day off, a home with no staff) | |
 
-Both rows count in the status line. Add `quiet: number` and `stuck: number`
-to `WaitingInput`.
+Both rows count in the status line. Add `quiet: number` (people) and
+`stuck: number` (phones) to `WaitingInput`.
 
 ### 2d. The one push
 
@@ -265,7 +281,7 @@ writes it, pruned after 35 days by the nightly job this migration adds
   Miamus that day and how many items were waiting to send; why; kept 14
   days. A new policy version.
 - **Export:** `export_household_data` is re-created from its newest
-  definition with `'staff_app_days'` (person's name, day, waiting; no
+  definition with `'staff_app_days'` (person's name and day; no
   times), so a staff member's data can be handed over (UU PDP).
 
 ## 3. Notification policy (migration 159)
@@ -557,8 +573,10 @@ needs it.
   client role can read `job_alerts_sent` or execute the check; old history
   rows are deleted.
 - **SQL 158:** a staff phone marks its own person; a second phone of the
-  same person reporting 0 does not clear the first phone's 3 (the owner
-  still reads 3), and the first reporting 0 then clears it; it cannot mark a person
+  same person reporting 0 does not clear the first phone's 3, and the first
+  reporting 0 then clears it; on a shared phone, Sari reports 3, Yanti
+  signs in and the outbox empties: the phone reads 0 and is no longer
+  listed; it cannot mark a person
   of another household, an archived person or an owner's roster row; an
   owner's session cannot mark anyone; `staff_app_today` refuses a staff
   phone and returns no timestamp; `anon` can execute neither; the job
