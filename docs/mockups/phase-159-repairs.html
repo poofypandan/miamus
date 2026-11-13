@@ -102,7 +102,8 @@
   .jobs { display: flex; flex-wrap: wrap; gap: 4px; }
   .job { background: var(--track); border-radius: 999px; padding: 3px 8px; font-size: 11.5px; color: var(--ink2); }
   .yes { font-size: 12.5px; color: var(--ink2); }
-  .yes::before { content: "✓ "; color: #15803d; font-weight: 700; }
+  .yes::before { content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 5px; vertical-align: -1px; background: #15803d; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.125em; flex: none; }
   .no { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
   .addsm { border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; font-size: 12px; color: var(--ink); font-weight: 500; background: #fff; }
   .whole { background: #fafafa; }
@@ -191,9 +192,9 @@
         <div class="grab"></div>
         <h3>Lapor kerusakan</h3>
         <div><div class="label">Ruangan</div><div class="input">LT3 · Music Room</div></div>
-        <div><div class="label">Bagian <em>(boleh dikosongkan)</em></div><div class="chips"><span class="chip on">Dinding</span><span class="chip">AC</span><span class="chip">Pintu</span><span class="chip">＋ Bagian baru</span></div></div>
+        <div><div class="label">Bagian <em>(boleh dikosongkan)</em></div><div class="chips"><span class="chip on">Dinding</span><span class="chip">AC</span><span class="chip">Pintu</span><span class="chip"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Bagian baru</span></div></div>
         <div><div class="label">Apa yang rusak?</div><div class="input">Dinding retak dekat jendela</div></div>
-        <div class="photo">📷  Ambil foto</div>
+        <div class="photo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg> Ambil foto</div>
         <div class="switch"><div><b>Darurat</b><span>Bocor, listrik, gas — pemilik langsung diberi tahu</span></div><div class="tog"></div></div>
         <div class="spacer"></div>
         <div class="btn primary">Kirim</div>
@@ -203,14 +204,14 @@
 </section>
 
 <section class="screen">
-  <h2>2. Owners: Chores → Repairs</h2>
+  <h2>2. Owners: Chores / Repairs</h2>
   <p>To review (staff reports), Open (with what's next), Fixed. Urgent ones first, with the only tint.</p>
   <div class="pair">
     <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
       <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
         <div class="seg seg3"><span>Today</span><span>Rooms</span><span class="on">Repairs</span></div></div>
       <div class="body">
-        <div class="btn primary">＋ Report a problem</div>
+        <div class="btn primary"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Report a problem</div>
         <div class="h2">To review<span>from staff</span></div>
         <div class="group">
           <div class="rep urgent"><div class="pic"></div><div class="t"><b>Tap leaking <span class="badge">Urgent</span></b><span>LT2 · GB2 Bathroom · Sink · Sari, 10 min ago</span><div class="acts"><span class="pri">Accept</span><span>Not needed</span></div></div></div>
@@ -228,7 +229,7 @@
       <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div>
         <div class="seg seg3"><span>Hari ini</span><span>Ruangan</span><span class="on">Perbaikan</span></div></div>
       <div class="body">
-        <div class="btn primary">＋ Lapor kerusakan</div>
+        <div class="btn primary"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Lapor kerusakan</div>
         <div class="h2">Perlu dicek<span>dari staf</span></div>
         <div class="group">
           <div class="rep urgent"><div class="pic"></div><div class="t"><b>Keran bocor <span class="badge">Darurat</span></b><span>LT2 · GB2 Bathroom · Wastafel · Sari, 10 mnt lalu</span><div class="acts"><span class="pri">Terima</span><span>Tidak perlu</span></div></div></div>
@@ -286,7 +287,7 @@
         <div class="note">LT3 · Music Room · Dinding · Kam 10.00 · Tukang: Pak Budi</div>
         <div class="bigpic">Foto kerusakan</div>
         <div class="steps">
-          <div class="step done"><span class="n">✓</span>Foto sebelum diperbaiki</div>
+          <div class="step done"><span class="n"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>Foto sebelum diperbaiki</div>
           <div class="step"><span class="n">2</span>Foto sesudah diperbaiki</div>
         </div>
         <div class="spacer"></div>
@@ -297,7 +298,7 @@
 </section>
 
 <section class="screen">
-  <h2>5. Room sheet → Repairs</h2>
+  <h2>5. Room sheet / Repairs</h2>
   <p>Phase 158's room sheet gains a Repairs section: open first, then history with before/after photos.</p>
   <div class="pair">
     <div class="phone"><div class="tag">Owner · Indonesia</div><div class="status"></div>
@@ -310,16 +311,16 @@
         <h3>LT3 · Music Room</h3>
         <div class="jh">Tugas</div>
         <div class="card">
-          <div class="ch"><div class="t"><b>Vacuum &amp; pel</b><span>Setiap Rabu · Sari</span></div><span class="chev">›</span></div>
+          <div class="ch"><div class="t"><b>Vacuum &amp; pel</b><span>Setiap Rabu · Sari</span></div><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div>
         </div>
         <div class="jh">Perbaikan</div>
         <div class="card">
-          <div class="ch"><div class="t"><b>Dinding retak</b><span>Pekerjaan selesai — cek fotonya</span></div><span class="chev">›</span></div>
-          <div class="ch"><div class="pic"></div><div class="pic after"></div><div class="t"><b>AC diservis</b><span>Diperbaiki 12 Agu · Pak Budi</span></div><span class="chev">›</span></div>
+          <div class="ch"><div class="t"><b>Dinding retak</b><span>Pekerjaan selesai — cek fotonya</span></div><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div>
+          <div class="ch"><div class="pic"></div><div class="pic after"></div><div class="t"><b>AC diservis</b><span>Diperbaiki 12 Agu · Pak Budi</span></div><span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div>
         </div>
         <div class="spacer"></div>
-        <div class="btn outline">＋ Lapor kerusakan di sini</div>
-        <div class="btn primary">＋ Tambah tugas di sini</div>
+        <div class="btn outline"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Lapor kerusakan di sini</div>
+        <div class="btn primary"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Tambah tugas di sini</div>
       </div>
     </div>
   </div>
@@ -332,10 +333,10 @@
     <div class="phone"><div class="tag">Owner · English</div><div class="status"></div>
       <div class="appbar"><div class="row"><div class="brand"><i></i>Miamus</div></div></div>
       <div class="body">
-        <div class="quiet"><span class="ico">🛒</span>2 things to buy<span class="chev">›</span></div>
-        <div class="quiet"><span class="ico">🔧</span>1 repair to review · 1 done — check the photos<span class="chev">›</span></div>
+        <div class="quiet"><span class="ico"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span>2 things to buy<span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div>
+        <div class="quiet"><span class="ico"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>1 repair to review · 1 done — check the photos<span class="chev"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div>
         <div class="h">Today</div>
-        <div class="group"><div class="item"><div class="thumb">🐶</div><div class="t"><b>Breakfast</b><span>07:00 · Ari</span></div></div></div>
+        <div class="group"><div class="item"><div class="thumb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></div><div class="t"><b>Breakfast</b><span>07:00 · Ari</span></div></div></div>
       </div>
       <div class="tabbar"><span class="on"><i></i>Today</span><span><i></i>Pets</span><span><i></i>Chores</span><span><i></i>Kitchen</span><span><i></i>Household</span></div>
     </div>
