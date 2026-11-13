@@ -1,16 +1,15 @@
 {
   "name": "miamus-trailer",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "The Miamus trailer: screen capture from the app's test stub, motion composed in Remotion. Separate from the app; adds no dependency to it.",
+  "description": "The Miamus trailer: the app's real screens from its test stub, a drawn world, voice and music made locally, composed in Remotion. Separate from the app; adds no dependency to it.",
   "scripts": {
     "capture": "cd ../.. && npx playwright test -c marketing/trailer/capture/capture.config.ts",
+    "sound": "./audio/sound.sh",
     "studio": "remotion studio src/index.ts",
     "render": "node scripts/render.mjs",
-    "render:quick": "node scripts/render.mjs --only=trailer-60-id",
-    "all": "npm run capture && npm run render",
-    "typecheck": "tsc --noEmit",
-    "cues": "node scripts/cues.ts"
+    "frames": "node scripts/frames.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fontsource/fraunces": "5.3.0",

@@ -1,9 +1,10 @@
 node_modules/
 out/
-review/*.png
+review/
 public/shots/
+public/audio/
 .remotion/
 test-results/
-
 .tools/
 audio/out/
+__pycache__/
