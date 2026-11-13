@@ -230,3 +230,15 @@ describe("withArea: the stored list after a switch", () => {
     expect(withArea(null, "pets", true)).toEqual([]);
   });
 });
+
+describe("occurrencesForStaff with the home switch (Phase 178)", () => {
+  it("keeps the person's own chores and drops Anyone's only when home is off", async () => {
+    const { occurrencesForStaff } = await import("@/lib/chore-recurrence");
+    const occ = (assigned_to: string | null) =>
+      ({ task: { assigned_to } }) as unknown as Parameters<typeof occurrencesForStaff>[0][number];
+    const all = [occ("ari"), occ(null), occ("syam")];
+    expect(occurrencesForStaff(all, "ari").map((o) => o.task.assigned_to)).toEqual(["ari", null]);
+    expect(occurrencesForStaff(all, "ari", true).map((o) => o.task.assigned_to)).toEqual(["ari", null]);
+    expect(occurrencesForStaff(all, "ari", false).map((o) => o.task.assigned_to)).toEqual(["ari"]);
+  });
+});

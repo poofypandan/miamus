@@ -60,6 +60,8 @@ import { StaffRepairsView, SupervisingStrip } from "@/components/staff/staff-per
 import { useRepairs } from "@/hooks/use-repairs";
 import { leaveCovering } from "@/lib/leave";
 import { STAFF_SUPERVISING_LABEL, supervisionExplains, supervisionStretches } from "@/lib/repair-walkins";
+import { useStaffVisibility } from "@/hooks/use-staff-visibility";
+import { showsRoutine } from "@/lib/staff-areas";
 
 export default function StaffPage() {
   const { loading, tenantReady, roleHydrated } = useHousehold();
@@ -94,6 +96,9 @@ export default function StaffPage() {
 // exactly when a staff member is mid-stock-check.
 // Perbaikan (Phase 174): only while Repairs is on (Household → Features);
 // a ?view=perbaikan left over with it off falls back to Tugas.
+// Phase 178: Dapur only for a person with Kitchen on, Perbaikan only with
+// Repairs on (the owner's switches, lib/staff-areas.ts); a view the person
+// signed in may not see falls back to Tugas the same way.
 const VIEWS = ["tugas", "stok", "perbaikan"] as const;
 type StaffView = (typeof VIEWS)[number];
 
@@ -102,7 +107,13 @@ function StaffTasks() {
   const { repairs: repairsOn } = useHouseholdFeatures();
   const param = useSearchParams().get("view");
   const known: StaffView = VIEWS.includes(param as StaffView) ? (param as StaffView) : "tugas";
-  const view: StaffView = known === "perbaikan" && !repairsOn ? "tugas" : known;
+  // The pills follow today, not the ribbon: Dapur and Perbaikan are not
+  // about a day. Covering someone today brings theirs (rule 4).
+  const sees = useStaffVisibility(formatDateLocal(useToday()));
+  const showKitchen = sees.kitchen;
+  const showRepairs = repairsOn && sees.repairs;
+  const view: StaffView =
+    (known === "perbaikan" && !showRepairs) || (known === "stok" && !showKitchen) ? "tugas" : known;
 
   // The pill lights on the tap, the list follows when ready, the page
   // returns to the top in that same commit — useTabNavigation (Phase 125).
@@ -151,8 +162,8 @@ function StaffTasks() {
             { value: "tugas", label: "Tugas Hari Ini" },
             // Dapur (Phase 156): Makanan · Belanja inside. Still "stok" in
             // the URL, so old links land here.
-            { value: "stok", label: "Dapur" },
-            ...(repairsOn ? [{ value: "perbaikan" as const, label: "Perbaikan" }] : []),
+            ...(showKitchen ? [{ value: "stok" as const, label: "Dapur" }] : []),
+            ...(showRepairs ? [{ value: "perbaikan" as const, label: "Perbaikan" }] : []),
           ]}
           value={activeView}
           onChange={setView}
@@ -220,11 +231,24 @@ function TasksView() {
   const dateStr = formatDateLocal(selectedDate);
   const today = useToday();
 
-  const admittedPets = useMemo(() => pets.filter(isAdmitted), [pets]);
+  // What the owner lets this person see on the ribbon's day (Phase 178).
+  const sees = useStaffVisibility(dateStr);
 
+  // Every admitted pet, for whether a routine is finished (isEntrySettled
+  // leaves admitted pets out of a group); only the "sedang dirawat di
+  // klinik" notices and their button follow Pet routines (Phase 178; Codex,
+  // PR #136).
+  const admittedPets = useMemo(() => pets.filter(isAdmitted), [pets]);
+  const clinicPets = sees.pets ? admittedPets : [];
+
+  // Pet routines: one set for this person always shows; the rest with Pet
+  // routines on (Phase 178, rules 1 and 2; rule 3 is folded into sees.pets).
   const groups = useMemo(
-    () => buildAgenda({ date: dateStr, entities: pets, schedules, logs }),
-    [dateStr, pets, schedules, logs]
+    () =>
+      buildAgenda({ date: dateStr, entities: pets, schedules, logs }).filter((group) =>
+        showsRoutine(group.staffId, staffId, sees)
+      ),
+    [dateStr, pets, schedules, logs, staffId, sees]
   );
 
   // The house, alongside the dogs, in one list (Phase 100). Chores used to sit
@@ -250,14 +274,20 @@ function TasksView() {
   // phone — that was the Phase 113 bug, where a stored name hid every other
   // chore from an owner. An admin with no row yet (before 106) has a null
   // id here and still sees everything, as before.
+  //
+  // Phase 178: chores for Anyone only for a person with "Chores for anyone"
+  // on (or when nobody working that day has it, or while covering someone
+  // who has it); a chore given to them by name always shows.
   const isolatedTo = staffId;
   const chores = useMemo(
-    () => (isolatedTo ? occurrencesForStaff(allChores, isolatedTo) : allChores),
-    [allChores, isolatedTo]
+    () => (isolatedTo ? occurrencesForStaff(allChores, isolatedTo, sees.home) : allChores),
+    [allChores, isolatedTo, sees.home]
   );
 
-  // Pet routines are never filtered: they belong to the household rather than
-  // to a person, and whoever is holding a phone may have to feed a dog.
+  // Pet routines were never filtered before Phase 178: whoever held a phone
+  // might have to feed a dog. Now they follow the owner's Pet routines
+  // switch (above), and rule 3 still puts them on every phone when nobody
+  // working that day has it on.
   const entries = useMemo(() => buildUnifiedAgenda({ groups, chores }), [groups, chores]);
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
   // What is left, and what is finished (Phase 131). Finished work folds into
@@ -339,16 +369,17 @@ function TasksView() {
   // The repair-notes tip (Phase 159 PR B) only once a repair visit is on
   // this phone's list: that's where notes are written.
   const showRepairNotesTip = useMemo(() => chores.some((chore) => !!chore.task.repair_id), [chores]);
-  const repairsOn = repairsFeatureOn;
+  // Repair and kitchen tips follow the person's switches too (Phase 178).
+  const repairsOn = repairsFeatureOn && sees.repairs;
   // The tip says ingredients moved to Makanan: true only with Food at home on too.
-  const kitchenAmountsOn = ingredientsUnderFood(featureFlags);
+  const kitchenAmountsOn = sees.kitchen && ingredientsUnderFood(featureFlags);
   // The recipes tip (Phase 170 PR B) once the household has a recipe to open.
   // Loading here also keeps the phone's copy fresh for a weak kitchen signal.
   const { recipes: householdRecipes } = useRecipes({ enabled: recipesOn(featureFlags) });
-  const showRecipesTip = recipesOn(featureFlags) && householdRecipes.length > 0;
+  const showRecipesTip = sees.kitchen && recipesOn(featureFlags) && householdRecipes.length > 0;
   // The menu tip (Phase 170 PR C) once there is a menu on Today.
   const { dishes: menuWeek } = useMenuWeek(dateStr, { enabled: recipesOn(featureFlags) });
-  const showMenuTip = recipesOn(featureFlags) && dishesOn(menuWeek, dateStr).length > 0;
+  const showMenuTip = sees.kitchen && recipesOn(featureFlags) && dishesOn(menuWeek, dateStr).length > 0;
 
   // The floors tip (Phase 158) only once this phone's list actually shows a
   // floor or a spot: before the owner sorts rooms there is nothing to explain.
@@ -443,7 +474,7 @@ function TasksView() {
         {!loading && <MyProgressLine staffId={staffId} />}
 
         {/* Supervising a repair (Phase 174): the strip, for that person only. */}
-        {repairsFeatureOn && <SupervisingStrip />}
+        {repairsOn && <SupervisingStrip />}
 
         {/* One tip at a time, newest first (audit B1, item 5): the work
             comes first on a busy morning, not a stack of news. The
@@ -477,15 +508,16 @@ function TasksView() {
         ) : null}
 
         {/* Menu hari ini (Phase 170 PR C): above the chores, only when the
-            day has a plan and the Kitchen switch is on. */}
-        <MenuTodayCard day={dateStr} enabled={recipesOn(featureFlags)} />
+            day has a plan, the Kitchen switch is on, and (Phase 178) the
+            person has Kitchen on. */}
+        <MenuTodayCard day={dateStr} enabled={sees.kitchen && recipesOn(featureFlags)} />
 
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.
             Staff-facing, so Bahasa Indonesia. */}
-        {admittedPets.length > 0 && (
+        {clinicPets.length > 0 && (
           <section className="flex flex-col gap-2">
-            {admittedPets.map((pet) => (
+            {clinicPets.map((pet) => (
               <div
                 key={pet.id}
                 className="flex flex-col gap-2 rounded-xl border bg-card p-3"
