@@ -161,3 +161,39 @@ test("Undo reverses only its own switch, and a slow save never lands on someone 
   await syam.getByRole("switch", { name: "Kitchen" }).click();
   await expect.poll(() => staff.find((p) => p.id === SYAM)?.hidden_areas).toEqual(["pets", "kitchen"]);
 });
+
+test("Undo tapped while another switch is still saving keeps both (Codex, #131)", async ({ context, page }) => {
+  const staff = roster();
+  await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true }, features: { repairs: true } });
+  await page.goto("/dashboard?module=access&page=staff");
+  await expect(page.getByRole("button", { name: "Add Person" })).toBeVisible({ timeout: 20_000 });
+
+  await page.getByRole("button", { name: "What Ari sees" }).click();
+  const ari = page.getByRole("dialog", { name: "What Ari sees" });
+  await ari.getByRole("switch", { name: "Kitchen" }).click();
+  await expect(page.getByText("Kitchen off for Ari")).toBeVisible();
+
+  // Repairs off is slow to save; Undo on Kitchen is tapped meanwhile.
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  let hold = true;
+  await page.route("**/rest/v1/staff_profiles*", async (route) => {
+    if (route.request().method() === "PATCH" && hold) {
+      hold = false;
+      await held;
+    }
+    await route.fallback();
+  });
+  await ari.getByRole("switch", { name: "Repairs" }).click();
+  await page.keyboard.press("Escape");
+  await expect(ari).toHaveCount(0);
+  await page
+    .locator("[data-sonner-toast]", { hasText: "Kitchen off for Ari" })
+    .getByRole("button", { name: "Undo" })
+    .click();
+  release();
+  await expect.poll(() => staff.find((p) => p.id === STAFF_ID)?.hidden_areas).toEqual(["repairs"]);
+  await page.getByRole("button", { name: "What Ari sees" }).click();
+  await expect(ari.getByRole("switch", { name: "Kitchen" })).toHaveAttribute("aria-checked", "true");
+  await expect(ari.getByRole("switch", { name: "Repairs" })).toHaveAttribute("aria-checked", "false");
+});

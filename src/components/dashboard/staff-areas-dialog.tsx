@@ -125,21 +125,30 @@ export function StaffAreasDialog({
     (area) => switches.includes(area) && areaHasNobody(area, roster, leaveRequests, today)
   );
 
+  // One save at a time per person, switches and Undo alike (Codex, PR
+  // #131): each list is worked out only once the save before it has landed,
+  // so an Undo tapped while another switch is saving can't overwrite it.
+  const queues = useRef(new Map<string, Promise<unknown>>());
+
   /** Shows (`visible`) or hides one area for one person, on top of their latest list. */
-  async function setArea(person: StaffProfile, area: StaffArea, visible: boolean): Promise<boolean> {
-    const base = saved.current.get(person.id) ?? hiddenAreasOf(person);
-    const next = withArea(base, area, visible);
-    try {
-      await dataProvider.setStaffHiddenAreas(person.id, next);
-    } catch (err) {
-      console.error(err);
-      toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
-      return false;
-    }
-    saved.current.set(person.id, next);
-    if (openId.current === person.id) setHidden(next);
-    void reload();
-    return true;
+  function setArea(person: StaffProfile, area: StaffArea, visible: boolean): Promise<boolean> {
+    const run = (queues.current.get(person.id) ?? Promise.resolve()).then(async () => {
+      const base = saved.current.get(person.id) ?? hiddenAreasOf(person);
+      const next = withArea(base, area, visible);
+      try {
+        await dataProvider.setStaffHiddenAreas(person.id, next);
+      } catch (err) {
+        console.error(err);
+        toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+        return false;
+      }
+      saved.current.set(person.id, next);
+      if (openId.current === person.id) setHidden(next);
+      void reload();
+      return true;
+    });
+    queues.current.set(person.id, run);
+    return run;
   }
 
   async function toggle(area: StaffArea) {
