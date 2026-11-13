@@ -147,7 +147,8 @@ Sari's phone has notifications off.
 ```
 
 - **The number** is the week's tasks finished on their day, of those due
-  (Monday to Sunday so far). It is the plan's signal S3, shown to the owner.
+  (Monday to Sunday so far). A task marked "couldn't be done" is due and
+  not finished. It is the plan's signal S3, shown to the owner.
 - **Slipped most:** up to three repeating tasks with the most days not
   done this week, at least two each. None: the block is absent and the card
   says *Nothing slipped twice.* / *Tidak ada yang terlewat dua kali.*
@@ -173,14 +174,18 @@ Sari's phone has notifications off.
 `service_role` only, not `security definer`. For each household with at
 least one task due that week, to every owner who has not switched it off:
 
-*Your week: 95% done without chasing* · *2 things slipped more than once.
-Open Today.* / *Minggu ini: 95% selesai tanpa ditagih* · *2 hal terlewat
-lebih dari sekali. Buka Hari Ini.*
+*Your week in Miamus* · *See how the week went. Open Today.* / *Kabar
+mingguan Miamus* · *Lihat bagaimana minggu ini berjalan. Buka Hari Ini.*
 
-- The percentage comes from `north_star_days` (142: each ended day's due
-  and closed counts) for Monday to Saturday plus Sunday so far from
-  `chore_days_open` and `routine_slots_open`. The second line is left out
-  when the server cannot count it cheaply; the card has the detail.
+- **The push carries no number.** The card's numbers are counted on the
+  phone with the Week view's rules, where only a finished task is done. The
+  server's stored daily counts (`north_star_days`, 142) also count a task
+  marked "couldn't be done" as closed, so a number worked out there could
+  disagree with the card (a week of couldn't-do would read 100% in the push
+  and 0% on the card). One place counts: the card.
+- "At least one task due that week" is read from `north_star_days`
+  (any `due` above 0, Monday to Saturday), or from `chore_days_open` and
+  `routine_slots_open` for the Sunday itself.
 - Claimed in `owner_push_sent` (part 1; `weekly_checkin`, key the Monday's
   date), tag `weekly-<monday>`.
 - **A switch.** 162 adds `'weekly'` to the allowed values of
@@ -323,7 +328,8 @@ words on screen today.
 | {pet} is back tomorrow. Routines start again. | {pet} kembali besok. Rutinitasnya mulai lagi. | Coming up |
 | Back early | Kembali lebih awal | The sheet |
 | This week | Minggu ini | The card's title |
-| {a} of {b} done without chasing ({p}%) | {a} dari {b} selesai tanpa ditagih ({p}%) | The card and the push |
+| {a} of {b} done without chasing ({p}%) | {a} dari {b} selesai tanpa ditagih ({p}%) | The card only. Done means finished; a task marked "couldn't be done" is not done |
+| Your week in Miamus · See how the week went. Open Today. | Kabar mingguan Miamus · Lihat bagaimana minggu ini berjalan. Buka Hari Ini. | The push |
 | Slipped most | Paling sering terlewat | The card |
 | not done {a} of {b} days | terlewat {a} dari {b} hari | A slipped row |
 | Nothing slipped twice. | Tidak ada yang terlewat dua kali. | The card |
