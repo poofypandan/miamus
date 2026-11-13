@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, CookingPot, Loader2, NotebookPen, Pencil, RefreshCw, RotateCcw } from "lucide-react";
+import { CheckCircle2, CookingPot, Loader2, NotebookPen, Pencil, RefreshCw, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { RecipeBody } from "@/components/kitchen/recipe-detail-sheet";
@@ -16,7 +16,8 @@ import type { MenuDish } from "@/types/database";
  * at the dish's servings, the kitchen notes on top, and Sudah dimasak at the
  * bottom. Owners (their language): the same, plus Edit and, once cooked,
  * Mark not cooked. A dish without a recipe is its name, its note and the
- * button. No prices anywhere.
+ * button. Once cooked, for the rest of that day, owners and staff see
+ * "Change what was used" (Phase 177). No prices anywhere.
  */
 export function DishSheet({
   dish,
@@ -28,6 +29,8 @@ export function DishSheet({
   cookState,
   onRetry,
   onCook,
+  changeState = "hidden",
+  onChangeUses,
   onUncook,
   onEdit,
   onClose,
@@ -44,6 +47,9 @@ export function DishSheet({
   onRetry: () => void;
   /** With the servings on the dish's stepper (Codex, PR #101). */
   onCook: (dish: MenuDish, servings: number | null) => void;
+  /** "Change what was used" on a cooked dish (Phase 177): hidden, or the readiness. */
+  changeState?: CookReadiness | "hidden";
+  onChangeUses?: (dish: MenuDish) => void;
   onUncook?: (dish: MenuDish) => void;
   onEdit?: (dish: MenuDish) => void;
   onClose: () => void;
@@ -64,6 +70,8 @@ export function DishSheet({
             cookState={cookState}
             onRetry={onRetry}
             onCook={onCook}
+            changeState={changeState}
+            onChangeUses={onChangeUses}
             onUncook={onUncook}
             onEdit={onEdit}
           />
@@ -83,6 +91,8 @@ function DishBody({
   cookState,
   onRetry,
   onCook,
+  changeState,
+  onChangeUses,
   onUncook,
   onEdit,
 }: {
@@ -97,6 +107,8 @@ function DishBody({
   onRetry: () => void;
   /** With the servings on the dish's stepper (Codex, PR #101). */
   onCook: (dish: MenuDish, servings: number | null) => void;
+  changeState: CookReadiness | "hidden";
+  onChangeUses?: (dish: MenuDish) => void;
   onUncook?: (dish: MenuDish) => void;
   onEdit?: (dish: MenuDish) => void;
 }) {
@@ -160,6 +172,19 @@ function DishBody({
       ) : canCook ? (
         <Button className="min-h-12 rounded-xl text-base" onClick={() => onCook(dish, shown)} disabled={busy}>
           {busy ? <Loader2 className="animate-spin" /> : <CookingPot />} {tr("Cooked", "Sudah dimasak")}
+        </Button>
+      ) : null}
+      {dish.cooked_at && onChangeUses && changeState === "loading" ? (
+        <Button variant="outline" className="min-h-11 rounded-xl" disabled>
+          <Loader2 className="animate-spin" /> {tr("Loading…", "Sedang memuat…")}
+        </Button>
+      ) : dish.cooked_at && onChangeUses && changeState === "failed" ? (
+        <Button variant="outline" className="min-h-11 rounded-xl" onClick={onRetry}>
+          <RefreshCw /> {tr("Couldn't load. Try again", "Belum bisa dimuat. Coba lagi")}
+        </Button>
+      ) : dish.cooked_at && onChangeUses && changeState === "ready" ? (
+        <Button variant="outline" className="min-h-11 rounded-xl" onClick={() => onChangeUses(dish)} disabled={busy}>
+          <SlidersHorizontal /> {tr("Change what was used", "Ubah bahan yang dipakai")}
         </Button>
       ) : null}
       {owner && (onEdit || (dish.cooked_at && onUncook)) && (

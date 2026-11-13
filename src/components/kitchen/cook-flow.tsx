@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, CookingPot, Loader2, Minus, Plus, Refrigerator } from "lucide-react";
+import { CheckCircle2, Circle, CookingPot, Loader2, Minus, Plus, Refrigerator, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FoodFormSheet } from "@/components/kitchen/food-form-sheet";
@@ -11,10 +11,13 @@ import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useRecipes } from "@/hooks/use-recipes";
+import { useToday } from "@/hooks/use-today";
 import { CookingRuleError } from "@/lib/cooked-uses";
 import { MenuAlreadyCookedError } from "@/lib/data/types";
 import { clean, friendlyAmount } from "@/lib/kitchen-units";
 import {
+  changeLines,
+  changeReadiness,
   cookLines,
   cookReadiness,
   dishServings,
@@ -25,10 +28,11 @@ import {
   type CountedLine,
   type UncountedLine,
 } from "@/lib/menu";
-import { cookDish, uncookDish } from "@/lib/menu-store";
+import { changeDishUses, cookDish, uncookDish } from "@/lib/menu-store";
 import { loadRecipes } from "@/lib/recipes-store";
 import { amountLabel, type RecipeLang } from "@/lib/recipes";
-import type { InventoryUnit, MenuDish } from "@/types/database";
+import { formatDateLocal } from "@/lib/scheduleEngine";
+import type { CookedUse, InventoryUnit, MenuDish } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 /** How long the cooked toast (and its Undo) stays. */
@@ -41,11 +45,22 @@ function cookStep(unit: InventoryUnit): number {
   return 1;
 }
 
+type SheetLine = CountedLine & { on: boolean };
+
 interface Pending {
+  /** Cooking ("Bahan yang dipakai"), or changing what a cooked dish used (Phase 177). */
+  mode: "cook" | "change";
   dish: MenuDish;
   title: string;
-  lines: (CountedLine & { on: boolean })[];
+  lines: SheetLine[];
   uncounted: UncountedLine[];
+  /** Change mode: the lines as the sheet opened (Save waits for a difference; Undo sends them back). */
+  initial?: SheetLine[];
+}
+
+/** What a line list sends, in a form that compares (ticked lines and their amounts). */
+function sentKey(lines: readonly SheetLine[]): string {
+  return JSON.stringify(usesFrom(lines).map((u) => [u.item_id, u.amount]));
 }
 
 /**
@@ -77,6 +92,10 @@ export function useCookFlow(
   retry: () => void;
   /** Undo: puts back what cooking took and says if an item couldn't be. */
   undo: (dish: MenuDish, title: string) => Promise<void>;
+  /** "Change what was used" on a cooked dish (Phase 177): hidden, loading, failed or ready. */
+  changeState: (dish: MenuDish) => CookReadiness | "hidden";
+  /** Opens the change sheet for a cooked dish. */
+  change: (dish: MenuDish) => void;
   busyId: string | null;
   sheets: ReactNode;
 } {
@@ -85,6 +104,7 @@ export function useCookFlow(
   const { inventoryItems, applyInventoryRows, listsFresh, syncFailed, refresh } = useHousehold();
   const { recipes, fresh: recipesFresh, errored: recipesErrored } = useRecipes();
   const { flags } = useHouseholdFeatures();
+  const today = formatDateLocal(useToday());
   const [pending, setPending] = useState<Pending | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [leftover, setLeftover] = useState<string | null>(null);
@@ -92,6 +112,66 @@ export function useCookFlow(
 
   function readiness(dish: MenuDish): CookReadiness {
     return cookReadiness(dish, { recipes, recipesFresh, recipesErrored, listsFresh, listsFailed: syncFailed });
+  }
+
+  function changeState(dish: MenuDish): CookReadiness | "hidden" {
+    return changeReadiness(dish, today, {
+      recipes,
+      recipesFresh,
+      recipesErrored,
+      listsFresh,
+      listsFailed: syncFailed,
+      items: inventoryItems,
+    });
+  }
+
+  function openChange(dish: MenuDish) {
+    const state = changeState(dish);
+    if (state === "hidden") return;
+    if (state !== "ready") {
+      toast(state === "loading" ? tr("Loading…", "Sedang memuat…") : tr("Couldn't load. Try again.", "Belum bisa dimuat. Coba lagi."));
+      if (state === "failed") retry();
+      return;
+    }
+    const recipe = recipeOf(dish, recipes);
+    const { lines, uncounted } = changeLines(dish, recipe, inventoryItems, forStaff);
+    setPending({ mode: "change", dish, title: dishTitle(dish, recipe, forStaff), lines, uncounted, initial: lines });
+  }
+
+  /**
+   * Saves the whole list; the server applies only the difference. Undo on
+   * the toast sends the list as the sheet opened, the same way. Any refusal
+   * closes the sheet with its message, and the menu is read again.
+   */
+  async function saveChange(dish: MenuDish, title: string, uses: CookedUse[], was: CookedUse[] | null, undoUses: CookedUse[] | null) {
+    setBusyId(dish.id);
+    try {
+      const { dish: saved, items } = await changeDishUses(dish.id, uses, readActiveStaffId(), was);
+      applyInventoryRows(items);
+      setPending(null);
+      const done = tr(`${title} · ingredients updated`, `${title} · bahan diperbarui`);
+      if (undoUses) {
+        toast.success(done, {
+          duration: COOKED_TOAST_MS,
+          action: { label: tr("Undo", "Batalkan"), onClick: () => void saveChange(saved, title, undoUses, saved.cooked_uses, null) },
+        });
+      } else {
+        toast.success(done);
+      }
+    } catch (err) {
+      setPending(null);
+      const code = err instanceof CookingRuleError ? err.code : null;
+      if (code === "changed_elsewhere") toast.error(tr("Changed on another phone. Open it again.", "Sudah diubah di HP lain. Buka lagi."));
+      else if (code === "not_cooked") toast.error(tr("This dish was marked not cooked.", "Masakan ini sudah ditandai belum dimasak."));
+      else if (code === "too_late") {
+        toast.error(tr("A day has passed. Change the amount on the ingredient itself.", "Sudah lewat sehari. Ubah jumlahnya langsung di bahannya."));
+      } else {
+        console.error(err);
+        toast.error(tr("Not saved yet. Try again.", "Belum tersimpan. Coba lagi."));
+      }
+    } finally {
+      setBusyId(null);
+    }
   }
 
   function retry() {
@@ -174,7 +254,7 @@ export function useCookFlow(
       void finish(dish, title, []);
       return;
     }
-    setPending({ dish, title, lines: counted.map((line) => ({ ...line, on: true })), uncounted });
+    setPending({ mode: "cook", dish, title, lines: counted.map((line) => ({ ...line, on: true })), uncounted });
   }
 
   function change(itemId: string, next: Partial<{ amount: number; on: boolean }>) {
@@ -189,7 +269,14 @@ export function useCookFlow(
         busy={pending !== null && busyId === pending.dish.id}
         onChange={change}
         onClose={() => setPending(null)}
-        onUse={() => pending && void finish(pending.dish, pending.title, usesFrom(pending.lines))}
+        onUse={() => {
+          if (!pending) return;
+          if (pending.mode === "change") {
+            void saveChange(pending.dish, pending.title, usesFrom(pending.lines), pending.dish.cooked_uses, usesFrom(pending.initial ?? []));
+          } else {
+            void finish(pending.dish, pending.title, usesFrom(pending.lines));
+          }
+        }}
       />
       <LeftoversSheet
         title={leftover}
@@ -210,7 +297,7 @@ export function useCookFlow(
     </>
   );
 
-  return { start, readiness, retry, undo, busyId, sheets };
+  return { start, readiness, retry, undo, changeState, change: openChange, busyId, sheets };
 }
 
 function ConfirmSheet({
@@ -232,18 +319,28 @@ function ConfirmSheet({
   const tr = (en: string, ind: string) => (id ? ind : en);
   useBackToClose(pending !== null, onClose);
   const count = pending?.lines.filter((l) => l.on && l.amount > 0).length ?? 0;
+  const changing = pending?.mode === "change";
+  // Save changes waits until something differs from how the sheet opened.
+  const unchanged = changing && pending ? sentKey(pending.lines) === sentKey(pending.initial ?? []) : false;
   return (
     <Sheet open={pending !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-2xl">
         {pending && (
           <div className="flex flex-col">
             <SheetHeader>
-              <SheetTitle className="text-xl">{tr("Ingredients used", "Bahan yang dipakai")}</SheetTitle>
+              <SheetTitle className="text-xl">
+                {changing ? tr("Change what was used", "Ubah bahan yang dipakai") : tr("Ingredients used", "Bahan yang dipakai")}
+              </SheetTitle>
               <SheetDescription>
-                {tr(
-                  `${pending.title}. These come off what's at home.`,
-                  `${pending.title}. Jumlahnya dikurangi dari stok di rumah.`
-                )}
+                {changing
+                  ? tr(
+                      `${pending.title}. Only the difference is added to or taken off what's at home.`,
+                      `${pending.title}. Hanya selisihnya yang ditambah atau dikurangi dari stok di rumah.`
+                    )
+                  : tr(
+                      `${pending.title}. These come off what's at home.`,
+                      `${pending.title}. Jumlahnya dikurangi dari stok di rumah.`
+                    )}
               </SheetDescription>
             </SheetHeader>
             <div className="flex flex-col gap-5 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
@@ -314,10 +411,17 @@ function ConfirmSheet({
                 </section>
               )}
 
-              <Button className="min-h-12 rounded-xl text-base" onClick={onUse} disabled={busy}>
-                {busy ? <Loader2 className="animate-spin" /> : <CookingPot />}
-                {count > 0 ? tr("Use these", "Pakai bahan ini") : tr("Cooked, nothing used", "Sudah dimasak, tanpa bahan")}
-              </Button>
+              {changing ? (
+                <Button className="min-h-12 rounded-xl text-base" onClick={onUse} disabled={busy || unchanged}>
+                  {busy ? <Loader2 className="animate-spin" /> : <Save />}
+                  {tr("Save changes", "Simpan perubahan")}
+                </Button>
+              ) : (
+                <Button className="min-h-12 rounded-xl text-base" onClick={onUse} disabled={busy}>
+                  {busy ? <Loader2 className="animate-spin" /> : <CookingPot />}
+                  {count > 0 ? tr("Use these", "Pakai bahan ini") : tr("Cooked, nothing used", "Sudah dimasak, tanpa bahan")}
+                </Button>
+              )}
             </div>
           </div>
         )}

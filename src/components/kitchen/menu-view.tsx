@@ -321,6 +321,11 @@ export function MenuView() {
           setOpenId(null);
           cook.start(dish, servings);
         }}
+        changeState={open ? cook.changeState(open) : "hidden"}
+        onChangeUses={(dish) => {
+          setOpenId(null);
+          cook.change(dish);
+        }}
         onUncook={(dish) => void cook.undo(dish, dish.title)}
         onEdit={(dish) => {
           setOpenId(null);

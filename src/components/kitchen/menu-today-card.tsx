@@ -91,6 +91,11 @@ export function MenuTodayCard({ day, enabled = true }: { day: string; enabled?: 
           setOpenId(null);
           cook.start(dish, servings);
         }}
+        changeState={open ? cook.changeState(open) : "hidden"}
+        onChangeUses={(dish) => {
+          setOpenId(null);
+          cook.change(dish);
+        }}
         onClose={() => setOpenId(null)}
       />
       {cook.sheets}

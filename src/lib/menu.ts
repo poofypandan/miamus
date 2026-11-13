@@ -485,6 +485,42 @@ export function changeLines(
   return { lines, uncounted };
 }
 
+/** The phone's calendar day of a moment ("2026-11-13"). */
+export function localDay(iso: string): string {
+  return formatDay(new Date(iso));
+}
+
+/**
+ * Whether a cooked dish shows "Change what was used" (Phase 177, plan 3a):
+ *
+ *   - hidden unless it was cooked today on this phone's calendar (the day
+ *     after, the place to fix an amount is the ingredient itself);
+ *   - loading / failed while the recipe or the household's lists aren't
+ *     fresh from the server yet, as cooking waits (cookReadiness), and the
+ *     lists too when the dish took anything off;
+ *   - then ready when the sheet has at least one line (changeLines), else
+ *     hidden (no recipe, nothing that can come off stock).
+ */
+export function changeReadiness(
+  dish: Pick<MenuDish, "recipe_id" | "cooked_at" | "cooked_uses" | "servings">,
+  today: string,
+  state: {
+    recipes: readonly RecipeWithLines[];
+    recipesFresh: boolean;
+    recipesErrored: boolean;
+    listsFresh: boolean;
+    listsFailed: boolean;
+    items: readonly InventoryItem[];
+  }
+): CookReadiness | "hidden" {
+  if (!dish.cooked_at || localDay(dish.cooked_at) !== today) return "hidden";
+  const tookSomething = (dish.cooked_uses ?? []).length > 0;
+  let ready = cookReadiness(dish, state);
+  if (ready === "ready" && tookSomething && !state.listsFresh) ready = state.listsFailed ? "failed" : "loading";
+  if (ready !== "ready") return dish.recipe_id || tookSomething ? ready : "hidden";
+  return changeLines(dish, recipeOf(dish, state.recipes), state.items, false).lines.length > 0 ? "ready" : "hidden";
+}
+
 // --- Add missing to Shopping --------------------------------------------------------
 
 /** A shortfall, rounded up so the shopper buys enough: 5 g, 0.1 kg, whole otherwise. */
