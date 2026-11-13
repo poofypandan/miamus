@@ -39,7 +39,7 @@ Away
 Who?            [ Sari ] [ Yanti ] [ Coco ] [ Bruno ] [ Me ]
 From – to       [ Today ] [ Tomorrow ] [ Pick dates ]   to   [ date ]   (a person)
 Until           [ date ]   or   [ Until I say ]                           (a pet)
-(a person)      What happens to their tasks?
+(a person)      What happens to their chores?
                 ( Give to… ) ( Anyone can do them ) ( Pause them )
 (a pet)         Why?   ( At the vet ) ( Boarding ) ( Travelling with us )
                 Their routines pause until they are back.
@@ -53,6 +53,13 @@ Until           [ date ]   or   [ Until I say ]                           (a pet
   ahead would pause them by itself on a day when plans may have changed.
   For next week's boarding, the owner says so on the day. *Until I say*
   leaves the end open, as today.
+- **The question is about chores only.** Leave hands over, opens up or
+  pauses a person's **chores** (`applyLeaveTriage()` in `src/lib/leave.ts`).
+  A pet routine that person usually does is not paused or given to anyone
+  by leave: while they are away its card shows to everyone, as it does
+  today, because a pet still has to be fed. The sheet says so in one grey
+  line under the answers: *Pet routines stay on for everyone.* / *Rutinitas
+  hewan tetap berjalan untuk semua.* This version does not change that.
 - **Give to** shows the other staff; it is the `reassign` that leave
   already has. **Anyone** is `unassign`. **Pause** is `pause`.
 - Saving shows a toast with **Undo**: *Sari is away until Monday* / *Sari
@@ -111,7 +118,7 @@ unit-tested.
 
 ### 2d. Staff
 
-Staff see what they see today: their tasks move, pause and return through
+Staff see what they see today: their chores move, pause and return through
 leave as now, and a pet that is away shows no routine cards. The pet's row
 on a staff phone reads *Dirawat di klinik* (the glossary's words, unchanged), *Dititipkan* or
 *Ikut bepergian*.
@@ -321,7 +328,8 @@ words on screen today.
 
 | English | Bahasa Indonesia | Where |
 |---|---|---|
-| Who? / From – to / What happens to their tasks? | Siapa? / Dari – sampai / Tugasnya bagaimana? | The Away sheet |
+| Who? / From – to / What happens to their chores? | Siapa? / Dari – sampai / Tugasnya bagaimana? | The Away sheet. "Tugas" is the word for chores |
+| Pet routines stay on for everyone. | Rutinitas hewan tetap berjalan untuk semua. | Under the three answers, for a person |
 | Give to… / Anyone can do them / Pause them | Berikan ke… / Siapa saja boleh / Jeda dulu | Its three answers |
 | Why? · At the vet · Boarding · Travelling with us | Kenapa? · Dirawat di klinik · Dititipkan · Ikut bepergian | A pet. *Dirawat di klinik* is the glossary's existing row for "At the vet"; the other two are new |
 | Their routines pause until they are back. | Rutinitasnya dijeda sampai kembali. | A pet |
@@ -402,8 +410,9 @@ steps are the manager's, on the owner's OK.
 - **Browser, owner (EN and ID):** Away for a staff member, a pet and Me,
   with Undo; Back early; the Coming up line; the weekly card with and
   without slips, Got it; the switch.
-- **Browser, staff (ID):** tasks move and return through an owner-made
-  leave; a pet away shows its label and no routines; no English.
+- **Browser, staff (ID):** chores move and return through an owner-made
+  leave, and that person's pet routines show to everyone whichever answer
+  was chosen; a pet away shows its label and no routines; no English.
 - **Must still pass:** the leave, vet and evening-summary tests, and
   `kakak.spec.ts`.
 
