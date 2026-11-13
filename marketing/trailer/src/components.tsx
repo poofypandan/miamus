@@ -324,14 +324,14 @@ export function NotificationCard({ title, body, time, at }: { title: string; bod
 /* ------------------------------------------------------------------ */
 
 /** Three short questions arriving like messages: plain rounded bubbles, no chat app's look. */
-export function HookBubbles({ lines, leaveAt, stagger = 14 }: { lines: [string, string, string]; leaveAt: number; stagger?: number }) {
+export function HookBubbles({ lines, leaveAt, stagger = 14, first = 0 }: { lines: [string, string, string]; leaveAt: number; stagger?: number; first?: number }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const leave = ramp(frame, leaveAt, leaveAt + 12);
   return (
     <div style={{ position: "absolute", left: SAFE.left + 40, width: SAFE.right - SAFE.left - 80, top: 640, opacity: 1 - leave, transform: `translateY(${-leave * 80}px)` }}>
       {lines.map((line, i) => {
-        const s = spring({ frame: frame - 2 - i * stagger, fps, config: { damping: 16, stiffness: 160, mass: 0.7 } });
+        const s = spring({ frame: frame - first - i * stagger, fps, config: { damping: 16, stiffness: 160, mass: 0.7 } });
         return (
           <div key={line} style={{ display: "flex", justifyContent: i === 1 ? "flex-end" : "flex-start", marginBottom: 34 }}>
             <div

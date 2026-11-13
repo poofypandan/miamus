@@ -10,7 +10,8 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")).map(([k, v]) => [k, v ?? true]));
-const cuts = ["trailer-60-id", "trailer-60-en", "trailer-15-id", "trailer-15-en"].filter((id) => !args.only || id === args.only);
+// English 60 s first: the primary version (owner, 13 Nov 2026).
+const cuts = ["trailer-60-en", "trailer-60-id", "trailer-15-en", "trailer-15-id"].filter((id) => !args.only || id === args.only);
 
 if (!fs.existsSync(path.join(root, "public/shots/taps.json"))) {
   console.error("No screens yet: run `npm run capture` first (see README.md).");
@@ -34,12 +35,9 @@ if (!args["frames-only"]) {
 }
 
 // Key frames for review: the moment each shot is clearest (frame numbers at 30 fps).
-const FRAMES = {
-  "trailer-60-id": { "01-hook": 40, "02-today-tap": 142, "03-kakak-card-ai-label": 320, "04-lights-card": 535, "05-two-cards": 712, "06-staff-photos": 925, "07-staff-reminder": 1110, "08-all-on-track": 1210, "09-scroll": 1320, "10-owner-alert": 1530, "11-glimpse-pets": 1620, "12-end-card": 1785 },
-  "trailer-60-en": { "03-kakak-card-ai-label": 320, "08-all-on-track": 1210, "10-owner-alert": 1530, "12-end-card": 1785 },
-  "trailer-15-id": { "02-kakak": 140, "05-end-card": 440 },
-  "trailer-15-en": { "02-kakak": 140, "05-end-card": 440 },
-};
+const SIXTY = { "01-hook": 48, "02-today-tap": 150, "03-kakak-card-ai-label": 330, "04-lights-card": 545, "05-two-cards": 715, "06-staff-photos": 905, "07-staff-reminder": 1105, "08-all-on-track": 1200, "09-scroll": 1320, "10-owner-alert": 1520, "11-glimpse-pets": 1630, "12-end-card": 1790 };
+const FIFTEEN = { "01-hook": 48, "02-kakak": 150, "03-staff": 250, "04-all-on-track": 340, "05-end-card": 445 };
+const FRAMES = { "trailer-60-en": SIXTY, "trailer-60-id": SIXTY, "trailer-15-en": FIFTEEN, "trailer-15-id": FIFTEEN };
 for (const id of cuts) {
   for (const [name, frame] of Object.entries(FRAMES[id] ?? {})) {
     run(["remotion", "still", "src/index.ts", id, `review/${id.replace("trailer-", "")}-${name}.png`, `--frame=${frame}`, ...props]);

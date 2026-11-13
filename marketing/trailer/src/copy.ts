@@ -5,6 +5,15 @@
  */
 export type Locale = "id" | "en";
 
+/**
+ * The end-card lines, in one place (owner and design lead, 13 Nov 2026).
+ * Change them here; nothing else needs touching.
+ */
+export const END_LINES: Record<Locale, { sixty: string; fifteen: string }> = {
+  en: { sixty: "More time for family.", fifteen: "Less asking. More calm." },
+  id: { sixty: "Lebih banyak waktu untuk keluarga.", fifteen: "Lebih sedikit bertanya. Lebih banyak tenang." },
+};
+
 export interface Line {
   /** The on-screen caption. */
   text: string;
@@ -47,8 +56,8 @@ export const COPY: Record<Locale, Copy> = {
     s8: { text: "Anda hanya dikabari kalau ada yang belum.", say: "Dan Anda hanya dikabari kalau ada yang belum dikerjakan." },
     s9: { text: "Dapur. Hewan. Perbaikan. Satu tempat.", say: "Dapur, hewan, perbaikan. Semua di satu tempat." },
     aiLabel: "Kakak, asisten AI Miamus",
-    endLine60: "Supaya di rumah, Anda benar-benar pulang.",
-    endLine15: "Lebih sedikit bertanya. Lebih banyak tenang.",
+    endLine60: END_LINES.id.sixty,
+    endLine15: END_LINES.id.fifteen,
     endSmall: "Kakak adalah asisten AI Miamus.",
     short: { s2: "Bilang sekali ke Kakak.", s5: "Staf mengerjakan, dengan foto.", s7: "Semua lancar." },
     staffPush: { title: "Pengingat", body: "21.30 · Matikan lampu · Coco & Bruno", time: "21.30" },
@@ -60,16 +69,17 @@ export const COPY: Record<Locale, Copy> = {
     s2: { text: "Tell Kakak once.", say: "Now you say it once, to Kakak." },
     s3: { text: "She sets it all up.", say: "Kakak sets it up: who, when, and who gets told." },
     s4: { text: "Two things at once.", say: "Shopping and what's in the fridge, in one go." },
-    s5: { text: "Staff know what to do. With a photo.", say: "Staff see their own tasks, and finish them with a photo." },
+    // The staff screen stays Indonesian in the English cut; the caption says why (design lead).
+    s5: { text: "Staff see their own tasks, in their own language.", say: "And finish them with a photo." },
     s6: { text: "Reminded on time.", say: "What matters is reminded on time." },
     s7: { text: "One glance is enough.", say: "One glance tells you: all on track." },
     s8: { text: "You only hear when something isn't done.", say: "And you only hear when something isn't done." },
     s9: { text: "Kitchen. Pets. Repairs. One place.", say: "Kitchen, pets, repairs. All in one place." },
     aiLabel: "Kakak, Miamus's AI helper",
-    endLine60: "So that at home, you're really home.",
-    endLine15: "Less asking. More calm.",
+    endLine60: END_LINES.en.sixty,
+    endLine15: END_LINES.en.fifteen,
     endSmall: "Kakak is Miamus's AI helper.",
-    short: { s2: "Tell Kakak once.", s5: "Staff do it, with a photo.", s7: "All on track." },
+    short: { s2: "Tell Kakak once.", s5: "Staff do it, in their own language.", s7: "All on track." },
     // The staff phone is always in Indonesian; the owner's follows their language.
     staffPush: { title: "Pengingat", body: "21.30 · Matikan lampu · Coco & Bruno", time: "21.30" },
     ownerPush: { title: "Lights off · Coco & Bruno", body: "Not done yet (9:30 PM)", time: "10:00 PM" },

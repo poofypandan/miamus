@@ -161,7 +161,9 @@ test("staff: Pel teras, with photos", async ({ context, page }) => {
     const chooser = page.waitForEvent("filechooser", { timeout: 10_000 });
     await button.click();
     await (await chooser).setFiles({ name: `${name}.jpg`, mimeType: "image/jpeg", buffer: await photo(name) });
-    await still(page, "staff", `photo-${key}`, 3000);
+    // Wait for the photo to finish saving, so the still shows it, not the spinner.
+    await page.getByText(/Menyimpan foto/).first().waitFor({ state: "detached", timeout: 20_000 }).catch(() => undefined);
+    await still(page, "staff", `photo-${key}`, 1500);
   }
   const finish = page.getByRole("button", { name: "Selesaikan" });
   await tapAt("staff.finish", finish);
