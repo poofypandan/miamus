@@ -106,8 +106,11 @@ staff screens already treat `admitted` as "no routines".
 
 ### 2c. What Today says
 
-Under **Coming up**, the day before someone's last day away and on that
-day: *Sari is back tomorrow. Their tasks return to them.* / *Sari kembali
+Under **Coming up**, on someone's **last day away** only. The end date is
+inclusive (`leaveCovering()` treats `end_date` as a day away; a pet comes
+home the night after `away_until`), so the day they are back is the end
+date plus one, and "tomorrow" is true on the end date itself and on no
+other day: *Sari is back tomorrow. Their tasks return to them.* / *Sari kembali
 besok. Tugasnya kembali ke dia.* For a pet: *Coco is back tomorrow. Routines
 start again.* / *Coco kembali besok. Rutinitasnya mulai lagi.* A tap opens
 the sheet for that person or pet, where **Back early** ends it now (the
@@ -404,7 +407,9 @@ steps are the manager's, on the owner's OK.
 - **SQL 163:** the four names are accepted by the column check and by
   `kakak_record`; an unknown name is still refused; `anon` cannot execute
   it; every name 155 accepted still is.
-- **Unit:** `returning` (the day before, the day, a pet without a date);
+- **Unit:** `returning` (away until Monday: nothing on Saturday, the line on Monday,
+  nothing on Tuesday; a leave ended early; a pet without a date never shows
+  it);
   `doneOnItsDay` (a chore due Friday and finished Saturday is not done and is
   a slip for Friday; finished Friday at 23.50 is done); `checkinWeek` (Sunday 16.59 is still last week; Sunday 17.00 and all of Monday are the week just ended); `weeklyCheckin` (the percentage, the three most slipped, fewer than two is
   not slipped, the suggestion's threshold, no suggestion, the notifications
