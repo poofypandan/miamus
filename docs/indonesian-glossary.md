@@ -90,6 +90,7 @@ people are **staf** and **admin**.
 | Or type your answer | **Atau ketik jawaban** | Under Kakak's answer buttons. |
 | Let Kakak help (household switch) | **Izinkan Kakak membantu** | The opt-in switch; says what is sent and to whom. |
 | Kakak's guess — check it | **Tebakan Kakak — cek lagi** | Marks a field Kakak guessed (a date, a room) so the owner looks again. |
+| Sorry, I didn't catch that. Could you say it another way? | **Maaf, Kakak belum paham. Bisa Anda katakan dengan cara lain?** | Said instead of a Kakak reply that the server dropped (a note to self, a reference, the wrong language). Builds on the sheet's existing "Maaf, Kakak belum paham." |
 | Chores · Rooms · Repairs (Home pill) | **Tugas · Ruangan · Perbaikan** | Phase 175: was Today · Rooms (Phase 158) and Repairs (Phase 159). "Ruangan", not "Kamar": a lounge or a terrace isn't a kamar. |
 | Room / Rooms | **Ruangan** | Phase 158. |
 | Whole floor | **Seluruh lantai** | Phase 158: chores for a room named just "LT2". |

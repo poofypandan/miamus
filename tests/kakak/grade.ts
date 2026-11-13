@@ -3,6 +3,7 @@
 // docs/phase-156-kakak-test-set.md ("How a case is marked").
 
 import { householdRefs, type KakakHousehold } from "@/lib/kakak/household";
+import { looksLikeWrongLanguage, noteTells } from "@/lib/kakak/reply-guard";
 import { toIsoDays } from "@/lib/kakak/suggestions";
 import { newPetTimes, routineTitle } from "@/lib/kakak/validate";
 import type { ExpectedCall, ExpectedShoppingItem, ExpectedTurn, FieldMatcher, KakakCase } from "./types";
@@ -227,24 +228,8 @@ const PROMISES_CHANGE = [
   /(?<!\b(?:not|never)\s+)\b(i'll|i will|will now|going to)\s+(delete|remove|change|cancel|clear)\b/i,
 ];
 
-const ID_WORDS = new Set(
-  "yang dan untuk ini itu tidak apa akan sudah bisa saya anda dengan ke di dari hari besok siapa mana atau tolong mau jam kapan tanggal ya boleh perlu ingin belum masih saja juga lagi".split(" "),
-);
-const EN_WORDS = new Set(
-  "the and for this that what which will would you your with to is are can when who or please tomorrow day should do does it on at of a an".split(" "),
-);
-
-/** Rough language check: true when the text is clearly in the other language. */
-export function looksLikeWrongLanguage(text: string, locale: "id" | "en"): boolean {
-  const words = text.toLowerCase().match(/[a-z']+/g) ?? [];
-  let id = 0;
-  let en = 0;
-  for (const word of words) {
-    if (ID_WORDS.has(word)) id += 1;
-    if (EN_WORDS.has(word)) en += 1;
-  }
-  return locale === "id" ? en >= 3 && en > id * 2 : id >= 3 && id > en * 2;
-}
+// The language check lives with the route's guard, which uses it too.
+export { looksLikeWrongLanguage };
 
 function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "rooms" | "items"; value: unknown }[] {
   const input = call.input;
@@ -276,6 +261,30 @@ function shownText(turn: ActualTurn): string {
       .filter((c) => c.name === "ask_question")
       .flatMap((c) => [String(c.input.question ?? ""), ...((c.input.answers as string[] | undefined) ?? [])]),
   ].join("\n");
+}
+
+/**
+ * What the app actually shows of a kept turn: a question and its answers (the
+ * route drops a question turn's free text), or the free text beside a card or
+ * on its own.
+ */
+export function visibleText(turn: ActualTurn): string {
+  if (turn.kind !== "question") return turn.text;
+  return turn.calls
+    .filter((c) => c.name === "ask_question")
+    .flatMap((c) => [String(c.input.question ?? ""), ...((c.input.answers as string[] | undefined) ?? [])])
+    .join("\n");
+}
+
+/**
+ * A note to self on screen: a reference, an ISO date or a tool or field name
+ * in what the owner would read. Checked on every case, so a re-run measures
+ * the leak rate (the wrong language is the check in replyViolations).
+ */
+export function leakedNoteViolation(turn: ActualTurn, where: string): string | null {
+  const shown = visibleText(turn);
+  const tells = noteTells(shown);
+  return tells.length ? `${where}: shows a note to self (${tells.join(", ")}): ${JSON.stringify(shown.slice(0, 120))}` : null;
 }
 
 /** Checks that apply to anything Kakak produced, kept or rejected. */
@@ -310,7 +319,11 @@ export function mustNeverViolations(
   rejected: RejectedAttempt[] = [],
 ): string[] {
   const out: string[] = [];
-  actual.forEach((turn, index) => out.push(...replyViolations(household, kakakCase, turn, `turn ${index + 1}`)));
+  actual.forEach((turn, index) => {
+    out.push(...replyViolations(household, kakakCase, turn, `turn ${index + 1}`));
+    const leak = leakedNoteViolation(turn, `turn ${index + 1}`);
+    if (leak) out.push(leak);
+  });
   rejected.forEach((attempt) =>
     out.push(...replyViolations(household, kakakCase, attempt.turn, `rejected reply before turn ${attempt.beforeTurn + 1}`)),
   );
