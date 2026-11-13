@@ -9,9 +9,9 @@ Generated from `src/timeline.ts` by `npm run cues`. 86 BPM, 30 fps; one beat = 2
 | 0.00 | 2.10 | near silence; the hook's three soft taps |
 | 2.10 | 6.27 | one motif |
 | 6.27 | 25.80 | a soft pulse, building a step with each Kakak sentence (shots 2, 3, 4) |
-| 25.80 | 37.67 | a small lift as the staff phone appears; steady through the reminder |
+| 25.80 | 37.67 | a small lift as the staff phone appears; steady through the evening reminder and its tick |
 | 37.67 | 44.67 | the high point, on "All on track" |
-| 44.67 | 52.33 | near silence under the "not done" notification |
+| 44.67 | 52.33 | near silence under the owner's one "not done" notification (the evening walk) |
 | 52.33 | 55.80 | the pulse returns |
 | 55.80 | 60.00 | resolve: a real ending on the last beat, not a fade |
 
@@ -41,19 +41,24 @@ Generated from `src/timeline.ts` by `npm run cues`. 86 BPM, 30 fps; one beat = 2
 | 0.70 | 1.0 | tap (hook bubble 3) |
 | 4.90 | 7.0 | tap (Kakak's button) |
 | 9.07 | 13.0 | tap (send, sentence 1) |
+| 10.80 | 15.5 | (sheet scrolls to the button, sentence 1) |
 | 11.87 | 17.0 | tap (confirm, sentence 1) |
 | 16.03 | 23.0 | tap (send, sentence 2) |
 | 18.83 | 27.0 | tap (confirm, sentence 2) |
 | 22.33 | 32.0 | tap (send, sentence 3) |
 | 24.43 | 35.0 | tap (confirm, sentence 3) |
-| 27.20 | 39.0 | tap (Pel teras) |
-| 28.60 | 41.0 | tap (before photo) |
-| 28.80 | 41.3 | shutter |
-| 30.00 | 43.0 | tap (after photo) |
-| 30.20 | 43.3 | shutter |
-| 31.40 | 45.0 | tap (Selesaikan) |
-| 34.20 | 49.0 | chime (staff reminder) |
-| 46.03 | 66.0 | chime (owner: not done) — the only sound of the owner's phone |
+| 26.50 | 38.0 | tap (Pel teras) |
+| 27.20 | 39.0 | tap (before photo) |
+| 27.40 | 39.3 | shutter |
+| 27.90 | 40.0 | tap (after photo) |
+| 28.10 | 40.3 | shutter |
+| 30.00 | 43.0 | tap (Selesaikan) |
+| 33.50 | 48.0 | chime (staff reminder, 21.30) |
+| 34.53 | 49.5 | tap (the reminder) |
+| 34.90 | 50.0 | tap (camera) |
+| 35.10 | 50.3 | shutter |
+| 36.27 | 52.0 | tap (Simpan): the tick |
+| 46.03 | 66.0 | chime (owner: the walk isn't done) — the only sound of the owner's phone |
 | 56.13 | 80.5 | soft chime (end card) |
 
 ## Cuts and sounds (15 s)
@@ -66,12 +71,12 @@ Generated from `src/timeline.ts` by `npm run cues`. 86 BPM, 30 fps; one beat = 2
 | 0.70 | 1.0 | tap (hook) |
 | 2.10 | 3.0 | cut: s2 |
 | 2.80 | 4.0 | tap (send) |
-| 4.90 | 7.0 | tap (confirm) |
+| 5.13 | 7.4 | tap (confirm) |
 | 6.27 | 9.0 | cut: s5 |
-| 6.60 | 9.5 | tap |
-| 7.30 | 10.5 | shutter |
-| 7.80 | 11.2 | shutter |
-| 8.20 | 11.8 | tap |
+| 6.53 | 9.4 | tap |
+| 7.13 | 10.2 | shutter |
+| 7.60 | 10.9 | shutter |
+| 8.27 | 11.8 | tap |
 | 9.07 | 13.0 | cut: s7 |
 | 11.87 | 17.0 | cut: end |
 | 12.13 | 17.4 | soft chime (end card) |

@@ -22,12 +22,15 @@ fx60.push([SHOTS_60.s1[0] + S1.tap, "tap (Kakak's button)"]);
 const shots = [SHOTS_60.s2, SHOTS_60.s3, SHOTS_60.s4];
 K60.forEach((k, i) => {
   fx60.push([shots[i][0] + k.send, `tap (send, sentence ${i + 1})`]);
+  if (k.scrollLength) fx60.push([shots[i][0] + k.scrollFrom, `(sheet scrolls to the button, sentence ${i + 1})`]);
   fx60.push([shots[i][0] + k.confirm, `tap (confirm, sentence ${i + 1})`]);
 });
 const s5 = SHOTS_60.s5[0];
 fx60.push([s5 + STAFF60.card, "tap (Pel teras)"], [s5 + STAFF60.before, "tap (before photo)"], [s5 + STAFF60.beforeIn - 2, "shutter"]);
 fx60.push([s5 + STAFF60.after, "tap (after photo)"], [s5 + STAFF60.afterIn - 2, "shutter"], [s5 + STAFF60.finish, "tap (Selesaikan)"]);
-fx60.push([SHOTS_60.s6[0] + S6.push, "chime (staff reminder)"], [SHOTS_60.s8[0] + S8.push, "chime (owner: not done) — the only sound of the owner's phone"]);
+const s6 = SHOTS_60.s6[0];
+fx60.push([s6 + S6.push, "chime (staff reminder, 21.30)"], [s6 + S6.open, "tap (the reminder)"], [s6 + S6.camera, "tap (camera)"], [s6 + S6.picked - 2, "shutter"], [s6 + S6.save, "tap (Simpan): the tick"]);
+fx60.push([SHOTS_60.s8[0] + S8.push, "chime (owner: the walk isn't done) — the only sound of the owner's phone"]);
 fx60.push([SHOTS_60.end[0] + 10, "soft chime (end card)"]);
 lines.push("", "## Sound effects (60 s)", "", "| Time (s) | Beat | Sound |", "|---|---|---|");
 for (const [f, what] of fx60.sort((a, b) => a[0] - b[0])) lines.push(row(Math.round(f), what));

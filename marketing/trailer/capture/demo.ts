@@ -140,20 +140,58 @@ export const LIGHTS = [MOCHI, BENTO].map((p) =>
   } as never)
 );
 
-/** Logs for every pet slot before 16.30 today. */
-export function petLogs(schedules: Record<string, unknown>[], nowHm = "16:30") {
+/**
+ * The evening walk, 17.00, both dogs, with "tell me if it isn't done" on: the
+ * routine the owner hears about in shot 8 (meals can't carry that switch in
+ * the app; walks and lights can).
+ */
+export const WALKS = [MOCHI, BENTO].map((p) =>
+  schedule(p, "Jalan-jalan", ["17:00"], {
+    kind: "walk",
+    routine_group_id: id(0x17d3),
+    staff_id: null,
+    proof: "photo",
+    remind_staff: true,
+    alert_owners: true,
+  } as never)
+);
+
+/** Logs for every pet slot before `nowHm` today, except the routines left `open`. */
+export function petLogs(schedules: Record<string, unknown>[], nowHm = "16:30", open: string[] = []) {
   return schedules.flatMap((s) =>
-    ((s.fixed_times as string[]) ?? [])
-      .filter((t) => t < nowHm)
-      .map((t) => ({
-        ...logFor(s as never, DAY, addMinutes(t, 6)),
-        id: `log-${s.id}-${t}`,
-        scheduled_time: t,
-        staff_id: t < "12:00" ? SARI : YANTI,
-        // A photo of the empty bowl after each meal, as staff take them.
-        photo_url: /Sarapan|Makan/.test(String(s.title)) ? photo("bowl") : null,
-      }))
+    open.includes(String(s.kind))
+      ? []
+      : ((s.fixed_times as string[]) ?? [])
+          .filter((t) => t < nowHm)
+          .map((t) => ({
+            ...logFor(s as never, DAY, addMinutes(t, 6)),
+            id: `log-${s.id}-${t}`,
+            scheduled_time: t,
+            staff_id: t < "12:00" ? SARI : YANTI,
+            // The photo staff take each time: the empty bowl after a meal,
+            // the lawn after a potty break; one per slot, so each is its own tile.
+            photo_url: /Sarapan|Makan/.test(String(s.title))
+              ? photo(`bowl-${t}`)
+              : /Pipis/.test(String(s.title))
+                ? photo(`lawn-${t}`)
+                : null,
+          }))
   );
+}
+
+/** Food at home for the Kitchen glimpse (made up; no prices). */
+export function foods(locale: "id" | "en") {
+  const row = (n: number, name: string, kept_in: string, expires_on: string | null, source: string | null, from_whom: string | null) => ({
+    id: id(0xf00 + n), household_id: HOUSEHOLD_ID, name, kept_in, expires_on, expiry_unknown: false, source, from_whom,
+    return_container: false, container_returned_at: null, notes: null, photo_url: null, added_by: null, created_by: null,
+    outcome: null, finished_at: null, finished_by: null, created_at: "2026-11-16T01:00:00Z", updated_at: "2026-11-16T01:00:00Z",
+  });
+  return [
+    row(1, "Opor", "fridge", "2026-11-18", "gift", locale === "en" ? "Aunt Rina" : "Tante Rina"),
+    row(2, "Sayur asem", "fridge", "2026-11-17", "home", null),
+    row(3, "Rendang", "freezer", "2026-12-10", "home", null),
+    row(4, "Kue lapis", "counter", "2026-11-19", "bought", null),
+  ];
 }
 
 export const ITEMS = [
@@ -196,6 +234,18 @@ export const REPAIR = {
   updated_at: "2026-11-15T03:00:00Z",
 };
 
+export const REPAIR_2 = {
+  ...REPAIR,
+  id: id(0x1591),
+  title: "Lampu teras mati",
+  notes: "Bohlam di atas pintu depan.",
+  location_id: R("Teras"),
+  reported_by: JOKO,
+  photo_url: null,
+  created_at: "2026-11-16T00:30:00Z",
+  updated_at: "2026-11-16T00:30:00Z",
+};
+
 export interface Demo {
   stub: Stub;
 }
@@ -205,12 +255,12 @@ export async function installDemo(
   context: BrowserContext,
   page: Page,
   as: { owner: "id" | "en" } | { staff: true },
-  extra: { lights?: boolean; terraceToDo?: boolean; kakak?: boolean; at?: string } = {}
+  extra: { lights?: boolean; terraceToDo?: boolean; kakak?: boolean; at?: string; open?: string[] } = {}
 ): Promise<Stub> {
   // A token good for a year: the browser's clock is pinned to NOW and must
   // never think it ran out (a refresh loop would follow).
   const yearFromNow = Math.floor(Date.now() / 1000) + 365 * 86400;
-  const schedules = [...BREAKFASTS, ...(extra.lights ? LIGHTS : [])] as unknown as Record<string, unknown>[];
+  const schedules = [...BREAKFASTS, ...WALKS, ...(extra.lights ? LIGHTS : [])] as unknown as Record<string, unknown>[];
   const stub = await installStub(context, {
     ...("owner" in as
       ? { owner: { locale: as.owner }, stored: session(OWNER, yearFromNow, false) }
@@ -221,7 +271,7 @@ export async function installDemo(
     rooms: ROOMS.map((r) => ({ ...r })),
     chores: chores({ terraceToDo: extra.terraceToDo, at: extra.at }),
     items: ITEMS,
-    repairs: [{ ...REPAIR }],
+    repairs: [{ ...REPAIR }, { ...REPAIR_2 }],
     schedules,
     household: { hasPets: true, createdAt: "2026-09-20T00:00:00Z" },
   });
@@ -230,7 +280,7 @@ export async function installDemo(
     if (String(stub.schedules[i].title).startsWith("Medication")) stub.schedules.splice(i, 1);
   }
   const at = extra.at ?? "16:30";
-  stub.logs.push(...petLogs(stub.schedules, at));
+  stub.logs.push(...petLogs(stub.schedules, at, extra.open ?? ["lights", "walk"]));
   await page.clock.setFixedTime(new Date(`${DAY}T${at}:00+07:00`));
   return stub;
 }

@@ -2,15 +2,19 @@
  * Captures every screen the trailer uses, as stills at 390 × 844 CSS px and
  * 3× density (1170 × 2532), into ../public/shots/. Run with `npm run capture`
  * from marketing/trailer (README.md). Also writes ../public/shots/taps.json:
- * where each tap lands, in CSS px, for the tap circles drawn in the edit.
+ * where each tap lands (and where Kakak's name sits, for the AI tag), in CSS px.
  *
  * Owner screens are captured in both languages (shots/id, shots/en); staff
  * screens once, in Indonesian (shots/staff), as staff screens always are.
+ *
+ * The day, Monday 16 Nov 2026: the owner tells Kakak at 07.45, Sari mops the
+ * terrace from 09.00, Today is all on track at 16.30, the lights reminder
+ * rings on Sari's phone at 21.30.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { test, type Locator, type Page } from "@playwright/test";
-import { HOUSEHOLD_ID, installDemo } from "./demo";
+import { DAY, foods, installDemo } from "./demo";
 import { photo, servePhotos } from "./photos";
 import { TYPED, UI, kakakReply, type Locale } from "./script";
 import { STAFF_WHATS_NEW, WHATS_NEW, storageKey } from "../../../src/lib/whats-new";
@@ -20,6 +24,7 @@ const TAPS_FILE = path.join(SHOTS, "taps.json");
 type Tap = { x: number; y: number };
 const taps: Record<string, Tap> = fs.existsSync(TAPS_FILE) ? JSON.parse(fs.readFileSync(TAPS_FILE, "utf8")) : {};
 function saveTaps() {
+  fs.mkdirSync(SHOTS, { recursive: true });
   fs.writeFileSync(TAPS_FILE, JSON.stringify(taps, null, 2));
 }
 
@@ -29,11 +34,15 @@ async function still(page: Page, dir: string, name: string, settle = 700, type: 
   await page.screenshot({ path: path.join(SHOTS, dir, `${name}.${type === "png" ? "png" : "jpg"}`), type, ...(type === "jpeg" ? { quality: 92 } : {}) });
 }
 
-async function tapAt(key: string, target: Locator) {
+async function tapAt(key: string, target: Locator, where: "centre" | "right" = "centre") {
   const box = await target.boundingBox();
-  if (box) taps[key] = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
+  if (box) {
+    taps[key] = where === "right" ? { x: Math.round(box.x + box.width), y: Math.round(box.y + box.height / 2) } : { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
+  }
   saveTaps();
 }
+
+const at = (page: Page, hhmm: string) => page.clock.setFixedTime(new Date(`${DAY}T${hhmm}:00+07:00`));
 
 // Every What's new card and staff tip already closed: a clean screen.
 test.beforeEach(async ({ context }) => {
@@ -42,18 +51,26 @@ test.beforeEach(async ({ context }) => {
   }, [...WHATS_NEW, ...STAFF_WHATS_NEW].map((e) => storageKey(e.id)));
 });
 
-/** Where the typing frames break: about every `step` characters, always ending on the full sentence. */
+/** Where the typing frames break: evenly, always ending on the full sentence. */
 function typingCuts(text: string, frames: number) {
   const cuts: number[] = [];
   for (let i = 1; i <= frames; i++) cuts.push(Math.round((text.length * i) / frames));
   return [...new Set(cuts)];
 }
 
-for (const locale of ["id", "en"] as Locale[]) {
+/** Kakak's sheet scrolls inside itself: the element that does. */
+async function sheetScroller(page: Page) {
+  return page.getByRole("dialog").evaluateHandle((dialog) => {
+    const all = [dialog, ...Array.from(dialog.querySelectorAll("*"))] as HTMLElement[];
+    return all.find((el) => el.scrollHeight > el.clientHeight + 4 && /(auto|scroll)/.test(getComputedStyle(el).overflowY)) ?? null;
+  });
+}
+
+for (const locale of ["en", "id"] as Locale[]) {
   const ui = UI[locale];
 
   test(`owner ${locale}: Today and the three sentences to Kakak`, async ({ context, page }) => {
-    const stub = await installDemo(context, page, { owner: locale }, { lights: false });
+    await installDemo(context, page, { owner: locale }, { lights: false, at: "07:45" });
     await servePhotos(page);
     let k: 0 | 1 | 2 = 0;
     let hold = Promise.resolve();
@@ -95,11 +112,34 @@ for (const locale of ["id", "en"] as Locale[]) {
       const confirm = page.getByRole("button", { name: confirms[k], exact: true });
       await confirm.waitFor();
       await still(page, locale, `k${k}-card`, 1100);
+      // Kakak's name in the sheet's header: the AI tag sits beside it.
+      // Measured on the text itself: the element may span the whole header.
+      const name = await page
+        .getByRole("dialog")
+        .getByText("Kakak", { exact: true })
+        .first()
+        .evaluate((el) => {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const r = range.getBoundingClientRect();
+          return { x: Math.round(r.right), y: Math.round(r.top + r.height / 2) };
+        });
+      taps[`${locale}.k${k}.name`] = name;
+      saveTaps();
+      if (k === 0) {
+        // The chore card is long: scroll the sheet down to its button, in small steps.
+        const scroller = await sheetScroller(page);
+        const max = await scroller.evaluate((el) => (el ? (el as HTMLElement).scrollHeight - (el as HTMLElement).clientHeight : 0));
+        const steps = 14;
+        for (let i = 1; i <= steps; i++) {
+          await scroller.evaluate((el, y) => el && ((el as HTMLElement).scrollTop = y), Math.round((max * i) / steps));
+          await still(page, locale, `k0-scroll-${String(i - 1).padStart(2, "0")}`, 60, "jpeg");
+        }
+      }
       await tapAt(`${locale}.k${k}.confirm`, confirm);
       await confirm.click();
       await still(page, locale, `k${k}-saved`, 1300);
     }
-    void stub;
   });
 
   test(`owner ${locale}: all on track, and the scroll past each person`, async ({ context, page }) => {
@@ -118,13 +158,7 @@ for (const locale of ["id", "en"] as Locale[]) {
   test(`owner ${locale}: Kitchen, Pets, Repairs`, async ({ context, page }) => {
     const stub = await installDemo(context, page, { owner: locale }, { lights: true });
     await servePhotos(page);
-    // Aunt Rina's opor, as sentence 3 saved it.
-    stub.foods.push({
-      id: "00000000-0000-4000-8000-000000000f01", household_id: HOUSEHOLD_ID, name: "Opor", kept_in: "fridge",
-      expires_on: "2026-11-17", expiry_unknown: false, source: "gift", from_whom: locale === "en" ? "Aunt Rina" : "Tante Rina",
-      return_container: false, container_returned_at: null, notes: null, photo_url: null, added_by: null, created_by: null,
-      outcome: null, finished_at: null, finished_by: null, created_at: "2026-11-16T08:00:00Z", updated_at: "2026-11-16T08:00:00Z",
-    });
+    stub.foods.push(...foods(locale));
     const tabs = locale === "id" ? { kitchen: "Dapur", pets: "Hewan", home: "Rumah", repairs: "Perbaikan" } : { kitchen: "Kitchen", pets: "Pets", home: "Home", repairs: "Repairs" };
     await page.goto("/dashboard");
     await page.getByRole("button", { name: ui.open }).waitFor({ timeout: 30_000 });
@@ -135,14 +169,14 @@ for (const locale of ["id", "en"] as Locale[]) {
         await page.getByRole("button", { name: tabs.repairs, exact: true }).or(page.getByRole("tab", { name: tabs.repairs })).first().click();
         await still(page, locale, "glimpse-repairs", 1600);
       } else {
-        await still(page, locale, `glimpse-${key}`, 1600);
+        await still(page, locale, `glimpse-${key}`, 1800);
       }
     }
   });
 }
 
 test("staff: Pel teras, with photos", async ({ context, page }) => {
-  await installDemo(context, page, { staff: true }, { lights: true, terraceToDo: true, at: "08:50" });
+  await installDemo(context, page, { staff: true }, { lights: true, terraceToDo: true, at: "08:58" });
   await servePhotos(page);
   await page.goto("/staff");
   const card = page.getByRole("button", { name: /Pel teras/ }).first();
@@ -152,10 +186,12 @@ test("staff: Pel teras, with photos", async ({ context, page }) => {
   await card.click();
   await page.getByRole("button", { name: "Ambil Foto Sebelum" }).waitFor();
   await still(page, "staff", "sheet", 900);
-  for (const [label, name, key] of [
-    ["Ambil Foto Sebelum", "terrace-before", "before"],
-    ["Ambil Foto Sesudah", "terrace", "after"],
+  // The before photo as she starts, the after photo when she's done.
+  for (const [label, name, key, time] of [
+    ["Ambil Foto Sebelum", "terrace-before", "before", "09:02"],
+    ["Ambil Foto Sesudah", "terrace", "after", "09:24"],
   ] as const) {
+    await at(page, time);
     const button = page.getByRole("button", { name: label, exact: true });
     await tapAt(`staff.${key}`, button);
     const chooser = page.waitForEvent("filechooser", { timeout: 10_000 });
@@ -171,10 +207,35 @@ test("staff: Pel teras, with photos", async ({ context, page }) => {
   await still(page, "staff", "done", 900);
 });
 
-test("staff: the evening, lights off still to do", async ({ context, page }) => {
-  await installDemo(context, page, { staff: true }, { lights: true, at: "21:25" });
+test("staff: the 21.30 reminder, the photo and the tick", async ({ context, page }) => {
+  await installDemo(context, page, { staff: true }, { lights: true, at: "21:30", open: ["lights"] });
   await servePhotos(page);
   await page.goto("/staff");
-  await page.getByRole("button", { name: /Matikan lampu/ }).first().waitFor({ timeout: 30_000 });
+  const card = page.getByRole("button", { name: /Matikan lampu/ }).first();
+  await card.waitFor({ timeout: 30_000 });
   await still(page, "staff", "evening", 2000);
+  // The round camera button at the card's right.
+  const box = await card.boundingBox();
+  if (box) taps["staff.lights"] = { x: Math.round(box.x + box.width - 26), y: Math.round(box.y + box.height / 2) };
+  saveTaps();
+  await card.click();
+  const take = page.getByText(/Ambil Foto untuk/);
+  await take.waitFor();
+  const chooser = page.waitForEvent("filechooser", { timeout: 10_000 });
+  await take.click();
+  await (await chooser).setFiles({ name: "night.jpg", mimeType: "image/jpeg", buffer: await photo("night") });
+  const boxes = page.getByRole("checkbox");
+  await boxes.first().waitFor();
+  await still(page, "staff", "lights-pick", 900);
+  const count = await boxes.count();
+  for (let i = 0; i < count; i++) {
+    await tapAt(`staff.pick${i}`, boxes.nth(i));
+    await boxes.nth(i).click();
+  }
+  await still(page, "staff", "lights-picked", 600);
+  const save = page.getByRole("button", { name: "Simpan" });
+  await tapAt("staff.lightsSave", save);
+  await save.click();
+  await page.getByText(/Menyimpan foto/).first().waitFor({ state: "detached", timeout: 20_000 }).catch(() => undefined);
+  await still(page, "staff", "lights-done", 1500);
 });

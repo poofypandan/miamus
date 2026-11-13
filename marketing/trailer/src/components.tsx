@@ -47,10 +47,11 @@ export function Backdrop({ evening = 0 }: { evening?: number }) {
     const pb = b.match(/\w\w/g)!.map((h) => parseInt(h, 16));
     return `rgb(${pa.map((v, i) => Math.round(v + (pb[i] - v) * evening)).join(",")})`;
   };
+  // Warm white by day; dark only for the two evening notifications (design lead, v2).
   return (
     <AbsoluteFill
       style={{
-        background: `radial-gradient(120% 80% at 46% 38%, ${mix("ffffff", "34373c")} 0%, ${mix("f4f2ee", "25272b")} 55%, ${mix("ebe7e0", "1c1e21")} 100%)`,
+        background: `radial-gradient(120% 80% at 46% 38%, ${mix("fffefb", "34373c")} 0%, ${mix("fbf8f3", "25272b")} 55%, ${mix("f5f1ea", "1c1e21")} 100%)`,
       }}
     />
   );
@@ -134,7 +135,7 @@ export function Phone({
   // caption, so a caption never sits on the app's own white screen.
   const z = Math.max(0, Math.min(1, (camera.scale - 1) / 0.12));
   const capTop = CAPTION_TOP - 6;
-  const mask = z > 0 ? `linear-gradient(to bottom, #000 0px, #000 ${capTop - 70}px, rgba(0,0,0,${1 - z}) ${capTop}px)` : undefined;
+  const mask = z > 0 ? `linear-gradient(to bottom, #000 0px, #000 ${capTop - 150}px, rgba(0,0,0,${1 - z}) ${capTop - 8}px)` : undefined;
   return (
     <AbsoluteFill style={mask ? { WebkitMaskImage: mask, maskImage: mask } : undefined}>
     <div
@@ -221,19 +222,7 @@ export function Shutter({ at }: { at: number }) {
  * corners, the app's typeface at medium weight, no outline, no shadow.
  * Stays at least 1.5 s (storyboard). `label` is the AI disclosure line.
  */
-export function Caption({
-  text,
-  say,
-  label,
-  from,
-  to,
-}: {
-  text: string;
-  say?: string;
-  label?: string;
-  from: number;
-  to: number;
-}) {
+export function Caption({ text, sub, from, to }: { text: string; sub?: string; from: number; to: number }) {
   const frame = useCurrentFrame();
   const inT = ramp(frame, from, from + 10);
   const outT = ramp(frame, to - 8, to);
@@ -254,26 +243,55 @@ export function Caption({
     >
       <div
         style={{
-          maxWidth: 820,
-          padding: "20px 30px 22px",
+          maxWidth: 840,
+          padding: "20px 32px 22px",
           borderRadius: 28,
-          // Warm off-white with a hairline edge: it stays apart from the app's
-          // white screen when a zoomed phone passes behind it.
-          background: "rgba(247,245,241,0.97)",
-          border: "1.5px solid rgba(23,23,23,0.09)",
+          // Warm off-white with a hairline edge, apart from the app's white screen.
+          background: "rgba(255,253,249,0.97)",
+          border: "1.5px solid rgba(23,23,23,0.08)",
           fontFamily: FONT,
           textAlign: "center",
           color: C.ink,
         }}
       >
-        <div style={{ fontSize: 42, fontWeight: 600, lineHeight: 1.18, letterSpacing: -0.4, textWrap: "balance" } as React.CSSProperties}>{text}</div>
-        {label && (
-          <div style={{ marginTop: 8, fontSize: 27, fontWeight: 500, color: C.inkSoft, lineHeight: 1.25 }}>{label}</div>
-        )}
-        {say && (
-          <div style={{ marginTop: label ? 6 : 8, fontSize: 28, fontWeight: 400, color: C.inkMute, lineHeight: 1.3, textWrap: "balance" } as React.CSSProperties}>{say}</div>
-        )}
+        <div style={{ fontSize: 44, fontWeight: 600, lineHeight: 1.18, letterSpacing: -0.4, textWrap: "balance" } as React.CSSProperties}>{text}</div>
+        {sub && <div style={{ marginTop: 8, fontSize: 28, fontWeight: 500, color: C.inkSoft, lineHeight: 1.3 }}>{sub}</div>}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The AI disclosure: a small tag beside Kakak's name in her sheet, for two
+ * seconds the first time she appears. `x`, `y`: the right end and middle of
+ * her name, in CSS px of the screen.
+ */
+export function AiTag({ text, x, y, from, to }: { text: string; x: number; y: number; from: number; to: number }) {
+  const frame = useCurrentFrame();
+  const o = ramp(frame, from, from + 8) * (1 - ramp(frame, to - 8, to));
+  if (o <= 0) return null;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: (x + 8) * K,
+        top: INSET_TOP + y * K,
+        transform: `translateY(-50%) scale(${0.9 + 0.1 * o})`,
+        transformOrigin: "left center",
+        opacity: o,
+        fontFamily: FONT,
+        fontSize: 11.5 * K,
+        fontWeight: 600,
+        lineHeight: 1,
+        color: C.ink,
+        background: "#f1efeb",
+        border: "1px solid rgba(23,23,23,0.12)",
+        borderRadius: 999,
+        padding: `${4 * K}px ${8 * K}px`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {text}
     </div>
   );
 }
@@ -299,11 +317,14 @@ export function BrandMark({ size, radius = 0.2237 }: { size: number; radius?: nu
  * Miamus mark, the title and body as the app sends them). Deliberately not
  * a phone maker's lock screen or banner.
  */
-export function NotificationCard({ title, body, time, at }: { title: string; body: string; time: string; at: number }) {
+export function NotificationCard({ title, body, time, at, until }: { title: string; body: string; time: string; at: number; until?: number }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const s = spring({ frame: frame - at, fps, config: { damping: 18, stiffness: 120, mass: 0.8 } });
-  if (frame < at) return null;
+  const s0 = spring({ frame: frame - at, fps, config: { damping: 18, stiffness: 120, mass: 0.8 } });
+  // Tapped: it lifts away.
+  const gone = until === undefined ? 0 : ramp(frame, until, until + 8);
+  const s = s0 * (1 - gone);
+  if (frame < at || gone >= 1) return null;
   return (
     <div
       style={{
@@ -369,8 +390,8 @@ export function HookBubbles({ lines, leaveAt, stagger = 14, first = 0 }: { lines
   );
 }
 
-/** The end card: the mark, the name, the line, the address; the AI note in small print. */
-export function EndCard({ line, small, from }: { line: string; small: string; from: number }) {
+/** The end card: the mark, the name, the line, the address (the AI note is in shot 2 now). */
+export function EndCard({ line, from }: { line: string; from: number }) {
   const frame = useCurrentFrame();
   const a = ramp(frame, from, from + 16);
   const b = ramp(frame, from + 8, from + 26);
@@ -391,7 +412,6 @@ export function EndCard({ line, small, from }: { line: string; small: string; fr
         ))}
       </div>
       <div style={{ opacity: c, marginTop: 40, fontSize: 36, fontWeight: 500, color: C.inkSoft, letterSpacing: 0.5 }}>miamus.app</div>
-      <div style={{ opacity: c, position: "absolute", bottom: 24, fontSize: 26, color: C.inkMute }}>{small}</div>
     </div>
   );
 }

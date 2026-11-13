@@ -15,6 +15,8 @@ export const beat = (n: number) => Math.round(n * BEAT);
 /** The nearest beat to a frame, the next one, or the one before. */
 export const snap = (f: number) => beat(Math.round(f / BEAT));
 export const snapUp = (f: number) => beat(Math.ceil(f / BEAT - 1e-6));
+/** The nearest half beat: for quick runs of taps. */
+export const snapHalf = (f: number) => Math.round(Math.round((f / BEAT) * 2) * (BEAT / 2));
 
 export type Span = readonly [number, number];
 export const len = (s: Span) => s[1] - s[0];
@@ -64,34 +66,45 @@ export interface KakakTimes {
   /** Tap on Send (on a beat), the card, the tap on the confirm button (on a beat), the saved screen. */
   send: number;
   card: number;
+  /** The AI tag beside Kakak's name: two seconds while the card is on screen. */
+  tag: [number, number];
+  /** Sentence 1's card is long: the sheet scrolls down to its button (0 length = no scroll). */
+  scrollFrom: number;
+  scrollLength: number;
   confirm: number;
   saved: number;
-  /** The push in on the card: start, full, hold until, back out by. */
-  zoom: [number, number, number, number];
 }
 
 /** Shots 2–4 (and the 15-second cut's shot 2): taps on beats, everything else follows them. */
-export function kakakTimes(span: Span, typingFrom: number, typingLength: number, startTyped = false): KakakTimes {
+export function kakakTimes(span: Span, typingFrom: number, typingLength: number, opts: { startTyped?: boolean; scroll?: boolean; scrollGap?: number } = {}): KakakTimes {
   const [start] = span;
   const length = len(span);
-  const typed = startTyped ? typingFrom : typingFrom + typingLength;
+  const typed = opts.startTyped ? typingFrom : typingFrom + typingLength;
   const send = snapUp(start + typed + 6) - start;
   const card = send + 18;
-  const confirm = Math.max(card + 40, snap(start + length - 40) - start);
-  const saved = confirm + 8;
-  const zIn = card + 6;
-  const zOut = confirm - 2;
-  const zFull = Math.min(card + 32, zOut - 22);
-  const zHold = Math.max(zFull, zOut - 16);
-  return { typingFrom, typingLength: startTyped ? 0 : typingLength, send, card, confirm, saved, zoom: [zIn, zFull, zHold, zOut] };
+  const scrollFrom = opts.scroll ? card + (opts.scrollGap ?? 34) : 0;
+  const scrollLength = opts.scroll ? 16 : 0;
+  const earliest = opts.scroll ? scrollFrom + scrollLength + 10 : card + 40;
+  const confirm = Math.max(earliest, snap(start + length - 40) - start);
+  return {
+    typingFrom,
+    typingLength: opts.startTyped ? 0 : typingLength,
+    send,
+    card,
+    tag: [card + 4, card + 4 + 2 * FPS],
+    scrollFrom,
+    scrollLength,
+    confirm,
+    saved: confirm + 8,
+  };
 }
 
 export const K60: [KakakTimes, KakakTimes, KakakTimes] = [
-  kakakTimes(SHOTS_60.s2, 10, 60),
+  kakakTimes(SHOTS_60.s2, 10, 60, { scroll: true }),
   kakakTimes(SHOTS_60.s3, 8, 62),
   kakakTimes(SHOTS_60.s4, 6, 46),
 ];
-export const K15 = kakakTimes(SHOTS_15.s2, 14, 0, true);
+export const K15 = kakakTimes(SHOTS_15.s2, 14, 0, { startTyped: true, scroll: true, scrollGap: 26 });
 
 export interface StaffTimes {
   card: number;
@@ -104,24 +117,39 @@ export interface StaffTimes {
   done: number;
 }
 
-/** Shot 5: Sari's four taps on beats (60 s); the 15-second cut runs the same beats faster, unsnapped. */
+/**
+ * Shot 5: Sari's taps on half beats (60 s), kept short on the empty sheet so
+ * the time goes to the finished photos and the tick. The 15-second cut runs
+ * the same beats faster, unsnapped.
+ */
 export const STAFF60: StaffTimes = (() => {
   const [start] = SHOTS_60.s5;
-  const at = (f: number) => snap(start + f) - start;
-  // Two beats between taps: the tap, the screen it opens, a breath.
-  const card = at(42);
-  const before = at(84);
-  const after = at(126);
-  const finish = at(168);
+  const at = (f: number) => snapHalf(start + f) - start;
+  const card = at(24);
+  const before = at(40);
+  const after = at(60);
+  const finish = at(130);
   return { card, sheet: card + 8, before, beforeIn: before + 8, after, afterIn: after + 8, finish, done: finish + 8 };
 })();
-export const STAFF15: StaffTimes = { card: 10, sheet: 16, before: 27, beforeIn: 33, after: 42, afterIn: 48, finish: 58, done: 64 };
+export const STAFF15: StaffTimes = { card: 8, sheet: 14, before: 22, beforeIn: 28, after: 36, afterIn: 42, finish: 60, done: 66 };
 
-/** Shots 6 and 8: when each notification arrives (on a beat). */
-export const S6 = { push: snap(SHOTS_60.s6[0] + 40) - SHOTS_60.s6[0] };
+/**
+ * Shot 6: the 21.30 reminder arrives on Sari's phone; she taps it, takes the
+ * photo of the dogs with the lights off, ticks them, saves: the tick.
+ */
+export const S6 = (() => {
+  const [start] = SHOTS_60.s6;
+  const at = (f: number) => snapHalf(start + f) - start;
+  const push = at(22);
+  const open = at(50);
+  const camera = at(64);
+  const save = at(104);
+  return { push, open, camera, picked: camera + 8, save, done: save + 8 };
+})();
+/** Shot 8: the owner's only alert: the evening walk, not done (on a beat). */
 export const S8 = { push: snap(SHOTS_60.s8[0] + 44) - SHOTS_60.s8[0] };
-/** Shot 7: the push in on the status line, then the slow scroll. */
-export const S7 = { zoomIn: [16, 46] as const, zoomOut: [78, 96] as const, scrollFrom: 96, scrollLength: 104 };
+/** Shot 7: held on the status line, then the slow scroll past each person. */
+export const S7 = { scrollFrom: 84, scrollLength: 110 };
 /** Shot 9: Kitchen for two beats, Pets for one and a half, Repairs to the end. */
 export const S9 = { pets: beat(2), repairs: beat(3.5) };
 
@@ -133,9 +161,9 @@ export const MUSIC_ARC: { from: number; to: number; what: string }[] = [
   { from: 0, to: SHOTS_60.s1[0], what: "near silence; the hook's three soft taps" },
   { from: SHOTS_60.s1[0], to: SHOTS_60.s2[0], what: "one motif" },
   { from: SHOTS_60.s2[0], to: SHOTS_60.s5[0], what: "a soft pulse, building a step with each Kakak sentence (shots 2, 3, 4)" },
-  { from: SHOTS_60.s5[0], to: SHOTS_60.s7[0], what: "a small lift as the staff phone appears; steady through the reminder" },
+  { from: SHOTS_60.s5[0], to: SHOTS_60.s7[0], what: "a small lift as the staff phone appears; steady through the evening reminder and its tick" },
   { from: SHOTS_60.s7[0], to: SHOTS_60.s8[0], what: "the high point, on \"All on track\"" },
-  { from: SHOTS_60.s8[0], to: SHOTS_60.s9[0], what: "near silence under the \"not done\" notification" },
+  { from: SHOTS_60.s8[0], to: SHOTS_60.s9[0], what: "near silence under the owner's one \"not done\" notification (the evening walk)" },
   { from: SHOTS_60.s9[0], to: SHOTS_60.end[0], what: "the pulse returns" },
   { from: SHOTS_60.end[0], to: SHOTS_60.end[1], what: "resolve: a real ending on the last beat, not a fade" },
 ];

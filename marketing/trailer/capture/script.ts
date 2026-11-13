@@ -9,7 +9,7 @@
  * used for these three because it reads one intent per sentence (sentence 3
  * is two cards) and labels its bubbles "(Latihan)".
  */
-import { BRUNO, COCO, DAY, EGGS, NEXT_MONDAY, SARI, SOAP, TERRACE } from "./demo";
+import { BRUNO, COCO, DAY, EGGS, SARI, SOAP, TERRACE } from "./demo";
 
 export type Locale = "id" | "en";
 
@@ -22,12 +22,12 @@ export const TYPED: Record<Locale, [string, string, string]> = {
   id: [
     "Minta Sari pel teras setiap Senin jam 9.",
     "Matikan lampu untuk Coco dan Bruno jam 21.30. Ingatkan staf, dan kabari saya kalau belum dikerjakan.",
-    "Beli telur dan sabun cuci piring. Tante Rina juga bawa opor, simpan di kulkas.",
+    "Beli telur dan sabun cuci piring. Tante Rina juga bawa opor, simpan di kulkas, tahan sampai Rabu.",
   ],
   en: [
     "Have Sari mop the terrace every Monday at 9.",
     "Lights off for Coco and Bruno at 9:30 pm. Remind staff, and tell me if it isn't done.",
-    "Buy eggs and dish soap. Aunt Rina also brought opor; it's in the fridge.",
+    "Buy eggs and dish soap. Aunt Rina also brought opor; it's in the fridge, good until Wednesday.",
   ],
 };
 
@@ -35,12 +35,12 @@ const REPLY: Record<Locale, [string, string, string]> = {
   id: [
     "Baik. Sari mengepel teras setiap Senin jam 09.00.",
     "Baik. Lampu untuk Coco dan Bruno dimatikan setiap malam jam 21.30, dengan foto. Staf diingatkan, dan Anda dikabari kalau belum dikerjakan.",
-    "Baik. Telur dan sabun cuci piring masuk daftar belanja, dan opor dari Tante Rina dicatat di kulkas.",
+    "Baik. Telur dan sabun cuci piring masuk daftar belanja, dan opor dari Tante Rina dicatat di kulkas sampai Rabu.",
   ],
   en: [
     "Sure. Sari mops the terrace every Monday at 9:00.",
     "Sure. Lights off for Coco and Bruno every night at 9:30 pm, with a photo. Staff get a reminder, and you'll hear only if it isn't done.",
-    "Sure. Eggs and dish soap are on the shopping list, and Aunt Rina's opor is noted in the fridge.",
+    "Sure. Eggs and dish soap are on the shopping list, and Aunt Rina's opor is noted in the fridge until Wednesday.",
   ],
 };
 
@@ -56,7 +56,8 @@ function items(locale: Locale, k: 0 | 1 | 2) {
       {
         kind: "chore", title: "Pel teras", titleEn: "Mop the terrace", category: "cleaning",
         assignedTo: SARI, assignToSelf: false, assigneeName: "Sari",
-        dueDate: NEXT_MONDAY, dueTime: "09:00", recurrence: "weekly", recurrenceUntil: null,
+        // First time this Monday, 16 Nov, at 9 (the owner sets it up at 7.45; Sari mops at 9).
+        dueDate: DAY, dueTime: "09:00", recurrence: "weekly", recurrenceUntil: null,
         requiresSupervision: false, locationId: TERRACE.id, roomName: "Teras",
         newRoomName: null, newRoomFloorId: null, newRoomFloorName: null, notes: null, remindDaysBefore: null,
       },
@@ -84,8 +85,9 @@ function items(locale: Locale, k: 0 | 1 | 2) {
       ],
     },
     {
+      // The owner gave the date ("until Wednesday"), so it isn't Kakak's guess.
       kind: "food", name: "Opor", keptIn: "fridge", expiresOn: addDays(DAY, 2), expiryUnknown: false,
-      expiryIsGuess: true, source: "gift", fromWhom: locale === "en" ? "Aunt Rina" : "Tante Rina",
+      expiryIsGuess: false, source: "gift", fromWhom: locale === "en" ? "Aunt Rina" : "Tante Rina",
       returnContainer: false, notes: null,
     },
   ];

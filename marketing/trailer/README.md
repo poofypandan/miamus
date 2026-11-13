@@ -74,7 +74,26 @@ Both folders are git-ignored.
   "Simpan 2" in the app (en: "Looks right" / "Save" / "Save 2"); the film
   shows the real labels.
 - **"Segera dipakai"** (shot 9) is not a section in the app; the opor shows
-  under "Minggu ini" with "Besok".
+  under "Minggu ini" / "This week".
+- **The owner's alert (shot 8)** is the evening walk, not dinner: in the app
+  only routines such as walks and lights can carry "tell me if it isn't done";
+  meals can't.
+- **The staff photos:** the app always asks for a before and an after photo
+  (Phase 127), so shot 5 shows both.
+
+## v2 (design lead's review, 14 Nov)
+
+Every shot pushed in at least as far as the Kakak shots; one line per caption
+(the English cut's second line in shot 6 translates the Indonesian reminder);
+the reminder shot ends with Sari's photo and the tick, and the owner's alert
+is a different routine; Today opens with the status card out of view ("All
+on track" first appears in shot 7); the AI disclosure is a small tag beside
+Kakak's name for two seconds; the first card scrolls down to "Looks right";
+the opor's date comes from the owner, so the card has no guess label; the
+staff shot spends its time on the finished photos (09.02 and 09.24) and the
+tick; the first mop is Monday the 16th; fuller Kitchen, Pets and Repairs
+screens; warm white by day, dark only for the two evening notifications; no
+AI line on the end card.
 
 ## Fonts
 

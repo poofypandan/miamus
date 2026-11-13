@@ -82,6 +82,22 @@ const SCENES: Record<string, string> = {
     <ellipse cx="540" cy="430" rx="280" ry="70" fill="#a9bac4"/>
     <ellipse cx="540" cy="432" rx="230" ry="52" fill="#b98f5e"/>
     ${[[470, 420], [520, 405], [580, 425], [620, 412], [500, 445], [560, 450], [440, 438], [650, 440]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="14" fill="#9c7447"/>`).join("")}`,
+  // Lights off for the dogs: a dim room, moonlight at the window, two dog beds.
+  night: `
+    <rect width="${W}" height="${H}" fill="#2a2f3a"/>
+    <rect x="0" y="470" width="${W}" height="340" fill="#242832"/>
+    <rect x="640" y="90" width="300" height="300" rx="8" fill="#3d4a5f"/>
+    <line x1="790" y1="90" x2="790" y2="390" stroke="#2a2f3a" stroke-width="10"/>
+    <polygon points="640,390 940,390 1000,700 560,700" fill="#3a4354" opacity=".45"/>
+    <ellipse cx="300" cy="640" rx="190" ry="60" fill="#4a4e57"/><ellipse cx="300" cy="628" rx="150" ry="40" fill="#5b5f68"/>
+    <ellipse cx="620" cy="690" rx="170" ry="55" fill="#4a4e57"/><ellipse cx="620" cy="678" rx="132" ry="36" fill="#5b5f68"/>`,
+  lawn: `
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9efe4"/><stop offset="1" stop-color="#cfdcc4"/></linearGradient></defs>
+    <rect width="${W}" height="${H}" fill="url(#g)"/>
+    <rect x="0" y="0" width="${W}" height="260" fill="#eef0ea"/>
+    <rect x="0" y="230" width="${W}" height="40" fill="#d8d2c6"/>
+    ${Array.from({ length: 60 }, (_, i) => `<path d="M${(i * 37) % W},${330 + ((i * 53) % 440)} l6,-26 l6,26 z" fill="#9fb58f" opacity=".55"/>`).join("")}
+    ${plant(150, 250, 0.7)}`,
   "repair-tap": `
     <rect width="${W}" height="${H}" fill="#eef1f2"/>
     <rect x="0" y="520" width="${W}" height="290" fill="#e2e6e8"/>
@@ -102,7 +118,9 @@ SCENES["terrace-before"] = SCENES.terrace.replace("url(#light)", "#d9cdbb").conc
 
 const cache = new Map<string, Buffer>();
 export async function photo(name: string): Promise<Buffer> {
-  const key = SCENES[name] ? name : "room-1";
+  // "bowl-07:30" is the bowl scene, and so on: one scene, many tiles.
+  const base = name.replace(/-\d\d:\d\d$/, "");
+  const key = SCENES[name] ? name : SCENES[base] ? base : "room-1";
   if (!cache.has(key)) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${SCENES[key]}</svg>`;
     cache.set(key, await sharp(Buffer.from(svg)).jpeg({ quality: 88 }).toBuffer());
