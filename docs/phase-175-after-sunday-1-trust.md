@@ -155,10 +155,18 @@ the migration:
 
 **The staff phone** calls `mark_staff_app_open` with the signed-in person
 (`readActiveStaffId()`) and the count of its outbox (what the weak-signal
-queue holds): when the staff app opens, when it comes back to the front,
-and when the outbox empties; never more than once in 15 minutes unless the
-count changed. A failed call is dropped silently; the next one replaces it.
-An owner in staff view sends nothing.
+queue holds):
+
+- when the staff app opens and when it comes back to the front, at most
+  once in 15 minutes while the count is the same;
+- **whenever the outbox count changes** while the app is open
+  (`subscribeOutbox()` in `src/lib/offline-queue.ts`), so photos that get
+  stuck during a session are reported without the app being closed first:
+  one call a minute at most, carrying the latest count, and always one more
+  when the count reaches zero.
+
+A failed call is dropped silently; the next one replaces it. An owner in
+staff view sends nothing.
 
 A phone with no signal at all cannot report anything, so it reads as "has
 not opened today". A phone whose signal is too weak for photos can still
@@ -554,7 +562,8 @@ needs it.
   switch greyed without a time; two owners with different kinds see the same
   Today.
 - **Browser, staff (ID):** the bell on a watched task; the tip card; no
-  English; the ping is sent on open and after the outbox empties.
+  English; the ping is sent on open, when a save gets stuck while the app
+  stays open (the count goes from 0 to 1), and after the outbox empties.
 - **Must still pass:** `push-prompt`, `calm-start`, `first-run`,
   `weak-signal`, the evening-summary and routine-alert SQL tests.
 
