@@ -8,6 +8,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { useHousehold } from "@/context/household-context";
 import { useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useRecipeHints } from "@/hooks/use-recipe-hints";
+import { RecipeHintCard } from "@/components/kitchen/recipe-hint-card";
 import {
   RECIPE_LIMITS,
   STAFF_STEPS_MISSING,
@@ -104,6 +106,8 @@ export function RecipeBody({
   const readLang: RecipeLang = forStaff ? "id" : lang;
   const steps = splitSteps(text.steps);
   const missing = owner && missingIndonesian(recipe, inventoryItems);
+  // Recipes that learn (Phase 177): owners only, above the ingredients, also inside a dish.
+  const hint = useRecipeHints({ enabled: owner }).find((h) => h.recipe.id === recipe.id) ?? null;
   const big = !owner || asStaff;
 
   return (
@@ -128,6 +132,8 @@ export function RecipeBody({
         )}
 
         {missing && <IndonesianVersionNote onAdd={onEdit ? () => onEdit(recipe, "indonesian") : undefined} />}
+
+        {owner && hint && <RecipeHintCard hint={hint} lang={lang} />}
 
         <div className="flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2">
           <span className={cn("font-medium text-gray-900", big ? "text-lg" : "text-base")}>
