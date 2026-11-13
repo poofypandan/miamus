@@ -12,14 +12,17 @@ import {
   EndCard,
   FramedPhone,
   HookBubbles,
+  KB,
   NotificationCard,
   Screen,
   ScreenTrack,
   Shutter,
   TapRing,
   ramp,
+  screenPoint,
 } from "./components";
 import { COPY, type Locale } from "./copy";
+import { W } from "./theme";
 import { loadFonts } from "./theme";
 import { HOOK, K15, K60, type KakakTimes, S1, S6, S7, S8, S9, SHOTS_15, SHOTS_60, STAFF15, STAFF60, TWO_PHONES, type Span, type StaffTimes, len } from "./timeline";
 
@@ -50,15 +53,15 @@ export type TrailerProps = {
 /* ------------------------------------------------------------------ */
 
 /**
- * The screen fills the frame (scale 1 = as wide as the frame, as large as on
- * a phone in the hand); the camera pushes in on what matters. A key says
- * which CSS row of the screen to look at (`fy`), how close, and where on the
- * frame that row should land (`y`). Everything that must be read lands
- * between 220 and about 1,350 px, clear of the caption and the platforms'
- * buttons.
+ * The screen is exactly the frame's width (design lead, v3: never wider; at
+ * that size the text is already as large as on a phone in the hand). The
+ * camera pans: a key says which CSS row to look at (`fy`) and where on the
+ * frame it lands (`y`). What must be read lands between 220 and about 1,180
+ * px, above the screen's fade; the caption sits alone on the band below.
+ * Only shot 1 uses a smaller screen (`scale` < 1, shifted `left`).
  */
-type Key = { at: number; fy: number; scale: number; y: number };
-const cam = (at: number, fy: number, y = 780, scale = 1): Key => ({ at, fy, scale, y });
+type Key = { at: number; fy: number; y: number; scale: number; left: number };
+const cam = (at: number, fy: number, y = 780, scale = 1, left?: number): Key => ({ at, fy, y, scale, left: left ?? (W - W * scale) / 2 });
 
 function useCamera(keys: Key[]): Camera {
   const frame = useCurrentFrame();
@@ -68,14 +71,14 @@ function useCamera(keys: Key[]): Camera {
   const b = keys[Math.min(keys.length - 1, i)];
   const t = a === b ? 1 : ramp(frame, a.at, b.at);
   const lerp = (p: number, q: number) => p + (q - p) * t;
-  return { scale: lerp(a.scale, b.scale), fx: CSS_W / 2, fy: lerp(a.fy, b.fy), y: lerp(a.y, b.y) };
+  return { scale: lerp(a.scale, b.scale), fy: lerp(a.fy, b.fy), y: lerp(a.y, b.y), left: lerp(a.left, b.left) };
 }
 
 /** The screen sliding in from one side at the start of a shot. */
 function useSlideIn(from: number, duration = 14, side: 1 | -1 = 1) {
   const frame = useCurrentFrame();
   const t = ramp(frame, from, from + duration);
-  return { x: (1 - t) * 1080 * side, opacity: 1 };
+  return { x: (1 - t) * 1080 * side };
 }
 
 function Shot({ span, children }: { span: Span; children: React.ReactNode }) {
@@ -86,12 +89,15 @@ function Shot({ span, children }: { span: Span; children: React.ReactNode }) {
   );
 }
 
+/** Where a confirm button lands: whole, above the fade. */
+const BUTTON_Y = 1110;
+
 /* ------------------------------------------------------------------ */
 /* The owner's three sentences to Kakak                                */
 /* ------------------------------------------------------------------ */
 
 /** What follows each save: the toast on Today (status card out of view), or Kakak's "Done". */
-const SAVED: Key[] = [cam(0, 609, 1000, 1.1), cam(0, 470, 780), cam(0, 609, 1000, 1.1)];
+const SAVED: Key[] = [cam(0, 609, 1080), cam(0, 470, 760), cam(0, 609, 1080)];
 
 function KakakShot({ locale, k, t, startTyped = false, aiTag }: { locale: Locale; k: 0 | 1 | 2; t: KakakTimes; startTyped?: boolean; aiTag?: string }) {
   const dir = `shots/${locale}`;
@@ -113,9 +119,6 @@ function KakakShot({ locale, k, t, startTyped = false, aiTag }: { locale: Locale
   const c = tap(`${locale}.k${k}.confirm`);
   const s = tap(`${locale}.k${k}.send`);
   const name = tap(`${locale}.k${k}.name`);
-  // The confirm button sits just above the caption, so the card's rows, its
-  // switches and the button show together.
-  const BUTTON_Y = 1270;
   const saved = SAVED[k];
   const camera = useCamera(
     t.scrollLength
@@ -131,6 +134,7 @@ function KakakShot({ locale, k, t, startTyped = false, aiTag }: { locale: Locale
           { ...saved, at: t.saved + 20 },
         ]
       : [
+          // Sentences 2 and 3: the card's rows, switches and button together.
           cam(0, 440, 820),
           cam(t.card, 440, 820),
           cam(t.card + 20, c.y, BUTTON_Y),
@@ -160,7 +164,23 @@ function KakakShot({ locale, k, t, startTyped = false, aiTag }: { locale: Locale
 
 const STAFF_BEZEL = "#7d7770";
 
-function StaffScreen({ t, from = 0 }: { t: StaffTimes; from?: number }) {
+function staffCamera(t: StaffTimes, from: number) {
+  const p = (k: string) => tap(`staff.${k}`);
+  return [
+    cam(from, p("card").y, 700),
+    cam(t.sheet, p("card").y, 700),
+    cam(t.sheet + 10, 490, 760),
+    // The two finished photos, each with its tick and its time.
+    cam(t.finish - 16, 490, 760),
+    cam(t.finish - 4, p("finish").y, BUTTON_Y),
+    cam(t.done + 4, p("finish").y, BUTTON_Y),
+    // Done: the top of her list, one more done and the task gone (the toast
+    // and the Lapor button at the bottom stay out of view).
+    cam(t.done + 18, 300, 640),
+  ];
+}
+
+function StaffScreen({ t, from = 0, fade = 1 }: { t: StaffTimes; from?: number; fade?: number }) {
   const cues: Cue[] = [
     { src: "shots/staff/list.png", at: 0, fade: 0 },
     { src: "shots/staff/sheet.png", at: t.sheet, fade: 8 },
@@ -169,20 +189,11 @@ function StaffScreen({ t, from = 0 }: { t: StaffTimes; from?: number }) {
     { src: "shots/staff/done.png", at: t.done, fade: 9 },
   ];
   const p = (k: string) => tap(`staff.${k}`);
-  const camera = useCamera([
-    cam(from, p("card").y, 700),
-    cam(t.sheet, p("card").y, 700),
-    cam(t.sheet + 10, 490, 760),
-    // The two finished photos, each with its tick and its time.
-    cam(t.finish - 16, 490, 760),
-    cam(t.finish - 4, p("finish").y, 1150),
-    cam(t.done + 4, p("finish").y, 1150),
-    // Done: the toast with its tick.
-    cam(t.done + 20, 801, 1150, 1.06),
-  ]);
+  const camera = useCamera(staffCamera(t, from));
   return (
     <Screen
       camera={camera}
+      fade={fade}
       overlay={
         <>
           <TapRing x={p("card").x} y={p("card").y} at={t.card} />
@@ -199,26 +210,38 @@ function StaffScreen({ t, from = 0 }: { t: StaffTimes; from?: number }) {
   );
 }
 
-/** 5. The owner's phone beside Sari's: what was said to Kakak, and her list. Then her screen fills the frame. */
+/**
+ * 5. The owner's phone beside Sari's: what was said to Kakak, and her list.
+ * Then the camera pushes straight into Sari's phone: her screen grows from
+ * its outline to the frame's width.
+ */
+const STAFF_PHONE = { left: 500, top: 300, screenW: 380 };
 function Shot5({ locale }: { locale: Locale }) {
   const frame = useCurrentFrame();
   const owner = ramp(frame, 0, 10);
-  const staff = ramp(frame, 4, 18);
-  const handover = ramp(frame, TWO_PHONES.until, TWO_PHONES.until + 12);
-  const W2 = 380;
+  const staffIn = ramp(frame, 4, 18);
+  const push = ramp(frame, TWO_PHONES.until, TWO_PHONES.until + 14);
+  // The full-bleed screen starts exactly over the outlined phone's screen.
+  const start = screenPoint(cam(0, tap("staff.card").y, 700), 0, 0);
+  const k0 = STAFF_PHONE.screenW / W; // outline screen ÷ frame width
+  const b = Math.round(10 * (STAFF_PHONE.screenW / CSS_W));
+  const insetTop = Math.round(22 * (STAFF_PHONE.screenW / CSS_W));
+  const ox = STAFF_PHONE.left + b;
+  const oy = STAFF_PHONE.top + b + insetTop - start.y * k0;
+  const sc = k0 + (1 - k0) * push;
   return (
     <>
-      <AbsoluteFill style={{ opacity: 1 - handover }}>
-        <FramedPhone left={60} top={300 + (1 - owner) * 60} screenW={W2} opacity={owner}>
+      <AbsoluteFill style={{ opacity: 1 - ramp(frame, TWO_PHONES.until, TWO_PHONES.until + 6) }}>
+        <FramedPhone left={60} top={300 + (1 - owner) * 60} screenW={380} opacity={owner * (1 - push)}>
           <ScreenTrack cues={[{ src: `shots/${locale}/k0-card.png`, at: 0, fade: 0 }]} />
         </FramedPhone>
-        <FramedPhone left={500 + (1 - staff) * 300} top={300} screenW={W2} bezel={STAFF_BEZEL} opacity={staff}>
+        <FramedPhone left={STAFF_PHONE.left + (1 - staffIn) * 300} top={STAFF_PHONE.top} screenW={STAFF_PHONE.screenW} bezel={STAFF_BEZEL} opacity={staffIn}>
           <ScreenTrack cues={[{ src: "shots/staff/list.png", at: 0, fade: 0 }]} />
         </FramedPhone>
       </AbsoluteFill>
       {frame >= TWO_PHONES.until && (
-        <AbsoluteFill style={{ opacity: handover, transform: `scale(${0.94 + 0.06 * handover})` }}>
-          <StaffScreen t={STAFF60} from={TWO_PHONES.until} />
+        <AbsoluteFill style={{ transform: `translate(${ox * (1 - push)}px, ${oy * (1 - push)}px) scale(${sc})`, transformOrigin: "0 0" }}>
+          <StaffScreen t={STAFF60} from={TWO_PHONES.until + 14} fade={push} />
         </AbsoluteFill>
       )}
     </>
@@ -229,13 +252,11 @@ function Shot5({ locale }: { locale: Locale }) {
 /* The trailer                                                         */
 /* ------------------------------------------------------------------ */
 
-/** Dark only for the two evening notification shots (design lead, v2). */
+/** Dark only for the night notification (shot 8). */
 function eveningAt(frame: number, cut: "60" | "15") {
   if (cut === "15") return 0;
-  const [a, b] = SHOTS_60.s6;
   const [c, d] = SHOTS_60.s8;
-  const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-  return interpolate(frame, [a, a + 16, b - 10, b + 6], [0, 1, 1, 0], clamp) + interpolate(frame, [c, c + 20, d - 8, d + 8], [0, 1, 1, 0], clamp);
+  return interpolate(frame, [c, c + 20, d - 8, d + 8], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 }
 
 /**
@@ -263,7 +284,7 @@ export const Trailer: React.FC<TrailerProps> = ({ locale, cut, music }) => {
 
       {cut === "60" ? <Sixty locale={locale} /> : <Fifteen locale={locale} />}
 
-      {/* One caption per shot, low in the platforms' safe area, above everything. */}
+      {/* One caption per shot, alone on the band below the screen's fade. */}
       {cut === "60" ? (
         <>
           <Shot span={S.s1}><Caption {...copy.s1} from={4} to={len(S.s1)} /></Shot>
@@ -330,13 +351,23 @@ function Sixty({ locale }: { locale: Locale }) {
   );
 }
 
-/** 1. Today, the status card out of view: a push in on Kakak's button, the tap, her sheet. */
+/**
+ * 1. Today, the status card out of view: Kakak's button, the tap, her sheet.
+ * This shot alone uses a slightly smaller screen shifted left, so the whole
+ * "Tell Kakak" pill stays clear of the right 160 px (design lead, v3).
+ */
+const SHOT1_SCALE = 0.82;
+const SHOT1_LEFT = 40;
 function Shot1({ locale }: { locale: Locale }) {
   const dir = `shots/${locale}`;
   const frame = useCurrentFrame();
   const rise = ramp(frame, 0, 16);
   const open = tap(`${locale}.open`);
-  const camera = useCamera([cam(0, 600, 820), cam(S1.tap - 8, open.y, 1050, 1.14), cam(S1.sheet + 4, open.y, 1050, 1.14), cam(S1.sheet + 20, 440, 820)]);
+  const camera = useCamera([
+    cam(0, open.y, 1110, SHOT1_SCALE, SHOT1_LEFT),
+    cam(S1.sheet + 4, open.y, 1110, SHOT1_SCALE, SHOT1_LEFT),
+    cam(S1.sheet + 20, 440, 820),
+  ]);
   return (
     <AbsoluteFill style={{ opacity: rise, transform: `translateY(${(1 - rise) * 80}px)` }}>
       <Screen camera={camera} overlay={<TapRing x={open.x} y={open.y} at={S1.tap} />}>
@@ -351,37 +382,37 @@ function Shot1({ locale }: { locale: Locale }) {
   );
 }
 
-/** 6. 21.30 on Sari's phone: the reminder, her tap, the photo of the dogs with the lights off, the tick. */
+/** 6. 17.00 on Sari's phone: the walk reminder, her tap, the photo on the walk, both dogs ticked, done. */
 function Shot6({ locale }: { locale: Locale }) {
   const copy = COPY[locale];
   const frame = useCurrentFrame();
-  const slide = useSlideIn(0, 14, 1);
-  const lights = tap("staff.lights");
-  const save = tap("staff.lightsSave");
+  const walk = tap("staff.walk");
+  const save = tap("staff.walkSave");
   const camera = useCamera([
     cam(0, 320, 760),
     cam(S6.push - 2, 320, 760),
-    cam(S6.push + 12, 130, 560, 1.08),
-    cam(S6.open, 130, 560, 1.08),
-    cam(S6.open + 10, lights.y, 700),
-    cam(S6.picked, lights.y, 700),
-    cam(S6.picked + 10, save.y - 120, 920),
-    cam(S6.done, save.y - 120, 920),
-    // Done: "every task today is done", and the green tick.
-    cam(S6.done + 14, 360, 700),
-    cam(S6.done + 40, 801, 1150, 1.06),
+    cam(S6.push + 12, 130, 560),
+    cam(S6.open, 130, 560),
+    cam(S6.open + 10, walk.y, 700),
+    cam(S6.picked, walk.y, 700),
+    // The photo and the two ticked dogs, then down to Simpan.
+    cam(S6.picked + 10, 430, 760),
+    cam(S6.save - 14, 430, 760),
+    cam(S6.save - 4, save.y, BUTTON_Y),
+    cam(S6.done, save.y, BUTTON_Y),
+    // Done: the top of her list, every pet routine so far done.
+    cam(S6.done + 14, 420, 700),
   ]);
-  const dim = 0.5 * ramp(frame, 8, 22) * (1 - ramp(frame, S6.open, S6.open + 8));
+  const dim = 0.4 * ramp(frame, 8, 22) * (1 - ramp(frame, S6.open, S6.open + 8));
   return (
     <Screen
-      x={slide.x}
       camera={camera}
       dim={dim}
       overlay={
         <>
           <NotificationCard {...copy.staffPush} at={S6.push} until={S6.open + 2} />
           <TapRing x={CSS_W / 2} y={130} at={S6.open} />
-          <TapRing x={lights.x} y={lights.y} at={S6.camera} />
+          <TapRing x={walk.x} y={walk.y} at={S6.camera} />
           <Shutter at={S6.picked - 2} />
           <TapRing x={save.x} y={save.y} at={S6.save} />
         </>
@@ -389,9 +420,9 @@ function Shot6({ locale }: { locale: Locale }) {
     >
       <ScreenTrack
         cues={[
-          { src: "shots/staff/evening.png", at: 0, fade: 0 },
-          { src: "shots/staff/lights-picked.png", at: S6.picked, fade: 4 },
-          { src: "shots/staff/lights-done.png", at: S6.done, fade: 8 },
+          { src: "shots/staff/walk-list.png", at: 0, fade: 0 },
+          { src: "shots/staff/walk-picked.png", at: S6.picked, fade: 4 },
+          { src: "shots/staff/walk-done.png", at: S6.done, fade: 8 },
         ]}
       />
     </Screen>
@@ -404,7 +435,7 @@ function Shot7({ locale }: { locale: Locale }) {
   const slide = useSlideIn(0, 16, -1);
   const cues: Cue[] = [{ src: `${dir}/status.png`, at: 0, fade: 0 }];
   for (let i = 0; i < SCROLL_FRAMES; i++) cues.push({ src: `${dir}/scroll/${pad(i)}.jpg`, at: S7.scrollFrom + Math.round((S7.scrollLength * i) / SCROLL_FRAMES), fade: 0 });
-  const camera = useCamera([cam(0, 172, 560, 1.18), cam(S7.scrollFrom - 8, 172, 560, 1.18), cam(S7.scrollFrom + 24, 330, 780), cam(S7.scrollFrom + S7.scrollLength, 330, 780)]);
+  const camera = useCamera([cam(0, 172, 600), cam(S7.scrollFrom - 8, 172, 600), cam(S7.scrollFrom + 24, 330, 780), cam(S7.scrollFrom + S7.scrollLength, 330, 780)]);
   return (
     <Screen x={slide.x} camera={camera}>
       <ScreenTrack cues={cues} />
@@ -412,21 +443,21 @@ function Shot7({ locale }: { locale: Locale }) {
   );
 }
 
-/** 8. Evening: the owner's one alert, the walk that wasn't done. */
+/** 8. Night: the owner's one alert, the 21.30 lights not done. */
 function Shot8({ locale }: { locale: Locale }) {
   const copy = COPY[locale];
   const dir = `shots/${locale}`;
   const frame = useCurrentFrame();
-  const camera = useCamera([cam(0, 330, 780), cam(S8.push - 4, 330, 780), cam(S8.push + 20, 130, 560, 1.1)]);
+  const camera = useCamera([cam(0, 330, 780), cam(S8.push - 4, 330, 780), cam(S8.push + 20, 130, 560)]);
   return (
-    <Screen camera={camera} dim={0.62 * ramp(frame, 0, 24)} overlay={<NotificationCard {...copy.ownerPush} at={S8.push} />}>
+    <Screen camera={camera} dim={0.72 * ramp(frame, 0, 24)} overlay={<NotificationCard {...copy.ownerPush} at={S8.push} />}>
       <ScreenTrack cues={[{ src: `${dir}/scroll/${pad(SCROLL_FRAMES - 1)}.jpg`, at: 0, fade: 0 }]} />
     </Screen>
   );
 }
 
 /** Where to look on each glimpse. */
-const GLIMPSE = { kitchen: cam(0, 330, 780), pets: cam(0, 390, 780), repairs: cam(0, 210, 640, 1.12) };
+const GLIMPSE = { kitchen: cam(0, 330, 760), pets: cam(0, 400, 760), repairs: cam(0, 210, 620) };
 
 /** 9. Kitchen, Pets, Repairs: a beat or two each, read at a glance. */
 function Shot9({ dir }: { dir: string }) {
@@ -485,7 +516,7 @@ function Fifteen({ locale }: { locale: Locale }) {
         <Shot7Short dir={dir} />
       </Shot>
       <Shot span={Q.end}>
-        <Outro line={copy.endLine15} last={`${dir}/status.png`} lastCam={cam(0, 172, 560, 1.18)} />
+        <Outro line={copy.endLine15} last={`${dir}/status.png`} lastCam={cam(0, 172, 600)} />
       </Shot>
     </>
   );
@@ -500,10 +531,13 @@ function Rise({ children }: { children: React.ReactNode }) {
 
 function Shot7Short({ dir }: { dir: string }) {
   const slide = useSlideIn(0, 12, -1);
-  const camera = useCamera([cam(0, 172, 560, 1.18)]);
+  const camera = useCamera([cam(0, 172, 600)]);
   return (
     <Screen x={slide.x} camera={camera}>
       <ScreenTrack cues={[{ src: `${dir}/status.png`, at: 0, fade: 0 }]} />
     </Screen>
   );
 }
+
+// KB is re-exported for scripts that reason about the screen's size.
+export { KB };

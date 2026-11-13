@@ -18,8 +18,6 @@ export const CSS_H = 844;
  */
 export const KB = W / CSS_W;
 export const BLEED_H = Math.round(CSS_H * KB);
-/** The highest the screen's bottom edge may rise (video px). */
-const BOTTOM_EDGE_MIN = 1300;
 
 export const ease = Easing.bezier(0.33, 0, 0.2, 1);
 
@@ -90,19 +88,24 @@ export function ScreenTrack({ cues }: { cues: Cue[] }) {
 }
 
 export interface Camera {
-  /** Zoom, 1 = the screen exactly as wide as the frame. */
+  /** Size: 1 = exactly the frame's width, never more (design lead, v3). Below 1 only where a shot needs room. */
   scale: number;
-  /** The CSS point of the screen the zoom keeps in place. */
-  fx: number;
+  /** The CSS row of the screen to look at, and where on the frame it lands (video px). */
   fy: number;
-  /** Where that row lands on the frame (video px). */
   y: number;
+  /** The screen's left edge on the frame (only when it is smaller than the frame). */
+  left?: number;
 }
 
+/** Where the screen fades out: the caption sits alone on the plain band below. */
+export const FADE_FROM = 1180;
+export const FADE_TO = 1300;
+
 /**
- * The app's screen, full-bleed: as wide as the frame, pushed in on what
- * matters. The camera never lets the frame's edges show past the screen.
- * `x` slides it sideways (owner ↔ staff); `dim` darkens it for the evening.
+ * The app's screen, full-bleed: exactly as wide as the frame (never wider),
+ * panned to what matters, fading out above the caption's band at y 1300.
+ * `x` slides it sideways (owner ↔ staff); `dim` darkens it for the night;
+ * `fade` (0–1) is how much of the bottom fade applies.
  */
 export function Screen({
   children,
@@ -110,6 +113,7 @@ export function Screen({
   x = 0,
   opacity = 1,
   dim = 0,
+  fade = 1,
   overlay,
 }: {
   children: React.ReactNode;
@@ -117,22 +121,18 @@ export function Screen({
   x?: number;
   opacity?: number;
   dim?: number;
+  fade?: number;
   overlay?: React.ReactNode;
 }) {
-  const s = Math.max(1, camera.scale);
-  const ox = camera.fx * KB;
-  const oy = camera.fy * KB;
-  // translateY(ty) scale(s) about (ox, oy): a row y lands at ty + oy + (y - oy) * s.
-  // The screen may leave a margin only where it doesn't matter: its top edge
-  // no lower than the platforms' top 220 px, its bottom edge no higher than
-  // the caption's band (so a toast at the very bottom of the app can rise
-  // above the caption). Most of the time it covers the frame.
-  let ty = camera.y - oy;
-  const maxTy = SAFE.top + oy * (s - 1);
-  const minTy = BOTTOM_EDGE_MIN - oy - (BLEED_H - oy) * s;
-  ty = Math.min(maxTy, Math.max(minTy, ty));
+  const s = Math.min(1, camera.scale);
+  const left = camera.left ?? (W - W * s) / 2;
+  // A row y lands at ty + y·KB·s. The top edge stays at or above the
+  // platforms' 220 px; the bottom edge at or below the fade.
+  let ty = camera.y - camera.fy * KB * s;
+  ty = Math.min(SAFE.top, Math.max(FADE_TO - BLEED_H * s, ty));
+  const mask = fade > 0 ? `linear-gradient(to bottom, #000 0px, #000 ${FADE_FROM}px, rgba(0,0,0,${1 - fade}) ${FADE_TO}px)` : undefined;
   return (
-    <AbsoluteFill style={{ opacity, transform: `translateX(${x}px)`, overflow: "hidden" }}>
+    <AbsoluteFill style={{ opacity, transform: `translateX(${x}px)`, overflow: "hidden", ...(mask ? { WebkitMaskImage: mask, maskImage: mask } : {}) }}>
       <div
         style={{
           position: "absolute",
@@ -140,8 +140,8 @@ export function Screen({
           top: 0,
           width: W,
           height: BLEED_H,
-          transform: `translateY(${ty}px) scale(${s})`,
-          transformOrigin: `${ox}px ${oy}px`,
+          transform: `translate(${left}px, ${ty}px) scale(${s})`,
+          transformOrigin: "0 0",
           background: C.paper,
         }}
       >
@@ -153,6 +153,15 @@ export function Screen({
       </div>
     </AbsoluteFill>
   );
+}
+
+/** Where a CSS point of a full-bleed screen lands on the frame, for this camera. */
+export function screenPoint(camera: Camera, x: number, y: number) {
+  const s = Math.min(1, camera.scale);
+  const left = camera.left ?? (W - W * s) / 2;
+  let ty = camera.y - camera.fy * KB * s;
+  ty = Math.min(SAFE.top, Math.max(FADE_TO - BLEED_H * s, ty));
+  return { x: left + x * KB * s, y: ty + y * KB * s, s };
 }
 
 /**
@@ -232,10 +241,10 @@ export function Shutter({ at }: { at: number }) {
 /* ------------------------------------------------------------------ */
 
 /**
- * The caption: one line, in the app's typeface, low in the safe area that
- * Reels, TikTok and Shorts leave free (above the bottom 420 px, clear of the
- * right 160 px). Over a full-bleed white screen a light panel would vanish,
- * so it is the app's ink with white text. `sub` only where it adds something.
+ * The caption: one line, in the app's typeface, on the plain band below the
+ * screen's fade (y 1300 to 1500), inside the area Reels, TikTok and Shorts
+ * leave free: above the bottom 420 px, clear of the right 160 px. Never on
+ * top of app text. `sub` only where it adds something.
  */
 export function Caption({ text, sub, from, to }: { text: string; sub?: string; from: number; to: number }) {
   const frame = useCurrentFrame();
@@ -249,7 +258,9 @@ export function Caption({ text, sub, from, to }: { text: string; sub?: string; f
         position: "absolute",
         left: SAFE.left,
         width: SAFE.right - SAFE.left,
-        bottom: H - SAFE.bottom + 10,
+        top: FADE_TO + 12,
+        height: SAFE.bottom - FADE_TO - 12,
+        alignItems: "center",
         display: "flex",
         justifyContent: "center",
         opacity: o,
@@ -259,7 +270,7 @@ export function Caption({ text, sub, from, to }: { text: string; sub?: string; f
       <div
         style={{
           maxWidth: 840,
-          padding: "22px 34px 24px",
+          padding: "16px 32px 18px",
           borderRadius: 30,
           background: "rgba(23,23,23,0.9)",
           fontFamily: FONT,
@@ -267,8 +278,8 @@ export function Caption({ text, sub, from, to }: { text: string; sub?: string; f
           color: "#fff",
         }}
       >
-        <div style={{ fontSize: 46, fontWeight: 600, lineHeight: 1.18, letterSpacing: -0.4, textWrap: "balance" } as React.CSSProperties}>{text}</div>
-        {sub && <div style={{ marginTop: 10, fontSize: 30, fontWeight: 500, color: "rgba(255,255,255,0.78)", lineHeight: 1.3 }}>{sub}</div>}
+        <div style={{ fontSize: sub ? 40 : 44, fontWeight: 600, lineHeight: 1.15, letterSpacing: -0.4, textWrap: "balance" } as React.CSSProperties}>{text}</div>
+        {sub && <div style={{ marginTop: 6, fontSize: 27, fontWeight: 500, color: "rgba(255,255,255,0.78)", lineHeight: 1.25 }}>{sub}</div>}
       </div>
     </div>
   );

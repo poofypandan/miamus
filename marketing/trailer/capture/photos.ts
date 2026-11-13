@@ -91,6 +91,15 @@ const SCENES: Record<string, string> = {
     <polygon points="640,390 940,390 1000,700 560,700" fill="#3a4354" opacity=".45"/>
     <ellipse cx="300" cy="640" rx="190" ry="60" fill="#4a4e57"/><ellipse cx="300" cy="628" rx="150" ry="40" fill="#5b5f68"/>
     <ellipse cx="620" cy="690" rx="170" ry="55" fill="#4a4e57"/><ellipse cx="620" cy="678" rx="132" ry="36" fill="#5b5f68"/>`,
+  // The evening walk: a quiet park path, trees, soft late-afternoon light.
+  path: `
+    <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6efe2"/><stop offset="1" stop-color="#e9efe0"/></linearGradient></defs>
+    <rect width="${W}" height="${H}" fill="url(#sk)"/>
+    <rect x="0" y="360" width="${W}" height="450" fill="#cfdcbf"/>
+    <polygon points="470,360 610,360 900,810 180,810" fill="#e6dccb"/>
+    <circle cx="160" cy="250" r="120" fill="#a7bd96"/><rect x="150" y="300" width="20" height="90" fill="#9b8b78"/>
+    <circle cx="930" cy="230" r="140" fill="#9fb78c"/><rect x="920" y="290" width="22" height="100" fill="#9b8b78"/>
+    <circle cx="700" cy="300" r="70" fill="#b4c7a3"/>`,
   lawn: `
     <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9efe4"/><stop offset="1" stop-color="#cfdcc4"/></linearGradient></defs>
     <rect width="${W}" height="${H}" fill="url(#g)"/>

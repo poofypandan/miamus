@@ -142,8 +142,8 @@ export const TWO_PHONES = { until: 34 };
 export const STAFF15: StaffTimes = { card: 8, sheet: 14, before: 22, beforeIn: 28, after: 36, afterIn: 42, finish: 60, done: 66 };
 
 /**
- * Shot 6: the 21.30 reminder arrives on Sari's phone; she taps it, takes the
- * photo of the dogs with the lights off, ticks them, saves: the tick.
+ * Shot 6: the 17.00 walk reminder arrives on Sari's phone; she taps it,
+ * takes the photo on the walk, ticks both dogs, saves: the tick.
  */
 export const S6 = (() => {
   const [start] = SHOTS_60.s6;
@@ -154,7 +154,7 @@ export const S6 = (() => {
   const save = at(104);
   return { push, open, camera, picked: camera + 8, save, done: save + 8 };
 })();
-/** Shot 8: the owner's only alert: the evening walk, not done (on a beat). */
+/** Shot 8: the owner's only alert, at night: the 21.30 lights, not done (on a beat). */
 export const S8 = { push: snap(SHOTS_60.s8[0] + 44) - SHOTS_60.s8[0] };
 /** Shot 7: held on the status line, then the slow scroll past each person. */
 export const S7 = { scrollFrom: 84, scrollLength: 110 };
@@ -169,9 +169,9 @@ export const MUSIC_ARC: { from: number; to: number; what: string }[] = [
   { from: 0, to: SHOTS_60.s1[0], what: "near silence; the hook's three soft taps" },
   { from: SHOTS_60.s1[0], to: SHOTS_60.s2[0], what: "one motif" },
   { from: SHOTS_60.s2[0], to: SHOTS_60.s5[0], what: "a soft pulse, building a step with each Kakak sentence (shots 2, 3, 4)" },
-  { from: SHOTS_60.s5[0], to: SHOTS_60.s7[0], what: "a small lift as the staff phone appears; steady through the evening reminder and its tick" },
+  { from: SHOTS_60.s5[0], to: SHOTS_60.s7[0], what: "a small lift as the staff phone appears; steady through the 17.00 walk reminder and its tick" },
   { from: SHOTS_60.s7[0], to: SHOTS_60.s8[0], what: "the high point, on \"All on track\"" },
-  { from: SHOTS_60.s8[0], to: SHOTS_60.s9[0], what: "near silence under the owner's one \"not done\" notification (the evening walk)" },
+  { from: SHOTS_60.s8[0], to: SHOTS_60.s9[0], what: "near silence under the owner's one \"not done\" notification, at night (the 21.30 lights)" },
   { from: SHOTS_60.s9[0], to: SHOTS_60.end[0], what: "the pulse returns" },
   { from: SHOTS_60.end[0], to: SHOTS_60.end[1], what: "resolve: a real ending on the last beat, not a fade" },
 ];

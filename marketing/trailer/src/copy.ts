@@ -58,9 +58,10 @@ export const COPY: Record<Locale, Copy> = {
     endLine60: END_LINES.id.sixty,
     endLine15: END_LINES.id.fifteen,
     short: { s2: "Bilang sekali ke Kakak.", s5: "Staf mengerjakan, dengan foto.", s7: "Semua lancar." },
-    staffPush: { title: "Pengingat", body: "21.30 · Matikan lampu · Coco & Bruno", time: "21.30" },
-    // The evening walk, 17.00: the owner hears 30 minutes later (migrations/150).
-    ownerPush: { title: "Jalan-jalan · Coco & Bruno", body: "Belum dikerjakan (17.00)", time: "17.30" },
+    // 17.00: Sari is reminded of the walk, and ticks it.
+    staffPush: { title: "Pengingat", body: "17.00 · Jalan-jalan · Coco & Bruno", time: "17.00" },
+    // 21.30 lights not done: the owner hears 30 minutes later (migrations/150); sentence 2 pays off.
+    ownerPush: { title: "Matikan lampu · Coco & Bruno", body: "Belum dikerjakan (21.30)", time: "22.00" },
   },
   en: {
     hook: ["Mopped yet?", "Lights off?", "Dogs fed?"],
@@ -71,7 +72,7 @@ export const COPY: Record<Locale, Copy> = {
     // The staff screen stays Indonesian in the English cut; the caption says why (design lead).
     s5: { text: "Staff see their own tasks, in their own language." },
     // The notification on Sari's phone is Indonesian: the second line translates it.
-    s6: { text: "Reminded on time.", sub: "Reminder · 9:30 pm · Lights off · Coco & Bruno" },
+    s6: { text: "Reminded on time.", sub: "Reminder · 5:00 pm · Walk · Coco & Bruno" },
     s7: { text: "One glance is enough." },
     s8: { text: "You only hear when something isn't done." },
     s9: { text: "Kitchen. Pets. Repairs. One place." },
@@ -80,7 +81,7 @@ export const COPY: Record<Locale, Copy> = {
     endLine15: END_LINES.en.fifteen,
     short: { s2: "Tell Kakak once.", s5: "Staff do it, in their own language.", s7: "All on track." },
     // The staff phone is always in Indonesian; the owner's follows their language.
-    staffPush: { title: "Pengingat", body: "21.30 · Matikan lampu · Coco & Bruno", time: "21.30" },
-    ownerPush: { title: "Walk · Coco & Bruno", body: "Not done yet (5:00 PM)", time: "5:30 PM" },
+    staffPush: { title: "Pengingat", body: "17.00 · Jalan-jalan · Coco & Bruno", time: "17.00" },
+    ownerPush: { title: "Lights off · Coco & Bruno", body: "Not done yet (9:30 PM)", time: "10:00 PM" },
   },
 };

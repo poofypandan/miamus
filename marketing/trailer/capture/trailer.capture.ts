@@ -207,35 +207,31 @@ test("staff: Pel teras, with photos", async ({ context, page }) => {
   await still(page, "staff", "done", 900);
 });
 
-test("staff: the 21.30 reminder, the photo and the tick", async ({ context, page }) => {
-  await installDemo(context, page, { staff: true }, { lights: true, at: "21:30", open: ["lights"] });
+test("staff: the 17.00 walk reminder, the photo and the tick", async ({ context, page }) => {
+  await installDemo(context, page, { staff: true }, { lights: true, at: "17:00", open: ["walk", "lights"] });
   await servePhotos(page);
   await page.goto("/staff");
-  const card = page.getByRole("button", { name: /Matikan lampu/ }).first();
+  const card = page.getByRole("button", { name: /Jalan-jalan/ }).first();
   await card.waitFor({ timeout: 30_000 });
-  await still(page, "staff", "evening", 2000);
+  await still(page, "staff", "walk-list", 2000);
   // The round camera button at the card's right.
   const box = await card.boundingBox();
-  if (box) taps["staff.lights"] = { x: Math.round(box.x + box.width - 26), y: Math.round(box.y + box.height / 2) };
+  if (box) taps["staff.walk"] = { x: Math.round(box.x + box.width - 26), y: Math.round(box.y + box.height / 2) };
   saveTaps();
   await card.click();
   const take = page.getByText(/Ambil Foto untuk/);
   await take.waitFor();
   const chooser = page.waitForEvent("filechooser", { timeout: 10_000 });
   await take.click();
-  await (await chooser).setFiles({ name: "night.jpg", mimeType: "image/jpeg", buffer: await photo("night") });
+  await (await chooser).setFiles({ name: "path.jpg", mimeType: "image/jpeg", buffer: await photo("path") });
   const boxes = page.getByRole("checkbox");
   await boxes.first().waitFor();
-  await still(page, "staff", "lights-pick", 900);
   const count = await boxes.count();
-  for (let i = 0; i < count; i++) {
-    await tapAt(`staff.pick${i}`, boxes.nth(i));
-    await boxes.nth(i).click();
-  }
-  await still(page, "staff", "lights-picked", 600);
+  for (let i = 0; i < count; i++) await boxes.nth(i).click();
+  await still(page, "staff", "walk-picked", 600);
   const save = page.getByRole("button", { name: "Simpan" });
-  await tapAt("staff.lightsSave", save);
+  await tapAt("staff.walkSave", save);
   await save.click();
   await page.getByText(/Menyimpan foto/).first().waitFor({ state: "detached", timeout: 20_000 }).catch(() => undefined);
-  await still(page, "staff", "lights-done", 1500);
+  await still(page, "staff", "walk-done", 1500);
 });

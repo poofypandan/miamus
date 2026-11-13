@@ -78,11 +78,20 @@ Both folders are git-ignored.
   shows the real labels.
 - **"Segera dipakai"** (shot 9) is not a section in the app; the opor shows
   under "Minggu ini" / "This week".
-- **The owner's alert (shot 8)** is the evening walk, not dinner: in the app
-  only routines such as walks and lights can carry "tell me if it isn't done";
-  meals can't.
+- **Time order (v3):** Sari is reminded of the 17.00 walk and ticks it; the
+  owner's one alert is the 21.30 lights, at night ("Lights off · Coco & Bruno
+  · Not done yet (9:30 PM)"), which pays off the sentence typed in shot 3.
 - **The staff photos:** the app always asks for a before and an after photo
   (Phase 127), so shot 5 shows both.
+
+## v3 (design lead, 14 Nov)
+
+The screen is exactly the frame's width, never wider; it fades out at y
+1300 and every caption sits alone on the plain band below (1300–1500).
+Shot 1 alone uses a slightly smaller screen shifted left, so the "Tell Kakak"
+pill is whole and clear of the right 160 px. The two-phone beat pushes
+straight into Sari's list. Finished states show the top of the list (one
+more done), keeping the bottom toast and the Lapor button out of view.
 
 ## v2 (design lead's review and the owner's note, 14 Nov)
 
