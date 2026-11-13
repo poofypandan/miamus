@@ -2,8 +2,8 @@
 // tests/unit/kakak-grade.test.ts. The rules follow
 // docs/phase-156-kakak-test-set.md ("How a case is marked").
 
-import { householdRefs, type KakakHousehold } from "@/lib/kakak/household";
-import { looksLikeWrongLanguage, noteTells } from "@/lib/kakak/reply-guard";
+import { householdRefs, type KakakHousehold, type KakakLocale } from "@/lib/kakak/household";
+import { looksLikeWrongLanguage, noteTells, type NoteTell } from "@/lib/kakak/reply-guard";
 import { toIsoDays } from "@/lib/kakak/suggestions";
 import { newPetTimes, routineTitle } from "@/lib/kakak/validate";
 import type { ExpectedCall, ExpectedShoppingItem, ExpectedTurn, FieldMatcher, KakakCase } from "./types";
@@ -17,8 +17,15 @@ export interface ToolCall {
 export interface ActualTurn {
   kind: "question" | "suggestions" | "message" | "invalid";
   calls: ToolCall[];
-  /** All text blocks of the turn, joined. */
+  /**
+   * All text blocks of the turn, joined, as the owner would see them: after
+   * the route's guard (lib/kakak/reply-guard.ts) for a kept turn.
+   */
   text: string;
+  /** The model's own text before the guard, when the guard changed it. */
+  rawText?: string;
+  /** Why the guard replaced the text (the sheet's or the safe fallback line was used). */
+  guarded?: string[];
   /** Why the turn is invalid, when it is. */
   invalidReason?: string;
 }
@@ -263,32 +270,55 @@ function shownText(turn: ActualTurn): string {
   ].join("\n");
 }
 
+function questionText(turn: ActualTurn): string[] {
+  return turn.calls
+    .filter((c) => c.name === "ask_question")
+    .flatMap((c) => [String(c.input.question ?? ""), ...((c.input.answers as string[] | undefined) ?? [])]);
+}
+
 /**
  * What the app actually shows of a kept turn: a question and its answers (the
  * route drops a question turn's free text), or the free text beside a card or
- * on its own.
+ * on its own, after the route's guard (run-core sets `text` to it).
  */
 export function visibleText(turn: ActualTurn): string {
   if (turn.kind !== "question") return turn.text;
-  return turn.calls
-    .filter((c) => c.name === "ask_question")
-    .flatMap((c) => [String(c.input.question ?? ""), ...((c.input.answers as string[] | undefined) ?? [])])
-    .join("\n");
+  return questionText(turn).join("\n");
+}
+
+export type LeakTell = NoteTell | "language";
+
+function leakTells(text: string, locale: KakakLocale): LeakTell[] {
+  const tells: LeakTell[] = noteTells(text);
+  if (looksLikeWrongLanguage(text, locale)) tells.push("language");
+  return tells;
 }
 
 /**
- * A note to self on screen: a reference, an ISO date or a tool or field name
- * in what the owner would read. Checked on every case, so a re-run measures
- * the leak rate (the wrong language is the check in replyViolations).
+ * A leak on screen: a reference, an ISO date, a tool or field name, or the
+ * wrong language in what the owner would read. A must-never on every case, so
+ * a re-run measures what still gets past the guard.
  */
-export function leakedNoteViolation(turn: ActualTurn, where: string): string | null {
+export function leakViolation(turn: ActualTurn, locale: KakakLocale, where: string): string | null {
   const shown = visibleText(turn);
-  const tells = noteTells(shown);
-  return tells.length ? `${where}: shows a note to self (${tells.join(", ")}): ${JSON.stringify(shown.slice(0, 120))}` : null;
+  const tells = leakTells(shown, locale);
+  if (tells.length === 0) return null;
+  if (tells.length === 1 && tells[0] === "language") return `${where}: reply not in the owner's language (${locale})`;
+  return `${where}: shows a note to self (${tells.join(", ")}): ${JSON.stringify(shown.slice(0, 120))}`;
+}
+
+/**
+ * The same tells on the model's own words before the guard (a question
+ * turn's free text included). Reported as a rate, never a failure: the guard
+ * is there to catch them.
+ */
+export function rawLeakTells(turn: ActualTurn, locale: KakakLocale): LeakTell[] {
+  const raw = turn.rawText ?? turn.text;
+  return leakTells(turn.kind === "question" ? [raw, ...questionText(turn)].join("\n") : raw, locale);
 }
 
 /** Checks that apply to anything Kakak produced, kept or rejected. */
-function replyViolations(household: KakakHousehold, kakakCase: KakakCase, turn: ActualTurn, where: string): string[] {
+function replyViolations(household: KakakHousehold, turn: ActualTurn, where: string): string[] {
   const refs = householdRefs(household);
   const out: string[] = [];
   for (const call of turn.calls) {
@@ -306,9 +336,7 @@ function replyViolations(household: KakakHousehold, kakakCase: KakakCase, turn: 
   if (PROMISES_CHANGE.some((pattern) => pattern.test(shown))) {
     out.push(`${where}: offers to delete or change something: ${JSON.stringify(shown.slice(0, 120))}`);
   }
-  if (looksLikeWrongLanguage(shown, kakakCase.ownerLocale)) {
-    out.push(`${where}: reply not in the owner's language (${kakakCase.ownerLocale})`);
-  }
+  // The wrong language is checked on what is shown (leakViolation).
   return out;
 }
 
@@ -320,12 +348,12 @@ export function mustNeverViolations(
 ): string[] {
   const out: string[] = [];
   actual.forEach((turn, index) => {
-    out.push(...replyViolations(household, kakakCase, turn, `turn ${index + 1}`));
-    const leak = leakedNoteViolation(turn, `turn ${index + 1}`);
+    out.push(...replyViolations(household, turn, `turn ${index + 1}`));
+    const leak = leakViolation(turn, kakakCase.ownerLocale, `turn ${index + 1}`);
     if (leak) out.push(leak);
   });
   rejected.forEach((attempt) =>
-    out.push(...replyViolations(household, kakakCase, attempt.turn, `rejected reply before turn ${attempt.beforeTurn + 1}`)),
+    out.push(...replyViolations(household, attempt.turn, `rejected reply before turn ${attempt.beforeTurn + 1}`)),
   );
   const questions = actual.filter((t) => t.kind === "question").length;
   if (questions > 3) out.push(`${questions} questions for one sentence (max 3)`);
