@@ -485,6 +485,8 @@ function TasksView() {
         ) : pushCard.ready ? (
         <StaffTipCard
           tips={[
+            // Phase 177: changing what a cooked dish used, once Today has a menu.
+            { id: "staff-cooking-changes-2026-11", show: showMenuTip },
             // Phase 170 PR A: only while Kitchen amounts is on.
             // Phase 176: while Bahan masakan shows under Makanan.
             { id: "staff-kitchen-places-2026-11", show: kitchenAmountsOn },
