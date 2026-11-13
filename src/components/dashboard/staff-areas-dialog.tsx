@@ -121,10 +121,14 @@ export function StaffAreasDialog({
   }, [profile?.id]);
 
   // The roster as it will be once this person's last change has landed.
-  const roster = useMemo(
-    () => staff.map((p) => (profile && p.id === profile.id ? { ...p, hidden_areas: hidden } : p)),
-    [staff, profile, hidden]
-  );
+  // Everyone else's too, while a save of theirs from this dialog hasn't been
+  // read back into the roster yet (fallback review, PR #131). Worked out on
+  // every render, not memoised: it reads the per-person refs.
+  const roster = staff.map((p) => {
+    if (profile && p.id === profile.id) return { ...p, hidden_areas: hidden };
+    const landing = (pending.current.get(p.id) ?? 0) > 0 ? saved.current.get(p.id) : undefined;
+    return landing ? { ...p, hidden_areas: landing } : p;
+  });
   const nobody = (["pets", "home"] as const).filter(
     (area) => switches.includes(area) && areaHasNobody(area, roster, leaveRequests, today)
   );
