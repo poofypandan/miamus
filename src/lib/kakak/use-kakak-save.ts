@@ -141,11 +141,22 @@ export function useKakakSave() {
                   if (tracked) throw new Error("Kakak's ingredient is tracked now: its amount changed meanwhile");
                   const statusBefore = stockStatus(before);
                   await household.setTrackAmount(item.itemId, { track: true, unit: amount.unit, quantity: amount.value, lowAt: 0 });
-                  undos.push(async () => {
-                    await household.setTrackAmount(item.itemId, { track: false });
-                    // Counting at an amount made it Enough: back to what it said.
-                    if (statusBefore !== "ok") await household.setInventoryStatus(item.itemId, statusBefore);
-                  });
+                  // Undo, in one write: not counted again, with everything
+                  // the count had touched as it was. An item counted once
+                  // before keeps its unit, amount, low level and usual
+                  // purchase for the next Track amount (Codex, PR #144), and
+                  // counting at an amount had made it Enough.
+                  undos.push(() =>
+                    household.updateInventoryItem(item.itemId, {
+                      track_amount: false,
+                      unit: before.unit,
+                      quantity: before.quantity,
+                      min_threshold: before.min_threshold,
+                      last_bought_amount: before.last_bought_amount ?? null,
+                      to_buy_amount: before.to_buy_amount ?? null,
+                      stock_status: statusBefore,
+                    }),
+                  );
                 } else {
                   // The card's numbers were worked out in the item's unit as it was read.
                   if (!tracked || before.unit !== amount.unit) {

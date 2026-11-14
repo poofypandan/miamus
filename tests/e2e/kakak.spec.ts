@@ -583,6 +583,39 @@ test("what is left replaces the amount, and Undo puts back the amount and a Runn
   await expect.poll(() => stub.supplies[0]).toMatchObject({ quantity: 4, stock_status: "low" });
 });
 
+test("an amount starts the count on an item that wasn't counted, and Undo leaves it exactly as it was", async ({ context, page }) => {
+  // The beef was counted once (4 kg, running low at 1 kg), then counting was switched off, and
+  // someone marked it Running low. "500 g of beef in the freezer."
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [{ ...beef, track_amount: false, quantity: 4, unit: "kg", min_threshold: 1, stock_status: "low" }],
+  });
+  await kakakSays(page, [
+    {
+      kind: "suggestions",
+      text: "",
+      items: [
+        { kind: "ingredient", itemId: BEEF, name: "Daging sapi", keptIn: null, fromPlace: "freezer", expiry: "keep", expiresOn: null, expiryIsGuess: false, amount: { value: 500, unit: "g", mode: "start", before: null }, amountSkipped: null },
+      ],
+    },
+  ]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("We have 500 g of beef in the freezer");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("Miamus keeps count of it from now on.")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: true, unit: "g", quantity: 500, min_threshold: 0, stock_status: "ok" });
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  // Not counted again, with the count it had kept and the mark someone had set.
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: false, unit: "kg", quantity: 4, min_threshold: 1, stock_status: "low" });
+});
+
 test("an amount that can't be written is explained on the card, and the card has nothing to save", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true }, features: { kitchen: true }, items: [beef] });
   await kakakSays(page, [
