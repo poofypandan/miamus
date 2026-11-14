@@ -145,10 +145,11 @@ test("new voice: keeps listening through a pause, Done fills the box without sen
   await expect(page.getByText("Pel teras", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sudah benar" })).toBeVisible();
 
-  // The card was read aloud, ending with the question.
+  // Her own sentence was read aloud, ending with the question. The card's
+  // rows stay on screen and are no longer read out (#142).
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.join(" | ")))
-    .toMatch(/Pel teras.*Sudah benar\?$/);
+    .toMatch(/tambahkan\. \| Sudah benar\?$/);
 
   expect(stub.tasks).toHaveLength(0); // nothing saved before Sudah benar
   await page.getByRole("button", { name: "Sudah benar" }).click();
@@ -207,7 +208,8 @@ test("new voice: typing and tapping Send while the mic is on sends once", async 
   await page.waitForTimeout(300);
   expect(asked).toEqual(["Buy eggs"]);
   expect(await starts(page)).toBe(1);
-  await expect(page.getByRole("textbox", { name: "What should I set up?" })).toHaveValue("");
+  // After her plain reply the box asks "Anything else?" (#144).
+  await expect(page.getByRole("textbox", { name: "Anything else?" })).toHaveValue("");
 });
 
 test("new voice: a recognizer that refuses to run (iPhone Home Screen app) falls back to the tip", async ({ context, page }) => {
