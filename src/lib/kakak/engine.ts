@@ -12,9 +12,10 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { costMicroUsd, type KakakModel } from "./cost";
 import { jakartaNow, type RefMap, type RefNames } from "./context";
+import { guideForKakak } from "@/lib/guide";
 import { renderHouseholdBlock, type KakakHousehold } from "./household";
 import { KAKAK_SYSTEM_PROMPT } from "./prompt";
-import { guardReplyText } from "./reply-guard";
+import { correctionFor, guardReplyText, replyProblems } from "./reply-guard";
 import { toSuggestion, type KakakSuggestion } from "./suggestions";
 import { KAKAK_TOOLS, KAKAK_TOOL_NAMES } from "./tools";
 import { validateToolCall } from "./validate";
@@ -236,15 +237,27 @@ export function toolsFor(household: KakakHousehold): Anthropic.Tool[] {
   );
 }
 
+/**
+ * What Kakak reads before the conversation: her instructions, the guide to
+ * Miamus in the owner's language (Phase 180), then this household. Each ends
+ * a cached prefix: the first is shared by every household, the second by
+ * every household in that language, the third lasts the conversation. The
+ * eval builds the same blocks (tests/kakak/run-core.ts).
+ */
+export function kakakSystem(household: KakakHousehold): Anthropic.TextBlockParam[] {
+  return [
+    { type: "text", text: KAKAK_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+    { type: "text", text: guideForKakak(household.ownerLocale), cache_control: { type: "ephemeral" } },
+    { type: "text", text: renderHouseholdBlock(household), cache_control: { type: "ephemeral" } },
+  ];
+}
+
 export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: string): Promise<TurnResult> {
   const history = checkHistory(historyIn);
   const messages: Anthropic.MessageParam[] = [...history.messages, nextUserTurn(history, reply)];
-  const system: Anthropic.TextBlockParam[] = [
-    // Breakpoint 1: instructions and tools, the same for every household.
-    { type: "text", text: KAKAK_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-    // Breakpoint 2: this household, cached within the conversation.
-    { type: "text", text: renderHouseholdBlock(deps.household), cache_control: { type: "ephemeral" } },
-  ];
+  const system = kakakSystem(deps.household);
+  // One second try per turn, whichever needs it first: a tool call that fails
+  // the checks, or a plain reply that can't be shown.
   let retried = false;
 
   for (;;) {
@@ -316,6 +329,25 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
         }),
       });
       continue;
+    }
+
+    // A plain reply the owner can't be shown (too long, a note to self, the
+    // wrong language, or no words): say why and let Kakak say it again, once.
+    // She understood; "Sorry, I didn't catch that" would say she hadn't.
+    if (calls.length === 0 && !retried) {
+      const wrong = replyProblems(text, deps.household.ownerLocale);
+      if (wrong.length > 0) {
+        record.outcome = "message";
+        await deps.record(begun.requestId, record);
+        console.warn("kakak: reply text sent back", wrong.join(","));
+        retried = true;
+        // No words at all: ask again as it was. A turn with nothing to show
+        // can't go back into the history (the API takes no empty turn).
+        if (wrong.includes("empty")) continue;
+        messages.push({ role: "assistant", content: response.content });
+        messages.push({ role: "user", content: correctionFor(wrong, deps.household.ownerLocale) });
+        continue;
+      }
     }
 
     messages.push({ role: "assistant", content: response.content });

@@ -455,3 +455,304 @@ test("an ingredient card for an item marked Out saves nothing, since its date wo
   // The move was taken back with the rest.
   await expect.poll(() => stub.supplies[0]).toMatchObject({ kept_in: "freezer", expires_on: null });
 });
+
+// 2026-11-14 (owner: "Add 2 kg of brown rice into the pantry" got "Sorry, I
+// can't add a new ingredient"; "what is Miamus for" got "Sorry, I didn't
+// catch that"): a new ingredient's card, an amount on a listed one, and a
+// plain answer, with both sides of the conversation kept on screen.
+
+/** One canned Kakak reply for every turn, and what the page sent. */
+async function kakakSays(page: Page, replies: Record<string, unknown>[]) {
+  const asked: { reply: string; v?: number; history: unknown }[] = [];
+  await page.route("**/api/kakak", (route) => {
+    asked.push(route.request().postDataJSON());
+    const reply = replies[Math.min(asked.length, replies.length) - 1];
+    return route.fulfill({
+      json: { requestId: `00000000-0000-4000-8000-0000000000b${asked.length}`, history: { messages: [] }, ...reply },
+    });
+  });
+  await page.route("**/api/kakak/outcome", (route) => route.fulfill({ json: { ok: true } }));
+  return asked;
+}
+
+test("a new ingredient's card adds it with its amount, as Add ingredient does, and Undo takes it out", async ({ context, page }) => {
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [beef],
+  });
+  const asked = await kakakSays(page, [
+    {
+      kind: "suggestions",
+      text: "Of course. I'll put 2 kg of brown rice in the cupboard.",
+      items: [
+        { kind: "new_ingredient", name: "Beras merah", nameEn: "Brown rice", category: "pantry", keptIn: "pantry", expiresOn: null, expiryIsGuess: false, amount: { value: 2, unit: "kg" } },
+      ],
+    },
+  ]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("Add 2 kg of brown rice into the pantry thank you");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  // Her own sentence, then the card: what staff will read, glossed for the owner.
+  await expect(page.getByText("Of course. I'll put 2 kg of brown rice in the cupboard.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("New ingredient")).toBeVisible();
+  await expect(page.getByText("Beras merah (Brown rice)")).toBeVisible();
+  await expect(page.locator("dd").getByText("2 kg", { exact: true })).toBeVisible();
+  await expect(page.locator("dd").getByText("Cupboard", { exact: true })).toBeVisible();
+  // The page says what it can show, so the route may send this kind of card.
+  expect(asked[0]).toMatchObject({ reply: "Add 2 kg of brown rice into the pantry thank you", v: 2 });
+  expect(stub.supplies).toHaveLength(1); // nothing saved before Looks right
+
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.supplies.length).toBe(2);
+  await expect
+    .poll(() => stub.supplies[1])
+    .toMatchObject({ name: "Beras merah", scope: "home", category: "pantry", kept_in: "pantry", expires_on: null, track_amount: true, unit: "kg", quantity: 2 });
+  await expect(page.getByText("Saved — Brown rice")).toBeVisible();
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => stub.supplies.length).toBe(1);
+  expect(stub.supplies[0]).toMatchObject({ name: "Daging sapi" });
+  expect(stub.seen.realBackend).toEqual([]);
+});
+
+test("an amount on a listed ingredient is added as a purchase, and Undo takes it off again", async ({ context, page }) => {
+  // The beef, counted: 1 kg in the freezer. Two more come in.
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [{ ...beef, track_amount: true }],
+  });
+  await kakakSays(page, [
+    {
+      kind: "suggestions",
+      text: "",
+      items: [
+        { kind: "ingredient", itemId: BEEF, name: "Daging sapi", keptIn: null, fromPlace: "freezer", expiry: "keep", expiresOn: null, expiryIsGuess: false, amount: { value: 2, unit: "kg", mode: "add", before: 1 }, amountSkipped: null },
+      ],
+    },
+  ]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("We bought 2 kg of beef");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("+2 kg · 3 kg in all")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ quantity: 3, stock_status: "ok", kept_in: "freezer", expires_on: "2026-12-20" });
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ quantity: 1 });
+});
+
+test("what is left replaces the amount, and Undo puts back the amount and a Running low someone had tapped", async ({ context, page }) => {
+  // The beef, counted: 4 kg, and someone marked it Running low by hand. "Only 1 kg left."
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [{ ...beef, track_amount: true, quantity: 4, stock_status: "low" }],
+  });
+  await kakakSays(page, [
+    {
+      kind: "suggestions",
+      text: "",
+      items: [
+        { kind: "ingredient", itemId: BEEF, name: "Daging sapi", keptIn: null, fromPlace: "freezer", expiry: "keep", expiresOn: null, expiryIsGuess: false, amount: { value: 1, unit: "kg", mode: "set", before: 4 }, amountSkipped: null },
+      ],
+    },
+  ]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("There is only 1 kg of beef left");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("1 kg (was 4 kg)")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Looks right" }).click();
+  // A new amount settles the status again: 1 kg, with no low level set, is Enough.
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ quantity: 1, stock_status: "ok" });
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ quantity: 4, stock_status: "low" });
+});
+
+/** Opens Kakak's card that starts the count on the beef at 500 g. */
+async function openStartCountCard(page: Page) {
+  await kakakSays(page, [
+    {
+      kind: "suggestions",
+      text: "",
+      items: [
+        { kind: "ingredient", itemId: BEEF, name: "Daging sapi", keptIn: null, fromPlace: "freezer", expiry: "keep", expiresOn: null, expiryIsGuess: false, amount: { value: 500, unit: "g", mode: "start", before: null }, amountSkipped: null },
+      ],
+    },
+  ]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("We have 500 g of beef in the freezer");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("Miamus keeps count of it from now on.")).toBeVisible({ timeout: 20_000 });
+}
+
+test("an amount starts the count on an item that was counted before, and Undo leaves it exactly as it was", async ({ context, page }) => {
+  // The beef was counted once (4 kg, running low at 1 kg), then counting was switched off, and
+  // someone marked it Running low. "500 g of beef in the freezer."
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [{ ...beef, track_amount: false, quantity: 4, unit: "kg", min_threshold: 1, stock_status: "low", amount_set_at: "2026-11-01T02:00:00Z" }],
+  });
+  await openStartCountCard(page);
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: true, unit: "g", quantity: 500, min_threshold: 0, stock_status: "ok" });
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  // Not counted again, with the count it had kept and the mark someone had set.
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: false, unit: "kg", quantity: 4, min_threshold: 1, stock_status: "low" });
+});
+
+test("Undo of a started count never turns a count from before amounts into a real one", async ({ context, page }) => {
+  // Never counted (no "counted at"), with a number left from before amounts existed: 4. The
+  // Track amount sheet shows it only as "Old count: 4 kg, not used".
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [{ ...beef, track_amount: false, quantity: 4, unit: "kg", amount_set_at: null }],
+  });
+  await openStartCountCard(page);
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: true, unit: "g", quantity: 500 });
+  // The database stamped it as counted, and takes no other value for that from a phone.
+  expect(stub.supplies[0].amount_set_at).toBeTruthy();
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  // So it goes back with no amount: the old 4 can't be read as a count someone chose.
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: false, unit: "kg", quantity: 0, stock_status: "ok" });
+});
+
+test("an amount that can't be written is explained on the card, and the card has nothing to save", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true }, features: { kitchen: true }, items: [beef] });
+  await kakakSays(page, [
+    {
+      kind: "suggestions",
+      text: "",
+      items: [
+        { kind: "ingredient", itemId: BEEF, name: "Daging sapi", keptIn: null, fromPlace: "freezer", expiry: "keep", expiresOn: null, expiryIsGuess: false, amount: null, amountSkipped: { value: 2, unit: "L", itemUnit: "kg" } },
+      ],
+    },
+  ]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "Mau Kakak atur apa?" }).fill("Tambah daging 2 liter");
+  await page.getByRole("button", { name: "Kirim" }).click();
+
+  await expect(page.getByText("2 L tidak ditambahkan: di sini Daging sapi dicatat dalam kg.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Sudah benar" })).toBeDisabled();
+});
+
+test("Kakak answers a question in words, and the conversation keeps both sides", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  const answer =
+    "Miamus keeps the running of your home in one place: chores, pets, the kitchen and the people who help. You say what should happen once; staff see it on their own phone and tick it off, often with a photo. You only hear about what didn't happen.";
+  const asked = await kakakSays(page, [
+    { kind: "message", text: answer },
+    { kind: "message", text: "You're welcome." },
+  ]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("how would you describe what miamis is for");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  // The whole answer, longer than a card's sentence, and no card.
+  await expect(page.getByText(answer)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Looks right" })).toHaveCount(0);
+  // She can be asked again straight away: the box now asks "Anything else?".
+  await page.getByRole("textbox", { name: "Anything else?" }).fill("thank you");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("You're welcome.")).toBeVisible();
+  // Both sides stay, in order: the question, her answer, the thanks.
+  const said = page.getByTestId("kakak-said");
+  await expect(said.locator("p")).toHaveText(["how would you describe what miamis is for", answer, "thank you"]);
+  await expect(said.getByTestId("kakak-earlier")).toHaveCount(1);
+  expect(asked.map((turn) => turn.reply)).toEqual(["how would you describe what miamis is for", "thank you"]);
+});
+
+test("Kakak's question stays above the answer the owner taps", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  await answerKakak(page);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("Ari mops the terrace at 9");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Monday" }).click({ timeout: 20_000 });
+
+  await expect(page.getByText("Pel teras (Mop the terrace)")).toBeVisible();
+  await expect(page.getByTestId("kakak-said").locator("p")).toHaveText(["Ari mops the terrace at 9", "Which day?", "Monday"]);
+});
+
+test("a long chat rolls over: after five answers the next question starts a new conversation", async ({ context, page }) => {
+  // The family keeps asking without closing the sheet. A conversation holds
+  // only so many of Kakak's turns, so a long one at rest starts afresh.
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  const turn = (n: number) => ({
+    messages: Array.from({ length: n * 2 }, (_, i) =>
+      i % 2 === 0 ? { role: "user", content: `question ${i / 2 + 1}` } : { role: "assistant", content: [{ type: "text", text: `Answer ${(i + 1) / 2}.` }] },
+    ),
+  });
+  const asked: { reply: string; history: { messages: unknown[] } | null }[] = [];
+  await page.route("**/api/kakak", (route) => {
+    const body = route.request().postDataJSON();
+    asked.push(body);
+    // The history grows by one exchange each turn, as the real route's does.
+    const before = body.history ? body.history.messages.length / 2 : 0;
+    return route.fulfill({
+      json: { kind: "message", text: `Answer ${asked.length}.`, requestId: `00000000-0000-4000-8000-0000000000d${asked.length}`, history: turn(before + 1) },
+    });
+  });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("question 1");
+  await page.getByRole("button", { name: "Send" }).click();
+  for (let n = 2; n <= 7; n += 1) {
+    await expect(page.getByText(`Answer ${n - 1}.`)).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("textbox", { name: "Anything else?" }).fill(`question ${n}`);
+    await page.getByRole("button", { name: "Send" }).click();
+  }
+  await expect(page.getByText("Answer 7.")).toBeVisible();
+
+  // Turns 1 to 5 build one conversation; the sixth question starts a new one, and the seventh follows it.
+  expect(asked.map((turn) => (turn.history ? turn.history.messages.length / 2 : null))).toEqual([null, 1, 2, 3, 4, null, 1]);
+  // On screen it is still one conversation.
+  await expect(page.getByTestId("kakak-said").locator("p")).toHaveCount(13);
+});
+
+test("a conversation that is full says so and offers Start again, not another way to say it", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
+  await kakakSays(page, [{ kind: "failed", reason: "too_long" }]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "Mau Kakak atur apa?" }).fill("Ari pel teras besok");
+  await page.getByRole("button", { name: "Kirim" }).click();
+
+  await expect(page.getByText("Percakapan ini sudah panjang. Mulai lagi, lalu bilang ke Kakak apa berikutnya.")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Mulai lagi" }).click();
+  await expect(page.getByRole("textbox", { name: "Mau Kakak atur apa?" })).toBeVisible();
+  await expect(page.getByTestId("kakak-said")).toHaveCount(0);
+});

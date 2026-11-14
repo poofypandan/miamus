@@ -265,22 +265,23 @@ describe("runKakakTurn", () => {
   });
 });
 
+/** Runs with console.warn captured: the route logs why it dropped or sent back a reply. */
+const quiet = <T,>(run: () => Promise<T>) => {
+  const warn = console.warn;
+  const logged: unknown[][] = [];
+  console.warn = (...args: unknown[]) => void logged.push(args);
+  return run().then(
+    (value) => ((console.warn = warn), { value, logged }),
+    (error) => {
+      console.warn = warn;
+      throw error;
+    },
+  );
+};
+
 describe("runKakakTurn never shows a note to self (tonight's eval)", () => {
   const k021 =
     "'Sabun cuci' most likely means I2 Sabun cuci piring, though it could be detergent. It's ambiguous: sabun cuci could be laundry soap. I2 is \"Sabun cuci piring\", I3 is \"Deterjen\". I'll treat it as close enough to I2.";
-  const quiet = <T,>(run: () => Promise<T>) => {
-    const warn = console.warn;
-    const logged: unknown[][] = [];
-    console.warn = (...args: unknown[]) => void logged.push(args);
-    return run().then(
-      (value) => ((console.warn = warn), { value, logged }),
-      (error) => {
-        console.warn = warn;
-        throw error;
-      },
-    );
-  };
-
   it("drops a card's note (K021) and keeps the card; the log has no text", async () => {
     const { deps } = fake([{ content: [{ type: "text", text: k021 }, chore("S1")], stop_reason: "tool_use" }]);
     const { value: result, logged } = await quiet(() => runKakakTurn(deps, null, "Beli sabun cuci"));
@@ -316,15 +317,100 @@ describe("runKakakTurn never shows a note to self (tonight's eval)", () => {
     expect(await runKakakTurn(deps, null, "Mbak Sari pel teras tiap Senin jam 9")).toMatchObject({ kind: "suggestions", text: good });
   });
 
-  it("replaces a plain reply that is a note with the safe line, in the owner's language", async () => {
-    const { deps } = fake([{ content: [{ type: "text", text: "No tool fits; reply that P1 medicine is unsupported." }], stop_reason: "end_turn" }]);
+  it("replaces a plain reply that is a note twice over with the safe line, in the owner's language", async () => {
+    // Sent back once (below); a second note still never reaches the owner.
+    const note = { content: [{ type: "text", text: "No tool fits; reply that P1 medicine is unsupported." }], stop_reason: "end_turn" };
+    const { deps, bodies } = fake([note, note]);
     const { value: id } = await quiet(() => runKakakTurn(deps, null, "obat Mochi"));
     expect(id).toMatchObject({ kind: "message", text: "Maaf, Kakak belum paham. Bisa Anda katakan dengan cara lain?" });
+    expect(bodies).toHaveLength(2);
 
-    const english = fake([{ content: [{ type: "text", text: "Use add_food with expires_on today." }], stop_reason: "end_turn" }]);
+    const leak = { content: [{ type: "text", text: "Use add_food with expires_on today." }], stop_reason: "end_turn" };
+    const english = fake([leak, leak]);
     english.deps.household = { ...english.deps.household, ownerLocale: "en" };
     const { value: en } = await quiet(() => runKakakTurn(english.deps, null, "rice"));
     expect(en).toMatchObject({ kind: "message", text: "Sorry, I didn't catch that. Could you say it another way?" });
+  });
+});
+
+describe("runKakakTurn gives a plain reply one second try (2026-11-14)", () => {
+  const LONG =
+    "Miamus is a household app that keeps everything about your home in one place, including the chores, the pets, the kitchen, the repairs, the bills, the staff and their phones, the family, the notifications and the settings, and it lets you tell it what should happen so your staff know what to do and take photos as proof, and then you only hear about the things that did not happen, which you can see on Today, where there is also a list of things waiting for you, such as a leave request, and a list of things that are coming up soon.";
+  const GOOD = "Miamus keeps the running of your home in one place. You say what should happen once, and you only hear about what didn't.";
+
+  it("sends a reply that is too long back with the reason, and shows the second one", async () => {
+    expect(LONG.length).toBeGreaterThan(480);
+    const { deps, bodies, records } = fake([
+      { content: [{ type: "text", text: LONG }], stop_reason: "end_turn" },
+      { content: [{ type: "text", text: GOOD }], stop_reason: "end_turn" },
+    ]);
+    deps.household = { ...deps.household, ownerLocale: "en" };
+    const { value: result, logged } = await quiet(() => runKakakTurn(deps, null, "how would you describe what miamis is for"));
+    expect(result).toMatchObject({ kind: "message", text: GOOD });
+    expect(logged).toEqual([["kakak: reply text sent back", "too_long"]]);
+    // The second request carries her first reply and the app's note, in order.
+    const second = (bodies[1] as { messages: { role: string; content: unknown }[] }).messages;
+    expect(second.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
+    expect(second[2].content).toMatch(/^\(From Miamus, not the owner: your last reply was not shown\. It was longer than 480 characters\./);
+    expect(second[2].content).toContain("in English");
+    // Both calls are counted and recorded, and the history she gets back is whole.
+    expect(records.map((r) => r.outcome)).toEqual(["message", "message"]);
+    if (result.kind !== "message") return;
+    expect(result.history.messages).toHaveLength(4);
+    expect(() => checkHistory(result.history)).not.toThrow();
+  });
+
+  it("shows an answer about Miamus of up to 480 characters as it is", async () => {
+    const answer =
+      "Miamus menyatukan urusan rumah di satu tempat: tugas, hewan, dapur, dan orang-orang yang membantu. Anda cukup bilang sekali; staf melihatnya di HP masing-masing dan menandainya selesai, sering dengan foto. Anda hanya dikabari soal yang belum dikerjakan.";
+    expect(answer.length).toBeGreaterThan(200);
+    const { deps, bodies } = fake([{ content: [{ type: "text", text: answer }], stop_reason: "end_turn" }]);
+    expect(await runKakakTurn(deps, null, "Miamus itu untuk apa?")).toMatchObject({ kind: "message", text: answer });
+    expect(bodies).toHaveLength(1);
+  });
+
+  it("asks again as it was when the reply had no words, and never puts an empty turn in the history", async () => {
+    const { deps, bodies } = fake([
+      { content: [], stop_reason: "end_turn" },
+      { content: [{ type: "text", text: "Sama-sama." }], stop_reason: "end_turn" },
+    ]);
+    const { value: result } = await quiet(() => runKakakTurn(deps, null, "terima kasih"));
+    expect(result).toMatchObject({ kind: "message", text: "Sama-sama." });
+    expect((bodies[1] as { messages: unknown[] }).messages).toEqual((bodies[0] as { messages: unknown[] }).messages);
+    if (result.kind === "message") expect(result.history.messages).toHaveLength(2);
+  });
+
+  it("uses the turn's one second try only once: a bad tool call first leaves none for the reply", async () => {
+    const { deps, bodies } = fake([
+      { content: [chore("S9")], stop_reason: "tool_use" },
+      { content: [{ type: "text", text: "Use create_chore with assignee S1." }], stop_reason: "end_turn" },
+    ]);
+    const { value: result } = await quiet(() => runKakakTurn(deps, null, "Mbak Sari pel teras"));
+    expect(result).toMatchObject({ kind: "message", text: "Maaf, Kakak belum paham. Bisa Anda katakan dengan cara lain?" });
+    expect(bodies).toHaveLength(2);
+  });
+});
+
+describe("what Kakak reads before the conversation", () => {
+  it("is her instructions, the guide in the owner's language, then the household, each cached", async () => {
+    const { deps, bodies } = fake([{ content: [{ type: "text", text: "Sama-sama." }], stop_reason: "end_turn" }]);
+    await runKakakTurn(deps, null, "terima kasih");
+    const system = (bodies[0] as { system: { text: string; cache_control?: unknown }[] }).system;
+    expect(system).toHaveLength(3);
+    expect(system[0].text).toContain("You are Kakak");
+    expect(system[1].text).toContain("# Guide to Miamus");
+    expect(system[1].text).toContain("Untuk apa Miamus");
+    expect(system[1].text).not.toContain("What Miamus is for");
+    expect(system[2].text).toContain("<household>");
+    expect(system.every((block) => block.cache_control)).toBe(true);
+
+    const english = fake([{ content: [{ type: "text", text: "You're welcome." }], stop_reason: "end_turn" }]);
+    english.deps.household = { ...english.deps.household, ownerLocale: "en" };
+    await runKakakTurn(english.deps, null, "thanks");
+    const en = (english.bodies[0] as { system: { text: string }[] }).system;
+    expect(en[1].text).toContain("What Miamus is for");
+    // The instructions are the same bytes for both, so they share one cache entry.
+    expect(en[0].text).toBe(system[0].text);
   });
 });
 

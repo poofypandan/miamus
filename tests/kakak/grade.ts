@@ -126,6 +126,11 @@ export const DEFAULTS: Record<string, Record<string, FieldMatcher>> = {
   },
   put_away_ingredient: {
     expiry_is_guess: false,
+    // No amount unless the owner gave one; a listed item has no new name or shelf.
+    amount: null,
+    unit: null,
+    new_name: null,
+    shelf: null,
   },
   add_to_shopping_list: {},
   add_pet_routine: {
@@ -144,6 +149,13 @@ export const DEFAULTS: Record<string, Record<string, FieldMatcher>> = {
  * left, so "the dogs at 17:00" when one dog has it grades as the other dog.
  */
 export function routeView(household: KakakHousehold, call: ToolCall): ToolCall {
+  if (call.name === "put_away_ingredient") {
+    // The newer fields read as null when a call leaves them out (validate.ts).
+    return {
+      name: call.name,
+      input: { new_name: null, new_name_en: null, shelf: null, amount: null, unit: null, amount_is: "bought", ...call.input },
+    };
+  }
   if (call.name !== "add_pet_routine") return call;
   const times = Array.isArray(call.input.times) ? (call.input.times as string[]) : [];
   const pets = Array.isArray(call.input.pets) ? (call.input.pets as string[]) : [];
@@ -191,7 +203,11 @@ function turnMismatches(household: KakakHousehold, expected: ExpectedTurn, actua
     if (!actual.text.trim()) return ["an empty reply"];
     const body = actual.text.toLowerCase();
     const missing = (expected.mentions ?? []).filter((group) => !group.some((n) => body.includes(n.toLowerCase())));
-    return missing.map((group) => `reply doesn't mention one of ${JSON.stringify(group)}`);
+    const said = (expected.avoids ?? []).filter((n) => body.includes(n.toLowerCase()));
+    return [
+      ...missing.map((group) => `reply doesn't mention one of ${JSON.stringify(group)}`),
+      ...said.map((n) => `reply says ${JSON.stringify(n)}, which it must not`),
+    ];
   }
   const ok = matchAll(expected.calls, actual.calls, (e, a) => callMismatches(household, e, a).length === 0);
   if (ok) return [];
@@ -256,6 +272,9 @@ function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "r
         { field: `items[${i}].item`, kind: "items" as const, value: item.item },
         { field: `items[${i}].pet`, kind: "pets" as const, value: item.pet },
       ]);
+    case "put_away_ingredient":
+      // Null is a new ingredient, by name: only a reference can be invented.
+      return [{ field: "item", kind: "items", value: input.item }];
     default:
       return [];
   }

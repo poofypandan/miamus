@@ -116,9 +116,12 @@ describe("playConversation", () => {
     ]);
     expect(tools.filter((t) => t.strict).map((t) => t.name)).toEqual(["create_chore", "add_pet_routine", "ask_question"]);
     const system = first.system as { text: string; cache_control?: unknown }[];
-    expect(system).toHaveLength(2);
+    // The route's own blocks: instructions, the guide in the owner's language, the household.
+    expect(system).toHaveLength(3);
     expect(system.every((block) => block.cache_control)).toBe(true);
-    expect(system[1].text).toContain("Owner's chosen language: Bahasa Indonesia (id).");
+    expect(system[1].text).toContain("# Guide to Miamus");
+    expect(system[1].text).toContain("Untuk apa Miamus");
+    expect(system[2].text).toContain("Owner's chosen language: Bahasa Indonesia (id).");
     expect(first.messages).toEqual([{ role: "user", content: k013.sentence }]);
 
     // Second call: the assistant turn comes back unchanged (thinking block and
@@ -170,10 +173,27 @@ describe("playConversation", () => {
     const english = { ...k013, ownerLocale: "en" as const };
     await playConversation(client, { ...sonnet, thinking: "between_tools" }, household, english, "x");
     expect(bodies[0].thinking).toEqual({ type: "between_tools" });
-    expect((bodies[0].system as { text: string }[])[1].text).toContain("English (en)");
+    expect((bodies[0].system as { text: string }[])[1].text).toContain("What Miamus is for");
+    expect((bodies[0].system as { text: string }[])[2].text).toContain("English (en)");
     await expect(
       playConversation(client, { model: "claude-opus-5-5", effort: "low", thinking: "between_tools" }, household, k013, "x"),
     ).rejects.toThrow(/only on Sonnet/);
+  });
+
+  it("sends a plain reply that can't be shown back once, as the route does, and grades the second", async () => {
+    const about = testSet.cases.find((c) => c.id === "K131")!;
+    const long = "Miamus keeps the running of your home in one place. ".repeat(10).trim();
+    const good = "Miamus keeps your home's chores, pets and kitchen in one place, so you only hear about what didn't happen.";
+    const { client, bodies } = fakeApi([
+      { content: [{ type: "text", text: long }], stop_reason: "end_turn" },
+      { content: [{ type: "text", text: good }], stop_reason: "end_turn" },
+    ]);
+    const result = await playConversation(client, sonnet, household, about, about.sentence);
+    expect(result.calls).toHaveLength(2);
+    expect(result.calls[0].rejected).toEqual(["reply not shown: too_long"]);
+    expect(result.turns).toEqual([{ kind: "message", calls: [], text: good }]);
+    expect(String(bodies[1].messages[2].content)).toMatch(/^\(From Miamus, not the owner:/);
+    expect(gradeCase(household, about, result.turns, result.rejected).pass).toBe(true);
   });
 
   it("records a refusal as a failed turn", async () => {

@@ -2,18 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, MessageSquareText } from "lucide-react";
+import { BookOpen, ChevronRight, MessageSquareText } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { LEGAL } from "@/config/legal";
 import { FeedbackSheet } from "@/components/shared/feedback-sheet";
 import { useOwnerLocale } from "@/context/owner-locale-context";
+import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
+import { settingsPageHref } from "@/lib/settings-pages";
 import type { OwnerLocale } from "@/lib/owner-locale";
 
 /**
  * "About Miamus" — the last page of the Household tab (owner request,
  * 2026-11-08): where Miamus came from and what it is for. Owners only, in the
  * owner's language. Short on purpose: a mark, the promise, three paragraphs,
- * and (in Bahasa Indonesia) the proverb the app is built around.
+ * and (in Bahasa Indonesia) the proverb the app is built around; then How
+ * Miamus works (Phase 180 H2) and Send feedback.
  *
  * Copy lives here as whole paragraphs per language rather than through t(),
  * because the two versions are written, not translated line by line.
@@ -31,6 +34,8 @@ const COPY = {
     madeBy: `Made with care by ${LEGAL.operatorName}.`,
     privacy: "Privacy Policy",
     privacyHref: "/privacy",
+    guide: "How Miamus works",
+    guideDetail: "What each part does, in a few lines.",
     feedback: "Send feedback",
     feedbackDetail: "Ideas, problems, anything: straight to us.",
   },
@@ -49,6 +54,8 @@ const COPY = {
     madeBy: `Dibuat dengan sepenuh hati oleh ${LEGAL.operatorName}.`,
     privacy: "Kebijakan Privasi",
     privacyHref: "/privasi",
+    guide: "Cara pakai Miamus",
+    guideDetail: "Fungsi tiap bagian, singkat saja.",
     feedback: "Kirim masukan",
     feedbackDetail: "Ide, masalah, apa saja: langsung ke kami.",
   },
@@ -60,6 +67,8 @@ export function AboutMiamus() {
   // Feedback (roadmap item 9, migrations/135): here, low-key, where an
   // owner who wants to tell the makers something would look.
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // How Miamus works (Phase 180 H2): the guide, a Settings page of its own.
+  const guideHref = settingsPageHref("how-miamus-works");
 
   return (
     <article className="flex flex-col gap-6 pb-4">
@@ -83,6 +92,25 @@ export function AboutMiamus() {
           <figcaption className="mt-1.5 text-sm text-muted-foreground">{copy.proverb.note}</figcaption>
         </figure>
       )}
+
+      <a
+        href={guideHref}
+        onClick={(event) => {
+          if (!isPlainClick(event)) return;
+          event.preventDefault();
+          pushInPlace(guideHref);
+        }}
+        className="flex min-h-16 w-full items-center gap-3 rounded-xl border bg-card px-4 text-left active:bg-muted"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+          <BookOpen className="size-5" strokeWidth={1.75} />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-base font-semibold text-gray-900">{copy.guide}</span>
+          <span className="text-xs text-muted-foreground">{copy.guideDetail}</span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+      </a>
 
       <button
         type="button"

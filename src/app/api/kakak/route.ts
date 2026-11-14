@@ -6,6 +6,7 @@ import type { KakakModel } from "@/lib/kakak/cost";
 import { PRICES } from "@/lib/kakak/cost";
 import { classifyApiError } from "@/lib/kakak/api-errors";
 import { practiceAllowed, practiceClient } from "@/lib/kakak/practice";
+import { needsNewerApp } from "@/lib/kakak/suggestions";
 import {
   BadTurnError,
   StaleConversationError,
@@ -79,13 +80,32 @@ function featureRow(rows: unknown, feature: string): boolean | null {
  * working while the migration rolls out, with no ingredient places.
  */
 async function readItems(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, householdId: string) {
+  // track_amount, unit and quantity (migrations/148) say how an amount the
+  // owner gives lands on an item; they stay on the server (context.ts
+  // ItemStock) and are never sent to Anthropic.
   const items = await supabase
     .from("inventory_items")
-    .select("id, name, scope, created_at, category, stock_status, kept_in, expires_on")
+    .select("id, name, scope, created_at, category, stock_status, kept_in, expires_on, track_amount, unit, quantity")
     .eq("household_id", householdId);
   if (items.error?.code !== "42703") return items;
   console.error("Kakak: ingredient places not read", items.error.message);
   return supabase.from("inventory_items").select("id, name, scope, created_at, category, stock_status").eq("household_id", householdId);
+}
+
+/**
+ * What the page that called can show (lib/kakak/client.ts KAKAK_CLIENT_VERSION).
+ * A page loaded before a deploy keeps calling with its old number, or none:
+ * it is never sent a card it can't draw or would half-save.
+ */
+function clientVersion(value: unknown): number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 ? value : 1;
+}
+
+/** Said instead of a card an older page can't show: reopening Miamus loads the new one. */
+function reopenLine(locale: "en" | "id"): string {
+  return locale === "id"
+    ? "Kakak baru saja diperbarui. Tutup Miamus, buka lagi, lalu bilang ke Kakak sekali lagi."
+    : "I've just been updated. Please close Miamus, open it again, and tell me once more.";
 }
 
 async function readRows(
@@ -105,7 +125,13 @@ async function readRows(
     supabase.from("households").select("has_pets").eq("id", householdId).maybeSingle(),
     // Household → Features (Phase 171): Food at home switched off means no
     // add_food; Kitchen amounts on as well means ingredients (Phase 176).
-    supabase.from("household_features").select("feature, enabled").eq("household_id", householdId).in("feature", ["food", "kitchen"]),
+    // Repairs and Bills too (Phase 180): Kakak says a switched-off feature
+    // is off, rather than describe a screen this household doesn't have.
+    supabase
+      .from("household_features")
+      .select("feature, enabled")
+      .eq("household_id", householdId)
+      .in("feature", ["food", "kitchen", "repairs", "bills"]),
   ]);
   for (const result of [staff, pets, rooms, items]) if (result.error) throw result.error;
   // Optional: a failed read (or a database without migrations/133) leaves
@@ -129,6 +155,9 @@ async function readRows(
     hasPets: household.error ? null : ((household.data as { has_pets: boolean | null } | null)?.has_pets ?? null),
     foodOn: food.error ? null : featureRow(food.data, "food"),
     kitchenOn: food.error ? null : featureRow(food.data, "kitchen"),
+    repairsOn: food.error ? null : featureRow(food.data, "repairs"),
+    billsOn: food.error ? null : featureRow(food.data, "bills"),
+    featuresRead: !food.error,
   } as ContextRows;
 }
 
@@ -148,7 +177,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "too large" }, { status: 413 });
   }
 
-  let body: { householdId?: unknown; history?: unknown; reply?: unknown; locale?: unknown };
+  let body: { householdId?: unknown; history?: unknown; reply?: unknown; locale?: unknown; v?: unknown };
   try {
     const raw = await request.text();
     if (raw.length > MAX_BODY_BYTES) return NextResponse.json({ error: "too large" }, { status: 413 });
@@ -270,13 +299,23 @@ export async function POST(request: NextRequest) {
       if (result.reason === "busy") console.error("kakak: the global daily cap was reached");
       return refused(result.reason, result.reason === "limit" || result.reason === "busy" ? 429 : 403);
     }
+    // A page from before this deploy can't show a new ingredient or save an
+    // amount: it is asked to reopen Miamus rather than crash or half-save.
+    if (result.kind === "suggestions" && clientVersion(body.v) < 2 && result.items.some(needsNewerApp)) {
+      console.info("kakak: an older page was asked to reopen");
+      const reopen = { kind: "message" as const, text: reopenLine(ownerLocale), requestId: result.requestId, history: result.history };
+      return NextResponse.json(practice ? { ...reopen, practice: true } : reopen);
+    }
     return NextResponse.json(practice ? { ...result, practice: true } : result);
   } catch (error) {
     if (error instanceof StaleConversationError) return failed("stale");
     if (error instanceof BadTurnError) return NextResponse.json({ error: "bad request" }, { status: 400 });
     // The spend limit, a bad key, rate limits and timeouts each get their own
     // plain sentence on the phone (lib/kakak/api-errors.ts).
-    const { body: failure, status: code, log } = classifyApiError(error);
+    // A 400 on a later turn: the history no longer fits what Kakak is sent
+    // (her instructions were updated while the sheet stayed open). The sheet
+    // offers Start again, not Try again into the same refusal.
+    const { body: failure, status: code, log } = classifyApiError(error, { laterTurn: history.messages.length > 0 });
     console.error("kakak: call failed", log);
     return NextResponse.json(failure, { status: code });
   }
