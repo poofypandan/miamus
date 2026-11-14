@@ -260,8 +260,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "pets",
     title: { en: "Pet routines", id: "Rutinitas hewan" },
     body: {
-      en: "Each pet has meals, potty breaks and other routines: walks, lights off, play, fresh water, brushing teeth, or your own. Add one in Pets → the pet → Add routine, for one pet or several, every day or on the days you choose.",
-      id: "Tiap hewan punya jam makan, pipis dan pup, serta rutinitas lain: jalan-jalan, matikan lampu, ajak main, ganti air minum, sikat gigi, atau buatan Anda sendiri. Tambahkan di Hewan → hewannya → Tambah rutinitas, untuk satu atau beberapa hewan, setiap hari atau di hari pilihan Anda.",
+      en: "Each pet has meals, potty breaks and other routines: walks, lights off, play, fresh water, brushing teeth, or your own. Add one with Add routine on the Pets tab, for one pet or several, every day or on the days you choose.",
+      id: "Tiap hewan punya jam makan, pipis dan pup, serta rutinitas lain: jalan-jalan, matikan lampu, ajak main, ganti air minum, sikat gigi, atau buatan Anda sendiri. Tambahkan lewat Tambah rutinitas di tab Hewan, untuk satu atau beberapa hewan, setiap hari atau di hari pilihan Anda.",
     },
     where: "pets",
     needs: "pets",
@@ -284,8 +284,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "pets",
     title: { en: "Medicine, grooming and the vet", id: "Obat, grooming, dan dokter hewan" },
     body: {
-      en: "Each pet's page in Pets keeps its medicine schedule, grooming and vet visits, with photos. A job for a person, like taking a dog to the groomer tomorrow, is a chore.",
-      id: "Halaman tiap hewan di tab Hewan menyimpan jadwal obat, grooming, dan kunjungan dokter hewan, lengkap dengan fotonya. Pekerjaan untuk seseorang, seperti mengantar anjing ke groomer besok, adalah tugas.",
+      en: "Each pet's page in Pets keeps its health records, like vaccines and weight, its medicine schedule, grooming and vet visits. A job for a person, like taking a dog to the groomer tomorrow, is a chore.",
+      id: "Halaman tiap hewan di tab Hewan menyimpan catatan kesehatannya, seperti vaksin dan berat badan, jadwal obat, grooming, dan kunjungan dokter hewan. Pekerjaan untuk seseorang, seperti mengantar anjing ke groomer besok, adalah tugas.",
     },
     where: "pets",
     needs: "pets",
@@ -398,8 +398,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "A staff member's PIN", id: "PIN staf" },
     body: {
-      en: "Each staff member has their own 4-digit PIN, so Miamus knows who did what. They choose it the first time they sign in. Forgotten? In Settings → Staff, open the person and tap Change PIN, or let them choose a new one.",
-      id: "Setiap staf punya PIN 4 angka sendiri, supaya Miamus tahu siapa mengerjakan apa. PIN dibuat saat pertama kali masuk. Lupa? Di Pengaturan → Staf, buka orangnya lalu ketuk Ubah PIN, atau biarkan mereka memilih yang baru.",
+      en: "Each staff member has their own 4-digit PIN, so Miamus knows who did what. They choose it the first time they sign in. Forgotten? In Settings → Staff, tap Change PIN beside their name, and set one or let them choose a new one.",
+      id: "Setiap staf punya PIN 4 angka sendiri, supaya Miamus tahu siapa mengerjakan apa. PIN dibuat saat pertama kali masuk. Lupa? Di Pengaturan → Staf, ketuk Ubah PIN di samping namanya, lalu atur PIN baru atau biarkan mereka memilih sendiri.",
     },
     where: "settings_staff",
   },
