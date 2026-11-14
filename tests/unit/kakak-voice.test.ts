@@ -22,7 +22,6 @@ import {
   readSpeakChoice,
   sendsSnapshots,
   syncNewVoice,
-  speakable,
   voiceReducer,
   writeSpeakChoice,
   type RecognitionLike,
@@ -772,7 +771,7 @@ describe("what Kakak reads aloud", () => {
     expect(kakakWords({ kind: "waiting" }, "en")).toBe("");
   });
 
-  it("reads the card's facts and asks if it's right", () => {
+  it("on a card, reads only her own sentence and asks if it's right, never the card's rows", () => {
     const words = kakakWords(
       {
         kind: "card",
@@ -783,29 +782,23 @@ describe("what Kakak reads aloud", () => {
       },
       "id"
     );
-    expect(words.startsWith("Ini yang akan Kakak tambahkan: Daftar belanja: Beli Telur.")).toBe(true);
-    expect(words.endsWith("Sudah benar?")).toBe(true);
+    expect(words).toBe("Ini yang akan Kakak tambahkan. Sudah benar?");
   });
 
-  it("reads a pet routine's pet and times, not just 'Potty break'", () => {
-    const words = speakable(kakakWords(
+  it("doesn't read a pet routine's rows (names, times, labels)", () => {
+    const words = kakakWords(
       {
         kind: "card",
-        text: "Here's what I'll add:",
+        text: "(Practice) Of course. I'll set up potty breaks for Mochi every day at 07:00, 17:00.",
         items: [
           { kind: "pet_routine", routine: "potty", pets: [{ petId: "p1", petName: "Mochi", times: [{ time: "07:00", title: "Potty" }, { time: "17:00", title: "Potty" }], alreadyThere: ["12:00"] }], title: null, titleEn: null, days: null, until: null, staffId: null, staffName: null, note: null, proof: null, remindStaff: false, alertOwners: false },
         ],
       },
       "en"
-    ));
+    );
     expect(words).toBe(
-      "Here's what I'll add: Potty breaks, Mochi: 07:00 Potty break, 17:00 Potty break. 12:00 is already there. Is that right?"
+      "(Practice) Of course. I'll set up potty breaks for Mochi every day at 07:00, 17:00. Is that right?"
     );
-  });
-
-  it("drops symbols a voice would read out", () => {
-    expect(speakable("Kakak sudah banyak membantu hari ini — coba lagi besok")).toBe(
-      "Kakak sudah banyak membantu hari ini, coba lagi besok"
-    );
+    expect(words).not.toMatch(/Potty break|already there/);
   });
 });

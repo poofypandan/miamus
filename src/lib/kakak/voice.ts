@@ -5,7 +5,6 @@
 // key is added. Pure, so the state machine is unit-tested with a fake
 // recognition object (tests/unit/kakak-voice.test.ts).
 
-import { describeSuggestion } from "./describe";
 import type { KakakSuggestion } from "./suggestions";
 
 export type VoiceLocale = "en" | "id";
@@ -646,15 +645,6 @@ export function writeSpeakChoice(storage: Pick<Storage, "setItem"> | undefined, 
   }
 }
 
-/** Text for reading aloud: dashes become pauses, stray symbols go. */
-export function speakable(text: string): string {
-  return text
-    .replace(/\s*[—–·]\s*/g, ", ")
-    .replace(/[•*_#]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 // ---- What Kakak says -------------------------------------------------------
 
 /**
@@ -671,9 +661,10 @@ export interface VoiceScreen {
 
 /**
  * What Kakak says on this screen, for reading aloud: her question, her
- * message, or the card read as it is shown (each item's heading, then every
- * row's label and value, then its note), then "Is that right?". Labels stay
- * in because some carry the fact: a pet routine's times are its labels.
+ * message, or on a card her own sentence, then "Is that right?". Only her
+ * own words: the card's rows (names, times, labels) stay on screen, where
+ * they are read at a glance; read out, they sound like a form. Before the
+ * voice reads it, src/lib/kakak/speech.ts rewrites it for the ear.
  */
 export function kakakWords(screen: VoiceScreen, locale: VoiceLocale): string {
   const t = (en: string, id: string) => (locale === "id" ? id : en);
@@ -685,15 +676,10 @@ export function kakakWords(screen: VoiceScreen, locale: VoiceLocale): string {
     case "saved":
       return screen.text ?? "";
     case "card": {
-      const items = (screen.items ?? []).map((item) => {
-        const card = describeSuggestion(item, locale);
-        const rows = card.rows.map((row) => `${row.label} ${row.value}`).join(", ");
-        return `${card.heading}: ${rows}${card.note ? `. ${card.note}` : ""}`;
-      });
-      const intro = screen.text || t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:");
-      // One pause between parts: "add:" runs on, and no part ends in "..".
-      const parts = [intro, ...items].map((part) => part.trim().replace(/\.$/, ""));
-      return [...parts, t("Is that right?", "Sudah benar?")].join(". ").replace(/:\./g, ":");
+      // "Here's what I'll add:" introduces rows that aren't read, so it ends the sentence instead.
+      const intro = (screen.text || t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:")).trim().replace(/[\s:]+$/, "");
+      const closed = /[.!?]$/.test(intro) ? intro : `${intro}.`;
+      return `${closed} ${t("Is that right?", "Sudah benar?")}`;
     }
     default:
       return "";

@@ -52,6 +52,24 @@ export const FOOD_PLACES = ["fridge", "freezer", "pantry", "counter"] as const;
 /** put_away_ingredient's date: a new one, none any more, or leave it alone. */
 export const INGREDIENT_EXPIRY = ["set", "clear", "keep"] as const;
 
+/** A new ingredient's shelf (inventory_items.category): the two that are ingredients (lib/kitchen-units isIngredient). */
+export const INGREDIENT_SHELVES = ["fresh_food", "pantry"] as const;
+
+/**
+ * The units an amount can be given in: lib/kitchen-units STOCK_UNITS, which
+ * mirrors inventory_items_unit_check (migrations/148). A unit test keeps the
+ * two lists the same.
+ */
+export const INGREDIENT_UNITS = [
+  "g", "kg", "ml", "L",
+  "pcs", "buah", "butir",
+  "ikat", "siung", "lembar", "batang", "bungkus", "sachet",
+  "pack", "box", "bottle", "roll", "tube",
+] as const;
+
+/** What an amount means: more of it came in, or what is there in all. */
+export const INGREDIENT_AMOUNT_IS = ["bought", "now"] as const;
+
 /** Weekdays as the tool writes them; ISO order (1 = Monday ... 7 = Sunday). */
 export const TOOL_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
@@ -247,19 +265,61 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
   },
   {
     // Phase 176 (docs/phase-176-kitchen-places-plan.md, section 10). Not
-    // strict, so the strict union count stays 15 (tools header).
+    // strict, so the strict union count stays 15 (tools header). Since
+    // 2026-11-14 it also takes an ingredient that isn't listed yet and an
+    // amount (owner: "Add 2 kg of brown rice into the pantry"), under the
+    // same name, so kakak_requests' tools check (migrations/155) needs no
+    // change. validate.ts reads the six newer fields as null when a call
+    // leaves them out.
     name: "put_away_ingredient",
     description:
-      "Suggest where a listed ingredient is kept and when it expires: bought and put away, moved, or taken out to thaw. Only for an item marked (ingredient). Never saves anything.",
+      "Suggest an ingredient the home keeps: where it is kept, how much there is and when it expires. For one that is listed and marked (ingredient): bought and put away, moved, or taken out to thaw. For one that isn't listed yet: a new ingredient, by name. Never saves anything.",
     input_schema: {
       type: "object",
       additionalProperties: false,
-      required: ["item", "kept_in", "expiry", "expires_on", "expiry_is_guess"],
+      required: [
+        "item",
+        "new_name",
+        "new_name_en",
+        "shelf",
+        "kept_in",
+        "amount",
+        "unit",
+        "amount_is",
+        "expiry",
+        "expires_on",
+        "expiry_is_guess",
+      ],
       properties: {
-        item: { type: "string", description: "An item reference marked (ingredient): I1, …" },
+        item: nullableString("A listed item's reference marked (ingredient): I1, … Null for one that isn't listed yet."),
+        new_name: nullableString(
+          "Only when item is null: the new ingredient's name in Bahasa Indonesia, as staff will read it ('Beras merah'). Max 60 characters.",
+        ),
+        new_name_en: nullableString(
+          "With new_name, for an English-speaking owner: the owner's own English words for it ('Brown rice'). Else null.",
+        ),
+        shelf: {
+          anyOf: [{ type: "string", enum: [...INGREDIENT_SHELVES] }, { type: "null" }],
+          description:
+            "With new_name: fresh_food (meat, fish, eggs, dairy, vegetables, fruit) or pantry (rice, flour, oil, sugar, spices, dry and canned goods). Null when item is set.",
+        },
         kept_in: {
           anyOf: [{ type: "string", enum: [...FOOD_PLACES] }, { type: "null" }],
-          description: "Where it is now. Null leaves the place as it is.",
+          description: "Where it is now. Null leaves the place as it is (a new one: its shelf's usual place).",
+        },
+        amount: {
+          anyOf: [{ type: "number" }, { type: "null" }],
+          description: "The number the owner gave (2 for '2 kg'), more than 0. Null when no amount was given.",
+        },
+        unit: {
+          anyOf: [{ type: "string", enum: [...INGREDIENT_UNITS] }, { type: "null" }],
+          description: "The amount's unit, as the owner said it. Null when amount is null.",
+        },
+        amount_is: {
+          type: "string",
+          enum: [...INGREDIENT_AMOUNT_IS],
+          description:
+            "bought: that much more came in (bought, add, put in). now: that is what is there in all ('we have 3 kg', 'tinggal 1 kg'). bought when amount is null.",
         },
         expiry: {
           type: "string",

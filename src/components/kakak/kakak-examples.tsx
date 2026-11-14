@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useMemo } from "react";
-import { BedDouble, BellRing, ListChecks, PawPrint, Refrigerator, ShoppingCart, type LucideIcon } from "lucide-react";
+import { BedDouble, BellRing, CircleHelp, ListChecks, PawPrint, Refrigerator, ShoppingCart, type LucideIcon } from "lucide-react";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -15,11 +15,12 @@ const ICONS: Record<KakakExampleKind, LucideIcon> = {
   pet: PawPrint,
   food: Refrigerator,
   sheets: BedDouble,
+  question: CircleHelp,
 };
 
 /**
- * The Kakak sheet's first screen: five things to say, in the owner's
- * language and with this household's own names (lib/kakak/examples.ts).
+ * The Kakak sheet's first screen: five things to say and one to ask, in the
+ * owner's language and with this household's own names (lib/kakak/examples.ts).
  * Tapping one puts it in the typing box, so the owner can change it first.
  * The roster loads on demand; until it has, the examples use no names.
  */

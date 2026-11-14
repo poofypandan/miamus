@@ -36,7 +36,7 @@ import { KakakRemindChips } from "@/components/kakak/kakak-remind-chips";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
-import { askKakak, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
+import { askKakak, historyForNextTurn, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
 import { addsSomething, describeSuggestion, routineListLine, savedBenefit, savedSummary } from "@/lib/kakak/describe";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
@@ -118,8 +118,13 @@ function Conversation({ onClose }: { onClose: () => void }) {
   const newVoice = useNewVoice();
   const [screen, setScreen] = useState<Screen>({ kind: "typing" });
   const [history, setHistory] = useState<KakakHistory | null>(null);
-  /** What the owner wrote, kept on screen so they see what Kakak read. */
-  const [said, setSaid] = useState<string[]>([]);
+  /**
+   * The conversation so far, both sides (2026-11-14): what the owner wrote,
+   * so they see what Kakak read, and what Kakak said before her latest
+   * reply. With the owner's lines alone, three in a row read as if she had
+   * ignored the first two.
+   */
+  const [said, setSaid] = useState<SaidLine[]>([]);
   const [draft, setDraft] = useState("");
   const [typingAnswer, setTypingAnswer] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -128,8 +133,20 @@ function Conversation({ onClose }: { onClose: () => void }) {
   const abort = useRef<AbortController | null>(null);
   /** The last words sent and the history they went with, for "Try again". */
   const lastTurn = useRef<{ words: string; history: KakakHistory | null } | null>(null);
+  /** The owner's latest line, which the sheet scrolls to as the conversation grows. */
+  const latestSaid = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => () => abort.current?.abort(), []);
+
+  // From the second exchange on, the owner's latest words go to the top of
+  // the sheet, so Kakak's reply to them, her card and the mic under it stay
+  // in view instead of sliding below the earlier lines.
+  const lines = said.length;
+  const showing = screen.kind;
+  useEffect(() => {
+    if (lines < 3) return;
+    latestSaid.current?.scrollIntoView({ block: "start" });
+  }, [lines, showing]);
 
   async function send(text: string) {
     const typed = text.trim();
@@ -141,10 +158,15 @@ function Conversation({ onClose }: { onClose: () => void }) {
     const own = typed.slice(0, MAX_TYPED);
     const note = screen.kind === "card" && screen.refined ? refinementNote(screen.items, MAX_TYPED - own.length - 1) : "";
     const words = note ? `${note} ${own}` : own;
-    setSaid((list) => [...list, own]);
+    // Kakak's line the owner is answering stays above their answer.
+    const hers = kakakLine(screen, t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:"));
+    setSaid((list) => [...list, ...(hers ? [{ who: "kakak" as const, text: hers }] : []), { who: "owner" as const, text: own }]);
     setDraft("");
     setTypingAnswer(false);
-    await ask(words, history);
+    // After her plain reply the conversation is at rest: a long one starts
+    // afresh here, so the owner can keep asking (lib/kakak/client.ts).
+    const atRest = screen.kind === "message" && !screen.problem;
+    await ask(words, historyForNextTurn(history, atRest));
   }
 
   /** The same words again, after no internet, a busy Kakak or a timeout. */
@@ -287,12 +309,23 @@ function Conversation({ onClose }: { onClose: () => void }) {
         </p>
       )}
       {said.length > 0 && (
-        <div className="flex flex-col items-end gap-2">
-          {said.map((line, index) => (
-            <p key={index} className="max-w-[85%] rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900">
-              {line}
-            </p>
-          ))}
+        <div className="flex flex-col gap-2" data-testid="kakak-said">
+          {said.map((line, index) =>
+            line.who === "owner" ? (
+              <p
+                key={index}
+                ref={index === said.length - 1 ? latestSaid : undefined}
+                className="max-w-[85%] scroll-mt-2 self-end rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900"
+              >
+                {line.text}
+              </p>
+            ) : (
+              // Her earlier lines: the same bubble, a little quieter than her latest.
+              <div key={index} className="opacity-80" data-testid="kakak-earlier">
+                <KakakBubble>{line.text}</KakakBubble>
+              </div>
+            )
+          )}
         </div>
       )}
 
@@ -386,6 +419,8 @@ function Conversation({ onClose }: { onClose: () => void }) {
 
       {/* Kakak's pet routines (Phase 173 PR B): once, before the first try, under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-routines-2026-11" />}
+      {/* Kakak answers questions, and adds an ingredient (2026-11-14): the same, in its own week. */}
+      {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-answers-2026-11" />}
 
       {/* Talk to Kakak (voice beta): spoken words go through send() like typed ones. */}
       {newVoice ? (
@@ -422,7 +457,10 @@ function Conversation({ onClose }: { onClose: () => void }) {
               ? t("What should change?", "Apa yang perlu diubah?")
               : screen.kind === "question"
                 ? t("Type your answer", "Ketik jawaban Anda")
-                : t("What should I set up?", "Mau Kakak atur apa?")
+                : screen.kind === "message" && !screen.problem
+                  ? // After her answer, the conversation goes on (2026-11-14).
+                    t("Anything else?", "Ada lagi?")
+                  : t("What should I set up?", "Mau Kakak atur apa?")
           }
           showExamples={screen.kind === "typing" && said.length === 0}
         />
@@ -435,6 +473,31 @@ function Conversation({ onClose }: { onClose: () => void }) {
       )}
     </div>
   );
+}
+
+/** One line of the conversation so far. */
+interface SaidLine {
+  who: "owner" | "kakak";
+  text: string;
+}
+
+/**
+ * What Kakak was saying on this screen, to keep above the owner's answer:
+ * her question, her reply, or her line over a card (the card itself goes
+ * when it is changed). Nothing for a problem (no internet, a limit), which
+ * isn't part of the conversation.
+ */
+function kakakLine(screen: Screen, cardIntro: string): string | null {
+  switch (screen.kind) {
+    case "question":
+      return screen.question;
+    case "message":
+      return screen.problem ? null : screen.text;
+    case "card":
+      return screen.text || cardIntro;
+    default:
+      return null;
+  }
 }
 
 function KakakBubble({ children }: { children: React.ReactNode }) {
@@ -859,6 +922,7 @@ const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
   pet_routine: PawPrint,
   food: Refrigerator,
   ingredient: Carrot,
+  new_ingredient: Carrot,
 };
 
 type T = (en: string, id: string) => string;
@@ -928,8 +992,17 @@ function failure(reason: KakakFailure, t: T): { text: string; problem: Problem }
         text: t("This conversation is from earlier. Start again to tell Kakak.", "Percakapan ini sudah lewat. Mulai lagi untuk bilang ke Kakak."),
         problem: { icon: RotateCcw, next: "restart" },
       };
-    case "invalid":
     case "too_long":
+      // The conversation holds as many turns as it may: saying it another
+      // way would only be refused again, so the way on is to start again.
+      return {
+        text: t(
+          "We've covered a lot in this conversation. Start again, and tell me what's next.",
+          "Percakapan ini sudah panjang. Mulai lagi, lalu bilang ke Kakak apa berikutnya."
+        ),
+        problem: { icon: RotateCcw, next: "restart" },
+      };
+    case "invalid":
     case "refusal":
       return {
         text: t(
