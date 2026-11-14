@@ -34,7 +34,7 @@ import { KakakRemindChips } from "@/components/kakak/kakak-remind-chips";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
-import { askKakak, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
+import { askKakak, historyForNextTurn, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
 import { addsSomething, describeSuggestion, routineListLine, savedBenefit, savedSummary } from "@/lib/kakak/describe";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
@@ -159,7 +159,10 @@ function Conversation({ onClose }: { onClose: () => void }) {
     setSaid((list) => [...list, ...(hers ? [{ who: "kakak" as const, text: hers }] : []), { who: "owner" as const, text: own }]);
     setDraft("");
     setTypingAnswer(false);
-    await ask(words, history);
+    // After her plain reply the conversation is at rest: a long one starts
+    // afresh here, so the owner can keep asking (lib/kakak/client.ts).
+    const atRest = screen.kind === "message" && !screen.problem;
+    await ask(words, historyForNextTurn(history, atRest));
   }
 
   /** The same words again, after no internet, a busy Kakak or a timeout. */
@@ -971,8 +974,17 @@ function failure(reason: KakakFailure, t: T): { text: string; problem: Problem }
         text: t("This conversation is from earlier. Start again to tell Kakak.", "Percakapan ini sudah lewat. Mulai lagi untuk bilang ke Kakak."),
         problem: { icon: RotateCcw, next: "restart" },
       };
-    case "invalid":
     case "too_long":
+      // The conversation holds as many turns as it may: saying it another
+      // way would only be refused again, so the way on is to start again.
+      return {
+        text: t(
+          "We've covered a lot in this conversation. Start again, and tell me what's next.",
+          "Percakapan ini sudah panjang. Mulai lagi, lalu bilang ke Kakak apa berikutnya."
+        ),
+        problem: { icon: RotateCcw, next: "restart" },
+      };
+    case "invalid":
     case "refusal":
       return {
         text: t(

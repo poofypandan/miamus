@@ -5,6 +5,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
 import { classifyApiError } from "@/lib/kakak/api-errors";
+import { FRESH_AFTER_TURNS, historyForNextTurn } from "@/lib/kakak/client";
 import { buildContext, jakartaNow, type ContextRows } from "@/lib/kakak/context";
 import {
   BadTurnError,
@@ -18,7 +19,7 @@ import {
 import { kakakExamples } from "@/lib/kakak/examples";
 import { practiceClient } from "@/lib/kakak/practice";
 import { MAX_REFINEMENT_NOTE, REPEAT_CHOICES, refineChore, refinementNote, repeatLabel, splitRefinementNote } from "@/lib/kakak/refine";
-import { MAX_TYPED, type TurnResult } from "@/lib/kakak/engine";
+import { MAX_CALLS_PER_CONVERSATION, MAX_TYPED, type TurnResult } from "@/lib/kakak/engine";
 import { isSaveableSuggestion } from "@/lib/kakak/suggestions";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -149,6 +150,30 @@ describe("classifyApiError", () => {
   it("never puts the household's words in the log line", () => {
     const { log } = classifyApiError(apiError(400, { type: "invalid_request_error", message: "Mbak Sari pel teras" }));
     expect(log).not.toContain("Sari");
+  });
+});
+
+describe("a long chat rolls over", () => {
+  const turns = (n: number) => ({
+    messages: Array.from({ length: n * 2 }, (_, i) =>
+      i % 2 === 0 ? { role: "user" as const, content: "x" } : { role: "assistant" as const, content: [{ type: "text" as const, text: "y" }] },
+    ),
+  });
+
+  it("keeps the conversation while it is short, or while Kakak waits for an answer or a confirmation", () => {
+    expect(historyForNextTurn(null, true)).toBeNull();
+    const short = turns(FRESH_AFTER_TURNS - 1);
+    expect(historyForNextTurn(short, true)).toBe(short);
+    const long = turns(FRESH_AFTER_TURNS + 2);
+    // A question or a card is open: the answer belongs to this conversation, however long.
+    expect(historyForNextTurn(long, false)).toBe(long);
+  });
+
+  it("starts afresh once she has spoken five times and the conversation is at rest, well inside the engine's limit", () => {
+    expect(historyForNextTurn(turns(FRESH_AFTER_TURNS), true)).toBeNull();
+    expect(historyForNextTurn(turns(FRESH_AFTER_TURNS + 2), true)).toBeNull();
+    // One turn may take two calls (a second try), and must still fit.
+    expect(FRESH_AFTER_TURNS + 2).toBeLessThanOrEqual(MAX_CALLS_PER_CONVERSATION);
   });
 });
 

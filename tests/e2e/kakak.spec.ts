@@ -646,3 +646,55 @@ test("Kakak's question stays above the answer the owner taps", async ({ context,
   await expect(page.getByText("Pel teras (Mop the terrace)")).toBeVisible();
   await expect(page.getByTestId("kakak-said").locator("p")).toHaveText(["Ari mops the terrace at 9", "Which day?", "Monday"]);
 });
+
+test("a long chat rolls over: after five answers the next question starts a new conversation", async ({ context, page }) => {
+  // The family keeps asking without closing the sheet. A conversation holds
+  // only so many of Kakak's turns, so a long one at rest starts afresh.
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  const turn = (n: number) => ({
+    messages: Array.from({ length: n * 2 }, (_, i) =>
+      i % 2 === 0 ? { role: "user", content: `question ${i / 2 + 1}` } : { role: "assistant", content: [{ type: "text", text: `Answer ${(i + 1) / 2}.` }] },
+    ),
+  });
+  const asked: { reply: string; history: { messages: unknown[] } | null }[] = [];
+  await page.route("**/api/kakak", (route) => {
+    const body = route.request().postDataJSON();
+    asked.push(body);
+    // The history grows by one exchange each turn, as the real route's does.
+    const before = body.history ? body.history.messages.length / 2 : 0;
+    return route.fulfill({
+      json: { kind: "message", text: `Answer ${asked.length}.`, requestId: `00000000-0000-4000-8000-0000000000d${asked.length}`, history: turn(before + 1) },
+    });
+  });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("question 1");
+  await page.getByRole("button", { name: "Send" }).click();
+  for (let n = 2; n <= 7; n += 1) {
+    await expect(page.getByText(`Answer ${n - 1}.`)).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("textbox", { name: "Anything else?" }).fill(`question ${n}`);
+    await page.getByRole("button", { name: "Send" }).click();
+  }
+  await expect(page.getByText("Answer 7.")).toBeVisible();
+
+  // Turns 1 to 5 build one conversation; the sixth question starts a new one, and the seventh follows it.
+  expect(asked.map((turn) => (turn.history ? turn.history.messages.length / 2 : null))).toEqual([null, 1, 2, 3, 4, null, 1]);
+  // On screen it is still one conversation.
+  await expect(page.getByTestId("kakak-said").locator("p")).toHaveCount(13);
+});
+
+test("a conversation that is full says so and offers Start again, not another way to say it", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
+  await kakakSays(page, [{ kind: "failed", reason: "too_long" }]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "Mau Kakak atur apa?" }).fill("Ari pel teras besok");
+  await page.getByRole("button", { name: "Kirim" }).click();
+
+  await expect(page.getByText("Percakapan ini sudah panjang. Mulai lagi, lalu bilang ke Kakak apa berikutnya.")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Mulai lagi" }).click();
+  await expect(page.getByRole("textbox", { name: "Mau Kakak atur apa?" })).toBeVisible();
+  await expect(page.getByTestId("kakak-said")).toHaveCount(0);
+});

@@ -31,6 +31,24 @@ export type KakakFailure = "invalid" | "api" | "too_long" | "refusal" | "offline
  */
 export const KAKAK_CLIENT_VERSION = 2;
 
+/**
+ * A long chat rolls over (2026-11-14). A conversation may hold only so many
+ * of Kakak's turns (engine.ts MAX_CALLS_PER_CONVERSATION), and now that she
+ * answers questions an owner can simply keep asking. So once she has spoken
+ * this many times, and the conversation is at rest (her last turn was a
+ * plain reply: no question waiting for an answer, no card waiting to be
+ * confirmed), the next words start a new conversation. Earlier turns can't
+ * be dropped one by one: the API takes a history whole or not at all.
+ */
+export const FRESH_AFTER_TURNS = 5;
+
+/** The history the next words go with: this one, or none once a long chat is at rest. */
+export function historyForNextTurn(history: KakakHistory | null, atRest: boolean): KakakHistory | null {
+  if (!history || !atRest) return history;
+  const hers = history.messages.filter((message) => message.role === "assistant").length;
+  return hers >= FRESH_AFTER_TURNS ? null : history;
+}
+
 export async function askKakak(
   householdId: string,
   history: KakakHistory | null,
