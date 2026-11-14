@@ -1,5 +1,8 @@
-import type { Feature } from "@/lib/features";
+import type { ChoresView } from "@/hooks/use-chores-view";
+import { moduleHref, type DashboardModule } from "@/lib/dashboard-modules";
+import type { Feature, KitchenViewValue } from "@/lib/features";
 import type { OwnerLocale } from "@/lib/owner-locale";
+import { settingsPageHref } from "@/lib/settings-pages";
 
 /**
  * The guide to Miamus (Phase 180, docs/phase-180-kakak-answers-plan.md,
@@ -8,8 +11,8 @@ import type { OwnerLocale } from "@/lib/owner-locale";
  *
  * One source, two readers. Kakak's request carries it (guideForKakak), so
  * she can answer "what is Miamus for?" or "how do I link a staff phone?"
- * from it and only from it; the How Miamus works screen (the plan's H2) will
- * list the same entries, so the two can never disagree.
+ * from it and only from it; the How Miamus works screen (the plan's H2,
+ * how-miamus-works.tsx) lists the same entries, so the two can never disagree.
  *
  * Rules for every entry (tests/unit/guide.test.ts holds them):
  *   - what Miamus does today, as the screens say it. No prices, plans,
@@ -33,32 +36,47 @@ export const GUIDE_GROUP_TITLES: Record<GuideGroup, Record<OwnerLocale, string>>
   settings: { en: "Settings", id: "Pengaturan" },
 };
 
+// The links below are built from the tabs' own keys and views, never typed
+// as URLs: the tab bar's modules (dashboard-modules.ts), Home's pill
+// (?chores=, use-chores-view.ts), the Kitchen's pill (?kitchen=,
+// use-kitchen-view.ts) and the Settings pages (settings-pages.ts).
+function tabHref(module: DashboardModule, param?: [string, string]): string {
+  const base = moduleHref(module);
+  if (!param) return base;
+  return `${base}${base.includes("?") ? "&" : "?"}${param[0]}=${param[1]}`;
+}
+const home = (view: Exclude<ChoresView, "today">) => tabHref("chores", ["chores", view]);
+const kitchen = (view: KitchenViewValue) => (view === "food" ? tabHref("inventory") : tabHref("inventory", ["kitchen", view]));
+
 /**
  * The screens an entry can point at, by their path in words, as the tabs and
- * pages name themselves (bottom-tab-bar.tsx, chores-tab.tsx, staff-tab.tsx).
- * The screen's link joins each of these with the How Miamus works screen.
+ * pages name themselves (bottom-tab-bar.tsx, chores-tab.tsx, staff-tab.tsx),
+ * and the link the How Miamus works screen opens for it (Phase 180 H2).
+ * Kakak reads only the words.
  */
 export const GUIDE_PLACES = {
-  today: { en: "Today", id: "Hari ini" },
-  home_chores: { en: "Home → Chores", id: "Rumah → Tugas" },
-  home_rooms: { en: "Home → Rooms", id: "Rumah → Ruangan" },
-  home_repairs: { en: "Home → Repairs", id: "Rumah → Perbaikan" },
-  home_bills: { en: "Home → Bills and upkeep", id: "Rumah → Tagihan dan perawatan" },
-  pets: { en: "Pets", id: "Hewan" },
-  kitchen_food: { en: "Kitchen → Food", id: "Dapur → Makanan" },
-  kitchen_menu: { en: "Kitchen → Menu", id: "Dapur → Menu" },
-  kitchen_shopping: { en: "Kitchen → Shopping", id: "Dapur → Belanja" },
-  settings_family: { en: "Settings → Family", id: "Pengaturan → Keluarga" },
-  settings_staff: { en: "Settings → Staff", id: "Pengaturan → Staf" },
-  settings_features: { en: "Settings → Features", id: "Pengaturan → Fitur" },
-  settings_invite: { en: "Settings → Invite someone", id: "Pengaturan → Undang" },
-  settings_notifications: { en: "Settings → Notifications", id: "Pengaturan → Notifikasi" },
-  settings_language: { en: "Settings → Language", id: "Pengaturan → Bahasa" },
-  settings_lock: { en: "Settings → App lock", id: "Pengaturan → Kunci aplikasi" },
-  settings_kakak: { en: "Settings → Kakak", id: "Pengaturan → Kakak" },
-  settings_data: { en: "Settings → Your data", id: "Pengaturan → Data Anda" },
-  settings_about: { en: "Settings → About Miamus", id: "Pengaturan → Tentang Miamus" },
-} as const satisfies Record<string, Record<OwnerLocale, string>>;
+  today: { en: "Today", id: "Hari ini", href: tabHref("agenda") },
+  home_chores: { en: "Home → Chores", id: "Rumah → Tugas", href: tabHref("chores") },
+  home_rooms: { en: "Home → Rooms", id: "Rumah → Ruangan", href: home("rooms") },
+  home_repairs: { en: "Home → Repairs", id: "Rumah → Perbaikan", href: home("repairs") },
+  // The checklist is a sheet over Home → Chores, opened by ?bills=open
+  // (chores-tab.tsx), the way Today's What's new card opens it.
+  home_bills: { en: "Home → Bills and upkeep", id: "Rumah → Tagihan dan perawatan", href: tabHref("chores", ["bills", "open"]) },
+  pets: { en: "Pets", id: "Hewan", href: tabHref("pets") },
+  kitchen_food: { en: "Kitchen → Food", id: "Dapur → Makanan", href: kitchen("food") },
+  kitchen_menu: { en: "Kitchen → Menu", id: "Dapur → Menu", href: kitchen("menu") },
+  kitchen_shopping: { en: "Kitchen → Shopping", id: "Dapur → Belanja", href: kitchen("buy") },
+  settings_family: { en: "Settings → Family", id: "Pengaturan → Keluarga", href: settingsPageHref("family") },
+  settings_staff: { en: "Settings → Staff", id: "Pengaturan → Staf", href: settingsPageHref("staff") },
+  settings_features: { en: "Settings → Features", id: "Pengaturan → Fitur", href: settingsPageHref("features") },
+  settings_invite: { en: "Settings → Invite someone", id: "Pengaturan → Undang", href: settingsPageHref("invite") },
+  settings_notifications: { en: "Settings → Notifications", id: "Pengaturan → Notifikasi", href: settingsPageHref("notifications") },
+  settings_language: { en: "Settings → Language", id: "Pengaturan → Bahasa", href: settingsPageHref("language") },
+  settings_lock: { en: "Settings → App lock", id: "Pengaturan → Kunci aplikasi", href: settingsPageHref("lock") },
+  settings_kakak: { en: "Settings → Kakak", id: "Pengaturan → Kakak", href: settingsPageHref("kakak") },
+  settings_data: { en: "Settings → Your data", id: "Pengaturan → Data Anda", href: settingsPageHref("data") },
+  settings_about: { en: "Settings → About Miamus", id: "Pengaturan → Tentang Miamus", href: settingsPageHref("about") },
+} as const satisfies Record<string, Record<OwnerLocale, string> & { href: string }>;
 
 export type GuidePlace = keyof typeof GUIDE_PLACES;
 
