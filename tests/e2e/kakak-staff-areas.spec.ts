@@ -178,7 +178,8 @@ test("a page from before this card (v2) is asked to reopen Miamus, and nothing i
   await page.getByRole("textbox", { name: "What should I set up?" }).fill("Hide the kitchen and repairs from Ari");
   await page.getByRole("button", { name: "Send" }).click();
 
-  await expect(page.getByText("I've just been updated. Please close Miamus, open it again, and tell me once more.")).toBeVisible({
+  // In the language saved on the account (server-stub.cjs answers my_locale "id").
+  await expect(page.getByText("Kakak baru saja diperbarui. Tutup Miamus, buka lagi, lalu bilang ke Kakak sekali lagi.")).toBeVisible({
     timeout: 20_000,
   });
   await expect(page.getByText("What Ari sees")).toHaveCount(0);
