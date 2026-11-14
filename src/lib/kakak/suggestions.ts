@@ -7,13 +7,21 @@
 // Shared by the route (building) and the phone (checking again before
 // saving), so it imports nothing server-only.
 
+import { convertAmount, isStockUnit, MAX_AMOUNT } from "@/lib/kitchen-units";
 import { effectiveProof, routineKindInfo } from "@/lib/pet-routine-kinds";
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
-import type { RoutineKind, RoutineProof } from "@/types/database";
+import type { InventoryUnit, RoutineKind, RoutineProof } from "@/types/database";
 import type { RefMap, RefNames } from "./context";
 import type { KakakHousehold } from "./household";
-import { FOOD_PLACES, INGREDIENT_EXPIRY, PET_ROUTINE_TOOL_KINDS, TOOL_WEEKDAYS, type PetRoutineToolKind } from "./tools";
-import { REMIND_DAYS, isDay, isTime, newPetTimes, routineTitle } from "./validate";
+import {
+  FOOD_PLACES,
+  INGREDIENT_EXPIRY,
+  INGREDIENT_SHELVES,
+  PET_ROUTINE_TOOL_KINDS,
+  TOOL_WEEKDAYS,
+  type PetRoutineToolKind,
+} from "./tools";
+import { REMIND_DAYS, amountGiven, isDay, isTime, newPetTimes, routineTitle } from "./validate";
 
 export type ChoreCategory = "cleaning" | "maintenance" | "errand" | "groceries";
 export type ChoreRecurrence = "none" | "daily" | "weekly" | "monthly";
@@ -105,9 +113,29 @@ export interface FoodSuggestion {
 }
 
 /**
+ * How an amount the owner gave lands on a listed ingredient (2026-11-14):
+ *   add    that much more came in: a purchase (recordPurchase), on an item
+ *          whose amount is kept;
+ *   set    that is what is there now (setInventoryAmount), likewise;
+ *   start  its amount wasn't kept yet: keeping it starts at this
+ *          (setTrackAmount), as a number in Add ingredient does.
+ */
+export type IngredientAmountMode = "add" | "set" | "start";
+
+export interface IngredientAmount {
+  /** In `unit`: the item's own unit for add and set, the owner's for start. */
+  value: number;
+  unit: InventoryUnit;
+  mode: IngredientAmountMode;
+  /** What was there when Kakak read the household, in `unit`; null for start. */
+  before: number | null;
+}
+
+/**
  * Where an ingredient is kept and when it expires (Phase 176): saved
  * through setIngredientPlace and setIngredientExpiry, each sending only its
  * own column, so another phone's amount or status is never overwritten.
+ * Since 2026-11-14 also how much of it there is, when the owner said.
  */
 export interface IngredientSuggestion {
   kind: "ingredient";
@@ -122,9 +150,60 @@ export interface IngredientSuggestion {
   expiresOn: string | null;
   /** Labels the date "Kakak's guess — check it"; not saved. */
   expiryIsGuess: boolean;
+  /** The amount to write, or null (absent on a card from before 2026-11-14). */
+  amount?: IngredientAmount | null;
+  /**
+   * An amount the owner gave that can't be written: the item is counted in
+   * another kind of unit (2 kg of something kept in packs). The card says
+   * so; nothing about it is saved. `itemUnit` null: how it is kept wasn't read.
+   */
+  amountSkipped?: { value: number; unit: InventoryUnit; itemUnit: InventoryUnit | null } | null;
+  /**
+   * A date the owner gave that can't be kept: the item is marked Out and
+   * this card doesn't bring it back in stock (no amount, or one that can't
+   * be written), and an Out item keeps no date (migrations/154). The card
+   * says so; `expiry` is then "keep".
+   */
+  dateSkipped?: boolean;
 }
 
-export type KakakSuggestion = ChoreSuggestion | ShoppingSuggestion | PetRoutineSuggestion | FoodSuggestion | IngredientSuggestion;
+/**
+ * An ingredient that isn't listed yet (2026-11-14; owner: "Add 2 kg of brown
+ * rice into the pantry"). Saved as Add ingredient saves it: addInventoryItem,
+ * then setTrackAmount when there is an amount.
+ */
+export interface NewIngredientSuggestion {
+  kind: "new_ingredient";
+  /** In Bahasa Indonesia, as staff read it. */
+  name: string;
+  /** The owner's English for it, for the card of an English-speaking owner; not saved. */
+  nameEn: string | null;
+  category: (typeof INGREDIENT_SHELVES)[number];
+  /** Where it is kept; null stores nothing, and the shelf's usual place shows (lib/ingredients defaultPlace). */
+  keptIn: FoodPlace | null;
+  expiresOn: string | null;
+  /** Labels the date "Kakak's guess — check it"; not saved. */
+  expiryIsGuess: boolean;
+  /** With an amount it is tracked from the start, at this much. */
+  amount: { value: number; unit: InventoryUnit } | null;
+}
+
+export type KakakSuggestion =
+  | ChoreSuggestion
+  | ShoppingSuggestion
+  | PetRoutineSuggestion
+  | FoodSuggestion
+  | IngredientSuggestion
+  | NewIngredientSuggestion;
+
+/**
+ * The suggestion kinds a phone must know before the route may send them
+ * (route.ts): a page loaded before 2026-11-14 can't show a new ingredient or
+ * save an amount, so it is asked to reopen Miamus instead.
+ */
+export function needsNewerApp(item: KakakSuggestion): boolean {
+  return item.kind === "new_ingredient" || (item.kind === "ingredient" && Boolean(item.amount || item.amountSkipped));
+}
 
 /** The potty title the app writes (lib/schedule-categories.ts). */
 export const POTTY_TITLE = "Pipis & Pup";
@@ -294,18 +373,63 @@ export function toSuggestion(
       };
     case "put_away_ingredient": {
       const item = str(input.item);
-      const listed = item ? household.items.find((i) => i.ref === item) : undefined;
-      if (!item || !refs.items[item]) return null;
       const expiry = (INGREDIENT_EXPIRY as readonly unknown[]).includes(input.expiry) ? (input.expiry as IngredientExpiry) : "keep";
+      const keptIn = PLACES.has(String(input.kept_in)) ? (input.kept_in as FoodPlace) : null;
+      const given = amountGiven(input);
+      if (!item) {
+        // One that isn't listed yet.
+        const name = str(input.new_name);
+        if (!name || !(INGREDIENT_SHELVES as readonly unknown[]).includes(input.shelf)) return null;
+        return {
+          kind: "new_ingredient",
+          name,
+          nameEn: str(input.new_name_en),
+          category: input.shelf as NewIngredientSuggestion["category"],
+          keptIn,
+          expiresOn: expiry === "set" ? str(input.expires_on) : null,
+          expiryIsGuess: expiry === "set" && input.expiry_is_guess === true,
+          amount: given ? { value: given.value, unit: given.unit } : null,
+        };
+      }
+      const listed = household.items.find((i) => i.ref === item);
+      if (!refs.items[item]) return null;
+      // How the amount lands depends on how the item's amount is kept, which
+      // only the server knows (context.ts ItemStock): never Anthropic.
+      const stock = refs.stock?.[item];
+      let amount: IngredientAmount | null = null;
+      let amountSkipped: IngredientSuggestion["amountSkipped"] = null;
+      if (given && !stock) {
+        amountSkipped = { value: given.value, unit: given.unit, itemUnit: null };
+      } else if (given && stock && !stock.tracked) {
+        amount = { value: given.value, unit: given.unit, mode: "start", before: null };
+      } else if (given && stock) {
+        const converted = convertAmount(given.value, given.unit, stock.unit);
+        const total = converted === null ? null : given.is === "now" ? converted : stock.quantity + converted;
+        if (converted === null || total === null || total > MAX_AMOUNT) {
+          amountSkipped = { value: given.value, unit: given.unit, itemUnit: stock.unit };
+        } else {
+          amount = { value: converted, unit: stock.unit, mode: given.is === "now" ? "set" : "add", before: stock.quantity };
+        }
+      }
+      // An Out item keeps no date unless this card brings it back in stock
+      // (migrations/154). The check lets a date through when an amount comes
+      // with it; when that amount can't be written after all, the item stays
+      // Out, so the date is left off too rather than saved and dropped (Codex,
+      // PR #144).
+      const dateSkipped = listed?.out === true && amount === null && expiry === "set";
+      const kept: IngredientExpiry = dateSkipped ? "keep" : expiry;
       return {
         kind: "ingredient",
         itemId: refs.items[item],
         name: names.items[item],
-        keptIn: PLACES.has(String(input.kept_in)) ? (input.kept_in as FoodPlace) : null,
+        keptIn,
         fromPlace: listed?.keptIn ?? null,
-        expiry,
-        expiresOn: expiry === "set" ? str(input.expires_on) : null,
-        expiryIsGuess: expiry === "set" && input.expiry_is_guess === true,
+        expiry: kept,
+        expiresOn: kept === "set" ? str(input.expires_on) : null,
+        expiryIsGuess: kept === "set" && input.expiry_is_guess === true,
+        amount,
+        amountSkipped,
+        ...(dateSkipped ? { dateSkipped: true } : {}),
       };
     }
     default:
@@ -411,7 +535,8 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         typeof s.returnContainer === "boolean" &&
         okText(s.notes, 200, true)
       );
-    case "ingredient":
+    case "ingredient": {
+      const amount = (s.amount ?? null) as Record<string, unknown> | null;
       return (
         okId(s.itemId, false) &&
         okText(s.name, 60, false) &&
@@ -420,10 +545,33 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         (s.expiry === "set" ? isDay(s.expiresOn) : (s.expiry === "clear" || s.expiry === "keep") && s.expiresOn === null) &&
         typeof s.expiryIsGuess === "boolean" &&
         !(s.expiryIsGuess && s.expiry !== "set") &&
+        (amount === null ||
+          (okAmount(amount.value) &&
+            isStockUnit(amount.unit) &&
+            (amount.mode === "add" || amount.mode === "set" || amount.mode === "start"))) &&
         // A card that changes nothing is never saved.
-        !(s.keptIn === null && s.expiry === "keep")
+        !(s.keptIn === null && s.expiry === "keep" && amount === null)
       );
+    }
+    case "new_ingredient": {
+      const amount = (s.amount ?? null) as Record<string, unknown> | null;
+      return (
+        okText(s.name, 60, false) &&
+        okText(s.nameEn ?? null, 60, true) &&
+        (INGREDIENT_SHELVES as readonly unknown[]).includes(s.category) &&
+        (s.keptIn === null || (typeof s.keptIn === "string" && PLACES.has(s.keptIn))) &&
+        (s.expiresOn === null || isDay(s.expiresOn)) &&
+        typeof s.expiryIsGuess === "boolean" &&
+        !(s.expiryIsGuess && s.expiresOn === null) &&
+        (amount === null || (okAmount(amount.value) && isStockUnit(amount.unit)))
+      );
+    }
     default:
       return false;
   }
+}
+
+/** An amount Kakak may write: above 0 (none left is the shopping list's Out), at most MAX_AMOUNT. */
+function okAmount(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= MAX_AMOUNT;
 }

@@ -487,6 +487,26 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       if (options.owner && who === OWNER && table === "rpc/list_linked_phones") {
         return route.fulfill({ json: options.linkedPhones ?? [] });
       }
+      if (table === "staff_profiles" && options.staff && request.method() === "PATCH") {
+        // What each person sees (migrations/165): owners only, as
+        // admin_update_staff_profiles checks; a staff phone's update matches
+        // no row. Only hidden_areas is written here.
+        const id = (new URL(request.url()).searchParams.get("id") ?? "").replace(/^eq\./, "");
+        const row = who === OWNER ? options.staff.find((r) => r.id === id) : undefined;
+        const body = request.postDataJSON() ?? {};
+        if (row && Array.isArray(body.hidden_areas)) {
+          const known = ["home", "pets", "kitchen", "repairs"];
+          if (body.hidden_areas.some((a: unknown) => !known.includes(String(a)))) {
+            return route.fulfill({
+              status: 400,
+              json: { code: "23514", message: "staff_profiles_hidden_areas_check", details: null, hint: null },
+            });
+          }
+          row.hidden_areas = body.hidden_areas;
+        }
+        writes.push([request.method(), table]);
+        return route.fulfill({ json: row ? [{ id: row.id }] : [] });
+      }
       if (table === "staff_profiles" && options.staff) {
         const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: one ? (options.staff[0] ?? null) : options.staff });
@@ -564,6 +584,12 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         supplies.push(row);
         const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: object ? row : [row] });
+      }
+      // An item taken off again (Kakak's Undo of a new ingredient, 2026-11-14).
+      if (table === "inventory_items" && request.method() === "DELETE") {
+        const itemId = (new URL(request.url()).searchParams.get("id") ?? "").replace(/^eq\./, "");
+        const index = supplies.findIndex((row) => row.id === itemId);
+        return route.fulfill({ json: index === -1 ? [] : supplies.splice(index, 1) });
       }
       // Kitchen amounts (Phase 170 PR A, migrations/148).
       if (table === "inventory_items" && request.method() === "PATCH") {

@@ -28,6 +28,54 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 2026-11-14 (Phase 180 step 1, and a new ingredient with its amount):
+    // a card in the Kakak sheet before the first try, for households with
+    // Kakak only, under the calm-start rules (one card a week, never to new
+    // households), so it waits behind this week's card. The sheet's last
+    // example ("What's the difference between a chore and a routine?") is
+    // the tutorial for everyone else.
+    id: "kakak-answers-2026-11",
+    date: "2026-11-14",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: ask Kakak how Miamus works", id: "Baru: tanya Kakak cara pakai Miamus" },
+    steps: {
+      en: [
+        "Ask her anything about Miamus: \u201cHow do I link a staff phone?\u201d She answers in a sentence or two and says where to find it.",
+        "She can add an ingredient that isn't on your list yet, with its amount: \u201cAdd 2 kg of brown rice to the cupboard\u201d. For one that's listed, say how much you bought, or how much is left.",
+        "The conversation stays on screen as you go. Nothing is saved until you confirm.",
+      ],
+      id: [
+        "Tanya apa saja tentang Miamus: \u201cBagaimana cara menghubungkan HP staf?\u201d Kakak menjawab singkat dan menunjukkan tempatnya.",
+        "Kakak bisa menambah bahan masakan yang belum ada di daftar, lengkap dengan jumlahnya: \u201cTambah beras merah 2 kg di lemari\u201d. Untuk yang sudah ada, bilang beli berapa, atau sisa berapa.",
+        "Percakapannya tetap tampil selama Anda bicara. Tidak ada yang disimpan sebelum Anda konfirmasi.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
+    // Phase 177: shown on Kitchen → Menu's week while the Kitchen switch is
+    // on, under the calm-start rules (one card a week, never to new
+    // households), so it may wait behind this week's card.
+    id: "cooking-changes-2026-11",
+    date: "2026-11-16",
+    audience: "owner",
+    title: { en: "New: change what cooking used", id: "Baru: ubah bahan yang dipakai" },
+    steps: {
+      en: [
+        "Cooked a dish today? Open it and tap Change what was used. Raise or lower an amount, or untick one: only the difference comes off or goes back to what's at home.",
+        "Staff can do the same on Menu hari ini, until the end of that day. Undo puts it back as it was; after that day, change the amount on the ingredient itself.",
+        "When a recipe used a different amount three times in a row, Menu offers to update it. Update recipe saves the new amount; with Keep recipe, Miamus won't suggest it again.",
+      ],
+      id: [
+        "Sudah masak hari ini? Buka masakannya dan ketuk Ubah bahan yang dipakai. Tambah atau kurangi jumlahnya, atau hapus centangnya: hanya selisihnya yang ditambah atau dikurangi dari stok di rumah.",
+        "Staf juga bisa melakukannya di Menu hari ini, sampai hari itu berakhir. Batalkan mengembalikannya seperti semula; setelah hari itu, ubah jumlahnya langsung di bahannya.",
+        "Kalau satu resep tiga kali berturut-turut memakai jumlah yang berbeda, Menu menawarkan untuk memperbaruinya. Perbarui resep menyimpan jumlah yang baru; dengan Biarkan resep, Miamus tidak akan menyarankannya lagi.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Phase 176: shown on Kitchen → Food while Ingredients shows (Kitchen
     // amounts and Food at home on), under the calm-start rules (one card a
     // week, never to new households), so it may wait behind this week's card.
@@ -621,6 +669,16 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    // Phase 177: once Today has a menu, while the Kitchen switch is on.
+    id: "staff-cooking-changes-2026-11",
+    date: "2026-11-16",
+    title: "Baru: ubah bahan yang dipakai",
+    lines: [
+      "Jumlah bahan yang dipakai berbeda? Buka masakan yang sudah dimasak di Menu hari ini, lalu ketuk Ubah bahan yang dipakai.",
+      "Tambah, kurangi atau hapus centangnya, lalu tekan Simpan perubahan. Hanya selisihnya yang dikurangi atau dikembalikan. Bisa sampai hari itu berakhir.",
+    ],
+  },
   {
     // Phase 176: while Bahan masakan shows under Makanan (Kitchen amounts and
     // Food at home on).

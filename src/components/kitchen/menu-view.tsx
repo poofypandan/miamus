@@ -23,9 +23,11 @@ import { useCookFlow } from "@/components/kitchen/cook-flow";
 import { DishFormSheet, type DishFormTarget } from "@/components/kitchen/dish-form-sheet";
 import { DishSheet } from "@/components/kitchen/dish-sheet";
 import { KitchenNotesSheet } from "@/components/kitchen/kitchen-notes-sheet";
+import { RecipeHintCard } from "@/components/kitchen/recipe-hint-card";
 import { RecipesView } from "@/components/kitchen/recipes-view";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useAllHeldDishes, useMenuWeek } from "@/hooks/use-menu";
+import { useRecipeHints } from "@/hooks/use-recipe-hints";
 import { useRecipes } from "@/hooks/use-recipes";
 import { useToday } from "@/hooks/use-today";
 import { pushInPlace } from "@/lib/in-place-navigation";
@@ -83,6 +85,8 @@ export function MenuView() {
   const held = useAllHeldDishes();
   const { recipes } = useRecipes();
   const cook = useCookFlow(lang, false);
+  // Recipes that learn (Phase 177): one card at a time, the recipe cooked most recently first.
+  const hint = useRecipeHints()[0] ?? null;
   // Add missing adds up only fresh data: the week, the recipes and the items
   // from the server in this session (Codex, PR #101).
   const { fresh: recipesFresh, errored: recipesErrored } = useRecipes();
@@ -198,6 +202,9 @@ export function MenuView() {
   return (
     <div className="flex flex-col gap-4">
       <div className="empty:hidden">
+        <WhatsNewCard id="cooking-changes-2026-11" />
+      </div>
+      <div className="empty:hidden">
         <WhatsNewCard id="menu-2026-11" />
       </div>
 
@@ -247,6 +254,8 @@ export function MenuView() {
         </span>
         <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
       </button>
+
+      {hint && <RecipeHintCard key={hint.recipe.id} hint={hint} lang={lang} />}
 
       {!loaded && dishes.length === 0 ? (
         <div className="flex flex-col gap-2">

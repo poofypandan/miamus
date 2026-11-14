@@ -131,6 +131,8 @@ async function shot(page: Page, name: string, tall = false) {
 }
 
 test("the owner's week reads at a glance: days, meals, dishes, today, cooked, kitchen notes", async ({ context, page }) => {
+  // Phase 177's card (newer) would hold this week's slot on Menu: seen, so the menu card shows.
+  await context.addInitScript(() => localStorage.setItem("miamus.whats-new.cooking-changes-2026-11", "seen"));
   await installStub(context, {
     owner: { locale: "en" },
     features: { kitchen: true },
@@ -342,17 +344,20 @@ test("kitchen notes: the first save asks once about health information", async (
 });
 
 test("Copy last week fills the empty days, with Undo", async ({ context, page }) => {
+  const monday = -((new Date().getDay() + 6) % 7); // this week's Monday, as a day offset
   const stub = await installStub(context, {
     owner: { locale: "en" },
     features: { kitchen: true },
-    menu: [dish(-7, "lunch", "Soto betawi"), dish(-6, "dinner", "Pecel lele")],
+    // Last week's Monday and Tuesday. A week is Monday to Sunday, so
+    // "7 and 6 days ago" would put the second dish in this week on a Sunday.
+    menu: [dish(monday - 7, "lunch", "Soto betawi"), dish(monday - 6, "dinner", "Pecel lele")],
   });
   await page.goto("/dashboard?module=inventory&kitchen=menu");
   await page.getByRole("button", { name: "Copy last week" }).click({ timeout: 20_000 });
   await expect.poll(() => stub.menu.length).toBe(4);
   expect(stub.menu.slice(2)).toMatchObject([
-    { day: day(0), title: "Soto betawi", cooked_at: null },
-    { day: day(1), title: "Pecel lele" },
+    { day: day(monday), title: "Soto betawi", cooked_at: null },
+    { day: day(monday + 1), title: "Pecel lele" },
   ]);
   await page.getByRole("button", { name: "Undo" }).click();
   await expect.poll(() => stub.menu.length).toBe(2);

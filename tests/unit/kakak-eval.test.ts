@@ -363,8 +363,34 @@ describe("runner helpers", () => {
 describe("the test set", () => {
   it("is consistent with the household and the tools", () => {
     expect(checkTestSet(household, testSet)).toEqual([]);
-    expect(testSet.cases).toHaveLength(116);
+    // 116, plus 23 on 2026-11-14: K131–K144 (questions about Miamus, thanks) and
+    // K146–K154 (a new ingredient, amounts). All for tuning; the holdout is as it was.
+    expect(testSet.cases).toHaveLength(139);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
+  });
+
+  it("marks a reply that says what it must not (a made-up price, a list where thanks belong)", () => {
+    const price = testSet.cases.find((c) => c.id === "K137")!;
+    const turn = (text: string): ActualTurn => ({ kind: "message", calls: [], text });
+    expect(gradeCase(household, price, [turn("I'm not sure about prices. You can ask the Miamus team in Settings → Send feedback.")]).pass).toBe(true);
+    const made = gradeCase(household, price, [turn("I'm not sure, but I think it is $5 a month.")]);
+    expect(made.pass).toBe(false);
+    expect(made.failures.join(" ")).toContain('reply says "$", which it must not');
+  });
+
+  it("grades a new ingredient by its name, shelf and amount, and reads a left-out amount as none", () => {
+    const rice = testSet.cases.find((c) => c.id === "K146")!;
+    const call = (input: Record<string, unknown>): ActualTurn => ({ kind: "suggestions", calls: [{ name: "put_away_ingredient", input }], text: "" });
+    const good = { item: null, new_name: "Beras merah", new_name_en: "Brown rice", shelf: "pantry", kept_in: "pantry", amount: 2, unit: "kg", amount_is: "bought", expiry: "keep", expires_on: null, expiry_is_guess: false };
+    expect(gradeCase(household, rice, [call(good)]).pass).toBe(true);
+    // The listed Beras is the mistake the owner met: it must not pass.
+    expect(gradeCase(household, rice, [call({ ...good, item: "I4", new_name: null, shelf: null })]).pass).toBe(false);
+    expect(gradeCase(household, rice, [call({ ...good, amount: null, unit: null })]).pass).toBe(false);
+    // An older put-away, with none of the newer fields: no amount, no new name.
+    const eggs = testSet.cases.find((c) => c.id === "K114")!;
+    expect(gradeCase(household, eggs, [call({ item: "I1", kept_in: "fridge", expiry: "set", expires_on: "2026-11-25", expiry_is_guess: false })]).pass).toBe(true);
+    // An invented item reference is a must-never, as for every other tool.
+    expect(gradeCase(household, eggs, [call({ item: "I99", kept_in: "fridge", expiry: "set", expires_on: "2026-11-25", expiry_is_guess: false })]).mustNever.join(" ")).toContain('invented reference item="I99"');
   });
 
   it("catches a typo in a field name or reference", () => {
