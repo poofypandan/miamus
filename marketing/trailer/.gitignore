@@ -9,3 +9,4 @@ test-results/
 audio/out/
 __pycache__/
 audio/eleven/queue/
+.tools
