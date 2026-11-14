@@ -1,21 +1,23 @@
-// The Kakak test run on GitHub (.github/workflows/kakak-eval.yml) spends
-// money with a key the owner stored, in a public repository. These hold the
-// rules that keep that safe: started by hand and by nothing else, the key
-// given to one step, what was typed checked and never run, a ceiling on the
-// budget, and the pass mark decided by whole numbers.
+// The Kakak test run on GitHub (.github/workflows/kakak-eval.yml and
+// tests/kakak/run-from-github.sh) spends money with a key the owner stored,
+// in a public repository. These hold the rules that keep that safe: started
+// by hand and by nothing else, the least permissions, the key given to one
+// step and one program, what was typed checked and never run, a ceiling on
+// the budget, only the dev split, and nothing uploaded that holds the key.
 
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { keyWasRefused, meetsBar, PASS_MARK_PERCENT } from "../kakak/report";
+import { afterEach, describe, expect, it } from "vitest";
 
 const root = join(__dirname, "..", "..");
 const workflow = readFileSync(join(root, ".github", "workflows", "kakak-eval.yml"), "utf8");
 const checks = readFileSync(join(root, ".github", "workflows", "checks.yml"), "utf8");
+const scriptPath = join(root, "tests", "kakak", "run-from-github.sh");
+const script = readFileSync(scriptPath, "utf8");
 
-/** A file's lines without its comments and blank lines. */
+/** A file's lines without its comment lines and blank lines. */
 const code = (text: string) => text.split("\n").filter((line) => line.trim() && !line.trim().startsWith("#"));
 
 /** The lines under one top-level key. */
@@ -44,34 +46,67 @@ describe("the Kakak test run on GitHub", () => {
   it("can read the repository and nothing more, one run at a time", () => {
     expect(block(workflow, "permissions")).toEqual(["  contents: read"]);
     expect(block(workflow, "concurrency")).toEqual(["  group: kakak-eval", "  cancel-in-progress: false"]);
-    expect(code(workflow).join("\n")).toContain("persist-credentials: false");
+    const lines = code(workflow).map((line) => line.trim());
+    // No job or step asks for more, and the checkout leaves no token behind.
+    expect(lines.filter((line) => line.startsWith("permissions:"))).toHaveLength(1);
+    expect(lines).toContain("persist-credentials: false");
   });
 
-  it("gives the key to one step, and never pastes what was typed into a command", () => {
-    const lines = code(workflow);
-    const expressions = lines.filter((line) => line.includes("${{"));
-    expect(expressions.map((line) => line.trim())).toEqual([
+  it("keeps the key to one environment, one step and one value, and never pastes what was typed into a command", () => {
+    const lines = code(workflow).map((line) => line.trim());
+    // The job names the environment the owner stores the key in, and can protect.
+    expect(lines).toContain("environment: kakak-eval");
+    // Every expression in the file. The run's name is one of two fixed strings.
+    expect(lines.filter((line) => line.includes("${{"))).toEqual([
+      "run-name: ${{ inputs.cases == '' && 'Kakak test run, the whole dev split' || 'Kakak test run, chosen sentences only' }}",
       "ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_EVAL_KEY }}",
       "CASES: ${{ inputs.cases }}",
       "BUDGET: ${{ inputs.budget }}",
+      "KAKAK_UPLOAD_DIR: ${{ runner.temp }}/kakak-upload",
+      "path: ${{ runner.temp }}/kakak-upload/",
     ]);
     // Every command the workflow runs, in order: none is built from the form.
-    const commands = lines.filter((line) => /^\s+(- )?run:/.test(line)).map((line) => line.replace(/^\s+(- )?run:\s*/, ""));
+    const commands = code(workflow)
+      .filter((line) => /^\s+(- )?run:/.test(line))
+      .map((line) => line.replace(/^\s+(- )?run:\s*/, ""));
     expect(commands).toEqual([
-      "npm ci",
+      "npm ci --ignore-scripts",
       "npx tsx tests/kakak/run-test-set.ts --check",
       "bash tests/kakak/run-from-github.sh",
     ]);
   });
 
+  it("pins every action to one exact commit", () => {
+    const uses = code(workflow)
+      .map((line) => line.trim().replace(/^- /, ""))
+      .filter((line) => line.startsWith("uses:"));
+    expect(uses).toHaveLength(3);
+    for (const line of uses) expect(line).toMatch(/^uses: actions\/[a-z-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/);
+  });
+
+  it("uploads only the folder the script fills after its search for the key", () => {
+    const lines = code(workflow).map((line) => line.trim());
+    expect(lines.filter((line) => line.startsWith("path:"))).toEqual(["path: ${{ runner.temp }}/kakak-upload/"]);
+    expect(lines).not.toContain("path: tests/kakak/results/");
+  });
+
   it("leaves the everyday checks without any secret", () => {
     expect(code(checks).join("\n")).not.toMatch(/secrets\./);
+  });
+
+  it("can only ever send the made-up household: real photos, voices and saved runs are not in the repository", () => {
+    const ignored = readFileSync(join(root, ".gitignore"), "utf8").split("\n");
+    expect(ignored).toContain("/tests/kakak/media/");
+    expect(ignored).toContain("/tests/kakak/results/");
+    // The script names one runner, the test set's, and never the photo or voice ones.
+    expect(script).toContain("npx tsx tests/kakak/run-test-set.ts");
+    expect(script).not.toMatch(/run-photos|run-voice|run-comparison/);
   });
 });
 
 describe("the script GitHub runs (tests/kakak/run-from-github.sh)", () => {
-  const script = join(root, "tests", "kakak", "run-from-github.sh");
   const KEY = "sk-ant-test-0000-not-a-real-key";
+  const RESULTS = join(root, "tests", "kakak", "results");
   const RUNNER_OUTPUT = [
     "",
     "opus-medium: 3 cases (dev, chosen)…",
@@ -81,23 +116,64 @@ describe("the script GitHub runs (tests/kakak/run-from-github.sh)", () => {
     "",
     "opus-medium: 1/3 passed, 1 must-never (K147), $0.04.",
     "  about_miamus: 1/1",
-    "  pass mark (90% or more, no must-never): NOT met (1 of 3 passed, under 90%; must-never: K147)",
+    "RESULT (opus-medium): NOT PASSED (chosen sentences): 1 of 3 passed, under 90%; must-never: K147.",
+    "",
+    "Counted against the budget: $0.04 of $2.5, over 4 request(s) sent.",
     "",
   ].join("\n");
 
-  /** Plays the script with a stand-in for `npx` that records how it was called. */
-  function play(env: Record<string, string>, runner: { exit?: number; output?: string } = {}) {
+  const made: string[] = [];
+  let counter = 0;
+  /** A file name in the runner's results folder that only this test uses. */
+  const resultName = () => {
+    counter += 1;
+    const name = `zz-unit-${process.pid}-${counter}.json`;
+    made.push(join(RESULTS, name));
+    return name;
+  };
+  afterEach(() => {
+    for (const path of made.splice(0)) rmSync(path, { force: true });
+  });
+
+  /**
+   * Plays the script with stand-ins on its PATH: `npx` records how it was
+   * called and whether it was given the key, and can save a conversation;
+   * `tee` records whether it was given the key, then does its job.
+   */
+  function play(
+    env: Record<string, string>,
+    runner: { exit?: number; output?: string; result?: { name: string; body: string } } = {},
+  ) {
     const dir = mkdtempSync(join(tmpdir(), "kakak-eval-"));
     const calls = join(dir, "calls.txt");
     const output = join(dir, "runner-output.txt");
     const summary = join(dir, "summary.md");
+    const upload = join(dir, "upload");
     writeFileSync(output, runner.output ?? "");
     writeFileSync(
       join(dir, "npx"),
-      '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$FAKE_CALLS"\ncat "$FAKE_OUTPUT"\nexit "${FAKE_EXIT:-0}"\n',
+      [
+        "#!/bin/sh",
+        'printf \'%s\\n\' "$*" >> "$FAKE_CALLS"',
+        'if [ -n "${ANTHROPIC_API_KEY:-}" ]; then echo "runner: key given" >> "$FAKE_CALLS"; fi',
+        'if [ -n "${FAKE_RESULT:-}" ]; then printf \'%s\' "$FAKE_RESULT_BODY" > "tests/kakak/results/$FAKE_RESULT"; fi',
+        'cat "$FAKE_OUTPUT"',
+        'exit "${FAKE_EXIT:-0}"',
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(dir, "tee"),
+      [
+        "#!/bin/sh",
+        'if [ -n "${ANTHROPIC_API_KEY:-}" ]; then echo "tee: key given" >> "$FAKE_CALLS"; fi',
+        'exec /usr/bin/tee "$@"',
+        "",
+      ].join("\n"),
     );
     chmodSync(join(dir, "npx"), 0o755);
-    const result = spawnSync("bash", [script], {
+    chmodSync(join(dir, "tee"), 0o755);
+    const result = spawnSync("bash", [scriptPath], {
       encoding: "utf8",
       timeout: 20_000,
       // Only these: the script must not lean on anything else in the environment.
@@ -107,44 +183,83 @@ describe("the script GitHub runs (tests/kakak/run-from-github.sh)", () => {
         HOME: dir,
         RUNNER_TEMP: dir,
         GITHUB_STEP_SUMMARY: summary,
+        KAKAK_UPLOAD_DIR: upload,
         FAKE_CALLS: calls,
         FAKE_OUTPUT: output,
         FAKE_EXIT: String(runner.exit ?? 0),
+        ...(runner.result ? { FAKE_RESULT: runner.result.name, FAKE_RESULT_BODY: runner.result.body } : {}),
         ...env,
       },
     });
     return {
-      dir,
       status: result.status,
       out: `${result.stdout}${result.stderr}`,
       calls: existsSync(calls) ? readFileSync(calls, "utf8").trim().split("\n") : [],
       summary: existsSync(summary) ? readFileSync(summary, "utf8") : "",
+      uploaded: existsSync(upload) ? readdirSync(upload) : [],
+      upload,
     };
   }
 
-  it("runs the dev split on the setup production uses, inside the budget, and asks for the pass mark", () => {
+  it("runs the dev split on the setup production uses, inside the budget, and asks for the verdict", () => {
     const run = play({ ANTHROPIC_API_KEY: KEY, CASES: "", BUDGET: "2.5" });
     expect(run.status).toBe(0);
-    expect(run.calls).toEqual(["tsx tests/kakak/run-test-set.ts --model opus --effort medium --budget 2.5 --bar"]);
-  });
-
-  it("plays only the sentences asked for, and never the holdout", () => {
-    const run = play({ ANTHROPIC_API_KEY: KEY, CASES: "K131,K146", BUDGET: "1" });
     expect(run.calls).toEqual([
-      "tsx tests/kakak/run-test-set.ts --model opus --effort medium --budget 1 --bar --cases K131,K146",
+      "tsx tests/kakak/run-test-set.ts --split dev --model opus --effort medium --budget 2.5 --bar",
+      "runner: key given",
     ]);
-    expect(run.calls.join(" ")).not.toMatch(/--split|--all-variants|holdout/);
   });
 
-  it("passes on the runner's verdict, and puts the result and the misses on the run's front page", () => {
+  it("plays only the sentences asked for, still of the dev split, and never the holdout", () => {
+    const run = play({ ANTHROPIC_API_KEY: KEY, CASES: "K131,K146", BUDGET: "1" });
+    expect(run.calls[0]).toBe(
+      "tsx tests/kakak/run-test-set.ts --split dev --model opus --effort medium --budget 1 --bar --cases K131,K146",
+    );
+    expect(run.calls.join(" ")).not.toMatch(/--split (holdout|all)|--all-variants/);
+    expect(code(script).join("\n")).not.toMatch(/--split (holdout|all)|--all-variants/);
+  });
+
+  it("gives the key to the runner alone: not to the other programs it starts, and not to its own later steps", () => {
+    const run = play({ ANTHROPIC_API_KEY: KEY, CASES: "", BUDGET: "2.5" }, { output: RUNNER_OUTPUT });
+    expect(run.calls).toContain("runner: key given");
+    expect(run.calls).not.toContain("tee: key given");
+    // Read once, then taken out of the script's environment before anything else happens.
+    const lines = code(script);
+    const read = lines.indexOf('key="${ANTHROPIC_API_KEY:-}"');
+    expect(read).toBeGreaterThan(-1);
+    expect(lines[read + 1]).toBe("unset ANTHROPIC_API_KEY");
+    expect(lines.filter((line) => line.includes("ANTHROPIC_API_KEY")).slice(2)).toEqual([
+      'ANTHROPIC_API_KEY="$key" npx tsx tests/kakak/run-test-set.ts "${args[@]}" 2>&1 | tee "$log" || status=$?',
+    ]);
+  });
+
+  it("passes on the runner's verdict, and puts it first on the run's front page, with the misses", () => {
     const run = play({ ANTHROPIC_API_KEY: KEY, CASES: "K131,K146,K147", BUDGET: "2.5" }, { exit: 2, output: RUNNER_OUTPUT });
     expect(run.status).toBe(2);
+    const lines = run.summary.split("\n");
+    expect(lines[0]).toBe("## Kakak test run: chosen sentences only (not a full evaluation)");
+    expect(lines[2]).toBe(
+      "**RESULT (opus-medium): NOT PASSED (chosen sentences): 1 of 3 passed, under 90%; must-never: K147.**",
+    );
     expect(run.summary).toContain("opus-medium: 1/3 passed, 1 must-never (K147), $0.04.");
-    expect(run.summary).toContain("pass mark (90% or more, no must-never): NOT met");
+    expect(run.summary).toContain("Counted against the budget: $0.04 of $2.5, over 4 request(s) sent.");
     expect(run.summary).toContain("### Sentences that did not pass");
     expect(run.summary).toContain("  K146 fail: expected put_away_ingredient");
     expect(run.summary).toContain("  K147 MUST-NEVER: shows a note to self (reference)");
     expect(run.summary).not.toContain("K131 pass");
+  });
+
+  it("names a run of the whole dev split as that, and a run with no result as that", () => {
+    const whole = play({ ANTHROPIC_API_KEY: KEY, CASES: "", BUDGET: "2.5" }, { output: RUNNER_OUTPUT });
+    expect(whole.summary.split("\n")[0]).toBe("## Kakak test run: the whole dev split");
+    const died = play(
+      { ANTHROPIC_API_KEY: KEY, CASES: "K101", BUDGET: "2.5" },
+      { exit: 1, output: "Held out, so not played: K101.\n" },
+    );
+    expect(died.status).toBe(1);
+    expect(died.summary).toContain("**No result.** The run ended before one.");
+    expect(died.summary).toContain("Held out, so not played: K101.");
+    expect(died.summary).not.toContain("PASSED");
   });
 
   it("spends nothing without a key, or with something that is not an Anthropic key", () => {
@@ -153,7 +268,7 @@ describe("the script GitHub runs (tests/kakak/run-from-github.sh)", () => {
       expect(run.status, key).toBe(1);
       expect(run.calls, key).toEqual([]);
       expect(run.out, key).toContain("Nothing was run and nothing was spent.");
-      expect(run.summary, key).toContain("Nothing was run and nothing was spent.");
+      expect(run.summary, key).toContain("**Nothing was run and nothing was spent.**");
     }
     expect(play({ ANTHROPIC_API_KEY: "", CASES: "", BUDGET: "2.5" }).out).toContain("ANTHROPIC_EVAL_KEY is not set");
   });
@@ -178,7 +293,7 @@ describe("the script GitHub runs (tests/kakak/run-from-github.sh)", () => {
     for (const budget of ["0.5", "5", "5.00"]) {
       const run = play({ ANTHROPIC_API_KEY: KEY, CASES: "", BUDGET: budget });
       expect(run.status, budget).toBe(0);
-      expect(run.calls.join(" "), budget).toContain(`--budget ${budget} --bar`);
+      expect(run.calls[0], budget).toContain(`--budget ${budget} --bar`);
     }
   });
 
@@ -193,40 +308,46 @@ describe("the script GitHub runs (tests/kakak/run-from-github.sh)", () => {
       expect(run.calls.join(" ")).not.toContain(KEY);
     }
   });
-});
 
-describe("the pass mark", () => {
-  const run = (cases: number, passed: number, mustNeverCases: string[] = []) => ({ cases, passed, mustNeverCases });
-
-  it("is 90% or more of the sentences, counted in whole numbers", () => {
-    expect(PASS_MARK_PERCENT).toBe(90);
-    expect(meetsBar(run(110, 99), 110)).toEqual({ met: true, reasons: [] });
-    expect(meetsBar(run(109, 106), 109).met).toBe(true);
-    expect(meetsBar(run(110, 98), 110)).toEqual({ met: false, reasons: ["98 of 110 passed, under 90%"] });
-    expect(meetsBar(run(2, 1), 2).met).toBe(false);
+  it("keeps for upload only this run's conversations, and only after searching them for the key", () => {
+    mkdirSync(RESULTS, { recursive: true });
+    const earlier = resultName();
+    writeFileSync(join(RESULTS, earlier), '{"from":"an earlier run"}');
+    const fresh = resultName();
+    const run = play(
+      { ANTHROPIC_API_KEY: KEY, CASES: "", BUDGET: "2.5" },
+      { output: RUNNER_OUTPUT, result: { name: fresh, body: '{"verdict":"saved by this run"}' } },
+    );
+    expect(run.status).toBe(0);
+    expect(run.uploaded).toEqual([fresh]);
+    expect(readFileSync(join(run.upload, fresh), "utf8")).toBe('{"verdict":"saved by this run"}');
   });
 
-  it("is missed by one must-never, whatever else passed", () => {
-    expect(meetsBar(run(109, 109, ["K021"]), 109)).toEqual({ met: false, reasons: ["must-never: K021"] });
+  it("keeps nothing, and says why, if the key is in a saved conversation", () => {
+    const leaky = resultName();
+    const run = play(
+      { ANTHROPIC_API_KEY: KEY, CASES: "", BUDGET: "2.5" },
+      { output: RUNNER_OUTPUT, result: { name: leaky, body: `{"error":"x-api-key ${KEY} refused"}` } },
+    );
+    expect(run.status).toBe(1);
+    expect(run.uploaded).toEqual([]);
+    expect(run.out).toContain("The key was found in the run's output. Nothing was kept for upload.");
+    expect(run.summary).toContain("**The key was found in the run's output, so nothing was kept or uploaded.**");
+    expect(run.summary).not.toContain("RESULT");
+    expect(run.out).not.toContain(KEY);
+    expect(run.summary).not.toContain(KEY);
   });
 
-  it("is missed by a run that did not play every sentence", () => {
-    expect(meetsBar(run(60, 60), 109, true)).toEqual({
-      met: false,
-      reasons: ["only 60 of 109 sentences were played (the budget was reached)"],
-    });
-    expect(meetsBar(run(108, 108), 109).met).toBe(false);
-    expect(meetsBar(run(0, 0), 0).met).toBe(false);
-  });
-
-  it("is missed by a run that stopped because the key was refused", () => {
-    // Wrong, deleted or expired (401), or not allowed (403): the run stops there.
-    expect([401, 403].map(keyWasRefused)).toEqual([true, true]);
-    // The settings refused (400), busy (429, 529) or no error: the run goes on.
-    expect([400, 429, 500, 529, undefined].map(keyWasRefused)).toEqual([false, false, false, false, false]);
-    expect(meetsBar(run(4, 0), 109).reasons).toEqual([
-      "only 4 of 109 sentences were played",
-      "0 of 4 passed, under 90%",
-    ]);
+  it("keeps nothing if the key is in what the runner printed", () => {
+    const clean = resultName();
+    const run = play(
+      { ANTHROPIC_API_KEY: KEY, CASES: "", BUDGET: "2.5" },
+      { output: `${RUNNER_OUTPUT}debug: ${KEY}\n`, result: { name: clean, body: "{}" } },
+    );
+    expect(run.status).toBe(1);
+    expect(run.uploaded).toEqual([]);
+    // GitHub hides a secret in its log; the front page and the upload must not rely on that.
+    expect(run.summary).not.toContain(KEY);
+    expect(run.summary).toContain("nothing was kept or uploaded");
   });
 });

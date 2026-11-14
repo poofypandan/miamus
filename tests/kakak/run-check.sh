@@ -2,8 +2,9 @@
 # One run of the Kakak test set against the real API, after a change to her
 # instructions, her tools or the guide: the whole dev split (never the
 # holdout) on the setup production uses, Opus at medium effort. Run by hand;
-# costs money (about US$1.30 for 109 sentences; it stops starting new ones at
-# US$2.50). See docs/kakak-eval.md, "After a change to her instructions".
+# costs money (about US$1.30 for 109 sentences; no request is sent that could
+# take it past US$2.50). See docs/kakak-eval.md, "After a change to her
+# instructions" and "The budget".
 #
 #   zsh tests/kakak/run-check.sh              the whole dev split
 #   zsh tests/kakak/run-check.sh K131,K146    only these sentences

@@ -27,8 +27,11 @@ started by hand: at the laptop, or with GitHub's Run workflow button (see
 | `tests/kakak/household.json` | The pretend household: Dewi (owner), Sari, Nah, Budi, Yanti and Yati (the look-alikes), Mochi, Kopi and Luna, nine rooms, nine shopping items. Today is Wednesday 11 November 2026, 08.30. |
 | `tests/kakak/test-set.json` | 139 sentences. K001–K040 are the 40 from `docs/phase-156-kakak-test-set.md` (PR #13); K041–K100 add more days and times, shopping, pets, food, several things at once, things Kakak can't do, attempts to override her rules, and missing or ambiguous names; K101–K116 pet routines and putting ingredients away; K131–K144 questions about Miamus and thanks (`about_miamus`); K146–K154 a new ingredient and amounts. K117–K130 are left for Kakak's staff-areas card (PR #140). 109 are for tuning (`dev`); 30 are held back (`holdout`) for the final comparison. |
 | `tests/kakak/run-test-set.ts` | Plays every sentence against the API like the planned route: one retry after a failed check, scripted answers to questions, at most three questions. |
+| `tests/kakak/select.ts` | Which sentences a run may play: the dev split unless the holdout is asked for by name; a held-out sentence picked by id is refused; never the holdout on GitHub. |
+| `tests/kakak/budget.ts` | The run's spending limit, held where every request passes: nothing is sent unless its worst case still fits, retries included (see "The budget"). |
+| `tests/kakak/play-run.ts` | One setup over the chosen sentences: the first one alone, then side by side; ends early on a refused key, on the budget, or when the API stops answering. |
 | `tests/kakak/run-check.sh` | One run after a change to her instructions, at the laptop: the dev split on the setup production uses. Reads the key hidden. |
-| `tests/kakak/run-from-github.sh`, `.github/workflows/kakak-eval.yml` | The same run started from GitHub, for when nobody is at the laptop (see "From GitHub"). Its rules are held by `tests/unit/kakak-eval-workflow.test.ts`. |
+| `tests/kakak/run-from-github.sh`, `.github/workflows/kakak-eval.yml` | The same run started from GitHub, for when nobody is at the laptop (see "From GitHub"). Their rules are held by `tests/unit/kakak-eval-workflow.test.ts`, `kakak-eval-run.test.ts` and `kakak-eval-budget.test.ts`. |
 | `tests/kakak/run-photos.ts` | The same for food photos. |
 | `tests/kakak/run-voice.ts` | The speech-to-text comparison. |
 | `tests/kakak/grade.ts`, `report.ts`, `test-set-check.ts`, `wer.ts` | Grading and numbers, with no network calls; covered by `tests/unit/kakak-eval.test.ts` and `tests/unit/kakak-wer.test.ts`. |
@@ -89,8 +92,9 @@ npm run eval:kakak -- --all-variants --budget 15
 ```
 
 Runs the 70 dev sentences on seven setups: Opus low/medium, Sonnet
-low/medium, Sonnet with thinking off, and Haiku low/medium. It stops starting
-new sentences at the budget. Expect roughly $5–8 in total; Opus is most of it.
+low/medium, Sonnet with thinking off, and Haiku low/medium. It sends no
+request that could take it past the budget (see "The budget" below). Expect
+roughly $5–8 in total; Opus is most of it.
 
 ```bash
 npm run eval:kakak -- --model sonnet --effort low --cases K013,K032
@@ -106,8 +110,59 @@ The final comparison: the 30 held-back sentences, run only on the two or
 three best setups and only after the instructions stop changing. If the
 instructions are tuned on the holdout, it stops being a fair test.
 
-Each run prints a line per sentence, a summary by category, and a row for the
-table below. It saves every conversation in `tests/kakak/results/`.
+Each run prints a line per sentence, a summary by category, a `RESULT` line
+and a row for the table below. It saves every conversation in
+`tests/kakak/results/`.
+
+**The result, in one line.** `RESULT` starts with one of three words, so a
+part can't be read as the whole:
+
+- `PASSED: the whole dev split, 106 of 109 sentences, no must-never.` Every
+  sentence was answered, 90% or more passed, and there was no must-never.
+  Only this means a full evaluation passed.
+- `PASSED for the 2 chosen sentences only. This is not a full evaluation.`
+  Sentences picked with `--cases`.
+- `NOT PASSED: …` Under 90%, or a must-never.
+- `INCOMPLETE, so not passed: …` The run stopped early (the budget, a
+  refused key, an API that stopped answering), or a sentence got no answer.
+  Whatever it did play, it is not a result for the split: run it again.
+
+`--bar` makes the run end with exit code 2 unless every setup says `PASSED`.
+
+**The budget.** `--budget` is a bound, not a point at which the run notices
+it has already overspent (`tests/kakak/budget.ts`):
+
+- Before a request is sent, its worst case is set aside: every byte of the
+  request counted as one input token, plus a whole reply's worth for each
+  earlier reply of hers it carries, at the dearest input rate it can be
+  charged, plus all the output it is allowed (`max_tokens`). Real text is
+  about three bytes a token, so this is about three times too high on
+  purpose. For today's requests that is about US$0.29 each, against about
+  US$0.01 really spent.
+- A request is sent only if that fits beside the requests still in flight.
+  One that will fit later waits. One that can never fit ends the run, and
+  the sentences not played are not results.
+- Every attempt passes this gate: the runner's own second tries, and the
+  SDK's retries after a 429, a 529, a 5xx or a dropped connection.
+- An answer is counted at what it cost. An answer that is an error is not
+  billed. A request with no answer at all is counted at its worst case,
+  because the work may still have been done.
+
+So a run cannot be billed more than its budget **by the prices in
+`src/lib/kakak/cost.ts`**. Those prices are ours to keep right. Anthropic's
+invoice is the truth, and the workspace's monthly limit in the Claude Console
+is the limit Anthropic itself enforces. If a request ever costs more than its
+worst case, the run says so, stops and ends with exit code 2. A budget under
+one request's worst case (about US$0.30) sends nothing.
+
+**Stopping early.** A key that is refused (wrong, deleted, expired, or not
+allowed the model) ends the run after one request: the first sentence is
+played alone. Five sentences in a row with no answer end it too.
+
+**The holdout.** `--cases` picks sentences of the chosen split only. A
+held-out sentence picked by id is refused, before anything is spent, unless
+`--split holdout` (or `all`) is given with it. An id that doesn't exist is
+refused too, instead of quietly playing fewer sentences.
 
 ```bash
 zsh tests/kakak/run-comparison.sh
@@ -265,21 +320,30 @@ run counts against its monthly limit.
 ## From GitHub, when nobody is at the laptop
 
 The same run as `run-check.sh`, started from GitHub instead of a terminal:
-the workflow **Kakak test run** (`.github/workflows/kakak-eval.yml`). It
-plays the dev split on the setup production uses. It never plays the holdout,
-photos or voice. It can be started once the workflow is on `main`.
+the workflow **Kakak test run** (`.github/workflows/kakak-eval.yml`), which
+runs `tests/kakak/run-from-github.sh`. It plays the dev split on the setup
+production uses. It never plays the holdout, photos or voice. It can be
+started once the workflow is on `main`.
 
 **Once (the owner; a phone is enough):**
 
-1. In the Claude Console, create a key in the workspace the eval key lives
-   in, named `eval-github`, with an expiry (7 days covers a round of tuning).
-2. On GitHub, open this repository's **Settings → Secrets and variables →
-   Actions → New repository secret**. Name it `ANTHROPIC_EVAL_KEY`, paste the
-   key as its value and save. GitHub never shows it again, to anyone, and
-   hides it in logs.
-3. A key never goes into a chat, a file, an issue or a screenshot. One that
+1. In the Claude Console (console.anthropic.com, API keys), create a key in
+   the workspace the eval key lives in, named `eval-github`, with an expiry
+   (7 days covers a round of tuning).
+2. On GitHub, open this repository's **Settings → Environments → New
+   environment** and name it `kakak-eval`. Under **Environment secrets**, add
+   a secret named `ANTHROPIC_EVAL_KEY` and paste the key as its value.
+   GitHub never shows it again, to anyone, and hides it in logs. Stored
+   there, only this workflow's job can ever be given it.
+3. Recommended, on the same page: tick **Required reviewers** and add
+   yourself. Each run then waits until you approve it on GitHub, so no run
+   can spend without you.
+4. A key never goes into a chat, a file, an issue or a screenshot. One that
    was pasted anywhere it can be read back is deleted in the Console and
    replaced.
+
+The simpler place, **Settings → Secrets and variables → Actions → New
+repository secret**, works too, without the approval step.
 
 **Each run:**
 
@@ -289,19 +353,31 @@ photos or voice. It can be started once the workflow is on `main`.
   cases=K131,K146` for chosen sentences and `--ref <branch>` to test a
   branch before it merges.
 - A Claude session asks the owner before each run, because it spends money.
+  With Required reviewers on, GitHub asks as well.
 
 **What it costs, and what stops it:** about US$1.30 for the 109 dev
-sentences. It stops starting new sentences at the budget (US$2.50 unless
-changed) and refuses a budget above US$5. Only one run goes at a time. The
-key is in the same workspace as production, so each run counts against that
-workspace's monthly limit.
+sentences. The budget is US$2.50 unless changed, and US$5 at most. It is a
+bound, as "The budget" above describes: no request is sent unless its worst
+case still fits, retries included. A refused key ends the run after one
+request. Only one run goes at a time. The key is in the same workspace as
+production, so each run counts against that workspace's monthly limit, which
+is the limit Anthropic itself enforces.
 
-**Reading the result:** the run's front page shows the totals, the pass mark
-and each sentence that missed. A red run means the pass mark was missed
-(under 90%, a must-never, or the budget ran out before every sentence was
-played), or that nothing was run because the key is missing. Every
-conversation is in the run's `kakak-test-run-conversations` download for 7
-days.
+**Reading the result:** the first line of the run's front page is the
+`RESULT` line, and the run's name says whether it was the whole dev split or
+chosen sentences only. A green run said `PASSED`. A red run said `NOT PASSED`
+or `INCOMPLETE`, or nothing was run (the key is missing, or what was typed
+was refused). Below it are the totals and each sentence that missed.
+
+**What is uploaded:** this run's conversations, in the run's
+`kakak-test-run-conversations` download for 7 days, and only after the
+script has searched them and the run's output for the key. GitHub hides a
+secret in logs but not in a file it uploads. If the key is found anywhere,
+nothing is kept and the run says to replace the key.
+
+**The holdout stays out.** The script always asks for the dev split. A
+held-out sentence typed by id is refused before anything is spent. The
+runner refuses the holdout on GitHub outright, because it would be public.
 
 **Who can start it, and who can read it:** only people who can push to this
 repository can start a run, and a pull request from outside is never given
