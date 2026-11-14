@@ -5174,14 +5174,11 @@
             "kind": "message",
             "mentions": [
               [
-                "WhatsApp"
+                "WhatsApp",
+                "link"
               ],
               [
                 "Pengaturan"
-              ],
-              [
-                "PIN",
-                "nama"
               ]
             ]
           }
@@ -5252,7 +5249,9 @@
             "mentions": [
               [
                 "not sure",
+                "unsure",
                 "don't know",
+                "don't have",
                 "can't say",
                 "can't tell",
                 "feedback"
@@ -5262,9 +5261,7 @@
               "$",
               "Rp",
               "IDR",
-              "USD",
-              "free",
-              "per month is"
+              "USD"
             ]
           }
         ]
@@ -5283,9 +5280,8 @@
           {
             "kind": "message",
             "avoids": [
-              "Kakak bisa",
-              "tugas",
-              "belanja"
+              "belanja",
+              "rutinitas"
             ]
           }
         ]
@@ -5304,9 +5300,8 @@
           {
             "kind": "message",
             "avoids": [
-              "I can",
-              "chore",
-              "shopping"
+              "shopping",
+              "routine"
             ]
           }
         ]
@@ -5423,7 +5418,7 @@
               ]
             ],
             "avoids": [
-              "mg",
+              " mg",
               "dose of"
             ]
           }
@@ -5474,7 +5469,9 @@
                   "new_name": {
                     "textHas": [
                       [
-                        "beras merah"
+                        "beras merah",
+                        "beras cokelat",
+                        "beras coklat"
                       ]
                     ]
                   },
@@ -5585,9 +5582,40 @@
               }
             ]
           }
+        ],
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": "I4",
+                  "kept_in": null,
+                  "amount": 1,
+                  "unit": "kg",
+                  "amount_is": "now",
+                  "expiry": "keep"
+                }
+              },
+              {
+                "tool": "add_to_shopping_list",
+                "fields": {
+                  "items": {
+                    "items": [
+                      {
+                        "item": "I4",
+                        "status": "low"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
         ]
       ],
-      "note": "'Tinggal' is what is there in all: amount_is now, the place left alone."
+      "note": "'Tinggal' is what is there in all: amount_is now, the place left alone. Putting Beras on the shopping list as running low with it is fine too."
     },
     {
       "id": "K150",
@@ -5768,7 +5796,9 @@
                         "note": {
                           "textHas": [
                             [
-                              "beras merah"
+                              "beras merah",
+                              "beras cokelat",
+                              "beras coklat"
                             ]
                           ]
                         }
