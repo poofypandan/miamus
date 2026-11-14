@@ -16,7 +16,9 @@ picture, music, sound and timing stay v4's.
 
 - [x] Generator, wrapper, page builder (tested with a fake key and stand-in clips)
 - [x] Manager asked for a key (TTS access + Voices read, 10,000 credit cap); estimate ~5,100 characters
-- [ ] Key session open; searches queued (`01`–`04`)
-- [ ] Shortlist 4, auditions, page published, owner and wife pick
+- [x] Key session open (manager tab c6); searches done; 1,956 characters spent on auditions
+- [x] Shortlist: Velora, Aita, Lyly (Indonesian), Alexandra (American); all clips checked with Whisper
+- [x] Blind page: https://claude.ai/artifact/JdBsKXEm5CTCb7SaeZD6aA (key: docs/private/marketing/trailer-v5/audition-labels.json)
+- [ ] Owner and wife pick a letter
 - [ ] Final takes, place, `npm run sound -- --voice eleven-<slug>` (mix only), render into
       `docs/private/marketing/trailer-v5/`, review, NOTE and LICENCES
