@@ -29,17 +29,21 @@ const hideKitchenAndRepairs = {
   hide: ["kitchen", "repairs"],
   before: [],
   areas: ["home", "pets", "kitchen", "repairs"],
-  nobody: [],
+  roster: [
+    { staffId: STAFF_ID, hidden: [] },
+    { staffId: SYAM, hidden: [] },
+  ],
+  owedAreas: ["home", "pets"],
 };
 
-async function answerKakak(page: Page, item: Record<string, unknown>) {
+async function answerKakak(page: Page, item: Record<string, unknown> | Record<string, unknown>[]) {
   const outcomes: string[] = [];
   await page.route("**/api/kakak", (route) =>
     route.fulfill({
       json: {
         kind: "suggestions",
         text: "Of course. Syam will only see chores for anyone and pet routines.",
-        items: [item],
+        items: Array.isArray(item) ? item : [item],
         requestId: "00000000-0000-4000-8000-0000000000c1",
         history: { messages: [] },
       },
@@ -110,7 +114,14 @@ test("Cancel saves nothing, and the card warns when nobody would see pet routine
     household: { hasPets: true },
     features: { repairs: true },
   });
-  const outcomes = await answerKakak(page, { ...hideKitchenAndRepairs, hide: ["pets"], nobody: ["pets"] });
+  const outcomes = await answerKakak(page, {
+    ...hideKitchenAndRepairs,
+    hide: ["pets"],
+    roster: [
+      { staffId: STAFF_ID, hidden: ["pets"] },
+      { staffId: SYAM, hidden: [] },
+    ],
+  });
   await page.goto("/dashboard");
 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
@@ -123,6 +134,35 @@ test("Cancel saves nothing, and the card warns when nobody would see pet routine
   await expect.poll(() => outcomes).toEqual(["cancelled"]);
   expect(patches(stub)).toBe(0);
   expect(staff.find((p) => p.id === SYAM)?.hidden_areas).toEqual([]);
+});
+
+test("two cards that together leave nobody with pet routines say so once; removing one takes it back (Codex, PR #140)", async ({
+  context,
+  page,
+}) => {
+  const staff = [person(STAFF_ID, "Ari"), person(SYAM, "Syam"), person(OWNER_PROFILE_ID, "Moshe", { user_id: OWNER })];
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    staff,
+    household: { hasPets: true },
+    features: { repairs: true },
+  });
+  const petsOff = (staffId: string, staffName: string) => ({ ...hideKitchenAndRepairs, staffId, staffName, hide: ["pets"] });
+  await answerKakak(page, [petsOff(STAFF_ID, "Ari"), petsOff(SYAM, "Syam")]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("Ari and Syam don't need the pet routines");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("What Syam sees")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Nobody would see pet routines/)).toHaveCount(1);
+  // Syam's card goes: Syam keeps pet routines, so the warning goes too.
+  await page.getByRole("button", { name: "Remove" }).nth(1).click();
+  await expect(page.getByText("What Syam sees")).toHaveCount(0);
+  await expect(page.getByText(/Nobody would see pet routines/)).toHaveCount(0);
+  expect(patches(stub)).toBe(0);
 });
 
 test("Bahasa Indonesia, practice mode: the real route reads the request, and Simpan saves Ari's areas", async ({ context, page }) => {

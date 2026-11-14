@@ -208,11 +208,14 @@ export interface StaffAreasSuggestion {
   /** The rows the card shows: the switches this household has, as on the owner's dialog, and any area the card changes. */
   areas: StaffArea[];
   /**
-   * Chores for anyone or pet routines that no staff member would see once
-   * this is saved, so every staff member sees them (rule 3). Leave isn't
-   * known here, so this can only under-warn.
+   * Every staff member (not owners) and what they had switched off when
+   * Kakak read the household. With the other staff-areas cards on screen,
+   * the phone works out who would still see chores for anyone and pet
+   * routines once everything on the card is saved (staffAreasNobody).
    */
-  nobody: StaffArea[];
+  roster: { staffId: string; hidden: StaffArea[] }[];
+  /** The areas where "nobody sees it" means everybody does (rule 3): home, and pets unless pets are off. */
+  owedAreas: StaffArea[];
 }
 
 export type KakakSuggestion =
@@ -479,11 +482,6 @@ export function toSuggestion(
       const show = areasFrom(input.show);
       const hide = areasFrom(input.hide).filter((area) => !show.includes(area));
       const before = person.hidden ?? [];
-      const after = withAreas(before, show, hide);
-      // Rule 3, for the household as Kakak read it: nobody else on staff
-      // with the area on, once this person's change is in.
-      const seesAfter = (area: StaffArea) =>
-        household.people.some((p) => !p.owner && !(p.ref === ref ? after : (p.hidden ?? [])).includes(area));
       return {
         kind: "staff_areas",
         staffId,
@@ -495,14 +493,39 @@ export function toSuggestion(
         // its feature is off (Repairs), so the owner sees all that Save
         // writes (Codex, PR #140).
         areas: AREAS.filter((area) => householdAreas(household).includes(area) || show.includes(area) || hide.includes(area)),
-        nobody: (["home", "pets"] as const).filter(
-          (area) => (area !== "pets" || !household.petsOff) && !seesAfter(area),
-        ),
+        roster: household.people
+          .filter((p) => !p.owner && refs.people[p.ref])
+          .map((p) => ({ staffId: refs.people[p.ref] as string, hidden: p.hidden ?? [] })),
+        owedAreas: household.petsOff ? ["home"] : ["home", "pets"],
       };
     }
     default:
       return null;
   }
+}
+
+/**
+ * Rule 3 for the staff-areas card at `index`: chores for anyone or pet
+ * routines that no staff member would see once every staff-areas card still
+ * on screen is saved, so every staff member sees them (Codex, PR #140: two
+ * cards together can leave nobody). Each area is said once: on the first
+ * card that hides it, or on the first staff-areas card when none does.
+ * Leave isn't known here, so this can only under-warn.
+ */
+export function staffAreasNobody(items: KakakSuggestion[], index: number): StaffArea[] {
+  const item = items[index];
+  if (!item || item.kind !== "staff_areas") return [];
+  const hidden = new Map(item.roster.map((r) => [r.staffId, r.hidden] as const));
+  const cards = items.flatMap((other, at) => (other.kind === "staff_areas" ? [{ card: other, at }] : []));
+  for (const { card } of cards) {
+    hidden.set(card.staffId, withAreas(hidden.get(card.staffId) ?? card.before, card.show, card.hide));
+  }
+  const lists = [...hidden.values()];
+  return item.owedAreas.filter((area) => {
+    if (lists.some((list) => !list.includes(area))) return false;
+    const sayer = cards.find(({ card }) => card.hide.includes(area)) ?? cards[0];
+    return sayer.at === index;
+  });
 }
 
 /** A list of areas from a tool call, each once, in AREAS order; anything else dropped. */
@@ -633,7 +656,7 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
       );
     }
     case "staff_areas": {
-      const lists = [s.show, s.hide, s.before, s.areas, s.nobody];
+      const lists = [s.show, s.hide, s.before, s.areas, s.owedAreas];
       if (!lists.every((list) => Array.isArray(list) && list.every(isStaffArea) && new Set(list).size === list.length)) {
         return false;
       }
@@ -644,7 +667,16 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         okText(s.staffName, 40, false) &&
         show.length + hide.length > 0 &&
         !show.some((area) => hide.includes(area)) &&
-        (s.nobody as StaffArea[]).every((area) => area === "home" || area === "pets")
+        (s.owedAreas as StaffArea[]).every((area) => area === "home" || area === "pets") &&
+        Array.isArray(s.roster) &&
+        s.roster.length <= 200 &&
+        (s.roster as Record<string, unknown>[]).every(
+          (r) =>
+            okId(r?.staffId, false) &&
+            Array.isArray(r.hidden) &&
+            r.hidden.every(isStaffArea) &&
+            new Set(r.hidden).size === r.hidden.length,
+        )
       );
     }
     case "new_ingredient": {

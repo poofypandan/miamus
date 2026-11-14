@@ -7,9 +7,9 @@ import { defaultPlace } from "@/lib/ingredients";
 import { clean, formatAmount, unitLabel } from "@/lib/kitchen-units";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
-import { AREA_LABELS, withAreas } from "@/lib/staff-areas";
+import { AREA_LABELS, withAreas, type StaffArea } from "@/lib/staff-areas";
 import type { RoutineKind, RoutineProof } from "@/types/database";
-import type { KakakSuggestion } from "./suggestions";
+import { staffAreasNobody, type KakakSuggestion } from "./suggestions";
 
 type Locale = "en" | "id";
 type T = (en: string, id: string) => string;
@@ -89,7 +89,12 @@ const SOURCES: Record<string, [string, string]> = {
   bought: ["Bought", "Dibeli"],
 };
 
-export function describeSuggestion(item: KakakSuggestion, locale: Locale): CardItem {
+/**
+ * `nobody` is for a staff-areas card: what no staff member would see once
+ * every card on screen is saved (staffAreasNobody); by default, worked out
+ * for this card alone.
+ */
+export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody?: StaffArea[]): CardItem {
   const t = translator(locale);
   switch (item.kind) {
     case "chore": {
@@ -259,7 +264,7 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale): CardI
       };
     }
     case "staff_areas":
-      return describeStaffAreas(item, t);
+      return describeStaffAreas(item, t, nobody ?? staffAreasNobody([item], 0));
   }
 }
 
@@ -271,7 +276,7 @@ type StaffAreas = Extract<KakakSuggestion, { kind: "staff_areas" }>;
  * "nobody sees" when the change leaves pet routines or chores for anyone
  * with nobody (Phase 178).
  */
-function describeStaffAreas(item: StaffAreas, t: T): CardItem {
+function describeStaffAreas(item: StaffAreas, t: T, nobody: StaffArea[]): CardItem {
   const after = withAreas(item.before, item.show, item.hide);
   const rows: CardRow[] = item.areas.map((area) => {
     const on = !after.includes(area);
@@ -285,7 +290,7 @@ function describeStaffAreas(item: StaffAreas, t: T): CardItem {
   const name = item.staffName;
   const notes = [
     t(`Anything you give ${name} by name always shows.`, `Tugas yang Anda berikan langsung ke ${name} selalu terlihat.`),
-    ...item.nobody.map((area) =>
+    ...nobody.map((area) =>
       area === "pets"
         ? t(
             "Nobody would see pet routines, so every staff member will see them.",

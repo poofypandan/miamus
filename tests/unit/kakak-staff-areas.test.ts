@@ -12,7 +12,15 @@ import { renderHouseholdBlock, type KakakHousehold } from "@/lib/kakak/household
 import { practiceClient } from "@/lib/kakak/practice";
 import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
 import { KAKAK_CLIENT_VERSION } from "@/lib/kakak/client";
-import { clientVersionFor, isSaveableSuggestion, needsNewerApp, toSuggestion, type StaffAreasSuggestion } from "@/lib/kakak/suggestions";
+import {
+  clientVersionFor,
+  isSaveableSuggestion,
+  needsNewerApp,
+  staffAreasNobody,
+  toSuggestion,
+  type KakakSuggestion,
+  type StaffAreasSuggestion,
+} from "@/lib/kakak/suggestions";
 import { KAKAK_TOOLS } from "@/lib/kakak/tools";
 import { validateToolCall } from "@/lib/kakak/validate";
 import { withAreas } from "@/lib/staff-areas";
@@ -166,8 +174,14 @@ describe("the suggestion", () => {
       hide: ["home"],
       before: ["kitchen", "repairs"],
       areas: ["home", "pets", "kitchen", "repairs"],
-      nobody: [],
+      // Staff only, as read: never the owner or the co-owner.
+      roster: [
+        { staffId: id(2), hidden: [] },
+        { staffId: id(3), hidden: ["kitchen", "repairs"] },
+      ],
+      owedAreas: ["home", "pets"],
     });
+    expect(suggest(call(), { hasPets: false }).owedAreas).toEqual(["home"]);
     // Repairs and Pet routines only when the home has them, as on the owner's dialog.
     expect(suggest(call({ hide: ["kitchen"] }), { repairsOn: false, featuresRead: true, hasPets: false }).areas).toEqual(["home", "kitchen"]);
     // An area the card changes always shows, even with its feature off, so
@@ -185,11 +199,33 @@ describe("the suggestion", () => {
 
   it("says when nobody on staff would see pet routines or chores for anyone (rule 3)", () => {
     // Syam already has pets on; Ari turning pets off leaves Syam.
-    expect(suggest(call({ hide: ["pets"] })).nobody).toEqual([]);
+    expect(staffAreasNobody([suggest(call({ hide: ["pets"] }))], 0)).toEqual([]);
     const syamNoPets = rows.staff.map((p) => (p.id === id(3) ? { ...p, hidden_areas: ["pets", "home"] } : p));
-    expect(suggest(call({ hide: ["pets", "home"] }), { staff: syamNoPets }).nobody).toEqual(["home", "pets"]);
+    expect(staffAreasNobody([suggest(call({ hide: ["pets", "home"] }), { staff: syamNoPets })], 0)).toEqual(["home", "pets"]);
     // Pets switched off: no pets warning.
-    expect(suggest(call({ hide: ["home"] }), { staff: syamNoPets, hasPets: false }).nobody).toEqual(["home"]);
+    expect(staffAreasNobody([suggest(call({ hide: ["home"] }), { staff: syamNoPets, hasPets: false })], 0)).toEqual(["home"]);
+    // Not a staff-areas card: nothing.
+    expect(staffAreasNobody([], 0)).toEqual([]);
+  });
+
+  it("counts every staff-areas card on screen, says it once, and drops a card that was removed (Codex, PR #140)", () => {
+    // One request, two cards: pet routines off for Ari and for Syam. Each
+    // alone leaves the other; together they leave nobody.
+    const ari = suggest(call({ staff: "S1", hide: ["pets"] }));
+    const syam = suggest(call({ staff: "S2", hide: ["pets"] }));
+    const chore: KakakSuggestion = { kind: "shopping", entries: [{ type: "note", note: "Gula", petId: null, petName: null }] };
+    const both: KakakSuggestion[] = [chore, ari, syam];
+    expect(staffAreasNobody([ari], 0)).toEqual([]);
+    expect(staffAreasNobody(both, 1)).toEqual(["pets"]);
+    // Said on the first card that hides it, not again on the second.
+    expect(staffAreasNobody(both, 2)).toEqual([]);
+    expect(describeSuggestion(ari, "en", staffAreasNobody(both, 1)).note).toContain("Nobody would see pet routines");
+    expect(describeSuggestion(syam, "en", staffAreasNobody(both, 2)).note).not.toContain("Nobody would see");
+    // The owner removes Syam's card: Syam keeps pets, so no warning.
+    expect(staffAreasNobody([chore, ari], 1)).toEqual([]);
+    // A card that shows the area again cancels it out.
+    const syamBack = suggest(call({ staff: "S2", show: ["pets"], hide: ["home"] }));
+    expect(staffAreasNobody([ari, syamBack], 0)).toEqual([]);
   });
 
   it("is saveable as built, and refused by the phone when it's malformed", () => {
@@ -201,7 +237,10 @@ describe("the suggestion", () => {
     expect(isSaveableSuggestion({ ...good, hide: ["garden"] })).toBe(false);
     expect(isSaveableSuggestion({ ...good, hide: ["home", "home"] })).toBe(false);
     expect(isSaveableSuggestion({ ...good, before: null })).toBe(false);
-    expect(isSaveableSuggestion({ ...good, nobody: ["kitchen"] })).toBe(false);
+    expect(isSaveableSuggestion({ ...good, owedAreas: ["kitchen"] })).toBe(false);
+    expect(isSaveableSuggestion({ ...good, roster: null })).toBe(false);
+    expect(isSaveableSuggestion({ ...good, roster: [{ staffId: "S1", hidden: [] }] })).toBe(false);
+    expect(isSaveableSuggestion({ ...good, roster: [{ staffId: id(2), hidden: ["garden"] }] })).toBe(false);
     expect(isSaveableSuggestion({ ...good, staffName: "" })).toBe(false);
   });
 
