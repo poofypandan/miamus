@@ -1,0 +1,82 @@
+name: Kakak test run
+
+# Kakak's test set against the real Anthropic API, for when nobody is at the
+# laptop. Started only by hand (the Run workflow button, or `gh workflow
+# run`), never by a push, a pull request or a schedule: each run costs money.
+# About US$1.30 for the 109 dev sentences on the setup production uses (Opus,
+# medium effort). It stops starting new sentences at the budget, and the
+# budget cannot be set above US$5. The same run as tests/kakak/run-check.sh.
+# docs/kakak-eval.md, "From GitHub".
+#
+# The key is the repository secret ANTHROPIC_EVAL_KEY, which the owner adds
+# under Settings, Secrets and variables, Actions. GitHub never shows a secret
+# again once it is saved, and masks it in logs. Only people who can push to
+# this repository can start the run, and a pull request from a fork is never
+# given secrets (this workflow has no pull_request trigger at all).
+# tests/unit/kakak-eval-workflow.test.ts holds these rules.
+#
+# This repository is public, so the run's log and its saved conversations
+# are public too. They hold what anyone could produce with a key of their
+# own: the made-up test household, the test sentences and Kakak's replies.
+# No real household's data is in the test set, and photos and voice clips
+# are never run here.
+on:
+  workflow_dispatch:
+    inputs:
+      cases:
+        description: "Only these sentences, like K131,K146. Empty runs the whole dev split."
+        required: false
+        default: ""
+        type: string
+      budget:
+        description: "Stop starting new sentences at this many US dollars (5 at most)."
+        required: false
+        default: "2.5"
+        type: string
+
+# One run at a time: a second one waits instead of spending alongside.
+concurrency:
+  group: kakak-eval
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: Kakak test run (costs money)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check the test set (no key, no cost)
+        run: npx tsx tests/kakak/run-test-set.ts --check
+
+      # The only step that is given the key. What was typed into the form
+      # reaches the script as plain values, never as part of a command, and
+      # the script checks them before anything is spent.
+      - name: Run the dev split against the real API
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_EVAL_KEY }}
+          CASES: ${{ inputs.cases }}
+          BUDGET: ${{ inputs.budget }}
+        run: bash tests/kakak/run-from-github.sh
+
+      - name: Keep every conversation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kakak-test-run-conversations
+          path: tests/kakak/results/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -117,6 +117,44 @@ export function tableRow(label: string, summary: Summary): string {
 export const TABLE_HEADER =
   "| Variant | Passed | Must-never | Median call | p95 call | p95 sentence | Cost | Cost per pass |\n| --- | --- | --- | --- | --- | --- | --- | --- |";
 
+/**
+ * Whether an API error means the key itself was refused: wrong, deleted,
+ * expired (401), or not allowed to do this (403). Every sentence would fail
+ * the same way, so a run stops at the first one instead of trying them all.
+ */
+export function keyWasRefused(apiStatus: number | undefined): boolean {
+  return apiStatus === 401 || apiStatus === 403;
+}
+
+// ---------- the pass mark ----------
+
+/** The pass mark (docs/kakak-eval.md): this share of the sentences or more, and no must-never. */
+export const PASS_MARK_PERCENT = 90;
+
+/**
+ * Whether one run meets the pass mark, and if not, why. A run that played
+ * fewer sentences than planned (it stopped at its budget) never does: the
+ * sentences it skipped could be the ones that fail. Whole numbers only, so
+ * 99 of 110 is exactly the mark and never a rounding error under it.
+ */
+export function meetsBar(
+  summary: Pick<Summary, "cases" | "passed" | "mustNeverCases">,
+  planned: number,
+  stoppedForBudget = false,
+): { met: boolean; reasons: string[] } {
+  const reasons: string[] = [];
+  if (stoppedForBudget || summary.cases < planned) {
+    reasons.push(
+      `only ${summary.cases} of ${planned} sentences were played${stoppedForBudget ? " (the budget was reached)" : ""}`,
+    );
+  }
+  if (summary.cases === 0 || summary.passed * 100 < summary.cases * PASS_MARK_PERCENT) {
+    reasons.push(`${summary.passed} of ${summary.cases} passed, under ${PASS_MARK_PERCENT}%`);
+  }
+  if (summary.mustNeverCases.length) reasons.push(`must-never: ${summary.mustNeverCases.join(", ")}`);
+  return { met: reasons.length === 0, reasons };
+}
+
 // ---------- the model comparison (run-comparison.ts) ----------
 
 /** One run of one setup over the dev split. */

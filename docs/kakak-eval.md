@@ -9,8 +9,10 @@ with numbers instead of guesses:
    Scribe v2, Soniox or Deepgram Nova-3.
 3. **What a right answer costs**, for pricing: the cost per passed case.
 
-Nothing here runs in CI or in the app, and nothing reaches the database. Each
-run costs money and needs keys, so it is run by hand.
+Nothing here runs on its own, in the everyday checks or in the app, and
+nothing reaches the database. Each run costs money and needs keys, so it is
+started by hand: at the laptop, or with GitHub's Run workflow button (see
+"From GitHub" below).
 
 ## What is in it
 
@@ -25,6 +27,8 @@ run costs money and needs keys, so it is run by hand.
 | `tests/kakak/household.json` | The pretend household: Dewi (owner), Sari, Nah, Budi, Yanti and Yati (the look-alikes), Mochi, Kopi and Luna, nine rooms, nine shopping items. Today is Wednesday 11 November 2026, 08.30. |
 | `tests/kakak/test-set.json` | 139 sentences. K001–K040 are the 40 from `docs/phase-156-kakak-test-set.md` (PR #13); K041–K100 add more days and times, shopping, pets, food, several things at once, things Kakak can't do, attempts to override her rules, and missing or ambiguous names; K101–K116 pet routines and putting ingredients away; K131–K144 questions about Miamus and thanks (`about_miamus`); K146–K154 a new ingredient and amounts. K117–K130 are left for Kakak's staff-areas card (PR #140). 109 are for tuning (`dev`); 30 are held back (`holdout`) for the final comparison. |
 | `tests/kakak/run-test-set.ts` | Plays every sentence against the API like the planned route: one retry after a failed check, scripted answers to questions, at most three questions. |
+| `tests/kakak/run-check.sh` | One run after a change to her instructions, at the laptop: the dev split on the setup production uses. Reads the key hidden. |
+| `tests/kakak/run-from-github.sh`, `.github/workflows/kakak-eval.yml` | The same run started from GitHub, for when nobody is at the laptop (see "From GitHub"). Its rules are held by `tests/unit/kakak-eval-workflow.test.ts`. |
 | `tests/kakak/run-photos.ts` | The same for food photos. |
 | `tests/kakak/run-voice.ts` | The speech-to-text comparison. |
 | `tests/kakak/grade.ts`, `report.ts`, `test-set-check.ts`, `wer.ts` | Grading and numbers, with no network calls; covered by `tests/unit/kakak-eval.test.ts` and `tests/unit/kakak-wer.test.ts`. |
@@ -57,6 +61,11 @@ The runner always calls `https://api.anthropic.com` directly. It ignores
   for. No photos of children's faces or documents. No production data.
 - `tests/kakak/media/` and `tests/kakak/results/` are git-ignored: photos,
   voices and transcripts never go into the repo.
+- **A run started from GitHub is public**, because this repository is: its
+  log and its saved conversations can be read by anyone. That run plays only
+  the made-up sentences and household, so it shows nothing that a stranger
+  with a key of their own couldn't produce. Photos and voice clips are never
+  run from GitHub.
 - Anthropic keeps API data for up to 30 days and doesn't train on it. Soniox's
   clips are deleted straight after each transcription (the runner does this;
   if a deletion fails, that clip shows an error saying what to delete by
@@ -243,6 +252,8 @@ leaks):
 zsh tests/kakak/run-check.sh
 ```
 
+With nobody at the laptop, the same run starts from GitHub (next section).
+
 It reads the key once, hidden, as the comparison does. About US$1.30 for 109
 sentences (`zsh tests/kakak/run-check.sh K131,K146` plays only those). The bar is the same: at least 90% and zero
 must-never. Watch three things the change could move: raw leaks and
@@ -250,6 +261,55 @@ fallbacks (she now writes a sentence beside every card), retries (plain
 replies sent back), and the `about_miamus` and `food` groups, which hold the
 new sentences. The eval key is in the same workspace as production, so each
 run counts against its monthly limit.
+
+## From GitHub, when nobody is at the laptop
+
+The same run as `run-check.sh`, started from GitHub instead of a terminal:
+the workflow **Kakak test run** (`.github/workflows/kakak-eval.yml`). It
+plays the dev split on the setup production uses. It never plays the holdout,
+photos or voice. It can be started once the workflow is on `main`.
+
+**Once (the owner; a phone is enough):**
+
+1. In the Claude Console, create a key in the workspace the eval key lives
+   in, named `eval-github`, with an expiry (7 days covers a round of tuning).
+2. On GitHub, open this repository's **Settings → Secrets and variables →
+   Actions → New repository secret**. Name it `ANTHROPIC_EVAL_KEY`, paste the
+   key as its value and save. GitHub never shows it again, to anyone, and
+   hides it in logs.
+3. A key never goes into a chat, a file, an issue or a screenshot. One that
+   was pasted anywhere it can be read back is deleted in the Console and
+   replaced.
+
+**Each run:**
+
+- On GitHub: **Actions → Kakak test run → Run workflow**. Leave both boxes
+  as they are for the whole dev split, or type sentences like `K131,K146`.
+- From a terminal: `gh workflow run kakak-eval.yml`, with `-f
+  cases=K131,K146` for chosen sentences and `--ref <branch>` to test a
+  branch before it merges.
+- A Claude session asks the owner before each run, because it spends money.
+
+**What it costs, and what stops it:** about US$1.30 for the 109 dev
+sentences. It stops starting new sentences at the budget (US$2.50 unless
+changed) and refuses a budget above US$5. Only one run goes at a time. The
+key is in the same workspace as production, so each run counts against that
+workspace's monthly limit.
+
+**Reading the result:** the run's front page shows the totals, the pass mark
+and each sentence that missed. A red run means the pass mark was missed
+(under 90%, a must-never, or the budget ran out before every sentence was
+played), or that nothing was run because the key is missing. Every
+conversation is in the run's `kakak-test-run-conversations` download for 7
+days.
+
+**Who can start it, and who can read it:** only people who can push to this
+repository can start a run, and a pull request from outside is never given
+the key. The log and the download are public (see Privacy).
+
+**To switch it off:** delete the secret on the same Settings page, or delete
+the key in the Console. Without the secret the run refuses and spends
+nothing.
 
 ## What this doesn't cover yet
 

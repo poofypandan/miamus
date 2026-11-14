@@ -1,4 +1,6 @@
-// The Kakak test set against the real API. Run by hand; costs money; never in CI.
+// The Kakak test set against the real API. Started by hand, from the laptop
+// (run-check.sh) or from GitHub's Run workflow button (kakak-eval.yml); costs
+// money; never on a push or a pull request.
 //
 //   ANTHROPIC_API_KEY=… npx tsx tests/kakak/run-test-set.ts --model opus --effort low
 //   ANTHROPIC_API_KEY=… npx tsx tests/kakak/run-test-set.ts --all-variants --budget 15
@@ -7,6 +9,7 @@
 // Options: --model opus|sonnet|haiku  --effort low|medium|high  --no-thinking (Sonnet only)
 //          --split dev|holdout|all (default dev)  --cases K001,K002  --concurrency 4
 //          --budget <dollars, default 20>  --all-variants
+//          --bar  (exit 2 when a setup misses the pass mark; the mark is always printed)
 // See docs/kakak-eval.md.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -14,7 +17,15 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { KakakHousehold } from "@/lib/kakak/household";
 import { gradeCase } from "./grade";
-import { summarise, tableRow, TABLE_HEADER, type CaseOutcome } from "./report";
+import {
+  keyWasRefused,
+  meetsBar,
+  PASS_MARK_PERCENT,
+  summarise,
+  tableRow,
+  TABLE_HEADER,
+  type CaseOutcome,
+} from "./report";
 import {
   checkVariant,
   DEFAULT_VARIANTS,
@@ -81,6 +92,7 @@ async function main() {
   const concurrency = Number(arg("concurrency") ?? "4");
   const client = makeClient();
   let spentMicro = 0;
+  let missedTheMark = false;
   const rows: string[] = [];
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   mkdirSync(join(here, "results"), { recursive: true });
@@ -89,8 +101,10 @@ async function main() {
     const label = variantLabel(variant);
     const outcomes: CaseOutcome[] = [];
     let stoppedForBudget = false;
+    let keyRefused = false;
     console.log(`\n${label}: ${cases.length} cases (${split}${only ? ", chosen" : ""})…`);
     await pool(cases, concurrency, async (kakakCase) => {
+      if (keyRefused) return;
       // Stops starting new cases at the budget; cases already running finish
       // (a few cents each at most).
       if (spentMicro >= budgetUsd * 1_000_000) {
@@ -98,6 +112,7 @@ async function main() {
         return;
       }
       const conversation = await playConversation(client, variant, household, kakakCase, kakakCase.sentence);
+      if (keyWasRefused(conversation.apiStatus)) keyRefused = true;
       spentMicro += conversation.calls.reduce((sum, c) => sum + c.costMicroUsd, 0);
       const grade = gradeCase(household, kakakCase, conversation.turns, conversation.rejected);
       outcomes.push({
@@ -129,7 +144,18 @@ async function main() {
       `  raw leaks: ${summary.rawLeakCases.length} case(s)${summary.rawLeakCases.length ? ` (${summary.rawLeakCases.join(", ")})` : ""}; fallbacks: ${summary.fallbacks}; retries: ${summary.retries}; calls: ${summary.calls}; warm p50 ${(summary.warmMedianCallMs / 1000).toFixed(1)} s, p95 ${(summary.warmP95CallMs / 1000).toFixed(1)} s`,
     );
     if (summary.errors.length) console.log(`  errors: ${summary.errors.join("; ")}`);
+    const bar = meetsBar(summary, cases.length, stoppedForBudget);
+    if (!bar.met) missedTheMark = true;
+    console.log(
+      `  pass mark (${PASS_MARK_PERCENT}% or more, no must-never): ${bar.met ? "met" : `NOT met (${bar.reasons.join("; ")})`}`,
+    );
     console.log(`  details: ${file}`);
+    if (keyRefused) {
+      console.log(
+        "Stopped: Anthropic refused the key (wrong, deleted, expired, or not allowed to use this model). Refused calls cost nothing.",
+      );
+      break;
+    }
     if (stoppedForBudget) {
       console.log(`Stopped: the $${budgetUsd} budget was reached.`);
       break;
@@ -137,6 +163,8 @@ async function main() {
   }
   console.log(`\n${TABLE_HEADER}\n${rows.join("\n")}`);
   console.log(`\nTotal spent: $${(spentMicro / 1_000_000).toFixed(2)} of a $${budgetUsd} budget.`);
+  // Only on request, so a tuning run that expects misses still ends cleanly.
+  if (flag("bar") && missedTheMark) process.exitCode = 2;
 }
 
 main().catch((error) => {
