@@ -19,7 +19,9 @@ import { LEGAL, isLegalDraft } from "@/config/legal";
  * days, photos 30, migrations/139), bill payments (kept 2 years,
  * migrations/138), menu days (kept one year, migrations/153), and Kakak's request counts (kept 13
  * months; the text itself goes to Anthropic, not our database). Talking to
- * Kakak uses the browser's own speech recognition: no audio reaches Miamus. If either changes,
+ * Kakak uses the browser's own speech recognition: no audio reaches Miamus. Read replies aloud sends
+ * Kakak's reply text to ElevenLabs for her voice (app-voice-server.ts); Miamus keeps only a daily
+ * character count (migrations/172, 35 days). If any of this changes,
  * this has to change with it. Not legal advice: have it reviewed before a
  * public launch.
  */
@@ -136,8 +138,9 @@ const COPY: Record<
             ul: [
               "Kakak is off unless an admin of your household turns it on, and any admin can turn it off again.",
               "What you type to Kakak, her questions and your answers are sent to Anthropic to be understood (see section 5). Miamus doesn't store them: the conversation stays on your phone while Kakak is open, then is forgotten.",
-              "If you talk to Kakak instead of typing, your browser's own speech recognition turns your voice into text. To do that, the browser may send the audio to the company that makes it (Apple for Safari, Google for Chrome), under that company's privacy terms with you. Miamus never receives or stores audio: only the text is sent to Kakak, exactly as if you had typed it. If you turn on reading replies aloud, your phone does the reading.",
+              "If you talk to Kakak instead of typing, your browser's own speech recognition turns your voice into text. To do that, the browser may send the audio to the company that makes it (Apple for Safari, Google for Chrome), under that company's privacy terms with you. Miamus never receives or stores audio: only the text is sent to Kakak, exactly as if you had typed it.",
               "To understand requests like “ask Mbak Sari to water the plants”, each request also carries the first names of your staff (and, for anyone you've switched parts of the staff app off for, which parts they don't see), your pets' names, your room names, the names of items on your shopping list (for kitchen ingredients, also where each is kept and its use-by date, once someone has noted them), which parts of Miamus your household has switched off, and today's date. Nothing else about your staff is sent.",
+              "If you turn on Read replies aloud, Kakak reads her replies in her own voice. The words of each reply (her words, not what you typed or said, though they can include a first name from your request) are sent to ElevenLabs to make the audio, which comes straight back to your phone (see section 5). Miamus keeps neither the words nor the audio, only how many characters were read aloud each day. When her voice isn't available, your phone reads the reply itself, as before.",
               "A count of Kakak requests and what each cost, without any of the text.",
               "Kakak's suggestions can be wrong. Nothing is saved until you check and confirm it; what is saved is the chore, food, shopping item, ingredient (its place, amount and date) or what a staff member sees that you confirmed, just as if you had set it yourself.",
             ],
@@ -176,7 +179,7 @@ const COPY: Record<
               "Keeping it secure — sign-in, keeping each household's data separate, reviewing new households and requests to set them up, and preventing misuse. This is our legitimate interest.",
               "Sending notifications you've turned on. This is based on your consent, which you can withdraw at any time in your phone or browser settings.",
               "Improving Miamus — reading the feedback you choose to send, and usage counts (numbers only, never what you typed or said) to make Miamus easier to start. This is our legitimate interest.",
-              "Kakak, if an admin turns it on — understanding what admins type so it can suggest chores, food, shopping items, ingredients and what each staff member sees, and answer questions about how Miamus works. This is based on the consent the admin gives by turning Kakak on, which they can withdraw by turning it off.",
+              "Kakak, if an admin turns it on — understanding what admins type so it can suggest chores, food, shopping items, ingredients and what each staff member sees, and answer questions about how Miamus works, and, with Read replies aloud on, reading her replies in her voice. This is based on the consent the admin gives by turning Kakak on (and Read replies aloud), which they can withdraw by turning it off.",
               "Meeting legal obligations, where any apply.",
             ],
           },
@@ -198,6 +201,7 @@ const COPY: Record<
               "Vercel — hosts the app, on servers in Singapore. Photos pass through its servers when they're shown, but aren't stored there.",
               "Google — sign-in for admins.",
               "Anthropic — understands what admins type to Kakak, if an admin turns it on, on servers in the United States. It keeps this up to 30 days (longer only if its safety systems flag a request, or the law requires it), and doesn't use it to train its AI.",
+              "ElevenLabs — turns Kakak's replies into her voice when Read replies aloud is on, on servers in the United States. Miamus asks it to delete each reply's words and audio from its history as soon as the audio is sent; it may keep technical and safety logs, and copies in its backups for up to 30 days.",
               "Apple, Google, Microsoft or Mozilla push services — deliver notifications to your device.",
               "Authorities — only when Indonesian law requires it.",
             ],
@@ -219,6 +223,9 @@ const COPY: Record<
           {
             p: "If an admin turns on Kakak, what is typed to Kakak is processed by Anthropic in the United States (and its providers may process it in other countries). Anthropic is bound by agreement through its data processing addendum, part of its commercial terms; where that isn't enough, the admin gives consent by turning Kakak on.",
           },
+          {
+            p: "If Read replies aloud is on, the words of Kakak's replies are processed by ElevenLabs in the United States to make her voice. ElevenLabs is bound by agreement through its data processing addendum; where that isn't enough, the admin gives consent by turning Read replies aloud on.",
+          },
         ],
       },
       {
@@ -238,7 +245,7 @@ const COPY: Record<
               "Each day of the menu plan is kept one year, then deleted automatically. Kitchen notes are kept until an admin changes or deletes them.",
               "A staff phone not used for 60 days is unlinked from the household automatically. Its ID is deleted 7 days after it was last used, once the phone is no longer linked to a household.",
               "A staff phone's notification details are deleted when notifications are turned off on it, when the push service says the phone no longer accepts them, or when the phone is removed from the household (its ID is then deleted after 7 days without use).",
-              "Counts of Kakak requests and their cost (without anything that was typed) are kept 13 months, then deleted.",
+              "Counts of Kakak requests and their cost (without anything that was typed) are kept 13 months, then deleted. How many characters were read aloud in Kakak's voice each day is kept 35 days.",
               "Usage counts are kept while your household exists, and deleted with it; the daily task counts are deleted after 400 days.",
               "Everything else is kept while your household uses Miamus.",
               "A request to set up a household that isn't approved is deleted 30 days after the decision, together with the Google sign-in it came from, unless that account has since joined a household. Approved requests are kept while the account belongs to a household.",
@@ -414,8 +421,9 @@ const COPY: Record<
             ul: [
               "Kakak tidak aktif kecuali admin rumah tangga Anda menyalakannya, dan setiap admin bisa mematikannya lagi.",
               "Yang Anda ketik ke Kakak, pertanyaan Kakak, dan jawaban Anda dikirim ke Anthropic untuk dipahami (lihat bagian 5). Miamus tidak menyimpannya: percakapan hanya ada di HP Anda selama Kakak terbuka, lalu dilupakan.",
-              "Jika Anda bicara ke Kakak alih-alih mengetik, fitur pengenal suara bawaan browser Anda yang mengubah suara Anda menjadi teks. Untuk itu, browser bisa mengirim rekaman suaranya ke perusahaan pembuatnya (Apple untuk Safari, Google untuk Chrome), sesuai ketentuan privasi perusahaan itu dengan Anda. Miamus tidak pernah menerima atau menyimpan rekaman suara: hanya teksnya yang dikirim ke Kakak, sama seperti jika Anda mengetiknya. Jika Anda menyalakan fitur membacakan jawaban, HP Anda sendiri yang membacakannya.",
+              "Jika Anda bicara ke Kakak alih-alih mengetik, fitur pengenal suara bawaan browser Anda yang mengubah suara Anda menjadi teks. Untuk itu, browser bisa mengirim rekaman suaranya ke perusahaan pembuatnya (Apple untuk Safari, Google untuk Chrome), sesuai ketentuan privasi perusahaan itu dengan Anda. Miamus tidak pernah menerima atau menyimpan rekaman suara: hanya teksnya yang dikirim ke Kakak, sama seperti jika Anda mengetiknya.",
               "Supaya Kakak paham permintaan seperti “minta Mbak Sari menyiram tanaman”, setiap permintaan juga membawa nama depan staf (dan, untuk staf yang sebagian aplikasinya Anda matikan, bagian mana yang tidak mereka lihat), nama hewan peliharaan, nama ruangan, nama barang di daftar belanja (untuk bahan masakan, juga tempat penyimpanan dan tanggal kedaluwarsanya, jika sudah dicatat), bagian Miamus mana yang dimatikan rumah tangga Anda, dan tanggal hari ini. Tidak ada data staf lain yang dikirim.",
+              "Jika Anda menyalakan Bacakan jawaban Kakak, Kakak membacakan jawabannya dengan suaranya sendiri. Kata-kata setiap jawaban (kata-kata Kakak, bukan yang Anda ketik atau ucapkan, meski bisa memuat nama depan dari permintaan Anda) dikirim ke ElevenLabs untuk dijadikan suara, yang langsung kembali ke HP Anda (lihat bagian 5). Miamus tidak menyimpan kata-kata maupun suaranya, hanya jumlah karakter yang dibacakan setiap hari. Jika suara Kakak tidak tersedia, HP Anda sendiri yang membacakan jawabannya, seperti sebelumnya.",
               "Jumlah permintaan ke Kakak dan biaya masing-masing, tanpa isi teksnya.",
               "Saran Kakak bisa salah. Tidak ada yang disimpan sebelum Anda memeriksa dan mengonfirmasinya; yang disimpan adalah tugas, makanan, barang belanja, bahan masakan (tempat, jumlah, dan tanggalnya), atau bagian aplikasi yang dilihat staf yang Anda konfirmasi, sama seperti jika Anda mengaturnya sendiri.",
             ],
@@ -454,7 +462,7 @@ const COPY: Record<
               "Menjaga keamanan — login, memisahkan data setiap rumah tangga, meninjau rumah tangga baru dan permintaan membuatnya, dan mencegah penyalahgunaan. Ini adalah kepentingan sah kami.",
               "Mengirim notifikasi yang Anda nyalakan. Ini berdasarkan persetujuan Anda, yang dapat Anda tarik kapan saja lewat pengaturan HP atau browser.",
               "Memperbaiki Miamus — membaca masukan yang Anda pilih untuk dikirim, dan hitungan pemakaian (hanya angka, tidak pernah isi yang Anda ketik atau ucapkan) agar Miamus lebih mudah dimulai. Ini adalah kepentingan sah kami.",
-              "Kakak, jika admin menyalakannya — memahami yang diketik admin agar Kakak bisa menyarankan tugas, makanan, barang belanja, bahan masakan, dan bagian aplikasi yang dilihat setiap staf, serta menjawab pertanyaan tentang cara pakai Miamus. Ini berdasarkan persetujuan yang diberikan admin saat menyalakan Kakak, yang dapat ditarik dengan mematikannya.",
+              "Kakak, jika admin menyalakannya — memahami yang diketik admin agar Kakak bisa menyarankan tugas, makanan, barang belanja, bahan masakan, dan bagian aplikasi yang dilihat setiap staf, serta menjawab pertanyaan tentang cara pakai Miamus, dan, jika Bacakan jawaban Kakak dinyalakan, membacakan jawabannya dengan suaranya. Ini berdasarkan persetujuan yang diberikan admin saat menyalakan Kakak (dan Bacakan jawaban Kakak), yang dapat ditarik dengan mematikannya.",
               "Memenuhi kewajiban hukum, jika ada.",
             ],
           },
@@ -476,6 +484,7 @@ const COPY: Record<
               "Vercel — hosting aplikasi, di server yang berada di Singapura. Foto melewati servernya saat ditampilkan, tetapi tidak disimpan di sana.",
               "Google — login untuk admin.",
               "Anthropic — memahami yang diketik admin ke Kakak, jika admin menyalakannya, di server yang berada di Amerika Serikat. Anthropic menyimpannya paling lama 30 hari (lebih lama hanya jika sistem keamanannya menandai sebuah permintaan, atau jika diwajibkan hukum), dan tidak memakainya untuk melatih AI-nya.",
+              "ElevenLabs — mengubah jawaban Kakak menjadi suaranya jika Bacakan jawaban Kakak dinyalakan, di server yang berada di Amerika Serikat. Miamus meminta ElevenLabs menghapus kata-kata dan suara setiap jawaban dari riwayatnya begitu suaranya terkirim; ElevenLabs dapat menyimpan log teknis dan keamanan, serta salinan di cadangannya paling lama 30 hari.",
               "Layanan notifikasi Apple, Google, Microsoft, atau Mozilla — mengirim notifikasi ke perangkat Anda.",
               "Instansi berwenang — hanya jika diwajibkan oleh hukum Indonesia.",
             ],
@@ -497,6 +506,9 @@ const COPY: Record<
           {
             p: "Jika admin menyalakan Kakak, yang diketik ke Kakak diproses oleh Anthropic di Amerika Serikat (dan penyedianya dapat memprosesnya di negara lain). Anthropic terikat perjanjian melalui perjanjian pemrosesan datanya (data processing addendum), yang menjadi bagian dari ketentuan komersialnya; jika itu tidak cukup, admin memberikan persetujuannya dengan menyalakan Kakak.",
           },
+          {
+            p: "Jika Bacakan jawaban Kakak dinyalakan, kata-kata jawaban Kakak diproses oleh ElevenLabs di Amerika Serikat untuk dijadikan suaranya. ElevenLabs terikat perjanjian melalui perjanjian pemrosesan datanya (data processing addendum); jika itu tidak cukup, admin memberikan persetujuannya dengan menyalakan Bacakan jawaban Kakak.",
+          },
         ],
       },
       {
@@ -516,7 +528,7 @@ const COPY: Record<
               "Setiap hari dalam rencana menu disimpan satu tahun, lalu dihapus otomatis. Catatan dapur disimpan sampai admin mengubah atau menghapusnya.",
               "HP staf yang tidak dipakai selama 60 hari otomatis tidak terhubung lagi ke rumah tangga. ID-nya dihapus 7 hari setelah terakhir dipakai, jika HP itu tidak lagi terhubung ke rumah tangga.",
               "Data notifikasi HP staf dihapus saat notifikasi dimatikan di HP itu, saat layanan notifikasi menyatakan HP itu tidak lagi menerimanya, atau saat HP itu dihapus dari rumah tangga (ID-nya lalu dihapus setelah 7 hari tidak dipakai).",
-              "Jumlah permintaan ke Kakak dan biayanya (tanpa isi yang diketik) disimpan 13 bulan, lalu dihapus.",
+              "Jumlah permintaan ke Kakak dan biayanya (tanpa isi yang diketik) disimpan 13 bulan, lalu dihapus. Jumlah karakter yang dibacakan dengan suara Kakak setiap hari disimpan 35 hari.",
               "Hitungan pemakaian disimpan selama rumah tangga Anda ada, dan ikut dihapus bersamanya; hitungan tugas harian dihapus setelah 400 hari.",
               "Data lainnya disimpan selama rumah tangga Anda memakai Miamus.",
               "Permintaan membuat rumah tangga yang tidak disetujui dihapus 30 hari setelah keputusan, bersama akun login Google yang dipakai untuk memintanya, kecuali akun itu sudah bergabung ke sebuah rumah tangga. Permintaan yang disetujui disimpan selama akun tersebut masih tergabung di sebuah rumah tangga.",

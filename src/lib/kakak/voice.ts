@@ -1,8 +1,9 @@
 // Talk to Kakak (voice beta, roadmap item 23's first step). The phone's own
 // speech features only: the browser's SpeechRecognition turns speech into
 // text, which goes to Kakak exactly as if it had been typed; speechSynthesis
-// reads her replies aloud. No audio reaches Miamus, and no speech service or
-// key is added. Pure, so the state machine is unit-tested with a fake
+// reads her replies aloud, unless the server has Kakak's own ElevenLabs
+// voice (src/lib/kakak/app-voice.ts), which then reads them. No audio of the
+// owner reaches Miamus. Pure, so the state machine is unit-tested with a fake
 // recognition object (tests/unit/kakak-voice.test.ts).
 
 import type { KakakSuggestion } from "./suggestions";
