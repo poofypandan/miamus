@@ -10,6 +10,7 @@ import { kakakSystem, toolsFor } from "@/lib/kakak/engine";
 import type { KakakHousehold } from "@/lib/kakak/household";
 import { correctionFor, guardReplyText, replyProblems } from "@/lib/kakak/reply-guard";
 import { validateToolCall } from "@/lib/kakak/validate";
+import { budgetFetch, type Budget } from "./budget";
 import { scriptedReply, type ActualTurn, type RejectedAttempt, type ToolCall } from "./grade";
 import type { KakakCase } from "./types";
 
@@ -103,7 +104,7 @@ export function countingFetch(base: typeof fetch = fetch): typeof fetch {
  * household's photos only ever go to api.anthropic.com and the comparison
  * measures the real API. Unit tests pass their own fake client instead.
  */
-export function makeClient(): Anthropic {
+export function makeClient(budget?: Budget): Anthropic {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY is not set. See docs/kakak-eval.md, 'Before the first run'.");
@@ -113,7 +114,9 @@ export function makeClient(): Anthropic {
     authToken: null,
     baseURL: "https://api.anthropic.com",
     maxRetries: 3,
-    fetch: countingFetch(),
+    // With a budget, every request (the SDK's own retries included) is sized
+    // and has to fit before it is sent (budget.ts).
+    fetch: budget ? budgetFetch(budget, countingFetch()) : countingFetch(),
   });
 }
 
