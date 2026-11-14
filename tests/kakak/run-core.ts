@@ -6,10 +6,9 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { costMicroUsd, type KakakModel } from "@/lib/kakak/cost";
-import { renderHouseholdBlock, type KakakHousehold } from "@/lib/kakak/household";
-import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
-import { guardReplyText } from "@/lib/kakak/reply-guard";
-import { KAKAK_TOOLS } from "@/lib/kakak/tools";
+import { kakakSystem, toolsFor } from "@/lib/kakak/engine";
+import type { KakakHousehold } from "@/lib/kakak/household";
+import { correctionFor, guardReplyText, replyProblems } from "@/lib/kakak/reply-guard";
 import { validateToolCall } from "@/lib/kakak/validate";
 import { scriptedReply, type ActualTurn, type RejectedAttempt, type ToolCall } from "./grade";
 import type { KakakCase } from "./types";
@@ -174,12 +173,9 @@ export async function playConversation(
 ): Promise<ConversationResult> {
   checkVariant(variant);
   const caseHousehold: KakakHousehold = { ...household, ownerLocale: kakakCase.ownerLocale };
-  const system: Anthropic.TextBlockParam[] = [
-    // Breakpoint 1: instructions + tools, the same for every household.
-    { type: "text", text: KAKAK_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-    // Breakpoint 2: this household, cached within the conversation.
-    { type: "text", text: renderHouseholdBlock(caseHousehold), cache_control: { type: "ephemeral" } },
-  ];
+  // The route's own blocks (engine.ts): her instructions, the guide to
+  // Miamus in the owner's language, then this household, each cached.
+  const system = kakakSystem(caseHousehold);
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: firstMessage }];
   const result: ConversationResult = { turns: [], rejected: [], calls: [] };
   let retried = false;
@@ -193,7 +189,7 @@ export async function playConversation(
         model: variant.model,
         max_tokens: 4096,
         system,
-        tools: KAKAK_TOOLS,
+        tools: toolsFor(caseHousehold),
         tool_choice: { type: "auto" },
         thinking: variant.thinking === "between_tools" ? { type: "between_tools" } : { type: "adaptive" },
         output_config: { effort: variant.effort },
@@ -272,6 +268,21 @@ export async function playConversation(
 
     const plain = calls.map(({ name, input }) => ({ name, input }));
     const classified = classify(plain);
+    // A plain reply the owner can't be shown goes back once, with the reason
+    // (engine.ts): the turn's one second try, shared with a failed check.
+    if (classified.kind === "message" && !retried) {
+      const wrong = replyProblems(text, caseHousehold.ownerLocale);
+      if (wrong.length > 0) {
+        retried = true;
+        record.rejected = [`reply not shown: ${wrong.join(", ")}`];
+        result.rejected.push({ beforeTurn: result.turns.length, turn: { kind: "message", calls: [], text } });
+        if (!wrong.includes("empty")) {
+          messages.push({ role: "assistant", content: response.content });
+          messages.push({ role: "user", content: correctionFor(wrong, caseHousehold.ownerLocale) });
+        }
+        continue;
+      }
+    }
     // What the owner would see: the route's guard on the model's words.
     const guarded =
       classified.kind === "invalid" ? { text, tells: [] } : guardReplyText(classified.kind, text, caseHousehold.ownerLocale);

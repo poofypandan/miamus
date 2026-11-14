@@ -124,6 +124,10 @@ async function main() {
     for (const [category, entry] of Object.entries(summary.byCategory)) {
       console.log(`  ${category}: ${entry.passed}/${entry.cases}`);
     }
+    // What a change to her instructions could move without failing a case.
+    console.log(
+      `  raw leaks: ${summary.rawLeakCases.length} case(s)${summary.rawLeakCases.length ? ` (${summary.rawLeakCases.join(", ")})` : ""}; fallbacks: ${summary.fallbacks}; retries: ${summary.retries}; calls: ${summary.calls}; warm p50 ${(summary.warmMedianCallMs / 1000).toFixed(1)} s, p95 ${(summary.warmP95CallMs / 1000).toFixed(1)} s`,
+    );
     if (summary.errors.length) console.log(`  errors: ${summary.errors.join("; ")}`);
     console.log(`  details: ${file}`);
     if (stoppedForBudget) {
