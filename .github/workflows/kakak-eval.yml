@@ -1,0 +1,100 @@
+name: Kakak test run
+
+# Kakak's test set against the real Anthropic API, for when nobody is at the
+# laptop. Started only by hand (the Run workflow button, or `gh workflow
+# run`), never by a push, a pull request or a schedule: each run costs money.
+# About US$1.30 for the 109 dev sentences on the setup production uses (Opus,
+# medium effort). The same run as tests/kakak/run-check.sh.
+# docs/kakak-eval.md, "From GitHub". tests/unit/kakak-eval-workflow.test.ts
+# holds the rules below.
+#
+# The key. It is the secret ANTHROPIC_EVAL_KEY, which only the owner adds, in
+# GitHub's own settings: best in the environment "kakak-eval", so that no
+# other workflow can ever be given it, and so that the owner can require
+# their own approval before each run. One step is given the key. GitHub never
+# shows a secret again once it is saved and hides it in logs. Nothing is
+# uploaded until the run's output has been searched for the key.
+#
+# The money. The budget is a bound, not a point at which the run notices it
+# has overspent: no request is sent unless its worst case still fits
+# (tests/kakak/budget.ts), the SDK's retries included. It cannot be set above
+# US$5. One run goes at a time.
+#
+# The data. This repository is public, so the run's log and its saved
+# conversations are public too. They hold what anyone could produce with a
+# key of their own: the made-up test household, the dev sentences and Kakak's
+# replies. The held-out sentences, photos and voice clips are never run here.
+#
+# Who can start it. Only people who can push to this repository. A pull
+# request from a fork is never given secrets, and this workflow has no
+# pull_request trigger at all.
+run-name: ${{ inputs.cases == '' && 'Kakak test run, the whole dev split' || 'Kakak test run, chosen sentences only' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      cases:
+        description: "Only these sentences, like K131,K146. Empty runs the whole dev split."
+        required: false
+        default: ""
+        type: string
+      budget:
+        description: "The run may not go past this many US dollars (5 at most)."
+        required: false
+        default: "2.5"
+        type: string
+
+# One run at a time: a second one waits instead of spending alongside.
+concurrency:
+  group: kakak-eval
+  cancel-in-progress: false
+
+# The least a job needs to read the code. Nothing can be written.
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: Kakak test run (costs money)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Where the key lives, and where the owner can require an approval.
+    environment: kakak-eval
+    steps:
+      # Each action is pinned to one exact commit, so that it cannot change
+      # under a job that is later given a key.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      # Without the packages' own install scripts: the run needs none of them.
+      - run: npm ci --ignore-scripts
+
+      - name: Check the test set (no key, no cost)
+        run: npx tsx tests/kakak/run-test-set.ts --check
+
+      # The only step that is given the key. What was typed into the form
+      # reaches the script as plain values, never as part of a command, and
+      # the script checks them before anything is spent.
+      - name: Run the dev split against the real API
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_EVAL_KEY }}
+          CASES: ${{ inputs.cases }}
+          BUDGET: ${{ inputs.budget }}
+          KAKAK_UPLOAD_DIR: ${{ runner.temp }}/kakak-upload
+        run: bash tests/kakak/run-from-github.sh
+
+      # Only what the script put there, after it searched it for the key.
+      - name: Keep the conversations
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: kakak-test-run-conversations
+          path: ${{ runner.temp }}/kakak-upload/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -49,6 +49,28 @@ A second example, if there's time (one dog only, three photos):
 - ID: Jalan-jalan Matcha tiap sore jam 5, Mocha tidak usah.
 - EN: Walk Matcha every evening at 5, not Mocha.
 
+### More to show, since 14 November
+
+Two things the family is likely to try, and that Kakak used to answer with
+"Sorry". Both need the 14 November update to be live.
+
+- **A question about Miamus.** She answers in a sentence or two, from the
+  guide (`src/lib/guide.ts`), and says where to find it.
+  - ID: Miamus itu untuk apa? · Apa bedanya tugas dan rutinitas? · Bagaimana
+    cara menghubungkan HP staf?
+  - EN: What is Miamus for? · What's the difference between a chore and a
+    routine? · How do I link a staff phone?
+- **A new ingredient, with its amount.** One card: the name staff will read,
+  the amount, where it is kept. Needs **Jumlah bahan dan resep** / **Kitchen
+  amounts and recipes** on in Pengaturan → Fitur / Settings → Features.
+  - ID: Tambah beras merah 2 kg di lemari. · Beras tinggal 1 kg.
+  - EN: Add 2 kg of brown rice to the cupboard. · There is only 1 kg of rice
+    left.
+
+What she still can't do, so don't ask on camera: change or delete something
+that exists, say what happened today, add a person or a pet (she says where
+to do each by hand).
+
 ### Things to check before filming
 
 - The real Kakak is on (Vercel: `KAKAK_ENABLED`, the key; see

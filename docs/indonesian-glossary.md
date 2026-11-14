@@ -209,6 +209,8 @@ people are **staf** and **admin**.
 | Automatic (an approval made at sign-up) | **Otomatis** | Phase 172 PR A1, the approvals page. |
 | New household · {name} just joined (push) | **Rumah baru** · **{name} baru bergabung.** | Phase 172 PR A1, to platform admins. |
 | Tap the mic on your keyboard and speak. | **Ketuk mic di keyboard, lalu bicara.** | Phase 172 PR A1, Kakak's keyboard tip. "Mic" is the everyday word on the keyboard. |
+| Listening. Tap Done when you're finished. / Done / Cancel | **Kakak mendengarkan. Ketuk Selesai kalau sudah.** / **Selesai** / **Batalkan** | Kakak voice's new flow, tap to start and tap Done to stop (2026-11-13, opt-in with ?newvoice=1). Nothing is sent before Kirim, so not "ketuk Berhenti kalau sudah" or "Batal, jangan kirim" (the current flow's words). |
+| Say what you need. Pauses are fine. · Check the words, then tap Send. | **Sebutkan yang Anda perlukan. Boleh sambil berpikir.** · **Cek kata-katanya, lalu ketuk Kirim.** | Kakak voice: the empty live-words line, and the line after Done while the words wait in the typing box. |
 | How should we let you know? · Your WhatsApp number | **Bagaimana kami memberi tahu Anda? · Nomor WhatsApp Anda** | Phase 172 PR A1, the waiting screen (owner, 2026-11-11). |
 | We'll use your number only to tell you you're approved, then delete it. | **Nomor Anda hanya kami pakai untuk memberi tahu bahwa Anda sudah disetujui, lalu kami hapus.** | The note under the number field; "Kebijakan privasi" links to the policy. |
 | Copy link · Link copied | **Salin link · Link disalin** | The approvals page's third button. |
@@ -393,6 +395,17 @@ people are **staf** and **admin**.
 | Nobody sees chores for anyone now, so every staff member sees them. | **Sekarang tidak ada yang melihat tugas untuk siapa saja, jadi semua staf melihatnya.** | Phase 178: the same, for chores. |
 | Doesn't see: Kitchen, Repairs | **Tidak melihat: Dapur, Perbaikan** | Phase 178: the staff list, under a name with anything off. |
 | Kitchen off for Sari / Kitchen on for Sari | **Dapur dimatikan untuk Sari** / **Dapur aktif untuk Sari** | Phase 178: the toast after a switch, with Undo / **Batalkan**. Same verbs as the Features switches. |
+| How Miamus works (the guide) | **Cara pakai Miamus** | Phase 180: the guide to Miamus, `src/lib/guide.ts`, about thirty short entries in both languages; Kakak answers from it. Its titles and bodies are the agreed wording for explaining a screen: change them there, with the test. Groups: **Memulai · Rumah · Hewan · Dapur · Pengaturan**. |
+| What's the difference between a chore and a routine? | **Apa bedanya tugas dan rutinitas?** | Phase 180: the Kakak sheet's last example, a question. |
+| New ingredient (Kakak's card) | **Bahan masakan baru** | 2026-11-14: Kakak's card for an ingredient that isn't listed yet. Rows as the ingredient card's, plus **Jumlah**. |
+| Amount: +2 kg · 5 kg in all / 1 kg (was 1.5 kg) | **Jumlah: +2 kg · jadi 5 kg** / **1 kg (sebelumnya 1,5 kg)** | 2026-11-14: Kakak's ingredient card. Bought adds; "what is left" replaces, like the place row's *(sebelumnya Freezer)*. |
+| Miamus keeps count of it from now on. | **Mulai sekarang jumlahnya dicatat.** | 2026-11-14: under the card, when an amount starts the count on an ingredient that wasn't counted. "Dicatat", as in **Catat jumlah**. |
+| The 2 kg isn't added: here Beras is counted in pak. / The 2 kg isn't added. Set the amount on the ingredient itself. | **2 kg tidak ditambahkan: di sini Beras dicatat dalam pak.** / **2 kg tidak ditambahkan. Atur jumlahnya langsung di bahannya.** | 2026-11-14: under the card, when the amount is in another kind of unit than the item's. |
+| We've covered a lot in this conversation. Start again, and tell me what's next. | **Percakapan ini sudah panjang. Mulai lagi, lalu bilang ke Kakak apa berikutnya.** | 2026-11-14: when a conversation holds as many of Kakak's turns as it may; with **Mulai lagi**. |
+| The date isn't kept while it is marked Out. Set it once it is marked Bought. | **Tanggalnya tidak disimpan selama masih ditandai Habis. Atur setelah ditandai Sudah dibeli.** | 2026-11-14: under Kakak's ingredient card, when a date came with an amount that can't be written and the item stays Out. |
+| Anything else? | **Ada lagi?** | 2026-11-14: the typing box after Kakak's answer or thanks; **Mau Kakak atur apa?** stays for the first line. |
+| I've just been updated. Please close Miamus, open it again, and tell me once more. | **Kakak baru saja diperbarui. Tutup Miamus, buka lagi, lalu bilang ke Kakak sekali lagi.** | 2026-11-14: said to a page left open across an update, instead of a card it can't show. |
+| Kakak sets up chores, shopping, pet routines, food and ingredients from what you type or say, and answers questions about how Miamus works. | **Kakak mengatur tugas, belanja, rutinitas hewan, makanan, dan bahan masakan dari yang Anda ketik atau ucapkan, dan menjawab pertanyaan tentang cara pakai Miamus.** | 2026-11-14: Settings → Kakak, the first line. |
 
 ## Formatting
 
