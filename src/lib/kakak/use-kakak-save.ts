@@ -146,11 +146,19 @@ export function useKakakSave() {
                   // before keeps its unit, amount, low level and usual
                   // purchase for the next Track amount (Codex, PR #144), and
                   // counting at an amount had made it Enough.
+                  //
+                  // One thing can't come back: the database stamps "counted
+                  // at" when counting starts and takes no value for it from a
+                  // phone (migrations/148). So an item that had never been
+                  // counted goes back with no amount, not with a count from
+                  // before amounts existed: with the stamp set, the next
+                  // Track amount would start from that old number as if
+                  // someone had chosen it (kitchen-units startingAmount, D14).
                   undos.push(() =>
                     household.updateInventoryItem(item.itemId, {
                       track_amount: false,
                       unit: before.unit,
-                      quantity: before.quantity,
+                      quantity: before.amount_set_at ? before.quantity : 0,
                       min_threshold: before.min_threshold,
                       last_bought_amount: before.last_bought_amount ?? null,
                       to_buy_amount: before.to_buy_amount ?? null,

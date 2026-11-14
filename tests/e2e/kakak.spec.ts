@@ -583,15 +583,8 @@ test("what is left replaces the amount, and Undo puts back the amount and a Runn
   await expect.poll(() => stub.supplies[0]).toMatchObject({ quantity: 4, stock_status: "low" });
 });
 
-test("an amount starts the count on an item that wasn't counted, and Undo leaves it exactly as it was", async ({ context, page }) => {
-  // The beef was counted once (4 kg, running low at 1 kg), then counting was switched off, and
-  // someone marked it Running low. "500 g of beef in the freezer."
-  const stub = await installStub(context, {
-    owner: { locale: "en" },
-    kakak: { allowed: true, enabled: true },
-    features: { kitchen: true },
-    items: [{ ...beef, track_amount: false, quantity: 4, unit: "kg", min_threshold: 1, stock_status: "low" }],
-  });
+/** Opens Kakak's card that starts the count on the beef at 500 g. */
+async function openStartCountCard(page: Page) {
   await kakakSays(page, [
     {
       kind: "suggestions",
@@ -608,12 +601,44 @@ test("an amount starts the count on an item that wasn't counted, and Undo leaves
   await page.getByRole("button", { name: "Send" }).click();
 
   await expect(page.getByText("Miamus keeps count of it from now on.")).toBeVisible({ timeout: 20_000 });
+}
+
+test("an amount starts the count on an item that was counted before, and Undo leaves it exactly as it was", async ({ context, page }) => {
+  // The beef was counted once (4 kg, running low at 1 kg), then counting was switched off, and
+  // someone marked it Running low. "500 g of beef in the freezer."
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [{ ...beef, track_amount: false, quantity: 4, unit: "kg", min_threshold: 1, stock_status: "low", amount_set_at: "2026-11-01T02:00:00Z" }],
+  });
+  await openStartCountCard(page);
   await page.getByRole("button", { name: "Looks right" }).click();
   await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: true, unit: "g", quantity: 500, min_threshold: 0, stock_status: "ok" });
 
   await page.getByRole("button", { name: "Undo" }).click();
   // Not counted again, with the count it had kept and the mark someone had set.
   await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: false, unit: "kg", quantity: 4, min_threshold: 1, stock_status: "low" });
+});
+
+test("Undo of a started count never turns a count from before amounts into a real one", async ({ context, page }) => {
+  // Never counted (no "counted at"), with a number left from before amounts existed: 4. The
+  // Track amount sheet shows it only as "Old count: 4 kg, not used".
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [{ ...beef, track_amount: false, quantity: 4, unit: "kg", amount_set_at: null }],
+  });
+  await openStartCountCard(page);
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: true, unit: "g", quantity: 500 });
+  // The database stamped it as counted, and takes no other value for that from a phone.
+  expect(stub.supplies[0].amount_set_at).toBeTruthy();
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  // So it goes back with no amount: the old 4 can't be read as a count someone chose.
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ track_amount: false, unit: "kg", quantity: 0, stock_status: "ok" });
 });
 
 test("an amount that can't be written is explained on the card, and the card has nothing to save", async ({ context, page }) => {
