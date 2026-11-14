@@ -14,7 +14,9 @@ import {
   guideEntry,
   guideForKakak,
 } from "@/lib/guide";
-import { FEATURES } from "@/lib/features";
+import { DASHBOARD_MODULES, moduleFromParam } from "@/lib/dashboard-modules";
+import { FEATURES, kitchenViews } from "@/lib/features";
+import { SETTINGS_PAGES, guideEntryHref } from "@/lib/settings-pages";
 import { WHATS_NEW } from "@/lib/whats-new";
 
 const LOCALES = ["en", "id"] as const;
@@ -90,6 +92,51 @@ describe("the guide's entries", () => {
       expect(text, entry.id).not.toMatch(/\b\d{1,2}:\d{2}\b/);
       expect(`${entry.title.en} ${entry.body.en}`, entry.id).not.toMatch(/\b\d{1,2}\.\d{2}\b(?! kg)/);
     }
+  });
+});
+
+describe("the guide's links (the How Miamus works screen, Phase 180 H2)", () => {
+  // Each place's path in words starts with its tab; its link opens that tab.
+  const TAB_OF = { Today: "agenda", Home: "chores", Pets: "pets", Kitchen: "inventory", Settings: "access" } as const;
+  const ALL_ON = { repairs: true, bills: true, food: true, kitchen: true };
+
+  it("give every place a link to a tab, and a page or view, that exist", () => {
+    for (const [key, place] of Object.entries(GUIDE_PLACES)) {
+      expect(place.href, key).toMatch(/^\/dashboard(\?|$)/);
+      const url = new URL(place.href, "https://miamus.test");
+      expect(url.pathname, key).toBe("/dashboard");
+      const tabParam = url.searchParams.get("module");
+      // The bare /dashboard is Today; anything else names its tab outright.
+      if (tabParam !== null) expect(DASHBOARD_MODULES, key).toContain(tabParam);
+      const tab = moduleFromParam(tabParam);
+      expect(tab, key).toBe(TAB_OF[place.en.split(" → ")[0] as keyof typeof TAB_OF]);
+
+      const allowed: Record<string, readonly string[]> = {
+        agenda: [],
+        pets: [],
+        chores: ["chores", "bills"],
+        inventory: ["kitchen"],
+        access: ["page"],
+      };
+      for (const name of url.searchParams.keys()) {
+        if (name !== "module") expect(allowed[tab], `${key}: ${name}`).toContain(name);
+      }
+      const page = url.searchParams.get("page");
+      if (tab === "access") expect(SETTINGS_PAGES, key).toContain(page);
+      const chores = url.searchParams.get("chores");
+      if (chores !== null) expect(["rooms", "repairs"], key).toContain(chores);
+      if (url.searchParams.has("bills")) expect(url.searchParams.get("bills"), key).toBe("open");
+      const kitchen = url.searchParams.get("kitchen");
+      if (kitchen !== null) expect(kitchenViews(ALL_ON), key).toContain(kitchen);
+    }
+  });
+
+  it("send a switched-off entry to Settings → Features, and open an entry by its id", () => {
+    expect(GUIDE_PLACES.settings_features.href).toBe("/dashboard?module=access&page=features");
+    expect(GUIDE_PLACES.today.href).toBe("/dashboard");
+    expect(GUIDE_PLACES.kitchen_shopping.href).toBe("/dashboard?module=inventory&kitchen=buy");
+    expect(guideEntryHref("chores-vs-routines")).toBe("/dashboard?module=access&page=how-miamus-works&entry=chores-vs-routines");
+    expect(SETTINGS_PAGES).toContain("how-miamus-works");
   });
 });
 
