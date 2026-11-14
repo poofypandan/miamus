@@ -130,6 +130,36 @@ export function useKakakSave() {
               if (!before) throw new Error("Kakak's ingredient is not in this household's list");
               const placeBefore = before.kept_in ?? null;
               const dateBefore = before.expires_on ?? null;
+              // The amount first (2026-11-14): buying takes an Out item back
+              // in stock, so a date given with it is kept (migrations/154).
+              // Each mode is the action its screen uses by hand.
+              const amount = item.amount ?? null;
+              if (amount) {
+                const tracked = before.track_amount === true;
+                if (amount.mode === "start") {
+                  // Its amount wasn't kept: start, as Track amount does.
+                  if (tracked) throw new Error("Kakak's ingredient is tracked now: its amount changed meanwhile");
+                  const statusBefore = stockStatus(before);
+                  await household.setTrackAmount(item.itemId, { track: true, unit: amount.unit, quantity: amount.value, lowAt: 0 });
+                  undos.push(async () => {
+                    await household.setTrackAmount(item.itemId, { track: false });
+                    // Counting at an amount made it Enough: back to what it said.
+                    if (statusBefore !== "ok") await household.setInventoryStatus(item.itemId, statusBefore);
+                  });
+                } else {
+                  // The card's numbers were worked out in the item's unit as it was read.
+                  if (!tracked || before.unit !== amount.unit) {
+                    throw new Error("Kakak's ingredient is counted differently now: its amount changed meanwhile");
+                  }
+                  if (amount.mode === "add") {
+                    await household.recordPurchase(item.itemId, amount.value);
+                    undos.push(() => household.undoPurchase(before, amount.value));
+                  } else {
+                    await household.setInventoryAmount(item.itemId, amount.value);
+                    undos.push(() => household.setInventoryAmount(item.itemId, before.quantity));
+                  }
+                }
+              }
               if (item.keptIn) {
                 await household.setIngredientPlace(item.itemId, item.keptIn);
                 undos.push(() =>
@@ -146,6 +176,27 @@ export function useKakakSave() {
                 if ((saved.expires_on ?? null) !== item.expiresOn) {
                   throw new Error("The ingredient's date was not kept (it is marked Out)");
                 }
+              }
+              break;
+            }
+            case "new_ingredient": {
+              // As Add ingredient saves it (inventory-item-form.tsx): the item
+              // with neutral counts, then, with an amount, tracked at it.
+              const added = await household.addInventoryItem({
+                scope: "home",
+                name: item.name,
+                category: item.category,
+                photo_url: null,
+                quantity: 0,
+                unit: "pcs",
+                min_threshold: 0,
+                audit_frequency_days: 30,
+                kept_in: item.keptIn,
+                expires_on: item.expiresOn,
+              });
+              undos.push(() => household.removeInventoryItem(added.id));
+              if (item.amount) {
+                await household.setTrackAmount(added.id, { track: true, unit: item.amount.unit, quantity: item.amount.value, lowAt: 0 });
               }
               break;
             }

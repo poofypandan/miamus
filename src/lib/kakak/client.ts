@@ -23,6 +23,14 @@ export type KakakReply =
  */
 export type KakakFailure = "invalid" | "api" | "too_long" | "refusal" | "offline" | "cap" | "slow" | "stale";
 
+/**
+ * What this page can show, sent with every turn. The route sends a newer
+ * kind of card only to a page that says it knows it (route.ts), so a page
+ * left open across a deploy is asked to reopen instead of crashing.
+ *   2 (2026-11-14): a new ingredient's card, and amounts on an ingredient.
+ */
+export const KAKAK_CLIENT_VERSION = 2;
+
 export async function askKakak(
   householdId: string,
   history: KakakHistory | null,
@@ -36,7 +44,7 @@ export async function askKakak(
     response = await fetch("/api/kakak", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ householdId, history, reply, locale }),
+      body: JSON.stringify({ householdId, history, reply, locale, v: KAKAK_CLIENT_VERSION }),
       signal,
     });
   } catch (error) {

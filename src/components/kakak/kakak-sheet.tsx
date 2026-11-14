@@ -114,8 +114,13 @@ function Conversation({ onClose }: { onClose: () => void }) {
   const save = useKakakSave();
   const [screen, setScreen] = useState<Screen>({ kind: "typing" });
   const [history, setHistory] = useState<KakakHistory | null>(null);
-  /** What the owner wrote, kept on screen so they see what Kakak read. */
-  const [said, setSaid] = useState<string[]>([]);
+  /**
+   * The conversation so far, both sides (2026-11-14): what the owner wrote,
+   * so they see what Kakak read, and what Kakak said before her latest
+   * reply. With the owner's lines alone, three in a row read as if she had
+   * ignored the first two.
+   */
+  const [said, setSaid] = useState<SaidLine[]>([]);
   const [draft, setDraft] = useState("");
   const [typingAnswer, setTypingAnswer] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -137,7 +142,9 @@ function Conversation({ onClose }: { onClose: () => void }) {
     const own = typed.slice(0, MAX_TYPED);
     const note = screen.kind === "card" && screen.refined ? refinementNote(screen.items, MAX_TYPED - own.length - 1) : "";
     const words = note ? `${note} ${own}` : own;
-    setSaid((list) => [...list, own]);
+    // Kakak's line the owner is answering stays above their answer.
+    const hers = kakakLine(screen, t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:"));
+    setSaid((list) => [...list, ...(hers ? [{ who: "kakak" as const, text: hers }] : []), { who: "owner" as const, text: own }]);
     setDraft("");
     setTypingAnswer(false);
     await ask(words, history);
@@ -283,12 +290,20 @@ function Conversation({ onClose }: { onClose: () => void }) {
         </p>
       )}
       {said.length > 0 && (
-        <div className="flex flex-col items-end gap-2">
-          {said.map((line, index) => (
-            <p key={index} className="max-w-[85%] rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900">
-              {line}
-            </p>
-          ))}
+        <div className="flex flex-col gap-2" data-testid="kakak-said">
+          {said.map((line, index) =>
+            line.who === "owner" ? (
+              <p key={index} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900">
+                {line.text}
+              </p>
+            ) : (
+              // Her earlier lines: the same bubble, a little quieter than her latest.
+              <div key={index} className="flex items-start gap-2 opacity-80" data-testid="kakak-earlier">
+                <KakakAvatar className="size-7" />
+                <p className="max-w-[85%] rounded-2xl rounded-tl-md border bg-card px-3 py-2 text-sm text-gray-900">{line.text}</p>
+              </div>
+            )
+          )}
         </div>
       )}
 
@@ -417,6 +432,31 @@ function Conversation({ onClose }: { onClose: () => void }) {
       )}
     </div>
   );
+}
+
+/** One line of the conversation so far. */
+interface SaidLine {
+  who: "owner" | "kakak";
+  text: string;
+}
+
+/**
+ * What Kakak was saying on this screen, to keep above the owner's answer:
+ * her question, her reply, or her line over a card (the card itself goes
+ * when it is changed). Nothing for a problem (no internet, a limit), which
+ * isn't part of the conversation.
+ */
+function kakakLine(screen: Screen, cardIntro: string): string | null {
+  switch (screen.kind) {
+    case "question":
+      return screen.question;
+    case "message":
+      return screen.problem ? null : screen.text;
+    case "card":
+      return screen.text || cardIntro;
+    default:
+      return null;
+  }
 }
 
 function KakakBubble({ children }: { children: React.ReactNode }) {
@@ -841,6 +881,7 @@ const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
   pet_routine: PawPrint,
   food: Refrigerator,
   ingredient: Carrot,
+  new_ingredient: Carrot,
 };
 
 type T = (en: string, id: string) => string;

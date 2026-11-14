@@ -13,9 +13,17 @@ import { runKakakTurn, toolsFor, type TurnDeps, type TurnResult } from "@/lib/ka
 import { renderHouseholdBlock } from "@/lib/kakak/household";
 import { practiceClient } from "@/lib/kakak/practice";
 import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
-import { isSaveableSuggestion, toSuggestion, type IngredientSuggestion } from "@/lib/kakak/suggestions";
-import { KAKAK_TOOL_NAMES, KAKAK_TOOLS } from "@/lib/kakak/tools";
-import { validateToolCall } from "@/lib/kakak/validate";
+import {
+  isSaveableSuggestion,
+  needsNewerApp,
+  toSuggestion,
+  type IngredientSuggestion,
+  type NewIngredientSuggestion,
+} from "@/lib/kakak/suggestions";
+import { INGREDIENT_SHELVES, INGREDIENT_UNITS, KAKAK_TOOL_NAMES, KAKAK_TOOLS } from "@/lib/kakak/tools";
+import { amountGiven, validateToolCall } from "@/lib/kakak/validate";
+import { addsSomething } from "@/lib/kakak/describe";
+import { isIngredient, STOCK_UNITS } from "@/lib/kitchen-units";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -98,7 +106,17 @@ describe("the tool", () => {
   it("is in Kakak's instructions, with raw ingredients kept off add_food", () => {
     expect(KAKAK_SYSTEM_PROMPT).toContain("put_away_ingredient");
     expect(KAKAK_SYSTEM_PROMPT).toContain("is never add_food");
-    expect(KAKAK_SYSTEM_PROMPT).toContain("Tambah bahan masakan / Add ingredient");
+    // Since 2026-11-14 an ingredient that isn't listed is suggested, not sent to the form.
+    expect(KAKAK_SYSTEM_PROMPT).not.toContain("Tambah bahan masakan / Add ingredient");
+    expect(KAKAK_SYSTEM_PROMPT).toContain("never send the owner to add it by hand");
+  });
+
+  it("takes every unit the kitchen counts in, and both ingredient shelves", () => {
+    // tools.ts keeps its own list so it imports nothing; this keeps it the kitchen's.
+    expect([...INGREDIENT_UNITS].sort()).toEqual([...STOCK_UNITS].sort());
+    expect(INGREDIENT_SHELVES.every((shelf) => isIngredient({ category: shelf }))).toBe(true);
+    const schema = KAKAK_TOOLS.find((t) => t.name === "put_away_ingredient")!.input_schema as { required: string[]; properties: Record<string, unknown> };
+    expect([...schema.required].sort()).toEqual(Object.keys(schema.properties).sort());
   });
 });
 
@@ -172,8 +190,15 @@ describe("the suggestion", () => {
       expiry: "set",
       expiresOn: "2026-11-12",
       expiryIsGuess: false,
+      amount: null,
+      amountSkipped: null,
     });
     expect(isSaveableSuggestion(item)).toBe(true);
+    // A card from a page or a history older than amounts still saves.
+    const { amount: _amount, amountSkipped: _skipped, ...older } = item;
+    void _amount;
+    void _skipped;
+    expect(isSaveableSuggestion(older)).toBe(true);
   });
 
   it("is refused by the phone when it would change nothing or its date doesn't fit", () => {
@@ -215,6 +240,268 @@ describe("the suggestion", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// 2026-11-14 (owner: "Add 2 kg of brown rice into the pantry" got "Sorry, I
+// can't add a new ingredient"): an ingredient that isn't listed, and amounts.
+
+/** The same household, with how each item's amount is kept, as the route reads it (migrations/148). */
+const stocked: ContextRows = {
+  ...rows,
+  kitchenOn: true,
+  items: [
+    // I1: Dada Ayam, not counted.
+    { ...rows.items[0], track_amount: false, unit: "pcs", quantity: 0 },
+    // I2: Beras, counted in kg: 1.5 kg left.
+    { ...rows.items[1], track_amount: true, unit: "kg", quantity: 1.5 },
+    rows.items[2],
+    rows.items[3],
+    // I5: Telur, counted in butir, and Out.
+    { ...rows.items[4], track_amount: true, unit: "butir", quantity: 0 },
+    // I6: Minyak goreng, counted in bottles: no weight or volume to add to.
+    { id: id(35), name: "Minyak goreng", scope: "home", created_at: "2026-01-06", category: "pantry", kept_in: null, expires_on: null, track_amount: true, unit: "bottle", quantity: 2 },
+  ],
+} as ContextRows;
+const withStock = (locale: "en" | "id" = "en") => buildContext(stocked, { ...opts, ownerLocale: locale });
+
+const fresh = (over: Record<string, unknown> = {}) => ({
+  item: null,
+  new_name: "Beras merah",
+  new_name_en: "Brown rice",
+  shelf: "pantry",
+  kept_in: "pantry",
+  amount: 2,
+  unit: "kg",
+  amount_is: "bought",
+  expiry: "keep",
+  expires_on: null,
+  expiry_is_guess: false,
+  ...over,
+});
+const listed = (over: Record<string, unknown> = {}) => ({
+  item: "I2",
+  new_name: null,
+  new_name_en: null,
+  shelf: null,
+  kept_in: null,
+  amount: 2,
+  unit: "kg",
+  amount_is: "bought",
+  expiry: "keep",
+  expires_on: null,
+  expiry_is_guess: false,
+  ...over,
+});
+
+describe("a new ingredient (2026-11-14)", () => {
+  const built = withStock();
+  const check = (input: Record<string, unknown>) => validateToolCall(built.household, "put_away_ingredient", input);
+  const suggest = (input: Record<string, unknown>, from = built) => toSuggestion(from.household, from.refs, from.names, "put_away_ingredient", input);
+
+  it("is accepted by name, with a shelf, and an amount, a place and a date only when given", () => {
+    expect(check(fresh())).toEqual({ ok: true });
+    expect(check(fresh({ kept_in: null, amount: null, unit: null, new_name_en: null }))).toEqual({ ok: true });
+    expect(check(fresh({ new_name: "Ikan tongkol", shelf: "fresh_food", kept_in: "freezer", amount: null, unit: null, expiry: "set", expires_on: "2026-11-30" }))).toEqual({ ok: true });
+  });
+
+  it("needs a name and a shelf, and never both an item and a name", () => {
+    expect(check(fresh({ new_name: null })).ok).toBe(false);
+    expect(check(fresh({ new_name: "  " })).ok).toBe(false);
+    expect(check(fresh({ new_name: "x".repeat(61) })).ok).toBe(false);
+    expect(check(fresh({ shelf: null })).ok).toBe(false);
+    expect(check(fresh({ shelf: "household_supplies" })).ok).toBe(false);
+    expect(check(fresh({ item: "I2" })).ok).toBe(false);
+    expect(check(listed({ shelf: "pantry" })).ok).toBe(false);
+    // Nothing to clear on something new.
+    expect(check(fresh({ expiry: "clear" })).ok).toBe(false);
+  });
+
+  it("is sent back to the listed item when its name is already there", () => {
+    const again = check(fresh({ new_name: " beras ", amount: null, unit: null }));
+    expect(again).toEqual({ ok: false, errors: ["new_name is already listed as I2: use item I2 instead"] });
+    // A supply of the same name isn't an ingredient: the new one stands.
+    expect(check(fresh({ new_name: "Sabun cuci", amount: null, unit: null }))).toEqual({ ok: true });
+  });
+
+  it("isn't taken while ingredients are off", () => {
+    expect(validateToolCall(buildContext(rows, opts).household, "put_away_ingredient", fresh()).ok).toBe(false);
+  });
+
+  it("becomes a card the phone can save, named for staff and glossed for an English-speaking owner", () => {
+    const item = suggest(fresh()) as NewIngredientSuggestion;
+    expect(item).toEqual({
+      kind: "new_ingredient",
+      name: "Beras merah",
+      nameEn: "Brown rice",
+      category: "pantry",
+      keptIn: "pantry",
+      expiresOn: null,
+      expiryIsGuess: false,
+      amount: { value: 2, unit: "kg" },
+    });
+    expect(isSaveableSuggestion(item)).toBe(true);
+    expect(addsSomething(item)).toBe(true);
+    expect(needsNewerApp(item)).toBe(true);
+    expect(describeSuggestion(item, "en")).toEqual({
+      heading: "New ingredient",
+      rows: [
+        { label: "What", value: "Beras merah (Brown rice)" },
+        { label: "Amount", value: "2 kg" },
+        { label: "Kept in", value: "Cupboard" },
+      ],
+      note: undefined,
+    });
+    expect(describeSuggestion(item, "id")).toEqual({
+      heading: "Bahan masakan baru",
+      rows: [
+        { label: "Apa", value: "Beras merah" },
+        { label: "Jumlah", value: "2 kg" },
+        { label: "Disimpan di", value: "Lemari" },
+      ],
+      note: undefined,
+    });
+    expect(savedSummary([item], "en")).toBe("Saved — Brown rice");
+    expect(savedSummary([item], "id")).toBe("Tersimpan — Beras merah");
+  });
+
+  it("shows its shelf's usual place when none was said, and stores none", () => {
+    const fish = suggest(fresh({ new_name: "Ikan tongkol", new_name_en: null, shelf: "fresh_food", kept_in: null, amount: null, unit: null, expiry: "set", expires_on: "2026-11-30", expiry_is_guess: true })) as NewIngredientSuggestion;
+    expect(fish).toMatchObject({ keptIn: null, category: "fresh_food", amount: null, expiresOn: "2026-11-30", expiryIsGuess: true });
+    expect(describeSuggestion(fish, "id")).toEqual({
+      heading: "Bahan masakan baru",
+      rows: [
+        { label: "Apa", value: "Ikan tongkol" },
+        { label: "Disimpan di", value: "Kulkas" },
+        { label: "Kedaluwarsa", value: "Senin 30 Nov · Tebakan Kakak — cek lagi", guess: true },
+      ],
+      note: "Kalau baunya atau tampilannya aneh, buang saja.",
+    });
+  });
+
+  it("is refused by the phone when its shape isn't what the route builds", () => {
+    const item = suggest(fresh()) as NewIngredientSuggestion;
+    expect(isSaveableSuggestion({ ...item, name: "" })).toBe(false);
+    expect(isSaveableSuggestion({ ...item, category: "household_supplies" })).toBe(false);
+    expect(isSaveableSuggestion({ ...item, keptIn: "garage" })).toBe(false);
+    expect(isSaveableSuggestion({ ...item, amount: { value: 0, unit: "kg" } })).toBe(false);
+    expect(isSaveableSuggestion({ ...item, amount: { value: 2, unit: "karung" } })).toBe(false);
+    expect(isSaveableSuggestion({ ...item, expiryIsGuess: true })).toBe(false);
+  });
+});
+
+describe("an amount (2026-11-14)", () => {
+  const built = withStock();
+  const check = (input: Record<string, unknown>) => validateToolCall(built.household, "put_away_ingredient", input);
+  const suggest = (input: Record<string, unknown>, from = built) =>
+    toSuggestion(from.household, from.refs, from.names, "put_away_ingredient", input) as IngredientSuggestion;
+
+  it("needs a number above 0 with a unit the kitchen counts in, or neither", () => {
+    expect(check(listed())).toEqual({ ok: true });
+    expect(check(listed({ amount: 0 })).ok).toBe(false);
+    expect(check(listed({ amount: -1 })).ok).toBe(false);
+    expect(check(listed({ amount: "2" })).ok).toBe(false);
+    expect(check(listed({ amount: 100_001 })).ok).toBe(false);
+    expect(check(listed({ unit: null })).ok).toBe(false);
+    expect(check(listed({ amount: null })).ok).toBe(false);
+    expect(check(listed({ unit: "karung" })).ok).toBe(false);
+    expect(check(listed({ amount_is: "maybe" })).ok).toBe(false);
+    expect(amountGiven(listed())).toEqual({ value: 2, unit: "kg", is: "bought" });
+    expect(amountGiven(listed({ amount_is: "now" }))).toEqual({ value: 2, unit: "kg", is: "now" });
+    expect(amountGiven(listed({ amount: null, unit: null }))).toBeNull();
+  });
+
+  it("is a change by itself: an amount alone is never 'nothing would change'", () => {
+    expect(check(listed())).toEqual({ ok: true });
+    expect(check(listed({ amount: null, unit: null })).ok).toBe(false);
+  });
+
+  it("lets a date stand on an ingredient marked Out, because buying brings it back", () => {
+    const eggs = listed({ item: "I5", amount: 30, unit: "butir", kept_in: null, expiry: "set", expires_on: "2026-11-25" });
+    expect(check(eggs)).toEqual({ ok: true });
+    expect(check({ ...eggs, amount: null, unit: null }).ok).toBe(false);
+  });
+
+  it("is added to an item that is counted, in the item's own unit", () => {
+    const more = suggest(listed({ amount: 500, unit: "g", kept_in: "pantry" }));
+    expect(more.amount).toEqual({ value: 0.5, unit: "kg", mode: "add", before: 1.5 });
+    expect(more.amountSkipped).toBeNull();
+    expect(isSaveableSuggestion(more)).toBe(true);
+    expect(needsNewerApp(more)).toBe(true);
+    expect(describeSuggestion(more, "en").rows).toEqual([
+      { label: "What", value: "Beras" },
+      { label: "Amount", value: "+0.5 kg · 2 kg in all" },
+      { label: "Kept in", value: "Cupboard" },
+    ]);
+    expect(describeSuggestion(more, "id").rows[1]).toEqual({ label: "Jumlah", value: "+0,5 kg · jadi 2 kg" });
+  });
+
+  it("replaces what is there when the owner says what is left", () => {
+    const left = suggest(listed({ amount: 1, amount_is: "now" }));
+    expect(left.amount).toEqual({ value: 1, unit: "kg", mode: "set", before: 1.5 });
+    expect(describeSuggestion(left, "en").rows[1]).toEqual({ label: "Amount", value: "1 kg (was 1.5 kg)" });
+    expect(describeSuggestion(left, "id").rows[1]).toEqual({ label: "Jumlah", value: "1 kg (sebelumnya 1,5 kg)" });
+    expect(isSaveableSuggestion(left)).toBe(true);
+  });
+
+  it("starts the count on an item that wasn't counted, and says so", () => {
+    const chicken = suggest(listed({ item: "I1", amount: 2, unit: "kg", kept_in: "freezer" }));
+    // Already in the freezer: the amount is the news.
+    expect(chicken.amount).toEqual({ value: 2, unit: "kg", mode: "start", before: null });
+    expect(describeSuggestion(chicken, "en")).toMatchObject({
+      rows: [
+        { label: "What", value: "Dada Ayam" },
+        { label: "Amount", value: "2 kg" },
+        { label: "Kept in", value: "Freezer" },
+      ],
+      note: "Miamus keeps count of it from now on.",
+    });
+    expect(describeSuggestion(chicken, "id").note).toBe("Mulai sekarang jumlahnya dicatat.");
+    expect(isSaveableSuggestion(chicken)).toBe(true);
+  });
+
+  it("is left off, with the reason on the card, when the item is counted another way", () => {
+    const oil = suggest(listed({ item: "I6", amount: 2, unit: "L", kept_in: "pantry" }));
+    expect(oil.amount).toBeNull();
+    expect(oil.amountSkipped).toEqual({ value: 2, unit: "L", itemUnit: "bottle" });
+    expect(describeSuggestion(oil, "en").note).toBe("The 2 L isn't added: here Minyak goreng is counted in bottle.");
+    expect(describeSuggestion(oil, "id").note).toBe("2 L tidak ditambahkan: di sini Minyak goreng dicatat dalam botol.");
+    // The place still saves; with nothing else to save the card's button stays off.
+    expect(addsSomething(oil)).toBe(true);
+    const only = suggest(listed({ item: "I6", amount: 2, unit: "L" }));
+    expect(addsSomething(only)).toBe(false);
+    expect(needsNewerApp(only)).toBe(true);
+  });
+
+  it("is never guessed onto an item whose count wasn't read", () => {
+    const blind = buildContext({ ...rows, kitchenOn: true }, opts);
+    const item = suggest(listed({ kept_in: "pantry" }), blind);
+    expect(item.amount).toBeNull();
+    expect(item.amountSkipped).toEqual({ value: 2, unit: "kg", itemUnit: null });
+    expect(describeSuggestion(item, "en").note).toBe("The 2 kg isn't added. Set the amount on the ingredient itself.");
+  });
+
+  it("never reaches Anthropic: the household block is the same with or without it", () => {
+    const withAmounts = renderHouseholdBlock(built.household);
+    expect(withAmounts).not.toMatch(/1\.5|kg|butir|bottle/);
+    expect(JSON.stringify(built.household)).not.toContain("quantity");
+    expect(built.refs.stock).toEqual({
+      I1: { tracked: false, unit: "pcs", quantity: 0 },
+      I2: { tracked: true, unit: "kg", quantity: 1.5 },
+      I5: { tracked: true, unit: "butir", quantity: 0 },
+      I6: { tracked: true, unit: "bottle", quantity: 2 },
+    });
+  });
+
+  it("is refused by the phone when the amount isn't one it can write", () => {
+    const more = suggest(listed());
+    expect(isSaveableSuggestion({ ...more, amount: { ...more.amount, value: 0 } })).toBe(false);
+    expect(isSaveableSuggestion({ ...more, amount: { ...more.amount, mode: "double" } })).toBe(false);
+    expect(isSaveableSuggestion({ ...more, amount: { ...more.amount, unit: "karung" } })).toBe(false);
+    // An amount alone is a change; nothing at all still isn't.
+    expect(isSaveableSuggestion(more)).toBe(true);
+    expect(isSaveableSuggestion({ ...more, amount: null })).toBe(false);
+  });
+});
+
 describe("practice mode", () => {
   function setup(locale: "en" | "id") {
     const built = buildContext({ ...rows, kitchenOn: true }, { ...opts, ownerLocale: locale });
@@ -251,6 +538,55 @@ describe("practice mode", () => {
     expect(items(second)).toEqual([
       expect.objectContaining({ kind: "ingredient", itemId: id(30), keptIn: "fridge", fromPlace: "freezer", expiry: "set", expiresOn: "2026-11-12" }),
     ]);
+  });
+});
+
+describe("practice mode, a new ingredient and amounts (2026-11-14)", () => {
+  function setup(locale: "en" | "id") {
+    const built = withStock(locale);
+    let begun = 0;
+    const deps: TurnDeps = {
+      client: practiceClient(built.household),
+      model: "claude-opus-5-5",
+      effort: "low",
+      household: built.household,
+      refs: built.refs,
+      names: built.names,
+      begin: async () => ({ ok: true, requestId: id(900 + ++begun), callsLeft: 40 }),
+      record: async () => undefined,
+    };
+    return deps;
+  }
+  const items = (result: TurnResult) => {
+    if (result.kind !== "suggestions") throw new Error(`expected suggestions, got ${result.kind}`);
+    for (const item of result.items) expect(isSaveableSuggestion(item)).toBe(true);
+    return result.items;
+  };
+
+  it("adds the owner's own sentence: 2 kg of brown rice into the pantry", async () => {
+    const result = await runKakakTurn(setup("en"), null, "Add 2 kg of brown rice into the pantry thank you");
+    expect(items(result)).toEqual([
+      { kind: "new_ingredient", name: "Beras merah", nameEn: "Brown rice", category: "pantry", keptIn: "pantry", expiresOn: null, expiryIsGuess: false, amount: { value: 2, unit: "kg" } },
+    ]);
+  });
+
+  it("adds one in Indonesian, on the fresh shelf, with no amount", async () => {
+    const result = await runKakakTurn(setup("id"), null, "Tambah ikan tongkol di freezer");
+    expect(items(result)).toEqual([
+      expect.objectContaining({ kind: "new_ingredient", name: "Ikan tongkol", nameEn: null, category: "fresh_food", keptIn: "freezer", amount: null }),
+    ]);
+  });
+
+  it("adds an amount to a listed ingredient, and sets what is left", async () => {
+    const more = await runKakakTurn(setup("id"), null, "Tambah beras 2 kg di lemari");
+    expect(items(more)).toEqual([expect.objectContaining({ kind: "ingredient", itemId: id(31), keptIn: "pantry", amount: { value: 2, unit: "kg", mode: "add", before: 1.5 } })]);
+    const left = await runKakakTurn(setup("id"), null, "Beras tinggal 1 kg di lemari");
+    expect(items(left)).toEqual([expect.objectContaining({ kind: "ingredient", itemId: id(31), amount: { value: 1, unit: "kg", mode: "set", before: 1.5 } })]);
+  });
+
+  it("doesn't save a name it can't vouch is Indonesian", async () => {
+    const result = await runKakakTurn(setup("en"), null, "Add 2 kg of quinoa to the pantry");
+    expect(result.kind).toBe("message");
   });
 });
 

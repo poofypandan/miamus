@@ -228,3 +228,33 @@ describe("practice conversations", () => {
     expect(suggestions(second).items[0]).toMatchObject({ recurrence: "daily", dueTime: "07:00" });
   });
 });
+
+// Phase 180 (2026-11-14): questions about Miamus, and thanks.
+describe("a question about Miamus", () => {
+  it("is answered with the guide's own entry, as a plain reply, in the owner's language", async () => {
+    const en = await runKakakTurn(setup("en").deps, null, "how would you describe what miamis is for");
+    expect(en).toMatchObject({ kind: "message" });
+    if (en.kind === "message") expect(en.text).toBe("(Practice) Miamus keeps the running of your home in one place: chores, pets, the kitchen and the people who help. You say what should happen once; staff see it on their own phone and tick it off, often with a photo. You only hear about what didn't happen.");
+    const id = await runKakakTurn(setup("id").deps, null, "Apa bedanya tugas dan rutinitas?");
+    expect(id).toMatchObject({ kind: "message" });
+    if (id.kind === "message") expect(id.text).toContain("(Latihan) Tugas adalah pekerjaan rumah");
+  });
+
+  it("finds the entry by what is asked", async () => {
+    const ask = async (question: string) => {
+      const result = await runKakakTurn(setup("en").deps, null, question);
+      return result.kind === "message" ? result.text : result.kind;
+    };
+    expect(await ask("How do I link a staff phone?")).toContain("send the one WhatsApp message");
+    expect(await ask("What do staff see?")).toContain("tap the eye beside a person");
+    expect(await ask("Where are the recipes?")).toContain("Kitchen → Menu → New recipe");
+    expect(await ask("What is the weather like?")).toBe("(Practice) I'm not sure about that one. The people who make Miamus read what you send from Settings → Send feedback.");
+  });
+
+  it("answers thanks with thanks, and still sets up a request that only sounds like a question", async () => {
+    expect(await runKakakTurn(setup("id").deps, null, "terima kasih")).toMatchObject({ kind: "message", text: "(Latihan) Sama-sama." });
+    expect(await runKakakTurn(setup("en").deps, null, "Thank you!")).toMatchObject({ kind: "message", text: "(Practice) You're welcome." });
+    // "Can you buy eggs?" is shopping, not a question about Miamus.
+    suggestions(await runKakakTurn(setup("en").deps, null, "Can you buy eggs?"));
+  });
+});
