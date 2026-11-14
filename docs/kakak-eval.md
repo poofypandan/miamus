@@ -240,10 +240,11 @@ compare with the 2026-11-14 01:30 run (Opus medium: 97%, 0 must-never, 0 raw
 leaks):
 
 ```bash
-npm run eval:kakak -- --model opus --effort medium
+zsh tests/kakak/run-check.sh
 ```
 
-About US$1.30 for 109 sentences. The bar is the same: at least 90% and zero
+It reads the key once, hidden, as the comparison does. About US$1.30 for 109
+sentences (`zsh tests/kakak/run-check.sh K131,K146` plays only those). The bar is the same: at least 90% and zero
 must-never. Watch three things the change could move: raw leaks and
 fallbacks (she now writes a sentence beside every card), retries (plain
 replies sent back), and the `about_miamus` and `food` groups, which hold the
