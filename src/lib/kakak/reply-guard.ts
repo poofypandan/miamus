@@ -15,8 +15,14 @@ import { KAKAK_TOOLS, KAKAK_TOOL_NAMES } from "./tools";
 /** The household block's references: M1 (the owner), S people, P pets, R rooms, I items (context.ts). */
 export const REFERENCE = /\b[MSPRI]\d+\b/;
 export const ISO_DATE = /\b\d{4}-\d{2}-\d{2}\b/;
-/** Longer than Kakak's one or two short sentences: a note or an explanation. */
+/** Beside a card: longer than Kakak's one or two short sentences is a note or an explanation. */
 export const MAX_REPLY_CHARS = 200;
+/**
+ * A reply on its own may be an answer about Miamus (Phase 180): up to three
+ * short sentences and where to go. At 200, "what is Miamus for?" was dropped
+ * for being an answer, and the owner read "Sorry, I didn't catch that."
+ */
+export const MAX_ANSWER_CHARS = 480;
 
 function propertyNames(schema: unknown, into: Set<string>): Set<string> {
   if (!schema || typeof schema !== "object") return into;
@@ -76,10 +82,10 @@ export function noteTells(text: string): NoteTell[] {
   return tells;
 }
 
-/** Every reason the text must not reach the owner; empty when it may. */
-export function replyTells(text: string, locale: KakakLocale): ReplyTell[] {
+/** Every reason the text must not reach the owner; empty when it may. `max`: the longest it may be. */
+export function replyTells(text: string, locale: KakakLocale, max: number = MAX_REPLY_CHARS): ReplyTell[] {
   const tells: ReplyTell[] = noteTells(text);
-  if (text.length > MAX_REPLY_CHARS) tells.push("too_long");
+  if (text.length > max) tells.push("too_long");
   if (looksLikeWrongLanguage(text, locale)) tells.push("language");
   return tells;
 }
@@ -107,7 +113,37 @@ export function guardReplyText(kind: "question" | "suggestions" | "message", tex
   const trimmed = text.trim();
   if (kind === "question") return { text: "", tells: [] };
   if (!trimmed) return { text: "", tells: [] };
-  const tells = replyTells(trimmed, locale);
+  const tells = replyTells(trimmed, locale, kind === "message" ? MAX_ANSWER_CHARS : MAX_REPLY_CHARS);
   if (tells.length === 0) return { text: trimmed, tells };
   return { text: kind === "message" ? safeReplyLine(locale) : "", tells };
+}
+
+/** Why a plain reply can't be shown: the guard's tells, or no words at all. */
+export type ReplyProblem = ReplyTell | "empty";
+
+/** What is wrong with a plain reply (a turn with no tool), or nothing. */
+export function replyProblems(text: string, locale: KakakLocale): ReplyProblem[] {
+  const trimmed = text.trim();
+  return trimmed ? replyTells(trimmed, locale, MAX_ANSWER_CHARS) : ["empty"];
+}
+
+/** How every correction starts, so practice mode never reads one as the owner's words. */
+export const CORRECTION_PREFIX = "(From Miamus, not the owner:";
+
+/**
+ * What the route says to Kakak, once, when her plain reply can't be shown
+ * (engine.ts): why, and to say it again. Before this, a reply that failed
+ * the guard became "Sorry, I didn't catch that", though she had understood.
+ * Short enough for the history's limit on a typed turn (MAX_TYPED).
+ */
+export function correctionFor(problems: readonly ReplyProblem[], locale: KakakLocale): string {
+  const language = locale === "id" ? "Bahasa Indonesia" : "English";
+  const why: string[] = [];
+  if (problems.includes("empty")) why.push("It had no words for the owner.");
+  if (problems.includes("too_long")) why.push(`It was longer than ${MAX_ANSWER_CHARS} characters.`);
+  if (problems.includes("language")) why.push(`It was not in ${language}.`);
+  if (problems.some((p) => p === "reference" || p === "date" || p === "internal_name")) {
+    why.push("It showed a reference such as S1, a date written as 2026-11-25, or a tool or field name.");
+  }
+  return `${CORRECTION_PREFIX} your last reply was not shown. ${why.join(" ")} Reply to the owner again now, in ${language}: at most three short sentences, in plain words.)`;
 }

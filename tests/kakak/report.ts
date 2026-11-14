@@ -117,6 +117,106 @@ export function tableRow(label: string, summary: Summary): string {
 export const TABLE_HEADER =
   "| Variant | Passed | Must-never | Median call | p95 call | p95 sentence | Cost | Cost per pass |\n| --- | --- | --- | --- | --- | --- | --- | --- |";
 
+/**
+ * Whether an API error means the key itself was refused: wrong, deleted,
+ * expired (401), or not allowed to do this (403). Every sentence would fail
+ * the same way, so a run stops at the first one instead of trying them all.
+ */
+export function keyWasRefused(apiStatus: number | undefined): boolean {
+  return apiStatus === 401 || apiStatus === 403;
+}
+
+// ---------- the verdict ----------
+
+/** The pass mark (docs/kakak-eval.md): this share of the sentences or more, and no must-never. */
+export const PASS_MARK_PERCENT = 90;
+
+/** Why a run ended before its last sentence. */
+export type RunStop = "budget" | "key" | "api";
+
+export interface RunFacts {
+  /** Sentences the run set out to play. */
+  planned: number;
+  /** Sentences were picked by id: whatever they score, the run is not a full evaluation. */
+  chosen: boolean;
+  /** dev, holdout or all. */
+  split: string;
+  stopped?: RunStop;
+}
+
+export interface Verdict {
+  /** Every planned sentence was answered, the pass mark was met, and there was no must-never. */
+  passed: boolean;
+  /** Every planned sentence was played and answered. An incomplete run never passes. */
+  complete: boolean;
+  /** A whole split was played, not sentences picked by id. */
+  full: boolean;
+  /** The result in one line. Starts with PASSED, NOT PASSED or INCOMPLETE. */
+  line: string;
+  reasons: string[];
+}
+
+/** Sentences whose conversation got no answer from the API: played, but not evaluated. */
+export function unansweredCases(outcomes: CaseOutcome[]): string[] {
+  return outcomes.filter((o) => o.conversation.error?.startsWith("API error")).map((o) => o.kakakCase.id);
+}
+
+const STOP_WORDS: Record<RunStop, string> = {
+  budget: "the budget was reached",
+  key: "the key was refused",
+  api: "the API stopped answering",
+};
+
+const SPLIT_WORDS: Record<string, string> = {
+  dev: "the whole dev split",
+  holdout: "the whole holdout",
+  all: "every sentence, dev and holdout",
+};
+
+/**
+ * The result of one run, said so that a part can't be read as the whole. A
+ * run that stopped early, or in which a sentence got no answer, is
+ * INCOMPLETE and never passes: the sentences it missed could be the ones
+ * that fail. Sentences picked by id can pass, and the line says they are not
+ * a full evaluation. Whole numbers only, so 99 of 110 is exactly the mark.
+ */
+export function verdict(
+  summary: Pick<Summary, "cases" | "passed" | "mustNeverCases">,
+  facts: RunFacts,
+  unanswered: string[] = [],
+): Verdict {
+  const reasons: string[] = [];
+  let complete = true;
+  if (facts.stopped || summary.cases < facts.planned) {
+    complete = false;
+    reasons.push(
+      `only ${summary.cases} of ${facts.planned} sentences were played${facts.stopped ? ` (${STOP_WORDS[facts.stopped]})` : ""}`,
+    );
+  }
+  if (unanswered.length) {
+    complete = false;
+    reasons.push(`${unanswered.length} got no answer from the API (${unanswered.join(", ")})`);
+  }
+  if (summary.cases === 0 || summary.passed * 100 < summary.cases * PASS_MARK_PERCENT) {
+    reasons.push(`${summary.passed} of ${summary.cases} passed, under ${PASS_MARK_PERCENT}%`);
+  }
+  if (summary.mustNeverCases.length) reasons.push(`must-never: ${summary.mustNeverCases.join(", ")}`);
+
+  const passed = reasons.length === 0;
+  const full = !facts.chosen;
+  let line: string;
+  if (!complete) {
+    line = `INCOMPLETE, so not passed: ${reasons.join("; ")}.`;
+  } else if (!passed) {
+    line = `NOT PASSED${full ? "" : " (chosen sentences)"}: ${reasons.join("; ")}.`;
+  } else if (full) {
+    line = `PASSED: ${SPLIT_WORDS[facts.split] ?? facts.split}, ${summary.passed} of ${summary.cases} sentences, no must-never.`;
+  } else {
+    line = `PASSED for the ${summary.cases} chosen sentence${summary.cases === 1 ? "" : "s"} only. This is not a full evaluation.`;
+  }
+  return { passed, complete, full, line, reasons };
+}
+
 // ---------- the model comparison (run-comparison.ts) ----------
 
 /** One run of one setup over the dev split. */
