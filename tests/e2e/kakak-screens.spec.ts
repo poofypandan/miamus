@@ -3,8 +3,13 @@ import { HOUSEHOLD_ID } from "../fixtures/household";
 import { installStub } from "./stub-backend";
 import { WHATS_NEW, storageKey } from "../../src/lib/whats-new";
 
-// Phone-size screenshots of Kakak's new screens, in both languages. Not part
-// of the suite: run by hand with SHOTS_DIR set.
+// Phone-size screenshots of Kakak's sheet, in both languages: the first
+// screen, a new ingredient's card, an answer, and a conversation with both
+// sides (2026-11-14). Not part of the suite; run by hand:
+//
+//   SHOTS_DIR=<folder> CI=1 npx playwright test tests/e2e/kakak-screens.spec.ts
+//
+// Test-only: the stubbed backend and the canned replies never ship.
 const DIR = process.env.SHOTS_DIR;
 test.skip(!DIR, "set SHOTS_DIR to take the screenshots");
 test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
