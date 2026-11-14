@@ -48,6 +48,7 @@ let household = "house-a";
 vi.mock("@/lib/tenant", () => ({ getActiveHouseholdId: () => household }));
 
 const queue = await import("@/lib/offline-queue");
+const { ChoreChangedError } = await import("@/lib/chore-settled");
 const photos = (await import("@/lib/photo-queue")) as unknown as {
   ensureUploaded: ReturnType<typeof vi.fn>;
   PhotoNotUploadedError: new (reason: "pending" | "failed") => Error;
@@ -933,5 +934,64 @@ describe("a walk-in's saves go in order (Phase 174; Codex, PR #94)", () => {
     } finally {
       delete (provider as Record<string, unknown>).createTaskException;
     }
+  });
+});
+
+// Staff chore saves refused on 12-13 Nov 2026: a day the server will never
+// write (chore_owner_only, 42501) was read as this phone's sign-in being
+// refused. With a link check that had no clear answer it stayed queued and was
+// resent, refused each time, until the phone was called unlinked; with a clear
+// one it was dropped under a generic "Coba catat lagi".
+describe("a save refused because the chore changed", () => {
+  const OWNER_ONLY = { code: "42501", message: "chore_owner_only", details: null, hint: null, status: 403 };
+  const NOT_THE_TASK = { code: "42501", message: "task_exception_task", details: null, hint: null, status: 403 };
+
+  async function queueChore() {
+    provider.materialiseChoreOccurrence.mockRejectedValue(NO_ANSWER);
+    await queue.submitJob(choreJob());
+    provider.materialiseChoreOccurrence.mockReset();
+  }
+
+  it("is the save's refusal, not the sign-in's, and never retried", () => {
+    expect(queue.isSessionRefusal(OWNER_ONLY)).toBe(false);
+    expect(queue.isSessionRefusal(NOT_THE_TASK)).toBe(false);
+    expect(queue.isRetryable(OWNER_ONLY)).toBe(false);
+    expect(queue.isRetryable(new ChoreChangedError())).toBe(false);
+  });
+
+  it.each(["unknown", "no_answer", "linked"] as const)(
+    "leaves the queue at once and is reported as changed, whatever the link check says (%s)",
+    async (link) => {
+      queue.setLinkCheckForTests(async () => link);
+      await queueChore();
+      provider.materialiseChoreOccurrence.mockRejectedValue(OWNER_ONLY);
+      const report = await queue.drainOutbox();
+      expect(report.changed.map((i) => i.job)).toEqual([choreJob()]);
+      expect(report.refused).toHaveLength(1);
+      expect(report.waiting).toBe(0);
+      expect(report.unlinked).toBe(false);
+      expect(queue.outboxUnlinked()).toBe(false);
+      expect(await stored()).toEqual([]);
+      // Its photos are not this phone's to delete: the draft still holds them.
+      expect(provider.deletePhoto).not.toHaveBeenCalled();
+      // Not sent again by the next pass.
+      await queue.drainOutbox();
+      expect(provider.materialiseChoreOccurrence).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it("is caught before sending when the template no longer allows the day", async () => {
+    await queueChore();
+    provider.materialiseChoreOccurrence.mockRejectedValue(new ChoreChangedError());
+    const report = await queue.drainOutbox();
+    expect(report.changed).toHaveLength(1);
+    expect(provider.updateHouseholdTaskStatus).not.toHaveBeenCalled();
+    expect(await stored()).toEqual([]);
+  });
+
+  it("is thrown at once when sent straight away, so the sheet can say why", async () => {
+    provider.materialiseChoreOccurrence.mockRejectedValue(OWNER_ONLY);
+    await expect(queue.submitJob(choreJob())).rejects.toMatchObject({ message: "chore_owner_only" });
+    expect(await stored()).toEqual([]);
   });
 });

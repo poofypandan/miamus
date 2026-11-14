@@ -1,4 +1,4 @@
-import { ChoreAlreadySettledError } from "@/lib/chore-settled";
+import { ChoreAlreadySettledError, ChoreChangedError } from "@/lib/chore-settled";
 import { applyAmountRules } from "@/lib/kitchen-units";
 import { applyCook, applyUncook, applyUsesChange } from "@/lib/cooked-uses";
 import type { RecipeWithLines } from "@/lib/recipes";
@@ -35,7 +35,7 @@ import type {
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { MOCK_ENTITIES, MOCK_SCHEDULES } from "./mock-seed";
 import type { CreateScheduleInput, DataProvider } from "./types";
-import { isTemplate, longRepeatFloorFor } from "@/lib/chore-recurrence";
+import { canWriteDayOf, isTemplate, longRepeatFloorFor } from "@/lib/chore-recurrence";
 import { isSetUp } from "@/lib/rooms-view";
 import { AREAS } from "@/lib/staff-areas";
 
@@ -925,6 +925,8 @@ export const mockProvider: DataProvider = {
     if (existing) return delay(existing);
     const template = db.householdTasks.find((t) => t.id === templateId);
     if (!template) throw new Error(`Household task ${templateId} not found`);
+    // As the Supabase provider: the database refuses any other day row.
+    if (!canWriteDayOf(template, date)) throw new ChoreChangedError();
     const occurrence: HouseholdTask = {
       ...template,
       id: uid("chore"),
