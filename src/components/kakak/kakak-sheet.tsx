@@ -129,8 +129,20 @@ function Conversation({ onClose }: { onClose: () => void }) {
   const abort = useRef<AbortController | null>(null);
   /** The last words sent and the history they went with, for "Try again". */
   const lastTurn = useRef<{ words: string; history: KakakHistory | null } | null>(null);
+  /** The owner's latest line, which the sheet scrolls to as the conversation grows. */
+  const latestSaid = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => () => abort.current?.abort(), []);
+
+  // From the second exchange on, the owner's latest words go to the top of
+  // the sheet, so Kakak's reply to them, her card and the mic under it stay
+  // in view instead of sliding below the earlier lines.
+  const lines = said.length;
+  const showing = screen.kind;
+  useEffect(() => {
+    if (lines < 3) return;
+    latestSaid.current?.scrollIntoView({ block: "start" });
+  }, [lines, showing]);
 
   async function send(text: string) {
     const typed = text.trim();
@@ -293,7 +305,11 @@ function Conversation({ onClose }: { onClose: () => void }) {
         <div className="flex flex-col gap-2" data-testid="kakak-said">
           {said.map((line, index) =>
             line.who === "owner" ? (
-              <p key={index} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900">
+              <p
+                key={index}
+                ref={index === said.length - 1 ? latestSaid : undefined}
+                className="max-w-[85%] scroll-mt-2 self-end rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900"
+              >
                 {line.text}
               </p>
             ) : (
@@ -397,6 +413,8 @@ function Conversation({ onClose }: { onClose: () => void }) {
 
       {/* Kakak's pet routines (Phase 173 PR B): once, before the first try, under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-routines-2026-11" />}
+      {/* Kakak answers questions, and adds an ingredient (2026-11-14): the same, in its own week. */}
+      {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-answers-2026-11" />}
 
       {/* Talk to Kakak (voice beta): spoken words go through send() like typed ones. */}
       <KakakVoice

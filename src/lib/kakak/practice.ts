@@ -419,7 +419,8 @@ const FRESH = /\b(ayam|ikan|daging|telur|sayur|buah|susu|tahu|tempe|cabai|cabe|b
  * cooks read ingredient names.
  */
 function newIngredientFrom(household: KakakHousehold, text: string): { name: string; nameEn: string | null } | null {
-  if (!household.ingredientsOn || !has(text, ADDING)) return null;
+  // "Tambah gula ke daftar belanja" is the shopping list's, not the cupboard's.
+  if (!household.ingredientsOn || !has(text, ADDING) || has(text, /\b(belanja|shopping|daftar)\b/)) return null;
   const t = text.toLowerCase();
   const english = EN_GROCERIES.find(([pattern]) => pattern.test(t));
   if (english) {
@@ -439,9 +440,11 @@ function newIngredientFrom(household: KakakHousehold, text: string): { name: str
 
 // ---- Questions about Miamus (Phase 180) ----------------------------------------
 
-const THANKS = /^(?:ok(?:ay)?,?\s+)?(thanks|thank you|thank u|terima kasih|makasih|trims|hi|hello|halo|hai)\b[\s\p{L},!.]{0,24}$/iu;
+// Thanks or a greeting and nothing else: "Hai Ari, pel teras" is a request.
+const THANKS =
+  /^(?:ok(?:ay)?,?\s+)?(?:(?:thanks|thank you|thank u|terima kasih|makasih|trims)(?:,?\s+(?:ya|kak|kakak|so much|a lot|banyak))*|(?:hi|hello|halo|hai)(?:,?\s+(?:kak|kakak))?)[\s!.]*$/i;
 const ASKING =
-  /\?\s*$|^(what|how|where|why|who|which|can i|can you|could you tell|tell me about|explain|apa|apakah|bagaimana|gimana|cara|di mana|dimana|kenapa|mengapa|untuk apa|jelaskan)\b/i;
+  /\?\s*$|^(what|how|where|why|who|which|can i|tell me about|explain|apa|apakah|bagaimana|gimana|cara|di mana|dimana|kenapa|mengapa|untuk apa|jelaskan)\b/i;
 
 /** Words too common to tell one guide entry from another. */
 const COMMON = new Set(
@@ -482,8 +485,14 @@ function intentOf(household: KakakHousehold, text: string): Intent {
   if (!listed && household.ingredientsOn && has(text, ADDING) && amountFrom(text) && !has(text, /\b(beli|belikan|buy)\b/)) {
     return "new_ingredient";
   }
-  // A question, unless it is a request it knows how to set up.
-  if (ASKING.test(text.trim()) && !has(text, /\b(beli|belikan|buy)\b/) && timesFrom(text).length === 0) return "question";
+  // A question, unless it is a request it knows how to set up: "How do I get
+  // Ari to mop on Mondays?" names a chore and who or when, so it is a chore.
+  const t = text.toLowerCase();
+  const request =
+    has(text, /\b(beli|belikan|buy)\b/) ||
+    timesFrom(text).length > 0 ||
+    ((EN_TASKS.some(([pattern]) => pattern.test(t)) || ID_TASK.test(t)) && (findPerson(household, text) !== null || whenFrom(text, household.today) !== null));
+  if (ASKING.test(text.trim()) && !request) return "question";
   if (has(text, /\b(beli|belikan|buy|habis|abis|out of|running low|restock)\b/)) return "shopping";
   if (
     findPets(household, text).length > 0 &&
@@ -494,7 +503,6 @@ function intentOf(household: KakakHousehold, text: string): Intent {
   }
   // A chore word wins over a food word: "Bersihkan kulkas" is cleaning the
   // fridge, not food in it (Codex, PR #31).
-  const t = text.toLowerCase();
   if (EN_TASKS.some(([pattern]) => pattern.test(t)) || ID_TASK.test(t)) return "chore";
   if (has(text, /\b(kulkas|fridge|freezer|kue|lauk|sisa|leftover|leftovers|dikasih|oleh-oleh|gift|cake|soup|sup|rendang|dari tante|from)\b/)) {
     return "food";

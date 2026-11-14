@@ -256,5 +256,13 @@ describe("a question about Miamus", () => {
     expect(await runKakakTurn(setup("en").deps, null, "Thank you!")).toMatchObject({ kind: "message", text: "(Practice) You're welcome." });
     // "Can you buy eggs?" is shopping, not a question about Miamus.
     suggestions(await runKakakTurn(setup("en").deps, null, "Can you buy eggs?"));
+    // A greeting in front of a request is still the request.
+    expect(suggestions(await runKakakTurn(setup("id").deps, null, "Hai Ari pel teras besok")).items[0]).toMatchObject({ kind: "chore" });
+    // A request dressed as a question is set up, not explained.
+    expect(suggestions(await runKakakTurn(setup("en").deps, null, "How do I get Ari to mop the terrace every Monday?")).items[0]).toMatchObject({
+      kind: "chore",
+      title: "Pel teras",
+      recurrence: "weekly",
+    });
   });
 });

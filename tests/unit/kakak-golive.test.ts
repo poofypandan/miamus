@@ -144,12 +144,14 @@ describe("classifyApiError", () => {
 describe("kakakExamples", () => {
   it("uses the household's own first names, in the owner's language", () => {
     const en = kakakExamples({ locale: "en", staffNames: ["Ari Wibowo"], petNames: ["Mochi"] });
-    expect(en.map((e) => e.kind)).toEqual(["chore", "shopping", "reminder", "pet", "food"]);
+    expect(en.map((e) => e.kind)).toEqual(["chore", "shopping", "reminder", "pet", "food", "question"]);
+    expect(en[5].text).toBe("What's the difference between a chore and a routine?");
     expect(en[0].text).toBe("Ari waters the plants every Monday at 8");
     expect(en[3].text).toBe("Feed Mochi at 7 am and 5 pm");
     const id = kakakExamples({ locale: "id", staffNames: ["Ari"], petNames: ["Mochi"] });
     expect(id[0].text).toBe("Ari siram tanaman setiap Senin jam 8");
     expect(id[2].text).toMatch(/^Ingatkan saya/);
+    expect(id[5].text).toBe("Apa bedanya tugas dan rutinitas?");
   });
 
   it("keeps a pet's whole name, as the household block does", () => {
@@ -196,8 +198,11 @@ describe("every example works in practice mode", () => {
         kakakExamples({ locale, staffNames: ["Ari"], petNames: [] }),
       )) {
         const result = await runKakakTurn(deps, null, example.text);
-        // A question (the food's date) or a card; never "I can't do that".
-        expect([example.kind, result.kind]).toEqual([example.kind, example.kind === "food" ? "question" : "suggestions"]);
+        // A question (the food's date), a card, or, for the question about
+        // Miamus, the guide's own answer; never "I can't do that".
+        const expected = example.kind === "food" ? "question" : example.kind === "question" ? "message" : "suggestions";
+        expect([example.kind, result.kind]).toEqual([example.kind, expected]);
+        if (result.kind === "message") expect(result.text).toMatch(locale === "id" ? /Tugas adalah pekerjaan rumah/ : /A chore is a job in the house/);
         if (result.kind === "suggestions" && example.kind === "reminder") {
           expect(result.items[0]).toMatchObject({ kind: "chore", assignedTo: id(3), dueTime: "19:00" });
           expect((result.items[0] as { title: string }).title).toMatch(/^Bersihkan filter AC/);

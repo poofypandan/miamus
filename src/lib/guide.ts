@@ -410,7 +410,7 @@ export const GUIDE: readonly GuideEntry[] = [
       id: "Kakak adalah asisten AI di Miamus. Ketik atau ucapkan yang Anda perlukan, lalu Kakak menyiapkan kartunya: tugas, belanja, rutinitas hewan, makanan, dan bahan masakan. Tidak ada yang disimpan sebelum Anda konfirmasi. Nyalakan atau matikan Kakak di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
-    covers: ["kakak-routines-2026-11", "kakak-voice-2026-11"],
+    covers: ["kakak-routines-2026-11", "kakak-voice-2026-11", "kakak-answers-2026-11"],
   },
   {
     id: "weak-signal",

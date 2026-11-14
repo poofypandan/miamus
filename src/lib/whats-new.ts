@@ -28,6 +28,32 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 2026-11-14 (Phase 180 step 1, and a new ingredient with its amount):
+    // a card in the Kakak sheet before the first try, for households with
+    // Kakak only, under the calm-start rules (one card a week, never to new
+    // households), so it waits behind this week's card. The sheet's last
+    // example ("What's the difference between a chore and a routine?") is
+    // the tutorial for everyone else.
+    id: "kakak-answers-2026-11",
+    date: "2026-11-14",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: ask Kakak how Miamus works", id: "Baru: tanya Kakak cara pakai Miamus" },
+    steps: {
+      en: [
+        "Ask her anything about Miamus: \u201cHow do I link a staff phone?\u201d She answers in a sentence or two and says where to find it.",
+        "She can add an ingredient that isn't on your list yet, with its amount: \u201cAdd 2 kg of brown rice to the cupboard\u201d. For one that's listed, say how much you bought, or how much is left.",
+        "The conversation stays on screen as you go. Nothing is saved until you confirm.",
+      ],
+      id: [
+        "Tanya apa saja tentang Miamus: \u201cBagaimana cara menghubungkan HP staf?\u201d Kakak menjawab singkat dan menunjukkan tempatnya.",
+        "Kakak bisa menambah bahan masakan yang belum ada di daftar, lengkap dengan jumlahnya: \u201cTambah beras merah 2 kg di lemari\u201d. Untuk yang sudah ada, bilang beli berapa, atau sisa berapa.",
+        "Percakapannya tetap tampil selama Anda bicara. Tidak ada yang disimpan sebelum Anda konfirmasi.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Phase 177: shown on Kitchen → Menu's week while the Kitchen switch is
     // on, under the calm-start rules (one card a week, never to new
     // households), so it may wait behind this week's card.

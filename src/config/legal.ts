@@ -201,8 +201,19 @@ export const LEGAL = {
   // profile while it exists. It changes only what the phone shows, never
   // what staff can report. No new service, nothing sent to Kakak; not yet in
   // the household export (added when the export is next re-created).
-  policyVersion: "2026-11-13.3",
-  effectiveDate: { en: "13 November 2026", id: "13 November 2026" },
+  // 2026-11-14.1: Kakak answers questions and adds ingredients (Phase 180
+  // step 1; no migration) — Kakak can answer a question about how Miamus
+  // works, from Miamus's own guide (no household data in it), and can
+  // suggest an ingredient that isn't listed yet, with its amount, saved
+  // only when the admin confirms, exactly as Add ingredient saves it. Each
+  // request also says which parts of Miamus the household has switched off
+  // (Repairs, Bills and upkeep, Kitchen amounts; Pets and Food at home were
+  // already said), so she doesn't describe a screen that isn't there.
+  // Amounts and units are never sent: the server works out how an amount
+  // lands. No new kind of personal data, no new service or region;
+  // Anthropic's retention is unchanged.
+  policyVersion: "2026-11-14.1",
+  effectiveDate: { en: "14 November 2026", id: "14 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on
