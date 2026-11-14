@@ -11,7 +11,8 @@ import { runKakakTurn, toolsFor, type CallRecord, type TurnDeps, type TurnResult
 import { renderHouseholdBlock, type KakakHousehold } from "@/lib/kakak/household";
 import { practiceClient } from "@/lib/kakak/practice";
 import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
-import { isSaveableSuggestion, toSuggestion, type StaffAreasSuggestion } from "@/lib/kakak/suggestions";
+import { KAKAK_CLIENT_VERSION } from "@/lib/kakak/client";
+import { clientVersionFor, isSaveableSuggestion, needsNewerApp, toSuggestion, type StaffAreasSuggestion } from "@/lib/kakak/suggestions";
 import { KAKAK_TOOLS } from "@/lib/kakak/tools";
 import { validateToolCall } from "@/lib/kakak/validate";
 import { withAreas } from "@/lib/staff-areas";
@@ -68,11 +69,13 @@ describe("the household block", () => {
   });
 
   it("flags the co-owner and Repairs switched off without writing either into the block", () => {
-    const { household } = built({ repairsOn: false });
+    const { household } = built({ repairsOn: false, featuresRead: true });
     expect(household.people.find((p) => p.ref === "S3")).toEqual({ ref: "S3", name: "Rina", owner: true });
     expect(household.repairsOff).toBe(true);
     expect(built().household.repairsOff).toBeUndefined();
-    expect(built({ repairsOn: null }).household.repairsOff).toBeUndefined();
+    expect(built({ repairsOn: null, featuresRead: true }).household.repairsOff).toBeUndefined();
+    // A failed read of the switches says nothing is off.
+    expect(built({ repairsOn: false }).household.repairsOff).toBeUndefined();
   });
 });
 
@@ -90,8 +93,10 @@ describe("the tool", () => {
     expect(KAKAK_SYSTEM_PROMPT).toContain("- set_staff_areas:");
     expect(KAKAK_SYSTEM_PROMPT).toContain("# Staff areas");
     const cantDo = KAKAK_SYSTEM_PROMPT.slice(KAKAK_SYSTEM_PROMPT.indexOf("# What you can't do yet"));
-    expect(cantDo).toContain("other than an ingredient's place and date and what a staff member sees");
+    expect(cantDo).toContain("change or delete anything other than what a staff member sees");
     expect(cantDo).not.toMatch(/^- what a staff member sees/m);
+    // PR #137's "set by hand … the eye next to the person" pointer is gone.
+    expect(KAKAK_SYSTEM_PROMPT).not.toContain("the eye next to the person");
     // She doesn't pick someone for kitchen work or a repair whose area is off.
     expect(KAKAK_SYSTEM_PROMPT).toContain("never pick someone whose kitchen is off");
   });
@@ -164,10 +169,10 @@ describe("the suggestion", () => {
       nobody: [],
     });
     // Repairs and Pet routines only when the home has them, as on the owner's dialog.
-    expect(suggest(call({ hide: ["kitchen"] }), { repairsOn: false, hasPets: false }).areas).toEqual(["home", "kitchen"]);
+    expect(suggest(call({ hide: ["kitchen"] }), { repairsOn: false, featuresRead: true, hasPets: false }).areas).toEqual(["home", "kitchen"]);
     // An area the card changes always shows, even with its feature off, so
     // the owner sees everything Save writes (Codex, PR #140).
-    const offRepairs = suggest(call({ hide: ["kitchen", "repairs"] }), { repairsOn: false });
+    const offRepairs = suggest(call({ hide: ["kitchen", "repairs"] }), { repairsOn: false, featuresRead: true });
     expect(offRepairs.areas).toEqual(["home", "pets", "kitchen", "repairs"]);
     expect(describeSuggestion(offRepairs, "en").rows.at(-1)).toEqual({ label: "Repairs", value: "Off (was on)" });
   });
@@ -236,6 +241,14 @@ describe("the suggestion", () => {
     expect(describeSuggestion(item, "id").note).toBe(
       "Tugas yang Anda berikan langsung ke Ari selalu terlihat. Tidak ada yang akan melihat rutinitas hewan, jadi semua staf akan melihatnya.",
     );
+  });
+
+  it("is sent only to a page that can show it: an older page is asked to reopen Miamus", () => {
+    const item = suggest(call());
+    expect(clientVersionFor(item)).toBe(3);
+    expect(KAKAK_CLIENT_VERSION).toBeGreaterThanOrEqual(3);
+    for (const version of [1, 2]) expect(needsNewerApp(item, version)).toBe(true);
+    expect(needsNewerApp(item, 3)).toBe(false);
   });
 
   it("uses no emoji or symbol icons in its words", () => {

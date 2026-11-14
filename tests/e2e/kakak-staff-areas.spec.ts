@@ -157,3 +157,31 @@ test("Bahasa Indonesia, practice mode: the real route reads the request, and Sim
   expect(patches(stub)).toBe(1);
   expect(stub.seen.realBackend).toEqual([]);
 });
+
+test("a page from before this card (v2) is asked to reopen Miamus, and nothing is saved", async ({ context, page }) => {
+  const staff = [person(STAFF_ID, "Ari"), person(OWNER_PROFILE_ID, "Moshe", { user_id: OWNER })];
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    staff,
+    household: { hasPets: true },
+    features: { repairs: true },
+  });
+  // The real route in practice mode, asked as a page loaded before the
+  // staff-areas card existed would ask it.
+  await page.route("**/api/kakak", (route) =>
+    route.continue({ postData: JSON.stringify({ ...route.request().postDataJSON(), v: 2 }) }),
+  );
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("Hide the kitchen and repairs from Ari");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("I've just been updated. Please close Miamus, open it again, and tell me once more.")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText("What Ari sees")).toHaveCount(0);
+  expect(patches(stub)).toBe(0);
+  expect(staff.find((p) => p.id === STAFF_ID)?.hidden_areas).toEqual([]);
+});

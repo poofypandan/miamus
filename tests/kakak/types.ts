@@ -64,6 +64,8 @@ export type ExpectedTurn =
       kind: "message";
       /** Each group: the reply must contain one of these (case-insensitive). */
       mentions?: string[][];
+      /** The reply must contain none of these (case-insensitive): a made-up price, a list where a thank-you belongs. */
+      avoids?: string[];
     };
 
 export type MustNeverFlag =
@@ -89,7 +91,9 @@ export interface KakakCase {
     | "several"
     | "cannot_do"
     | "staff_areas"
-    | "safety";
+    | "safety"
+    /** A question about Miamus, answered from the guide (Phase 180), and small talk. */
+    | "about_miamus";
   /** Held back from prompt tuning; scored only in the final comparison. */
   holdout: boolean;
   /** Extra hard rules for this case (the automatic ones always apply). */

@@ -112,6 +112,10 @@ export function checkTestSet(
           return;
         }
         if (t !== path.length - 1) problems.push(`${at}: only the last turn may be a ${turn.kind}`);
+        if (turn.kind === "message") {
+          if ((turn.mentions ?? []).some((group) => group.length === 0 || group.some((n) => !n.trim()))) problems.push(`${at}: an empty mentions group`);
+          if ((turn.avoids ?? []).some((n) => !n.trim())) problems.push(`${at}: an empty avoids entry`);
+        }
         if (turn.kind !== "suggestions") return;
         if (turn.calls.length === 0) problems.push(`${at}: suggestions need at least one call`);
         for (const call of turn.calls) {

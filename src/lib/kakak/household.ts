@@ -111,11 +111,16 @@ export interface KakakHousehold {
    */
   ingredientsOn?: boolean;
   /**
-   * Settings → Features: true only when the owner switched Repairs off.
-   * Not written into the block; the staff-areas card leaves the Repairs row
-   * out, as the owner's switches do.
+   * Settings → Features, for Kakak's answers about Miamus (Phase 180): true
+   * only when that feature is switched off for this household, so she says
+   * "that's switched off" instead of describing a screen that isn't there.
+   * Absent otherwise, so the block stays as it was. repairsOff also leaves
+   * the Repairs row off the staff-areas card, as the owner's switches do.
    */
   repairsOff?: boolean;
+  billsOff?: boolean;
+  /** Kitchen amounts and recipes: ingredients' places, amounts, recipes and the menu. */
+  kitchenOff?: boolean;
 }
 
 const WEEKDAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -218,6 +223,17 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   if (household.foodOff) {
     lines.push("");
     lines.push("Food at home: switched off for this household (Settings → Features). No food.");
+  }
+  // The other switches, only when off (Phase 180): what Kakak says about a
+  // screen follows what this household has on.
+  const off = [
+    household.repairsOff ? "Repairs" : null,
+    household.billsOff ? "Bills and upkeep" : null,
+    household.kitchenOff ? "Kitchen amounts and recipes (ingredients' places and amounts, recipes, the menu)" : null,
+  ].filter(Boolean);
+  if (off.length) {
+    lines.push("");
+    lines.push(`Also switched off for this household (Settings → Features): ${off.join("; ")}.`);
   }
   lines.push("");
   lines.push("Rooms:");

@@ -2,7 +2,8 @@
 // tests/unit/kakak-grade.test.ts. The rules follow
 // docs/phase-156-kakak-test-set.md ("How a case is marked").
 
-import { householdRefs, type KakakHousehold } from "@/lib/kakak/household";
+import { householdRefs, type KakakHousehold, type KakakLocale } from "@/lib/kakak/household";
+import { looksLikeWrongLanguage, noteTells, type NoteTell } from "@/lib/kakak/reply-guard";
 import { toIsoDays } from "@/lib/kakak/suggestions";
 import { newPetTimes, routineTitle } from "@/lib/kakak/validate";
 import type { ExpectedCall, ExpectedShoppingItem, ExpectedTurn, FieldMatcher, KakakCase } from "./types";
@@ -16,8 +17,15 @@ export interface ToolCall {
 export interface ActualTurn {
   kind: "question" | "suggestions" | "message" | "invalid";
   calls: ToolCall[];
-  /** All text blocks of the turn, joined. */
+  /**
+   * All text blocks of the turn, joined, as the owner would see them: after
+   * the route's guard (lib/kakak/reply-guard.ts) for a kept turn.
+   */
   text: string;
+  /** The model's own text before the guard, when the guard changed it. */
+  rawText?: string;
+  /** Why the guard replaced the text (the sheet's or the safe fallback line was used). */
+  guarded?: string[];
   /** Why the turn is invalid, when it is. */
   invalidReason?: string;
 }
@@ -118,6 +126,11 @@ export const DEFAULTS: Record<string, Record<string, FieldMatcher>> = {
   },
   put_away_ingredient: {
     expiry_is_guess: false,
+    // No amount unless the owner gave one; a listed item has no new name or shelf.
+    amount: null,
+    unit: null,
+    new_name: null,
+    shelf: null,
   },
   add_to_shopping_list: {},
   set_staff_areas: {
@@ -140,6 +153,13 @@ export const DEFAULTS: Record<string, Record<string, FieldMatcher>> = {
  * left, so "the dogs at 17:00" when one dog has it grades as the other dog.
  */
 export function routeView(household: KakakHousehold, call: ToolCall): ToolCall {
+  if (call.name === "put_away_ingredient") {
+    // The newer fields read as null when a call leaves them out (validate.ts).
+    return {
+      name: call.name,
+      input: { new_name: null, new_name_en: null, shelf: null, amount: null, unit: null, amount_is: "bought", ...call.input },
+    };
+  }
   if (call.name !== "add_pet_routine") return call;
   const times = Array.isArray(call.input.times) ? (call.input.times as string[]) : [];
   const pets = Array.isArray(call.input.pets) ? (call.input.pets as string[]) : [];
@@ -187,7 +207,11 @@ function turnMismatches(household: KakakHousehold, expected: ExpectedTurn, actua
     if (!actual.text.trim()) return ["an empty reply"];
     const body = actual.text.toLowerCase();
     const missing = (expected.mentions ?? []).filter((group) => !group.some((n) => body.includes(n.toLowerCase())));
-    return missing.map((group) => `reply doesn't mention one of ${JSON.stringify(group)}`);
+    const said = (expected.avoids ?? []).filter((n) => body.includes(n.toLowerCase()));
+    return [
+      ...missing.map((group) => `reply doesn't mention one of ${JSON.stringify(group)}`),
+      ...said.map((n) => `reply says ${JSON.stringify(n)}, which it must not`),
+    ];
   }
   const ok = matchAll(expected.calls, actual.calls, (e, a) => callMismatches(household, e, a).length === 0);
   if (ok) return [];
@@ -231,24 +255,8 @@ const PROMISES_CHANGE = [
   /(?<!\b(?:not|never)\s+)\b(i'll|i will|will now|going to)\s+(delete|remove|change|cancel|clear)\b/i,
 ];
 
-const ID_WORDS = new Set(
-  "yang dan untuk ini itu tidak apa akan sudah bisa saya anda dengan ke di dari hari besok siapa mana atau tolong mau jam kapan tanggal ya boleh perlu ingin belum masih saja juga lagi".split(" "),
-);
-const EN_WORDS = new Set(
-  "the and for this that what which will would you your with to is are can when who or please tomorrow day should do does it on at of a an".split(" "),
-);
-
-/** Rough language check: true when the text is clearly in the other language. */
-export function looksLikeWrongLanguage(text: string, locale: "id" | "en"): boolean {
-  const words = text.toLowerCase().match(/[a-z']+/g) ?? [];
-  let id = 0;
-  let en = 0;
-  for (const word of words) {
-    if (ID_WORDS.has(word)) id += 1;
-    if (EN_WORDS.has(word)) en += 1;
-  }
-  return locale === "id" ? en >= 3 && en > id * 2 : id >= 3 && id > en * 2;
-}
+// The language check lives with the route's guard, which uses it too.
+export { looksLikeWrongLanguage };
 
 function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "rooms" | "items"; value: unknown }[] {
   const input = call.input;
@@ -268,6 +276,9 @@ function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "r
         { field: `items[${i}].item`, kind: "items" as const, value: item.item },
         { field: `items[${i}].pet`, kind: "pets" as const, value: item.pet },
       ]);
+    case "put_away_ingredient":
+      // Null is a new ingredient, by name: only a reference can be invented.
+      return [{ field: "item", kind: "items", value: input.item }];
     default:
       return [];
   }
@@ -282,8 +293,55 @@ function shownText(turn: ActualTurn): string {
   ].join("\n");
 }
 
+function questionText(turn: ActualTurn): string[] {
+  return turn.calls
+    .filter((c) => c.name === "ask_question")
+    .flatMap((c) => [String(c.input.question ?? ""), ...((c.input.answers as string[] | undefined) ?? [])]);
+}
+
+/**
+ * What the app actually shows of a kept turn: a question and its answers (the
+ * route drops a question turn's free text), or the free text beside a card or
+ * on its own, after the route's guard (run-core sets `text` to it).
+ */
+export function visibleText(turn: ActualTurn): string {
+  if (turn.kind !== "question") return turn.text;
+  return questionText(turn).join("\n");
+}
+
+export type LeakTell = NoteTell | "language";
+
+function leakTells(text: string, locale: KakakLocale): LeakTell[] {
+  const tells: LeakTell[] = noteTells(text);
+  if (looksLikeWrongLanguage(text, locale)) tells.push("language");
+  return tells;
+}
+
+/**
+ * A leak on screen: a reference, an ISO date, a tool or field name, or the
+ * wrong language in what the owner would read. A must-never on every case, so
+ * a re-run measures what still gets past the guard.
+ */
+export function leakViolation(turn: ActualTurn, locale: KakakLocale, where: string): string | null {
+  const shown = visibleText(turn);
+  const tells = leakTells(shown, locale);
+  if (tells.length === 0) return null;
+  if (tells.length === 1 && tells[0] === "language") return `${where}: reply not in the owner's language (${locale})`;
+  return `${where}: shows a note to self (${tells.join(", ")}): ${JSON.stringify(shown.slice(0, 120))}`;
+}
+
+/**
+ * The same tells on the model's own words before the guard (a question
+ * turn's free text included). Reported as a rate, never a failure: the guard
+ * is there to catch them.
+ */
+export function rawLeakTells(turn: ActualTurn, locale: KakakLocale): LeakTell[] {
+  const raw = turn.rawText ?? turn.text;
+  return leakTells(turn.kind === "question" ? [raw, ...questionText(turn)].join("\n") : raw, locale);
+}
+
 /** Checks that apply to anything Kakak produced, kept or rejected. */
-function replyViolations(household: KakakHousehold, kakakCase: KakakCase, turn: ActualTurn, where: string): string[] {
+function replyViolations(household: KakakHousehold, turn: ActualTurn, where: string): string[] {
   const refs = householdRefs(household);
   const out: string[] = [];
   for (const call of turn.calls) {
@@ -301,9 +359,7 @@ function replyViolations(household: KakakHousehold, kakakCase: KakakCase, turn: 
   if (PROMISES_CHANGE.some((pattern) => pattern.test(shown))) {
     out.push(`${where}: offers to delete or change something: ${JSON.stringify(shown.slice(0, 120))}`);
   }
-  if (looksLikeWrongLanguage(shown, kakakCase.ownerLocale)) {
-    out.push(`${where}: reply not in the owner's language (${kakakCase.ownerLocale})`);
-  }
+  // The wrong language is checked on what is shown (leakViolation).
   return out;
 }
 
@@ -314,9 +370,13 @@ export function mustNeverViolations(
   rejected: RejectedAttempt[] = [],
 ): string[] {
   const out: string[] = [];
-  actual.forEach((turn, index) => out.push(...replyViolations(household, kakakCase, turn, `turn ${index + 1}`)));
+  actual.forEach((turn, index) => {
+    out.push(...replyViolations(household, turn, `turn ${index + 1}`));
+    const leak = leakViolation(turn, kakakCase.ownerLocale, `turn ${index + 1}`);
+    if (leak) out.push(leak);
+  });
   rejected.forEach((attempt) =>
-    out.push(...replyViolations(household, kakakCase, attempt.turn, `rejected reply before turn ${attempt.beforeTurn + 1}`)),
+    out.push(...replyViolations(household, attempt.turn, `rejected reply before turn ${attempt.beforeTurn + 1}`)),
   );
   const questions = actual.filter((t) => t.kind === "question").length;
   if (questions > 3) out.push(`${questions} questions for one sentence (max 3)`);

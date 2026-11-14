@@ -5020,16 +5020,30 @@
       "paths": [
         [
           {
-            "kind": "message",
-            "mentions": [
-              [
-                "Bahan masakan"
-              ]
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": null,
+                  "new_name": {
+                    "textHas": [
+                      [
+                        "tongkol"
+                      ]
+                    ]
+                  },
+                  "shelf": "fresh_food",
+                  "kept_in": "freezer",
+                  "expiry": "set",
+                  "expires_on": "2026-11-30"
+                }
+              }
             ]
           }
         ]
       ],
-      "note": "Phase 176: a raw ingredient that isn't listed is never add_food; Kakak says it can be added in Dapur → Makanan → Tambah bahan masakan."
+      "note": "Phase 176, changed 2026-11-14: a raw ingredient that isn't listed is never add_food, and no longer sent to the form: Kakak suggests it as a new ingredient, on the fresh shelf, with the owner's date and no amount (none was given)."
     },
     {
       "id": "K116",
@@ -5169,7 +5183,7 @@
       "ownerLocale": "id",
       "lang": "id",
       "category": "staff_areas",
-      "holdout": true,
+      "holdout": false,
       "paths": [
         [
           {
@@ -5360,7 +5374,7 @@
       "ownerLocale": "id",
       "lang": "id",
       "category": "staff_areas",
-      "holdout": true,
+      "holdout": false,
       "paths": [
         [
           {
@@ -5493,6 +5507,740 @@
         ]
       ],
       "note": "Budi's kitchen is off, but the owner names him: what is given by name always shows."
+    },
+    {
+      "id": "K131",
+      "sentence": "how would you describe what miamis is for",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "home",
+                "house"
+              ],
+              [
+                "staff",
+                "chores",
+                "pets",
+                "kitchen"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "The owner's own sentence, 14 Nov, voice-typed ('miamis'). She answered, and the guard dropped the answer for being longer than a card's sentence: the owner read 'Sorry, I didn't catch that.' Answered from the guide's first entry."
+    },
+    {
+      "id": "K132",
+      "sentence": "Miamus itu untuk apa?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "rumah"
+              ],
+              [
+                "staf",
+                "tugas",
+                "hewan",
+                "dapur"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "The same question in Bahasa Indonesia."
+    },
+    {
+      "id": "K133",
+      "sentence": "What's the difference between a chore and a routine?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "chore"
+              ],
+              [
+                "routine"
+              ],
+              [
+                "pet"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Guide: Chores and routines. The sheet's own example question."
+    },
+    {
+      "id": "K134",
+      "sentence": "Bagaimana cara menghubungkan HP staf?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "WhatsApp",
+                "link"
+              ],
+              [
+                "Pengaturan"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Guide: Linking a staff phone, with the screen's name as the guide writes it."
+    },
+    {
+      "id": "K135",
+      "sentence": "What do my staff see on their phones?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Settings"
+              ],
+              [
+                "eye",
+                "tasks",
+                "Bahasa Indonesia"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Guide: What staff see."
+    },
+    {
+      "id": "K136",
+      "sentence": "Segera dipakai itu maksudnya apa?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "seminggu",
+                "minggu",
+                "kedaluwarsa"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Guide: Ingredients: places and Use soon. A word on a screen, asked about."
+    },
+    {
+      "id": "K137",
+      "sentence": "How much does Miamus cost per month?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "not sure",
+                "unsure",
+                "don't know",
+                "don't have",
+                "can't say",
+                "can't tell",
+                "feedback"
+              ]
+            ],
+            "avoids": [
+              "$",
+              "Rp",
+              "IDR",
+              "USD"
+            ]
+          }
+        ]
+      ],
+      "note": "Not in the guide: she isn't sure, and says where to ask. Never a price, a plan or a date."
+    },
+    {
+      "id": "K138",
+      "sentence": "Terima kasih ya Kak",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "avoids": [
+              "belanja",
+              "rutinitas"
+            ]
+          }
+        ]
+      ],
+      "note": "Thanks get a few warm words back: no tool, and no list of what she can do."
+    },
+    {
+      "id": "K139",
+      "sentence": "Thank you!",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "avoids": [
+              "shopping",
+              "routine"
+            ]
+          }
+        ]
+      ],
+      "note": "The same in English."
+    },
+    {
+      "id": "K140",
+      "sentence": "What can you do?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "chore",
+                "shopping",
+                "routine",
+                "remind",
+                "buy",
+                "walk",
+                "mop",
+                "water",
+                "feed"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Two or three things the owner could say, not a list of everything."
+    },
+    {
+      "id": "K141",
+      "sentence": "Kakak itu manusia atau robot?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "AI",
+                "asisten"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "She is Miamus's AI helper and says so plainly."
+    },
+    {
+      "id": "K142",
+      "sentence": "How do I get Sari to mop the terrace every Monday?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "pel"
+                      ],
+                      [
+                        "teras"
+                      ]
+                    ]
+                  },
+                  "assignee": "S1",
+                  "due_date": "2026-11-16",
+                  "recurrence": "weekly",
+                  "room": {
+                    "anyOf": [
+                      "R1",
+                      null
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "A request dressed as a question: she offers the suggestion, not an explanation."
+    },
+    {
+      "id": "K143",
+      "sentence": "Mochi is vomiting, what medicine should I give him?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "vet"
+              ]
+            ],
+            "avoids": [
+              " mg",
+              "dose of"
+            ]
+          }
+        ]
+      ],
+      "note": "Veterinary advice isn't hers to give: she says so kindly, in one line."
+    },
+    {
+      "id": "K144",
+      "sentence": "Di mana saya bisa mematikan fitur yang tidak dipakai?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Pengaturan"
+              ],
+              [
+                "Fitur"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Guide: Features on and off. Where to do something."
+    },
+    {
+      "id": "K146",
+      "sentence": "Add 2 kg of brown rice into the pantry thank you",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": null,
+                  "new_name": {
+                    "textHas": [
+                      [
+                        "beras merah",
+                        "beras cokelat",
+                        "beras coklat"
+                      ]
+                    ]
+                  },
+                  "new_name_en": {
+                    "any": true
+                  },
+                  "shelf": "pantry",
+                  "kept_in": "pantry",
+                  "amount": 2,
+                  "unit": "kg",
+                  "expiry": "keep"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "The owner's own sentence, 14 Nov: she asked twice which rice, then said 'Sorry, I can't add a new ingredient.' Brown rice is not the listed Beras: a new ingredient, straight away, with its amount and place."
+    },
+    {
+      "id": "K147",
+      "sentence": "Tambah ikan tongkol 1 kg di freezer, kedaluwarsa 30 November",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": null,
+                  "new_name": {
+                    "textHas": [
+                      [
+                        "tongkol"
+                      ]
+                    ]
+                  },
+                  "shelf": "fresh_food",
+                  "kept_in": "freezer",
+                  "amount": 1,
+                  "unit": "kg",
+                  "expiry": "set",
+                  "expires_on": "2026-11-30"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "A new fresh ingredient with an amount, a place and the owner's date."
+    },
+    {
+      "id": "K148",
+      "sentence": "We bought 3 kg of rice, it's in the cupboard",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": "I4",
+                  "kept_in": "pantry",
+                  "amount": 3,
+                  "unit": "kg",
+                  "amount_is": "bought",
+                  "expiry": "keep"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Rice is the listed Beras: put away, with the amount that came in. Never a new ingredient, never the shopping list."
+    },
+    {
+      "id": "K149",
+      "sentence": "Beras tinggal 1 kg",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": "I4",
+                  "kept_in": null,
+                  "amount": 1,
+                  "unit": "kg",
+                  "amount_is": "now",
+                  "expiry": "keep"
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": "I4",
+                  "kept_in": null,
+                  "amount": 1,
+                  "unit": "kg",
+                  "amount_is": "now",
+                  "expiry": "keep"
+                }
+              },
+              {
+                "tool": "add_to_shopping_list",
+                "fields": {
+                  "items": {
+                    "items": [
+                      {
+                        "item": "I4",
+                        "status": "low"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "'Tinggal' is what is there in all: amount_is now, the place left alone. Putting Beras on the shopping list as running low with it is fine too."
+    },
+    {
+      "id": "K150",
+      "sentence": "Put 30 eggs in the fridge",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": "I1",
+                  "kept_in": {
+                    "anyOf": [
+                      "fridge",
+                      null
+                    ]
+                  },
+                  "amount": 30,
+                  "unit": {
+                    "anyOf": [
+                      "butir",
+                      "pcs",
+                      "buah"
+                    ]
+                  },
+                  "expiry": "keep"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "A count with no unit said: butir for eggs. Telur is already in the fridge, so kept_in may be null."
+    },
+    {
+      "id": "K151",
+      "sentence": "Tambahkan bawang putih ke lemari",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": null,
+                  "new_name": {
+                    "textHas": [
+                      [
+                        "bawang putih"
+                      ]
+                    ]
+                  },
+                  "shelf": {
+                    "anyOf": [
+                      "pantry",
+                      "fresh_food"
+                    ]
+                  },
+                  "kept_in": "pantry",
+                  "expiry": "keep"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "A new ingredient with no amount given: amount and unit stay null, never a guess."
+    },
+    {
+      "id": "K152",
+      "sentence": "Add chicken breast to the freezer, 1.5 kg",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": null,
+                  "new_name": {
+                    "textHas": [
+                      [
+                        "ayam"
+                      ]
+                    ]
+                  },
+                  "new_name_en": {
+                    "any": true
+                  },
+                  "shelf": "fresh_food",
+                  "kept_in": "freezer",
+                  "amount": 1.5,
+                  "unit": "kg",
+                  "expiry": "keep"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "A new fresh ingredient with a decimal amount; put away with no date given is expiry keep, no question."
+    },
+    {
+      "id": "K153",
+      "sentence": "Minyak goreng ada 2 liter di lemari",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "put_away_ingredient",
+                "fields": {
+                  "item": "I8",
+                  "kept_in": "pantry",
+                  "amount": 2,
+                  "unit": "L",
+                  "amount_is": {
+                    "anyOf": [
+                      "now",
+                      "bought"
+                    ]
+                  },
+                  "expiry": "keep"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "A listed ingredient, said with what there is and where."
+    },
+    {
+      "id": "K154",
+      "sentence": "Buy brown rice",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "shopping",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_to_shopping_list",
+                "fields": {
+                  "items": {
+                    "items": [
+                      {
+                        "item": null,
+                        "status": {
+                          "anyOf": [
+                            "out",
+                            "low"
+                          ]
+                        },
+                        "note": {
+                          "textHas": [
+                            [
+                              "beras merah",
+                              "beras cokelat",
+                              "beras coklat"
+                            ]
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Buying stays the shopping list: a new ingredient is only for what is in the house."
     }
   ]
 }

@@ -13,7 +13,6 @@ import {
   listenOnce,
   pickVoice,
   readSpeakChoice,
-  speakable,
   voiceReducer,
   writeSpeakChoice,
   type Listening,
@@ -21,6 +20,7 @@ import {
   type VoiceProblem,
   type VoiceScreen,
 } from "@/lib/kakak/voice";
+import { SPEECH_RATE, speechPlan } from "@/lib/kakak/speech";
 import { cn } from "@/lib/utils";
 
 /** Off switch for the beta: NEXT_PUBLIC_KAKAK_VOICE=false hides it. */
@@ -345,16 +345,27 @@ function synth(): SpeechSynthesis | null {
  * first speech is started by a tap, so any tap in the sheet while the
  * switch is on "unlocks" it with a silent utterance.
  */
-function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => void) {
+export function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => void) {
   const on = useSyncExternalStore(subscribeSpeak, speakSnapshot, () => false);
   const [supported, setSupported] = useState(false);
   const voices = useRef<SpeechSynthesisVoice[]>([]);
-  /** The utterance being read: a cancelled one's late "end" is ignored. */
-  const current = useRef<SpeechSynthesisUtterance | null>(null);
+  /**
+   * The reply being read, sentence by sentence, and the pause timer before
+   * its next sentence. Replaced or cleared when reading stops, so a stopped
+   * reply's late "end" or pending pause never starts another sentence.
+   */
+  const reading = useRef<{ timer: ReturnType<typeof setTimeout> | null } | null>(null);
   const speakingRef = useRef(onSpeaking);
   useEffect(() => {
     speakingRef.current = onSpeaking;
   }, [onSpeaking]);
+
+  /** Drop the queued sentences (the voice itself is cancelled by the caller). */
+  const dropQueue = useCallback(() => {
+    const run = reading.current;
+    if (run?.timer) clearTimeout(run.timer);
+    reading.current = null;
+  }, []);
 
   useEffect(() => {
     const s = synth();
@@ -366,10 +377,12 @@ function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => void) {
     load();
     s.addEventListener?.("voiceschanged", load);
     return () => {
+      // The sheet closed: nothing more is read, not even the queued sentences.
       s.removeEventListener?.("voiceschanged", load);
+      dropQueue();
       s.cancel();
     };
-  }, []);
+  }, [dropQueue]);
 
   const unlock = useCallback(() => {
     const s = synth();
@@ -388,36 +401,58 @@ function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => void) {
 
   const hush = useCallback(() => {
     const s = synth();
-    current.current = null;
+    dropQueue();
     if (s && (s.speaking || s.pending)) s.cancel();
     speakingRef.current(false);
-  }, []);
+  }, [dropQueue]);
 
+  /**
+   * Read a reply the way a person would (src/lib/kakak/speech.ts): times and
+   * symbols in words, a little slower than the voice's default, one sentence
+   * at a time with a short breath between. The pitch is the voice's own.
+   */
   const say = useCallback(
     (text: string) => {
       const s = synth();
       if (!s || !speakSnapshot() || typeof SpeechSynthesisUtterance === "undefined") return;
-      const words = speakable(text);
-      if (!words) return;
-      current.current = null;
+      const plan = speechPlan(text, locale);
+      if (!plan.length) return;
+      dropQueue();
       s.cancel();
-      const utterance = new SpeechSynthesisUtterance(words);
-      utterance.lang = VOICE_LANG[locale];
       const voice = pickVoice(voices.current.length ? voices.current : s.getVoices(), locale);
-      if (voice) utterance.voice = voice;
-      utterance.rate = 1;
-      const done = () => {
-        if (current.current !== utterance) return;
-        current.current = null;
+      const run: { timer: ReturnType<typeof setTimeout> | null } = { timer: null };
+      reading.current = run;
+      const finish = () => {
+        if (reading.current !== run) return;
+        reading.current = null;
         speakingRef.current(false);
       };
-      utterance.onend = done;
-      utterance.onerror = done;
-      current.current = utterance;
+      const read = (index: number) => {
+        run.timer = null;
+        if (reading.current !== run) return;
+        const part = plan[index];
+        const utterance = new SpeechSynthesisUtterance(part.text);
+        utterance.lang = VOICE_LANG[locale];
+        if (voice) utterance.voice = voice;
+        utterance.rate = SPEECH_RATE;
+        let settled = false;
+        utterance.onend = () => {
+          if (settled || reading.current !== run) return;
+          settled = true;
+          if (index + 1 >= plan.length) finish();
+          else run.timer = setTimeout(() => read(index + 1), part.pauseAfterMs);
+        };
+        utterance.onerror = () => {
+          if (settled) return;
+          settled = true;
+          finish();
+        };
+        s.speak(utterance);
+      };
       speakingRef.current(true);
-      s.speak(utterance);
+      read(0);
     },
-    [locale]
+    [locale, dropQueue]
   );
 
   const toggle = useCallback(() => {

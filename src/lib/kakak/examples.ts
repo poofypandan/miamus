@@ -1,7 +1,8 @@
 // The tappable examples on the Kakak sheet's first screen (plan, screen 2).
 // They teach what Kakak can do without a help page, so each one is something
-// her tools really do — a chore, a reminder for the owner, shopping, a pet's
-// meals (with two pets, lights off for both), food in the fridge — never a
+// she really does — a chore, a reminder for the owner, shopping, a pet's
+// meals (with two pets, lights off for both), food in the fridge, and, last,
+// a question about Miamus she answers from the guide (Phase 180) — never a
 // question she can't answer yet ("who's on leave?"). They use this household's own first names, so a tapped
 // example works as it is: Kakak never has to say "I can't find Sari".
 // Each also works in practice mode (lib/kakak/practice.ts).
@@ -10,7 +11,7 @@
 
 import { firstName } from "./context";
 
-export type KakakExampleKind = "chore" | "reminder" | "shopping" | "pet" | "food" | "sheets";
+export type KakakExampleKind = "chore" | "reminder" | "shopping" | "pet" | "food" | "sheets" | "question";
 
 export interface KakakExample {
   kind: KakakExampleKind;
@@ -96,6 +97,11 @@ export function kakakExamples({ locale, staffNames, petNames }: ExampleHousehold
   list.push({
     kind: "food",
     text: id ? "Rendang dari Tante Rina di kulkas" : "Rendang from Aunt Rina in the fridge",
+  });
+  // Last: she can be asked, too (Phase 180, the plan's section 6c).
+  list.push({
+    kind: "question",
+    text: id ? "Apa bedanya tugas dan rutinitas?" : "What's the difference between a chore and a routine?",
   });
   return list;
 }
