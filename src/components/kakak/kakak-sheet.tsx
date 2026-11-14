@@ -314,9 +314,8 @@ function Conversation({ onClose }: { onClose: () => void }) {
               </p>
             ) : (
               // Her earlier lines: the same bubble, a little quieter than her latest.
-              <div key={index} className="flex items-start gap-2 opacity-80" data-testid="kakak-earlier">
-                <KakakAvatar className="size-7" />
-                <p className="max-w-[85%] rounded-2xl rounded-tl-md border bg-card px-3 py-2 text-sm text-gray-900">{line.text}</p>
+              <div key={index} className="opacity-80" data-testid="kakak-earlier">
+                <KakakBubble>{line.text}</KakakBubble>
               </div>
             )
           )}
