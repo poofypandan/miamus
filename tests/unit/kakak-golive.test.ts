@@ -135,6 +135,17 @@ describe("classifyApiError", () => {
     expect(classifyApiError(new Error("x")).body).toEqual({ kind: "failed", reason: "api" });
   });
 
+  it("reads a refused request on a later turn as a conversation to start again, never on the first turn", () => {
+    const refused = apiError(400, { type: "invalid_request_error", message: "messages.1.content.0: thinking block does not match" });
+    expect(classifyApiError(refused, { laterTurn: true }).body).toEqual({ kind: "failed", reason: "stale" });
+    expect(classifyApiError(refused).body).toEqual({ kind: "failed", reason: "api" });
+    // The spend limit is still the spend limit, and a busy API still busy, on any turn.
+    expect(
+      classifyApiError(apiError(400, { type: "invalid_request_error", message: "You have reached your specified workspace API usage limits." }), { laterTurn: true }).body,
+    ).toEqual({ kind: "failed", reason: "cap" });
+    expect(classifyApiError(apiError(529, { type: "overloaded_error", message: "Overloaded" }), { laterTurn: true }).body).toEqual({ kind: "refused", reason: "busy" });
+  });
+
   it("never puts the household's words in the log line", () => {
     const { log } = classifyApiError(apiError(400, { type: "invalid_request_error", message: "Mbak Sari pel teras" }));
     expect(log).not.toContain("Sari");

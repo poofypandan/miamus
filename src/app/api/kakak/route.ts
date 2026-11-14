@@ -312,7 +312,10 @@ export async function POST(request: NextRequest) {
     if (error instanceof BadTurnError) return NextResponse.json({ error: "bad request" }, { status: 400 });
     // The spend limit, a bad key, rate limits and timeouts each get their own
     // plain sentence on the phone (lib/kakak/api-errors.ts).
-    const { body: failure, status: code, log } = classifyApiError(error);
+    // A 400 on a later turn: the history no longer fits what Kakak is sent
+    // (her instructions were updated while the sheet stayed open). The sheet
+    // offers Start again, not Try again into the same refusal.
+    const { body: failure, status: code, log } = classifyApiError(error, { laterTurn: history.messages.length > 0 });
     console.error("kakak: call failed", log);
     return NextResponse.json(failure, { status: code });
   }

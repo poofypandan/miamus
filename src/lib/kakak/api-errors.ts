@@ -11,10 +11,15 @@ import Anthropic from "@anthropic-ai/sdk";
 //   slow         timed out: try again
 //   unavailable  the key is wrong, revoked or not allowed: the operator
 //                must fix it, the owner can't
+//   stale        the request was refused (a 400) on a later turn of a
+//                conversation: its history no longer fits what Kakak is
+//                sent, as after an update to her instructions while the
+//                sheet stayed open. Trying the same words again would be
+//                refused the same way; starting again works.
 //   api          anything else
 
 export type ApiFailure =
-  | { kind: "failed"; reason: "cap" | "slow" | "api" }
+  | { kind: "failed"; reason: "cap" | "slow" | "api" | "stale" }
   | { kind: "refused"; reason: "busy" | "unavailable" };
 
 export interface ClassifiedFailure {
@@ -29,7 +34,11 @@ export interface ClassifiedFailure {
 // signal. Matched on a 400/402 only, and a miss just reads as "api".
 const SPEND_WORDS = /\b(spend(ing)? limits?|usage limits?|credit balance)\b/i;
 
-export function classifyApiError(error: unknown): ClassifiedFailure {
+/**
+ * `laterTurn`: the request carried earlier turns of the conversation. A 400
+ * then is read as a history that no longer fits (stale), not as "try again".
+ */
+export function classifyApiError(error: unknown, { laterTurn = false }: { laterTurn?: boolean } = {}): ClassifiedFailure {
   if (error instanceof Anthropic.APIConnectionTimeoutError) {
     return { body: { kind: "failed", reason: "slow" }, status: 504, log: "timeout" };
   }
@@ -48,6 +57,9 @@ export function classifyApiError(error: unknown): ClassifiedFailure {
     }
     if (error.status === 429 || error.status === 529 || error.type === "overloaded_error") {
       return { body: { kind: "refused", reason: "busy" }, status: 429, log: name };
+    }
+    if (error.status === 400 && laterTurn) {
+      return { body: { kind: "failed", reason: "stale" }, status: 200, log: `${name}: refused on a later turn` };
     }
     return { body: { kind: "failed", reason: "api" }, status: 502, log: name };
   }
