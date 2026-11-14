@@ -19,6 +19,10 @@ picture, music, sound and timing stay v4's.
 - [x] Key session open (manager tab c6); searches done; 1,956 characters spent on auditions
 - [x] Shortlist: Velora, Aita, Lyly (Indonesian), Alexandra (American); all clips checked with Whisper
 - [x] Blind page: https://claude.ai/artifact/JdBsKXEm5CTCb7SaeZD6aA (key: docs/private/marketing/trailer-v5/audition-labels.json)
-- [ ] Owner and wife pick a letter
-- [ ] Final takes, place, `npm run sound -- --voice eleven-<slug>` (mix only), render into
-      `docs/private/marketing/trailer-v5/`, review, NOTE and LICENCES
+- [x] Owners picked Voice E = Lyly (ZF5uWKM2iVvSId3tBCYt)
+- [x] Name test, final takes (3 each), end-line retake: 5,908 characters in all
+- [x] Placed (`audio/eleven/picks-lyly.json`), mixed, rendered; four MP4s, NOTE, LICENCES,
+      provenance and the voice takes in `docs/private/marketing/trailer-v5/`
+- [x] Frames and loudness checked in the MP4s
+- [ ] Owner watches v5; checks the two items in LICENCES.md (no beta tag on Eleven v4; keep the
+      November invoice); optionally adds Lyly to My Voices; deletes the key when done

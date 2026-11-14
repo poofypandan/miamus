@@ -29,8 +29,11 @@ later (below). Four cuts, as before: `miamus-60-en.mp4` (the primary),
   (11.45 s), still before Kakak's mark appears. Captions follow the voice.
 - **Mix:** unchanged from v4: the music steps back about 10 dB under her,
   all four cuts at -14.0 LUFS, true peaks -1.6 to -1.7 dBTP (v4: -1.55 to
-  -1.75), loudness range 4.0 to 5.5 LU (v4: 3.5 to 5.7). Whisper, run on
-  each full mix with the music in, writes down every line.
+  -1.75), loudness range 4.0 to 5.5 LU (v4: 3.5 to 5.7). Measured again in
+  the finished MP4s (after AAC): -14.0 LUFS, true peaks -1.5 to -1.6 dBTP.
+  Whisper, run on each full mix with the music in, writes down every line.
+  Frames checked in all four cuts around every moved line: captions on
+  their plates and in step with her voice.
 - **Credits:** 5,908 characters in all (auditions 1,956, a name test 444,
   the final 3,204, a retake of the last line 304), on a key limited to text
   to speech and reading voices, capped at 10,000 credits, expiring after 7
