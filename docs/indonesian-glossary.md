@@ -209,6 +209,8 @@ people are **staf** and **admin**.
 | Automatic (an approval made at sign-up) | **Otomatis** | Phase 172 PR A1, the approvals page. |
 | New household · {name} just joined (push) | **Rumah baru** · **{name} baru bergabung.** | Phase 172 PR A1, to platform admins. |
 | Tap the mic on your keyboard and speak. | **Ketuk mic di keyboard, lalu bicara.** | Phase 172 PR A1, Kakak's keyboard tip. "Mic" is the everyday word on the keyboard. |
+| Listening. Tap Done when you're finished. / Done / Cancel | **Kakak mendengarkan. Ketuk Selesai kalau sudah.** / **Selesai** / **Batalkan** | Kakak voice's new flow, tap to start and tap Done to stop (2026-11-13, opt-in with ?newvoice=1). Nothing is sent before Kirim, so not "ketuk Berhenti kalau sudah" or "Batal, jangan kirim" (the current flow's words). |
+| Say what you need. Pauses are fine. · Check the words, then tap Send. | **Sebutkan yang Anda perlukan. Boleh sambil berpikir.** · **Cek kata-katanya, lalu ketuk Kirim.** | Kakak voice: the empty live-words line, and the line after Done while the words wait in the typing box. |
 | How should we let you know? · Your WhatsApp number | **Bagaimana kami memberi tahu Anda? · Nomor WhatsApp Anda** | Phase 172 PR A1, the waiting screen (owner, 2026-11-11). |
 | We'll use your number only to tell you you're approved, then delete it. | **Nomor Anda hanya kami pakai untuk memberi tahu bahwa Anda sudah disetujui, lalu kami hapus.** | The note under the number field; "Kebijakan privasi" links to the policy. |
 | Copy link · Link copied | **Salin link · Link disalin** | The approvals page's third button. |

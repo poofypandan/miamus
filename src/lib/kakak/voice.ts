@@ -130,30 +130,251 @@ export function findRecognition(scope: unknown = typeof window === "undefined" ?
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+// ---- Joining what was heard ------------------------------------------------
+
+function splitWords(text: string): string[] {
+  return text.split(/\s+/).filter(Boolean);
+}
+
+/** A word as compared: case and punctuation don't make it a different word. */
+function wordKey(word: string): string {
+  return word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+function sameWords(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((word, i) => wordKey(word) === wordKey(b[i]));
+}
+
+function startsWithWords(text: string[], start: string[]): boolean {
+  return start.length > 0 && start.length <= text.length && start.every((word, i) => wordKey(word) === wordKey(text[i]));
+}
+
+/** Two stretches of words as one tidy line. */
+export function joinWords(base: string, next: string): string {
+  return [...splitWords(base), ...splitWords(next)].join(" ");
+}
+
+/**
+ * One recognizer session's results as one line: final words, then the guess
+ * still forming. Read from the whole list each time, so a guess the browser
+ * corrects is replaced, never added to, and an event sent twice adds nothing.
+ * Each result is the owner's next words, so they are joined as they are,
+ * except:
+ * - a result that only repeats the one before word for word (a browser
+ *   sending a result twice) is dropped;
+ * - with `snapshots` (Chrome on Android, whose results in continuous mode
+ *   each hold everything heard so far), a result that starts with all the
+ *   words so far replaces them instead of repeating them.
+ * Only on Android: elsewhere "Feed Mocha at seven" then "Feed Mocha at seven
+ * thirty tomorrow" are two requests, and both are kept.
+ */
+export function joinSession(results: RecognitionResultEventLike["results"], snapshots = false): string {
+  let line: string[] = [];
+  let previous: string[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const words = splitWords(results[i][0]?.transcript ?? "");
+    if (!words.length || sameWords(words, previous)) continue;
+    line = snapshots && startsWithWords(words, line) ? words : [...line, ...words];
+    previous = words;
+  }
+  return line.join(" ");
+}
+
+// ---- Listening until Done ---------------------------------------------------
+
+export interface ListenHandlers {
+  /** Every change in what was heard, for the live words. */
+  onHeard: (transcript: string) => void;
+  /** Listening finished (Done or the time limit in the new flow, Stop or the browser's end in the current one): the words heard. */
+  onFinished: (transcript: string) => void;
+  onProblem: (problem: VoiceProblem) => void;
+}
+
+export interface Listening {
+  /** Stop listening and hand over what was heard (Done, or Stop in the current flow). */
+  finish: () => void;
+  /** Stop and drop what was heard. */
+  cancel: () => void;
+}
+
+/** How long Done (or Stop) waits for the browser's own end before ending itself. */
+export const FINISH_GRACE_MS = 1500;
+
+/** The safety limit: listening ends by itself after this long, as if Done was tapped. */
+export const MAX_LISTEN_MS = 60_000;
+
+/**
+ * A session that ends this soon with nothing heard, or a restart that fails
+ * before hearing anything, is a stumble; this many in a row means the
+ * browser won't keep listening, so it stops (keeping the words) instead of
+ * starting again forever.
+ */
+export const QUICK_END_MS = 500;
+export const MAX_STUMBLES = 3;
+
+export interface ListenOptions {
+  /** The browser sends each result as everything so far (Chrome on Android): see `joinSession`. */
+  snapshots?: boolean;
+  /** The clock, for the tests. */
+  now?: () => number;
+}
+
+/** Chrome on Android, whose continuous results are snapshots of everything so far. */
+export function sendsSnapshots(userAgent: string): boolean {
+  return /android/i.test(userAgent);
+}
+
+/**
+ * Tap to start, tap Done to stop. Listens until `finish()` (or
+ * MAX_LISTEN_MS), however long the owner pauses to think. Chrome on Android
+ * ends a session at a pause even in continuous mode, and Safari on iPhone
+ * has its own limits, so when the browser ends by itself a new recognizer
+ * starts quietly and its words are added after the ones before. Nothing is
+ * said twice: a session's words are frozen when it ends, an ended session's
+ * late results are ignored, and each session is read from its own full list
+ * (`joinSession`). A new recognizer each time, because Safari on iPhone
+ * doesn't reliably start a used one again.
+ */
+export function listenUntilDone(
+  Ctor: RecognitionCtor,
+  lang: string,
+  handlers: ListenHandlers,
+  { snapshots = false, now = Date.now }: ListenOptions = {}
+): Listening {
+  /** Words from the sessions that ended. */
+  let kept = "";
+  /** `kept` plus the session listening now: what the owner sees. */
+  let heard = "";
+  let state: "on" | "finishing" | "over" = "on";
+  let current: RecognitionLike | null = null;
+  let stumbles = 0;
+  let sessions = 0;
+  let graceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const end = () => {
+    state = "over";
+    current = null;
+    clearTimeout(graceTimer);
+    clearTimeout(limitTimer);
+  };
+  /** Hand over the words, or say nothing was heard. */
+  const handOver = () => {
+    if (state === "over") return;
+    end();
+    if (heard) handlers.onFinished(heard);
+    else handlers.onProblem("quiet");
+  };
+  /** A real problem: keep what was heard if anything was, so no words are lost. */
+  const fail = (problem: VoiceProblem) => {
+    if (state === "over") return;
+    const r = current;
+    end();
+    try {
+      r?.abort();
+    } catch {
+      // already stopped
+    }
+    if (heard) handlers.onFinished(heard);
+    else handlers.onProblem(problem);
+  };
+
+  const begin = () => {
+    const recognition = new Ctor();
+    recognition.lang = lang;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    const startedAt = now();
+    let gotWords = false;
+    /** A restart that failed before hearing anything: try again, within the stumble limit. */
+    let stumbled = false;
+    current = recognition;
+    sessions++;
+
+    recognition.onresult = (event) => {
+      if (current !== recognition) return; // an old session, or listening is over
+      const session = joinSession(event.results, snapshots);
+      if (session) gotWords = true;
+      const next = joinWords(kept, session);
+      if (next !== heard) {
+        heard = next;
+        handlers.onHeard(heard);
+      }
+    };
+    recognition.onerror = (event) => {
+      if (current !== recognition) return;
+      const problem = problemFor(event.error);
+      // Silence isn't a problem while listening: the session ends and the
+      // next one starts. Aborted is one of ours.
+      if (!problem || problem === "quiet") return;
+      // A restarted recognizer can fail while Android still holds the mic
+      // from the last one: start again (counted as a stumble) rather than
+      // end what the owner is saying. A refused microphone always ends it.
+      if (sessions > 1 && !gotWords && problem !== "blocked") {
+        stumbled = true;
+        return;
+      }
+      fail(problem);
+    };
+    recognition.onend = () => {
+      if (current !== recognition) return;
+      kept = heard; // the session's words, its last guess included
+      if (state === "finishing") return handOver();
+      const quick = !gotWords && (stumbled || now() - startedAt < QUICK_END_MS);
+      stumbles = quick ? stumbles + 1 : 0;
+      if (stumbles >= MAX_STUMBLES) return handOver();
+      begin();
+    };
+
+    try {
+      recognition.start();
+    } catch {
+      // Safari throws when the service is off (Siri and Dictation disabled).
+      current = null;
+      if (sessions === 1) fail("unavailable");
+      else handOver();
+    }
+  };
+
+  const finish = () => {
+    if (state !== "on") return;
+    state = "finishing";
+    const r = current;
+    try {
+      r?.stop();
+    } catch {
+      // already stopping
+    }
+    // Safari on iPhone sometimes never fires end after stop().
+    graceTimer = setTimeout(handOver, FINISH_GRACE_MS);
+  };
+
+  const limitTimer = setTimeout(finish, MAX_LISTEN_MS);
+  begin();
+
+  return {
+    finish,
+    cancel() {
+      if (state === "over") return;
+      const r = current;
+      end();
+      try {
+        r?.abort();
+      } catch {
+        // already stopped
+      }
+    },
+  };
+}
+
+// ---- The current flow (switch off) ------------------------------------------
+
 /** All results so far, as one line: final words, then the guess forming. */
 export function joinResults(results: RecognitionResultEventLike["results"]): string {
   const parts: string[] = [];
   for (let i = 0; i < results.length; i++) parts.push(results[i][0]?.transcript ?? "");
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
-
-export interface ListenHandlers {
-  /** Every change in what was heard, for the live transcript. */
-  onHeard: (transcript: string) => void;
-  /** The owner finished speaking: the words to send ("" if none). */
-  onFinished: (transcript: string) => void;
-  onProblem: (problem: VoiceProblem) => void;
-}
-
-export interface Listening {
-  /** Stop listening and send what was heard (the big Stop button). */
-  finish: () => void;
-  /** Stop and drop what was heard: nothing is sent. */
-  cancel: () => void;
-}
-
-/** How long Stop waits for the browser's own end before ending itself. */
-export const FINISH_GRACE_MS = 1500;
 
 /**
  * One utterance: start, report what is heard as it forms, and on the
@@ -224,6 +445,52 @@ export function listenOnce(Ctor: RecognitionCtor, lang: string, handlers: Listen
       }
     },
   };
+}
+
+// ---- The switch --------------------------------------------------------------
+
+/**
+ * The new voice flow (tap Done, check, then Send) is opt-in per phone while
+ * the owner tries it: opening any Miamus address with ?newvoice=1 turns it
+ * on for this phone, ?newvoice=0 turns it off. Off by default, and then the
+ * current flow above runs unchanged.
+ */
+export const NEW_VOICE_KEY = "miamus.kakak.newVoice";
+export const NEW_VOICE_PARAM = "newvoice";
+
+/** What the address asks for: on, off, or nothing. */
+export function newVoiceFromUrl(search: string): boolean | null {
+  let value: string | null = null;
+  try {
+    value = new URLSearchParams(search).get(NEW_VOICE_PARAM);
+  } catch {
+    return null;
+  }
+  return value === "1" ? true : value === "0" ? false : null;
+}
+
+export function readNewVoice(storage: Pick<Storage, "getItem"> | undefined): boolean {
+  try {
+    return storage?.getItem(NEW_VOICE_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Applies ?newvoice= from the address, if there is one, and says whether the
+ * new flow is on for this phone.
+ */
+export function syncNewVoice(search: string, storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | undefined): boolean {
+  const asked = newVoiceFromUrl(search);
+  if (asked === null) return readNewVoice(storage);
+  try {
+    if (asked) storage?.setItem(NEW_VOICE_KEY, "on");
+    else storage?.removeItem(NEW_VOICE_KEY);
+  } catch {
+    // storage blocked: the choice lasts this visit only
+  }
+  return asked;
 }
 
 // ---- Reading aloud ---------------------------------------------------------

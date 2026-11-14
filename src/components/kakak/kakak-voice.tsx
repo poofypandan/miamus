@@ -345,7 +345,7 @@ function synth(): SpeechSynthesis | null {
  * first speech is started by a tap, so any tap in the sheet while the
  * switch is on "unlocks" it with a silent utterance.
  */
-function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => void) {
+export function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => void) {
   const on = useSyncExternalStore(subscribeSpeak, speakSnapshot, () => false);
   const [supported, setSupported] = useState(false);
   const voices = useRef<SpeechSynthesisVoice[]>([]);
