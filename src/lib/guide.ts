@@ -167,6 +167,16 @@ export const GUIDE: readonly GuideEntry[] = [
     covers: ["starter-list-2026-11"],
   },
   {
+    id: "add-a-chore",
+    group: "home",
+    title: { en: "Adding a chore by hand", id: "Menambah tugas sendiri" },
+    body: {
+      en: "Home → Chores → Add Chore: what to do, who does it or anyone, the day, and whether it repeats. A room, a time and a note are optional. With Kakak on, one sentence to her does the same.",
+      id: "Rumah → Tugas → Tambah Tugas: apa yang dikerjakan, siapa yang mengerjakan atau siapa saja, harinya, dan apakah berulang. Ruangan, jam, dan catatan boleh dikosongkan. Kalau Kakak aktif, cukup satu kalimat ke Kakak.",
+    },
+    where: "home_chores",
+  },
+  {
     id: "repeating-chores",
     group: "home",
     title: { en: "Repeating chores and reminders", id: "Tugas berulang dan pengingat" },
@@ -234,6 +244,18 @@ export const GUIDE: readonly GuideEntry[] = [
   },
   // ----------------------------------------------------------------- pets
   {
+    id: "add-a-pet",
+    group: "pets",
+    title: { en: "Adding a pet", id: "Menambah hewan" },
+    body: {
+      en: "On the Pets tab, tap Add Pet. Miamus then offers the usual routines, already ticked: a morning walk, an evening walk and fresh water for a dog; fresh water and the litter box for a cat. Untick what you don't want, then Add.",
+      id: "Di tab Hewan, ketuk Tambah Hewan. Miamus lalu menawarkan rutinitas yang biasa, sudah dicentang: jalan pagi, jalan sore, dan ganti air minum untuk anjing; ganti air minum dan pasir kucing untuk kucing. Hapus centang yang tidak perlu, lalu Tambah.",
+    },
+    where: "pets",
+    needs: "pets",
+    covers: ["pet-starters-2026-11"],
+  },
+  {
     id: "pet-routines",
     group: "pets",
     title: { en: "Pet routines", id: "Rutinitas hewan" },
@@ -243,7 +265,7 @@ export const GUIDE: readonly GuideEntry[] = [
     },
     where: "pets",
     needs: "pets",
-    covers: ["pet-starters-2026-11", "who-lives-here-2026-11"],
+    covers: ["who-lives-here-2026-11"],
   },
   {
     id: "routine-reminders",
