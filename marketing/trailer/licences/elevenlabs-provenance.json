@@ -1,0 +1,341 @@
+{
+ "generated": "2026-11-15",
+ "service": "ElevenLabs API, POST /v1/text-to-speech/{voice_id}",
+ "plan": "Creator (owner's account)",
+ "model_id": "eleven_v4",
+ "voice": {
+  "name": "Lyly - Calm, Witty and Clear",
+  "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+  "source": "ElevenLabs Voice Library (shared voice)",
+  "category": "high_quality",
+  "notice_period_days": 730
+ },
+ "voice_settings": {
+  "stability": 0.55,
+  "similarity_boost": 0.75,
+  "use_speaker_boost": true
+ },
+ "characters_this_project": 5908,
+ "lines": [
+  {
+   "cut_line": "L1",
+   "language": "en",
+   "text_sent": "Running a home takes a lot of asking.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "FZiTPYgltQDdLeyH0NVI",
+   "format": "wav_48000",
+   "characters": 37
+  },
+  {
+   "cut_line": "L2",
+   "language": "en",
+   "text_sent": "What if you only had to say it once?",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "0dOUVVd73AVcaRq5HMyF",
+   "format": "wav_48000",
+   "characters": 36
+  },
+  {
+   "cut_line": "L3",
+   "language": "en",
+   "text_sent": "Hi. I'm Kakak, the AI helper inside Mee-AH-moos.",
+   "take": "final/t2",
+   "seed": 112,
+   "request_id": "BcwpsV9ryXLf77fITMeb",
+   "format": "wav_48000",
+   "characters": 48
+  },
+  {
+   "cut_line": "L4",
+   "language": "en",
+   "text_sent": "Tell me once.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "anRLEUMikrFqqVl9Nq75",
+   "format": "wav_48000",
+   "characters": 13
+  },
+  {
+   "cut_line": "L4b",
+   "language": "en",
+   "text_sent": "I'll take it from there.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "ChQ7Q6LeI6m3oKQi1ElS",
+   "format": "wav_48000",
+   "characters": 24
+  },
+  {
+   "cut_line": "L5",
+   "language": "en",
+   "text_sent": "And everyone at home knows what to do.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "WXGzrXbCU6PyItEqZK2M",
+   "format": "wav_48000",
+   "characters": 38
+  },
+  {
+   "cut_line": "L6",
+   "language": "en",
+   "text_sent": "In their own language. On their own phone.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "JbUfyKRNULp6Y07K8lYN",
+   "format": "wav_48000",
+   "characters": 42
+  },
+  {
+   "cut_line": "L7a",
+   "language": "en",
+   "text_sent": "They run the home.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "BJff3nAuS7CkUOthWthX",
+   "format": "wav_48000",
+   "characters": 18
+  },
+  {
+   "cut_line": "L7b",
+   "language": "en",
+   "text_sent": "I just keep track.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "8ab96J4lrTbTpb33ndNF",
+   "format": "wav_48000",
+   "characters": 18
+  },
+  {
+   "cut_line": "L8",
+   "language": "en",
+   "text_sent": "And you? You'll only hear from me,",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "p5cwVMK3PGv5jH7ctd3u",
+   "format": "wav_48000",
+   "characters": 34
+  },
+  {
+   "cut_line": "L9",
+   "language": "en",
+   "text_sent": "when something isn't done.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "GOrh1Fq4ztRCmDl03wF2",
+   "format": "wav_48000",
+   "characters": 26
+  },
+  {
+   "cut_line": "L10",
+   "language": "en",
+   "text_sent": "That one's yours.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "d6qW2cLqPrBOWiIk20Wl",
+   "format": "wav_48000",
+   "characters": 17
+  },
+  {
+   "cut_line": "L11",
+   "language": "en",
+   "text_sent": "Meeahmoos. More time for your family.",
+   "take": "retake1/b1",
+   "seed": 11,
+   "request_id": "mkmRXwtA8GdALRHhx3nQ",
+   "format": "wav_48000",
+   "characters": 37
+  },
+  {
+   "cut_line": "S1",
+   "language": "en",
+   "text_sent": "I'm Kakak, Mee-AH-moos's AI helper. Tell me once,",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "CRXFRSYhOwMMCBlxx5cz",
+   "format": "wav_48000",
+   "characters": 49
+  },
+  {
+   "cut_line": "S2",
+   "language": "en",
+   "text_sent": "and everyone at home knows what to do.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "UbOh9iTIpOJ5Aqzr3rCg",
+   "format": "wav_48000",
+   "characters": 38
+  },
+  {
+   "cut_line": "S3",
+   "language": "en",
+   "text_sent": "Meeahmoos. More time for your family.",
+   "take": "retake1/b1",
+   "seed": 11,
+   "request_id": "ArbDx1GqFYd5i5ZDJVE1",
+   "format": "wav_48000",
+   "characters": 37
+  },
+  {
+   "cut_line": "L1",
+   "language": "id",
+   "text_sent": "Mengurus rumah itu banyak bertanya.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "vuxYvOYpBLvmVcVOX275",
+   "format": "wav_48000",
+   "characters": 35
+  },
+  {
+   "cut_line": "L2",
+   "language": "id",
+   "text_sent": "Bagaimana kalau cukup bilang sekali?",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "Uw4enuv9khyvh12Hkc6A",
+   "format": "wav_48000",
+   "characters": 36
+  },
+  {
+   "cut_line": "L3",
+   "language": "id",
+   "text_sent": "Halo. Ini Kakak, asisten AI di Miamus.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "IqaDlLiadCZdDuGU2kUg",
+   "format": "wav_48000",
+   "characters": 38
+  },
+  {
+   "cut_line": "L4",
+   "language": "id",
+   "text_sent": "Bilang sekali ke Kakak.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "zCXtyxfvwR4n79KjJkJQ",
+   "format": "wav_48000",
+   "characters": 23
+  },
+  {
+   "cut_line": "L4b",
+   "language": "id",
+   "text_sent": "Sisanya, Kakak yang atur.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "kn9McgZ8EgNMq1foLA5Q",
+   "format": "wav_48000",
+   "characters": 25
+  },
+  {
+   "cut_line": "L5",
+   "language": "id",
+   "text_sent": "Dan semua orang di rumah tahu harus apa.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "7zVS2jYiIDnbfNPqVwFR",
+   "format": "wav_48000",
+   "characters": 40
+  },
+  {
+   "cut_line": "L6",
+   "language": "id",
+   "text_sent": "Dalam bahasa mereka. Di HP masing-masing.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "p4UjI61oeWKmM3HTKIca",
+   "format": "wav_48000",
+   "characters": 41
+  },
+  {
+   "cut_line": "L7a",
+   "language": "id",
+   "text_sent": "Merekalah yang mengurus rumah.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "yRKy2k6Lhyr0odXV4cnw",
+   "format": "wav_48000",
+   "characters": 30
+  },
+  {
+   "cut_line": "L7b",
+   "language": "id",
+   "text_sent": "Kakak hanya membantu mencatat.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "2ASy65kIBd1BatxUSNZ7",
+   "format": "wav_48000",
+   "characters": 30
+  },
+  {
+   "cut_line": "L8",
+   "language": "id",
+   "text_sent": "Dan Anda? Anda hanya dikabari,",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "YsIj3PtaiwhZYvyHgUcp",
+   "format": "wav_48000",
+   "characters": 30
+  },
+  {
+   "cut_line": "L9",
+   "language": "id",
+   "text_sent": "kalau ada yang belum dikerjakan.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "Bn1w7ZWANjBpGt2XgPbz",
+   "format": "wav_48000",
+   "characters": 32
+  },
+  {
+   "cut_line": "L10",
+   "language": "id",
+   "text_sent": "Yang ini bagian Anda.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "JR9elL9cjnyguzDylYOQ",
+   "format": "wav_48000",
+   "characters": 21
+  },
+  {
+   "cut_line": "L11",
+   "language": "id",
+   "text_sent": "Miamus. Lebih banyak waktu untuk keluarga.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "2KLwSaVbsO1GtuhINOSD",
+   "format": "wav_48000",
+   "characters": 42
+  },
+  {
+   "cut_line": "S1",
+   "language": "id",
+   "text_sent": "Ini Kakak, asisten AI di Miamus. Bilang sekali,",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "6ehBATKBqWYxt05r3LGq",
+   "format": "wav_48000",
+   "characters": 47
+  },
+  {
+   "cut_line": "S2",
+   "language": "id",
+   "text_sent": "dan semua orang di rumah tahu harus apa.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "MymRIuRG3AyR4HXQBYvT",
+   "format": "wav_48000",
+   "characters": 40
+  },
+  {
+   "cut_line": "S3",
+   "language": "id",
+   "text_sent": "Miamus. Lebih banyak waktu untuk keluarga.",
+   "take": "final/t1",
+   "seed": 11,
+   "request_id": "78LEmMeo7du1oeJqkZm1",
+   "format": "wav_48000",
+   "characters": 42
+  }
+ ]
+}

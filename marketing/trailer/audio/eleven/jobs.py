@@ -24,8 +24,10 @@ QUEUE = os.path.join(ROOT, "audio", "eleven", "queue")
 OUT = os.path.join(ROOT, "audio", "out", "eleven")
 
 # What ElevenLabs is given to read. The words on screen come from src/film/copy.ts, so a spelling here
-# only changes how a word is said. "Kakak" and "Miamus" stay as written unless a check shows otherwise.
-SAY_EN = {"Kakak": "Kakak", "Miamus": "Miamus", "A.I.": "AI"}
+# only changes how a word is said. Tested with Lyly (15 Nov): plain "Miamus" is heard as "Maya Moose",
+# IPA in slashes as "My Amos"; "Mee-AH-moos" is heard as "Miamus" with the stress on AH. "Kakak" as
+# written gives the Indonesian final stop (heard "Kaka"), as v4 did. Indonesian needs no respelling.
+SAY_EN = {"Kakak": "Kakak", "Miamus": "Mee-AH-moos", "A.I.": "AI"}
 SAY_ID = {}
 
 # The audition: three film lines (two of them two sentences long) and one of the owner's audition lines.

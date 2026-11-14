@@ -27,7 +27,11 @@ app's dependencies, no app code changed, no database or deployment touched.
    above the caption band; captions sit on their own plate and the phone's
    picture melts away above them, so they are never on app text.
 4. **The sound** (`audio/`), all made locally:
-   - `voice/`: Kakak, spoken by Kokoro-82M. `lines.py` holds her lines (the
+   - `eleven/`: Kakak's voice since v5, from ElevenLabs (`eleven_v4`, the
+     Voice Library voice Lyly). `key.zsh` asks for the API key (hidden) and
+     runs `el.py`, which takes jobs from `jobs.py`; `check.py` hears each
+     take; `page.py` builds the blind audition page. See `NOTE.md`.
+   - `voice/`: Kakak as she was in v4, spoken by Kokoro-82M. `lines.py` holds her lines (the
      Indonesian as hand-written phonemes), `speak.py` the candidate voices,
      `explore.py` and `accent.py` how they were measured.
    - `music/`: the score (`score.py`) and its instruments (`dsp.py`).
@@ -61,8 +65,10 @@ anything else.
 - **A word on screen or a caption:** `src/film/copy.ts`. If Kakak says it,
   change `audio/voice/lines.py` too (Indonesian lines are phonemes: check a
   new one with `audio/voice/asr.py`), then `npm run sound`.
-- **Kakak's voice:** `npm run sound -- --voice kakak-b` (the candidates are
-  in `audio/voice/speak.py`), then `npm run render`.
+- **Kakak's voice (v5, ElevenLabs):** `audio/eleven/jobs.py place lyly --pick
+  audio/eleven/picks-lyly.json`, then `audio/mix.py --voice eleven-lyly`, then
+  `npm run render` (`NOTE.md` has the steps). `npm run sound` alone still
+  rebuilds v4's Kokoro voice.
 - **The music:** `npm run sound -- --music strings` (or `tines`, `felt`).
 - **A timing:** `src/film/timeline.ts`; the sound follows it on the next
   `npm run sound`.

@@ -27,9 +27,13 @@ from dsp import SR, bandpass, db, highpass, lowpass, pan, reverb, soft_limit
 FPS = 30
 # When each line starts, in seconds. One plan for both languages: every slot is long enough for the longer one.
 CUES = {
-    "60": {"L1": 5.15, "L2": 7.7, "L3": 11.2, "L4": 15.25, "L4b": 19.55, "L5": 25.05, "L6": 28.15, "L7a": 31.7, "L7b": 35.3, "L8": 39.4, "L9": 44.05, "L10": 48.3, "L11": 55.75},
-    "15": {"S1": 3.15, "S2": 7.1, "S3": 11.85},
+    "60": {"L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.25, "L4b": 19.55, "L5": 25.05, "L6": 28.15, "L7a": 31.7, "L7b": 35.3, "L8": 39.4, "L9": 44.05, "L10": 48.3, "L11": 55.75},
+    "15": {"S1": 3.15, "S2": 7.3, "S3": 11.85},
 }
+# v5 (ElevenLabs voice): L2 and S2 start 0.25 s and 0.2 s later than in v4, as the new L1 and S1 run a
+# little longer. One line differs by language: the Indonesian "Miamus. Lebih banyak waktu untuk keluarga."
+# runs 3.2 s, so in the 15-second cut it starts 0.4 s earlier, still before Kakak's mark appears.
+LOCALE_CUES = {"id": {"15": {"S3": 11.45}}}
 
 
 def arg(name, default):
@@ -86,7 +90,7 @@ def mix(cut, locale, voice, music_style):
 
     vo = np.zeros(n)
     cues = []
-    order = sorted(CUES[cut].items(), key=lambda kv: kv[1])
+    order = sorted(dict(CUES[cut], **LOCALE_CUES.get(locale, {}).get(cut, {})).items(), key=lambda kv: kv[1])
     for i, (key, start) in enumerate(order):
         line = read(os.path.join(ROOT, "audio", "out", "vo", voice, locale, f"{key}.wav"))[:, 0]
         a = int(start * SR)
