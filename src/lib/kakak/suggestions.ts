@@ -158,6 +158,13 @@ export interface IngredientSuggestion {
    * so; nothing about it is saved. `itemUnit` null: how it is kept wasn't read.
    */
   amountSkipped?: { value: number; unit: InventoryUnit; itemUnit: InventoryUnit | null } | null;
+  /**
+   * A date the owner gave that can't be kept: the item is marked Out and
+   * this card doesn't bring it back in stock (no amount, or one that can't
+   * be written), and an Out item keeps no date (migrations/154). The card
+   * says so; `expiry` is then "keep".
+   */
+  dateSkipped?: boolean;
 }
 
 /**
@@ -404,17 +411,25 @@ export function toSuggestion(
           amount = { value: converted, unit: stock.unit, mode: given.is === "now" ? "set" : "add", before: stock.quantity };
         }
       }
+      // An Out item keeps no date unless this card brings it back in stock
+      // (migrations/154). The check lets a date through when an amount comes
+      // with it; when that amount can't be written after all, the item stays
+      // Out, so the date is left off too rather than saved and dropped (Codex,
+      // PR #144).
+      const dateSkipped = listed?.out === true && amount === null && expiry === "set";
+      const kept: IngredientExpiry = dateSkipped ? "keep" : expiry;
       return {
         kind: "ingredient",
         itemId: refs.items[item],
         name: names.items[item],
         keptIn,
         fromPlace: listed?.keptIn ?? null,
-        expiry,
-        expiresOn: expiry === "set" ? str(input.expires_on) : null,
-        expiryIsGuess: expiry === "set" && input.expiry_is_guess === true,
+        expiry: kept,
+        expiresOn: kept === "set" ? str(input.expires_on) : null,
+        expiryIsGuess: kept === "set" && input.expiry_is_guess === true,
         amount,
         amountSkipped,
+        ...(dateSkipped ? { dateSkipped: true } : {}),
       };
     }
     default:

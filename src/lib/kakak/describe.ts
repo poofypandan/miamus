@@ -201,6 +201,14 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale): CardI
             : t(`The ${given} isn't added. Set the amount on the ingredient itself.`, `${given} tidak ditambahkan. Atur jumlahnya langsung di bahannya.`),
         );
       }
+      if (item.dateSkipped) {
+        notes.push(
+          t(
+            "The date isn't kept while it is marked Out. Set it once it is marked Bought.",
+            "Tanggalnya tidak disimpan selama masih ditandai Habis. Atur setelah ditandai Sudah dibeli.",
+          ),
+        );
+      }
       if (item.keptIn) {
         const moved = item.fromPlace && item.fromPlace !== item.keptIn;
         rows.push({

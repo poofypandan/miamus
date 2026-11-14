@@ -420,6 +420,34 @@ describe("an amount (2026-11-14)", () => {
     expect(check({ ...eggs, amount: null, unit: null }).ok).toBe(false);
   });
 
+  it("leaves the date off too when the amount can't be written and the item stays Out (Codex, PR #144)", () => {
+    // Telur is counted in butir and marked Out. "2 kg of eggs, good until the 25th": the check lets
+    // the date through because an amount came with it, but 2 kg can't be added to butir.
+    const eggs = listed({ item: "I5", amount: 2, unit: "kg", kept_in: "counter", expiry: "set", expires_on: "2026-11-25" });
+    expect(check(eggs)).toEqual({ ok: true });
+    const card = suggest(eggs);
+    expect(card).toMatchObject({ amount: null, amountSkipped: { value: 2, unit: "kg", itemUnit: "butir" }, expiry: "keep", expiresOn: null, expiryIsGuess: false, dateSkipped: true, keptIn: "counter" });
+    // Nothing it saves can be dropped by the database: the place alone.
+    expect(isSaveableSuggestion(card)).toBe(true);
+    expect(describeSuggestion(card, "en").rows).toEqual([
+      { label: "What", value: "Telur" },
+      { label: "Kept in", value: "Counter (was Fridge)" },
+    ]);
+    expect(describeSuggestion(card, "en").note).toBe(
+      "The 2 kg isn't added: here Telur is counted in butir. The date isn't kept while it is marked Out. Set it once it is marked Bought.",
+    );
+    expect(describeSuggestion(card, "id").note).toBe(
+      "2 kg tidak ditambahkan: di sini Telur dicatat dalam butir. Tanggalnya tidak disimpan selama masih ditandai Habis. Atur setelah ditandai Sudah dibeli.",
+    );
+    // With an amount that can be written, the eggs are bought again and the date stands.
+    const bought = suggest(listed({ item: "I5", amount: 30, unit: "butir", expiry: "set", expires_on: "2026-11-25" }));
+    expect(bought).toMatchObject({ amount: { value: 30, unit: "butir", mode: "add", before: 0 }, expiry: "set", expiresOn: "2026-11-25" });
+    expect(bought.dateSkipped).toBeUndefined();
+    // And with no place either, the card has nothing to save: its button stays off.
+    const nothing = suggest(listed({ item: "I5", amount: 2, unit: "kg", kept_in: null, expiry: "set", expires_on: "2026-11-25" }));
+    expect(addsSomething(nothing)).toBe(false);
+  });
+
   it("is added to an item that is counted, in the item's own unit", () => {
     const more = suggest(listed({ amount: 500, unit: "g", kept_in: "pantry" }));
     expect(more.amount).toEqual({ value: 0.5, unit: "kg", mode: "add", before: 1.5 });
