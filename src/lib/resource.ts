@@ -110,7 +110,7 @@ export function createResource<T>(load: () => Promise<T>) {
     return () => listeners.delete(listener);
   }
 
-  return function useResource(): ResourceState<T> {
+  function useResource(): ResourceState<T> {
     const key = getActiveHouseholdId();
     // Whether this component is already on screen. Only its first render
     // may suspend (Phase 175 check, P8): a component that suspends halfway
@@ -162,5 +162,19 @@ export function createResource<T>(load: () => Promise<T>) {
         await refresh(key);
       },
     };
-  };
+  }
+
+  /**
+   * Re-fetches the active household's value from outside a component, after
+   * a change made elsewhere (Kakak's card saving someone's staff areas):
+   * every component reading it re-renders when it lands.
+   */
+  async function reload(): Promise<void> {
+    const key = getActiveHouseholdId();
+    const current = entryFor(key);
+    if (current.inflight) await current.inflight;
+    await refresh(key);
+  }
+
+  return Object.assign(useResource, { reload });
 }

@@ -4,6 +4,7 @@
 
 import { householdRefs, type KakakHousehold } from "@/lib/kakak/household";
 import { KAKAK_TOOLS, TOOL_WEEKDAYS } from "@/lib/kakak/tools";
+import { AREAS } from "@/lib/staff-areas";
 import { isDay, isTime } from "@/lib/kakak/validate";
 import type { ExpectedShoppingItem, FieldMatcher, KakakTestSet } from "./types";
 
@@ -70,6 +71,10 @@ export function checkTestSet(
         if (setKind) {
           for (const value of matcher.sameSet) {
             if (!refs[setKind].has(value)) problems.push(`${where}: ${field} ${JSON.stringify(value)} is not in the household`);
+          }
+        } else if (field === "show" || field === "hide") {
+          if (!matcher.sameSet.every((area) => (AREAS as readonly string[]).includes(area))) {
+            problems.push(`${where}: ${field} has an area that is not ${AREAS.join(", ")}`);
           }
         } else if (field === "days") {
           if (!matcher.sameSet.every((d) => (TOOL_WEEKDAYS as readonly string[]).includes(d))) {

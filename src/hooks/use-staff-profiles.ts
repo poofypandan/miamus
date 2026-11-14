@@ -7,6 +7,9 @@ import type { StaffProfile } from "@/types/database";
 
 const useRoster = createResource(() => dataProvider.listStaffProfiles());
 
+/** Re-reads the roster after a change made outside a roster screen (Kakak's staff-areas card). */
+export const reloadStaffProfiles = useRoster.reload;
+
 /**
  * The household's roster — everyone a chore can be assigned to, admins
  * included since Phase 139 (migrations/106) — loaded on demand rather than in HouseholdContext: it is

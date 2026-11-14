@@ -93,12 +93,12 @@ describe("household dates", () => {
 });
 
 describe("tool definitions", () => {
-  it("are closed and require every property; strict except the three validate.ts checks in full", () => {
-    expect(KAKAK_TOOLS).toHaveLength(6);
+  it("are closed and require every property; strict except the four validate.ts checks in full", () => {
+    expect(KAKAK_TOOLS).toHaveLength(7);
     for (const tool of KAKAK_TOOLS) {
       if (!("input_schema" in tool)) throw new Error("custom tools only");
       // The API's limit of 16 union-typed parameters (tools.ts, kakak-tool-limits.test.ts).
-      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient"].includes(tool.name);
+      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient", "set_staff_areas"].includes(tool.name);
       expect(tool.strict).toBe(loose ? undefined : true);
       expect(tool.input_schema.additionalProperties).toBe(false);
       expect([...(tool.input_schema.required ?? [])].sort()).toEqual(
@@ -364,8 +364,9 @@ describe("the test set", () => {
   it("is consistent with the household and the tools", () => {
     expect(checkTestSet(household, testSet)).toEqual([]);
     // 116, plus 23 on 2026-11-14: K131–K144 (questions about Miamus, thanks) and
-    // K146–K154 (a new ingredient, amounts). All for tuning; the holdout is as it was.
-    expect(testSet.cases).toHaveLength(139);
+    // K146–K154 (a new ingredient, amounts), plus K117–K126 (what a staff
+    // member sees, Phase 178 follow-up). All for tuning; the holdout is as it was.
+    expect(testSet.cases).toHaveLength(149);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 

@@ -26,6 +26,7 @@ import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
 import type { PetRoutineToolKind } from "./tools";
 import { newPetTimes } from "./validate";
+import { AREAS, type StaffArea } from "@/lib/staff-areas";
 
 /** Practice mode is on only when asked for, and never on production. */
 export function practiceAllowed(env: Record<string, string | undefined>): boolean {
@@ -357,7 +358,7 @@ function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-type Intent = "shopping" | "food" | "ingredient" | "new_ingredient" | "pet" | "chore" | "thanks" | "question";
+type Intent = "shopping" | "food" | "ingredient" | "new_ingredient" | "pet" | "staff_areas" | "chore" | "thanks" | "question";
 
 type Place = "fridge" | "freezer" | "pantry" | "counter";
 
@@ -381,6 +382,37 @@ function placeFrom(text: string): Place | null {
 /** A listed ingredient (Phase 176) the text names, while ingredients are on. */
 function findIngredient(household: KakakHousehold, text: string): KakakHousehold["items"][number] | null {
   return household.ingredientsOn ? findRef(household.items.filter((item) => item.ingredient), text) : null;
+}
+
+/** The areas a sentence names (Phase 178): "Dapur dan Perbaikan", "the pet routines". */
+const AREA_WORDS: [RegExp, StaffArea][] = [
+  [/\b(tugas untuk siapa saja|chores for anyone)\b/, "home"],
+  [/\b(rutinitas hewan|pet routines?)\b/, "pets"],
+  [/\b(dapur|kitchen)\b/, "kitchen"],
+  [/\b(perbaikan|repairs?)\b/, "repairs"],
+];
+const HIDE_AREAS = /\b(hide|sembunyikan|jangan lihat|jangan kelihatan|tidak usah lihat|ga usah lihat|matikan)\b/;
+const ONLY_AREAS = /\b(only|cuma|hanya)\b/;
+const SHOW_AREAS = /\b(show|tampilkan|boleh lihat|lihat lagi|see|aktifkan)\b/;
+
+/**
+ * "Sembunyikan Dapur dan Perbaikan dari Syam", "only show Syam the pet
+ * routines", "let Budi see the kitchen again": the set_staff_areas call, or
+ * null when the sentence names no area, no staff member, or no way.
+ */
+function staffAreasFrom(household: KakakHousehold, text: string): { staff: string; show: StaffArea[]; hide: StaffArea[] } | null {
+  const t = text.toLowerCase();
+  const named = AREA_WORDS.filter(([pattern]) => pattern.test(t)).map(([, area]) => area);
+  if (named.length === 0) return null;
+  const staff = household.people.filter((p) => !p.owner);
+  const said = words(text);
+  const person = staff.find((p) => said.includes(p.name.toLowerCase().split(/\s+/)[0]));
+  if (!person) return null;
+  const all = AREAS.filter((area) => area !== "pets" || !household.petsOff);
+  if (HIDE_AREAS.test(t)) return { staff: person.ref, show: [], hide: named };
+  if (ONLY_AREAS.test(t)) return { staff: person.ref, show: named, hide: all.filter((area) => !named.includes(area)) };
+  if (SHOW_AREAS.test(t)) return { staff: person.ref, show: named, hide: [] };
+  return null;
 }
 
 // ---- Amounts (2026-11-14) -----------------------------------------------------
@@ -472,6 +504,8 @@ function guideEntryFor(question: string, locale: Locale): GuideEntry | null {
 
 function intentOf(household: KakakHousehold, text: string): Intent {
   if (THANKS.test(text.trim())) return "thanks";
+  // "Sembunyikan Dapur dari Syam" (Phase 178): before "Dapur" reads as a room.
+  if (staffAreasFrom(household, text)) return "staff_areas";
   // "Telur sudah di kulkas", "move the beef to the fridge": a listed
   // ingredient with a place or an amount, before "beli" makes it shopping.
   const listed = findIngredient(household, text);
@@ -651,6 +685,14 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
     if (after && after.ref !== before?.ref) return message(model, [text(copy.noChange)]);
   }
   const canAsk = asked < 1;
+
+  if (intent === "staff_areas") {
+    const call = staffAreasFrom(household, first);
+    if (!call) return message(model, [text(copy.stuck)]);
+    const name = household.people.find((p) => p.ref === call.staff)?.name ?? "";
+    const line = household.ownerLocale === "id" ? `(Latihan) Ini yang akan dilihat ${name}:` : `(Practice) Here's what ${name} would see:`;
+    return message(model, [text(line), toolUse("set_staff_areas", call)]);
+  }
 
   if (intent === "shopping") {
     const body = first.replace(/\b(tolong|please|beli|belikan|buy|habis|abis|out of|running low|restock|kita|we're|we are|are|is)\b/gi, " ");

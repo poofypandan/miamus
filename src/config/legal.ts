@@ -212,7 +212,15 @@ export const LEGAL = {
   // Amounts and units are never sent: the server works out how an amount
   // lands. No new kind of personal data, no new service or region;
   // Anthropic's retention is unchanged.
-  policyVersion: "2026-11-14.1",
+  // 2026-11-14.2: Kakak sets what a staff member sees (Phase 178
+  // follow-up; migrations/171 only lets the request record name the new
+  // tool) — each Kakak request now also carries, for a staff member with
+  // parts of the staff app switched off, which parts they don't see (chores
+  // for anyone, pet routines, kitchen, repairs), and Kakak may suggest a
+  // change, saved only when the admin confirms. No new kind of personal
+  // data stored, no new service or region; Anthropic's retention is
+  // unchanged.
+  policyVersion: "2026-11-14.2",
   effectiveDate: { en: "14 November 2026", id: "14 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

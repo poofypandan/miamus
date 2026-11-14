@@ -5080,6 +5080,435 @@
       "note": "Phase 176: a cake is food ready to eat, so still add_food while ingredients are on."
     },
     {
+      "id": "K117",
+      "sentence": "Sembunyikan Dapur dan Perbaikan dari Syam",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_areas",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S6",
+                  "show": {
+                    "sameSet": []
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "kitchen",
+                      "repairs"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "id": "K118",
+      "sentence": "Please hide the kitchen and repairs from Syam",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "staff_areas",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S6",
+                  "show": {
+                    "sameSet": []
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "kitchen",
+                      "repairs"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "id": "K119",
+      "sentence": "Only show Syam the pet routines",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "staff_areas",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S6",
+                  "show": {
+                    "any": true
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "home",
+                      "kitchen",
+                      "repairs"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Pets are already on for Syam, so show may be empty or [pets]; the validator refuses any other overlap."
+    },
+    {
+      "id": "K120",
+      "sentence": "Syam cuma boleh lihat rutinitas hewan saja",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_areas",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S6",
+                  "show": {
+                    "any": true
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "home",
+                      "kitchen",
+                      "repairs"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "As K119, in Indonesian."
+    },
+    {
+      "id": "K121",
+      "sentence": "Hide the kitchen from Rina",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "staff_areas",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "who Rina is",
+            "reply": "Sari"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S1",
+                  "show": {
+                    "sameSet": []
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "kitchen"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Rina"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Nobody called Rina: ask who, or say she can't find them. Never guess."
+    },
+    {
+      "id": "K122",
+      "sentence": "Sembunyikan Dapur dari Mbak Rina",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_areas",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "siapa Rina",
+            "reply": "Sari"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S1",
+                  "show": {
+                    "sameSet": []
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "kitchen"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Rina"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "As K121, in Indonesian."
+    },
+    {
+      "id": "K123",
+      "sentence": "Hide repairs from Sam",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "staff_areas",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S6",
+                  "show": {
+                    "sameSet": []
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "repairs"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "question",
+            "about": "whether Sam is Syam",
+            "answersInclude": [
+              [
+                "Syam"
+              ]
+            ],
+            "reply": "Syam"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S6",
+                  "show": {
+                    "sameSet": []
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "repairs"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "'Sam' sounds like exactly one listed person, Syam: use S6, or ask offering Syam."
+    },
+    {
+      "id": "K124",
+      "sentence": "Sam jangan lihat Perbaikan ya",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_areas",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S6",
+                  "show": {
+                    "sameSet": []
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "repairs"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "question",
+            "about": "apakah Sam itu Syam",
+            "answersInclude": [
+              [
+                "Syam"
+              ]
+            ],
+            "reply": "Syam"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S6",
+                  "show": {
+                    "sameSet": []
+                  },
+                  "hide": {
+                    "sameSet": [
+                      "repairs"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "As K123, in Indonesian."
+    },
+    {
+      "id": "K125",
+      "sentence": "Let Budi see the kitchen again",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "staff_areas",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "set_staff_areas",
+                "fields": {
+                  "staff": "S3",
+                  "show": {
+                    "sameSet": [
+                      "kitchen"
+                    ]
+                  },
+                  "hide": {
+                    "sameSet": []
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Budi doesn't see the kitchen (household.json)."
+    },
+    {
+      "id": "K126",
+      "sentence": "Budi masak nasi besok jam 11",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "chore_once",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "masak"
+                      ],
+                      [
+                        "nasi"
+                      ]
+                    ]
+                  },
+                  "assignee": "S3",
+                  "due_date": "2026-11-12",
+                  "due_time": "11:00",
+                  "room": {
+                    "anyOf": [
+                      "R2",
+                      null
+                    ]
+                  },
+                  "category": {
+                    "any": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Budi's kitchen is off, but the owner names him: what is given by name always shows."
+    },
+    {
       "id": "K131",
       "sentence": "how would you describe what miamis is for",
       "ownerLocale": "en",

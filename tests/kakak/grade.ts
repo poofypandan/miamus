@@ -133,6 +133,10 @@ export const DEFAULTS: Record<string, Record<string, FieldMatcher>> = {
     shelf: null,
   },
   add_to_shopping_list: {},
+  set_staff_areas: {
+    show: { sameSet: [] },
+    hide: { sameSet: [] },
+  },
   add_pet_routine: {
     days: null,
     until: null,

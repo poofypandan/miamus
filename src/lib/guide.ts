@@ -147,8 +147,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "What staff see", id: "Yang dilihat staf" },
     body: {
-      en: "Staff phones are in Bahasa Indonesia and show their own tasks for the day, plus what you leave on for them. In Settings → Staff, tap the eye beside a person to choose what they see: chores for anyone, pet routines, Kitchen, Repairs. Staff never see prices.",
-      id: "HP staf berbahasa Indonesia dan menampilkan tugas mereka hari itu, ditambah yang Anda izinkan. Di Pengaturan → Staf, ketuk ikon mata di samping nama untuk memilih yang dilihatnya: tugas untuk siapa saja, rutinitas hewan, Dapur, Perbaikan. Staf tidak pernah melihat harga.",
+      en: "Staff phones are in Bahasa Indonesia and show their own tasks for the day, plus what you leave on for them. In Settings → Staff, tap the eye beside a person to choose what they see: chores for anyone, pet routines, Kitchen, Repairs. Or tell Kakak. Staff never see prices.",
+      id: "HP staf berbahasa Indonesia dan menampilkan tugas hari itu, ditambah yang Anda izinkan. Di Pengaturan → Staf, ketuk ikon mata di samping nama untuk memilih: tugas untuk siapa saja, rutinitas hewan, Dapur, Perbaikan. Atau bilang ke Kakak. Staf tidak pernah melihat harga.",
     },
     where: "settings_staff",
   },
@@ -446,8 +446,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Kakak", id: "Kakak" },
     body: {
-      en: "Kakak is Miamus's AI helper. Tell her what you need by typing or talking, and she prepares a card: chores, shopping, pet routines, food and ingredients. Nothing is saved until you confirm. Switch her on or off in Settings → Kakak.",
-      id: "Kakak adalah asisten AI di Miamus. Ketik atau ucapkan yang Anda perlukan, lalu Kakak menyiapkan kartunya: tugas, belanja, rutinitas hewan, makanan, dan bahan masakan. Tidak ada yang disimpan sebelum Anda konfirmasi. Nyalakan atau matikan Kakak di Pengaturan → Kakak.",
+      en: "Kakak is Miamus's AI helper. Tell her what you need by typing or talking, and she prepares a card: chores, shopping, pet routines, food, ingredients and what staff see. Nothing is saved until you confirm. Switch her on or off in Settings → Kakak.",
+      id: "Kakak adalah asisten AI di Miamus. Ketik atau ucapkan yang Anda perlukan, lalu Kakak menyiapkan kartunya: tugas, belanja, rutinitas hewan, makanan, bahan masakan, dan yang dilihat staf. Tidak ada yang disimpan sebelum Anda konfirmasi. Nyalakan atau matikan di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
     covers: ["kakak-routines-2026-11", "kakak-voice-2026-11", "kakak-answers-2026-11"],

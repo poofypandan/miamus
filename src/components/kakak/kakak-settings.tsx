@@ -58,8 +58,8 @@ export function KakakSettings({ status, reload }: { status: KakakStatus; reload:
             <KakakAvatar className="size-10" />
             <p className="text-sm text-gray-900">
               {t(
-                "Kakak sets up chores, shopping, pet routines, food and ingredients from what you type or say, and answers questions about how Miamus works. She shows you a card first; nothing is saved until you confirm.",
-                "Kakak mengatur tugas, belanja, rutinitas hewan, makanan, dan bahan masakan dari yang Anda ketik atau ucapkan, dan menjawab pertanyaan tentang cara pakai Miamus. Kakak menunjukkan kartunya dulu; tidak ada yang disimpan sebelum Anda konfirmasi."
+                "Kakak sets up chores, shopping, pet routines, food, ingredients and what staff see from what you type or say, and answers questions about how Miamus works. She shows you a card first; nothing is saved until you confirm.",
+                "Kakak mengatur tugas, belanja, rutinitas hewan, makanan, bahan masakan, dan yang dilihat staf dari yang Anda ketik atau ucapkan, dan menjawab pertanyaan tentang cara pakai Miamus. Kakak menunjukkan kartunya dulu; tidak ada yang disimpan sebelum Anda konfirmasi."
               )}
             </p>
           </div>
