@@ -112,6 +112,37 @@ Code: `src/components/kakak/kakak-voice.tsx` (UI) and
 2. Tap Stop when you're done. Kakak shows her card; nothing is saved until you confirm.
 3. Want to hear her answers? Turn on Read replies aloud. This phone remembers it.
 
+## Kakak's own voice (ElevenLabs, migration 172)
+
+With **Read replies aloud** on, her replies are read in her chosen voice
+("Lyly", model `eleven_v4`, picked 15 Nov) instead of the phone's. Off until
+the server has both of these, so nothing changes before then:
+
+- `ELEVENLABS_API_KEY`: an ElevenLabs API key (server-only, set in Vercel).
+- `KAKAK_VOICE_ID`: Lyly's voice id. Add her to **My Voices** in the
+  ElevenLabs Voice Library first, then copy the id from the voice's menu.
+- Optional: `KAKAK_VOICE_MODEL` (default `eleven_v4`) and
+  `KAKAK_VOICE_DAILY_CHARS` (characters per household per Jakarta day,
+  default 3000, `0` turns the voice off).
+
+How it works (`src/app/api/kakak/speak/route.ts`,
+`src/lib/kakak/app-voice-server.ts`, `src/lib/kakak/app-voice.ts`):
+
+- The phone sends only the words it would read itself (`speechPlan`: times
+  in words, a short opener and two sentences, never a card's rows), at most
+  600 characters.
+- `kakak_voice_spend` lets in the same people as `/api/kakak` (an admin of a
+  household where Kakak is allowed and on) and counts the characters in
+  `kakak_usage.voice_chars` (numbers only, kept 35 days). Over the budget the
+  phone reads aloud itself for the rest of the visit.
+- The audio streams straight back and is never stored. ElevenLabs keeps each
+  generation in the account's history by default (zero retention is
+  Enterprise-only), so the route deletes it from the history right after
+  (`forget`). Check the History page on staging: it should stay empty.
+- Any failure (not set up, budget, offline, no audio within 2.5 seconds,
+  audio the phone can't play) reads the reply in the phone's voice instead.
+  Without migration 172 the route answers "off".
+
 ## Limits (migration 126)
 
 - 40 calls per household per Jakarta day (`kakak_settings.daily_limit`).

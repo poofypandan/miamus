@@ -72,6 +72,10 @@ export function KakakSettings({ status, reload }: { status: KakakStatus; reload:
               "If you talk to Kakak, your browser turns your voice into text and may send the audio to Apple or Google to do it. Miamus only gets the text, never the audio.",
               "Jika Anda bicara ke Kakak, browser Anda mengubah suara menjadi teks dan bisa mengirim rekaman suaranya ke Apple atau Google untuk itu. Miamus hanya menerima teksnya, tidak pernah rekaman suaranya."
             )}{" "}
+            {t(
+              "With Read replies aloud on, Kakak's replies are sent to ElevenLabs in the United States to be read in her voice. Miamus keeps neither the words nor the audio, and asks ElevenLabs to delete them right away.",
+              "Jika Bacakan jawaban Kakak dinyalakan, jawaban Kakak dikirim ke ElevenLabs di Amerika Serikat untuk dibacakan dengan suaranya. Miamus tidak menyimpan kata-kata maupun suaranya, dan meminta ElevenLabs langsung menghapusnya."
+            )}{" "}
             <Link href={locale === "id" ? "/privasi" : "/privacy"} className="font-medium underline underline-offset-2">
               {t("Privacy policy", "Kebijakan privasi")}
             </Link>
