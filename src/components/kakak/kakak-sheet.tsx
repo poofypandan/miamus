@@ -436,7 +436,10 @@ function Conversation({ onClose }: { onClose: () => void }) {
               ? t("What should change?", "Apa yang perlu diubah?")
               : screen.kind === "question"
                 ? t("Type your answer", "Ketik jawaban Anda")
-                : t("What should I set up?", "Mau Kakak atur apa?")
+                : screen.kind === "message" && !screen.problem
+                  ? // After her answer, the conversation goes on (2026-11-14).
+                    t("Anything else?", "Ada lagi?")
+                  : t("What should I set up?", "Mau Kakak atur apa?")
           }
           showExamples={screen.kind === "typing" && said.length === 0}
         />

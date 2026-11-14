@@ -551,6 +551,38 @@ test("an amount on a listed ingredient is added as a purchase, and Undo takes it
   await expect.poll(() => stub.supplies[0]).toMatchObject({ quantity: 1 });
 });
 
+test("what is left replaces the amount, and Undo puts back the amount and a Running low someone had tapped", async ({ context, page }) => {
+  // The beef, counted: 4 kg, and someone marked it Running low by hand. "Only 1 kg left."
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    features: { kitchen: true },
+    items: [{ ...beef, track_amount: true, quantity: 4, stock_status: "low" }],
+  });
+  await kakakSays(page, [
+    {
+      kind: "suggestions",
+      text: "",
+      items: [
+        { kind: "ingredient", itemId: BEEF, name: "Daging sapi", keptIn: null, fromPlace: "freezer", expiry: "keep", expiresOn: null, expiryIsGuess: false, amount: { value: 1, unit: "kg", mode: "set", before: 4 }, amountSkipped: null },
+      ],
+    },
+  ]);
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "What should I set up?" }).fill("There is only 1 kg of beef left");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByText("1 kg (was 4 kg)")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Looks right" }).click();
+  // A new amount settles the status again: 1 kg, with no low level set, is Enough.
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ quantity: 1, stock_status: "ok" });
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(() => stub.supplies[0]).toMatchObject({ quantity: 4, stock_status: "low" });
+});
+
 test("an amount that can't be written is explained on the card, and the card has nothing to save", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true }, features: { kitchen: true }, items: [beef] });
   await kakakSays(page, [
@@ -589,8 +621,8 @@ test("Kakak answers a question in words, and the conversation keeps both sides",
   // The whole answer, longer than a card's sentence, and no card.
   await expect(page.getByText(answer)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Looks right" })).toHaveCount(0);
-  // She can be asked again straight away.
-  await page.getByRole("textbox", { name: "What should I set up?" }).fill("thank you");
+  // She can be asked again straight away: the box now asks "Anything else?".
+  await page.getByRole("textbox", { name: "Anything else?" }).fill("thank you");
   await page.getByRole("button", { name: "Send" }).click();
 
   await expect(page.getByText("You're welcome.")).toBeVisible();

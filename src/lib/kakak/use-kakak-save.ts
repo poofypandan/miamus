@@ -155,8 +155,15 @@ export function useKakakSave() {
                     await household.recordPurchase(item.itemId, amount.value);
                     undos.push(() => household.undoPurchase(before, amount.value));
                   } else {
+                    // What is there now. A new amount settles the status
+                    // again (migrations/148), so Undo also puts back a
+                    // Running low someone had tapped (Codex, PR #144).
+                    const statusBefore = stockStatus(before);
                     await household.setInventoryAmount(item.itemId, amount.value);
-                    undos.push(() => household.setInventoryAmount(item.itemId, before.quantity));
+                    undos.push(async () => {
+                      const back = await household.setInventoryAmount(item.itemId, before.quantity);
+                      if (stockStatus(back) !== statusBefore) await household.setInventoryStatus(item.itemId, statusBefore);
+                    });
                   }
                 }
               }
