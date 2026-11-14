@@ -7,17 +7,21 @@
 // and no tokens used.
 //
 // It is not clever, and isn't meant to be: it recognises days, times, names,
-// rooms, "buy", food words, pet routines (meals, potty, walks, lights off…)
-// and a listed ingredient put in a place, asks one question when the day, a
-// food's date or a thawed ingredient's date is missing, and otherwise
-// suggests. What it
+// rooms, "buy", food words, pet routines (meals, potty, walks, lights off…),
+// a listed ingredient put in a place and a new one it can name in
+// Indonesian (each with an amount, if given), asks one question when the
+// day, a food's date or a thawed ingredient's date is missing, and otherwise
+// suggests. A question about Miamus gets the guide's own entry, and thanks
+// get a thank-you. What it
 // tests is the app around Kakak, never Kakak's judgement — that needs the
 // real eval (tests/kakak).
 //
 // Never on production: practiceAllowed() refuses when Vercel says so.
 import type Anthropic from "@anthropic-ai/sdk";
+import { GUIDE, GUIDE_PLACES, type GuideEntry } from "@/lib/guide";
 import { addDays, weekdayIndex, type KakakHousehold } from "./household";
 import { splitRefinementNote } from "./refine";
+import { CORRECTION_PREFIX } from "./reply-guard";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
 import type { PetRoutineToolKind } from "./tools";
@@ -296,6 +300,8 @@ function indonesianTitle(sentence: string, roomName: string | null): string | nu
 // Groceries and supplies: English to the Indonesian shops use, longest first
 // (Codex, PR #31: shopping notes are shown on staff screens).
 const EN_GROCERIES: [RegExp, string][] = [
+  [/\bbrown rice\b/, "Beras merah"],
+  [/\bchicken breasts?\b/, "Dada ayam"],
   [/\bdish(?:washing)? soap\b/, "Sabun cuci piring"],
   [/\btoilet (?:paper|rolls?)\b/, "Tisu toilet"],
   [/\bcooking oil\b/, "Minyak goreng"],
@@ -351,7 +357,7 @@ function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-type Intent = "shopping" | "food" | "ingredient" | "pet" | "chore";
+type Intent = "shopping" | "food" | "ingredient" | "new_ingredient" | "pet" | "chore" | "thanks" | "question";
 
 type Place = "fridge" | "freezer" | "pantry" | "counter";
 
@@ -377,10 +383,116 @@ function findIngredient(household: KakakHousehold, text: string): KakakHousehold
   return household.ingredientsOn ? findRef(household.items.filter((item) => item.ingredient), text) : null;
 }
 
+// ---- Amounts (2026-11-14) -----------------------------------------------------
+
+type Unit = "g" | "kg" | "ml" | "L" | "pcs" | "buah" | "butir" | "ikat" | "siung" | "lembar" | "batang" | "bungkus" | "sachet" | "pack" | "box" | "bottle" | "roll" | "tube";
+
+const UNIT_WORDS: Record<string, Unit> = {
+  kg: "kg", kilo: "kg", kilos: "kg", g: "g", gr: "g", gram: "g", grams: "g",
+  l: "L", liter: "L", liters: "L", litre: "L", litres: "L", ml: "ml",
+  pcs: "pcs", buah: "buah", butir: "butir", ikat: "ikat", siung: "siung", lembar: "lembar", batang: "batang",
+  bungkus: "bungkus", sachet: "sachet", pack: "pack", packs: "pack", pak: "pack", box: "box", boxes: "box", kotak: "box",
+  bottle: "bottle", bottles: "bottle", botol: "bottle", roll: "roll", rolls: "roll", rol: "roll", tube: "tube",
+};
+const AMOUNT = new RegExp(String.raw`(\d+(?:[.,]\d+)?)\s*(${Object.keys(UNIT_WORDS).sort((a, b) => b.length - a.length).join("|")})\b`, "i");
+
+/** "2 kg", "1,5 liter", "30 butir": the number and its unit, or null. */
+function amountFrom(text: string): { amount: number; unit: Unit } | null {
+  const match = AMOUNT.exec(text);
+  if (!match) return null;
+  const amount = Number(match[1].replace(",", "."));
+  return amount > 0 ? { amount, unit: UNIT_WORDS[match[2].toLowerCase()] } : null;
+}
+
+/** "We have 3 kg", "tinggal 1 kg": what is there in all, not more coming in. */
+function amountIsNow(text: string): boolean {
+  return has(text, /\b(we have|there is|there are|left|tinggal|sisa|masih ada)\b/);
+}
+
+const ADDING = /\b(add|adding|tambah|tambahkan|put|taruh|simpan|masukkan|store|we have|ada)\b/;
+const FRESH = /\b(ayam|ikan|daging|telur|sayur|buah|susu|tahu|tempe|cabai|cabe|bawang|tomat|udang|keju)\b/i;
+
+/**
+ * A new ingredient the text adds, named in Indonesian (2026-11-14): a known
+ * English grocery translated ("brown rice" → "Beras merah"), or the owner's
+ * own Indonesian words. Null for anything it can't vouch is Indonesian:
+ * cooks read ingredient names.
+ */
+function newIngredientFrom(household: KakakHousehold, text: string): { name: string; nameEn: string | null } | null {
+  // "Tambah gula ke daftar belanja" is the shopping list's, not the cupboard's.
+  if (!household.ingredientsOn || !has(text, ADDING) || has(text, /\b(belanja|shopping|daftar)\b/)) return null;
+  const t = text.toLowerCase();
+  const english = EN_GROCERIES.find(([pattern]) => pattern.test(t));
+  if (english) {
+    const said = english[0].exec(t)?.[0] ?? "";
+    return { name: english[1], nameEn: household.ownerLocale === "en" && said ? capitalise(said) : null };
+  }
+  if (!ID_GROCERY.test(t)) return null;
+  const name = t
+    .replace(AMOUNT, " ")
+    .replace(/\b(tolong|please|terima kasih|makasih|thank you|thanks|tambah|tambahkan|taruh|simpan|masukkan|ada|ke|di|dalam|yang|ya)\b/g, " ")
+    .replace(/\b(kulkas|freezer|lemari|meja)\b/g, " ")
+    .replace(/[^\p{L}\s'-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return name ? { name: clip(capitalise(name), 60), nameEn: null } : null;
+}
+
+// ---- Questions about Miamus (Phase 180) ----------------------------------------
+
+// Thanks or a greeting and nothing else: "Hai Ari, pel teras" is a request.
+const THANKS =
+  /^(?:ok(?:ay)?,?\s+)?(?:(?:thanks|thank you|thank u|terima kasih|makasih|trims)(?:,?\s+(?:ya|kak|kakak|so much|a lot|banyak))*|(?:hi|hello|halo|hai)(?:,?\s+(?:kak|kakak))?)[\s!.]*$/i;
+const ASKING =
+  /\?\s*$|^(what|how|where|why|who|which|can i|tell me about|explain|apa|apakah|bagaimana|gimana|cara|di mana|dimana|kenapa|mengapa|untuk apa|jelaskan)\b/i;
+
+/** Words too common to tell one guide entry from another. */
+const COMMON = new Set(
+  "what how where why who which does this that with from your have about would describe tell explain like the are can you miamus apa bagaimana gimana cara yang untuk dengan dari anda saya bisa adalah itu ini seperti".split(" "),
+);
+
+/**
+ * The guide entry a question is about: the one sharing most of its words,
+ * by title first. "What is Miamus for?" is the entry about Miamus itself.
+ */
+function guideEntryFor(question: string, locale: Locale): GuideEntry | null {
+  const asked = words(question).filter((w) => w.length >= 3 && !COMMON.has(w));
+  if (/\b(miamus|miamis)\b/i.test(question) && asked.length <= 2) return GUIDE[0];
+  let best: { entry: GuideEntry; score: number } | null = null;
+  for (const entry of GUIDE) {
+    const title = words(`${entry.title[locale]} ${entry.where ? GUIDE_PLACES[entry.where][locale] : ""}`);
+    const body = words(entry.body[locale]);
+    const near = (list: string[], w: string) => list.some((x) => x === w || (w.length >= 4 && (x.startsWith(w) || w.startsWith(x))));
+    const score = asked.reduce((sum, w) => sum + (near(title, w) ? 3 : near(body, w) ? 1 : 0), 0);
+    // One word from a body isn't enough to call it that entry's question.
+    if (score >= 2 && (!best || score > best.score)) best = { entry, score };
+  }
+  return best?.entry ?? null;
+}
+
 function intentOf(household: KakakHousehold, text: string): Intent {
+  if (THANKS.test(text.trim())) return "thanks";
   // "Telur sudah di kulkas", "move the beef to the fridge": a listed
-  // ingredient with a place, before "beli" makes it shopping.
-  if (findIngredient(household, text) && (placeFrom(text) || has(text, /\b(dari|out of)( the)? freezer\b/))) return "ingredient";
+  // ingredient with a place or an amount, before "beli" makes it shopping.
+  const listed = findIngredient(household, text);
+  if (listed && (placeFrom(text) || has(text, /\b(dari|out of)( the)? freezer\b/) || (amountFrom(text) && has(text, ADDING)))) {
+    return "ingredient";
+  }
+  // "Add 2 kg of brown rice into the pantry": one that isn't listed yet.
+  if (!listed && newIngredientFrom(household, text) && (placeFrom(text) || amountFrom(text))) return "new_ingredient";
+  // The same with a name it can't vouch is Indonesian ("2 kg of quinoa"):
+  // it says it can't, rather than read it as a chore and ask which day.
+  if (!listed && household.ingredientsOn && has(text, ADDING) && amountFrom(text) && !has(text, /\b(beli|belikan|buy)\b/)) {
+    return "new_ingredient";
+  }
+  // A question, unless it is a request it knows how to set up: "How do I get
+  // Ari to mop on Mondays?" names a chore and who or when, so it is a chore.
+  const t = text.toLowerCase();
+  const request =
+    has(text, /\b(beli|belikan|buy)\b/) ||
+    timesFrom(text).length > 0 ||
+    ((EN_TASKS.some(([pattern]) => pattern.test(t)) || ID_TASK.test(t)) && (findPerson(household, text) !== null || whenFrom(text, household.today) !== null));
+  if (ASKING.test(text.trim()) && !request) return "question";
   if (has(text, /\b(beli|belikan|buy|habis|abis|out of|running low|restock)\b/)) return "shopping";
   if (
     findPets(household, text).length > 0 &&
@@ -391,7 +503,6 @@ function intentOf(household: KakakHousehold, text: string): Intent {
   }
   // A chore word wins over a food word: "Bersihkan kulkas" is cleaning the
   // fridge, not food in it (Codex, PR #31).
-  const t = text.toLowerCase();
   if (EN_TASKS.some(([pattern]) => pattern.test(t)) || ID_TASK.test(t)) return "chore";
   if (has(text, /\b(kulkas|fridge|freezer|kue|lauk|sisa|leftover|leftovers|dikasih|oleh-oleh|gift|cake|soup|sup|rendang|dari tante|from)\b/)) {
     return "food";
@@ -433,7 +544,8 @@ function readConversation(messages: Anthropic.MessageParam[]): Conversation {
       return;
     }
     if (typeof message.content === "string") {
-      pushOwner(said, message.content);
+      // The route's note that a reply couldn't be shown isn't the owner's.
+      if (!message.content.startsWith(CORRECTION_PREFIX)) pushOwner(said, message.content);
       return;
     }
     for (const block of message.content) {
@@ -491,6 +603,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     stuck: "(Practice) I can't set that up in practice mode. Try: \"Ari mops the terrace every Monday at 9\".",
     noChange: "(Practice) In practice mode I can only change a chore's day, time or person. Cancel and type the whole thing again.",
     already: "(Practice) That's already in your routines, at that time. Nothing to add.",
+    welcome: "(Practice) You're welcome.",
+    unsure: "(Practice) I'm not sure about that one. The people who make Miamus read what you send from Settings → Send feedback.",
   },
   id: {
     here: "(Latihan) Ini yang akan Kakak tambahkan:",
@@ -505,6 +619,8 @@ const COPY: Record<Locale, Record<string, string>> = {
     stuck: "(Latihan) Ini belum bisa di mode latihan. Coba: \"Ari pel teras setiap Senin jam 9\".",
     noChange: "(Latihan) Di mode latihan, Kakak hanya bisa mengubah hari, jam atau orang untuk tugas. Batalkan lalu ketik ulang semuanya.",
     already: "(Latihan) Itu sudah ada di rutinitas Anda, di jam itu. Tidak ada yang perlu ditambahkan.",
+    welcome: "(Latihan) Sama-sama.",
+    unsure: "(Latihan) Kakak belum yakin soal itu. Tim Miamus membaca yang Anda kirim lewat Pengaturan → Kirim masukan.",
   },
 };
 
@@ -516,6 +632,14 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
   const first = said[0];
   const all = said.join(" · ");
   const intent = intentOf(household, first);
+  const practice = household.ownerLocale === "id" ? "(Latihan)" : "(Practice)";
+  // Thanks, and questions about Miamus (Phase 180): a plain reply, no card.
+  // A question is answered with the guide's own entry, word for word.
+  if (intent === "thanks") return message(model, [text(copy.welcome)]);
+  if (intent === "question") {
+    const entry = guideEntryFor(first, household.ownerLocale);
+    return message(model, [text(entry ? `${practice} ${entry.body[household.ownerLocale]}` : copy.unsure)]);
+  }
   // Only chores take a typed change; anything else would come back unchanged
   // and look corrected (Codex, PR #31), so say so instead.
   if (changed && intent !== "chore") return message(model, [text(copy.noChange)]);
@@ -580,10 +704,37 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
     ]);
   }
 
+  if (intent === "new_ingredient") {
+    const fresh = newIngredientFrom(household, first);
+    if (!fresh) return message(model, [text(copy.stuck)]);
+    const amount = amountFrom(first);
+    const t = all.toLowerCase();
+    let expires: string | null = null;
+    if (/\b(in 3 days|3 hari)\b/.test(t)) expires = addDays(household.today, 3);
+    else if (/\b(tomorrow|besok)\b/.test(t)) expires = addDays(household.today, 1);
+    return message(model, [
+      text(copy.here),
+      toolUse("put_away_ingredient", {
+        item: null,
+        new_name: fresh.name,
+        new_name_en: fresh.nameEn,
+        shelf: FRESH.test(fresh.name) ? "fresh_food" : "pantry",
+        kept_in: placeFrom(first),
+        amount: amount?.amount ?? null,
+        unit: amount?.unit ?? null,
+        amount_is: "bought",
+        expiry: expires ? "set" : "keep",
+        expires_on: expires,
+        expiry_is_guess: false,
+      }),
+    ]);
+  }
+
   if (intent === "ingredient") {
     const item = findIngredient(household, first);
     if (!item) return message(model, [text(copy.stuck)]);
     const place = placeFrom(first);
+    const amount = amountFrom(first);
     const t = all.toLowerCase();
     const unknown = /\b(don't know|dont know|tidak tahu|nggak tahu|gak tahu|ga tau)\b/.test(t);
     let expires: string | null = null;
@@ -605,7 +756,13 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
       text(copy.here),
       toolUse("put_away_ingredient", {
         item: item.ref,
+        new_name: null,
+        new_name_en: null,
+        shelf: null,
         kept_in: place,
+        amount: amount?.amount ?? null,
+        unit: amount?.unit ?? null,
+        amount_is: amount && amountIsNow(first) ? "now" : "bought",
         expiry: expires ? "set" : "keep",
         expires_on: expires,
         expiry_is_guess: false,

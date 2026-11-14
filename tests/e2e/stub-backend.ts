@@ -585,6 +585,12 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         const object = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: object ? row : [row] });
       }
+      // An item taken off again (Kakak's Undo of a new ingredient, 2026-11-14).
+      if (table === "inventory_items" && request.method() === "DELETE") {
+        const itemId = (new URL(request.url()).searchParams.get("id") ?? "").replace(/^eq\./, "");
+        const index = supplies.findIndex((row) => row.id === itemId);
+        return route.fulfill({ json: index === -1 ? [] : supplies.splice(index, 1) });
+      }
       // Kitchen amounts (Phase 170 PR A, migrations/148).
       if (table === "inventory_items" && request.method() === "PATCH") {
         const itemId = (new URL(request.url()).searchParams.get("id") ?? "").replace(/^eq\./, "");

@@ -6,7 +6,19 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { KakakHousehold } from "@/lib/kakak/household";
-import { guardReplyText, INTERNAL_NAMES, MAX_REPLY_CHARS, noteTells, replyTells } from "@/lib/kakak/reply-guard";
+import {
+  correctionFor,
+  CORRECTION_PREFIX,
+  guardReplyText,
+  INTERNAL_NAMES,
+  MAX_ANSWER_CHARS,
+  MAX_REPLY_CHARS,
+  noteTells,
+  replyProblems,
+  replyTells,
+} from "@/lib/kakak/reply-guard";
+import { MAX_TYPED } from "@/lib/kakak/engine";
+import { GUIDE } from "@/lib/guide";
 import { gradeCase, visibleText, type ActualTurn } from "../kakak/grade";
 import type { KakakTestSet } from "../kakak/types";
 
@@ -134,5 +146,42 @@ describe("the eval's must-never for a note on screen", () => {
     for (const text of GOOD_ID) {
       expect(gradeCase(household, k001, [message(text)]).mustNever.join(" "), text).not.toMatch(/note to self/);
     }
+  });
+});
+
+// 2026-11-14: "how would you describe what miamis is for" was answered, and
+// the answer was dropped for being longer than a card's sentence. The owner
+// read "Sorry, I didn't catch that."
+describe("an answer on its own may be longer than a card's sentence", () => {
+  it("shows every guide entry as an answer, in both languages, and still not beside a card", () => {
+    for (const entry of GUIDE) {
+      for (const locale of ["en", "id"] as const) {
+        const answer = entry.body[locale];
+        expect(guardReplyText("message", answer, locale), `${entry.id} ${locale}`).toEqual({ text: answer, tells: [] });
+        if (answer.length > MAX_REPLY_CHARS) expect(guardReplyText("suggestions", answer, locale).text).toBe("");
+      }
+    }
+  });
+
+  it("still stops at a length no answer needs, and at every note to self", () => {
+    const tooLong = "Miamus keeps the running of your home in one place. ".repeat(10);
+    expect(tooLong.length).toBeGreaterThan(MAX_ANSWER_CHARS);
+    expect(guardReplyText("message", tooLong, "en").tells).toEqual(["too_long"]);
+    expect(guardReplyText("message", K114, "en").tells).toEqual(["reference", "date"]);
+    expect(replyProblems("  ", "en")).toEqual(["empty"]);
+    expect(replyProblems("You're welcome.", "en")).toEqual([]);
+    expect(replyProblems(K021, "id")).toEqual(["reference", "language"]);
+  });
+
+  it("tells Kakak why, once, in a line the history takes", () => {
+    const all = correctionFor(["empty", "too_long", "language", "reference", "date", "internal_name"], "id");
+    expect(all.startsWith(CORRECTION_PREFIX)).toBe(true);
+    expect(all.length).toBeLessThanOrEqual(MAX_TYPED);
+    expect(all).toContain("longer than 480 characters");
+    expect(all).toContain("not in Bahasa Indonesia");
+    expect(all).toContain("a reference such as S1");
+    expect(correctionFor(["too_long"], "en")).toBe(
+      "(From Miamus, not the owner: your last reply was not shown. It was longer than 480 characters. Reply to the owner again now, in English: at most three short sentences, in plain words.)",
+    );
   });
 });
