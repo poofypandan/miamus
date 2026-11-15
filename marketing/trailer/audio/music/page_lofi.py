@@ -28,16 +28,19 @@ import page  # noqa: E402  (its clip() button)
 
 VOICES = {"kakak": "eleven-lyly-v12", "girl": None, "mama": "mama-aita-v11"}
 # (heading, note, music styles (audio/out/music-60-<style>.wav), letters, the effects file: the girl's bell in the score's key)
+# (heading, note, music styles (audio/out/music-60-<style>.wav), letters, the effects file (the girl's bell in the
+# score's key), tags shown beside a score's letter). After the owner's choice (15 Nov) the page names its sources.
 ROUNDS = [
-    ("Round 1", "Four scores in D at 84 to 93 beats a minute; they differ in what plays the tune and how worn the record sounds.",
-     ["lofi-a", "lofi-b", "lofi-c", "lofi-d"], "ABCD", "sfx-{cut}.wav"),
-    ("Round 2, on your reference", "Three scores on the measurements from the mix you like: slower (69 to 75 beats a minute, hi-hats at double time), in C major, dark and warm, with a deep round bass. The girl's bell moves to C with them.",
-     ["lofi-e", "lofi-f", "lofi-g"], "EFG", "sfx-{cut}-C.wav"),
-    # Eleven Music: the owner's four tracks from the ElevenLabs app, fitted to the arc on their own bar lines
-    # (audio/music/eleven_owner.py). Listening only until ElevenLabs answers on company ads. Blind: the page does not
-    # say where these come from; the key file and audio/out/eleven-owner-edits.json do.
-    ("Round 3", "Four more on the same arc, around 68 beats a minute, in C.",
-     ["eleven-owner-1", "eleven-owner-2", "eleven-owner-3", "eleven-owner-4"], "HIJK", "sfx-{cut}-C.wav"),
+    ("Composed here, round 1", "Four scores in D at 84 to 93 beats a minute; they differ in what plays the tune and how worn the record sounds. Ours to use in ads.",
+     ["lofi-a", "lofi-b", "lofi-c", "lofi-d"], "ABCD", "sfx-{cut}.wav", {}),
+    ("Composed here, round 2", "Three scores on the measurements from the mix you like: slower (69 to 75 beats a minute, hi-hats at double time), in C major, dark and warm, with a deep round bass. Ours to use in ads.",
+     ["lofi-e", "lofi-f", "lofi-g"], "EFG", "sfx-{cut}-C.wav", {}),
+    # The owner's four tracks from the ElevenLabs app, fitted on their own bar lines (audio/music/eleven_owner.py).
+    ("ElevenLabs, licence pending", "Your four Eleven Music tracks, each cut on its own bar lines so its groove comes back on 0:47. Not for publication until ElevenLabs confirms the Creator plan covers company ads. The one in v13-lofi is marked; any of the others can take its place.",
+     ["eleven-owner-1", "eleven-owner-2", "eleven-owner-3", "eleven-owner-4"], "HIJK", "sfx-{cut}-C.wav", {"eleven-owner-3": "in v13-lofi"}),
+    # The owner's Suno free-plan track (audio/music/suno_test.py): never usable, a sound comparison only. Not blind.
+    ("Suno (free plan): sound test only, not usable", "Made on Suno's free plan, which gives no commercial rights, so it can never be in the ad. Here only to judge the sound, to decide whether Suno Pro is worth paying for. Trimmed on its own bar lines around its one break; its levels are left as they are, so its quiet moment is not as quiet as the others.",
+     ["suno-test"], "L", "sfx-{cut}-C.wav", {"suno-test": "Suno free plan, not usable"}),
 ]
 FROM_FILM, FROM_MUSIC = 35.0, 5.0
 
@@ -67,7 +70,8 @@ def main():
     key_path = os.path.join(ROOT, "audio", "out", "lofi-labels.json")
     labels = json.load(open(key_path)) if os.path.exists(key_path) else {}
     sections = []
-    for title, note, styles, letters, sfx in ROUNDS:
+    mix.BRAND_DIP_DB = 5.0  # as in v13-lofi: the music dips under the brand name that opens the end line
+    for title, note, styles, letters, sfx, tags in ROUNDS:
         styles = [st for st in styles if os.path.exists(os.path.join(ROOT, "audio", "out", f"music-60-{st}.wav"))]
         if not styles:
             continue
@@ -90,7 +94,8 @@ def main():
             # The music alone a little louder than it sits in the film (every candidate by the same amount).
             alone = excerpt(music, sr, FROM_MUSIC) * mix.db(2.5)
             alone = mix.soft_limit(alone, 0.97, 0.85)
-            cards.append(f"""<article class="voice"><h3>Score {letter}</h3>
+            tag = f' <span class="tag">{html.escape(tags[style])}</span>' if style in tags else ""
+            cards.append(f"""<article class="voice"><h3>Score {letter}{tag}</h3>
   <div class="row"><span class="lang">The ending, with the voices (0:35–1:00)</span><div class="clips">{page.clip(mp3(excerpt(film, sr, FROM_FILM), sr), "Film")}</div></div>
   <div class="row"><span class="lang">The music alone (0:05–1:00)</span><div class="clips">{page.clip(mp3(alone, sr), "Music")}</div></div>
 </article>""")
@@ -105,13 +110,13 @@ def main():
     head, rest = tpl.split("<main>", 1)
     script = rest.split("</main>", 1)[1]
     head = head.replace("<title>Kakak Voice Audition</title>", "<title>Lo-fi Score Audition</title>")
-    head = head.replace("  footer {", "  .beats { margin: 0; padding-left: 20px; display: grid; gap: 7px; color: var(--soft); font-size: 15px; }\n  .beats b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }\n  .small { font-size: 14px; }\n  footer {")
+    head = head.replace("  footer {", "  .beats { margin: 0; padding-left: 20px; display: grid; gap: 7px; color: var(--soft); font-size: 15px; }\n  .beats b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }\n  .small { font-size: 14px; }\n  .tag { font-size: 12.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--kakak); background: var(--kakak-tint); border: 1px solid var(--kakak-line); border-radius: 999px; padding: 2px 9px; margin-left: 6px; vertical-align: 3px; white-space: nowrap; }\n  footer {")
     mark = re.search(r'<div class="mark".*?</div>', rest, re.S).group(0)
     main_html = f"""<main>
   <header>
     {mark}
     <h1>Lo-fi scores</h1>
-    <p class="lede">The same 60-second film (v13), with a lo-fi score instead of the lullaby. Every score was made for this film; within each round the letters are in random order. Each plays under the film's last 25 seconds with the voices, then on its own.</p>
+    <p class="lede">The same 60-second film (v13), with a lo-fi score instead of the lullaby. v13-lofi uses your ElevenLabs track marked below; the rest are here so you can swap. Each plays under the film's last 25 seconds with the voices, then on its own.</p>
   </header>
 
   <section>
@@ -127,10 +132,10 @@ def main():
 {"".join(sections)}
   <section>
     <h2>Your choice</h2>
-    <p class="reply">Reply with one letter, for example <code>Score F</code>. A note on what to change is welcome too.</p>
+    <p class="reply">To swap the score in v13-lofi, reply with a letter, for example <code>Score I</code>. A note on what to change is welcome too.</p>
   </section>
 
-  <footer>Original music, composed and played on the laptop for the Miamus trailer: no samples, no loops, nothing licensed from anyone. The family is invented.</footer>
+  <footer>Rounds 1 and 2 are original music composed and played on the laptop for the Miamus trailer: no samples, no loops, nothing licensed from anyone. The family is invented.</footer>
 </main>
 """
     open(out, "w").write(head + main_html + script)
