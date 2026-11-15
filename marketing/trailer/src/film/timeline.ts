@@ -35,19 +35,27 @@ export const S15 = {
 
 /** The hook: when each question lands (frames in the scene), faster and faster; then the stop. */
 export const HOOK = {
-  /** The child's call writes itself on. */
-  call: 4,
-  at: [16, 30, 42, 52, 61, 69, 76, 82, 88, 93, 98, 102, 106, 109, 112, 114, 116, 117, 118, 119, 120],
+  /** The child's call writes itself on (v6: as she says it, from 0.2 s). */
+  call: 6,
+  /** v6: the first question waits until she has finished; then faster and faster, out of Mama's phone. */
+  at: [38, 49, 58, 66, 73, 80, 85, 90, 95, 99, 103, 106, 109, 111, 114, 115, 117, 118, 118, 119, 120],
   slam: 122,
   /** The held breath, then everything lets go. */
   fall: 134,
+  /** v6: close on the girl, then pull back as the questions come; Mama's phone rises into the bottom of the frame. */
+  close: [0, 30] as Span,
+  pull: [30, 84] as Span,
+  phone: [26, 52] as Span,
 };
 /** The same, for the 15-second cut. */
 export const HOOK15 = {
   call: 2,
-  at: [8, 16, 23, 29, 34, 39, 43, 47, 51, 54, 57, 60, 62, 64, 66, 67, 68, 69, 70, 71, 72],
+  at: [30, 35, 40, 44, 47, 50, 53, 56, 58, 60, 62, 64, 65, 67, 68, 69, 69, 70, 71, 71, 72],
   slam: 74,
   fall: 80,
+  close: [0, 22] as Span,
+  pull: [22, 60] as Span,
+  phone: [18, 40] as Span,
 };
 
 /** Kakak's sheet, sentence by sentence (frames in the "tell" scene). */
@@ -81,10 +89,13 @@ export const SARI = { card: 8, sheet: 14, before: 30, beforeIn: 38, after: 54, a
 export const SARI15 = { card: 6, sheet: 12, before: 22, beforeIn: 28, after: 38, afterIn: 44, finish: 58, done: 64 };
 
 /** All on track; the phone sleeps; the one notification; the garden comes back (frames in "quiet"). */
-export const QUIET = { scroll: [36, 84] as Span, sleep: [92, 122] as Span, ping: 136, call: 204, away: [210, 240] as Span };
+// v6: the ping comes 0.8 s earlier (frame 112, 42.7 s), so Kakak's "That one's yours" is said while the
+// notification is still on screen; the call's bell sits under the girl's second "Mama, look!" as the phone falls away.
+export const QUIET = { scroll: [26, 70] as Span, sleep: [76, 100] as Span, ping: 112, call: 236, away: [210, 240] as Span };
 
 /** The ending (frames in "ending"): Mama walks out, they look up, the camera follows the kite, the name. */
-export const ENDING = { mama: [14, 110] as Span, lift: [120, 250] as Span, crane: [150, 262] as Span, mark: 258, name: 276, line: 292, url: 310 };
+// v6: the crane waits for Mama's "I'm looking, sweetie." (~50.9 s) and a held second; it still ends on the mark.
+export const ENDING = { mama: [14, 110] as Span, lift: [120, 250] as Span, crane: [196, 262] as Span, mark: 258, name: 276, line: 292, url: 310 };
 export const ENDING15 = { mama: [-40, 26] as Span, lift: [28, 90] as Span, crane: [34, 86] as Span, mark: 70, name: 80, line: 90, url: 100 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */

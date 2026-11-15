@@ -165,3 +165,51 @@ export function Captions({ cues, level = 0 }: { cues: CaptionCue[]; level?: numb
     </div>
   );
 }
+
+/**
+ * v6: Mama's words. A plain light plate with no mark, in the same place as Kakak's, so the two are
+ * never mistaken for each other: Kakak is the dark plate with her heart, Mama is light and plain.
+ */
+export function MamaCaptions({ cues }: { cues: CaptionCue[] }) {
+  const frame = useCurrentFrame();
+  const cue = cues.find((c) => frame >= c.from - 3 && frame <= c.to + 12);
+  if (!cue) return null;
+  const inT = ramp(frame, cue.from - 3, cue.from + 6, easeOut);
+  const o = inT * (1 - ramp(frame, cue.to + 4, cue.to + 12));
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: SAFE.left,
+        width: SAFE.right - SAFE.left,
+        bottom: H - CAPTION_BOTTOM,
+        display: "flex",
+        justifyContent: "center",
+        opacity: o,
+        transform: `translate(${CX - (SAFE.left + SAFE.right) / 2}px, ${(1 - inT) * 16}px)`,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 830,
+          padding: "17px 36px 18px",
+          borderRadius: 44,
+          // Warm sand with a fine edge: light, plain, and not the white of the day's questions.
+          background: "rgba(240,229,212,0.96)",
+          border: "2px solid rgba(150,112,74,0.45)",
+          boxShadow: "0 10px 30px rgba(10,8,20,0.26)",
+          fontFamily: FONT,
+          fontSize: 41,
+          fontWeight: 600,
+          fontStyle: "italic",
+          lineHeight: 1.2,
+          letterSpacing: -0.3,
+          color: "#2a2420",
+          textWrap: "balance",
+        } as React.CSSProperties}
+      >
+        {cue.text}
+      </div>
+    </div>
+  );
+}

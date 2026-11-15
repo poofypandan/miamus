@@ -5,7 +5,10 @@ import { Day, Ending, Hook, Know, MeetKakak, Quiet, Sari, Tell, Turn, Voice } fr
 import { FPS, S15, S60, type Span, len } from "./film/timeline";
 import voData from "./film/vo-data.json";
 import { loadFonts } from "./theme";
-import { Captions } from "./ui/kakak";
+import { CALL } from "./film/scenes";
+import { ENDING, ENDING15, HOOK, HOOK15 } from "./film/timeline";
+import { GirlCalls } from "./ui/hook";
+import { Captions, MamaCaptions } from "./ui/kakak";
 import { Grain } from "./ui/kit";
 
 loadFonts();
@@ -70,7 +73,10 @@ export const Film: React.FC<FilmProps> = ({ locale, cut, audio }) => {
           </>
         )}
       </Voice.Provider>
-      <Captions cues={cues.filter((c) => !SHOWN_LARGE.includes(c.id))} level={voice.level} />
+      {/* Three voices, three looks: Kakak's dark plate with her mark, Mama's plain light plate, the girl's handwriting. */}
+      <Captions cues={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GM]\d/.test(c.id))} level={voice.level} />
+      <MamaCaptions cues={cues.filter((c) => /^M\d/.test(c.id))} />
+      <GirlCalls cues={cues.filter((c) => /^G\d/.test(c.id))} call={CALL} hookOut={(cut === "60" ? HOOK.at[11] : HOOK15.at[11]) + 4} endOut={cut === "60" ? S60.ending[0] + ENDING.crane[0] + 8 : S15.ending[0] + ENDING15.crane[0]} />
       <Grain />
     </AbsoluteFill>
   );

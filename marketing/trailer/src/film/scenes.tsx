@@ -8,7 +8,7 @@ import { KakakMark } from "../ui/kakak";
 import { Vignette, clamp01, ease, easeIn, easeOut, keys, lerp, ramp, springAt } from "../ui/kit";
 import { type Cue, Glow, NotificationCard, Phone, type PhoneCam, ScreenTrack, Shutter, Tag, TapRing, look, phonePoint } from "../ui/phone";
 import { World } from "../world/World";
-import type { Cam } from "../world/camera";
+import { type Cam, camMix } from "../world/camera";
 import { lightAt } from "../world/tod";
 import { COPY, type Locale } from "./copy";
 import { ENDING, ENDING15, HOOK, HOOK15, KNOW, QUIET, S15, S60, SARI, SARI15, TELL, TELL15, len } from "./timeline";
@@ -27,7 +27,7 @@ const NIGHT = "#0e0f24";
  */
 const GARDEN: Cam = { x: -20, y: 340, z: 1.06 };
 /** The child's call sits in the sky, left of the kite's string. */
-const CALL = { x: 92, y: 452, size: 104 };
+export const CALL = { x: 92, y: 452, size: 104 };
 
 /** Kakak's voice, for the things that move with it: how loud she is this frame, and when each line is said. */
 export const Voice = createContext<{ level: number; cue: (id: string) => { from: number; to: number } | null }>({ level: 0, cue: () => null });
@@ -60,18 +60,29 @@ export function Hook({ locale, t0, fast }: SceneProps) {
   const T = fast ? HOOK15 : HOOK;
   const end = fast ? len(S15.hook) : len(S60.hook);
   const push = frame / end;
-  const cam = { x: -24 * push, y: 328 + 20 * push, z: 1 + 0.07 * push };
+  // v6: close on the girl while she calls, then back to the garden as the questions come.
+  const wide: Cam = { x: -24 * push, y: 328 + 20 * push, z: 1 + 0.07 * push };
+  const close: Cam = { x: -183 + 6 * push, y: 434, z: 2.0 };
+  const cam = camMix(close, wide, ramp(frame, T.pull[0], T.pull[1], ease));
   const cover = ramp(frame, T.at[2], T.slam);
   const out = ramp(frame, T.fall + 2, end - 2);
+  // Mama's phone: we are Mama, looking down at it; its top rises into the bottom of the frame.
+  const rise = ramp(frame, T.phone[0], T.phone[1], easeOut);
+  const phoneTop = lerp(2010, 1505, rise);
+  const phoneCam = look(0, 2.25, 0, phoneTop, { rx: 10 });
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       <AbsoluteFill style={{ opacity: 1 - out }}>
         <World light={lightAt(17.62)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} birds={1} />
         <Vignette />
-        <Hand text={copy.child} {...CALL} at={T.call} />
         <AbsoluteFill style={{ background: `rgba(18,14,30,${(0.44 * cover).toFixed(3)})` }} />
+        {rise > 0 && (
+          <Phone cam={phoneCam} fade={0}>
+            <ScreenTrack cues={[{ src: `shots/${locale}/scroll/00.jpg`, at: 0, fade: 0 }]} />
+          </Phone>
+        )}
       </AbsoluteFill>
-      <Pile bubbles={copy.bubbles} slam={copy.slam} at={T.at} slamAt={T.slam} fall={T.fall} />
+      <Pile bubbles={copy.bubbles} slam={copy.slam} at={T.at} slamAt={T.slam} fall={T.fall} from={{ x: 540, y: phoneTop + 40 }} />
     </AbsoluteFill>
   );
 }
@@ -428,7 +439,6 @@ export function Quiet({ locale, t0 }: SceneProps) {
       >
         <ScreenTrack cues={cues} />
       </Phone>
-      <Hand text={copy.child} x={lerp(150, CALL.x, away)} y={lerp(1000, CALL.y, away)} size={CALL.size} at={Q.call} />
     </AbsoluteFill>
   );
 }
@@ -453,7 +463,6 @@ export function Ending({ locale, t0, fast }: SceneProps) {
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       <World light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} kiteLift={lift} birds={1} />
       <Vignette />
-      <Hand text={copy.child} {...CALL} at={fast ? 3 : -40} out={E.crane[0] + (fast ? 0 : 8)} />
       <EndCard line={copy.end.line} url={copy.end.url} mark={E.mark} name={E.name} lineAt={E.line} urlAt={E.url} />
     </AbsoluteFill>
   );

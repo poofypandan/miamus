@@ -35,6 +35,22 @@ CUES = {
 # runs 3.2 s, so in the 15-second cut it starts 0.4 s earlier, still before Kakak's mark appears.
 LOCALE_CUES = {"id": {"15": {"S3": 11.45}}}
 
+# v6 (Fable's notes, 15 Nov): the girl (G) and Mama (M) speak too, each from her own voice folder.
+#   Hook: the girl's "Mama, look!" at 0.2 s; Mama, distracted, after the first questions land; the
+#   girl's small "Mama…?" just before the slam. End: the ping is 0.8 s earlier, so Kakak's "That one's
+#   yours. Go play." comes straight after L9 while the notification is on screen; the girl calls again as
+#   the phone falls away; Mama answers with her hand up to her eyes, then a held moment before the crane.
+CUES["60"].update({"G1": 0.2, "M1": 1.75, "G3": 3.75, "L9": 43.0, "L10": 44.85, "G2": 46.95, "M2": 50.7})
+CUES["15"].update({"G1": 0.1, "M1": 1.1, "G2": 10.1})
+LOCALE_CUES["id"]["60"] = {"L10": 45.3, "G2": 48.27}
+LOCALE_CUES["id"]["15"]["G2"] = 9.8
+# Words shown but not spoken: in the 15-second cut Mama's answer is a caption only (there is no room to say it).
+CAPTION_ONLY = {"15": {"M2": (11.0, 12.4)}}
+
+
+def speaker(key):
+    return "girl" if key.startswith("G") else "mama" if key.startswith("M") else "kakak"
+
 
 def arg(name, default):
     return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
@@ -81,32 +97,59 @@ def loudness(path):
     return float(j["input_i"]), float(j["input_tp"]), float(j["input_lra"])
 
 
-def mix(cut, locale, voice, music_style):
+def mix(cut, locale, voices, music_style):
     length = 60 if cut == "60" else 15
     n = length * SR
     music = read(os.path.join(ROOT, "audio", "out", f"music-{cut}-{music_style}.wav"))[:n]
     sfx = read(os.path.join(ROOT, "audio", "out", f"sfx-{cut}.wav"))[:n]
     air = read(os.path.join(ROOT, "audio", "out", f"air-{cut}.wav"))[:n]
 
-    vo = np.zeros(n)
+    tracks = {who: np.zeros(n) for who in ("kakak", "girl", "mama")}
     cues = []
-    order = sorted(dict(CUES[cut], **LOCALE_CUES.get(locale, {}).get(cut, {})).items(), key=lambda kv: kv[1])
+    plan = dict(CUES[cut], **LOCALE_CUES.get(locale, {}).get(cut, {}))
+    if not voices.get("girl"):
+        plan = {k: t for k, t in plan.items() if speaker(k) == "kakak"}
+    order = sorted(plan.items(), key=lambda kv: kv[1])
     for i, (key, start) in enumerate(order):
-        line = read(os.path.join(ROOT, "audio", "out", "vo", voice, locale, f"{key}.wav"))[:, 0]
+        who = speaker(key)
+        line = read(os.path.join(ROOT, "audio", "out", "vo", voices[who], locale, f"{key}.wav"))[:, 0]
         a = int(start * SR)
         end = start + len(line) / SR
-        limit = order[i + 1][1] - 0.2 if i + 1 < len(order) else length - 0.35
+        # Each voice keeps clear of her own next line; different people may overlap a little, as people do.
+        nxt = [t for k, t in order[i + 1 :] if speaker(k) == who]
+        limit = nxt[0] - 0.2 if nxt else length - 0.35
         if end > limit:
             raise SystemExit(f"{cut}-{locale}: {key} ends at {end:.2f} s, past {limit:.2f} s. Move its cue or shorten the line.")
-        vo[a : a + len(line)] += line[: n - a]
+        other = [t for k, t in order[i + 1 :] if speaker(k) != who]
+        if other and end - other[0] > 0.45:
+            raise SystemExit(f"{cut}-{locale}: {key} runs {end - other[0]:.2f} s into the next speaker.")
+        tracks[who][a : a + len(line)] += line[: n - a]
         cues.append({"id": key, "from": round(start, 3), "to": round(end, 3)})
+    for key, (start, end) in CAPTION_ONLY.get(cut, {}).items() if voices.get("girl") else []:
+        cues.append({"id": key, "from": start, "to": end, "silent": True})
+    cues.sort(key=lambda c: c["from"])
 
-    # Her voice: clear of rumble, a little presence, evened out, in a small warm room.
-    v = highpass(vo, 85)
-    v = v + 0.22 * bandpass(v, 2400, 5600)
-    v = compress(v)
-    presence = follow(v)
+    def chain(x):
+        x = highpass(x, 85)
+        x = x + 0.22 * bandpass(x, 2400, 5600)
+        return compress(x)
+
+    # Kakak: clear of rumble, a little presence, evened out, in a small warm room.
+    v = chain(tracks["kakak"])
+    presence_kakak = follow(v)
     v2 = reverb(pan(v, 0.0), 0.55, 0.05)
+    # The girl and Mama are in the garden: a little more air around them. Mama in the hook is off screen
+    # (we are behind her phone), so she is a touch softer and further away until she walks out at the end.
+    people = np.zeros(n)
+    if voices.get("girl"):
+        g = chain(tracks["girl"])
+        m = chain(tracks["mama"])
+        far = np.zeros(n)
+        far[: int(6 * SR)] = 1
+        m = m * (1 - far) + 0.75 * lowpass(m, 5200) * far
+        people = g + m
+        v2 = v2 + reverb(pan(g, -0.08), 0.75, 0.12) + reverb(pan(m, 0.06), 0.7, 0.1)
+    presence = follow(v + people)
 
     # The music steps back under her (about 10 dB, so she stays clear on a phone's speaker), the effects a little.
     duck = 1 - 0.7 * presence
@@ -132,18 +175,19 @@ def mix(cut, locale, voice, music_style):
 
     # For the picture: how loud she is in each frame.
     per = SR // FPS
-    env = [round(float(np.clip(presence[f * per : (f + 1) * per].mean() * 1.25, 0, 1)), 3) for f in range(length * FPS)]
+    env = [round(float(np.clip(presence_kakak[f * per : (f + 1) * per].mean() * 1.25, 0, 1)), 3) for f in range(length * FPS)]
     return {"cues": cues, "env": env}, (i2, tp2, lra2)
 
 
 if __name__ == "__main__":
     voice = arg("--voice", "kakak-a")
+    voices = {"kakak": voice, "girl": arg("--girl", None), "mama": arg("--mama", None)}
     style = arg("--music", "felt")
     data, report = {}, {}
     for cut in ("60", "15"):
         for locale in ("en", "id"):
-            data[f"{cut}-{locale}"], report[f"{cut}-{locale}"] = mix(cut, locale, voice, style)
+            data[f"{cut}-{locale}"], report[f"{cut}-{locale}"] = mix(cut, locale, voices, style)
     with open(os.path.join(ROOT, "src", "film", "vo-data.json"), "w") as f:
         f.write("{\n" + ",\n".join(f'  "{k}": {json.dumps(v, separators=(",", ":"))}' for k, v in data.items()) + "\n}\n")
-    json.dump({"voice": voice, "music": style, "loudness": {k: {"lufs": v[0], "true_peak_dbtp": v[1], "range_lu": v[2]} for k, v in report.items()}}, open(os.path.join(ROOT, "audio", "out", "mix-report.json"), "w"), indent=1)
+    json.dump({"voice": voice, "girl": voices["girl"], "mama": voices["mama"], "music": style, "loudness": {k: {"lufs": v[0], "true_peak_dbtp": v[1], "range_lu": v[2]} for k, v in report.items()}}, open(os.path.join(ROOT, "audio", "out", "mix-report.json"), "w"), indent=1)
     print("wrote src/film/vo-data.json")
