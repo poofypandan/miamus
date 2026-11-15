@@ -346,6 +346,15 @@ CHORDS = {
     "A13sus": ("A1", "dom", ["G3", "B3", "D4", "F#4"]),
     "A6": ("A1", "maj", ["F#3", "A3", "C#4", "E4"]),
     "Asus2": ("A1", "sus", ["E3", "A3", "B3", "E4"]),
+    # Round 2 (the owner's measured reference: C major, dark, slow).
+    "Cmaj9": ("C2", "maj", ["E3", "G3", "B3", "D4"]),
+    "Am9": ("A1", "min", ["C3", "E3", "G3", "B3"]),
+    "Fmaj9": ("F1", "maj", ["E3", "G3", "A3", "C4"]),
+    "Em7": ("E2", "min", ["D3", "G3", "B3", "E4"]),
+    "Dm9": ("D2", "min", ["C3", "F3", "A3", "E4"]),
+    "G13": ("G1", "dom", ["F3", "A3", "B3", "E4"]),
+    "G13sus": ("G1", "dom", ["F3", "A3", "C4", "E4"]),
+    "Gq": ("G1", "dom", ["D3", "G3", "B3", "D4"]),  # under the girl's bell in C (G G B)
 }
 SEVENTH = {"maj": 9, "min": 10, "dom": 10, "sus": 10}
 
@@ -417,6 +426,53 @@ STYLES = {
 
 # The melodies, written for this film: (beat in the bar, length in beats, note, velocity). Beat 0 is the downbeat.
 # Every one opens the return at 47.0 s with the girl's call come home (A, A, then D), as the lullaby does.
+# Round 2, on the owner's reference measurements (15 Nov): ~68 bpm half-time with double-time hats, C major, very dark
+# (85% roll-off ~2.3 kHz, ~96% of the energy below 800 Hz), a deep round funky bass, steady and compressed. Tempos are
+# picked so a bar line still falls on 47.0 s and the resolve at 57.0 s sits on a beat or an off-beat.
+# Measured like the reference (audio/music/measure_lofi.py: magnitude roll-off and centroid per frame, as medians):
+#   E  69 bpm  closest to the reference: dark, Rhodes melody low, the bass up front (resolve on the "and" of 4)
+#   F  72 bpm  a touch warmer and brighter, Rhodes and a soft analog pad (resolve on a downbeat)
+#   G  75 bpm  the brightest of the three: guitar answering a reed piano, A minor colour (resolve just after a downbeat)
+SLOW = {"slow": True, "resolve": ["C3", "G3", "B3", "D4", "E4", "G4"], "resolve_pad": ["C3", "G3", "B3", "E4"], "resolve_bass": "C2", "quiet": "Gq"}
+STYLES.update({
+    "e": dict(SLOW, **{
+        "name": "Dark 69", "dust_db": -7, "bpm": 69, "swing": 0.6, "seed": 695,
+        "intro": ["Cmaj9", "Am9"], "groove": ["Fmaj9", "Em7", "Dm9", "G13"], "home": ["Cmaj9", "Am9", "Fmaj9"],
+        "keys": "rhodes", "lead": "rhodes", "bass": "round", "pad": "warm",
+        "kick": [0, 7, 10], "kick_alt": [0, 7, 10, 11], "snare": [4, 12], "ghost": [3, 14],
+        "hats": list(range(16)), "open": [], "hat_bright": 0.6,
+        "bassline": [(0, 3, 0, 1.0), (3, 1, 12, 0.5), (4, 2, 0, 0.7), (7, 1, 7, 0.6), (8, 3, 0, 0.85), (11, 1, 12, 0.5), (12, 2, "7", 0.6), (14, 2, "n", 0.65)],
+        "comp": [(0, 2.5, 0.46), (2.75, 1.0, 0.34)],
+        "dusty": 0.8, "vinyl": 0.9, "hiss": 2.0, "wow": 1.0, "top": 7500, "drive": 1.3,
+        "guitar": 0.0, "arp": 0.0, "last": "C5",
+        "dark": {"keys_lp": 3000, "lead_lp": 3200, "hat_db": -12.5, "snare_lp": 6000, "snare_db": -6.5, "bass_db": -3.2, "kick_db": -4.5, "keys_db": -4.0, "lead_db": -5.5, "comp": 3.0, "thresh": -26.0},
+    }),
+    "f": dict(SLOW, **{
+        "name": "Warm 72", "dust_db": -8, "bpm": 72, "swing": 0.58, "seed": 726,
+        "intro": ["Am9", "Fmaj9"], "groove": ["Am9", "Fmaj9", "Cmaj9", "G13sus"], "home": ["Cmaj9", "Am9", "Dm9"],
+        "keys": "rhodes", "lead": "rhodes", "bass": "round", "pad": "analog",
+        "kick": [0, 10], "kick_alt": [0, 3, 10], "snare": [4, 12], "ghost": [7, 15],
+        "hats": list(range(16)), "open": [14], "hat_bright": 0.75,
+        "bassline": [(0, 2, 0, 1.0), (2, 1, 12, 0.5), (3, 3, 0, 0.75), (6, 1, 7, 0.55), (8, 2, 0, 0.85), (10, 1, "7", 0.55), (11, 2, 7, 0.6), (14, 2, "n", 0.65)],
+        "comp": [(0, 1.5, 0.42), (1.75, 0.5, 0.3), (2.5, 1.5, 0.38)],
+        "dusty": 0.5, "vinyl": 0.8, "hiss": 2.2, "wow": 0.9, "top": 8500, "drive": 1.1,
+        "guitar": 0.0, "arp": 0.0, "last": "E5",
+        "dark": {"keys_lp": 3400, "lead_lp": 3600, "hat_db": -12.0, "snare_lp": 7000, "snare_db": -6.5, "bass_db": -3.5, "kick_db": -4.5, "keys_db": -4.0, "lead_db": -5.0, "comp": 2.6, "thresh": -26.0},
+    }),
+    "g": dict(SLOW, **{
+        "name": "Brighter 75", "dust_db": -9, "bpm": 75, "swing": 0.62, "seed": 757,
+        "intro": ["Am9", "Em7"], "groove": ["Am9", "Em7", "Fmaj9", "G13"], "home": ["Cmaj9", "Am9", "Fmaj9", "G13"],
+        "keys": "wurli", "lead": "guitar", "bass": "round", "pad": "warm",
+        "kick": [0, 9], "kick_alt": [0, 3, 9], "snare": [4, 12], "ghost": [7, 14],
+        "hats": list(range(16)), "open": [], "hat_bright": 0.85,
+        "bassline": [(0, 4, 0, 0.95), (6, 1, 0, 0.55), (7, 1, 12, 0.5), (8, 3, 7, 0.75), (12, 2, 12, 0.55), (14, 2, "n", 0.6)],
+        "comp": [(0, 1.4, 0.42), (2.5, 1.2, 0.36)],
+        "dusty": 0.9, "vinyl": 1.2, "hiss": 2.4, "wow": 1.3, "top": 9500, "drive": 1.2,
+        "guitar": 1.0, "arp": 0.0, "last": "G4", "laid_back": 0.016,
+        "dark": {"keys_lp": 3800, "lead_lp": 4200, "hat_db": -11.5, "snare_lp": 7500, "snare_db": -6.0, "bass_db": -3.5, "kick_db": -4.5, "keys_db": -4.0, "lead_db": -5.0, "comp": 2.3, "thresh": -26.0},
+    }),
+})
+
 HOME_TUNE = {
     "a": [
         [(0, 0.5, "A4", 0.62), (0.75, 0.5, "A4", 0.58), (1.5, 1.75, "D5", 0.7), (3.5, 0.5, "E5", 0.55)],
@@ -443,6 +499,24 @@ HOME_TUNE = {
         [(0, 1.0, "E5", 0.58), (1.0, 0.75, "C#5", 0.55), (2.0, 0.5, "E5", 0.55), (2.75, 0.5, "A4", 0.5)],
     ],
 }
+HOME_TUNE.update({
+    "e": [
+        [(0, 0.5, "G4", 0.6), (0.75, 0.5, "G4", 0.56), (1.5, 2.0, "C5", 0.66), (3.5, 0.5, "D5", 0.5)],
+        [(0, 1.0, "E5", 0.58), (1.0, 0.5, "D5", 0.52), (1.5, 0.5, "C5", 0.5), (2.5, 1.5, "B4", 0.55)],
+        [(0, 0.75, "A4", 0.55), (0.75, 0.75, "C5", 0.56), (1.5, 1.5, "E5", 0.6), (3.0, 0.5, "D5", 0.5)],
+    ],
+    "f": [
+        [(0, 0.5, "G4", 0.6), (0.75, 0.5, "G4", 0.56), (1.5, 1.0, "C5", 0.68), (2.75, 0.5, "E5", 0.55), (3.25, 0.75, "G5", 0.58)],
+        [(0, 1.5, "E5", 0.6), (1.5, 0.5, "D5", 0.52), (2.0, 0.5, "C5", 0.5), (2.5, 1.5, "A4", 0.54)],
+        [(0, 0.75, "A4", 0.55), (1.0, 0.5, "C5", 0.54), (1.5, 0.5, "D5", 0.56), (2.0, 1.5, "F5", 0.6), (3.5, 0.5, "E5", 0.52)],
+    ],
+    "g": [
+        [(0, 0.5, "G4", 0.64), (0.75, 0.5, "G4", 0.6), (1.5, 1.0, "C5", 0.7), (2.75, 0.25, "D5", 0.5), (3.0, 1.0, "E5", 0.6)],
+        [(0.5, 0.5, "C5", 0.55), (1.0, 0.5, "A4", 0.52), (1.5, 1.5, "E4", 0.56), (3.5, 0.5, "G4", 0.5)],
+        [(0, 0.75, "A4", 0.56), (1.0, 0.5, "C5", 0.56), (1.5, 0.5, "D5", 0.58), (2.0, 1.5, "F5", 0.6)],
+        [],
+    ],
+})
 # Short answers at the end of every other groove bar (under the voices, so small and low).
 FILLS = {
     "a": [[(2.5, 0.5, "A4", 0.4), (3.0, 0.5, "B4", 0.38), (3.5, 0.5, "D5", 0.42)], [(2.5, 1.0, "C#5", 0.4), (3.5, 0.5, "E5", 0.36)]],
@@ -450,6 +524,38 @@ FILLS = {
     "c": [[(2.5, 0.25, "D5", 0.42), (2.75, 0.25, "E5", 0.42), (3.0, 1.0, "F#5", 0.46)], [(2.0, 0.5, "B4", 0.4), (2.5, 0.5, "A4", 0.4), (3.0, 1.0, "F#4", 0.44)]],
     "d": [[(2.5, 0.5, "F#5", 0.4), (3.0, 0.5, "A5", 0.42), (3.5, 0.5, "B5", 0.4)], [(3.0, 1.0, "E5", 0.42)]],
 }
+
+
+FILLS.update({
+    "e": [[(2.5, 0.5, "G4", 0.4), (3.0, 0.5, "A4", 0.38), (3.5, 0.5, "C5", 0.42)], [(2.5, 1.0, "B4", 0.4), (3.5, 0.5, "D5", 0.36)]],
+    "f": [[(2.0, 1.0, "E5", 0.42), (3.0, 0.5, "D5", 0.38), (3.5, 0.5, "C5", 0.36)], [(2.5, 1.5, "G5", 0.4)]],
+    "g": [[(2.5, 0.25, "C5", 0.42), (2.75, 0.25, "D5", 0.42), (3.0, 1.0, "E5", 0.46)], [(2.0, 0.5, "A4", 0.4), (2.5, 0.5, "G4", 0.4), (3.0, 1.0, "E4", 0.44)]],
+})
+
+
+def compress(x, ratio=3.0, threshold_db=-24.0, attack=0.03, release=0.35, hop=0.01):
+    """A gentle bus compressor: the music steady, as the reference is (its loudness range is about 3.6 LU).
+    The level is read every 10 ms, the gain follows it (quick down, slow up) and is eased back to every sample."""
+    if ratio <= 1:
+        return x
+    h = int(hop * SR)
+    frames = len(x) // h
+    power = np.mean(x[: frames * h] ** 2, axis=1).reshape(frames, h).mean(axis=1)
+    lvl = 10 * np.log10(power + 1e-12)
+    target = -np.maximum(lvl - threshold_db, 0) * (1 - 1 / ratio)
+    a, r = np.exp(-hop / attack), np.exp(-hop / release)
+    g = np.zeros(frames)
+    cur = 0.0
+    for i, t in enumerate(target):
+        cur = a * cur + (1 - a) * t if t < cur else r * cur + (1 - r) * t
+        g[i] = cur
+    # Make-up gain: the typical playing level stays where it was, only the swings get smaller.
+    playing = lvl > threshold_db - 6
+    if playing.any():
+        g = g - np.median(g[playing])
+    centers = (np.arange(frames) + 0.5) * h
+    gain = 10 ** (np.interp(np.arange(len(x)), centers, g) / 20)
+    return x * gain[:, None]
 
 
 class Song:
@@ -463,7 +569,9 @@ class Song:
         self.buses = {k: Bus(LENGTH + 4) for k in ("kick", "snare", "hats", "keys", "lead", "bass", "pad", "guitar", "arp", "fx")}
         # Bars are numbered from the return: bar 0 starts at 47.0 s, bar -1 the one before it.
         self.first_groove = int(np.ceil((GROOVE_FROM - RETURN) / self.bar - 1e-9))
-        self.resolve_beat = (RESOLVE - RETURN) / self.beat - 12  # where in bar 3 the resolve falls
+        beats = (RESOLVE - RETURN) / self.beat
+        self.resolve_bar = int(beats // 4 + 1e-9)  # the bar the resolve falls in (bar 3 at 84–93 bpm, 2 or 3 when slow)
+        self.resolve_beat = beats - 4 * self.resolve_bar
 
     def t(self, bar, beat=0.0):
         return RETURN + bar * self.bar + beat * self.beat
@@ -625,8 +733,10 @@ class Song:
             for i, name in enumerate(voicing):
                 self.put("keys", self.key_note(hz(name), self.t(first_intro + 1) - MUSIC_FROM, 0.3), MUSIC_FROM + 0.02 * i, p=-0.3 + 0.2 * i)
 
-        # The groove: from the first bar line after 14.9 s through bar -4.
-        for i, bar in enumerate(range(g0, -3)):
+        # The groove: from the first bar line after 14.9 s through bar -4 (bar -3 when the bars are long).
+        slow = s.get("slow", False)
+        quiet = s.get("quiet", "Asus2")
+        for i, bar in enumerate(range(g0, -2 if slow else -3)):
             chord = groove[i % 4]
             nxt = groove[(i + 1) % 4]
             self.drums(bar, 1.0, alt=(i % 4 == 3))
@@ -638,17 +748,26 @@ class Song:
                 self.melody(bar, FILLS[self.k][(i // 2) % 2], 0.7)
             if i % 4 == 3:
                 self.guitar_lick(bar, chord, 0.8)
-        # Bar -3: it thins (kick, quieter hats, the bass held, one chord).
-        i = -3 - g0
-        thin = groove[i % 4]
-        self.drums(-3, 0.6, only="kick")
-        self.drums(-3, 0.4, only="hats")
-        self.bassline(-3, thin, "Asus2", 0.6, pattern=[(0, 8, 0, 0.7), (10, 4, 7, 0.5)])
-        self.comp(-3, thin, 0.7, rhythm=[(0, 3.0, 0.4)])
-        self.pad(-3, thin, 0.45)
-        # Bar -2: one chord, held and fading.
-        self.comp(-2, "Asus2", 0.55, rhythm=[(0, 2.0, 0.34)], roll=0.04)
-        self.pad(-2, "Asus2", 0.32, bars=0.6)
+        if slow:
+            # Bar -2 (about 40–43.5 s): it thins in its first half (kick and hats to beat 2, the bass held, one chord
+            # fading), so by 43 s almost nothing is left.
+            thin = groove[(-2 - g0) % 4]
+            self.drums(-2, 0.55, until=2.0, only="kick")
+            self.drums(-2, 0.35, until=2.0, only="hats")
+            self.bassline(-2, thin, quiet, 0.6, pattern=[(0, 6, 0, 0.7)])
+            self.comp(-2, thin, 0.6, rhythm=[(0, 2.0, 0.36)], roll=0.04)
+            self.pad(-2, quiet, 0.3, bars=0.5)
+        else:
+            # Bar -3: it thins (kick, quieter hats, the bass held, one chord).
+            thin = groove[(-3 - g0) % 4]
+            self.drums(-3, 0.6, only="kick")
+            self.drums(-3, 0.4, only="hats")
+            self.bassline(-3, thin, quiet, 0.6, pattern=[(0, 8, 0, 0.7), (10, 4, 7, 0.5)])
+            self.comp(-3, thin, 0.7, rhythm=[(0, 3.0, 0.4)])
+            self.pad(-3, thin, 0.45)
+            # Bar -2: one chord, held and fading.
+            self.comp(-2, quiet, 0.55, rhythm=[(0, 2.0, 0.34)], roll=0.04)
+            self.pad(-2, quiet, 0.32, bars=0.6)
         # Bar -1 (about 44.2–47 s): almost nothing (the record's dust, the faintest pad); the bell is on top in sfx.py.
         # Just before 47.0 a breath of air rises into the downbeat.
         rise = int(0.9 * SR)
@@ -658,37 +777,40 @@ class Song:
 
         # The return at 47.0 s: everything at once, and the call come home.
         self.put("fx", self.kit.crash(0.55, s["dusty"]), RETURN, p=0.2, jitter=0.0)
-        for bar in range(0, 4):
+        last_bar = self.resolve_bar
+        for bar in range(0, last_bar + 1):
+            until = self.resolve_beat if bar == last_bar else None
+            if until is not None and until < 0.25:
+                break  # the resolve is on this bar's downbeat
             chord = home[bar]
-            nxt = home[bar + 1] if bar < 3 else home[0]
-            until = self.resolve_beat if bar == 3 else None
+            nxt = home[bar + 1] if bar + 1 < len(home) else home[0]
             # In the last bar the drums stop just before the resolve.
-            self.drums(bar, 1.0 if bar < 3 else 0.85, alt=(bar == 2), until=until)
+            self.drums(bar, 1.0 if until is None else 0.85, alt=(bar == 2), until=until)
             self.bassline(bar, chord, nxt, 1.0, until=until)
             self.comp(bar, chord, 1.0, until=until)
-            self.pad(bar, chord, 0.6, bars=1.0 if bar < 3 else until / 4)
-            if bar < 3:
+            self.pad(bar, chord, 0.6, bars=1.0 if until is None else until / 4)
+            if until is None:
                 self.arp(bar, chord, 0.85)
             self.melody(bar, HOME_TUNE[self.k][bar], 1.0, until=until)
-        self.guitar_lick(2, home[2], 1.0)
+        self.guitar_lick(min(2, last_bar - 1), home[min(2, last_bar - 1)], 1.0)
 
         # 57.0 s: the resolve on D, with the end card. Rolled, held, ringing out to the end.
         hold = LENGTH - RESOLVE - 0.4
-        voicing = ["D3", "A3", "C#4", "E4", "F#4", "A4"]
+        voicing = s.get("resolve", ["D3", "A3", "C#4", "E4", "F#4", "A4"])
         for i, name in enumerate(voicing):
             self.put("keys", self.key_note(hz(name), hold, 0.42), RESOLVE + 0.028 * i, p=-0.35 + 0.14 * i, jitter=0.0)
-        for name in ("D3", "A3", "C#4", "F#4"):
+        for name in s.get("resolve_pad", ("D3", "A3", "C#4", "F#4")):
             f = hz(name)
             snd = self.kit.analog_pad(f, hold, 0.3, 0.3, 1.0) if s["pad"] == "analog" else self.kit.warm_pad(f, hold, 0.3, 0.4, 1.2)
             self.put("pad", snd, RESOLVE, jitter=0.0)
-        self.put("bass", self.kit.round_bass(hz("D1") * 2, hold, 0.7), RESOLVE, jitter=0.0)
+        self.put("bass", self.kit.round_bass(hz(s.get("resolve_bass", "D2")), hold, 0.7), RESOLVE, jitter=0.0)
         self.put("kick", self.kit.kick(0.55, 0.7, s["dusty"]), RESOLVE, jitter=0.0)
         self.put("fx", self.kit.crash(0.3, s["dusty"]), RESOLVE, p=-0.2, jitter=0.0)
-        last = {"a": "D5", "b": "D5", "c": "A4", "d": "F#5"}[self.k]
+        last = s.get("last") or {"a": "D5", "b": "D5", "c": "A4", "d": "F#5"}[self.k]
         if s["lead"] == "guitar":
             self.put("guitar", self.kit.guitar(hz(last) * 2, hold, 0.55, 0.4, 3.0), RESOLVE + 0.12, p=0.2, jitter=0.0)
         else:
-            self.melody(3, [(self.resolve_beat, (LENGTH - RESOLVE - 0.6) / self.beat, last, 0.55)])
+            self.melody(self.resolve_bar, [(self.resolve_beat, (LENGTH - RESOLVE - 0.6) / self.beat, last, 0.55)])
 
     # --- the finished tape ---------------------------------------------------------
 
@@ -704,13 +826,20 @@ class Song:
         pad = chorus(b["pad"].x, 0.35, 3.0, 11.0, 0.5) if s["pad"] == "analog" else b["pad"].x
         arp = echo(b["arp"].x, self.beat * 0.75, 0.38, 4, 2600)
         drums_wet = 0.08 + 0.06 * s["dusty"]
+        d = s.get("dark", {})
+        snare = lowpass(b["snare"].x, d["snare_lp"]) if d else b["snare"].x
+        if d:
+            keys = lowpass(keys, d["keys_lp"], 4)
+            lead = lowpass(lead, d["lead_lp"], 4)
+            guitar = lowpass(guitar, d["lead_lp"], 4)
+        kick_db = d.get("kick_db", -3.0)
         mix = (
-            b["kick"].x * db(-3.0)
-            + reverb(b["snare"].x, 1.1, drums_wet + 0.05) * db(-6.5)
-            + reverb(b["hats"].x, 0.9, drums_wet) * db(-12.0 + 2.0 * (s["hat_bright"] - 1))
-            + reverb(keys, 1.8, 0.2) * db(-5.5)
-            + reverb(lead, 2.0, 0.24) * db(-6.0)
-            + b["bass"].x * db(-4.5)
+            b["kick"].x * db(kick_db)
+            + reverb(snare, 1.1, drums_wet + 0.05) * db(d.get("snare_db", -6.5))
+            + reverb(b["hats"].x, 0.9, drums_wet) * db(d.get("hat_db", -12.0 + 2.0 * (s["hat_bright"] - 1)))
+            + reverb(keys, 1.8, 0.2) * db(d.get("keys_db", -5.5))
+            + reverb(lead, 2.0, 0.24) * db(d.get("lead_db", -6.0))
+            + b["bass"].x * db(d.get("bass_db", -4.5))
             + reverb(pad, 2.6, 0.3) * db(-11.5 + 2.0 * (s["pad"] == "analog"))
             + reverb(guitar, 1.9, 0.22) * db(-7.0)
             + reverb(arp, 1.6, 0.25) * db(-15.0)
@@ -719,12 +848,17 @@ class Song:
         # Duck everything a little on the kick, as lo-fi beats breathe.
         kick_env = np.abs(b["kick"].x[:n, 0])
         pump = 1 - 0.22 * np.clip(lowpass(kick_env, 8) * 6, 0, 1)
-        bed = mix - b["kick"].x[:n] * db(-3.0)
-        mix = bed * pump[:, None] + b["kick"].x[:n] * db(-3.0)
-        dust = self.kit.vinyl(LENGTH, s["vinyl"], s["hiss"]) * db(-14.0) * (0.0 if os.environ.get("LOFI_DRY") else 1.0)
+        bed = mix - b["kick"].x[:n] * db(kick_db)
+        mix = bed * pump[:, None] + b["kick"].x[:n] * db(kick_db)
+        if d.get("comp"):
+            mix = compress(mix, d["comp"], d.get("thresh", -26.0))
+        dust = self.kit.vinyl(LENGTH, s["vinyl"], s["hiss"]) * db(s.get("dust_db", -14.0)) * (0.0 if os.environ.get("LOFI_DRY") else 1.0)
         dust *= fade(int(1.2 * SR), int(1.5 * SR), n)[:, None]
         dust[: int(MUSIC_FROM * SR)] = 0
-        mix = tape(mix, s["wow"], 1.0, s["top"], s["drive"], seed=s["seed"]) + lowpass(dust, s["top"] + 2000)
+        mix = tape(mix, s["wow"], 1.0, s["top"], s["drive"], seed=s["seed"])
+        if d:
+            mix = lowpass(mix, s["top"] * 1.15, 4)  # the reference's dark top: a steeper roll-off on the whole bed
+        mix = mix + lowpass(dust, s["top"] + 2000)
         # The film's arc, in level: a quiet intro, the groove, a thinning, almost nothing, then everything.
         g = self.t(self.first_groove)
         mix = ride(mix, [(0, -6), (g - 0.3, -6), (g, -3.0), (36, -2.5), (39, -3.5), (42, -7), (43, -10), (46.0, -11), (46.9, -8), (47.0, 0), (55, 0), (57, -0.5), (58.6, -1.0), (60, -3)])
@@ -752,11 +886,11 @@ def make(key):
         x = x * db(min(0.0, TARGET_LUFS - now))
         sf.write(path, x.astype("float32"), SR)
     rms = 20 * np.log10(np.sqrt(np.mean(x[int(5 * SR):] ** 2)))
-    print(f"wrote {os.path.relpath(path, ROOT)}  ({STYLES[key]['name']}; groove from {song.t(song.first_groove):.2f} s; resolve on beat {song.resolve_beat + 1:g} of the last bar)  rms {rms:.1f} dB", flush=True)
+    print(f"wrote {os.path.relpath(path, ROOT)}  ({STYLES[key]['name']}; groove from {song.t(song.first_groove):.2f} s; resolve in bar {song.resolve_bar + 1} after the return, on beat {song.resolve_beat + 1:g})  rms {rms:.1f} dB", flush=True)
     return path
 
 
 if __name__ == "__main__":
-    keys = sys.argv[1:] or list(STYLES)
+    keys = sys.argv[1:] or list(STYLES)  # a b c d (round 1), e f g (round 2)
     for k in keys:
         make(k)

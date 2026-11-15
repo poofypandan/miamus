@@ -198,7 +198,22 @@ def listening():
     return np.concatenate([out[0], gap, out[1]])
 
 
-def build(cut, c):
+SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+
+def moved(names, shift):
+    """Note names moved by `shift` semitones (v13-lofi: the C major scores move every pitched effect down 2)."""
+    if not shift:
+        return names
+    out = []
+    for n in names:
+        pitch, octave = n[:-1], int(n[-1])
+        k = SHARPS.index(pitch) + octave * 12 + shift
+        out.append(f"{SHARPS[k % 12]}{k // 12}")
+    return out
+
+
+def build(cut, c, shift=0):
     length = c["length"]
     fx = Bus(length + 3)  # the hook and the phones: close and dry
     ring = Bus(length + 3)  # bells and chimes: with the room
@@ -217,9 +232,9 @@ def build(cut, c):
     # --- the child's call ---------------------------------------------------
     # v6: the girl does not speak; the bell is her voice ("Ma-ma, look"), a little more present at both calls,
     # and her tugs on Mama's dress are heard as soft cloth.
-    ring.add(notes(["A5", "A5", "C#6"], 1 / 3, 0.42), c["call"][0], 1.15, p=-0.2)
+    ring.add(notes(moved(["A5", "A5", "C#6"], shift), 1 / 3, 0.42), c["call"][0], 1.15, p=-0.2)
     if c["call"][1] is not None:
-        ring.add(notes(["A5", "A5", "C#6"], 1 / 3, 0.6, ring=2.6), c["call"][1], 1.3, p=-0.2)
+        ring.add(notes(moved(["A5", "A5", "C#6"], shift), 1 / 3, 0.6, ring=2.6), c["call"][1], 1.3, p=-0.2)
     for at in c.get("tugs", []):
         fx.add(cloth(), at, 0.9)
     if c.get("listen") is not None:
@@ -231,22 +246,22 @@ def build(cut, c):
     for a, b in c["typing"]:
         fx.add(typing(b - a), a, 0.8, p=0.1)
     for at in c["cards"]:
-        ring.add(notes(["F#5", "A5"], 0.05, 0.4, kind=tine, ring=1.0), at, 0.9, p=0.1)
+        ring.add(notes(moved(["F#5", "A5"], shift), 0.05, 0.4, kind=tine, ring=1.0), at, 0.9, p=0.1)
     for at in c["saved"]:
-        ring.add(notes(["D6", "A6"], 0.085, 0.36, kind=tine, ring=1.1), at, 0.9, p=0.1)
+        ring.add(notes(moved(["D6", "A6"], shift), 0.085, 0.36, kind=tine, ring=1.1), at, 0.9, p=0.1)
     for at in c["shutters"]:
         fx.add(shutter(), at, 0.9, p=0.1)
     for at in c["whooshes"]:
         fx.add(whoosh(0.55, 0.5), at - 0.2, 0.8)
     if c["arrive"] is not None:
-        ring.add(notes(["A6", "D7", "F#7"], 0.055, 0.28, ring=1.4), c["arrive"] - 0.05, 0.8, p=0.4)
+        ring.add(notes(moved(["A6", "D7", "F#7"], shift), 0.055, 0.28, ring=1.4), c["arrive"] - 0.05, 0.8, p=0.4)
     if c["kakak"] is not None:
         fx.add(thud(0.5, 110, 60, 0.12), c["kakak"], 0.6)
     if c["sleep"] is not None:
         fx.add(power_down(), c["sleep"], 0.7)
     if c["ping"] is not None:
         # The one notification: two soft notes, a major third, left to ring.
-        ring.add(notes(["F#6", "A6"], 0.13, 0.55, ring=2.6), c["ping"], 1.0, p=0.0)
+        ring.add(notes(moved(["F#6", "A6"], shift), 0.13, 0.55, ring=2.6), c["ping"], 1.0, p=0.0)
 
     # --- the garden's air: under the hook, and again when the phone falls away ----
     hook_air = garden(c["slam"] + 0.1)
@@ -260,9 +275,13 @@ def build(cut, c):
 
 
 if __name__ == "__main__":
+    # `--key C`: every pitched effect (the girl's bell, the chimes) a tone lower, for scores in C major
+    # (the bell's A A C# becomes G G B, the same call). Written as sfx-<cut>-C.wav; the default stays in D.
+    shift = -2 if "--key" in sys.argv and sys.argv[sys.argv.index("--key") + 1] == "C" else 0
+    suffix = "-C" if shift else ""
     cues = json.load(open(os.path.join(ROOT, "audio", "out", "cues.json")))
     for cut in ("60", "15"):
-        sfx, air = build(cut, cues[cut])
-        sf.write(os.path.join(ROOT, "audio", "out", f"sfx-{cut}.wav"), sfx.astype("float32"), SR)
+        sfx, air = build(cut, cues[cut], shift)
+        sf.write(os.path.join(ROOT, "audio", "out", f"sfx-{cut}{suffix}.wav"), sfx.astype("float32"), SR)
         sf.write(os.path.join(ROOT, "audio", "out", f"air-{cut}.wav"), air.astype("float32"), SR)
-        print(f"wrote sfx-{cut}.wav (peak {20 * np.log10(np.abs(sfx).max() + 1e-9):.1f} dB) and air-{cut}.wav (rms {20 * np.log10(np.sqrt(np.mean(air ** 2)) + 1e-9):.1f} dB)")
+        print(f"wrote sfx-{cut}{suffix}.wav (peak {20 * np.log10(np.abs(sfx).max() + 1e-9):.1f} dB) and air-{cut}.wav (rms {20 * np.log10(np.sqrt(np.mean(air ** 2)) + 1e-9):.1f} dB)")

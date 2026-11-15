@@ -21,6 +21,34 @@ def lufs(path):
     return float(j["input_i"]), float(j["input_tp"])
 
 
+def lra(path, start=17.0, end=39.0):
+    """The loudness range of the steady groove (17–39 s: after the intro, before the planned thinning and silence)."""
+    out = subprocess.run(["npx", "remotion", "ffmpeg", "-hide_banner", "-nostats", "-ss", str(start), "-to", str(end), "-i", path, "-af", "loudnorm=I=-14:TP=-1:LRA=11:print_format=json", "-f", "null", "-"], cwd=ROOT, capture_output=True, text=True).stderr
+    return float(json.loads(re.search(r"\{[^{}]*\"input_i\"[^{}]*\}", out, re.S).group(0))["input_lra"])
+
+
+def tone(x, sr, spans=((15, 41), (47, 57))):
+    """The reference's measures, over the groove (frames of 2048, hop 512, as librosa does): the share of power below
+    800 Hz and 150 Hz; the 85% roll-off and the spectral centroid of each frame's magnitude spectrum, as medians."""
+    m = x.mean(axis=1)
+    n, hop = 2048, 512
+    win = np.hanning(n)
+    f = np.fft.rfftfreq(n, 1 / sr)
+    power = np.zeros(len(f))
+    rolls, cents = [], []
+    for a, b in spans:
+        for i in range(int(a * sr), int(b * sr) - n, hop):
+            mag = np.abs(np.fft.rfft(m[i : i + n] * win))
+            power += mag**2
+            s = mag.sum()
+            if s > 1e-6:
+                rolls.append(f[np.searchsorted(np.cumsum(mag) / s, 0.85)])
+                cents.append((f * mag).sum() / s)
+    c = np.cumsum(power) / power.sum()
+    return {"below_800": round(float(c[f < 800][-1]) * 100, 1), "below_150": round(float(c[f < 150][-1]) * 100, 1),
+            "rolloff85_hz": int(np.median(rolls)), "centroid_median_hz": int(np.median(cents))}
+
+
 def band_db(x, sr, t0, t1, lo, hi):
     seg = x[int(t0 * sr) : int(t1 * sr)].mean(axis=1)
     spec = np.abs(np.fft.rfft(seg * np.hanning(len(seg)))) ** 2
@@ -78,7 +106,7 @@ def main():
         rms = lambda t: 20 * np.log10(np.sqrt(np.mean(x[int(t * sr) : int(t * sr) + w] ** 2)) + 1e-9)
         step = rms(47.0) - rms(46.85)
         c = clicks(x, sr)
-        report[k] = {"lufs": round(i, 1), "true_peak": round(tp, 1), "groove_30_38_db": round(groove, 1), "quiet_43_46_db": round(quiet, 1),
+        report[k] = {**tone(x, sr), "groove_lra": round(lra(path), 1), "lufs": round(i, 1), "true_peak": round(tp, 1), "groove_30_38_db": round(groove, 1), "quiet_43_46_db": round(quiet, 1),
                      "return_47_50_db": round(back, 1), "drop_db": round(groove - quiet, 1), "return_db": round(back - quiet, 1),
                      "low_band_return_db": round(low_b - low_q, 1), "step_at_47_db": round(step, 1), "clicks": c[:20]}
         spectrogram(x, sr, os.path.join(ROOT, "audio", "out", f"lofi-{k}-spec.png"), f"lofi {k}")

@@ -59,6 +59,7 @@ TEMPO = {("15", "id", "S3"): 1.03}
 # these elsewhere so its trial mixes never replace the film's.
 OUT_DIR = os.path.join(ROOT, "public", "audio")
 OUT_NAME = "mix-{cut}-{locale}.wav"
+SFX_NAME = "sfx-{cut}.wav"  # sfx-{cut}-C.wav for scores in C major (audio/sfx.py --key C)
 
 
 def stretched(path, factor):
@@ -126,7 +127,7 @@ def mix(cut, locale, voices, music_style):
     length = int(json.load(open(os.path.join(ROOT, "audio", "out", "cues.json")))[cut]["length"])
     n = length * SR
     music = read(os.path.join(ROOT, "audio", "out", f"music-{cut}-{music_style}.wav"))[:n]
-    sfx = read(os.path.join(ROOT, "audio", "out", f"sfx-{cut}.wav"))[:n]
+    sfx = read(os.path.join(ROOT, "audio", "out", SFX_NAME.format(cut=cut)))[:n]
     air = read(os.path.join(ROOT, "audio", "out", f"air-{cut}.wav"))[:n]
 
     tracks = {who: np.zeros(n) for who in ("kakak", "girl", "mama")}
