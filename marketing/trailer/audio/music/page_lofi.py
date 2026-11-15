@@ -33,11 +33,11 @@ ROUNDS = [
      ["lofi-a", "lofi-b", "lofi-c", "lofi-d"], "ABCD", "sfx-{cut}.wav"),
     ("Round 2, on your reference", "Three scores on the measurements from the mix you like: slower (69 to 75 beats a minute, hi-hats at double time), in C major, dark and warm, with a deep round bass. The girl's bell moves to C with them.",
      ["lofi-e", "lofi-f", "lofi-g"], "EFG", "sfx-{cut}-C.wav"),
-    # Eleven Music (audio/music/eleven_prep.py), listening only until ElevenLabs answers on company ads. Blind: the
-    # page does not say where these come from; the key file does.
-    ("Round 3", "Four more on the same arc, from 68 to 88 beats a minute.",
-     ["eleven-e1-dark68", "eleven-e2-rhodes70", "eleven-e3-guitar76", "eleven-e4-spacefunk88"], "HIJK",
-     {"eleven-e1-dark68": "sfx-{cut}-C.wav", "eleven-e2-rhodes70": "sfx-{cut}-C.wav", "eleven-e3-guitar76": "sfx-{cut}-C.wav", "eleven-e4-spacefunk88": "sfx-{cut}.wav"}),
+    # Eleven Music: the owner's four tracks from the ElevenLabs app, fitted to the arc on their own bar lines
+    # (audio/music/eleven_owner.py). Listening only until ElevenLabs answers on company ads. Blind: the page does not
+    # say where these come from; the key file and audio/out/eleven-owner-edits.json do.
+    ("Round 3", "Four more on the same arc, around 68 beats a minute, in C.",
+     ["eleven-owner-1", "eleven-owner-2", "eleven-owner-3", "eleven-owner-4"], "HIJK", "sfx-{cut}-C.wav"),
 ]
 FROM_FILM, FROM_MUSIC = 35.0, 5.0
 

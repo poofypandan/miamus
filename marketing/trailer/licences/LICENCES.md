@@ -23,6 +23,16 @@ social ads. The licence texts are in this folder; `elevenlabs-provenance.json`
 (v5) and `elevenlabs-provenance-v6.json` (v6) record every line of the voices
 (text sent, take, ElevenLabs request id).
 
+## The lo-fi variant (v13-lofi, candidates on the listening page, 15 Nov 2026)
+
+v13 stays the lullaby version. For a lo-fi variant the owner is comparing eleven candidate scores on a private, blind
+listening page; none is in a rendered film yet.
+
+| Candidates | What they are | Terms |
+|---|---|---|
+| **Composed here** (round 1 and 2, seven scores) | Original lo-fi scores written for this film as code in `audio/music/lofi.py` and played by computed instruments (drums, electric pianos, synths, a plucked-string guitar, vinyl and tape, all from sine waves, delay lines and noise). Round 2 follows measurements of a lo-fi mix the owner likes (tempo, key, tone); nothing of that mix was copied or sampled. With the C major scores, `audio/sfx.py --key C` plays the girl's bell and the chimes a tone lower. | Made for Miamus in this project, like the lullaby: no samples, loops or recordings of anyone's work, so no third party to license from. Usable in paid ads. |
+| **Eleven Music** (round 3, four tracks) | Four 60 s tracks the owner generated in the ElevenLabs app (Eleven Music v2.5, Creator plan) from the same brief, re-edited on their own bar lines to the film's arc for the page only (`audio/music/eleven_owner.py`; what was moved where: `audio/out/eleven-owner-edits.json`). `audio/eleven/el.py` can also call the Music API, but that job was not run. | **Listening and comparison only.** The Eleven Music terms (elevenlabs.io/music-terms) do not make clear that the Creator plan covers a company's paid ads, and the owner has asked ElevenLabs support (15 Nov 2026). Until ElevenLabs confirms in writing, these tracks must not go into any ad or published video. If one is picked before then, the film is rendered with it only for internal viewing, and a composed score stays the version for ads. |
+
 ## Heard in the film
 
 | Part | What it is | Terms |
