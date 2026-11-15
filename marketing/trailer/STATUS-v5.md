@@ -55,3 +55,9 @@ picture, music, sound and timing stay v4's.
 - [x] Mama says the sentence to Kakak: the real listening screen (captured), her words appearing as she speaks
 - [x] Four MP4s and docs in `docs/private/marketing/trailer-v10/`
 - [ ] The owners watch v10
+
+## v11 (15 Nov)
+
+- [x] Cards cut from the real captures, the phone once, "Kak," in Mama's request, no clock, 68 s (score bars repeated)
+- [x] Composed for the whole safe area; four MP4s and docs in `docs/private/marketing/trailer-v11/` (long cut `miamus-68-*`)
+- [ ] Fable reviews after Wednesday's reset; the owners watch v11

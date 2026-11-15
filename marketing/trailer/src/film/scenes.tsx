@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import tapsJson from "../../public/shots/taps.json";
-import { CX, FONT, SAFE } from "../theme";
+import { CLEAR, CX, FONT, SAFE } from "../theme";
 import { BigLine, EndCard, NameChip, StaffChip, TravelLine } from "../ui/extras";
 import { Hand, Pile } from "../ui/hook";
 import { KakakMark } from "../ui/kakak";
@@ -11,7 +11,8 @@ import { World } from "../world/World";
 import { type Cam, camMix, project } from "../world/camera";
 import { lightAt } from "../world/tod";
 import { COPY, type Locale } from "./copy";
-import { ENDING, ENDING15, HOOK, HOOK15, QUIET, S15, S60, SARI15, STAFF, type Span, TELL, TELL15, len } from "./timeline";
+import { CARDS, CARDS15, ENDING, ENDING15, HOOK, HOOK15, QUIET, S15, S60, SARI15, STAFF, type Span, TELL, TELL15, len } from "./timeline";
+import { CaptureCard, ListeningPulse, Thumb } from "../ui/cards";
 
 const taps = tapsJson as Record<string, { x: number; y: number }>;
 const tap = (key: string) => taps[key] ?? { x: 195, y: 422 };
@@ -97,7 +98,7 @@ const TWO_SHOT: Cam = { x: -218, y: 469, z: 2.98 };
 /** Where the pair is in that shot, for the background blur's sharp centre. */
 const PAIR = { x: 490, y: 750, rx: 310, ry: 540 };
 /** Her call, on two lines, in the free sky right of Mama and above the girl. */
-const CALL_TWO = { x: 570, y: 400, size: 104 };
+const CALL_TWO = { x: 540, y: 400, size: 104 };
 
 /** The world with its background softened (4–6 px) and the family sharp: a blurred pass, and a sharp pass masked to the pair. */
 function SoftWorld({ soft, ...props }: React.ComponentProps<typeof World> & { soft: number }) {
@@ -337,7 +338,7 @@ export function Staff({ locale, t0 }: SceneProps) {
   const to = phonePoint(sari, 195, 352);
   return (
     <AbsoluteFill>
-      <Backdrop tod={lerp(7.9, 9.5, frame / len(S60.staff))} frame={frame + t0} cam={{ x: 0, y: 40, z: 1.04 }} />
+      <Backdrop tod={lerp(7.9, 9.5, frame / 348)} frame={frame + t0} cam={{ x: 0, y: 40, z: 1.04 }} />
       <Phone cam={owner} fade={1 - ramp(frame, 0, 10)} opacity={1 - ramp(frame, K.push[0] + 4, K.push[1] - 6)}>
         <ScreenTrack cues={[{ src: `${dir}/k0-saved.png`, at: 0, fade: 0 }]} />
       </Phone>
@@ -382,8 +383,8 @@ export function Sari({ t0 }: SceneProps) {
   cam.Y += (1 - springAt(frame, fps, 0, { damping: 19, stiffness: 100, mass: 0.9 })) * 1500;
   return (
     <AbsoluteFill>
-      <Backdrop tod={lerp(9, 9.4, frame / len(S15.sari))} frame={frame + t0} cam={{ x: 0, y: 40, z: 1.04 }} />
-      <Phone cam={cam} bezel={STAFF_BEZEL} overlay={<Glow x={16} y={290} w={358} h={124} at={T.glow} until={len(S15.sari) + 6} radius={18} />}>
+      <Backdrop tod={lerp(9, 9.4, frame / 60)} frame={frame + t0} cam={{ x: 0, y: 40, z: 1.04 }} />
+      <Phone cam={cam} bezel={STAFF_BEZEL} overlay={<Glow x={16} y={290} w={358} h={124} at={T.glow} until={60 + 6} radius={18} />}>
         <ScreenTrack cues={[{ src: "shots/staff/list.png", at: 0, fade: 0 }]} />
       </Phone>
     </AbsoluteFill>
@@ -441,6 +442,127 @@ export function Quiet({ locale, t0 }: SceneProps) {
       </Phone>
     </AbsoluteFill>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* v11. Cards: the phone once, then one key element at a time          */
+/* ------------------------------------------------------------------ */
+
+/** Where each card comes from in the real captures (CSS px), and its key line for the terracotta ring. */
+const CARD_REGIONS = {
+  listen: { en: { x: 14, y: 130, w: 362, h: 312 }, id: { x: 14, y: 130, w: 362, h: 332 } },
+  suggest: { en: { x: 10, y: 198, w: 370, h: 238 }, id: { x: 10, y: 178, w: 370, h: 238 } },
+  suggestRing: { en: { x: 22, y: 308, w: 346, h: 74 }, id: { x: 22, y: 288, w: 346, h: 74 } },
+  saved: { x: 12, y: 702, w: 366, h: 66 },
+  // v11: Sari's card with her real list header above it (her day), so it fills the frame with meaning, not decoration.
+  sari: { x: 12, y: 66, w: 366, h: 352 },
+  done: { x: 16, y: 777, w: 357, h: 49 },
+  // "All on track" with the day's progress under it.
+  track: { x: 12, y: 167, w: 366, h: 428 },
+};
+const PHOTO_BEFORE = { x: 28, y: 388, w: 88, h: 84 };
+const PHOTO_AFTER = { x: 28, y: 574, w: 88, h: 84 };
+
+export function Cards({ locale, t0, fast }: SceneProps) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const copy = COPY[locale];
+  const dir = `shots/${locale}`;
+  const total = fast ? len(S15.cards) : len(S60.cards);
+  // The day passes behind the cards: morning to late afternoon, softly blurred; at the end the garden comes into focus.
+  const C = CARDS;
+  const toGarden = fast ? 0 : ramp(frame, C.garden[0], C.garden[1], ease);
+  const tod = fast ? lerp(7.8, 9.4, frame / total) : lerp(7.75, 17.62, ramp(frame, 0, C.garden[0]));
+  const worldCam: Cam = { x: lerp(0, -30, toGarden), y: lerp(40, 300, toGarden), z: lerp(1.04, 1.02, toGarden) };
+  const S = fast ? CARDS15 : CARDS;
+  return (
+    <AbsoluteFill>
+      <Backdrop tod={tod} frame={frame + t0} cam={worldCam} blur={lerp(22, 0, toGarden)} wash={0.08 * (1 - toGarden)} people={toGarden} />
+      {!fast && <PhoneOnce locale={locale} />}
+      {!fast && (
+        <CaptureCard src={`${dir}/k0-listen-base.png`} region={CARD_REGIONS.listen[locale]} at={C.listen.at} out={C.listen.out} tag={copy.tags.you}>
+          <ListeningPulse x={195} y={locale === "en" ? 209 : 212} from={C.listen.at} until={C.listen.out + 12} />
+          <SpokenInput
+            words={copy.spoken.words.map(([text, t]) => ({ text, at: C.listen.words + Math.round((t + 0.12) * fps) }))}
+            split={copy.spoken.split}
+            top={LISTEN_GEO[locale].text}
+            button={{ x: 325.3, y: LISTEN_GEO[locale].button, size: 49.3, src: `${dir}/k0-listen-send.png` }}
+            until={C.listen.out + 12}
+          />
+        </CaptureCard>
+      )}
+      {/* Kakak's card; once confirmed, "Saved" arrives under it. */}
+      <CaptureCard
+        src={`${dir}/k0-card.png`}
+        region={CARD_REGIONS.suggest[locale]}
+        at={S.suggest.at}
+        out={S.saved.out}
+        tag={copy.tags.you}
+        press={{ at: S.suggest.press, x: 195, y: CARD_REGIONS.suggestRing[locale].y + 37 }}
+        check={S.suggest.check}
+        fadeBottom
+        below={{
+          src: `${dir}/k0-saved.png`,
+          region: CARD_REGIONS.saved,
+          at: S.saved.at,
+          check: S.saved.check,
+          children: <Glow x={16} y={706} w={358} h={58} at={S.saved.ring} until={S.saved.out + 14} radius={14} />,
+        }}
+      >
+        <Glow {...CARD_REGIONS.suggestRing[locale]} at={S.suggest.ring} until={S.saved.at} radius={12} />
+      </CaptureCard>
+      {/* Sari's task, her photos popping on; then "selesai" arrives under it. */}
+      <CaptureCard
+        src="shots/staff/list.png"
+        region={CARD_REGIONS.sari}
+        at={S.sari.at}
+        out={fast ? S.sari.out : C.done.out}
+        tag={copy.tags.sari}
+        below={fast ? undefined : { src: "shots/staff/done.png", region: CARD_REGIONS.done, at: C.done.at, check: C.done.check }}
+      >
+        <Glow x={16} y={289} w={358} h={124} at={S.sari.ring} until={fast ? S.sari.out + 14 : C.done.at} radius={18} />
+        <Thumb src="shots/staff/photo-after.png" crop={PHOTO_BEFORE} x={238} y={298} size={56} at={S.sari.thumbs[0]} />
+        <Thumb src="shots/staff/photo-after.png" crop={PHOTO_AFTER} x={302} y={298} size={56} at={S.sari.thumbs[1]} />
+      </CaptureCard>
+      {!fast && (
+        <CaptureCard src={`${dir}/status.png`} region={CARD_REGIONS.track} at={C.track.at} out={C.track.out} tag={copy.tags.you}>
+          <Glow x={16} y={171} w={358} h={74} at={C.track.ring} until={C.track.out + 14} radius={16} />
+        </CaptureCard>
+      )}
+    </AbsoluteFill>
+  );
+}
+
+/** The one real phone shot: Kakak's sheet, the mic; a press (a dip, a soft ripple, no finger); then it gives way. */
+function PhoneOnce({ locale }: { locale: Locale }) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const C = CARDS;
+  if (frame > C.phoneOut[1]) return null;
+  const rise = springAt(frame, fps, 0, { damping: 19, stiffness: 90, mass: 0.9 });
+  // Sized and placed to sit wholly inside the area free of platform UI (v11).
+  const cam = look(0, 2.12, 300, 740, { X: (CLEAR.left + CLEAR.right) / 2 });
+  cam.Y += (1 - rise) * 1500;
+  const away = ramp(frame, C.phoneOut[0], C.phoneOut[1], easeIn);
+  const mic = tap(`${locale}.mic`);
+  const dip = 1 - 0.02 * (0.5 - 0.5 * Math.cos(2 * Math.PI * Math.min(1, Math.max(0, (frame - C.press) / 12))));
+  return (
+    <AbsoluteFill style={{ opacity: 1 - away, transform: `scale(${dip * (1 - 0.06 * away)})` }}>
+      <Phone cam={cam} overlay={<PressRing x={mic.x} y={mic.y} at={C.press} />}>
+        <ScreenTrack cues={[{ src: `shots/${locale}/k0-open-clean.png`, at: 0, fade: 0 }]} />
+      </Phone>
+    </AbsoluteFill>
+  );
+}
+
+/** A press on the phone without a finger: a soft terracotta ring opening from the mic. */
+function PressRing({ x, y, at }: { x: number; y: number; at: number }) {
+  const frame = useCurrentFrame();
+  const t = frame - at;
+  if (t < 0 || t > 20) return null;
+  const k = 2.12;
+  const size = 70 * k * (0.5 + 0.8 * easeOut(t / 20));
+  return <div style={{ position: "absolute", left: x * k - size / 2, top: (12 + y) * k - size / 2, width: size, height: size, borderRadius: "50%", border: `${2.2 * k}px solid rgba(182,95,85,0.75)`, opacity: ramp(frame, at, at + 3) * (1 - t / 20) }} />;
 }
 
 /* ------------------------------------------------------------------ */

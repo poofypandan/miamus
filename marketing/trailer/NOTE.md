@@ -1,5 +1,71 @@
 # The Miamus trailer: what was made, and why
 
+## Version 11 (15 November 2026): cards, so anyone can follow it
+
+The owner's mother-in-law watched v10 and did not understand what the app is
+for. v11 shows the phone once, then one key element at a time as a card. The
+long film is now 68 s; the 15 s cut stays 15 s. Four cuts in
+`docs/private/marketing/trailer-v11/` (the long cut is named `miamus-68-*`);
+v10 is untouched. Spec: `V11-SPEC.md`.
+
+- **The phone once:** a short real shot of Kakak's sheet (15.0 s). Mama
+  presses the mic (a slight dip and a soft terracotta ripple; no finger).
+- **Then cards:** each element is cut from the real captures (never redrawn),
+  enlarged to the full safe width (about 2.4x the phone), centred over the
+  softly blurred garden as the day passes behind it, one at a time; each
+  lands, holds about 2.5 s, and leaves. The terracotta ring marks the key line.
+  A small tag says who it is for ("You" / "Anda", "Sari").
+  1. Kakak listening (16.6 s): the app's real listening screen, its halo
+     breathing as the app animates it, Mama's words appearing as she says
+     them.
+  2. Kakak's suggestion card (22.6): the ring on what / who / when; a press,
+     then a check settles on; "Saved — Mop the terrace, Sari" arrives under
+     it (26.6) with its own check.
+  3. Sari's task list with the "Pel teras" card ringed (30.2), her two photos
+     popping onto it (cut from her real photo screen); "Pel teras" selesai
+     arrives under it (36.2) with a check.
+  4. "All on track" with the day's progress under it (40.0), under "I just
+     keep track." and "And you? You'll only hear from me… when something
+     isn't done."
+  Then about 2 s of quiet; the garden comes into focus at 50.6–52.2 s.
+- **Mama talks to Kakak by name:** "Kak, have Sari mop the terrace every
+  Monday at 9." / "Kak, minta Sari pel teras setiap Senin jam 9." "Kak,"
+  shows in the words, as the app would. Aita, unhurried; the Indonesian was
+  sent with a breath after "teras" so it is heard clearly (the words on
+  screen are unchanged). Mama sits a little further back in the mix, with a
+  touch more room; Kakak stays close and clean. Mama's own lines keep her
+  sand plate.
+- **No clock** and no dark-phone wait.
+- **Composed for the whole safe area** (owner): everything stays clear of the
+  top 10%, the bottom 25% and the right 15% (the platforms' captions,
+  usernames and buttons). Cards are centred between their tag and Kakak's
+  caption at about 88% of that width; the caption plate now sits just above
+  the bottom zone, under the card (it ended at 1282 px; now 1440), and is
+  centred in the clear area. Short elements ("Saved", "selesai", "All on
+  track") come with real context from the same captures (they arrive under
+  the card they follow; the day's progress under "All on track") rather
+  than decoration. Every card beat was checked against a safe-area overlay.
+- **68 s, and why:** at 60 s the last card cannot hold "I just keep track.",
+  L8, L9 and a real 2 s pause before the garden opens on its bar. The score
+  plays four middle bars twice (7 and 9, the tell pulse; 15, Sari's F#–D;
+  18, the held F#), spliced on their bar lines, so the composed ending and
+  its level rise arrive exactly 8 s later (`lengthen` in
+  `audio/music/score.py`): tug, call and bell 53.0; Kakak "That one's
+  yours." 55.0, where the score opens; Mama 57.4; the hand 59.0 and a 2 s
+  hold; crane 61.0; end line 61.3; card 65.0 ("For the little moments.");
+  address 65.6; end 68.0. Reels, TikTok and Shorts all take 68 s.
+- **15 s:** cards too: Kakak's suggestion card with its check, "Saved", and
+  Sari's card with her photos. Unchanged otherwise.
+- **Smooth:** caption plates now enter with an ease-in-out over 12 frames
+  (an ease-out read as a pop over the calm blurred garden); presses dip on a
+  smooth curve and their rings fade in. The stutter check is clean on all
+  four cuts, with no exceptions.
+- **Checked:** MP4s at -14.0 LUFS, true peak -1.4 to -1.6 dBTP; every line
+  word for word in the finished mixes (Mama's "Kak," request included);
+  frames from the MP4s of every card beat, the climax and the end card,
+  against a safe-area overlay.
+- **Credits:** 8,226 characters used of the key's 10,000 (v11: 555).
+
 ## Version 10 (15 November 2026): Mama says it
 
 The owner's note on v9: in the "tell Kakak" beat, Mama should say the

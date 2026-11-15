@@ -1,6 +1,9 @@
 # Licences: what is in the trailer, and the right to use it in paid ads
 
-Version 10 (15 November 2026) adds Mama saying one sentence to Kakak (a new
+Version 11 (15 November 2026) shows the app's real screens as cards cut from
+the same captures, gives Mama's request a "Kak," (a new take, same voice and
+terms; `elevenlabs-provenance-v11.json`) and lengthens the score from its own
+bars (no new music). Version 10 added Mama saying one sentence to Kakak (a new
 take, same voice and terms; `elevenlabs-provenance-v10.json`) and shows the
 app's real listening screen, captured from the demo build. Version 9 re-timed the ending and changes the end card's
 written line; no new voices or takes. Version 8 changed Mama's answer (a new take, same voice,

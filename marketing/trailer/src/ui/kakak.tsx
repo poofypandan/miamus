@@ -1,7 +1,7 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { C, CAPTION_BOTTOM, CX, FONT, H, SAFE } from "../theme";
-import { clamp01, easeOut, ramp, springAt } from "./kit";
+import { clamp01, ease, easeOut, ramp, springAt } from "./kit";
 
 /**
  * Kakak, as she is in the app (src/components/kakak/kakak-avatar.tsx): the
@@ -114,14 +114,14 @@ export function Captions({ cues, level = 0 }: { cues: CaptionCue[]; level?: numb
   const frame = useCurrentFrame();
   // v8: every caption in its window is drawn with its own fade, so two lines close together cross-fade
   // instead of the plate snapping from one to the next.
-  const live = cues.filter((c) => frame >= c.from - 3 && frame <= c.to + 10);
+  const live = cues.filter((c) => frame >= c.from - 5 && frame <= c.to + 10);
   if (!live.length) return null;
   return <>{live.map((c) => <CaptionPlate key={`${c.from}-${c.text}`} cue={c} level={level} />)}</>;
 }
 
 function CaptionPlate({ cue, level }: { cue: CaptionCue; level: number }) {
   const frame = useCurrentFrame();
-  const inT = ramp(frame, cue.from - 3, cue.from + 6, easeOut);
+  const inT = ramp(frame, cue.from - 5, cue.from + 7, ease); // v11: a gentle entrance, no first-frame pop
   const outT = ramp(frame, cue.to + 2, cue.to + 10);
   const o = inT * (1 - outT);
   const words = cue.text.split(" ");
@@ -139,7 +139,7 @@ function CaptionPlate({ cue, level }: { cue: CaptionCue; level: number }) {
         display: "flex",
         justifyContent: "center",
         opacity: o,
-        transform: `translate(${CX - (SAFE.left + SAFE.right) / 2}px, ${(1 - inT) * 16}px)`,
+        transform: `translate(0px, ${(1 - inT) * 16}px)`, // v11: centred in the clear area, off the right-hand buttons
       }}
     >
       <div
@@ -147,7 +147,7 @@ function CaptionPlate({ cue, level }: { cue: CaptionCue; level: number }) {
           display: "flex",
           alignItems: "center",
           gap: 18,
-          maxWidth: 830,
+          maxWidth: 790,
           padding: "15px 34px 16px 16px",
           borderRadius: 44,
           background: "rgba(22,19,26,0.84)",
@@ -179,11 +179,11 @@ function CaptionPlate({ cue, level }: { cue: CaptionCue; level: number }) {
  */
 export function MamaCaptions({ cues, kakak = [] }: { cues: CaptionCue[]; kakak?: CaptionCue[] }) {
   const frame = useCurrentFrame();
-  const cue = cues.find((c) => frame >= c.from - 3 && frame <= c.to + 12);
+  const cue = cues.find((c) => frame >= c.from - 5 && frame <= c.to + 12);
   if (!cue) return null;
   // When Kakak speaks over her tail, Mama's plate steps up a row, so the two never sit on each other.
   const lift = kakak.some((k) => k.from - 6 <= cue.to + 12 && k.to + 10 >= cue.from - 3) ? 118 * ramp(frame, cue.from - 3, cue.from + 6) : 0;
-  const inT = ramp(frame, cue.from - 3, cue.from + 6, easeOut);
+  const inT = ramp(frame, cue.from - 5, cue.from + 7, ease); // v11: a gentle entrance, no first-frame pop
   const o = inT * (1 - ramp(frame, cue.to + 4, cue.to + 12));
   return (
     <div
@@ -195,12 +195,12 @@ export function MamaCaptions({ cues, kakak = [] }: { cues: CaptionCue[]; kakak?:
         display: "flex",
         justifyContent: "center",
         opacity: o,
-        transform: `translate(${CX - (SAFE.left + SAFE.right) / 2}px, ${(1 - inT) * 16 - lift}px)`,
+        transform: `translate(0px, ${(1 - inT) * 16 - lift}px)`,
       }}
     >
       <div
         style={{
-          maxWidth: 830,
+          maxWidth: 790,
           padding: "17px 36px 18px",
           borderRadius: 44,
           // Warm sand with a fine edge: light, plain, and not the white of the day's questions.

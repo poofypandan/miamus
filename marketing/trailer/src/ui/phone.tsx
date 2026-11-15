@@ -14,7 +14,7 @@ export const CSS_H = 844;
 export const INSET = 12;
 
 /** How the current screen is drawn: video px per CSS px, and the strip above the app. */
-const Geo = createContext({ k: 1, inset: 0 });
+export const Geo = createContext({ k: 1, inset: 0 });
 
 /* ------------------------------------------------------------------ */
 /* Screens                                                             */

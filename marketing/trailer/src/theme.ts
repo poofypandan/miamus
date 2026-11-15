@@ -16,7 +16,11 @@ export const SAFE = { top: 270, bottom: 1290, left: 64, right: 916 };
 /** The middle of the safe area: phones, captions and titles centre here. */
 export const CX = 490;
 /** Captions: their bottom edge. */
-export const CAPTION_BOTTOM = 1282;
+// v11 (owner): captions sit just above the platforms' bottom zone (the lowest 25%: captions, usernames, buttons),
+// under the content, so a frame reads top to bottom. Before v11 they ended at 1282.
+export const CAPTION_BOTTOM = 1440;
+/** v11: the area free of platform UI: below the top 10%, above the bottom 25%, left of the right 15%. */
+export const CLEAR = { top: 192, bottom: 1440, left: 64, right: 918 };
 
 /** The app's own palette (src/app/globals.css) and Kakak's one warm colour. */
 export const C = {

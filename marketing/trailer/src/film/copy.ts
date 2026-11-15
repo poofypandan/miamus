@@ -20,6 +20,8 @@ export interface Copy {
   typed: { lines: [string, string]; placeholder: string; start15: number };
   /** v10: the sentence Mama says to Kakak, word by word (seconds after she starts), and how many words fit line one. */
   spoken: { words: [string, number][]; split: number };
+  /** v11: who each card is for. */
+  tags: { you: string; sari: string };
   /** v6: the same call on two lines, one word group per bell note. */
   call: [string, string];
   bubbles: Bubble[];
@@ -107,7 +109,9 @@ export const COPY: Record<Locale, Copy> = {
     call: ["Mama,", "look!"],
     typed: { lines: ["Have Sari mop the terrace every", "Monday at 9."], placeholder: "What should I set up?", start15: 22 },
     // Word onsets measured on Mama's take with Whisper (audio/out/vo/mama-aita-v10/T1-words.json).
-    spoken: { words: [["Have", 0], ["Sari", 0.24], ["mop", 0.52], ["the", 0.7], ["terrace", 0.86], ["every", 1.16], ["Monday", 1.52], ["at", 1.82], ["9.", 2.02]], split: 6 },
+    // v11: "Kak," first, so it is clear she is talking to Kakak (word onsets: audio/out/vo/mama-aita-v11/T1-words.json).
+    spoken: { words: [["Kak,", 0], ["have", 0.68], ["Sari", 0.94], ["mop", 1.26], ["the", 1.48], ["terrace", 1.62], ["every", 2.0], ["Monday", 2.4], ["at", 2.76], ["9.", 2.98]], split: 6 },
+    tags: { you: "You", sari: "Sari" },
   },
   id: {
     child: "Mama, lihat!",
@@ -169,7 +173,7 @@ export const COPY: Record<Locale, Copy> = {
     end: { line: "Untuk momen-momen kecil.", em: "kecil", url: "miamus.app" },
     call: ["Mama,", "lihat!"],
     typed: { lines: ["Minta Sari pel teras setiap Senin jam", "9."], placeholder: "Mau Kakak atur apa?", start15: 18 },
-    // The unhurried take (v10, so "pel teras" is two clear words).
-    spoken: { words: [["Minta", 0], ["Sari", 0.34], ["pel", 0.74], ["teras", 1.02], ["setiap", 1.4], ["Senin", 1.92], ["jam", 2.2], ["9.", 2.54]], split: 7 },
+    spoken: { words: [["Kak,", 0], ["minta", 0.58], ["Sari", 0.82], ["pel", 1.06], ["teras", 1.36], ["setiap", 1.78], ["Senin", 2.48], ["jam", 2.76], ["9.", 3.1]], split: 7 },
+    tags: { you: "Anda", sari: "Sari" },
   },
 };

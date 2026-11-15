@@ -40,10 +40,10 @@ LOCALE_CUES = {"id": {"15": {"S3": 11.45}}}
 #   is 0.8 s earlier, so Kakak's "That one's yours. Go play." comes straight after L9 while the notification
 #   is on screen; Mama answers as her hand comes up to shade her eyes, then a held moment before the crane.
 # v6 (Fable's pacing): every line re-timed onto the new picture. Tell 15–26.4 s, staff 26.4–38, quiet 38–47.
-# v9 (Fable): the quiet beat ends at 44.2 s; the climax spaced on the bars: Kakak 47.0 (where the score opens),
-# Mama 49.4; the end line 53.3. One set of cues for both languages.
-CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.45, "T1": 16.6, "L4b": 21.3, "L5": 27.0, "L6": 29.85, "L7a": 32.6,
-              "L7b": 36.2, "L8": 38.6, "L9": 41.4, "L10": 47.0, "M2": 49.4, "L11": 53.3}
+# v11 (the owner's card cut, 68 s): each line on its card; the climax on the same bars 8 s later: Kakak 55.0 (where the
+# score opens), Mama 57.4; the end line 61.3. One set of cues for both languages.
+CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.45, "T1": 17.1, "L4b": 23.2, "L5": 30.6, "L6": 33.6,
+              "L7a": 36.8, "L7b": 41.4, "L8": 43.8, "L9": 46.7, "L10": 55.0, "M2": 57.4, "L11": 61.3}
 CUES["15"] = {"M1": 1.6, "S1": 3.15, "S2": 7.3, "S3": 11.85}
 LOCALE_CUES["id"]["60"] = {}
 LOCALE_CUES["id"]["15"] = {"S3": 11.5}
@@ -117,7 +117,8 @@ def loudness(path):
 
 
 def mix(cut, locale, voices, music_style):
-    length = 60 if cut == "60" else 15
+    # v11: the long film runs 68 s (its cue is still "60"); the length comes from the film's own timings.
+    length = int(json.load(open(os.path.join(ROOT, "audio", "out", "cues.json")))[cut]["length"])
     n = length * SR
     music = read(os.path.join(ROOT, "audio", "out", f"music-{cut}-{music_style}.wav"))[:n]
     sfx = read(os.path.join(ROOT, "audio", "out", f"sfx-{cut}.wav"))[:n]
@@ -168,7 +169,8 @@ def mix(cut, locale, voices, music_style):
         far[: int(6 * SR)] = 1
         m = m * (1 - far) + 0.75 * lowpass(m, 5200) * far
         people = g + m
-        v2 = v2 + reverb(pan(g, -0.08), 0.75, 0.12) + reverb(pan(m, 0.06), 0.7, 0.1)
+        # v11: Mama a little further away and more natural (a touch more room); Kakak stays close and clean.
+        v2 = v2 + reverb(pan(g, -0.08), 0.75, 0.12) + reverb(pan(m * db(-0.8), 0.06), 0.9, 0.17)
     presence = follow(v + people)
 
     # The music steps back under her (about 10 dB, so she stays clear on a phone's speaker), the effects a little.

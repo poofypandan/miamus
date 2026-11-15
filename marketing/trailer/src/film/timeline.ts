@@ -19,18 +19,15 @@ export const S60 = {
   kakak: [f(11), f(15)],
   // v6 (Fable's pacing): one task end to end, on the score's bars. The house-through-the-day scene is cut,
   // and the two-phone shot and Sari's phone are one staff beat.
-  tell: [f(15), f(26.4)],
-  staff: [f(26.4), f(38)],
-  // v9 (Fable): the quiet beat gives 2.8 s to the climax; the garden opens on the pair at 44.2 s.
-  quiet: [f(38), f(44.2)],
-  ending: [f(44.2), f(60)],
+  // v11 (the owner's card cut, 68 s): the phone once, then one card at a time (15.0–52.2 s); the garden at 52.2.
+  cards: [f(15), f(52.2)],
+  ending: [f(52.2), f(68)],
 } as const satisfies Record<string, Span>;
 
 /** The 15-second cut: the hook, the one sentence, the staff, the garden, the name. */
 export const S15 = {
   hook: [0, f(3)],
-  tell: [f(3), f(8)],
-  sari: [f(8), f(10)],
+  cards: [f(3), f(10)],
   ending: [f(10), f(15)],
 } as const satisfies Record<string, Span>;
 
@@ -88,6 +85,28 @@ export const TELL = {
 // v8: the input opens with the first words typed; the last 22 characters type at the same steady rate.
 export const TELL15 = { type: [0, 44] as Span, send: 48, card: 58, toCard: [60, 70] as Span, scroll: [130, 138] as Span, ok: 141, saved: 145 };
 
+/**
+ * v11: the card sequence (frames in "cards", 0 = 15.0 s). Each card lands, holds ~2.5 s, leaves; then the next.
+ * The phone is seen once, at the start; a press is a dip and a soft ripple, never a finger.
+ */
+export const CARDS = {
+  press: 39,
+  phoneOut: [45, 57] as Span,
+  listen: { at: 48, out: 216, words: 63 },
+  suggest: { at: 228, ring: 261, press: 318, check: 327, out: 342 },
+  saved: { at: 348, ring: 363, check: 372, out: 438 },
+  sari: { at: 456, ring: 468, thumbs: [516, 534], out: 618 },
+  done: { at: 636, check: 651, out: 732 },
+  track: { at: 750, ring: 762, out: 1062 },
+  garden: [1068, 1116] as Span,
+};
+/** 15 s (frames in "cards", 0 = 3.0 s): Kakak's card, saved, Sari's card with her photos. */
+export const CARDS15 = {
+  suggest: { at: 6, ring: 18, press: 66, check: 75, out: 87 },
+  saved: { at: 90, ring: 99, check: 105, out: 141 },
+  sari: { at: 150, ring: 158, thumbs: [168, 177], out: 216 },
+};
+
 /** v6: one staff beat (frames in "staff", 0 = 26.4 s): the line to Sari's phone, her list, the task, two photos, done. */
 export const STAFF = {
   apart: [0, 18] as Span,
@@ -129,24 +148,25 @@ export function soundCues(cut: "60" | "15") {
     const S = S60;
     const at = (span: Span, frame: number) => sec(span[0] + frame);
     return {
-      length: 60,
+      // v11: the long film runs 68 s (four middle bars repeated in the score; see audio/music/score.py).
+      length: 68,
       musicFrom: 5,
       pops: HOOK.at.map((a) => sec(a)),
       slam: sec(HOOK.slam),
       fall: sec(HOOK.fall),
       call: [sec(HOOK.bell), at(S.ending, ENDING.bell)],
       tugs: [...HOOK.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING.tug + 3)],
-      taps: [at(S.tell, TELL.tap), at(S.tell, TELL.stop), at(S.tell, TELL.ok), at(S.staff, STAFF.card), at(S.staff, STAFF.before), at(S.staff, STAFF.after), at(S.staff, STAFF.finish)],
+      taps: [at(S.cards, CARDS.press), at(S.cards, CARDS.suggest.press)],
       typing: [],
-      cards: [at(S.tell, TELL.card)],
-      saved: [at(S.tell, TELL.saved), at(S.staff, STAFF.done)],
-      shutters: [at(S.staff, STAFF.beforeIn), at(S.staff, STAFF.afterIn)],
-      whooshes: [sec(S.tell[0]), at(S.staff, STAFF.line[0]), at(S.staff, STAFF.push[0]), sec(S.quiet[0]), at(S.quiet, QUIET.away[0])],
-      arrive: at(S.staff, STAFF.line[1]),
-      sleep: at(S.quiet, QUIET.sleep[0]),
+      cards: [at(S.cards, CARDS.suggest.at + 6)],
+      saved: [at(S.cards, CARDS.saved.check), at(S.cards, CARDS.done.check)],
+      shutters: CARDS.sari.thumbs.map((t) => at(S.cards, t)),
+      whooshes: [sec(S.cards[0]), at(S.cards, CARDS.sari.at), at(S.cards, CARDS.garden[0])],
+      arrive: at(S.cards, CARDS.sari.at + 12),
+      sleep: null,
       ping: null,
       kakak: sec(S.kakak[0] + 26),
-      garden: [0, at(S.quiet, QUIET.away[0])],
+      garden: [0, at(S.cards, CARDS.garden[0])],
       mark: at(S.ending, ENDING.mark),
     };
   }
@@ -160,12 +180,12 @@ export function soundCues(cut: "60" | "15") {
     fall: sec(HOOK15.fall),
     call: [sec(HOOK15.bell), at(S.ending, ENDING15.bell)],
     tugs: [...HOOK15.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING15.tug + 3)],
-    taps: [at(S.tell, TELL15.send), at(S.tell, TELL15.ok)],
-    typing: [[at(S.tell, TELL15.type[0]), at(S.tell, TELL15.type[1])]],
-    cards: [at(S.tell, TELL15.card)],
-    saved: [at(S.tell, TELL15.saved)],
-    shutters: [],
-    whooshes: [sec(S.tell[0]), sec(S.sari[0]), sec(S.ending[0])],
+    taps: [at(S.cards, CARDS15.suggest.press)],
+    typing: [],
+    cards: [at(S.cards, CARDS15.suggest.at + 6)],
+    saved: [at(S.cards, CARDS15.saved.check)],
+    shutters: CARDS15.sari.thumbs.map((t) => at(S.cards, t)),
+    whooshes: [sec(S.cards[0]), at(S.cards, CARDS15.sari.at), sec(S.ending[0])],
     arrive: null,
     sleep: null,
     ping: null,

@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame } from "remotion";
 import { COPY, type Locale } from "./film/copy";
-import { Ending, Hook, MeetKakak, Quiet, Sari, Staff, Tell, Turn, Voice } from "./film/scenes";
+import { Cards, Ending, Hook, MeetKakak, Turn, Voice } from "./film/scenes";
 import { FPS, S15, S60, type Span, len } from "./film/timeline";
 import voData from "./film/vo-data.json";
 import { loadFonts } from "./theme";
@@ -55,16 +55,13 @@ export const Film: React.FC<FilmProps> = ({ locale, cut, audio }) => {
             <Scene span={S60.hook}><Hook {...p} t0={S60.hook[0]} /></Scene>
             <Scene span={S60.turn}><Turn {...p} t0={S60.turn[0]} /></Scene>
             <Scene span={S60.kakak}><MeetKakak {...p} t0={S60.kakak[0]} /></Scene>
-            <Scene span={S60.tell}><Tell {...p} t0={S60.tell[0]} /></Scene>
-            <Scene span={S60.staff}><Staff {...p} t0={S60.staff[0]} /></Scene>
-            <Scene span={S60.quiet}><Quiet {...p} t0={S60.quiet[0]} /></Scene>
+            <Scene span={S60.cards}><Cards {...p} t0={S60.cards[0]} /></Scene>
             <Scene span={S60.ending}><Ending {...p} t0={S60.ending[0]} /></Scene>
           </>
         ) : (
           <>
             <Scene span={S15.hook}><Hook {...p} t0={0} fast /></Scene>
-            <Scene span={S15.tell}><Tell {...p} t0={S15.tell[0]} fast /></Scene>
-            <Scene span={S15.sari}><Sari {...p} t0={S15.sari[0]} fast /></Scene>
+            <Scene span={S15.cards}><Cards {...p} t0={S15.cards[0]} fast /></Scene>
             <Scene span={S15.ending}><Ending {...p} t0={S15.ending[0]} fast /></Scene>
           </>
         )}

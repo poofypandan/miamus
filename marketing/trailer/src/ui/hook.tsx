@@ -13,11 +13,11 @@ import { easeOut, ramp } from "./kit";
  */
 const PLACES: { x: number; y: number; rot: number; size: number }[] = [
   // The first ones land around the child's call and around her, so both can still be seen…
-  { x: 700, y: 1345, rot: -4, size: 58 },
-  { x: 610, y: 760, rot: 2, size: 56 },
+  { x: 700, y: 1510, rot: -4, size: 58 },
+  { x: 520, y: 760, rot: 2, size: 56 },
   { x: 250, y: 1650, rot: -2, size: 44 },
   { x: 640, y: 1500, rot: 3, size: 58 },
-  { x: 210, y: 1380, rot: -5, size: 62 },
+  { x: 210, y: 1290, rot: -5, size: 62 },
   { x: 700, y: 930, rot: 2, size: 54 },
   { x: 262, y: 868, rot: -3, size: 60 },
   { x: 800, y: 620, rot: 4, size: 44 },
@@ -28,8 +28,8 @@ const PLACES: { x: number; y: number; rot: number; size: number }[] = [
   { x: 340, y: 470, rot: 2, size: 60 },
   { x: 770, y: 1070, rot: -4, size: 64 },
   { x: 500, y: 566, rot: 3, size: 52 },
-  { x: 290, y: 1372, rot: -2, size: 44 },
-  { x: 560, y: 1436, rot: 2, size: 58 },
+  { x: 290, y: 1590, rot: -2, size: 44 },
+  { x: 560, y: 1290, rot: 2, size: 58 },
   { x: 250, y: 1548, rot: -3, size: 52 },
   { x: 262, y: 262, rot: 3, size: 50 },
   { x: 820, y: 450, rot: -2, size: 50 },

@@ -1,0 +1,30 @@
+{
+ "generated": "2026-11-15",
+ "service": "ElevenLabs API, POST /v1/text-to-speech/{voice_id}",
+ "plan": "Creator (owner's account)",
+ "model_id": "eleven_v4",
+ "note": "v11: Mama's request now starts with 'Kak,' (unhurried). The Indonesian text sent has a comma after 'teras' so the voice breathes there; the words on screen are unchanged. Every other line as in v10.",
+ "characters_total_project": 8226,
+ "lines": [
+  {
+   "speaker": "Mama",
+   "line": "T1 (said to Kakak)",
+   "language": "en",
+   "text_sent": "Kak, have Sari mop the terrace every Monday at 9.",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 113,
+   "request_id": "3t0j2jaf1umULB7G5cWt",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Mama",
+   "line": "T1 (said to Kakak)",
+   "language": "id",
+   "text_sent": "Kak, minta Sari pel teras, setiap Senin jam 9.",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 7,
+   "request_id": "RDD8TUdCw5mRCMgc3hFF",
+   "format": "wav_48000"
+  }
+ ]
+}

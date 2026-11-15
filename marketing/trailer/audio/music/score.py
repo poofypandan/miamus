@@ -326,13 +326,43 @@ def fifteen(style):
     return ride(P.render(), [(0, -3.5), (9.9, -2.5), (10.2, -1), (11, 0), (15, -1)])
 
 
+# v11 (the owner's card-focused cut): the long film runs 68 s. Four bars of the middle are each played twice, spliced
+# on their bar lines with short equal-power crossfades, so the composed ending (bars 20–28) and its level rise arrive
+# exactly 8 s later: Kakak's "That one's yours." still sits where the score opens (now 55.0 s), the card bar at 65.0 s.
+# The repeated bars carry no tune or a held one: 7 and 9 (the tell pulse), 15 (Sari's F#–D), 18 (the held F#), so the
+# fade to silence after bar 19 still happens once.
+REPEAT_BARS = (7, 9, 15, 18)
+LONG = 68
+
+
+def lengthen(x, repeats=REPEAT_BARS, first=5.0, bar=BAR, fade=0.04):
+    """Each bar in `repeats` played twice. Only the start of a repeat is blended (the music that would have followed
+    fades out as the bar begins again); after the repeat the original continues exactly as it did after that bar, so
+    that seam needs nothing. No time is lost: the result is 2 s longer per repeat."""
+    n = int(fade * SR)
+    up = np.sin(np.linspace(0, np.pi / 2, n))[:, None]
+    down = np.cos(np.linspace(0, np.pi / 2, n))[:, None]
+    parts, cursor = [], 0
+    for b in sorted(repeats):
+        s0 = int(round((first + (b - 1) * bar) * SR))
+        e0 = int(round((first + b * bar) * SR))
+        parts.append(x[cursor:e0])
+        again = x[s0:e0].copy()
+        again[:n] = x[e0 : e0 + n] * down + x[s0 : s0 + n] * up
+        parts.append(again)
+        cursor = e0
+    parts.append(x[cursor:])
+    return np.concatenate(parts)
+
+
 if __name__ == "__main__":
     cuts = [sys.argv[1]] if len(sys.argv) > 1 else ["60", "15"]
     styles = [sys.argv[2]] if len(sys.argv) > 2 else list(STYLES)
     os.makedirs(os.path.join(ROOT, "audio", "out"), exist_ok=True)
     for cut in cuts:
         for style in styles:
-            x = sixty(style) if cut == "60" else fifteen(style)
+            # The long film's cue is still "60" in the code; since v11 it runs 68 s (see lengthen).
+            x = lengthen(sixty(style))[: LONG * SR] if cut == "60" else fifteen(style)
             peak = np.abs(x).max()
             x = soft_limit(x / peak * 0.8)
             path = os.path.join(ROOT, "audio", "out", f"music-{cut}-{style}.wav")
