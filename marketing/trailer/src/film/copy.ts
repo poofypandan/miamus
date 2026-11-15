@@ -105,7 +105,7 @@ export const COPY: Record<Locale, Copy> = {
     stamps: { tell: "7:45 AM", staff: "9:00 AM", track: "4:30 PM", alert: "5:30 PM" },
     dayFrom: 9,
     // The end card (v9, the owner): one line, the why; "em" (optional) is set in the soft italic. One place to change.
-    end: { line: "For the little moments.", em: "little", url: "miamus.app" },
+    end: { line: "For the little moments", em: "little", url: "miamus.app" },
     call: ["Mama,", "look!"],
     typed: { lines: ["Have Sari mop the terrace every", "Monday at 9."], placeholder: "What should I set up?", start15: 22 },
     // Word onsets measured on Mama's take with Whisper (audio/out/vo/mama-aita-v10/T1-words.json).
@@ -170,7 +170,7 @@ export const COPY: Record<Locale, Copy> = {
     push: { title: "Ajak main · Coco & Bruno", body: "Belum dikerjakan (17.00)", time: "17.30" },
     stamps: { tell: "07.45", staff: "09.00", track: "16.30", alert: "17.30" },
     dayFrom: 9,
-    end: { line: "Untuk momen-momen kecil.", em: "kecil", url: "miamus.app" },
+    end: { line: "Untuk momen-momen kecil", em: "kecil", url: "miamus.app" },
     call: ["Mama,", "lihat!"],
     typed: { lines: ["Minta Sari pel teras setiap Senin jam", "9."], placeholder: "Mau Kakak atur apa?", start15: 18 },
     spoken: { words: [["Kak,", 0], ["minta", 0.58], ["Sari", 0.82], ["pel", 1.06], ["teras", 1.36], ["setiap", 1.78], ["Senin", 2.48], ["jam", 2.76], ["9.", 3.1]], split: 7 },

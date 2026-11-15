@@ -42,8 +42,9 @@ LOCALE_CUES = {"id": {"15": {"S3": 11.45}}}
 # v6 (Fable's pacing): every line re-timed onto the new picture. Tell 15–26.4 s, staff 26.4–38, quiet 38–47.
 # v12 (62 s): each line on its card, the cards a little quicker; the climax on its bars: Kakak 49.0 (where the score
 # opens), Mama 51.4; the end line 55.3. One set of cues for both languages.
-CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.45, "T1": 17.1, "L4b": 22.7, "L5": 27.5, "L6": 30.4,
-              "L7a": 32.2, "L7b": 34.3, "L8": 36.6, "L9": 39.5, "L10": 49.0, "M2": 51.4, "L11": 55.3}
+# v13: 60 s on the composed score; "Tell me once." (L4) is gone (it repeated "Just tell me what you need").
+CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "T1": 16.7, "L4b": 21.2, "L5": 25.6, "L6": 28.5, "L7a": 30.15,
+              "L7b": 32.2, "L8": 34.45, "L9": 37.25, "L10": 47.0, "M2": 49.4, "L11": 53.3}
 CUES["15"] = {"M1": 1.6, "S1": 3.15, "S2": 7.3, "S3": 11.85}
 LOCALE_CUES["id"]["60"] = {}
 LOCALE_CUES["id"]["15"] = {"S3": 11.5}

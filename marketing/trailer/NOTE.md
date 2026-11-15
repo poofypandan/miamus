@@ -1,5 +1,42 @@
 # The Miamus trailer: what was made, and why
 
+## Version 13 (15 November 2026): 60 s, on the score as composed
+
+Owner's notes on v12. Four cuts in `docs/private/marketing/trailer-v13/`;
+v12 is untouched.
+
+- **Exactly 60 s, no spliced bars.** The owner heard the cut in v12's
+  repeated bar, so the score is played as composed (`REPEAT_BARS = ()` in
+  `audio/music/score.py`) and the picture fits the music: the cards run
+  15.0–41.0 s; the garden comes into focus wide with Mama beside the girl
+  (41.0–42.0), one eased push-in (43.4–44.8), then the composed cues: tug,
+  call and bell 45.0; Kakak "That one's yours." 47.0, where the score opens;
+  Mama turns ~48.4 and answers 49.4; the hand 51.0; crane 53.0; end line
+  53.3; card 57.0; address 57.6.
+- **"Tell me once." is gone** (it repeated "Just tell me what you need"). In
+  its place, a soft voice-note chime as the mic starts listening (16.3 s):
+  two short round notes a fourth apart, synthesised like the other effects,
+  ducking nothing. "I'll take it from there." stays, with Kakak's card.
+  (The 15 s cut keeps its "Tell me once,": it has no "Just tell me what you
+  need" to repeat.)
+- **Shorter tails:** the listening card leaves about 0.5 s after Mama's last
+  word; each card leaves once it is read (about 2 s), the 0.4 s overlap kept;
+  "All on track" holds through L8–L9, then about 2 s of quiet before the garden.
+- **End card:** "For the little moments" / "Untuk momen-momen kecil", no
+  full stop, "little" / "kecil" in the soft italic.
+- **Music checked:** the score has no sudden drops anywhere; its only sharp
+  entries are the composed ones on bar lines (5.0 s, the first bar; 47.0 s,
+  the full band). Its own level changes start on bars (39, 47, 55, 57 s).
+  Both finished mixes were checked for clicks (none) and for spectral jolts
+  in 38–47 s and the climax: the only jolts are the consonants of L9 over the
+  quiet bed (38.0–38.9), the call's bell notes and the cloth tug on bar 45
+  (45.1–45.9), and Kakak's "That one's yours." at 47.5. No cut in the music.
+- **Checked:** the stutter check clean on all four cuts, with no exceptions;
+  MP4s at -14.0 LUFS, true peak -1.5 to -1.6 dBTP, the long cut 60.0 s;
+  every line word for word in the finished mixes; MP4 frames against the
+  safe-area overlay.
+- **Credits:** 8,634 characters used of the key's 10,000 (v13: none).
+
 ## Version 12 (15 November 2026): clear but moving
 
 Owner's notes on v11. Four cuts in `docs/private/marketing/trailer-v12/`

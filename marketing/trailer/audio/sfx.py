@@ -185,6 +185,19 @@ def cloth():
     return pan(x, -0.1)
 
 
+def listening():
+    """v13: the mic starts listening: a soft, familiar two-note chime (a fourth up), short and round, like a voice note."""
+    out = []
+    for f, dur, gain in ((880.0, 0.11, 0.22), (1174.7, 0.16, 0.2)):
+        n = int(dur * SR)
+        t = np.arange(n) / SR
+        env = (1 - np.exp(-t / 0.004)) * np.exp(-t / (dur * 0.45))
+        tone = np.sin(TWO_PI * f * t) + 0.18 * np.sin(TWO_PI * 2 * f * t)
+        out.append(tone * env * gain)
+    gap = np.zeros(int(0.035 * SR))
+    return np.concatenate([out[0], gap, out[1]])
+
+
 def build(cut, c):
     length = c["length"]
     fx = Bus(length + 3)  # the hook and the phones: close and dry
@@ -209,6 +222,8 @@ def build(cut, c):
         ring.add(notes(["A5", "A5", "C#6"], 1 / 3, 0.6, ring=2.6), c["call"][1], 1.3, p=-0.2)
     for at in c.get("tugs", []):
         fx.add(cloth(), at, 0.9)
+    if c.get("listen") is not None:
+        ring.add(listening(), c["listen"], 0.8, p=0.05)
 
     # --- the phones ---------------------------------------------------------
     for at in c["taps"]:

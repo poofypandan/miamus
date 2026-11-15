@@ -66,3 +66,9 @@ picture, music, sound and timing stay v4's.
 
 - [x] Kakak's intro is the why (AI tag on screen), no presses on cards, quicker cards, 62 s, one continuous push-in at the end
 - [x] Four MP4s and docs in `docs/private/marketing/trailer-v12/` (long cut `miamus-62-*`)
+
+## v13 (15 Nov)
+
+- [x] 60 s on the score as composed (no splices), no "Tell me once." (a listening chime instead), shorter tails, end card without a full stop
+- [x] Four MP4s and docs in `docs/private/marketing/trailer-v13/`
+- [ ] Lo-fi score variant: on hold until Eleven Music's terms are confirmed for company ads on the Creator plan

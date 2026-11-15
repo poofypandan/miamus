@@ -1,6 +1,7 @@
 # Licences: what is in the trailer, and the right to use it in paid ads
 
-Version 12 (15 November 2026) changes Kakak's intro line (a new take, same
+Version 13 (15 November 2026) adds no voices or takes: the score is played as
+composed (60 s) and a synthesised listening chime is added. Version 12 changed Kakak's intro line (a new take, same
 voice and terms; `elevenlabs-provenance-v12.json`); the "Miamus's AI helper"
 tag stays on screen as the AI disclosure. Version 11 showed the app's real screens as cards cut from
 the same captures, gives Mama's request a "Kak," (a new take, same voice and

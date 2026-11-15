@@ -578,7 +578,7 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   const copy = COPY[locale];
   const E = fast ? ENDING15 : ENDING;
   // The light deepens from the garden to the end card (v9: the 60 s ending starts 2.8 s sooner, at 44.2 s).
-  const tod = fast ? lerp(17.74, 18.42, ramp(frame, 24, 112, (t) => t)) : lerp(17.62, 18.42, ramp(frame, 120, 390, (t) => t));
+  const tod = fast ? lerp(17.74, 18.42, ramp(frame, 24, 112, (t) => t)) : lerp(17.62, 18.42, ramp(frame, 210, 480, (t) => t));
   // Fable's mirror: the walk stays wide, a push over her last steps to the hook's two-shot, then the crane back up the
   // string to the sky. The 15-second cut opens already in the two-shot.
   const sky: Cam = { x: 0, y: -1150, z: 1 };
