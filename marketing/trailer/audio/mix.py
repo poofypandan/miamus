@@ -60,6 +60,10 @@ TEMPO = {("15", "id", "S3"): 1.03}
 OUT_DIR = os.path.join(ROOT, "public", "audio")
 OUT_NAME = "mix-{cut}-{locale}.wav"
 SFX_NAME = "sfx-{cut}.wav"  # sfx-{cut}-C.wav for scores in C major (audio/sfx.py --key C)
+# v13-lofi: under a full groove the brand name that opens the end line ("Miamus. More time…") was sometimes misheard,
+# so the music dips this many dB under its first 1.3 s (0 for the lullaby, which is quiet there already).
+BRAND_DIP_DB = 0.0
+BRAND_LINES = {"L11": 1.3, "S3": 1.3}
 
 
 def stretched(path, factor):
@@ -181,6 +185,14 @@ def mix(cut, locale, voices, music_style):
 
     # The music steps back under her (about 10 dB, so she stays clear on a phone's speaker), the effects a little.
     duck = 1 - 0.7 * presence
+    if BRAND_DIP_DB:
+        t = np.arange(n) / SR
+        dip = np.zeros(n)
+        for c in cues:
+            if c["id"] in BRAND_LINES and not c.get("silent"):
+                a, b = c["from"] - 0.1, c["from"] + BRAND_LINES[c["id"]]
+                dip = np.maximum(dip, np.clip(np.minimum((t - a) / 0.12, (b - t) / 0.25), 0, 1))
+        duck = duck * db(-BRAND_DIP_DB * dip)
     bed = music * duck[:, None] * db(-3.5) + sfx * (1 - 0.25 * presence)[:, None] * db(-3.0) + air
     out = soft_limit(v2 * db(4.0) + bed, 0.97, 0.75)
 
@@ -211,6 +223,10 @@ if __name__ == "__main__":
     voice = arg("--voice", "kakak-a")
     voices = {"kakak": voice, "girl": arg("--girl", None), "mama": arg("--mama", None)}
     style = arg("--music", "felt")
+    # v13-lofi: `--sfx C` uses the effects with the bell in C (audio/sfx.py --key C); `--brand-dip 5` (see BRAND_DIP_DB).
+    if arg("--sfx", None) == "C":
+        SFX_NAME = "sfx-{cut}-C.wav"
+    BRAND_DIP_DB = float(arg("--brand-dip", "0"))
     data, report = {}, {}
     for cut in ("60", "15"):
         for locale in ("en", "id"):

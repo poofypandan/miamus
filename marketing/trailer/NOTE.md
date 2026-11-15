@@ -1,5 +1,39 @@
 # The Miamus trailer: what was made, and why
 
+## Version 13-lofi (15 November 2026): v13 on the owner's Eleven Music track
+
+**Eleven Music, Creator plan, owner-generated 15 Nov; not for publication until ElevenLabs confirms company-ad use.**
+Four cuts in `docs/private/marketing/trailer-v13-lofi/`; v13 stays the lullaby version and is untouched.
+
+- **The picture is v13's, byte for byte.** Only the sound changed: the new mixes were put onto v13's video streams
+  without re-encoding (the captions and Kakak's level for the picture depend only on the voices, which are v13's).
+- **The track:** `owner-eleven-3` of the four the owner made in the ElevenLabs app (Eleven Music v2.5, 60 s each).
+  All four are about 68 bpm, in C, dark, with a keys-only intro and the groove entering on a bar line, and none has a
+  quiet section. Track 3 fits best by measurement: the deepest quiet once fitted (-39.8 dB at 43–46 s, 21 dB under
+  its groove), the strongest return on 47.0 (a 36 dB step), and an ending of its own (a last hit at 56.8 s, on the
+  end card, decayed to almost nothing by 60). Tracks 1 and 2 would have their own fades cut at 60 s; track 4 goes
+  quiet before the card. The other three stay on the listening page as alternatives.
+- **The edit, on the track's own bar lines** (bar 3.555 s; `audio/music/eleven_owner.py`, map in
+  `audio/out/eleven-owner-edits.json`; no notes changed): from 5.0 s the intro's last 3 bars into the groove's own
+  entrance (15.4 s); 8 bars of groove, the last fading 14 dB and closing to 400 Hz; 43.4–47 s the intro's last bar,
+  10 dB down, with the bell on top; 47.0 the groove's own entrance (continuous with that bar in the track: no edit at
+  the return); 2 bars; the track's ending from its bar 16. 40 ms equal-power crossfades. 15 s cut: the groove's
+  entrance at 3.0, 8 beats, one quiet beat (10.1–11.0) under the bell, the track's last bar from 11.0, its last hit
+  13.7 s. The seams measure like the track's own downbeats (spectral change within the range of unedited ones).
+- **The girl's bell and the chimes in C** (`audio/sfx.py --key C`: A A C# becomes G G B, the same call), so they sit
+  in the track's key.
+- **"Miamus" at the end line:** under the full groove it was sometimes misheard, so the music dips 5 dB more under the
+  first 1.3 s of the end line (`--brand-dip 5`); it is now heard as "Miamus" in the long cut.
+- **Checked:** stutter check clean on all four (no holds; the only jumps are the film's own cuts, 15.0 s and 3.0 /
+  10.0 s, as in v13); -14.0 LUFS, true peak -2.0 to -2.4 dBTP; 60.0 s and 15.0 s; every line word for word in the
+  finished mixes (Whisper's usual "Mia Moose" in the quick 15 s English read is the same on v13's lullaby mix).
+- **To re-make:** `audio/sfx.py --key C`; `audio/music/eleven_owner.py`; `audio/mix.py --voice eleven-lyly-v12
+  --mama mama-aita-v11 --music eleven-owner-3 --sfx C --brand-dip 5`; then mux each `public/audio/mix-*.wav` onto
+  `trailer-v13/miamus-*.mp4` (`-c:v copy`, AAC 320k, after a 4× oversampled limit at -2.4 dB); then
+  `git checkout -- public/audio src/film/vo-data.json` to put v13's mix back.
+- **Also on the listening page:** seven scores composed here (`audio/music/lofi.py`; rounds 1 and 2, the second on
+  measurements of a lo-fi mix the owner likes), which are ours to use in ads if the licence answer is no.
+
 ## Version 13 (15 November 2026): 60 s, on the score as composed
 
 Owner's notes on v12. Four cuts in `docs/private/marketing/trailer-v13/`;

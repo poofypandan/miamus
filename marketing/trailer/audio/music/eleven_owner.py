@@ -118,6 +118,44 @@ def fit(x, bar, entry_bar):
     }
 
 
+def fit15(x, bar, entry_bar):
+    """The 15 s cut (music from 3.0 s; the garden, tug and bell at 10.0; Mama's hand at 11.0; the mark 12.3; end 15):
+      3.0          the groove's own entrance, then 8 beats of groove; the last half beat fades and closes down
+      ~10.1–11.0   the intro's last beat, 10 dB down, the bell on top
+      11.0         the track's bar 16 in full, its own ending (in track 3 a last hit about 13.7 s), cut at 15.0
+    Every edit falls on the track's own beat or bar lines."""
+    length = 15.0
+    beat = bar / 4
+    G = entry_bar * bar
+    ret = 11.0
+    groove_at = 3.0
+    groove = piece(x, G, G + 8 * beat)
+    quiet_at = groove_at + 8 * beat
+    quiet = piece(x, G - (ret - quiet_at), G)
+    ending = piece(x, 15 * bar, len(x) / SR)
+    t = np.arange(len(groove)) / SR + groove_at
+    w = np.clip((t - (quiet_at - beat / 2)) / (beat / 2), 0, 1)[:, None] ** 1.5
+    groove = groove * (1 - w) + lowpass(groove, 400, 2) * w
+    groove = groove * db(np.interp(t, [0, quiet_at - beat / 2, quiet_at - 0.03], [0, 0, -12]))[:, None]
+    quiet = quiet * db(-10)
+    out = np.zeros((int((length + 6) * SR), 2))
+    n = int(0.04 * SR)
+    up = np.sin(np.linspace(0, np.pi / 2, n))[:, None]
+    for i, (at, a) in enumerate(((groove_at, groove), (quiet_at, quiet), (ret, ending))):
+        a = a.copy()
+        if i:
+            a[:n] *= up
+        if i < 2:
+            a[-n:] *= up[::-1]
+        j = int(round(at * SR))
+        out[j : j + len(a)] += a
+    out = out[: int(length * SR)]
+    out[: int(groove_at * SR)] = 0
+    n_out = int(0.6 * SR)
+    out[-n_out:] *= np.cos(np.linspace(0, np.pi / 2, n_out))[:, None]
+    return out
+
+
 def main():
     folder = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_DIR
     report = {}
@@ -134,6 +172,15 @@ def main():
         if peak > 0.89:
             film *= 0.89 / peak
         sf.write(path, film.astype("float32"), SR)
+        short = fit15(x, bar, entry)
+        p15 = os.path.join(ROOT, "audio", "out", f"music-15-eleven-owner-{n}.wav")
+        sf.write(p15, short.astype("float32"), SR)
+        now15, _ = lufs(p15)
+        short = short * db(TARGET_LUFS - now15)
+        if np.abs(short).max() > 0.89:
+            short *= 0.89 / np.abs(short).max()
+        sf.write(p15, short.astype("float32"), SR)
+        info["cut_15"] = {"groove_from_track": [round(entry * bar, 2), round(entry * bar + 8 * bar / 4, 2)], "film": "3.0 groove entrance; quiet beat to 11.0; track bar 16 from 11.0 to 15.0"}
         info["source"] = os.path.basename(src)
         info["lufs"] = lufs(path)[0]
         report[f"eleven-owner-{n}"] = info
