@@ -112,9 +112,10 @@ export const SARI15 = { push: [0, 60] as Span, glow: 4 };
 export const QUIET = { push: [0, 102] as Span, sleep: [102, 118] as Span, set: [120, 136] as Span, clock: [140, 236] as Span, away: [246, 270] as Span };
 
 // v7 (Fable): the garden opens close on the pair (Mama already beside her, nothing in her hands). 48.0 the tug, the
-// point, her handwriting and the bell; 49.2 Mama's "I'm looking, sweetie." as her hand comes up; 50.6 she takes the
-// girl's hand; 51.2–52.4 Kakak, softly, "That one's yours."; 53.0 the crane; Kakak's end line from 53.6; the card at 57.0.
-export const ENDING = { mama: [-80, -1] as Span, tug: 30, point: 36, bell: 37, shade: [62, 77] as Span, hold: [80, 98] as Span, lift: [120, 250] as Span, crane: [180, 232] as Span, mark: 270, name: 279, line: 288, call: 300, url: 338 };
+// point, her handwriting and the bell; 49.0 Mama's "I'm looking, sweetie." as her hand comes up; ~51.2 she takes the
+// girl's hand; 51.5 Kakak, softly, "That one's yours."; 53.0 the crane; Kakak's end line from 53.3; the card at 57.0.
+// One set of cues for both languages, sized for Indonesian (Fable's final cue times).
+export const ENDING = { mama: [-80, -1] as Span, tug: 30, point: 36, bell: 37, shade: [56, 71] as Span, hold: [120, 138] as Span, lift: [120, 250] as Span, crane: [180, 232] as Span, mark: 270, name: 279, line: 288, call: 300, url: 338 };
 export const ENDING15 = { tug: 6, point: 12, bell: 13, shade: [18, 36] as Span, hold: [38, 56] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 78, line: 84, call: 90, url: 106 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */

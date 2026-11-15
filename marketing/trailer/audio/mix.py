@@ -41,11 +41,11 @@ LOCALE_CUES = {"id": {"15": {"S3": 11.45}}}
 #   is on screen; Mama answers as her hand comes up to shade her eyes, then a held moment before the crane.
 # v6 (Fable's pacing): every line re-timed onto the new picture. Tell 15–26.4 s, staff 26.4–38, quiet 38–47.
 CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.45, "L4b": 21.3, "L5": 27.0, "L6": 29.85, "L7a": 32.6,
-              "L7b": 36.2, "L8": 39.4, "L9": 43.0, "M2": 49.2, "L10": 51.2, "L11": 53.6}
+              "L7b": 36.2, "L8": 39.4, "L9": 43.0, "M2": 49.0, "L10": 51.5, "L11": 53.3}
 CUES["15"] = {"M1": 1.6, "S1": 3.15, "S2": 7.3, "M2": 10.55, "S3": 12.0}
 # v7: Kakak's "That one's yours." comes after Mama's answer, over the two of them. Mama's Indonesian answer runs
 # longer, so the Indonesian line starts a little later (see NOTE.md).
-LOCALE_CUES["id"]["60"] = {"L10": 51.5}
+LOCALE_CUES["id"]["60"] = {"L10": 51.4}  # v7: Fable's one set of cues, with the Indonesian Kakak line 0.1 s sooner so she has a breath before her end line
 LOCALE_CUES["id"]["15"] = {"S3": 11.5}
 # The girl does not speak (Fable, 15 Nov): her "Mama, look!" is the score's bell and her handwriting.
 # In the 15-second Indonesian cut there is no room to say Mama's answer as well as the end line, so it is a caption.

@@ -32,3 +32,9 @@ picture, music, sound and timing stay v4's.
 - [x] Mama (Aita), nonverbal girl, Fable's pacing and framing, end card "For every" + "Mama, look!"
 - [x] Four MP4s, NOTE, LICENCES, provenance, voice takes and covers in `docs/private/marketing/trailer-v6/`
 - [ ] The owners watch v6
+
+## v7 (15 Nov)
+
+- [x] "That one's yours." softly at the end, after Mama's answer and the hand; no notification, no ping
+- [x] Four MP4s and docs in `docs/private/marketing/trailer-v7/`
+- [ ] The owners watch v7

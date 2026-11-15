@@ -11,19 +11,22 @@ in `docs/private/marketing/trailer-v7/`; v4 to v6 are untouched.
   done." over the dark phone, and a small clock on its screen runs 4:30 →
   5:30 while nothing arrives. The silence is the promise. ("Did anyone play
   with Coco?" stays among the hook's questions.)
-- **The ending, in Fable's order:** the garden opens close on the pair
-  (47.0 s); the girl tugs and points, with her handwriting and the bell
-  (48.0); Mama shades her eyes, "I'm looking, sweetie." (49.2); she takes
-  the girl's hand (50.6); then Kakak, softly, over the two of them:
-  "That one's yours." (51.2). Kakak never speaks between the call and the
-  answer. The crane at 53.0, Kakak's end line from 53.6, the card at 57.0.
+- **The ending, in Fable's order and cue times:** the garden opens close on
+  the pair (47.0 s), Mama already beside her; the girl tugs and points, with
+  her handwriting and the bell (48.0); Mama shades her eyes, "I'm looking,
+  sweetie." (49.0); she takes the girl's hand (~51.2); then Kakak, softly,
+  over the two of them: "That one's yours." (51.5). Kakak never speaks
+  between the call and the answer. The crane at 53.0, Kakak's end line from
+  53.3, "For every" at 56.6, her handwriting and the bell at 57.0.
 - **Kakak's line:** EN "That one's yours.", ID "Yang ini untuk Anda."
   ("bagian" read as a share of the work). "Go play" is gone. A soft take
   (eleven_v4's "[softly]" tag, which directs delivery and is not spoken),
   set 3 dB under her usual level.
-- **Indonesian timing:** Mama's Indonesian answer runs to 51.4 s, so
-  "Yang ini untuk Anda." starts at 51.5 and ends at ~53.2, about 0.8 s past
-  Fable's 52.4 (into the crane's first moment). Not rushed. English fits.
+- **Timing, one set of cues sized for Indonesian:** EN Mama 49.0–50.5,
+  Kakak 51.5–52.7, end line 53.3–56.0. ID Mama 49.0–51.2, Kakak
+  "Yang ini untuk Anda." 51.4–53.1 (0.1 s sooner than Fable's 51.5, so she
+  has a breath before her end line), end line 53.3–56.5 at normal speed.
+  Neither end line touches "For every" or the bell.
 - **15 s:** unchanged from v6 (it had no ping and no "That one's yours").
 - **Checked:** every line word for word (Whisper); the four MP4s at
   -14.0 LUFS; frames of the quiet beat and the ending in both languages.
