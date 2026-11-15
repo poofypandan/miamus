@@ -83,7 +83,7 @@ def splice(parts, xf=0.04):
     return out[: int(LENGTH * SR)]
 
 
-def fit(x, bar, entry_bar):
+def fit(x, bar, entry_bar, coda=False):
     G = entry_bar * bar  # the groove's entrance, in the track
     groove_start = RETURN - bar - 8 * bar  # film time the first groove bar lands
     intro = piece(x, G - 3 * bar, G + 8 * bar)  # intro's last 3 bars + 8 bars of groove, continuous in the track
@@ -102,6 +102,15 @@ def fit(x, bar, entry_bar):
     tq = np.arange(len(quiet)) / SR + quiet_at
     quiet = quiet * db(np.interp(tq, [0, RETURN - 0.04, RETURN, 100], [-10, -10, 0, 0]))[:, None]
     film = splice([(intro_at, intro), (quiet_at, quiet), (ending_at, ending)])
+    if coda:
+        # v13-lofi-H: track 4 stops on beat 3 of its bar 16 (film 55.9) and is silent by the card. On the next bar line
+        # (film 47 + 3 bars, 57.7 s, as the address appears) its own opening chord (the intro's first bar) comes back,
+        # 5 dB down, and rings out to the end: the track's material, on its own bar line, nothing re-pitched or stretched.
+        chord = piece(x, 0.0, bar * 1.5) * db(-5)
+        n = int(0.03 * SR)
+        chord[:n] *= np.linspace(0, 1, n)[:, None]
+        j = int(round((RETURN + 3 * bar) * SR))
+        film[j : j + len(chord)] += chord[: len(film) - j]
     film[: int(MUSIC_FROM * SR)] = 0
     n_in = int(0.4 * SR)
     a = int(MUSIC_FROM * SR)
@@ -159,10 +168,23 @@ def fit15(x, bar, entry_bar):
 def main():
     folder = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_DIR
     report = {}
+    # `--coda 4`: also write track 4 with its opening chord back on the bar after its stop (music-60-eleven-owner-4c).
+    coda = sys.argv[sys.argv.index("--coda") + 1] if "--coda" in sys.argv else None
+    if "--coda" in sys.argv:
+        folder = DEFAULT_DIR if len(sys.argv) < 4 or sys.argv[1] == "--coda" else sys.argv[1]
     for src in sorted(glob.glob(os.path.join(folder, "owner-eleven-*.mp3"))):
         n = os.path.splitext(os.path.basename(src))[0].split("-")[-1]
         x = decode(src)
         bar, entry = bar_and_entry(x)
+        if coda == n:
+            film_c, _ = fit(x, bar, entry, coda=True)
+            pc = os.path.join(ROOT, "audio", "out", f"music-60-eleven-owner-{n}c.wav")
+            sf.write(pc, film_c.astype("float32"), SR)
+            film_c = film_c * db(TARGET_LUFS - lufs(pc)[0])
+            if np.abs(film_c).max() > 0.89:
+                film_c *= 0.89 / np.abs(film_c).max()
+            sf.write(pc, film_c.astype("float32"), SR)
+            print(f"  and {os.path.relpath(pc, ROOT)} (its opening chord back at {RETURN + 3 * bar:.2f} s)", flush=True)
         film, info = fit(x, bar, entry)
         path = os.path.join(ROOT, "audio", "out", f"music-60-eleven-owner-{n}.wav")
         sf.write(path, film.astype("float32"), SR)

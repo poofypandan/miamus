@@ -1,5 +1,25 @@
 # The Miamus trailer: what was made, and why
 
+## Version 13-lofi-H (15 November 2026): v13 on the owner's Eleven Music track 4 (Score H)
+
+**Eleven Music, Creator plan, owner-generated 15 Nov; not for publication until ElevenLabs confirms company-ad use.**
+Four cuts in `docs/private/marketing/trailer-v13-lofi-H/`, for the owner to hear Score H in the film; v13-lofi (K) and
+v13 are untouched. The same treatment as K (below): v13's picture byte for byte, the same bar-line fit
+(`owner-eleven-4`: bar 3.555 s, groove entering at bar 5), the music ducked under the voices, the bell and chimes in
+C, the 5 dB dip under "Miamus".
+
+- **Its ending:** track 4 does not fade; it stops on beat 3 of its bar 16 (film 55.9 s) and its chord dies away by
+  about 57, before the card. On bar lines the stop can only fall at 55.9 or 59.5 (too late, its tail cut), and a
+  one-beat shift would leave a five-beat bar, which is heard. So the stop stays at 55.9, and on the next bar line
+  (57.7 s, as the address appears) the track's own opening chord (its first intro bar) comes back, 5 dB down, and
+  rings out to 60 (`eleven_owner.py --coda 4`: `music-60-eleven-owner-4c.wav`). The 15 s cut ends on the stop itself
+  (12.8 s, under the mark), with no room for the chord.
+- **Checked:** stutter clean on all four (jumps only at the film's own cuts); -14.0 LUFS, true peak -1.6 to -2.5
+  dBTP; 60.0 s and 15.0 s; every line word for word; the picture identical to v13.
+- **To re-make:** `eleven_owner.py --coda 4`; copy `music-15-eleven-owner-4.wav` to `music-15-eleven-owner-4c.wav`;
+  `audio/mix.py --voice eleven-lyly-v12 --mama mama-aita-v11 --music eleven-owner-4c --sfx C --brand-dip 5`; mux as
+  for K; `git checkout -- public/audio src/film/vo-data.json`.
+
 ## Version 13-lofi (15 November 2026): v13 on the owner's Eleven Music track
 
 **Eleven Music, Creator plan, owner-generated 15 Nov; not for publication until ElevenLabs confirms company-ad use.**

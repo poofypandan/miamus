@@ -28,14 +28,15 @@ social ads. The licence texts are in this folder; `elevenlabs-provenance.json`
 **Eleven Music, Creator plan, owner-generated 15 Nov; not for publication until ElevenLabs confirms company-ad use.**
 
 v13-lofi (`docs/private/marketing/trailer-v13-lofi/`) is v13's picture with the owner's Eleven Music track
-`owner-eleven-3`, re-edited on its own bar lines. Everything else in it is as listed below for v13 (the girl's bell
+`owner-eleven-3`, re-edited on its own bar lines; v13-lofi-H (`trailer-v13-lofi-H/`) is the same with
+`owner-eleven-4`. Both are internal only, under the same terms. Everything else in it is as listed below for v13 (the girl's bell
 and the chimes are the same computed sounds, a tone lower). v13 stays the lullaby version, usable in ads. The other
 candidates stay on a private listening page:
 
 | Candidates | What they are | Terms |
 |---|---|---|
 | **Composed here** (round 1 and 2, seven scores) | Original lo-fi scores written for this film as code in `audio/music/lofi.py` and played by computed instruments (drums, electric pianos, synths, a plucked-string guitar, vinyl and tape, all from sine waves, delay lines and noise). Round 2 follows measurements of a lo-fi mix the owner likes (tempo, key, tone); nothing of that mix was copied or sampled. With the C major scores, `audio/sfx.py --key C` plays the girl's bell and the chimes a tone lower. | Made for Miamus in this project, like the lullaby: no samples, loops or recordings of anyone's work, so no third party to license from. Usable in paid ads. |
-| **Eleven Music** (round 3, four tracks; track 3 is in v13-lofi) | Four 60 s tracks the owner generated in the ElevenLabs app (Eleven Music v2.5, Creator plan, 15 Nov 2026) from the same brief, re-edited on their own bar lines to the film's arc (`audio/music/eleven_owner.py`; what was moved where: `audio/out/eleven-owner-edits.json`). `audio/eleven/el.py` can also call the Music API, but that job was not run. | **Not for publication until ElevenLabs confirms company-ad use.** The Eleven Music terms (elevenlabs.io/music-terms) do not make clear that the Creator plan covers a company's paid ads, and the owner has asked ElevenLabs support (15 Nov 2026). Until ElevenLabs confirms in writing, v13-lofi and these tracks are for internal viewing only: no ad, no published video. Keep the answer beside this file when it comes. |
+| **Eleven Music** (round 3, four tracks; track 3 is in v13-lofi, track 4 in v13-lofi-H) | Four 60 s tracks the owner generated in the ElevenLabs app (Eleven Music v2.5, Creator plan, 15 Nov 2026) from the same brief, re-edited on their own bar lines to the film's arc (`audio/music/eleven_owner.py`; what was moved where: `audio/out/eleven-owner-edits.json`). `audio/eleven/el.py` can also call the Music API, but that job was not run. | **Not for publication until ElevenLabs confirms company-ad use.** The Eleven Music terms (elevenlabs.io/music-terms) do not make clear that the Creator plan covers a company's paid ads, and the owner has asked ElevenLabs support (15 Nov 2026). Until ElevenLabs confirms in writing, v13-lofi and these tracks are for internal viewing only: no ad, no published video. Keep the answer beside this file when it comes. |
 | **Suno** (one track, sound test) | A track the owner made on Suno's free plan (Suno v6-mini), heard on the listening page only, to judge whether Suno Pro is worth paying for. | **Never usable in an ad:** Suno's free plan does not grant commercial use. Not in any film. |
 
 ## Heard in the film
