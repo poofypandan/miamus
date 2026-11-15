@@ -26,7 +26,7 @@ Kakak: dark plate with her mark. Mama: plain warm-sand plate, band y 1190–1282
 - Mama's walk stays wide; push in over her last steps (~50.0–50.9) to the same close two-shot.
 - Tug and point at 50.9 (bell, handwriting); hand to eyes and "I'm looking, sweetie." from 51.3; her other hand takes the girl's; hold to 52.8.
 - Crane back up the string, a little faster. Kakak says L11 ~53.6–55.9. Mark, name and written line arrive silent on the bell's last three notes at 57.0; miamus.app small, last.
-- Written line (placeholder until the owner's final): "The home app for families with staff." / "Aplikasi rumah untuk keluarga dengan staf."
+- End card (owner's final): "For every" in plain type at ~56.6 s, then "Mama, look!" in her handwriting with the bell's three notes from 57.0 s; ID "Untuk setiap" + "Mama, lihat!"; miamus.app small, last. In the 15 s cut they overlap Kakak's end line.
 
 ## 15 s
 - 3–8: the typed sentence, the card held 2.4 s, tap "Looks right", "Saved". 8–10: Sari's list with "Pel teras" highlighted, a slow push, no taps. 10+: opens in the close two-shot, tug and point 10.2, hand to eyes and "I'm looking, sweetie." by 11.9 (EN voiced; ID caption), end line from 12.0.

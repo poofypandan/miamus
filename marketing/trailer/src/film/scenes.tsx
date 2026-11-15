@@ -456,7 +456,7 @@ export function Ending({ locale, t0, fast }: SceneProps) {
       <SoftWorld soft={5 * close} light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} mamaPose={mamaPose} childPose={moves.child} kiteLift={lift} birds={1} />
       <Vignette />
       <CallTwo lines={copy.call} {...CALL_TWO} at={E.bell} out={E.crane[0] + 6} />
-      <EndCard line={copy.end.line} url={copy.end.url} mark={E.mark} name={E.name} lineAt={E.line} urlAt={E.url} />
+      <EndCard line={copy.end.line} call={copy.end.call} url={copy.end.url} mark={E.mark} name={E.name} lineAt={E.line} callAt={E.call} urlAt={E.url} />
     </AbsoluteFill>
   );
 }

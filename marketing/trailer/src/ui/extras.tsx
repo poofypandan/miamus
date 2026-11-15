@@ -1,6 +1,6 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
-import { C, CX, FONT, SAFE, SERIF } from "../theme";
+import { C, CX, FONT, HAND, SAFE, SERIF } from "../theme";
 import { clamp01, easeOut, lerp, ramp, springAt } from "./kit";
 
 /** A small time of day, top left: the film is one day, in order. */
@@ -218,13 +218,18 @@ export function TravelLine({ from, to, start, end }: { from: { x: number; y: num
  * The end: the mark draws itself in the evening sky in one line (the roof,
  * then the M), then the name, the line, the address. No price, no date.
  */
-export function EndCard({ line, url, mark, name, lineAt, urlAt }: { line: string; url: string; mark: number; name: number; lineAt: number; urlAt: number }) {
+/**
+ * The end card. v6: under the name, "For every" in plain type, then the girl's "Mama, look!" in her own hand,
+ * written on with the bell's three notes (`call`, `callAt`); the address last, small.
+ */
+export function EndCard({ line, call, url, mark, name, lineAt, callAt, urlAt }: { line: string; call?: string; url: string; mark: number; name: number; lineAt: number; callAt?: number; urlAt: number }) {
   const frame = useCurrentFrame();
   const roof = ramp(frame, mark, mark + 14, easeOut);
   const m = ramp(frame, mark + 10, mark + 32, easeOut);
   const a = ramp(frame, name, name + 16, easeOut);
   const b = ramp(frame, lineAt, lineAt + 16, easeOut);
   const c = ramp(frame, urlAt, urlAt + 16, easeOut);
+  const w = callAt === undefined ? 0 : ramp(frame, callAt, callAt + 24, easeOut);
   if (frame < mark) return null;
   const shadow = "0 4px 34px rgba(16,10,40,0.5)";
   return (
@@ -235,7 +240,26 @@ export function EndCard({ line, url, mark, name, lineAt, urlAt }: { line: string
       </svg>
       <div style={{ marginTop: 6, fontSize: 132, fontWeight: 700, letterSpacing: -3.5, lineHeight: 1.05, opacity: a, transform: `translateY(${(1 - a) * 22}px)`, textShadow: shadow }}>Miamus</div>
       <div style={{ marginTop: 26, fontSize: 53, fontWeight: 500, lineHeight: 1.22, letterSpacing: -0.6, maxWidth: 800, opacity: b, transform: `translateY(${(1 - b) * 18}px)`, textShadow: shadow, textWrap: "balance" } as React.CSSProperties}>{line}</div>
-      <div style={{ marginTop: 46, fontSize: 40, fontWeight: 600, letterSpacing: 0.6, opacity: c, transform: `translateY(${(1 - c) * 14}px)`, padding: "12px 34px 14px", borderRadius: 999, border: "2.5px solid rgba(255,255,255,0.85)", textShadow: shadow }}>{url}</div>
+      {call && (
+        <div
+          style={{
+            marginTop: 8,
+            fontFamily: HAND,
+            fontWeight: 600,
+            fontSize: 104,
+            lineHeight: 1.1,
+            color: "#fff6e6",
+            transform: "rotate(-4deg)",
+            textShadow: "0 3px 22px rgba(70,24,10,0.42), 0 1px 3px rgba(70,24,10,0.3)",
+            clipPath: `inset(-30% ${((1 - w) * 104).toFixed(2)}% -30% -6%)`,
+            opacity: w > 0 ? 1 : 0,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {call}
+        </div>
+      )}
+      <div style={{ marginTop: call ? 34 : 46, fontSize: call ? 34 : 40, fontWeight: 600, letterSpacing: 0.6, opacity: c, transform: `translateY(${(1 - c) * 14}px)`, padding: "12px 34px 14px", borderRadius: 999, border: "2.5px solid rgba(255,255,255,0.85)", textShadow: shadow }}>{url}</div>
     </div>
   );
 }

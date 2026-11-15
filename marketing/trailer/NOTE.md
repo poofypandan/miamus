@@ -32,9 +32,11 @@ full spec (Fable's notes and the owner's choices) is `V6-SPEC.md`.
   plate, Kakak on her dark plate with her mark. In the 15-second Indonesian
   cut, Mama's answer is a caption only (no room to say it before the end
   line).
-- **End-card line:** a placeholder ("The home app for families with staff."
-  / "Aplikasi rumah untuk keluarga dengan staf.") until the owner's final
-  wording; it is one line in `src/film/copy.ts`.
+- **End card (owner's final):** the mark and "Miamus", then "For every" in
+  plain type (56.6 s) and the girl's "Mama, look!" in her handwriting,
+  written on with the bell's three notes from 57.0 s; "miamus.app" small,
+  last. Indonesian: "Untuk setiap" + "Mama, lihat!". One place to change:
+  `end` in `src/film/copy.ts`.
 - **Checked:** every new line heard word for word by Whisper; the four
   mixes at -14.0 LUFS, true peak -1.6 to -1.7 dBTP; the 42.7 s ping 38 dB
   above the music in its band, after the pad has faded; frames of all four

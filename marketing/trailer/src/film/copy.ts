@@ -36,7 +36,7 @@ export interface Copy {
   /** Small time stamps as the day passes. */
   stamps: { tell: string; staff: string; track: string; alert: string };
   dayFrom: number;
-  end: { line: string; url: string };
+  end: { line: string; call?: string; url: string };
 }
 
 export const COPY: Record<Locale, Copy> = {
@@ -98,8 +98,8 @@ export const COPY: Record<Locale, Copy> = {
     push: { title: "Play · Coco & Bruno", body: "Not done yet (5:00 PM)", time: "5:30 PM" },
     stamps: { tell: "7:45 AM", staff: "9:00 AM", track: "4:30 PM", alert: "5:30 PM" },
     dayFrom: 9,
-    // The written line under the name: a placeholder until the owner's final wording.
-    end: { line: "The home app for families with staff.", url: "miamus.app" },
+    // The end card (owner, 15 Nov): "For every" in plain type, then her "Mama, look!" in her own hand. One place to change.
+    end: { line: "For every", call: "Mama, look!", url: "miamus.app" },
     call: ["Mama,", "look!"],
   },
   id: {
@@ -159,7 +159,7 @@ export const COPY: Record<Locale, Copy> = {
     push: { title: "Ajak main · Coco & Bruno", body: "Belum dikerjakan (17.00)", time: "17.30" },
     stamps: { tell: "07.45", staff: "09.00", track: "16.30", alert: "17.30" },
     dayFrom: 9,
-    end: { line: "Aplikasi rumah untuk keluarga dengan staf.", url: "miamus.app" },
+    end: { line: "Untuk setiap", call: "Mama, lihat!", url: "miamus.app" },
     call: ["Mama,", "lihat!"],
   },
 };

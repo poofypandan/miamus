@@ -118,8 +118,8 @@ export const QUIET = { push: [0, 102] as Span, sleep: [102, 118] as Span, set: [
 // Fable's framing: the walk stays wide, then a push over her last steps to the hook's close two-shot; tug and point
 // at 50.9 s; her hand to her eyes from 51.3 s; hold to 52.8 s; the crane back up the string; Kakak's end line
 // ~53.6–55.9 s; the mark, name and written line arrive silent on the bell's last three notes at 57.0 s; the address last.
-export const ENDING = { mama: [10, 90] as Span, push: [90, 117] as Span, tug: 117, point: 123, bell: 124, shade: [129, 144] as Span, hold: [146, 168] as Span, lift: [120, 250] as Span, crane: [174, 232] as Span, mark: 300, name: 310, line: 320, url: 338 };
-export const ENDING15 = { tug: 6, point: 12, bell: 13, shade: [18, 36] as Span, hold: [38, 56] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 80, line: 90, url: 100 };
+export const ENDING = { mama: [10, 90] as Span, push: [90, 117] as Span, tug: 117, point: 123, bell: 124, shade: [129, 144] as Span, hold: [146, 168] as Span, lift: [120, 250] as Span, crane: [174, 232] as Span, mark: 270, name: 279, line: 288, call: 300, url: 338 };
+export const ENDING15 = { tug: 6, point: 12, bell: 13, shade: [18, 36] as Span, hold: [38, 56] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 78, line: 84, call: 90, url: 106 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */
 export function soundCues(cut: "60" | "15") {
