@@ -2,7 +2,7 @@ import React from "react";
 import { random } from "remotion";
 import { type Cam, H, STILL, W, layer } from "./camera";
 import { type Light, css, mix, shade, shadeRgb } from "./tod";
-import { Child, Dog, Kite, Mama, kitePose } from "./Figures";
+import { Child, type ChildPose, Dog, Kite, Mama, type MamaPose, kitePose } from "./Figures";
 
 /**
  * The film's one place: a garden behind a house, hills and a volcano beyond,
@@ -26,6 +26,9 @@ export interface WorldProps {
   child?: number;
   /** Mama: 0 not there, 1 beside the child. She walks in from the house. */
   mama?: number;
+  /** v6: the scene's poses for Mama and the girl (see Figures). */
+  mamaPose?: MamaPose;
+  childPose?: ChildPose;
   dogs?: number;
   kite?: number;
   /** 0 the kite at its usual height, 1 soaring. */
@@ -544,7 +547,7 @@ function Sprinkler({ light, frame, show }: { light: Light; frame: number; show: 
 export const CHILD_AT = { x: 372, y: 1452 };
 export const MAMA_AT = { x: 286, y: 1458 };
 
-export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child = 0, mama = 0, dogs = 0, kite = 0, kiteLift = 0, birds = 0, blur = 0, house = 1, laundry = 0, sprinkler = 0 }) => {
+export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child = 0, mama = 0, mamaPose, childPose, dogs = 0, kite = 0, kiteLift = 0, birds = 0, blur = 0, house = 1, laundry = 0, sprinkler = 0 }) => {
   const pose = kitePose(frame, kiteLift);
   // Low sun: long shadows, away from it.
   const sunUp = light.sunY < HORIZON + 30 ? Math.min(1, light.glow * 1.2) : 0;
@@ -596,12 +599,12 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
           <g opacity={shadow.o} fill={shadow.fill} stroke={shadow.fill} filter="url(#shadowBlur)">
             {child > 0 && (
               <g transform={`translate(${CHILD_AT.x} ${CHILD_AT.y}) matrix(1 0 ${-shadow.kx} ${-shadow.ky} 0 0)`} opacity={child}>
-                <Child flat frame={frame} />
+                <Child flat frame={frame} pose={childPose} />
               </g>
             )}
             {mama > 0.02 && (
               <g transform={`translate(${mamaX} ${mamaY}) scale(${mamaS}) matrix(1 0 ${-shadow.kx} ${-shadow.ky} 0 0)`} opacity={mama}>
-                <Mama flat frame={frame} arrive={mama} />
+                <Mama flat frame={frame} arrive={mama} pose={mamaPose} />
               </g>
             )}
             {dogs > 0 && (
@@ -646,20 +649,20 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
           <g transform={`translate(${mamaX} ${mamaY}) scale(${mamaS})`} opacity={Math.min(1, mama * 14)}>
             {rim.o > 0.05 && (
               <g transform={`translate(${rim.dx} -1)`} fill={rim.fill} stroke={rim.fill}>
-                <Mama flat frame={frame} arrive={mama} />
+                <Mama flat frame={frame} arrive={mama} pose={mamaPose} />
               </g>
             )}
-            <Mama light={light} frame={frame} arrive={mama} />
+            <Mama light={light} frame={frame} arrive={mama} pose={mamaPose} />
           </g>
         )}
         {child > 0 && (
           <g transform={`translate(${CHILD_AT.x} ${CHILD_AT.y})`} opacity={child}>
             {rim.o > 0.05 && (
               <g transform={`translate(${rim.dx} -1)`} fill={rim.fill} stroke={rim.fill}>
-                <Child flat frame={frame} />
+                <Child flat frame={frame} pose={childPose} />
               </g>
             )}
-            <Child light={light} frame={frame} />
+            <Child light={light} frame={frame} pose={childPose} />
           </g>
         )}
       </g>

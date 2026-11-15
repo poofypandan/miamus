@@ -97,10 +97,10 @@ export function Pile({ bubbles, slam, at, slamAt, fall, from }: { bubbles: Bubbl
 }
 
 /** A child's handwriting, writing itself on. */
-export function Hand({ text, x, y, size, at, rot = -5, out, color = "#fff6e6", shadow = "0 3px 22px rgba(70,24,10,0.42), 0 1px 3px rgba(70,24,10,0.3)" }: { text: string; x: number; y: number; size: number; at: number; rot?: number; out?: number; color?: string; shadow?: string }) {
+export function Hand({ text, x, y, size, at, dur = 18, rot = -5, out, color = "#fff6e6", shadow = "0 3px 22px rgba(70,24,10,0.42), 0 1px 3px rgba(70,24,10,0.3)" }: { text: string; x: number; y: number; size: number; at: number; dur?: number; rot?: number; out?: number; color?: string; shadow?: string }) {
   const frame = useCurrentFrame();
   if (frame < at) return null;
-  const w = ramp(frame, at, at + 18, easeOut);
+  const w = ramp(frame, at, at + dur, easeOut);
   const o = out === undefined ? 1 : 1 - ramp(frame, out, out + 12);
   if (o <= 0) return null;
   return (

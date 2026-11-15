@@ -22,7 +22,15 @@ function paint(light: Light | undefined, flat: boolean | undefined) {
   return (base: string, own = 0.3) => (flat || !light ? undefined : shade(base, light, 0.03, own));
 }
 
-export function Child({ light, frame, flat }: FigureProps) {
+/** v6: the girl's free arm and body. tug and point blend her free (left) arm from rest; lean is degrees away from Mama; hop is a bounce in px. */
+export interface ChildPose {
+  tug?: number;
+  point?: number;
+  lean?: number;
+  hop?: number;
+}
+
+export function Child({ light, frame, flat, pose = {} }: FigureProps & { pose?: ChildPose }) {
   const c = paint(light, flat);
   const dress = c("#e2685e", 0.5);
   const hair = c("#2a1c18", 0);
@@ -32,14 +40,20 @@ export function Child({ light, frame, flat }: FigureProps) {
   const toes = Math.max(0, Math.sin(frame * 0.14)) * 3;
   const pull = Math.sin(frame * 0.09) * 3;
   const limb = { strokeWidth: 8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
+  // Her free arm: a three-point stroke (shoulder, elbow, hand) between three positions.
+  const tug = clamp01(pose.tug ?? 0);
+  const point = clamp01(pose.point ?? 0);
+  const at = (rest: number, toTug: number, toPoint: number) => lerp(lerp(rest, toTug, tug), toPoint, point);
+  const elbow = { x: at(-27, -31, -13), y: at(-83, -92, -142) };
+  const hand = { x: at(-29, -46, 2), y: at(-65, -80, -184) };
   return (
-    <g transform={`translate(0 ${-toes})`}>
+    <g transform={`translate(0 ${-toes - (pose.hop ?? 0)}) rotate(${pose.lean ?? 0})`}>
       <path d="M -10 -48 L -11 -6" stroke={skin} {...limb} strokeWidth={9} />
       <path d="M 10 -48 L 12 -6" stroke={skin} {...limb} strokeWidth={9} />
       <ellipse cx={-13} cy={-3} rx={9} ry={4.6} fill={shoe} />
       <ellipse cx={14} cy={-3} rx={9} ry={4.6} fill={shoe} />
       <path d="M -15 -106 C -8 -113 8 -113 15 -106 L 31 -44 Q 0 -35 -31 -44 Z" fill={dress} />
-      <path d="M -13 -101 L -27 -83 L -29 -65" stroke={skin} {...limb} />
+      <path d={`M -13 -101 L ${elbow.x} ${elbow.y} L ${hand.x} ${hand.y}`} stroke={skin} {...limb} />
       <path d={`M 13 -101 L ${30 + pull * 0.3} -125 L ${37 + pull} -152`} stroke={skin} {...limb} />
       <path d="M -5 -112 L 5 -112 L 5 -104 L -5 -104 Z" fill={skin} />
       <circle cx={0} cy={-128} r={19} fill={hair} />
@@ -49,7 +63,15 @@ export function Child({ light, frame, flat }: FigureProps) {
   );
 }
 
-export function Mama({ light, frame, flat, arrive = 1 }: FigureProps & { arrive?: number }) {
+/** v6: Mama's pose, when the scene sets it: shade (her eye-shading arm, 0–1), hold (her other hand takes the girl's), sway (degrees toward the girl), phone (its glow, 0–1; 0 is no phone). */
+export interface MamaPose {
+  shade?: number;
+  hold?: number;
+  sway?: number;
+  phone?: number;
+}
+
+export function Mama({ light, frame, flat, arrive = 1, pose }: FigureProps & { arrive?: number; pose?: MamaPose }) {
   const c = paint(light, flat);
   const dress = c("#f3e7d3", 0.4);
   const hair = c("#2a1c18", 0);
@@ -58,14 +80,17 @@ export function Mama({ light, frame, flat, arrive = 1 }: FigureProps & { arrive?
   // She walks out, then stands: one hand finds the child's shoulder, the other shades her eyes.
   const walking = arrive < 0.97 ? 1 : 0;
   const step = Math.sin(frame * 0.5) * 8 * walking;
-  const up = clamp01((arrive - 0.82) / 0.18);
-  const reach = clamp01((arrive - 0.7) / 0.3);
+  const up = pose ? clamp01(pose.shade ?? 0) : clamp01((arrive - 0.82) / 0.18);
+  const reach = pose ? 0 : clamp01((arrive - 0.7) / 0.3);
+  const hold = clamp01(pose?.hold ?? 0);
   const limb = { strokeWidth: 10, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
   const elbowL = { x: lerp(-33, -47, up), y: lerp(-170, -229, up) };
   const handL = { x: lerp(-30, -21, up), y: lerp(-134, -253, up) };
-  const handR = { x: lerp(34, 60, reach), y: lerp(-134, -146, reach) };
+  const handR = { x: lerp(lerp(34, 60, reach), 57, hold), y: lerp(lerp(-134, -146, reach), -73, hold) };
+  const elbowR = { x: lerp(41, 47, hold), y: lerp(-172, -140, hold) };
+  const glow = flat ? 0 : clamp01(pose?.phone ?? 0);
   return (
-    <g transform={`translate(0 ${-Math.abs(step) * 0.25})`}>
+    <g transform={`translate(0 ${-Math.abs(step) * 0.25}) rotate(${pose?.sway ?? 0})`}>
       <path d={`M -11 -74 L ${-12 + step} -7`} stroke={skin} {...limb} strokeWidth={11} />
       <path d={`M 11 -74 L ${13 - step} -7`} stroke={skin} {...limb} strokeWidth={11} />
       <ellipse cx={-14 + step} cy={-4} rx={11} ry={5} fill={shoe} />
@@ -74,11 +99,28 @@ export function Mama({ light, frame, flat, arrive = 1 }: FigureProps & { arrive?
         d="M -24 -212 C -10 -221 10 -221 24 -212 C 22 -190 18 -173 17 -160 L 45 -62 Q 0 -51 -45 -62 L -17 -160 C -18 -173 -22 -190 -24 -212 Z"
         fill={dress}
       />
-      <path d={`M 22 -206 L 41 -172 L ${handR.x} ${handR.y}`} stroke={skin} {...limb} />
+      <path d={`M 22 -206 L ${elbowR.x} ${elbowR.y} L ${handR.x} ${handR.y}`} stroke={skin} {...limb} />
       <path d={`M -22 -206 L ${elbowL.x} ${elbowL.y} L ${handL.x} ${handL.y}`} stroke={skin} {...limb} />
       <path d="M -6 -222 L 6 -222 L 6 -210 L -6 -210 Z" fill={skin} />
       <circle cx={0} cy={-241} r={22} fill={hair} />
       <circle cx={2} cy={-268} r={11.5} fill={hair} />
+      {(pose?.phone ?? 0) > 0 && (
+        // The phone held up by her head: the only cool light in the frame.
+        <g transform={`translate(${handL.x - 2} ${handL.y - 6}) rotate(-8)`}>
+          {glow > 0 && <circle cx={0} cy={0} r={46} fill="url(#phoneGlow)" opacity={glow} />}
+          <rect x={-8} y={-14} width={16} height={27} rx={4} fill={flat ? undefined : "#1d2129"} />
+          {!flat && <rect x={-6} y={-12} width={12} height={23} rx={2.6} fill="#e8f1ff" opacity={0.55 + 0.45 * glow} />}
+          {!flat && (
+            <defs>
+              <radialGradient id="phoneGlow">
+                <stop offset="0%" stopColor="#dce9ff" stopOpacity={0.75} />
+                <stop offset="45%" stopColor="#b9d0ff" stopOpacity={0.28} />
+                <stop offset="100%" stopColor="#9fbcff" stopOpacity={0} />
+              </radialGradient>
+            </defs>
+          )}
+        </g>
+      )}
     </g>
   );
 }

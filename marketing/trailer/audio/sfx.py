@@ -176,6 +176,15 @@ def garden(dur, dusk_from=None):
     return out * fade(int(0.25 * SR), int(0.6 * SR), n)[:, None]
 
 
+def cloth():
+    """v6: a soft tug on a cotton dress: band-passed noise, about 100 ms, a quick swell and fall."""
+    n = int(0.11 * SR)
+    t = np.arange(n) / SR
+    env = np.sin(np.pi * np.clip(t / 0.11, 0, 1)) ** 1.6 * (1 + 0.5 * np.sin(TWO_PI * 23 * t))
+    x = bandpass(rng.standard_normal(n), 700, 3400) * env * 0.32
+    return pan(x, -0.1)
+
+
 def build(cut, c):
     length = c["length"]
     fx = Bus(length + 3)  # the hook and the phones: close and dry
@@ -193,9 +202,13 @@ def build(cut, c):
     fx.add(exhale(), c["fall"], 1.0)
 
     # --- the child's call ---------------------------------------------------
-    ring.add(notes(["A5", "A5", "C#6"], 1 / 3, 0.42), c["call"][0], 0.8, p=-0.2)
+    # v6: the girl does not speak; the bell is her voice ("Ma-ma, look"), a little more present at both calls,
+    # and her tugs on Mama's dress are heard as soft cloth.
+    ring.add(notes(["A5", "A5", "C#6"], 1 / 3, 0.42), c["call"][0], 1.15, p=-0.2)
     if c["call"][1] is not None:
-        ring.add(notes(["A5", "A5", "C#6"], 1 / 3, 0.6, ring=2.6), c["call"][1], 1.0, p=-0.2)
+        ring.add(notes(["A5", "A5", "C#6"], 1 / 3, 0.6, ring=2.6), c["call"][1], 1.3, p=-0.2)
+    for at in c.get("tugs", []):
+        fx.add(cloth(), at, 0.9)
 
     # --- the phones ---------------------------------------------------------
     for at in c["taps"]:

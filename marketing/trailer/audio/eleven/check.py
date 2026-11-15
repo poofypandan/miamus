@@ -63,13 +63,17 @@ def audition(slugs):
         json.dump(rows, open(os.path.join(ROOT, "audio", "out", "eleven", "audition", f"check-{slug}.json"), "w"), indent=1, ensure_ascii=False)
 
 
+# Lines that are not Kakak's (v6: Mama).
+OTHER = {("en", "M1"): "In a minute, sweetie…", ("en", "M2"): "I'm looking, sweetie.", ("id", "M1"): "Sebentar ya, sayang…", ("id", "M2"): "Iya, Mama lihat, sayang."}
+
+
 def final(slug, tag="final"):
     rows = []
     for locale in ("en", "id"):
         d = os.path.join(ROOT, "audio", "out", "eleven", tag, slug, locale)
         for f in sorted(os.listdir(d)):
             key, take = f.split(".")[:2]
-            r = measure(os.path.join(d, f), locale, jobs.text_for(locale, key))
+            r = measure(os.path.join(d, f), locale, OTHER.get((locale, key)) or jobs.text_for(locale, key))
             r.update(locale=locale, key=key, take=take)
             rows.append(r)
             print(f"{locale} {key:4s} {take} lang={r['detected_language']} match={r['match']:.2f} {r['speech_seconds']:5.2f}s peak={r['peak']}  {r['heard']}", flush=True)

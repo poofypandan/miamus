@@ -8,10 +8,10 @@ import { KakakMark } from "../ui/kakak";
 import { Vignette, clamp01, ease, easeIn, easeOut, keys, lerp, ramp, springAt } from "../ui/kit";
 import { type Cue, Glow, NotificationCard, Phone, type PhoneCam, ScreenTrack, Shutter, Tag, TapRing, look, phonePoint } from "../ui/phone";
 import { World } from "../world/World";
-import { type Cam, camMix } from "../world/camera";
+import { type Cam, camMix, project } from "../world/camera";
 import { lightAt } from "../world/tod";
 import { COPY, type Locale } from "./copy";
-import { ENDING, ENDING15, HOOK, HOOK15, KNOW, QUIET, S15, S60, SARI, SARI15, TELL, TELL15, len } from "./timeline";
+import { ENDING, ENDING15, HOOK, HOOK15, KNOW, QUIET, S15, S60, SARI, SARI15, type Span, TELL, TELL15, len } from "./timeline";
 
 const taps = tapsJson as Record<string, { x: number; y: number }>;
 const tap = (key: string) => taps[key] ?? { x: 195, y: 422 };
@@ -54,35 +54,71 @@ function Backdrop({ tod, frame, cam, blur = 22, wash = 0.08, people = 0 }: { tod
 /* 1. The hook: "Mama, look!" and everything that buries it            */
 /* ------------------------------------------------------------------ */
 
+/** v6: one tug at `t`: her hand reaches Mama's dress, she leans back, Mama sways toward her and springs back. */
+function tugAt(frame: number, t: number) {
+  const reach = ramp(frame, t, t + 3, easeOut) * (1 - ramp(frame, t + 8, t + 13));
+  const pull = ramp(frame, t + 2, t + 4, easeOut) * (1 - ramp(frame, t + 5, t + 10));
+  const after = frame - (t + 4);
+  const sway = after < 0 ? 0 : 3 * Math.exp(-after / 5) * Math.cos(after * 0.55);
+  return { reach, lean: 6 * pull, sway };
+}
+
+/** v6: the girl's pose and Mama's sway for a set of tugs, then the point (with a bounce) and the arm coming down. */
+function girlMoves(frame: number, tugs: number[], point: number, down: Span) {
+  let tug = 0;
+  let lean = 0;
+  let sway = 0;
+  for (const t of tugs) {
+    const m = tugAt(frame, t);
+    tug = Math.max(tug, m.reach);
+    lean += m.lean;
+    sway += m.sway;
+  }
+  const up = ramp(frame, point, point + 5, easeOut) * (1 - ramp(frame, down[0], down[1], ease));
+  const since = frame - (point + 5);
+  const hop = since < 0 ? 0 : Math.abs(Math.sin(since * 0.42)) * 9 * Math.exp(-since / 26) * up;
+  return { child: { tug, point: up, lean, hop }, sway };
+}
+
+/** Where Mama's phone is in the world when she holds it up by her head (Figures: her eye-shading hand). */
+const PHONE_AT = { x: 263, y: 1199 };
+/** Pointing hand, in the world. */
+const POINT_AT = { x: 374, y: 1268 };
+
 export function Hook({ locale, t0, fast }: SceneProps) {
   const frame = useCurrentFrame();
   const copy = COPY[locale];
   const T = fast ? HOOK15 : HOOK;
   const end = fast ? len(S15.hook) : len(S60.hook);
   const push = frame / end;
-  // v6: close on the girl while she calls, then back to the garden as the questions come.
-  const wide: Cam = { x: -24 * push, y: 328 + 20 * push, z: 1 + 0.07 * push };
-  const close: Cam = { x: -183 + 6 * push, y: 434, z: 2.0 };
-  const cam = camMix(close, wide, ramp(frame, T.pull[0], T.pull[1], ease));
+  // v6 (Fable): close on the two of them from behind (about twice the garden's size), then back and up until the
+  // kite is where she points.
+  const close: Cam = { x: -228 + 4 * push, y: 374, z: 2.0 };
+  const wide: Cam = { x: -30 * push, y: 300 + 16 * push, z: 1.02 + 0.05 * push };
+  const pulled = ramp(frame, T.pull[0], T.pull[1], ease);
+  const cam = camMix(close, wide, pulled);
   const cover = ramp(frame, T.at[2], T.slam);
   const out = ramp(frame, T.fall + 2, end - 2);
-  // Mama's phone: we are Mama, looking down at it; its top rises into the bottom of the frame.
-  const rise = ramp(frame, T.phone[0], T.phone[1], easeOut);
-  const phoneTop = lerp(2010, 1505, rise);
-  const phoneCam = look(0, 2.25, 0, phoneTop, { rx: 10 });
+  const moves = girlMoves(frame, T.tugs, T.point, T.armDown);
+  // The phone's cool light flickers with every question that leaves it.
+  let flick = 0;
+  for (const a of T.at) if (frame >= a) flick += Math.exp(-(frame - a) / 3);
+  const phone = Math.min(1, 0.72 + 0.28 * Math.min(1, flick));
+  const origin = project(cam, 0.92, PHONE_AT.x, PHONE_AT.y);
+  const hand = project(cam, 0.92, POINT_AT.x, POINT_AT.y);
+  // Her words write on beside the raised arm, then settle in the sky as the camera pulls back.
+  const callX = lerp(Math.max(36, hand.x - 600), CALL.x, pulled);
+  const callY = lerp(hand.y - 420, CALL.y, pulled);
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       <AbsoluteFill style={{ opacity: 1 - out }}>
-        <World light={lightAt(17.62)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} birds={1} />
+        <World light={lightAt(17.62)} frame={frame + t0} cam={cam} child={1} mama={1} mamaPose={{ shade: 1, phone, sway: moves.sway }} childPose={moves.child} dogs={1} kite={1} birds={1} />
         <Vignette />
         <AbsoluteFill style={{ background: `rgba(18,14,30,${(0.44 * cover).toFixed(3)})` }} />
-        {rise > 0 && (
-          <Phone cam={phoneCam} fade={0}>
-            <ScreenTrack cues={[{ src: `shots/${locale}/scroll/00.jpg`, at: 0, fade: 0 }]} />
-          </Phone>
-        )}
       </AbsoluteFill>
-      <Pile bubbles={copy.bubbles} slam={copy.slam} at={T.at} slamAt={T.slam} fall={T.fall} from={{ x: 540, y: phoneTop + 40 }} />
+      <Hand text={copy.child} x={callX} y={callY} size={lerp(96, CALL.size, pulled)} at={T.bell} dur={22} out={T.at[11] + 4} />
+      <Pile bubbles={copy.bubbles} slam={copy.slam} at={T.at} slamAt={T.slam} fall={T.fall} from={{ x: origin.x, y: origin.y }} />
+      {!fast && <Hand text={copy.lines.G3} x={330} y={1190} size={84} rot={-3} at={110} out={128} color="#3a2418" shadow="0 0 10px rgba(255,250,240,0.95), 0 0 3px rgba(255,250,240,0.9)" />}
     </AbsoluteFill>
   );
 }
@@ -459,10 +495,15 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   ]);
   const walk = ramp(frame, E.mama[0], E.mama[1], (t) => 1 - (1 - t) * (1 - t));
   const lift = 0.3 * ramp(frame, E.lift[0], E.lift[1]);
+  // v6 (Fable): on arrival the same single tug and the point; Mama shades her eyes (the opening's silhouette, no
+  // phone) and her other hand takes the girl's, whose arm comes down to meet it.
+  const moves = girlMoves(frame, [E.tug], E.point, [E.shade[1] - 4, E.hold[0] + 8]);
+  const mamaPose = { shade: ramp(frame, E.shade[0], E.shade[1], ease), hold: ramp(frame, E.hold[0], E.hold[1], ease), sway: moves.sway };
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
-      <World light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} kiteLift={lift} birds={1} />
+      <World light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} mamaPose={mamaPose} childPose={moves.child} kiteLift={lift} birds={1} />
       <Vignette />
+      <Hand text={copy.child} {...CALL} at={E.bell} dur={22} out={E.crane[0] + (fast ? 0 : 8)} />
       <EndCard line={copy.end.line} url={copy.end.url} mark={E.mark} name={E.name} lineAt={E.line} urlAt={E.url} />
     </AbsoluteFill>
   );

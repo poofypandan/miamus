@@ -1,6 +1,7 @@
 """The three voice folders for the v6 mix (audio/mix.py --voice … --girl … --mama …).
 
-  .tools/venv-main/bin/python audio/child/place_v6.py --girl chatterbox-lively --mama aita \
+  .tools/venv-main/bin/python audio/child/place_v6.py --mama aita --mama-from audio/out/eleven/v6final \
+      --mama-takes en/M1=t1,en/M2=t2,id/M1=t1,id/M2=t1 \
       [--l10 audio/out/eleven/v6/kakak-lyly] [--mama-from audio/out/eleven/v6]
 
   audio/out/vo/girl-<name>/<locale>/G1 G2 G3.wav   her first call, the brighter second call, "Mama…?"
@@ -23,8 +24,9 @@ def opt(name, default=None):
     return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
 
 
-def first(d, stem):
-    return os.path.join(d, next(f for f in sorted(os.listdir(d)) if f.split(".")[0] == stem))
+def first(d, stem, take=None):
+    want = f"{stem}.{take}" if take else stem
+    return os.path.join(d, next(f for f in sorted(os.listdir(d)) if f.rsplit(".", 1)[0] == want or (not take and f.split(".")[0] == stem)))
 
 
 def put(src, dst):
@@ -36,15 +38,19 @@ def main():
     girl, mama = opt("--girl"), opt("--mama")
     l10 = opt("--l10", os.path.join(ROOT, "audio", "out", "eleven", "v6", "kakak-lyly"))
     mama_from = opt("--mama-from", os.path.join(ROOT, "audio", "out", "eleven", "v6"))
-    cand = os.path.join(ROOT, "audio", "out", "child", "candidates", girl)
+    # Takes, e.g. --mama-takes en/M1=t1,en/M2=t2 (the final takes are named M1.t1 …; the samples have none).
+    takes = dict(x.split("=") for x in opt("--mama-takes", "").split(",") if x)
     for locale in ("en", "id"):
-        g = os.path.join(VO, f"girl-{girl}", locale)
-        print(locale, "girl", put(os.path.join(cand, f"{locale}-look1.wav"), os.path.join(g, "G1.wav")),
-              put(os.path.join(cand, f"{locale}-look2.wav"), os.path.join(g, "G2.wav")),
-              put(os.path.join(cand, "unanswered.wav"), os.path.join(g, "G3.wav")))
+        if girl:  # v6 dropped the girl's voice (she is nonverbal); kept for the record of what was tried.
+            cand = os.path.join(ROOT, "audio", "out", "child", "candidates", girl)
+            g = os.path.join(VO, f"girl-{girl}", locale)
+            print(locale, "girl", put(os.path.join(cand, f"{locale}-look1.wav"), os.path.join(g, "G1.wav")),
+                  put(os.path.join(cand, f"{locale}-look2.wav"), os.path.join(g, "G2.wav")),
+                  put(os.path.join(cand, "unanswered.wav"), os.path.join(g, "G3.wav")))
         m_src = os.path.join(mama_from, f"mama-{mama}", locale)
         m = os.path.join(VO, f"mama-{mama}", locale)
-        print(locale, "mama", put(first(m_src, "M1"), os.path.join(m, "M1.wav")), put(first(m_src, "M2"), os.path.join(m, "M2.wav")))
+        print(locale, "mama", put(first(m_src, "M1", takes.get(f"{locale}/M1")), os.path.join(m, "M1.wav")),
+              put(first(m_src, "M2", takes.get(f"{locale}/M2")), os.path.join(m, "M2.wav")))
         k_src, k = os.path.join(VO, "eleven-lyly", locale), os.path.join(VO, "eleven-lyly-v6", locale)
         os.makedirs(k, exist_ok=True)
         for f in os.listdir(k_src):

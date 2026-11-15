@@ -42,10 +42,14 @@ export const HOOK = {
   slam: 122,
   /** The held breath, then everything lets go. */
   fall: 134,
-  /** v6: close on the girl, then pull back as the questions come; Mama's phone rises into the bottom of the frame. */
-  close: [0, 30] as Span,
-  pull: [30, 84] as Span,
-  phone: [26, 52] as Span,
+  /** v6 (Fable): close on the two of them from behind; the girl tugs Mama's dress twice, then points at the kite. */
+  tugs: [5, 16],
+  point: 25,
+  /** The bell's three notes ("Ma-ma, look") start here; her handwriting writes on with them. */
+  bell: 27,
+  /** Pull back and up until the kite is where she points; her arm comes down slowly. */
+  pull: [39, 100] as Span,
+  armDown: [62, 112] as Span,
 };
 /** The same, for the 15-second cut. */
 export const HOOK15 = {
@@ -53,9 +57,11 @@ export const HOOK15 = {
   at: [30, 35, 40, 44, 47, 50, 53, 56, 58, 60, 62, 64, 65, 67, 68, 69, 69, 70, 71, 71, 72],
   slam: 74,
   fall: 80,
-  close: [0, 22] as Span,
-  pull: [22, 60] as Span,
-  phone: [18, 40] as Span,
+  tugs: [3],
+  point: 11,
+  bell: 12,
+  pull: [26, 70] as Span,
+  armDown: [40, 80] as Span,
 };
 
 /** Kakak's sheet, sentence by sentence (frames in the "tell" scene). */
@@ -94,9 +100,11 @@ export const SARI15 = { card: 6, sheet: 12, before: 22, beforeIn: 28, after: 38,
 export const QUIET = { scroll: [26, 70] as Span, sleep: [76, 100] as Span, ping: 112, call: 236, away: [210, 240] as Span };
 
 /** The ending (frames in "ending"): Mama walks out, they look up, the camera follows the kite, the name. */
-// v6: the crane waits for Mama's "I'm looking, sweetie." (~50.9 s) and a held second; it still ends on the mark.
-export const ENDING = { mama: [14, 110] as Span, lift: [120, 250] as Span, crane: [196, 262] as Span, mark: 258, name: 276, line: 292, url: 310 };
-export const ENDING15 = { mama: [-40, 26] as Span, lift: [28, 90] as Span, crane: [34, 86] as Span, mark: 70, name: 80, line: 90, url: 100 };
+// v6 (Fable): Mama walks out (a little sooner, nothing in her hands); on arrival the girl gives the same single tug
+// and points, with the bell; Mama shades her eyes ("I'm looking, sweetie."), takes the girl's hand; a held moment,
+// then the crane, which still ends on the mark.
+export const ENDING = { mama: [10, 90] as Span, tug: 93, point: 101, bell: 103, shade: [108, 126] as Span, hold: [128, 150] as Span, lift: [120, 250] as Span, crane: [206, 262] as Span, mark: 258, name: 276, line: 292, url: 310 };
+export const ENDING15 = { tug: 6, point: 12, bell: 13, shade: [18, 36] as Span, hold: [38, 56] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 80, line: 90, url: 100 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */
 export function soundCues(cut: "60" | "15") {
@@ -110,7 +118,8 @@ export function soundCues(cut: "60" | "15") {
       pops: HOOK.at.map((a) => sec(a)),
       slam: sec(HOOK.slam),
       fall: sec(HOOK.fall),
-      call: [sec(HOOK.call), at(S.quiet, QUIET.call)],
+      call: [sec(HOOK.bell), at(S.ending, ENDING.bell)],
+      tugs: [...HOOK.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING.tug + 3)],
       taps: [
         at(S.tell, TELL.tap),
         at(S.tell, TELL.send1),
@@ -143,7 +152,8 @@ export function soundCues(cut: "60" | "15") {
     pops: HOOK15.at.map((a) => sec(a)),
     slam: sec(HOOK15.slam),
     fall: sec(HOOK15.fall),
-    call: [sec(HOOK15.call), at(S.ending, 4)],
+    call: [sec(HOOK15.bell), at(S.ending, ENDING15.bell)],
+    tugs: [...HOOK15.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING15.tug + 3)],
     taps: [at(S.tell, TELL15.send), at(S.tell, TELL15.ok), at(S.sari, SARI15.card), at(S.sari, SARI15.before), at(S.sari, SARI15.after), at(S.sari, SARI15.finish)],
     typing: [],
     cards: [at(S.tell, TELL15.card)],

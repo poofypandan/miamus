@@ -35,17 +35,30 @@ CUES = {
 # runs 3.2 s, so in the 15-second cut it starts 0.4 s earlier, still before Kakak's mark appears.
 LOCALE_CUES = {"id": {"15": {"S3": 11.45}}}
 
-# v6 (Fable's notes, 15 Nov): the girl (G) and Mama (M) speak too, each from her own voice folder.
-#   Hook: the girl's "Mama, look!" at 0.2 s; Mama, distracted, after the first questions land; the
-#   girl's small "Mama…?" just before the slam. End: the ping is 0.8 s earlier, so Kakak's "That one's
-#   yours. Go play." comes straight after L9 while the notification is on screen; the girl calls again as
-#   the phone falls away; Mama answers with her hand up to her eyes, then a held moment before the crane.
-CUES["60"].update({"G1": 0.2, "M1": 1.75, "G3": 3.75, "L9": 43.0, "L10": 44.85, "G2": 46.95, "M2": 50.7})
-CUES["15"].update({"G1": 0.1, "M1": 1.1, "G2": 10.1})
-LOCALE_CUES["id"]["60"] = {"L10": 45.3, "G2": 48.27}
-LOCALE_CUES["id"]["15"]["G2"] = 9.8
-# Words shown but not spoken: in the 15-second cut Mama's answer is a caption only (there is no room to say it).
-CAPTION_ONLY = {"15": {"M2": (11.0, 12.4)}}
+# v6 (Fable's notes, 15 Nov): Mama (M) speaks too, from her own voice folder (--mama).
+#   Hook: Mama, distracted, "In a minute, sweetie…" as the first questions leave her phone. End: the ping
+#   is 0.8 s earlier, so Kakak's "That one's yours. Go play." comes straight after L9 while the notification
+#   is on screen; Mama answers as her hand comes up to shade her eyes, then a held moment before the crane.
+CUES["60"].update({"M1": 1.75, "L9": 43.0, "L10": 44.85, "M2": 50.75})
+CUES["15"].update({"M1": 1.2, "M2": 10.55, "S3": 12.0})
+LOCALE_CUES["id"]["60"] = {"L10": 45.3}
+LOCALE_CUES["id"]["15"] = {"S3": 11.5}
+# The girl does not speak (Fable, 15 Nov): her "Mama, look!" is the score's bell and her handwriting.
+# In the 15-second Indonesian cut there is no room to say Mama's answer as well as the end line, so it is a caption.
+DROP = {("15", "id"): ["M2"]}
+CAPTION_ONLY = {("15", "id"): {"M2": (10.6, 11.95)}}
+# The 15-second end line, a touch quicker (pitch kept), so Mama's answer fits before it.
+TEMPO = {("15", "en", "S3"): 1.03, ("15", "id", "S3"): 1.03}
+
+
+def stretched(path, factor):
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+        out = f.name
+    subprocess.run(["npx", "remotion", "ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", path, "-af", f"atempo={factor}", "-c:a", "pcm_s24le", out], cwd=ROOT, check=True)
+    x = read(out)
+    os.unlink(out)
+    return x
 
 
 def speaker(key):
@@ -107,12 +120,13 @@ def mix(cut, locale, voices, music_style):
     tracks = {who: np.zeros(n) for who in ("kakak", "girl", "mama")}
     cues = []
     plan = dict(CUES[cut], **LOCALE_CUES.get(locale, {}).get(cut, {}))
-    if not voices.get("girl"):
-        plan = {k: t for k, t in plan.items() if speaker(k) == "kakak"}
+    plan = {k: t for k, t in plan.items() if voices.get(speaker(k)) and k not in DROP.get((cut, locale), [])}
     order = sorted(plan.items(), key=lambda kv: kv[1])
     for i, (key, start) in enumerate(order):
         who = speaker(key)
-        line = read(os.path.join(ROOT, "audio", "out", "vo", voices[who], locale, f"{key}.wav"))[:, 0]
+        src = os.path.join(ROOT, "audio", "out", "vo", voices[who], locale, f"{key}.wav")
+        tempo = TEMPO.get((cut, locale, key)) if voices.get("mama") else None
+        line = (stretched(src, tempo) if tempo else read(src))[:, 0]
         a = int(start * SR)
         end = start + len(line) / SR
         # Each voice keeps clear of her own next line; different people may overlap a little, as people do.
@@ -125,7 +139,7 @@ def mix(cut, locale, voices, music_style):
             raise SystemExit(f"{cut}-{locale}: {key} runs {end - other[0]:.2f} s into the next speaker.")
         tracks[who][a : a + len(line)] += line[: n - a]
         cues.append({"id": key, "from": round(start, 3), "to": round(end, 3)})
-    for key, (start, end) in CAPTION_ONLY.get(cut, {}).items() if voices.get("girl") else []:
+    for key, (start, end) in CAPTION_ONLY.get((cut, locale), {}).items() if voices.get("mama") else []:
         cues.append({"id": key, "from": start, "to": end, "silent": True})
     cues.sort(key=lambda c: c["from"])
 
@@ -141,7 +155,7 @@ def mix(cut, locale, voices, music_style):
     # The girl and Mama are in the garden: a little more air around them. Mama in the hook is off screen
     # (we are behind her phone), so she is a touch softer and further away until she walks out at the end.
     people = np.zeros(n)
-    if voices.get("girl"):
+    if voices.get("mama") or voices.get("girl"):
         g = chain(tracks["girl"])
         m = chain(tracks["mama"])
         far = np.zeros(n)
