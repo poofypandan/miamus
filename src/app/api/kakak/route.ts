@@ -93,6 +93,22 @@ async function readItems(supabase: Awaited<ReturnType<typeof createSupabaseServe
 }
 
 /**
+ * The roster, with what each person sees (Phase 178, migrations/165). On a
+ * database without 165 the column doesn't exist (Postgres 42703): read the
+ * roster as before, so Kakak keeps working with everyone seeing everything.
+ */
+async function readStaff(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, householdId: string) {
+  // Named columns: pin is revoked from every client role (migrations/096).
+  const staff = await supabase
+    .from("staff_profiles")
+    .select("id, name, created_at, user_id, archived_at, hidden_areas")
+    .eq("household_id", householdId);
+  if (staff.error?.code !== "42703") return staff;
+  console.error("Kakak: staff areas not read", staff.error.message);
+  return supabase.from("staff_profiles").select("id, name, created_at, user_id, archived_at").eq("household_id", householdId);
+}
+
+/**
  * What the page that called can show (lib/kakak/client.ts KAKAK_CLIENT_VERSION).
  * A page loaded before a deploy keeps calling with its old number, or none:
  * it is never sent a card it can't draw or would half-save.
@@ -113,11 +129,7 @@ async function readRows(
   householdId: string,
 ): Promise<ContextRows> {
   const [staff, pets, rooms, items, household, food] = await Promise.all([
-    supabase
-      .from("staff_profiles")
-      // Named columns: pin is revoked from every client role (migrations/096).
-      .select("id, name, created_at, user_id, archived_at")
-      .eq("household_id", householdId),
+    readStaff(supabase, householdId),
     supabase.from("task_entities").select("id, name, created_at, entity_type, metadata").eq("household_id", householdId).eq("entity_type", "pet"),
     supabase.from("household_locations").select("id, name, created_at, kind, parent_id").eq("household_id", householdId),
     readItems(supabase, householdId),
@@ -126,7 +138,8 @@ async function readRows(
     // Household → Features (Phase 171): Food at home switched off means no
     // add_food; Kitchen amounts on as well means ingredients (Phase 176).
     // Repairs and Bills too (Phase 180): Kakak says a switched-off feature
-    // is off, rather than describe a screen this household doesn't have.
+    // is off, rather than describe a screen this household doesn't have,
+    // and the staff-areas card leaves Repairs out while it's off (Phase 178).
     supabase
       .from("household_features")
       .select("feature, enabled")
@@ -299,9 +312,11 @@ export async function POST(request: NextRequest) {
       if (result.reason === "busy") console.error("kakak: the global daily cap was reached");
       return refused(result.reason, result.reason === "limit" || result.reason === "busy" ? 429 : 403);
     }
-    // A page from before this deploy can't show a new ingredient or save an
-    // amount: it is asked to reopen Miamus rather than crash or half-save.
-    if (result.kind === "suggestions" && clientVersion(body.v) < 2 && result.items.some(needsNewerApp)) {
+    // A page from before this deploy can't show a new ingredient, save an
+    // amount (2) or show what a staff member sees (3): it is asked to reopen
+    // Miamus rather than crash or half-save.
+    const version = clientVersion(body.v);
+    if (result.kind === "suggestions" && result.items.some((item) => needsNewerApp(item, version))) {
       console.info("kakak: an older page was asked to reopen");
       const reopen = { kind: "message" as const, text: reopenLine(ownerLocale), requestId: result.requestId, history: result.history };
       return NextResponse.json(practice ? { ...reopen, practice: true } : reopen);

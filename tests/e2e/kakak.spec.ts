@@ -504,7 +504,7 @@ test("a new ingredient's card adds it with its amount, as Add ingredient does, a
   await expect(page.locator("dd").getByText("2 kg", { exact: true })).toBeVisible();
   await expect(page.locator("dd").getByText("Cupboard", { exact: true })).toBeVisible();
   // The page says what it can show, so the route may send this kind of card.
-  expect(asked[0]).toMatchObject({ reply: "Add 2 kg of brown rice into the pantry thank you", v: 2 });
+  expect(asked[0]).toMatchObject({ reply: "Add 2 kg of brown rice into the pantry thank you", v: 3 });
   expect(stub.supplies).toHaveLength(1); // nothing saved before Looks right
 
   await page.getByRole("button", { name: "Looks right" }).click();

@@ -395,6 +395,9 @@ people are **staf** and **admin**.
 | Nobody sees chores for anyone now, so every staff member sees them. | **Sekarang tidak ada yang melihat tugas untuk siapa saja, jadi semua staf melihatnya.** | Phase 178: the same, for chores. |
 | Doesn't see: Kitchen, Repairs | **Tidak melihat: Dapur, Perbaikan** | Phase 178: the staff list, under a name with anything off. |
 | Kitchen off for Sari / Kitchen on for Sari | **Dapur dimatikan untuk Sari** / **Dapur aktif untuk Sari** | Phase 178: the toast after a switch, with Undo / **Batalkan**. Same verbs as the Features switches. |
+| On · Off · On (was off) · Off (was on) | **Aktif · Mati · Aktif (sebelumnya mati) · Mati (sebelumnya aktif)** | Phase 178 follow-up: Kakak's "What {name} sees" card, one row per switch. "Aktif · Mati" as the notification status; "(sebelumnya …)" as the ingredient card's "(sebelumnya Freezer)". Buttons **Simpan · Ubah · Batal**. |
+| Nobody would see pet routines, so every staff member will see them. | **Tidak ada yang akan melihat rutinitas hewan, jadi semua staf akan melihatnya.** | Phase 178 follow-up: under Kakak's card, before saving. The same for **tugas untuk siapa saja**. |
+| Saved — What Syam sees | **Tersimpan — Yang dilihat Syam** | Phase 178 follow-up: the toast after Kakak's card, with Undo / **Batalkan**. |
 | How Miamus works (the guide) | **Cara pakai Miamus** | Phase 180: the guide to Miamus, `src/lib/guide.ts`, about thirty short entries in both languages; Kakak answers from it. Its titles and bodies are the agreed wording for explaining a screen: change them there, with the test. Groups: **Memulai · Rumah · Hewan · Dapur · Pengaturan**. |
 | What's the difference between a chore and a routine? | **Apa bedanya tugas dan rutinitas?** | Phase 180: the Kakak sheet's last example, a question. |
 | New ingredient (Kakak's card) | **Bahan masakan baru** | 2026-11-14: Kakak's card for an ingredient that isn't listed yet. Rows as the ingredient card's, plus **Jumlah**. |
@@ -405,7 +408,7 @@ people are **staf** and **admin**.
 | The date isn't kept while it is marked Out. Set it once it is marked Bought. | **Tanggalnya tidak disimpan selama masih ditandai Habis. Atur setelah ditandai Sudah dibeli.** | 2026-11-14: under Kakak's ingredient card, when a date came with an amount that can't be written and the item stays Out. |
 | Anything else? | **Ada lagi?** | 2026-11-14: the typing box after Kakak's answer or thanks; **Mau Kakak atur apa?** stays for the first line. |
 | I've just been updated. Please close Miamus, open it again, and tell me once more. | **Kakak baru saja diperbarui. Tutup Miamus, buka lagi, lalu bilang ke Kakak sekali lagi.** | 2026-11-14: said to a page left open across an update, instead of a card it can't show. |
-| Kakak sets up chores, shopping, pet routines, food and ingredients from what you type or say, and answers questions about how Miamus works. | **Kakak mengatur tugas, belanja, rutinitas hewan, makanan, dan bahan masakan dari yang Anda ketik atau ucapkan, dan menjawab pertanyaan tentang cara pakai Miamus.** | 2026-11-14: Settings → Kakak, the first line. |
+| Kakak sets up chores, shopping, pet routines, food, ingredients and what staff see from what you type or say, and answers questions about how Miamus works. | **Kakak mengatur tugas, belanja, rutinitas hewan, makanan, bahan masakan, dan yang dilihat staf dari yang Anda ketik atau ucapkan, dan menjawab pertanyaan tentang cara pakai Miamus.** | 2026-11-14: Settings → Kakak, the first line. |
 
 ## Formatting
 

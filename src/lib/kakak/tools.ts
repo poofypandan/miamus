@@ -1,7 +1,8 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { AREAS } from "@/lib/staff-areas";
 
 // The tools Kakak gets (docs/phase-156-step2-kakak-plan.md, section 3; the
-// sixth, put_away_ingredient, Phase 176). The list is identical for every
+// sixth, put_away_ingredient, Phase 176; set_staff_areas, Phase 178). The list is identical for every
 // household with the same switches, so it caches once for all of them:
 // names of people, pets and rooms never appear here, only short references
 // (S1, P1, R1, I1, M1) that the household block defines.
@@ -17,10 +18,10 @@ import type Anthropic from "@anthropic-ai/sdk";
 // union, so only three tools are strict: create_chore (9 unions),
 // add_pet_routine (6) and ask_question (0), 15 in all. They are the ones
 // whose shape matters most (dates, recurrence, routine switches) or that
-// every turn may use. add_to_shopping_list, add_food and put_away_ingredient
-// are not strict: validate.ts checks their whole shape (fields, types,
-// enums), and a call that fails goes back to Kakak once like any other
-// mistake.
+// every turn may use. add_to_shopping_list, add_food, put_away_ingredient and
+// set_staff_areas are not strict: validate.ts checks their whole shape
+// (fields, types, enums), and a call that fails goes back to Kakak once like
+// any other mistake.
 // tests/unit/kakak-tool-limits.test.ts keeps the strict set under the limits.
 
 const nullableString = (description: string) => ({
@@ -34,6 +35,7 @@ export const KAKAK_TOOL_NAMES = [
   "add_pet_routine",
   "add_food",
   "put_away_ingredient",
+  "set_staff_areas",
   "ask_question",
 ] as const;
 
@@ -333,6 +335,31 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
         expiry_is_guess: {
           type: "boolean",
           description: "True when expires_on is Kakak's cautious guess, not a label or the owner's date.",
+        },
+      },
+    },
+  },
+  {
+    // Phase 178 follow-up (docs/phase-178-staff-areas-plan.md). Not strict,
+    // so the strict union count stays 15 (tools header).
+    name: "set_staff_areas",
+    description:
+      "Suggest which parts of the staff app one staff member sees: home (chores for anyone), pets (pet routines), kitchen (Dapur), repairs (Perbaikan). List only what changes. Never saves anything.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["staff", "show", "hide"],
+      properties: {
+        staff: { type: "string", description: "A staff reference (S1, …). Never M1." },
+        show: {
+          type: "array",
+          items: { type: "string", enum: [...AREAS] },
+          description: "Areas to switch on for them; empty for none.",
+        },
+        hide: {
+          type: "array",
+          items: { type: "string", enum: [...AREAS] },
+          description: "Areas to switch off for them; empty for none.",
         },
       },
     },

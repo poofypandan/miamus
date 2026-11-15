@@ -100,7 +100,7 @@ describe("the tool", () => {
     expect(tool.strict).toBeUndefined();
     expect(toolsFor(on().household).map((t) => t.name)).toContain("put_away_ingredient");
     const off = toolsFor(buildContext(rows, opts).household).map((t) => t.name);
-    expect(off).toEqual(["create_chore", "add_to_shopping_list", "add_pet_routine", "add_food", "ask_question"]);
+    expect(off).toEqual(["create_chore", "add_to_shopping_list", "add_pet_routine", "add_food", "set_staff_areas", "ask_question"]);
   });
 
   it("is in Kakak's instructions, with raw ingredients kept off add_food", () => {

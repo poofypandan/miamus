@@ -51,6 +51,15 @@ staging tests or the owner's approval. Background: `docs/handoff-2026-11-07.md`.
   `lucide-react` line icons beside the text, or plain text where no icon is
   needed.
 
+### Kakak and the guide
+
+- **Flag a change that adds, renames, moves or removes something owners or
+  staff can see or do, without a matching change to `src/lib/guide.ts`.**
+  Kakak answers "how do I…" questions from that guide, and Settings → About
+  Miamus shows the same text, so a stale entry makes both wrong (Phase 180).
+  Safe path: update the guide entry, in both languages, in the same PR, using
+  the screens' own names.
+
 ### Language
 
 - **Flag owner-facing text that has no Bahasa Indonesia version, and any

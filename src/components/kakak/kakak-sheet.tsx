@@ -7,6 +7,7 @@ import {
   Check,
   CheckCircle2,
   CircleAlert,
+  Eye,
   Gauge,
   Hourglass,
   ListChecks,
@@ -41,7 +42,7 @@ import { addsSomething, describeSuggestion, routineListLine, savedBenefit, saved
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
 import { MAX_TYPED, type KakakHistory, type RefusalReason } from "@/lib/kakak/engine";
-import type { KakakSuggestion } from "@/lib/kakak/suggestions";
+import { staffAreasNobody, type KakakSuggestion } from "@/lib/kakak/suggestions";
 import { useKakakSave } from "@/lib/kakak/use-kakak-save";
 import { firstName } from "@/lib/kakak/context";
 import {
@@ -615,7 +616,8 @@ function SuggestionCard({
       <KakakBubble>{text || t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:")}</KakakBubble>
       <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card shadow-sm">
         {items.map((item, index) => {
-          const card = describeSuggestion(item, locale);
+          // A staff-areas card's "nobody would see" counts every card on screen (Codex, PR #140).
+          const card = describeSuggestion(item, locale, item.kind === "staff_areas" ? staffAreasNobody(items, index) : undefined);
           // A routine shows its own icon (Lights off, Walk…), as on the Pets tab.
           const Icon =
             (item.kind === "pet_routine" ? routineKindInfo(item.routine as RoutineKind)?.icon : undefined) ?? KIND_ICONS[item.kind];
@@ -706,7 +708,7 @@ function SuggestionCard({
                 <Check className="size-5" aria-hidden="true" />
                 {saveable > 1
                   ? t(`Save ${saveable}`, `Simpan ${saveable}`)
-                  : items.some((item) => item.kind === "pet_routine")
+                  : items.some((item) => item.kind === "pet_routine" || item.kind === "staff_areas")
                     ? t("Save", "Simpan")
                     : t("Looks right", "Sudah benar")}
               </>
@@ -923,6 +925,7 @@ const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
   food: Refrigerator,
   ingredient: Carrot,
   new_ingredient: Carrot,
+  staff_areas: Eye,
 };
 
 type T = (en: string, id: string) => string;

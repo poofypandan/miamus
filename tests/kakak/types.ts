@@ -90,6 +90,7 @@ export interface KakakCase {
     | "food"
     | "several"
     | "cannot_do"
+    | "staff_areas"
     | "safety"
     /** A question about Miamus, answered from the guide (Phase 180), and small talk. */
     | "about_miamus";
