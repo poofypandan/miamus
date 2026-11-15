@@ -37,7 +37,7 @@ EN = {
 ID_TEXT = {
     "L1": "Mengurus rumah itu banyak bertanya.",
     "L2": "Bagaimana kalau cukup bilang sekali?",
-    "L3": "Halo. Ini Kakak, asisten AI di Miamus.",
+    "L3": "Halo, ini Kakak. Bilang saja apa yang Anda perlukan.",
     "L4": "Bilang sekali ke Kakak.",
     "L4b": "Sisanya, Kakak yang atur.",
     "L5": "Dan semua orang di rumah tahu harus apa.",

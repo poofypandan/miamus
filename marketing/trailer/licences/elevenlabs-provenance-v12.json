@@ -1,0 +1,31 @@
+{
+ "generated": "2026-11-15",
+ "service": "ElevenLabs API, POST /v1/text-to-speech/{voice_id}",
+ "plan": "Creator (owner's account)",
+ "model_id": "eleven_v4",
+ "note": "v12: Kakak's intro line changed to the why. Every other line as in v11.",
+ "characters_total_project": 8634,
+ "lines": [
+  {
+   "speaker": "Kakak",
+   "line": "L3",
+   "language": "id",
+   "text_sent": "Halo, ini Kakak. Bilang saja apa yang Anda perlukan.",
+   "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+   "seed": 213,
+   "request_id": "PNcUT8aHGQStZwIyPcdB",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Kakak",
+   "line": "L3",
+   "language": "en",
+   "text_sent": "Hi! I'm Kakak. Just tell me what you need.",
+   "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+   "seed": 331,
+   "request_id": "3S5vkB9apl0U57mUQRzy",
+   "format": "wav_48000",
+   "note": "'Hi!' gives the name more lift, so its K survives the music; the caption reads 'Hi, I'm Kakak.'"
+  }
+ ]
+}

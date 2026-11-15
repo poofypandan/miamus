@@ -20,8 +20,9 @@ export const S60 = {
   // v6 (Fable's pacing): one task end to end, on the score's bars. The house-through-the-day scene is cut,
   // and the two-phone shot and Sari's phone are one staff beat.
   // v11 (the owner's card cut, 68 s): the phone once, then one card at a time (15.0–52.2 s); the garden at 52.2.
-  cards: [f(15), f(52.2)],
-  ending: [f(52.2), f(68)],
+  // v12: clear but moving (2 s holds, each card entering as the last settles); 62 s with one repeated score bar.
+  cards: [f(15), f(44)],
+  ending: [f(44), f(62)],
 } as const satisfies Record<string, Span>;
 
 /** The 15-second cut: the hook, the one sentence, the staff, the garden, the name. */
@@ -92,17 +93,16 @@ export const TELL15 = { type: [0, 44] as Span, send: 48, card: 58, toCard: [60, 
 export const CARDS = {
   press: 39,
   phoneOut: [45, 57] as Span,
-  listen: { at: 48, out: 216, words: 63 },
-  suggest: { at: 228, ring: 261, press: 318, check: 327, out: 342 },
-  saved: { at: 348, ring: 363, check: 372, out: 438 },
-  sari: { at: 456, ring: 468, thumbs: [516, 534], out: 618 },
-  done: { at: 636, check: 651, out: 732 },
-  track: { at: 750, ring: 762, out: 1062 },
-  garden: [1068, 1116] as Span,
+  listen: { at: 48, out: 225, words: 63 },
+  suggest: { at: 213, ring: 234, check: 288 },
+  saved: { at: 297, ring: 306, check: 318, out: 369 },
+  sari: { at: 357, ring: 378, thumbs: [414, 429], out: 570 },
+  done: { at: 492, check: 513, out: 570 },
+  track: { at: 558, ring: 579, out: 858 },
 };
 /** 15 s (frames in "cards", 0 = 3.0 s): Kakak's card, saved, Sari's card with her photos. */
 export const CARDS15 = {
-  suggest: { at: 6, ring: 18, press: 66, check: 75, out: 87 },
+  suggest: { at: 6, ring: 18, check: 75 },
   saved: { at: 90, ring: 99, check: 105, out: 141 },
   sari: { at: 150, ring: 158, thumbs: [168, 177], out: 216 },
 };
@@ -132,11 +132,10 @@ export const SARI15 = { push: [0, 60] as Span, glow: 4 };
 // the clock runs; the phone falls away and the garden opens at 44.2 s. No notification, no ping.
 export const QUIET = { push: [0, 86] as Span, sleep: [86, 96] as Span, set: [98, 112] as Span, clock: [100, 160] as Span, away: [168, 186] as Span };
 
-// v9 (Fable; frames in "ending", 0 = 44.2 s): close on the pair. 45.0 the tug, her handwriting and the bell (the call
-// rings in the last quiet bar); 47.0 Kakak softly "That one's yours." as the score opens; Mama turns ~48.4 and answers
-// at 49.4; 51.0 the hand, then a 2 s hold; 53.0 the crane; 53.3 the end line; 57.0 the card's line on the bell;
-// 57.6 the address. Bars fall on the odd seconds; the music is not re-cut.
-export const ENDING = { mama: [-80, -1] as Span, tug: 24, point: 30, bell: 31, shade: [126, 141] as Span, hold: [204, 222] as Span, lift: [204, 334] as Span, crane: [264, 316] as Span, mark: 354, name: 363, line: 384, url: 402 };
+// v12 (frames in "ending", 0 = 44.0 s): the garden comes into focus, wide, Mama already beside the girl; one eased
+// push-in to the close two-shot (45.4–46.8); 47.0 the tug, the call and the bell; 49.0 Kakak "That one's yours." (the
+// score opens); 51.4 Mama, turning first; 53.0 the hand; 55.0 the crane; 55.3 the end line; 59.0 the card; 59.6 the address.
+export const ENDING = { mama: [-80, -1] as Span, settle: [0, 30] as Span, push: [42, 84] as Span, tug: 90, point: 96, bell: 97, shade: [204, 219] as Span, hold: [270, 288] as Span, lift: [270, 400] as Span, crane: [330, 382] as Span, mark: 420, name: 429, line: 450, url: 468 };
 // v9: the garden cut at 10.0 with the tug and bell together; the hand at 11.0 is her answer (a caption, as the end
 // line needs the time); the end line from 11.85; the card's line on the bell at 13.0, the address at 13.4.
 export const ENDING15 = { tug: 0, point: 6, bell: 1, shade: [16, 30] as Span, hold: [30, 46] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 78, line: 90, url: 102 };
@@ -149,24 +148,24 @@ export function soundCues(cut: "60" | "15") {
     const at = (span: Span, frame: number) => sec(span[0] + frame);
     return {
       // v11: the long film runs 68 s (four middle bars repeated in the score; see audio/music/score.py).
-      length: 68,
+      length: 62,
       musicFrom: 5,
       pops: HOOK.at.map((a) => sec(a)),
       slam: sec(HOOK.slam),
       fall: sec(HOOK.fall),
       call: [sec(HOOK.bell), at(S.ending, ENDING.bell)],
       tugs: [...HOOK.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING.tug + 3)],
-      taps: [at(S.cards, CARDS.press), at(S.cards, CARDS.suggest.press)],
+      taps: [at(S.cards, CARDS.press)],
       typing: [],
       cards: [at(S.cards, CARDS.suggest.at + 6)],
       saved: [at(S.cards, CARDS.saved.check), at(S.cards, CARDS.done.check)],
       shutters: CARDS.sari.thumbs.map((t) => at(S.cards, t)),
-      whooshes: [sec(S.cards[0]), at(S.cards, CARDS.sari.at), at(S.cards, CARDS.garden[0])],
+      whooshes: [sec(S.cards[0]), at(S.cards, CARDS.sari.at), sec(S.ending[0])],
       arrive: at(S.cards, CARDS.sari.at + 12),
       sleep: null,
       ping: null,
       kakak: sec(S.kakak[0] + 26),
-      garden: [0, at(S.cards, CARDS.garden[0])],
+      garden: [0, sec(S.ending[0])],
       mark: at(S.ending, ENDING.mark),
     };
   }
@@ -180,7 +179,7 @@ export function soundCues(cut: "60" | "15") {
     fall: sec(HOOK15.fall),
     call: [sec(HOOK15.bell), at(S.ending, ENDING15.bell)],
     tugs: [...HOOK15.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING15.tug + 3)],
-    taps: [at(S.cards, CARDS15.suggest.press)],
+    taps: [],
     typing: [],
     cards: [at(S.cards, CARDS15.suggest.at + 6)],
     saved: [at(S.cards, CARDS15.saved.check)],

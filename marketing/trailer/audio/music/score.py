@@ -331,8 +331,8 @@ def fifteen(style):
 # exactly 8 s later: Kakak's "That one's yours." still sits where the score opens (now 55.0 s), the card bar at 65.0 s.
 # The repeated bars carry no tune or a held one: 7 and 9 (the tell pulse), 15 (Sari's F#–D), 18 (the held F#), so the
 # fade to silence after bar 19 still happens once.
-REPEAT_BARS = (7, 9, 15, 18)
-LONG = 68
+REPEAT_BARS = (18,)  # v12: one bar (62 s); v11 repeated 7, 9, 15 and 18 (68 s)
+LONG = 62
 
 
 def lengthen(x, repeats=REPEAT_BARS, first=5.0, bar=BAR, fade=0.04):

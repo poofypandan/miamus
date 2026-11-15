@@ -1,5 +1,43 @@
 # The Miamus trailer: what was made, and why
 
+## Version 12 (15 November 2026): clear but moving
+
+Owner's notes on v11. Four cuts in `docs/private/marketing/trailer-v12/`
+(the long cut is `miamus-62-*`); v11 is untouched.
+
+- **Kakak's intro, the why:** "Hi, I'm Kakak. Just tell me what you need." /
+  "Halo, ini Kakak. Bilang saja apa yang Anda perlukan." (the way she
+  introduces herself elsewhere, "ini Kakak", and the owner as Anda, per the
+  glossary). The "Miamus's AI helper" tag stays on screen while she speaks:
+  that is the AI disclosure. New Lyly takes (ID take 3; EN take 4, sent as
+  "Hi! I'm Kakak." for a little more lift on the name: the first English
+  take was right on its own but its soft K was heard as "Taka" under the
+  music). Her name and the tag spring in as she starts (11.2–11.5 s).
+  "Tell me once." later stays.
+- **The mic press lands on the mic.** v11 used the tap point recorded on the
+  listening screen's layout, so the ripple sat on "Nothing is saved until
+  you confirm"; it now uses the mic's position on the idle sheet itself.
+- **No press on any card.** Kakak's card rings only what / who / when; Sari's
+  card rings only the "Pel teras" task line, then her photos pop on. The
+  checks and the arrivals ("Saved", "selesai") stay.
+- **Pacing:** each card holds about 2 s, and the next begins entering as the
+  last settles (0.4 s overlap). With that the cards need less time, so the
+  score repeats one bar instead of four (bar 18, the held F#, under "All on
+  track"): **62 s**. Two repeated bars (64 s) would have left about 8 s with
+  nothing new to show. The composed ending is intact, on its bars: tug, call
+  and bell 47.0; "That one's yours." 49.0, where the score opens; Mama 51.4;
+  the hand 53.0; crane 55.0; end line 55.3; card 59.0; address 59.6; end
+  62.0.
+- **Ending continuity:** the last card leaves; the garden comes into focus,
+  wide, with Mama already standing beside the girl (44.0–45.0); then one
+  eased push-in to the close two-shot (45.4–46.8), with no cut, before the tug.
+- **Checked:** the stutter check clean on all four cuts, with no exceptions;
+  MP4s at -14.0 LUFS, true peak -1.4 to -1.7 dBTP; every line in the
+  finished mixes (Kakak's name heard as "Kaka", the Indonesian final stop,
+  as since v5); frames from the MP4s against the safe-area overlay,
+  including the dawn shot with the AI tag on screen from her first word.
+- **Credits:** 8,634 characters used of the key's 10,000 (v12: 408).
+
 ## Version 11 (15 November 2026): cards, so anyone can follow it
 
 The owner's mother-in-law watched v10 and did not understand what the app is

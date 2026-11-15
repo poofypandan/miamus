@@ -75,7 +75,7 @@ export const COPY: Record<Locale, Copy> = {
     lines: {
       L1: "Running a home takes a lot of asking.",
       L2: "What if you only had to say it once?",
-      L3: "Hi. I'm Kakak, the AI helper inside Miamus.",
+      L3: "Hi, I'm Kakak. Just tell me what you need.",
       L4: "Tell me once.",
       L4b: "I'll take it from there.",
       L5: "And everyone at home knows what to do.",
@@ -142,7 +142,7 @@ export const COPY: Record<Locale, Copy> = {
     lines: {
       L1: "Mengurus rumah itu banyak bertanya.",
       L2: "Bagaimana kalau cukup bilang sekali?",
-      L3: "Halo. Ini Kakak, asisten AI di Miamus.",
+      L3: "Halo, ini Kakak. Bilang saja apa yang Anda perlukan.",
       L4: "Bilang sekali ke Kakak.",
       L4b: "Sisanya, Kakak yang atur.",
       L5: "Dan semua orang di rumah tahu harus apa.",

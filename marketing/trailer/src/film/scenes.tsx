@@ -195,8 +195,9 @@ export function MeetKakak({ locale, t0 }: SceneProps) {
   const total = len(S60.kakak);
   const p = frame / total;
   const out = ramp(frame, total - 16, total);
-  const name = springAt(frame, fps, 24, { damping: 16, stiffness: 120 });
-  const tag = springAt(frame, fps, 38, { damping: 15, stiffness: 150 });
+  // v12: her name and the AI tag are on screen from the moment she starts speaking (the tag is the AI disclosure).
+  const name = springAt(frame, fps, 4, { damping: 16, stiffness: 120 });
+  const tag = springAt(frame, fps, 9, { damping: 15, stiffness: 150 });
   const gloss = ramp(frame, 52, 66);
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
@@ -471,13 +472,14 @@ export function Cards({ locale, t0, fast }: SceneProps) {
   const total = fast ? len(S15.cards) : len(S60.cards);
   // The day passes behind the cards: morning to late afternoon, softly blurred; at the end the garden comes into focus.
   const C = CARDS;
-  const toGarden = fast ? 0 : ramp(frame, C.garden[0], C.garden[1], ease);
-  const tod = fast ? lerp(7.8, 9.4, frame / total) : lerp(7.75, 17.62, ramp(frame, 0, C.garden[0]));
+  // v12: the garden comes into focus in the ending scene (one continuous move), so the cards end on the blurred day.
+  const toGarden = 0;
+  const tod = fast ? lerp(7.8, 9.4, frame / total) : lerp(7.75, 17.62, ramp(frame, 0, total));
   const worldCam: Cam = { x: lerp(0, -30, toGarden), y: lerp(40, 300, toGarden), z: lerp(1.04, 1.02, toGarden) };
   const S = fast ? CARDS15 : CARDS;
   return (
     <AbsoluteFill>
-      <Backdrop tod={tod} frame={frame + t0} cam={worldCam} blur={lerp(22, 0, toGarden)} wash={0.08 * (1 - toGarden)} people={toGarden} />
+      <Backdrop tod={tod} frame={frame + t0} cam={worldCam} blur={22} wash={0.08} people={toGarden} />
       {!fast && <PhoneOnce locale={locale} />}
       {!fast && (
         <CaptureCard src={`${dir}/k0-listen-base.png`} region={CARD_REGIONS.listen[locale]} at={C.listen.at} out={C.listen.out} tag={copy.tags.you}>
@@ -498,7 +500,6 @@ export function Cards({ locale, t0, fast }: SceneProps) {
         at={S.suggest.at}
         out={S.saved.out}
         tag={copy.tags.you}
-        press={{ at: S.suggest.press, x: 195, y: CARD_REGIONS.suggestRing[locale].y + 37 }}
         check={S.suggest.check}
         fadeBottom
         below={{
@@ -520,7 +521,8 @@ export function Cards({ locale, t0, fast }: SceneProps) {
         tag={copy.tags.sari}
         below={fast ? undefined : { src: "shots/staff/done.png", region: CARD_REGIONS.done, at: C.done.at, check: C.done.check }}
       >
-        <Glow x={16} y={289} w={358} h={124} at={S.sari.ring} until={fast ? S.sari.out + 14 : C.done.at} radius={18} />
+        {/* v12: only the task line is ringed; then her photos pop on. */}
+        <Glow x={22} y={300} w={204} h={46} at={S.sari.ring} until={fast ? S.sari.out + 14 : C.done.at} radius={10} />
         <Thumb src="shots/staff/photo-after.png" crop={PHOTO_BEFORE} x={238} y={298} size={56} at={S.sari.thumbs[0]} />
         <Thumb src="shots/staff/photo-after.png" crop={PHOTO_AFTER} x={302} y={298} size={56} at={S.sari.thumbs[1]} />
       </CaptureCard>
@@ -533,6 +535,9 @@ export function Cards({ locale, t0, fast }: SceneProps) {
   );
 }
 
+/** v12: the mic on the idle sheet (k0-open), measured from the capture: the press lands exactly on it. */
+const MIC_IDLE = { x: 195, y: 265 };
+
 /** The one real phone shot: Kakak's sheet, the mic; a press (a dip, a soft ripple, no finger); then it gives way. */
 function PhoneOnce({ locale }: { locale: Locale }) {
   const frame = useCurrentFrame();
@@ -544,11 +549,10 @@ function PhoneOnce({ locale }: { locale: Locale }) {
   const cam = look(0, 2.12, 300, 740, { X: (CLEAR.left + CLEAR.right) / 2 });
   cam.Y += (1 - rise) * 1500;
   const away = ramp(frame, C.phoneOut[0], C.phoneOut[1], easeIn);
-  const mic = tap(`${locale}.mic`);
   const dip = 1 - 0.02 * (0.5 - 0.5 * Math.cos(2 * Math.PI * Math.min(1, Math.max(0, (frame - C.press) / 12))));
   return (
     <AbsoluteFill style={{ opacity: 1 - away, transform: `scale(${dip * (1 - 0.06 * away)})` }}>
-      <Phone cam={cam} overlay={<PressRing x={mic.x} y={mic.y} at={C.press} />}>
+      <Phone cam={cam} overlay={<PressRing x={MIC_IDLE.x} y={MIC_IDLE.y} at={C.press} />}>
         <ScreenTrack cues={[{ src: `shots/${locale}/k0-open-clean.png`, at: 0, fade: 0 }]} />
       </Phone>
     </AbsoluteFill>
@@ -574,19 +578,32 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   const copy = COPY[locale];
   const E = fast ? ENDING15 : ENDING;
   // The light deepens from the garden to the end card (v9: the 60 s ending starts 2.8 s sooner, at 44.2 s).
-  const tod = fast ? lerp(17.74, 18.42, ramp(frame, 24, 112, (t) => t)) : lerp(17.64, 18.42, ramp(frame, 114, 384, (t) => t));
+  const tod = fast ? lerp(17.74, 18.42, ramp(frame, 24, 112, (t) => t)) : lerp(17.62, 18.42, ramp(frame, 120, 390, (t) => t));
   // Fable's mirror: the walk stays wide, a push over her last steps to the hook's two-shot, then the crane back up the
   // string to the sky. The 15-second cut opens already in the two-shot.
   const sky: Cam = { x: 0, y: -1150, z: 1 };
   const string: Cam = { x: -16, y: 300, z: 1.05 };
-  // v7: both cuts open close on the pair, then the crane back up the string to the sky.
-  const cam = keys<Cam>(frame, [
-    { at: 0, ...TWO_SHOT },
-    { at: E.crane[0], ...TWO_SHOT },
-    { at: Math.round(E.crane[0] + (E.crane[1] - E.crane[0]) * 0.45), ...string },
-    { at: E.crane[1], ...sky },
-  ]);
-  const close = 1 - ramp(frame, E.crane[0], E.crane[0] + 12);
+  // v12: the 15 s cut opens close on the pair. The 60 s cut opens where the cards left off (the blurred garden), comes
+  // into focus wide with Mama already beside the girl, then pushes in once, eased, to the close two-shot. No cut.
+  const blurred: Cam = { x: 0, y: 40, z: 1.04 };
+  const cam = fast
+    ? keys<Cam>(frame, [
+        { at: 0, ...TWO_SHOT },
+        { at: E.crane[0], ...TWO_SHOT },
+        { at: Math.round(E.crane[0] + (E.crane[1] - E.crane[0]) * 0.45), ...string },
+        { at: E.crane[1], ...sky },
+      ])
+    : keys<Cam>(frame, [
+        { at: 0, ...blurred },
+        { at: ENDING.settle[1], ...GARDEN },
+        { at: ENDING.push[0], ...GARDEN },
+        { at: ENDING.push[1], ...TWO_SHOT },
+        { at: E.crane[0], ...TWO_SHOT },
+        { at: Math.round(E.crane[0] + (E.crane[1] - E.crane[0]) * 0.45), ...string },
+        { at: E.crane[1], ...sky },
+      ]);
+  const close = (fast ? 1 : ramp(frame, ENDING.push[0], ENDING.push[1])) * (1 - ramp(frame, E.crane[0], E.crane[0] + 12));
+  const focus = fast ? 1 : ramp(frame, ENDING.settle[0], ENDING.settle[1], ease);
   const walk = ramp(frame, E.mama[0], E.mama[1], (t) => 1 - (1 - t) * (1 - t));
   const lift = 0.3 * ramp(frame, E.lift[0], E.lift[1]);
   // On arrival the same single tug and the point; Mama shades her eyes (the opening's silhouette, no phone) and her
@@ -598,7 +615,11 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   const mamaPose = { shade: ramp(frame, shade[0], shade[1], ease), hold: ramp(frame, hold[0], hold[1], ease), sway: moves.sway };
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
-      <SoftWorld soft={5 * close} light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} mamaPose={mamaPose} childPose={moves.child} kiteLift={lift} birds={1} />
+      {/* Out of the cards' blur (22 px, as the backdrop was) into focus; the slight scale matches the backdrop's. */}
+      <AbsoluteFill style={{ filter: focus < 1 ? `blur(${(22 * (1 - focus)).toFixed(2)}px)` : undefined, transform: focus < 1 ? `scale(${1 + 0.06 * (1 - focus)})` : undefined }}>
+        <SoftWorld soft={5 * close} light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} mamaPose={mamaPose} childPose={moves.child} kiteLift={lift} birds={1} />
+      </AbsoluteFill>
+      {focus < 1 && <AbsoluteFill style={{ background: `rgba(255,250,242,${(0.08 * (1 - focus)).toFixed(3)})` }} />}
       <Vignette />
       <CallTwo lines={copy.call} {...CALL_TWO} at={E.bell} out={E.crane[0] + 6} />
       <EndCard line={copy.end.line} em={copy.end.em} call={copy.end.call} url={copy.end.url} mark={E.mark} name={E.name} lineAt={E.line} callAt={"call" in E ? (E as { call: number }).call : undefined} urlAt={E.url} />

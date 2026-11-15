@@ -1,6 +1,8 @@
 # Licences: what is in the trailer, and the right to use it in paid ads
 
-Version 11 (15 November 2026) shows the app's real screens as cards cut from
+Version 12 (15 November 2026) changes Kakak's intro line (a new take, same
+voice and terms; `elevenlabs-provenance-v12.json`); the "Miamus's AI helper"
+tag stays on screen as the AI disclosure. Version 11 showed the app's real screens as cards cut from
 the same captures, gives Mama's request a "Kak," (a new take, same voice and
 terms; `elevenlabs-provenance-v11.json`) and lengthens the score from its own
 bars (no new music). Version 10 added Mama saying one sentence to Kakak (a new

@@ -40,10 +40,10 @@ LOCALE_CUES = {"id": {"15": {"S3": 11.45}}}
 #   is 0.8 s earlier, so Kakak's "That one's yours. Go play." comes straight after L9 while the notification
 #   is on screen; Mama answers as her hand comes up to shade her eyes, then a held moment before the crane.
 # v6 (Fable's pacing): every line re-timed onto the new picture. Tell 15–26.4 s, staff 26.4–38, quiet 38–47.
-# v11 (the owner's card cut, 68 s): each line on its card; the climax on the same bars 8 s later: Kakak 55.0 (where the
-# score opens), Mama 57.4; the end line 61.3. One set of cues for both languages.
-CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.45, "T1": 17.1, "L4b": 23.2, "L5": 30.6, "L6": 33.6,
-              "L7a": 36.8, "L7b": 41.4, "L8": 43.8, "L9": 46.7, "L10": 55.0, "M2": 57.4, "L11": 61.3}
+# v12 (62 s): each line on its card, the cards a little quicker; the climax on its bars: Kakak 49.0 (where the score
+# opens), Mama 51.4; the end line 55.3. One set of cues for both languages.
+CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.45, "T1": 17.1, "L4b": 22.7, "L5": 27.5, "L6": 30.4,
+              "L7a": 32.2, "L7b": 34.3, "L8": 36.6, "L9": 39.5, "L10": 49.0, "M2": 51.4, "L11": 55.3}
 CUES["15"] = {"M1": 1.6, "S1": 3.15, "S2": 7.3, "S3": 11.85}
 LOCALE_CUES["id"]["60"] = {}
 LOCALE_CUES["id"]["15"] = {"S3": 11.5}

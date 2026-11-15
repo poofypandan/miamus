@@ -61,3 +61,8 @@ picture, music, sound and timing stay v4's.
 - [x] Cards cut from the real captures, the phone once, "Kak," in Mama's request, no clock, 68 s (score bars repeated)
 - [x] Composed for the whole safe area; four MP4s and docs in `docs/private/marketing/trailer-v11/` (long cut `miamus-68-*`)
 - [ ] Fable reviews after Wednesday's reset; the owners watch v11
+
+## v12 (15 Nov)
+
+- [x] Kakak's intro is the why (AI tag on screen), no presses on cards, quicker cards, 62 s, one continuous push-in at the end
+- [x] Four MP4s and docs in `docs/private/marketing/trailer-v12/` (long cut `miamus-62-*`)
