@@ -1,0 +1,30 @@
+{
+ "generated": "2026-11-15",
+ "service": "ElevenLabs API, POST /v1/text-to-speech/{voice_id}",
+ "plan": "Creator (owner's account)",
+ "model_id": "eleven_v4",
+ "note": "v7 replaces Kakak's L10 with a soft take ('[softly]' is an eleven_v4 audio tag that directs delivery and is not spoken). Every other line is as in v6 (elevenlabs-provenance-v6.json) and v5 (elevenlabs-provenance.json).",
+ "characters_total_project": 7014,
+ "lines": [
+  {
+   "speaker": "Kakak",
+   "line": "L10",
+   "language": "en",
+   "text_sent": "[softly] That one's yours.",
+   "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+   "seed": 112,
+   "request_id": "dt4h43Fy2ts7amGwyTDT",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Kakak",
+   "line": "L10",
+   "language": "id",
+   "text_sent": "[softly] Yang ini untuk Anda.",
+   "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+   "seed": 112,
+   "request_id": "jwe6T9DIzXZGprRMThYC",
+   "format": "wav_48000"
+  }
+ ]
+}

@@ -106,19 +106,15 @@ export const STAFF = {
 export const SARI15 = { push: [0, 60] as Span, glow: 4 };
 
 /** All on track; the phone sleeps; the one notification; the garden comes back (frames in "quiet"). */
-// v6 (frames in "quiet", 0 = 38.0 s): "All on track" as one still with a slow push-in (3.4 s); the phone sleeps at
-// 41.4 s; the ping at 42.7 s; the notification held 2.6 s, during which Kakak says "That one's yours. Go play.";
-// then the phone falls away and the garden comes back at 47.0 s.
-export const QUIET = { push: [0, 102] as Span, sleep: [102, 118] as Span, set: [120, 136] as Span, ping: 141, close: [150, 168] as Span, away: [246, 270] as Span };
+// v7 (frames in "quiet", 0 = 38.0 s): "All on track" as one still with a slow push-in (3.4 s); the phone sleeps at
+// 41.4 s and is set down; a small clock on its dark screen runs 4:30 → 5:30 while L9 is said and then nothing arrives.
+// No notification and no ping: the silence is the promise. The phone falls away and the garden comes back at 47.0 s.
+export const QUIET = { push: [0, 102] as Span, sleep: [102, 118] as Span, set: [120, 136] as Span, clock: [140, 236] as Span, away: [246, 270] as Span };
 
-/** The ending (frames in "ending"): Mama walks out, they look up, the camera follows the kite, the name. */
-// v6 (Fable): Mama walks out (a little sooner, nothing in her hands); on arrival the girl gives the same single tug
-// and points, with the bell; Mama shades her eyes ("I'm looking, sweetie."), takes the girl's hand; a held moment,
-// then the crane, which still ends on the mark.
-// Fable's framing: the walk stays wide, then a push over her last steps to the hook's close two-shot; tug and point
-// at 50.9 s; her hand to her eyes from 51.3 s; hold to 52.8 s; the crane back up the string; Kakak's end line
-// ~53.6–55.9 s; the mark, name and written line arrive silent on the bell's last three notes at 57.0 s; the address last.
-export const ENDING = { mama: [10, 90] as Span, push: [90, 117] as Span, tug: 117, point: 123, bell: 124, shade: [129, 144] as Span, hold: [146, 168] as Span, lift: [120, 250] as Span, crane: [174, 232] as Span, mark: 270, name: 279, line: 288, call: 300, url: 338 };
+// v7 (Fable): the garden opens close on the pair (Mama already beside her, nothing in her hands). 48.0 the tug, the
+// point, her handwriting and the bell; 49.2 Mama's "I'm looking, sweetie." as her hand comes up; 50.6 she takes the
+// girl's hand; 51.2–52.4 Kakak, softly, "That one's yours."; 53.0 the crane; Kakak's end line from 53.6; the card at 57.0.
+export const ENDING = { mama: [-80, -1] as Span, tug: 30, point: 36, bell: 37, shade: [62, 77] as Span, hold: [80, 98] as Span, lift: [120, 250] as Span, crane: [180, 232] as Span, mark: 270, name: 279, line: 288, call: 300, url: 338 };
 export const ENDING15 = { tug: 6, point: 12, bell: 13, shade: [18, 36] as Span, hold: [38, 56] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 78, line: 84, call: 90, url: 106 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */
@@ -143,7 +139,7 @@ export function soundCues(cut: "60" | "15") {
       whooshes: [sec(S.tell[0]), at(S.staff, STAFF.line[0]), at(S.staff, STAFF.push[0]), sec(S.quiet[0]), at(S.quiet, QUIET.away[0])],
       arrive: at(S.staff, STAFF.line[1]),
       sleep: at(S.quiet, QUIET.sleep[0]),
-      ping: at(S.quiet, QUIET.ping),
+      ping: null,
       kakak: sec(S.kakak[0] + 26),
       garden: [0, at(S.quiet, QUIET.away[0])],
       mark: at(S.ending, ENDING.mark),

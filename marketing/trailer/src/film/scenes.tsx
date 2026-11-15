@@ -382,6 +382,22 @@ export function Sari({ t0 }: SceneProps) {
 /* 8. Quiet, and the one notification                                  */
 /* ------------------------------------------------------------------ */
 
+/** v7: the time on the sleeping phone's dark screen, 4:30 to 5:30 PM in an hour of the film's seconds; nothing else arrives. */
+function DarkClock({ locale, from, to }: { locale: Locale; from: number; to: number }) {
+  const frame = useCurrentFrame();
+  const o = ramp(frame, from - 8, from + 6);
+  if (o <= 0) return null;
+  const minutes = 16 * 60 + 30 + Math.round(60 * ramp(frame, from, to, (t) => t));
+  const h = Math.floor(minutes / 60);
+  const m = pad(minutes % 60);
+  const text = locale === "en" ? `${((h + 11) % 12) + 1}:${m}` : `${pad(h)}.${m}`;
+  return (
+    <div style={{ position: "absolute", left: 0, right: 0, top: 150, textAlign: "center", fontFamily: FONT, fontSize: 76, fontWeight: 300, letterSpacing: -2, color: "rgba(236,238,245,0.78)", fontVariantNumeric: "tabular-nums", opacity: o }}>
+      {text}
+    </div>
+  );
+}
+
 export function Quiet({ locale, t0 }: SceneProps) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -389,16 +405,15 @@ export function Quiet({ locale, t0 }: SceneProps) {
   const dir = `shots/${locale}`;
   const Q = QUIET;
   const rise = springAt(frame, fps, 0, { damping: 19, stiffness: 90, mass: 0.9 });
-  // "All on track" as one still with a slow push-in; then one change at a time: sleep, set down, the ping, closer.
+  // "All on track" as one still with a slow push-in; then one change at a time: sleep, set down, the hour passing.
   const cam = keys<PhoneCam>(frame, [
     look(0, 2.2, 250, 700),
     look(Q.push[1], 2.36, 262, 700),
     look(Q.set[0], 2.36, 262, 700),
     look(Q.set[1], 1.42, 422, 730, { rz: -3 }),
-    look(Q.close[0], 1.42, 422, 730, { rz: -3 }),
-    look(Q.close[1], 2.5, 150, 690),
-    look(Q.away[0], 2.5, 150, 690),
-    { ...look(Q.away[1], 2.3, 150, 2900, { rz: 9 }), ease: easeIn },
+    // v7: set down, dark, and a slow drift closer while nothing arrives.
+    look(Q.away[0], 1.56, 422, 730, { rz: -3 }),
+    { ...look(Q.away[1], 1.5, 422, 2900, { rz: 6 }), ease: easeIn },
   ]);
   cam.Y += (1 - rise) * 1500;
   const sleep = ramp(frame, Q.sleep[0], Q.sleep[1]);
@@ -407,9 +422,9 @@ export function Quiet({ locale, t0 }: SceneProps) {
   const worldCam: Cam = { x: lerp(0, GARDEN.x, away), y: lerp(40, GARDEN.y, away), z: lerp(1.04, GARDEN.z, away) };
   return (
     <AbsoluteFill>
-      <Backdrop tod={tod} frame={frame + t0} cam={worldCam} blur={lerp(22, 0, ramp(frame, Q.away[0], Q.away[1] - 4))} wash={0.08 * (1 - away)} people={ramp(frame, Q.set[0], Q.ping)} />
+      <Backdrop tod={tod} frame={frame + t0} cam={worldCam} blur={lerp(22, 0, ramp(frame, Q.away[0], Q.away[1] - 4))} wash={0.08 * (1 - away)} people={ramp(frame, Q.set[0], Q.set[1] + 20)} />
       <Vignette strength={0.34 * away} />
-      <Phone cam={cam} sleep={sleep} fade={1 - ramp(frame, Q.sleep[0], Q.sleep[0] + 12)} above={<NotificationCard {...copy.push} at={Q.ping} />}>
+      <Phone cam={cam} sleep={sleep} fade={1 - ramp(frame, Q.sleep[0], Q.sleep[0] + 12)} above={<DarkClock locale={locale} from={Q.clock[0]} to={Q.clock[1]} />}>
         <ScreenTrack cues={[{ src: `${dir}/status.png`, at: 0, fade: 0 }]} />
       </Phone>
     </AbsoluteFill>
@@ -429,22 +444,14 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   // string to the sky. The 15-second cut opens already in the two-shot.
   const sky: Cam = { x: 0, y: -1150, z: 1 };
   const string: Cam = { x: -16, y: 300, z: 1.05 };
-  const cam = fast
-    ? keys<Cam>(frame, [
-        { at: 0, ...TWO_SHOT },
-        { at: E.crane[0], ...TWO_SHOT },
-        { at: Math.round((E.crane[0] + E.crane[1]) / 2), ...string },
-        { at: E.crane[1], ...sky },
-      ])
-    : keys<Cam>(frame, [
-        { at: 0, ...GARDEN },
-        { at: ENDING.push[0], ...GARDEN },
-        { at: ENDING.push[1], ...TWO_SHOT },
-        { at: E.crane[0], ...TWO_SHOT },
-        { at: Math.round(E.crane[0] + (E.crane[1] - E.crane[0]) * 0.45), ...string },
-        { at: E.crane[1], ...sky },
-      ]);
-  const close = fast ? 1 - ramp(frame, E.crane[0], E.crane[0] + 12) : ramp(frame, ENDING.push[0], ENDING.push[1]) * (1 - ramp(frame, E.crane[0], E.crane[0] + 12));
+  // v7: both cuts open close on the pair, then the crane back up the string to the sky.
+  const cam = keys<Cam>(frame, [
+    { at: 0, ...TWO_SHOT },
+    { at: E.crane[0], ...TWO_SHOT },
+    { at: Math.round(E.crane[0] + (E.crane[1] - E.crane[0]) * 0.45), ...string },
+    { at: E.crane[1], ...sky },
+  ]);
+  const close = 1 - ramp(frame, E.crane[0], E.crane[0] + 12);
   const walk = ramp(frame, E.mama[0], E.mama[1], (t) => 1 - (1 - t) * (1 - t));
   const lift = 0.3 * ramp(frame, E.lift[0], E.lift[1]);
   // On arrival the same single tug and the point; Mama shades her eyes (the opening's silhouette, no phone) and her

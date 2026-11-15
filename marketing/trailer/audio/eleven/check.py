@@ -64,7 +64,8 @@ def audition(slugs):
 
 
 # Lines that are not Kakak's (v6: Mama).
-OTHER = {("en", "M1"): "In a minute, sweetie…", ("en", "M2"): "I'm looking, sweetie.", ("id", "M1"): "Sebentar ya, sayang…", ("id", "M2"): "Iya, Mama lihat, sayang."}
+OTHER = {("en", "M1"): "In a minute, sweetie…", ("en", "M2"): "I'm looking, sweetie.", ("id", "M1"): "Sebentar ya, sayang…", ("id", "M2"): "Iya, Mama lihat, sayang.",
+         ("en", "L10"): "That one's yours.", ("id", "L10"): "Yang ini untuk Anda."}
 
 
 def final(slug, tag="final"):

@@ -1,5 +1,41 @@
 # The Miamus trailer: what was made, and why
 
+## Version 7 (15 November 2026): the moment is hers
+
+The owner's note on v6: Kakak should hand Mama the moment with her
+daughter, not the dog task. v7 changes only the end of the film. Four cuts
+in `docs/private/marketing/trailer-v7/`; v4 to v6 are untouched.
+
+- **No notification, no ping.** After "All on track" the phone sleeps;
+  Kakak says "And you? You'll only hear from me… when something isn't
+  done." over the dark phone, and a small clock on its screen runs 4:30 →
+  5:30 while nothing arrives. The silence is the promise. ("Did anyone play
+  with Coco?" stays among the hook's questions.)
+- **The ending, in Fable's order:** the garden opens close on the pair
+  (47.0 s); the girl tugs and points, with her handwriting and the bell
+  (48.0); Mama shades her eyes, "I'm looking, sweetie." (49.2); she takes
+  the girl's hand (50.6); then Kakak, softly, over the two of them:
+  "That one's yours." (51.2). Kakak never speaks between the call and the
+  answer. The crane at 53.0, Kakak's end line from 53.6, the card at 57.0.
+- **Kakak's line:** EN "That one's yours.", ID "Yang ini untuk Anda."
+  ("bagian" read as a share of the work). "Go play" is gone. A soft take
+  (eleven_v4's "[softly]" tag, which directs delivery and is not spoken),
+  set 3 dB under her usual level.
+- **Indonesian timing:** Mama's Indonesian answer runs to 51.4 s, so
+  "Yang ini untuk Anda." starts at 51.5 and ends at ~53.2, about 0.8 s past
+  Fable's 52.4 (into the crane's first moment). Not rushed. English fits.
+- **15 s:** unchanged from v6 (it had no ping and no "That one's yours").
+- **Checked:** every line word for word (Whisper); the four MP4s at
+  -14.0 LUFS; frames of the quiet beat and the ending in both languages.
+- **Credits:** 7,014 characters used of the key's 10,000 (v7: 165).
+
+### To re-render v7
+
+As v6, then place Kakak's soft L10 (take 2) into `audio/out/vo/eleven-lyly-v7/`
+(a copy of `eleven-lyly-v6/` with `L10.wav` from `audio/out/eleven/v7/lyly/<lang>/L10.t2.*`,
+through `jobs.to_wav48` + `jobs.tidy48`, then × 0.708 for -3 dB), and mix with
+`--voice eleven-lyly-v7 --mama mama-aita`.
+
 ## Version 6 (15 November 2026): the girl's call, understood
 
 Friends who watched v5 missed the story of "Mama, look!". v6 tells it with
@@ -51,6 +87,7 @@ full spec (Fable's notes and the owner's choices) is `V6-SPEC.md`.
 | v4 | Kokoro-82M (open source) | none | none (the bell) |
 | v5 | ElevenLabs, Voice Library "Lyly" | none | none (the bell) |
 | v6 | Lyly, with two new lines | ElevenLabs, Voice Library "Aita" | no voice: the bell, handwriting, cloth tugs |
+| v7 | Lyly, "That one's yours." softly at the end | Aita | as v6 |
 
 ### To re-render v6
 
