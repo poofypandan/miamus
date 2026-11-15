@@ -1,5 +1,5 @@
 import { WRITE_TIMEOUT_MS } from "@/lib/supabase/write-timeout";
-import { ChoreAlreadySettledError } from "@/lib/chore-settled";
+import { ChoreAlreadySettledError, ChoreChangedError } from "@/lib/chore-settled";
 import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import type { OrganiseRoomsMoved,
@@ -21,7 +21,7 @@ import { withLines } from "@/lib/recipes";
 import { MenuAlreadyCookedError } from "./types";
 import { CookingRuleError, cookingRefusal } from "@/lib/cooked-uses";
 import type { CookedDish, CreateHouseholdTaskInput, DataProvider, HouseCodeClaim, HouseCodePerson, HouseCodeSignIn, LinkedPhone, PinCheck } from "./types";
-import { longRepeatFloorFor, longestGapDays, LONGEST_REPEAT_GAP_DAYS, rolloverFloorFor } from "@/lib/chore-recurrence";
+import { canWriteDayOf, longRepeatFloorFor, longestGapDays, LONGEST_REPEAT_GAP_DAYS, rolloverFloorFor } from "@/lib/chore-recurrence";
 
 function client() {
   if (!supabase) throw new Error("Supabase client is not configured");
@@ -1000,6 +1000,11 @@ export const supabaseProvider: DataProvider = {
       .eq("id", templateId)
       .single();
     if (readError) throw withStatus(readError, readStatus);
+    // household_tasks_owner_guard's rule for a staff phone's day row, checked
+    // against the template as the server has it now: a top-level repeat, on
+    // one of its days. Otherwise the insert is refused (chore_owner_only)
+    // however often it is sent, so say why instead, without sending it.
+    if (!canWriteDayOf(template, date)) throw new ChoreChangedError();
 
     const { data, error, status: insertStatus } = await client()
       .from("household_tasks")

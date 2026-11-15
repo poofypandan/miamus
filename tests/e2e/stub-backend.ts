@@ -389,7 +389,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     if (table === "food_items") return answerFood(route, foods, false);
     if (table === "task_logs") return answerLogs(route, logs);
     if (table === "household_tasks") return answerTasks(route, tasks, options.chores, who);
-    if (table === "task_exceptions") return answerExceptions(route, exceptions);
+    if (table === "task_exceptions") return answerExceptions(route, exceptions, [...(options.chores ?? []), ...tasks]);
     return route.fulfill({ json: [] });
   }
 
@@ -883,7 +883,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       if (table === "repair_visits") return answerWalkIns(route, walkIns, supervision, who === OWNER);
       if (table === "repair_supervision") return answerSupervision(route, walkIns, supervision);
       // Phase 165 (migrations/139): couldn't-do records and the admin's switches.
-      if (table === "task_exceptions") return answerExceptions(route, exceptions);
+      if (table === "task_exceptions") return answerExceptions(route, exceptions, [...(options.chores ?? []), ...tasks]);
       if (table === "rpc/my_notification_prefs" && who === OWNER) return route.fulfill({ json: [notificationPrefs] });
       if (table === "rpc/set_my_notification_prefs" && who === OWNER) {
         const body = request.postDataJSON() ?? {};
@@ -1150,6 +1150,66 @@ function photoRefusal(
   return ownPhotoFree ? null : { code: "23514", message: "A chore is completed with both a before and an after photo" };
 }
 
+/**
+ * chore_occurs_on (migrations/137), written out on its own as the SQL has it
+ * (UTC dates, whole days), not borrowed from the app's occursOn: the stub is
+ * the server here, and has to disagree with the app where the server would.
+ */
+function choreOccursOn(t: Record<string, unknown>, day: string): boolean {
+  const recurrence = (t.recurrence as string | null) ?? "none";
+  const start = String(t.due_date);
+  if (recurrence === "none") return day === start;
+  if (day < start) return false;
+  if (t.recurrence_until && day > String(t.recurrence_until)) return false;
+  if (recurrence === "daily") return true;
+  const interval = Math.max(Number(t.recurrence_interval ?? 1) || 1, 1);
+  const a = new Date(`${start}T00:00:00Z`);
+  const b = new Date(`${day}T00:00:00Z`);
+  if (recurrence === "weekly") {
+    const days = Math.round((b.getTime() - a.getTime()) / 86_400_000);
+    return a.getUTCDay() === b.getUTCDay() && Math.floor(days / 7) % interval === 0;
+  }
+  if (recurrence === "monthly") {
+    const months = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + b.getUTCMonth() - a.getUTCMonth();
+    const last = new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth() + 1, 0)).getUTCDate();
+    return months % interval === 0 && b.getUTCDate() === Math.min(a.getUTCDate(), last);
+  }
+  return false;
+}
+
+/**
+ * household_tasks_owner_guard on an insert (migrations/128, as 137 left it),
+ * for anyone who isn't the household's admin: a staff phone may only write a
+ * repeat's own day, copied from it. Null when allowed.
+ */
+function staffDayRowRefusal(fields: Record<string, unknown>, all: Record<string, unknown>[]): string | null {
+  if (fields.status !== undefined && fields.status !== "pending" && fields.status !== "completed") return "chore_owner_only";
+  if (!fields.parent_task_id) return "chore_owner_only";
+  const template = all.find(
+    (t) => t.id === fields.parent_task_id && !t.parent_task_id && ((t.recurrence as string | null) ?? "none") !== "none"
+  );
+  if (!template) return "chore_owner_only";
+  const same = (key: string, fallback: unknown = null) => (fields[key] ?? fallback) === (template[key] ?? fallback);
+  if (
+    !same("title") ||
+    !same("notes") ||
+    !same("category") ||
+    !same("due_time") ||
+    !same("requires_supervision", false) ||
+    !same("location_id") ||
+    !same("spot") ||
+    !same("repair_id") ||
+    ((fields.recurrence as string | null) ?? "none") !== "none" ||
+    fields.recurrence_until != null ||
+    (fields.recurrence_interval ?? 1) !== 1 ||
+    fields.remind_days_before != null ||
+    !choreOccursOn(template, String(fields.due_date))
+  ) {
+    return "chore_owner_only";
+  }
+  return null;
+}
+
 /** household_tasks writes, enough for a chore saved and undone (Kakak). */
 function answerTasks(
   route: Route,
@@ -1162,8 +1222,16 @@ function answerTasks(
   const reply = (rows: Record<string, unknown>[]) => route.fulfill({ json: wantsObject ? (rows[0] ?? null) : rows });
   if (request.method() === "POST") {
     const body = request.postDataJSON();
+    const inserts: Record<string, unknown>[] = Array.isArray(body) ? body : [body];
+    // A staff phone's day row, as the database's guard reads it.
+    if (who !== OWNER) {
+      for (const fields of inserts) {
+        const refusal = staffDayRowRefusal(fields, [...seeded, ...tasks]);
+        if (refusal) return route.fulfill({ status: 403, json: { code: "42501", message: refusal, details: null, hint: null } });
+      }
+    }
     // One insert may carry several chores (one per room, Phase 158).
-    const rows = (Array.isArray(body) ? body : [body]).map((fields: Record<string, unknown>) => {
+    const rows = inserts.map((fields: Record<string, unknown>) => {
       const row: Record<string, unknown> = {
         id: `00000000-0000-4000-8000-${String(900 + tasks.length).padStart(12, "0")}`,
         household_id: HOUSEHOLD_ID,
@@ -1538,7 +1606,7 @@ function answerSchedules(route: Route, rows: Record<string, unknown>[], admin: b
  * record for the same task-day; deletes only within 5 minutes, answered with
  * what went (an RLS-filtered delete returns nothing).
  */
-function answerExceptions(route: Route, rows: Record<string, unknown>[]) {
+function answerExceptions(route: Route, rows: Record<string, unknown>[], chores: Record<string, unknown>[] = []) {
   const request = route.request();
   const method = request.method();
   const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
@@ -1558,6 +1626,17 @@ function answerExceptions(route: Route, rows: Record<string, unknown>[]) {
       created_at: new Date().toISOString(),
     };
     if (rows.some((r) => r.id === row.id)) return duplicateKey(route, "task_exceptions_pkey");
+    // task_exceptions_guard (migrations/139): the chore is a top-level one,
+    // not called off; its day is open (that day's row governs it).
+    if (row.chore_id) {
+      const chore = chores.find((c) => c.id === row.chore_id && !c.parent_task_id && c.status !== "cancelled");
+      if (!chore) return stubError(route, 403, "42501", "task_exception_task");
+      const day = chores.find((c) => c.parent_task_id === chore.id && c.due_date === row.occurs_on);
+      if (day ? day.status !== "pending" : chore.due_date === row.occurs_on && chore.status !== "pending") {
+        return stubError(route, 400, "23514", "task_exception_not_open");
+      }
+      if (!day && !choreOccursOn(chore, String(row.occurs_on))) return stubError(route, 400, "22023", "task_exception_day");
+    }
     if (row.chore_id && rows.some((r) => r.chore_id === row.chore_id && r.occurs_on === row.occurs_on)) {
       return duplicateKey(route, "task_exceptions_chore_day_key");
     }

@@ -35,8 +35,43 @@ export function recurrenceOf(task: HouseholdTask): ChoreRecurrence {
   return value && CHORE_RECURRENCES.includes(value) ? value : "none";
 }
 
+/**
+ * A repeat: a top-level row with a cadence. A written day of a repeat (it has
+ * a parent) is one day's work, whatever its own recurrence column says — the
+ * database reads it so too (household_tasks_owner_guard, task_exceptions_guard,
+ * the evening summary and the 07:00 reminder all take `parent_task_id is null`
+ * as the repeat). A day row that was given a cadence of its own (an owner
+ * picking "Weekly" on one day's row, before the editor stopped offering it)
+ * used to be expanded here as a second repeat: on a staff phone it produced a
+ * "missed" day keyed on the day row, which the server refused to write
+ * (chore_owner_only) or explain (task_exception_task).
+ */
 export function isTemplate(task: HouseholdTask): boolean {
-  return recurrenceOf(task) !== "none";
+  return !task.parent_task_id && recurrenceOf(task) !== "none";
+}
+
+/**
+ * The chore a day belongs to on the server: the repeat for one of its days,
+ * the row itself for a one-off. What a couldn't-do record names (chore_id,
+ * migrations/139) and what a day row's parent_task_id points at.
+ *
+ * Not simply `occurrence.template.id`: a written day whose repeat isn't on the
+ * phone (turned off or ended long ago, still carried over) is its own
+ * template there, and the day row's id is refused as a chore_id.
+ */
+export function seriesIdOf(occurrence: Pick<ChoreOccurrence, "row" | "template">): string {
+  return occurrence.row?.parent_task_id ?? occurrence.template.parent_task_id ?? occurrence.template.id;
+}
+
+/**
+ * Whether a staff phone may write `template`'s day `date` as its own row: the
+ * client twin of household_tasks_owner_guard's rule for an insert (128, as
+ * 137 left it). The template must be a top-level repeat, and the day one it
+ * falls on. Read against the template as the server has it now, just before
+ * writing: if it no longer holds, the chore changed since the phone loaded it.
+ */
+export function canWriteDayOf(template: HouseholdTask, date: string): boolean {
+  return isTemplate(template) && occursOn(template, date);
 }
 
 /**

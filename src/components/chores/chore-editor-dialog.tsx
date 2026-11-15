@@ -253,8 +253,14 @@ export function ChoreEditorDialog({
     if (!lock.acquire()) return;
     setSaving(true);
     try {
+      // One written day of a repeat is one day's work: never a repeat of its
+      // own. A day row given a cadence was expanded on staff phones as a
+      // second repeat, whose days the server refused to write
+      // (chore_owner_only). Saving such a day also clears a cadence an older
+      // build left on it.
+      const cadence: ChoreRecurrence = dayOfRepeat ? "none" : recurrence;
       // The interval belongs to weekly and monthly repeats only.
-      const every = recurrence === "weekly" || recurrence === "monthly" ? repeatEvery : 1;
+      const every = cadence === "weekly" || cadence === "monthly" ? repeatEvery : 1;
       const fields = {
         title: title.trim(),
         category,
@@ -264,10 +270,10 @@ export function ChoreEditorDialog({
         due_date: date,
         due_time: time || null,
         notes: notes.trim() || null,
-        recurrence,
+        recurrence: cadence,
         // A one-off has no end date to carry; leaving a stale one behind would
         // quietly cap the repeat if it were ever turned back on.
-        recurrence_until: recurrence === "none" ? null : until || null,
+        recurrence_until: cadence === "none" ? null : until || null,
         // Sent when set, or to clear one this chore has; otherwise left out,
         // so a database before migrations/137 still takes the chore.
         ...(every !== 1 || intervalOf(task ?? {}) !== 1 ? { recurrence_interval: every } : {}),
@@ -487,7 +493,7 @@ export function ChoreEditorDialog({
     }, t("Failed to delete the chore", "Tugas gagal dihapus"));
   }
 
-  const repeats = recurrence !== "none";
+  const repeats = recurrence !== "none" && !dayOfRepeat;
   // A bill's payments (Phase 164 PR B), owners only: the history below, and
   // what deleting the bill would take with it.
   const editingBill = editing && (series ?? task)?.category === "bill";
@@ -626,25 +632,35 @@ export function ChoreEditorDialog({
             )}
           </p>
 
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t("Repeat", "Ulangi")}</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {repeatOptions.map((choice) => (
-                <Button
-                  key={choice.key}
-                  type="button"
-                  variant={sameRepeat(choice) ? "default" : "outline"}
-                  className="min-h-[44px]"
-                  onClick={() => {
-                    setRecurrence(choice.recurrence);
-                    setRepeatEvery(choice.interval);
-                  }}
-                >
-                  {repeatLabel(choice.recurrence, choice.interval, locale)}
-                </Button>
-              ))}
+          {dayOfRepeat ? (
+            // A written day of a repeat: its repeat is edited from the repeat.
+            <p className="text-[11px] text-muted-foreground">
+              {t(
+                "This is one day of a repeating chore. Changes apply to this date only.",
+                "Ini satu hari dari tugas berulang. Perubahan hanya berlaku untuk tanggal ini."
+              )}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">{t("Repeat", "Ulangi")}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {repeatOptions.map((choice) => (
+                  <Button
+                    key={choice.key}
+                    type="button"
+                    variant={sameRepeat(choice) ? "default" : "outline"}
+                    className="min-h-[44px]"
+                    onClick={() => {
+                      setRecurrence(choice.recurrence);
+                      setRepeatEvery(choice.interval);
+                    }}
+                  >
+                    {repeatLabel(choice.recurrence, choice.interval, locale)}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {repeats && (
             <div className="flex flex-col gap-1.5">
