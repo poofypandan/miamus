@@ -55,6 +55,10 @@ DROP = {}
 CAPTION_ONLY = {("15", "en"): {"M2": (11.0, 12.4)}, ("15", "id"): {"M2": (11.0, 12.4)}}
 # The 15-second end line, a touch quicker (pitch kept), so Mama's answer fits before it.
 TEMPO = {("15", "id", "S3"): 1.03}
+# Where the finished mixes go. The film reads public/audio; the lo-fi listening page (audio/music/page_lofi.py) points
+# these elsewhere so its trial mixes never replace the film's.
+OUT_DIR = os.path.join(ROOT, "public", "audio")
+OUT_NAME = "mix-{cut}-{locale}.wav"
 
 
 def stretched(path, factor):
@@ -179,8 +183,8 @@ def mix(cut, locale, voices, music_style):
     bed = music * duck[:, None] * db(-3.5) + sfx * (1 - 0.25 * presence)[:, None] * db(-3.0) + air
     out = soft_limit(v2 * db(4.0) + bed, 0.97, 0.75)
 
-    os.makedirs(os.path.join(ROOT, "public", "audio"), exist_ok=True)
-    path = os.path.join(ROOT, "public", "audio", f"mix-{cut}-{locale}.wav")
+    os.makedirs(OUT_DIR, exist_ok=True)
+    path = os.path.join(OUT_DIR, OUT_NAME.format(cut=cut, locale=locale, music=music_style))
     sf.write(path, out.astype("float32"), SR, subtype="PCM_24")
     i_lufs, tp, lra = loudness(path)
     gain = -14.0 - i_lufs
