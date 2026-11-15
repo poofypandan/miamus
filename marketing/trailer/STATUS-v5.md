@@ -26,3 +26,9 @@ picture, music, sound and timing stay v4's.
 - [x] Frames and loudness checked in the MP4s
 - [ ] Owner watches v5; checks the two items in LICENCES.md (no beta tag on Eleven v4; keep the
       November invoice); optionally adds Lyly to My Voices; deletes the key when done
+
+## v6 (15 Nov)
+
+- [x] Mama (Aita), nonverbal girl, Fable's pacing and framing, end card "For every" + "Mama, look!"
+- [x] Four MP4s, NOTE, LICENCES, provenance, voice takes and covers in `docs/private/marketing/trailer-v6/`
+- [ ] The owners watch v6

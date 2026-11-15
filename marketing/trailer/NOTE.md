@@ -37,8 +37,9 @@ full spec (Fable's notes and the owner's choices) is `V6-SPEC.md`.
   written on with the bell's three notes from 57.0 s; "miamus.app" small,
   last. Indonesian: "Untuk setiap" + "Mama, lihat!". One place to change:
   `end` in `src/film/copy.ts`.
-- **Checked:** every new line heard word for word by Whisper; the four
-  mixes at -14.0 LUFS, true peak -1.6 to -1.7 dBTP; the 42.7 s ping 38 dB
+- **Checked:** every line heard word for word by Whisper, in each finished
+  mix with the music in; the four MP4s at -14.0 LUFS, true peak -1.5 to
+  -1.6 dBTP (after AAC); the 42.7 s ping 38 dB
   above the music in its band, after the pad has faded; frames of all four
   cuts, including close crops of the tug, point and hand-hold.
 - **Credits:** 6,849 characters used of the key's 10,000 (v6: 941).
