@@ -1,0 +1,30 @@
+{
+ "generated": "2026-11-15",
+ "service": "ElevenLabs API, POST /v1/text-to-speech/{voice_id}",
+ "plan": "Creator (owner's account)",
+ "model_id": "eleven_v4",
+ "note": "v8 replaces Mama's answer ('[warmly]' is an eleven_v4 audio tag that directs delivery and is not spoken). Kakak's lines are as in v7; Mama's hook line as in v6.",
+ "characters_total_project": 7185,
+ "lines": [
+  {
+   "speaker": "Mama",
+   "line": "M2",
+   "language": "en",
+   "text_sent": "[warmly] I'm here, sweetie.",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 7,
+   "request_id": "NGJ4KAdzsMprcqbly6gX",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Mama",
+   "line": "M2",
+   "language": "id",
+   "text_sent": "[warmly] Mama di sini, sayang.",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 113,
+   "request_id": "NnEjjATocCso1ZorRTxP",
+   "format": "wav_48000"
+  }
+ ]
+}

@@ -73,8 +73,9 @@ export const TELL = {
   tap: 39,
   sheet: 45,
   toSheet: [50, 60] as Span,
-  type: [60, 138] as Span,
-  send: 150,
+  // v8: typed at a steady 15 characters a second (one every 2 frames) once the camera has settled.
+  type: [58, 146] as Span,
+  send: 156,
   card: 180,
   toCard: [184, 196] as Span,
   scroll: [258, 270] as Span,
@@ -83,7 +84,8 @@ export const TELL = {
   saved: 300,
 };
 /** 15 s (frames in "tell", 0 = 3.0 s): the typed sentence, the card held 2.4 s, "Looks right", "Saved". */
-export const TELL15 = { type: [0, 36] as Span, send: 40, card: 50, toCard: [54, 64] as Span, scroll: [122, 132] as Span, ok: 138, saved: 143 };
+// v8: the input opens with the first words typed; the last 22 characters type at the same steady rate.
+export const TELL15 = { type: [0, 44] as Span, send: 48, card: 58, toCard: [60, 70] as Span, scroll: [130, 138] as Span, ok: 141, saved: 145 };
 
 /** v6: one staff beat (frames in "staff", 0 = 26.4 s): the line to Sari's phone, her list, the task, two photos, done. */
 export const STAFF = {
@@ -115,7 +117,10 @@ export const QUIET = { push: [0, 102] as Span, sleep: [102, 118] as Span, set: [
 // point, her handwriting and the bell; 49.0 Mama's "I'm looking, sweetie." as her hand comes up; ~51.2 she takes the
 // girl's hand; 51.5 Kakak, softly, "That one's yours."; 53.0 the crane; Kakak's end line from 53.3; the card at 57.0.
 // One set of cues for both languages, sized for Indonesian (Fable's final cue times).
-export const ENDING = { mama: [-80, -1] as Span, tug: 30, point: 36, bell: 37, shade: [56, 71] as Span, hold: [120, 138] as Span, lift: [120, 250] as Span, crane: [180, 232] as Span, mark: 270, name: 279, line: 288, call: 300, url: 338 };
+// v8 (owner): Kakak softly "That one's yours." starts on the tug (48.0), so the girl is never seen waiting on an AI;
+// Mama answers as soon as Kakak finishes ("I'm here, sweetie."), her hand coming up as she speaks; then she takes
+// the girl's hand. The Indonesian lines run longer, so Mama's gestures follow her voice there (shadeId, holdId).
+export const ENDING = { mama: [-80, -1] as Span, tug: 30, point: 36, bell: 37, shade: [66, 81] as Span, hold: [110, 128] as Span, shadeId: [83, 98] as Span, holdId: [128, 146] as Span, lift: [120, 250] as Span, crane: [180, 232] as Span, mark: 270, name: 279, line: 288, call: 300, url: 338 };
 export const ENDING15 = { tug: 6, point: 12, bell: 13, shade: [18, 36] as Span, hold: [38, 56] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 78, line: 84, call: 90, url: 106 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */

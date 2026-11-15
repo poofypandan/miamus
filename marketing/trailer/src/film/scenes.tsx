@@ -6,7 +6,7 @@ import { BigLine, EndCard, NameChip, StaffChip, TravelLine } from "../ui/extras"
 import { Hand, Pile } from "../ui/hook";
 import { KakakMark } from "../ui/kakak";
 import { Vignette, clamp01, ease, easeIn, easeOut, keys, lerp, ramp, springAt } from "../ui/kit";
-import { type Cue, Glow, NotificationCard, Phone, type PhoneCam, ScreenTrack, Shutter, Tag, TapRing, look, phonePoint } from "../ui/phone";
+import { type Cue, Glow, NotificationCard, Phone, type PhoneCam, ScreenTrack, Shutter, Tag, TapRing, TypedInput, look, phonePoint } from "../ui/phone";
 import { World } from "../world/World";
 import { type Cam, camMix, project } from "../world/camera";
 import { lightAt } from "../world/tod";
@@ -222,8 +222,10 @@ export function Tell({ locale, t0, fast }: SceneProps) {
   const cues: Cue[] = [];
   let cam: PhoneCam;
   let overlay: React.ReactNode;
-  const typing = (span: Span) => {
-    for (let i = 0; i < 14; i++) cues.push({ src: `${dir}/k0-type-${pad(i)}.jpg`, at: span[0] + Math.round(((span[1] - span[0]) * i) / 13), fade: 0 });
+  // v8: the finished-sentence screenshot is the base (the input already two lines tall); TypedInput types over it.
+  const typed = (at: number, from: number, until: number, start = 0) => {
+    cues.push({ src: `${dir}/k0-sheet-empty.png`, at, fade: at === 0 ? 0 : 12 });
+    return <TypedInput lines={copy.typed.lines} placeholder={copy.typed.placeholder} from={from} until={until} start={start} darkButton={`${dir}/k0-send-dark.png`} appear={at === 0 ? undefined : at} />;
   };
   const scrolling = (span: Span) => {
     for (let i = 0; i < 14; i++) cues.push({ src: `${dir}/k0-scroll-${pad(i)}.jpg`, at: span[0] + Math.round(((span[1] - span[0]) * i) / 13), fade: 0 });
@@ -231,10 +233,12 @@ export function Tell({ locale, t0, fast }: SceneProps) {
   if (fast) {
     // 15 s: one interaction, then one result. The terrace sentence typed, the card held, "Looks right", "Saved".
     const T = TELL15;
-    typing(T.type);
-    cues.push({ src: `${dir}/k0-thinking.png`, at: T.send + 3, fade: 4 }, { src: `${dir}/k0-card.png`, at: T.card, fade: 8 });
+    // v8: no "thinking" screen (the app's half-height sheet made a double exposure); the full sheet cross-fades
+    // straight to the card, and the typed text leaves with that cross-fade.
+    const input = typed(0, T.type[0], T.card, copy.typed.start15);
+    cues.push({ src: `${dir}/k0-card.png`, at: T.card, fade: 12 });
     scrolling(T.scroll);
-    cues.push({ src: `${dir}/k0-saved.png`, at: T.saved, fade: 8 });
+    cues.push({ src: `${dir}/k0-saved.png`, at: T.saved, fade: 12 });
     cam = keys(frame, [
       look(0, 2.35, 400, 720),
       look(T.toCard[0], 2.35, 400, 720),
@@ -245,6 +249,7 @@ export function Tell({ locale, t0, fast }: SceneProps) {
     const name = tap(`${locale}.k0.name`);
     overlay = (
       <>
+        {input}
         <Tag text={copy.aiTag} x={name.x + 8} y={name.y} from={T.card + 4} to={T.scroll[0]} />
         <TapRing {...SEND} at={T.send} />
         <TapRing {...CONFIRM} at={T.ok} />
@@ -254,11 +259,11 @@ export function Tell({ locale, t0, fast }: SceneProps) {
     // 60 s (Fable's pacing): only the terrace sentence. The phone opens already framed on "Tell Kakak"; one change
     // at a time, a pause before each tap, and the card held long enough to read.
     const T = TELL;
-    cues.push({ src: `${dir}/today.png`, at: 0, fade: 0 }, { src: `${dir}/k0-open.png`, at: T.sheet, fade: 8 });
-    typing(T.type);
-    cues.push({ src: `${dir}/k0-thinking.png`, at: T.send + 3, fade: 4 }, { src: `${dir}/k0-card.png`, at: T.card, fade: 8 });
+    cues.push({ src: `${dir}/today.png`, at: 0, fade: 0 });
+    const input = typed(T.sheet, T.type[0], T.card);
+    cues.push({ src: `${dir}/k0-card.png`, at: T.card, fade: 12 });
     scrolling(T.scroll);
-    cues.push({ src: `${dir}/k0-saved.png`, at: T.saved, fade: 8 });
+    cues.push({ src: `${dir}/k0-saved.png`, at: T.saved, fade: 12 });
     cam = keys(frame, [
       look(0, 2.2, 660, 780),
       look(T.toSheet[0], 2.2, 660, 780),
@@ -272,6 +277,7 @@ export function Tell({ locale, t0, fast }: SceneProps) {
     ]);
     overlay = (
       <>
+        {input}
         <TapRing x={open.x} y={open.y} at={T.tap} />
         <TapRing {...SEND} at={T.send} />
         <TapRing {...CONFIRM} at={T.ok} />
@@ -347,10 +353,10 @@ export function Staff({ locale, t0 }: SceneProps) {
         <ScreenTrack
           cues={[
             { src: "shots/staff/list.png", at: 0, fade: 0 },
-            { src: "shots/staff/sheet.png", at: K.sheet, fade: 8 },
-            { src: "shots/staff/photo-before.png", at: K.beforeIn, fade: 4 },
-            { src: "shots/staff/photo-after.png", at: K.afterIn, fade: 4 },
-            { src: "shots/staff/done.png", at: K.done, fade: 8 },
+            { src: "shots/staff/sheet.png", at: K.sheet, fade: 12 },
+            { src: "shots/staff/photo-before.png", at: K.beforeIn, fade: 8 },
+            { src: "shots/staff/photo-after.png", at: K.afterIn, fade: 8 },
+            { src: "shots/staff/done.png", at: K.done, fade: 12 },
           ]}
         />
       </Phone>
@@ -456,8 +462,10 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   const lift = 0.3 * ramp(frame, E.lift[0], E.lift[1]);
   // On arrival the same single tug and the point; Mama shades her eyes (the opening's silhouette, no phone) and her
   // other hand takes the girl's, whose arm comes down to meet it.
-  const moves = girlMoves(frame, [E.tug], E.point, [E.shade[1] - 4, E.hold[0] + 8]);
-  const mamaPose = { shade: ramp(frame, E.shade[0], E.shade[1], ease), hold: ramp(frame, E.hold[0], E.hold[1], ease), sway: moves.sway };
+  const moves = girlMoves(frame, [E.tug], E.point, !fast && locale === "id" ? [ENDING.shadeId[1] - 4, ENDING.holdId[0] + 8] : [E.shade[1] - 4, E.hold[0] + 8]);
+  const shade = !fast && locale === "id" ? ENDING.shadeId : E.shade;
+  const hold = !fast && locale === "id" ? ENDING.holdId : E.hold;
+  const mamaPose = { shade: ramp(frame, shade[0], shade[1], ease), hold: ramp(frame, hold[0], hold[1], ease), sway: moves.sway };
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       <SoftWorld soft={5 * close} light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} mamaPose={mamaPose} childPose={moves.child} kiteLift={lift} birds={1} />

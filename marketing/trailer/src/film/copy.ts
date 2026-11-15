@@ -16,6 +16,8 @@ export interface Bubble {
 export interface Copy {
   /** The child's call, in her own hand. */
   child: string;
+  /** v8: the sentence typed to Kakak, as the app wraps it, its placeholder, and where the 15-second cut starts typing. */
+  typed: { lines: [string, string]; placeholder: string; start15: number };
   /** v6: the same call on two lines, one word group per bell note. */
   call: [string, string];
   bubbles: Bubble[];
@@ -88,7 +90,7 @@ export const COPY: Record<Locale, Copy> = {
       G2: "Mama, look!",
       G3: "Mama…?",
       M1: "In a minute, sweetie…",
-      M2: "I'm looking, sweetie.",
+      M2: "I'm here, sweetie.",
     },
     big: { rows: ["What if you only had", "to say it"], word: "once?" },
     aiTag: "Miamus's AI helper",
@@ -101,6 +103,7 @@ export const COPY: Record<Locale, Copy> = {
     // The end card (owner, 15 Nov): "For every" in plain type, then her "Mama, look!" in her own hand. One place to change.
     end: { line: "For every", call: "Mama, look!", url: "miamus.app" },
     call: ["Mama,", "look!"],
+    typed: { lines: ["Have Sari mop the terrace every", "Monday at 9."], placeholder: "What should I set up?", start15: 22 },
   },
   id: {
     child: "Mama, lihat!",
@@ -149,7 +152,7 @@ export const COPY: Record<Locale, Copy> = {
       G2: "Mama, lihat!",
       G3: "Mama…?",
       M1: "Sebentar ya, sayang…",
-      M2: "Iya, Mama lihat, sayang.",
+      M2: "Mama di sini, sayang.",
     },
     big: { rows: ["Bagaimana kalau", "cukup bilang"], word: "sekali?" },
     aiTag: "asisten AI Miamus",
@@ -161,5 +164,6 @@ export const COPY: Record<Locale, Copy> = {
     dayFrom: 9,
     end: { line: "Untuk setiap", call: "Mama, lihat!", url: "miamus.app" },
     call: ["Mama,", "lihat!"],
+    typed: { lines: ["Minta Sari pel teras setiap Senin jam", "9."], placeholder: "Mau Kakak atur apa?", start15: 18 },
   },
 };

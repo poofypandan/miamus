@@ -38,3 +38,9 @@ picture, music, sound and timing stay v4's.
 - [x] "That one's yours." softly at the end, after Mama's answer and the hand; no notification, no ping
 - [x] Four MP4s and docs in `docs/private/marketing/trailer-v7/`
 - [ ] The owners watch v7
+
+## v8 (15 Nov)
+
+- [x] Kakak on the tug, Mama "I'm here, sweetie.", smooth typing, soft screen changes, stutter check clean
+- [x] Four MP4s and docs in `docs/private/marketing/trailer-v8/`
+- [ ] The owners watch v8

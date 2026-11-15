@@ -66,6 +66,8 @@ def audition(slugs):
 # Lines that are not Kakak's (v6: Mama).
 OTHER = {("en", "M1"): "In a minute, sweetie…", ("en", "M2"): "I'm looking, sweetie.", ("id", "M1"): "Sebentar ya, sayang…", ("id", "M2"): "Iya, Mama lihat, sayang.",
          ("en", "L10"): "That one's yours.", ("id", "L10"): "Yang ini untuk Anda."}
+# v8: Mama's new answer.
+OTHER_V8 = {("en", "M2"): "I'm here, sweetie.", ("id", "M2"): "Mama di sini, sayang."}
 
 
 def final(slug, tag="final"):
@@ -74,7 +76,7 @@ def final(slug, tag="final"):
         d = os.path.join(ROOT, "audio", "out", "eleven", tag, slug, locale)
         for f in sorted(os.listdir(d)):
             key, take = f.split(".")[:2]
-            r = measure(os.path.join(d, f), locale, OTHER.get((locale, key)) or jobs.text_for(locale, key))
+            r = measure(os.path.join(d, f), locale, (OTHER_V8 if tag == "v8" else OTHER).get((locale, key)) or OTHER.get((locale, key)) or jobs.text_for(locale, key))
             r.update(locale=locale, key=key, take=take)
             rows.append(r)
             print(f"{locale} {key:4s} {take} lang={r['detected_language']} match={r['match']:.2f} {r['speech_seconds']:5.2f}s peak={r['peak']}  {r['heard']}", flush=True)

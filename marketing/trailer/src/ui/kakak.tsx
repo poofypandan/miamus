@@ -112,8 +112,15 @@ export interface CaptionCue {
  */
 export function Captions({ cues, level = 0 }: { cues: CaptionCue[]; level?: number }) {
   const frame = useCurrentFrame();
-  const cue = cues.find((c) => frame >= c.from - 3 && frame <= c.to + 10);
-  if (!cue) return null;
+  // v8: every caption in its window is drawn with its own fade, so two lines close together cross-fade
+  // instead of the plate snapping from one to the next.
+  const live = cues.filter((c) => frame >= c.from - 3 && frame <= c.to + 10);
+  if (!live.length) return null;
+  return <>{live.map((c) => <CaptionPlate key={`${c.from}-${c.text}`} cue={c} level={level} />)}</>;
+}
+
+function CaptionPlate({ cue, level }: { cue: CaptionCue; level: number }) {
+  const frame = useCurrentFrame();
   const inT = ramp(frame, cue.from - 3, cue.from + 6, easeOut);
   const outT = ramp(frame, cue.to + 2, cue.to + 10);
   const o = inT * (1 - outT);

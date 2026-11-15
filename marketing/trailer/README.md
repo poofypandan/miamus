@@ -46,6 +46,7 @@ From `marketing/trailer/`:
     npm install                    # once
     ./audio/setup.sh               # once: the sound tools, under .tools/ (add --chatterbox for the second voice engine)
     npm run capture                # the app's screens; needs the stub build, below
+    .tools/venv-main/bin/python scripts/clean_sheet.py   # v8: the clean base for the typing shot (after capture)
     npm run sound                  # cues, effects, music, voice, mix → public/audio/
     npm run render                 # the four MP4s into out/
     npm run render -- --only=film-60-en

@@ -332,3 +332,56 @@ export function Tag({ text, x, y, from, to, anchor = "left", tone = "light" }: {
     </div>
   );
 }
+
+/**
+ * v8: the sentence typed into Kakak's sheet, drawn over the app's own screenshot so it never stutters: one
+ * character every `step` frames (2 = 15 a second), a cursor that blinks once the typing stops, and the input
+ * already two lines tall (the base screenshot is the finished sentence), so nothing jumps when the text wraps.
+ * The "Try saying" suggestions under the input are hidden for this shot. Coordinates are the app's CSS pixels
+ * (measured from k0-type-13 at 3x).
+ */
+export function TypedInput({ lines, placeholder, from, until, start = 0, step = 2, darkButton, appear }: { lines: [string, string]; placeholder: string; from: number; until: number; start?: number; step?: number; darkButton: string; appear?: number }) {
+  const frame = useCurrentFrame();
+  const { k, inset } = useContext(Geo);
+  // It leaves with the next screen's cross-fade (9 frames), so nothing under it shows through suddenly.
+  if (frame >= until + 9) return null;
+  const total = lines[0].length + 1 + lines[1].length;
+  const n = Math.max(0, Math.min(total, start + (frame < from ? 0 : Math.floor((frame - from) / step))));
+  const one = lines[0].slice(0, Math.min(n, lines[0].length));
+  const two = n > lines[0].length + 1 ? lines[1].slice(0, n - lines[0].length - 1) : "";
+  const typing = frame >= from && n < total;
+  const caret = typing || (frame - from) % 16 < 9;
+  const px = (v: number) => v * k;
+  const box = (x: number, y: number, w: number, h: number, extra: React.CSSProperties = {}): React.CSSProperties => ({ position: "absolute", left: px(x), top: px(inset + y), width: px(w), height: px(h), ...extra });
+  const text: React.CSSProperties = { fontFamily: FONT, fontSize: px(16.2), fontWeight: 400, color: "#1b1b1b", lineHeight: `${px(23.4)}px`, whiteSpace: "pre", letterSpacing: -0.1 * k };
+  const bar = <span style={{ display: "inline-block", width: px(1.6), height: px(19), marginLeft: px(0.6), verticalAlign: "middle", background: caret ? "#2a6df4" : "transparent", transform: `translateY(${px(-1)}px)` }} />;
+  // It fades in with the sheet's own cross-fade (8 frames), so nothing pops.
+  const o = (appear === undefined ? 1 : ramp(frame, appear, appear + 12)) * (1 - ramp(frame, until, until + 9));
+  if (o <= 0) return null;
+  return (
+    <div style={{ position: "absolute", inset: 0, opacity: o }}>
+      {/* The base (k0-sheet-empty, scripts/clean_sheet.py) has the input empty, two lines tall, no suggestions. */}
+      <div style={box(26.6, 418.6, 286, 48, text)}>
+        {n === 0 ? (
+          <>
+            {frame >= from - 1 && bar}
+            <span style={{ color: "#9a9a9a" }}>{placeholder}</span>
+          </>
+        ) : (
+          <>
+            <div>
+              {one}
+              {two === "" && n <= lines[0].length + 1 && bar}
+            </div>
+            <div>
+              {two}
+              {two !== "" && bar}
+            </div>
+          </>
+        )}
+      </div>
+      {/* The send button turns dark once there is something to send. */}
+      {n > 0 && <div style={box(976 / 3, 1276 / 3, 148 / 3, 148 / 3, { backgroundImage: `url(${staticFile(darkButton)})`, backgroundSize: "100% 100%" })} />}
+    </div>
+  );
+}

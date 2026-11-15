@@ -1,5 +1,57 @@
 # The Miamus trailer: what was made, and why
 
+## Version 8 (15 November 2026): the hand-over, and no stutter
+
+Owner's notes on v7. Four cuts in `docs/private/marketing/trailer-v8/`;
+v4 to v7 are untouched.
+
+- **The ending, in the owner's order:** the girl tugs and points, with her
+  handwriting and the bell (48.0 s); Kakak says softly "That one's yours." /
+  "Yang ini untuk Anda." over the tug itself, starting on it, so the child
+  is never seen waiting on an AI; Mama answers at once, "I'm here, sweetie."
+  / "Mama di sini, sayang." (EN 49.3, ID 49.85), her hand coming up as she
+  speaks; then she takes the girl's hand. 53.0 onward is unchanged (crane,
+  end line, "For every" + "Mama, look!"). In Indonesian, Mama's gestures
+  follow her longer line. The 15 s cut uses the new answer too (voiced EN,
+  caption ID).
+- **Mama's new line:** Aita, "[warmly]" (an eleven_v4 audio tag that directs
+  delivery and is not spoken), 3 takes per language; EN take 1, ID take 3
+  (take 1 was heard as "Mau di sini"; take 2 lost its soft "M" in the
+  trim). The Indonesian take is trimmed more gently so the "Ma-" stays; a
+  copy of the placed file is in `trailer-v8/voice/`.
+- **Smooth typing:** the sentence in Kakak's sheet is drawn over the app's
+  own screenshot at a steady 15 characters a second (one every 2 frames),
+  with a blinking cursor. The input is two lines tall from the start, so
+  nothing jumps when the text wraps, and the "Try saying" suggestions are
+  hidden for this shot. In 60 s it types 16.9–19.8 s; the 15 s cut opens
+  with the first words typed and types the last 22 characters at the same
+  rate. Before, 14 screenshots were held ~5.6 frames each, and the input
+  grew when the sentence wrapped (the stutter at 0:19).
+- **Soft screen changes:** every screen swap cross-fades over 12 frames
+  (photos 8, under the shutter flash). Camera moves already ease in and out.
+  The sheet opens onto a clean base made from the app's own screenshot
+  (`scripts/clean_sheet.py`: input empty and two lines tall, send button
+  grey, no suggestions), so nothing ghosts through the fade. The app's
+  "thinking" screen (a half-height sheet) is dropped: cross-fading between
+  sheet heights made a double exposure; the typed sheet now fades straight
+  to Kakak's card, still at 21.0 s.
+- **Captions cross-fade:** where two of Kakak's lines come close (Indonesian
+  L5→L6, both 15 s S1→S2), the plates now cross-fade instead of snapping.
+- **Stutter check:** `scripts/smooth.py` decodes each finished MP4 and
+  flags frames that freeze in the middle of a move or jump more than their
+  neighbours away from a planned cut. On v7 it found the 0:19 wrap jump and
+  three short screen swaps. On v8: no jumps and no freezes in any of the
+  four cuts, apart from the planned dip to black between the hook and dawn
+  (5.0 s).
+- **Checked:** every changed line word for word in the finished mixes;
+  the four MP4s at -14.0 LUFS, true peak -1.5 to -1.6 dBTP; frames from the
+  MP4s around the typing, the screen changes and the ending.
+- **Frame rate:** kept at 30 fps. All three platforms accept 30 and 60; the
+  film's motion is slow, eased camera work that is smooth at 30; the stutter
+  came from held screenshots, not the frame rate; and 60 fps would mean
+  re-timing every frame-based cue and doubling render time and file size.
+- **Credits:** 7,185 characters used of the key's 10,000 (v8: 171).
+
 ## Version 7 (15 November 2026): the moment is hers
 
 The owner's note on v6: Kakak should hand Mama the moment with her
@@ -91,6 +143,7 @@ full spec (Fable's notes and the owner's choices) is `V6-SPEC.md`.
 | v5 | ElevenLabs, Voice Library "Lyly" | none | none (the bell) |
 | v6 | Lyly, with two new lines | ElevenLabs, Voice Library "Aita" | no voice: the bell, handwriting, cloth tugs |
 | v7 | Lyly, "That one's yours." softly at the end | Aita | as v6 |
+| v8 | Lyly, "That one's yours." on the tug | Aita, "I'm here, sweetie." | as v6 |
 
 ### To re-render v6
 
