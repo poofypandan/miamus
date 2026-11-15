@@ -14,8 +14,9 @@ import page  # noqa: E402  (its mp3(), load() and clip())
 
 V6 = os.path.join(ROOT, "audio", "out", "eleven", "v6")
 MAMAS = [("Mama 1", "aita", "Aita: calm, gentle, friendly"), ("Mama 2", "devi", "Devi: warm, expressive"), ("Mama 3", "lani", "Lani Eleonora: warm, conversational")]
-MAMA_LINES = [("M1", "In a minute, sweetie…", "Sebentar ya, sayang…"), ("M1t", "In a minute, sweetie… (distracted)", "Sebentar ya, sayang… (distracted)"), ("M2", "I see you.", "Mama lihat kok.")]
-CHILD = [("Sample A", "af_sky-{loc}-a"), ("Sample B", "af_sky-{loc}-b"), ("Sample C", "af_bella-{loc}-a"), ("Sample D", "af_bella-{loc}-b")]
+MAMA_LINES = [("M1", "In a minute, sweetie…", "Sebentar ya, sayang…"), ("M1t", "In a minute… (distracted)", "Sebentar ya… (distracted)"), ("M2", "I'm looking, sweetie.", "Iya, Mama lihat, sayang.")]
+CHILD_DIR = os.path.join(ROOT, "audio", "out", "child", "candidates")
+CHILD = ["kokoro-calm", "kokoro-bright", "chatterbox-lively", "chatterbox-bright"]
 
 
 def find(d, stem):
@@ -32,7 +33,9 @@ def card(title, note, rows):
 
 
 def main():
-    out, child_dir = sys.argv[1], sys.argv[2]
+    import json
+    import secrets
+    out = sys.argv[1]
     mama_cards = []
     for label, slug, note in MAMAS:
         rows = []
@@ -41,14 +44,26 @@ def main():
             rows.append(row(title, [page.clip(page.mp3(page.load(find(d, k))), t if loc == "en" else ti) for k, t, ti in MAMA_LINES]))
         mama_cards.append(card(f"{label}", note, rows))
     d = os.path.join(V6, "kakak-lyly")
-    kakak = card("Kakak (Lyly, the chosen voice)", "Her new last line, after the one notification.", [
-        row("English", [page.clip(page.mp3(page.load(find(os.path.join(d, "en"), "L10"))), "That one's yours. Enjoy it.")]),
-        row("Bahasa Indonesia", [page.clip(page.mp3(page.load(find(os.path.join(d, "id"), "L10"))), "Yang ini bagian Anda. Nikmati, ya."),
-                                 page.clip(page.mp3(page.load(find(os.path.join(d, "id"), "L10alt"))), "Yang itu untuk Anda. Selamat menikmati.")]),
+    kakak = card("Kakak (Lyly, the chosen voice)", "Her new line, said while the notification is still on screen.", [
+        row("English", [page.clip(page.mp3(page.load(find(os.path.join(d, "en"), "L10"))), "That one's yours. Go play.")]),
+        row("Bahasa Indonesia", [page.clip(page.mp3(page.load(find(os.path.join(d, "id"), "L10"))), "Yang ini bagian Anda. Selamat bermain."),
+                                 page.clip(page.mp3(page.load(find(os.path.join(d, "id"), "L10alt"))), "Yang ini bagian Anda. Nikmati, ya.")]),
     ])
-    child_cards = [card(label, "", [row(title, [page.clip(page.mp3(page.load(os.path.join(child_dir, stem.format(loc=loc) + ".wav"))), text)])
-                                     for loc, title, text in (("en", "English", "Mama, look!"), ("id", "Bahasa Indonesia", "Mama, lihat!"))])
-                   for label, stem in CHILD]
+    order = CHILD[:]
+    for i in range(len(order) - 1, 0, -1):
+        j = secrets.randbelow(i + 1)
+        order[i], order[j] = order[j], order[i]
+    labels = dict(zip("ABCD", order))
+    json.dump(labels, open(os.path.join(CHILD_DIR, "labels.json"), "w"), indent=1)
+    child_cards = []
+    for letter, name in labels.items():
+        cd = os.path.join(CHILD_DIR, name)
+        clip = lambda f, t: page.clip(page.mp3(page.load(os.path.join(cd, f))), t)
+        child_cards.append(card(f"Girl {letter}", "", [
+            row("In the hook, with the music", [clip("en-hook.wav", "English"), clip("id-hook.wav", "Indonesia")]),
+            row("English", [clip("en-look1.wav", "Mama, look!"), clip("en-look2.wav", "Again, brighter"), clip("unanswered.wav", "Mama…?")]),
+            row("Bahasa Indonesia", [clip("id-look1.wav", "Mama, lihat!"), clip("id-look2.wav", "Lagi, lebih ceria")]),
+        ]))
 
     tpl = open(os.path.join(os.path.dirname(__file__), "page.html")).read()
     head, rest = tpl.split("<main>", 1)
@@ -59,18 +74,19 @@ def main():
     main = f"""<main>
   <header>
     {mark}
-    <h1>Mama, look: the voices for v6</h1>
-    <p class="lede">The friends who watched v5 missed the story of the girl's call. Version 6 lets you hear it: Mama answers her, too busy at the start and there for her at the end. Listen, then tell Kakak's team which Mama, which Indonesian line for Kakak, and how the girl should sound.</p>
+    <h1>Mama, look</h1>
+    <p class="lede">The friends who watched v5 missed the story of the girl's call. Version 6 lets you hear it: Mama answers her, too busy at the start and there for her at the end. Listen, then choose the girl, Mama, and Kakak's Indonesian line.</p>
   </header>
 
   <section>
     <h2>Where each line goes</h2>
     <ol class="beats">
-      <li><b>0:00</b> The girl: "Mama, look!" Her handwriting beside her, as now.</li>
-      <li><b>0:01.5</b> Mama, off screen, as the day's questions pile up: "In a minute, sweetie…"</li>
-      <li><b>0:48</b> Kakak, after the one notification: "That one's yours. Enjoy it."</li>
-      <li><b>0:51</b> The girl calls again: "Mama, look!"</li>
-      <li><b>0:52</b> Mama, beside her now, looking up: "I see you."</li>
+      <li><b>0:00.2</b> The girl: "Mama, look!" The first question waits until she finishes.</li>
+      <li><b>0:02</b> Mama, looking at her phone, as the questions rise out of it: "In a minute, sweetie…"</li>
+      <li><b>0:04</b> The girl, smaller, unanswered: "Mama…?"</li>
+      <li><b>0:46</b> Kakak, while the one notification is still on screen: "That one's yours. Go play."</li>
+      <li><b>0:49</b> The girl calls again as the phone falls away: "Mama, look!"</li>
+      <li><b>0:51</b> Mama, beside her, hand up to her eyes: "I'm looking, sweetie."</li>
     </ol>
   </section>
 
@@ -86,13 +102,13 @@ def main():
 
   <section>
     <h2>The girl</h2>
-    <p class="lede small">ElevenLabs does not offer child voices: its rules keep child-like voices out of its library, and its voice designer refuses them. These four were made on the laptop instead, from an open-source voice raised toward a child's pitch. They may sound processed. The other choices are an adult voice actor who does children's voices, or her words on screen only.</p>
+    <p class="lede small">Four girls, A to D, in random order, from the least acted to the most animated. ElevenLabs does not offer child voices (its rules keep child-like voices out), so these were made on the laptop from two open-source voices, Kokoro and Chatterbox, both licensed for commercial use, raised to a little girl's pitch: the usual technique in animation. Pick the one that sounds least like acting. Mama in the hook clips is Mama 1, only so you can hear the moment.</p>
     {"".join(child_cards)}
   </section>
 
   <section>
     <h2>Your choice</h2>
-    <p class="reply">Reply with three things, for example <code>Mama 2, Nikmati ya, girl on screen only</code>.</p>
+    <p class="reply">Reply with three things, for example <code>Girl C, Mama 2, Selamat bermain</code>.</p>
   </section>
 
   <footer>Made for the Miamus trailer. The family is invented.</footer>
