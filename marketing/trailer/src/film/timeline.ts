@@ -71,12 +71,12 @@ export const HOOK15 = {
  * time, a pause before each tap, reading holds 2.5 s. The phone opens already framed on "Tell Kakak".
  */
 export const TELL = {
+  // v10 (owner): Mama says the sentence. The phone opens on Kakak's sheet; 16.3 s she taps the mic; the app listens
+  // and her words appear as she speaks (from 16.6 s); she taps Stop; the card at 21.0 s, as before.
   tap: 39,
-  sheet: 45,
-  toSheet: [50, 60] as Span,
-  // v8: typed at a steady 15 characters a second (one every 2 frames) once the camera has settled.
-  type: [58, 146] as Span,
-  send: 156,
+  listen: 41,
+  said: 48,
+  stop: 144,
   card: 180,
   toCard: [184, 196] as Span,
   scroll: [258, 270] as Span,
@@ -136,8 +136,8 @@ export function soundCues(cut: "60" | "15") {
       fall: sec(HOOK.fall),
       call: [sec(HOOK.bell), at(S.ending, ENDING.bell)],
       tugs: [...HOOK.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING.tug + 3)],
-      taps: [at(S.tell, TELL.tap), at(S.tell, TELL.send), at(S.tell, TELL.ok), at(S.staff, STAFF.card), at(S.staff, STAFF.before), at(S.staff, STAFF.after), at(S.staff, STAFF.finish)],
-      typing: [[at(S.tell, TELL.type[0]), at(S.tell, TELL.type[1])]],
+      taps: [at(S.tell, TELL.tap), at(S.tell, TELL.stop), at(S.tell, TELL.ok), at(S.staff, STAFF.card), at(S.staff, STAFF.before), at(S.staff, STAFF.after), at(S.staff, STAFF.finish)],
+      typing: [],
       cards: [at(S.tell, TELL.card)],
       saved: [at(S.tell, TELL.saved), at(S.staff, STAFF.done)],
       shutters: [at(S.staff, STAFF.beforeIn), at(S.staff, STAFF.afterIn)],

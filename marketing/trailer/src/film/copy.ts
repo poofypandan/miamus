@@ -18,6 +18,8 @@ export interface Copy {
   child: string;
   /** v8: the sentence typed to Kakak, as the app wraps it, its placeholder, and where the 15-second cut starts typing. */
   typed: { lines: [string, string]; placeholder: string; start15: number };
+  /** v10: the sentence Mama says to Kakak, word by word (seconds after she starts), and how many words fit line one. */
+  spoken: { words: [string, number][]; split: number };
   /** v6: the same call on two lines, one word group per bell note. */
   call: [string, string];
   bubbles: Bubble[];
@@ -104,6 +106,8 @@ export const COPY: Record<Locale, Copy> = {
     end: { line: "For the little moments.", em: "little", url: "miamus.app" },
     call: ["Mama,", "look!"],
     typed: { lines: ["Have Sari mop the terrace every", "Monday at 9."], placeholder: "What should I set up?", start15: 22 },
+    // Word onsets measured on Mama's take with Whisper (audio/out/vo/mama-aita-v10/T1-words.json).
+    spoken: { words: [["Have", 0], ["Sari", 0.24], ["mop", 0.52], ["the", 0.7], ["terrace", 0.86], ["every", 1.16], ["Monday", 1.52], ["at", 1.82], ["9.", 2.02]], split: 6 },
   },
   id: {
     child: "Mama, lihat!",
@@ -165,5 +169,7 @@ export const COPY: Record<Locale, Copy> = {
     end: { line: "Untuk momen-momen kecil.", em: "kecil", url: "miamus.app" },
     call: ["Mama,", "lihat!"],
     typed: { lines: ["Minta Sari pel teras setiap Senin jam", "9."], placeholder: "Mau Kakak atur apa?", start15: 18 },
+    // The unhurried take (v10, so "pel teras" is two clear words).
+    spoken: { words: [["Minta", 0], ["Sari", 0.34], ["pel", 0.74], ["teras", 1.02], ["setiap", 1.4], ["Senin", 1.92], ["jam", 2.2], ["9.", 2.54]], split: 7 },
   },
 };

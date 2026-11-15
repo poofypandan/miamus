@@ -1,5 +1,42 @@
 # The Miamus trailer: what was made, and why
 
+## Version 10 (15 November 2026): Mama says it
+
+The owner's note on v9: in the "tell Kakak" beat, Mama should say the
+sentence, to show the voice feature. Everything else is v9's. Four cuts in
+`docs/private/marketing/trailer-v10/`; v9 is untouched.
+
+- **The real voice screen.** The app's listening state (the default voice
+  flow in `src/components/kakak/kakak-voice.tsx`: the black Stop button
+  with its halo, "Listening… tap Stop when you're done" / "Kakak
+  mendengarkan… ketuk Berhenti kalau sudah", the words live in the typing
+  box) was captured from the demo build against the read-only stub
+  (`capture/listen.capture.ts`), with no app code changed. The phone's
+  speech recogniser is replaced in the page only by a fake of the same
+  shape the app's own tests use; the capture hands it the sentence.
+- **The beat (60 s):** the phone opens on Kakak's sheet (the mic, "Tap and
+  talk"); 16.3 s Mama taps the mic; the app listens; from 16.6 s she says
+  "Have Sari mop the terrace every Monday at 9." / "Minta Sari pel teras
+  setiap Senin jam 9." and each word appears in the box 0.12 s after she
+  says it (onsets measured on her take with Whisper), with no cursor; the
+  box is two lines tall from the start and the suggestions are hidden (the
+  base is the real listening screen with its words painted out,
+  `scripts/clean_sheet.py`); 19.8 s she taps Stop (which sends it, in the
+  app); the card at 21.0 s as before. Kakak says "Tell me once." just
+  before. Sound off, the words on screen carry it.
+- **Mama's take:** Aita. EN "[slightly hurried]", take 1. ID retaken
+  unhurried (the hurried takes ran "pel teras" together, heard as
+  "Peltera"), take 1: every syllable is there, including the final s
+  (Whisper spells it "Pelteras", as one word). Her words appear on screen
+  in step with each take.
+- **Checked:** the stutter check clean on all four cuts (the mic tap is a
+  planned 4-frame change, under the tap ring); MP4s at -14.0 LUFS, true peak
+  -1.4 to -1.6 dBTP; Mama's sentence and Kakak's lines around it heard in
+  the finished mixes; frames from the MP4s through the spoken beat.
+- **15 s:** unchanged from v9 (typed): three seconds cannot hold a spoken
+  sentence and the card.
+- **Credits:** 7,671 characters used of the key's 10,000 (v10: 486).
+
 ## Version 9 (15 November 2026): room to breathe, and the why
 
 Owner's notes on v8, with Fable's cues. Four cuts in

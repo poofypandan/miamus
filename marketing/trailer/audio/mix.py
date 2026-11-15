@@ -42,7 +42,7 @@ LOCALE_CUES = {"id": {"15": {"S3": 11.45}}}
 # v6 (Fable's pacing): every line re-timed onto the new picture. Tell 15–26.4 s, staff 26.4–38, quiet 38–47.
 # v9 (Fable): the quiet beat ends at 44.2 s; the climax spaced on the bars: Kakak 47.0 (where the score opens),
 # Mama 49.4; the end line 53.3. One set of cues for both languages.
-CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.45, "L4b": 21.3, "L5": 27.0, "L6": 29.85, "L7a": 32.6,
+CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.45, "T1": 16.6, "L4b": 21.3, "L5": 27.0, "L6": 29.85, "L7a": 32.6,
               "L7b": 36.2, "L8": 38.6, "L9": 41.4, "L10": 47.0, "M2": 49.4, "L11": 53.3}
 CUES["15"] = {"M1": 1.6, "S1": 3.15, "S2": 7.3, "S3": 11.85}
 LOCALE_CUES["id"]["60"] = {}
@@ -67,7 +67,8 @@ def stretched(path, factor):
 
 
 def speaker(key):
-    return "girl" if key.startswith("G") else "mama" if key.startswith("M") else "kakak"
+    # T: what Mama says to Kakak (v10), in her voice; shown as the words in the typing box, not as a caption.
+    return "girl" if key.startswith("G") else "mama" if key.startswith(("M", "T")) else "kakak"
 
 
 def arg(name, default):

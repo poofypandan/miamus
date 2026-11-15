@@ -56,3 +56,11 @@ for loc, g in LISTEN.items():
     out.save(os.path.join(d, "k0-listen-base.png"))
     dark.save(os.path.join(d, "k0-listen-send.png"))
     print("wrote", os.path.relpath(os.path.join(d, "k0-listen-base.png"), ROOT), "grey", grey)
+
+# v10: the idle sheet (the mic before it is tapped), with the suggestions hidden as in the listening shot.
+for loc in ("en", "id"):
+    d = os.path.join(ROOT, "public", "shots", loc)
+    a = np.asarray(Image.open(os.path.join(d, "k0-open.png")).convert("RGB")).copy()
+    a[SUGGEST_TOP:, :] = 255
+    Image.fromarray(a).save(os.path.join(d, "k0-open-clean.png"))
+    print("wrote", os.path.relpath(os.path.join(d, "k0-open-clean.png"), ROOT))

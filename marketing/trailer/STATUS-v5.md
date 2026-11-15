@@ -49,3 +49,9 @@ picture, music, sound and timing stay v4's.
 
 - [x] The climax spaced on the bars (garden 44.2, tug 45, Kakak 47, Mama 49.4); end card "For the little moments."
 - [x] Four MP4s and docs in `docs/private/marketing/trailer-v9/`
+
+## v10 (15 Nov)
+
+- [x] Mama says the sentence to Kakak: the real listening screen (captured), her words appearing as she speaks
+- [x] Four MP4s and docs in `docs/private/marketing/trailer-v10/`
+- [ ] The owners watch v10

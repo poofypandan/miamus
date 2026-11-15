@@ -6,7 +6,7 @@ import { BigLine, EndCard, NameChip, StaffChip, TravelLine } from "../ui/extras"
 import { Hand, Pile } from "../ui/hook";
 import { KakakMark } from "../ui/kakak";
 import { Vignette, clamp01, ease, easeIn, easeOut, keys, lerp, ramp, springAt } from "../ui/kit";
-import { type Cue, Glow, NotificationCard, Phone, type PhoneCam, ScreenTrack, Shutter, Tag, TapRing, TypedInput, look, phonePoint } from "../ui/phone";
+import { type Cue, Glow, NotificationCard, Phone, type PhoneCam, ScreenTrack, Shutter, Tag, TapRing, TypedInput, SpokenInput, look, phonePoint } from "../ui/phone";
 import { World } from "../world/World";
 import { type Cam, camMix, project } from "../world/camera";
 import { lightAt } from "../world/tod";
@@ -79,6 +79,12 @@ function girlMoves(frame: number, tugs: number[], point: number, down: Span) {
   const hop = since < 0 ? 0 : Math.abs(Math.sin(since * 0.42)) * 9 * Math.exp(-since / 26) * up;
   return { child: { tug, point: up, lean, hop }, sway };
 }
+
+/** v10: the listening screen's typing box and Stop button, in the app's CSS px (measured from the captures). */
+const LISTEN_GEO: Record<Locale, { text: number; button: number; stop: number }> = {
+  en: { text: 381.3, button: 388.3, stop: 209 },
+  id: { text: 401.3, button: 408.3, stop: 212 },
+};
 
 /** Where Mama's phone is in the world when she holds it up by her head (Figures: her eye-shading hand). */
 const PHONE_AT = { x: 263, y: 1199 };
@@ -256,30 +262,30 @@ export function Tell({ locale, t0, fast }: SceneProps) {
       </>
     );
   } else {
-    // 60 s (Fable's pacing): only the terrace sentence. The phone opens already framed on "Tell Kakak"; one change
-    // at a time, a pause before each tap, and the card held long enough to read.
+    // 60 s (v10, the owner): Mama says the sentence to Kakak. The real listening screen (capture/listen.capture.ts),
+    // her words appearing as she speaks, then Stop, then the card. One change at a time.
     const T = TELL;
-    cues.push({ src: `${dir}/today.png`, at: 0, fade: 0 });
-    const input = typed(T.sheet, T.type[0], T.card);
+    const geo = LISTEN_GEO[locale];
+    cues.push({ src: `${dir}/k0-open-clean.png`, at: 0, fade: 0 }, { src: `${dir}/k0-listen-base.png`, at: T.listen, fade: 4 });
     cues.push({ src: `${dir}/k0-card.png`, at: T.card, fade: 12 });
     scrolling(T.scroll);
     cues.push({ src: `${dir}/k0-saved.png`, at: T.saved, fade: 12 });
     cam = keys(frame, [
-      look(0, 2.2, 660, 780),
-      look(T.toSheet[0], 2.2, 660, 780),
-      look(T.toSheet[1], 2.35, 400, 720),
-      look(T.toCard[0], 2.35, 400, 720),
+      look(0, 2.35, 300, 690),
+      look(T.toCard[0], 2.35, 300, 690),
       look(T.toCard[1], 2.35, 262, 700),
       look(T.toOk[0], 2.35, 262, 700),
       look(T.toOk[1], 2.35, 566, 720),
       look(T.saved + 10, 2.35, 566, 720),
       look(T.saved + 22, 2.2, 660, 780),
     ]);
+    const mic = tap(`${locale}.mic`);
+    const words = copy.spoken.words.map(([text, t]) => ({ text, at: T.said + Math.round((t + 0.12) * 30) }));
     overlay = (
       <>
-        {input}
-        <TapRing x={open.x} y={open.y} at={T.tap} />
-        <TapRing {...SEND} at={T.send} />
+        <SpokenInput words={words} split={copy.spoken.split} top={geo.text} button={{ x: 325.3, y: geo.button, size: 49.3, src: `${dir}/k0-listen-send.png` }} until={T.card} appear={T.listen} />
+        <TapRing x={mic.x} y={mic.y} at={T.tap} />
+        <TapRing x={195} y={geo.stop} at={T.stop} />
         <TapRing {...CONFIRM} at={T.ok} />
       </>
     );

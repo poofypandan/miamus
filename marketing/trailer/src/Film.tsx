@@ -70,8 +70,8 @@ export const Film: React.FC<FilmProps> = ({ locale, cut, audio }) => {
         )}
       </Voice.Provider>
       {/* Three looks: Kakak's dark plate with her mark, Mama's plain light plate; the girl's handwriting is in the scenes. */}
-      <Captions cues={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GM]\d/.test(c.id))} level={voice.level} />
-      <MamaCaptions cues={cues.filter((c) => /^M\d/.test(c.id))} kakak={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GM]\d/.test(c.id))} />
+      <Captions cues={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GMT]\d/.test(c.id))} level={voice.level} />
+      <MamaCaptions cues={cues.filter((c) => /^M\d/.test(c.id))} kakak={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GMT]\d/.test(c.id))} />
       <Grain />
     </AbsoluteFill>
   );

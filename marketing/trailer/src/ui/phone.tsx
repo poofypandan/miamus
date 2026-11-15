@@ -385,3 +385,39 @@ export function TypedInput({ lines, placeholder, from, until, start = 0, step = 
     </div>
   );
 }
+
+/**
+ * v10: Mama's sentence appearing in the typing box as she says it, the way the app's voice input shows live words
+ * (src/components/kakak/kakak-voice.tsx): word by word, no cursor, the box two lines tall from the start (the base is
+ * the real listening screen with its words painted out, scripts/clean_sheet.py). `words` are the frames each word
+ * appears; the first `split` words are the first line.
+ */
+export function SpokenInput({ words, split, top, button, until, appear }: { words: { text: string; at: number }[]; split: number; top: number; button: { x: number; y: number; size: number; src: string }; until: number; appear?: number }) {
+  const frame = useCurrentFrame();
+  const { k, inset } = useContext(Geo);
+  if (frame >= until + 12) return null;
+  const o = (appear === undefined ? 1 : ramp(frame, appear, appear + 4)) * (1 - ramp(frame, until, until + 12));
+  if (o <= 0) return null;
+  const px = (v: number) => v * k;
+  const heard = words.filter((w) => frame >= w.at);
+  const line = (list: { text: string; at: number }[]) =>
+    list.map((w, i) => (
+      // Each word settles in over a few frames, as the recogniser's guess firms up.
+      <span key={i} style={{ opacity: 0.35 + 0.65 * ramp(frame, w.at, w.at + 5) }}>
+        {i > 0 ? " " : ""}
+        {w.text}
+      </span>
+    ));
+  const text: React.CSSProperties = { fontFamily: FONT, fontSize: px(16.2), fontWeight: 400, color: "#1b1b1b", lineHeight: `${px(23.4)}px`, whiteSpace: "pre", letterSpacing: -0.1 * k };
+  return (
+    <div style={{ position: "absolute", inset: 0, opacity: o }}>
+      <div style={{ position: "absolute", left: px(26.6), top: px(inset + top), width: px(286), height: px(48), ...text }}>
+        <div>{line(heard.slice(0, split))}</div>
+        <div>{line(heard.slice(split))}</div>
+      </div>
+      {heard.length > 0 && (
+        <div style={{ position: "absolute", left: px(button.x), top: px(inset + button.y), width: px(button.size), height: px(button.size), backgroundImage: `url(${staticFile(button.src)})`, backgroundSize: "100% 100%", opacity: ramp(frame, heard[0].at, heard[0].at + 4) }} />
+      )}
+    </div>
+  );
+}

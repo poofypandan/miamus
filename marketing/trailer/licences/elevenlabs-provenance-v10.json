@@ -1,0 +1,31 @@
+{
+ "generated": "2026-11-15",
+ "service": "ElevenLabs API, POST /v1/text-to-speech/{voice_id}",
+ "plan": "Creator (owner's account)",
+ "model_id": "eleven_v4",
+ "note": "v10 adds Mama saying the sentence to Kakak ('[slightly hurried]' is an eleven_v4 audio tag, not spoken). Every other line as in v9.",
+ "characters_total_project": 7671,
+ "lines": [
+  {
+   "speaker": "Mama",
+   "line": "T1 (said to Kakak)",
+   "language": "en",
+   "text_sent": "[slightly hurried] Have Sari mop the terrace every Monday at 9.",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 7,
+   "request_id": "YNMZ1N3VxdNeRSWyGP12",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Mama",
+   "line": "T1 (said to Kakak)",
+   "language": "id",
+   "text_sent": "Minta Sari pel teras setiap Senin jam 9.",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 7,
+   "request_id": "slp5E1AC30INmuPHaX2p",
+   "format": "wav_48000",
+   "note": "unhurried retake, so 'pel teras' is two clear words"
+  }
+ ]
+}
