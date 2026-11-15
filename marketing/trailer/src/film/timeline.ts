@@ -21,8 +21,9 @@ export const S60 = {
   // and the two-phone shot and Sari's phone are one staff beat.
   tell: [f(15), f(26.4)],
   staff: [f(26.4), f(38)],
-  quiet: [f(38), f(47)],
-  ending: [f(47), f(60)],
+  // v9 (Fable): the quiet beat gives 2.8 s to the climax; the garden opens on the pair at 44.2 s.
+  quiet: [f(38), f(44.2)],
+  ending: [f(44.2), f(60)],
 } as const satisfies Record<string, Span>;
 
 /** The 15-second cut: the hook, the one sentence, the staff, the garden, the name. */
@@ -108,20 +109,18 @@ export const STAFF = {
 export const SARI15 = { push: [0, 60] as Span, glow: 4 };
 
 /** All on track; the phone sleeps; the one notification; the garden comes back (frames in "quiet"). */
-// v7 (frames in "quiet", 0 = 38.0 s): "All on track" as one still with a slow push-in (3.4 s); the phone sleeps at
-// 41.4 s and is set down; a small clock on its dark screen runs 4:30 → 5:30 while L9 is said and then nothing arrives.
-// No notification and no ping: the silence is the promise. The phone falls away and the garden comes back at 47.0 s.
-export const QUIET = { push: [0, 102] as Span, sleep: [102, 118] as Span, set: [120, 136] as Span, clock: [140, 236] as Span, away: [246, 270] as Span };
+// v9 (frames in "quiet", 0 = 38.0 s): "All on track" 38.0–41.0 with a slow push-in; the phone dark at 41.0; L9 while
+// the clock runs; the phone falls away and the garden opens at 44.2 s. No notification, no ping.
+export const QUIET = { push: [0, 86] as Span, sleep: [86, 96] as Span, set: [98, 112] as Span, clock: [100, 160] as Span, away: [168, 186] as Span };
 
-// v7 (Fable): the garden opens close on the pair (Mama already beside her, nothing in her hands). 48.0 the tug, the
-// point, her handwriting and the bell; 49.0 Mama's "I'm looking, sweetie." as her hand comes up; ~51.2 she takes the
-// girl's hand; 51.5 Kakak, softly, "That one's yours."; 53.0 the crane; Kakak's end line from 53.3; the card at 57.0.
-// One set of cues for both languages, sized for Indonesian (Fable's final cue times).
-// v8 (owner): Kakak softly "That one's yours." starts on the tug (48.0), so the girl is never seen waiting on an AI;
-// Mama answers as soon as Kakak finishes ("I'm here, sweetie."), her hand coming up as she speaks; then she takes
-// the girl's hand. The Indonesian lines run longer, so Mama's gestures follow her voice there (shadeId, holdId).
-export const ENDING = { mama: [-80, -1] as Span, tug: 30, point: 36, bell: 37, shade: [66, 81] as Span, hold: [110, 128] as Span, shadeId: [83, 98] as Span, holdId: [128, 146] as Span, lift: [120, 250] as Span, crane: [180, 232] as Span, mark: 270, name: 279, line: 288, call: 300, url: 338 };
-export const ENDING15 = { tug: 6, point: 12, bell: 13, shade: [18, 36] as Span, hold: [38, 56] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 78, line: 84, call: 90, url: 106 };
+// v9 (Fable; frames in "ending", 0 = 44.2 s): close on the pair. 45.0 the tug, her handwriting and the bell (the call
+// rings in the last quiet bar); 47.0 Kakak softly "That one's yours." as the score opens; Mama turns ~48.4 and answers
+// at 49.4; 51.0 the hand, then a 2 s hold; 53.0 the crane; 53.3 the end line; 57.0 the card's line on the bell;
+// 57.6 the address. Bars fall on the odd seconds; the music is not re-cut.
+export const ENDING = { mama: [-80, -1] as Span, tug: 24, point: 30, bell: 31, shade: [126, 141] as Span, hold: [204, 222] as Span, lift: [204, 334] as Span, crane: [264, 316] as Span, mark: 354, name: 363, line: 384, url: 402 };
+// v9: the garden cut at 10.0 with the tug and bell together; the hand at 11.0 is her answer (a caption, as the end
+// line needs the time); the end line from 11.85; the card's line on the bell at 13.0, the address at 13.4.
+export const ENDING15 = { tug: 0, point: 6, bell: 1, shade: [16, 30] as Span, hold: [30, 46] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 78, line: 90, url: 102 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */
 export function soundCues(cut: "60" | "15") {

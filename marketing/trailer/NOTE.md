@@ -1,5 +1,37 @@
 # The Miamus trailer: what was made, and why
 
+## Version 9 (15 November 2026): room to breathe, and the why
+
+Owner's notes on v8, with Fable's cues. Four cuts in
+`docs/private/marketing/trailer-v9/`; v4 to v8 are untouched. No new voice
+takes; the music is not re-cut.
+
+- **The climax, spaced on the score's bars** (bar lines fall on the odd
+  seconds): 45.0 the tug, her handwriting and the bell (the call rings in
+  the last quiet bar); 47.0 Kakak, softly, "That one's yours." (the score's
+  level rises exactly here: `sixty()` in `audio/music/score.py` holds at
+  -7 dB until 46.8 s and reaches 0 dB at 47.0 s); Mama turns from ~48.4 and
+  answers at 49.4, "I'm here, sweetie." / "Mama di sini, sayang."; 51.0 the
+  hand, then a 2 s hold; 53.0 the crane; 53.3 Kakak's end line.
+- **The quiet beat gives up 2.8 s:** "All on track" 38.0–41.0 (L8 from
+  38.6), the phone dark at 41.0, L9 while the clock runs (ends 43.0 EN /
+  43.5 ID), the garden on the pair at 44.2.
+- **End card, the why:** "For the little moments." / "Untuk momen-momen
+  kecil." (the owner's final; it avoids repeating "here" after Mama's
+  "I'm here, sweetie.") in the plain type, smaller than the name, with
+  "little" / "kecil" in the soft italic of "once?" at dawn; it fades up at
+  57.0 with the bell, and "miamus.app" at 57.6. No handwriting on the card.
+  One line in `src/film/copy.ts` (`end`; `em` is the italic word, optional).
+- **15 s:** no "That one's yours."; the garden cut at 10.0 with the tug and
+  bell together; the hand at 11.0 is Mama's answer, her words a caption (a
+  spoken line would run into the end line, which must end by 14.8); the end
+  line from 11.85 (EN; ID 11.5, 3% quicker), ending 14.55 / 14.6; the
+  card's line on the bell at 13.0, the address at 13.4.
+- **Checked:** the stutter check clean on all four cuts (only the planned
+  dip to black at 5.0 s); MP4s at -14.0 LUFS, true peak -1.5 to -1.6 dBTP;
+  every changed line word for word; frames from the MP4s of the quiet beat,
+  the climax and the card in both languages.
+
 ## Version 8 (15 November 2026): the hand-over, and no stutter
 
 Owner's notes on v7. Four cuts in `docs/private/marketing/trailer-v8/`;
@@ -144,6 +176,7 @@ full spec (Fable's notes and the owner's choices) is `V6-SPEC.md`.
 | v6 | Lyly, with two new lines | ElevenLabs, Voice Library "Aita" | no voice: the bell, handwriting, cloth tugs |
 | v7 | Lyly, "That one's yours." softly at the end | Aita | as v6 |
 | v8 | Lyly, "That one's yours." on the tug | Aita, "I'm here, sweetie." | as v6 |
+| v9 | as v8, spaced: Kakak at 47.0 | as v8, at 49.4 | as v6 |
 
 ### To re-render v6
 

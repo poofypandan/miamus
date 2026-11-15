@@ -1,6 +1,7 @@
 # Licences: what is in the trailer, and the right to use it in paid ads
 
-Version 8 (15 November 2026) changes Mama's answer (a new take, same voice,
+Version 9 (15 November 2026) re-times the ending and changes the end card's
+written line; no new voices or takes. Version 8 changed Mama's answer (a new take, same voice,
 same terms; `elevenlabs-provenance-v8.json`). Version 7 changed one line of Kakak's (a new soft take,
 same voice, same terms; `elevenlabs-provenance-v7.json`) and removes the
 notification. Version 6 added a second ElevenLabs voice, Mama (the Voice

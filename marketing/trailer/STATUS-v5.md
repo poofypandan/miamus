@@ -44,3 +44,8 @@ picture, music, sound and timing stay v4's.
 - [x] Kakak on the tug, Mama "I'm here, sweetie.", smooth typing, soft screen changes, stutter check clean
 - [x] Four MP4s and docs in `docs/private/marketing/trailer-v8/`
 - [ ] The owners watch v8
+
+## v9 (15 Nov)
+
+- [x] The climax spaced on the bars (garden 44.2, tug 45, Kakak 47, Mama 49.4); end card "For the little moments."
+- [x] Four MP4s and docs in `docs/private/marketing/trailer-v9/`

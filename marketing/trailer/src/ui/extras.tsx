@@ -222,7 +222,7 @@ export function TravelLine({ from, to, start, end }: { from: { x: number; y: num
  * The end card. v6: under the name, "For every" in plain type, then the girl's "Mama, look!" in her own hand,
  * written on with the bell's three notes (`call`, `callAt`); the address last, small.
  */
-export function EndCard({ line, call, url, mark, name, lineAt, callAt, urlAt }: { line: string; call?: string; url: string; mark: number; name: number; lineAt: number; callAt?: number; urlAt: number }) {
+export function EndCard({ line, em, call, url, mark, name, lineAt, callAt, urlAt }: { line: string; em?: string; call?: string; url: string; mark: number; name: number; lineAt: number; callAt?: number; urlAt: number }) {
   const frame = useCurrentFrame();
   const roof = ramp(frame, mark, mark + 14, easeOut);
   const m = ramp(frame, mark + 10, mark + 32, easeOut);
@@ -239,7 +239,18 @@ export function EndCard({ line, call, url, mark, name, lineAt, callAt, urlAt }: 
         <polyline points="152,400 152,262 256,354 360,262 360,400" stroke="#fff" strokeWidth={40} strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - m} opacity={m > 0 ? 1 : 0} />
       </svg>
       <div style={{ marginTop: 6, fontSize: 132, fontWeight: 700, letterSpacing: -3.5, lineHeight: 1.05, opacity: a, transform: `translateY(${(1 - a) * 22}px)`, textShadow: shadow }}>Miamus</div>
-      <div style={{ marginTop: 26, fontSize: 53, fontWeight: 500, lineHeight: 1.22, letterSpacing: -0.6, maxWidth: 800, opacity: b, transform: `translateY(${(1 - b) * 18}px)`, textShadow: shadow, textWrap: "balance" } as React.CSSProperties}>{line}</div>
+      <div style={{ marginTop: 26, fontSize: 53, fontWeight: 500, lineHeight: 1.22, letterSpacing: -0.6, maxWidth: 800, opacity: b, transform: `translateY(${(1 - b) * 18}px)`, textShadow: shadow, textWrap: "balance" } as React.CSSProperties}>
+        {em && line.includes(em) ? (
+          <>
+            {line.slice(0, line.indexOf(em))}
+            {/* v9: one word in the soft italic of "once?" at dawn. */}
+            <span style={{ fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, fontSize: "1.12em", color: "#ffd9c9", letterSpacing: -0.5 }}>{em}</span>
+            {line.slice(line.indexOf(em) + em.length)}
+          </>
+        ) : (
+          line
+        )}
+      </div>
       {call && (
         <div
           style={{

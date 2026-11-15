@@ -38,7 +38,7 @@ export interface Copy {
   /** Small time stamps as the day passes. */
   stamps: { tell: string; staff: string; track: string; alert: string };
   dayFrom: number;
-  end: { line: string; call?: string; url: string };
+  end: { line: string; em?: string; call?: string; url: string };
 }
 
 export const COPY: Record<Locale, Copy> = {
@@ -100,8 +100,8 @@ export const COPY: Record<Locale, Copy> = {
     push: { title: "Play · Coco & Bruno", body: "Not done yet (5:00 PM)", time: "5:30 PM" },
     stamps: { tell: "7:45 AM", staff: "9:00 AM", track: "4:30 PM", alert: "5:30 PM" },
     dayFrom: 9,
-    // The end card (owner, 15 Nov): "For every" in plain type, then her "Mama, look!" in her own hand. One place to change.
-    end: { line: "For every", call: "Mama, look!", url: "miamus.app" },
+    // The end card (v9, the owner): one line, the why; "em" (optional) is set in the soft italic. One place to change.
+    end: { line: "For the little moments.", em: "little", url: "miamus.app" },
     call: ["Mama,", "look!"],
     typed: { lines: ["Have Sari mop the terrace every", "Monday at 9."], placeholder: "What should I set up?", start15: 22 },
   },
@@ -162,7 +162,7 @@ export const COPY: Record<Locale, Copy> = {
     push: { title: "Ajak main · Coco & Bruno", body: "Belum dikerjakan (17.00)", time: "17.30" },
     stamps: { tell: "07.45", staff: "09.00", track: "16.30", alert: "17.30" },
     dayFrom: 9,
-    end: { line: "Untuk setiap", call: "Mama, lihat!", url: "miamus.app" },
+    end: { line: "Untuk momen-momen kecil.", em: "kecil", url: "miamus.app" },
     call: ["Mama,", "lihat!"],
     typed: { lines: ["Minta Sari pel teras setiap Senin jam", "9."], placeholder: "Mau Kakak atur apa?", start15: 18 },
   },

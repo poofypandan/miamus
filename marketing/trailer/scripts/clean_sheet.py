@@ -31,3 +31,28 @@ for loc in ("en", "id"):
     out.save(os.path.join(d, "k0-sheet-empty.png"))
     full.crop(BUTTON).save(os.path.join(d, "k0-send-dark.png"))
     print("wrote", os.path.relpath(os.path.join(d, "k0-sheet-empty.png"), ROOT))
+
+# v10: the same for the real listening screen (capture/listen.capture.ts): k0-listen-full with the words and the
+# suggestions painted out. The send button is grey before the first word (the dark one recoloured to the app's grey,
+# sampled from k0-open), dark after. Positions differ by language (the Indonesian status line wraps to two lines).
+LISTEN = {
+    "en": {"input": (58, 1117, 946, 1307), "button": (976, 1165, 1124, 1313), "suggest": 1326},
+    "id": {"input": (58, 1177, 946, 1367), "button": (976, 1225, 1124, 1373), "suggest": 1386},
+}
+for loc, g in LISTEN.items():
+    d = os.path.join(ROOT, "public", "shots", loc)
+    full = Image.open(os.path.join(d, "k0-listen-full.png")).convert("RGB")
+    grey = np.asarray(Image.open(os.path.join(d, "k0-open.png")).convert("RGB"))[1300, 1000]
+    dark = full.crop(g["button"])
+    a = np.asarray(full).copy()
+    x0, y0, x1, y1 = g["input"]
+    a[y0:y1, x0:x1] = 255
+    a[g["suggest"]:, :] = 255
+    b = np.asarray(dark).copy()
+    lum = b.mean(axis=2)
+    b[lum < 110] = grey
+    out = Image.fromarray(a)
+    out.paste(Image.fromarray(b), g["button"][:2])
+    out.save(os.path.join(d, "k0-listen-base.png"))
+    dark.save(os.path.join(d, "k0-listen-send.png"))
+    print("wrote", os.path.relpath(os.path.join(d, "k0-listen-base.png"), ROOT), "grey", grey)

@@ -445,7 +445,8 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   const frame = useCurrentFrame();
   const copy = COPY[locale];
   const E = fast ? ENDING15 : ENDING;
-  const tod = fast ? lerp(17.74, 18.42, ramp(frame, 24, 112, (t) => t)) : lerp(17.64, 18.42, ramp(frame, 30, 300, (t) => t));
+  // The light deepens from the garden to the end card (v9: the 60 s ending starts 2.8 s sooner, at 44.2 s).
+  const tod = fast ? lerp(17.74, 18.42, ramp(frame, 24, 112, (t) => t)) : lerp(17.64, 18.42, ramp(frame, 114, 384, (t) => t));
   // Fable's mirror: the walk stays wide, a push over her last steps to the hook's two-shot, then the crane back up the
   // string to the sky. The 15-second cut opens already in the two-shot.
   const sky: Cam = { x: 0, y: -1150, z: 1 };
@@ -462,16 +463,17 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   const lift = 0.3 * ramp(frame, E.lift[0], E.lift[1]);
   // On arrival the same single tug and the point; Mama shades her eyes (the opening's silhouette, no phone) and her
   // other hand takes the girl's, whose arm comes down to meet it.
-  const moves = girlMoves(frame, [E.tug], E.point, !fast && locale === "id" ? [ENDING.shadeId[1] - 4, ENDING.holdId[0] + 8] : [E.shade[1] - 4, E.hold[0] + 8]);
-  const shade = !fast && locale === "id" ? ENDING.shadeId : E.shade;
-  const hold = !fast && locale === "id" ? ENDING.holdId : E.hold;
+  const moves = girlMoves(frame, [E.tug], E.point, [E.shade[1] - 4, E.hold[0] + 8]);
+  // v9: one set of cues for both languages (Fable).
+  const shade = E.shade;
+  const hold = E.hold;
   const mamaPose = { shade: ramp(frame, shade[0], shade[1], ease), hold: ramp(frame, hold[0], hold[1], ease), sway: moves.sway };
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       <SoftWorld soft={5 * close} light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} mamaPose={mamaPose} childPose={moves.child} kiteLift={lift} birds={1} />
       <Vignette />
       <CallTwo lines={copy.call} {...CALL_TWO} at={E.bell} out={E.crane[0] + 6} />
-      <EndCard line={copy.end.line} call={copy.end.call} url={copy.end.url} mark={E.mark} name={E.name} lineAt={E.line} callAt={E.call} urlAt={E.url} />
+      <EndCard line={copy.end.line} em={copy.end.em} call={copy.end.call} url={copy.end.url} mark={E.mark} name={E.name} lineAt={E.line} callAt={"call" in E ? (E as { call: number }).call : undefined} urlAt={E.url} />
     </AbsoluteFill>
   );
 }
