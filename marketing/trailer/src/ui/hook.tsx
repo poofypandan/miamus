@@ -14,9 +14,9 @@ import { easeOut, ramp } from "./kit";
 const PLACES: { x: number; y: number; rot: number; size: number }[] = [
   // The first ones land around the child's call and around her, so both can still be seen…
   { x: 700, y: 1345, rot: -4, size: 58 },
-  { x: 640, y: 1500, rot: 3, size: 58 },
+  { x: 610, y: 760, rot: 2, size: 56 },
   { x: 250, y: 1650, rot: -2, size: 44 },
-  { x: 610, y: 760, rot: 2, size: 52 },
+  { x: 640, y: 1500, rot: 3, size: 58 },
   { x: 210, y: 1380, rot: -5, size: 62 },
   { x: 700, y: 930, rot: 2, size: 54 },
   { x: 262, y: 868, rot: -3, size: 60 },

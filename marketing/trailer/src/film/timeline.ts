@@ -17,93 +17,108 @@ export const S60 = {
   hook: [0, f(5)],
   turn: [f(5), f(11)],
   kakak: [f(11), f(15)],
-  tell: [f(15), f(25)],
-  know: [f(25), f(31)],
-  sari: [f(31), f(35)],
-  day: [f(35), f(39)],
-  quiet: [f(39), f(47)],
+  // v6 (Fable's pacing): one task end to end, on the score's bars. The house-through-the-day scene is cut,
+  // and the two-phone shot and Sari's phone are one staff beat.
+  tell: [f(15), f(26.4)],
+  staff: [f(26.4), f(38)],
+  quiet: [f(38), f(47)],
   ending: [f(47), f(60)],
 } as const satisfies Record<string, Span>;
 
 /** The 15-second cut: the hook, the one sentence, the staff, the garden, the name. */
 export const S15 = {
   hook: [0, f(3)],
-  tell: [f(3), f(7.2)],
-  sari: [f(7.2), f(10)],
+  tell: [f(3), f(8)],
+  sari: [f(8), f(10)],
   ending: [f(10), f(15)],
 } as const satisfies Record<string, Span>;
 
 /** The hook: when each question lands (frames in the scene), faster and faster; then the stop. */
 export const HOOK = {
-  /** The child's call writes itself on (v6: as she says it, from 0.2 s). */
+  /** The child's call writes itself on (v6: with the bell, see `bell`). */
   call: 6,
-  /** v6: the first question waits until she has finished; then faster and faster, out of Mama's phone. */
-  at: [38, 49, 58, 66, 73, 80, 85, 90, 95, 99, 103, 106, 109, 111, 114, 115, 117, 118, 118, 119, 120],
+  /** v6: the questions leave Mama's phone as the camera arrives at the kite (2.1 s), faster and faster. */
+  at: [63, 71, 77, 82, 87, 92, 96, 99, 103, 105, 108, 110, 112, 114, 116, 117, 118, 119, 119, 119, 120],
   slam: 122,
   /** The held breath, then everything lets go. */
   fall: 134,
-  /** v6 (Fable): close on the two of them from behind; the girl tugs Mama's dress twice, then points at the kite. */
-  tugs: [5, 16],
-  point: 25,
-  /** The bell's three notes ("Ma-ma, look") start here; her handwriting writes on with them. */
-  bell: 27,
-  /** Pull back and up until the kite is where she points; her arm comes down slowly. */
-  pull: [39, 100] as Span,
-  armDown: [62, 112] as Span,
+  /** v6 (Fable): a close two-shot from behind; the girl tugs Mama's dress twice, then points at the kite. */
+  tugs: [2, 11],
+  point: 19,
+  /** The bell's three notes ("Ma-ma, look") start here, a third of a second apart; her handwriting writes on with them. */
+  bell: 20,
+  /** One move back and up along her arm and the string until the kite is in frame; her arm comes down slowly. */
+  pull: [38, 63] as Span,
+  armDown: [70, 115] as Span,
 };
 /** The same, for the 15-second cut. */
 export const HOOK15 = {
   call: 2,
-  at: [30, 35, 40, 44, 47, 50, 53, 56, 58, 60, 62, 64, 65, 67, 68, 69, 69, 70, 71, 71, 72],
+  at: [48, 51, 54, 56, 58, 59, 61, 63, 64, 65, 66, 67, 68, 69, 70, 70, 70, 71, 71, 71, 72],
   slam: 74,
   fall: 80,
-  tugs: [3],
-  point: 11,
-  bell: 12,
-  pull: [26, 70] as Span,
-  armDown: [40, 80] as Span,
+  tugs: [2],
+  point: 12,
+  bell: 13,
+  pull: [27, 48] as Span,
+  armDown: [50, 80] as Span,
 };
 
 /** Kakak's sheet, sentence by sentence (frames in the "tell" scene). */
+/**
+ * v6 (Fable's pacing): only the terrace sentence is told to Kakak (frames in "tell", 0 = 15.0 s). One change at a
+ * time, a pause before each tap, reading holds 2.5 s. The phone opens already framed on "Tell Kakak".
+ */
 export const TELL = {
-  /** The Today screen, top to the "Tell Kakak" button. */
-  pan: [12, 32] as Span,
-  tap: 40,
-  sheet: 46,
-  // Sentence one: playtime for Coco and Bruno, typed out.
-  type1: [58, 100] as Span,
-  send1: 105,
-  card1: 120,
-  down1: [150, 164] as Span,
-  save1: 186,
-  saved1: 193,
-  // Sentence two: the terrace, already typed.
-  cut2: 206,
-  send2: 214,
-  card2: 228,
-  scroll2: [252, 266] as Span,
-  ok2: 280,
-  saved2: 287,
+  tap: 39,
+  sheet: 45,
+  toSheet: [50, 60] as Span,
+  type: [60, 138] as Span,
+  send: 150,
+  card: 180,
+  toCard: [184, 196] as Span,
+  scroll: [258, 270] as Span,
+  toOk: [272, 282] as Span,
+  ok: 291,
+  saved: 300,
 };
-export const TELL15 = { send: 8, card: 22, scroll: [50, 64] as Span, ok: 92, saved: 99 };
+/** 15 s (frames in "tell", 0 = 3.0 s): the typed sentence, the card held 2.4 s, "Looks right", "Saved". */
+export const TELL15 = { type: [0, 36] as Span, send: 40, card: 50, toCard: [54, 64] as Span, scroll: [122, 132] as Span, ok: 138, saved: 143 };
 
-/** The line from the owner's phone to Sari's, and the push into hers (frames in "know"). */
-export const KNOW = { apart: [0, 22] as Span, line: [30, 56] as Span, push: [82, 110] as Span };
-
-/** Sari's phone: the task, the two photos, done (frames in "sari"). */
-export const SARI = { card: 8, sheet: 14, before: 30, beforeIn: 38, after: 54, afterIn: 62, finish: 84, done: 92 };
-export const SARI15 = { card: 6, sheet: 12, before: 22, beforeIn: 28, after: 38, afterIn: 44, finish: 58, done: 64 };
+/** v6: one staff beat (frames in "staff", 0 = 26.4 s): the line to Sari's phone, her list, the task, two photos, done. */
+export const STAFF = {
+  apart: [0, 18] as Span,
+  line: [18, 40] as Span,
+  push: [70, 93] as Span,
+  card: 138,
+  sheet: 144,
+  toPhotos: [150, 162] as Span,
+  before: 168,
+  beforeIn: 177,
+  after: 216,
+  afterIn: 225,
+  toFinish: [255, 267] as Span,
+  finish: 276,
+  done: 288,
+  toDone: [296, 308] as Span,
+};
+/** 15 s: Sari's list with "Pel teras" highlighted and a slow push (frames in "sari", 0 = 8.0 s); no taps. */
+export const SARI15 = { push: [0, 60] as Span, glow: 4 };
 
 /** All on track; the phone sleeps; the one notification; the garden comes back (frames in "quiet"). */
-// v6: the ping comes 0.8 s earlier (frame 112, 42.7 s), so Kakak's "That one's yours" is said while the
-// notification is still on screen; the call's bell sits under the girl's second "Mama, look!" as the phone falls away.
-export const QUIET = { scroll: [26, 70] as Span, sleep: [76, 100] as Span, ping: 112, call: 236, away: [210, 240] as Span };
+// v6 (frames in "quiet", 0 = 38.0 s): "All on track" as one still with a slow push-in (3.4 s); the phone sleeps at
+// 41.4 s; the ping at 42.7 s; the notification held 2.6 s, during which Kakak says "That one's yours. Go play.";
+// then the phone falls away and the garden comes back at 47.0 s.
+export const QUIET = { push: [0, 102] as Span, sleep: [102, 118] as Span, set: [120, 136] as Span, ping: 141, close: [150, 168] as Span, away: [246, 270] as Span };
 
 /** The ending (frames in "ending"): Mama walks out, they look up, the camera follows the kite, the name. */
 // v6 (Fable): Mama walks out (a little sooner, nothing in her hands); on arrival the girl gives the same single tug
 // and points, with the bell; Mama shades her eyes ("I'm looking, sweetie."), takes the girl's hand; a held moment,
 // then the crane, which still ends on the mark.
-export const ENDING = { mama: [10, 90] as Span, tug: 93, point: 101, bell: 103, shade: [108, 126] as Span, hold: [128, 150] as Span, lift: [120, 250] as Span, crane: [206, 262] as Span, mark: 258, name: 276, line: 292, url: 310 };
+// Fable's framing: the walk stays wide, then a push over her last steps to the hook's close two-shot; tug and point
+// at 50.9 s; her hand to her eyes from 51.3 s; hold to 52.8 s; the crane back up the string; Kakak's end line
+// ~53.6–55.9 s; the mark, name and written line arrive silent on the bell's last three notes at 57.0 s; the address last.
+export const ENDING = { mama: [10, 90] as Span, push: [90, 117] as Span, tug: 117, point: 123, bell: 124, shade: [129, 144] as Span, hold: [146, 168] as Span, lift: [120, 250] as Span, crane: [174, 232] as Span, mark: 300, name: 310, line: 320, url: 338 };
 export const ENDING15 = { tug: 6, point: 12, bell: 13, shade: [18, 36] as Span, hold: [38, 56] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 80, line: 90, url: 100 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */
@@ -120,23 +135,13 @@ export function soundCues(cut: "60" | "15") {
       fall: sec(HOOK.fall),
       call: [sec(HOOK.bell), at(S.ending, ENDING.bell)],
       tugs: [...HOOK.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING.tug + 3)],
-      taps: [
-        at(S.tell, TELL.tap),
-        at(S.tell, TELL.send1),
-        at(S.tell, TELL.save1),
-        at(S.tell, TELL.send2),
-        at(S.tell, TELL.ok2),
-        at(S.sari, SARI.card),
-        at(S.sari, SARI.before),
-        at(S.sari, SARI.after),
-        at(S.sari, SARI.finish),
-      ],
-      typing: [[at(S.tell, TELL.type1[0]), at(S.tell, TELL.type1[1])]],
-      cards: [at(S.tell, TELL.card1), at(S.tell, TELL.card2)],
-      saved: [at(S.tell, TELL.saved1), at(S.tell, TELL.saved2), at(S.sari, SARI.done)],
-      shutters: [at(S.sari, SARI.beforeIn), at(S.sari, SARI.afterIn)],
-      whooshes: [sec(S.tell[0]), at(S.know, KNOW.line[0]), at(S.know, KNOW.push[0]), sec(S.day[0]), sec(S.quiet[0]), at(S.quiet, QUIET.away[0])],
-      arrive: at(S.know, KNOW.line[1]),
+      taps: [at(S.tell, TELL.tap), at(S.tell, TELL.send), at(S.tell, TELL.ok), at(S.staff, STAFF.card), at(S.staff, STAFF.before), at(S.staff, STAFF.after), at(S.staff, STAFF.finish)],
+      typing: [[at(S.tell, TELL.type[0]), at(S.tell, TELL.type[1])]],
+      cards: [at(S.tell, TELL.card)],
+      saved: [at(S.tell, TELL.saved), at(S.staff, STAFF.done)],
+      shutters: [at(S.staff, STAFF.beforeIn), at(S.staff, STAFF.afterIn)],
+      whooshes: [sec(S.tell[0]), at(S.staff, STAFF.line[0]), at(S.staff, STAFF.push[0]), sec(S.quiet[0]), at(S.quiet, QUIET.away[0])],
+      arrive: at(S.staff, STAFF.line[1]),
       sleep: at(S.quiet, QUIET.sleep[0]),
       ping: at(S.quiet, QUIET.ping),
       kakak: sec(S.kakak[0] + 26),
@@ -154,11 +159,11 @@ export function soundCues(cut: "60" | "15") {
     fall: sec(HOOK15.fall),
     call: [sec(HOOK15.bell), at(S.ending, ENDING15.bell)],
     tugs: [...HOOK15.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING15.tug + 3)],
-    taps: [at(S.tell, TELL15.send), at(S.tell, TELL15.ok), at(S.sari, SARI15.card), at(S.sari, SARI15.before), at(S.sari, SARI15.after), at(S.sari, SARI15.finish)],
-    typing: [],
+    taps: [at(S.tell, TELL15.send), at(S.tell, TELL15.ok)],
+    typing: [[at(S.tell, TELL15.type[0]), at(S.tell, TELL15.type[1])]],
     cards: [at(S.tell, TELL15.card)],
-    saved: [at(S.tell, TELL15.saved), at(S.sari, SARI15.done)],
-    shutters: [at(S.sari, SARI15.beforeIn), at(S.sari, SARI15.afterIn)],
+    saved: [at(S.tell, TELL15.saved)],
+    shutters: [],
     whooshes: [sec(S.tell[0]), sec(S.sari[0]), sec(S.ending[0])],
     arrive: null,
     sleep: null,

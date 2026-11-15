@@ -16,6 +16,8 @@ export interface Bubble {
 export interface Copy {
   /** The child's call, in her own hand. */
   child: string;
+  /** v6: the same call on two lines, one word group per bell note. */
+  call: [string, string];
   bubbles: Bubble[];
   /** The last one, the one that lands on everything. */
   slam: string;
@@ -42,7 +44,7 @@ export const COPY: Record<Locale, Copy> = {
     child: "Mama, look!",
     bubbles: [
       { text: "Dogs fed?" },
-      { text: "Terrace mopped?" },
+      { text: "Did anyone play with Coco?" },
       { text: "Sudah, Bu.", reply: true },
       { text: "Who's getting Maya at 1?" },
       { text: "Eggs?" },
@@ -51,7 +53,7 @@ export const COPY: Record<Locale, Copy> = {
       { text: "Siap, Bu.", reply: true },
       { text: "Laundry in?" },
       { text: "What's for dinner?" },
-      { text: "Did anyone play with Coco?" },
+      { text: "Terrace mopped?" },
       { text: "Gate locked?" },
       { text: "Done yet?" },
       { text: "The tap is dripping again" },
@@ -71,7 +73,7 @@ export const COPY: Record<Locale, Copy> = {
       L4: "Tell me once.",
       L4b: "I'll take it from there.",
       L5: "And everyone at home knows what to do.",
-      L6: "In their own language. On their own phone.",
+      L6: "In their own language.",
       L7a: "They run the home.",
       L7b: "I just keep track.",
       L8: "And you? You'll only hear from me…",
@@ -96,13 +98,15 @@ export const COPY: Record<Locale, Copy> = {
     push: { title: "Play · Coco & Bruno", body: "Not done yet (5:00 PM)", time: "5:30 PM" },
     stamps: { tell: "7:45 AM", staff: "9:00 AM", track: "4:30 PM", alert: "5:30 PM" },
     dayFrom: 9,
-    end: { line: "More time for your family.", url: "miamus.app" },
+    // The written line under the name: a placeholder until the owner's final wording.
+    end: { line: "The home app for families with staff.", url: "miamus.app" },
+    call: ["Mama,", "look!"],
   },
   id: {
     child: "Mama, lihat!",
     bubbles: [
       { text: "Anjing sudah makan?" },
-      { text: "Teras sudah dipel?" },
+      { text: "Coco sudah diajak main?" },
       { text: "Sudah, Bu.", reply: true },
       { text: "Siapa jemput Maya jam 1?" },
       { text: "Telur masih ada?" },
@@ -111,7 +115,7 @@ export const COPY: Record<Locale, Copy> = {
       { text: "Siap, Bu.", reply: true },
       { text: "Cucian sudah diangkat?" },
       { text: "Masak apa malam ini?" },
-      { text: "Coco sudah diajak main?" },
+      { text: "Teras sudah dipel?" },
       { text: "Gerbang sudah dikunci?" },
       { text: "Sudah?" },
       { text: "Keran bocor lagi" },
@@ -131,7 +135,7 @@ export const COPY: Record<Locale, Copy> = {
       L4: "Bilang sekali ke Kakak.",
       L4b: "Sisanya, Kakak yang atur.",
       L5: "Dan semua orang di rumah tahu harus apa.",
-      L6: "Dalam bahasa mereka. Di HP masing-masing.",
+      L6: "Dalam bahasa mereka.",
       L7a: "Merekalah yang mengurus rumah.",
       L7b: "Kakak hanya membantu mencatat.",
       L8: "Dan Anda? Anda hanya dikabari…",
@@ -155,6 +159,7 @@ export const COPY: Record<Locale, Copy> = {
     push: { title: "Ajak main · Coco & Bruno", body: "Belum dikerjakan (17.00)", time: "17.30" },
     stamps: { tell: "07.45", staff: "09.00", track: "16.30", alert: "17.30" },
     dayFrom: 9,
-    end: { line: "Lebih banyak waktu untuk keluarga.", url: "miamus.app" },
+    end: { line: "Aplikasi rumah untuk keluarga dengan staf.", url: "miamus.app" },
+    call: ["Mama,", "lihat!"],
   },
 };

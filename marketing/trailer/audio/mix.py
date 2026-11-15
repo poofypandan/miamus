@@ -39,8 +39,10 @@ LOCALE_CUES = {"id": {"15": {"S3": 11.45}}}
 #   Hook: Mama, distracted, "In a minute, sweetie…" as the first questions leave her phone. End: the ping
 #   is 0.8 s earlier, so Kakak's "That one's yours. Go play." comes straight after L9 while the notification
 #   is on screen; Mama answers as her hand comes up to shade her eyes, then a held moment before the crane.
-CUES["60"].update({"M1": 1.75, "L9": 43.0, "L10": 44.85, "M2": 50.75})
-CUES["15"].update({"M1": 1.2, "M2": 10.55, "S3": 12.0})
+# v6 (Fable's pacing): every line re-timed onto the new picture. Tell 15–26.4 s, staff 26.4–38, quiet 38–47.
+CUES["60"] = {"M1": 2.1, "L1": 5.15, "L2": 7.95, "L3": 11.2, "L4": 15.45, "L4b": 21.3, "L5": 27.0, "L6": 29.85, "L7a": 32.6,
+              "L7b": 36.2, "L8": 39.4, "L9": 43.0, "L10": 44.85, "M2": 51.3, "L11": 53.6}
+CUES["15"] = {"M1": 1.6, "S1": 3.15, "S2": 7.3, "M2": 10.55, "S3": 12.0}
 LOCALE_CUES["id"]["60"] = {"L10": 45.3}
 LOCALE_CUES["id"]["15"] = {"S3": 11.5}
 # The girl does not speak (Fable, 15 Nov): her "Mama, look!" is the score's bell and her handwriting.

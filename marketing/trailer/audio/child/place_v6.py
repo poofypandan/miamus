@@ -56,6 +56,10 @@ def main():
         for f in os.listdir(k_src):
             shutil.copy(os.path.join(k_src, f), os.path.join(k, f))
         print(locale, "kakak L10", put(first(os.path.join(l10, locale), "L10"), os.path.join(k, "L10.wav")))
+        # v6: L6 trimmed to "In their own language." / "Dalam bahasa mereka." (take 1).
+        l6 = os.path.join(ROOT, "audio", "out", "eleven", "v6final", "lyly", locale)
+        if os.path.isdir(l6):
+            print(locale, "kakak L6", put(first(l6, "L6", "t1"), os.path.join(k, "L6.wav")))
 
 
 if __name__ == "__main__":

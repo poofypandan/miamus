@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame } from "remotion";
 import { COPY, type Locale } from "./film/copy";
-import { Day, Ending, Hook, Know, MeetKakak, Quiet, Sari, Tell, Turn, Voice } from "./film/scenes";
+import { Ending, Hook, MeetKakak, Quiet, Sari, Staff, Tell, Turn, Voice } from "./film/scenes";
 import { FPS, S15, S60, type Span, len } from "./film/timeline";
 import voData from "./film/vo-data.json";
 import { loadFonts } from "./theme";
@@ -17,8 +17,9 @@ export type FilmProps = {
   audio: string | null;
 };
 
-/** Lines that are already on screen in large type: the dawn question, the end card. */
-const SHOWN_LARGE = ["L2", "L11", "S3"];
+/** Lines that are already on screen in large type: the dawn question. (v6: the end card's written line differs
+ * from Kakak's spoken end line, so that one is captioned too.) */
+const SHOWN_LARGE = ["L2"];
 
 type VoCut = { cues: { id: string; from: number; to: number }[]; env: number[] };
 
@@ -55,9 +56,7 @@ export const Film: React.FC<FilmProps> = ({ locale, cut, audio }) => {
             <Scene span={S60.turn}><Turn {...p} t0={S60.turn[0]} /></Scene>
             <Scene span={S60.kakak}><MeetKakak {...p} t0={S60.kakak[0]} /></Scene>
             <Scene span={S60.tell}><Tell {...p} t0={S60.tell[0]} /></Scene>
-            <Scene span={S60.know}><Know {...p} t0={S60.know[0]} /></Scene>
-            <Scene span={S60.sari}><Sari {...p} t0={S60.sari[0]} /></Scene>
-            <Scene span={S60.day}><Day {...p} t0={S60.day[0]} /></Scene>
+            <Scene span={S60.staff}><Staff {...p} t0={S60.staff[0]} /></Scene>
             <Scene span={S60.quiet}><Quiet {...p} t0={S60.quiet[0]} /></Scene>
             <Scene span={S60.ending}><Ending {...p} t0={S60.ending[0]} /></Scene>
           </>
@@ -72,7 +71,7 @@ export const Film: React.FC<FilmProps> = ({ locale, cut, audio }) => {
       </Voice.Provider>
       {/* Three looks: Kakak's dark plate with her mark, Mama's plain light plate; the girl's handwriting is in the scenes. */}
       <Captions cues={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GM]\d/.test(c.id))} level={voice.level} />
-      <MamaCaptions cues={cues.filter((c) => /^M\d/.test(c.id))} />
+      <MamaCaptions cues={cues.filter((c) => /^M\d/.test(c.id))} kakak={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GM]\d/.test(c.id))} />
       <Grain />
     </AbsoluteFill>
   );

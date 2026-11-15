@@ -1,5 +1,68 @@
 # The Miamus trailer: what was made, and why
 
+## Version 6 (15 November 2026): the girl's call, understood
+
+Friends who watched v5 missed the story of "Mama, look!". v6 tells it with
+Mama's voice and the girl's gestures, and follows one task end to end. Four
+cuts in `docs/private/marketing/trailer-v6/`; v4 and v5 are untouched. The
+full spec (Fable's notes and the owner's choices) is `V6-SPEC.md`.
+
+- **The hook:** a close two-shot from behind. Mama stands still with her
+  phone glowing by her head (the only cool light); the girl tugs her dress
+  twice, then points at the kite. Her "Mama, look!" is the bell and her
+  handwriting, one word group per note. The camera pulls back and up to the
+  kite as Mama says "In a minute, sweetie…" and the day's questions fly out
+  of her phone. "Did anyone play with Coco?" is the second question, so the
+  notification later lands.
+- **One task, end to end, on the score's bars:** Tell Kakak (15–26.4 s,
+  only the terrace sentence), the line to Sari's phone and her two photos
+  (26.4–38), "All on track" and the one notification (38–47). The
+  house-through-the-day and per-person scenes are cut; the music is not.
+- **The payoff:** Kakak says "That one's yours. Go play." while the
+  notification is still on screen. Mama walks out, the girl gives the same
+  tug and points, Mama shades her eyes ("I'm looking, sweetie.") and takes
+  her hand. The last human word is Mama's. Kakak says the end line over the
+  sky; the mark, name and written line arrive silent on the bell's last
+  three notes at 57 s.
+- **The girl does not speak.** The owners heard four synthetic child voices
+  (open-source, made on the laptop; ElevenLabs does not allow child-like
+  voices) and found them robotic. Her voice is the bell; her tugs are soft
+  cloth sounds.
+- **Captions, three looks:** the girl's handwriting, Mama on a plain sand
+  plate, Kakak on her dark plate with her mark. In the 15-second Indonesian
+  cut, Mama's answer is a caption only (no room to say it before the end
+  line).
+- **End-card line:** a placeholder ("The home app for families with staff."
+  / "Aplikasi rumah untuk keluarga dengan staf.") until the owner's final
+  wording; it is one line in `src/film/copy.ts`.
+- **Checked:** every new line heard word for word by Whisper; the four
+  mixes at -14.0 LUFS, true peak -1.6 to -1.7 dBTP; the 42.7 s ping 38 dB
+  above the music in its band, after the pad has faded; frames of all four
+  cuts, including close crops of the tug, point and hand-hold.
+- **Credits:** 6,849 characters used of the key's 10,000 (v6: 941).
+
+### Voices, all versions
+
+| | Kakak | Mama | The girl |
+|---|---|---|---|
+| v4 | Kokoro-82M (open source) | none | none (the bell) |
+| v5 | ElevenLabs, Voice Library "Lyly" | none | none (the bell) |
+| v6 | Lyly, with two new lines | ElevenLabs, Voice Library "Aita" | no voice: the bell, handwriting, cloth tugs |
+
+### To re-render v6
+
+From `marketing/trailer/` on branch `claude/trailer-voice-elevenlabs-77406a`
+(after `npm install`, `./audio/setup.sh` and `npm run capture`):
+
+    node audio/cues.mjs && .tools/venv-main/bin/python audio/sfx.py
+    .tools/venv-main/bin/python audio/music/score.py 60 felt && .tools/venv-main/bin/python audio/music/score.py 15 felt
+    .tools/venv-main/bin/python audio/eleven/jobs.py place lyly --pick audio/eleven/picks-lyly.json
+    .tools/venv-main/bin/python audio/child/place_v6.py --mama aita --mama-from audio/out/eleven/v6final --mama-takes en/M1=t1,en/M2=t2,id/M1=t1,id/M2=t1
+    .tools/venv-main/bin/python audio/mix.py --voice eleven-lyly-v6 --mama mama-aita --music felt
+    npm run render
+
+The ElevenLabs takes are git-ignored; copies are in `docs/private/marketing/trailer-v6/voice/`.
+
 ## Version 5 (15 November 2026): Kakak's new voice
 
 Only Kakak's voice changed. Picture, music, effects and every timing are

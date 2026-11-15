@@ -1,0 +1,104 @@
+{
+ "generated": "2026-11-15",
+ "service": "ElevenLabs API, POST /v1/text-to-speech/{voice_id}",
+ "plan": "Creator (owner's account)",
+ "model_id": "eleven_v4",
+ "voices": {
+  "Kakak": {
+   "name": "Lyly - Calm, Witty and Clear",
+   "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+   "notice_period_days": 730
+  },
+  "Mama": {
+   "name": "Aita - Neutral, Clear and Natural",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "category": "high_quality",
+   "notice_period_days": 730,
+   "source": "ElevenLabs Voice Library (shared voice)"
+  }
+ },
+ "note": "v6 adds these lines; every other Kakak line is v5's (elevenlabs-provenance.json).",
+ "characters_total_project": 6849,
+ "lines": [
+  {
+   "speaker": "Mama",
+   "line": "M1",
+   "language": "en",
+   "text_sent": "In a minute, sweetie…",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 7,
+   "request_id": "9z3bZafZY0uCWe53L2EV",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Mama",
+   "line": "M2",
+   "language": "en",
+   "text_sent": "I'm looking, sweetie.",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 113,
+   "request_id": "wqPrSA8m9VmjgH9eHFmS",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Mama",
+   "line": "M1",
+   "language": "id",
+   "text_sent": "Sebentar ya, sayang…",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 7,
+   "request_id": "WGAxcgyyBCwJ443q4SjQ",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Mama",
+   "line": "M2",
+   "language": "id",
+   "text_sent": "Iya, Mama lihat, sayang.",
+   "voice_id": "k5eTzx1VYYlp6BE39Qrj",
+   "seed": 7,
+   "request_id": "WcYORuzndaq6ZN5kxCuM",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Kakak",
+   "line": "L10",
+   "language": "en",
+   "text_sent": "That one's yours. Go play.",
+   "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+   "seed": 11,
+   "request_id": "SlRbp1TCWZAKSQLwzpkj",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Kakak",
+   "line": "L10",
+   "language": "id",
+   "text_sent": "Yang ini bagian Anda. Selamat bermain.",
+   "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+   "seed": 11,
+   "request_id": "W2slp4bxY1Y072hAwfJz",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Kakak",
+   "line": "L6",
+   "language": "en",
+   "text_sent": "In their own language.",
+   "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+   "seed": 11,
+   "request_id": "nOfvZDNFHvgB8fJDyr9k",
+   "format": "wav_48000"
+  },
+  {
+   "speaker": "Kakak",
+   "line": "L6",
+   "language": "id",
+   "text_sent": "Dalam bahasa mereka.",
+   "voice_id": "ZF5uWKM2iVvSId3tBCYt",
+   "seed": 11,
+   "request_id": "KxqqiLQaAsFWl1JyHJxf",
+   "format": "wav_48000"
+  }
+ ]
+}

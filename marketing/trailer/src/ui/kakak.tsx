@@ -170,10 +170,12 @@ export function Captions({ cues, level = 0 }: { cues: CaptionCue[]; level?: numb
  * v6: Mama's words. A plain light plate with no mark, in the same place as Kakak's, so the two are
  * never mistaken for each other: Kakak is the dark plate with her heart, Mama is light and plain.
  */
-export function MamaCaptions({ cues }: { cues: CaptionCue[] }) {
+export function MamaCaptions({ cues, kakak = [] }: { cues: CaptionCue[]; kakak?: CaptionCue[] }) {
   const frame = useCurrentFrame();
   const cue = cues.find((c) => frame >= c.from - 3 && frame <= c.to + 12);
   if (!cue) return null;
+  // When Kakak speaks over her tail, Mama's plate steps up a row, so the two never sit on each other.
+  const lift = kakak.some((k) => k.from - 6 <= cue.to + 12 && k.to + 10 >= cue.from - 3) ? 118 * ramp(frame, cue.from - 3, cue.from + 6) : 0;
   const inT = ramp(frame, cue.from - 3, cue.from + 6, easeOut);
   const o = inT * (1 - ramp(frame, cue.to + 4, cue.to + 12));
   return (
@@ -186,7 +188,7 @@ export function MamaCaptions({ cues }: { cues: CaptionCue[] }) {
         display: "flex",
         justifyContent: "center",
         opacity: o,
-        transform: `translate(${CX - (SAFE.left + SAFE.right) / 2}px, ${(1 - inT) * 16}px)`,
+        transform: `translate(${CX - (SAFE.left + SAFE.right) / 2}px, ${(1 - inT) * 16 - lift}px)`,
       }}
     >
       <div
