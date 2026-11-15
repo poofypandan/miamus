@@ -1,0 +1,818 @@
+{
+ "kind": "music",
+ "items": [
+  {
+   "out": "audio/out/eleven/music/e1-dark68",
+   "composition_plan": {
+    "chunks": [
+     {
+      "text": "[Intro]\n{soft Rhodes chords and vinyl crackle, no drums}",
+      "duration_ms": 10000,
+      "positive_styles": [
+       "68 BPM",
+       "C major",
+       "lo-fi hip hop",
+       "half-time groove",
+       "double-time hi-hats",
+       "very dark and warm",
+       "heavy low-pass filter on the whole mix",
+       "round funky electric bass, prominent",
+       "mellow Rhodes chords",
+       "dusty vintage drums",
+       "tape saturation",
+       "soft vinyl crackle",
+       "steady, compressed",
+       "great production quality",
+       "warm analog mix",
+       "instrumental only",
+       "gentle intro",
+       "sparse",
+       "quiet"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "crisp highs",
+       "airy",
+       "shimmering",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "drums",
+       "loud"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Groove]\n{drums and bass enter on the first beat}",
+      "duration_ms": 24000,
+      "positive_styles": [
+       "68 BPM",
+       "C major",
+       "full groove",
+       "steady",
+       "laid-back",
+       "lo-fi hip hop",
+       "half-time groove",
+       "double-time hi-hats",
+       "very dark and warm",
+       "heavy low-pass filter on the whole mix",
+       "round funky electric bass, prominent"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "crisp highs",
+       "airy",
+       "shimmering",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Breakdown]\n{drums drop out, bass and keys fade}",
+      "duration_ms": 4000,
+      "positive_styles": [
+       "68 BPM",
+       "C major",
+       "thinning out",
+       "drums stop",
+       "fading",
+       "keys only"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "crisp highs",
+       "airy",
+       "shimmering",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "drums",
+       "build-up",
+       "riser"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Silence]\n{almost silent, only faint vinyl crackle}",
+      "duration_ms": 4000,
+      "positive_styles": [
+       "near silence",
+       "faint vinyl crackle",
+       "very quiet",
+       "empty space"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "crisp highs",
+       "airy",
+       "shimmering",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "drums",
+       "bass",
+       "melody",
+       "chords",
+       "riser",
+       "build-up"
+      ],
+      "context_adherence": "medium"
+     },
+     {
+      "text": "[Drop]\n{full groove returns at once on the first beat}",
+      "duration_ms": 10000,
+      "positive_styles": [
+       "68 BPM",
+       "C major",
+       "full groove returns immediately",
+       "warm",
+       "satisfying",
+       "lo-fi hip hop",
+       "half-time groove",
+       "double-time hi-hats",
+       "very dark and warm",
+       "heavy low-pass filter on the whole mix",
+       "round funky electric bass, prominent"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "crisp highs",
+       "airy",
+       "shimmering",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "fade in",
+       "build-up"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Outro]\n{one resolving chord, ringing out}",
+      "duration_ms": 3000,
+      "positive_styles": [
+       "C major",
+       "final resolving chord on the tonic",
+       "ringing out",
+       "soft ending",
+       "no drums"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "crisp highs",
+       "airy",
+       "shimmering",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "drums",
+       "abrupt cut"
+      ],
+      "context_adherence": "high"
+     }
+    ]
+   },
+   "model": "music_v2_5",
+   "seed": 1115
+  },
+  {
+   "out": "audio/out/eleven/music/e2-rhodes70",
+   "composition_plan": {
+    "chunks": [
+     {
+      "text": "[Intro]\n{soft Rhodes chords and vinyl crackle, no drums}",
+      "duration_ms": 10000,
+      "positive_styles": [
+       "70 BPM",
+       "C major",
+       "lo-fi hip hop",
+       "half-time groove",
+       "double-time shuffled hi-hats",
+       "dark and warm",
+       "Rhodes electric piano melody",
+       "warm analog synth pad",
+       "deep round bass",
+       "boom-bap drums, soft",
+       "cassette tape wobble",
+       "vinyl texture",
+       "great production quality",
+       "warm analog mix",
+       "instrumental only",
+       "gentle intro",
+       "sparse",
+       "quiet"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "harsh",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "acoustic guitar",
+       "drums",
+       "loud"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Groove]\n{drums and bass enter on the first beat}",
+      "duration_ms": 24000,
+      "positive_styles": [
+       "70 BPM",
+       "C major",
+       "full groove",
+       "steady",
+       "laid-back",
+       "lo-fi hip hop",
+       "half-time groove",
+       "double-time shuffled hi-hats",
+       "dark and warm",
+       "Rhodes electric piano melody",
+       "warm analog synth pad"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "harsh",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "acoustic guitar"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Breakdown]\n{drums drop out, bass and keys fade}",
+      "duration_ms": 4000,
+      "positive_styles": [
+       "70 BPM",
+       "C major",
+       "thinning out",
+       "drums stop",
+       "fading",
+       "keys only"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "harsh",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "acoustic guitar",
+       "drums",
+       "build-up",
+       "riser"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Silence]\n{almost silent, only faint vinyl crackle}",
+      "duration_ms": 4000,
+      "positive_styles": [
+       "near silence",
+       "faint vinyl crackle",
+       "very quiet",
+       "empty space"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "harsh",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "acoustic guitar",
+       "drums",
+       "bass",
+       "melody",
+       "chords",
+       "riser",
+       "build-up"
+      ],
+      "context_adherence": "medium"
+     },
+     {
+      "text": "[Drop]\n{full groove returns at once on the first beat}",
+      "duration_ms": 10000,
+      "positive_styles": [
+       "70 BPM",
+       "C major",
+       "full groove returns immediately",
+       "warm",
+       "satisfying",
+       "lo-fi hip hop",
+       "half-time groove",
+       "double-time shuffled hi-hats",
+       "dark and warm",
+       "Rhodes electric piano melody",
+       "warm analog synth pad"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "harsh",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "acoustic guitar",
+       "fade in",
+       "build-up"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Outro]\n{one resolving chord, ringing out}",
+      "duration_ms": 3000,
+      "positive_styles": [
+       "C major",
+       "final resolving chord on the tonic",
+       "ringing out",
+       "soft ending",
+       "no drums"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "bright",
+       "harsh",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "acoustic guitar",
+       "drums",
+       "abrupt cut"
+      ],
+      "context_adherence": "high"
+     }
+    ]
+   },
+   "model": "music_v2_5",
+   "seed": 1116
+  },
+  {
+   "out": "audio/out/eleven/music/e3-guitar76",
+   "composition_plan": {
+    "chunks": [
+     {
+      "text": "[Intro]\n{soft Rhodes chords and vinyl crackle, no drums}",
+      "duration_ms": 10000,
+      "positive_styles": [
+       "76 BPM",
+       "A minor",
+       "lo-fi hip hop",
+       "laid-back groove",
+       "warm but slightly brighter",
+       "clean electric guitar licks with gentle chorus",
+       "Rhodes chords",
+       "funky round bass",
+       "crisp vintage drums",
+       "tape and vinyl texture",
+       "relaxed",
+       "great production quality",
+       "warm analog mix",
+       "instrumental only",
+       "gentle intro",
+       "sparse",
+       "quiet"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "distorted guitar",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "drums",
+       "loud"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Groove]\n{drums and bass enter on the first beat}",
+      "duration_ms": 24000,
+      "positive_styles": [
+       "76 BPM",
+       "A minor",
+       "full groove",
+       "steady",
+       "laid-back",
+       "lo-fi hip hop",
+       "laid-back groove",
+       "warm but slightly brighter",
+       "clean electric guitar licks with gentle chorus",
+       "Rhodes chords",
+       "funky round bass"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "distorted guitar",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Breakdown]\n{drums drop out, bass and keys fade}",
+      "duration_ms": 4000,
+      "positive_styles": [
+       "76 BPM",
+       "A minor",
+       "thinning out",
+       "drums stop",
+       "fading",
+       "keys only"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "distorted guitar",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "drums",
+       "build-up",
+       "riser"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Silence]\n{almost silent, only faint vinyl crackle}",
+      "duration_ms": 4000,
+      "positive_styles": [
+       "near silence",
+       "faint vinyl crackle",
+       "very quiet",
+       "empty space"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "distorted guitar",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "drums",
+       "bass",
+       "melody",
+       "chords",
+       "riser",
+       "build-up"
+      ],
+      "context_adherence": "medium"
+     },
+     {
+      "text": "[Drop]\n{full groove returns at once on the first beat}",
+      "duration_ms": 10000,
+      "positive_styles": [
+       "76 BPM",
+       "A minor",
+       "full groove returns immediately",
+       "warm",
+       "satisfying",
+       "lo-fi hip hop",
+       "laid-back groove",
+       "warm but slightly brighter",
+       "clean electric guitar licks with gentle chorus",
+       "Rhodes chords",
+       "funky round bass"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "distorted guitar",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "fade in",
+       "build-up"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Outro]\n{one resolving chord, ringing out}",
+      "duration_ms": 3000,
+      "positive_styles": [
+       "A minor",
+       "final resolving chord on the tonic",
+       "ringing out",
+       "soft ending",
+       "no drums"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "distorted guitar",
+       "EDM",
+       "trap hi-hat rolls",
+       "orchestral",
+       "drums",
+       "abrupt cut"
+      ],
+      "context_adherence": "high"
+     }
+    ]
+   },
+   "model": "music_v2_5",
+   "seed": 1117
+  },
+  {
+   "out": "audio/out/eleven/music/e4-spacefunk88",
+   "composition_plan": {
+    "chunks": [
+     {
+      "text": "[Intro]\n{soft Rhodes chords and vinyl crackle, no drums}",
+      "duration_ms": 10000,
+      "positive_styles": [
+       "88 BPM",
+       "D major",
+       "1980s retro-futuristic lo-fi",
+       "gentle space-funk groove",
+       "laid-back funky bass",
+       "Rhodes chords",
+       "electric piano melody",
+       "analog synth pads",
+       "subtle clean guitar lick",
+       "crisp vintage drums",
+       "tape and vinyl texture",
+       "great production quality",
+       "warm analog mix",
+       "instrumental only",
+       "gentle intro",
+       "sparse",
+       "quiet"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "EDM",
+       "trap",
+       "orchestral",
+       "aggressive",
+       "drums",
+       "loud"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Groove]\n{drums and bass enter on the first beat}",
+      "duration_ms": 24000,
+      "positive_styles": [
+       "88 BPM",
+       "D major",
+       "full groove",
+       "steady",
+       "laid-back",
+       "1980s retro-futuristic lo-fi",
+       "gentle space-funk groove",
+       "laid-back funky bass",
+       "Rhodes chords",
+       "electric piano melody",
+       "analog synth pads"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "EDM",
+       "trap",
+       "orchestral",
+       "aggressive"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Breakdown]\n{drums drop out, bass and keys fade}",
+      "duration_ms": 4000,
+      "positive_styles": [
+       "88 BPM",
+       "D major",
+       "thinning out",
+       "drums stop",
+       "fading",
+       "keys only"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "EDM",
+       "trap",
+       "orchestral",
+       "aggressive",
+       "drums",
+       "build-up",
+       "riser"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Silence]\n{almost silent, only faint vinyl crackle}",
+      "duration_ms": 4000,
+      "positive_styles": [
+       "near silence",
+       "faint vinyl crackle",
+       "very quiet",
+       "empty space"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "EDM",
+       "trap",
+       "orchestral",
+       "aggressive",
+       "drums",
+       "bass",
+       "melody",
+       "chords",
+       "riser",
+       "build-up"
+      ],
+      "context_adherence": "medium"
+     },
+     {
+      "text": "[Drop]\n{full groove returns at once on the first beat}",
+      "duration_ms": 10000,
+      "positive_styles": [
+       "88 BPM",
+       "D major",
+       "full groove returns immediately",
+       "warm",
+       "satisfying",
+       "1980s retro-futuristic lo-fi",
+       "gentle space-funk groove",
+       "laid-back funky bass",
+       "Rhodes chords",
+       "electric piano melody",
+       "analog synth pads"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "EDM",
+       "trap",
+       "orchestral",
+       "aggressive",
+       "fade in",
+       "build-up"
+      ],
+      "context_adherence": "high"
+     },
+     {
+      "text": "[Outro]\n{one resolving chord, ringing out}",
+      "duration_ms": 3000,
+      "positive_styles": [
+       "D major",
+       "final resolving chord on the tonic",
+       "ringing out",
+       "soft ending",
+       "no drums"
+      ],
+      "negative_styles": [
+       "vocals",
+       "lyrics",
+       "singing",
+       "humming",
+       "spoken word",
+       "rap",
+       "harsh",
+       "EDM",
+       "trap",
+       "orchestral",
+       "aggressive",
+       "drums",
+       "abrupt cut"
+      ],
+      "context_adherence": "high"
+     }
+    ]
+   },
+   "model": "music_v2_5",
+   "seed": 1118
+  }
+ ]
+}
