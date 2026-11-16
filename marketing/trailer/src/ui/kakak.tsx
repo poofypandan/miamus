@@ -16,7 +16,10 @@ const HEART =
   "M256 322.4C232.4 304.7 182.8 271.7 182.8 230.4C182.8 204.4 201.7 185.6 224.1 185.6C239.5 185.6 250.1 195 256 206.8C261.9 195 272.5 185.6 287.9 185.6C310.3 185.6 329.2 204.4 329.2 230.4C329.2 271.7 279.6 304.7 256 322.4Z";
 const VIEWBOX = "92 84 328 336";
 
-export function KakakAvatar({ size, glow = 0 }: { size: number; glow?: number }) {
+/** v17: how much the heart grows with her voice: 1.00 at rest, up to 1.05 on her loudest syllables. */
+const PULSE = 0.05;
+
+export function KakakAvatar({ size, glow = 0, pulse = 0 }: { size: number; glow?: number; pulse?: number }) {
   return (
     <div
       style={{
@@ -30,13 +33,12 @@ export function KakakAvatar({ size, glow = 0 }: { size: number; glow?: number })
         justifyContent: "center",
         flexShrink: 0,
         boxShadow: glow > 0.02 ? `0 0 ${size * (0.25 + 0.5 * glow)}px ${size * 0.06 * glow}px rgba(214,128,116,${(0.55 * glow).toFixed(3)})` : undefined,
-        transform: `scale(${1 + 0.05 * glow})`,
       }}
     >
       <svg viewBox={VIEWBOX} width={size * 0.64} height={size * 0.64 * (336 / 328)} fill="none">
         <polyline points={ROOF} stroke={C.kakak} strokeWidth={40} strokeLinecap="round" strokeLinejoin="round" />
         <path d={WALLS} stroke={C.kakak} strokeWidth={40} strokeLinecap="round" />
-        <path d={HEART} fill={C.kakak} />
+        <path d={HEART} fill={C.kakak} transform={`translate(256 254) scale(${(1 + PULSE * pulse).toFixed(4)}) translate(-256 -254)`} />
       </svg>
     </div>
   );
@@ -46,17 +48,16 @@ export function KakakAvatar({ size, glow = 0 }: { size: number; glow?: number })
  * Her entrance: the circle arrives, the roof and the walls draw in one
  * line, the heart lands and beats. `level` (0–1) is her voice.
  */
-export function KakakMark({ size, at, level = 0 }: { size: number; at: number; level?: number }) {
+export function KakakMark({ size, at, level = 0, pulse = 0 }: { size: number; at: number; level?: number; pulse?: number }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const disc = springAt(frame, fps, at, { damping: 14, stiffness: 120, mass: 0.9 });
   const roof = ramp(frame, at + 6, at + 22, easeOut);
   const walls = ramp(frame, at + 16, at + 30, easeOut);
   const heart = springAt(frame, fps, at + 28, { damping: 9, stiffness: 180, mass: 0.7 });
-  // A heartbeat once she is whole: two soft pulses, then rest.
-  const t = Math.max(0, frame - at - 44);
-  const phase = (t % 34) / 34;
-  const beat = t > 0 ? Math.max(0, Math.sin(phase * Math.PI * 2 * 2)) * (phase < 0.5 ? 1 : 0) * 0.045 : 0;
+  // v17: once she is whole, the heart grows a little with her voice (her loudness, not a timed beat) and rests when
+  // she is quiet.
+  const beat = frame > at + 40 ? PULSE * pulse : 0;
   const glow = clamp01(heart) * (0.35 + 0.65 * level);
   if (frame < at) return null;
   return (
@@ -110,16 +111,16 @@ export interface CaptionCue {
  * word brightening as it is spoken. Low in the safe area, on its own dark
  * plate, never over app text (the phone's picture melts away above it).
  */
-export function Captions({ cues, level = 0 }: { cues: CaptionCue[]; level?: number }) {
+export function Captions({ cues, level = 0, pulse = 0 }: { cues: CaptionCue[]; level?: number; pulse?: number }) {
   const frame = useCurrentFrame();
   // v8: every caption in its window is drawn with its own fade, so two lines close together cross-fade
   // instead of the plate snapping from one to the next.
   const live = cues.filter((c) => frame >= c.from - 5 && frame <= c.to + 10);
   if (!live.length) return null;
-  return <>{live.map((c) => <CaptionPlate key={`${c.from}-${c.text}`} cue={c} level={level} />)}</>;
+  return <>{live.map((c) => <CaptionPlate key={`${c.from}-${c.text}`} cue={c} level={level} pulse={pulse} />)}</>;
 }
 
-function CaptionPlate({ cue, level }: { cue: CaptionCue; level: number }) {
+function CaptionPlate({ cue, level, pulse = 0 }: { cue: CaptionCue; level: number; pulse?: number }) {
   const frame = useCurrentFrame();
   const inT = ramp(frame, cue.from - 5, cue.from + 7, ease); // v11: a gentle entrance, no first-frame pop
   const outT = ramp(frame, cue.to + 2, cue.to + 10);
@@ -154,7 +155,7 @@ function CaptionPlate({ cue, level }: { cue: CaptionCue; level: number }) {
           boxShadow: "0 10px 30px rgba(10,8,20,0.28)",
         }}
       >
-        <KakakAvatar size={62} glow={level * (frame <= cue.to ? 1 : 0)} />
+        <KakakAvatar size={62} glow={level * (frame <= cue.to ? 1 : 0)} pulse={frame <= cue.to ? pulse : 0} />
         <div style={{ fontFamily: FONT, fontSize: 41, fontWeight: 600, lineHeight: 1.2, letterSpacing: -0.3, color: "#fff", textWrap: "balance" } as React.CSSProperties}>
           {words.map((w, i) => {
             const at = cue.from + (span * seen) / total;

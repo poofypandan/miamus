@@ -1,14 +1,15 @@
 import React, { createContext, useContext } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import tapsJson from "../../public/shots/taps.json";
-import { CLEAR, CX, FONT, SAFE } from "../theme";
+import { CAPTION_BOTTOM, CLEAR, CX, FONT, HAND, SAFE, SERIF } from "../theme";
+import { BUBBLE, SpeechBubble } from "../ui/bubble";
 import { BigLine, EndCard, NameChip, StaffChip, TravelLine } from "../ui/extras";
 import { Hand, Pile } from "../ui/hook";
 import { KakakMark } from "../ui/kakak";
 import { Vignette, clamp01, ease, easeIn, easeOut, keys, lerp, ramp, springAt } from "../ui/kit";
 import { type Cue, Glow, NotificationCard, Phone, type PhoneCam, ScreenTrack, Shutter, Tag, TapRing, TypedInput, SpokenInput, look, phonePoint } from "../ui/phone";
 import { World } from "../world/World";
-import { type Cam, camMix, project } from "../world/camera";
+import { type Cam, H, camMix, project } from "../world/camera";
 import { lightAt } from "../world/tod";
 import { COPY, type Locale } from "./copy";
 import { CARDS, CARDS15, ENDING, ENDING15, FPS, HOOK, HOOK15, QUIET, S15, S60, SARI15, STAFF, type Span, TELL, TELL15, len } from "./timeline";
@@ -39,7 +40,7 @@ const GARDEN: Cam = { x: -20, y: 340, z: 1.06 };
 export const CALL = { x: 92, y: 452, size: 104 };
 
 /** Kakak's voice, for the things that move with it: how loud she is this frame, and when each line is said. */
-export const Voice = createContext<{ level: number; cue: (id: string) => { from: number; to: number } | null }>({ level: 0, cue: () => null });
+export const Voice = createContext<{ level: number; pulse?: number; cue: (id: string) => { from: number; to: number } | null }>({ level: 0, pulse: 0, cue: () => null });
 
 export interface SceneProps {
   locale: Locale;
@@ -134,9 +135,48 @@ function CallTwo({ lines, x, y, size, at, out }: { lines: [string, string]; x: n
   );
 }
 
+/** "In a minute, sweetie…" → two lines, broken after the first comma. */
+const splitAtComma = (t: string) => {
+  const i = t.indexOf(", ");
+  return i < 0 ? [t] : [t.slice(0, i + 1), t.slice(i + 2)];
+};
+
+/** v17: where the girl's and Mama's heads are in the garden (the family's layer, depth 0.92), for the bubbles' tails. */
+const GIRL_HEAD = { x: 370, y: 1292 };
+const MAMA_HEAD = { x: 284, y: 1170 };
+const head = (cam: Cam, p: { x: number; y: number }) => project(cam, 0.92, p.x, p.y);
+/** The girl's bubble: in the close two-shot, up in the sky right of Mama; in the wide shot, above and right of her. */
+const GIRL_BUBBLE = { two: { cx: 726, cy: 470, w: 390, h: 250 }, wide: { cx: 700, cy: 770, w: 372, h: 236 } };
+/** Mama's bubble (wide shot only): up and left, above her head, beside the girl's. */
+const MAMA_BUBBLE = { cx: 296, cy: 600, w: 440, h: 214 };
+
+/** A line of the girl's handwriting inside a bubble, writing itself on. */
+function Written({ text, at, dur, size }: { text: string; at: number; dur: number; size: number }) {
+  const frame = useCurrentFrame();
+  const w = ramp(frame, at, at + dur, easeOut);
+  return (
+    <div style={{ fontFamily: HAND, fontWeight: 600, fontSize: size, lineHeight: 1.04, whiteSpace: "nowrap", transform: "rotate(-3deg)", clipPath: `inset(-30% ${((1 - w) * 104).toFixed(2)}% -30% -6%)` }}>
+      {text}
+    </div>
+  );
+}
+
+/** v17: her "Mama, look!" in a speech bubble, the words written on with the bell's three notes, the tail to her head. */
+function GirlBubble({ lines, at, out, cam, box }: { lines: [string, string]; at: number; out?: number; cam: Cam; box: { cx: number; cy: number; w: number; h: number } }) {
+  return (
+    <SpeechBubble {...box} to={head(cam, GIRL_HEAD)} at={at - 3} out={out}>
+      <Written text={lines[0]} at={at} dur={19} size={90} />
+      <div style={{ marginLeft: 70 }}>
+        <Written text={lines[1]} at={at + 20} dur={9} size={90} />
+      </div>
+    </SpeechBubble>
+  );
+}
+
 export function Hook({ locale, t0, fast }: SceneProps) {
   const frame = useCurrentFrame();
   const copy = COPY[locale];
+  const voice = useContext(Voice);
   const T = fast ? HOOK15 : HOOK;
   const end = fast ? len(S15.hook) : len(S60.hook);
   const push = frame / end;
@@ -152,6 +192,7 @@ export function Hook({ locale, t0, fast }: SceneProps) {
   for (const a of T.at) if (frame >= a) flick += Math.exp(-(frame - a) / 3);
   const phone = Math.min(1, 0.72 + 0.28 * Math.min(1, flick));
   const origin = project(cam, 0.92, PHONE_AT.x, PHONE_AT.y);
+  const mama = voice.cue("M1");
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       <AbsoluteFill style={{ opacity: 1 - out }}>
@@ -159,10 +200,24 @@ export function Hook({ locale, t0, fast }: SceneProps) {
         <Vignette />
         <AbsoluteFill style={{ background: `rgba(18,14,30,${(0.44 * cover).toFixed(3)})` }} />
       </AbsoluteFill>
-      {/* Her call writes on beside her raised arm, then slides to its place by the kite string. */}
-      <CallTwo lines={copy.call} x={lerp(CALL_TWO.x, CALL.x, pulled)} y={lerp(CALL_TWO.y, CALL.y - 40, pulled)} size={lerp(CALL_TWO.size, CALL.size * 0.9, pulled)} at={T.bell} out={T.at[11] + 4} />
+      {/* v17: her call in a speech bubble, written on with the bell beside her raised arm; it follows the camera back. */}
+      <GirlBubble lines={copy.call} cam={cam} at={T.bell} out={T.fall - 2} box={{ cx: lerp(GIRL_BUBBLE.two.cx, GIRL_BUBBLE.wide.cx, pulled), cy: lerp(GIRL_BUBBLE.two.cy, GIRL_BUBBLE.wide.cy, pulled), w: lerp(GIRL_BUBBLE.two.w, GIRL_BUBBLE.wide.w, pulled), h: lerp(GIRL_BUBBLE.two.h, GIRL_BUBBLE.wide.h, pulled) }} />
+      {/* v17: Mama's "In a minute, sweetie…" in her own bubble, from her first word, rising above her head (60 s only). */}
+      {!fast && mama && (
+        <SpeechBubble {...MAMA_BUBBLE} to={head(cam, MAMA_HEAD)} at={mama.from} out={T.fall - 2}>
+          {splitAtComma(copy.lines.M1).map((l, i) => (
+            <div key={i} style={{ fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, fontSize: 60, lineHeight: 1.12, letterSpacing: -0.4 }}>{l}</div>
+          ))}
+        </SpeechBubble>
+      )}
+      {/* The questions pile up and bury both bubbles: mother and daughter, trying to talk under the notifications. */}
       <Pile bubbles={copy.bubbles} slam={copy.slam} at={T.at} slamAt={T.slam} fall={T.fall} from={{ x: origin.x, y: origin.y }} />
-      {!fast && <Hand text={copy.lines.G3} x={330} y={1190} size={84} rot={-3} at={110} out={128} color="#3a2418" shadow="0 0 10px rgba(255,250,240,0.95), 0 0 3px rgba(255,250,240,0.9)" />}
+      {/* Her last, small "Mama…?", on top of the pile, unanswered (60 s only). */}
+      {!fast && (
+        <SpeechBubble cx={598} cy={936} w={300} h={128} to={head(cam, GIRL_HEAD)} at={110} out={128} radius={52}>
+          <Written text={copy.lines.G3} at={110} dur={8} size={66} />
+        </SpeechBubble>
+      )}
     </AbsoluteFill>
   );
 }
@@ -203,21 +258,52 @@ export function MeetKakak({ locale, t0 }: SceneProps) {
   const total = len(S60.kakak);
   const p = frame / total;
   const out = ramp(frame, total - 16, total);
-  // v12: her name and the AI tag are on screen from the moment she starts speaking (the tag is the AI disclosure).
+  // v17: the centre is only her mark, her name and what she says; the AI disclosure is a quiet footnote at the
+  // bottom, on screen for her whole line. Name, line and footnote arrive as she starts speaking.
+  const l3 = voice.cue("L3");
+  const from = l3 ? l3.from - t0 : 4;
+  const to = l3 ? l3.to - t0 : total - 10;
   const name = springAt(frame, fps, 4, { damping: 16, stiffness: 120 });
-  const tag = springAt(frame, fps, 9, { damping: 15, stiffness: 150 });
-  const gloss = ramp(frame, 52, 66);
+  const line = ramp(frame, from - 3, from + 9, easeOut);
+  const note = ramp(frame, from, from + 12, easeOut);
+  const words = copy.lines.L3.split(" ");
+  const letters = words.reduce((n, w) => n + w.length + 1, 0);
+  let acc = 0;
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       <World light={lightAt(lerp(5.55, 6.3, ease(p)))} frame={frame + t0} cam={{ x: 0, y: lerp(-390, -340, p), z: 1 }} />
       <Vignette strength={0.22} />
       <div style={{ position: "absolute", left: SAFE.left, width: SAFE.right - SAFE.left, top: 420, transform: `translate(${CX - (SAFE.left + SAFE.right) / 2}px, ${-out * 50}px) scale(${1 - out * 0.06})`, opacity: 1 - out, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: FONT, color: "#fff", textAlign: "center" }}>
-        <KakakMark size={320} at={2} level={voice.level} />
-        <div style={{ marginTop: 44, fontSize: 132, fontWeight: 700, letterSpacing: -3.5, lineHeight: 1, opacity: Math.min(1, name * 1.5), transform: `translateY(${(1 - name) * 30}px)`, textShadow: "0 4px 34px rgba(40,16,40,0.45)" }}>Kakak</div>
-        <div style={{ marginTop: 30, fontSize: 40, fontWeight: 600, letterSpacing: 0.2, padding: "13px 32px 15px", borderRadius: 999, background: "rgba(22,19,26,0.86)", opacity: Math.min(1, tag * 1.6), transform: `scale(${0.8 + 0.2 * tag})` }}>{copy.aiTag}</div>
-        {copy.gloss && <div style={{ marginTop: 20, fontSize: 32, fontWeight: 600, padding: "9px 26px 11px", borderRadius: 999, background: "rgba(255,255,255,0.2)", opacity: gloss, textShadow: "0 1px 12px rgba(40,16,40,0.7)" }}>{copy.gloss}</div>}
+        <KakakMark size={320} at={2} level={voice.level} pulse={voice.pulse} />
+        <div style={{ marginTop: 44, fontSize: 132, fontWeight: 700, letterSpacing: -3.5, lineHeight: 1, opacity: Math.min(1, name * 1.5), transform: `translateY(${(1 - name) * 30}px)`, textShadow: "0 4px 34px rgba(40,16,40,0.45)" }}>
+          Kakak<span style={{ fontSize: 64, fontWeight: 600, verticalAlign: "62%", marginLeft: 4, opacity: 0.85 }}>*</span>
+        </div>
+        <div style={{ marginTop: 34, maxWidth: 800, fontSize: 64, fontWeight: 600, lineHeight: 1.2, letterSpacing: -0.7, opacity: line, transform: `translateY(${(1 - line) * 16}px)`, textShadow: "0 2px 6px rgba(30,12,30,0.55), 0 4px 30px rgba(30,12,30,0.6)", textWrap: "balance" } as React.CSSProperties}>
+          {words.map((w, i) => {
+            const at = from + ((acc / letters) * (to - from)) * 0.92;
+            acc += w.length + 1;
+            const lit = 0.66 + 0.34 * ramp(frame, at - 2, at + 4);
+            return (
+              <span key={i} style={{ opacity: lit }}>
+                {w}
+                {i < words.length - 1 ? " " : ""}
+              </span>
+            );
+          })}
+        </div>
       </div>
+      <Footnote text={copy.footnote} opacity={note * (1 - out)} />
     </AbsoluteFill>
+  );
+}
+
+/** v17: the AI disclosure, small and quiet but clear: a soft dark pill at the bottom of the safe area. */
+function Footnote({ text, opacity, bottom = H - CAPTION_BOTTOM + 8 }: { text: string; opacity: number; bottom?: number }) {
+  if (opacity <= 0) return null;
+  return (
+    <div style={{ position: "absolute", left: SAFE.left, width: SAFE.right - SAFE.left, bottom, transform: `translateX(${CX - (SAFE.left + SAFE.right) / 2}px)`, display: "flex", justifyContent: "center", opacity }}>
+      <div style={{ fontFamily: FONT, fontSize: 32, fontWeight: 600, letterSpacing: 0.1, color: "rgba(255,255,255,0.94)", padding: "10px 24px 12px", borderRadius: 999, background: "rgba(22,19,26,0.62)" }}>{text}</div>
+    </div>
   );
 }
 
@@ -544,24 +630,26 @@ export function Cards({ locale, t0, fast }: SceneProps) {
   );
 }
 
-/** v14 (15 s only): her name and the AI tag, on screen from her first word to the end of her line (the AI disclosure,
- *  as in the 60 s cut's MeetKakak). A compact row at the top of the safe area, clear of the cards below it. */
+/** v14 (15 s only): her name, on screen from her first word to the end of her line. v17: the name sits just above her
+ *  caption (near her line), and the AI disclosure is a small footnote under it, as on the 60 s intro card. */
 function KakakBadge({ locale, at, out }: { locale: Locale; at: number; out: number }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const copy = COPY[locale];
   const voice = useContext(Voice);
   const name = springAt(frame, fps, at, { damping: 16, stiffness: 130 });
-  const tag = springAt(frame, fps, at + 4, { damping: 15, stiffness: 150 });
+  const note = ramp(frame, at + 2, at + 14, easeOut);
   const leave = ramp(frame, out, out + 12, easeIn);
   if (frame < at - 2) return null;
   return (
-    <div style={{ position: "absolute", left: SAFE.left, width: SAFE.right - SAFE.left, top: CLEAR.top + 16, transform: `translateX(${CX - (SAFE.left + SAFE.right) / 2}px) translateY(${-leave * 24}px)`, opacity: 1 - leave, display: "flex", justifyContent: "center", alignItems: "center", gap: 22, fontFamily: FONT, color: "#fff" }}>
-      <KakakMark size={96} at={at} level={voice.level} />
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
-        <div style={{ fontSize: 62, fontWeight: 700, letterSpacing: -1.5, lineHeight: 1, opacity: Math.min(1, name * 1.5), transform: `translateY(${(1 - name) * 18}px)`, textShadow: "0 3px 24px rgba(40,16,40,0.5)" }}>Kakak</div>
-        <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: 0.2, padding: "8px 22px 10px", borderRadius: 999, background: "rgba(22,19,26,0.86)", opacity: Math.min(1, tag * 1.6), transform: `scale(${0.85 + 0.15 * tag})`, transformOrigin: "left center" }}>{copy.aiTag}</div>
+    <div style={{ position: "absolute", left: SAFE.left, width: SAFE.right - SAFE.left, bottom: H - CAPTION_BOTTOM + 124, transform: `translateX(${CX - (SAFE.left + SAFE.right) / 2}px) translateY(${leave * 16}px)`, opacity: 1 - leave, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, fontFamily: FONT, color: "#fff" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, opacity: Math.min(1, name * 1.5), transform: `translateY(${(1 - name) * 14}px)` }}>
+        <KakakMark size={64} at={at} level={voice.level} pulse={voice.pulse} />
+        <div style={{ fontSize: 54, fontWeight: 700, letterSpacing: -1.3, lineHeight: 1, textShadow: "0 3px 22px rgba(40,16,40,0.55)" }}>
+          Kakak<span style={{ fontSize: 30, fontWeight: 600, verticalAlign: "60%", marginLeft: 2, opacity: 0.85 }}>*</span>
+        </div>
       </div>
+      <div style={{ fontSize: 29, fontWeight: 600, color: "rgba(255,255,255,0.95)", padding: "8px 20px 10px", borderRadius: 999, background: "rgba(22,19,26,0.66)", opacity: note }}>{copy.footnote}</div>
     </div>
   );
 }
@@ -654,7 +742,7 @@ export function Ending({ locale, t0, fast }: SceneProps) {
       {focus < 1 && <AbsoluteFill style={{ background: `rgba(255,250,242,${(0.08 * (1 - focus)).toFixed(3)})` }} />}
       <Vignette />
       {/* v15: her handwriting is gone by the time the name arrives (they shared the same place on screen). */}
-      <CallTwo lines={copy.call} {...CALL_TWO} at={E.bell} out={Math.min(E.crane[0] + 6, brand - 16)} />
+      <GirlBubble lines={copy.call} cam={cam} at={E.bell} out={Math.min(E.crane[0] + 6, brand - 16)} box={GIRL_BUBBLE.two} />
       {/* v15: the mark and the name arrive together on her spoken "Miamus"; the line on the bell and the address as before. */}
       <EndCard line={copy.end.line} em={copy.end.em} call={copy.end.call} url={copy.end.url} mark={brand} name={brand} lineAt={E.line} callAt={"call" in E ? (E as { call: number }).call : undefined} urlAt={E.url} />
     </AbsoluteFill>

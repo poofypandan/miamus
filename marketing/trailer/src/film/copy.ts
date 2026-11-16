@@ -34,6 +34,8 @@ export interface Copy {
   aiTag: string;
   /** A gloss under Kakak's name (English cut only). */
   gloss: string | null;
+  /** v17: the AI disclosure as a quiet footnote under her intro (and beside her name in the 15 s cut). */
+  footnote: string;
   you: string;
   /** What the Indonesian staff screen says, for the English cut. */
   staffGloss: string | null;
@@ -103,6 +105,7 @@ export const COPY: Record<Locale, Copy> = {
     big: { rows: ["What if you only had", "to say it"], word: "once?" },
     aiTag: "Miamus's AI helper",
     gloss: "kakak: big sister, in Indonesian",
+    footnote: "*Miamus's AI helper · kakak = big sister in Indonesian",
     you: "You",
     staffGloss: "Today's tasks",
     push: { title: "Play · Coco & Bruno", body: "Not done yet (5:00 PM)", time: "5:30 PM" },
@@ -172,6 +175,8 @@ export const COPY: Record<Locale, Copy> = {
     big: { rows: ["Bagaimana kalau", "cukup bilang"], word: "sekali?" },
     aiTag: "asisten AI Miamus",
     gloss: null,
+    // Indonesian viewers know the word, so only the disclosure (the glossary's Kakak: the elder-sister character).
+    footnote: "*asisten AI Miamus",
     you: "Anda",
     staffGloss: null,
     push: { title: "Ajak main · Coco & Bruno", body: "Belum dikerjakan (17.00)", time: "17.30" },

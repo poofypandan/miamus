@@ -14,7 +14,7 @@ import { easeOut, ramp } from "./kit";
 const PLACES: { x: number; y: number; rot: number; size: number }[] = [
   // The first ones land around the child's call and around her, so both can still be seen…
   { x: 700, y: 1510, rot: -4, size: 58 },
-  { x: 520, y: 760, rot: 2, size: 56 },
+  { x: 404, y: 1088, rot: 3, size: 56 }, // v17: low, so Mama's bubble is read before the pile reaches it
   { x: 250, y: 1650, rot: -2, size: 44 },
   { x: 640, y: 1500, rot: 3, size: 58 },
   { x: 210, y: 1290, rot: -5, size: 62 },
@@ -23,7 +23,7 @@ const PLACES: { x: number; y: number; rot: number; size: number }[] = [
   { x: 800, y: 620, rot: 4, size: 44 },
   // …then the kite goes, then the child, then the call itself.
   { x: 730, y: 300, rot: -2, size: 58 },
-  { x: 404, y: 1088, rot: 3, size: 56 },
+  { x: 520, y: 760, rot: 2, size: 56 }, // v17: here instead, across both bubbles
   { x: 520, y: 1050, rot: -3, size: 54 },
   { x: 340, y: 470, rot: 2, size: 60 },
   { x: 770, y: 1070, rot: -4, size: 64 },

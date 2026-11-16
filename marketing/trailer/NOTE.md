@@ -1,5 +1,35 @@
 # The Miamus trailer: what was made, and why
 
+## Version 17 (16 November 2026): speech bubbles; Kakak's AI note as a footnote
+
+Owner's notes on v16. Four cuts in `docs/private/marketing/trailer-v17/`; v16 is untouched. No new takes; the sound
+and the timings are v16's.
+
+- **Speech bubbles for the people talking** (`src/ui/bubble.tsx`): soft, rounded, warm cream with a soft brown line
+  and shadow, a curved tail to the speaker's head (it follows the camera: the heads are projected from the garden),
+  rising a little as it appears; unlike the white notification chips and Kakak's dark plates.
+  - The girl's "Mama, look!" (hook and ending, both cuts): in her handwriting, dark ink in the bubble, written on with
+    the bell's three notes; in the hook it follows the camera back from the close two-shot to above her in the wide.
+  - Mama's "In a minute, sweetie…" (60 s; the 15 s cut has no Mama voice): her own bubble, in the soft serif italic,
+    above her head from her first word (2.1 s), beside the girl's; it replaces her caption plate there. Her end line
+    "I'm here, sweetie." keeps its plate.
+  - The girl's small "Mama…?" (60 s): a small bubble on top of the pile, unanswered.
+  - The questions pile up over both bubbles (drawn above them): the girl's is read for about 2 s, Mama's for about
+    1.3 s, before the pile reaches them. One early landing spot was swapped with a later one so nothing covers Mama's
+    bubble in its first second.
+- **Kakak's intro (60 s dawn):** the centre is only her mark, "Kakak*" and her spoken line, written there (words
+  brightening as she says them; no caption below). The AI disclosure is a quiet footnote at the bottom of the safe
+  area, a soft dark pill, from her first word to the end of the scene (about 3.8 s): EN "*Miamus's AI helper · kakak
+  = big sister in Indonesian", ID "*asisten AI Miamus" (Indonesian viewers know the word; the glossary's Kakak is the
+  elder-sister character, so "kakak perempuan/abang" would be wrong: "abang" is a brother).
+- **15 s:** her name ("Kakak*" with her mark) sits just above her caption, near her line, with the same footnote in
+  small type under it (her caption takes the bottom of the safe area), from her first word to the end of her line.
+- **Her heart pulses with her voice:** wherever her mark is on screen while she talks (the intro card, the 15 s name,
+  every caption plate), the heart scales 1.00–1.05 with a quick loudness envelope of her voice (35 ms up, 0.16 s
+  down, eased frame to frame; `pulse` in `vo-data.json`, from `audio/mix.py`), resting when she is silent. The old
+  timed double-beat is gone; the glow still follows her slower presence. It belongs to the mark, so it carries over
+  to Fable's redesign.
+
 ## Version 16 (16 November 2026): the end line hands straight to the card
 
 Owner's verdict on v15: the 15 s cuts are right, so v16's 15 s files are v15's, byte for byte; in the 60 s cuts there

@@ -253,7 +253,13 @@ def mix(cut, locale, voices, music_style):
     # For the picture: how loud she is in each frame.
     per = SR // FPS
     env = [round(float(np.clip(presence_kakak[f * per : (f + 1) * per].mean() * 1.25, 0, 1)), 3) for f in range(length * FPS)]
-    return {"cues": cues, "env": env}, (i2, tp2, lra2)
+    # v17: her heart pulses with her voice: a quicker loudness envelope (it follows her syllables and rests in silence),
+    # 0–1 against her own loud moments, eased frame to frame. The picture scales the heart 1.00–1.05 with it.
+    loud = follow(v, attack=0.035, release=0.16)
+    pulse = np.array([loud[f * per : (f + 1) * per].mean() for f in range(length * FPS)])
+    pulse = np.clip((pulse - 0.08) / 0.8, 0, 1) ** 1.2
+    pulse = np.convolve(pulse, [0.25, 0.5, 0.25], "same")
+    return {"cues": cues, "env": env, "pulse": [round(float(p), 3) for p in pulse]}, (i2, tp2, lra2)
 
 
 if __name__ == "__main__":

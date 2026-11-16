@@ -20,9 +20,9 @@ export type FilmProps = {
 /** Lines that are already on screen in large type: the dawn question. (v6: the end card's written line differs
  * from Kakak's spoken end line, so that one is captioned too.) */
 // v15: "L11" / "S3" carry the spoken "Miamus", shown as the name itself on screen (the brand lock), not as a caption.
-const SHOWN_LARGE = ["L2", "L11", "S3"];
+const SHOWN_LARGE = ["L2", "L11", "S3", "L3"]; // v17: L3 is written in the centre of Kakak's intro card instead
 
-type VoCut = { cues: { id: string; from: number; to: number }[]; env: number[] };
+type VoCut = { cues: { id: string; from: number; to: number }[]; env: number[]; pulse?: number[] };
 
 function Scene({ span, children }: { span: Span; children: React.ReactNode }) {
   return (
@@ -44,6 +44,7 @@ export const Film: React.FC<FilmProps> = ({ locale, cut, audio }) => {
   const cues = vo.cues.map((c) => ({ from: Math.round(c.from * FPS), to: Math.round(c.to * FPS), text: copy.lines[c.id], id: c.id }));
   const voice = {
     level: vo.env[frame] ?? 0,
+    pulse: vo.pulse?.[frame] ?? 0,
     cue: (id: string) => cues.find((c) => c.id === id) ?? null,
   };
   const p = { locale };
@@ -68,8 +69,8 @@ export const Film: React.FC<FilmProps> = ({ locale, cut, audio }) => {
         )}
       </Voice.Provider>
       {/* Three looks: Kakak's dark plate with her mark, Mama's plain light plate; the girl's handwriting is in the scenes. */}
-      <Captions cues={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GMT]\d/.test(c.id))} level={voice.level} />
-      <MamaCaptions cues={cues.filter((c) => /^M\d/.test(c.id))} kakak={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GMT]\d/.test(c.id))} />
+      <Captions cues={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GMT]\d/.test(c.id))} level={voice.level} pulse={voice.pulse} />
+      <MamaCaptions cues={cues.filter((c) => /^M\d/.test(c.id) && c.id !== "M1")} kakak={cues.filter((c) => !SHOWN_LARGE.includes(c.id) && !/^[GMT]\d/.test(c.id))} />
       <Grain />
     </AbsoluteFill>
   );
