@@ -209,11 +209,21 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Rooms, floors and spots", id: "Ruangan, lantai, dan bagian" },
     body: {
-      en: "Home → Rooms lists every room by floor and what is set up there. A room can hold rooms inside it, like a bathroom in its bedroom; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms. Short names like LT2 or GB1 are fine: Kakak understands \"the lounge on the second floor\" or \"guest room two\", and reads them aloud in full.",
-      id: "Rumah → Ruangan menampilkan semua ruangan per lantai beserta tugasnya. Ruangan bisa punya ruangan di dalamnya, seperti kamar mandi di dalam kamar; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan. Nama singkat seperti LT2 atau GB1 boleh: Kakak mengerti \"lounge lantai dua\" atau \"kamar tamu dua\", dan membacakannya lengkap.",
+      en: "Home → Rooms lists every room by floor and what is set up there. A room can hold rooms inside it, like a bathroom in its bedroom; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms.",
+      id: "Rumah → Ruangan menampilkan semua ruangan per lantai beserta tugasnya. Ruangan bisa punya ruangan di dalamnya, seperti kamar mandi di dalam kamar; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
     },
     where: "home_rooms",
     covers: ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "rooms-inside-2026-11"],
+  },
+  {
+    id: "room-names",
+    group: "home",
+    title: { en: "Short room names", id: "Nama ruangan singkat" },
+    body: {
+      en: "Short room names like LT2 or GB1 are fine. Tell Kakak \"the lounge on the second floor\" or \"guest room two\" and she finds the room; when she reads a reply aloud, she says short names in full.",
+      id: "Nama ruangan singkat seperti LT2 atau GB1 boleh dipakai. Bilang ke Kakak \"lounge lantai dua\" atau \"kamar tamu dua\", Kakak menemukan ruangannya; saat membacakan jawaban, nama singkat diucapkan lengkap.",
+    },
+    where: "home_rooms",
   },
   {
     id: "repairs",
