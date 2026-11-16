@@ -360,6 +360,41 @@ describe("runner helpers", () => {
   });
 });
 
+describe("room shorthand cases (K155–K160)", () => {
+  // Kakak titles chores in Indonesian, as staff read them; the room reference is what is checked.
+  const weekly = { due_time: null, recurrence: "weekly" };
+  const once = { due_time: null, recurrence: "none" };
+  const ask: ActualTurn = {
+    kind: "question",
+    calls: [{ name: "ask_question", input: { question: "Lounge yang mana?", answers: ["LT1", "LT2"], allow_typing: false } }],
+    text: "",
+  };
+
+  it("passes the Indonesian titles Kakak wrote in the paid run, on the right room", () => {
+    expect(gradeCase(household, caseById("K155"), [suggestion(chore({ ...weekly, title: "Pel lounge LT2", room: "R13" }))]).pass).toBe(true);
+    expect(
+      gradeCase(household, caseById("K158"), [
+        suggestion(chore({ ...once, title: "Vakum kamar tamu 1", assignee: "S3", due_date: "2026-11-12", room: "R14" })),
+      ]).pass
+    ).toBe(true);
+    expect(
+      gradeCase(household, caseById("K160"), [
+        ask,
+        suggestion(chore({ ...once, title: "Vakum lounge LT2", due_date: "2026-11-12", room: "R13" })),
+      ]).pass
+    ).toBe(true);
+  });
+
+  it("still fails the wrong floor or guest bedroom, whatever the title's language", () => {
+    expect(gradeCase(household, caseById("K155"), [suggestion(chore({ ...weekly, title: "Mop the lounge", room: "R12" }))]).pass).toBe(false);
+    expect(
+      gradeCase(household, caseById("K158"), [
+        suggestion(chore({ ...once, title: "Vakum kamar tamu 2", assignee: "S3", due_date: "2026-11-12", room: "R15" })),
+      ]).pass
+    ).toBe(false);
+  });
+});
+
 describe("the test set", () => {
   it("is consistent with the household and the tools", () => {
     expect(checkTestSet(household, testSet)).toEqual([]);
