@@ -209,8 +209,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Rooms, floors and spots", id: "Ruangan, lantai, dan bagian" },
     body: {
-      en: "Home → Rooms lists every room by floor and what is set up there. A room can hold rooms inside it, like a bathroom in its bedroom; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms.",
-      id: "Rumah → Ruangan menampilkan semua ruangan per lantai beserta tugasnya. Ruangan bisa punya ruangan di dalamnya, seperti kamar mandi di dalam kamar; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
+      en: "Home → Rooms lists every room by floor and what is set up there. A room can hold rooms inside it, like a bathroom in its bedroom; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms. Short names like LT2 or GB1 are fine: Kakak understands \"the lounge on the second floor\" or \"guest room two\", and reads them aloud in full.",
+      id: "Rumah → Ruangan menampilkan semua ruangan per lantai beserta tugasnya. Ruangan bisa punya ruangan di dalamnya, seperti kamar mandi di dalam kamar; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan. Nama singkat seperti LT2 atau GB1 boleh: Kakak mengerti \"lounge lantai dua\" atau \"kamar tamu dua\", dan membacakannya lengkap.",
     },
     where: "home_rooms",
     covers: ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "rooms-inside-2026-11"],
