@@ -1,5 +1,19 @@
 # The Miamus trailer: what was made, and why
 
+## Version 16 (16 November 2026): the end line hands straight to the card
+
+Owner's verdict on v15: the 15 s cuts are right, so v16's 15 s files are v15's, byte for byte; in the 60 s cuts there
+was a pause between Kakak's "…family." and the written line on the bell. Four cuts in
+`docs/private/marketing/trailer-v16/`; v15 is untouched. No new takes.
+
+- **60 s: the end line moves later** so her last word ends 0.15 s before the bell at 57.0 (measured from the line's
+  own end: EN 2.543 s in, ID 3.116 s in): EN starts 54.31 s (was 53.3; "Miamus" 54.345, frame 1630; "More time…"
+  caption 55.36; last word ends 56.85), ID starts 53.73 s (was 53.3; "Miamus" 53.749, frame 1612; caption 54.66;
+  last word ends 56.85). The name still arrives on her spoken "Miamus" (it follows the measured onset), now later in
+  the crane, over the sky; the girl's handwriting has left by 53.6. The bell (57.0), the address (57.6), the crane
+  and the music are unchanged; there is a longer breath after Mama's "I'm here, sweetie."
+- **Checked:** stutter clean on both 60 s cuts (jumps only at the film's own cuts); -14.0 LUFS, true peak -1.50 / -1.51 dBTP; 60.011 s; the name first visible the frame after her "Miamus" begins; end frames inside the safe area; the 15 s files are v15's, byte for byte.
+
 ## Version 15 (16 November 2026): the brand lock
 
 Owner's note on v14. Four cuts in `docs/private/marketing/trailer-v15/`; v14 is untouched. No new voice takes; the

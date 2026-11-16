@@ -72,6 +72,11 @@ TEMPO = {("15", "id", "S3"): 1.03}
 # (voice or caption); her picture beats stay. Kakak's one line at 3.15 s; the end line a little earlier, into the room
 # her answer's caption had (EN 11.85 → 11.5 s; ID 11.5 → 11.3 s, at its natural pace now: no tempo change needed).
 CUES["15"] = {"S1": 3.15, "S3": 11.5}
+# v16 (owner, 16 Nov): in the 60 s cuts Kakak's end line hands straight to the written line on the bell at 57.0: her
+# last word ends 0.15 s before it (measured: EN ends 2.543 s into the line, ID 3.116 s), so the line starts later,
+# EN 53.3 → 54.31 s, ID 53.3 → 53.73 s. The name (from her "Miamus") and the caption move with it.
+CUES["60"]["L11"] = 54.31
+LOCALE_CUES["id"]["60"] = {"L11": 53.73}
 LOCALE_CUES["id"]["15"] = {"S3": 11.3}
 CAPTION_ONLY = {}
 TEMPO = {}
