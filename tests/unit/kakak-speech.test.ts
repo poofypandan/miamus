@@ -193,3 +193,39 @@ describe("speechPlan: sentence by sentence, gently", () => {
     expect(speechPlan("  ·  ", "id")).toEqual([]);
   });
 });
+
+describe("toSpeech: room shorthand, said in full", () => {
+  it.each([
+    ["Ari mops the LT2 lounge every Monday.", "en", "Ari mops the second floor lounge every Monday."],
+    ["Done. Ari mops the LT2 · Lounge.", "en", "Done. Ari mops the second floor Lounge."],
+    ["Ari will clean LT1.", "en", "Ari will clean first floor."],
+    ["GB1 and GB 2 are done.", "en", "guest bedroom one and guest bedroom two are done."],
+    ["The LT12 storeroom.", "en", "The twelfth floor storeroom."],
+    ["Clean KM 2 and KT anak.", "en", "Clean bathroom two and bedroom anak."],
+    ["Syam bersihkan GB2 tiap Jumat.", "id", "Syam bersihkan kamar tamu dua tiap Jumat."],
+    ["Ari pel LT2 lounge.", "id", "Ari pel lantai dua lounge."],
+    ["Ari pel LT2 · Lounge.", "id", "Ari pel lantai dua, Lounge."],
+    ["Lt. 3 sudah rapi.", "id", "lantai tiga sudah rapi."],
+    ["Bersihkan R. tamu dan KM atas, lalu KT 2.", "id", "Bersihkan ruang tamu dan kamar mandi atas, lalu kamar tidur dua."],
+    ["Rapikan R.Makan.", "id", "Rapikan ruang Makan."],
+  ] as const)("%s (%s)", (text, locale, said) => {
+    expect(toSpeech(text, locale)).toBe(said);
+  });
+
+  it("keeps a floor or room shorthand's dot from ending the sentence", () => {
+    expect(speechPlan("Bersihkan R. tamu dan Lt. 2 hari ini.", "id")).toHaveLength(1);
+  });
+
+  it.each([
+    ["The LTE signal is weak.", "en"],
+    ["The phone has 16 GB left.", "en"],
+    ["GB alone, LT alone.", "en"],
+    ["Rumahnya 5 KM dari sini.", "id"],
+    ["Beli 2 LT minyak.", "id"],
+    ["Pak R. Hartono datang.", "id"],
+    ["GBK dan LTX.", "id"],
+    ["Ari, LT, GB and KM.", "en"],
+  ] as const)("leaves %s alone", (text, locale) => {
+    expect(toSpeech(text, locale)).toBe(text.replace(/\s+/g, " "));
+  });
+});

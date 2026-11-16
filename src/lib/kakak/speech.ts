@@ -3,7 +3,8 @@
 // Her replies are written for the eye: "21.30", "·", "→", "HP",
 // "Pengaturan → Staf". Any voice reads those like a machine, so this turns
 // them into what a person would say: "jam setengah sepuluh malam",
-// "Pengaturan, lalu Staf", "ha-pe". Pure, and unit-tested in
+// "Pengaturan, lalu Staf", "ha-pe", and room shorthand such as "LT2" or
+// "GB1" as "lantai dua", "kamar tamu satu". Pure, and unit-tested in
 // tests/unit/kakak-speech.test.ts. The words on screen never change.
 
 export type SpeechLocale = "en" | "id";
@@ -257,6 +258,56 @@ function speakSymbols(text: string, locale: SpeechLocale): string {
   );
 }
 
+// ---- Room shorthand ----------------------------------------------------------
+
+const EN_ORDINALS = [
+  "", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth",
+  "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth", "seventeenth", "eighteenth", "nineteenth", "twentieth",
+];
+
+// Not right after a letter, a digit or a digit and a space: "LTE", "16 GB",
+// "5 KM" are never rooms.
+const ROOM_START = String.raw`(?<![\p{L}\d])(?<!\d\s)`;
+// Floors and guest bedrooms only with their number: "LT2", "LT 2", "Lt. 2",
+// "GB1". "LT" or "GB" alone is left as written.
+// A floor before its room ("LT2 · Lounge") takes the room's separator with
+// it, so English says "second floor Lounge", not "second floor, Lounge".
+const FLOOR = new RegExp(String.raw`${ROOM_START}(?:LT|Lt)\.?\s?(\d{1,2})(?![\p{L}\d])(\s*·\s*(?=\p{L}))?`, "gu");
+const GUEST = new RegExp(String.raw`${ROOM_START}GB\s?(\d{1,2})(?![\p{L}\d])`, "gu");
+// KM, KT before a number or a word ("KM 2", "KM atas", "KT anak").
+const KM_KT = new RegExp(String.raw`${ROOM_START}(KM|KT)(?=\s?\d|\s+\p{L})`, "gu");
+// "R." before a lowercase word, or a usual room word: "R. tamu", "R.Makan".
+// Never an initial before a name ("Pak R. Hartono").
+const RUANG = new RegExp(
+  String.raw`${ROOM_START}R\.\s?(?=\p{Ll}|(?:Tamu|Makan|Keluarga|Kerja|Cuci|Tidur|Tengah|Santai|Belajar|TV)(?![\p{L}]))`,
+  "gu"
+);
+
+/**
+ * Room names written the way Indonesian homes shorten them, said in full:
+ * "LT2" is the second floor ("lantai dua"), "GB1" guest bedroom one
+ * ("kamar tamu satu"), "KM" kamar mandi, "KT" kamar tidur, "R." ruang.
+ * Only these whole shorthands, with their number where they need one; the
+ * room's own name on screen never changes.
+ */
+export function speakRooms(text: string, locale: SpeechLocale): string {
+  const id = locale === "id";
+  const say = (n: number) => (id ? idNumber(n) : n < 60 ? enNumber(n) : String(n));
+  return text
+    .replace(FLOOR, (_: string, n: string, room: string | undefined) => {
+      const floor = Number(n);
+      if (id) return `lantai ${idNumber(floor)}${room ? ", " : ""}`;
+      const said = EN_ORDINALS[floor] ? `${EN_ORDINALS[floor]} floor` : `floor ${say(floor)}`;
+      return `${said}${room ? " " : ""}`;
+    })
+    .replace(GUEST, (_: string, n: string) => `${id ? "kamar tamu" : "guest bedroom"} ${say(Number(n))}`)
+    .replace(KM_KT, (_: string, kind: string) =>
+      kind === "KM" ? (id ? "kamar mandi" : "bathroom") : id ? "kamar tidur" : "bedroom"
+    )
+    .replace(RUANG, "ruang ")
+    .replace(/(?<![\p{L}\d])(kamar mandi|kamar tidur|bathroom|bedroom)\s?(\d{1,2})(?![\p{L}\d])/gu, (_: string, room: string, n: string) => `${room} ${say(Number(n))}`);
+}
+
 function speakWords(text: string, locale: SpeechLocale): string {
   if (locale !== "id") return text;
   // Indonesians say the letters of HP the Indonesian way.
@@ -291,6 +342,7 @@ export function toSpeech(text: string, locale: SpeechLocale): string {
   if (!text) return "";
   let out = speakTimes(text, locale);
   out = speakDates(out, locale);
+  out = speakRooms(out, locale);
   out = speakSymbols(out, locale);
   out = speakWords(out, locale);
   return tidy(out);

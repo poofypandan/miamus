@@ -216,6 +216,16 @@ export const GUIDE: readonly GuideEntry[] = [
     covers: ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "rooms-inside-2026-11"],
   },
   {
+    id: "room-names",
+    group: "home",
+    title: { en: "Short room names", id: "Nama ruangan singkat" },
+    body: {
+      en: "Short room names like LT2 or GB1 are fine. Tell Kakak \"the lounge on the second floor\" or \"guest room two\" and she finds the room; when she reads a reply aloud, she says short names in full.",
+      id: "Nama ruangan singkat seperti LT2 atau GB1 boleh dipakai. Bilang ke Kakak \"lounge lantai dua\" atau \"kamar tamu dua\", Kakak menemukan ruangannya; saat membacakan jawaban, nama singkat diucapkan lengkap.",
+    },
+    where: "home_rooms",
+  },
+  {
     id: "repairs",
     group: "home",
     title: { en: "Repairs", id: "Perbaikan" },

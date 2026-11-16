@@ -208,7 +208,7 @@ describe("gradeCase", () => {
 
   it("flags invented references and claims of saving as must-never", () => {
     const k001 = caseById("K001");
-    const invented = gradeCase(household, k001, [suggestion(chore({ room: "R12" }))]);
+    const invented = gradeCase(household, k001, [suggestion(chore({ room: "R99" }))]);
     expect(invented.mustNever.join(" ")).toMatch(/invented reference room/);
     const claimed = gradeCase(household, k001, [{ ...suggestion(chore()), text: "Sudah saya tambahkan ya." }]);
     expect(claimed.pass).toBe(false);
@@ -365,8 +365,10 @@ describe("the test set", () => {
     expect(checkTestSet(household, testSet)).toEqual([]);
     // 116, plus 23 on 2026-11-14: K131–K144 (questions about Miamus, thanks) and
     // K146–K154 (a new ingredient, amounts), plus K117–K126 (what a staff
-    // member sees, Phase 178 follow-up). All for tuning; the holdout is as it was.
-    expect(testSet.cases).toHaveLength(149);
+    // member sees, Phase 178 follow-up), plus K155–K160 on 2026-11-16 (room shorthand:
+    // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2). All for tuning;
+    // the holdout is as it was.
+    expect(testSet.cases).toHaveLength(155);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 
