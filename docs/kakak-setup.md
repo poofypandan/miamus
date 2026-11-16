@@ -131,17 +131,44 @@ How it works (`src/app/api/kakak/speak/route.ts`,
 - The phone sends only the words it would read itself (`speechPlan`: times
   in words, a short opener and two sentences, never a card's rows), at most
   600 characters.
-- `kakak_voice_spend` lets in the same people as `/api/kakak` (an admin of a
-  household where Kakak is allowed and on) and counts the characters in
-  `kakak_usage.voice_chars` (numbers only, kept 35 days). Over the budget the
-  phone reads aloud itself for the rest of the visit.
+- `kakak_voice_reserve` (migration 173) lets in the same people as
+  `/api/kakak` (an admin of a household where Kakak is allowed and on) and,
+  side by side with the sign-in check, holds the reply's characters in
+  `kakak_usage.voice_chars` (numbers only, kept 35 days), atomically, so two
+  phones at once can't pass the budget. If no audio reaches the phone
+  (ElevenLabs refused or sent nothing, or the phone gave up first),
+  `kakak_voice_release` gives them back; once the first audio is on its way,
+  `kakak_voice_settle` deletes the hold and the characters stay counted. The
+  hold's id stays on the server, so a phone can't release its own. A hold
+  (household, day, count, time) lives only while a reply is being made; one
+  left by a request that died midway is deleted after an hour (next
+  reservation, or the nightly `prune_kakak_voice_holds` at 02:53 Jakarta). Over the budget the phone reads aloud
+  itself for the rest of the visit.
+- ElevenLabs is asked at Text to Speech streamed (`/v1/text-to-speech/{id}/stream`),
+  then, only on a 400/404/405/422 (e.g. a model it doesn't serve there), Text
+  to Speech in one piece (`/v1/text-to-speech/{id}`, how the trailer made its
+  eleven_v4 lines), then Text to Dialogue (`/v1/text-to-dialogue/stream`). The
+  one that worked is asked first for the rest of that server's life. Lyly is
+  sent with the trailer's settings (stability 0.55, similarity 0.75, speaker
+  boost). A refusal logs `kakak voice: refused by ElevenLabs <endpoint>
+  <status> <code>`: ElevenLabs' error code only, never its message.
+- Every answer carries `Server-Timing` (`auth`, `rpc`, `upstream_ttfb`,
+  in ms), and the log line `kakak voice <lang> <length> <endpoint>
+  <timings>` shows the same. The phone reports which way each reply was read
+  (`played`, or `timeout`, `autoplay`, `budget`, `upstream`…) to
+  `/api/kakak/speak/outcome`, logged as `kakak voice outcome <word>`: one word,
+  no text, nothing stored.
 - The audio streams straight back and is never stored. ElevenLabs keeps each
   generation in the account's history by default (zero retention is
-  Enterprise-only), so the route deletes it from the history right after
-  (`forget`). Check the History page on staging: it should stay empty.
-- Any failure (not set up, budget, offline, no audio within 2.5 seconds,
+  Enterprise-only), so the route deletes it from the history as soon as it answers
+  (`forget`, or `forgetByRequest` when only a `request-id` header comes
+  back). Check the History page on staging: it should stay empty.
+- The phone unlocks audio on any tap in the sheet while the speaker switch is
+  on (the send tap, the mic, the switch), since browsers refuse `play()` that
+  doesn't follow a tap.
+- Any failure (not set up, budget, offline, no first audio within 6 seconds,
   audio the phone can't play) reads the reply in the phone's voice instead.
-  Without migration 172 the route answers "off".
+  Without migrations 172 and 173 the route answers "off".
 
 ## Limits (migration 126)
 

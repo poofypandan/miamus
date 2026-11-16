@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AUDIO_WAIT_MS,
   MAX_SPEAK_CHARS,
+  VOICE_OUTCOMES,
   decide,
   fetchKakakAudio,
+  outcomeFor,
+  reportOutcome,
+  shouldPrimeAudio,
   silentWav,
   spokenText,
 } from "@/lib/kakak/app-voice";
@@ -16,11 +20,16 @@ import {
   MAX_DAILY_CHARS,
   appVoiceConfig,
   dailyCharsFrom,
+  endpointsFor,
   forget,
+  forgetByRequest,
   handleSpeak,
   handleVoiceCheck,
+  resetVoiceEndpoints,
+  upstreamErrorCode,
+  VOICE_SETTINGS,
   type SpeakDeps,
-  type SpendResult,
+  type ReserveResult,
 } from "@/lib/kakak/app-voice-server";
 
 const HOUSEHOLD = "11111111-1111-4111-8111-111111111111";
@@ -90,33 +99,39 @@ describe("fetchKakakAudio", () => {
   it("uses the phone's voice offline, without asking", async () => {
     const fetchFn = vi.fn();
     const result = await fetchKakakAudio({ ...base, online: () => false, signal: new AbortController().signal, fetch: fetchFn });
-    expect(result).toEqual({ kind: "phone" });
+    expect(result).toEqual({ kind: "phone", reason: "offline" });
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it("uses the phone's voice for the visit on a refusal or the budget", async () => {
-    for (const status of [401, 403, 429, 503]) {
+    const reasons = { 401: "refused", 403: "refused", 429: "budget", 503: "off" } as const;
+    for (const status of [401, 403, 429, 503] as const) {
       const fetchFn = vi.fn(async () => Response.json({ kind: "budget" }, { status }));
       expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: fetchFn })).toEqual({
         kind: "phone_today",
+        reason: reasons[status],
       });
     }
   });
 
   it("uses the phone's voice on a failure, a network error or a body that isn't audio", async () => {
     const failed = vi.fn(async () => Response.json({ kind: "failed" }, { status: 502 }));
-    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: failed })).toEqual({ kind: "phone" });
+    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: failed })).toEqual({ kind: "phone", reason: "upstream" });
     const thrown = vi.fn(async () => {
       throw new TypeError("network");
     });
-    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: thrown })).toEqual({ kind: "phone" });
+    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: thrown })).toEqual({ kind: "phone", reason: "network" });
     const notAudio = vi.fn(async () => new Response("<html>", { status: 200, headers: { "content-type": "text/html" } }));
-    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: notAudio })).toEqual({ kind: "phone" });
+    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: notAudio })).toEqual({ kind: "phone", reason: "upstream" });
     const empty = vi.fn(async () => audioResponse(0));
-    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: empty })).toEqual({ kind: "phone" });
+    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: empty })).toEqual({ kind: "phone", reason: "upstream" });
   });
 
-  it("gives up after AUDIO_WAIT_MS and uses the phone's voice", async () => {
+  it("waits about 6 seconds for the first audio: room for a cold start and the model's first byte", () => {
+    expect(AUDIO_WAIT_MS).toBe(6_000);
+  });
+
+  it("gives up after AUDIO_WAIT_MS and uses the phone's voice, saying it was a timeout", async () => {
     vi.useFakeTimers();
     try {
       let aborted = false;
@@ -133,7 +148,7 @@ describe("fetchKakakAudio", () => {
       await vi.advanceTimersByTimeAsync(AUDIO_WAIT_MS - 1);
       expect(aborted).toBe(false);
       await vi.advanceTimersByTimeAsync(1);
-      expect(await pending).toEqual({ kind: "phone" });
+      expect(await pending).toEqual({ kind: "phone", reason: "timeout" });
       expect(aborted).toBe(true);
     } finally {
       vi.useRealTimers();
@@ -150,7 +165,50 @@ describe("fetchKakakAudio", () => {
     );
     const pending = fetchKakakAudio({ ...base, signal: wanted.signal, fetch: fetchFn as unknown as typeof fetch });
     wanted.abort();
-    expect(await pending).toEqual({ kind: "phone" });
+    expect(await pending).toMatchObject({ kind: "phone" });
+  });
+});
+
+describe("shouldPrimeAudio (unlocking audio on a tap)", () => {
+  it("primes on a tap before the server has answered, and once it says on", () => {
+    for (const appVoice of ["unknown", "checking", "on"] as const) {
+      expect(shouldPrimeAudio({ appVoice, unlocked: false, playing: false })).toBe(true);
+    }
+  });
+
+  it("never once the voice is off, once it worked, or over her audio while it plays", () => {
+    expect(shouldPrimeAudio({ appVoice: "off", unlocked: false, playing: false })).toBe(false);
+    expect(shouldPrimeAudio({ appVoice: "on", unlocked: true, playing: false })).toBe(false);
+    expect(shouldPrimeAudio({ appVoice: "on", unlocked: false, playing: true })).toBe(false);
+  });
+});
+
+describe("outcomes (why the phone's voice read it)", () => {
+  it("names each refusal", () => {
+    expect(outcomeFor(401)).toBe("refused");
+    expect(outcomeFor(403)).toBe("refused");
+    expect(outcomeFor(429)).toBe("budget");
+    expect(outcomeFor(503)).toBe("off");
+    expect(outcomeFor(502)).toBe("upstream");
+  });
+
+  it("reports one word from the list, never the text, and never throws", () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const send = vi.fn(() => true);
+      reportOutcome("autoplay", send);
+      expect(send).toHaveBeenCalledWith("/api/kakak/speak/outcome", JSON.stringify({ outcome: "autoplay" }));
+      expect(info).toHaveBeenCalledWith("kakak voice: phone voice,", "autoplay");
+      expect(() =>
+        reportOutcome("timeout", () => {
+          throw new Error("beacon");
+        })
+      ).not.toThrow();
+      expect(() => reportOutcome("played", null)).not.toThrow();
+      expect(VOICE_OUTCOMES).toContain("played");
+    } finally {
+      info.mockRestore();
+    }
   });
 });
 
@@ -213,7 +271,9 @@ function deps(overrides: Partial<SpeakDeps> = {}): SpeakDeps & { later: ReturnTy
   return {
     env: ENV,
     userId: async () => "user-1",
-    spend: vi.fn(async (): Promise<SpendResult> => ({ ok: true })),
+    reserve: vi.fn(async (): Promise<ReserveResult> => ({ ok: true, hold: "hold-1" })),
+    release: vi.fn(async () => {}),
+    settle: vi.fn(async () => {}),
     fetch: vi.fn(async () =>
       new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { "content-type": "audio/mpeg", "history-item-id": "hist123" } })
     ) as unknown as typeof fetch,
@@ -225,12 +285,14 @@ function deps(overrides: Partial<SpeakDeps> = {}): SpeakDeps & { later: ReturnTy
 const GOOD = { householdId: HOUSEHOLD, text: "Beres. Syam diingatkan.", locale: "id" };
 
 describe("handleSpeak", () => {
+  beforeEach(() => resetVoiceEndpoints());
+
   it("is off without the key, before reading anything or asking anyone", async () => {
     const d = deps({ env: {} });
     const response = await handleSpeak(speakRequest(GOOD), d);
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ kind: "off" });
-    expect(d.spend).not.toHaveBeenCalled();
+    expect(d.reserve).not.toHaveBeenCalled();
     expect(d.fetch).not.toHaveBeenCalled();
   });
 
@@ -244,22 +306,24 @@ describe("handleSpeak", () => {
     const d = deps({ userId: async () => null });
     const response = await handleSpeak(speakRequest(GOOD), d);
     expect(response.status).toBe(401);
-    expect(d.spend).not.toHaveBeenCalled();
     expect(d.fetch).not.toHaveBeenCalled();
+    // Checked side by side: anything held is given back.
+    expect(d.release).toHaveBeenCalledWith(HOUSEHOLD, "hold-1");
   });
 
   it("refuses a staff phone, a household without Kakak, or Kakak switched off", async () => {
     for (const reason of ["not_admin", "not_allowed", "off"] as const) {
-      const d = deps({ spend: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason })) });
+      const d = deps({ reserve: vi.fn(async (): Promise<ReserveResult> => ({ ok: false, reason })) });
       const response = await handleSpeak(speakRequest(GOOD), d);
       expect(response.status).toBe(403);
       expect(await response.json()).toEqual({ kind: "refused" });
       expect(d.fetch).not.toHaveBeenCalled();
+      expect(d.release).not.toHaveBeenCalled();
     }
   });
 
   it("answers budget, without calling ElevenLabs, once the day's characters are used", async () => {
-    const d = deps({ spend: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason: "budget" })) });
+    const d = deps({ reserve: vi.fn(async (): Promise<ReserveResult> => ({ ok: false, reason: "budget" })) });
     const response = await handleSpeak(speakRequest(GOOD), d);
     expect(response.status).toBe(429);
     expect(await response.json()).toEqual({ kind: "budget" });
@@ -267,7 +331,7 @@ describe("handleSpeak", () => {
   });
 
   it("stays off on a database without the budget function", async () => {
-    const d = deps({ spend: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason: "unavailable" })) });
+    const d = deps({ reserve: vi.fn(async (): Promise<ReserveResult> => ({ ok: false, reason: "unavailable" })) });
     expect((await handleSpeak(speakRequest(GOOD), d)).status).toBe(503);
     expect(d.fetch).not.toHaveBeenCalled();
   });
@@ -286,32 +350,141 @@ describe("handleSpeak", () => {
       const d = deps();
       const response = await handleSpeak(speakRequest(body), d);
       expect(response.status).toBe(400);
-      expect(d.spend).not.toHaveBeenCalled();
+      expect(d.reserve).not.toHaveBeenCalled();
     }
     const big = deps();
     expect((await handleSpeak(speakRequest({ ...GOOD, text: "a".repeat(5000) }), big)).status).toBe(413);
   });
 
-  it("counts the reply's characters against the env's budget, then streams ElevenLabs' audio back", async () => {
+  it("holds the characters, asks ElevenLabs' Text to Speech stream for eleven_v4, keeps them once audio arrives, then streams it back", async () => {
     const d = deps({ env: { ...ENV, KAKAK_VOICE_DAILY_CHARS: "4000" } });
     const response = await handleSpeak(speakRequest({ ...GOOD, text: "  Beres.   Syam diingatkan. " }), d);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("audio/mpeg");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
-    expect(d.spend).toHaveBeenCalledWith(HOUSEHOLD, "Beres. Syam diingatkan.".length, 4000);
+    expect(d.reserve).toHaveBeenCalledWith(HOUSEHOLD, "Beres. Syam diingatkan.".length, 4000);
+    expect(d.release).not.toHaveBeenCalled();
+    expect(response.headers.get("server-timing")).toMatch(/^auth;dur=\d+, rpc;dur=\d+, upstream_ttfb;dur=\d+$/);
 
-    const [url, init] = (d.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    const calls = (d.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][];
+    expect(calls).toHaveLength(1);
+    const [url, init] = calls[0];
     expect(url).toBe(`${ELEVENLABS_API}/v1/text-to-speech/LylyVoiceId123/stream?output_format=mp3_44100_64`);
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>)["xi-api-key"]).toBe("test-key");
-    expect(JSON.parse(init.body as string)).toEqual({ text: "Beres. Syam diingatkan.", model_id: "eleven_v4", language_code: "id" });
+    expect(JSON.parse(init.body as string)).toEqual({
+      text: "Beres. Syam diingatkan.",
+      model_id: "eleven_v4",
+      language_code: "id",
+      voice_settings: VOICE_SETTINGS,
+    });
   });
 
-  it("asks ElevenLabs to delete the generation from its history after answering", async () => {
+  it("on a model-not-supported refusal, asks Text to Speech in one piece (the trailer's way), then Dialogue, and remembers what worked", async () => {
+    expect(endpointsFor("eleven_v4")).toEqual(["tts_stream", "tts", "dialogue"]);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const refusal = () =>
+        Response.json({ detail: { status: "model_not_supported", message: "Beres. Syam diingatkan." } }, { status: 422 });
+      const audio = () => new Response(new Uint8Array([7]), { status: 200, headers: { "content-type": "audio/mpeg" } });
+      const fetchFn = vi.fn().mockResolvedValueOnce(refusal()).mockResolvedValueOnce(audio());
+      const d = deps({ fetch: fetchFn as unknown as typeof fetch });
+      const response = await handleSpeak(speakRequest(GOOD), d);
+      expect(response.status).toBe(200);
+      expect(fetchFn.mock.calls.map(([url]) => new URL(url as string).pathname)).toEqual([
+        "/v1/text-to-speech/LylyVoiceId123/stream",
+        "/v1/text-to-speech/LylyVoiceId123",
+      ]);
+      expect(d.release).not.toHaveBeenCalled();
+      // Logged: endpoint, status and ElevenLabs' code. Never the message.
+      expect(error).toHaveBeenCalledWith("kakak voice: refused by ElevenLabs", "tts_stream", 422, "model_not_supported");
+      for (const call of error.mock.calls) expect(JSON.stringify(call)).not.toContain("Syam");
+      expect(endpointsFor("eleven_v4")).toEqual(["tts", "tts_stream", "dialogue"]);
+
+      const dialogue = vi.fn().mockResolvedValueOnce(refusal()).mockResolvedValueOnce(refusal()).mockResolvedValueOnce(audio());
+      resetVoiceEndpoints();
+      const d2 = deps({ fetch: dialogue as unknown as typeof fetch });
+      expect((await handleSpeak(speakRequest(GOOD), d2)).status).toBe(200);
+      const [dialogueUrl, dialogueInit] = dialogue.mock.calls[2] as [string, RequestInit];
+      expect(dialogueUrl).toBe(`${ELEVENLABS_API}/v1/text-to-dialogue/stream?output_format=mp3_44100_64`);
+      expect(JSON.parse(dialogueInit.body as string)).toEqual({
+        inputs: [{ text: "Beres. Syam diingatkan.", voice_id: "LylyVoiceId123" }],
+        model_id: "eleven_v4",
+        language_code: "id",
+      });
+    } finally {
+      error.mockRestore();
+      info.mockRestore();
+    }
+  });
+
+  it("reads only ElevenLabs' error code, never its message", async () => {
+    expect(await upstreamErrorCode(Response.json({ detail: { status: "quota_exceeded", message: "secret words" } }))).toBe("quota_exceeded");
+    expect(await upstreamErrorCode(Response.json({ detail: [{ type: "value_error", msg: "secret words" }] }))).toBe("value_error");
+    expect(await upstreamErrorCode(Response.json({ detail: { status: "has spaces and words" } }))).toBe("-");
+    expect(await upstreamErrorCode(new Response("<html>"))).toBe("-");
+  });
+
+  it("checks the sign-in and the budget at the same time", async () => {
+    let releaseUser!: (id: string) => void;
+    const reserve = vi.fn(async (): Promise<ReserveResult> => ({ ok: true, hold: "hold-1" }));
+    const d = deps({ userId: () => new Promise<string>((resolve) => (releaseUser = resolve)), reserve });
+    const pending = handleSpeak(speakRequest(GOOD), d);
+    await vi.waitFor(() => expect(reserve).toHaveBeenCalled());
+    releaseUser("user-1");
+    expect((await pending).status).toBe(200);
+  });
+
+  it("gives the characters back when the phone gives up before ElevenLabs' first audio, and still has the generation forgotten", async () => {
+    const phone = new AbortController();
+    let sendFirst!: () => void;
+    const fetchFn = vi.fn(async () => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          sendFirst = () => controller.enqueue(new Uint8Array([1]));
+        },
+      });
+      return new Response(body, { status: 200, headers: { "content-type": "audio/mpeg", "history-item-id": "hist123" } });
+    });
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const d = deps({ fetch: fetchFn as unknown as typeof fetch, signal: phone.signal });
+      const pending = handleSpeak(speakRequest(GOOD), d);
+      await vi.waitFor(() => expect(fetchFn).toHaveBeenCalled());
+      phone.abort();
+      sendFirst();
+      const response = await pending;
+      expect(response.status).toBe(502);
+      expect(d.release).toHaveBeenCalledWith(HOUSEHOLD, "hold-1");
+      expect(d.later).toHaveBeenCalledTimes(1);
+    } finally {
+      info.mockRestore();
+    }
+  });
+
+  it("gives the characters back when ElevenLabs sends no audio", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const d = deps({
+        fetch: vi.fn(async () => new Response(new Uint8Array(0), { status: 200, headers: { "content-type": "audio/mpeg" } })) as unknown as typeof fetch,
+      });
+      expect((await handleSpeak(speakRequest(GOOD), d)).status).toBe(502);
+      expect(d.release).toHaveBeenCalledWith(HOUSEHOLD, "hold-1");
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("after answering, asks ElevenLabs to delete the generation and settles the hold (characters kept)", async () => {
     const d = deps();
     await handleSpeak(speakRequest(GOOD), d);
-    expect(d.later).toHaveBeenCalledTimes(1);
+    expect(d.later).toHaveBeenCalledTimes(2);
+    expect(d.settle).not.toHaveBeenCalled();
+    for (const [task] of d.later.mock.calls) void (task as () => Promise<void>)().catch(() => {});
+    await vi.waitFor(() => expect(d.settle).toHaveBeenCalledWith(HOUSEHOLD, "hold-1"));
+    expect(d.release).not.toHaveBeenCalled();
   });
 
   it("answers failed, logging only the status, when ElevenLabs refuses or doesn't answer", async () => {
@@ -324,6 +497,9 @@ describe("handleSpeak", () => {
       expect(response.status).toBe(502);
       expect(await response.json()).toEqual({ kind: "failed" });
       expect(refused.later).not.toHaveBeenCalled();
+      // A bad key isn't a wrong endpoint: asked once, and the characters given back.
+      expect(refused.fetch).toHaveBeenCalledTimes(1);
+      expect(refused.release).toHaveBeenCalledWith(HOUSEHOLD, "hold-1");
       const thrown = deps({
         fetch: vi.fn(async () => {
           throw new TypeError("fetch failed");
@@ -369,6 +545,102 @@ describe("forget", () => {
     } finally {
       error.mockRestore();
     }
+  });
+});
+
+describe("forgetByRequest", () => {
+  const noWait = async () => {};
+
+  it("finds the generation by its request id and deletes that item only", async () => {
+    const fetchFn = vi.fn(async (url: string) =>
+      url.includes("/v1/history?")
+        ? Response.json({
+            history: [
+              { history_item_id: "trailer1", request_id: "other" },
+              { history_item_id: "hist999", request_id: "req123" },
+            ],
+          })
+        : Response.json({ status: "ok" })
+    );
+    await forgetByRequest(fetchFn as unknown as typeof fetch, "k", "req123", 1_000_000, noWait);
+    const urls = fetchFn.mock.calls.map(([url]) => url as string);
+    expect(urls[0]).toBe(`${ELEVENLABS_API}/v1/history?page_size=100&date_after_unix=999940`);
+    expect(urls.slice(1)).toEqual([`${ELEVENLABS_API}/v1/history/hist999`]);
+  });
+
+  it("follows the next pages of the history until it finds the request id", async () => {
+    const pages: Record<string, unknown> = {
+      first: { history: [{ history_item_id: "trailer1", request_id: "other" }], has_more: true, last_history_item_id: "trailer1" },
+      second: { history: [{ history_item_id: "hist999", request_id: "req123" }], has_more: false },
+    };
+    const fetchFn = vi.fn(async (url: string) =>
+      url.includes("/v1/history?")
+        ? Response.json(url.includes("start_after_history_item_id=trailer1") ? pages.second : pages.first)
+        : Response.json({ status: "ok" })
+    );
+    await forgetByRequest(fetchFn as unknown as typeof fetch, "k", "req123", 1_000_000, noWait);
+    const urls = fetchFn.mock.calls.map(([url]) => url as string);
+    expect(urls).toEqual([
+      `${ELEVENLABS_API}/v1/history?page_size=100&date_after_unix=999940`,
+      `${ELEVENLABS_API}/v1/history?page_size=100&date_after_unix=999940&start_after_history_item_id=trailer1`,
+      `${ELEVENLABS_API}/v1/history/hist999`,
+    ]);
+  });
+
+  it("deletes nothing when the request id isn't there", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const fetchFn = vi.fn(async () => Response.json({ history: [{ history_item_id: "trailer1", request_id: "other" }] }));
+      await forgetByRequest(fetchFn as unknown as typeof fetch, "k", "req123", 1_000_000, noWait);
+      for (const [, init] of fetchFn.mock.calls as unknown as [string, RequestInit | undefined][]) {
+        expect(init?.method ?? "GET").toBe("GET");
+      }
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("is used when ElevenLabs answers with a request id and no history item id", async () => {
+    const d = deps({
+      fetch: vi.fn(async () =>
+        new Response(new Uint8Array([1]), { status: 200, headers: { "content-type": "audio/mpeg", "request-id": "req123" } })
+      ) as unknown as typeof fetch,
+    });
+    await handleSpeak(speakRequest(GOOD), d);
+    expect(d.later).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("migrations/173", () => {
+  const sql = readFileSync("supabase/migrations/173_kakak_voice_holds.sql", "utf8").replace(/--.*$/gm, "");
+
+  it("holds numbers only, readable by no one but its functions, pruned after a day", () => {
+    const table = sql.slice(sql.indexOf("create table"), sql.indexOf(");", sql.indexOf("create table")));
+    expect(table).not.toMatch(/\btext\b/i);
+    expect(sql).toMatch(/alter table public\.kakak_voice_holds enable row level security;/);
+    expect(sql).not.toMatch(/create policy/i);
+    expect(sql).toMatch(/revoke all on table public\.kakak_voice_holds from public, anon, authenticated;/);
+    expect(sql).toMatch(/delete from public\.kakak_voice_holds where created_at < now\(\) - interval '1 hour'/);
+    expect(sql).toMatch(/cron\.schedule\('prune-kakak-voice-holds'/);
+    expect(sql).toMatch(/grant execute on function public\.prune_kakak_voice_holds\(\) to service_role;/);
+  });
+
+  it("checks household admins (never get_user_household_ids) and revokes public execute", () => {
+    expect(sql.match(/security definer/g)).toHaveLength(4);
+    expect(sql.match(/set search_path = public, pg_temp/g)).toHaveLength(4);
+    expect(sql.match(/household_members m\s+where m\.user_id = v_uid and m\.household_id = p_household/g)).toHaveLength(3);
+    expect(sql).toMatch(/revoke all on function public\.kakak_voice_settle\(uuid, uuid\) from public, anon;/);
+    expect(sql).toMatch(/revoke all on function public\.prune_kakak_voice_holds\(\) from public, anon, authenticated;/);
+    expect(sql).not.toMatch(/get_user_household_ids/);
+    expect(sql).toMatch(/revoke all on function public\.kakak_voice_reserve\(uuid, int, int\) from public, anon;/);
+    expect(sql).toMatch(/grant execute on function public\.kakak_voice_reserve\(uuid, int, int\) to authenticated;/);
+    expect(sql).toMatch(/revoke all on function public\.kakak_voice_release\(uuid, uuid\) from public, anon;/);
+    expect(sql).toMatch(/grant execute on function public\.kakak_voice_release\(uuid, uuid\) to authenticated;/);
+  });
+
+  it("gives back only that household's own recent, unreleased hold, never below zero", () => {
+    expect(sql).toMatch(/where h\.id = p_hold and h\.household_id = p_household\s+and h\.created_at > now\(\) - interval '10 minutes'/);
+    expect(sql).toMatch(/greatest\(0, u\.voice_chars - v_hold\.chars\)/);
   });
 });
 

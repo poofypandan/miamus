@@ -15,8 +15,13 @@ export type AppVoiceLocale = "en" | "id";
  */
 export const MAX_SPEAK_CHARS = 600;
 
-/** How long the phone waits for Kakak's audio to start before using its own voice. */
-export const AUDIO_WAIT_MS = 2_500;
+/**
+ * How long the phone waits for Kakak's first audio before using its own
+ * voice. The server answers only once ElevenLabs has started sending audio,
+ * so this covers a cold start, the sign-in and budget check, and the
+ * model's time to first byte (2.5 s in #148 was often too short).
+ */
+export const AUDIO_WAIT_MS = 6_000;
 /** And for the rest of the audio to arrive, once ElevenLabs has started sending it. */
 export const AUDIO_BODY_MS = 8_000;
 
@@ -57,7 +62,46 @@ export function decide(outcome: number | "timeout" | "offline" | "error"): AppVo
   return "phone";
 }
 
-export type AppVoiceResult = { kind: "audio"; audio: Blob } | { kind: AppVoiceDecision & ("phone" | "phone_today") };
+/**
+ * Why the phone's voice read a reply instead of Kakak's, or "played" when
+ * hers did. Words for a log line and a numbers-only report: never the text.
+ */
+export type VoiceOutcome =
+  | "played"
+  | "offline"
+  | "timeout"
+  | "network"
+  | "refused"
+  | "budget"
+  | "off"
+  | "upstream"
+  | "autoplay"
+  | "unplayable";
+
+export const VOICE_OUTCOMES: readonly VoiceOutcome[] = [
+  "played",
+  "offline",
+  "timeout",
+  "network",
+  "refused",
+  "budget",
+  "off",
+  "upstream",
+  "autoplay",
+  "unplayable",
+];
+
+/** The reason behind a status from /api/kakak/speak that isn't audio. */
+export function outcomeFor(status: number): VoiceOutcome {
+  if (status === 401 || status === 403) return "refused";
+  if (status === 429) return "budget";
+  if (status === 503) return "off";
+  return "upstream";
+}
+
+export type AppVoiceResult =
+  | { kind: "audio"; audio: Blob }
+  | { kind: AppVoiceDecision & ("phone" | "phone_today"); reason: VoiceOutcome };
 
 export interface FetchAudioOptions {
   householdId: string;
@@ -85,10 +129,10 @@ export async function fetchKakakAudio({
   waitMs = AUDIO_WAIT_MS,
   bodyMs = AUDIO_BODY_MS,
 }: FetchAudioOptions): Promise<AppVoiceResult> {
-  if (!text || !online()) return { kind: decide("offline") as "phone" };
+  if (!online()) return { kind: "phone", reason: "offline" };
+  if (!text || signal.aborted) return { kind: "phone", reason: "network" };
   const controller = new AbortController();
   const stop = () => controller.abort();
-  if (signal.aborted) return { kind: "phone" };
   signal.addEventListener("abort", stop, { once: true });
   let timer = setTimeout(stop, waitMs);
   try {
@@ -102,18 +146,58 @@ export async function fetchKakakAudio({
     const isAudio = (response.headers.get("content-type") ?? "").startsWith("audio/");
     if (decision !== "play" || !isAudio) {
       void response.body?.cancel().catch(() => {});
-      return { kind: decision === "play" ? "phone" : decision };
+      return decision === "play"
+        ? { kind: "phone", reason: "upstream" }
+        : { kind: decision, reason: outcomeFor(response.status) };
     }
     clearTimeout(timer);
     timer = setTimeout(stop, bodyMs);
     const audio = await response.blob();
-    if (!audio.size) return { kind: "phone" };
+    if (!audio.size) return { kind: "phone", reason: "upstream" };
     return { kind: "audio", audio };
   } catch {
-    return { kind: decide(controller.signal.aborted ? "timeout" : "error") as "phone" };
+    return { kind: "phone", reason: controller.signal.aborted ? "timeout" : "network" };
   } finally {
     clearTimeout(timer);
     signal.removeEventListener("abort", stop);
+  }
+}
+
+/**
+ * Whether a tap should play the silent sound that lets Kakak's audio play
+ * later. Browsers refuse play() that doesn't follow a tap (iPhone Safari
+ * always, per element; Android Chrome until the page has had one), and her
+ * reply arrives seconds after the tap that asked. So: on any tap until it
+ * has worked, unless the server has said her voice is off (a sound, even a
+ * silent one, can pause music in another app), and never over her audio
+ * while it plays.
+ */
+export function shouldPrimeAudio(state: {
+  appVoice: "unknown" | "checking" | "on" | "off";
+  unlocked: boolean;
+  playing: boolean;
+}): boolean {
+  return state.appVoice !== "off" && !state.unlocked && !state.playing;
+}
+
+/**
+ * Notes which way a reply was read: a console line on the phone, and the
+ * outcome word alone to /api/kakak/speak/outcome, which logs it so a phone
+ * that keeps falling back can be told apart (slow, blocked, refused) without
+ * anyone opening its developer tools. No text, nothing stored.
+ */
+export function reportOutcome(
+  outcome: VoiceOutcome,
+  send: ((url: string, body: string) => boolean) | null = typeof navigator !== "undefined" && navigator.sendBeacon
+    ? (url, body) => navigator.sendBeacon(url, new Blob([body], { type: "application/json" }))
+    : null
+): void {
+  if (outcome === "played") console.info("kakak voice: played");
+  else console.info("kakak voice: phone voice,", outcome);
+  try {
+    send?.("/api/kakak/speak/outcome", JSON.stringify({ outcome }));
+  } catch {
+    // A report is never worth an error.
   }
 }
 
