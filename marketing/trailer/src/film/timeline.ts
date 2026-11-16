@@ -140,7 +140,10 @@ export const QUIET = { push: [0, 86] as Span, sleep: [86, 96] as Span, set: [98,
 export const ENDING = { mama: [-80, -1] as Span, settle: [0, 30] as Span, push: [72, 114] as Span, tug: 120, point: 126, bell: 127, shade: [222, 237] as Span, hold: [300, 318] as Span, lift: [300, 430] as Span, crane: [360, 412] as Span, mark: 450, name: 459, line: 480, url: 498 };
 // v9: the garden cut at 10.0 with the tug and bell together; the hand at 11.0 is her answer (a caption, as the end
 // line needs the time); the end line from 11.85; the card's line on the bell at 13.0, the address at 13.4.
-export const ENDING15 = { tug: 0, point: 6, bell: 1, shade: [16, 30] as Span, hold: [30, 46] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [58, 96] as Span, mark: 70, name: 78, line: 90, url: 102 };
+// v15: the crane starts as she says "Miamus" (11.33 s, the Indonesian onset; the English one is 11.53; was 11.93), the
+// same length, so the name rises into the sky as in the 60 s cut. The line on the bell (13.0) and the address (13.4)
+// are unchanged.
+export const ENDING15 = { tug: 0, point: 6, bell: 1, shade: [16, 30] as Span, hold: [30, 40] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [40, 78] as Span, mark: 70, name: 78, line: 90, url: 102 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */
 export function soundCues(cut: "60" | "15") {

@@ -11,8 +11,16 @@ import { World } from "../world/World";
 import { type Cam, camMix, project } from "../world/camera";
 import { lightAt } from "../world/tod";
 import { COPY, type Locale } from "./copy";
-import { CARDS, CARDS15, ENDING, ENDING15, HOOK, HOOK15, QUIET, S15, S60, SARI15, STAFF, type Span, TELL, TELL15, len } from "./timeline";
+import { CARDS, CARDS15, ENDING, ENDING15, FPS, HOOK, HOOK15, QUIET, S15, S60, SARI15, STAFF, type Span, TELL, TELL15, len } from "./timeline";
 import { CaptureCard, ListeningPulse, Thumb } from "../ui/cards";
+import voData from "./vo-data.json";
+
+/** v15, the brand lock: the frame (in the scene) where she says "Miamus", from the end line's measured onset. */
+function brandFrame(fast: boolean | undefined, locale: Locale, t0: number, fallback: number) {
+  const cut = (voData as unknown as Record<string, { cues: { id: string; onset?: number }[] }>)[`${fast ? "15" : "60"}-${locale}`];
+  const onset = cut?.cues.find((c) => c.id === (fast ? "S3" : "L11"))?.onset;
+  return onset === undefined ? fallback : Math.round(onset * FPS) - t0;
+}
 
 const taps = tapsJson as Record<string, { x: number; y: number }>;
 const tap = (key: string) => taps[key] ?? { x: 195, y: 422 };
@@ -600,6 +608,7 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   const frame = useCurrentFrame();
   const copy = COPY[locale];
   const E = fast ? ENDING15 : ENDING;
+  const brand = brandFrame(fast, locale, t0, E.name);
   // The light deepens from the garden to the end card (v9: the 60 s ending starts 2.8 s sooner, at 44.2 s).
   const tod = fast ? lerp(17.74, 18.42, ramp(frame, 24, 112, (t) => t)) : lerp(17.62, 18.42, ramp(frame, 210, 480, (t) => t));
   // Fable's mirror: the walk stays wide, a push over her last steps to the hook's two-shot, then the crane back up the
@@ -644,8 +653,10 @@ export function Ending({ locale, t0, fast }: SceneProps) {
       </AbsoluteFill>
       {focus < 1 && <AbsoluteFill style={{ background: `rgba(255,250,242,${(0.08 * (1 - focus)).toFixed(3)})` }} />}
       <Vignette />
-      <CallTwo lines={copy.call} {...CALL_TWO} at={E.bell} out={E.crane[0] + 6} />
-      <EndCard line={copy.end.line} em={copy.end.em} call={copy.end.call} url={copy.end.url} mark={E.mark} name={E.name} lineAt={E.line} callAt={"call" in E ? (E as { call: number }).call : undefined} urlAt={E.url} />
+      {/* v15: her handwriting is gone by the time the name arrives (they shared the same place on screen). */}
+      <CallTwo lines={copy.call} {...CALL_TWO} at={E.bell} out={Math.min(E.crane[0] + 6, brand - 16)} />
+      {/* v15: the mark and the name arrive together on her spoken "Miamus"; the line on the bell and the address as before. */}
+      <EndCard line={copy.end.line} em={copy.end.em} call={copy.end.call} url={copy.end.url} mark={brand} name={brand} lineAt={E.line} callAt={"call" in E ? (E as { call: number }).call : undefined} urlAt={E.url} />
     </AbsoluteFill>
   );
 }

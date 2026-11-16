@@ -54,6 +54,14 @@ LOCALE_CUES["id"]["15"] = {"S3": 11.5}
 # S1 in eleven-lyly-v14; her name and the AI tag are on screen instead). It is said in one breath, so it is not cut
 # apart: only its caption is split at the comma's breath into two plates (S1, S2), each the size a plate holds.
 CAPTION_SPLIT = {("15", "en"): {"S1": ("S2", 2.57)}, ("15", "id"): {"S1": ("S2", 2.60)}}
+# v15 (owner, 16 Nov): the brand lock. The end line's first word, "Miamus", is shown as the name itself on screen from
+# the instant she says it, so it is not captioned; only "More time for your family." is (L11t / S3t), from the pause
+# after the name (the middle of the measured pause: EN about 1.05 s into the line, ID about 0.93 s). The name's frame
+# comes from the word's onset, measured from the line itself and written to vo-data.json as the cue's "onset".
+for loc, off in (("en", 1.05), ("id", 0.93)):
+    CAPTION_SPLIT.setdefault(("60", loc), {})["L11"] = ("L11t", off)
+    CAPTION_SPLIT.setdefault(("15", loc), {})["S3"] = ("S3t", off)
+BRAND_WORD = ("L11", "S3")
 # In the 15-second Indonesian cut there is no room to say Mama's answer as well as the end line, so it is a caption.
 DROP = {}
 # v9: in the 15-second cut Mama's answer is the hand at 11.0, with her words as a caption (the end line needs the time).
@@ -170,7 +178,13 @@ def mix(cut, locale, voices, music_style):
         split = CAPTION_SPLIT.get((cut, locale), {}).get(key) if voices["kakak"].endswith("v14") else None
         if split:
             second, off = split
-            cues.append({"id": key, "from": round(start, 3), "to": round(start + off, 3)})
+            cue = {"id": key, "from": round(start, 3), "to": round(start + off, 3)}
+            if key in BRAND_WORD:
+                # The word's onset: the first 5 ms window within 35 dB of the line's loudest.
+                env = np.sqrt(np.convolve(line**2, np.ones(240) / 240, "same"))
+                level = 20 * np.log10(env + 1e-9)
+                cue["onset"] = round(start + int(np.argmax(level > level.max() - 35)) / SR, 3)
+            cues.append(cue)
             cues.append({"id": second, "from": round(start + off, 3), "to": round(end, 3)})
         else:
             cues.append({"id": key, "from": round(start, 3), "to": round(end, 3)})

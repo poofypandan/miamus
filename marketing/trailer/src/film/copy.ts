@@ -90,6 +90,9 @@ export const COPY: Record<Locale, Copy> = {
       S1: "Hi, I'm Kakak. Tell me once,",
       S2: "and everyone at home knows what to do.",
       S3: "Miamus. More time for your family.",
+      // v15: the name is on screen from her "Miamus"; the caption carries only the words after it.
+      L11t: "More time for your family.",
+      S3t: "More time for your family.",
       // v6: the girl (G, in her handwriting) and Mama (M, on her own light plate).
       G1: "Mama, look!",
       G2: "Mama, look!",
@@ -158,6 +161,8 @@ export const COPY: Record<Locale, Copy> = {
       S1: "Halo, ini Kakak. Bilang sekali,",
       S2: "dan semua orang di rumah tahu harus apa.",
       S3: "Miamus. Lebih banyak waktu untuk keluarga.",
+      L11t: "Lebih banyak waktu untuk keluarga.",
+      S3t: "Lebih banyak waktu untuk keluarga.",
       G1: "Mama, lihat!",
       G2: "Mama, lihat!",
       G3: "Mama…?",

@@ -1,5 +1,26 @@
 # The Miamus trailer: what was made, and why
 
+## Version 15 (16 November 2026): the brand lock
+
+Owner's note on v14. Four cuts in `docs/private/marketing/trailer-v15/`; v14 is untouched. No new voice takes; the
+sound is v14's, unchanged.
+
+- **The name on the word.** The Miamus mark and name arrive together on the onset of Kakak's spoken "Miamus",
+  frame-accurate in each language: 60 s EN 53.335 s, ID 53.319 s (both frame 1600); 15 s EN 11.534 s (frame 346), ID
+  11.328 s (frame 340). The onset is measured from her line itself (`audio/mix.py` writes it to `vo-data.json` as the
+  cue's "onset"; `brandFrame` in `src/film/scenes.tsx` reads it), so it follows any future take. They stay to the end.
+  The line writes on with the bell as before (57.0 / 13.0), the address last (57.6 / 13.4).
+- **The caption.** The spoken "Miamus" is no longer captioned (the name itself is on screen); "More time for your
+  family." / "Lebih banyak waktu untuk keluarga." keeps a caption, from the pause after the name (EN about 1.05 s, ID
+  about 0.93 s into the line), so it still reads with the sound off, as most feeds play.
+- **The girl's handwriting** ("Mama, look!") now leaves just before the name arrives; they shared the same place on
+  screen. It still writes on with the bell (45.2 / 10.0) and is read in full.
+- **60 s:** the crane and music are unchanged; the name appears 0.33 s into the crane, over the roofline, and rises
+  into the sky with it, inside the safe area.
+- **15 s:** the crane now starts as she says "Miamus" (11.33 s, the Indonesian onset; was 11.93), the same length, so
+  the name rises into the sky instead of sitting over Mama's head; Mama's hold before it ends there. Line and address
+  unchanged.
+
 ## Version 14 (16 November 2026): Kakak alone in the 15 s cuts; Mama's "Kak," with a glottal stop
 
 Owner's notes on v13. Four cuts in `docs/private/marketing/trailer-v14/`: 60 s ID is v13's file, byte for byte

@@ -19,7 +19,8 @@ export type FilmProps = {
 
 /** Lines that are already on screen in large type: the dawn question. (v6: the end card's written line differs
  * from Kakak's spoken end line, so that one is captioned too.) */
-const SHOWN_LARGE = ["L2"];
+// v15: "L11" / "S3" carry the spoken "Miamus", shown as the name itself on screen (the brand lock), not as a caption.
+const SHOWN_LARGE = ["L2", "L11", "S3"];
 
 type VoCut = { cues: { id: string; from: number; to: number }[]; env: number[] };
 
