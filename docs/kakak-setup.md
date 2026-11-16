@@ -139,9 +139,14 @@ How it works (`src/app/api/kakak/speak/route.ts`,
   35 days). A reply ElevenLabs refused, or the phone gave up on, costs the
   household nothing. Over the budget the phone reads aloud itself for the
   rest of the visit.
-- ElevenLabs serves `eleven_v3` / `eleven_v4` through Text to Dialogue
-  (`/v1/text-to-dialogue/stream`) and older models through Text to Speech; the
-  route asks the matching one first and the other once on a 400/404/405/422.
+- ElevenLabs is asked at Text to Speech streamed (`/v1/text-to-speech/{id}/stream`),
+  then, only on a 400/404/405/422 (e.g. a model it doesn't serve there), Text
+  to Speech in one piece (`/v1/text-to-speech/{id}`, how the trailer made its
+  eleven_v4 lines), then Text to Dialogue (`/v1/text-to-dialogue/stream`). The
+  one that worked is asked first for the rest of that server's life. Lyly is
+  sent with the trailer's settings (stability 0.55, similarity 0.75, speaker
+  boost). A refusal logs `kakak voice: refused by ElevenLabs <endpoint>
+  <status> <code>`: ElevenLabs' error code only, never its message.
 - Every answer carries `Server-Timing` (`auth`, `rpc`, `upstream_ttfb`,
   `spend`, in ms), and the log line `kakak voice <lang> <length> <endpoint>
   <timings>` shows the same. The phone reports which way each reply was read

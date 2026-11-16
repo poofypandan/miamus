@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AUDIO_WAIT_MS,
   MAX_SPEAK_CHARS,
@@ -25,6 +25,9 @@ import {
   forgetByRequest,
   handleSpeak,
   handleVoiceCheck,
+  resetVoiceEndpoints,
+  upstreamErrorCode,
+  VOICE_SETTINGS,
   type SpeakDeps,
   type SpendResult,
 } from "@/lib/kakak/app-voice-server";
@@ -281,6 +284,8 @@ function deps(overrides: Partial<SpeakDeps> = {}): SpeakDeps & { later: ReturnTy
 const GOOD = { householdId: HOUSEHOLD, text: "Beres. Syam diingatkan.", locale: "id" };
 
 describe("handleSpeak", () => {
+  beforeEach(() => resetVoiceEndpoints());
+
   it("is off without the key, before reading anything or asking anyone", async () => {
     const d = deps({ env: {} });
     const response = await handleSpeak(speakRequest(GOOD), d);
@@ -350,7 +355,7 @@ describe("handleSpeak", () => {
     expect((await handleSpeak(speakRequest({ ...GOOD, text: "a".repeat(5000) }), big)).status).toBe(413);
   });
 
-  it("checks the budget, asks ElevenLabs' Text to Dialogue for eleven_v4, counts once audio arrives, then streams it back", async () => {
+  it("checks the budget, asks ElevenLabs' Text to Speech stream for eleven_v4, counts once audio arrives, then streams it back", async () => {
     const d = deps({ env: { ...ENV, KAKAK_VOICE_DAILY_CHARS: "4000" } });
     const response = await handleSpeak(speakRequest({ ...GOOD, text: "  Beres.   Syam diingatkan. " }), d);
     expect(response.status).toBe(200);
@@ -364,37 +369,61 @@ describe("handleSpeak", () => {
     const calls = (d.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][];
     expect(calls).toHaveLength(1);
     const [url, init] = calls[0];
-    expect(url).toBe(`${ELEVENLABS_API}/v1/text-to-dialogue/stream?output_format=mp3_44100_64`);
+    expect(url).toBe(`${ELEVENLABS_API}/v1/text-to-speech/LylyVoiceId123/stream?output_format=mp3_44100_64`);
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>)["xi-api-key"]).toBe("test-key");
     expect(JSON.parse(init.body as string)).toEqual({
-      inputs: [{ text: "Beres. Syam diingatkan.", voice_id: "LylyVoiceId123" }],
+      text: "Beres. Syam diingatkan.",
       model_id: "eleven_v4",
       language_code: "id",
+      voice_settings: VOICE_SETTINGS,
     });
   });
 
-  it("asks Text to Speech first for an older model, and the other endpoint once when one says the request is wrong", async () => {
-    expect(endpointsFor("eleven_v4")).toEqual(["dialogue", "tts"]);
-    expect(endpointsFor("eleven_v3")).toEqual(["dialogue", "tts"]);
-    expect(endpointsFor("eleven_multilingual_v2")).toEqual(["tts", "dialogue"]);
+  it("on a model-not-supported refusal, asks Text to Speech in one piece (the trailer's way), then Dialogue, and remembers what worked", async () => {
+    expect(endpointsFor("eleven_v4")).toEqual(["tts_stream", "tts", "dialogue"]);
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
-      const fetchFn = vi
-        .fn()
-        .mockResolvedValueOnce(Response.json({ detail: "unsupported" }, { status: 422 }))
-        .mockResolvedValueOnce(new Response(new Uint8Array([7]), { status: 200, headers: { "content-type": "audio/mpeg" } }));
+      const refusal = () =>
+        Response.json({ detail: { status: "model_not_supported", message: "Beres. Syam diingatkan." } }, { status: 422 });
+      const audio = () => new Response(new Uint8Array([7]), { status: 200, headers: { "content-type": "audio/mpeg" } });
+      const fetchFn = vi.fn().mockResolvedValueOnce(refusal()).mockResolvedValueOnce(audio());
       const d = deps({ fetch: fetchFn as unknown as typeof fetch });
       const response = await handleSpeak(speakRequest(GOOD), d);
       expect(response.status).toBe(200);
       expect(fetchFn.mock.calls.map(([url]) => new URL(url as string).pathname)).toEqual([
-        "/v1/text-to-dialogue/stream",
         "/v1/text-to-speech/LylyVoiceId123/stream",
+        "/v1/text-to-speech/LylyVoiceId123",
       ]);
       expect(d.spend).toHaveBeenCalledTimes(1);
+      // Logged: endpoint, status and ElevenLabs' code. Never the message.
+      expect(error).toHaveBeenCalledWith("kakak voice: refused by ElevenLabs", "tts_stream", 422, "model_not_supported");
+      for (const call of error.mock.calls) expect(JSON.stringify(call)).not.toContain("Syam");
+      expect(endpointsFor("eleven_v4")).toEqual(["tts", "tts_stream", "dialogue"]);
+
+      const dialogue = vi.fn().mockResolvedValueOnce(refusal()).mockResolvedValueOnce(refusal()).mockResolvedValueOnce(audio());
+      resetVoiceEndpoints();
+      const d2 = deps({ fetch: dialogue as unknown as typeof fetch });
+      expect((await handleSpeak(speakRequest(GOOD), d2)).status).toBe(200);
+      const [dialogueUrl, dialogueInit] = dialogue.mock.calls[2] as [string, RequestInit];
+      expect(dialogueUrl).toBe(`${ELEVENLABS_API}/v1/text-to-dialogue/stream?output_format=mp3_44100_64`);
+      expect(JSON.parse(dialogueInit.body as string)).toEqual({
+        inputs: [{ text: "Beres. Syam diingatkan.", voice_id: "LylyVoiceId123" }],
+        model_id: "eleven_v4",
+        language_code: "id",
+      });
     } finally {
       error.mockRestore();
+      info.mockRestore();
     }
+  });
+
+  it("reads only ElevenLabs' error code, never its message", async () => {
+    expect(await upstreamErrorCode(Response.json({ detail: { status: "quota_exceeded", message: "secret words" } }))).toBe("quota_exceeded");
+    expect(await upstreamErrorCode(Response.json({ detail: [{ type: "value_error", msg: "secret words" }] }))).toBe("value_error");
+    expect(await upstreamErrorCode(Response.json({ detail: { status: "has spaces and words" } }))).toBe("-");
+    expect(await upstreamErrorCode(new Response("<html>"))).toBe("-");
   });
 
   it("checks the sign-in and the budget at the same time", async () => {

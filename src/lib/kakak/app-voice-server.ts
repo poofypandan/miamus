@@ -126,21 +126,37 @@ export async function handleVoiceCheck(deps: Pick<SpeakDeps, "env" | "userId">):
 }
 
 /**
- * ElevenLabs serves its newest models (eleven_v3, eleven_v4) through Text to
- * Dialogue (https://elevenlabs.io/docs/models), and the older ones through
- * Text to Speech. A model on the endpoint that doesn't serve it is refused
- * (#148 on eleven_v4: every reply fell back to the phone's voice), so the
- * route asks the one that should serve the model, and the other once if that
- * one says the request is wrong.
+ * Where Kakak's words go at ElevenLabs, in order:
+ * - tts_stream: Text to Speech, streamed (the first audio soonest);
+ * - tts: Text to Speech in one piece. Proven with eleven_v4 and Lyly: the
+ *   trailer made hundreds of lines this way on 15 Nov, with language_code;
+ * - dialogue: Text to Dialogue, streamed, where ElevenLabs' models page
+ *   lists eleven_v4 (https://elevenlabs.io/docs/models).
+ * The next one is asked only when one says the request is wrong for it
+ * (400/404/405/422: e.g. a model it doesn't serve), never on a bad key or
+ * "too busy". The one that worked is asked first for the rest of this
+ * server's life, so only the first reply pays for finding it.
  */
-export type VoiceEndpoint = "dialogue" | "tts";
+export type VoiceEndpoint = "tts_stream" | "tts" | "dialogue";
 
-export function endpointsFor(model: string): [VoiceEndpoint, VoiceEndpoint] {
-  return /^eleven_v[3-9]/.test(model) ? ["dialogue", "tts"] : ["tts", "dialogue"];
+const ENDPOINT_ORDER: readonly VoiceEndpoint[] = ["tts_stream", "tts", "dialogue"];
+const workingEndpoint = new Map<string, VoiceEndpoint>();
+
+export function endpointsFor(model: string): VoiceEndpoint[] {
+  const known = workingEndpoint.get(model);
+  return known ? [known, ...ENDPOINT_ORDER.filter((e) => e !== known)] : [...ENDPOINT_ORDER];
+}
+
+/** For tests: forget which endpoint worked. */
+export function resetVoiceEndpoints(): void {
+  workingEndpoint.clear();
 }
 
 /** A refusal that says "wrong endpoint or body for this model", not "no key" or "too busy". */
 const TRY_OTHER_ENDPOINT = new Set([400, 404, 405, 422]);
+
+/** The trailer's settings for Lyly (marketing/trailer/audio/eleven/el.py), so the app sounds like the trailer. */
+export const VOICE_SETTINGS = { stability: 0.55, similarity_boost: 0.75, use_speaker_boost: true };
 
 export function upstreamRequest(
   endpoint: VoiceEndpoint,
@@ -154,10 +170,34 @@ export function upstreamRequest(
       body: JSON.stringify({ inputs: [{ text, voice_id: config.voiceId }], model_id: config.model, language_code: locale }),
     };
   }
+  const path = `/v1/text-to-speech/${encodeURIComponent(config.voiceId)}${endpoint === "tts_stream" ? "/stream" : ""}`;
   return {
-    url: `${ELEVENLABS_API}/v1/text-to-speech/${encodeURIComponent(config.voiceId)}/stream?output_format=${OUTPUT_FORMAT}`,
-    body: JSON.stringify({ text, model_id: config.model, language_code: locale }),
+    url: `${ELEVENLABS_API}${path}?output_format=${OUTPUT_FORMAT}`,
+    body: JSON.stringify({ text, model_id: config.model, language_code: locale, voice_settings: VOICE_SETTINGS }),
   };
+}
+
+/**
+ * ElevenLabs' error code (detail.status or detail.code, e.g.
+ * "model_not_supported") from a refusal, for the log. Never the message:
+ * it can echo Kakak's words.
+ */
+export async function upstreamErrorCode(response: Response): Promise<string> {
+  try {
+    const raw = await response.text();
+    const body = JSON.parse(raw.slice(0, 4_096)) as { detail?: unknown };
+    const detail = body?.detail;
+    const first = Array.isArray(detail) ? detail[0] : detail;
+    const code =
+      first && typeof first === "object"
+        ? ((first as { status?: unknown; code?: unknown; type?: unknown }).status ??
+          (first as { code?: unknown }).code ??
+          (first as { type?: unknown }).type)
+        : undefined;
+    return typeof code === "string" && /^[A-Za-z0-9_.-]{1,64}$/.test(code) ? code : "-";
+  } catch {
+    return "-";
+  }
 }
 
 /**
@@ -228,11 +268,11 @@ export async function handleSpeak(request: Request, deps: SpeakDeps): Promise<Re
       if (answer.ok && answer.body) {
         upstream = answer;
         endpoint = candidate;
+        workingEndpoint.set(config.model, candidate);
         break;
       }
-      // The status and endpoint only: ElevenLabs' error body can echo the text.
-      console.error("kakak voice: refused by ElevenLabs", candidate, answer.status);
-      void answer.body?.cancel().catch(() => {});
+      // The endpoint, status and error code only: the message can echo the text.
+      console.error("kakak voice: refused by ElevenLabs", candidate, answer.status, await upstreamErrorCode(answer));
       if (!TRY_OTHER_ENDPOINT.has(answer.status)) break;
     }
   } catch (error) {
