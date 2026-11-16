@@ -6241,6 +6241,243 @@
         ]
       ],
       "note": "Buying stays the shopping list: a new ingredient is only for what is in the house."
+    },
+    {
+      "id": "K155",
+      "sentence": "Have Sari mop the second-floor lounge every Monday",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "chore_repeat",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "mop"
+                      ],
+                      [
+                        "lounge"
+                      ]
+                    ]
+                  },
+                  "assignee": "S1",
+                  "due_date": "2026-11-16",
+                  "recurrence": "weekly",
+                  "room": "R13",
+                  "category": "cleaning"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Room shorthand: 'second-floor lounge' is the room listed as LT2 · Lounge, not LT1's."
+    },
+    {
+      "id": "K156",
+      "sentence": "Syam bersihkan kamar tamu dua tiap Jumat",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "chore_repeat",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "bersih",
+                        "beres",
+                        "rapi"
+                      ],
+                      [
+                        "kamar tamu",
+                        "GB2",
+                        "GB 2"
+                      ]
+                    ]
+                  },
+                  "assignee": "S6",
+                  "due_date": "2026-11-13",
+                  "recurrence": "weekly",
+                  "room": "R15",
+                  "category": "cleaning"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Room shorthand: 'kamar tamu dua' is GB2."
+    },
+    {
+      "id": "K157",
+      "sentence": "Besok Yanti pel lounge lantai satu",
+      "ownerLocale": "id",
+      "lang": "mixed",
+      "category": "chore_once",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "pel",
+                        "mengepel"
+                      ],
+                      [
+                        "lounge"
+                      ]
+                    ]
+                  },
+                  "assignee": "S4",
+                  "due_date": "2026-11-12",
+                  "room": "R12",
+                  "category": "cleaning"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Room shorthand: 'lantai satu' is LT1, so LT1 · Lounge."
+    },
+    {
+      "id": "K158",
+      "sentence": "Ask Budi to vacuum guest room one tomorrow",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "chore_once",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "vacuum",
+                        "hoover"
+                      ],
+                      [
+                        "guest",
+                        "GB1",
+                        "GB 1"
+                      ]
+                    ]
+                  },
+                  "assignee": "S3",
+                  "due_date": "2026-11-12",
+                  "room": "R14",
+                  "category": "cleaning"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Room shorthand: 'guest room one' is GB1."
+    },
+    {
+      "id": "K159",
+      "sentence": "Nah bersihkan seluruh lantai dua hari Sabtu",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "chore_once",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "bersih",
+                        "beres",
+                        "rapi"
+                      ]
+                    ]
+                  },
+                  "assignee": "S2",
+                  "due_date": "2026-11-14",
+                  "room": "R11",
+                  "category": "cleaning"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Room shorthand: the whole of 'lantai dua' is the floor LT2 (whole floor)."
+    },
+    {
+      "id": "K160",
+      "sentence": "Sari vacuum the lounge tomorrow",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "chore_once",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "which lounge (LT1 or LT2)",
+            "reply": "the one upstairs on LT2"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "vacuum",
+                        "hoover"
+                      ],
+                      [
+                        "lounge"
+                      ]
+                    ]
+                  },
+                  "assignee": "S1",
+                  "due_date": "2026-11-12",
+                  "room": "R13",
+                  "category": "cleaning"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Two rooms named Lounge, on LT1 and LT2: ask which."
     }
   ]
 }

@@ -25,7 +25,13 @@
     { "ref": "R6", "name": "Ruang tamu" },
     { "ref": "R7", "name": "Garasi" },
     { "ref": "R8", "name": "Taman" },
-    { "ref": "R9", "name": "Kamar anak" }
+    { "ref": "R9", "name": "Kamar anak" },
+    { "ref": "R10", "name": "LT1", "wholeFloor": true },
+    { "ref": "R11", "name": "LT2", "wholeFloor": true },
+    { "ref": "R12", "name": "Lounge", "floor": "LT1" },
+    { "ref": "R13", "name": "Lounge", "floor": "LT2" },
+    { "ref": "R14", "name": "GB1", "floor": "LT2" },
+    { "ref": "R15", "name": "GB2", "floor": "LT2" }
   ],
   "items": [
     { "ref": "I1", "name": "Telur", "pet": false, "ingredient": true, "keptIn": "fridge", "expiresOn": null },
