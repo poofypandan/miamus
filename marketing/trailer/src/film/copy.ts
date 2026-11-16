@@ -86,7 +86,8 @@ export const COPY: Record<Locale, Copy> = {
       L9: "…when something isn't done.",
       L10: "That one's yours.",
       L11: "Miamus. More time for your family.",
-      S1: "I'm Kakak, Miamus's AI helper. Tell me once,",
+      // v14: one line, the name and the AI tag on screen instead of in words.
+      S1: "Hi, I'm Kakak. Tell me once,",
       S2: "and everyone at home knows what to do.",
       S3: "Miamus. More time for your family.",
       // v6: the girl (G, in her handwriting) and Mama (M, on her own light plate).
@@ -110,7 +111,8 @@ export const COPY: Record<Locale, Copy> = {
     typed: { lines: ["Have Sari mop the terrace every", "Monday at 9."], placeholder: "What should I set up?", start15: 22 },
     // Word onsets measured on Mama's take with Whisper (audio/out/vo/mama-aita-v10/T1-words.json).
     // v11: "Kak," first, so it is clear she is talking to Kakak (word onsets: audio/out/vo/mama-aita-v11/T1-words.json).
-    spoken: { words: [["Kak,", 0], ["have", 0.68], ["Sari", 0.94], ["mop", 1.26], ["the", 1.48], ["terrace", 1.62], ["every", 2.0], ["Monday", 2.4], ["at", 2.76], ["9.", 2.98]], split: 6 },
+    // v14: timed to Mama's new take (the glottal "Ka'," said, "Kak," typed).
+    spoken: { words: [["Kak,", 0], ["have", 0.68], ["Sari", 0.94], ["mop", 1.27], ["the", 1.45], ["terrace", 1.65], ["every", 2.01], ["Monday", 2.41], ["at", 2.77], ["9.", 3.05]], split: 6 },
     tags: { you: "You", sari: "Sari" },
   },
   id: {
@@ -153,7 +155,7 @@ export const COPY: Record<Locale, Copy> = {
       L9: "…kalau ada yang belum dikerjakan.",
       L10: "Yang ini untuk Anda.",
       L11: "Miamus. Lebih banyak waktu untuk keluarga.",
-      S1: "Ini Kakak, asisten AI di Miamus. Bilang sekali,",
+      S1: "Halo, ini Kakak. Bilang sekali,",
       S2: "dan semua orang di rumah tahu harus apa.",
       S3: "Miamus. Lebih banyak waktu untuk keluarga.",
       G1: "Mama, lihat!",

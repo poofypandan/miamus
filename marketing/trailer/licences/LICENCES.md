@@ -1,6 +1,8 @@
 # Licences: what is in the trailer, and the right to use it in paid ads
 
-Version 13 (15 November 2026) adds no voices or takes: the score is played as
+Version 14 (16 November 2026): in the 15 s cuts Kakak's two lines become one (new Lyly takes) with her name and the
+AI tag shown on screen while she speaks, and Mama is not heard; in the 60 s English cut Mama's request is a new Aita
+take (a glottal "Ka'"). Same voices and terms; `elevenlabs-provenance-v14.json`. The 60 s Indonesian cut is v13's. Version 13 (15 November 2026) adds no voices or takes: the score is played as
 composed (60 s) and a synthesised listening chime is added. Version 12 changed Kakak's intro line (a new take, same
 voice and terms; `elevenlabs-provenance-v12.json`); the "Miamus's AI helper"
 tag stays on screen as the AI disclosure. Version 11 showed the app's real screens as cards cut from

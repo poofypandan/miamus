@@ -1,5 +1,37 @@
 # The Miamus trailer: what was made, and why
 
+## Version 14 (16 November 2026): Kakak alone in the 15 s cuts; Mama's "Kak," with a glottal stop
+
+Owner's notes on v13. Four cuts in `docs/private/marketing/trailer-v14/`: 60 s ID is v13's file, byte for byte
+(copied); 60 s EN and both 15 s cuts are new. v13 is untouched.
+
+- **15 s: one line for Kakak** instead of "I'm Kakak, Miamus's AI helper." then "Tell me once,":
+  EN "Hi, I'm Kakak. Tell me once, and everyone at home knows what to do."
+  ID "Halo, ini Kakak. Bilang sekali, dan semua orang di rumah tahu harus apa." ("Halo, ini Kakak" as in her 60 s
+  introduction; the rest is the 15 s line already approved; no glossary terms touched.) Lyly, three takes per
+  language; take 1 used in both, the clearest by speech check (English take 2's name was heard as "Kaka"). English
+  sent as "Hi! I'm Kakak." for a clear K, as in v12.
+- **15 s: her name and the AI tag on screen** from her first word: the 15 s cut had no name on screen (the spoken
+  line was the disclosure), so a compact row at the top of the safe area (her mark, "Kakak", the "Miamus's AI
+  helper" / "asisten AI Miamus" pill) springs in at 3.15 s and leaves after her line (8.7–9.1 s), clear of the cards
+  (`KakakBadge` in `src/film/scenes.tsx`, 15 s only; `CARDS15.badge`).
+- **15 s: no Mama voice.** "In a minute, sweetie…" in the hook and her answer at the end are gone, voice and
+  captions; her picture beats (phone up and distracted, then phone down and looking up), the girl's handwriting with
+  the bell and Kakak's line stay.
+- **15 s timing:** Kakak's line is said in one breath, so nothing was sped up: 3.15–7.63 s (EN), 3.15–8.43 s (ID);
+  its caption changes plate at the comma's breath (5.72 / 5.75 s), each plate two lines (`CAPTION_SPLIT` in
+  `audio/mix.py`). The garden, tug and bell 10.0, Mama looking up 10.5–11.0. The end line moves a little earlier,
+  into the room her answer's caption had: EN 11.85 → 11.5 s (to 14.2), ID 11.5 → 11.3 s (to 14.5), now at its
+  natural pace (the 3% speed-up was only there to fit Mama's answer).
+- **60 s EN: Mama's "Kak," with a glottal stop.** Indonesians end "Kak" with the vowel stopping, no k released; the
+  English take released a hard k. Aita, three spellings × three takes ("Ka',", "Kah,", "Kaa',"), compared by
+  spectrogram against her Indonesian "Kak,": "Ka'," take 2 stops the vowel to silence with no burst before "have"
+  ("Kah," breathes and clicks; "Kaa'," draws the vowel out to 0.3–0.4 s). The screen still shows "Kak," as typed; the
+  typed words are re-timed to the new take (within 0.07 s of v13). An English speech model writes it as "K".
+- **Checked:** see below; every line word for word (the 15 s English end line shows Whisper's usual trouble with the
+  brand name, as on v13).
+- **Credits:** 861 characters (Kakak 417, Mama 444); project 9,495.
+
 ## Version 13-lofi-H (15 November 2026): v13 on the owner's Eleven Music track 4 (Score H)
 
 **Eleven Music, Creator plan, owner-generated 15 Nov; not for publication until ElevenLabs confirms company-ad use.**

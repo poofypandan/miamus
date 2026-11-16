@@ -526,12 +526,35 @@ export function Cards({ locale, t0, fast }: SceneProps) {
         <Thumb src="shots/staff/photo-after.png" crop={PHOTO_BEFORE} x={238} y={298} size={56} at={S.sari.thumbs[0]} />
         <Thumb src="shots/staff/photo-after.png" crop={PHOTO_AFTER} x={302} y={298} size={56} at={S.sari.thumbs[1]} />
       </CaptureCard>
+      {fast && <KakakBadge locale={locale} at={CARDS15.badge.at} out={CARDS15.badge.out} />}
       {!fast && (
         <CaptureCard src={`${dir}/status.png`} region={CARD_REGIONS.track} at={C.track.at} out={C.track.out} tag={copy.tags.you}>
           <Glow x={16} y={171} w={358} h={74} at={C.track.ring} until={C.track.out + 14} radius={16} />
         </CaptureCard>
       )}
     </AbsoluteFill>
+  );
+}
+
+/** v14 (15 s only): her name and the AI tag, on screen from her first word to the end of her line (the AI disclosure,
+ *  as in the 60 s cut's MeetKakak). A compact row at the top of the safe area, clear of the cards below it. */
+function KakakBadge({ locale, at, out }: { locale: Locale; at: number; out: number }) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const copy = COPY[locale];
+  const voice = useContext(Voice);
+  const name = springAt(frame, fps, at, { damping: 16, stiffness: 130 });
+  const tag = springAt(frame, fps, at + 4, { damping: 15, stiffness: 150 });
+  const leave = ramp(frame, out, out + 12, easeIn);
+  if (frame < at - 2) return null;
+  return (
+    <div style={{ position: "absolute", left: SAFE.left, width: SAFE.right - SAFE.left, top: CLEAR.top + 16, transform: `translateX(${CX - (SAFE.left + SAFE.right) / 2}px) translateY(${-leave * 24}px)`, opacity: 1 - leave, display: "flex", justifyContent: "center", alignItems: "center", gap: 22, fontFamily: FONT, color: "#fff" }}>
+      <KakakMark size={96} at={at} level={voice.level} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ fontSize: 62, fontWeight: 700, letterSpacing: -1.5, lineHeight: 1, opacity: Math.min(1, name * 1.5), transform: `translateY(${(1 - name) * 18}px)`, textShadow: "0 3px 24px rgba(40,16,40,0.5)" }}>Kakak</div>
+        <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: 0.2, padding: "8px 22px 10px", borderRadius: 999, background: "rgba(22,19,26,0.86)", opacity: Math.min(1, tag * 1.6), transform: `scale(${0.85 + 0.15 * tag})`, transformOrigin: "left center" }}>{copy.aiTag}</div>
+      </div>
+    </div>
   );
 }
 

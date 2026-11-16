@@ -102,6 +102,8 @@ export const CARDS = {
 };
 /** 15 s (frames in "cards", 0 = 3.0 s): Kakak's card, saved, Sari's card with her photos. */
 export const CARDS15 = {
+  // v14: her name and the AI tag, from her first word (S1 at 3.15 s = frame 4.5) until her line ends.
+  badge: { at: 4, out: 172 },
   suggest: { at: 6, ring: 18, check: 75 },
   saved: { at: 90, ring: 99, check: 105, out: 141 },
   sari: { at: 150, ring: 158, thumbs: [168, 177], out: 216 },

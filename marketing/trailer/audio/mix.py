@@ -49,12 +49,24 @@ CUES["15"] = {"M1": 1.6, "S1": 3.15, "S2": 7.3, "S3": 11.85}
 LOCALE_CUES["id"]["60"] = {}
 LOCALE_CUES["id"]["15"] = {"S3": 11.5}
 # The girl does not speak (Fable, 15 Nov): her "Mama, look!" is the score's bell and her handwriting.
+# v14 (owner, 16 Nov): the 15-second cut's two Kakak lines become one, "Hi, I'm Kakak. Tell me once, and everyone at
+# home knows what to do." / "Halo, ini Kakak. Bilang sekali, dan semua orang di rumah tahu harus apa." (one Lyly take,
+# S1 in eleven-lyly-v14; her name and the AI tag are on screen instead). It is said in one breath, so it is not cut
+# apart: only its caption is split at the comma's breath into two plates (S1, S2), each the size a plate holds.
+CAPTION_SPLIT = {("15", "en"): {"S1": ("S2", 2.57)}, ("15", "id"): {"S1": ("S2", 2.60)}}
 # In the 15-second Indonesian cut there is no room to say Mama's answer as well as the end line, so it is a caption.
 DROP = {}
 # v9: in the 15-second cut Mama's answer is the hand at 11.0, with her words as a caption (the end line needs the time).
 CAPTION_ONLY = {("15", "en"): {"M2": (11.0, 12.4)}, ("15", "id"): {"M2": (11.0, 12.4)}}
 # The 15-second end line, a touch quicker (pitch kept), so Mama's answer fits before it.
 TEMPO = {("15", "id", "S3"): 1.03}
+# v14 (owner, 16 Nov): no Mama voice in the 15-second cuts: neither "In a minute, sweetie…" in the hook nor her answer
+# (voice or caption); her picture beats stay. Kakak's one line at 3.15 s; the end line a little earlier, into the room
+# her answer's caption had (EN 11.85 → 11.5 s; ID 11.5 → 11.3 s, at its natural pace now: no tempo change needed).
+CUES["15"] = {"S1": 3.15, "S3": 11.5}
+LOCALE_CUES["id"]["15"] = {"S3": 11.3}
+CAPTION_ONLY = {}
+TEMPO = {}
 # Where the finished mixes go. The film reads public/audio; the lo-fi listening page (audio/music/page_lofi.py) points
 # these elsewhere so its trial mixes never replace the film's.
 OUT_DIR = os.path.join(ROOT, "public", "audio")
@@ -155,7 +167,13 @@ def mix(cut, locale, voices, music_style):
         if other and end - other[0] > 0.45:
             raise SystemExit(f"{cut}-{locale}: {key} runs {end - other[0]:.2f} s into the next speaker.")
         tracks[who][a : a + len(line)] += line[: n - a]
-        cues.append({"id": key, "from": round(start, 3), "to": round(end, 3)})
+        split = CAPTION_SPLIT.get((cut, locale), {}).get(key) if voices["kakak"].endswith("v14") else None
+        if split:
+            second, off = split
+            cues.append({"id": key, "from": round(start, 3), "to": round(start + off, 3)})
+            cues.append({"id": second, "from": round(start + off, 3), "to": round(end, 3)})
+        else:
+            cues.append({"id": key, "from": round(start, 3), "to": round(end, 3)})
     for key, (start, end) in CAPTION_ONLY.get((cut, locale), {}).items() if voices.get("mama") else []:
         cues.append({"id": key, "from": start, "to": end, "silent": True})
     cues.sort(key=lambda c: c["from"])
