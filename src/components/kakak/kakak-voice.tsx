@@ -363,12 +363,16 @@ let audioElement: HTMLAudioElement | null = null;
 let audioUnlocked = false;
 /** The check in flight, so a reply that arrives before it answers waits for it. */
 let appVoiceCheck: Promise<void> | null = null;
+/** How long a reply waits for that check before the phone's voice reads it. */
+const CHECK_WAIT_MS = 3_000;
 
 function checkAppVoice(): Promise<void> {
   if (appVoice === "checking" && appVoiceCheck) return appVoiceCheck;
   if (appVoice !== "unknown" || typeof fetch === "undefined") return Promise.resolve();
   appVoice = "checking";
-  appVoiceCheck = fetch("/api/kakak/speak", { cache: "no-store" })
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  appVoiceCheck = fetch("/api/kakak/speak", { cache: "no-store", signal: controller.signal })
     .then((response) => (response.ok ? response.json() : null))
     .then((body: { kind?: string } | null) => {
       appVoice = body?.kind === "on" ? "on" : "off";
@@ -377,6 +381,7 @@ function checkAppVoice(): Promise<void> {
       appVoice = "unknown"; // offline: ask again next time
     })
     .finally(() => {
+      clearTimeout(timer);
       appVoiceCheck = null;
     });
   return appVoiceCheck;
@@ -613,8 +618,12 @@ export function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => v
       const householdId = activeHouseholdId;
       if (!householdId) return readOnPhone();
       if (appVoice === "checking") {
-        // The reply came back before the check did: wait for it, then decide.
-        void checkAppVoice().then(() => (appVoice === "on" ? askForAudio(householdId) : readOnPhone()));
+        // The reply came back before the check did: wait for it (a little),
+        // then decide. askForAudio and readOnPhone do nothing if the reply
+        // was stopped or replaced meanwhile.
+        void Promise.race([checkAppVoice(), new Promise((resolve) => setTimeout(resolve, CHECK_WAIT_MS))]).then(() =>
+          appVoice === "on" ? askForAudio(householdId) : readOnPhone(appVoice === "checking" ? "timeout" : undefined)
+        );
         return;
       }
       if (appVoice !== "on") return readOnPhone();

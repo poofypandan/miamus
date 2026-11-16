@@ -5,11 +5,12 @@
 // it, the budget and every failure are unit-tested
 // (tests/unit/kakak-app-voice.test.ts) without a network or a database.
 //
-// Nothing is stored: no audio, no text. The only row this touches is the
-// household's day in kakak_usage, which holds numbers (voice_chars,
-// migrations/172). ElevenLabs keeps each generation in the account's history
-// by default (zero retention is Enterprise-only), so the route asks it to
-// delete that item as soon as the audio has been sent.
+// Nothing is stored: no audio, no text. The only rows this touches hold
+// numbers: the household's day in kakak_usage (voice_chars, migrations/172)
+// and a short-lived hold of the reply's character count (migrations/173).
+// ElevenLabs keeps each generation in the account's history by default (zero
+// retention is Enterprise-only), so the route asks it to delete that item as
+// soon as ElevenLabs answers.
 
 import { MAX_SPEAK_CHARS, type AppVoiceLocale } from "./app-voice";
 
@@ -67,9 +68,9 @@ export function dailyCharsFrom(value: string | undefined): number {
   return Math.min(n, MAX_DAILY_CHARS);
 }
 
-/** What kakak_voice_check (migrations/173) and kakak_voice_spend (migrations/172) answered. */
-export type SpendResult =
-  | { ok: true }
+/** What kakak_voice_reserve (migrations/173) answered. */
+export type ReserveResult =
+  | { ok: true; hold: string }
   | { ok: false; reason: "not_admin" | "not_allowed" | "off" | "budget" | "unavailable" };
 
 export interface SpeakDeps {
@@ -77,18 +78,18 @@ export interface SpeakDeps {
   /** The signed-in user's id, or null. */
   userId: () => Promise<string | null>;
   /**
-   * Whether `chars` would still fit in the household's day, and the caller is
-   * an admin of a household where Kakak is allowed and on (the same people
-   * /api/kakak lets in). Counts nothing (kakak_voice_check, migrations/173).
+   * Holds `chars` of the household's day, only if they fit in `dailyChars`,
+   * and only for an admin of a household where Kakak is allowed and on (the
+   * same people /api/kakak lets in). Atomic, so two phones at once can't
+   * both pass the budget (kakak_voice_reserve, migrations/173).
    */
-  check: (householdId: string, chars: number, dailyChars: number) => Promise<SpendResult>;
+  reserve: (householdId: string, chars: number, dailyChars: number) => Promise<ReserveResult>;
   /**
-   * Counts `chars` against the household's day, only if they fit in
-   * `dailyChars` (kakak_voice_spend, migrations/172). Called once ElevenLabs
-   * has started sending audio, so a reply that never reached the phone
-   * costs the household nothing.
+   * Gives a hold's characters back: no audio reached the phone
+   * (kakak_voice_release, migrations/173). The hold id never leaves the
+   * server, so a phone can't give itself its budget back.
    */
-  spend: (householdId: string, chars: number, dailyChars: number) => Promise<SpendResult>;
+  release: (householdId: string, hold: string) => Promise<void>;
   fetch: typeof fetch;
   /** Runs after the response has been sent (next/server's after()). */
   later: (task: () => Promise<void>) => void;
@@ -99,9 +100,9 @@ export interface SpeakDeps {
 }
 
 /** Durations in ms for the Server-Timing header: where the wait before her first word went. */
-type Timings = Partial<Record<"auth" | "rpc" | "upstream_ttfb" | "spend", number>>;
+type Timings = Partial<Record<"auth" | "rpc" | "upstream_ttfb", number>>;
 
-const TIMING_ORDER = ["auth", "rpc", "upstream_ttfb", "spend"] as const;
+const TIMING_ORDER = ["auth", "rpc", "upstream_ttfb"] as const;
 
 function serverTiming(timings: Timings): string {
   return TIMING_ORDER.filter((name) => timings[name] !== undefined)
@@ -206,10 +207,10 @@ export async function upstreamErrorCode(response: Response): Promise<string> {
  * off (not set up), budget (the day's characters are used), refused (not an
  * admin of a household with Kakak on), failed (ElevenLabs or the network).
  *
- * Quick to the first word: who may ask and the budget are checked together
- * with the sign-in, ElevenLabs is asked straight after, and the characters
- * are counted once its first audio arrives, so a reply the phone gave up on
- * (or ElevenLabs refused) is never charged to the household's day.
+ * Quick to the first word: the characters are reserved together with the
+ * sign-in check, ElevenLabs is asked straight after, and they are given back
+ * when no audio comes (ElevenLabs refused, sent nothing, or the phone gave
+ * up first), so only replies that reached the phone use the household's day.
  */
 export async function handleSpeak(request: Request, deps: SpeakDeps): Promise<Response> {
   const config = appVoiceConfig(deps.env);
@@ -242,13 +243,22 @@ export async function handleSpeak(request: Request, deps: SpeakDeps): Promise<Re
 
   // Both before anything is sent to ElevenLabs: nobody else's words, and
   // nothing past the budget, ever costs a generation.
-  const [userId, allowed] = await Promise.all([
+  const [userId, held] = await Promise.all([
     timed("auth", deps.userId),
-    timed("rpc", () => deps.check(householdId, text.length, config.dailyChars)),
+    timed("rpc", () => deps.reserve(householdId, text.length, config.dailyChars)),
   ]);
-  if (!userId) return json({ kind: "refused" }, 401, timings);
-  const refusal = refusalFor(allowed, timings);
-  if (refusal) return refusal;
+  if (!held.ok) return refusalFor(held, timings);
+  const hold = held.hold;
+  /** No audio reached the phone: the household gets these characters back. */
+  const giveBack = async (response: Response): Promise<Response> => {
+    try {
+      await deps.release(householdId, hold);
+    } catch {
+      console.error("kakak voice: characters not given back");
+    }
+    return response;
+  };
+  if (!userId) return giveBack(json({ kind: "refused" }, 401, timings));
 
   const timeout = AbortSignal.timeout(UPSTREAM_TIMEOUT_MS);
   const signal = deps.signal ? AbortSignal.any([deps.signal, timeout]) : timeout;
@@ -277,12 +287,23 @@ export async function handleSpeak(request: Request, deps: SpeakDeps): Promise<Re
     }
   } catch (error) {
     console.error("kakak voice: no answer", (error as { name?: string }).name ?? "error");
-    return json({ kind: "failed" }, 502, timings);
+    return giveBack(json({ kind: "failed" }, 502, timings));
   }
-  if (!upstream?.body || !endpoint) return json({ kind: "failed" }, 502, timings);
+  if (!upstream?.body || !endpoint) return giveBack(json({ kind: "failed" }, 502, timings));
+
+  // ElevenLabs has the words now: ask it to forget them whatever happens next.
+  const historyId = upstream.headers.get("history-item-id") ?? upstream.headers.get("history_item_id");
+  const requestId = upstream.headers.get("request-id");
+  if (historyId && ID.test(historyId)) {
+    deps.later(() => forget(deps.fetch, config.apiKey, historyId));
+  } else if (requestId && ID.test(requestId)) {
+    deps.later(() => forgetByRequest(deps.fetch, config.apiKey, requestId, startedAt));
+  } else {
+    console.error("kakak voice: no history item to delete");
+  }
 
   // Wait for the first audio, so the phone's clock (AUDIO_WAIT_MS) is spent
-  // on audio, and nothing is counted for a generation that never started.
+  // on audio, and a generation that never started is given back.
   const reader = upstream.body.getReader();
   let first: Uint8Array | undefined;
   try {
@@ -294,27 +315,10 @@ export async function handleSpeak(request: Request, deps: SpeakDeps): Promise<Re
   timings.upstream_ttfb = now() - upstreamStart;
   if (!first?.byteLength || deps.signal?.aborted) {
     void reader.cancel().catch(() => {});
-    if (deps.signal?.aborted) console.info("kakak voice: phone gave up before the audio, not counted");
-    return json({ kind: "failed" }, 502, timings);
+    if (deps.signal?.aborted) console.info("kakak voice: phone gave up before the audio, given back");
+    return giveBack(json({ kind: "failed" }, 502, timings));
   }
 
-  const spent = await timed("spend", () => deps.spend(householdId, text.length, config.dailyChars));
-  const late = refusalFor(spent, timings);
-  if (late) {
-    // Another phone used the last of the day in the meantime.
-    void reader.cancel().catch(() => {});
-    return late;
-  }
-
-  const historyId = upstream.headers.get("history-item-id") ?? upstream.headers.get("history_item_id");
-  const requestId = upstream.headers.get("request-id");
-  if (historyId && ID.test(historyId)) {
-    deps.later(() => forget(deps.fetch, config.apiKey, historyId));
-  } else if (requestId && ID.test(requestId)) {
-    deps.later(() => forgetByRequest(deps.fetch, config.apiKey, requestId, startedAt));
-  } else {
-    console.error("kakak voice: no history item to delete");
-  }
   const timing = serverTiming(timings);
   console.info("kakak voice", locale, text.length, endpoint, timing);
 
@@ -342,13 +346,15 @@ export async function handleSpeak(request: Request, deps: SpeakDeps): Promise<Re
   });
 }
 
-/** The phone-voice answer for a refused check or count, or null when it went through. */
-function refusalFor(result: SpendResult, timings: Timings): Response | null {
-  if (result.ok) return null;
+/** The phone-voice answer for a refused reservation. */
+function refusalFor(result: Extract<ReserveResult, { ok: false }>, timings: Timings): Response {
   if (result.reason === "budget") return json({ kind: "budget" }, 429, timings);
   if (result.reason === "unavailable") return json({ kind: "off" }, 503, timings);
   return json({ kind: "refused" }, 403, timings);
 }
+
+/** The most history pages (100 items each) searched for one request id. */
+export const HISTORY_PAGES = 10;
 
 /** Waits before asking ElevenLabs to delete: a new item takes a moment to reach its history. */
 export const FORGET_DELAYS_MS = [3_000, 10_000];
@@ -399,25 +405,41 @@ export async function forgetByRequest(
   sinceUnix: number,
   wait: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 ): Promise<void> {
+  type Page = {
+    history?: { history_item_id?: unknown; request_id?: unknown }[];
+    has_more?: unknown;
+    last_history_item_id?: unknown;
+  };
   for (const delay of FORGET_DELAYS_MS) {
     await wait(delay);
     try {
-      const response = await fetchFn(
-        `${ELEVENLABS_API}/v1/history?page_size=20&date_after_unix=${Math.max(0, sinceUnix - 60)}`,
-        { headers: { "xi-api-key": apiKey }, signal: AbortSignal.timeout(5_000) }
-      );
-      if (!response.ok) {
-        void response.body?.cancel().catch(() => {});
-        if (response.status < 500) {
-          console.error("kakak voice: history not listed", response.status);
-          return;
+      // Every item since a minute before the request, page by page (busy
+      // account, the trailer generating at the same time), until it is found.
+      let after: string | null = null;
+      for (let page = 0; page < HISTORY_PAGES; page++) {
+        const query = `page_size=100&date_after_unix=${Math.max(0, sinceUnix - 60)}${
+          after ? `&start_after_history_item_id=${encodeURIComponent(after)}` : ""
+        }`;
+        const response = await fetchFn(`${ELEVENLABS_API}/v1/history?${query}`, {
+          headers: { "xi-api-key": apiKey },
+          signal: AbortSignal.timeout(5_000),
+        });
+        if (!response.ok) {
+          void response.body?.cancel().catch(() => {});
+          if (response.status < 500) {
+            console.error("kakak voice: history not listed", response.status);
+            return;
+          }
+          break;
         }
-        continue;
+        const body = (await response.json()) as Page;
+        const item = body.history?.find((entry) => entry.request_id === requestId);
+        const historyId = typeof item?.history_item_id === "string" ? item.history_item_id : null;
+        if (historyId && ID.test(historyId)) return forget(fetchFn, apiKey, historyId, async () => {});
+        const last = typeof body.last_history_item_id === "string" ? body.last_history_item_id : null;
+        if (body.has_more !== true || !last || last === after) break;
+        after = last;
       }
-      const page = (await response.json()) as { history?: { history_item_id?: unknown; request_id?: unknown }[] };
-      const item = page.history?.find((entry) => entry.request_id === requestId);
-      const historyId = typeof item?.history_item_id === "string" ? item.history_item_id : null;
-      if (historyId && ID.test(historyId)) return forget(fetchFn, apiKey, historyId, async () => {});
     } catch {
       // try again below
     }
