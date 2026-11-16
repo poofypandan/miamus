@@ -131,17 +131,34 @@ How it works (`src/app/api/kakak/speak/route.ts`,
 - The phone sends only the words it would read itself (`speechPlan`: times
   in words, a short opener and two sentences, never a card's rows), at most
   600 characters.
-- `kakak_voice_spend` lets in the same people as `/api/kakak` (an admin of a
-  household where Kakak is allowed and on) and counts the characters in
-  `kakak_usage.voice_chars` (numbers only, kept 35 days). Over the budget the
-  phone reads aloud itself for the rest of the visit.
+- `kakak_voice_check` (migration 173, counts nothing) lets in the same people
+  as `/api/kakak` (an admin of a household where Kakak is allowed and on) with
+  characters left today; it runs alongside the sign-in check. Then ElevenLabs
+  is asked, and only once its first audio arrives does `kakak_voice_spend`
+  (172) count the characters in `kakak_usage.voice_chars` (numbers only, kept
+  35 days). A reply ElevenLabs refused, or the phone gave up on, costs the
+  household nothing. Over the budget the phone reads aloud itself for the
+  rest of the visit.
+- ElevenLabs serves `eleven_v3` / `eleven_v4` through Text to Dialogue
+  (`/v1/text-to-dialogue/stream`) and older models through Text to Speech; the
+  route asks the matching one first and the other once on a 400/404/405/422.
+- Every answer carries `Server-Timing` (`auth`, `rpc`, `upstream_ttfb`,
+  `spend`, in ms), and the log line `kakak voice <lang> <length> <endpoint>
+  <timings>` shows the same. The phone reports which way each reply was read
+  (`played`, or `timeout`, `autoplay`, `budget`, `upstream`…) to
+  `/api/kakak/speak/outcome`, logged as `kakak voice outcome <word>`: one word,
+  no text, nothing stored.
 - The audio streams straight back and is never stored. ElevenLabs keeps each
   generation in the account's history by default (zero retention is
   Enterprise-only), so the route deletes it from the history right after
-  (`forget`). Check the History page on staging: it should stay empty.
-- Any failure (not set up, budget, offline, no audio within 2.5 seconds,
+  (`forget`, or `forgetByRequest` when only a `request-id` header comes
+  back). Check the History page on staging: it should stay empty.
+- The phone unlocks audio on any tap in the sheet while the speaker switch is
+  on (the send tap, the mic, the switch), since browsers refuse `play()` that
+  doesn't follow a tap.
+- Any failure (not set up, budget, offline, no first audio within 6 seconds,
   audio the phone can't play) reads the reply in the phone's voice instead.
-  Without migration 172 the route answers "off".
+  Without migrations 172 and 173 the route answers "off".
 
 ## Limits (migration 126)
 

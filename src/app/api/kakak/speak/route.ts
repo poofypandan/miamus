@@ -11,9 +11,10 @@ import { handleSpeak, handleVoiceCheck, type SpendResult } from "@/lib/kakak/app
  * server has ELEVENLABS_API_KEY and KAKAK_VOICE_ID.
  *
  * Who may call it is decided by the database with the caller's own JWT:
- * kakak_voice_spend (migrations/172) lets in only an admin of the household
- * where Kakak is allowed and switched on, the people /api/kakak lets in, and
- * counts the reply's characters against the household's day. Logs carry the
+ * kakak_voice_check (migrations/173) lets in only an admin of the household
+ * where Kakak is allowed and switched on, the people /api/kakak lets in,
+ * with characters left today; kakak_voice_spend (migrations/172) counts the
+ * reply's characters once ElevenLabs has started sending its audio. Logs carry the
  * language and the length, never the words.
  */
 
@@ -33,31 +34,46 @@ export async function GET() {
   return handleVoiceCheck({ env: process.env, userId: signedInUser });
 }
 
+type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+/**
+ * kakak_voice_check (migrations/173, counts nothing) or kakak_voice_spend
+ * (migrations/172, counts), as the caller with their own JWT.
+ */
+async function budgetCall(
+  supabase: Supabase,
+  fn: "kakak_voice_check" | "kakak_voice_spend",
+  householdId: string,
+  chars: number,
+  dailyChars: number
+): Promise<SpendResult> {
+  const { data, error } = await supabase.rpc(fn, {
+    p_household: householdId,
+    p_chars: chars,
+    p_daily_chars: dailyChars,
+  });
+  if (error) {
+    // PGRST202 / 42883: a database without migrations 172 and 173 yet. The
+    // voice stays off rather than unmetered.
+    console.error("kakak voice: budget not checked", fn, error.code);
+    return { ok: false, reason: "unavailable" };
+  }
+  const result = data as { ok?: boolean; reason?: string } | null;
+  if (result?.ok) return { ok: true };
+  const reason = result?.reason;
+  return {
+    ok: false,
+    reason: reason === "budget" || reason === "off" || reason === "not_allowed" ? reason : "not_admin",
+  };
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   return handleSpeak(request, {
     env: process.env,
     userId: async () => (await supabase.auth.getUser()).data.user?.id ?? null,
-    spend: async (householdId, chars, dailyChars): Promise<SpendResult> => {
-      const { data, error } = await supabase.rpc("kakak_voice_spend", {
-        p_household: householdId,
-        p_chars: chars,
-        p_daily_chars: dailyChars,
-      });
-      if (error) {
-        // PGRST202 / 42883: a database without migrations/172 yet. The voice
-        // stays off rather than unmetered.
-        console.error("kakak voice: budget not checked", error.code);
-        return { ok: false, reason: "unavailable" };
-      }
-      const result = data as { ok?: boolean; reason?: string } | null;
-      if (result?.ok) return { ok: true };
-      const reason = result?.reason;
-      return {
-        ok: false,
-        reason: reason === "budget" || reason === "off" || reason === "not_allowed" ? reason : "not_admin",
-      };
-    },
+    check: (householdId, chars, dailyChars) => budgetCall(supabase, "kakak_voice_check", householdId, chars, dailyChars),
+    spend: (householdId, chars, dailyChars) => budgetCall(supabase, "kakak_voice_spend", householdId, chars, dailyChars),
     fetch,
     later: (task) => after(task),
     signal: request.signal,

@@ -3,8 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AUDIO_WAIT_MS,
   MAX_SPEAK_CHARS,
+  VOICE_OUTCOMES,
   decide,
   fetchKakakAudio,
+  outcomeFor,
+  reportOutcome,
+  shouldPrimeAudio,
   silentWav,
   spokenText,
 } from "@/lib/kakak/app-voice";
@@ -16,7 +20,9 @@ import {
   MAX_DAILY_CHARS,
   appVoiceConfig,
   dailyCharsFrom,
+  endpointsFor,
   forget,
+  forgetByRequest,
   handleSpeak,
   handleVoiceCheck,
   type SpeakDeps,
@@ -90,33 +96,39 @@ describe("fetchKakakAudio", () => {
   it("uses the phone's voice offline, without asking", async () => {
     const fetchFn = vi.fn();
     const result = await fetchKakakAudio({ ...base, online: () => false, signal: new AbortController().signal, fetch: fetchFn });
-    expect(result).toEqual({ kind: "phone" });
+    expect(result).toEqual({ kind: "phone", reason: "offline" });
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it("uses the phone's voice for the visit on a refusal or the budget", async () => {
-    for (const status of [401, 403, 429, 503]) {
+    const reasons = { 401: "refused", 403: "refused", 429: "budget", 503: "off" } as const;
+    for (const status of [401, 403, 429, 503] as const) {
       const fetchFn = vi.fn(async () => Response.json({ kind: "budget" }, { status }));
       expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: fetchFn })).toEqual({
         kind: "phone_today",
+        reason: reasons[status],
       });
     }
   });
 
   it("uses the phone's voice on a failure, a network error or a body that isn't audio", async () => {
     const failed = vi.fn(async () => Response.json({ kind: "failed" }, { status: 502 }));
-    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: failed })).toEqual({ kind: "phone" });
+    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: failed })).toEqual({ kind: "phone", reason: "upstream" });
     const thrown = vi.fn(async () => {
       throw new TypeError("network");
     });
-    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: thrown })).toEqual({ kind: "phone" });
+    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: thrown })).toEqual({ kind: "phone", reason: "network" });
     const notAudio = vi.fn(async () => new Response("<html>", { status: 200, headers: { "content-type": "text/html" } }));
-    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: notAudio })).toEqual({ kind: "phone" });
+    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: notAudio })).toEqual({ kind: "phone", reason: "upstream" });
     const empty = vi.fn(async () => audioResponse(0));
-    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: empty })).toEqual({ kind: "phone" });
+    expect(await fetchKakakAudio({ ...base, signal: new AbortController().signal, fetch: empty })).toEqual({ kind: "phone", reason: "upstream" });
   });
 
-  it("gives up after AUDIO_WAIT_MS and uses the phone's voice", async () => {
+  it("waits about 6 seconds for the first audio: room for a cold start and the model's first byte", () => {
+    expect(AUDIO_WAIT_MS).toBe(6_000);
+  });
+
+  it("gives up after AUDIO_WAIT_MS and uses the phone's voice, saying it was a timeout", async () => {
     vi.useFakeTimers();
     try {
       let aborted = false;
@@ -133,7 +145,7 @@ describe("fetchKakakAudio", () => {
       await vi.advanceTimersByTimeAsync(AUDIO_WAIT_MS - 1);
       expect(aborted).toBe(false);
       await vi.advanceTimersByTimeAsync(1);
-      expect(await pending).toEqual({ kind: "phone" });
+      expect(await pending).toEqual({ kind: "phone", reason: "timeout" });
       expect(aborted).toBe(true);
     } finally {
       vi.useRealTimers();
@@ -150,7 +162,50 @@ describe("fetchKakakAudio", () => {
     );
     const pending = fetchKakakAudio({ ...base, signal: wanted.signal, fetch: fetchFn as unknown as typeof fetch });
     wanted.abort();
-    expect(await pending).toEqual({ kind: "phone" });
+    expect(await pending).toMatchObject({ kind: "phone" });
+  });
+});
+
+describe("shouldPrimeAudio (unlocking audio on a tap)", () => {
+  it("primes on a tap before the server has answered, and once it says on", () => {
+    for (const appVoice of ["unknown", "checking", "on"] as const) {
+      expect(shouldPrimeAudio({ appVoice, unlocked: false, playing: false })).toBe(true);
+    }
+  });
+
+  it("never once the voice is off, once it worked, or over her audio while it plays", () => {
+    expect(shouldPrimeAudio({ appVoice: "off", unlocked: false, playing: false })).toBe(false);
+    expect(shouldPrimeAudio({ appVoice: "on", unlocked: true, playing: false })).toBe(false);
+    expect(shouldPrimeAudio({ appVoice: "on", unlocked: false, playing: true })).toBe(false);
+  });
+});
+
+describe("outcomes (why the phone's voice read it)", () => {
+  it("names each refusal", () => {
+    expect(outcomeFor(401)).toBe("refused");
+    expect(outcomeFor(403)).toBe("refused");
+    expect(outcomeFor(429)).toBe("budget");
+    expect(outcomeFor(503)).toBe("off");
+    expect(outcomeFor(502)).toBe("upstream");
+  });
+
+  it("reports one word from the list, never the text, and never throws", () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const send = vi.fn(() => true);
+      reportOutcome("autoplay", send);
+      expect(send).toHaveBeenCalledWith("/api/kakak/speak/outcome", JSON.stringify({ outcome: "autoplay" }));
+      expect(info).toHaveBeenCalledWith("kakak voice: phone voice,", "autoplay");
+      expect(() =>
+        reportOutcome("timeout", () => {
+          throw new Error("beacon");
+        })
+      ).not.toThrow();
+      expect(() => reportOutcome("played", null)).not.toThrow();
+      expect(VOICE_OUTCOMES).toContain("played");
+    } finally {
+      info.mockRestore();
+    }
   });
 });
 
@@ -213,6 +268,7 @@ function deps(overrides: Partial<SpeakDeps> = {}): SpeakDeps & { later: ReturnTy
   return {
     env: ENV,
     userId: async () => "user-1",
+    check: vi.fn(async (): Promise<SpendResult> => ({ ok: true })),
     spend: vi.fn(async (): Promise<SpendResult> => ({ ok: true })),
     fetch: vi.fn(async () =>
       new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { "content-type": "audio/mpeg", "history-item-id": "hist123" } })
@@ -250,16 +306,17 @@ describe("handleSpeak", () => {
 
   it("refuses a staff phone, a household without Kakak, or Kakak switched off", async () => {
     for (const reason of ["not_admin", "not_allowed", "off"] as const) {
-      const d = deps({ spend: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason })) });
+      const d = deps({ check: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason })) });
       const response = await handleSpeak(speakRequest(GOOD), d);
       expect(response.status).toBe(403);
       expect(await response.json()).toEqual({ kind: "refused" });
       expect(d.fetch).not.toHaveBeenCalled();
+      expect(d.spend).not.toHaveBeenCalled();
     }
   });
 
   it("answers budget, without calling ElevenLabs, once the day's characters are used", async () => {
-    const d = deps({ spend: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason: "budget" })) });
+    const d = deps({ check: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason: "budget" })) });
     const response = await handleSpeak(speakRequest(GOOD), d);
     expect(response.status).toBe(429);
     expect(await response.json()).toEqual({ kind: "budget" });
@@ -267,7 +324,7 @@ describe("handleSpeak", () => {
   });
 
   it("stays off on a database without the budget function", async () => {
-    const d = deps({ spend: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason: "unavailable" })) });
+    const d = deps({ check: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason: "unavailable" })) });
     expect((await handleSpeak(speakRequest(GOOD), d)).status).toBe(503);
     expect(d.fetch).not.toHaveBeenCalled();
   });
@@ -286,26 +343,131 @@ describe("handleSpeak", () => {
       const d = deps();
       const response = await handleSpeak(speakRequest(body), d);
       expect(response.status).toBe(400);
+      expect(d.check).not.toHaveBeenCalled();
       expect(d.spend).not.toHaveBeenCalled();
     }
     const big = deps();
     expect((await handleSpeak(speakRequest({ ...GOOD, text: "a".repeat(5000) }), big)).status).toBe(413);
   });
 
-  it("counts the reply's characters against the env's budget, then streams ElevenLabs' audio back", async () => {
+  it("checks the budget, asks ElevenLabs' Text to Dialogue for eleven_v4, counts once audio arrives, then streams it back", async () => {
     const d = deps({ env: { ...ENV, KAKAK_VOICE_DAILY_CHARS: "4000" } });
     const response = await handleSpeak(speakRequest({ ...GOOD, text: "  Beres.   Syam diingatkan. " }), d);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("audio/mpeg");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
+    expect(d.check).toHaveBeenCalledWith(HOUSEHOLD, "Beres. Syam diingatkan.".length, 4000);
     expect(d.spend).toHaveBeenCalledWith(HOUSEHOLD, "Beres. Syam diingatkan.".length, 4000);
+    expect(response.headers.get("server-timing")).toMatch(/^auth;dur=\d+, rpc;dur=\d+, upstream_ttfb;dur=\d+, spend;dur=\d+$/);
 
-    const [url, init] = (d.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${ELEVENLABS_API}/v1/text-to-speech/LylyVoiceId123/stream?output_format=mp3_44100_64`);
+    const calls = (d.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][];
+    expect(calls).toHaveLength(1);
+    const [url, init] = calls[0];
+    expect(url).toBe(`${ELEVENLABS_API}/v1/text-to-dialogue/stream?output_format=mp3_44100_64`);
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>)["xi-api-key"]).toBe("test-key");
-    expect(JSON.parse(init.body as string)).toEqual({ text: "Beres. Syam diingatkan.", model_id: "eleven_v4", language_code: "id" });
+    expect(JSON.parse(init.body as string)).toEqual({
+      inputs: [{ text: "Beres. Syam diingatkan.", voice_id: "LylyVoiceId123" }],
+      model_id: "eleven_v4",
+      language_code: "id",
+    });
+  });
+
+  it("asks Text to Speech first for an older model, and the other endpoint once when one says the request is wrong", async () => {
+    expect(endpointsFor("eleven_v4")).toEqual(["dialogue", "tts"]);
+    expect(endpointsFor("eleven_v3")).toEqual(["dialogue", "tts"]);
+    expect(endpointsFor("eleven_multilingual_v2")).toEqual(["tts", "dialogue"]);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const fetchFn = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json({ detail: "unsupported" }, { status: 422 }))
+        .mockResolvedValueOnce(new Response(new Uint8Array([7]), { status: 200, headers: { "content-type": "audio/mpeg" } }));
+      const d = deps({ fetch: fetchFn as unknown as typeof fetch });
+      const response = await handleSpeak(speakRequest(GOOD), d);
+      expect(response.status).toBe(200);
+      expect(fetchFn.mock.calls.map(([url]) => new URL(url as string).pathname)).toEqual([
+        "/v1/text-to-dialogue/stream",
+        "/v1/text-to-speech/LylyVoiceId123/stream",
+      ]);
+      expect(d.spend).toHaveBeenCalledTimes(1);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("checks the sign-in and the budget at the same time", async () => {
+    let releaseUser!: (id: string) => void;
+    const check = vi.fn(async (): Promise<SpendResult> => ({ ok: true }));
+    const d = deps({ userId: () => new Promise<string>((resolve) => (releaseUser = resolve)), check });
+    const pending = handleSpeak(speakRequest(GOOD), d);
+    await vi.waitFor(() => expect(check).toHaveBeenCalled());
+    releaseUser("user-1");
+    expect((await pending).status).toBe(200);
+  });
+
+  it("counts nothing when the phone gives up before ElevenLabs' first audio", async () => {
+    const phone = new AbortController();
+    let sendFirst!: () => void;
+    const fetchFn = vi.fn(async () => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          sendFirst = () => controller.enqueue(new Uint8Array([1]));
+        },
+      });
+      return new Response(body, { status: 200, headers: { "content-type": "audio/mpeg" } });
+    });
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const d = deps({ fetch: fetchFn as unknown as typeof fetch, signal: phone.signal });
+      const pending = handleSpeak(speakRequest(GOOD), d);
+      await vi.waitFor(() => expect(fetchFn).toHaveBeenCalled());
+      phone.abort();
+      sendFirst();
+      const response = await pending;
+      expect(response.status).toBe(502);
+      expect(d.spend).not.toHaveBeenCalled();
+      expect(d.later).not.toHaveBeenCalled();
+    } finally {
+      info.mockRestore();
+    }
+  });
+
+  it("counts nothing when ElevenLabs sends no audio", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const d = deps({
+        fetch: vi.fn(async () => new Response(new Uint8Array(0), { status: 200, headers: { "content-type": "audio/mpeg" } })) as unknown as typeof fetch,
+      });
+      expect((await handleSpeak(speakRequest(GOOD), d)).status).toBe(502);
+      expect(d.spend).not.toHaveBeenCalled();
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("stops the audio when another phone used the last of the day meanwhile", async () => {
+    let cancelled = false;
+    const fetchFn = vi.fn(async () => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1]));
+        },
+        cancel() {
+          cancelled = true;
+        },
+      });
+      return new Response(body, { status: 200, headers: { "content-type": "audio/mpeg" } });
+    });
+    const d = deps({
+      fetch: fetchFn as unknown as typeof fetch,
+      spend: vi.fn(async (): Promise<SpendResult> => ({ ok: false, reason: "budget" })),
+    });
+    const response = await handleSpeak(speakRequest(GOOD), d);
+    expect(response.status).toBe(429);
+    expect(cancelled).toBe(true);
+    expect(d.later).not.toHaveBeenCalled();
   });
 
   it("asks ElevenLabs to delete the generation from its history after answering", async () => {
@@ -324,6 +486,9 @@ describe("handleSpeak", () => {
       expect(response.status).toBe(502);
       expect(await response.json()).toEqual({ kind: "failed" });
       expect(refused.later).not.toHaveBeenCalled();
+      // A bad key isn't a wrong endpoint: asked once, and nothing counted.
+      expect(refused.fetch).toHaveBeenCalledTimes(1);
+      expect(refused.spend).not.toHaveBeenCalled();
       const thrown = deps({
         fetch: vi.fn(async () => {
           throw new TypeError("fetch failed");
@@ -369,6 +534,67 @@ describe("forget", () => {
     } finally {
       error.mockRestore();
     }
+  });
+});
+
+describe("forgetByRequest", () => {
+  const noWait = async () => {};
+
+  it("finds the generation by its request id and deletes that item only", async () => {
+    const fetchFn = vi.fn(async (url: string) =>
+      url.includes("/v1/history?")
+        ? Response.json({
+            history: [
+              { history_item_id: "trailer1", request_id: "other" },
+              { history_item_id: "hist999", request_id: "req123" },
+            ],
+          })
+        : Response.json({ status: "ok" })
+    );
+    await forgetByRequest(fetchFn as unknown as typeof fetch, "k", "req123", 1_000_000, noWait);
+    const urls = fetchFn.mock.calls.map(([url]) => url as string);
+    expect(urls[0]).toBe(`${ELEVENLABS_API}/v1/history?page_size=20&date_after_unix=999940`);
+    expect(urls.slice(1)).toEqual([`${ELEVENLABS_API}/v1/history/hist999`]);
+  });
+
+  it("deletes nothing when the request id isn't there", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const fetchFn = vi.fn(async () => Response.json({ history: [{ history_item_id: "trailer1", request_id: "other" }] }));
+      await forgetByRequest(fetchFn as unknown as typeof fetch, "k", "req123", 1_000_000, noWait);
+      for (const [, init] of fetchFn.mock.calls as unknown as [string, RequestInit | undefined][]) {
+        expect(init?.method ?? "GET").toBe("GET");
+      }
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("is used when ElevenLabs answers with a request id and no history item id", async () => {
+    const d = deps({
+      fetch: vi.fn(async () =>
+        new Response(new Uint8Array([1]), { status: 200, headers: { "content-type": "audio/mpeg", "request-id": "req123" } })
+      ) as unknown as typeof fetch,
+    });
+    await handleSpeak(speakRequest(GOOD), d);
+    expect(d.later).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("migrations/173", () => {
+  const sql = readFileSync("supabase/migrations/173_kakak_voice_check.sql", "utf8").replace(/--.*$/gm, "");
+
+  it("only reads: no insert, update, delete or new column", () => {
+    expect(sql).not.toMatch(/\b(insert|update|delete|alter table)\b/i);
+    expect(sql).toMatch(/\bstable\b/);
+  });
+
+  it("checks household admins (never get_user_household_ids) and revokes public execute", () => {
+    expect(sql).toMatch(/security definer/);
+    expect(sql).toMatch(/household_members m\s+where m\.user_id = v_uid and m\.household_id = p_household/);
+    expect(sql).not.toMatch(/get_user_household_ids/);
+    expect(sql).toMatch(/revoke all on function public\.kakak_voice_check\(uuid, int, int\) from public, anon;/);
+    expect(sql).toMatch(/grant execute on function public\.kakak_voice_check\(uuid, int, int\) to authenticated;/);
   });
 });
 
