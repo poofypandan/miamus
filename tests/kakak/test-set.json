@@ -6260,10 +6260,13 @@
                   "title": {
                     "textHas": [
                       [
-                        "mop"
+                        "mop",
+                        "pel",
+                        "mengepel"
                       ],
                       [
-                        "lounge"
+                        "lounge",
+                        "LT2"
                       ]
                     ]
                   },
@@ -6379,12 +6382,16 @@
                     "textHas": [
                       [
                         "vacuum",
-                        "hoover"
+                        "hoover",
+                        "vakum",
+                        "vacum",
+                        "sedot debu"
                       ],
                       [
                         "guest",
                         "GB1",
-                        "GB 1"
+                        "GB 1",
+                        "kamar tamu"
                       ]
                     ]
                   },
@@ -6460,7 +6467,10 @@
                     "textHas": [
                       [
                         "vacuum",
-                        "hoover"
+                        "hoover",
+                        "vakum",
+                        "vacum",
+                        "sedot debu"
                       ],
                       [
                         "lounge"
