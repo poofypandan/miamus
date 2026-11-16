@@ -29,6 +29,9 @@ and the timings are v16's.
   down, eased frame to frame; `pulse` in `vo-data.json`, from `audio/mix.py`), resting when she is silent. The old
   timed double-beat is gone; the glow still follows her slower presence. It belongs to the mark, so it carries over
   to Fable's redesign.
+- **Checked:** stutter clean on all four (jumps only at the film's own cuts); -14.0 LUFS, true peak -1.47 to -1.77
+  dBTP; 60.011 / 15.019 s; hook, intro, 15 s name row and ending frames against the safe-area overlay in both
+  languages; the sound is v16's (no mix changed).
 
 ## Version 16 (16 November 2026): the end line hands straight to the card
 
