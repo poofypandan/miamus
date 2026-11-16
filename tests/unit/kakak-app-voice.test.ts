@@ -273,6 +273,7 @@ function deps(overrides: Partial<SpeakDeps> = {}): SpeakDeps & { later: ReturnTy
     userId: async () => "user-1",
     reserve: vi.fn(async (): Promise<ReserveResult> => ({ ok: true, hold: "hold-1" })),
     release: vi.fn(async () => {}),
+    settle: vi.fn(async () => {}),
     fetch: vi.fn(async () =>
       new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { "content-type": "audio/mpeg", "history-item-id": "hist123" } })
     ) as unknown as typeof fetch,
@@ -476,10 +477,14 @@ describe("handleSpeak", () => {
     }
   });
 
-  it("asks ElevenLabs to delete the generation from its history after answering", async () => {
+  it("after answering, asks ElevenLabs to delete the generation and settles the hold (characters kept)", async () => {
     const d = deps();
     await handleSpeak(speakRequest(GOOD), d);
-    expect(d.later).toHaveBeenCalledTimes(1);
+    expect(d.later).toHaveBeenCalledTimes(2);
+    expect(d.settle).not.toHaveBeenCalled();
+    for (const [task] of d.later.mock.calls) void (task as () => Promise<void>)().catch(() => {});
+    await vi.waitFor(() => expect(d.settle).toHaveBeenCalledWith(HOUSEHOLD, "hold-1"));
+    expect(d.release).not.toHaveBeenCalled();
   });
 
   it("answers failed, logging only the status, when ElevenLabs refuses or doesn't answer", async () => {
@@ -602,7 +607,7 @@ describe("forgetByRequest", () => {
       ) as unknown as typeof fetch,
     });
     await handleSpeak(speakRequest(GOOD), d);
-    expect(d.later).toHaveBeenCalledTimes(1);
+    expect(d.later).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -615,13 +620,17 @@ describe("migrations/173", () => {
     expect(sql).toMatch(/alter table public\.kakak_voice_holds enable row level security;/);
     expect(sql).not.toMatch(/create policy/i);
     expect(sql).toMatch(/revoke all on table public\.kakak_voice_holds from public, anon, authenticated;/);
-    expect(sql).toMatch(/delete from public\.kakak_voice_holds where created_at < now\(\) - interval '1 day'/);
+    expect(sql).toMatch(/delete from public\.kakak_voice_holds where created_at < now\(\) - interval '1 hour'/);
+    expect(sql).toMatch(/cron\.schedule\('prune-kakak-voice-holds'/);
+    expect(sql).toMatch(/grant execute on function public\.prune_kakak_voice_holds\(\) to service_role;/);
   });
 
   it("checks household admins (never get_user_household_ids) and revokes public execute", () => {
-    expect(sql.match(/security definer/g)).toHaveLength(2);
-    expect(sql.match(/set search_path = public, pg_temp/g)).toHaveLength(2);
-    expect(sql.match(/household_members m\s+where m\.user_id = v_uid and m\.household_id = p_household/g)).toHaveLength(2);
+    expect(sql.match(/security definer/g)).toHaveLength(4);
+    expect(sql.match(/set search_path = public, pg_temp/g)).toHaveLength(4);
+    expect(sql.match(/household_members m\s+where m\.user_id = v_uid and m\.household_id = p_household/g)).toHaveLength(3);
+    expect(sql).toMatch(/revoke all on function public\.kakak_voice_settle\(uuid, uuid\) from public, anon;/);
+    expect(sql).toMatch(/revoke all on function public\.prune_kakak_voice_holds\(\) from public, anon, authenticated;/);
     expect(sql).not.toMatch(/get_user_household_ids/);
     expect(sql).toMatch(/revoke all on function public\.kakak_voice_reserve\(uuid, int, int\) from public, anon;/);
     expect(sql).toMatch(/grant execute on function public\.kakak_voice_reserve\(uuid, int, int\) to authenticated;/);

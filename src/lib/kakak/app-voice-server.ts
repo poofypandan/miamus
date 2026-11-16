@@ -90,6 +90,8 @@ export interface SpeakDeps {
    * server, so a phone can't give itself its budget back.
    */
   release: (householdId: string, hold: string) => Promise<void>;
+  /** The audio is on its way: the characters stay counted, the hold goes (kakak_voice_settle). */
+  settle: (householdId: string, hold: string) => Promise<void>;
   fetch: typeof fetch;
   /** Runs after the response has been sent (next/server's after()). */
   later: (task: () => Promise<void>) => void;
@@ -319,6 +321,8 @@ export async function handleSpeak(request: Request, deps: SpeakDeps): Promise<Re
     return giveBack(json({ kind: "failed" }, 502, timings));
   }
 
+  // Kept: the hold isn't needed any more (after the response, not before it).
+  deps.later(() => deps.settle(householdId, hold).catch(() => console.error("kakak voice: hold not settled")));
   const timing = serverTiming(timings);
   console.info("kakak voice", locale, text.length, endpoint, timing);
 

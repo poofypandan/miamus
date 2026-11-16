@@ -12,10 +12,15 @@
 -- row whose random id goes back to the server only, never to the phone; the
 -- release needs that id, so a phone can't hand itself its budget back.
 --
--- NUMBERS ONLY. kakak_voice_holds keeps a household id, a day, a count of
--- characters and when: no text, no audio, nothing about what was said. A
--- hold is deleted when released, and every hold older than a day is deleted
--- by the next reservation. No policies: only these functions read it.
+-- NUMBERS ONLY, AND ONLY WHILE A REPLY IS BEING MADE. kakak_voice_holds
+-- keeps a household id, a day, a count of characters and when: no text, no
+-- audio, nothing about what was said. A hold lives for the seconds between
+-- asking ElevenLabs and its first audio: then it is deleted, either settled
+-- (kakak_voice_settle: the characters stay counted in kakak_usage, as 172
+-- always did) or released (kakak_voice_release: they are given back). One
+-- left behind by a request that died midway is deleted after an hour, by the
+-- next reservation or by the nightly prune_kakak_voice_holds, whichever is
+-- first. No policies: only these functions read it.
 --
 -- WHO MAY CALL THEM. Exactly the people kakak_voice_spend lets in: an admin
 -- of the household (a household_members row for auth.uid(), never
@@ -23,7 +28,8 @@
 -- where Kakak is allowed and switched on. A release also needs the hold to
 -- be that household's, unreleased, and under ten minutes old.
 --
--- Additive: one new table, two new functions; 172 is unchanged. Deploy
+-- Additive: one new table, four new functions, one nightly job; 172 is
+-- unchanged. Deploy
 -- before the code that calls them; without them the route keeps the voice
 -- off (the phone reads aloud, as before 172).
 -- ============================================================================
@@ -88,7 +94,7 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'budget');
   end if;
 
-  delete from public.kakak_voice_holds where created_at < now() - interval '1 day';
+  delete from public.kakak_voice_holds where created_at < now() - interval '1 hour';
   insert into public.kakak_voice_holds (household_id, day, chars)
   values (p_household, v_today, p_chars)
   returning id into v_hold;
@@ -129,7 +135,60 @@ begin
 end;
 $$;
 
+--   {"ok":true}  or  {"ok":false}. The audio is on its way: the characters
+--   stay counted and the hold goes.
+create or replace function public.kakak_voice_settle(p_household uuid, p_hold uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null or not exists (select 1 from public.household_members m
+                                   where m.user_id = v_uid and m.household_id = p_household) then
+    return jsonb_build_object('ok', false);
+  end if;
+  delete from public.kakak_voice_holds h where h.id = p_hold and h.household_id = p_household;
+  return jsonb_build_object('ok', found);
+end;
+$$;
+
+-- A hold left behind by a request that died midway: deleted after an hour.
+create or replace function public.prune_kakak_voice_holds()
+returns integer
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  removed integer;
+begin
+  delete from public.kakak_voice_holds where created_at < now() - interval '1 hour';
+  get diagnostics removed = row_count;
+  return removed;
+end;
+$$;
+
 revoke all on function public.kakak_voice_reserve(uuid, int, int) from public, anon;
 grant execute on function public.kakak_voice_reserve(uuid, int, int) to authenticated;
 revoke all on function public.kakak_voice_release(uuid, uuid) from public, anon;
 grant execute on function public.kakak_voice_release(uuid, uuid) to authenticated;
+revoke all on function public.kakak_voice_settle(uuid, uuid) from public, anon;
+grant execute on function public.kakak_voice_settle(uuid, uuid) to authenticated;
+revoke all on function public.prune_kakak_voice_holds() from public, anon, authenticated;
+grant execute on function public.prune_kakak_voice_holds() to service_role;
+
+-- 19:53 UTC (02:53 in Jakarta), beside the other nightly prunes.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule('prune-kakak-voice-holds')
+      where exists (select 1 from cron.job where jobname = 'prune-kakak-voice-holds');
+    perform cron.schedule('prune-kakak-voice-holds', '53 19 * * *', 'select public.prune_kakak_voice_holds();');
+  else
+    raise warning 'pg_cron is not installed: voice holds will not be pruned nightly';
+  end if;
+end;
+$$;

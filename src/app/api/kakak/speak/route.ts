@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabase.rpc("kakak_voice_release", { p_household: householdId, p_hold: hold });
       if (error || !(data as { ok?: boolean } | null)?.ok) console.error("kakak voice: characters not given back", error?.code ?? "-");
     },
+    settle: async (householdId, hold) => {
+      const { error } = await supabase.rpc("kakak_voice_settle", { p_household: householdId, p_hold: hold });
+      if (error) console.error("kakak voice: hold not settled", error.code);
+    },
     fetch,
     later: (task) => after(task),
     signal: request.signal,
