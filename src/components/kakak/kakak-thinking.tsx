@@ -34,7 +34,7 @@ export function KakakThinking() {
         {/* Her heart beats slowly while she reads (the warm seal, 20 Nov). */}
         <KakakAvatar className="size-7" beat="think" />
         {/* On her own blush, like her replies: a glance tells who is speaking. */}
-        <div className="flex items-center gap-2 rounded-2xl rounded-tl-md border border-kakak-line bg-kakak-tint px-3 py-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-2xl rounded-tl-md border border-kakak-line bg-kakak-tint px-3 py-2 text-sm text-gray-600">
           <span className="flex gap-1" aria-hidden="true">
             {[0, 1, 2].map((dot) => (
               <span

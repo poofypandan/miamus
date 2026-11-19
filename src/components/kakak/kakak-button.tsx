@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { KakakAvatar } from "@/components/kakak/kakak-avatar";
+import { KAKAK_SETTLE_MS, KakakAvatar } from "@/components/kakak/kakak-avatar";
 import { KakakSheet } from "@/components/kakak/kakak-sheet";
 import { useT } from "@/context/owner-locale-context";
 import { useKakakStatus } from "@/hooks/use-kakak-status";
@@ -33,10 +33,18 @@ export function KakakButton() {
   const [showHint, setShowHint] = useState(false);
   const [mounted, setMounted] = useState(false);
   /**
-   * Saves so far: each one remounts the button's mark with a single settle of
-   * her heart, the "saved" moment once the sheet has closed (the warm seal, 20 Nov).
+   * Saves so far: each one gives the button's mark a single settle of her
+   * heart, the "saved" moment once the sheet has closed (the warm seal, 20 Nov),
+   * and only then: the beat is cleared after it, so a remount never replays it.
    */
   const [saves, setSaves] = useState(0);
+  const [settling, setSettling] = useState(false);
+  useEffect(() => {
+    if (saves === 0) return;
+    setSettling(true);
+    const timer = window.setTimeout(() => setSettling(false), KAKAK_SETTLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [saves]);
   useEffect(() => {
     setMounted(true);
     setShowHint(!hintSeen());
@@ -87,7 +95,7 @@ export function KakakButton() {
               onClick={press}
               className="flex min-h-12 shrink-0 items-center gap-2 rounded-full border bg-background py-1.5 pl-1.5 pr-4 text-sm font-semibold text-gray-900 shadow-sm active:scale-[0.98]"
             >
-              <KakakAvatar key={saves} className="size-9" beat={saves > 0 ? "settle" : null} />
+              <KakakAvatar key={saves} className="size-9" beat={settling ? "settle" : null} />
               {t("Tell Kakak", "Bilang ke Kakak")}
             </button>
           </div>

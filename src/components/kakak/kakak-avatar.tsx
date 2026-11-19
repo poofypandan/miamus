@@ -33,6 +33,9 @@ export const KAKAK_VIEWBOX = "92 78 328 328";
 /** What her heart is doing: thinking, speaking (reading a reply aloud), or a saved settle. */
 export type KakakBeat = "think" | "speak" | "settle";
 
+/** How long a settle is shown for: its 420 ms (globals.css) and a little room. Then the heart is still again. */
+export const KAKAK_SETTLE_MS = 600;
+
 export function KakakAvatar({ className, beat }: { className?: string; beat?: KakakBeat | null }) {
   return (
     <span

@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { KakakAvatar, type KakakBeat } from "@/components/kakak/kakak-avatar";
+import { KAKAK_SETTLE_MS, KakakAvatar, type KakakBeat } from "@/components/kakak/kakak-avatar";
 import { KakakExamples } from "@/components/kakak/kakak-examples";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { KakakThinking } from "@/components/kakak/kakak-thinking";
@@ -146,10 +146,19 @@ function Conversation({
   const [screen, setScreen] = useState<Screen>({ kind: "typing" });
   /** A reply is being read aloud (the voice beta tells): her heart follows it. */
   const [speaking, setSpeaking] = useState(false);
+  /** The saved routine's one settle, just as it lands (not again after its benefit is read aloud). */
+  const [settling, setSettling] = useState(false);
+  const saved = screen.kind === "saved";
+  useEffect(() => {
+    if (!saved) return;
+    setSettling(true);
+    const timer = window.setTimeout(() => setSettling(false), KAKAK_SETTLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [saved]);
   // Her heart in the header (the warm seal, 20 Nov): a gentle beat while she
   // speaks, one settle when a routine is saved here; still otherwise, and
   // still again once this conversation closes.
-  const beat: KakakBeat | null = speaking ? "speak" : screen.kind === "saved" ? "settle" : null;
+  const beat: KakakBeat | null = speaking ? "speak" : settling ? "settle" : null;
   useEffect(() => {
     onBeat(beat);
   }, [beat, onBeat]);
