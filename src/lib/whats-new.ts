@@ -675,7 +675,7 @@ export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
     date: "2026-11-19",
     title: "Baru: foto langsung di kartu tugas",
     lines: [
-      "Setiap tugas Anda punya dua kotak foto: Sebelum dan Sesudah. Ketuk Sebelum saat mulai, Sesudah saat selesai. Begitu foto sesudah masuk, tugasnya Selesai.",
+      "Setiap tugas Anda punya dua kotak foto: Sebelum dan Sesudah. Ambil foto Sebelum saat mulai, ambil foto Sesudah saat selesai bekerja, lalu ketuk Selesai. Foto yang kurang bagus masih bisa diambil ulang sebelum ketuk Selesai.",
       "Tidak bisa dikerjakan? Ketuk tiga titik di kartunya. Ketuk nama tugas untuk melihat detailnya.",
     ],
   },

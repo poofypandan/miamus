@@ -158,7 +158,7 @@ people are **staf** and **admin**.
 | Undo (toast action) | **Batalkan** | Already the word in every Undo toast; never "Urungkan". |
 | Add photos (optional), owner sheet | **Tambah foto (opsional)** | Owner-only form, so "opsional" (staff forms say "boleh dikosongkan"). |
 | Both photos, or none | **Dua foto, atau tidak sama sekali** | Phase 163: an admin's own chore takes both photos or neither. |
-| Before / After (the photo places on a staff task card) | **Sebelum** / **Sesudah** | 19 Nov, product change #2: the two places are the buttons; empty ones say **Ketuk untuk foto**, Sesudah waits with **Foto sebelum dulu**. Done: **Selesai**. |
+| Before / After (the photo places on a staff task card) | **Sebelum** / **Sesudah** | 19 Nov, product change #2: the two places are the buttons; empty ones say **Ketuk untuk foto**, Sesudah waits with **Foto sebelum dulu**. With both photos in, the full-width button **Selesai** finishes it (20 Nov: the photo alone no longer does). |
 | More options (a card's menu) / See details | **Pilihan lain** / **Lihat detail** | 19 Nov: the three dots on a staff task card, holding **Tidak bisa dikerjakan**. |
 | Couldn't be done (button, status) | **Tidak bisa dikerjakan** / short **Tidak bisa** | Phase 165. Staff button and the amber status: "Tidak bisa · Barang habis · 09.10". |
 | Why couldn't it be done? | **Kenapa tidak bisa?** | Phase 165: the reason sheet's title. |

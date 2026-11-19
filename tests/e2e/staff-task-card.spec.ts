@@ -4,8 +4,9 @@ import { HOUSEHOLD_ID } from "../fixtures/household";
 import { STAFF_ID, freshSession, installStub } from "./stub-backend";
 
 // The staff task card (19 Nov, product change #2): the task's name, its time,
-// and two photo places, Sebelum and Sesudah, that are the buttons. The
-// Sesudah photo finishes it; "Tidak bisa dikerjakan" is in the card's menu.
+// and two photo places, Sebelum and Sesudah, that are the buttons. Selesai
+// finishes it once both are in (20 Nov: never the photo alone); "Tidak bisa
+// dikerjakan" is in the card's menu.
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
 
@@ -50,7 +51,7 @@ async function photo(page: Page, card: ReturnType<Page["locator"]>, place: "Sebe
   await (await chooser).setFiles({ name: "foto.jpg", mimeType: "image/jpeg", buffer });
 }
 
-test("staff finish a chore on its card: Sebelum, then Sesudah, and it shows Selesai", async ({ context, page }) => {
+test("staff finish a chore on its card: Sebelum, Sesudah, then Selesai", async ({ context, page }) => {
   const mop = chore({ title: "Pel teras", location_id: TERAS });
   const stub = await installStub(context, { stored: freshSession(), staffPhone: true, chores: [mop], rooms });
   await page.goto("/staff");
@@ -69,6 +70,13 @@ test("staff finish a chore on its card: Sebelum, then Sesudah, and it shows Sele
   await expect(card.getByRole("img", { name: "Foto Sebelum" })).toBeVisible();
   expect(mop.status).toBe("pending");
   await photo(page, card, "Sesudah");
+  await expect(card.getByRole("img", { name: "Foto Sesudah" })).toBeVisible();
+
+  // The photo alone doesn't finish it: both stay, Sesudah can be taken again, and Selesai finishes.
+  await page.waitForTimeout(1500);
+  expect(mop.status).toBe("pending");
+  await expect(card.getByRole("button", { name: "Hapus foto Sesudah" })).toBeEnabled();
+  await card.getByRole("button", { name: "Selesai", exact: true }).click();
 
   await expect(page.getByText('"Pel teras" selesai')).toBeVisible({ timeout: 30_000 });
   await expect.poll(() => mop.status).toBe("completed");
@@ -114,4 +122,22 @@ test("a chore for Anyone is taken first: no photo places until it is someone's",
   const card = page.locator("div.rounded-xl", { has: page.getByText("Buang sampah", { exact: true }) }).last();
   await expect(card.getByText("Saya kerjakan")).toBeVisible({ timeout: 20_000 });
   await expect(card.getByRole("button", { name: /^Sebelum/ })).toHaveCount(0);
+});
+
+test("a chore done with an owner there: Selesai first shows the sheet's warning", async ({ context, page }) => {
+  const glass = chore({ title: "Lap kaca", requires_supervision: true });
+  await installStub(context, { stored: freshSession(), staffPhone: true, chores: [glass] });
+  await page.goto("/staff");
+  const card = page.locator("div.rounded-xl", { has: page.getByText("Lap kaca", { exact: true }) }).last();
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  await photo(page, card, "Sebelum");
+  await expect(card.getByRole("img", { name: "Foto Sebelum" })).toBeVisible();
+  await photo(page, card, "Sesudah");
+  await expect(card.getByRole("img", { name: "Foto Sesudah" })).toBeVisible();
+
+  await card.getByRole("button", { name: "Selesai", exact: true }).click();
+  await expect(card.getByRole("alert")).toContainText("Tugas ini dikerjakan bersama pemilik rumah");
+  expect(glass.status).toBe("pending");
+  await card.getByRole("button", { name: "Selesai", exact: true }).click();
+  await expect.poll(() => glass.status, { timeout: 30_000 }).toBe("completed");
 });

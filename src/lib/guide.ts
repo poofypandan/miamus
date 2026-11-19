@@ -167,8 +167,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "Photos as proof", id: "Foto sebagai bukti" },
     body: {
-      en: "Staff finish a chore right on its card: they tap Sebelum for a photo before and Sesudah for one after, and it shows Selesai. A pet routine asks for one photo, three for a walk with one pet, or just a tick if you choose that. You see the photos on Today.",
-      id: "Staf menyelesaikan tugas langsung di kartunya: ketuk Sebelum untuk foto sebelum dan Sesudah untuk foto sesudah, lalu tampil Selesai. Rutinitas hewan minta satu foto, tiga untuk jalan-jalan dengan satu hewan, atau cukup centang kalau Anda memilihnya. Fotonya tampil di Hari ini.",
+      en: "Staff finish a chore right on its card: they take a Sebelum photo, take a Sesudah photo, then tap Selesai. A pet routine asks for one photo, three for a walk with one pet, or just a tick if you choose that. You see the photos on Today.",
+      id: "Staf menyelesaikan tugas langsung di kartunya: ambil foto Sebelum, ambil foto Sesudah, lalu ketuk Selesai. Rutinitas hewan minta satu foto, tiga untuk jalan-jalan dengan satu hewan, atau cukup centang kalau Anda memilihnya. Fotonya tampil di Hari ini.",
     },
     where: "today",
   },
