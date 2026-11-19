@@ -46,8 +46,11 @@ function Voice({
   screen,
   listenHere,
   onReview,
+  onSpeaking,
 }: {
   screen: VoiceScreen;
+  /** A reply starts or stops being read aloud: her heart follows it (the warm seal, 20 Nov). */
+  onSpeaking?: (on: boolean) => void;
   /** Whether a spoken answer makes sense on this screen. */
   listenHere: boolean;
   /** Done: put these words in the typing box, to check and send. Nothing is sent. */
@@ -60,7 +63,10 @@ function Voice({
   /** Spoken words are in the typing box, waiting for Send. */
   const [reviewing, setReviewing] = useState(false);
   const listening = useRef<Listening | null>(null);
-  const speaker = useReadAloud(locale, (on) => dispatch({ type: "speaking", on }));
+  const speaker = useReadAloud(locale, (on) => {
+    dispatch({ type: "speaking", on });
+    onSpeaking?.(on);
+  });
 
   // The latest callback, so the recognizer's handlers never call a stale one.
   const review = useRef(onReview);

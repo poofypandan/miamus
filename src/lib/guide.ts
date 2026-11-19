@@ -460,7 +460,7 @@ export const GUIDE: readonly GuideEntry[] = [
       id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik atau ucapkan: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Bacakan jawaban Kakak memperdengarkan suaranya. Atur di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
-    covers: ["kakak-routines-2026-11", "kakak-voice-2026-11", "kakak-answers-2026-11"],
+    covers: ["kakak-routines-2026-11", "kakak-voice-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],
   },
   {
     id: "kakak-card",

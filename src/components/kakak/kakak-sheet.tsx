@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { KakakAvatar } from "@/components/kakak/kakak-avatar";
+import { KakakAvatar, type KakakBeat } from "@/components/kakak/kakak-avatar";
 import { KakakExamples } from "@/components/kakak/kakak-examples";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { KakakThinking } from "@/components/kakak/kakak-thinking";
@@ -93,29 +93,50 @@ const UNDO_TOAST_MS = 8000;
  * as adding it by hand. The conversation lives here, in the open sheet, and
  * is forgotten when it closes.
  */
-export function KakakSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function KakakSheet({
+  open,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Something was saved and the sheet closed on it: the opener's mark can settle (the warm seal, 20 Nov). */
+  onSaved?: () => void;
+}) {
   useBackToClose(open, onClose);
   const t = useT();
+  /** What her heart in the header is doing: following her voice, or the saved settle. */
+  const [beat, setBeat] = useState<KakakBeat | null>(null);
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent side="bottom" className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl pb-safe">
+        {/* Her lock-up (the warm seal, 20 Nov): the mark on the left, her name
+            beside it in the app's face, semi-bold and slightly tight. */}
         <SheetHeader className="flex-row items-center gap-3 px-4 pb-2 pt-4 text-left">
-          <KakakAvatar className="size-10" />
+          <KakakAvatar className="size-10" beat={open ? beat : null} />
           <div className="min-w-0">
-            <SheetTitle className="text-base">Kakak</SheetTitle>
+            <SheetTitle className="text-lg leading-tight font-semibold tracking-[-0.01em]">Kakak</SheetTitle>
             <SheetDescription className="text-xs">
               {t("Nothing is saved until you confirm.", "Tidak ada yang disimpan sebelum Anda konfirmasi.")}
             </SheetDescription>
           </div>
         </SheetHeader>
         {/* Keyed by open: each opening starts a new conversation. */}
-        {open && <Conversation onClose={onClose} />}
+        {open && <Conversation onClose={onClose} onSaved={onSaved} onBeat={setBeat} />}
       </SheetContent>
     </Sheet>
   );
 }
 
-function Conversation({ onClose }: { onClose: () => void }) {
+function Conversation({
+  onClose,
+  onSaved,
+  onBeat,
+}: {
+  onClose: () => void;
+  onSaved?: () => void;
+  onBeat: (beat: KakakBeat | null) => void;
+}) {
   const t = useT();
   const locale = useOwnerLocale();
   const { activeHouseholdId } = useHousehold();
@@ -123,6 +144,16 @@ function Conversation({ onClose }: { onClose: () => void }) {
   /** The new voice flow (tap Done, check, then Send), opt-in on this phone with ?newvoice=1. */
   const newVoice = useNewVoice();
   const [screen, setScreen] = useState<Screen>({ kind: "typing" });
+  /** A reply is being read aloud (the voice beta tells): her heart follows it. */
+  const [speaking, setSpeaking] = useState(false);
+  // Her heart in the header (the warm seal, 20 Nov): a gentle beat while she
+  // speaks, one settle when a routine is saved here; still otherwise, and
+  // still again once this conversation closes.
+  const beat: KakakBeat | null = speaking ? "speak" : screen.kind === "saved" ? "settle" : null;
+  useEffect(() => {
+    onBeat(beat);
+  }, [beat, onBeat]);
+  useEffect(() => () => onBeat(null), [onBeat]);
   const [history, setHistory] = useState<KakakHistory | null>(null);
   /**
    * The conversation so far, both sides (2026-11-14): what the owner wrote,
@@ -267,6 +298,7 @@ function Conversation({ onClose }: { onClose: () => void }) {
         },
       });
       onClose();
+      onSaved?.();
     } catch (error) {
       console.error("Kakak save", error);
       toast.error(t("Something went wrong. Nothing was saved.", "Ada yang salah. Tidak ada yang disimpan."));
@@ -425,6 +457,8 @@ function Conversation({ onClose }: { onClose: () => void }) {
 
       {/* Kakak's card, short by default (19 Nov): the newest card first, under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-short-card-2026-11" />}
+      {/* Kakak's new look (the warm seal, 20 Nov): after the short card, in its own week. */}
+      {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-warm-seal-2026-11" />}
       {/* Kakak's pet routines (Phase 173 PR B): once, before the first try, under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-routines-2026-11" />}
       {/* Kakak answers questions, and adds an ingredient (2026-11-14): the same, in its own week. */}
@@ -436,6 +470,7 @@ function Conversation({ onClose }: { onClose: () => void }) {
         // name) and send like typed ones.
         <KakakVoiceNew
           screen={screen}
+          onSpeaking={setSpeaking}
           listenHere={showTyping || screen.kind === "question"}
           onReview={(text) => {
             setDraft((typed) => (typed.trim() ? `${typed.trim()} ${text}` : text).slice(0, MAX_TYPED));
@@ -446,6 +481,7 @@ function Conversation({ onClose }: { onClose: () => void }) {
       ) : (
         <KakakVoice
           screen={screen}
+          onSpeaking={setSpeaking}
           listenHere={showTyping || screen.kind === "question"}
           inputShown={showTyping}
           onHeard={setDraft}
@@ -508,11 +544,17 @@ function kakakLine(screen: Screen, cardIntro: string): string | null {
   }
 }
 
+/**
+ * Her replies on her own blush with its hairline (the warm seal, 20 Nov), so
+ * her warmth reaches her words; the owner's lines and the cards stay as they are.
+ */
+const KAKAK_BUBBLE = "max-w-[85%] rounded-2xl rounded-tl-md border border-kakak-line bg-kakak-tint px-3 py-2 text-sm text-gray-900";
+
 function KakakBubble({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2">
       <KakakAvatar className="size-7" />
-      <p className="max-w-[85%] rounded-2xl rounded-tl-md border bg-card px-3 py-2 text-sm text-gray-900">{children}</p>
+      <p className={KAKAK_BUBBLE}>{children}</p>
     </div>
   );
 }
@@ -522,7 +564,7 @@ function ProblemBubble({ icon: Icon, children }: { icon: LucideIcon; children: R
   return (
     <div className="flex items-start gap-2" role="alert">
       <KakakAvatar className="size-7" />
-      <div className="flex max-w-[85%] items-start gap-2 rounded-2xl rounded-tl-md border bg-card px-3 py-2 text-sm text-gray-900">
+      <div className={cn("flex items-start gap-2", KAKAK_BUBBLE)}>
         <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <p>{children}</p>
       </div>

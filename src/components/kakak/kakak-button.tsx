@@ -32,6 +32,11 @@ export function KakakButton() {
   const [open, setOpen] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [mounted, setMounted] = useState(false);
+  /**
+   * Saves so far: each one remounts the button's mark with a single settle of
+   * her heart, the "saved" moment once the sheet has closed (the warm seal, 20 Nov).
+   */
+  const [saves, setSaves] = useState(0);
   useEffect(() => {
     setMounted(true);
     setShowHint(!hintSeen());
@@ -82,14 +87,14 @@ export function KakakButton() {
               onClick={press}
               className="flex min-h-12 shrink-0 items-center gap-2 rounded-full border bg-background py-1.5 pl-1.5 pr-4 text-sm font-semibold text-gray-900 shadow-sm active:scale-[0.98]"
             >
-              <KakakAvatar className="size-9" />
+              <KakakAvatar key={saves} className="size-9" beat={saves > 0 ? "settle" : null} />
               {t("Tell Kakak", "Bilang ke Kakak")}
             </button>
           </div>
         </div>,
         document.body,
       )}
-      <KakakSheet open={open} onClose={() => setOpen(false)} />
+      <KakakSheet open={open} onClose={() => setOpen(false)} onSaved={() => setSaves((n) => n + 1)} />
     </>
   );
 }
