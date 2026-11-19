@@ -6,12 +6,14 @@ import {
   Carrot,
   Check,
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
   Eye,
   Gauge,
   Hourglass,
   ListChecks,
   Loader2,
+  MessageSquare,
   PawPrint,
   Refrigerator,
   RotateCcw,
@@ -38,7 +40,7 @@ import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { askKakak, historyForNextTurn, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
-import { addsSomething, describeSuggestion, routineListLine, savedBenefit, savedSummary } from "@/lib/kakak/describe";
+import { addsSomething, choreGlance, describeSuggestion, routineListLine, savedBenefit, savedSummary } from "@/lib/kakak/describe";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
 import { MAX_TYPED, type KakakHistory, type RefusalReason } from "@/lib/kakak/engine";
@@ -56,6 +58,9 @@ import {
 } from "@/lib/kakak/refine";
 import type { ChoreSuggestion } from "@/lib/kakak/suggestions";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { useHouseholdLocations } from "@/hooks/use-household-locations";
+import type { HouseholdLocation } from "@/types/database";
+import { nameSaysPlace } from "@/lib/room-in-name";
 import { cn } from "@/lib/utils";
 
 type Screen =
@@ -361,7 +366,7 @@ function Conversation({ onClose }: { onClose: () => void }) {
       )}
 
       {screen.kind === "card" && (
-        <SuggestionCard
+        <RoomAwareSuggestionCard
           text={screen.text}
           items={screen.items}
           saving={saving}
@@ -418,6 +423,8 @@ function Conversation({ onClose }: { onClose: () => void }) {
         </Button>
       )}
 
+      {/* Kakak's card, short by default (19 Nov): the newest card first, under the one-a-week rule. */}
+      {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-short-card-2026-11" />}
       {/* Kakak's pet routines (Phase 173 PR B): once, before the first try, under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-routines-2026-11" />}
       {/* Kakak answers questions, and adds an ingredient (2026-11-14): the same, in its own week. */}
@@ -585,9 +592,34 @@ function TypingBox({
   );
 }
 
+type SuggestionCardProps = Omit<Parameters<typeof SuggestionCard>[0], "locations" | "details" | "onDetails">;
+
+/**
+ * The card with the household's rooms, read under Suspense: while they load
+ * (the first time only), the same card shows every room. Whether Change is
+ * open lives here, above the Suspense, so it stays open when they arrive.
+ */
+function RoomAwareSuggestionCard(props: SuggestionCardProps) {
+  const [details, setDetails] = useState(false);
+  const shared = { ...props, details, onDetails: setDetails };
+  return (
+    <Suspense fallback={<SuggestionCard {...shared} locations={null} />}>
+      <WithRooms {...shared} />
+    </Suspense>
+  );
+}
+
+function WithRooms(props: Omit<Parameters<typeof SuggestionCard>[0], "locations">) {
+  const { locations } = useHouseholdLocations();
+  return <SuggestionCard {...props} locations={locations} />;
+}
+
 function SuggestionCard({
   text,
   items,
+  locations,
+  details,
+  onDetails,
   saving,
   changing,
   onDrop,
@@ -599,6 +631,10 @@ function SuggestionCard({
 }: {
   text: string;
   items: KakakSuggestion[];
+  locations: readonly HouseholdLocation[] | null;
+  /** Change is open: the chips and the rest of the card. */
+  details: boolean;
+  onDetails: (open: boolean) => void;
   saving: boolean;
   changing: boolean;
   onDrop: (index: number) => void;
@@ -611,18 +647,31 @@ function SuggestionCard({
   const t = useT();
   const locale = useOwnerLocale();
   const saveable = items.filter(addsSomething).length;
+  /**
+   * Short by default (19 Nov, product change #1): a chore shows What, Who
+   * and When, and Looks right stays in reach. Change opens the rest here —
+   * the chips and the card's other rows — with no call to Kakak; a change
+   * the chips can't say is still typed to her from there.
+   */
+  const hasChore = items.some((item) => item.kind === "chore");
+  // Leaves out a room the task's name already says (lib/room-in-name.ts).
+  const saysRoom = (item: ChoreSuggestion) => nameSaysPlace([item.title, item.titleEn], item.locationId, null, locations);
+  const open = hasChore && details && !changing;
   return (
     <div className="flex flex-col gap-3">
       <KakakBubble>{text || t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:")}</KakakBubble>
-      <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card shadow-sm" id="kakak-card">
         {items.map((item, index) => {
           // A staff-areas card's "nobody would see" counts every card on screen (Codex, PR #140).
           const card = describeSuggestion(item, locale, item.kind === "staff_areas" ? staffAreasNobody(items, index) : undefined);
+          // A chore at a glance; the rest of it under Change, or while a change is typed to Kakak.
+          const glance = item.kind === "chore" ? choreGlance(item, locale, saysRoom(item)) : null;
+          const rows = glance ? [...glance.rows, ...(open || changing ? glance.more : [])] : card.rows;
           // A routine shows its own icon (Lights off, Walk…), as on the Pets tab.
           const Icon =
             (item.kind === "pet_routine" ? routineKindInfo(item.routine as RoutineKind)?.icon : undefined) ?? KIND_ICONS[item.kind];
           return (
-            <div key={index} className="flex flex-col gap-1.5 px-4 py-3">
+            <div key={index} className="flex flex-col gap-2 px-4 py-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <Icon className="size-3.5" aria-hidden="true" />
@@ -639,18 +688,20 @@ function SuggestionCard({
                   </button>
                 )}
               </div>
-              <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 text-sm">
-                {card.rows.map((row, r) => {
+              <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5">
+                {rows.map((row, r) => {
                   // The card assembles itself, one row after another (motion-reduce: at once).
                   const motion = { className: "animate-kakak-row motion-reduce:animate-none", style: { animationDelay: `${r * 90}ms` } };
+                  // Values larger and heavier than their labels; a chore's name is the card's headline.
+                  const value = glance && r === 0 ? "text-headline" : "text-base font-semibold leading-snug";
                   return (
                     <div key={r} className="contents">
-                      <dt className={cn("text-muted-foreground", motion.className)} style={motion.style}>
+                      <dt className={cn("text-sm text-muted-foreground", motion.className)} style={motion.style}>
                         {row.label}
                       </dt>
                       {row.toggle ? (
                         <dd className={cn("flex min-h-9 items-center justify-between gap-2", motion.className)} style={motion.style}>
-                          <span className={cn("font-medium", row.toggle.on ? "text-gray-900" : "text-muted-foreground")}>
+                          <span className={cn(value, row.toggle.on ? "text-gray-900" : "text-muted-foreground")}>
                             {row.value}
                           </span>
                           <Switch
@@ -667,11 +718,9 @@ function SuggestionCard({
                           />
                         </dd>
                       ) : (
-                        <dd
-                          className={cn("font-medium text-gray-900", row.guess && "text-amber-700", motion.className)}
-                          style={motion.style}
-                        >
-                          {row.value}
+                        <dd className={cn("text-gray-900", row.guess && "text-amber-700", motion.className)} style={motion.style}>
+                          {/* Its own span: cn() reads text-headline as a colour and would drop it beside one. */}
+                          <span className={value}>{row.value}</span>
                         </dd>
                       )}
                     </div>
@@ -679,7 +728,7 @@ function SuggestionCard({
                 })}
               </dl>
               {card.note && <p className="text-xs text-muted-foreground">{card.note}</p>}
-              {item.kind === "chore" && !changing && (
+              {item.kind === "chore" && open && (
                 <>
                   <ChoreChips item={item} disabled={saving} onRefine={(change) => onRefine(index, change)} />
                   <KakakRemindChips
@@ -692,6 +741,17 @@ function SuggestionCard({
             </div>
           );
         })}
+        {open && (
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onChange}
+            className="flex min-h-12 items-center gap-2 px-4 text-left text-sm font-medium text-gray-900 active:bg-muted disabled:opacity-50"
+          >
+            <MessageSquare className="size-4 text-muted-foreground" aria-hidden="true" />
+            {t("Or tell Kakak what to change", "Atau bilang ke Kakak apa yang diubah")}
+          </button>
+        )}
       </div>
       {!changing && (
         <>
@@ -714,13 +774,29 @@ function SuggestionCard({
               </>
             )}
           </Button>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" className="min-h-11 flex-1 rounded-xl" disabled={saving} onClick={onChange}>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              disabled={saving}
+              // With a chore, Change opens the rest of the card here; otherwise it goes to Kakak, as before.
+              onClick={hasChore ? () => onDetails(!details) : onChange}
+              aria-expanded={hasChore ? details : undefined}
+              aria-controls={hasChore ? "kakak-card" : undefined}
+              className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-gray-900 active:bg-muted disabled:opacity-50"
+            >
               {t("Change", "Ubah")}
-            </Button>
-            <Button type="button" variant="ghost" className="min-h-11 flex-1 rounded-xl" disabled={saving} onClick={onCancel}>
+              {hasChore && (
+                <ChevronDown className={cn("size-4 transition-transform", details && "rotate-180")} aria-hidden="true" />
+              )}
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={onCancel}
+              className="min-h-11 rounded-lg px-2 text-sm font-medium text-muted-foreground active:bg-muted disabled:opacity-50"
+            >
               {t("Cancel", "Batal")}
-            </Button>
+            </button>
           </div>
           <p className="text-center text-xs text-muted-foreground">
             {t("You can undo it straight after saving.", "Setelah disimpan, masih bisa dibatalkan.")}

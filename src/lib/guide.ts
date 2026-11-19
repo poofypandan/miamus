@@ -463,6 +463,17 @@ export const GUIDE: readonly GuideEntry[] = [
     covers: ["kakak-routines-2026-11", "kakak-voice-2026-11", "kakak-answers-2026-11"],
   },
   {
+    id: "kakak-card",
+    group: "settings",
+    title: { en: "Kakak's card", id: "Kartu Kakak" },
+    body: {
+      en: "Kakak's card shows what, who and when, like Every Monday, 09:00. Looks right saves it. Change opens the rest: how often, who, Remind me, the room and notes. For anything else, Or tell Kakak what to change.",
+      id: "Kartu Kakak menampilkan apa, siapa, dan kapan, misalnya Setiap Senin, 09.00. Sudah benar menyimpannya. Ubah membuka sisanya: seberapa sering, siapa, Ingatkan saya, ruangan, dan catatan. Untuk yang lain, Atau bilang ke Kakak apa yang diubah.",
+    },
+    where: null,
+    covers: ["kakak-short-card-2026-11"],
+  },
+  {
     id: "weak-signal",
     group: "settings",
     title: { en: "A weak signal", id: "Sinyal lemah" },

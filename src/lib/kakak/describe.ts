@@ -60,16 +60,73 @@ export function cardTime(time: string, locale: Locale): string {
 }
 
 function repeats(item: Extract<KakakSuggestion, { kind: "chore" }>, locale: Locale, t: T): string | null {
+  const base = repeatBase(item, locale, t);
+  if (!base) return null;
+  return item.recurrenceUntil ? `${base}, ${t("until", "sampai")} ${cardDate(item.recurrenceUntil, locale)}` : base;
+}
+
+/** "Every Monday", "Every day", "Every month on the 16th", or null for a one-time chore. */
+function repeatBase(item: Extract<KakakSuggestion, { kind: "chore" }>, locale: Locale, t: T): string | null {
   if (item.recurrence === "none") return null;
   const [y, m, d] = item.dueDate.split("-").map(Number);
   const weekday = WEEKDAYS[locale][new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
-  const base =
-    item.recurrence === "daily"
-      ? t("Every day", "Setiap hari")
-      : item.recurrence === "weekly"
-        ? t(`Every ${weekday}`, `Setiap ${weekday}`)
-        : t(`Every month on the ${d}${ordinal(d)}`, `Setiap bulan tanggal ${d}`);
-  return item.recurrenceUntil ? `${base}, ${t("until", "sampai")} ${cardDate(item.recurrenceUntil, locale)}` : base;
+  return item.recurrence === "daily"
+    ? t("Every day", "Setiap hari")
+    : item.recurrence === "weekly"
+      ? t(`Every ${weekday}`, `Setiap ${weekday}`)
+      : t(`Every month on the ${d}${ordinal(d)}`, `Setiap bulan tanggal ${d}`);
+}
+
+/**
+ * Kakak's chore card at a glance (19 Nov, product change #1): What, Who and
+ * When, with the repeat folded into When ("Every Monday, 09:00"), and the
+ * room only when the task's name doesn't already say it, and "You: Need to
+ * be there" when it applies (staff then wait for an owner). Everything else —
+ * the first day of a repeat, the room the name says, notes, Remind me — is
+ * in `more`, which the card shows under Change with the chips.
+ * Nothing is lost; it is one tap away.
+ */
+export function choreGlance(
+  item: Extract<KakakSuggestion, { kind: "chore" }>,
+  locale: Locale,
+  /** The task's name already says its room (lib/room-in-name.ts, worked out by the caller from the rooms). */
+  roomSaid = false
+): { rows: CardRow[]; more: CardRow[] } {
+  const t = translator(locale);
+  const time = item.dueTime ? cardTime(item.dueTime, locale) : null;
+  const date = cardDate(item.dueDate, locale);
+  const repeat = repeatBase(item, locale, t);
+  const until = repeat && item.recurrenceUntil ? `, ${t("until", "sampai")} ${cardDate(item.recurrenceUntil, locale)}` : "";
+  const when = `${repeat ?? date}${time ? `, ${time}` : ""}${until}`;
+  const rows: CardRow[] = [
+    {
+      label: t("What", "Apa"),
+      value: locale === "en" && item.titleEn ? `${item.title} (${item.titleEn})` : item.title,
+    },
+    { label: t("Who", "Siapa"), value: item.assigneeName ?? t("Anyone", "Siapa saja") },
+    { label: t("When", "Kapan"), value: when },
+  ];
+  const more: CardRow[] = [];
+  if (repeat) more.push({ label: t("Starts", "Mulai"), value: date });
+  const newRoom = item.newRoomName
+    ? item.newRoomFloorName
+      ? `${item.newRoomFloorName} · ${item.newRoomName}`
+      : item.newRoomName
+    : null;
+  const room = item.roomName ?? newRoom;
+  if (room) {
+    const row = { label: t("Room", "Ruangan"), value: newRoom ? t(`${room} (new room)`, `${room} (ruangan baru)`) : room };
+    // A room Kakak is about to create always shows: saving adds it to Rooms.
+    if (newRoom || !roomSaid) rows.push(row);
+    else more.push(row);
+  }
+  // Being there stays on the card: it tells staff to wait for an owner.
+  if (item.requiresSupervision) rows.push({ label: t("You", "Anda"), value: t("Need to be there", "Harus ada") });
+  if (item.notes) more.push({ label: t("Notes", "Catatan"), value: item.notes });
+  if (item.remindDaysBefore != null) {
+    more.push({ label: t("Remind me", "Ingatkan saya"), value: remindLabel(item.remindDaysBefore, locale) });
+  }
+  return { rows, more };
 }
 
 function ordinal(n: number): string {
