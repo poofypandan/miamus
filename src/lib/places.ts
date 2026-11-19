@@ -44,6 +44,22 @@ export function floorOf(place: HouseholdLocation, byId: PlaceMap): HouseholdLoca
   return grand && isFloor(grand) ? grand : null;
 }
 
+/**
+ * The floor's name for a saved place, or null (no floor, or not known yet).
+ * What a staff card still says when the task's name already says the room
+ * (19 Nov): "Bersihkan service area" in "LT1 · Service Area" shows "LT1", so
+ * it is never mistaken for the one on LT2 (Codex, PR #153).
+ */
+export function floorNameOf(
+  locationId: string | null | undefined,
+  locations: readonly HouseholdLocation[] | null | undefined
+): string | null {
+  if (!locationId || !locations) return null;
+  const byId = placeMap(locations);
+  const place = byId.get(locationId);
+  return place ? (floorOf(place, byId)?.name ?? null) : null;
+}
+
 /** The names from the top: ["LT2", "GB1", "Bathroom"], ["LT2", "Lounge"], ["Teras"]. */
 export function placePath(place: HouseholdLocation, byId: PlaceMap): string[] {
   const outer = outerRoomOf(place, byId);

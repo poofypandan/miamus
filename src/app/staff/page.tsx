@@ -22,6 +22,7 @@ import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
 import { StaffChoreCard } from "@/components/staff/staff-chore-card";
 import { nameSaysPlace } from "@/lib/room-in-name";
+import { floorNameOf } from "@/lib/places";
 import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
@@ -419,9 +420,10 @@ function TasksView() {
         key={entry.key}
         occurrence={entry.occurrence}
         // The room, unless the task's name already says it ("Pel teras" in Teras; 19 Nov).
+        // Its floor still shows: the same room name can be on two floors (Codex, PR #153).
         locationName={
           nameSaysPlace([entry.occurrence.task.title], entry.occurrence.task.location_id, entry.occurrence.task.spot, locations)
-            ? null
+            ? floorNameOf(entry.occurrence.task.location_id, locations)
             : roomName(entry.occurrence.task.location_id, entry.occurrence.task.spot)
         }
         // Someone else's name only when it is someone else's chore — which
