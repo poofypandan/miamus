@@ -69,6 +69,8 @@ export interface MamaPose {
   hold?: number;
   sway?: number;
   phone?: number;
+  /** C1.6: reading, 0–1: the phone held out in front of her shoulder, her head tipped to it (trailer-reset 20, fix 12). */
+  read?: number;
 }
 
 export function Mama({ light, frame, flat, arrive = 1, pose }: FigureProps & { arrive?: number; pose?: MamaPose }) {
@@ -84,8 +86,9 @@ export function Mama({ light, frame, flat, arrive = 1, pose }: FigureProps & { a
   const reach = pose ? 0 : clamp01((arrive - 0.7) / 0.3);
   const hold = clamp01(pose?.hold ?? 0);
   const limb = { strokeWidth: 10, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
-  const elbowL = { x: lerp(-33, -47, up), y: lerp(-170, -229, up) };
-  const handL = { x: lerp(-30, -21, up), y: lerp(-134, -253, up) };
+  const read = clamp01(pose?.read ?? 0);
+  const elbowL = { x: lerp(lerp(-33, -47, up), -46, read), y: lerp(lerp(-170, -229, up), -162, read) };
+  const handL = { x: lerp(lerp(-30, -21, up), -40, read), y: lerp(lerp(-134, -253, up), -204, read) };
   const handR = { x: lerp(lerp(34, 60, reach), 57, hold), y: lerp(lerp(-134, -146, reach), -73, hold) };
   const elbowR = { x: lerp(41, 47, hold), y: lerp(-172, -140, hold) };
   const glow = flat ? 0 : clamp01(pose?.phone ?? 0);
@@ -102,8 +105,10 @@ export function Mama({ light, frame, flat, arrive = 1, pose }: FigureProps & { a
       <path d={`M 22 -206 L ${elbowR.x} ${elbowR.y} L ${handR.x} ${handR.y}`} stroke={skin} {...limb} />
       <path d={`M -22 -206 L ${elbowL.x} ${elbowL.y} L ${handL.x} ${handL.y}`} stroke={skin} {...limb} />
       <path d="M -6 -222 L 6 -222 L 6 -210 L -6 -210 Z" fill={skin} />
-      <circle cx={0} cy={-241} r={22} fill={hair} />
-      <circle cx={2} cy={-268} r={11.5} fill={hair} />
+      <g transform={read > 0 ? `rotate(${-9 * read} 0 -222)` : undefined}>
+        <circle cx={0} cy={-241} r={22} fill={hair} />
+        <circle cx={2} cy={-268} r={11.5} fill={hair} />
+      </g>
       {(pose?.phone ?? 0) > 0 && (
         // The phone held up by her head: the only cool light in the frame.
         <g transform={`translate(${handL.x - 2} ${handL.y - 6}) rotate(-8)`}>

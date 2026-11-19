@@ -7,6 +7,9 @@
  * - app captures (bitmaps): the smallest text the crop declares (data-raster-text, already scaled).
  * Anything under the floor cancels the render, so `npm run c15` (and any render) fails. The result is logged
  * as one "READABILITY {json}" line for the build script to collect.
+ *
+ * C1.6 (trailer-reset 20, fix 2): it also fails a frame in which a bubble ([data-bubble]) overlaps a person
+ * ([data-person], the boxes the shots mark around the figures' heads and bodies).
  */
 import React, { useEffect, useRef, useState } from "react";
 import { cancelRender, continueRender, delayRender } from "remotion";
@@ -66,6 +69,31 @@ export function measure(root: HTMLElement): Hit[] {
   return hits;
 }
 
+type Clash = { bubble: string; person: string; px: number };
+
+/** Every bubble that overlaps a person's box, with the overlap's area in px at 1080 width. */
+export function overlaps(root: HTMLElement): Clash[] {
+  const zoom = root.getBoundingClientRect().width / root.offsetWidth || 1;
+  const box = root.getBoundingClientRect();
+  const rect = (el: Element) => {
+    const r = el.getBoundingClientRect();
+    return { l: (r.left - box.left) / zoom, t: (r.top - box.top) / zoom, r: (r.right - box.left) / zoom, b: (r.bottom - box.top) / zoom };
+  };
+  const people = Array.from(root.querySelectorAll("[data-person]")).filter((el) => visible(el, root));
+  const out: Clash[] = [];
+  root.querySelectorAll("[data-bubble]").forEach((b) => {
+    if (!visible(b, root)) return;
+    const a = rect(b);
+    people.forEach((p) => {
+      const q = rect(p);
+      const w = Math.min(a.r, q.r) - Math.max(a.l, q.l);
+      const h = Math.min(a.b, q.b) - Math.max(a.t, q.t);
+      if (w > 0 && h > 0) out.push({ bubble: b.getAttribute("data-bubble") || "bubble", person: p.getAttribute("data-person") || "person", px: Math.round(w * h) });
+    });
+  });
+  return out;
+}
+
 export function Readable({ label, children }: { label: string; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [handle] = useState(() => delayRender(`readability ${label}`));
@@ -78,9 +106,13 @@ export function Readable({ label, children }: { label: string; children: React.R
         const hits = measure(ref.current);
         const small = hits.filter((h) => h.px < MIN_TEXT_PX - 0.05);
         const smallest = hits.reduce<Hit | null>((a, h) => (!a || h.px < a.px ? h : a), null);
-        console.log("READABILITY " + JSON.stringify({ label, pieces: hits.length, smallest, small }));
+        const clashes = overlaps(ref.current);
+        const people = ref.current.querySelectorAll("[data-person]").length;
+        console.log("READABILITY " + JSON.stringify({ label, pieces: hits.length, smallest, small, people, clashes }));
         if (small.length) {
           cancelRender(new Error(`Readability check failed in ${label}: ${small.map((h) => `"${h.text}" ${h.px.toFixed(1)} px`).join("; ")} (floor ${MIN_TEXT_PX} px at 1080 width)`));
+        } else if (clashes.length) {
+          cancelRender(new Error(`Frame check failed in ${label}: ${clashes.map((c) => `${c.bubble} covers ${c.person} (${c.px} px²)`).join("; ")}`));
         } else continueRender(handle);
       })
     );

@@ -102,3 +102,31 @@ export function SmallChild({ light }: { light: Light }) {
   );
 }
 
+
+/**
+ * A figure's ground shadow under the current light (trailer-reset 20, fix 1): the same rule as the family's in
+ * World (a low sun throws long shadows away from it), drawn as a soft tapered shape from the feet.
+ * Place it before the figure, inside the figure's own translate/scale group.
+ */
+export function GroundShadow({ light, h = 250, w = 24 }: { light: Light; h?: number; w?: number }) {
+  const HORIZON = 1190;
+  const sunUp = light.sunY < HORIZON + 30 ? Math.min(1, light.glow * 1.2) : 0;
+  if (sunUp < 0.02) return null;
+  const reach = Math.max(0.5, Math.min(3.0, 560 / (HORIZON - light.sunY + 90)));
+  const kx = (light.sunX < 540 ? 1 : -1) * reach;
+  const tip = { x: kx * h, y: 0.24 * h };
+  const id = `gs-${Math.round(light.t * 100)}`;
+  return (
+    <g opacity={0.3 * sunUp}>
+      <defs>
+        <filter id={id} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3.2" />
+        </filter>
+      </defs>
+      <g filter={`url(#${id})`} fill="rgb(40,34,40)">
+        <ellipse cx={0} cy={-1} rx={w + 6} ry={6} />
+        <path d={`M ${-w} 0 L ${w} 0 L ${tip.x + w * 0.45} ${tip.y} Q ${tip.x} ${tip.y + 10} ${tip.x - w * 0.45} ${tip.y} Z`} />
+      </g>
+    </g>
+  );
+}
