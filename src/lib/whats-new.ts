@@ -28,6 +28,29 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 19 Nov (product change #1): Kakak's card, short by default. A card in
+    // the Kakak sheet before the first try, for households with Kakak only,
+    // under the calm-start rules (one card a week, never to new households).
+    id: "kakak-short-card-2026-11",
+    date: "2026-11-19",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: a shorter card from Kakak", id: "Baru: kartu Kakak lebih ringkas" },
+    steps: {
+      en: [
+        "Kakak's card now shows what, who and when, with the repeat on the same line: \u201cEvery Monday, 09:00\u201d. Looks right is always in reach.",
+        "Change opens the rest on the card: how often, who, Remind me, the room and any notes. One tap each, and nothing goes back to Kakak.",
+        "Something those can't say? Under Change, tap Or tell Kakak what to change.",
+      ],
+      id: [
+        "Kartu Kakak sekarang menampilkan apa, siapa, dan kapan, dengan pengulangannya di baris yang sama: \u201cSetiap Senin, 09.00\u201d. Tombol Sudah benar selalu terjangkau.",
+        "Ubah membuka sisanya di kartu: seberapa sering, siapa, Ingatkan saya, ruangan, dan catatan. Sekali ketuk, tanpa dikirim lagi ke Kakak.",
+        "Ada yang tidak bisa diatur di situ? Di Ubah, ketuk Atau bilang ke Kakak apa yang diubah.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 2026-11-14 (Phase 180 step 1, and a new ingredient with its amount):
     // a card in the Kakak sheet before the first try, for households with
     // Kakak only, under the calm-start rules (one card a week, never to new

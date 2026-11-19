@@ -45,6 +45,14 @@
   --color-kakak: var(--kakak);
   --color-kakak-tint: var(--kakak-tint);
   --color-kakak-line: var(--kakak-line);
+  /* Headline (19 Nov, product change #4, first part): one size above the
+     body, for the single most important line on a card, such as the task's
+     name. `text-headline` sets 22 px, its line height and semi-bold. Keep
+     it out of cn() beside a text colour: the class merger takes an unknown
+     text-* for a colour and drops one of the two. */
+  --text-headline: 1.375rem;
+  --text-headline--line-height: 1.75rem;
+  --text-headline--font-weight: 600;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
