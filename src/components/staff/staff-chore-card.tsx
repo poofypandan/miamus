@@ -8,6 +8,9 @@ import { ChoreCard } from "@/components/chores/chore-card";
 import { ChoreProofPlaces } from "@/components/chores/proof-places";
 import { CouldntDoSheet } from "@/components/staff/couldnt-do-sheet";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useClearProofWhenSettled } from "@/hooks/use-chore-proof";
+import { useHousehold } from "@/context/household-context";
+import { choreDraftKey } from "@/lib/chore-draft";
 
 /**
  * A chore on a staff phone's list (19 Nov, product change #2): the task and
@@ -26,8 +29,12 @@ export function StaffChoreCard({
   /** "Tidak bisa dikerjakan" can be said for it: not said yet, and within the last week (canFileFor). */
   canSayCouldnt: boolean;
 }) {
-  const { occurrence, onPress } = card;
+  const { occurrence, onPress, waitingToSend = false } = card;
   const done = occurrence.status === "completed";
+  const { activeHouseholdId } = useHousehold();
+  // Photos taken on this card, for a chore finished on another phone: let
+  // them go, as the sheet does (the sheet may never be opened now).
+  useClearProofWhenSettled(choreDraftKey(activeHouseholdId, occurrence.template.id, occurrence.date), done && !waitingToSend);
   const [menuOpen, setMenuOpen] = useState(false);
   const [couldntOpen, setCouldntOpen] = useState(false);
   useBackToClose(menuOpen, () => setMenuOpen(false));

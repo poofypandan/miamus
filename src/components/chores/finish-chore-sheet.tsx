@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, Camera, Check, CheckCircle2, CircleSlash, CloudOff, CloudUpload, Eye, Hand, Loader2, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,10 +23,9 @@ import { photoSrc, photoTakenAt } from "@/lib/photos";
 import { useRepairs } from "@/hooks/use-repairs";
 import { RepairNotes } from "@/components/repairs/repair-notes";
 import { cn } from "@/lib/utils";
-import { choreDraftKey, clearChoreDraft } from "@/lib/chore-draft";
+import { choreDraftKey } from "@/lib/chore-draft";
 import { isChoreChanged } from "@/lib/chore-settled";
-import { discardPhoto } from "@/lib/photo-queue";
-import { setChoreProof, useChoreProof } from "@/hooks/use-chore-proof";
+import { useChoreProof, useClearProofWhenSettled } from "@/hooks/use-chore-proof";
 import { useFinishChore } from "@/hooks/use-finish-chore";
 import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
@@ -125,15 +124,8 @@ function FinishChoreBody({
   // draft.
 
   // Finished, here or on another phone: nothing is owed any more — including
-  // any proof still waiting on this phone to upload (Phase 138). Finished
-  // here, both are already in storage and discarding is a no-op.
-  useEffect(() => {
-    if (!done || waitingToSend) return;
-    clearChoreDraft(draftKey);
-    setChoreProof(draftKey, { before: null, after: null });
-    if (beforeUrl) void discardPhoto(beforeUrl);
-    if (afterUrl) void discardPhoto(afterUrl);
-  }, [draftKey, done, waitingToSend, beforeUrl, afterUrl]);
+  // any proof still waiting on this phone to upload (Phase 138).
+  useClearProofWhenSettled(draftKey, done && !waitingToSend);
 
   // Proof the storage server refused outright (Phase 138): it has to be
   // retaken, and finishing is held until it is.

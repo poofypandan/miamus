@@ -12,7 +12,7 @@ import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import { choreDraftKey } from "@/lib/chore-draft";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import { compressPhoto } from "@/lib/image";
-import { discardPhoto, enqueuePhoto } from "@/lib/photo-queue";
+import { discardPhoto, enqueuePhoto, photoSyncState } from "@/lib/photo-queue";
 import { photoSrc, photoTakenAt } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 
@@ -36,12 +36,23 @@ export function ChoreProofPlaces({ occurrence }: { occurrence: ChoreOccurrence }
   const { busy, finish } = useFinishChore(occurrence, draftKey);
   const [takingBefore, setTakingBefore] = useState(false);
   const [takingAfter, setTakingAfter] = useState(false);
-  const beforeState = useQueuedPhoto(before).state;
-  const afterState = useQueuedPhoto(after).state;
-  const failed = beforeState === "failed" || afterState === "failed";
+  const beforePhoto = useQueuedPhoto(before);
+  const afterPhoto = useQueuedPhoto(after);
+  const failed = beforePhoto.state === "failed" || afterPhoto.state === "failed";
   // The same folder as the sheet's photos: one per chore, household-prefixed (Phase 90).
   const pathPrefix = `household/${occurrence.template.id}`;
   const taking = takingBefore || takingAfter;
+
+  /**
+   * A photo just landed: finish if both are in. Read from the draft as saved
+   * and the queue as it is now, not from the render the camera opened in:
+   * the other photo may have been removed or retaken meanwhile.
+   */
+  function landed(draft: { before: string | null; after: string | null }) {
+    const { before: b, after: a } = draft;
+    if (!b || !a || photoSyncState(b) === "failed" || photoSyncState(a) === "failed") return;
+    void finish(b, a);
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -49,25 +60,28 @@ export function ChoreProofPlaces({ occurrence }: { occurrence: ChoreOccurrence }
         <ProofPlace
           label="Sebelum"
           url={before}
+          photo={beforePhoto}
           pathPrefix={pathPrefix}
-          disabled={busy}
+          // Held while the other photo is being saved: it may finish with this one.
+          disabled={busy || takingAfter}
           onBusyChange={setTakingBefore}
           onChange={(url) => {
-            setBefore(url);
+            const draft = setBefore(url);
             // A retaken Sebelum beside a Sesudah already there finishes too.
-            if (url && after && afterState !== "failed") void finish(url, after);
+            if (url) landed(draft);
           }}
         />
         <ProofPlace
           label="Sesudah"
           url={after}
+          photo={afterPhoto}
           pathPrefix={pathPrefix}
-          disabled={busy || (!before && !after)}
+          disabled={busy || takingBefore || (!before && !after)}
           waiting={!before && !after ? "Foto sebelum dulu" : undefined}
           onBusyChange={setTakingAfter}
           onChange={(url) => {
-            setAfter(url);
-            if (url && before && beforeState !== "failed") void finish(before, url);
+            const draft = setAfter(url);
+            if (url) landed(draft);
           }}
         />
       </div>
@@ -98,6 +112,7 @@ export function ChoreProofPlaces({ occurrence }: { occurrence: ChoreOccurrence }
 function ProofPlace({
   label,
   url,
+  photo,
   pathPrefix,
   disabled,
   waiting,
@@ -106,6 +121,8 @@ function ProofPlace({
 }: {
   label: string;
   url: string | null;
+  /** useQueuedPhoto(url), already read by the card. */
+  photo: ReturnType<typeof useQueuedPhoto>;
   pathPrefix: string;
   disabled: boolean;
   /** Why it can't be tapped yet, said in the place. */
@@ -116,7 +133,7 @@ function ProofPlace({
   const formatTime = useFormatTime();
   const input = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
-  const { state, localSrc, ready } = useQueuedPhoto(url);
+  const { state, localSrc, ready } = photo;
   const src = url ? (localSrc ?? (ready && state === null ? photoSrc(url, 320) : undefined)) : undefined;
   const takenAt = photoTakenAt(url);
 
