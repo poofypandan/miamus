@@ -35,6 +35,9 @@ import { cn } from "@/lib/utils";
  * Sesudah waits for Sebelum: the before photo is taken as the work starts.
  * Staff-facing, so Bahasa Indonesia only.
  */
+/** A tap this soon after the supervised warning appears is the same double tap, not a decision. */
+const WARNING_READ_MS = 800;
+
 export function ChoreProofPlaces({ occurrence }: { occurrence: ChoreOccurrence }) {
   const { activeHouseholdId } = useHousehold();
   const draftKey = choreDraftKey(activeHouseholdId, occurrence.template.id, occurrence.date);
@@ -49,15 +52,22 @@ export function ChoreProofPlaces({ occurrence }: { occurrence: ChoreOccurrence }
   const pathPrefix = `household/${occurrence.template.id}`;
   const taking = takingBefore || takingAfter;
   const supervised = !!occurrence.task.requires_supervision;
-  /** A supervised chore's first Selesai tap: the warning is up, the next tap finishes. */
-  const [warned, setWarned] = useState(false);
+  /**
+   * A supervised chore's first Selesai tap: the warning is up for these two
+   * photos (new photos bring it back), and the next tap finishes, but not a
+   * double tap's second half, which would skip reading it.
+   */
+  const [warned, setWarned] = useState<{ photos: string; at: number } | null>(null);
+  const photos = `${before ?? ""}|${after ?? ""}`;
+  const warning = supervised && warned?.photos === photos;
 
   function tapSelesai() {
     if (!before || !after) return;
-    if (supervised && !warned) {
-      setWarned(true);
+    if (supervised && !warning) {
+      setWarned({ photos, at: Date.now() });
       return;
     }
+    if (warned && Date.now() - warned.at < WARNING_READ_MS) return;
     void finish(before, after);
   }
 
@@ -91,7 +101,7 @@ export function ChoreProofPlaces({ occurrence }: { occurrence: ChoreOccurrence }
         </p>
       ) : before && after && !taking ? (
         <>
-          {supervised && warned && !failed && (
+          {warning && !failed && (
             // The sheet's own words for a supervised chore (finish-chore-sheet.tsx).
             <p
               role="alert"

@@ -138,6 +138,10 @@ test("a chore done with an owner there: Selesai first shows the sheet's warning"
   await card.getByRole("button", { name: "Selesai", exact: true }).click();
   await expect(card.getByRole("alert")).toContainText("Tugas ini dikerjakan bersama pemilik rumah");
   expect(glass.status).toBe("pending");
+  // A double tap's second half doesn't finish it: the warning is read first.
+  await card.getByRole("button", { name: "Selesai", exact: true }).click();
+  expect(glass.status).toBe("pending");
+  await page.waitForTimeout(900);
   await card.getByRole("button", { name: "Selesai", exact: true }).click();
   await expect.poll(() => glass.status, { timeout: 30_000 }).toBe("completed");
 });

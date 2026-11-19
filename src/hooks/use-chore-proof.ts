@@ -66,7 +66,7 @@ onChoreDraftChange((key) => {
  * set first and kept even if storage is full or blocked, so the photos still
  * work for this session.
  */
-export function setChoreProof(key: string, draft: ChoreDraft): ChoreDraft {
+export function setChoreProof(key: string, draft: ChoreDraft): void {
   snapshots.set(key, draft);
   writing = key;
   try {
@@ -75,7 +75,6 @@ export function setChoreProof(key: string, draft: ChoreDraft): ChoreDraft {
     writing = null;
   }
   notify(key);
-  return draft;
 }
 
 export function useChoreProof(key: string) {
@@ -84,7 +83,6 @@ export function useChoreProof(key: string) {
     () => read(key),
     () => EMPTY
   );
-  // Each returns the draft as saved, both photos as they are now.
   const setBefore = useCallback((before: string | null) => setChoreProof(key, { ...read(key), before }), [key]);
   const setAfter = useCallback((after: string | null) => setChoreProof(key, { ...read(key), after }), [key]);
   return { before: draft.before, after: draft.after, setBefore, setAfter };
