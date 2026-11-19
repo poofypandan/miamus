@@ -20,7 +20,9 @@ import {
 import { DischargeButton } from "@/components/dashboard/discharge-button";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { AgendaGroupCard } from "@/components/staff/agenda-group-card";
-import { ChoreCard } from "@/components/chores/chore-card";
+import { StaffChoreCard } from "@/components/staff/staff-chore-card";
+import { nameSaysPlace } from "@/lib/room-in-name";
+import { floorNameOf } from "@/lib/places";
 import { FinishChoreSheet } from "@/components/chores/finish-chore-sheet";
 import { StaffActionsFab } from "@/components/staff/staff-actions-fab";
 import { LeaveStatusBanner } from "@/components/staff/leave-request";
@@ -55,7 +57,7 @@ import { PendingBar } from "@/components/shared/pending-bar";
 import { useScrollTopOnChange, useTabNavigation } from "@/hooks/use-tab-navigation";
 import { cn } from "@/lib/utils";
 import { useTaskExceptions } from "@/hooks/use-task-exceptions";
-import { choreException, groupExceptions, slotOf, staffCouldntLine } from "@/lib/couldnt-do";
+import { canFileFor, choreException, groupExceptions, slotOf, staffCouldntLine } from "@/lib/couldnt-do";
 import { StaffRepairsView, SupervisingStrip } from "@/components/staff/staff-perbaikan";
 import { useRepairs } from "@/hooks/use-repairs";
 import { leaveCovering } from "@/lib/leave";
@@ -230,6 +232,7 @@ function TasksView() {
   const pushCard = useStaffPushCard(staffPush);
   const dateStr = formatDateLocal(selectedDate);
   const today = useToday();
+  const dateKeyToday = formatDateLocal(today);
 
   // What the owner lets this person see on the ribbon's day (Phase 178).
   const sees = useStaffVisibility(dateStr);
@@ -413,21 +416,27 @@ function TasksView() {
     return entry.kind === "routine" ? (
       <AgendaGroupCard key={entry.key} group={entry.group} />
     ) : (
-      <ChoreCard
+      <StaffChoreCard
         key={entry.key}
         occurrence={entry.occurrence}
-        locationName={roomName(entry.occurrence.task.location_id, entry.occurrence.task.spot)}
+        // The room, unless the task's name already says it ("Pel teras" in Teras; 19 Nov).
+        // Its floor still shows: the same room name can be on two floors (Codex, PR #153).
+        locationName={
+          nameSaysPlace([entry.occurrence.task.title], entry.occurrence.task.location_id, entry.occurrence.task.spot, locations)
+            ? floorNameOf(entry.occurrence.task.location_id, locations)
+            : roomName(entry.occurrence.task.location_id, entry.occurrence.task.spot)
+        }
         // Someone else's name only when it is someone else's chore — which
         // only an admin without a roster row sees. Left out, the card
-        // says "Untuk Anda".
+        // says nothing: on a person's own list every task is theirs.
         assigneeName={
           entry.occurrence.task.assigned_to && entry.occurrence.task.assigned_to !== isolatedTo
             ? staffName(entry.occurrence.task.assigned_to)
             : undefined
         }
-        locale="id"
         today={today}
         onPress={() => setOpenKey(entry.occurrence.key)}
+        canSayCouldnt={!choreException(exceptions, entry.occurrence) && canFileFor(entry.occurrence.date, dateKeyToday)}
         compact={compact}
         waitingToSend={!!entry.occurrence.row && pendingIds.has(entry.occurrence.row.id)}
         couldnt={(() => {
@@ -435,15 +444,9 @@ function TasksView() {
           return exception ? staffCouldntLine(exception) : null;
         })()}
         supervising={supervisingNote(entry) ? STAFF_SUPERVISING_LABEL : null}
-        // What the tap leads to (Phase 130): an unclaimed chore is claimed
-        // before anything is photographed.
-        action={
-          entry.occurrence.task.assigned_to ? (
-            <TapHint />
-          ) : (
-            <TapHint label="Saya kerjakan" icon={Hand} />
-          )
-        }
+        // An unclaimed chore is claimed before anything is photographed
+        // (Phase 130); one of this person's has its photo places on the card.
+        action={entry.occurrence.task.assigned_to ? undefined : <TapHint label="Saya kerjakan" icon={Hand} />}
       />
     );
   }
@@ -485,6 +488,8 @@ function TasksView() {
         ) : pushCard.ready ? (
         <StaffTipCard
           tips={[
+            // 19 Nov: the task card with its Sebelum and Sesudah places.
+            { id: "staff-task-card-2026-11", show: true },
             // Phase 177: changing what a cooked dish used, once Today has a menu.
             { id: "staff-cooking-changes-2026-11", show: showMenuTip },
             // Phase 170 PR A: only while Kitchen amounts is on.

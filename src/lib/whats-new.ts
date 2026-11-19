@@ -713,6 +713,16 @@ export interface StaffWhatsNewEntry {
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
   {
+    // 19 Nov (product change #2): the task card with its two photo places.
+    id: "staff-task-card-2026-11",
+    date: "2026-11-19",
+    title: "Baru: foto langsung di kartu tugas",
+    lines: [
+      "Setiap tugas Anda punya dua kotak foto: Sebelum dan Sesudah. Ambil foto Sebelum saat mulai, ambil foto Sesudah saat selesai bekerja, lalu ketuk Selesai. Foto yang kurang bagus masih bisa diambil ulang sebelum ketuk Selesai.",
+      "Tidak bisa dikerjakan? Ketuk tiga titik di kartunya. Ketuk nama tugas untuk melihat detailnya.",
+    ],
+  },
+  {
     // Phase 177: once Today has a menu, while the Kitchen switch is on.
     id: "staff-cooking-changes-2026-11",
     date: "2026-11-16",

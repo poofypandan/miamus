@@ -84,6 +84,9 @@ export function ChoreCard({
   waitingToSend = false,
   couldnt = null,
   supervising = null,
+  staff = false,
+  proof,
+  menu,
 }: {
   occurrence: ChoreOccurrence;
   locale: "en" | "id";
@@ -131,6 +134,19 @@ export function ChoreCard({
    * keeps its tone, and done wins.
    */
   supervising?: string | null;
+  /**
+   * The staff list's card (19 Nov, product change #2): the task's name large,
+   * its time under it, and none of the labels a person's own list doesn't
+   * need (category, "Untuk Anda", the repeat). A finished one says Selesai.
+   */
+  staff?: boolean;
+  /**
+   * The proof on the card (the staff list's Sebelum and Sesudah places).
+   * Drawn under the card's tappable part, never inside it: they are buttons.
+   */
+  proof?: ReactNode;
+  /** The card's menu button, top right, beside the tappable part. */
+  menu?: ReactNode;
 }) {
   const formatTime = useFormatTime();
   const t = COPY[locale];
@@ -139,21 +155,43 @@ export function ChoreCard({
   const recurrence = recurrenceOf(occurrence.template);
   const supervised = !!task.requires_supervision;
   const done = status === "completed";
+  // The staff card's row of labels only when it has one to show.
+  const badges =
+    !staff ||
+    done ||
+    supervised ||
+    !task.assigned_to ||
+    !!assigneeName ||
+    (!!action && !done);
 
+  // The staff card's headline: an open chore's name at the headline size.
+  const headline = staff && !done;
+  const time = task.due_time ? formatTime(task.due_time) : t.anytime;
   const body = (
     <>
       <div className="flex items-start gap-2">
         <span className="min-w-0 flex-1">
           <span
-            className={cn(
-              "block text-sm font-medium break-words",
-              // No strikethrough (Phase 131): it made a finished title hard to
-              // read, and the green face and the tick already say "done".
-              done && "text-muted-foreground"
-            )}
+            className={
+              headline
+                ? // Not through cn(): it reads text-headline as a colour.
+                  "block text-headline break-words text-gray-900"
+                : cn(
+                    "block text-sm font-medium break-words",
+                    // No strikethrough (Phase 131): it made a finished title hard to
+                    // read, and the green face and the tick already say "done".
+                    done && "text-muted-foreground"
+                  )
+            }
           >
             {task.title}
           </span>
+          {headline && (
+            <span className="mt-1 flex items-center gap-1.5 text-[15px] text-muted-foreground">
+              <Clock className="size-4 shrink-0" aria-hidden />
+              {time}
+            </span>
+          )}
           {/* Where, straight under what (Phase 135) — kept on a finished
               compact card too: it is how one chore is told from another. */}
           {/* Readable on purpose (audit B1, item 5): the room at 13px and
@@ -178,6 +216,7 @@ export function ChoreCard({
             </span>
           )}
         </span>
+        {done && staff && <span className={cn("text-sm font-semibold", DONE_TONE.check)}>{t.done}</span>}
         {done && <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", DONE_TONE.check)} />}
         {/* A span, not a button: the card is already the button. */}
         {editable && !done && (
@@ -188,30 +227,39 @@ export function ChoreCard({
         )}
       </div>
 
+      {badges && (
       <div className="flex flex-wrap items-center gap-1.5">
-        <Badge className={cn("h-5 gap-1 px-1.5 text-[10px]", categoryClass())}>
-          <CategoryIcon className="size-3" />
-          {categoryLabel(task.category, locale)}
-        </Badge>
+        {!staff && (
+          <Badge className={cn("h-5 gap-1 px-1.5 text-[10px]", categoryClass())}>
+            <CategoryIcon className="size-3" />
+            {categoryLabel(task.category, locale)}
+          </Badge>
+        )}
 
-        <Badge variant="secondary" className="h-5 gap-1 px-1.5 text-[10px]">
-          <Clock className="size-3" />
-          {task.due_time ? formatTime(task.due_time) : t.anytime}
-        </Badge>
+        {/* A finished staff card keeps its time small here; an open one has it under the name. */}
+        {!headline && (
+          <Badge variant="secondary" className="h-5 gap-1 px-1.5 text-[10px]">
+            <Clock className="size-3" />
+            {time}
+          </Badge>
+        )}
 
-        <Badge variant="outline" className="h-5 gap-1 px-1.5 text-[10px] font-normal">
-          {task.assigned_to ? (
-            <>
-              <UserRound className="size-3" /> {assigneeName ?? t.forYou}
-            </>
-          ) : (
-            <>
-              <Users className="size-3" /> {t.unassigned}
-            </>
-          )}
-        </Badge>
+        {/* On a person's own list every task is theirs: no "Untuk Anda". Anyone, or someone else's name, still shows. */}
+        {(!staff || !task.assigned_to || assigneeName) && (
+          <Badge variant="outline" className="h-5 gap-1 px-1.5 text-[10px] font-normal">
+            {task.assigned_to ? (
+              <>
+                <UserRound className="size-3" /> {assigneeName ?? t.forYou}
+              </>
+            ) : (
+              <>
+                <Users className="size-3" /> {t.unassigned}
+              </>
+            )}
+          </Badge>
+        )}
 
-        {recurrence !== "none" && (
+        {!staff && recurrence !== "none" && (
           <Badge variant="outline" className="h-5 gap-1 px-1.5 text-[10px] font-normal">
             <Repeat className="size-3" />
             {taskRepeatLabel(occurrence.template, locale)}
@@ -243,6 +291,7 @@ export function ChoreCard({
           </span>
         )}
       </div>
+      )}
 
       {couldnt && !done && (
         <p className="flex items-center gap-1 text-[13px] font-medium text-amber-800" data-testid="couldnt-line">
@@ -289,6 +338,29 @@ export function ChoreCard({
           "border-amber-300 border-l-[3px] border-l-amber-500 bg-amber-50"
         : cn("bg-card", AGENDA_TONES.chore.tint)
   );
+
+  if (proof || menu) {
+    // The card's tappable part and its own buttons side by side, never nested.
+    return (
+      <div className={className}>
+        <div className="flex items-start gap-1">
+          {onPress ? (
+            <button
+              type="button"
+              onClick={onPress}
+              className="-m-1 flex min-w-0 flex-1 flex-col gap-2 rounded-lg p-1 text-left active:bg-muted/60"
+            >
+              {body}
+            </button>
+          ) : (
+            <div className="flex min-w-0 flex-1 flex-col gap-2">{body}</div>
+          )}
+          {menu}
+        </div>
+        {proof}
+      </div>
+    );
+  }
 
   if (!onPress) return <div className={className}>{body}</div>;
 
