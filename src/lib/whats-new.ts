@@ -28,6 +28,26 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 20 Nov (the warm seal, Kakak's new mark): her look, so a short note. In
+    // the Kakak sheet after the short-card note, under the calm-start rules.
+    id: "kakak-warm-seal-2026-11",
+    date: "2026-11-20",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: Kakak's new look", id: "Baru: tampilan baru Kakak" },
+    steps: {
+      en: [
+        "Kakak has a new mark: the Miamus roof and a heart on a terracotta circle. Her replies sit on her own soft colour, so you can tell at a glance who is speaking.",
+        "Her heart moves a little: it beats while she thinks, follows her voice when Read replies aloud is on, and settles once when something is saved. It stays still if your phone is set to reduce motion.",
+      ],
+      id: [
+        "Kakak punya tanda baru: atap Miamus dan hati di lingkaran terakota. Jawabannya ada di warna lembutnya sendiri, jadi langsung terlihat siapa yang bicara.",
+        "Hatinya sedikit bergerak: berdetak saat Kakak berpikir, mengikuti suaranya saat Bacakan jawaban Kakak menyala, dan bergerak sekali saat ada yang tersimpan. Tetap diam kalau HP Anda diatur untuk mengurangi gerakan.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 19 Nov (product change #1): Kakak's card, short by default. A card in
     // the Kakak sheet before the first try, for households with Kakak only,
     // under the calm-start rules (one card a week, never to new households).
