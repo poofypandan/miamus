@@ -1,0 +1,35 @@
+{
+  "60": [
+    { "id": "01", "from": 0.0, "to": 2.1, "v17": 1.95, "what": "Mama, look!: the girl tugs and points; her bubble" },
+    { "id": "02", "from": 2.1, "to": 5.0, "v17": 4.2, "fadeIn": 0, "what": "The pile: questions from Mama's phone bury both bubbles; Done yet?" },
+    { "id": "03", "from": 5.0, "to": 8.0, "fadeIn": 0.4, "what": "Dusk: fallen questions on the lawn, the window lit; sky title L1" },
+    { "id": "04", "from": 8.0, "to": 11.0, "fadeIn": 0.5, "what": "First light: fireflies drift to the window; What if you only had to say it once?" },
+    { "id": "05", "from": 11.0, "to": 15.0, "fadeIn": 0.5, "what": "Dawn: Kakak's mark risen from Mama's phone; caption L3 with the AI tab" },
+    { "id": "06", "from": 15.0, "to": 16.6, "what": "The mic: the app's mic control from Mama's phone, pressed" },
+    { "id": "07", "from": 16.6, "to": 20.7, "what": "She says it: Mama's words in her bubble; the app's listening control" },
+    { "id": "08a", "from": 20.7, "to": 22.4, "what": "Kakak's card: today's five summary rows; caption L4b" },
+    { "id": "08b", "from": 22.4, "to": 24.0, "what": "One tap: the card's real Looks right button, pressed; caption L4b" },
+    { "id": "09", "from": 24.0, "to": 27.0, "what": "The hand-over: the task as a light crosses the garden to Sari on the terrace; caption L5" },
+    { "id": "10", "from": 27.0, "to": 30.0, "what": "Sari's screen: her task sheet (Indonesian), Ambil Foto Sebelum pressed; no caption (L6 cut)" },
+    { "id": "11", "from": 30.0, "to": 33.0, "what": "She does it: the after photo and Selesaikan, pressed; caption L7a" },
+    { "id": "12", "from": 33.0, "to": 35.0, "fadeIn": 0.4, "what": "They run the home: Budi, Sari, Yanti, Joko with Maya, name labels; caption L7b" },
+    { "id": "13", "from": 35.0, "to": 37.0, "what": "All on track: the app's status card from Mama's phone; caption L8" },
+    { "id": "14", "from": 37.0, "to": 41.0, "what": "The quiet phone: asleep in Mama's hand, the kite on the glass; caption L9" },
+    { "id": "15", "from": 41.0, "to": 45.0, "fadeIn": 0.3, "what": "Up to the kite: the phone dark at Mama's side, the girl, the kite" },
+    { "id": "16", "from": 45.0, "to": 47.0, "v17": 46.0, "what": "Mama, look! again: nothing covers it" },
+    { "id": "17", "from": 47.0, "to": 49.0, "v17": 47.8, "what": "That one's yours. (no phone glow, owner's C1 decision 5)" },
+    { "id": "18", "from": 49.0, "to": 51.0, "what": "I'm here, sweetie.: Mama's own bubble, tail to her, in the close two-shot (v17 had a plate)" },
+    { "id": "19", "from": 51.0, "to": 53.0, "v17": 52.0, "what": "The hand: mother and daughter, the dogs" },
+    { "id": "20", "from": 53.0, "to": 57.0, "v17": 56.8, "fadeIn": 0.4, "what": "Miamus: the mark and name on the spoken word; More time for your family." },
+    { "id": "21", "from": 57.0, "to": 60.0, "v17": 58.8, "fadeIn": 0.4, "what": "End card: For the little moments, miamus.app" }
+  ],
+  "15": [
+    { "id": "A", "from": 0.0, "to": 3.0, "v17": 2.55, "what": "Buried: the girl's bubble under the pile; Done yet?" },
+    { "id": "B1", "from": 3.0, "to": 4.8, "what": "One sentence: the pile gone, Mama's one bubble; caption S1 with the AI tab" },
+    { "id": "B2", "from": 4.8, "to": 5.7, "what": "One tap: the real Looks right button from Mama's phone, pressed; caption S1" },
+    { "id": "C", "from": 5.7, "to": 7.6, "what": "Everyone knows: the light reaches Sari; her task's title block; caption S2" },
+    { "id": "D", "from": 7.6, "to": 10.0, "what": "Done: Sari mops; the app's toast Pel teras selesai" },
+    { "id": "E", "from": 10.0, "to": 11.5, "v17": 10.9, "fadeIn": 0.3, "what": "Mama, look!: the same frame as the opening, answered" },
+    { "id": "F", "from": 11.5, "to": 15.0, "v17": 13.8, "fadeIn": 0.3, "what": "Miamus: the name, More time for your family., For the little moments" }
+  ]
+}

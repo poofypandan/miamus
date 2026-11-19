@@ -52,6 +52,7 @@ From `marketing/trailer/`:
     npm run render -- --only=film-60-en
     npm run studio                 # preview and scrub in the browser
     npm run frames                 # review frames into review/ (see scripts/stills.mjs)
+    npm run c15 -- <out-dir>       # C1.5 stills on the score (src/stills/): a PNG per shot, the 38 px readability check, half-res slideshows on the v17 mix
 
 `npm run capture` needs the app built against the stub host first, from the
 repo root:

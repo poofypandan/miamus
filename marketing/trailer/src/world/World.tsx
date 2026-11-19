@@ -41,6 +41,10 @@ export interface WorldProps {
   /** The day's work, seen from the garden: washing on the line, the sprinkler on. */
   laundry?: number;
   sprinkler?: number;
+  /** C1.5: where Mama stands (garden px) and her scale, overriding her walk-in. */
+  mamaAt?: { x: number; y: number; s: number };
+  /** C1.5: more figures in the garden layer (the staff), drawn after the family. */
+  extra?: React.ReactNode;
 }
 
 const R = (seed: string) => random(`miamus-${seed}`);
@@ -547,7 +551,7 @@ function Sprinkler({ light, frame, show }: { light: Light; frame: number; show: 
 export const CHILD_AT = { x: 372, y: 1452 };
 export const MAMA_AT = { x: 286, y: 1458 };
 
-export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child = 0, mama = 0, mamaPose, childPose, dogs = 0, kite = 0, kiteLift = 0, birds = 0, blur = 0, house = 1, laundry = 0, sprinkler = 0 }) => {
+export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child = 0, mama = 0, mamaPose, childPose, dogs = 0, kite = 0, kiteLift = 0, birds = 0, blur = 0, house = 1, laundry = 0, sprinkler = 0, mamaAt, extra }) => {
   const pose = kitePose(frame, kiteLift);
   // Low sun: long shadows, away from it.
   const sunUp = light.sunY < HORIZON + 30 ? Math.min(1, light.glow * 1.2) : 0;
@@ -556,10 +560,10 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
   // The low sun also draws a thin bright edge on the side that faces it.
   const rim = { dx: light.sunX < 540 ? -1.9 : 1.9, o: sunUp, fill: css(mix(light.sun, [255, 255, 255], 0.2), 0.6 * sunUp) };
   // Mama comes out across the terrace and down to the child.
-  const mamaX = MAMA_AT.x + (1 - mama) * 452;
-  const mamaY = MAMA_AT.y - (1 - mama) * 98;
+  const mamaX = mamaAt ? mamaAt.x : MAMA_AT.x + (1 - mama) * 452;
+  const mamaY = mamaAt ? mamaAt.y : MAMA_AT.y - (1 - mama) * 98;
   // Smaller at the door, full height beside the child: she is walking toward us.
-  const mamaS = 0.62 + 0.38 * mama;
+  const mamaS = mamaAt ? mamaAt.s : 0.62 + 0.38 * mama;
   const svg = (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0 }}>
       <g transform={layer(cam, 0.1)}>
@@ -665,6 +669,7 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
             <Child light={light} frame={frame} pose={childPose} />
           </g>
         )}
+        {extra}
       </g>
       {/* The kite flies between the garden and the sky: it moves less than the grass, more than the hills. */}
       {kite > 0 && (
