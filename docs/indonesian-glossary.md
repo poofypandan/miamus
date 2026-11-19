@@ -85,6 +85,8 @@ people are **staf** and **admin**.
 | I'm staff (start screen) | **Saya staf** | Shown in Indonesian on the English start screen too: it is the staff's door (owner decision, 2026-11-07). |
 | Looks right (confirm a Kakak suggestion) | **Sudah benar** | Kakak's card: the owner checks and confirms. Phase 156 plan, section 11. |
 | Change | **Ubah** | Edit a Kakak suggestion before saving. |
+| Starts (a repeating chore's first day, on Kakak's card) | **Mulai** | 19 Nov: Kakak's card is short by default; the first day sits under Ubah. |
+| Or tell Kakak what to change | **Atau bilang ke Kakak apa yang diubah** | 19 Nov: under Ubah, for a change the card's choices can't make. |
 | Save 2 (Save N) | **Simpan 2** (**Simpan N**) | Saving several Kakak suggestions at once. |
 | One moment… | **Sebentar…** | While Kakak thinks. |
 | Or type your answer | **Atau ketik jawaban** | Under Kakak's answer buttons. |

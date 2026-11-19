@@ -320,6 +320,58 @@
 }
 
 /*
+ * Kakak's heart (20 Nov, the warm seal): the roof never moves; the heart is
+ * alive. Set by KakakAvatar's `beat`:
+ * - think: a slow beat to 105 %, a little under once a second, while she reads;
+ * - speak: a gentle beat while a reply is read aloud;
+ * - settle: once, when something is saved, the heart widens by 4 % and comes
+ *   back, on the "done" timing of kakak-done above.
+ * Transform only, scaled from the heart's own centre. Nothing moves under
+ * reduced motion.
+ */
+.kakak-heart {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.kakak-heart[data-beat="think"] {
+  animation: kakak-think 1.15s ease-in-out infinite;
+}
+.kakak-heart[data-beat="speak"] {
+  animation: kakak-speak 0.7s ease-in-out infinite;
+}
+.kakak-heart[data-beat="settle"] {
+  animation: kakak-settle 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 1;
+}
+@keyframes kakak-think {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.05);
+  }
+}
+@keyframes kakak-speak {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+@keyframes kakak-settle {
+  45% {
+    transform: scale(1.04, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kakak-heart[data-beat] {
+    animation: none;
+  }
+}
+
+/*
  * The branded loading screens (Phase 121). Opacity only, like view-fade.
  *
  * loader-in holds the screen invisible for its first 150ms: most route
