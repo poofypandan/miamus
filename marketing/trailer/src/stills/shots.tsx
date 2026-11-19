@@ -470,6 +470,7 @@ function Shot15() {
 
 /** The 15's C: the wide garden toward the terrace, Sari's title block from her phone (unchanged from C1.5). */
 function HandOver({ tod, frame, caption }: { tod: number; frame: number; caption: React.ReactNode; card?: boolean }) {
+  // A2 (trailer-reset 20, the manager's note 4): the plate keeps its tab, at 44 px, through both of Kakak's captions.
   const light = lightAt(tod);
   const cam: Cam = { x: 150, y: 250, z: 1.3 };
   const to = P(cam, SARI.x - 42 * 0.72, SARI.y - 200 * 0.72);
@@ -477,7 +478,7 @@ function HandOver({ tod, frame, caption }: { tod: number; frame: number; caption
     <>
       <World light={light} frame={frame} cam={cam} mama={1} mamaAt={{ ...MAMA, s: 1 }} mamaPose={{ shade: 0.4, phone: 1 }} laundry={1} birds={1} extra={sari(light)} />
       <AppBubble id="sariTitle" x={150} y={560} scale={3.4} to={{ x: to.x, y: to.y - 18 }} />
-      <Caption text={caption} />
+      <Caption text={caption} tab={TAB} tabSize={44} />
       <Grade />
     </>
   );
@@ -534,7 +535,7 @@ function B1() {
     <Wide15 frame={100}>
       <Ghosts />
       <MamaSays lines={SAY} y={232} to={{ x: h.x + 4, y: h.y + 4 }} />
-      <Caption text="Hi, I'm Kakak. Tell me once," tab={TAB} />
+      <Caption text="Hi, I'm Kakak. Tell me once," tab={TAB} tabSize={44} />
     </Wide15>
   );
 }
@@ -544,7 +545,7 @@ function B2() {
   return (
     <Wide15 frame={150}>
       <AppBubble id="looksRight" x={56} y={560} scale={3.2} pad={14} to={ph} pressed />
-      <Caption text="Hi, I'm Kakak. Tell me once," tab={TAB} />
+      <Caption text="Hi, I'm Kakak. Tell me once," tab={TAB} tabSize={44} />
     </Wide15>
   );
 }

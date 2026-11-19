@@ -80,6 +80,8 @@ LOCALE_CUES["id"]["60"] = {"L11": 53.73}
 LOCALE_CUES["id"]["15"] = {"S3": 11.3}
 CAPTION_ONLY = {}
 TEMPO = {}
+# A2 (owner, C1 decision 3): "In their own language." (L6) is cut from both languages.
+del CUES["60"]["L6"]
 # Where the finished mixes go. The film reads public/audio; the lo-fi listening page (audio/music/page_lofi.py) points
 # these elsewhere so its trial mixes never replace the film's.
 OUT_DIR = os.path.join(ROOT, "public", "audio")
@@ -270,6 +272,8 @@ if __name__ == "__main__":
     if arg("--sfx", None) == "C":
         SFX_NAME = "sfx-{cut}-C.wav"
     BRAND_DIP_DB = float(arg("--brand-dip", "0"))
+    # A2: `--out-name a2-{cut}-{locale}.wav` writes the mixes beside v17's instead of over them.
+    OUT_NAME = arg("--out-name", OUT_NAME)
     data, report = {}, {}
     for cut in ("60", "15"):
         for locale in ("en", "id"):

@@ -14,6 +14,7 @@ import { lightAt } from "../world/tod";
 import { COPY, type Locale } from "./copy";
 import { CARDS, CARDS15, ENDING, ENDING15, FPS, HOOK, HOOK15, QUIET, S15, S60, SARI15, STAFF, type Span, TELL, TELL15, len } from "./timeline";
 import { CaptureCard, ListeningPulse, Thumb } from "../ui/cards";
+import { MamaSays } from "../stills/kit";
 import voData from "./vo-data.json";
 
 /** v15, the brand lock: the frame (in the scene) where she says "Miamus", from the end line's measured onset. */
@@ -115,7 +116,8 @@ function SoftWorld({ soft, ...props }: React.ComponentProps<typeof World> & { so
   const mask = `radial-gradient(ellipse ${PAIR.rx}px ${PAIR.ry}px at ${PAIR.x}px ${PAIR.y}px, #000 60%, transparent 100%)`;
   return (
     <>
-      <AbsoluteFill style={{ filter: `blur(${soft.toFixed(2)}px)` }}>
+      {/* A2: the blurred copy is drawn a little larger, so its soft edge never shows the night behind it (a thin dark line). */}
+      <AbsoluteFill style={{ filter: `blur(${soft.toFixed(2)}px)`, transform: "scale(1.03)" }}>
         <World {...props} />
       </AbsoluteFill>
       <AbsoluteFill style={{ WebkitMaskImage: mask, maskImage: mask }}>
@@ -692,9 +694,15 @@ function PressRing({ x, y, at }: { x: number; y: number; at: number }) {
 /* 9. The ending: the garden, Mama, the kite, the name                 */
 /* ------------------------------------------------------------------ */
 
-export function Ending({ locale, t0, fast }: SceneProps) {
+/**
+ * A2 options (trailer-reset 20, fix 9; the 15's E and F): `a2` clears the girl's bubble when Mama answers, lowers
+ * Mama's shading hand as she takes the girl's, lets the camera dip so the hand is seen, keeps the half dog out of the
+ * close two-shot, says Mama's answer in her own bubble, and sets Kakak's end line as a plain line under the name.
+ */
+export function Ending({ locale, t0, fast, a2 = false }: SceneProps & { a2?: boolean }) {
   const frame = useCurrentFrame();
   const copy = COPY[locale];
+  const voice = useContext(Voice);
   const E = fast ? ENDING15 : ENDING;
   const brand = brandFrame(fast, locale, t0, E.name);
   // The light deepens from the garden to the end card (v9: the 60 s ending starts 2.8 s sooner, at 44.2 s).
@@ -732,19 +740,39 @@ export function Ending({ locale, t0, fast }: SceneProps) {
   // v9: one set of cues for both languages (Fable).
   const shade = E.shade;
   const hold = E.hold;
-  const mamaPose = { shade: ramp(frame, shade[0], shade[1], ease), hold: ramp(frame, hold[0], hold[1], ease), sway: moves.sway };
+  // A2: her shading hand comes down as her other hand takes the girl's (fix 9: the hand is the shot).
+  const shadeUp = ramp(frame, shade[0], shade[1], ease) * (a2 ? 1 - ramp(frame, hold[0] - 12, hold[0] + 8, ease) : 1);
+  const mamaPose = { shade: shadeUp, hold: ramp(frame, hold[0], hold[1], ease), sway: moves.sway };
+  // A2: Mama's answer in her own bubble (the 60: her spoken line; the 15: the words alone, from 11.0 s).
+  const m2 = voice.cue("M2");
+  // (In the 15 the crane starts at 11.33 s, so her answer is up from 10.6 s, clear before the name lands at 11.53 s, and rides with her.)
+  const answer = a2 ? (m2 ? { from: m2.from - t0, to: m2.to - t0 + 20 } : fast ? { from: 22, to: 37 } : null) : null;
+  const end = voice.cue(fast ? "S3t" : "L11t");
+  const lineAt = a2 && fast && end ? Math.max(E.line, end.to - t0) : E.line;
+  const girlOut = a2 && answer ? answer.from - 4 : Math.min(E.crane[0] + 6, brand - 16);
+  const head = project(cam, 0.92, 284, 1170);
+  // The bubble keeps its place beside her head as the camera moves (set in the two-shot: x 478, y 230).
+  const home = project(TWO_SHOT, 0.92, 284, 1170);
+  const bx = 478 + head.x - home.x;
+  const by = 230 + head.y - home.y;
+  const say = answer ? ramp(frame, answer.from - 4, answer.from + 8, easeOut) * (1 - ramp(frame, answer.to, answer.to + 10)) : 0;
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       {/* Out of the cards' blur (22 px, as the backdrop was) into focus; the slight scale matches the backdrop's. */}
       <AbsoluteFill style={{ filter: focus < 1 ? `blur(${(22 * (1 - focus)).toFixed(2)}px)` : undefined, transform: focus < 1 ? `scale(${1 + 0.06 * (1 - focus)})` : undefined }}>
-        <SoftWorld soft={5 * close} light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} mamaPose={mamaPose} childPose={moves.child} kiteLift={lift} birds={1} />
+        <SoftWorld soft={5 * close} light={lightAt(tod)} frame={frame + t0} cam={cam} child={1} dogs={1} kite={1} mama={walk} mamaPose={mamaPose} childPose={moves.child} kiteLift={lift} birds={1} runDog={a2 ? 1 - clamp01((close - 0.85) / 0.15) : 1} />
       </AbsoluteFill>
       {focus < 1 && <AbsoluteFill style={{ background: `rgba(255,250,242,${(0.08 * (1 - focus)).toFixed(3)})` }} />}
       <Vignette />
       {/* v15: her handwriting is gone by the time the name arrives (they shared the same place on screen). */}
-      <GirlBubble lines={copy.call} cam={cam} at={E.bell} out={Math.min(E.crane[0] + 6, brand - 16)} box={GIRL_BUBBLE.two} />
+      <GirlBubble lines={copy.call} cam={cam} at={E.bell} out={girlOut} box={GIRL_BUBBLE.two} />
+      {say > 0.01 && (
+        <div style={{ position: "absolute", inset: 0, opacity: say, transform: `translateY(${(1 - say) * 18}px)` }}>
+          <MamaSays lines={splitAtComma(copy.lines.M2)} x={bx} y={by} w={440} size={72} to={{ x: head.x + 30, y: head.y - 10 }} />
+        </div>
+      )}
       {/* v15: the mark and the name arrive together on her spoken "Miamus"; the line on the bell and the address as before. */}
-      <EndCard line={copy.end.line} em={copy.end.em} call={copy.end.call} url={copy.end.url} mark={brand} name={brand} lineAt={E.line} callAt={"call" in E ? (E as { call: number }).call : undefined} urlAt={E.url} />
+      <EndCard line={copy.end.line} em={copy.end.em} call={copy.end.call} url={copy.end.url} mark={brand} name={brand} lineAt={lineAt} callAt={"call" in E ? (E as { call: number }).call : undefined} urlAt={E.url} spoken={a2 && end ? { text: copy.lines[fast ? "S3t" : "L11t"], from: end.from - t0 } : undefined} />
     </AbsoluteFill>
   );
 }

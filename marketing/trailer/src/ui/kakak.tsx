@@ -10,14 +10,22 @@ import { clamp01, ease, easeOut, ramp, springAt } from "./kit";
  * beside every caption, so it is always clear who is talking, and that she
  * is the app's AI helper, not a person.
  */
+/*
+ * A2 (owner, 20 Nov; trailer-reset 21, 22): the film's Kakak is treatment 1 "Tidy": the Miamus roof and a fuller heart
+ * with a rounded tip, no walls, on the pale blush disc. The roof never moves; the heart is alive. No glow rings.
+ */
 const ROOF = "112,214 256,104 400,214";
-const WALLS = "M152 400V262M360 262V400";
-const HEART =
-  "M256 322.4C232.4 304.7 182.8 271.7 182.8 230.4C182.8 204.4 201.7 185.6 224.1 185.6C239.5 185.6 250.1 195 256 206.8C261.9 195 272.5 185.6 287.9 185.6C310.3 185.6 329.2 204.4 329.2 230.4C329.2 271.7 279.6 304.7 256 322.4Z";
-const VIEWBOX = "92 84 328 336";
+function heartPath(x: number, y: number, w: number, h: number) {
+  const p = (u: number, v: number) => `${(x + u * w).toFixed(1)} ${(y + v * h).toFixed(1)}`;
+  return `M${p(0.5, 0.26)}C${p(0.44, 0.1)} ${p(0.34, 0)} ${p(0.23, 0)}C${p(0.09, 0)} ${p(0, 0.13)} ${p(0, 0.31)}C${p(0, 0.56)} ${p(0.24, 0.76)} ${p(0.43, 0.95)}Q${p(0.5, 1.02)} ${p(0.57, 0.95)}C${p(0.76, 0.76)} ${p(1, 0.56)} ${p(1, 0.31)}C${p(1, 0.13)} ${p(0.91, 0)} ${p(0.77, 0)}C${p(0.66, 0)} ${p(0.56, 0.1)} ${p(0.5, 0.26)}Z`;
+}
+const HEART = heartPath(160, 204, 192, 176);
+/** The heart's centre, the point it grows from. */
+const HC = "256 292";
+const VIEWBOX = "92 78 328 328";
 
-/** v17: how much the heart grows with her voice: 1.00 at rest, up to 1.05 on her loudest syllables. */
-const PULSE = 0.05;
+/** A2: how much the heart grows with her voice: up to 6 % on her loudest syllables (21: seen at 64 px). */
+const PULSE = 0.06;
 
 export function KakakAvatar({ size, glow = 0, pulse = 0 }: { size: number; glow?: number; pulse?: number }) {
   return (
@@ -32,13 +40,12 @@ export function KakakAvatar({ size, glow = 0, pulse = 0 }: { size: number; glow?
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
-        boxShadow: glow > 0.02 ? `0 0 ${size * (0.25 + 0.5 * glow)}px ${size * 0.06 * glow}px rgba(214,128,116,${(0.55 * glow).toFixed(3)})` : undefined,
+        boxSizing: "border-box",
       }}
     >
-      <svg viewBox={VIEWBOX} width={size * 0.64} height={size * 0.64 * (336 / 328)} fill="none">
+      <svg viewBox={VIEWBOX} width={size * 0.64} height={size * 0.64} fill="none">
         <polyline points={ROOF} stroke={C.kakak} strokeWidth={40} strokeLinecap="round" strokeLinejoin="round" />
-        <path d={WALLS} stroke={C.kakak} strokeWidth={40} strokeLinecap="round" />
-        <path d={HEART} fill={C.kakak} transform={`translate(256 254) scale(${(1 + PULSE * pulse).toFixed(4)}) translate(-256 -254)`} />
+        <path d={HEART} fill={C.kakak} transform={`translate(${HC}) scale(${(1 + PULSE * pulse).toFixed(4)}) translate(-${HC.replace(" ", " -")})`} />
       </svg>
     </div>
   );
@@ -53,27 +60,13 @@ export function KakakMark({ size, at, level = 0, pulse = 0 }: { size: number; at
   const { fps } = useVideoConfig();
   const disc = springAt(frame, fps, at, { damping: 14, stiffness: 120, mass: 0.9 });
   const roof = ramp(frame, at + 6, at + 22, easeOut);
-  const walls = ramp(frame, at + 16, at + 30, easeOut);
-  const heart = springAt(frame, fps, at + 28, { damping: 9, stiffness: 180, mass: 0.7 });
+  const heart = springAt(frame, fps, at + 22, { damping: 9, stiffness: 180, mass: 0.7 });
   // v17: once she is whole, the heart grows a little with her voice (her loudness, not a timed beat) and rests when
   // she is quiet.
   const beat = frame > at + 40 ? PULSE * pulse : 0;
-  const glow = clamp01(heart) * (0.35 + 0.65 * level);
   if (frame < at) return null;
   return (
     <div style={{ width: size, height: size, position: "relative", transform: `scale(${0.6 + 0.4 * disc})`, opacity: Math.min(1, disc * 1.6) }}>
-      {/* Rings that widen with her voice. */}
-      {[0, 1].map((i) => (
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            inset: -size * (0.1 + 0.16 * i) * (0.6 + level),
-            borderRadius: "50%",
-            border: `${2.5 - i}px solid rgba(255,236,226,${(0.5 - 0.2 * i) * glow})`,
-          }}
-        />
-      ))}
       <div
         style={{
           position: "absolute",
@@ -81,13 +74,12 @@ export function KakakMark({ size, at, level = 0, pulse = 0 }: { size: number; at
           borderRadius: "50%",
           background: C.kakakTint,
           border: `${size * 0.016}px solid ${C.kakakLine}`,
-          boxShadow: `0 0 ${size * (0.3 + 0.5 * glow)}px ${size * 0.05 * glow}px rgba(255,214,196,${0.75 * glow}), 0 ${size * 0.06}px ${size * 0.16}px rgba(40,20,30,0.22)`,
+          boxShadow: `0 ${size * 0.06}px ${size * 0.16}px rgba(40,20,30,0.22)`,
         }}
       />
-      <svg viewBox={VIEWBOX} width={size * 0.64} height={size * 0.64 * (336 / 328)} fill="none" style={{ position: "absolute", left: size * 0.18, top: size * 0.172 }}>
+      <svg viewBox={VIEWBOX} width={size * 0.64} height={size * 0.64} fill="none" style={{ position: "absolute", left: size * 0.18, top: size * 0.18 }}>
         <polyline points={ROOF} stroke={C.kakak} strokeWidth={40} strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - roof} opacity={roof > 0 ? 1 : 0} />
-        <path d={WALLS} stroke={C.kakak} strokeWidth={40} strokeLinecap="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - walls} opacity={walls > 0 ? 1 : 0} />
-        <g transform={`translate(256 254) scale(${Math.max(0, heart) * (1 + beat)}) translate(-256 -254)`}>
+        <g transform={`translate(${HC}) scale(${Math.max(0, heart) * (1 + beat)}) translate(-${HC.replace(" ", " -")})`}>
           <path d={HEART} fill={C.kakak} />
         </g>
       </svg>
@@ -156,7 +148,7 @@ function CaptionPlate({ cue, level, pulse = 0 }: { cue: CaptionCue; level: numbe
         }}
       >
         <KakakAvatar size={62} glow={level * (frame <= cue.to ? 1 : 0)} pulse={frame <= cue.to ? pulse : 0} />
-        <div style={{ fontFamily: FONT, fontSize: 41, fontWeight: 600, lineHeight: 1.2, letterSpacing: -0.3, color: "#fff", textWrap: "balance" } as React.CSSProperties}>
+        <div style={{ fontFamily: FONT, fontSize: 50, fontWeight: 600, lineHeight: 1.18, letterSpacing: -0.3, color: "#fff", textWrap: "balance" } as React.CSSProperties}>
           {words.map((w, i) => {
             const at = cue.from + (span * seen) / total;
             seen += w.length + 1;

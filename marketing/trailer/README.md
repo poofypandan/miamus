@@ -53,6 +53,10 @@ From `marketing/trailer/`:
     npm run studio                 # preview and scrub in the browser
     npm run frames                 # review frames into review/ (see scripts/stills.mjs)
     npm run c15 -- <out-dir>       # C1.5 stills on the score (src/stills/): a PNG per shot, the 38 px readability check, half-res slideshows on the v17 mix
+    npm run a2 -- <out-dir>        # A2 (src/a2/): Acts 1, 2, 4 moving, Act 3 as stills; half-res MP4s on public/audio/a2-*.wav and a frame sheet each
+                                   # the A2 sound: node audio/cues.mjs; .tools/venv-main/bin/python audio/sfx.py;
+                                   #   .tools/venv-main/bin/python audio/mix.py --voice eleven-lyly-v14 --mama mama-aita-v14 --music felt --out-name "a2-{cut}-{locale}.wav"
+                                   #   (stems in audio/out/: vo/eleven-lyly-v14, vo/mama-aita-v14, music-*-felt.wav, copied from the v17 sound build)
 
 `npm run capture` needs the app built against the stub host first, from the
 repo root:

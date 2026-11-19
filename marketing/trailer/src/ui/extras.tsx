@@ -222,8 +222,11 @@ export function TravelLine({ from, to, start, end }: { from: { x: number; y: num
  * The end card. v6: under the name, "For every" in plain type, then the girl's "Mama, look!" in her own hand,
  * written on with the bell's three notes (`call`, `callAt`); the address last, small.
  */
-export function EndCard({ line, em, call, url, mark, name, lineAt, callAt, urlAt }: { line: string; em?: string; call?: string; url: string; mark: number; name: number; lineAt: number; callAt?: number; urlAt: number }) {
+export function EndCard({ line, em, call, url, mark, name, lineAt, callAt, urlAt, spoken }: { line: string; em?: string; call?: string; url: string; mark: number; name: number; lineAt: number; callAt?: number; urlAt: number; spoken?: { text: string; from: number } }) {
   const frame = useCurrentFrame();
+  // A2 (trailer-reset 20, fix 9): Kakak's spoken end line is a plain line under the name, not a plate; the card's
+  // own line replaces it on the bell, so there is one line at a time.
+  const sp = spoken ? ramp(frame, spoken.from, spoken.from + 12, easeOut) * (1 - ramp(frame, lineAt - 8, lineAt + 4)) : 0;
   const roof = ramp(frame, mark, mark + 14, easeOut);
   const m = ramp(frame, mark + 10, mark + 32, easeOut);
   const a = ramp(frame, name, name + 16, easeOut);
@@ -239,6 +242,11 @@ export function EndCard({ line, em, call, url, mark, name, lineAt, callAt, urlAt
         <polyline points="152,400 152,262 256,354 360,262 360,400" stroke="#fff" strokeWidth={40} strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - m} opacity={m > 0 ? 1 : 0} />
       </svg>
       <div style={{ marginTop: 6, fontSize: 132, fontWeight: 700, letterSpacing: -3.5, lineHeight: 1.05, opacity: a, transform: `translateY(${(1 - a) * 22}px)`, textShadow: shadow }}>Miamus</div>
+      {spoken && sp > 0 && (
+        <div style={{ position: "absolute", top: 210 + 6 + 139 + 26, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
+          <div style={{ fontSize: 53, fontWeight: 500, lineHeight: 1.22, letterSpacing: -0.6, maxWidth: 800, opacity: sp, transform: `translateY(${(1 - sp) * 14}px)`, textShadow: shadow }}>{spoken.text}</div>
+        </div>
+      )}
       <div style={{ marginTop: 26, fontSize: 53, fontWeight: 500, lineHeight: 1.22, letterSpacing: -0.6, maxWidth: 800, opacity: b, transform: `translateY(${(1 - b) * 18}px)`, textShadow: shadow, textWrap: "balance" } as React.CSSProperties}>
         {em && line.includes(em) ? (
           <>

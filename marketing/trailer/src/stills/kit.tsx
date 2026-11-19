@@ -79,7 +79,7 @@ export function MamaSays({ lines, x = 120, y = 236, w = 798, size = 78, to }: { 
 }
 
 /** A soft heart in a box (trailer-reset 22, marks.mjs): x, y top-left, w wide, h tall. */
-function heartPath(x: number, y: number, w: number, h: number) {
+export function heartPath(x: number, y: number, w: number, h: number) {
   const p = (u: number, v: number) => `${(x + u * w).toFixed(1)} ${(y + v * h).toFixed(1)}`;
   return `M${p(0.5, 0.26)}C${p(0.44, 0.1)} ${p(0.34, 0)} ${p(0.23, 0)}C${p(0.09, 0)} ${p(0, 0.13)} ${p(0, 0.31)}C${p(0, 0.56)} ${p(0.24, 0.76)} ${p(0.43, 0.95)}Q${p(0.5, 1.02)} ${p(0.57, 0.95)}C${p(0.76, 0.76)} ${p(1, 0.56)} ${p(1, 0.31)}C${p(1, 0.13)} ${p(0.91, 0)} ${p(0.77, 0)}C${p(0.66, 0)} ${p(0.56, 0.1)} ${p(0.5, 0.26)}Z`;
 }

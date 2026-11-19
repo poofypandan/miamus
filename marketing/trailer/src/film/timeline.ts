@@ -37,7 +37,9 @@ export const HOOK = {
   /** The child's call writes itself on (v6: with the bell, see `bell`). */
   call: 6,
   /** v6: the questions leave Mama's phone as the camera arrives at the kite (2.1 s), faster and faster. */
-  at: [63, 71, 77, 82, 87, 92, 96, 99, 103, 105, 108, 110, 112, 114, 116, 117, 118, 119, 119, 119, 120],
+  // A2 (trailer-reset 20, fix 13): the first question waits until 2.6 s, so Mama's "In a minute, sweetie…" (from
+  // 2.1 s) has half a second clear before the pile buries it; the rest close up to land by the same slam (v17: 63…120).
+  at: [78, 84, 88, 92, 96, 99, 102, 105, 107, 109, 111, 113, 114, 116, 117, 118, 119, 119, 119, 119, 120],
   slam: 122,
   /** The held breath, then everything lets go. */
   fall: 134,
@@ -145,6 +147,14 @@ export const ENDING = { mama: [-80, -1] as Span, settle: [0, 30] as Span, push: 
 // are unchanged.
 export const ENDING15 = { tug: 0, point: 6, bell: 1, shade: [16, 30] as Span, hold: [30, 40] as Span, mama: [-80, -1] as Span, lift: [28, 90] as Span, crane: [40, 78] as Span, mark: 70, name: 78, line: 90, url: 102 };
 
+/**
+ * A2: where Act 3's sounds land on the C1.6 stills (seconds). The mic press (shot 6, 15.0), Kakak's card (8a, 20.7),
+ * "Saved" (8c, 23.1), the firefly leaving (9a, 24.0) and landing in Sari's phone (9c, 26.4), her photo button (10,
+ * 27.0; the shutter just after), the after photo and "selesai" (11b, 31.4). Kakak's disc arrives at 11.47 (act2.tsx).
+ */
+export const A2_60 = { kakak: 11.47, listen: 15.3, card: 20.75, saved: 23.15, handOver: 24.0, lands: 26.4, before: 28.0, after: 31.45, done: 31.55 };
+export const A2_15 = { card: 4.85, saved: 5.2, toSari: 5.7, done: 7.7 };
+
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */
 export function soundCues(cut: "60" | "15") {
   const sec = (frame: number) => +(frame / FPS).toFixed(3);
@@ -162,16 +172,17 @@ export function soundCues(cut: "60" | "15") {
       tugs: [...HOOK.tugs.map((t) => sec(t + 3)), at(S.ending, ENDING.tug + 3)],
       taps: [],
       // v13: a soft voice-note chime as the mic starts listening.
-      listen: at(S.cards, CARDS.press),
+      // A2 (trailer-reset 20, "effects re-timed to the new pictures"): Act 3 is the C1.6 shot list (src/stills/shots.json).
+      listen: A2_60.listen,
       typing: [],
-      cards: [at(S.cards, CARDS.suggest.at + 6)],
-      saved: [at(S.cards, CARDS.saved.check), at(S.cards, CARDS.done.check)],
-      shutters: CARDS.sari.thumbs.map((t) => at(S.cards, t)),
-      whooshes: [sec(S.cards[0]), at(S.cards, CARDS.sari.at), sec(S.ending[0])],
-      arrive: at(S.cards, CARDS.sari.at + 12),
+      cards: [A2_60.card],
+      saved: [A2_60.saved, A2_60.done],
+      shutters: [A2_60.before, A2_60.after],
+      whooshes: [sec(S.cards[0]), A2_60.handOver, sec(S.ending[0])],
+      arrive: A2_60.lands,
       sleep: null,
       ping: null,
-      kakak: sec(S.kakak[0] + 26),
+      kakak: A2_60.kakak,
       garden: [0, sec(S.ending[0])],
       mark: at(S.ending, ENDING.mark),
     };
@@ -189,10 +200,11 @@ export function soundCues(cut: "60" | "15") {
     taps: [],
     listen: null,
     typing: [],
-    cards: [at(S.cards, CARDS15.suggest.at + 6)],
-    saved: [at(S.cards, CARDS15.saved.check)],
-    shutters: CARDS15.sari.thumbs.map((t) => at(S.cards, t)),
-    whooshes: [sec(S.cards[0]), at(S.cards, CARDS15.sari.at), sec(S.ending[0])],
+    // A2: the 15's stills B1 (3.0), B2 (4.8, the press), C (5.7, to Sari), D (7.6, her toast).
+    cards: [A2_15.card],
+    saved: [A2_15.saved, A2_15.done],
+    shutters: [],
+    whooshes: [sec(S.cards[0]), A2_15.toSari, sec(S.ending[0])],
     arrive: null,
     sleep: null,
     ping: null,

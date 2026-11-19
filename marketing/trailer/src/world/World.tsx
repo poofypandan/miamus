@@ -45,6 +45,8 @@ export interface WorldProps {
   mamaAt?: { x: number; y: number; s: number };
   /** C1.5: more figures in the garden layer (the staff), drawn after the family. */
   extra?: React.ReactNode;
+  /** A2: the running dog's presence, 0–1 (off in the close two-shot, where only half of it was in frame). */
+  runDog?: number;
 }
 
 const R = (seed: string) => random(`miamus-${seed}`);
@@ -551,7 +553,7 @@ function Sprinkler({ light, frame, show }: { light: Light; frame: number; show: 
 export const CHILD_AT = { x: 372, y: 1452 };
 export const MAMA_AT = { x: 286, y: 1458 };
 
-export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child = 0, mama = 0, mamaPose, childPose, dogs = 0, kite = 0, kiteLift = 0, birds = 0, blur = 0, house = 1, laundry = 0, sprinkler = 0, mamaAt, extra }) => {
+export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child = 0, mama = 0, mamaPose, childPose, dogs = 0, kite = 0, kiteLift = 0, birds = 0, blur = 0, house = 1, laundry = 0, sprinkler = 0, mamaAt, extra, runDog = 1 }) => {
   const pose = kitePose(frame, kiteLift);
   // Low sun: long shadows, away from it.
   const sunUp = light.sunY < HORIZON + 30 ? Math.min(1, light.glow * 1.2) : 0;
@@ -616,7 +618,7 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
                 <g transform={`translate(214 1492) matrix(1 0 ${-shadow.kx} ${-shadow.ky} 0 0)`} opacity={dogs}>
                   <Dog kind="sit" flat frame={frame} />
                 </g>
-                <g transform={`translate(556 1516) matrix(1 0 ${-shadow.kx} ${-shadow.ky} 0 0)`} opacity={dogs}>
+                <g transform={`translate(556 1516) matrix(1 0 ${-shadow.kx} ${-shadow.ky} 0 0)`} opacity={dogs * runDog}>
                   <Dog kind="run" flat frame={frame} />
                 </g>
               </>
@@ -639,7 +641,7 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
               <Dog kind="sit" light={light} frame={frame} coat="#e9c99c" />
             </g>
             <circle cx={486} cy={1508} r={9.5} fill={shade("#f1e3cf", light, 0.03, 0.5)} />
-            <g transform="translate(556 1516)">
+            <g transform="translate(556 1516)" opacity={runDog}>
               {rim.o > 0.05 && (
                 <g transform={`translate(${rim.dx} -1)`} fill={rim.fill} stroke={rim.fill}>
                   <Dog kind="run" flat frame={frame} />

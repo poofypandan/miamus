@@ -6,7 +6,7 @@
 // cancels the render and this script exits non-zero. Its findings go to <out-dir>/readability.json.
 // Sound: public/audio/mix-<cut>-en.wav as committed at v17. In the 60, "In their own language." (L6, 28.50–29.93 s,
 // src/film/vo-data.json) is taken out: that stretch is crossfaded to the v17 music stem alone
-// (audio/out/music-60-eleven-owner-4c.wav, copied read-only from the v17 sound build), matched in level.
+// (audio/out/music-60-felt.wav, copied read-only from the v17 sound build), matched in level.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -83,7 +83,7 @@ for (const cut of cuts) {
   if (cut === "60") {
     const l6 = vo["60-en"].cues.find((c) => c.id === "L6");
     const a = l6.from - 0.08, b = l6.to + 0.1, f = 0.12;
-    const stem = path.join(root, "audio/out/music-60-eleven-owner-4c.wav");
+    const stem = path.join(root, "audio/out/music-60-felt.wav");
     if (!fs.existsSync(stem)) throw new Error(`Missing ${stem} (copy it read-only from the v17 sound build).`);
     // Level of the music in the mix where no one speaks (22.6–25.4 s, between L4b and L5) against the stem's.
     const gainDb = levelDb(mix) - levelDb(stem);
