@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncE
 import { AudioLines, Keyboard, Loader2, Mic, Square, Volume2, VolumeX } from "lucide-react";
 import { VideoTip } from "@/components/shared/video-tip";
 import { WhatsNewCard } from "@/components/shared/whats-new";
+import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import {
   VOICE_LANG,
@@ -13,7 +14,6 @@ import {
   listenOnce,
   pickVoice,
   readSpeakChoice,
-  speakable,
   voiceReducer,
   writeSpeakChoice,
   type Listening,
@@ -21,6 +21,15 @@ import {
   type VoiceProblem,
   type VoiceScreen,
 } from "@/lib/kakak/voice";
+import { SPEECH_RATE, speechPlan } from "@/lib/kakak/speech";
+import {
+  fetchKakakAudio,
+  reportOutcome,
+  shouldPrimeAudio,
+  silentWav,
+  spokenText,
+  type VoiceOutcome,
+} from "@/lib/kakak/app-voice";
 import { cn } from "@/lib/utils";
 
 /** Off switch for the beta: NEXT_PUBLIC_KAKAK_VOICE=false hides it. */
@@ -40,6 +49,8 @@ export function KakakVoice(props: Parameters<typeof Voice>[0]) {
  * The phone's own speech features only (src/lib/kakak/voice.ts): the
  * browser may send the audio to Apple or Google to turn it into text, but
  * Miamus never receives or stores audio, only the text, as typed Kakak does.
+ * Her replies are read in her own voice when the server has it
+ * (/api/kakak/speak), in the phone's voice otherwise.
  */
 function Voice({
   screen,
@@ -340,21 +351,104 @@ function synth(): SpeechSynthesis | null {
   return typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis : null;
 }
 
+// ---- Kakak's own voice (src/lib/kakak/app-voice.ts) ---------------------------
+
 /**
- * The speaker switch and the voice. Safari on iPhone only speaks after the
- * first speech is started by a tap, so any tap in the sheet while the
- * switch is on "unlocks" it with a silent utterance.
+ * Whether the server has Kakak's ElevenLabs voice set up, asked once per
+ * visit. Until it says "on", and for the rest of the visit once it says
+ * "off" (not set up, the day's budget used), the phone's voice reads aloud.
  */
-function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => void) {
+let appVoice: "unknown" | "checking" | "on" | "off" = "unknown";
+let audioElement: HTMLAudioElement | null = null;
+let audioUnlocked = false;
+/** The check in flight, so a reply that arrives before it answers waits for it. */
+let appVoiceCheck: Promise<void> | null = null;
+/** How long a reply waits for that check before the phone's voice reads it. */
+const CHECK_WAIT_MS = 3_000;
+
+function checkAppVoice(): Promise<void> {
+  if (appVoice === "checking" && appVoiceCheck) return appVoiceCheck;
+  if (appVoice !== "unknown" || typeof fetch === "undefined") return Promise.resolve();
+  appVoice = "checking";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  appVoiceCheck = fetch("/api/kakak/speak", { cache: "no-store", signal: controller.signal })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((body: { kind?: string } | null) => {
+      appVoice = body?.kind === "on" ? "on" : "off";
+    })
+    .catch(() => {
+      appVoice = "unknown"; // offline: ask again next time
+    })
+    .finally(() => {
+      clearTimeout(timer);
+      appVoiceCheck = null;
+    });
+  return appVoiceCheck;
+}
+
+/** One element for every reply, so the tap that unlocked it on iPhone keeps counting. */
+function kakakAudio(): HTMLAudioElement | null {
+  if (typeof Audio === "undefined") return null;
+  audioElement ??= new Audio();
+  return audioElement;
+}
+
+/** What is being read now. */
+interface ReadingRun {
+  /** The pause before the phone voice's next sentence. */
+  timer: ReturnType<typeof setTimeout> | null;
+  /** Cancels the request for Kakak's audio. */
+  abort: AbortController;
+  /** Kakak's audio, while it plays. */
+  url: string | null;
+}
+
+/**
+ * The speaker switch and the voice. Kakak's own voice when the server has it
+ * (POST /api/kakak/speak), the phone's voice otherwise or on any failure.
+ * Safari on iPhone only speaks, and only plays audio, after the first one is
+ * started by a tap, so any tap in the sheet while the switch is on "unlocks"
+ * both with a silent utterance and a silent sound.
+ */
+export function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => void) {
   const on = useSyncExternalStore(subscribeSpeak, speakSnapshot, () => false);
+  const { activeHouseholdId } = useHousehold();
   const [supported, setSupported] = useState(false);
   const voices = useRef<SpeechSynthesisVoice[]>([]);
-  /** The utterance being read: a cancelled one's late "end" is ignored. */
-  const current = useRef<SpeechSynthesisUtterance | null>(null);
+  /**
+   * The reply being read and how. Replaced or cleared when reading stops, so
+   * a stopped reply's late "end", pending pause or late audio never starts
+   * anything.
+   */
+  const reading = useRef<ReadingRun | null>(null);
   const speakingRef = useRef(onSpeaking);
   useEffect(() => {
     speakingRef.current = onSpeaking;
   }, [onSpeaking]);
+
+  /** Drop what is queued or playing for this reply (the phone voice itself is cancelled by the caller). */
+  const dropQueue = useCallback(() => {
+    const run = reading.current;
+    reading.current = null;
+    if (!run) return;
+    if (run.timer) clearTimeout(run.timer);
+    run.abort.abort();
+    if (run.url) {
+      const audio = kakakAudio();
+      if (audio) {
+        audio.onended = audio.onerror = null;
+        audio.pause();
+        audio.removeAttribute("src");
+      }
+      URL.revokeObjectURL(run.url);
+      run.url = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (on) checkAppVoice();
+  }, [on]);
 
   useEffect(() => {
     const s = synth();
@@ -366,65 +460,185 @@ function useReadAloud(locale: VoiceLocale, onSpeaking: (on: boolean) => void) {
     load();
     s.addEventListener?.("voiceschanged", load);
     return () => {
+      // The sheet closed: nothing more is read, not even the queued sentences.
       s.removeEventListener?.("voiceschanged", load);
       s.cancel();
     };
   }, []);
 
+  // The sheet closed: Kakak's audio stops too.
+  useEffect(() => () => dropQueue(), [dropQueue]);
+
   const unlock = useCallback(() => {
     const s = synth();
-    if (!s || speechUnlocked || typeof SpeechSynthesisUtterance === "undefined") return;
-    speechUnlocked = true;
-    const silent = new SpeechSynthesisUtterance(" ");
-    silent.volume = 0;
-    s.speak(silent);
+    if (s && !speechUnlocked && typeof SpeechSynthesisUtterance !== "undefined") {
+      speechUnlocked = true;
+      const silent = new SpeechSynthesisUtterance(" ");
+      silent.volume = 0;
+      s.speak(silent);
+    }
+    // src/lib/kakak/app-voice.ts shouldPrimeAudio: also before the server
+    // has answered, since the tap that sends the first question is often the
+    // only one before her reply arrives.
+    const prime = shouldPrimeAudio({ appVoice, unlocked: audioUnlocked, playing: Boolean(reading.current?.url) });
+    const audio = prime ? kakakAudio() : null;
+    if (audio) {
+      audioUnlocked = true;
+      audio.src = silentWav();
+      void audio.play().catch((error: { name?: string }) => {
+        // Cut short by her reply's own audio is still an unlock; refused isn't.
+        if (error?.name === "NotAllowedError") audioUnlocked = false;
+      });
+    }
   }, []);
 
   useEffect(() => {
-    if (!on || speechUnlocked) return;
-    document.addEventListener("pointerdown", unlock, { once: true, capture: true });
-    return () => document.removeEventListener("pointerdown", unlock, { capture: true });
+    if (!on) return;
+    // Every tap while the switch is on: whether Kakak's voice is on may only
+    // be known after the first one, and a refused play() (autoplay) needs a
+    // new tap. unlock() does nothing while both are unlocked.
+    document.addEventListener("pointerdown", unlock, { capture: true });
+    document.addEventListener("click", unlock, { capture: true });
+    return () => {
+      document.removeEventListener("pointerdown", unlock, { capture: true });
+      document.removeEventListener("click", unlock, { capture: true });
+    };
   }, [on, unlock]);
 
   const hush = useCallback(() => {
     const s = synth();
-    current.current = null;
+    dropQueue();
     if (s && (s.speaking || s.pending)) s.cancel();
     speakingRef.current(false);
-  }, []);
+  }, [dropQueue]);
 
+  /**
+   * Read a reply the way a person would (src/lib/kakak/speech.ts): times and
+   * symbols in words. In Kakak's own voice when the server has it and it
+   * answers within AUDIO_WAIT_MS; otherwise the phone's voice, a little
+   * slower than its default, one sentence at a time with a short breath
+   * between, at the voice's own pitch.
+   */
   const say = useCallback(
     (text: string) => {
       const s = synth();
-      if (!s || !speakSnapshot() || typeof SpeechSynthesisUtterance === "undefined") return;
-      const words = speakable(text);
-      if (!words) return;
-      current.current = null;
-      s.cancel();
-      const utterance = new SpeechSynthesisUtterance(words);
-      utterance.lang = VOICE_LANG[locale];
-      const voice = pickVoice(voices.current.length ? voices.current : s.getVoices(), locale);
-      if (voice) utterance.voice = voice;
-      utterance.rate = 1;
-      const done = () => {
-        if (current.current !== utterance) return;
-        current.current = null;
+      if (!speakSnapshot()) return;
+      const plan = speechPlan(text, locale);
+      if (!plan.length) return;
+      dropQueue();
+      s?.cancel();
+      const run: ReadingRun = { timer: null, abort: new AbortController(), url: null };
+      reading.current = run;
+      const finish = () => {
+        if (reading.current !== run) return;
+        dropQueue();
         speakingRef.current(false);
       };
-      utterance.onend = done;
-      utterance.onerror = done;
-      current.current = utterance;
+
+      /** The phone's own voice, as before Kakak had hers. */
+      const readOnPhone = (reason?: VoiceOutcome) => {
+        if (reading.current !== run) return;
+        if (reason) reportOutcome(reason);
+        if (!s || typeof SpeechSynthesisUtterance === "undefined") return finish();
+        const voice = pickVoice(voices.current.length ? voices.current : s.getVoices(), locale);
+        const read = (index: number) => {
+          run.timer = null;
+          if (reading.current !== run) return;
+          const part = plan[index];
+          const utterance = new SpeechSynthesisUtterance(part.text);
+          utterance.lang = VOICE_LANG[locale];
+          if (voice) utterance.voice = voice;
+          utterance.rate = SPEECH_RATE;
+          let settled = false;
+          utterance.onend = () => {
+            if (settled || reading.current !== run) return;
+            settled = true;
+            if (index + 1 >= plan.length) finish();
+            else run.timer = setTimeout(() => read(index + 1), part.pauseAfterMs);
+          };
+          utterance.onerror = () => {
+            if (settled) return;
+            settled = true;
+            finish();
+          };
+          s.speak(utterance);
+        };
+        read(0);
+      };
+
+      /** Kakak's own voice; the phone's if the audio won't play. */
+      const play = (blob: Blob) => {
+        const audio = kakakAudio();
+        if (!audio || reading.current !== run) return readOnPhone(audio ? undefined : "unplayable");
+        let started = false;
+        let fellBack = false;
+        /** Once only: a failed sound can both fire "error" and reject play(). */
+        const fallBack = (reason: VoiceOutcome) => {
+          if (fellBack || reading.current !== run) return;
+          fellBack = true;
+          audio.onended = audio.onerror = null;
+          audio.pause();
+          if (run.url) URL.revokeObjectURL(run.url);
+          run.url = null;
+          readOnPhone(reason);
+        };
+        run.url = URL.createObjectURL(blob);
+        audio.onplaying = () => {
+          if (!started) reportOutcome("played");
+          started = true;
+        };
+        audio.onended = () => finish();
+        audio.onerror = () => (started ? finish() : fallBack("unplayable"));
+        audio.src = run.url;
+        audio.play().catch((error: { name?: string }) => {
+          // NotAllowedError: the browser wants a tap first (autoplay). The
+          // next tap in the sheet unlocks it again.
+          if (error?.name === "NotAllowedError") audioUnlocked = false;
+          fallBack(error?.name === "NotAllowedError" ? "autoplay" : "unplayable");
+        });
+      };
+
+      /** Kakak's audio from the server; the phone's voice, with the reason, otherwise. */
+      const askForAudio = (householdId: string) => {
+        if (reading.current !== run) return;
+        void fetchKakakAudio({
+          householdId,
+          text: spokenText(text, locale),
+          locale,
+          signal: run.abort.signal,
+        }).then((result) => {
+          if (reading.current !== run) return;
+          if (result.kind === "audio") return play(result.audio);
+          if (result.kind === "phone_today") appVoice = "off";
+          readOnPhone(result.reason);
+        });
+      };
+
       speakingRef.current(true);
-      s.speak(utterance);
+      const householdId = activeHouseholdId;
+      if (!householdId) return readOnPhone();
+      if (appVoice === "checking") {
+        // The reply came back before the check did: wait for it (a little),
+        // then decide. askForAudio and readOnPhone do nothing if the reply
+        // was stopped or replaced meanwhile.
+        void Promise.race([checkAppVoice(), new Promise((resolve) => setTimeout(resolve, CHECK_WAIT_MS))]).then(() =>
+          appVoice === "on" ? askForAudio(householdId) : readOnPhone(appVoice === "checking" ? "timeout" : undefined)
+        );
+        return;
+      }
+      if (appVoice !== "on") return readOnPhone();
+      askForAudio(householdId);
     },
-    [locale]
+    [locale, dropQueue, activeHouseholdId]
   );
 
   const toggle = useCallback(() => {
     const next = !speakSnapshot();
     setSpeak(next);
-    if (next) unlock();
-    else hush();
+    if (next) {
+      checkAppVoice();
+      unlock();
+    } else hush();
   }, [unlock, hush]);
 
   return useMemo(() => ({ on, supported, say, hush, unlock, toggle }), [on, supported, say, hush, unlock, toggle]);

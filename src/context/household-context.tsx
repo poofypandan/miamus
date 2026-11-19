@@ -288,7 +288,8 @@ interface HouseholdContextValue {
   resolveInventoryAlert: (id: string) => Promise<void>;
   /** Owner only — the database refuses item edits from staff devices (migrations/099). */
   addInventoryItem: (input: InventoryItemInput) => Promise<InventoryItem>;
-  updateInventoryItem: (id: string, patch: Partial<InventoryItemInput>) => Promise<InventoryItem>;
+  /** Owners: any column a patch may carry, the counting ones included (Kakak's Undo puts a count back whole). */
+  updateInventoryItem: (id: string, patch: InventoryItemPatch) => Promise<InventoryItem>;
   /** Anyone in the household: enough, running low or out (Phase 154). */
   setInventoryStatus: (id: string, status: StockStatus) => Promise<InventoryItem>;
   removeInventoryItem: (id: string) => Promise<void>;
@@ -1184,7 +1185,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateInventoryItem = useCallback(
-    async (id: string, patch: Partial<InventoryItemInput>) => {
+    async (id: string, patch: InventoryItemPatch) => {
       const item = await dataProvider.updateInventoryItem(id, patch);
       setInventoryItems((prev) => prev.map((i) => (i.id === id ? item : i)));
       return item;

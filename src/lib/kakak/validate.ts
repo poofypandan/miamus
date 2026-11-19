@@ -2,21 +2,27 @@
 // the phone (docs/phase-156-step2-kakak-plan.md, section 4, "What comes back
 // to the phone"). Strict tool schemas guarantee the shape; this checks what
 // they can't: lengths, HH:mm, real dates in range, and references that exist
-// in this household. add_to_shopping_list, add_food and put_away_ingredient
-// aren't strict (the API's limit on union types, tools.ts), so for them this
-// also checks the whole shape: every field there and no others, types and
-// enums.
+// in this household. add_to_shopping_list, add_food, put_away_ingredient and
+// set_staff_areas aren't strict (the API's limit on union types, tools.ts),
+// so for them this also checks the whole shape: every field there and no
+// others, types and enums.
 
+import { sameName } from "@/lib/ingredients";
+import { MAX_AMOUNT } from "@/lib/kitchen-units";
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
 import { ROUTINE_NOTE_MAX, routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
 import { isScheduleActiveOn } from "@/lib/scheduleEngine";
 import { isoWeekday } from "@/lib/pet-routine-kinds";
 import type { MasterSchedule } from "@/types/database";
+import { AREAS, isStaffArea, withAreas, type StaffArea } from "@/lib/staff-areas";
 import { addDays, householdRefs, type KakakHousehold, type KakakRoutine } from "./household";
 import {
   FOOD_PLACES,
+  INGREDIENT_AMOUNT_IS,
   INGREDIENT_EXPIRY,
+  INGREDIENT_SHELVES,
+  INGREDIENT_UNITS,
   PET_ROUTINE_TOOL_KINDS,
   TOOL_WEEKDAYS,
   type KakakToolName,
@@ -76,14 +82,15 @@ function dayInRange(errors: string[], field: string, value: unknown, from: strin
 
 /**
  * For a tool that isn't strict: an object with exactly these fields, as its
- * schema requires (null counts as there). Returns it, or null when it isn't
- * an object at all.
+ * schema requires (null counts as there). `optional` fields may be left out,
+ * which reads as null. Returns it, or null when it isn't an object at all.
  */
 function shape(
   errors: string[],
   field: string,
   value: unknown,
   keys: readonly string[],
+  optional: readonly string[] = [],
 ): Record<string, unknown> | null {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     errors.push(`${field} must be an object`);
@@ -92,7 +99,7 @@ function shape(
   const record = value as Record<string, unknown>;
   const missing = keys.filter((key) => record[key] === undefined);
   if (missing.length) errors.push(`${field} is missing ${missing.join(", ")}`);
-  const extra = Object.keys(record).filter((key) => !keys.includes(key));
+  const extra = Object.keys(record).filter((key) => !keys.includes(key) && !optional.includes(key));
   if (extra.length) errors.push(`${field} has unknown fields: ${extra.join(", ")}`);
   return record;
 }
@@ -122,6 +129,44 @@ const FOOD_FIELDS = [
 ] as const;
 
 const INGREDIENT_FIELDS = ["item", "kept_in", "expiry", "expires_on", "expiry_is_guess"] as const;
+/**
+ * A new ingredient and an amount (2026-11-14). A call that leaves these out
+ * reads as null: the tool isn't strict, and a put-away that names none of
+ * them is exactly the call it always was.
+ */
+const INGREDIENT_NEWER_FIELDS = ["new_name", "new_name_en", "shelf", "amount", "unit", "amount_is"] as const;
+
+/** What the owner said about how much, read from a checked put_away_ingredient call. */
+export interface AmountGiven {
+  value: number;
+  unit: (typeof INGREDIENT_UNITS)[number];
+  is: (typeof INGREDIENT_AMOUNT_IS)[number];
+}
+
+/** The amount in a put_away_ingredient call, or null when none (or not a usable one) was given. */
+export function amountGiven(input: Record<string, unknown>): AmountGiven | null {
+  const value = input.amount;
+  const unit = input.unit;
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > MAX_AMOUNT) return null;
+  if (!(INGREDIENT_UNITS as readonly unknown[]).includes(unit)) return null;
+  return { value, unit: unit as AmountGiven["unit"], is: input.amount_is === "now" ? "now" : "bought" };
+}
+
+const STAFF_AREA_FIELDS = ["staff", "show", "hide"] as const;
+
+/** set_staff_areas' show or hide: a list of areas, each once. Null when it isn't one. */
+function areaList(errors: string[], field: string, value: unknown): StaffArea[] | null {
+  if (!Array.isArray(value)) {
+    errors.push(`${field} must be a list (empty for none)`);
+    return null;
+  }
+  if (!value.every(isStaffArea)) {
+    errors.push(`${field} must hold only ${AREAS.join(", ")}`);
+    return null;
+  }
+  if (new Set(value).size !== value.length) errors.push(`${field} repeats an area`);
+  return value;
+}
 
 /** "Remind me" (migrations/137): on the day, or 1, 3 or 7 days before. */
 export const REMIND_DAYS = new Set([0, 1, 3, 7]);
@@ -244,15 +289,45 @@ export function validateToolCall(
     }
     case "put_away_ingredient": {
       // Not strict (tools.ts): the shape is checked here.
-      shape(errors, "input", input, INGREDIENT_FIELDS);
-      ref(errors, "item", input.item, refs.items, false);
-      const item = household.items.find((i) => i.ref === input.item);
-      if (item && !(household.ingredientsOn && item.ingredient)) {
-        errors.push(`item ${item.ref} is not marked (ingredient): use add_to_shopping_list to buy it, or say where to add it by hand`);
+      shape(errors, "input", input, INGREDIENT_FIELDS, INGREDIENT_NEWER_FIELDS);
+      if (!household.ingredientsOn) {
+        errors.push("ingredients are switched off for this household: say so in one line instead");
+      }
+      const amount = input.amount ?? null;
+      const unit = input.unit ?? null;
+      let item: KakakHousehold["items"][number] | undefined;
+      if (input.item !== null && input.item !== undefined) {
+        // A listed ingredient: bought and put away, moved, or taken out to thaw.
+        ref(errors, "item", input.item, refs.items, false);
+        item = household.items.find((i) => i.ref === input.item);
+        if (item && !(household.ingredientsOn && item.ingredient)) {
+          errors.push(`item ${item.ref} is not marked (ingredient): use add_to_shopping_list to buy it, or say where to add it by hand`);
+        }
+        if (input.new_name != null) errors.push("item and new_name are both set: item for a listed ingredient, new_name for one that isn't listed");
+        if (input.shelf != null) errors.push("shelf is only for a new ingredient: leave it null when item is set");
+      } else {
+        // One that isn't listed yet: a new ingredient, by name.
+        text(errors, "new_name", input.new_name, { max: 60, required: true });
+        text(errors, "new_name_en", input.new_name_en, { max: 60, required: false });
+        oneOf(errors, "shelf", input.shelf ?? null, INGREDIENT_SHELVES);
+        const listed = household.items.find((i) => i.ingredient && sameName(i.name, typeof input.new_name === "string" ? input.new_name : null));
+        if (listed) errors.push(`new_name is already listed as ${listed.ref}: use item ${listed.ref} instead`);
+        if (input.expiry === "clear") errors.push("expiry clear on a new ingredient: use keep for no date");
       }
       oneOf(errors, "kept_in", input.kept_in, FOOD_PLACES, true);
       oneOf(errors, "expiry", input.expiry, INGREDIENT_EXPIRY);
       bool(errors, "expiry_is_guess", input.expiry_is_guess);
+      if (amount !== null) {
+        if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) {
+          errors.push(`amount must be a number above 0 and at most ${MAX_AMOUNT}, or null`);
+        }
+        if (unit === null) errors.push("amount without a unit: give the unit the owner said, or ask which unit");
+      }
+      if (unit !== null) {
+        oneOf(errors, "unit", unit, INGREDIENT_UNITS);
+        if (amount === null) errors.push("unit without an amount: both, or both null");
+      }
+      if (input.amount_is != null) oneOf(errors, "amount_is", input.amount_is, INGREDIENT_AMOUNT_IS);
       if (input.expiry === "set") {
         // A label may already be past, as for food.
         dayInRange(errors, "expires_on", input.expires_on, addDays(today, -366), addDays(today, 3 * 366));
@@ -260,8 +335,9 @@ export function validateToolCall(
         errors.push("expires_on must be null unless expiry is set");
       }
       if (input.expiry_is_guess === true && input.expiry !== "set") errors.push("expiry_is_guess without a date");
-      if (item?.out && input.expiry === "set") {
+      if (item?.out && input.expiry === "set" && amount === null) {
         // The database clears an Out item's date on every write (migrations/154).
+        // With an amount it is bought, so it is in stock again and keeps its date.
         errors.push(`item ${item.ref} is marked out, so it keeps no date: leave expiry keep and say the date can be set once it is marked Sudah dibeli / Bought`);
       }
       if (item?.ingredient) {
@@ -270,7 +346,35 @@ export function validateToolCall(
           input.expiry === "keep" ||
           (input.expiry === "set" && input.expires_on === item.expiresOn) ||
           (input.expiry === "clear" && !item.expiresOn);
-        if (samePlace && sameDate) errors.push("nothing would change: it is already noted that way; say so in one line instead");
+        if (samePlace && sameDate && amount === null) errors.push("nothing would change: it is already noted that way; say so in one line instead");
+      }
+      break;
+    }
+    case "set_staff_areas": {
+      // Not strict (tools.ts): the shape is checked here.
+      shape(errors, "input", input, STAFF_AREA_FIELDS);
+      const person = household.people.find((p) => p.ref === input.staff);
+      // Owners are never limited (Phase 178, rule 6): M1, and a co-owner's row.
+      if (input.staff === household.owner.ref || person?.owner) {
+        errors.push(`staff ${input.staff} is an owner, and owners always see everything: say so in one line instead`);
+      } else {
+        ref(errors, "staff", input.staff, refs.staff, false);
+      }
+      const show = areaList(errors, "show", input.show);
+      const hide = areaList(errors, "hide", input.hide);
+      if (!show || !hide) break;
+      if (show.length === 0 && hide.length === 0) errors.push("show and hide are both empty: list what changes");
+      const both = show.filter((area) => hide.includes(area));
+      if (both.length) errors.push(`${both.join(", ")} is in both show and hide`);
+      if (household.petsOff && [...show, ...hide].includes("pets")) {
+        errors.push("pets are switched off for this household: leave pets out");
+      }
+      if (person && !person.owner && both.length === 0) {
+        const before = person.hidden ?? [];
+        const after = withAreas(before, show, hide);
+        if (after.join() === before.join()) {
+          errors.push(`nothing would change: ${person.ref} already sees it that way; say so in one line instead`);
+        }
       }
       break;
     }

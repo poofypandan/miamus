@@ -5,6 +5,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
 import { classifyApiError } from "@/lib/kakak/api-errors";
+import { FRESH_AFTER_TURNS, historyForNextTurn } from "@/lib/kakak/client";
 import { buildContext, jakartaNow, type ContextRows } from "@/lib/kakak/context";
 import {
   BadTurnError,
@@ -18,7 +19,7 @@ import {
 import { kakakExamples } from "@/lib/kakak/examples";
 import { practiceClient } from "@/lib/kakak/practice";
 import { MAX_REFINEMENT_NOTE, REPEAT_CHOICES, refineChore, refinementNote, repeatLabel, splitRefinementNote } from "@/lib/kakak/refine";
-import { MAX_TYPED, type TurnResult } from "@/lib/kakak/engine";
+import { MAX_CALLS_PER_CONVERSATION, MAX_TYPED, type TurnResult } from "@/lib/kakak/engine";
 import { isSaveableSuggestion } from "@/lib/kakak/suggestions";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -135,21 +136,58 @@ describe("classifyApiError", () => {
     expect(classifyApiError(new Error("x")).body).toEqual({ kind: "failed", reason: "api" });
   });
 
+  it("reads a refused request on a later turn as a conversation to start again, never on the first turn", () => {
+    const refused = apiError(400, { type: "invalid_request_error", message: "messages.1.content.0: thinking block does not match" });
+    expect(classifyApiError(refused, { laterTurn: true }).body).toEqual({ kind: "failed", reason: "stale" });
+    expect(classifyApiError(refused).body).toEqual({ kind: "failed", reason: "api" });
+    // The spend limit is still the spend limit, and a busy API still busy, on any turn.
+    expect(
+      classifyApiError(apiError(400, { type: "invalid_request_error", message: "You have reached your specified workspace API usage limits." }), { laterTurn: true }).body,
+    ).toEqual({ kind: "failed", reason: "cap" });
+    expect(classifyApiError(apiError(529, { type: "overloaded_error", message: "Overloaded" }), { laterTurn: true }).body).toEqual({ kind: "refused", reason: "busy" });
+  });
+
   it("never puts the household's words in the log line", () => {
     const { log } = classifyApiError(apiError(400, { type: "invalid_request_error", message: "Mbak Sari pel teras" }));
     expect(log).not.toContain("Sari");
   });
 });
 
+describe("a long chat rolls over", () => {
+  const turns = (n: number) => ({
+    messages: Array.from({ length: n * 2 }, (_, i) =>
+      i % 2 === 0 ? { role: "user" as const, content: "x" } : { role: "assistant" as const, content: [{ type: "text" as const, text: "y" }] },
+    ),
+  });
+
+  it("keeps the conversation while it is short, or while Kakak waits for an answer or a confirmation", () => {
+    expect(historyForNextTurn(null, true)).toBeNull();
+    const short = turns(FRESH_AFTER_TURNS - 1);
+    expect(historyForNextTurn(short, true)).toBe(short);
+    const long = turns(FRESH_AFTER_TURNS + 2);
+    // A question or a card is open: the answer belongs to this conversation, however long.
+    expect(historyForNextTurn(long, false)).toBe(long);
+  });
+
+  it("starts afresh once she has spoken five times and the conversation is at rest, well inside the engine's limit", () => {
+    expect(historyForNextTurn(turns(FRESH_AFTER_TURNS), true)).toBeNull();
+    expect(historyForNextTurn(turns(FRESH_AFTER_TURNS + 2), true)).toBeNull();
+    // One turn may take two calls (a second try), and must still fit.
+    expect(FRESH_AFTER_TURNS + 2).toBeLessThanOrEqual(MAX_CALLS_PER_CONVERSATION);
+  });
+});
+
 describe("kakakExamples", () => {
   it("uses the household's own first names, in the owner's language", () => {
     const en = kakakExamples({ locale: "en", staffNames: ["Ari Wibowo"], petNames: ["Mochi"] });
-    expect(en.map((e) => e.kind)).toEqual(["chore", "shopping", "reminder", "pet", "food"]);
+    expect(en.map((e) => e.kind)).toEqual(["chore", "shopping", "reminder", "pet", "food", "question"]);
+    expect(en[5].text).toBe("What's the difference between a chore and a routine?");
     expect(en[0].text).toBe("Ari waters the plants every Monday at 8");
     expect(en[3].text).toBe("Feed Mochi at 7 am and 5 pm");
     const id = kakakExamples({ locale: "id", staffNames: ["Ari"], petNames: ["Mochi"] });
     expect(id[0].text).toBe("Ari siram tanaman setiap Senin jam 8");
     expect(id[2].text).toMatch(/^Ingatkan saya/);
+    expect(id[5].text).toBe("Apa bedanya tugas dan rutinitas?");
   });
 
   it("keeps a pet's whole name, as the household block does", () => {
@@ -196,8 +234,11 @@ describe("every example works in practice mode", () => {
         kakakExamples({ locale, staffNames: ["Ari"], petNames: [] }),
       )) {
         const result = await runKakakTurn(deps, null, example.text);
-        // A question (the food's date) or a card; never "I can't do that".
-        expect([example.kind, result.kind]).toEqual([example.kind, example.kind === "food" ? "question" : "suggestions"]);
+        // A question (the food's date), a card, or, for the question about
+        // Miamus, the guide's own answer; never "I can't do that".
+        const expected = example.kind === "food" ? "question" : example.kind === "question" ? "message" : "suggestions";
+        expect([example.kind, result.kind]).toEqual([example.kind, expected]);
+        if (result.kind === "message") expect(result.text).toMatch(locale === "id" ? /Tugas adalah pekerjaan rumah/ : /A chore is a job in the house/);
         if (result.kind === "suggestions" && example.kind === "reminder") {
           expect(result.items[0]).toMatchObject({ kind: "chore", assignedTo: id(3), dueTime: "19:00" });
           expect((result.items[0] as { title: string }).title).toMatch(/^Bersihkan filter AC/);

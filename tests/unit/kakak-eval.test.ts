@@ -93,12 +93,12 @@ describe("household dates", () => {
 });
 
 describe("tool definitions", () => {
-  it("are closed and require every property; strict except the three validate.ts checks in full", () => {
-    expect(KAKAK_TOOLS).toHaveLength(6);
+  it("are closed and require every property; strict except the four validate.ts checks in full", () => {
+    expect(KAKAK_TOOLS).toHaveLength(7);
     for (const tool of KAKAK_TOOLS) {
       if (!("input_schema" in tool)) throw new Error("custom tools only");
       // The API's limit of 16 union-typed parameters (tools.ts, kakak-tool-limits.test.ts).
-      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient"].includes(tool.name);
+      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient", "set_staff_areas"].includes(tool.name);
       expect(tool.strict).toBe(loose ? undefined : true);
       expect(tool.input_schema.additionalProperties).toBe(false);
       expect([...(tool.input_schema.required ?? [])].sort()).toEqual(
@@ -208,7 +208,7 @@ describe("gradeCase", () => {
 
   it("flags invented references and claims of saving as must-never", () => {
     const k001 = caseById("K001");
-    const invented = gradeCase(household, k001, [suggestion(chore({ room: "R12" }))]);
+    const invented = gradeCase(household, k001, [suggestion(chore({ room: "R99" }))]);
     expect(invented.mustNever.join(" ")).toMatch(/invented reference room/);
     const claimed = gradeCase(household, k001, [{ ...suggestion(chore()), text: "Sudah saya tambahkan ya." }]);
     expect(claimed.pass).toBe(false);
@@ -360,11 +360,75 @@ describe("runner helpers", () => {
   });
 });
 
+describe("room shorthand cases (K155–K160)", () => {
+  // Kakak titles chores in Indonesian, as staff read them; the room reference is what is checked.
+  const weekly = { due_time: null, recurrence: "weekly" };
+  const once = { due_time: null, recurrence: "none" };
+  const ask: ActualTurn = {
+    kind: "question",
+    calls: [{ name: "ask_question", input: { question: "Lounge yang mana?", answers: ["LT1", "LT2"], allow_typing: false } }],
+    text: "",
+  };
+
+  it("passes the Indonesian titles Kakak wrote in the paid run, on the right room", () => {
+    expect(gradeCase(household, caseById("K155"), [suggestion(chore({ ...weekly, title: "Pel lounge LT2", room: "R13" }))]).pass).toBe(true);
+    expect(
+      gradeCase(household, caseById("K158"), [
+        suggestion(chore({ ...once, title: "Vakum kamar tamu 1", assignee: "S3", due_date: "2026-11-12", room: "R14" })),
+      ]).pass
+    ).toBe(true);
+    expect(
+      gradeCase(household, caseById("K160"), [
+        ask,
+        suggestion(chore({ ...once, title: "Vakum lounge LT2", due_date: "2026-11-12", room: "R13" })),
+      ]).pass
+    ).toBe(true);
+  });
+
+  it("still fails the wrong floor or guest bedroom, whatever the title's language", () => {
+    expect(gradeCase(household, caseById("K155"), [suggestion(chore({ ...weekly, title: "Mop the lounge", room: "R12" }))]).pass).toBe(false);
+    expect(
+      gradeCase(household, caseById("K158"), [
+        suggestion(chore({ ...once, title: "Vakum kamar tamu 2", assignee: "S3", due_date: "2026-11-12", room: "R15" })),
+      ]).pass
+    ).toBe(false);
+  });
+});
+
 describe("the test set", () => {
   it("is consistent with the household and the tools", () => {
     expect(checkTestSet(household, testSet)).toEqual([]);
-    expect(testSet.cases).toHaveLength(116);
+    // 116, plus 23 on 2026-11-14: K131–K144 (questions about Miamus, thanks) and
+    // K146–K154 (a new ingredient, amounts), plus K117–K126 (what a staff
+    // member sees, Phase 178 follow-up), plus K155–K160 on 2026-11-16 (room shorthand:
+    // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2). All for tuning;
+    // the holdout is as it was.
+    expect(testSet.cases).toHaveLength(155);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
+  });
+
+  it("marks a reply that says what it must not (a made-up price, a list where thanks belong)", () => {
+    const price = testSet.cases.find((c) => c.id === "K137")!;
+    const turn = (text: string): ActualTurn => ({ kind: "message", calls: [], text });
+    expect(gradeCase(household, price, [turn("I'm not sure about prices. You can ask the Miamus team in Settings → Send feedback.")]).pass).toBe(true);
+    const made = gradeCase(household, price, [turn("I'm not sure, but I think it is $5 a month.")]);
+    expect(made.pass).toBe(false);
+    expect(made.failures.join(" ")).toContain('reply says "$", which it must not');
+  });
+
+  it("grades a new ingredient by its name, shelf and amount, and reads a left-out amount as none", () => {
+    const rice = testSet.cases.find((c) => c.id === "K146")!;
+    const call = (input: Record<string, unknown>): ActualTurn => ({ kind: "suggestions", calls: [{ name: "put_away_ingredient", input }], text: "" });
+    const good = { item: null, new_name: "Beras merah", new_name_en: "Brown rice", shelf: "pantry", kept_in: "pantry", amount: 2, unit: "kg", amount_is: "bought", expiry: "keep", expires_on: null, expiry_is_guess: false };
+    expect(gradeCase(household, rice, [call(good)]).pass).toBe(true);
+    // The listed Beras is the mistake the owner met: it must not pass.
+    expect(gradeCase(household, rice, [call({ ...good, item: "I4", new_name: null, shelf: null })]).pass).toBe(false);
+    expect(gradeCase(household, rice, [call({ ...good, amount: null, unit: null })]).pass).toBe(false);
+    // An older put-away, with none of the newer fields: no amount, no new name.
+    const eggs = testSet.cases.find((c) => c.id === "K114")!;
+    expect(gradeCase(household, eggs, [call({ item: "I1", kept_in: "fridge", expiry: "set", expires_on: "2026-11-25", expiry_is_guess: false })]).pass).toBe(true);
+    // An invented item reference is a must-never, as for every other tool.
+    expect(gradeCase(household, eggs, [call({ item: "I99", kept_in: "fridge", expiry: "set", expires_on: "2026-11-25", expiry_is_guess: false })]).mustNever.join(" ")).toContain('invented reference item="I99"');
   });
 
   it("catches a typo in a field name or reference", () => {

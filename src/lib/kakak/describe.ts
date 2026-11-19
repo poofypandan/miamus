@@ -3,10 +3,13 @@
 // Pure, so the wording is unit-tested in both languages.
 
 import { remindLabel } from "@/lib/chore-reminders";
+import { defaultPlace } from "@/lib/ingredients";
+import { clean, formatAmount, unitLabel } from "@/lib/kitchen-units";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
+import { AREA_LABELS, withAreas, type StaffArea } from "@/lib/staff-areas";
 import type { RoutineKind, RoutineProof } from "@/types/database";
-import type { KakakSuggestion } from "./suggestions";
+import { staffAreasNobody, type KakakSuggestion } from "./suggestions";
 
 type Locale = "en" | "id";
 type T = (en: string, id: string) => string;
@@ -86,7 +89,12 @@ const SOURCES: Record<string, [string, string]> = {
   bought: ["Bought", "Dibeli"],
 };
 
-export function describeSuggestion(item: KakakSuggestion, locale: Locale): CardItem {
+/**
+ * `nobody` is for a staff-areas card: what no staff member would see once
+ * every card on screen is saved (staffAreasNobody); by default, worked out
+ * for this card alone.
+ */
+export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody?: StaffArea[]): CardItem {
   const t = translator(locale);
   switch (item.kind) {
     case "chore": {
@@ -171,6 +179,42 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale): CardI
     case "ingredient": {
       const place = (p: string) => t(...(PLACES[p] ?? [p, p]));
       const rows: CardRow[] = [{ label: t("What", "Apa"), value: item.name }];
+      const notes: string[] = [];
+      const amount = item.amount ?? null;
+      if (amount) {
+        const now = formatAmount(amount.value, amount.unit, locale);
+        if (amount.mode === "add") {
+          // A purchase: what comes in, then what that makes.
+          const total = amount.before === null ? null : formatAmount(clean(amount.before + amount.value), amount.unit, locale);
+          rows.push({ label: t("Amount", "Jumlah"), value: total ? t(`+${now} · ${total} in all`, `+${now} · jadi ${total}`) : `+${now}` });
+        } else if (amount.mode === "set") {
+          const was = amount.before !== null && amount.before !== amount.value ? formatAmount(amount.before, amount.unit, locale) : null;
+          rows.push({ label: t("Amount", "Jumlah"), value: was ? t(`${now} (was ${was})`, `${now} (sebelumnya ${was})`) : now });
+        } else {
+          rows.push({ label: t("Amount", "Jumlah"), value: now });
+          notes.push(t("Miamus keeps count of it from now on.", "Mulai sekarang jumlahnya dicatat."));
+        }
+      }
+      const skipped = item.amountSkipped ?? null;
+      if (skipped) {
+        const given = formatAmount(skipped.value, skipped.unit, locale);
+        notes.push(
+          skipped.itemUnit
+            ? t(
+                `The ${given} isn't added: here ${item.name} is counted in ${unitLabel(skipped.itemUnit, locale)}.`,
+                `${given} tidak ditambahkan: di sini ${item.name} dicatat dalam ${unitLabel(skipped.itemUnit, locale)}.`,
+              )
+            : t(`The ${given} isn't added. Set the amount on the ingredient itself.`, `${given} tidak ditambahkan. Atur jumlahnya langsung di bahannya.`),
+        );
+      }
+      if (item.dateSkipped) {
+        notes.push(
+          t(
+            "The date isn't kept while it is marked Out. Set it once it is marked Bought.",
+            "Tanggalnya tidak disimpan selama masih ditandai Habis. Atur setelah ditandai Sudah dibeli.",
+          ),
+        );
+      }
       if (item.keptIn) {
         const moved = item.fromPlace && item.fromPlace !== item.keptIn;
         rows.push({
@@ -191,15 +235,74 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale): CardI
       } else if (item.expiry === "clear") {
         rows.push({ label: t("Expires", "Kedaluwarsa"), value: t("No date", "Tidak ada") });
       }
+      if (item.expiryIsGuess) notes.push(t("If it smells or looks off, throw it away.", "Kalau baunya atau tampilannya aneh, buang saja."));
+      return { heading: t("Ingredient", "Bahan masakan"), rows, note: notes.length ? notes.join(" ") : undefined };
+    }
+    case "new_ingredient": {
+      const place = (p: string) => t(...(PLACES[p] ?? [p, p]));
+      // An English-speaking owner also sees what staff will read.
+      const gloss = locale === "en" && item.nameEn && item.nameEn.toLowerCase() !== item.name.toLowerCase() ? item.nameEn : null;
+      const rows: CardRow[] = [{ label: t("What", "Apa"), value: gloss ? `${item.name} (${gloss})` : item.name }];
+      if (item.amount) rows.push({ label: t("Amount", "Jumlah"), value: formatAmount(item.amount.value, item.amount.unit, locale) });
+      // With no place said, the shelf's usual one, as Add ingredient shows it.
+      rows.push({ label: t("Kept in", "Disimpan di"), value: place(item.keptIn ?? defaultPlace(item.category)) });
+      if (item.expiresOn) {
+        rows.push({
+          label: t("Expires", "Kedaluwarsa"),
+          value: item.expiryIsGuess
+            ? `${cardDate(item.expiresOn, locale)} · ${t("Kakak's guess — check it", "Tebakan Kakak — cek lagi")}`
+            : cardDate(item.expiresOn, locale),
+          guess: item.expiryIsGuess,
+        });
+      }
       return {
-        heading: t("Ingredient", "Bahan masakan"),
+        heading: t("New ingredient", "Bahan masakan baru"),
         rows,
         note: item.expiryIsGuess
           ? t("If it smells or looks off, throw it away.", "Kalau baunya atau tampilannya aneh, buang saja.")
           : undefined,
       };
     }
+    case "staff_areas":
+      return describeStaffAreas(item, t, nobody ?? staffAreasNobody([item], 0));
   }
+}
+
+type StaffAreas = Extract<KakakSuggestion, { kind: "staff_areas" }>;
+
+/**
+ * "What Syam sees": every switch the household has, on or off once saved,
+ * with "(was on)" where the card changes it; then the dialog's own line, and
+ * "nobody sees" when the change leaves pet routines or chores for anyone
+ * with nobody (Phase 178).
+ */
+function describeStaffAreas(item: StaffAreas, t: T, nobody: StaffArea[]): CardItem {
+  const after = withAreas(item.before, item.show, item.hide);
+  const rows: CardRow[] = item.areas.map((area) => {
+    const on = !after.includes(area);
+    const was = !item.before.includes(area);
+    const value = on ? t("On", "Aktif") : t("Off", "Mati");
+    return {
+      label: t(...AREA_LABELS[area]),
+      value: on === was ? value : on ? t("On (was off)", "Aktif (sebelumnya mati)") : t("Off (was on)", "Mati (sebelumnya aktif)"),
+    };
+  });
+  const name = item.staffName;
+  const notes = [
+    t(`Anything you give ${name} by name always shows.`, `Tugas yang Anda berikan langsung ke ${name} selalu terlihat.`),
+    ...nobody.map((area) =>
+      area === "pets"
+        ? t(
+            "Nobody would see pet routines, so every staff member will see them.",
+            "Tidak ada yang akan melihat rutinitas hewan, jadi semua staf akan melihatnya.",
+          )
+        : t(
+            "Nobody would see chores for anyone, so every staff member will see them.",
+            "Tidak ada yang akan melihat tugas untuk siapa saja, jadi semua staf akan melihatnya.",
+          ),
+    ),
+  ];
+  return { heading: t(`What ${name} sees`, `Yang dilihat ${name}`), rows, note: notes.join(" ") };
 }
 
 /** The toast after saving: "Saved — Mop the terrace, Sari". */
@@ -213,14 +316,24 @@ export function savedSummary(items: KakakSuggestion[], locale: Locale): string {
         ? first.entries.map((e) => (e.type === "item" ? e.name : e.note)).join(", ")
         : first.kind === "pet_routine"
           ? petRoutineSummary(first, locale)
-          : first.name;
+          : first.kind === "new_ingredient" && locale === "en" && first.nameEn
+            ? first.nameEn
+            : first.kind === "staff_areas"
+              ? t(`What ${first.staffName} sees`, `Yang dilihat ${first.staffName}`)
+              : first.name;
   const more = items.length > 1 ? t(` and ${items.length - 1} more`, ` dan ${items.length - 1} lainnya`) : "";
   return t(`Saved — ${name}${more}`, `Tersimpan — ${name}${more}`);
 }
 
-/** Whether saving this card would add anything (a routine whose times all exist adds nothing). */
+/**
+ * Whether saving this card would add anything: a routine whose times all
+ * exist adds nothing, and neither does an ingredient whose only news was an
+ * amount that can't be written (its note says why).
+ */
 export function addsSomething(item: KakakSuggestion): boolean {
-  return item.kind !== "pet_routine" || item.pets.some((p) => p.times.length > 0);
+  if (item.kind === "pet_routine") return item.pets.some((p) => p.times.length > 0);
+  if (item.kind === "ingredient") return item.keptIn !== null || item.expiry !== "keep" || Boolean(item.amount);
+  return true;
 }
 
 type PetRoutine = Extract<KakakSuggestion, { kind: "pet_routine" }>;

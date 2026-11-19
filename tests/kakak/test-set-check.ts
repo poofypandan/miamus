@@ -4,6 +4,7 @@
 
 import { householdRefs, type KakakHousehold } from "@/lib/kakak/household";
 import { KAKAK_TOOLS, TOOL_WEEKDAYS } from "@/lib/kakak/tools";
+import { AREAS } from "@/lib/staff-areas";
 import { isDay, isTime } from "@/lib/kakak/validate";
 import type { ExpectedShoppingItem, FieldMatcher, KakakTestSet } from "./types";
 
@@ -71,6 +72,10 @@ export function checkTestSet(
           for (const value of matcher.sameSet) {
             if (!refs[setKind].has(value)) problems.push(`${where}: ${field} ${JSON.stringify(value)} is not in the household`);
           }
+        } else if (field === "show" || field === "hide") {
+          if (!matcher.sameSet.every((area) => (AREAS as readonly string[]).includes(area))) {
+            problems.push(`${where}: ${field} has an area that is not ${AREAS.join(", ")}`);
+          }
         } else if (field === "days") {
           if (!matcher.sameSet.every((d) => (TOOL_WEEKDAYS as readonly string[]).includes(d))) {
             problems.push(`${where}: days has a day that is not mon … sun`);
@@ -107,6 +112,10 @@ export function checkTestSet(
           return;
         }
         if (t !== path.length - 1) problems.push(`${at}: only the last turn may be a ${turn.kind}`);
+        if (turn.kind === "message") {
+          if ((turn.mentions ?? []).some((group) => group.length === 0 || group.some((n) => !n.trim()))) problems.push(`${at}: an empty mentions group`);
+          if ((turn.avoids ?? []).some((n) => !n.trim())) problems.push(`${at}: an empty avoids entry`);
+        }
         if (turn.kind !== "suggestions") return;
         if (turn.calls.length === 0) problems.push(`${at}: suggestions need at least one call`);
         for (const call of turn.calls) {

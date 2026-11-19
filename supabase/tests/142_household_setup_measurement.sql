@@ -191,7 +191,9 @@ insert into public.task_entities (id, household_id, entity_type, name, created_a
 values ('00000000-0000-0000-0000-0000000142e1', :f1, 'pet', 'Mochi', now() - interval '3 days');
 insert into public.master_schedules (id, entity_id, title, module, frequency_type, fixed_times, is_active, created_at)
 values ('00000000-0000-0000-0000-000000014201', '00000000-0000-0000-0000-0000000142e1', 'Makan', 'pet', 'fixed_time',
-        array['08:00'::time, '18:00'::time], true, now() - interval '3 days');
+        -- At midnight, so every slot of that day is owed whatever time the
+        -- test runs (migrations/170: none before the routine was made).
+        array['08:00'::time, '18:00'::time], true, pg_temp.at(3, 0));
 insert into public.task_logs (schedule_id, entity_id, module, completed_at, staff_id)
 values ('00000000-0000-0000-0000-000000014201', '00000000-0000-0000-0000-0000000142e1', 'pet', pg_temp.at(1, 8, 5),
         '00000000-0000-0000-0000-0000000142c1');
@@ -409,8 +411,8 @@ select pg_temp.ok((select (j #>> '{summary,same_day}')::int = 3 and (j #>> '{sum
 -- chore from 8 days ago (due yesterday, open) with a written day 2 days
 -- ago, off its pattern, done.
 insert into public.master_schedules (entity_id, title, module, frequency_type, start_time, end_time, interval_hours, is_active, created_at)
-values ('00000000-0000-0000-0000-0000000142e1', 'Pipis', 'pet', 'interval', '08:00', '16:00', 4, true, now() - interval '3 days'),
-       ('00000000-0000-0000-0000-0000000142e1', 'Rusak', 'pet', 'interval', '08:00', '16:00', 0, true, now() - interval '3 days');
+values ('00000000-0000-0000-0000-0000000142e1', 'Pipis', 'pet', 'interval', '08:00', '16:00', 4, true, pg_temp.at(3, 0)),
+       ('00000000-0000-0000-0000-0000000142e1', 'Rusak', 'pet', 'interval', '08:00', '16:00', 0, true, pg_temp.at(3, 0));
 insert into public.task_logs (schedule_id, entity_id, module, completed_at)
 select id, entity_id, 'pet', pg_temp.at(1, 12, 5) from public.master_schedules where title = 'Pipis'
    and entity_id = '00000000-0000-0000-0000-0000000142e1';

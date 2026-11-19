@@ -40,6 +40,14 @@ const NEVER_HIDDEN_FROM_EVERYBODY: readonly StaffArea[] = ["home", "pets"];
 type Person = Pick<StaffProfile, "id"> &
   Partial<Pick<StaffProfile, "user_id" | "archived_at" | "hidden_areas">>;
 
+/** Each area's name, as the owner's switches say it (English, Bahasa Indonesia). */
+export const AREA_LABELS: Record<StaffArea, readonly [en: string, id: string]> = {
+  home: ["Chores for anyone", "Tugas untuk siapa saja"],
+  pets: ["Pet routines", "Rutinitas hewan"],
+  kitchen: ["Kitchen", "Dapur"],
+  repairs: ["Repairs", "Perbaikan"],
+};
+
 export function isStaffArea(value: unknown): value is StaffArea {
   return typeof value === "string" && (AREAS as readonly string[]).includes(value);
 }
@@ -180,5 +188,22 @@ export function withArea(hidden: readonly string[] | null | undefined, area: Sta
   const next = new Set((hidden ?? []).filter(isStaffArea));
   if (on) next.delete(area);
   else next.add(area);
+  return AREAS.filter((a) => next.has(a));
+}
+
+/**
+ * The stored list after several areas change at once (Kakak's card, Phase
+ * 178 follow-up): `show` taken off what is hidden, `hide` added, in AREAS
+ * order, unknown values dropped. Worked out on top of the latest list, so an
+ * area the change doesn't name stays as it is.
+ */
+export function withAreas(
+  hidden: readonly string[] | null | undefined,
+  show: readonly StaffArea[],
+  hide: readonly StaffArea[]
+): StaffArea[] {
+  const next = new Set((hidden ?? []).filter(isStaffArea));
+  for (const area of show) next.delete(area);
+  for (const area of hide) next.add(area);
   return AREAS.filter((a) => next.has(a));
 }

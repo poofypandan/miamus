@@ -14,6 +14,25 @@ function day(offset = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// The screen offers the change only on the day of cooked_at, on the phone's
+// calendar (Asia/Jakarta here). "An hour ago" is yesterday from 00:00 to
+// 01:00 WIB, which is when CI failed: so an hour ago, but never before
+// today's midnight.
+function earlierToday(): string {
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  return new Date(Math.max(Date.now() - 60 * 60 * 1000, midnight.getTime())).toISOString();
+}
+
+// Yesterday at 23:00: always the day before on the calendar, and always
+// within the server's 30 hours, so only the screen's day rule hides it.
+function lateYesterday(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  d.setHours(23, 0, 0, 0);
+  return d.toISOString();
+}
+
 function item(id: string, name: string, quantity: number, unit: string, over: Record<string, unknown> = {}) {
   return {
     id,
@@ -106,7 +125,7 @@ function dish(over: Record<string, unknown> = {}) {
     servings: 4,
     notes: null,
     position: 0,
-    cooked_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    cooked_at: earlierToday(),
     cooked_by: SYAM,
     cooked_uses: COOKED_USES.map((u) => ({ ...u })),
     created_by: null,
@@ -223,7 +242,7 @@ test("the button is gone on a dish cooked yesterday, on a dish with no recipe, a
     menu: [
       // Planned for today but marked cooked yesterday (the rule is the day of cooked_at):
       // a dish on yesterday's date would fall outside the week on a Monday.
-      dish({ cooked_at: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString() }),
+      dish({ cooked_at: lateYesterday() }),
       dish({ recipe_id: null, title: "Nasi goreng", servings: null, cooked_uses: [], meal: "lunch" }),
       dish({ recipe_id: plain.id, title: "Sambal", cooked_uses: [], meal: "breakfast" }),
     ],

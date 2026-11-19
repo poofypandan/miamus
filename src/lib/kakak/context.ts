@@ -11,8 +11,9 @@
 // same household gives the same references on every call of a conversation.
 
 import { ROUTINE_KINDS } from "@/lib/pet-routine-kinds";
-import { isIngredient } from "@/lib/kitchen-units";
-import type { FoodPlace, InventoryCategory, RoutineKind } from "@/types/database";
+import { isIngredient, isStockUnit } from "@/lib/kitchen-units";
+import { hiddenAreasOf } from "@/lib/staff-areas";
+import type { FoodPlace, InventoryCategory, InventoryUnit, RoutineKind } from "@/types/database";
 import type { KakakHousehold, KakakLocale } from "./household";
 import { FOOD_PLACES } from "./tools";
 
@@ -26,6 +27,8 @@ export interface ContextStaffRow {
   created_at: string;
   user_id?: string | null;
   archived_at?: string | null;
+  /** migrations/165; absent before it (or on an older read), which reads as nothing hidden. */
+  hidden_areas?: string[] | null;
 }
 
 export interface ContextPetRow {
@@ -73,6 +76,10 @@ export interface ContextItemRow {
   expires_on?: string | null;
   /** Enough, Running low or Out: an Out item keeps no date (migrations/154's trigger). */
   stock_status?: string | null;
+  /** migrations/148: whether its amount is counted, in which unit, and how much is left. */
+  track_amount?: boolean | null;
+  unit?: string | null;
+  quantity?: number | string | null;
 }
 
 export interface ContextRows {
@@ -87,6 +94,22 @@ export interface ContextRows {
   foodOn?: boolean | null;
   /** household_features 'kitchen' (migrations/148): only an explicit true switches Kitchen amounts on. */
   kitchenOn?: boolean | null;
+  /** household_features 'repairs' and 'bills' (migrations/145): only an explicit false switches one off. */
+  repairsOn?: boolean | null;
+  billsOn?: boolean | null;
+  /** The features were read at all: without it Kakak is told nothing about what is off. */
+  featuresRead?: boolean;
+}
+
+/**
+ * How an ingredient's amount is kept (migrations/148), for turning "2 kg" in
+ * a suggestion into the right write. Stays on the server: amounts and units
+ * are never in the household block, so they never reach Anthropic.
+ */
+export interface ItemStock {
+  tracked: boolean;
+  unit: InventoryUnit;
+  quantity: number;
 }
 
 export interface RefMap {
@@ -95,6 +118,8 @@ export interface RefMap {
   pets: Record<string, string>;
   rooms: Record<string, string>;
   items: Record<string, string>;
+  /** I1… → how its amount is kept; only for items whose row carried it. */
+  stock?: Record<string, ItemStock>;
 }
 
 /** Shown on the card next to each reference, in the household's own words. */
@@ -155,7 +180,7 @@ export function buildContext(
   rows: ContextRows,
   { today, now, ownerLocale, callerUserId }: { today: string; now: string; ownerLocale: KakakLocale; callerUserId: string },
 ): BuiltContext {
-  const refs: RefMap = { people: {}, pets: {}, rooms: {}, items: {} };
+  const refs: RefMap = { people: {}, pets: {}, rooms: {}, items: {}, stock: {} };
   const names: RefNames = { people: {}, pets: {}, rooms: {}, items: {} };
 
   const active = rows.staff.filter((s) => !s.archived_at).sort(byAge);
@@ -169,7 +194,10 @@ export function buildContext(
     if (person === self) continue;
     const ref = `S${people.length + 1}`;
     const name = firstName(person.name);
-    people.push({ ref, name });
+    // What an owner switched off (Phase 178). A co-owner's row is never
+    // limited, so it carries nothing, and is marked so Kakak can't limit it.
+    const hidden = hiddenAreasOf(person);
+    people.push({ ref, name, ...(hidden.length ? { hidden } : {}), ...(person.user_id ? { owner: true as const } : {}) });
     refs.people[ref] = person.id;
     names.people[ref] = name;
   }
@@ -265,6 +293,11 @@ export function buildContext(
     });
     refs.items[ref] = item.id;
     names.items[ref] = name;
+    // How its amount is kept, when the row says (migrations/148). Server only.
+    const quantity = Number(item.quantity);
+    if (typeof item.track_amount === "boolean" && isStockUnit(item.unit) && Number.isFinite(quantity)) {
+      refs.stock![ref] = { tracked: item.track_amount, unit: item.unit, quantity: Math.max(0, quantity) };
+    }
   }
 
   return {
@@ -280,6 +313,10 @@ export function buildContext(
       ...(rows.hasPets === false ? { petsOff: true } : {}),
       ...(rows.foodOn === false ? { foodOff: true } : {}),
       ...(ingredientsOn ? { ingredientsOn: true } : {}),
+      // Only when the switches were read: a failed read says nothing is off.
+      ...(rows.featuresRead && rows.repairsOn === false ? { repairsOff: true } : {}),
+      ...(rows.featuresRead && rows.billsOn === false ? { billsOff: true } : {}),
+      ...(rows.featuresRead && rows.kitchenOn !== true ? { kitchenOff: true } : {}),
     },
     refs,
     names,

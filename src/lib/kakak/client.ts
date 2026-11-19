@@ -23,6 +23,33 @@ export type KakakReply =
  */
 export type KakakFailure = "invalid" | "api" | "too_long" | "refusal" | "offline" | "cap" | "slow" | "stale";
 
+/**
+ * What this page can show, sent with every turn. The route sends a newer
+ * kind of card only to a page that says it knows it (route.ts), so a page
+ * left open across a deploy is asked to reopen instead of crashing.
+ *   2 (2026-11-14): a new ingredient's card, and amounts on an ingredient.
+ *   3 (Phase 178 follow-up): what a staff member sees.
+ */
+export const KAKAK_CLIENT_VERSION = 3;
+
+/**
+ * A long chat rolls over (2026-11-14). A conversation may hold only so many
+ * of Kakak's turns (engine.ts MAX_CALLS_PER_CONVERSATION), and now that she
+ * answers questions an owner can simply keep asking. So once she has spoken
+ * this many times, and the conversation is at rest (her last turn was a
+ * plain reply: no question waiting for an answer, no card waiting to be
+ * confirmed), the next words start a new conversation. Earlier turns can't
+ * be dropped one by one: the API takes a history whole or not at all.
+ */
+export const FRESH_AFTER_TURNS = 5;
+
+/** The history the next words go with: this one, or none once a long chat is at rest. */
+export function historyForNextTurn(history: KakakHistory | null, atRest: boolean): KakakHistory | null {
+  if (!history || !atRest) return history;
+  const hers = history.messages.filter((message) => message.role === "assistant").length;
+  return hers >= FRESH_AFTER_TURNS ? null : history;
+}
+
 export async function askKakak(
   householdId: string,
   history: KakakHistory | null,
@@ -36,7 +63,7 @@ export async function askKakak(
     response = await fetch("/api/kakak", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ householdId, history, reply, locale }),
+      body: JSON.stringify({ householdId, history, reply, locale, v: KAKAK_CLIENT_VERSION }),
       signal,
     });
   } catch (error) {

@@ -201,8 +201,37 @@ export const LEGAL = {
   // profile while it exists. It changes only what the phone shows, never
   // what staff can report. No new service, nothing sent to Kakak; not yet in
   // the household export (added when the export is next re-created).
-  policyVersion: "2026-11-13.3",
-  effectiveDate: { en: "13 November 2026", id: "13 November 2026" },
+  // 2026-11-14.1: Kakak answers questions and adds ingredients (Phase 180
+  // step 1; no migration) — Kakak can answer a question about how Miamus
+  // works, from Miamus's own guide (no household data in it), and can
+  // suggest an ingredient that isn't listed yet, with its amount, saved
+  // only when the admin confirms, exactly as Add ingredient saves it. Each
+  // request also says which parts of Miamus the household has switched off
+  // (Repairs, Bills and upkeep, Kitchen amounts; Pets and Food at home were
+  // already said), so she doesn't describe a screen that isn't there.
+  // Amounts and units are never sent: the server works out how an amount
+  // lands. No new kind of personal data, no new service or region;
+  // Anthropic's retention is unchanged.
+  // 2026-11-14.2: Kakak sets what a staff member sees (Phase 178
+  // follow-up; migrations/171 only lets the request record name the new
+  // tool) — each Kakak request now also carries, for a staff member with
+  // parts of the staff app switched off, which parts they don't see (chores
+  // for anyone, pet routines, kitchen, repairs), and Kakak may suggest a
+  // change, saved only when the admin confirms. No new kind of personal
+  // data stored, no new service or region; Anthropic's retention is
+  // unchanged.
+  // 2026-11-15.1: Kakak's own voice (read replies aloud). ElevenLabs
+  // (United States) becomes a processor: when an admin turns on Read replies
+  // aloud and the server has her voice set up, the words of each Kakak reply
+  // (shaped for speech, at most 600 characters; may include a first name
+  // from the request) are sent to ElevenLabs, and the audio streams straight
+  // back to the phone. Miamus stores no audio and no text, only characters
+  // read aloud per household per day (kakak_usage.voice_chars, numbers only,
+  // 35 days, migrations/172), and asks ElevenLabs to delete each generation
+  // from its history right after (zero retention is Enterprise-only); it may
+  // keep logs, and backups up to 30 days. Otherwise the phone reads aloud.
+  policyVersion: "2026-11-15.1",
+  effectiveDate: { en: "15 November 2026", id: "15 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on

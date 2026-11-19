@@ -6,10 +6,11 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { costMicroUsd, type KakakModel } from "@/lib/kakak/cost";
-import { renderHouseholdBlock, type KakakHousehold } from "@/lib/kakak/household";
-import { KAKAK_SYSTEM_PROMPT } from "@/lib/kakak/prompt";
-import { KAKAK_TOOLS } from "@/lib/kakak/tools";
+import { kakakSystem, toolsFor } from "@/lib/kakak/engine";
+import type { KakakHousehold } from "@/lib/kakak/household";
+import { correctionFor, guardReplyText, replyProblems } from "@/lib/kakak/reply-guard";
 import { validateToolCall } from "@/lib/kakak/validate";
+import { budgetFetch, type Budget } from "./budget";
 import { scriptedReply, type ActualTurn, type RejectedAttempt, type ToolCall } from "./grade";
 import type { KakakCase } from "./types";
 
@@ -52,6 +53,8 @@ export function checkVariant(variant: Variant): void {
 }
 
 export interface CallRecord {
+  /** When the call started (ms since the epoch), to set the run's first, cold call apart. */
+  startedAt?: number;
   ms: number;
   costMicroUsd: number;
   inputTokens: number;
@@ -74,6 +77,24 @@ export interface ConversationResult {
   calls: CallRecord[];
   /** Set when the conversation stopped for a reason other than its end. */
   error?: string;
+  /** The HTTP status of an API error, when there was one (400: the API refused the settings). */
+  apiStatus?: number;
+}
+
+/**
+ * Rate limits (429) and overloads (529) the API answered with, including the
+ * ones the SDK retried by itself. Read before and after a run.
+ */
+export const apiPressure = { rateLimited: 0, overloaded: 0 };
+
+/** `base` with every 429 and 529 counted in apiPressure. */
+export function countingFetch(base: typeof fetch = fetch): typeof fetch {
+  return async (input, init) => {
+    const response = await base(input, init);
+    if (response.status === 429) apiPressure.rateLimited += 1;
+    if (response.status === 529) apiPressure.overloaded += 1;
+    return response;
+  };
 }
 
 /**
@@ -83,7 +104,7 @@ export interface ConversationResult {
  * household's photos only ever go to api.anthropic.com and the comparison
  * measures the real API. Unit tests pass their own fake client instead.
  */
-export function makeClient(): Anthropic {
+export function makeClient(budget?: Budget): Anthropic {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY is not set. See docs/kakak-eval.md, 'Before the first run'.");
@@ -93,7 +114,23 @@ export function makeClient(): Anthropic {
     authToken: null,
     baseURL: "https://api.anthropic.com",
     maxRetries: 3,
+    // With a budget, every request (the SDK's own retries included) is sized
+    // and has to fit before it is sent (budget.ts).
+    fetch: budget ? budgetFetch(budget, countingFetch()) : countingFetch(),
   });
+}
+
+/** Runs `work` over the items, `size` at a time, starting them in order. */
+export async function pool<T>(items: T[], size: number, work: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(size, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next];
+      next += 1;
+      await work(item);
+    }
+  });
+  await Promise.all(workers);
 }
 
 const MAX_QUESTIONS = 3;
@@ -139,25 +176,23 @@ export async function playConversation(
 ): Promise<ConversationResult> {
   checkVariant(variant);
   const caseHousehold: KakakHousehold = { ...household, ownerLocale: kakakCase.ownerLocale };
-  const system: Anthropic.TextBlockParam[] = [
-    // Breakpoint 1: instructions + tools, the same for every household.
-    { type: "text", text: KAKAK_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-    // Breakpoint 2: this household, cached within the conversation.
-    { type: "text", text: renderHouseholdBlock(caseHousehold), cache_control: { type: "ephemeral" } },
-  ];
+  // The route's own blocks (engine.ts): her instructions, the guide to
+  // Miamus in the owner's language, then this household, each cached.
+  const system = kakakSystem(caseHousehold);
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: firstMessage }];
   const result: ConversationResult = { turns: [], rejected: [], calls: [] };
   let retried = false;
 
   while (result.calls.length < MAX_CALLS) {
     const started = performance.now();
+    const startedAt = Date.now();
     let response: Anthropic.Message;
     try {
       response = await client.messages.create({
         model: variant.model,
         max_tokens: 4096,
         system,
-        tools: KAKAK_TOOLS,
+        tools: toolsFor(caseHousehold),
         tool_choice: { type: "auto" },
         thinking: variant.thinking === "between_tools" ? { type: "between_tools" } : { type: "adaptive" },
         output_config: { effort: variant.effort },
@@ -165,10 +200,12 @@ export async function playConversation(
       });
     } catch (error) {
       result.error = `API error: ${error instanceof Error ? error.message : String(error)}`;
+      if (error instanceof Anthropic.APIError && typeof error.status === "number") result.apiStatus = error.status;
       return result;
     }
     const usage = response.usage;
     const record: CallRecord = {
+      startedAt,
       ms: Math.round(performance.now() - started),
       costMicroUsd: costMicroUsd(variant.model, usage),
       inputTokens: usage.input_tokens,
@@ -233,7 +270,32 @@ export async function playConversation(
     }
 
     const plain = calls.map(({ name, input }) => ({ name, input }));
-    const turn: ActualTurn = { ...classify(plain), calls: plain, text };
+    const classified = classify(plain);
+    // A plain reply the owner can't be shown goes back once, with the reason
+    // (engine.ts): the turn's one second try, shared with a failed check.
+    if (classified.kind === "message" && !retried) {
+      const wrong = replyProblems(text, caseHousehold.ownerLocale);
+      if (wrong.length > 0) {
+        retried = true;
+        record.rejected = [`reply not shown: ${wrong.join(", ")}`];
+        result.rejected.push({ beforeTurn: result.turns.length, turn: { kind: "message", calls: [], text } });
+        if (!wrong.includes("empty")) {
+          messages.push({ role: "assistant", content: response.content });
+          messages.push({ role: "user", content: correctionFor(wrong, caseHousehold.ownerLocale) });
+        }
+        continue;
+      }
+    }
+    // What the owner would see: the route's guard on the model's words.
+    const guarded =
+      classified.kind === "invalid" ? { text, tells: [] } : guardReplyText(classified.kind, text, caseHousehold.ownerLocale);
+    const turn: ActualTurn = {
+      ...classified,
+      calls: plain,
+      text: guarded.text,
+      ...(guarded.text !== text ? { rawText: text } : {}),
+      ...(guarded.tells.length ? { guarded: guarded.tells } : {}),
+    };
     result.turns.push(turn);
     if (turn.kind !== "question") return result;
 

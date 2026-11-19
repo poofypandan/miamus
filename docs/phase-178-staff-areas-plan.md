@@ -188,6 +188,10 @@ method, `setStaffHiddenAreas(staffId, areas)`.
 - **Kakak** is unchanged. A chore she suggests for a person shows to that
   person (rule 1). She is not told who sees what, so nothing new is sent to
   Anthropic.
+  *Follow-up (after the 15 Nov demo):* Kakak can now suggest a "What Syam
+  sees" card (`set_staff_areas`), saved through `setStaffHiddenAreas` on the
+  owner's tap; her household block carries "(doesn't see: …)" after a staff
+  member with areas off, and the privacy policy says so (2026-11-13.4).
 - **The export** lists a staff member's fields by name and so does not
   carry `hidden_areas` yet. Add it when the export is next re-created (the
   Phase 175 "trust" spec re-creates it in migration 158).

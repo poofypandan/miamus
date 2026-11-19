@@ -1,4 +1,4 @@
-import type { ChoreOccurrence } from "@/lib/chore-recurrence";
+import { seriesIdOf, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { ScheduleCategory } from "@/lib/schedule-categories";
 import type { OwnerLocale } from "@/lib/owner-locale";
@@ -121,7 +121,10 @@ export function slotOf(time: string | null | undefined): string | null {
 /** The record for a chore's day, unless the chore is done (done wins) or called off. */
 export function choreException(list: readonly TaskException[], occurrence: ChoreOccurrence): TaskException | null {
   if (occurrence.status !== "pending") return null;
-  return list.find((x) => x.chore_id === occurrence.template.id && x.occurs_on === occurrence.date) ?? null;
+  // Keyed on the chore the server knows (the repeat, or the one-off), as the
+  // record is filed: never a written day's own id (task_exceptions_guard).
+  const chore = seriesIdOf(occurrence);
+  return list.find((x) => x.chore_id === chore && x.occurs_on === occurrence.date) ?? null;
 }
 
 /** The record for one pet's slot, unless it is logged (done wins). */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -8,7 +8,6 @@ import {
   CalendarOff,
   Camera,
   ChevronLeft,
-  ChevronRight,
   Crown,
   DoorOpen,
   Eye,
@@ -75,6 +74,10 @@ import { SignOutSheet } from "@/components/auth/sign-out-sheet";
 import { HouseholdDataPanel } from "@/components/dashboard/household-data-panel";
 import { useHouseholdDeletion } from "@/hooks/use-household-deletion";
 import { AboutMiamus } from "@/components/dashboard/about-miamus";
+import { HowMiamusWorks } from "@/components/dashboard/how-miamus-works";
+import { SettingsGroup, SettingsRow } from "@/components/dashboard/settings-list";
+import { guideEntry } from "@/lib/guide";
+import { SETTINGS_PAGES, type SettingsPage } from "@/lib/settings-pages";
 import { WhatsNewCard, WhatsNewList } from "@/components/shared/whats-new";
 import { VideoTip } from "@/components/shared/video-tip";
 import { useStaffPushOverview } from "@/hooks/use-staff-push-overview";
@@ -118,65 +121,13 @@ function proposalStatus(status: ProposalStatus, t: Translate): string {
   return t("pending", "menunggu");
 }
 
-const HOUSEHOLD_PAGES = [
-  "family",
-  "staff",
-  "leave",
-  "invite",
-  "sign-in",
-  "notifications",
-  "language",
-  "lock",
-  "kakak",
-  "activity",
-  "data",
-  "about",
-  "whats-new",
-  "rooms",
-  "features",
-] as const;
-type HouseholdPage = (typeof HOUSEHOLD_PAGES)[number];
+// The pages, in a list of their own so links to them are built from it (settings-pages.ts).
+const HOUSEHOLD_PAGES = SETTINGS_PAGES;
+type HouseholdPage = SettingsPage;
 
 /** Kakak's avatar at the size of a row icon. */
 function KakakRowIcon() {
   return <KakakAvatar className="size-5 shrink-0" />;
-}
-
-/** A rounded group of rows, like a section of iPhone Settings (Phase 155). */
-function SettingsGroup({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">{children}</div>;
-}
-
-function SettingsRow({
-  icon: Icon,
-  label,
-  detail,
-  waiting = false,
-  onPress,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  detail?: string;
-  /** Amber: something is waiting for the owner (Phase 153 colour rule). */
-  waiting?: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onPress}
-      className="flex min-h-[52px] items-center gap-3 px-4 text-left text-sm active:bg-muted"
-    >
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 flex-1 truncate font-medium text-gray-900">{label}</span>
-      {detail && (
-        <span className={waiting ? "text-xs font-medium text-amber-700" : "text-xs text-muted-foreground"}>
-          {detail}
-        </span>
-      )}
-      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-    </button>
-  );
 }
 
 /**
@@ -202,6 +153,8 @@ export function StaffTab() {
     else params.delete("page");
     // Only Home → Rooms → Edit rooms sets it, for the back link below.
     params.delete("from");
+    // How Miamus works' open entry belongs to that page alone.
+    params.delete("entry");
     pushInPlace(`${pathname}?${params.toString()}`);
   }
   const today = formatDateLocal(useToday());
@@ -290,6 +243,16 @@ export function StaffTab() {
   const pageName = pageParam === "who-lives-here" ? "features" : pageParam;
   const page = HOUSEHOLD_PAGES.includes(pageName as HouseholdPage) ? (pageName as HouseholdPage) : null;
   const backToHomeRooms = page === "rooms" && searchParams.get("from") === "home";
+  // How Miamus works sits under About Miamus, and its open entry under the
+  // guide's list (Phase 180 H2): Back goes up one step.
+  const inGuideEntry = page === "how-miamus-works" && !!guideEntry(searchParams.get("entry") ?? "");
+  const back = backToHomeRooms
+    ? { label: t("Home", "Rumah"), go: () => pushInPlace("/dashboard?module=chores&chores=rooms") }
+    : inGuideEntry
+      ? { label: t("How Miamus works", "Cara pakai Miamus"), go: () => open("how-miamus-works") }
+      : page === "how-miamus-works"
+        ? { label: t("About Miamus", "Tentang Miamus"), go: () => open("about") }
+        : { label: t("Settings", "Pengaturan"), go: () => open(null) };
 
   if (!page) {
     const staffCount = (profiles ?? []).filter((p) => !p.user_id).length;
@@ -392,16 +355,14 @@ export function StaffTab() {
   return (
     <div className="flex flex-col gap-4">
       {/* Back to the list, or — for the rooms editor opened from Home →
-          Rooms → Edit rooms (Phase 175) — back to Home → Rooms. */}
+          Rooms → Edit rooms (Phase 175) — back to Home → Rooms; for How
+          Miamus works, up one step. */}
       <button
         type="button"
-        onClick={() =>
-          backToHomeRooms ? pushInPlace("/dashboard?module=chores&chores=rooms") : open(null)
-        }
+        onClick={back.go}
         className="-ml-2 flex min-h-11 items-center gap-0.5 self-start rounded-lg px-2 text-sm font-medium text-muted-foreground active:bg-muted"
       >
-        <ChevronLeft className="size-4" />{" "}
-        {backToHomeRooms ? t("Home", "Rumah") : t("Settings", "Pengaturan")}
+        <ChevronLeft className="size-4" /> {back.label}
       </button>
 
       {page === "family" && <HouseholdMembersPanel />}
@@ -430,6 +391,7 @@ export function StaffTab() {
       {page === "activity" && <ActivityPage entries={entries} />}
       {page === "data" && <HouseholdDataPanel status={deletion.status} reload={deletion.reload} />}
       {page === "about" && <AboutMiamus />}
+      {page === "how-miamus-works" && <HowMiamusWorks />}
       {page === "whats-new" && <WhatsNewList />}
       {page === "rooms" && <RoomsManager />}
       {page === "features" && <FeaturesPanel />}

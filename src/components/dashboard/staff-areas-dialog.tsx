@@ -18,7 +18,7 @@ import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useToday } from "@/hooks/use-today";
 import { dataProvider } from "@/lib/data";
 import { formatDateLocal } from "@/lib/scheduleEngine";
-import { areaHasNobody, hiddenAreasOf, withArea, type StaffArea } from "@/lib/staff-areas";
+import { AREA_LABELS, areaHasNobody, hiddenAreasOf, withArea, type StaffArea } from "@/lib/staff-areas";
 import type { StaffProfile } from "@/types/database";
 
 /**
@@ -31,16 +31,7 @@ import type { StaffProfile } from "@/types/database";
  */
 
 export function areaLabel(area: StaffArea, t: Translate): string {
-  switch (area) {
-    case "home":
-      return t("Chores for anyone", "Tugas untuk siapa saja");
-    case "pets":
-      return t("Pet routines", "Rutinitas hewan");
-    case "kitchen":
-      return t("Kitchen", "Dapur");
-    case "repairs":
-      return t("Repairs", "Perbaikan");
-  }
+  return t(...AREA_LABELS[area]);
 }
 
 /**
