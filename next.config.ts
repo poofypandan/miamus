@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { parseOneDayLanding } from "./src/lib/landing-flag";
 
 /**
  * This build's identity, for the over-the-air update check (Phase 137).
@@ -80,6 +81,28 @@ const nextConfig: NextConfig = {
   // it is running, and the server knows which version is live.
   env: {
     NEXT_PUBLIC_BUILD_ID: process.env.MIAMUS_BUILD_ID,
+  },
+  // The "One day" landing page (src/lib/landing-flag.ts). Switched on, it is
+  // served at /welcome and /selamat-datang in place of today's page, and its
+  // preview addresses send people there. beforeFiles, because a page already
+  // lives at those paths. Off or preview: nothing changes here.
+  async rewrites() {
+    if (parseOneDayLanding(process.env.LANDING_ONE_DAY) !== "on") return [];
+    return {
+      beforeFiles: [
+        { source: "/welcome", destination: "/welcome/one-day" },
+        { source: "/selamat-datang", destination: "/selamat-datang/sehari" },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
+  async redirects() {
+    if (parseOneDayLanding(process.env.LANDING_ONE_DAY) !== "on") return [];
+    return [
+      { source: "/welcome/one-day", destination: "/welcome", permanent: false },
+      { source: "/selamat-datang/sehari", destination: "/selamat-datang", permanent: false },
+    ];
   },
   async headers() {
     return [
