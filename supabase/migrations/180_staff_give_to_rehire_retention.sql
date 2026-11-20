@@ -208,6 +208,7 @@ begin
          claimable_from = now()
    where id = p_staff_id
      and household_id = caller_admin_household()
+     and archived_at is not null
      and forgotten_at is null
   returning * into v_row;
 

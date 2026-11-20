@@ -169,6 +169,8 @@ select pg_temp.ok(pg_temp.claim(:yanti) = 'not_claimable', '... after 7 days the
 update public.staff_profiles set claimable_from = now() where id = :yanti;
 select pg_temp.ok(pg_temp.claim(:yanti) = 'ok', '... inside the window it can, though she was added 6 months ago');
 select pg_temp.ok((select has_pin from public.staff_profiles where id = :yanti), '... and she has her own PIN');
+select pg_temp.ok(pg_temp.err_as(:a1, format('select public.restore_staff_profile(%L)', :yanti)) <> '',
+  'restoring someone still working is refused (it would reopen their claim window; security review, PR #172)');
 select pg_temp.ok(pg_temp.err_as(:p1, format('select public.restore_staff_profile(%L)', :sri)) <> '',
   'a staff phone can''t bring anyone back');
 select pg_temp.ok(pg_temp.err_as(null, format('select public.restore_staff_profile(%L)', :sri)) like '%permission denied%',
