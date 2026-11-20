@@ -230,8 +230,16 @@ export const LEGAL = {
   // 35 days, migrations/172), and asks ElevenLabs to delete each generation
   // from its history right after (zero retention is Enterprise-only); it may
   // keep logs, and backups up to 30 days. Otherwise the phone reads aloud.
-  policyVersion: "2026-11-15.1",
-  effectiveDate: { en: "15 November 2026", id: "15 November 2026" },
+  // 2026-11-20.1: two questions when asking for access (owner, 2026-11-20;
+  // migrations/175) — what the person would like Miamus to help with
+  // (required on the screen, up to 300 characters) and, optionally, who
+  // told them about Miamus (up to 100). Used to understand what people want
+  // and how they hear about Miamus; only Poofy Labs sees them (the approvals
+  // page); never in a notification. Cleared 12 months after the request by
+  // the nightly prune, or deleted sooner with the request (a rejected one
+  // after 30 days, an account that is deleted). No new service.
+  policyVersion: "2026-11-20.1",
+  effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on

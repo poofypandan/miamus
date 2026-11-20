@@ -6,22 +6,27 @@ import Link from "next/link";
 import {
   Building,
   Building2,
+  ChefHat,
   Clock,
   House,
   Languages,
   Loader2,
   Mail,
   MessageCircle,
+  Mic,
   PawPrint,
   ShieldX,
   Trees,
   UserRoundPlus,
+  UsersRound,
+  Wrench,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { LanguageChoice } from "@/components/dashboard/language-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { LEGAL } from "@/config/legal";
 import { useHousehold } from "@/context/household-context";
 import {
@@ -34,8 +39,12 @@ import {
   canCreateHousehold,
   createHouseholdFailure,
   formatWhatsApp,
+  hasSuggestion,
+  HEARD_FROM_MAX,
   normalizeWhatsApp,
   parseHouseholdAccess,
+  toggleSuggestion,
+  WANTS_HELP_MAX,
   type HouseholdAccess,
 } from "@/lib/household-access";
 import { clearCachedOwnerLocale, LOCALE_NAMES } from "@/lib/owner-locale";
@@ -187,16 +196,53 @@ function LanguageScreen() {
 
 // --- Asking -----------------------------------------------------------------------
 
+/**
+ * The suggestions under "What would you like Miamus to help with?" (owner,
+ * 2026-11-20). A tap puts the words in the box, a second tap takes them out
+ * (toggleSuggestion), so most people type nothing (the north star). The
+ * answer is stored as they leave it, in their language. No commas inside a
+ * suggestion: the answer's parts are split on them.
+ */
+const HELP_SUGGESTIONS: { icon: typeof House; label: [string, string] }[] = [
+  { icon: UsersRound, label: ["Running the house with staff", "Mengatur rumah bersama staf"] },
+  { icon: PawPrint, label: ["Pets", "Hewan peliharaan"] },
+  { icon: ChefHat, label: ["Kitchen and groceries", "Dapur dan belanja"] },
+  { icon: Wrench, label: ["Repairs in a new house", "Perbaikan di rumah baru"] },
+  { icon: Mic, label: ["Talking to Kakak instead of tapping", "Bilang ke Kakak tanpa banyak mengetuk"] },
+];
+
+/**
+ * Asking for access, with two questions (owner, 2026-11-20; migrations/175):
+ * what they'd like Miamus to help with (required here, up to 300
+ * characters, with the suggestions above) and who told them about it
+ * (optional, up to 100). Only platform admins read the answers, on the
+ * approvals page; they are never in a notification.
+ */
 function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess) => void }) {
   const t = useT();
+  const [helpWith, setHelpWith] = useState("");
+  const [heardFrom, setHeardFrom] = useState("");
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
+  const ready = helpWith.trim().length > 0;
 
-  async function request() {
-    if (!supabase || sending) return;
+  async function request(e: React.FormEvent) {
+    e.preventDefault();
+    // `sending` too: Enter in the second field submits the form regardless.
+    if (!supabase || sending || !ready) return;
     setSending(true);
     setFailed(false);
-    const { data, error } = await supabase.rpc("request_household_access");
+    let { data, error } = await supabase.rpc("request_household_access", {
+      p_wants_help_with: helpWith.trim(),
+      p_heard_from: heardFrom.trim() || null,
+    });
+    // A database without migrations/175 yet (the app deployed first) has no
+    // function taking the answers (PGRST202): file the request without them
+    // rather than not at all.
+    if (error?.code === "PGRST202") {
+      console.error(error);
+      ({ data, error } = await supabase.rpc("request_household_access"));
+    }
     if (error) {
       console.error(error);
       setFailed(true);
@@ -205,6 +251,11 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
     }
     onRequested(parseHouseholdAccess(data));
   }
+
+  const chip = (on: boolean) =>
+    on
+      ? "flex min-h-11 items-center gap-1.5 rounded-full border border-gray-900 bg-gray-900 px-4 text-left text-sm font-medium text-white"
+      : "flex min-h-11 items-center gap-1.5 rounded-full border bg-white px-4 text-left text-sm font-medium text-gray-700 active:bg-muted";
 
   return (
     <Screen icon={<UserRoundPlus className="size-5" />}>
@@ -222,18 +273,78 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
           "Ingin bergabung ke rumah orang lain? Buka link undangan yang mereka kirim."
         )}
       </Body>
-      <Button onClick={() => void request()} disabled={sending} className="min-h-[52px]">
-        {sending && <Loader2 className="animate-spin" />} {t("Request access", "Minta akses")}
-      </Button>
-      {failed && (
-        <Body tone="error">
-          {t("Couldn't send your request. Try again.", "Permintaan gagal dikirim. Coba lagi.")}
-        </Body>
-      )}
+      <form onSubmit={(e) => void request(e)} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="wants-help-with" className="text-sm font-medium text-gray-900">
+            {t("What would you like Miamus to help with?", "Ingin dibantu Miamus dalam hal apa?")}
+          </Label>
+          <p id="wants-help-with-hint" className="text-xs text-muted-foreground">
+            {t("Tap any that fit, or write your own.", "Ketuk yang sesuai, atau tulis sendiri.")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {HELP_SUGGESTIONS.map((suggestion) => {
+              const Icon = suggestion.icon;
+              const phrase = t(...suggestion.label);
+              const on = hasSuggestion(helpWith, phrase);
+              return (
+                <button
+                  key={suggestion.label[0]}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setHelpWith((text) => toggleSuggestion(text, phrase))}
+                  className={chip(on)}
+                >
+                  <Icon className="size-4 shrink-0" aria-hidden />
+                  {phrase}
+                </button>
+              );
+            })}
+          </div>
+          <Textarea
+            id="wants-help-with"
+            aria-describedby="wants-help-with-hint"
+            value={helpWith}
+            onChange={(e) => setHelpWith(e.target.value)}
+            placeholder={t("A few words is enough", "Beberapa kata saja cukup")}
+            maxLength={WANTS_HELP_MAX}
+            rows={2}
+            required
+            className="min-h-[72px] bg-white"
+          />
+          {helpWith.length > WANTS_HELP_MAX - 50 && (
+            <p className="self-end text-xs text-muted-foreground tabular-nums">
+              {helpWith.length}/{WANTS_HELP_MAX}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="heard-from" className="text-sm font-medium text-gray-900">
+            {t("Who told you about Miamus?", "Siapa yang memberi tahu Anda tentang Miamus?")}{" "}
+            <span className="font-normal text-muted-foreground">{t("(optional)", "(opsional)")}</span>
+          </Label>
+          <Input
+            id="heard-from"
+            value={heardFrom}
+            onChange={(e) => setHeardFrom(e.target.value)}
+            placeholder={t("A friend's name, or where you saw it", "Nama teman, atau di mana Anda melihatnya")}
+            maxLength={HEARD_FROM_MAX}
+            autoComplete="off"
+            className="min-h-[48px] bg-white"
+          />
+        </div>
+        <Button type="submit" disabled={sending || !ready} className="min-h-[52px]">
+          {sending && <Loader2 className="animate-spin" />} {t("Request access", "Minta akses")}
+        </Button>
+        {failed && (
+          <Body tone="error">
+            {t("Couldn't send your request. Try again.", "Permintaan gagal dikirim. Coba lagi.")}
+          </Body>
+        )}
+      </form>
       <p className="text-xs leading-relaxed text-muted-foreground">
         {t(
-          `Your request shares your Google name and email with ${LEGAL.operatorName}, who runs Miamus. See the `,
-          `Permintaan ini membagikan nama dan email Google Anda kepada ${LEGAL.operatorName}, pengelola Miamus. Lihat `
+          `Your request shares your Google name and email, and your answers, with ${LEGAL.operatorName}, who runs Miamus. See the `,
+          `Permintaan ini membagikan nama dan email Google Anda, serta jawaban Anda, kepada ${LEGAL.operatorName}, pengelola Miamus. Lihat `
         )}
         <PrivacyLink />.
       </p>
