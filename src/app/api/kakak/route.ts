@@ -132,7 +132,7 @@ async function readRows(
   // The menu around today (Can we cook it?): context.ts keeps the 7 days
   // from the conversation's own today.
   const { today } = jakartaNow();
-  const [staff, pets, rooms, items, household, food, recipes, menu] = await Promise.all([
+  const [staff, pets, rooms, items, household, food, recipes, menu, foods] = await Promise.all([
     readStaff(supabase, householdId),
     supabase.from("task_entities").select("id, name, created_at, entity_type, metadata").eq("household_id", householdId).eq("entity_type", "pet"),
     supabase.from("household_locations").select("id, name, created_at, kind, parent_id").eq("household_id", householdId),
@@ -162,6 +162,18 @@ async function readRows(
       .eq("household_id", householdId)
       .gte("day", addDays(today, -1))
       .lte("day", addDays(today, 8)),
+    // E1 (20 Nov): the ready-to-eat food still at home, for "what should we
+    // eat?". Name, place and date only: never the photo, notes or giver.
+    // context.ts drops it while Food at home is off.
+    supabase
+      .from("food_items")
+      .select("name, kept_in, expires_on, expiry_unknown, created_at")
+      .eq("household_id", householdId)
+      .is("outcome", null)
+      // Soonest use-by first, so the limit never drops one that is due today.
+      .order("expires_on", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(60),
   ]);
   for (const result of [staff, pets, rooms, items]) if (result.error) throw result.error;
   // Optional: a failed read (or a database without migrations/133) leaves
@@ -171,6 +183,7 @@ async function readRows(
   // Optional too: without them Kakak knows no recipes and says so.
   if (recipes.error) console.error("Kakak: recipes not read", recipes.error.message);
   if (menu.error) console.error("Kakak: menu not read", menu.error.message);
+  if (foods.error) console.error("Kakak: food at home not read", foods.error.message);
   const petIds = (pets.data ?? []).map((p) => p.id as string);
   const schedules = petIds.length
     ? await supabase
@@ -193,6 +206,7 @@ async function readRows(
     featuresRead: !food.error,
     recipes: recipes.error ? [] : (recipes.data ?? []),
     menu: menu.error ? [] : (menu.data ?? []),
+    foods: foods.error ? undefined : (foods.data ?? []),
   } as ContextRows;
 }
 

@@ -324,8 +324,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Food that is ready to eat", id: "Makanan siap dimakan" },
     body: {
-      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first, so it gets eaten in time.",
-      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas, supaya sempat dimakan.",
+      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first. Ask Kakak \"What should we eat?\" and she answers from this list.",
+      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas. Tanya Kakak \"Makan apa?\" dan Kakak menjawab dari daftar ini.",
     },
     where: "kitchen_food",
     needs: "food",

@@ -8339,6 +8339,161 @@
         ]
       ],
       "note": "The wife's questions, casual: what to cook today (PR C1). Ready first (Nasi goreng, Rendang daging); no card until she picks one."
+    },
+    {
+      "id": "K200",
+      "sentence": "Makan apa ya malam ini?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "household": {
+        "foods": [
+          {
+            "name": "Rendang",
+            "keptIn": "fridge",
+            "expiresOn": "2026-11-11",
+            "expiryUnknown": false
+          },
+          {
+            "name": "Lapis legit",
+            "keptIn": "counter",
+            "expiresOn": "2026-11-12",
+            "expiryUnknown": false
+          }
+        ]
+      },
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "rendang"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "E1: the rendang at home expires today, so it comes first. A short reply, no card."
+    },
+    {
+      "id": "K201",
+      "sentence": "Is there anything left over?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "food",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "household": {
+        "foods": [
+          {
+            "name": "Rendang",
+            "keptIn": "fridge",
+            "expiresOn": "2026-11-11",
+            "expiryUnknown": false
+          },
+          {
+            "name": "Lapis legit",
+            "keptIn": "counter",
+            "expiresOn": "2026-11-12",
+            "expiryUnknown": false
+          }
+        ]
+      },
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "rendang"
+              ],
+              [
+                "lapis"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "E1: both ready-to-eat foods, soonest first (rendang today, lapis legit tomorrow). Never a food the block doesn't list. No card."
+    },
+    {
+      "id": "K202",
+      "sentence": "Ada sisa makanan nggak?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "household": {
+        "foods": []
+      },
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "belum ada",
+                "tidak ada",
+                "nggak ada",
+                "kosong"
+              ]
+            ],
+            "avoids": [
+              "rendang",
+              "lapis",
+              "sop",
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "E1: nothing ready to eat is noted. She says so, and may offer what can be cooked. Never makes up a leftover. No card."
     }
   ]
 }

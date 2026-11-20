@@ -683,3 +683,43 @@ describe("what can we cook tonight? (PR C1)", () => {
     expect(system).toContain("Never call a recipe ready unless the block says ready");
   });
 });
+
+describe("Kakak sees ready-to-eat food (E1)", () => {
+  const foods = [
+    { name: "Lapis legit", kept_in: "counter", expires_on: "2026-11-12", expiry_unknown: false, created_at: "2026-11-10T01:00:00Z" },
+    { name: "Rendang", kept_in: "fridge", expires_on: "2026-11-11", expiry_unknown: false, created_at: "2026-11-09T01:00:00Z" },
+    { name: "Sop", kept_in: "fridge", expires_on: "2026-11-10", expiry_unknown: false, created_at: "2026-11-08T01:00:00Z" },
+    { name: null, kept_in: "fridge", expires_on: null, expiry_unknown: true, created_at: "2026-11-10T02:00:00Z" },
+    { name: "Kue", kept_in: "attic", expires_on: null, expiry_unknown: false, created_at: "2026-11-10T03:00:00Z" },
+  ];
+
+  it("lists name, place and date only, soonest first, in the block", () => {
+    const { household } = built({ foods, foodOn: true, featuresRead: true } as Partial<ContextRows>);
+    expect(household.foods?.map((f) => f.name)).toEqual(["Sop", "Rendang", "Lapis legit", "Kue", null]);
+    // An unknown place is dropped, never guessed.
+    expect(household.foods?.find((f) => f.name === "Kue")?.keptIn).toBeNull();
+    const block = renderHouseholdBlock(household);
+    expect(block).toContain("Ready to eat at home (Dapur / Kitchen → Makanan / Food), soonest first:");
+    expect(block).toContain("- Sop · fridge · past its date (2026-11-10)");
+    expect(block).toContain("- Rendang · fridge · expires today (2026-11-11)");
+    expect(block).toContain("- Lapis legit · counter · expires 2026-11-12");
+    expect(block).toContain("- a dish saved with a photo only, no name · fridge · date not known");
+    expect(block).toContain("- Kue · no date noted");
+  });
+
+  it("says when there is nothing, and sends nothing while Food at home is off or the read failed", () => {
+    expect(renderHouseholdBlock(built({ foods: [], foodOn: true, featuresRead: true } as Partial<ContextRows>).household)).toContain(
+      "Ready to eat at home (Dapur / Kitchen → Makanan / Food): nothing.",
+    );
+    const off = built({ foods, foodOn: false, featuresRead: true } as Partial<ContextRows>).household;
+    expect(off.foods).toBeUndefined();
+    expect(renderHouseholdBlock(off)).not.toContain("Rendang");
+    expect(built({ foodOn: true, featuresRead: true }).household.foods).toBeUndefined();
+  });
+
+  it("her instructions answer \"what should we eat?\" from the list, and never suggest food past its date", () => {
+    const system = JSON.stringify(kakakSystem(built().household));
+    expect(system).toContain("Ready to eat at home");
+    expect(system).toContain("never suggest eating it");
+  });
+});

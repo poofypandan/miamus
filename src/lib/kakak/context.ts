@@ -97,6 +97,15 @@ export interface ContextRecipeRow {
   ingredients: { id: string; item_id: string | null; name: string; name_id: string | null; amount: number | null; unit: string | null; position: number }[];
 }
 
+/** A ready-to-eat food at home (migrations/123), as the route reads it: name, place and date only. */
+export interface ContextFoodRow {
+  name: string | null;
+  kept_in: string | null;
+  expires_on: string | null;
+  expiry_unknown: boolean | null;
+  created_at: string;
+}
+
 /** A planned dish (migrations/153), as the route reads it. */
 export interface ContextDishRow {
   day: string;
@@ -128,6 +137,8 @@ export interface ContextRows {
   recipes?: ContextRecipeRow[];
   /** The menu from today (Phase 170 PR C); absent or failed reads as none. */
   menu?: ContextDishRow[];
+  /** E1: ready-to-eat food still at home (outcome null); absent on an older read. */
+  foods?: ContextFoodRow[];
 }
 
 /**
@@ -384,6 +395,7 @@ export function buildContext(
       ...(rows.featuresRead && rows.kitchenOn !== true ? { kitchenOff: true } : {}),
       ...(recipes.length ? { recipes } : {}),
       ...(menu.length ? { menu } : {}),
+      ...(rows.foodOn !== false && rows.foods ? { foods: foodsFor(rows.foods) } : {}),
     },
     refs,
     names,
@@ -500,6 +512,24 @@ function kitchenFor(
       recipe: dish.recipe_id ? (byId.get(dish.recipe_id) ?? null) : null,
     }));
   return { recipes: recipes.sort(byUsefulness), menu };
+}
+
+/** E1: the food as the block lists it, soonest use-by first, then no date (newest first). */
+function foodsFor(rows: ContextFoodRow[]): NonNullable<KakakHousehold["foods"]> {
+  return rows
+    .map((row) => {
+      const day = typeof row.expires_on === "string" ? row.expires_on.slice(0, 10) : "";
+      const name = typeof row.name === "string" ? cleanName(row.name, 60) : "";
+      return {
+        name: name || null,
+        keptIn: PLACES.has(row.kept_in ?? "") ? (row.kept_in as FoodPlace) : null,
+        expiresOn: DAY.test(day) ? day : null,
+        expiryUnknown: row.expiry_unknown === true,
+        createdAt: row.created_at,
+      };
+    })
+    .sort((a, b) => (a.expiresOn ?? "9999-12-31").localeCompare(b.expiresOn ?? "9999-12-31") || b.createdAt.localeCompare(a.createdAt))
+    .map((food) => ({ name: food.name, keptIn: food.keptIn, expiresOn: food.expiresOn, expiryUnknown: food.expiryUnknown }));
 }
 
 /** How many days ahead "uses soon" looks (PR C1): today, tomorrow and the day after. */
