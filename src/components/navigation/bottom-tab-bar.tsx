@@ -82,8 +82,10 @@ export function BottomTabBar() {
       // pb-safe keeps the tabs clear of the iOS home indicator and Android's
       // gesture bar. The page seen through it, softened, over one hairline
       // (21 Nov, the visual direction's PR 2), so the bar is part of the
-      // page rather than a white slab on it.
-      className="sticky bottom-0 z-40 w-full border-t bg-background/85 pb-safe backdrop-blur-[18px]"
+      // page rather than a white slab on it. 93 % paper under the blur
+      // (Fable's look): what passes below is only a change of tone, never
+      // words that can be read through the labels.
+      className="sticky bottom-0 z-40 w-full border-t bg-background/93 pb-safe backdrop-blur-[18px]"
     >
       <div className="flex h-16">
         {enabledModules(flags).map((module) => {
