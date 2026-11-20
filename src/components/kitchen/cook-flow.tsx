@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, CookingPot, Loader2, Minus, Plus, Refrigerator, Save } from "lucide-react";
+import { Check, CheckCircle2, Circle, CookingPot, Loader2, Minus, Plus, Refrigerator, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FoodFormSheet } from "@/components/kitchen/food-form-sheet";
@@ -23,6 +23,7 @@ import {
   cookReadiness,
   dishServings,
   dishTitle,
+  ranOutCandidates,
   recipeOf,
   usesFrom,
   type CookReadiness,
@@ -33,7 +34,8 @@ import { changeDishUses, cookDish, uncookDish } from "@/lib/menu-store";
 import { loadRecipes } from "@/lib/recipes-store";
 import { amountLabel, type RecipeLang } from "@/lib/recipes";
 import { formatDateLocal } from "@/lib/scheduleEngine";
-import type { CookedUse, InventoryUnit, MenuDish } from "@/types/database";
+import { stockItemName, stockStatus } from "@/lib/inventory";
+import type { CookedUse, InventoryItem, InventoryUnit, MenuDish, StockStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 /** How long the cooked toast (and its Undo) stays. */
@@ -102,7 +104,7 @@ export function useCookFlow(
 } {
   const id = lang === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { inventoryItems, applyInventoryRows, listsFresh, syncFailed, refresh } = useHousehold();
+  const { inventoryItems, applyInventoryRows, listsFresh, syncFailed, refresh, setInventoryStatus } = useHousehold();
   const { recipes, fresh: recipesFresh, errored: recipesErrored } = useRecipes();
   const { flags, ready: featuresReady } = useHouseholdFeatures();
   // With Kitchen amounts off nothing is counted off stock (features countedItems).
@@ -112,6 +114,12 @@ export function useCookFlow(
   const [busyId, setBusyId] = useState<string | null>(null);
   const [leftover, setLeftover] = useState<string | null>(null);
   const [foodName, setFoodName] = useState<string | null>(null);
+  // "Ada bahan yang habis?" (S2a): the dish just cooked and what it may have used up.
+  const [ranOut, setRanOut] = useState<{ dishId: string; title: string; items: InventoryItem[]; cooked: () => void } | null>(null);
+  // What each tap there changed, per dish, so the cooked toast's Undo puts it
+  // back too: only within that toast's time, never on a much later undo
+  // (Mark not cooked hours later), when the statuses may be true.
+  const marks = useRef(new Map<string, { at: number; before: Map<string, StockStatus> }>());
 
   // Whether amounts are counted depends on the Kitchen switch: until it is
   // known, a dish with a recipe waits, or cooking could take nothing off
@@ -190,6 +198,7 @@ export function useCookFlow(
     try {
       const { items, skipped } = await uncookDish(dish.id);
       applyInventoryRows(items);
+      await putBackMarks(dish.id);
       if (skipped.length > 0) {
         // An owner changed an item's unit to one that doesn't convert: that
         // item is left as it is rather than given a wrong number.
@@ -222,16 +231,66 @@ export function useCookFlow(
     }
   }
 
+  function cookedToast(dish: MenuDish, title: string) {
+    // Undo's window for the sheet's marks starts with the toast.
+    const made = marks.current.get(dish.id);
+    if (made) made.at = Date.now();
+    toast.success(tr(`${title} cooked`, `${title} sudah dimasak`), {
+      duration: COOKED_TOAST_MS,
+      action: { label: tr("Undo", "Batalkan"), onClick: () => void undo(dish, title) },
+    });
+  }
+
+  /** Undo (S2a): what "Ada bahan yang habis?" marked for this dish goes back as it was. */
+  async function putBackMarks(dishId: string) {
+    const made = marks.current.get(dishId);
+    marks.current.delete(dishId);
+    // Functional: the toast's Undo was made before the sheet opened (review, S2a).
+    setRanOut((open) => (open?.dishId === dishId ? null : open));
+    if (!made || Date.now() - made.at > COOKED_TOAST_MS + 2000) return;
+    for (const [itemId, before] of made.before) {
+      try {
+        await setInventoryStatus(itemId, before);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }
+
+  /** One tap on a chip: Habis, then Hampir habis, then back to how it was. */
+  async function markRanOut(dishId: string, item: InventoryItem) {
+    const entry = marks.current.get(dishId) ?? { at: Date.now(), before: new Map<string, StockStatus>() };
+    marks.current.set(dishId, entry);
+    const made = entry.before;
+    const current = stockStatus(inventoryItems.find((i) => i.id === item.id) ?? item);
+    const before = made.get(item.id) ?? current;
+    if (!made.has(item.id)) made.set(item.id, before);
+    const next: StockStatus = current === "out" ? (before === "low" ? before : "low") : current === "low" && before !== "low" ? before : "out";
+    if (next === before) made.delete(item.id);
+    try {
+      await setInventoryStatus(item.id, next);
+    } catch (err) {
+      console.error(err);
+      toast.error(tr("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+    }
+  }
+
   async function finish(dish: MenuDish, title: string, uses: ReturnType<typeof usesFrom>) {
     setBusyId(dish.id);
     try {
       const { items } = await cookDish(dish.id, uses, readActiveStaffId());
       applyInventoryRows(items);
       setPending(null);
-      toast.success(tr(`${title} cooked`, `${title} sudah dimasak`), {
-        duration: COOKED_TOAST_MS,
-        action: { label: tr("Undo", "Batalkan"), onClick: () => void undo(dish, title) },
-      });
+      // What cooking didn't take off: ask what ran out first (S2a). The
+      // cooked toast and its Batalkan wait until that sheet closes: a sheet
+      // covers the toast, so its button couldn't be tapped meanwhile.
+      const asked = ranOutCandidates(recipeOf(dish, recipes), inventoryItems, uses);
+      if (asked.length > 0) {
+        marks.current.set(dish.id, { at: Date.now(), before: new Map() });
+        setRanOut({ dishId: dish.id, title, items: asked, cooked: () => cookedToast(dish, title) });
+        return;
+      }
+      cookedToast(dish, title);
       if (flags.food) setLeftover(title);
     } catch (err) {
       if (err instanceof MenuAlreadyCookedError) {
@@ -283,6 +342,18 @@ export function useCookFlow(
           } else {
             void finish(pending.dish, pending.title, usesFrom(pending.lines));
           }
+        }}
+      />
+      <RanOutSheet
+        asked={ranOut}
+        lang={lang}
+        items={inventoryItems}
+        onTap={(item) => ranOut && void markRanOut(ranOut.dishId, item)}
+        onClose={() => {
+          if (!ranOut) return;
+          setRanOut(null);
+          ranOut.cooked();
+          if (flags.food) setLeftover(ranOut.title);
         }}
       />
       <LeftoversSheet
@@ -464,6 +535,78 @@ function LeftoversSheet({
           </Button>
           <Button variant="outline" className="min-h-12 rounded-xl text-base" onClick={onClose}>
             {tr("No leftovers", "Tidak ada sisa")}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/**
+ * "Ada bahan yang habis?" (kitchen sync S2a, owner 20 Nov: "make it as
+ * easy/seamless as possible"): right after Sudah dimasak, one chip per
+ * linked item cooking didn't take off. One tap marks it Habis, a second
+ * Hampir habis, a third puts it back; each tap is saved at once. One
+ * button closes it: "Tidak ada" until something is marked, then
+ * "Selesai"; the cooked toast with Batalkan follows. No prices, nothing to
+ * read past the heading.
+ */
+function RanOutSheet({
+  asked,
+  lang,
+  items,
+  onTap,
+  onClose,
+}: {
+  asked: { title: string; items: InventoryItem[] } | null;
+  lang: RecipeLang;
+  items: readonly InventoryItem[];
+  onTap: (item: InventoryItem) => void;
+  onClose: () => void;
+}) {
+  const id = lang === "id";
+  const tr = (en: string, ind: string) => (id ? ind : en);
+  useBackToClose(asked !== null, onClose);
+  // As each item is now (a tap updates the list at once).
+  const now = (asked?.items ?? []).map((item) => items.find((i) => i.id === item.id) ?? item);
+  const marked = now.some((item, index) => stockStatus(item) !== stockStatus(asked!.items[index]));
+  return (
+    <Sheet open={asked !== null} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="bottom" className="rounded-t-2xl">
+        <SheetHeader>
+          <SheetTitle className="text-xl">{tr("Anything run out?", "Ada bahan yang habis?")}</SheetTitle>
+          <SheetDescription>{asked?.title}</SheetDescription>
+        </SheetHeader>
+        <div className="flex flex-col gap-4 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <div className="flex flex-wrap gap-2" role="group" aria-label={tr("Ingredients", "Bahan")}>
+            {now.map((item) => {
+              const status = stockStatus(item);
+              const was = stockStatus(asked!.items.find((i) => i.id === item.id) ?? item);
+              const changed = status !== was;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={changed}
+                  onClick={() => onTap(item)}
+                  className={cn(
+                    "flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-base",
+                    changed ? "border-amber-300 bg-amber-50 text-amber-900" : "border-gray-200 bg-card text-gray-900"
+                  )}
+                >
+                  {changed && <Check className="size-4 shrink-0" strokeWidth={2} aria-hidden />}
+                  <span>{stockItemName(item)}</span>
+                  {changed && (
+                    <span className="text-sm text-amber-800">
+                      · {status === "out" ? tr("Out", "Habis") : status === "low" ? tr("Running low", "Hampir habis") : tr("Enough", "Masih ada")}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <Button variant={marked ? "default" : "outline"} className="min-h-12 rounded-xl text-base" onClick={onClose}>
+            {marked ? tr("Done", "Selesai") : tr("Nothing ran out", "Tidak ada")}
           </Button>
         </div>
       </SheetContent>

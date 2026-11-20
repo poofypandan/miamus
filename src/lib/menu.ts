@@ -1,4 +1,4 @@
-import { stockItemName } from "@/lib/inventory";
+import { stockItemName, stockStatus } from "@/lib/inventory";
 import { clean, convertAmount, friendlyAmount, isTracked } from "@/lib/kitchen-units";
 
 export { friendlyAmount, toBuyAmountLabel } from "@/lib/kitchen-units";
@@ -631,4 +631,27 @@ export function menuShortfall(
  */
 export function toBuyPatch(line: Pick<ToBuyLine, "item" | "buy">): { stock_status: "low" | "out"; to_buy_amount: number } {
   return { stock_status: line.item.quantity > 0 ? "low" : "out", to_buy_amount: Math.min(100_000, line.buy) };
+}
+
+/**
+ * "Ada bahan yang habis?" after Sudah dimasak (kitchen sync S2a, owner
+ * 20 Nov): the recipe's linked items that cooking didn't take off, so the
+ * cook can mark the ones that ran out with one tap. With Kitchen amounts
+ * off that is every linked item; with it on, the ones not counted by
+ * amount. An item already Out isn't asked again. In recipe order, once each.
+ */
+export function ranOutCandidates(
+  recipe: RecipeWithLines | null,
+  items: readonly InventoryItem[],
+  uses: readonly CookedUse[]
+): InventoryItem[] {
+  if (!recipe) return [];
+  const taken = new Set(uses.map((use) => use.item_id));
+  const out: InventoryItem[] = [];
+  for (const line of [...recipe.ingredients].sort((a, b) => a.position - b.position)) {
+    const item = lineItem(line, items);
+    if (!item || taken.has(item.id) || stockStatus(item) === "out" || out.some((i) => i.id === item.id)) continue;
+    out.push(item);
+  }
+  return out;
 }

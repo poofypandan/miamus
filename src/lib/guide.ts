@@ -369,8 +369,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Keeping the kitchen up to date", id: "Menjaga stok tetap benar" },
     body: {
-      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out, and tap Sudah dimasak on Menu hari ini. With Food at home on, they mark food Dimakan, Diberikan or Dibuang. Their phone shows them a short tip.",
-      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis, dan menekan Sudah dimasak di Menu hari ini. Kalau Makanan di rumah menyala, mereka menandai makanan Dimakan, Diberikan, atau Dibuang. HP mereka menampilkan tips.",
+      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out. After Sudah dimasak, Miamus asks what ran out: one tap each. With Food at home on, they mark food Dimakan, Diberikan or Dibuang.",
+      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis. Setelah Sudah dimasak, Miamus bertanya bahan apa yang habis: sekali ketuk. Dengan Makanan di rumah, makanan ditandai Dimakan, Diberikan, atau Dibuang.",
     },
     where: "kitchen_shopping",
   },
