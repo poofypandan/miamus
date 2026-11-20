@@ -203,7 +203,17 @@ export function useCookFlow(
     try {
       const { items, skipped } = await uncookDish(dish.id);
       applyInventoryRows(items);
-      await putBackMarks(dish.id, putBack);
+      const notBack = await putBackMarks(dish.id, putBack);
+      if (notBack.length > 0) {
+        // A mark that couldn't be put back is said, with where to fix it (Codex, PR #164).
+        toast.warning(
+          tr(
+            `Not cooked — ${title}. ${notBack.join(", ")} wasn't put back. Set it in Kitchen → Shopping.`,
+            `Dibatalkan — ${title}. ${notBack.join(", ")} belum dikembalikan. Ubah di Dapur → Belanja.`
+          )
+        );
+        return;
+      }
       if (skipped.length > 0) {
         // An owner changed an item's unit to one that doesn't convert: that
         // item is left as it is rather than given a wrong number.
@@ -247,23 +257,30 @@ export function useCookFlow(
   }
 
   /** Undo (S2a): what "Ada bahan yang habis?" marked for this dish goes back as it was. */
-  async function putBackMarks(dishId: string, putBack: boolean) {
+  /** The names of any items that couldn't be put back, so Undo can say so. */
+  async function putBackMarks(dishId: string, putBack: boolean): Promise<string[]> {
     const made = marks.current.get(dishId);
     marks.current.delete(dishId);
     // Functional: the toast's Undo was made before the sheet opened (review, S2a).
     setRanOut((open) => (open?.dishId === dishId ? null : open));
-    if (!made || !putBack) return;
-    for (const [itemId, before] of made.before) await restore(itemId, before);
+    if (!made || !putBack) return [];
+    const failed: string[] = [];
+    for (const [itemId, before] of made.before) {
+      try {
+        await restore(itemId, before);
+      } catch (err) {
+        console.error(err);
+        const item = inventoryItems.find((i) => i.id === itemId);
+        failed.push(item ? stockItemName(item) : tr("One item", "Satu bahan"));
+      }
+    }
+    return failed;
   }
 
-  /** An item back as it was before the sheet: its status, and the date Out cleared. */
+  /** An item back as it was before the sheet: its status, and the date Out cleared. Throws when it can't. */
   async function restore(itemId: string, before: { status: StockStatus; expiresOn: string | null }) {
-    try {
-      const row = await setInventoryStatus(itemId, before.status);
-      if (before.expiresOn && (row.expires_on ?? null) !== before.expiresOn) await setIngredientExpiry(itemId, before.expiresOn);
-    } catch (err) {
-      console.error(err);
-    }
+    const row = await setInventoryStatus(itemId, before.status);
+    if (before.expiresOn && (row.expires_on ?? null) !== before.expiresOn) await setIngredientExpiry(itemId, before.expiresOn);
   }
 
   /** One tap on a chip: Habis, then Hampir habis, then back to how it was. */
@@ -279,9 +296,9 @@ export function useCookFlow(
     const next: StockStatus = current === "out" ? (before === "low" ? before : "low") : current === "low" && before !== "low" ? before : "out";
     try {
       if (next === before) {
-        // Back as it was, date included.
-        made.delete(item.id);
+        // Back as it was, date included; kept until that works, so Undo can try again.
         await restore(item.id, was);
+        made.delete(item.id);
         return;
       }
       await setInventoryStatus(item.id, next);
@@ -588,7 +605,8 @@ function RanOutSheet({
   const marked = now.some((item, index) => stockStatus(item) !== stockStatus(asked!.items[index]));
   return (
     <Sheet open={asked !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="bottom" className="rounded-t-2xl">
+      {/* A recipe may link many items: never taller than the screen (Codex, PR #164). */}
+      <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
           <SheetTitle className="text-xl">{tr("Anything run out?", "Ada bahan yang habis?")}</SheetTitle>
           <SheetDescription>{asked?.title}</SheetDescription>
