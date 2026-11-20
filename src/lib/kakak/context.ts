@@ -510,8 +510,9 @@ const STATE_ORDER: Record<string, number> = { ready: 0, missing: 1, unknown: 2 }
 /**
  * The order the recipe lines are listed in (PR C1, display only: the
  * D-refs keep their age order, so they never move): ready first, then the
- * fewest missing, then what couldn't be checked; within each, one that uses
- * something soon first, soonest first. The 40-recipe cap then keeps the
+ * fewest missing, then what couldn't be checked; among equals, one that
+ * uses something soon first, soonest first (a recipe missing five never
+ * goes ahead of one missing one: Codex, PR #162). The 40-recipe cap then keeps the
  * most useful lines. Stable, so ties keep their age order.
  */
 function byUsefulness(a: NonNullable<KakakHousehold["recipes"]>[number], b: NonNullable<KakakHousehold["recipes"]>[number]): number {
@@ -519,8 +520,8 @@ function byUsefulness(a: NonNullable<KakakHousehold["recipes"]>[number], b: NonN
   const soonB = b.usesSoon?.[0]?.expiresOn ?? "9999-12-31";
   return (
     STATE_ORDER[a.state] - STATE_ORDER[b.state] ||
-    soonA.localeCompare(soonB) ||
-    (a.state === "missing" ? a.missing.length - b.missing.length : 0)
+    (a.state === "missing" ? a.missing.length - b.missing.length : 0) ||
+    soonA.localeCompare(soonB)
   );
 }
 

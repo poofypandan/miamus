@@ -646,6 +646,18 @@ describe("what can we cook tonight? (PR C1)", () => {
     expect(block).toContain("Listed ready first, then fewest missing.");
   });
 
+  it("never puts a recipe missing more ahead of one missing less, even when it uses something soon (Codex, PR #162)", () => {
+    // Santan Out: opor misses Santan (one) and uses Ayam tomorrow; soto misses Bihun (one). Equal: opor first.
+    const equal = built({ ...ingredientsOn, items: withDates("2026-11-12", null).map((i) => (i.name === "Santan" ? { ...i, stock_status: "out" } : i)) });
+    expect(equal.household.recipes?.filter((r) => r.state === "missing").map((r) => r.ref)).toEqual(["D1", "D3"]);
+    // Ayam short too (amounts on): opor misses two, so soto (one) goes first despite the date.
+    const short = built({
+      ...ingredientsOn,
+      items: withDates("2026-11-12", null, { quantity: 0.5 }).map((i) => (i.name === "Santan" ? { ...i, stock_status: "out" } : i)),
+    });
+    expect(short.household.recipes?.filter((r) => r.state === "missing").map((r) => r.ref)).toEqual(["D3", "D1"]);
+  });
+
   it("never for a date in the past, past two days, an item that is out, or while Ingredients are off", () => {
     for (const ayam of ["2026-11-10", "2026-11-14"]) {
       expect(built({ ...ingredientsOn, items: withDates(ayam, null) }).household.recipes?.some((r) => r.usesSoon)).toBe(false);
