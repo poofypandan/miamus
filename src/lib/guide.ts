@@ -177,8 +177,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "When someone leaves", id: "Kalau staf berhenti" },
     body: {
-      en: "Settings → Staff: tap the remove icon beside their name, then Remove. Their PIN stops working and the phones they last signed in on are signed out. Unfinished chores go to Unassigned; finished work keeps their name. Other staff phones stay signed in.",
-      id: "Pengaturan → Staf: ketuk ikon hapus di samping namanya, lalu Hapus. PIN-nya langsung tidak berlaku dan HP yang terakhir dipakainya ikut keluar. Tugas yang belum selesai kembali ke Belum ditugaskan; yang sudah selesai tetap atas namanya. HP staf lain tetap masuk.",
+      en: "Settings → Staff: tap the remove icon beside their name, then Remove. Their PIN stops working and the phones they last signed in on are signed out. Unfinished chores go to Anyone; finished work keeps their name. Other staff phones stay signed in.",
+      id: "Pengaturan → Staf: ketuk ikon hapus di samping namanya, lalu Hapus. PIN-nya langsung tidak berlaku dan HP yang terakhir dipakainya ikut keluar. Tugas yang belum selesai jadi untuk Siapa saja; yang sudah selesai tetap atas namanya. HP staf lain tetap masuk.",
     },
     where: "settings_staff",
   },

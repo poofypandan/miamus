@@ -543,8 +543,8 @@ function StaffRoster({
       // (staff onboarding plan, 2c).
       toast.success(
         t(
-          `${profile.name} removed. Staff phones that are signed in stay signed in.`,
-          `${profile.name} dihapus. HP staf yang sudah masuk tetap masuk.`
+          `${profile.name} removed. Other staff phones stay signed in.`,
+          `${profile.name} dihapus. HP staf lain tetap masuk.`
         )
       );
     } catch (err) {
