@@ -2,11 +2,13 @@
  * The first-day line on a new staff member's Tugas Hari Ini (staff
  * onboarding step 8, owner decision 4): one quiet line, on the day they
  * joined only, gone once they tap it or finish a task. Kept on this phone
- * only (a convenience, never needed): who joined here and on which day.
+ * only (a convenience, never needed): who joined here and on which day,
+ * removed once read or once the day is over (privacy policy, "Only on your
+ * phone").
  */
 const KEY = "miamus:first-day";
 
-type FirstDay = { staffId: string; day: string; dismissed?: boolean };
+type FirstDay = { staffId: string; day: string };
 
 function read(): FirstDay | null {
   try {
@@ -38,14 +40,21 @@ export function markFirstDay(staffId: string, now = new Date()) {
   write({ staffId, day: todayKey(now) });
 }
 
-/** Whether this person, on this phone, should see the line today. */
+/**
+ * Whether this person, on this phone, should see the line today. A record
+ * from another day is removed on the way (privacy policy: kept no longer
+ * than the day).
+ */
 export function showsFirstDayLine(staffId: string | null, now = new Date()): boolean {
   const value = read();
-  return !!staffId && !!value && value.staffId === staffId && value.day === todayKey(now) && !value.dismissed;
+  if (value && value.day !== todayKey(now)) {
+    write(null);
+    return false;
+  }
+  return !!staffId && !!value && value.staffId === staffId;
 }
 
-/** Tapped, or a task was finished: gone for good. */
+/** Tapped, or a task was finished: the record is removed. */
 export function dismissFirstDayLine() {
-  const value = read();
-  if (value) write({ ...value, dismissed: true });
+  write(null);
 }

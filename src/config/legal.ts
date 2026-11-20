@@ -245,7 +245,11 @@ export const LEGAL = {
   // types it; former staff are never sent (the phone matches a returning
   // name itself). Saved only when the admin confirms, through the same paths
   // as by hand. No new kind of personal data, service or region.
-  policyVersion: "2026-11-20.2",
+  // 2026-11-20.3: the first-day line (staff onboarding step 8) — on a staff
+  // phone only, the day the person joined and their roster id, so one line
+  // explains their tasks that day; removed once read, once a task is
+  // finished, or when the day is over. Never sent anywhere.
+  policyVersion: "2026-11-20.3",
   effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { HOUSEHOLD_ID } from "../fixtures/household";
+import { HOUSEHOLD_ID, MOCHI, SCHEDULES } from "../fixtures/household";
 import { OWNER, OWNER_PROFILE_ID, STAFF_ID, STUB_URL, freshSession, installStub } from "./stub-backend";
 
 // Staff onboarding (docs/private/staff-onboarding-plan.md), step 1: the
@@ -624,4 +624,33 @@ test("staff: no first-day line on another day", async ({ context, page }) => {
   await page.goto("/staff");
   await expect(page.getByText("Tugas Hari Ini", { exact: false }).first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("first-day-line")).toHaveCount(0);
+});
+
+test("staff: a pet routine done today also ends the first-day line (Codex, PR #174)", async ({ context, page }) => {
+  await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    logs: [
+      {
+        id: "00000000-0000-4000-8000-0000000174f1",
+        schedule_id: SCHEDULES[0].id,
+        entity_id: MOCHI.id,
+        module: "pet",
+        photo_url: null,
+        notes: null,
+        staff_id: STAFF_ID,
+        completed_at: new Date().toISOString(),
+        sub_type: "complete",
+      },
+    ],
+  });
+  await page.addInitScript(
+    ([staffId, day]) => window.localStorage.setItem("miamus:first-day", JSON.stringify({ staffId, day })),
+    [STAFF_ID, localDay()]
+  );
+  await page.goto("/staff");
+  await expect(page.getByText("Tugas Hari Ini", { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("first-day-line")).toHaveCount(0);
+  // And the record on the phone is gone, not just hidden.
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("miamus:first-day"))).toBeNull();
 });

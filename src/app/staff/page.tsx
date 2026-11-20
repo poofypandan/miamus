@@ -480,7 +480,14 @@ function TasksView() {
         {/* Their first day (staff onboarding step 8, decision 4): one quiet
             line, gone once tapped or once a task is finished. */}
         {!loading && dateStr === formatDateLocal(today) && (
-          <FirstDayLine staffId={staffId} anyDone={chores.some((c) => c.status === "completed")} />
+          <FirstDayLine
+            staffId={staffId}
+            // A chore or a pet routine done today (Codex, PR #174).
+            anyDone={
+              chores.some((c) => c.status === "completed") ||
+              logs.some((l) => !!staffId && l.staff_id === staffId && formatDateLocal(new Date(l.completed_at)) === dateStr)
+            }
+          />
         )}
 
         {/* Supervising a repair (Phase 174): the strip, for that person only. */}
