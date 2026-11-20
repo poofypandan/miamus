@@ -108,15 +108,17 @@ export function KindCounts({
   className?: string;
 }) {
   return (
-    <span className={cn("flex min-w-0 items-center gap-1.5 tabular-nums", className)}>
+    // One line that truncates before it can touch what sits beside it
+    // (Fable's look: "8/8" ran into "Semua selesai" in Indonesian).
+    <span className={cn("block min-w-0 truncate tabular-nums", className)}>
       {house && (
-        <span className="whitespace-nowrap" data-testid="progress-house">
+        <span data-testid="progress-house">
           {houseLabel} {house.done}/{house.total}
         </span>
       )}
-      {house && pets && <span aria-hidden>·</span>}
+      {house && pets && <span aria-hidden> · </span>}
       {pets && (
-        <span className="whitespace-nowrap" data-testid="progress-pets">
+        <span data-testid="progress-pets">
           {petsLabel} {pets.done}/{pets.total}
         </span>
       )}

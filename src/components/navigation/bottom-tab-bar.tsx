@@ -119,7 +119,7 @@ export function BottomTabBar() {
               )}
             >
               <Icon className="size-6 shrink-0" style={{ strokeWidth: active ? 2 : 1.6 }} />
-              <span className="w-full truncate text-center">{label}</span>
+              <span className="w-full truncate text-center tracking-[-0.01em]">{label}</span>
             </Link>
           );
         })}

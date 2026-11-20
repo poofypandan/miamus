@@ -35,7 +35,7 @@ export function TodayStatus({
 
   const body = (
     <>
-      <Icon className={cn("mt-0.5 size-6 shrink-0", ok ? "text-done" : "text-attention")} aria-hidden />
+      <Icon className={cn("mt-[3px] size-7 shrink-0", ok ? "text-done" : "text-attention")} aria-hidden />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {/* The screen's one large line (21 Nov, PR 4): 30 px, readable at arm's length. */}
         {/* Outside cn(): its class merger takes text-title for a colour and drops it. */}
