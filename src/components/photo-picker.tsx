@@ -6,7 +6,7 @@ import { AlertTriangle, Camera, CloudOff, Crop, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
 import { useHousehold } from "@/context/household-context";
-import { compressPhoto } from "@/lib/image";
+import { compressPhoto, photoForUpload } from "@/lib/image";
 import { cn } from "@/lib/utils";
 import { photoSrc } from "@/lib/photos";
 import { discardPhoto, enqueuePhoto } from "@/lib/photo-queue";
@@ -155,14 +155,10 @@ export function PhotoPicker({
   async function upload(file: File) {
     setBusy(true);
     try {
-      // Offline-first keeps the original if compression fails: a 4MB photo
-      // on the device beats no photo at all.
-      const compressed = offline
-        ? await compressPhoto(file).catch((err) => {
-            console.error("Compression failed; keeping the original", err);
-            return file;
-          })
-        : await compressPhoto(file);
+      // Offline-first keeps the original if compression fails (a photo on
+      // the device beats no photo at all), with its location and other
+      // hidden data taken out first (security audit, 20 Nov 2026).
+      const compressed = offline ? await photoForUpload(file) : await compressPhoto(file);
       const url = offline
         ? await enqueuePhoto(compressed, pathPrefix)
         : await uploadPhoto(compressed, pathPrefix);

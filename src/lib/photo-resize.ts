@@ -55,3 +55,30 @@ export async function resizeForWidth(
     return null;
   }
 }
+
+/**
+ * The original without its hidden data, or null when it has none (or can't
+ * be read). Security audit, 20 Nov 2026: photos are cleaned on the phone
+ * before upload (lib/image.ts), but an older build uploaded the camera file
+ * as it was when compression failed, so a stored photo may still carry where
+ * it was taken. Thumbnails never do (sharp writes no metadata unless asked);
+ * this covers the full-size view. The photo is turned the way it is shown
+ * first, since the orientation tag goes with the rest.
+ */
+export async function withoutHiddenData(
+  input: Buffer
+): Promise<{ body: Buffer; type: "image/jpeg" | "image/png" | "image/webp" } | null> {
+  try {
+    const image = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS });
+    const meta = await image.metadata();
+    if (!meta.exif && !meta.xmp && !meta.iptc && !meta.comments?.length) return null;
+    const turned = image.rotate();
+    if (meta.format === "jpeg") return { body: await turned.jpeg({ quality: 90 }).toBuffer(), type: "image/jpeg" };
+    if (meta.format === "png") return { body: await turned.png().toBuffer(), type: "image/png" };
+    if (meta.format === "webp") return { body: await turned.webp({ quality: 90 }).toBuffer(), type: "image/webp" };
+    return null;
+  } catch (err) {
+    console.error("Photo metadata not checked; serving the original", err);
+    return null;
+  }
+}

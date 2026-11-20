@@ -8,7 +8,7 @@ import { freshSession, installStub } from "./stub-backend";
 
 const PHOTO = "00000000-0000-4000-8000-000000000001/logs/1794200000000-abc123.jpg";
 const url = (width?: number) =>
-  `/api/photo?b=household-logs&p=${encodeURIComponent(PHOTO)}${width ? `&w=${width}` : ""}&v=2`;
+  `/api/photo?b=household-logs&p=${encodeURIComponent(PHOTO)}${width ? `&w=${width}` : ""}&v=3`;
 
 /** Width and height from a WebP (VP8/VP8L/VP8X) or JPEG header. */
 function size(bytes: Buffer): [number, number] {

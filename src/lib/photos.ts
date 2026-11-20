@@ -69,8 +69,11 @@ export function photoSrc(
  *
  *   2 — Phase 106: resize "contain" instead of the default "cover", which had
  *       been returning every thumbnail as a centre-cut strip.
+ *   3 — Security audit, 20 Nov 2026: an original that still carries hidden
+ *       data (a camera's GPS location) is served without it, so copies a
+ *       phone already holds are fetched again.
  */
-const TRANSFORM_VERSION = 2;
+const TRANSFORM_VERSION = 3;
 
 /**
  * Rows that share one stored photo, merged (Phase 118).

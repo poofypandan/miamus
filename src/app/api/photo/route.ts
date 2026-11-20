@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isPhotoBucket } from "@/lib/photos";
-import { resizeForWidth } from "@/lib/photo-resize";
+import { resizeForWidth, withoutHiddenData } from "@/lib/photo-resize";
 
 // sharp is a native module: Node, never the edge runtime.
 export const runtime = "nodejs";
@@ -65,10 +65,15 @@ export async function GET(request: NextRequest) {
   // A thumbnail: a feed asking for 320px gets ~24KB instead of the ~185KB
   // original. Scaled to fit the width, never upscaled; an original no wider
   // than asked (or one that can't be read) is served as it is.
-  const resized = width ? await resizeForWidth(Buffer.from(await data.arrayBuffer()), width) : null;
-  const body = resized ? new Uint8Array(resized.body) : data;
+  const original = Buffer.from(await data.arrayBuffer());
+  // Served as stored unless it still carries hidden data such as where it
+  // was taken (security audit, 20 Nov 2026): then without it. That covers
+  // the full-size view and a thumbnail asked wider than the photo; a resized
+  // thumbnail never carries any.
+  const resized = (width ? await resizeForWidth(original, width) : null) ?? (await withoutHiddenData(original));
+  const body = resized ? new Uint8Array(resized.body) : new Uint8Array(original);
   const bodyType = resized ? resized.type : contentType;
-  const bodySize = resized ? resized.body.byteLength : data.size;
+  const bodySize = resized ? resized.body.byteLength : original.byteLength;
 
   return new NextResponse(body, {
     headers: {
