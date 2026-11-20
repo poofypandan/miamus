@@ -104,7 +104,7 @@ export function useCookFlow(
   const tr = (en: string, ind: string) => (id ? ind : en);
   const { inventoryItems, applyInventoryRows, listsFresh, syncFailed, refresh } = useHousehold();
   const { recipes, fresh: recipesFresh, errored: recipesErrored } = useRecipes();
-  const { flags } = useHouseholdFeatures();
+  const { flags, ready: featuresReady } = useHouseholdFeatures();
   // With Kitchen amounts off nothing is counted off stock (features countedItems).
   const stockItems = useMemo(() => countedItems(inventoryItems, amountsOn(flags)), [inventoryItems, flags]);
   const today = formatDateLocal(useToday());
@@ -113,8 +113,12 @@ export function useCookFlow(
   const [leftover, setLeftover] = useState<string | null>(null);
   const [foodName, setFoodName] = useState<string | null>(null);
 
+  // Whether amounts are counted depends on the Kitchen switch: until it is
+  // known, a dish with a recipe waits, or cooking could take nothing off
+  // where amounts are on (Codex, PR #155).
   function readiness(dish: MenuDish): CookReadiness {
-    return cookReadiness(dish, { recipes, recipesFresh, recipesErrored, listsFresh, listsFailed: syncFailed });
+    const ready = cookReadiness(dish, { recipes, recipesFresh, recipesErrored, listsFresh, listsFailed: syncFailed });
+    return ready === "ready" && dish.recipe_id && !featuresReady ? "loading" : ready;
   }
 
   function changeState(dish: MenuDish): CookReadiness | "hidden" {

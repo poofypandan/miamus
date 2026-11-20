@@ -92,7 +92,9 @@ export function cookCheck(
     // A line counted by status needs Enough. Counted amounts need the amount
     // at home; a tracked item with enough that a person marked Running low
     // is there for this dish (the amount says so, D18).
-    const short = byStatus ? stockStatus(item) !== "ok" : Math.max(0, item.quantity) < need;
+    // Both can apply to one item (a counted line and a by-status line):
+    // either falls short (Codex, PR #155).
+    const short = (byStatus && stockStatus(item) !== "ok") || (need > 0 && Math.max(0, item.quantity) < need);
     if (short) missing.push({ itemId: item.id, name });
   }
 

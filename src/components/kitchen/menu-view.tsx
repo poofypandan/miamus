@@ -96,7 +96,7 @@ export function MenuView() {
   // from the server in this session (Codex, PR #101).
   const { fresh: recipesFresh, errored: recipesErrored } = useRecipes();
   const { listsFresh, syncFailed, refresh } = useHousehold();
-  const missingReady = shortfallReadiness({
+  const missingCheck = shortfallReadiness({
     weekLoaded,
     weekFailed,
     recipesFresh,
@@ -104,6 +104,8 @@ export function MenuView() {
     listsFresh,
     listsFailed: syncFailed,
   });
+  // Add missing counts amounts only with Kitchen amounts on: it waits until the switch is known (Codex, PR #155).
+  const missingReady = missingCheck === "ready" && !features.ready ? "loading" : missingCheck;
   function retryMissing() {
     void loadRecipes(true);
     void loadMenuWeek(monday, true);

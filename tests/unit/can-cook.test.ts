@@ -139,6 +139,14 @@ describe("cookCheck with Kitchen amounts on", () => {
     expect(cookCheck(tasteOnly, null, [santanOut], on).state).toBe("missing");
   });
 
+  it("checks both a counted line and a by-status line of one item (Codex, PR #155)", () => {
+    const rice = item({ id: "beras", name: "Beras", track_amount: true, quantity: 0.2, unit: "kg", stock_status: "ok" });
+    const r = recipe([line({ item_id: "beras", name: "Beras", amount: 1, unit: "kg" }), line({ name: "Beras" })]);
+    expect(cookCheck(r, null, [rice], on).missing).toEqual([{ itemId: "beras", name: "Beras" }]);
+    const plenty = { ...rice, quantity: 5 } as InventoryItem;
+    expect(cookCheck(r, null, [plenty], on).state).toBe("ready");
+  });
+
   it("uses the status for an untracked item", () => {
     const r = recipe([line({ item_id: "santan", name: "Santan", amount: 400, unit: "ml" })]);
     expect(cookCheck(r, null, [santanOut], on).state).toBe("missing");
