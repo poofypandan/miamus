@@ -159,6 +159,15 @@ describe("what the page still waits for", () => {
     expect(blockers.join(" ")).toMatch(/"card"[\s\S]*"status"[\s\S]*PR #157/);
   });
 
+  it("counts a picture captured in one language only, or with an empty path, as a placeholder (Codex, PR #177)", () => {
+    const all = { en: "/a.webp", id: "/b.webp" };
+    const blockers = oneDayBlockers({ card: { en: "/card-en.webp", id: "" }, staff: all, status: all }, true);
+    expect(blockers).toHaveLength(1);
+    expect(blockers[0]).toMatch(/"card" is still a placeholder in id/);
+    expect(readiness.pictureSrc("card", "id", { card: { en: "/x", id: "  " }, staff: all, status: all })).toBeNull();
+    expect(readiness.pictureSrc("card", "en", { card: { en: "/x", id: "" }, staff: all, status: all })).toBe("/x");
+  });
+
   it("is ready once every picture is captured and the question is live", () => {
     const all = { en: "/a.webp", id: "/b.webp" };
     expect(oneDayBlockers({ card: all, staff: all, status: all }, true)).toEqual([]);

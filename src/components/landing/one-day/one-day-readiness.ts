@@ -34,14 +34,36 @@ export const WHY_QUESTION_LIVE = false;
 export const ONE_DAY_FILM: { src: string; poster: string } | null = null;
 export const SHOW_FILM_PLATE = false;
 
+const LOCALES: OwnerLocale[] = ["en", "id"];
+
+/**
+ * The capture for one picture in one language, or null when the page must
+ * draw a placeholder. The page and the guard both ask this, so they can't
+ * disagree (an empty string counts as missing, as the page treats it).
+ */
+export function pictureSrc(
+  name: keyof typeof ONE_DAY_PICTURES,
+  locale: OwnerLocale,
+  pictures: typeof ONE_DAY_PICTURES = ONE_DAY_PICTURES
+): string | null {
+  const src = pictures[name]?.[locale]?.trim();
+  return src ? src : null;
+}
+
 /** Why the page can't be switched on yet; empty when it can. */
 export function oneDayBlockers(
   pictures: typeof ONE_DAY_PICTURES = ONE_DAY_PICTURES,
   whyQuestionLive: boolean = WHY_QUESTION_LIVE
 ): string[] {
-  const blockers = Object.entries(pictures)
-    .filter(([, src]) => src === null)
-    .map(([name]) => `the app picture "${name}" is still a placeholder (re-capture it from the live app)`);
+  const blockers: string[] = [];
+  for (const name of Object.keys(pictures) as (keyof typeof ONE_DAY_PICTURES)[]) {
+    const missing = LOCALES.filter((locale) => !pictureSrc(name, locale, pictures));
+    if (missing.length > 0) {
+      blockers.push(
+        `the app picture "${name}" is still a placeholder in ${missing.join(" and ")} (re-capture it from the live app)`
+      );
+    }
+  }
   if (!whyQuestionLive) {
     blockers.push("the why question (PR #157) isn't live, and Request access promises it (WHY_QUESTION_LIVE)");
   }

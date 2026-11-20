@@ -25,7 +25,7 @@ import { Garden, KakakMarkD, Kite, KiteString } from "./one-day-art";
 import { ONE_DAY_COPY, type Accented, type OneDayCopy } from "./one-day-copy";
 import { fontSerif } from "./one-day-fonts";
 import { OneDayMotion } from "./one-day-motion";
-import { ONE_DAY_FILM, ONE_DAY_PICTURES, SHOW_FILM_PLATE } from "./one-day-readiness";
+import { ONE_DAY_FILM, type ONE_DAY_PICTURES, SHOW_FILM_PLATE, pictureSrc } from "./one-day-readiness";
 import { RequestAccessButton } from "./request-access-button";
 import s from "./one-day.module.css";
 
@@ -109,7 +109,7 @@ function Picture({
   t: OneDayCopy;
   locale: OwnerLocale;
 }) {
-  const src = ONE_DAY_PICTURES[name]?.[locale];
+  const src = pictureSrc(name, locale);
   if (src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- a fixed-size capture below the fold; next/image would add a loader for nothing
