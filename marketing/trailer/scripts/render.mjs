@@ -2,10 +2,12 @@
 //   npm run render                       all four
 //   npm run render -- --only=film-60-en
 //   npm run render -- --silent           picture only
+//   npm run render -- --only=film-60-en --motion-check --cuts=15     then the motion check on each film (scripts/motion-check.mjs)
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runMotionCheck } from "./motion-check.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, "").split("=")).map(([k, v]) => [k, v ?? true]));
@@ -28,4 +30,5 @@ for (const id of cuts) {
     ["remotion", "render", "src/index.ts", id, file, "--codec=h264", "--crf=17", "--pixel-format=yuv420p", "--audio-codec=aac", "--audio-bitrate=320k", "--props", JSON.stringify({ audio: sound ? wav : null })],
     { cwd: root, stdio: "inherit" }
   );
+  if (args["motion-check"]) runMotionCheck(path.join(root, file), process.argv.slice(2), path.join(root, file.replace(/\.mp4$/, ".motion.json")));
 }

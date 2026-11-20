@@ -2,6 +2,7 @@
 //   npm run a2 -- <out-dir>                       both cuts: MP4 with sound, a one-frame-per-second sheet each
 //   npm run a2 -- <out-dir> --only=60             one cut
 //   npm run a2 -- <out-dir> --at=2.4,51.5         just these moments (seconds) of the chosen cut(s), as PNGs
+//   npm run a3 -- <out-dir> --motion-check --cuts=15,41   the motion check on each film after it renders (motion-check.mjs)
 // Sound: public/audio/a2-<cut>-en.wav (audio/mix.py with the A2 effects; see marketing/trailer/README.md).
 // Every Act 3 still keeps its readability and frame check while the film renders (src/stills/readability.tsx).
 import fs from "node:fs";
@@ -11,6 +12,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
+import { runMotionCheck } from "./motion-check.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sharp = createRequire(path.join(root, "../../package.json"))("sharp");
@@ -72,6 +74,7 @@ for (const cut of cuts) {
   const file = path.join(out, `${name}-${cut}-en.mp4`);
   await renderMedia({ composition, serveUrl, codec: "h264", outputLocation: file, inputProps, browserExecutable, scale: 0.5, crf: 20, concurrency: 6, onBrowserLog });
   console.log("wrote", path.relative(out, file));
+  if (argv.includes("--motion-check")) runMotionCheck(file, argv, path.join(out, `motioncheck-${cut}.json`));
   report(cut, fails);
 }
 function report(cut, fails) {
