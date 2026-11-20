@@ -10,7 +10,7 @@ import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRecipes } from "@/hooks/use-recipes";
-import { ingredientsUnderFood } from "@/lib/features";
+import { amountsOn, countedItems, ingredientsUnderFood } from "@/lib/features";
 import { isLowStock, stockItemName } from "@/lib/inventory";
 import { isActiveAlert } from "@/lib/inventory-status";
 import { amountLine, isTracked } from "@/lib/kitchen-units";
@@ -123,9 +123,11 @@ function Tick({ on, label, onClick, disabled }: { on: boolean; label: string; on
 function Review({ dishes, from, to, onDone }: { dishes: readonly MenuDish[]; from: string; to: string; onDone: () => void }) {
   const t = useT();
   const lang = useOwnerLocale();
-  const { inventoryItems, inventoryAlerts, markToBuy, flagLowStock } = useHousehold();
+  const { inventoryItems: allItems, inventoryAlerts, markToBuy, flagLowStock } = useHousehold();
   const { recipes } = useRecipes();
   const { flags } = useHouseholdFeatures();
+  // With Kitchen amounts off nothing is counted: every item is checked by status.
+  const inventoryItems = countedItems(allItems, amountsOn(flags));
   const underFood = ingredientsUnderFood(flags);
   // Worked out once when the sheet opens, so the list doesn't move under a finger.
   const [result] = useState(() => menuShortfall(dishes, recipes, inventoryItems, from, to));

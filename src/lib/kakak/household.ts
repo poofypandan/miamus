@@ -119,7 +119,7 @@ export interface KakakHousehold {
    */
   repairsOff?: boolean;
   billsOff?: boolean;
-  /** Kitchen amounts and recipes: ingredients' places, amounts, recipes and the menu. */
+  /** Kitchen amounts: ingredients' places and amounts (recipes and the menu are on for every home since 20 Nov). */
   kitchenOff?: boolean;
 }
 
@@ -229,7 +229,7 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   const off = [
     household.repairsOff ? "Repairs" : null,
     household.billsOff ? "Bills and upkeep" : null,
-    household.kitchenOff ? "Kitchen amounts and recipes (ingredients' places and amounts, recipes, the menu)" : null,
+    household.kitchenOff ? "Kitchen amounts (ingredients' places and amounts; recipes and the menu are still there)" : null,
   ].filter(Boolean);
   if (off.length) {
     lines.push("");

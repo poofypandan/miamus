@@ -494,7 +494,10 @@ function guideEntryFor(question: string, locale: Locale): GuideEntry | null {
   for (const entry of GUIDE) {
     const title = words(`${entry.title[locale]} ${entry.where ? GUIDE_PLACES[entry.where][locale] : ""}`);
     const body = words(entry.body[locale]);
-    const near = (list: string[], w: string) => list.some((x) => x === w || (w.length >= 4 && (x.startsWith(w) || w.startsWith(x))));
+    // A word inside a longer one counts both ways, never a two-letter word
+    // ("we" in "Can we cook it?" is not "weather").
+    const near = (list: string[], w: string) =>
+      list.some((x) => x === w || (w.length >= 4 && (x.startsWith(w) || (x.length >= 3 && w.startsWith(x)))));
     const score = asked.reduce((sum, w) => sum + (near(title, w) ? 3 : near(body, w) ? 1 : 0), 0);
     // One word from a body isn't enough to call it that entry's question.
     if (score >= 2 && (!best || score > best.score)) best = { entry, score };
