@@ -51,3 +51,6 @@ next-env.d.ts
 # Kakak eval: household photos and voices never go in the repo; run results stay local
 /tests/kakak/media/
 /tests/kakak/results/
+
+# Photo backup run summary (scripts/photo-backup), counts only
+photo-backup-summary.json

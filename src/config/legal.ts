@@ -230,14 +230,37 @@ export const LEGAL = {
   // 35 days, migrations/172), and asks ElevenLabs to delete each generation
   // from its history right after (zero retention is Enterprise-only); it may
   // keep logs, and backups up to 30 days. Otherwise the phone reads aloud.
-  policyVersion: "2026-11-15.1",
-  effectiveDate: { en: "15 November 2026", id: "15 November 2026" },
+  // 2026-11-20.5: photo backups (security audit S5, migrations/179). Amazon
+  // Web Services (Singapore, ap-southeast-1) becomes a processor: every
+  // photo in the three photo buckets is copied each night to a private,
+  // versioned, encrypted (SSE-S3) bucket there, which only Poofy Labs can
+  // open, only to restore. The copy runs in a Supabase Edge Function in
+  // Singapore, so photos stay in the region; GitHub only starts it and sees
+  // counts. A photo deleted from Miamus is marked deleted in the backup the
+  // next night and expires 30 days later (lifecycle rule), so it is gone
+  // within 32 days. No new kind of personal data; a new copy, location
+  // and retention. Go live the day the backup is switched on
+  // (docs/photo-backups.md).
+  policyVersion: "2026-11-20.5",
+  effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on
    * the date above). Update this if the project moves region again.
    */
   dataRegion: { en: "Singapore", id: "Singapura" },
+  /**
+   * The nightly photo backup (docs/photo-backups.md). keepDeletedDays is
+   * the backup bucket's lifecycle rule (noncurrent versions expire after
+   * this many days); goneWithinDays adds the night before the delete is
+   * noticed and the day AWS may take to act. Change them with the bucket.
+   */
+  photoBackup: {
+    provider: "Amazon Web Services (AWS)",
+    region: { en: "Singapore", id: "Singapura" },
+    keepDeletedDays: 30,
+    goneWithinDays: 32,
+  },
 } as const;
 
 export const isLegalDraft = !LEGAL.operatorName || !LEGAL.contactEmail;

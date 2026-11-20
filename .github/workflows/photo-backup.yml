@@ -1,0 +1,77 @@
+name: Photo backup
+
+# Nightly: starts the photo-backup Edge Function, which copies new and changed
+# photos to the backup bucket in AWS Singapore (security audit S5). The copy
+# runs in Singapore, inside Supabase; this job only starts it and turns any
+# problem into a failed run, which GitHub emails to the repository's owner.
+# It sees counts, never a photo or a path. Plan and restore drill:
+# docs/photo-backups.md.
+#
+# Off until set up: the nightly run needs the repository variable
+# PHOTO_BACKUP_ENABLED = true. Secrets and variables live in the GitHub
+# environments `photo-backup` (production) and `photo-backup-staging`, each
+# limited to the main branch (Settings -> Environments).
+
+on:
+  schedule:
+    # 19:17 UTC = 02:17 in Jakarta: after the evening's photos, before the
+    # 03:30-03:50 clean-ups (prune-task-photos), so tonight's deletes are
+    # tomorrow's removals.
+    - cron: "17 19 * * *"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which project
+        type: choice
+        options: [production, staging]
+        default: production
+      dry_run:
+        description: Report only, change nothing
+        type: boolean
+        default: false
+      allow_mass_delete:
+        description: Let a large removal through (only after checking why)
+        type: boolean
+        default: false
+
+# One backup at a time per project; a second waits rather than overlapping.
+concurrency:
+  group: photo-backup-${{ inputs.target || 'production' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Back up photos (${{ inputs.target || 'production' }})
+    if: github.event_name == 'workflow_dispatch' || vars.PHOTO_BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: ${{ inputs.target == 'staging' && 'photo-backup-staging' || 'photo-backup' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/photo-backup
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Back up
+        env:
+          PHOTO_BACKUP_FUNCTION_URL: ${{ vars.PHOTO_BACKUP_FUNCTION_URL }}
+          PHOTO_BACKUP_TRIGGER_SECRET: ${{ secrets.PHOTO_BACKUP_TRIGGER_SECRET }}
+          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+          ALLOW_MASS_DELETE: ${{ inputs.allow_mass_delete && '--allow-mass-delete' || '' }}
+        run: node scripts/photo-backup/trigger.mjs $DRY_RUN $ALLOW_MASS_DELETE
+
+      - name: Keep the summary (counts only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: photo-backup-summary
+          path: photo-backup-summary.json
+          if-no-files-found: ignore
+          retention-days: 30
