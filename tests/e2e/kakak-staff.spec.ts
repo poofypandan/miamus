@@ -160,3 +160,27 @@ test("en: Yanti is back: the phone knows she left, and the card brings her back"
   await expect(page.getByTestId("add-staff-sheet").getByText("Yanti is back")).toBeVisible();
   expect(calls).toEqual([["restore", { p_staff_id: YANTI }]]);
 });
+
+test("en: on a two-week trial: Sri is added and My tasks gets the owner's reminder to decide, in the same save", async ({ context, page }) => {
+  const staff = roster();
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true }, staff, household: { hasPets: true } });
+  await answerKakak(page, "Of course. Sri for the kitchen, on a two-week trial.", {
+    kind: "add_staff",
+    name: "Sri",
+    areas: ["kitchen"],
+    starterChores: false,
+    trialDays: 14,
+  });
+  const calls = await stubStaffWrites(page, staff);
+  await tellKakak(page, "en", "Add a new cook, Sri, on a two-week trial");
+  await expect(page.locator("dl")).toContainText("Trial2 weeks, then a reminder to decide", { timeout: 20_000 });
+  await page.getByRole("button", { name: "Add Sri" }).click();
+  const sheet = page.getByTestId("add-staff-sheet");
+  await expect(sheet.getByText("Sri is added")).toBeVisible();
+  await expect(sheet.getByText("My tasks reminds you to decide on Sri's trial.", { exact: false })).toBeVisible();
+  const [, draft] = calls[0] as [string, { chores: Record<string, unknown>[] }];
+  // No starter chores (Kakak said none), only the owner's reminder, 14 days on, with a push on the day.
+  expect(draft.chores).toEqual([
+    expect.objectContaining({ title: "Decide on Sri's trial", assignee: { me: true }, remind: 0, recurrence: "none", category: "errand" }),
+  ]);
+});
