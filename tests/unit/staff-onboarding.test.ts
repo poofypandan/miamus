@@ -79,10 +79,15 @@ describe("the guide's staff entries", () => {
 });
 
 describe("Kakak on adding and removing staff", () => {
-  it("says how from the guide: adding or removing someone is done by hand for now", () => {
+  it("suggests them now (step 5): the tools are listed, and the step 1 can't-do line is gone", () => {
+    expect(KAKAK_SYSTEM_PROMPT).toContain("- add_staff:");
+    expect(KAKAK_SYSTEM_PROMPT).toContain("- remove_staff:");
+    expect(KAKAK_SYSTEM_PROMPT).toContain("# Adding and removing staff");
     const cantDo = KAKAK_SYSTEM_PROMPT.slice(KAKAK_SYSTEM_PROMPT.indexOf("# What you can't do yet"));
-    expect(cantDo).toContain("- adding a staff member, or taking one off the list when they leave");
-    expect(cantDo).toContain("Pengaturan / Settings → Staf / Staff");
+    expect(cantDo).not.toContain("adding a staff member");
+    // Decision 2: ask what they do, never default to everything; decision 7: ask who takes the work.
+    expect(KAKAK_SYSTEM_PROMPT).toContain("Never default to everything.");
+    expect(KAKAK_SYSTEM_PROMPT).toContain("ask once who takes their chores");
   });
 });
 

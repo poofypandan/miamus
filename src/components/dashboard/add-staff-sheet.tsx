@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Check, Loader2, RotateCcw, UserRoundCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,17 +54,35 @@ import type { StaffProfile } from "@/types/database";
  * Owner-facing: English or Bahasa Indonesia. Chore titles are Indonesian,
  * as staff read them, with the meaning beside them for English owners.
  */
+/**
+ * Kakak's add_staff card, filled into the sheet (staff onboarding step 5).
+ * With autoSave the owner already confirmed on Kakak's card, so the sheet
+ * saves at once (or brings back someone who left with that name) and shows
+ * the welcome; a name already on the list waits for the owner, as by hand.
+ */
+export interface AddStaffPreset {
+  name: string;
+  areas: StaffArea[];
+  starterChores: boolean;
+  autoSave?: boolean;
+}
+
 export function AddStaffSheet({
   open,
   onClose,
   roster,
   reload,
+  preset,
+  onAdded,
 }: {
   open: boolean;
   onClose: () => void;
   /** Everyone on the roster, including owners and people no longer here. */
   roster: StaffProfile[];
   reload: () => Promise<void>;
+  preset?: AddStaffPreset;
+  /** After the person is added or brought back. */
+  onAdded?: (person: { id: string; name: string }) => void;
 }) {
   useBackToClose(open, onClose);
   return (
@@ -72,7 +90,7 @@ export function AddStaffSheet({
       <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto" data-testid="add-staff-sheet">
         {/* Mounted only while open: a fresh form each time, and the household's
             chores are read only when the sheet needs them. */}
-        {open && <AddStaffForm onClose={onClose} roster={roster} reload={reload} />}
+        {open && <AddStaffForm onClose={onClose} roster={roster} reload={reload} preset={preset} onAdded={onAdded} />}
       </SheetContent>
     </Sheet>
   );
@@ -84,10 +102,14 @@ function AddStaffForm({
   onClose,
   roster,
   reload,
+  preset,
+  onAdded,
 }: {
   onClose: () => void;
   roster: StaffProfile[];
   reload: () => Promise<void>;
+  preset?: AddStaffPreset;
+  onAdded?: (person: { id: string; name: string }) => void;
 }) {
   const t = useT();
   const locale = useOwnerLocale();
@@ -97,8 +119,10 @@ function AddStaffForm({
   const { locations, failed: roomsFailed, reload: reloadRooms } = useHouseholdLocations();
   const today = formatDateLocal(useToday());
   const { rows: chores, loaded: choresLoaded, failed: choresFailed, reload: reloadChores } = useSetUpChores(today);
-  const [name, setName] = useState("");
-  const [jobs, setJobs] = useState<Set<StaffArea>>(() => new Set());
+  const [name, setName] = useState(preset?.name ?? "");
+  const [jobs, setJobs] = useState<Set<StaffArea>>(() => new Set(preset?.areas ?? []));
+  // Kakak may say no starter chores: then none start ticked (the owner can still tick).
+  const startersOn = preset?.starterChores ?? true;
   // The owner's own changes to the ticks, by chore key; the rest follow the defaults.
   const [flipped, setFlipped] = useState<Set<string>>(() => new Set());
   const [saving, setSaving] = useState(false);
@@ -121,8 +145,8 @@ function AddStaffForm({
     [kitchen, chores, locations, today]
   );
   const ticked = useMemo(
-    () => new Set(starters.filter((s) => s.ticked !== flipped.has(s.key)).map((s) => s.key)),
-    [starters, flipped]
+    () => new Set(starters.filter((s) => (startersOn && s.ticked) !== flipped.has(s.key)).map((s) => s.key)),
+    [starters, flipped, startersOn]
   );
   // Until every set-up chore is read, a "move" can't be told from a new one: wait.
   const startersReady = !kitchen || (choresLoaded && locations !== null);
@@ -171,6 +195,7 @@ function AddStaffForm({
       await dataProvider.restoreStaffProfile(person.id);
       await Promise.allSettled([reload(), refresh({ silent: true })]);
       setAdded({ id: person.id, name: person.name, chores: 0, back: true });
+      onAdded?.({ id: person.id, name: person.name });
     } catch (err) {
       console.error(err);
       lock.release();
@@ -259,7 +284,24 @@ function AddStaffForm({
     await Promise.allSettled([reload(), refresh({ silent: true })]);
     setAdded({ id, name: person, chores });
     setSaving(false);
+    onAdded?.({ id, name: person });
   }
+
+  // Kakak's card was the confirmation (step 5): save once everything is read.
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (!preset?.autoSave || autoTried.current || added || saving) return;
+    if (former) {
+      autoTried.current = true;
+      void bringBack(former);
+    } else if (canAdd) {
+      autoTried.current = true;
+      void add();
+    } else if (taken || badName || (startersReady && jobs.size === 0)) {
+      // Left for the owner, as by hand.
+      autoTried.current = true;
+    }
+  });
 
   if (added) {
     return (

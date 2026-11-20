@@ -239,7 +239,13 @@ export const LEGAL = {
   // and the date the name was removed. When someone leaves, their chores and
   // pet routines can go to another staff member (data that was already
   // stored). No new service or region; nothing new sent to Kakak.
-  policyVersion: "2026-11-20.1",
+  // 2026-11-20.2: Kakak suggests adding or removing a staff member (staff
+  // onboarding step 5, migrations/181 only lets the request record name the
+  // two tools) — the new person's name reaches Anthropic only as the admin
+  // types it; former staff are never sent (the phone matches a returning
+  // name itself). Saved only when the admin confirms, through the same paths
+  // as by hand. No new kind of personal data, service or region.
+  policyVersion: "2026-11-20.2",
   effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

@@ -18,8 +18,8 @@ import { AREAS } from "@/lib/staff-areas";
 // union, so only three tools are strict: create_chore (9 unions),
 // add_pet_routine (6) and ask_question (0), 15 in all. They are the ones
 // whose shape matters most (dates, recurrence, routine switches) or that
-// every turn may use. add_to_shopping_list, add_food, put_away_ingredient and
-// set_staff_areas are not strict: validate.ts checks their whole shape
+// every turn may use. add_to_shopping_list, add_food, put_away_ingredient,
+// set_staff_areas, add_staff and remove_staff are not strict: validate.ts checks their whole shape
 // (fields, types, enums), and a call that fails goes back to Kakak once like
 // any other mistake.
 // tests/unit/kakak-tool-limits.test.ts keeps the strict set under the limits.
@@ -36,6 +36,8 @@ export const KAKAK_TOOL_NAMES = [
   "add_food",
   "put_away_ingredient",
   "set_staff_areas",
+  "add_staff",
+  "remove_staff",
   "ask_question",
 ] as const;
 
@@ -71,6 +73,12 @@ export const INGREDIENT_UNITS = [
 
 /** What an amount means: more of it came in, or what is there in all. */
 export const INGREDIENT_AMOUNT_IS = ["bought", "now"] as const;
+
+/** add_staff's trial (staff onboarding, decision 3): none, two weeks, a month. */
+export const TRIAL_DAYS = [0, 14, 30] as const;
+
+/** remove_staff's give_to when nobody in particular takes the work. */
+export const GIVE_TO_ANYONE = "anyone";
 
 /** Weekdays as the tool writes them; ISO order (1 = Monday ... 7 = Sunday). */
 export const TOOL_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -360,6 +368,56 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
           type: "array",
           items: { type: "string", enum: [...AREAS] },
           description: "Areas to switch off for them; empty for none.",
+        },
+      },
+    },
+  },
+  {
+    // Staff onboarding step 5 (docs/private/staff-onboarding-plan.md, section 6).
+    // Not strict, so the strict union count stays 15 (tools header).
+    name: "add_staff",
+    description:
+      "Suggest adding a new staff member, or bringing back one who left. The phone shows the Add staff card; nothing is saved until the owner confirms. Never put a house code, PIN or phone number in any field.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["name", "areas", "starter_chores", "trial_days"],
+      properties: {
+        name: {
+          type: "string",
+          description: "What they are called, as the owner wrote it, without Mbak, Bu or Pak; at most 40 characters. Never a job title.",
+        },
+        areas: {
+          type: "array",
+          items: { type: "string", enum: [...AREAS] },
+          description: "What they will do, as staff areas: kitchen (cooking, Dapur), home (cleaning, laundry, chores for anyone), pets, repairs. At least one.",
+        },
+        starter_chores: {
+          type: "boolean",
+          description: "Offer the usual chores for those areas on the card (true for kitchen).",
+        },
+        trial_days: {
+          type: "integer",
+          enum: [...TRIAL_DAYS],
+          description: "A reminder for the owner to decide on a trial: 14 (two weeks), 30 (a month), or 0 for none.",
+        },
+      },
+    },
+  },
+  {
+    // Staff onboarding step 5. Not strict (tools header).
+    name: "remove_staff",
+    description:
+      "Suggest that a staff member no longer works here. Their unfinished chores and pet routines go to give_to. Never an owner. Never saves anything.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["staff", "give_to"],
+      properties: {
+        staff: { type: "string", description: "A staff reference (S1, …). Never M1 or another owner." },
+        give_to: {
+          type: "string",
+          description: "Who takes their work: another staff reference (S2, …), or \"anyone\".",
         },
       },
     },

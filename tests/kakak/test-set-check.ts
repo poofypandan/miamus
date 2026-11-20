@@ -72,7 +72,7 @@ export function checkTestSet(
           for (const value of matcher.sameSet) {
             if (!refs[setKind].has(value)) problems.push(`${where}: ${field} ${JSON.stringify(value)} is not in the household`);
           }
-        } else if (field === "show" || field === "hide") {
+        } else if (field === "show" || field === "hide" || field === "areas") {
           if (!matcher.sameSet.every((area) => (AREAS as readonly string[]).includes(area))) {
             problems.push(`${where}: ${field} has an area that is not ${AREAS.join(", ")}`);
           }

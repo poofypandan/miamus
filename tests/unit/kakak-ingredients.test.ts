@@ -100,7 +100,7 @@ describe("the tool", () => {
     expect(tool.strict).toBeUndefined();
     expect(toolsFor(on().household).map((t) => t.name)).toContain("put_away_ingredient");
     const off = toolsFor(buildContext(rows, opts).household).map((t) => t.name);
-    expect(off).toEqual(["create_chore", "add_to_shopping_list", "add_pet_routine", "add_food", "set_staff_areas", "ask_question"]);
+    expect(off).toEqual(["create_chore", "add_to_shopping_list", "add_pet_routine", "add_food", "set_staff_areas", "add_staff", "remove_staff", "ask_question"]);
   });
 
   it("is in Kakak's instructions, with raw ingredients kept off add_food", () => {
@@ -632,6 +632,14 @@ describe("the database records every tool Kakak has", () => {
       m[1].split(",").map((name) => name.trim().replace(/^'|'$/g, "")),
     );
     expect(lists).toHaveLength(2); // the column's check and kakak_record's
-    for (const list of lists) expect([...list].sort()).toEqual([...KAKAK_TOOL_NAMES].sort());
+    // 181 (staff onboarding) also names plan_dish, which the "Can we cook it?"
+    // stack's 174 adds, so whichever migration lands last keeps both stacks'
+    // tools. Any other extra name is a mistake.
+    const pending = new Set(["plan_dish"]);
+    for (const list of lists) {
+      expect([...list].filter((name) => !pending.has(name) || (KAKAK_TOOL_NAMES as readonly string[]).includes(name)).sort()).toEqual(
+        [...KAKAK_TOOL_NAMES].sort(),
+      );
+    }
   });
 });

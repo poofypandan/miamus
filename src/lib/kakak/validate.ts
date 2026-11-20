@@ -25,6 +25,8 @@ import {
   INGREDIENT_UNITS,
   PET_ROUTINE_TOOL_KINDS,
   TOOL_WEEKDAYS,
+  TRIAL_DAYS,
+  GIVE_TO_ANYONE,
   type KakakToolName,
   type PetRoutineToolKind,
 } from "./tools";
@@ -153,6 +155,19 @@ export function amountGiven(input: Record<string, unknown>): AmountGiven | null 
 }
 
 const STAFF_AREA_FIELDS = ["staff", "show", "hide"] as const;
+const ADD_STAFF_FIELDS = ["name", "areas", "starter_chores", "trial_days"] as const;
+const REMOVE_STAFF_FIELDS = ["staff", "give_to"] as const;
+
+/** Names as people say them: case, spaces and an honorific ignored ("Mbak Sri" is Sri). */
+export function sameStaffName(a: string, b: string): boolean {
+  const key = (n: string) =>
+    n
+      .toLowerCase()
+      .replace(/^(mbak|mba|mas|bik|bi|bu|ibu|pak|bapak|kak|teh|ceu|mang|om|tante)\s+/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  return key(a) === key(b);
+}
 
 /** set_staff_areas' show or hide: a list of areas, each once. Null when it isn't one. */
 function areaList(errors: string[], field: string, value: unknown): StaffArea[] | null {
@@ -375,6 +390,44 @@ export function validateToolCall(
         if (after.join() === before.join()) {
           errors.push(`nothing would change: ${person.ref} already sees it that way; say so in one line instead`);
         }
+      }
+      break;
+    }
+    case "add_staff": {
+      // Not strict (tools.ts): the shape is checked here. Staff onboarding step 5.
+      shape(errors, "input", input, ADD_STAFF_FIELDS);
+      text(errors, "name", input.name, { max: 40, required: true });
+      if (typeof input.name === "string") {
+        const name = input.name.trim();
+        // A name only: no code, PIN or number ever rides in it (safety case K318).
+        if (/[0-9<>@\n\r\t]/.test(name)) errors.push("name must be the person's name only: no digits, codes or symbols");
+        const taken = household.people.find((p) => !p.owner && sameStaffName(p.name, name));
+        if (taken) errors.push(`${taken.ref} is already called ${taken.name}: say so in one line instead`);
+        if (sameStaffName(household.owner.name, name) || household.people.some((p) => p.owner && sameStaffName(p.name, name))) {
+          errors.push(`${name} is an owner of this home, not staff: say so in one line instead`);
+        }
+      }
+      const areas = areaList(errors, "areas", input.areas);
+      if (areas && areas.length === 0) errors.push("areas must list at least one: ask what they will do if the owner didn't say");
+      if (areas && household.petsOff && areas.includes("pets")) errors.push("pets are switched off for this household: leave pets out");
+      bool(errors, "starter_chores", input.starter_chores);
+      oneOf(errors, "trial_days", input.trial_days, TRIAL_DAYS);
+      break;
+    }
+    case "remove_staff": {
+      // Not strict (tools.ts). Staff onboarding step 5.
+      shape(errors, "input", input, REMOVE_STAFF_FIELDS);
+      const person = household.people.find((p) => p.ref === input.staff);
+      if (input.staff === household.owner.ref || person?.owner) {
+        errors.push(`staff ${input.staff} is an owner: owners are removed in Pengaturan / Settings → Keluarga / Family; say so in one line instead`);
+      } else {
+        ref(errors, "staff", input.staff, refs.staff, false);
+      }
+      if (input.give_to !== GIVE_TO_ANYONE) {
+        const to = household.people.find((p) => p.ref === input.give_to);
+        if (input.give_to === household.owner.ref || to?.owner) errors.push(`give_to ${input.give_to} is an owner: give it to staff or "anyone"`);
+        else if (input.give_to === input.staff) errors.push("give_to is the person leaving: give it to someone else or \"anyone\"");
+        else ref(errors, "give_to", input.give_to, refs.staff, false);
       }
       break;
     }

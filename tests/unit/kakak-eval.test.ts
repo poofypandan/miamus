@@ -93,12 +93,12 @@ describe("household dates", () => {
 });
 
 describe("tool definitions", () => {
-  it("are closed and require every property; strict except the four validate.ts checks in full", () => {
-    expect(KAKAK_TOOLS).toHaveLength(7);
+  it("are closed and require every property; strict except the six validate.ts checks in full", () => {
+    expect(KAKAK_TOOLS).toHaveLength(9);
     for (const tool of KAKAK_TOOLS) {
       if (!("input_schema" in tool)) throw new Error("custom tools only");
       // The API's limit of 16 union-typed parameters (tools.ts, kakak-tool-limits.test.ts).
-      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient", "set_staff_areas"].includes(tool.name);
+      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient", "set_staff_areas", "add_staff", "remove_staff"].includes(tool.name);
       expect(tool.strict).toBe(loose ? undefined : true);
       expect(tool.input_schema.additionalProperties).toBe(false);
       expect([...(tool.input_schema.required ?? [])].sort()).toEqual(
@@ -403,8 +403,10 @@ describe("the test set", () => {
     // member sees, Phase 178 follow-up), plus K155–K160 on 2026-11-16 (room shorthand:
     // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2), plus K301–K303 on
     // 2026-11-20 (staff onboarding step 1: how to add, explain to, and remove a staff
-    // member, answered from the guide). All for tuning; the holdout is as it was.
-    expect(testSet.cases).toHaveLength(158);
+    // member, answered from the guide), plus K304–K318 on 2026-11-20 (step 5: add_staff,
+    // remove_staff, the trial reminder, what Kakak can't do, a code in the request).
+    // All for tuning; the holdout is as it was.
+    expect(testSet.cases).toHaveLength(173);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 

@@ -28,6 +28,26 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 20 Nov (staff onboarding, step 5): Kakak adds and removes staff. In
+    // the Kakak sheet, for households with Kakak, under the calm-start rules.
+    id: "kakak-staff-2026-11",
+    date: "2026-11-20",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: tell Kakak about your staff", id: "Baru: bilang ke Kakak soal staf" },
+    steps: {
+      en: [
+        "\u201cAdd a new cook, Sri\u201d prepares Add staff for you: what Sri sees and the kitchen's usual chores. One tap adds Sri, and their welcome is ready to send.",
+        "\u201cSri no longer works here\u201d prepares the remove card, with who takes their chores. Kakak asks if two people could.",
+      ],
+      id: [
+        "\u201cTambah juru masak baru, Sri\u201d menyiapkan Tambah staf: yang dilihat Sri dan tugas dapur yang biasa. Sekali ketuk Sri ditambahkan, dan sambutannya siap dikirim.",
+        "\u201cSri sudah tidak kerja di sini\u201d menyiapkan kartu hapus, dengan siapa yang mengambil tugasnya. Kakak bertanya kalau ada dua orang yang bisa.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 20 Nov (staff onboarding, step 2): Add staff in one sheet. A card on
     // Settings → Staff, where the button is, under the calm-start rules.
     // Staff screens don't change, so there is no staff card.

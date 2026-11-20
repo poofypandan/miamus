@@ -2,6 +2,7 @@
 // (plan, screen 5): one fact per line — What, Who, When, Repeats, Room.
 // Pure, so the wording is unit-tested in both languages.
 
+import { STAFF_JOBS, STAFF_JOB_LABELS } from "@/lib/staff-onboarding";
 import { remindLabel } from "@/lib/chore-reminders";
 import { defaultPlace } from "@/lib/ingredients";
 import { clean, formatAmount, unitLabel } from "@/lib/kitchen-units";
@@ -322,6 +323,29 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
     }
     case "staff_areas":
       return describeStaffAreas(item, t, nobody ?? staffAreasNobody([item], 0));
+    case "add_staff": {
+      // Staff onboarding step 5: the Add staff sheet, filled in. No job
+      // title (decision 8): what they do is the areas, in the chips' words.
+      const sees = STAFF_JOBS.filter((job) => item.areas.includes(job)).map((job) => t(...STAFF_JOB_LABELS[job]));
+      const rows: CardRow[] = [{ label: t("Does", "Mengerjakan"), value: sees.join(", ") }];
+      if (item.starterChores && item.areas.includes("kitchen")) {
+        rows.push({ label: t("Chores", "Tugas"), value: t("The kitchen's usual chores, ticked", "Tugas dapur yang biasa, dicentang") });
+      }
+      return {
+        heading: t(`New staff: ${item.name}`, `Staf baru: ${item.name}`),
+        rows,
+        note: t(`${item.name} sees only what they do.`, `${item.name} hanya melihat yang dikerjakannya.`),
+      };
+    }
+    case "remove_staff":
+      return {
+        heading: t(`${item.staffName} leaves today`, `${item.staffName} berhenti hari ini`),
+        rows: [{ label: t("Their work goes to", "Tugasnya diberikan ke"), value: item.giveTo?.name ?? t("Anyone", "Siapa saja") }],
+        note: t(
+          `${item.staffName}'s phone is signed out. Their past work keeps their name.`,
+          `HP ${item.staffName} langsung keluar. Pekerjaan sebelumnya tetap atas namanya.`,
+        ),
+      };
   }
 }
 
@@ -377,7 +401,9 @@ export function savedSummary(items: KakakSuggestion[], locale: Locale): string {
             ? first.nameEn
             : first.kind === "staff_areas"
               ? t(`What ${first.staffName} sees`, `Yang dilihat ${first.staffName}`)
-              : first.name;
+              : first.kind === "remove_staff"
+                ? first.staffName
+                : first.name;
   const more = items.length > 1 ? t(` and ${items.length - 1} more`, ` dan ${items.length - 1} lainnya`) : "";
   return t(`Saved — ${name}${more}`, `Tersimpan — ${name}${more}`);
 }

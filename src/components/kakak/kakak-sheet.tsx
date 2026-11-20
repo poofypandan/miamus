@@ -9,6 +9,8 @@ import {
   ChevronDown,
   CircleAlert,
   Eye,
+  UserMinus,
+  UserPlus,
   Gauge,
   Hourglass,
   ListChecks,
@@ -44,7 +46,15 @@ import { addsSomething, choreGlance, describeSuggestion, routineListLine, savedB
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
 import type { RoutineKind } from "@/types/database";
 import { MAX_TYPED, type KakakHistory, type RefusalReason } from "@/lib/kakak/engine";
-import { staffAreasNobody, type KakakSuggestion } from "@/lib/kakak/suggestions";
+import {
+  staffAreasNobody,
+  type AddStaffSuggestion,
+  type KakakSuggestion,
+  type RemoveStaffSuggestion,
+} from "@/lib/kakak/suggestions";
+import { AddStaffSheet, type AddStaffPreset } from "@/components/dashboard/add-staff-sheet";
+import { formerStaffWithName } from "@/lib/staff-onboarding";
+import { dataProvider } from "@/lib/data";
 import { useKakakSave } from "@/lib/kakak/use-kakak-save";
 import { firstName } from "@/lib/kakak/context";
 import {
@@ -57,7 +67,7 @@ import {
   type PetRoutineRefinement,
 } from "@/lib/kakak/refine";
 import type { ChoreSuggestion } from "@/lib/kakak/suggestions";
-import { useStaffProfiles } from "@/hooks/use-staff-profiles";
+import { reloadStaffProfiles, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import type { HouseholdLocation } from "@/types/database";
 import { nameSaysPlace } from "@/lib/room-in-name";
@@ -141,6 +151,11 @@ function Conversation({
   const locale = useOwnerLocale();
   const { activeHouseholdId } = useHousehold();
   const save = useKakakSave();
+  // Staff cards (staff onboarding step 5) save through the Free sheets'
+  // own paths: Add staff, pre-filled, and archive_staff_profile with give_to.
+  const { allProfiles, reload: reloadRoster } = useStaffProfiles();
+  const [staffAdd, setStaffAdd] = useState<{ preset: AddStaffPreset; requestId: string; refined: boolean } | null>(null);
+  const staffAdded = useRef(false);
   /** The new voice flow (tap Done, check, then Send), opt-in on this phone with ?newvoice=1. */
   const newVoice = useNewVoice();
   const [screen, setScreen] = useState<Screen>({ kind: "typing" });
@@ -271,8 +286,58 @@ function Conversation({
     }
   }
 
+  /** Kakak's remove card, confirmed: archive with give_to, as the remove card does (step 4). */
+  async function removeStaff(item: RemoveStaffSuggestion) {
+    const roster = await dataProvider.listStaffProfiles();
+    const person = roster.find((p) => p.id === item.staffId && !p.archived_at && !p.user_id);
+    if (!person) throw new Error("Kakak's staff member is no longer on the roster");
+    const to = item.giveTo && roster.some((p) => p.id === item.giveTo?.staffId && !p.archived_at && !p.user_id) ? item.giveTo : null;
+    await dataProvider.archiveStaffProfile(person.id, to?.staffId ?? null);
+    void reloadStaffProfiles();
+    toast.success(
+      to
+        ? t(
+            `${person.name} removed. Their work is ${to.name}'s now. Other staff phones stay signed in.`,
+            `${person.name} dihapus. Tugasnya sekarang milik ${to.name}. HP staf lain tetap masuk.`
+          )
+        : t(
+            `${person.name} removed. Their work is for anyone now. Other staff phones stay signed in.`,
+            `${person.name} dihapus. Tugasnya sekarang untuk siapa saja. HP staf lain tetap masuk.`
+          ),
+      { duration: UNDO_TOAST_MS }
+    );
+  }
+
   async function confirm(items: KakakSuggestion[], requestId: string, refined: boolean) {
     if (saving) return;
+    const staffItem = items.find((item) => item.kind === "add_staff" || item.kind === "remove_staff");
+    if (staffItem) {
+      setSaving(true);
+      try {
+        // Anything else on the card (a trial reminder chore) first, all or nothing.
+        const rest = items.filter((item) => item !== staffItem);
+        if (rest.length > 0) await save(rest);
+        if (staffItem.kind === "add_staff") {
+          staffAdded.current = false;
+          setStaffAdd({
+            preset: { name: staffItem.name, areas: staffItem.areas, starterChores: staffItem.starterChores, autoSave: true },
+            requestId,
+            refined,
+          });
+          return;
+        }
+        if (staffItem.kind === "remove_staff") await removeStaff(staffItem);
+        reportKakakOutcome(requestId, refined ? "changed" : "confirmed");
+        onClose();
+        onSaved?.();
+      } catch (error) {
+        console.error("Kakak staff card", error);
+        toast.error(t("Something went wrong. Nothing was saved.", "Ada yang salah. Tidak ada yang disimpan."));
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     setSaving(true);
     try {
       const { undo } = await save(items);
@@ -440,6 +505,26 @@ function Conversation({
         />
       )}
 
+      <AddStaffSheet
+        open={!!staffAdd}
+        preset={staffAdd?.preset}
+        roster={allProfiles ?? []}
+        reload={reloadRoster}
+        onAdded={() => {
+          staffAdded.current = true;
+          if (staffAdd) reportKakakOutcome(staffAdd.requestId, staffAdd.refined ? "changed" : "confirmed");
+        }}
+        onClose={() => {
+          setStaffAdd(null);
+          // Added (or brought back): Kakak's work is done. Closed before
+          // saving: back to her card, nothing saved.
+          if (staffAdded.current) {
+            onClose();
+            onSaved?.();
+          }
+        }}
+      />
+
       {screen.kind === "saved" && (
         <SavedRoutine text={screen.text} items={screen.items} busy={saving} onDone={onClose} onUndo={() => void undoSaved()} />
       )}
@@ -465,6 +550,7 @@ function Conversation({
       )}
 
       {/* Kakak's card, short by default (19 Nov): the newest card first, under the one-a-week rule. */}
+      {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-staff-2026-11" />}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-short-card-2026-11" />}
       {/* Kakak's new look (the warm seal, 20 Nov): after the short card, in its own week. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-warm-seal-2026-11" />}
@@ -705,6 +791,18 @@ function SuggestionCard({
    * the chips can't say is still typed to her from there.
    */
   const hasChore = items.some((item) => item.kind === "chore");
+  // A staff card's button says what happens (step 5); a name that matches
+  // someone who left is brought back (the phone knows them, Kakak doesn't).
+  const { allProfiles } = useStaffProfiles();
+  const addCard = items.find((item): item is AddStaffSuggestion => item.kind === "add_staff");
+  const removeCard = items.find((item): item is RemoveStaffSuggestion => item.kind === "remove_staff");
+  const staffAction = addCard
+    ? formerStaffWithName(addCard.name, allProfiles ?? [])
+      ? t(`Bring ${addCard.name} back`, `Kembalikan ${addCard.name}`)
+      : t(`Add ${addCard.name}`, `Tambah ${addCard.name}`)
+    : removeCard
+      ? t(`Remove ${removeCard.staffName}`, `Hapus ${removeCard.staffName}`)
+      : null;
   // Leaves out a room the task's name already says (lib/room-in-name.ts).
   const saysRoom = (item: ChoreSuggestion) => nameSaysPlace([item.title, item.titleEn], item.locationId, null, locations);
   const open = hasChore && details && !changing;
@@ -817,7 +915,9 @@ function SuggestionCard({
             ) : (
               <>
                 <Check className="size-5" aria-hidden="true" />
-                {saveable > 1
+                {staffAction
+                  ? staffAction
+                  : saveable > 1
                   ? t(`Save ${saveable}`, `Simpan ${saveable}`)
                   : items.some((item) => item.kind === "pet_routine" || item.kind === "staff_areas")
                     ? t("Save", "Simpan")
@@ -850,7 +950,11 @@ function SuggestionCard({
             </button>
           </div>
           <p className="text-center text-xs text-muted-foreground">
-            {t("You can undo it straight after saving.", "Setelah disimpan, masih bisa dibatalkan.")}
+            {removeCard
+              ? t("You can bring them back later in Settings → Staff.", "Bisa dikembalikan nanti di Pengaturan → Staf.")
+              : addCard
+                ? t("Their welcome is ready to send right after.", "Sambutannya siap dikirim sesudahnya.")
+                : t("You can undo it straight after saving.", "Setelah disimpan, masih bisa dibatalkan.")}
           </p>
         </>
       )}
@@ -1053,6 +1157,8 @@ const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
   ingredient: Carrot,
   new_ingredient: Carrot,
   staff_areas: Eye,
+  add_staff: UserPlus,
+  remove_staff: UserMinus,
 };
 
 type T = (en: string, id: string) => string;

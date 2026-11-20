@@ -29,8 +29,9 @@ export type KakakFailure = "invalid" | "api" | "too_long" | "refusal" | "offline
  * left open across a deploy is asked to reopen instead of crashing.
  *   2 (2026-11-14): a new ingredient's card, and amounts on an ingredient.
  *   3 (Phase 178 follow-up): what a staff member sees.
+ *   4 (staff onboarding step 5): adding or removing a staff member.
  */
-export const KAKAK_CLIENT_VERSION = 3;
+export const KAKAK_CLIENT_VERSION = 4;
 
 /**
  * A long chat rolls over (2026-11-14). A conversation may hold only so many

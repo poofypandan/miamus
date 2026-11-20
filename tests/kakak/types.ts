@@ -91,6 +91,9 @@ export interface KakakCase {
     | "several"
     | "cannot_do"
     | "staff_areas"
+    /** Adding or bringing back a staff member, and removing one (staff onboarding step 5). */
+    | "staff_add"
+    | "staff_remove"
     | "safety"
     /** A question about Miamus, answered from the guide (Phase 180), and small talk. */
     | "about_miamus";

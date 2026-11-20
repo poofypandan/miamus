@@ -19,6 +19,8 @@ import {
   INGREDIENT_EXPIRY,
   INGREDIENT_SHELVES,
   PET_ROUTINE_TOOL_KINDS,
+  TRIAL_DAYS,
+  GIVE_TO_ANYONE,
   TOOL_WEEKDAYS,
   type PetRoutineToolKind,
 } from "./tools";
@@ -218,6 +220,31 @@ export interface StaffAreasSuggestion {
   owedAreas: StaffArea[];
 }
 
+/**
+ * A new staff member (staff onboarding step 5): the Add staff sheet, filled
+ * in (components/dashboard/add-staff-sheet.tsx). The card saves through the
+ * sheet's own path, so nothing here is written by Kakak.
+ */
+export interface AddStaffSuggestion {
+  kind: "add_staff";
+  name: string;
+  /** What they will do, as staff areas; what isn't here is switched off. */
+  areas: StaffArea[];
+  /** Offer the kitchen's usual chores, ticked, as the sheet does. */
+  starterChores: boolean;
+  /** A reminder for the owner to decide (decision 3): 0, 14 or 30 days. */
+  trialDays: number;
+}
+
+/** Someone leaving (staff onboarding step 5): the remove card, filled in. */
+export interface RemoveStaffSuggestion {
+  kind: "remove_staff";
+  staffId: string;
+  staffName: string;
+  /** Who takes their chores and pet routines; null is Anyone. */
+  giveTo: { staffId: string; name: string } | null;
+}
+
 export type KakakSuggestion =
   | ChoreSuggestion
   | ShoppingSuggestion
@@ -225,14 +252,18 @@ export type KakakSuggestion =
   | FoodSuggestion
   | IngredientSuggestion
   | NewIngredientSuggestion
-  | StaffAreasSuggestion;
+  | StaffAreasSuggestion
+  | AddStaffSuggestion
+  | RemoveStaffSuggestion;
 
 /**
  * The oldest page (lib/kakak/client.ts KAKAK_CLIENT_VERSION) that can show
  * and save this suggestion: 2 (2026-11-14) for a new ingredient or an
- * amount, 3 for what a staff member sees (Phase 178 follow-up), else 1.
+ * amount, 3 for what a staff member sees (Phase 178 follow-up), 4 for
+ * adding or removing a staff member (staff onboarding step 5), else 1.
  */
 export function clientVersionFor(item: KakakSuggestion): number {
+  if (item.kind === "add_staff" || item.kind === "remove_staff") return 4;
   if (item.kind === "staff_areas") return 3;
   if (item.kind === "new_ingredient" || (item.kind === "ingredient" && Boolean(item.amount || item.amountSkipped))) return 2;
   return 1;
@@ -499,6 +530,33 @@ export function toSuggestion(
         owedAreas: household.petsOff ? ["home"] : ["home", "pets"],
       };
     }
+    case "add_staff": {
+      const name = str(input.name);
+      if (!name) return null;
+      const areas = areasFrom(input.areas);
+      if (areas.length === 0) return null;
+      return {
+        kind: "add_staff",
+        name: name.trim().replace(/\s+/g, " "),
+        areas,
+        starterChores: input.starter_chores === true,
+        trialDays: (TRIAL_DAYS as readonly unknown[]).includes(input.trial_days) ? (input.trial_days as number) : 0,
+      };
+    }
+    case "remove_staff": {
+      const ref = str(input.staff);
+      const person = ref ? household.people.find((p) => p.ref === ref && !p.owner) : undefined;
+      const staffId = ref ? refs.people[ref] : null;
+      if (!ref || !person || !staffId) return null;
+      const to = str(input.give_to);
+      const toId = to && to !== GIVE_TO_ANYONE ? refs.people[to] : null;
+      return {
+        kind: "remove_staff",
+        staffId,
+        staffName: names.people[ref] ?? person.name,
+        giveTo: to && toId ? { staffId: toId, name: names.people[to] ?? to } : null,
+      };
+    }
     default:
       return null;
   }
@@ -677,6 +735,26 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
             r.hidden.every(isStaffArea) &&
             new Set(r.hidden).size === r.hidden.length,
         )
+      );
+    }
+    case "add_staff": {
+      return (
+        okText(s.name, 40, false) &&
+        !/[0-9<>@]/.test(String(s.name)) &&
+        Array.isArray(s.areas) &&
+        s.areas.length > 0 &&
+        s.areas.every(isStaffArea) &&
+        new Set(s.areas).size === s.areas.length &&
+        typeof s.starterChores === "boolean" &&
+        (TRIAL_DAYS as readonly unknown[]).includes(s.trialDays)
+      );
+    }
+    case "remove_staff": {
+      const to = (s.giveTo ?? null) as Record<string, unknown> | null;
+      return (
+        okId(s.staffId, false) &&
+        okText(s.staffName, 40, false) &&
+        (to === null || (okId(to.staffId, false) && okText(to.name, 40, false) && to.staffId !== s.staffId))
       );
     }
     case "new_ingredient": {
