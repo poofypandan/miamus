@@ -197,10 +197,12 @@ export function AgendaTab() {
     try {
       await dataProvider.archiveStaffProfile(person.id, choice.giveTo);
       await reloadStaff();
-      // Their chores and routines changed hands: shown at once (as Kakak's card, PR #173).
-      void refreshHousehold({ silent: true });
       // The decision is made: the reminder is done.
       await finish(leaving.occurrence).catch(() => null);
+      // Then their chores and routines, which changed hands, shown at once.
+      // After the finish, so a slower read can't bring the reminder back as
+      // still open (Codex, PR #174).
+      void refreshHousehold({ silent: true });
       const to = choice.giveTo ? (allProfiles ?? []).find((p) => p.id === choice.giveTo)?.name : null;
       toast.success(
         to
