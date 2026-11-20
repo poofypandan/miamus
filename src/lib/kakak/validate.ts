@@ -218,8 +218,20 @@ export function validateToolCall(
       items.forEach((entry, index) => {
         const item = shape(errors, `items[${index}]`, entry, SHOPPING_ITEM_FIELDS);
         if (!item) return;
-        oneOf(errors, `items[${index}].status`, item.status, ["low", "out"]);
+        oneOf(errors, `items[${index}].status`, item.status, ["low", "out", "ok"]);
         ref(errors, `items[${index}].item`, item.item, refs.items, true);
+        // E2: "bought" sets a listed item back to Enough; a new note can't be bought.
+        if (item.status === "ok") {
+          if (item.item === null) errors.push(`items[${index}]: 'ok' (bought) is only for a listed item; for something new, there is nothing to set`);
+          const listed = household.items.find((i) => i.ref === item.item);
+          if (listed && household.statusesRead && !listed.status) {
+            errors.push(`${listed.ref} ${listed.name} is already marked Enough: say so in one line instead`);
+          }
+          // Counted by amount: Bought in the app asks how much, so it is done there.
+          if (listed?.tracked) {
+            errors.push(`${listed.ref} ${listed.name} is counted by amount: say in one line to tap Bought in Dapur / Kitchen → Belanja / Shopping, which asks how much`);
+          }
+        }
         if (item.item === null) text(errors, `items[${index}].note`, item.note, { max: 120, required: true });
         else text(errors, `items[${index}].note`, item.note, { max: 120, required: false });
         ref(errors, `items[${index}].pet`, item.pet, refs.pets, true);

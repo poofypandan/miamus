@@ -86,6 +86,18 @@ export interface KakakHousehold {
     ingredient?: boolean;
     /** Marked Out: it keeps no date until it is bought again (migrations/154). */
     out?: boolean;
+    /**
+     * E2 (20 Nov): Running low or Out, for every listed item (Enough is
+     * absent), so "what's running low?" and "what do we need to buy?" have
+     * an answer and "I bought it" knows what is on the list.
+     */
+    status?: "low" | "out";
+    /**
+     * E2: counted by amount while Kitchen amounts is on. Never rendered
+     * into the block (only what renderHouseholdBlock writes reaches the
+     * model); validate.ts uses it, since Bought there asks how much.
+     */
+    tracked?: boolean;
     /** Its stored place, only when someone noted one; a default is never sent. */
     keptIn?: FoodPlace | null;
     /** Its stored date, YYYY-MM-DD, only when there is one. */
@@ -131,6 +143,8 @@ export interface KakakHousehold {
    * other block reads exactly as before.
    */
   recipes?: KakakRecipe[];
+  /** E2: the items' statuses were read, so an item without one is Enough. */
+  statusesRead?: boolean;
   /** The menu from today for 7 days (Phase 170 PR C), for "is it on the menu already?". Absent when empty. */
   menu?: { day: string; meal: MenuMeal; title: string; recipe: string | null }[];
   /**
@@ -301,9 +315,15 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   for (const room of household.rooms) lines.push(`- ${room.ref}: ${roomLine(room)}`);
   if (household.rooms.length === 0) lines.push("- none");
   lines.push("");
-  lines.push("Shopping items already in the app:");
+  lines.push(
+    household.statusesRead
+      ? "Shopping items already in the app (out or running low means it is on the shopping list; nothing means Enough; never an amount):"
+      : "Shopping items already in the app:",
+  );
   for (const item of household.items) {
-    lines.push(`- ${item.ref}: ${item.name}${item.pet ? " (pet)" : ""}${household.ingredientsOn ? ingredientLine(item) : ""}`);
+    const asIngredient = household.ingredientsOn && item.ingredient;
+    const status = asIngredient ? "" : item.status === "out" ? " · out" : item.status === "low" ? " · running low" : "";
+    lines.push(`- ${item.ref}: ${item.name}${item.pet ? " (pet)" : ""}${status}${household.ingredientsOn ? ingredientLine(item) : ""}`);
   }
   if (household.items.length === 0) lines.push("- none");
   if (household.ingredientsOn) {
@@ -428,7 +448,8 @@ function roomLine(room: KakakHousehold["rooms"][number]): string {
 function ingredientLine(item: KakakHousehold["items"][number]): string {
   if (!item.ingredient) return "";
   const parts = [" (ingredient)"];
-  if (item.out) parts.push("out");
+  if (item.out || item.status === "out") parts.push("out");
+  else if (item.status === "low") parts.push("running low");
   if (item.keptIn) parts.push(item.keptIn);
   if (item.expiresOn) parts.push(`expires ${item.expiresOn}`);
   return parts.join(" · ");

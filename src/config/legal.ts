@@ -249,7 +249,12 @@ export const LEGAL = {
   // name, where it is kept and its use-by date. Never its photo, its notes,
   // who gave it or who added it. Nothing new is stored; no new service or
   // region.
-  policyVersion: "2026-11-20.2",
+  // 2026-11-20.3 (E2): each Kakak request also says whether each shopping
+  // item is marked Running low or Out (never an amount), for "what's
+  // running low?" and "what do we need to buy?". Kakak may suggest marking
+  // a listed item bought (Enough), saved only when the admin confirms.
+  // Nothing new is stored; no new service or region.
+  policyVersion: "2026-11-20.3",
   effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
