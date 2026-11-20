@@ -81,7 +81,10 @@ anything else.
   measured word times. `src/motion/turn-b.tsx` (`m2-60-en`) is the second pass
   after the owner's pick: the same motion in v17's composition (sky frame,
   line 1 in the plate, the thread and pulse that lead the eye to the plate).
-  One of the two goes at the rebuild.
+  `src/motion/turn-c.tsx` (`m3-60-en`) is the third, after the owner's notes
+  on the second: night to morning in one direction, both lines in the sky,
+  Kakak's lock-up on the centre line, one firefly from her mark to her plate.
+  One of the three stays at the rebuild.
 - **The check** (`scripts/motion-check.mjs`): after a render, lists (a)
   one-frame jumps of the whole picture that are not intended cuts, (b) moves
   that start or stop inside one frame, (c) anything on screen for under 8

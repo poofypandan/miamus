@@ -32,6 +32,8 @@ export const RemotionRoot: React.FC = () => (
     <Composition id="m1-60-en" component={A2Film} durationInFrames={60 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "60", audio: "audio/a4-60-en.wav", act3: true, motion: true } as A2Props} />
     {/* Its second pass (owner's pick, 20 Nov): the kit's motion in v17's composition (src/motion/turn-b.tsx). */}
     <Composition id="m2-60-en" component={A2Film} durationInFrames={60 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "60", audio: "audio/a4-60-en.wav", act3: true, motion: "b" } as A2Props} />
+    {/* Its third pass (owner's notes on 2b, 20 Nov): v17's light, line 1 in the sky, Kakak centred, one firefly to her plate (src/motion/turn-c.tsx). */}
+    <Composition id="m3-60-en" component={A2Film} durationInFrames={60 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "60", audio: "audio/a4-60-en.wav", act3: true, motion: "c" } as A2Props} />
     <Composition id="world-test" component={WorldTest} durationInFrames={600} fps={FPS} width={W} height={H} defaultProps={{ tod: 17.6 } as WorldTestProps} />
   </>
 );
