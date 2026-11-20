@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MiamusMark, MiamusPromise, PROMISE, RumahRules } from "@/components/brand/loading-screens";
+import {
+  LaunchStage,
+  MiamusMark,
+  MiamusPromise,
+  PROMISE,
+  RumahRules,
+} from "@/components/brand/loading-screens";
+import { launchMarkShown } from "@/lib/launch-clock";
 import { readCachedOwnerLocale } from "@/lib/owner-locale";
 import {
   endNavigation,
@@ -15,7 +22,7 @@ import { waitForStableLayout } from "@/lib/stable-layout";
 import { cn } from "@/lib/utils";
 
 /**
- * The branded covers: the circular Miamus mark for owners, the RUMAH rules
+ * The branded covers: the Miamus mark for owners, the RUMAH rules
  * for staff. Two of them:
  *
  *   LaunchCover      Over a cold start, at once, until the page is ready
@@ -131,30 +138,47 @@ export function LaunchCover({ variant, ready }: { variant: CoverVariant; ready: 
     return () => clearTimeout(timer);
   }, [phase]);
 
+  // Read once: whether the "/" splash's mark was on screen just before this.
+  const [afterSplash] = useState(launchMarkShown);
+
   if (phase === "done") return null;
-  return <CoverFace variant={variant} revealing={phase === "revealing"} />;
+  return (
+    <CoverFace
+      variant={variant}
+      revealing={phase === "revealing"}
+      opening
+      fadeContent={variant === "staff" && afterSplash}
+    />
+  );
 }
 
 /**
- * The cover itself: fixed to the app column above everything but sheets and
- * dialogs. Fades out over 200ms, opacity only, letting taps through while it
- * does. `fadeIn` for a cover that appears over a screen already in use, where
- * popping in at full opacity would itself be the jolt.
+ * The cover itself: the launch stage (loading-screens.tsx), above everything
+ * but sheets and dialogs. Fades out over 200ms, opacity only, letting taps
+ * through while it does. `fadeIn` for a cover that appears over a screen
+ * already in use, where popping in at full opacity would itself be the jolt.
+ *
+ * `opening` for the launch cover: its mark keeps the launch clock, so it
+ * carries on from the "/" splash it replaces without a jump. `fadeContent`
+ * for the staff cover replacing that splash: the white stays, the mark gives
+ * way, and the RUMAH rules come up softly instead of cutting in.
  */
 function CoverFace({
   variant,
   revealing,
   fadeIn = false,
+  opening = false,
+  fadeContent = false,
 }: {
   variant: CoverVariant;
   revealing: boolean;
   fadeIn?: boolean;
+  opening?: boolean;
+  fadeContent?: boolean;
 }) {
   return (
-    <div
-      aria-hidden
+    <LaunchStage
       className={cn(
-        "fixed inset-y-0 left-1/2 z-[45] flex w-full max-w-md -translate-x-1/2 items-center justify-center bg-slate-50 px-6",
         revealing
           ? "pointer-events-none opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none"
           : "opacity-100",
@@ -162,14 +186,14 @@ function CoverFace({
       )}
     >
       {variant === "owner" ? (
-        <div className="flex flex-col items-center">
-          <MiamusMark />
+        <div className="relative">
+          <MiamusMark opening={opening} />
           <OwnerPromise />
         </div>
       ) : (
-        <RumahRules />
+        <RumahRules className={cn(fadeContent && "animate-view-fade motion-reduce:animate-none")} />
       )}
-    </div>
+    </LaunchStage>
   );
 }
 

@@ -403,40 +403,137 @@
 }
 
 /*
- * The Miamus mark's roof drawing itself (MiamusMark, 2026-11-09). Two
- * animations on one 2.4s clock: a strip of the tile's ink slides from just
- * left of the roof (14px) to just past it (74px), revealing it left to right;
- * the roof holds, then fades, and at the restart the strip is back over it
- * while the roof returns to full opacity unseen. Transform and opacity only.
+ * The Miamus mark drawing itself (MiamusMark, 20 Nov; the roof alone from
+ * 2026-11-09). Ported from the film's end card, where the roof draws over
+ * 14 frames, the M starts 10 frames after it and draws over 22, both on the
+ * film's easeOut, cubic-bezier(0.16, 1, 0.3, 1). At 30 frames a second that
+ * is 467ms, +333ms and 733ms. Fades use the motion kit's EVEN curve.
+ *
+ * One 2.6s cycle on three layers, transform and opacity only:
+ *     0–300ms   the strokes fade out (EVEN)
+ *   300ms       ink strips cover each line, unseen (ink on ink)
+ *   340ms       the strokes return under the strips
+ *   400–867ms   the roof's strip slides off it, left to right (easeOut)
+ *   733–1467ms  the M's strip slides off it, overlapping (easeOut)
+ *  1500ms       the strips go (unseen); the whole house rests to 2.6s
+ *
+ * Started 1.5s in (-1500ms): the first frame is the whole house at rest, the
+ * same picture as the icon just tapped, so a load under about 1.1s never
+ * sees the mark come apart. The strips' positions are shares of the 512 box:
+ * the roof runs 92–420, the M 132–380, each strip's soft edge 20 wide.
  */
 @theme inline {
-  /* Started halfway through (-1.2s): the first frame is the whole house, the
-     same picture as the icon just tapped, so a quick load never shows a
-     roofless M. The roof first fades and redraws about 0.7s in. */
-  --animate-roof-reveal: roof-reveal 2.4s -1.2s infinite;
-  --animate-roof-fade: roof-fade 2.4s -1.2s infinite;
+  --animate-mark-strokes: mark-strokes 2.6s -1.5s infinite;
+  --animate-mark-roof: mark-roof 2.6s -1.5s infinite;
+  --animate-mark-m: mark-m 2.6s -1.5s infinite;
 
-  @keyframes roof-reveal {
-    0%,
-    10% {
-      transform: translateX(14px);
-      animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  @keyframes mark-strokes {
+    0% {
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
     }
-    48%,
+    11.54% {
+      opacity: 0;
+      animation-timing-function: step-end;
+    }
+    13.08%,
     100% {
-      transform: translateX(74px);
+      opacity: 1;
     }
   }
 
-  @keyframes roof-fade {
-    0%,
-    78% {
-      opacity: 1;
+  @keyframes mark-roof {
+    0% {
+      opacity: 0;
+      transform: translateX(82.8%);
+      animation-timing-function: step-end;
     }
-    92%,
+    11.54% {
+      opacity: 1;
+      transform: translateX(14.06%);
+    }
+    15.38% {
+      opacity: 1;
+      transform: translateX(14.06%);
+      animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    33.35% {
+      opacity: 1;
+      transform: translateX(82.8%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
     100% {
       opacity: 0;
+      transform: translateX(82.8%);
     }
+  }
+
+  @keyframes mark-m {
+    0% {
+      opacity: 0;
+      transform: translateX(75%);
+      animation-timing-function: step-end;
+    }
+    11.54% {
+      opacity: 1;
+      transform: translateX(21.88%);
+    }
+    28.19% {
+      opacity: 1;
+      transform: translateX(21.88%);
+      animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    56.42% {
+      opacity: 1;
+      transform: translateX(75%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
+    100% {
+      opacity: 0;
+      transform: translateX(75%);
+    }
+  }
+}
+
+/*
+ * The launch mark's opening (20 Nov): from the phone's own splash to the
+ * rounded square.
+ *
+ * Android draws an installed web app's splash from the maskable icon cut to a
+ * 160dp circle, the glyph at 192dp (the icon's 80% safe zone, on a 240dp
+ * canvas). The first frame here is that picture, pixel for pixel on a 160px
+ * mark: the circle under a transparent tile, the glyph at 1.2. After a beat
+ * the tile fades in over the circle (its corners fill) while the glyph eases
+ * to the icon's own proportions. Opacity and transform only.
+ *
+ * Only where that splash exists: an installed app (display-mode: standalone)
+ * that is not an iPhone (-webkit-touch-callout is iOS Safari's alone). iPhones
+ * draw no icon on launch, and a browser tab has no splash, so there the mark
+ * starts settled. In CSS rather than script so the very first server-rendered
+ * frame is already right.
+ */
+@media (display-mode: standalone) and (prefers-reduced-motion: no-preference) {
+  @supports not (-webkit-touch-callout: none) {
+    .mark-opening-tile {
+      animation: mark-tile 480ms cubic-bezier(0.37, 0, 0.63, 1) 240ms both;
+    }
+    .mark-opening-glyph {
+      animation: mark-settle 600ms cubic-bezier(0.4, 0, 0.2, 1) 120ms both;
+    }
+  }
+}
+
+@keyframes mark-tile {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mark-settle {
+  from {
+    transform: scale(1.2);
   }
 }
 
