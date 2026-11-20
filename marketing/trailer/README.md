@@ -88,7 +88,8 @@ anything else.
   house, and one light travels from her phone to Kakak's mark and down to her
   plate. `src/motion/turn-e.tsx` (`m5-60-en`) is the fifth, calmer: slower
   lights, no light to the plate, the footnote "Kakak is your AI helper". One of
-  the five stays at the rebuild.
+  the five stays at the rebuild. `src/motion/turn-f.tsx` (`m6-60-en`) is the
+  sixth: the rising light keeps clear of the type (one of the six stays).
 - **The check** (`scripts/motion-check.mjs`): after a render, lists (a)
   one-frame jumps of the whole picture that are not intended cuts, (b) moves
   that start or stop inside one frame, (c) anything on screen for under 8

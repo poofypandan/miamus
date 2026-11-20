@@ -23,14 +23,15 @@ import { TurnB } from "../motion/turn-b";
 import { TurnC } from "../motion/turn-c";
 import { TurnD } from "../motion/turn-d";
 import { TurnE } from "../motion/turn-e";
+import { TurnF } from "../motion/turn-f";
 import { Act3, Act3Short } from "../a3/act3";
 import { FrameCheck } from "../stills/readability";
 
 loadFonts();
 
 /** A3: `act3` animates Act 3 of the 60 (src/a3/act3.tsx); `check` runs the frame check on every frame ("strict" fails the render). */
-/** `motion`: 5–15 s of the 60 on the motion kit (src/motion/turn.tsx; the blind motion test, trailer-reset 28). "b": its second pass, in v17's composition (turn-b.tsx). "c": the third (turn-c.tsx). "d": the fourth (turn-d.tsx). "e": the fifth (turn-e.tsx). */
-export type A2Props = { cut: "60" | "15"; audio: string | null; act3?: boolean; check?: "log" | "strict"; motion?: boolean | "b" | "c" | "d" | "e" };
+/** `motion`: 5–15 s of the 60 on the motion kit (src/motion/turn.tsx; the blind motion test, trailer-reset 28). "b": its second pass, in v17's composition (turn-b.tsx). "c": the third (turn-c.tsx). "d": the fourth (turn-d.tsx). "e": the fifth (turn-e.tsx). "f": the sixth (turn-f.tsx). */
+export type A2Props = { cut: "60" | "15"; audio: string | null; act3?: boolean; check?: "log" | "strict"; motion?: boolean | "b" | "c" | "d" | "e" | "f" };
 type VoCut = { cues: { id: string; from: number; to: number }[]; env: number[]; pulse?: number[] };
 
 function Scene({ span, children }: { span: Span; children: React.ReactNode }) {
@@ -84,7 +85,7 @@ export const A2Film: React.FC<A2Props> = ({ cut, audio, act3 = false, check, mot
             <Scene span={S60.hook}><Hook {...p} t0={0} /></Scene>
             <Sequence from={S60.turn[0] - lead} durationInFrames={S60.kakak[1] - S60.turn[0] + lead} layout="none">
               <Faded frames={lead}>
-                {motion === "e" ? <TurnE base={S60.turn[0]} lead={lead} /> : motion === "d" ? <TurnD base={S60.turn[0]} lead={lead} /> : motion === "c" ? <TurnC base={S60.turn[0]} lead={lead} /> : motion === "b" ? <TurnB base={S60.turn[0]} lead={lead} /> : motion ? <Turn base={S60.turn[0]} lead={lead} /> : <Act2 base={S60.turn[0]} lead={lead} />}
+                {motion === "f" ? <TurnF base={S60.turn[0]} lead={lead} /> : motion === "e" ? <TurnE base={S60.turn[0]} lead={lead} /> : motion === "d" ? <TurnD base={S60.turn[0]} lead={lead} /> : motion === "c" ? <TurnC base={S60.turn[0]} lead={lead} /> : motion === "b" ? <TurnB base={S60.turn[0]} lead={lead} /> : motion ? <Turn base={S60.turn[0]} lead={lead} /> : <Act2 base={S60.turn[0]} lead={lead} />}
               </Faded>
             </Sequence>
             {act3 ? (

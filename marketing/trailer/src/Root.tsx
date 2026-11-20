@@ -38,6 +38,8 @@ export const RemotionRoot: React.FC = () => (
     <Composition id="m4-60-en" component={A2Film} durationInFrames={60 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "60", audio: "audio/a4-60-en.wav", act3: true, motion: "d" } as A2Props} />
     {/* Its fifth pass (owner's questions on 2d, 20 Nov): calmer lights, no light to the subtitle, the footnote without the name (src/motion/turn-e.tsx). */}
     <Composition id="m5-60-en" component={A2Film} durationInFrames={60 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "60", audio: "audio/a4-60-en.wav", act3: true, motion: "e" } as A2Props} />
+    {/* Its sixth pass (owner's note on 2e, 20 Nov): the rising light never crosses type (src/motion/turn-f.tsx). */}
+    <Composition id="m6-60-en" component={A2Film} durationInFrames={60 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "60", audio: "audio/a4-60-en.wav", act3: true, motion: "f" } as A2Props} />
     <Composition id="world-test" component={WorldTest} durationInFrames={600} fps={FPS} width={W} height={H} defaultProps={{ tod: 17.6 } as WorldTestProps} />
   </>
 );
