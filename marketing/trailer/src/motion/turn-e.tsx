@@ -8,7 +8,8 @@
  *    Each firefly joins Mama as she walks past it, so none crosses the lawn to reach her.
  *  · MAMA COMES TO THE DOOR EARLIER, under "takes a lot of asking", and steps out as the fireflies rise, which
  *    is what gives the light its extra half second.
- *  · THE FOOTNOTE is "Kakak is an AI helper": the name Miamus is kept for the end of the film.
+ *  · THE FOOTNOTE is "Kakak is your AI helper": the name Miamus is kept for the end of the film, and "your"
+ *    is the person the film has been speaking to since "What if you only had to say it once?".
  *
  * turn.tsx to turn-d.tsx (clips 2 to 2d) are kept as they were; one of the five stays at the rebuild.
  */
@@ -314,7 +315,7 @@ export function TurnE({ base, lead }: { base: number; lead: number }) {
       )}
       {foot.o > 0.001 && (
         <div data-moving={foot.moving ? "" : undefined} style={{ position: "absolute", left: CX - 427, width: 854, top: 1492, textAlign: "center", font: `500 40px/1 ${FONT}`, color: "rgba(255,246,232,0.88)", whiteSpace: "nowrap", textShadow: "0 2px 6px rgba(30,12,30,0.55), 0 4px 30px rgba(30,12,30,0.6)", opacity: foot.o }}>
-          Kakak is an AI helper
+          Kakak is your AI helper
         </div>
       )}
 
