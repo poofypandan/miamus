@@ -18,6 +18,10 @@ import {
 import { KAKAK_TOOLS } from "@/lib/kakak/tools";
 import { sameStaffName, validateToolCall } from "@/lib/kakak/validate";
 
+import type Anthropic from "@anthropic-ai/sdk";
+import { runKakakTurn, type CallRecord, type TurnDeps } from "@/lib/kakak/engine";
+import { trialChore, trialNameFrom, trialTitle } from "@/lib/staff-onboarding";
+
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const OWNER = "11111111-1111-4111-8111-111111111111";
 const WIFE = "22222222-2222-4222-8222-222222222222";
@@ -148,6 +152,7 @@ describe("the cards", () => {
     expect(en.rows.map((r) => [r.label, r.value])).toEqual([
       ["Does", "Kitchen"],
       ["Chores", "The kitchen's usual chores, ticked"],
+      ["Trial", "2 weeks, then a reminder to decide"],
     ]);
     expect(describeSuggestion(added, "id").heading).toBe("Staf baru: Wati");
     const leaves = describeSuggestion(removed, "id");
@@ -156,5 +161,78 @@ describe("the cards", () => {
     expect(describeSuggestion(anyone, "en").rows[0].value).toBe("Anyone");
     for (const card of [en, leaves]) expect(JSON.stringify(card)).not.toMatch(/\b(cook|maid|juru masak|koki|pembantu|dipecat|fired)\b/i);
     expect(savedSummary([removed], "en")).toContain("Sri");
+  });
+});
+
+// Codex, PR #173: a staff card comes alone, and the trial reaches the sheet.
+describe("a staff card comes alone in a turn", () => {
+  it("sends a staff change with anything beside it back to Kakak once", async () => {
+    const replies = [
+      [
+        { type: "tool_use", id: "t1", name: "add_staff", input: add() },
+        { type: "tool_use", id: "t2", name: "remove_staff", input: remove() },
+      ],
+      [{ type: "tool_use", id: "t3", name: "add_staff", input: add() }],
+    ];
+    const seen: Anthropic.MessageParam[][] = [];
+    const client = {
+      messages: {
+        create: async (params: { messages: Anthropic.MessageParam[] }) => {
+          seen.push(params.messages);
+          return {
+            content: [{ type: "text", text: "Of course." }, ...replies[seen.length - 1]],
+            stop_reason: "tool_use",
+            usage: { input_tokens: 10, output_tokens: 5 },
+          };
+        },
+      },
+    } as unknown as Anthropic;
+    const recorded: CallRecord[] = [];
+    const deps: TurnDeps = {
+      client,
+      model: "claude-opus-5-5",
+      effort: "low",
+      household,
+      refs: context.refs,
+      names: context.names,
+      begin: async () => ({ ok: true, requestId: id(901), callsLeft: 40 }),
+      record: async (_r, record) => void recorded.push(record),
+    };
+    const result = await runKakakTurn(deps, null, "Add Wati and remove Sri");
+    expect(result.kind).toBe("suggestions");
+    if (result.kind === "suggestions") expect(result.items.map((i) => i.kind)).toEqual(["add_staff"]);
+    // The second request carried the first answer's problems back.
+    expect(JSON.stringify(seen[1])).toContain("add_staff and remove_staff come alone");
+  });
+});
+
+describe("the trial reminder (decision 3)", () => {
+  it("is the owner's own chore, in their language, with a push on the day", () => {
+    expect(trialTitle("Sri", "en")).toBe("Decide on Sri's trial");
+    expect(trialTitle("Sri", "id")).toBe("Putuskan masa percobaan Sri");
+    expect(trialChore(" Sri ", 14, "2026-11-20", "en")).toEqual({
+      title: "Decide on Sri's trial",
+      place: null,
+      recurrence: "none",
+      interval: 1,
+      due_date: "2026-12-04",
+      category: "errand",
+      assignee: { me: true },
+      remind: 0,
+    });
+    expect(trialChore("Sri", 30, "2026-11-20", "id").due_date).toBe("2026-12-20");
+  });
+
+  it("is found again by its title, in either language, and nothing else is", () => {
+    expect(trialNameFrom("Decide on Sri's trial")).toBe("Sri");
+    expect(trialNameFrom("Putuskan masa percobaan Sri Wahyuni")).toBe("Sri Wahyuni");
+    expect(trialNameFrom("Cuci piring")).toBeNull();
+    expect(trialNameFrom(null)).toBeNull();
+  });
+
+  it("shows on Kakak's card when she heard a trial", () => {
+    const card = toSuggestion(household, context.refs, context.names, "add_staff", add({ trial_days: 14 })) as AddStaffSuggestion;
+    expect(describeSuggestion(card, "en").rows.at(-1)).toEqual({ label: "Trial", value: "2 weeks, then a reminder to decide" });
+    expect(describeSuggestion({ ...card, trialDays: 0 }, "en").rows.map((r) => r.label)).not.toContain("Trial");
   });
 });

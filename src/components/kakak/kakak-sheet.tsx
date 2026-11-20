@@ -312,15 +312,24 @@ function Conversation({
     if (saving) return;
     const staffItem = items.find((item) => item.kind === "add_staff" || item.kind === "remove_staff");
     if (staffItem) {
+      // The route sends a staff card alone (engine.ts); anything beside one is
+      // refused here rather than half-done (Codex, PR #173).
+      if (items.length > 1) {
+        toast.error(t("Kakak sent more than one change. Tell her one at a time.", "Kakak mengirim lebih dari satu perubahan. Bilang satu per satu."));
+        return;
+      }
       setSaving(true);
       try {
-        // Anything else on the card (a trial reminder chore) first, all or nothing.
-        const rest = items.filter((item) => item !== staffItem);
-        if (rest.length > 0) await save(rest);
         if (staffItem.kind === "add_staff") {
           staffAdded.current = false;
           setStaffAdd({
-            preset: { name: staffItem.name, areas: staffItem.areas, starterChores: staffItem.starterChores, autoSave: true },
+            preset: {
+              name: staffItem.name,
+              areas: staffItem.areas,
+              starterChores: staffItem.starterChores,
+              trialDays: staffItem.trialDays,
+              autoSave: true,
+            },
             requestId,
             refined,
           });

@@ -331,6 +331,12 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
       if (item.starterChores && item.areas.includes("kitchen")) {
         rows.push({ label: t("Chores", "Tugas"), value: t("The kitchen's usual chores, ticked", "Tugas dapur yang biasa, dicentang") });
       }
+      if (item.trialDays > 0) {
+        rows.push({
+          label: t("Trial", "Masa percobaan"),
+          value: item.trialDays === 14 ? t("2 weeks, then a reminder to decide", "2 minggu, lalu pengingat untuk memutuskan") : t("1 month, then a reminder to decide", "1 bulan, lalu pengingat untuk memutuskan"),
+        });
+      }
       return {
         heading: t(`New staff: ${item.name}`, `Staf baru: ${item.name}`),
         rows,

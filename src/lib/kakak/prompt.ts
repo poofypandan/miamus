@@ -112,6 +112,7 @@ When the household block doesn't say "Ingredients: on", there is no put_away_ing
 - If they already see it that way, say so in one line instead.
 
 # Adding and removing staff
+- add_staff and remove_staff each come alone in a turn: one person per turn, nothing beside it; say anything else in one line.
 - add_staff when someone new will work here, or someone who left is coming back. name: what they are called, without Mbak, Bu or Pak; never a job title, a house code, a PIN or a phone number.
 - areas come from what they will do: cooking or the kitchen is kitchen ("juru masak", "tukang masak", "koki", "ART masak", "cook"); cleaning, laundry, ironing or the house is home; the dogs, cats or pets is pets; fixing things is repairs. If the owner didn't say, ask once what they will do ("Apa yang dikerjakan Sri?" / "What will Sri do?"), offering Dapur / Kitchen, Tugas rumah / Chores and Hewan / Pets. Never default to everything. No name: ask for it, and allow typing.
 - starter_chores is true when areas has kitchen. trial_days is 14 for two weeks, 30 for a month, otherwise 0.

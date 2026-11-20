@@ -263,3 +263,42 @@ export function formerStaffWithName(name: string, roster: readonly StaffProfile[
   if (!key) return null;
   return roster.find((p) => !p.user_id && p.archived_at && !p.forgotten_at && nameKey(p.name) === key) ?? null;
 }
+
+// --- Step 6: the trial reminder (owner decision 3) -----------------------------------------
+
+/** The Add staff sheet's trial chips: none, two weeks, a month. */
+export const TRIAL_CHOICES = [0, 14, 30] as const;
+
+/**
+ * The owner's own reminder chore for a trial: an ordinary chore for them
+ * (My tasks), in their language, so no new data is kept about the person.
+ */
+export function trialTitle(name: string, locale: "en" | "id"): string {
+  return locale === "id" ? `Putuskan masa percobaan ${name}` : `Decide on ${name}'s trial`;
+}
+
+/** The name in a trial reminder's title, in either language, or null for any other chore. */
+export function trialNameFrom(title: string | null | undefined): string | null {
+  const t = (title ?? "").trim();
+  const id = /^Putuskan masa percobaan (.{1,40})$/.exec(t);
+  if (id) return id[1].trim();
+  const en = /^Decide on (.{1,40})'s trial$/.exec(t);
+  return en ? en[1].trim() : null;
+}
+
+/** The trial reminder as apply_household_setup takes it: the owner's chore, a push at 07:00 on the day. */
+export function trialChore(name: string, days: number, today: string, locale: "en" | "id"): ApplyPayload["chores"][number] {
+  const due = new Date(`${today}T00:00:00`);
+  due.setDate(due.getDate() + days);
+  const day = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
+  return {
+    title: trialTitle(cleanStaffName(name), locale),
+    place: null,
+    recurrence: "none",
+    interval: 1,
+    due_date: day,
+    category: "errand",
+    assignee: { me: true },
+    remind: 0,
+  };
+}

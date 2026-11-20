@@ -31,6 +31,8 @@ import {
   choresToMove,
   cleanStaffName,
   formerStaffWithName,
+  TRIAL_CHOICES,
+  trialChore,
   hiddenAreasFor,
   kitchenStarters,
   staffWithName,
@@ -64,6 +66,8 @@ export interface AddStaffPreset {
   name: string;
   areas: StaffArea[];
   starterChores: boolean;
+  /** Kakak's trial_days (decision 3): 0, 14 or 30. */
+  trialDays?: number;
   autoSave?: boolean;
 }
 
@@ -96,7 +100,7 @@ export function AddStaffSheet({
   );
 }
 
-type Added = { id: string; name: string; chores: number; back?: boolean };
+type Added = { id: string; name: string; chores: number; back?: boolean; trialOn?: string };
 
 function AddStaffForm({
   onClose,
@@ -123,6 +127,11 @@ function AddStaffForm({
   const [jobs, setJobs] = useState<Set<StaffArea>>(() => new Set(preset?.areas ?? []));
   // Kakak may say no starter chores: then none start ticked (the owner can still tick).
   const startersOn = preset?.starterChores ?? true;
+  // A reminder to decide (step 6, decision 3): the owner's own chore, so no
+  // new data is kept about the person.
+  const [trial, setTrial] = useState<number>(() =>
+    (TRIAL_CHOICES as readonly number[]).includes(preset?.trialDays ?? 0) ? (preset?.trialDays ?? 0) : 0
+  );
   // The owner's own changes to the ticks, by chore key; the rest follow the defaults.
   const [flipped, setFlipped] = useState<Set<string>>(() => new Set());
   const [saving, setSaving] = useState(false);
@@ -228,9 +237,16 @@ function AddStaffForm({
     setSaving(true);
     const person = clean;
     const payload = addStaffPayload({ name: person, starters, ticked, locations: locations ?? [] });
-    const outcome = (await isMockBackend())
-      ? await addInMock(person, payload)
-      : await applyHouseholdSetup(activeHouseholdId, payload);
+    const mock = await isMockBackend();
+    // In demo mode the trial reminder isn't made (no owner roster row to give it to).
+    const trialReminder = trial > 0 && !mock ? trialChore(person, trial, today, locale) : null;
+    if (trialReminder) {
+      // "For you" needs the owner's own roster row (apply_household_setup
+      // refuses no_owner_profile): made here if it is missing.
+      await dataProvider.ensureMyMemberProfile(activeHouseholdId).catch(() => null);
+      payload.chores.push(trialReminder);
+    }
+    const outcome = mock ? await addInMock(person, payload) : await applyHouseholdSetup(activeHouseholdId, payload);
     const id = outcome.ok ? outcome.staff[NEW_STAFF_KEY] : undefined;
     if (!outcome.ok || !id) {
       lock.release();
@@ -280,9 +296,20 @@ function AddStaffForm({
       );
     }
 
-    const chores = (outcome.result.chores_added ?? 0) + (moves.length - notMoved);
+    const chores = (outcome.result.chores_added ?? 0) - (trialReminder ? 1 : 0) + (moves.length - notMoved);
     await Promise.allSettled([reload(), refresh({ silent: true })]);
-    setAdded({ id, name: person, chores });
+    setAdded({
+      id,
+      name: person,
+      chores: Math.max(0, chores),
+      trialOn: trialReminder
+        ? new Date(`${trialReminder.due_date}T00:00:00`).toLocaleDateString(locale === "id" ? "id-ID" : "en-GB", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })
+        : undefined,
+    });
     setSaving(false);
     onAdded?.({ id, name: person });
   }
@@ -325,6 +352,14 @@ function AddStaffForm({
             {t(
               `${added.chores} ${added.chores === 1 ? "chore is" : "chores are"} ${added.name}'s from today.`,
               `${added.chores} tugas jadi milik ${added.name} mulai hari ini.`
+            )}
+          </p>
+        )}
+        {added.trialOn && (
+          <p className="px-4 text-sm text-muted-foreground">
+            {t(
+              `On ${added.trialOn}, My tasks reminds you to decide on ${added.name}'s trial.`,
+              `Pada ${added.trialOn}, Tugas saya mengingatkan Anda untuk memutuskan masa percobaan ${added.name}.`
             )}
           </p>
         )}
@@ -482,6 +517,44 @@ function AddStaffForm({
             )}
           </div>
         )}
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-xs font-medium">{t("Trial", "Masa percobaan")}</legend>
+          <div className="flex flex-wrap gap-2">
+            {TRIAL_CHOICES.map((days) => {
+              const on = trial === days;
+              const label =
+                days === 0
+                  ? t("No trial", "Tanpa masa percobaan")
+                  : days === 14
+                    ? t("2 weeks", "2 minggu")
+                    : t("1 month", "1 bulan");
+              return (
+                <button
+                  key={days}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setTrial(days)}
+                  className={cn(
+                    "flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors",
+                    on ? "border-gray-900 bg-gray-900 text-white" : "bg-white text-gray-700 active:bg-muted"
+                  )}
+                >
+                  {on && <Check className="size-3.5" aria-hidden />}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {trial > 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              {t(
+                `A reminder in My tasks when it ends, to keep ${shown} or not. Nothing changes for ${shown}.`,
+                `Pengingat di Tugas saya saat selesai, untuk memutuskan lanjut atau tidak. Tidak ada yang berubah untuk ${shown}.`
+              )}
+            </p>
+          )}
+        </fieldset>
 
         <SheetFooter className="px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <Button type="submit" className="min-h-[48px] rounded-xl" disabled={!canAdd}>
