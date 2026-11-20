@@ -451,6 +451,28 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
+    // Shown once inside the Kakak sheet, above the mic: the voice flow that
+    // is the default since 20 Nov (kakak-voice-new.tsx).
+    id: "kakak-tap-to-talk-2026-11",
+    date: "2026-11-20",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "Talk to Kakak: tap, talk, tap Done", id: "Bicara dengan Kakak: ketuk, bicara, ketuk Selesai" },
+    steps: {
+      en: [
+        "Tap the mic and talk. Take your time: pauses are fine, Kakak keeps listening.",
+        "Tap Done to send. Misheard a word? Tap Edit words under them to fix it.",
+        "Kakak shows her card; nothing is saved until you confirm.",
+      ],
+      id: [
+        "Ketuk mikrofon lalu bicara. Tidak perlu buru-buru: boleh berhenti sejenak, Kakak tetap mendengarkan.",
+        "Ketuk Selesai untuk mengirim. Ada kata yang salah dengar? Ketuk Ubah kata-kata di bawahnya untuk memperbaikinya.",
+        "Kakak menunjukkan kartunya; tidak ada yang disimpan sebelum Anda konfirmasi.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown once inside the Kakak sheet, above the mic (voice beta).
     id: "kakak-voice-2026-11",
     date: "2026-11-10",
