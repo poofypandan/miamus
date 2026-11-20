@@ -230,8 +230,17 @@ export const LEGAL = {
   // 35 days, migrations/172), and asks ElevenLabs to delete each generation
   // from its history right after (zero retention is Enterprise-only); it may
   // keep logs, and backups up to 30 days. Otherwise the phone reads aloud.
-  policyVersion: "2026-11-15.1",
-  effectiveDate: { en: "15 November 2026", id: "15 November 2026" },
+  // 2026-11-20.1: staff who leave (staff onboarding step 4, migrations/180)
+  // — an archived staff profile keeps its name on past work for 12 months,
+  // then the name is replaced with "Former staff" ("Mantan staf") and the
+  // rest of the row is cleared, automatically every night; an admin can do
+  // it sooner (Remove for good). Two new facts on a staff profile: the date
+  // an admin brought them back (so the welcome link works again for 7 days)
+  // and the date the name was removed. When someone leaves, their chores and
+  // pet routines can go to another staff member (data that was already
+  // stored). No new service or region; nothing new sent to Kakak.
+  policyVersion: "2026-11-20.1",
+  effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on

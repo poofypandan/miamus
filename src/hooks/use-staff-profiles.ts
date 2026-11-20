@@ -46,10 +46,12 @@ export function useStaffProfiles() {
  */
 export function useStaffNameLookup(
   profiles: StaffProfile[] | null,
-  fallback = "Someone"
+  fallback = "Someone",
+  /** Someone whose name was removed after they left (migrations/180), in the reader's language. */
+  former = "Mantan staf"
 ): (id: string | null | undefined) => string {
   return useMemo(() => {
-    const byId = new Map((profiles ?? []).map((p) => [p.id, p.name]));
+    const byId = new Map((profiles ?? []).map((p) => [p.id, p.forgotten_at ? former : p.name]));
     return (id: string | null | undefined) => (id ? (byId.get(id) ?? fallback) : fallback);
-  }, [profiles, fallback]);
+  }, [profiles, fallback, former]);
 }

@@ -255,6 +255,17 @@ export type StaffProfile = {
    */
   archived_at?: string | null;
   /**
+   * When an admin last brought this person back (migrations/180): the 7-day
+   * claim window counts from here when set, else from created_at.
+   */
+  claimable_from?: string | null;
+  /**
+   * When their name was replaced with "Mantan staf" (migrations/180): by
+   * Remove for good, or 12 months after they left. Shown as "Former staff"
+   * to English-speaking owners.
+   */
+  forgotten_at?: string | null;
+  /**
    * The parts of the staff app an owner switched off for this person
    * (migrations/165, Phase 178): any of "home", "pets", "kitchen",
    * "repairs". Empty sees everything. The app hides; it does not lock (see
@@ -1225,13 +1236,19 @@ export interface Database {
       };
       // Taking someone off the roster, and putting them back (migrations/109).
       // Both return the row they changed.
+      // give_to (migrations/180): who takes their work; absent is Anyone.
       archive_staff_profile: {
-        Args: { p_staff_id: string };
+        Args: { p_staff_id: string; p_give_to?: string };
         Returns: StaffProfile;
       };
       restore_staff_profile: {
         Args: { p_staff_id: string };
         Returns: StaffProfile;
+      };
+      // Remove for good (migrations/180): the name becomes "Mantan staf".
+      forget_staff_profile: {
+        Args: { p_staff_id: string };
+        Returns: undefined;
       };
       // Who has co-owner access, with emails — the table itself only ever
       // shows you your own row (migrations/094).

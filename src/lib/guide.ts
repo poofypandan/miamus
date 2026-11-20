@@ -178,8 +178,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "When someone leaves", id: "Kalau staf berhenti" },
     body: {
-      en: "Settings → Staff: tap the remove icon beside their name, then Remove. Their PIN stops working and the phones they last signed in on are signed out. Unfinished chores go to Anyone; finished work keeps their name. Other staff phones stay signed in.",
-      id: "Pengaturan → Staf: ketuk ikon hapus di samping namanya, lalu Hapus. PIN-nya langsung tidak berlaku dan HP yang terakhir dipakainya ikut keluar. Tugas yang belum selesai jadi untuk Siapa saja; yang sudah selesai tetap atas namanya. HP staf lain tetap masuk.",
+      en: "Settings → Staff: tap the remove icon beside their name, pick who takes their chores and pet routines, or Anyone, then Remove. Their PIN stops working and their phone is signed out. Finished work keeps their name for 12 months. Other staff phones stay signed in.",
+      id: "Pengaturan → Staf: ketuk ikon hapus di samping namanya, pilih siapa yang mengambil tugas dan rutinitas hewannya, atau Siapa saja, lalu Hapus. PIN-nya tidak berlaku dan HP-nya keluar. Pekerjaan sebelumnya tetap atas namanya selama 12 bulan. HP staf lain tetap masuk.",
     },
     where: "settings_staff",
   },
@@ -188,8 +188,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "Bringing someone back", id: "Mengembalikan staf" },
     body: {
-      en: "Settings → Staff → No longer here → Bring back. They choose a new PIN when they next sign in. The WhatsApp message only works in someone's first 7 days on the list; after that, tap Set PIN beside their name and tell them the PIN.",
-      id: "Pengaturan → Staf → Sudah tidak bekerja → Kembalikan. Mereka membuat PIN baru saat masuk nanti. Pesan WhatsApp hanya berlaku 7 hari pertama setelah orang ditambahkan; setelah itu, ketuk Atur PIN di samping namanya dan beri tahu PIN-nya.",
+      en: "Settings → Staff → No longer here → Bring back, or type their name in Add staff. Then send the welcome again: it works for 7 days. After 12 months away, their name becomes Former staff; Remove for good does it sooner.",
+      id: "Pengaturan → Staf → Sudah tidak bekerja → Kembalikan, atau ketik namanya di Tambah staf. Lalu kirim sambutan lagi: berlaku 7 hari. Setelah 12 bulan berhenti, namanya menjadi Mantan staf; Hapus permanen melakukannya lebih cepat.",
     },
     where: "settings_staff",
   },

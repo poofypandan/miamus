@@ -1613,8 +1613,9 @@ export const mockProvider: DataProvider = {
     saveDB(db);
     return delay(profile);
   },
-  async archiveStaffProfile(id) {
+  async archiveStaffProfile(id, giveTo) {
     const db = loadDB();
+    const to = giveTo ?? null;
     const profile = db.staffProfiles.find((s) => s.id === id);
     if (!profile) throw new Error("Staff profile not found");
     if (profile.user_id) throw new Error("This person is an admin");
@@ -1626,9 +1627,9 @@ export const mockProvider: DataProvider = {
     db.staffPins = { ...(db.staffPins ?? {}), [id]: null };
     db.householdTasks = db.householdTasks.map((task) => {
       if (task.assigned_to !== id) return task;
-      if (task.status === "pending") return { ...task, assigned_to: null };
+      if (task.status === "pending") return { ...task, assigned_to: to };
       if (task.status === "completed" && isTemplate(task)) {
-        return { ...task, assigned_to: null, completed_by: task.completed_by ?? id };
+        return { ...task, assigned_to: to, completed_by: task.completed_by ?? id };
       }
       return task;
     });
@@ -1639,9 +1640,23 @@ export const mockProvider: DataProvider = {
     const db = loadDB();
     const profile = db.staffProfiles.find((s) => s.id === id);
     if (!profile) throw new Error("Staff profile not found");
+    if (profile.forgotten_at) throw new Error("This person was removed for good");
     profile.archived_at = null;
+    profile.claimable_from = new Date().toISOString();
     saveDB(db);
     return delay(profile);
+  },
+  async forgetStaffProfile(id) {
+    const db = loadDB();
+    const profile = db.staffProfiles.find((s) => s.id === id);
+    if (!profile || !profile.archived_at || profile.user_id) throw new Error("No such former staff member");
+    // Mirrors forget_staff_profile (migrations/180).
+    profile.name = "Mantan staf";
+    profile.forgotten_at = new Date().toISOString();
+    profile.hidden_areas = [];
+    profile.claimable_from = null;
+    saveDB(db);
+    await delay(undefined);
   },
   async setStaffHiddenAreas(id, areas) {
     const db = loadDB();

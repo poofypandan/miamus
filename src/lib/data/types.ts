@@ -776,11 +776,21 @@ export interface DataProvider {
   /**
    * Takes someone off the active roster without deleting them, so their name
    * stays on the work they finished (migrations/109). Also revokes their PIN
-   * and releases any pending chore still assigned to them.
+   * and releases any pending chore still assigned to them: to `giveTo`, a
+   * staff member still here (migrations/180), or to Anyone.
    */
-  archiveStaffProfile(id: string): Promise<StaffProfile>;
-  /** Puts an archived person back on the roster. They re-choose a PIN. */
+  archiveStaffProfile(id: string, giveTo?: string | null): Promise<StaffProfile>;
+  /**
+   * Puts an archived person back on the roster. They re-choose a PIN, from
+   * the welcome link: bringing them back opens a fresh 7-day claim window
+   * (migrations/180).
+   */
   restoreStaffProfile(id: string): Promise<StaffProfile>;
+  /**
+   * Remove for good (migrations/180): an archived person's name becomes
+   * "Mantan staf" and the rest of the row is cleared. Past work stays.
+   */
+  forgetStaffProfile(id: string): Promise<void>;
   /**
    * Owner-only: the parts of the staff app this person doesn't see
    * (migrations/165, Phase 178; lib/staff-areas.ts). The whole list, as it

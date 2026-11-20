@@ -85,6 +85,9 @@ import { StaffAreasDialog, StaffAreasLine } from "@/components/dashboard/staff-a
 import { SendStaffMessageButton } from "@/components/setup/send-staff-message";
 import { AddStaffSheet } from "@/components/dashboard/add-staff-sheet";
 import { StaffWelcome } from "@/components/dashboard/staff-welcome";
+import { RemoveStaffCard, type RemoveChoice } from "@/components/dashboard/remove-staff-card";
+import { isClaimable } from "@/lib/staff-onboarding";
+import { cn } from "@/lib/utils";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { featuresOnCount } from "@/lib/features";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -180,7 +183,7 @@ export function StaffTab() {
   // Feedback (roadmap item 9): a sheet over the list, not a page of its own.
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
 
   const petName = useMemo(() => {
     const byId = new Map(pets.map((p) => [p.id, p.name]));
@@ -494,7 +497,8 @@ function StaffRoster({
   const [areasTarget, setAreasTarget] = useState<StaffProfile | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const archived = useMemo(
-    () => (allProfiles ?? []).filter((p) => p.archived_at),
+    // "Former staff" (migrations/180) have nothing left to do here.
+    () => (allProfiles ?? []).filter((p) => p.archived_at && !p.forgotten_at),
     [allProfiles]
   );
   // Who is away today (Phase 140): a red badge on their row.
@@ -503,20 +507,28 @@ function StaffRoster({
   const staffPush = useStaffPushOverview();
   const today = formatDateLocal(useToday());
 
-  async function archive(profile: StaffProfile) {
+  async function archive(profile: StaffProfile, choice: RemoveChoice) {
     setBusyId(profile.id);
     try {
-      await dataProvider.archiveStaffProfile(profile.id);
+      await dataProvider.archiveStaffProfile(profile.id, choice.giveTo);
       await reload();
       setRemoveTarget(null);
       // Archiving also gives the house a new code (migrations/146), but
       // phones already signed in stay signed in, so there is nothing to
       // share now. The new code is on Staff sign-in, where it is needed
       // (staff onboarding plan, 2c).
+      const n = choice.chores + choice.routines;
+      const to = choice.giveTo ? (profiles ?? []).find((p) => p.id === choice.giveTo)?.name : null;
+      const moved =
+        n === 0
+          ? ""
+          : to
+            ? t(` ${n === 1 ? "Their task is" : `Their ${n} tasks are`} ${to}'s now.`, ` ${n} tugasnya sekarang milik ${to}.`)
+            : t(` ${n === 1 ? "Their task is" : `Their ${n} tasks are`} for anyone now.`, ` ${n} tugasnya sekarang untuk siapa saja.`);
       toast.success(
         t(
-          `${profile.name} removed. Other staff phones stay signed in.`,
-          `${profile.name} dihapus. HP staf lain tetap masuk.`
+          `${profile.name} removed.${moved} Other staff phones stay signed in.`,
+          `${profile.name} dihapus.${moved} HP staf lain tetap masuk.`
         )
       );
     } catch (err) {
@@ -530,17 +542,46 @@ function StaffRoster({
   async function restore(profile: StaffProfile) {
     setBusyId(profile.id);
     try {
-      await dataProvider.restoreStaffProfile(profile.id);
+      const back = await dataProvider.restoreStaffProfile(profile.id);
       await reload();
+      // A fresh 7-day claim window (migrations/180): the welcome link works
+      // again, so offer it straight away.
+      setWelcomeTarget({ ...profile, ...back, archived_at: null });
       toast.success(
         t(
-          `${profile.name} is back — they pick a new PIN at next sign-in`,
-          `${profile.name} kembali — dia memilih PIN baru saat masuk nanti`
+          `${profile.name} is back. Send the welcome so they can make a new PIN.`,
+          `${profile.name} kembali. Kirim sambutan supaya dia bisa membuat PIN baru.`
         )
       );
     } catch (err) {
       console.error(err);
       toast.error(t(`Couldn't bring ${profile.name} back`, `Gagal mengembalikan ${profile.name}`));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Remove for good (migrations/180): two taps, as Not Sari? Undo.
+  const [forgetArmed, setForgetArmed] = useState<string | null>(null);
+  async function forget(profile: StaffProfile) {
+    if (forgetArmed !== profile.id) {
+      setForgetArmed(profile.id);
+      return;
+    }
+    setForgetArmed(null);
+    setBusyId(profile.id);
+    try {
+      await dataProvider.forgetStaffProfile(profile.id);
+      await reload();
+      toast.success(
+        t(
+          `${profile.name}'s name is removed. Their past work now shows “Former staff”.`,
+          `Nama ${profile.name} sudah dihapus. Pekerjaan sebelumnya sekarang tertulis “Mantan staf”.`
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error(t(`Couldn't remove ${profile.name}'s name. Try again.`, `Nama ${profile.name} gagal dihapus. Coba lagi.`));
     } finally {
       setBusyId(null);
     }
@@ -594,7 +635,7 @@ function StaffRoster({
       )}
       {/* Staff in one go (Phase 172 PR A2): while someone added this week
           still has to pick their name and make a PIN. */}
-      {staff !== null && staff.some((p) => !p.has_pin && !p.user_id && isClaimable(p.created_at)) && (
+      {staff !== null && staff.some((p) => !p.has_pin && !p.user_id && isClaimable(p)) && (
         <div className="flex flex-col gap-2 rounded-xl border bg-card px-4 py-3">
           <p className="text-xs text-muted-foreground">
             {t("Send this to your staff. Each person picks their name.", "Kirim ke staf Anda. Masing-masing memilih namanya.")}
@@ -682,7 +723,7 @@ function StaffRoster({
                     </span>
                     {/* Not signed in yet and still inside the claim window: her
                         own welcome, as a message or a QR code (step 3). */}
-                    {!profile.has_pin && isClaimable(profile.created_at) && (
+                    {!profile.has_pin && isClaimable(profile) && (
                       <button
                         type="button"
                         onClick={() => setWelcomeTarget(profile)}
@@ -755,6 +796,12 @@ function StaffRoster({
           <h3 className="text-xs font-medium text-gray-500">
             {t("No longer here", "Sudah tidak bekerja")}
           </h3>
+          <p className="text-[11px] text-muted-foreground">
+            {t(
+              "Their name stays on past work for 12 months after they leave, then it reads “Former staff”.",
+              "Namanya tetap tercatat pada pekerjaan sebelumnya selama 12 bulan setelah berhenti, lalu menjadi “Mantan staf”."
+            )}
+          </p>
           <Card className="py-2">
             <CardContent className="flex flex-col divide-y px-0">
               {archived.map((profile) => (
@@ -780,6 +827,19 @@ function StaffRoster({
                         );
                       })()}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => void forget(profile)}
+                      disabled={busyId === profile.id}
+                      className={cn(
+                        "-ml-1 flex min-h-9 items-center self-start rounded-md px-1 text-xs font-medium active:bg-muted",
+                        forgetArmed === profile.id ? "text-red-700" : "text-red-600"
+                      )}
+                    >
+                      {forgetArmed === profile.id
+                        ? t("Tap again to remove for good", "Ketuk lagi untuk menghapus permanen")
+                        : t("Remove for good", "Hapus permanen")}
+                    </button>
                   </span>
                   <Button
                     variant="outline"
@@ -802,64 +862,13 @@ function StaffRoster({
         </div>
       )}
 
-      <Dialog
-        open={!!removeTarget}
-        onOpenChange={(open) => !open && setRemoveTarget(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {t(`Remove ${removeTarget?.name ?? ""}?`, `Hapus ${removeTarget?.name ?? ""}?`)}
-            </DialogTitle>
-            <DialogDescription asChild>
-              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                <p>
-                  {t(
-                    "Their PIN stops working straight away, and their name comes off the sign-in screen and every assignee list.",
-                    "PIN-nya langsung tidak berlaku, dan namanya hilang dari layar masuk dan dari semua daftar penugasan."
-                  )}
-                </p>
-                <p>
-                  {t(
-                    "Anything of theirs that is still unfinished goes back to Unassigned, so someone else can pick it up. Everything they already finished keeps their name on it.",
-                    "Tugasnya yang belum selesai kembali ke Belum ditugaskan, supaya bisa diambil orang lain. Semua yang sudah selesai tetap atas namanya."
-                  )}
-                </p>
-                <p>
-                  {t(
-                    "Phones they last signed in on are signed out too. If they had their own phone, also remove it under Linked staff phones.",
-                    "HP yang terakhir mereka pakai untuk masuk juga ikut keluar. Kalau mereka punya HP sendiri, hapus juga di HP staf yang terhubung."
-                  )}
-                </p>
-                <p>
-                  {t(
-                    "You can bring them back later if you need to.",
-                    "Anda bisa mengembalikannya nanti jika perlu."
-                  )}
-                </p>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="min-h-[44px]"
-              onClick={() => setRemoveTarget(null)}
-            >
-              {t("Cancel", "Batal")}
-            </Button>
-            <Button
-              variant="destructive"
-              className="min-h-[44px]"
-              disabled={!!busyId}
-              onClick={() => removeTarget && archive(removeTarget)}
-            >
-              {busyId ? <Loader2 className="animate-spin" /> : <UserMinus />}{" "}
-              {t("Remove", "Hapus")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RemoveStaffCard
+        person={removeTarget}
+        roster={allProfiles ?? []}
+        busy={!!busyId}
+        onCancel={() => setRemoveTarget(null)}
+        onRemove={(person, choice) => void archive(person, choice)}
+      />
     </div>
   );
 }
@@ -979,11 +988,4 @@ function SignOutRow({ locale }: { locale: "en" | "id" }) {
       />
     </>
   );
-}
-
-/** Added less than 7 days ago: the claim window (migrations/147). */
-function isClaimable(createdAt: string | null | undefined): boolean {
-  if (!createdAt) return false;
-  const at = new Date(createdAt).getTime();
-  return Number.isFinite(at) && Date.now() - at < 7 * 24 * 60 * 60 * 1000;
 }
