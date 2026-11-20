@@ -279,7 +279,18 @@ function FoodRow({
         )}
       </span>
       {!past && (
-        <span className={cn("shrink-0 text-xs", unknown ? "font-medium text-amber-700" : "text-muted-foreground")}>
+        // Today and tomorrow in attention ink, the word alone (Fable's look):
+        // the one thing on the screen that needs eating soon. Later, quiet.
+        <span
+          className={cn(
+            "shrink-0 text-xs",
+            unknown
+              ? "font-medium text-amber-700"
+              : days !== null && days <= 1
+                ? "font-medium text-attention"
+                : "text-muted-foreground"
+          )}
+        >
           {expiryLabel(days, locale, item.expiry_unknown)}
         </span>
       )}
