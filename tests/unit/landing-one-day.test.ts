@@ -169,3 +169,11 @@ describe("what the page still waits for", () => {
     expect(readiness.oneDayBlockers().length).toBeGreaterThan(0);
   });
 });
+
+describe("the link preview's headline", () => {
+  it("breaks at the comma, so the italic word ends the second row in both languages", async () => {
+    const { splitAtComma } = await import("@/components/landing/one-day/one-day-og-image");
+    expect(splitAtComma(ONE_DAY_COPY.en.hero.headline[0])).toEqual(["A day at home,", "without the"]);
+    expect(splitAtComma(ONE_DAY_COPY.id.hero.headline[0])).toEqual(["Sehari di rumah,", "tanpa"]);
+  });
+});

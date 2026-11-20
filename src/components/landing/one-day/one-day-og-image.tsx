@@ -19,8 +19,19 @@ async function font(path: string) {
   return readFile(join(process.cwd(), "node_modules", path));
 }
 
+/**
+ * "A day at home, without the " -> ["A day at home,", "without the"]: the
+ * headline's first row ends at its comma; the rest leads into the italic word.
+ */
+export function splitAtComma(before: string): [string, string] {
+  const i = before.indexOf(",");
+  if (i < 0) return [before.trim(), ""];
+  return [before.slice(0, i + 1).trim(), before.slice(i + 1).trim()];
+}
+
 export async function oneDayOgImage(locale: OwnerLocale) {
   const [before, word, after] = ONE_DAY_COPY[locale].hero.headline;
+  const [first, rest] = splitAtComma(before);
   const [sans, serif] = await Promise.all([
     font("@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-600-normal.woff"),
     font("@fontsource/fraunces/files/fraunces-latin-500-italic.woff"),
@@ -57,20 +68,24 @@ export async function oneDayOgImage(locale: OwnerLocale) {
             </g>
           </svg>
         </div>
+        {/* Two rows, broken by hand at the comma: the renderer treats the
+            italic word as its own block, so it can't balance the lines. */}
         <div
           style={{
             display: "flex",
-            flexWrap: "wrap",
+            flexDirection: "column",
             marginTop: 44,
-            maxWidth: 1000,
             fontSize: 84,
-            lineHeight: 1.02,
+            lineHeight: 1.06,
             letterSpacing: "-0.04em",
           }}
         >
-          {before.trim() && <span style={{ marginRight: 22 }}>{before.trim()}</span>}
-          <span style={{ fontFamily: "Fraunces", fontStyle: "italic", letterSpacing: "-0.01em" }}>{word}</span>
-          <span style={{ marginLeft: -6 }}>{after}</span>
+          <span>{first}</span>
+          <div style={{ display: "flex" }}>
+            {rest && <span style={{ marginRight: 22 }}>{rest}</span>}
+            <span style={{ fontFamily: "Fraunces", fontStyle: "italic", letterSpacing: "-0.01em" }}>{word}</span>
+            <span style={{ marginLeft: -6 }}>{after}</span>
+          </div>
         </div>
         <div style={{ display: "flex", marginTop: 36, fontSize: 32, color: "#3f3733" }}>Miamus</div>
       </div>
