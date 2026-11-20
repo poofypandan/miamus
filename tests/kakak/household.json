@@ -60,6 +60,7 @@
     { "ref": "D6", "name": "Rendang ayam", "state": "missing", "missing": ["Ayam"], "unchecked": [] }
   ],
   "menu": [
-    { "day": "2026-11-12", "meal": "lunch", "title": "Nasi goreng", "recipe": "D2" }
+    { "day": "2026-11-12", "meal": "lunch", "title": "Nasi goreng", "recipe": "D2" },
+    { "day": "2026-11-15", "meal": "dinner", "title": "Soto ayam", "recipe": "D3" }
   ]
 }

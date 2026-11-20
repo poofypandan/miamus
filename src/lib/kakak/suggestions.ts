@@ -13,7 +13,7 @@ import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts
 import { AREAS, isStaffArea, withAreas, type StaffArea } from "@/lib/staff-areas";
 import type { InventoryUnit, RoutineKind, RoutineProof } from "@/types/database";
 import type { RefMap, RefNames } from "./context";
-import type { KakakHousehold } from "./household";
+import { addDays, type KakakHousehold } from "./household";
 import {
   DISH_MEALS,
   FOOD_PLACES,
@@ -236,8 +236,18 @@ export interface MenuDishSuggestion {
   meal: (typeof DISH_MEALS)[number];
   /** Null: the recipe's own servings (or none, for a typed dish). */
   servings: number | null;
-  /** What the recipe is missing, for the card's quiet line when it isn't added. */
+  /** "Today" / "Tomorrow" on the card, by the household's today when Kakak read it (Fable W5). */
+  relative?: "today" | "tomorrow" | null;
+  /**
+   * The app's own check, at the servings planned, always on the card
+   * (Fable S0): her sentence may be dropped by the guard, the card never
+   * loses the answer. Null for a typed dish (no saved recipe).
+   */
+  check?: { state: "ready" | "missing" | "unknown"; missing: { name: string; listed: boolean }[]; unchecked: string[] } | null;
+  /** What is missing and not on the shopping card: all of it, or (`overflow`) what didn't fit. */
   missing: string[];
+  /** `missing` is what is past the ten the shopping card holds (Fable W4). */
+  overflow?: boolean;
 }
 
 export type KakakSuggestion =
@@ -322,17 +332,24 @@ export function toSuggestions(
   if (!title || !isDay(input.day) || !(DISH_MEALS as readonly unknown[]).includes(input.meal)) return [];
   const servings = Number.isInteger(input.servings) && (input.servings as number) >= 1 && (input.servings as number) <= 50 ? (input.servings as number) : null;
   // At the servings asked for, when the owner gave a number (Codex, PR #156).
-  const missing = (recipe && servings && recipe.missingFor ? recipe.missingFor(servings) : recipe?.missing) ?? [];
+  const check = recipe ? (servings && recipe.checkFor ? recipe.checkFor(servings) : recipe) : null;
+  const missing = check?.missing ?? [];
   const add = input.add_missing === true && missing.length > 0;
+  const day = input.day as string;
   const dish: MenuDishSuggestion = {
     kind: "menu_dish",
     recipeId: recipe?.id ?? null,
     title,
-    day: input.day as string,
+    day,
     meal: input.meal as MenuDishSuggestion["meal"],
     servings,
+    relative: day === household.today ? "today" : day === addDays(household.today, 1) ? "tomorrow" : null,
+    check: check
+      ? { state: check.state, missing: check.missing.map((m) => ({ name: m.name, listed: m.listed })), unchecked: check.unchecked }
+      : null,
     // Not added: all of it; added: what the shopping card can't hold (10 at most).
     missing: (add ? missing.slice(10) : missing).map((m) => m.name),
+    overflow: add && missing.length > 10,
   };
   if (!add) return [dish];
   const shopping: ShoppingSuggestion = {
@@ -643,7 +660,10 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         (s.servings === null || (Number.isInteger(s.servings) && (s.servings as number) >= 1 && (s.servings as number) <= 50)) &&
         Array.isArray(s.missing) &&
         s.missing.length <= 200 &&
-        s.missing.every((m) => typeof m === "string")
+        s.missing.every((m) => typeof m === "string") &&
+        (s.relative == null || s.relative === "today" || s.relative === "tomorrow") &&
+        (s.overflow == null || typeof s.overflow === "boolean") &&
+        (s.check == null || okCheck(s.check))
       );
     case "chore":
       return (
@@ -776,6 +796,21 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
     default:
       return false;
   }
+}
+
+/** A dish card's check, as the route builds it: only names, a state and whether each is listed. */
+function okCheck(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const c = value as Record<string, unknown>;
+  return (
+    (c.state === "ready" || c.state === "missing" || c.state === "unknown") &&
+    Array.isArray(c.missing) &&
+    c.missing.length <= 200 &&
+    c.missing.every((m: Record<string, unknown>) => typeof m?.name === "string" && typeof m.listed === "boolean") &&
+    Array.isArray(c.unchecked) &&
+    c.unchecked.length <= 200 &&
+    c.unchecked.every((n) => typeof n === "string")
+  );
 }
 
 /** An amount Kakak may write: above 0 (none left is the shopping list's Out), at most MAX_AMOUNT. */

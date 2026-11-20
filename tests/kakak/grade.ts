@@ -217,6 +217,10 @@ function turnMismatches(household: KakakHousehold, expected: ExpectedTurn, actua
   const ok = matchAll(expected.calls, actual.calls, (e, a) => callMismatches(household, e, a).length === 0);
   if (ok) {
     // Her line beside the card (Can we cook it?): what it must say and must not.
+    // A line the guard dropped leaves the fallback, "Here's what I'll add:" (Fable S0).
+    if ((expected.mentions ?? []).length && !actual.text.trim()) {
+      return ["her line beside the card was dropped by the guard: the owner sees the fallback"];
+    }
     const body = actual.text.toLowerCase();
     const missing = (expected.mentions ?? []).filter((group) => !group.some((n) => body.includes(n.toLowerCase())));
     const said = (expected.avoids ?? []).filter((n) => body.includes(n.toLowerCase()));

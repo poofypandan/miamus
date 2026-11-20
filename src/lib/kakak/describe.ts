@@ -2,6 +2,7 @@
 // (plan, screen 5): one fact per line — What, Who, When, Repeats, Room.
 // Pure, so the wording is unit-tested in both languages.
 
+import { cookLine, cookTone, uncheckedLine, type CookCheck, type CookTone } from "@/lib/can-cook";
 import { remindLabel } from "@/lib/chore-reminders";
 import { defaultPlace } from "@/lib/ingredients";
 import { clean, formatAmount, unitLabel } from "@/lib/kitchen-units";
@@ -30,6 +31,11 @@ export interface CardRow {
 export interface CardItem {
   heading: string;
   rows: CardRow[];
+  /**
+   * The app's own answer under the rows (Fable S0): "Ready to cook",
+   * "Missing 1: Santan", "To buy: Santan", "Not on your list: Serai".
+   */
+  checks?: { tone: CookTone | "muted"; text: string }[];
   /** One quiet line under the rows ("07.00 is already there"). */
   note?: string;
 }
@@ -160,18 +166,24 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
   const t = translator(locale);
   switch (item.kind) {
     case "menu_dish": {
-      // Can we cook it? (20 Nov): What · When · For. What the recipe is
-      // missing is its own Shopping list card; left off it, a quiet line.
+      // Can we cook it? (20 Nov): What · When · For, then the app's own
+      // check (Fable S0). What the recipe is missing is its own Shopping
+      // list card; left off it, a quiet line.
+      const day = item.relative === "today" ? t("Today", "Hari ini") : item.relative === "tomorrow" ? t("Tomorrow", "Besok") : cardDate(item.day, locale);
       const rows: CardRow[] = [
         { label: t("What", "Apa"), value: item.title },
-        { label: t("When", "Kapan"), value: `${cardDate(item.day, locale)} · ${t(...MEAL_WORDS[item.meal])}` },
+        { label: t("When", "Kapan"), value: `${day} · ${t(...MEAL_WORDS[item.meal])}` },
       ];
       if (item.servings) rows.push({ label: t("For", "Untuk"), value: t(`${item.servings} servings`, `${item.servings} porsi`) });
+      const list = item.missing.join(", ");
       return {
         heading: t("Menu", "Menu"),
         rows,
+        checks: dishChecks(item, locale),
         note: item.missing.length
-          ? t(`Also missing, not added to the shopping list: ${item.missing.join(", ")}.`, `Juga kurang, tidak ditambahkan ke daftar belanja: ${item.missing.join(", ")}.`)
+          ? item.overflow
+            ? t(`Also missing, not added to the shopping list: ${list}.`, `Juga kurang, tidak ditambahkan ke daftar belanja: ${list}.`)
+            : t(`Missing, not added to the shopping list: ${list}.`, `Kurang, tidak ditambahkan ke daftar belanja: ${list}.`)
           : undefined,
       };
     }
@@ -344,6 +356,32 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
     case "staff_areas":
       return describeStaffAreas(item, t, nobody ?? staffAreasNobody([item], 0));
   }
+}
+
+type MenuDish = Extract<KakakSuggestion, { kind: "menu_dish" }>;
+
+/**
+ * The dish card's answer, from the app's own check, never from Kakak's
+ * words (Fable S0): the same lines as the Menu screens, "now" for a later
+ * day. A typed dish says it has no saved recipe. A card from before the
+ * check (no `check` field) shows nothing extra.
+ */
+function dishChecks(item: MenuDish, locale: Locale): NonNullable<CardItem["checks"]> {
+  if (item.check === undefined) return [];
+  if (item.check === null) return [{ tone: "muted", text: locale === "id" ? "Belum ada resep tersimpan" : "No saved recipe" }];
+  const check: CookCheck = {
+    state: item.check.state,
+    missing: item.check.missing.map((m) => ({ itemId: "", name: m.name, listed: m.listed })),
+    unchecked: item.check.unchecked,
+    missingLines: [],
+  };
+  const out: NonNullable<CardItem["checks"]> = [];
+  const line = cookLine(check, locale, { later: item.relative !== "today" });
+  const tone = cookTone(check);
+  if (line && tone) out.push({ tone, text: line });
+  const notListed = uncheckedLine(check, locale);
+  if (notListed) out.push({ tone: "muted", text: notListed });
+  return out;
 }
 
 type StaffAreas = Extract<KakakSuggestion, { kind: "staff_areas" }>;

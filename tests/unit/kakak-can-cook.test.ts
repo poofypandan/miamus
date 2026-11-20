@@ -115,11 +115,11 @@ describe("what Kakak is told", () => {
       id: id(41),
       name: "Opor ayam",
       missing: [
-        { itemId: id(30), name: "Ayam", status: "low" },
-        { itemId: id(31), name: "Santan", status: "out" },
+        { itemId: id(30), name: "Ayam", status: "low", listed: false },
+        { itemId: id(31), name: "Santan", status: "out", listed: true },
       ],
     });
-    expect(refs.recipes?.D3.missing).toEqual([{ itemId: id(33), name: "Bihun", status: "low" }]);
+    expect(refs.recipes?.D3.missing).toEqual([{ itemId: id(33), name: "Bihun", status: "low", listed: true }]);
   });
 
   it("names a missing item with its variant, as the recipe screen does (Codex, PR #156)", () => {
@@ -202,7 +202,18 @@ describe("the cards", () => {
   it("one call is the Menu card and, with add_missing, a Shopping list card the server fills from the app's check", () => {
     const cards = toSuggestions(household, refs, names, "plan_dish", plan());
     expect(cards).toEqual([
-      { kind: "menu_dish", recipeId: id(41), title: "Opor ayam", day: "2026-11-11", meal: "dinner", servings: null, missing: [] },
+      {
+        kind: "menu_dish",
+        recipeId: id(41),
+        title: "Opor ayam",
+        day: "2026-11-11",
+        meal: "dinner",
+        servings: null,
+        relative: "today",
+        check: { state: "missing", missing: [{ name: "Santan", listed: true }], unchecked: ["Serai"] },
+        missing: [],
+        overflow: false,
+      },
       { kind: "shopping", entries: [{ type: "item", itemId: id(31), name: "Santan", status: "out" }] },
     ]);
     for (const card of cards) expect(isSaveableSuggestion(card)).toBe(true);
@@ -212,22 +223,38 @@ describe("the cards", () => {
     const [dish, ...rest] = toSuggestions(household, refs, names, "plan_dish", plan({ add_missing: false, servings: 6 }));
     expect(rest).toEqual([]);
     expect(dish).toMatchObject({ kind: "menu_dish", servings: 6, missing: ["Santan"] });
+    // The card says "Today" (Fable W5) and always carries the app's own answer (Fable S0).
     expect(describeSuggestion(dish, "en")).toEqual({
       heading: "Menu",
       rows: [
         { label: "What", value: "Opor ayam" },
-        { label: "When", value: "Wednesday 11 Nov · Dinner" },
+        { label: "When", value: "Today · Dinner" },
         { label: "For", value: "6 servings" },
       ],
-      note: "Also missing, not added to the shopping list: Santan.",
+      checks: [
+        { tone: "listed", text: "To buy: Santan" },
+        { tone: "muted", text: "Not on your list: Serai" },
+      ],
+      note: "Missing, not added to the shopping list: Santan.",
     });
-    expect(describeSuggestion(dish, "id").rows[1]).toEqual({ label: "Kapan", value: "Rabu 11 Nov · Makan malam" });
+    const id = describeSuggestion(dish, "id");
+    expect(id.rows[1]).toEqual({ label: "Kapan", value: "Hari ini · Makan malam" });
+    expect(id.checks?.[0].text).toBe("Perlu dibeli: Santan");
+    expect(id.note).toBe("Kurang, tidak ditambahkan ke daftar belanja: Santan.");
+    // Tomorrow, and later: the ready line says "now".
+    const [ready] = toSuggestions(household, refs, names, "plan_dish", plan({ recipe: "D2", day: "2026-11-13", add_missing: false }));
+    expect(describeSuggestion(ready, "en").rows[1].value).toBe("Friday 13 Nov · Dinner");
+    expect(describeSuggestion(ready, "en").checks).toEqual([{ tone: "ready", text: "Ready to cook now" }]);
+    const [tomorrow] = toSuggestions(household, refs, names, "plan_dish", plan({ day: "2026-11-12", add_missing: false }));
+    expect(describeSuggestion(tomorrow, "id").rows[1].value).toBe("Besok · Makan malam");
   });
 
   it("a typed dish has no recipe; an unknown recipe makes no card", () => {
-    expect(toSuggestions(household, refs, names, "plan_dish", plan({ recipe: "none", dish_name: "Ayam bakar madu", add_missing: false }))).toEqual([
-      { kind: "menu_dish", recipeId: null, title: "Ayam bakar madu", day: "2026-11-11", meal: "dinner", servings: null, missing: [] },
+    const typed = toSuggestions(household, refs, names, "plan_dish", plan({ recipe: "none", dish_name: "Ayam bakar madu", add_missing: false }));
+    expect(typed).toEqual([
+      { kind: "menu_dish", recipeId: null, title: "Ayam bakar madu", day: "2026-11-11", meal: "dinner", servings: null, relative: "today", check: null, missing: [], overflow: false },
     ]);
+    expect(describeSuggestion(typed[0], "en").checks).toEqual([{ tone: "muted", text: "No saved recipe" }]);
     expect(toSuggestions(household, refs, names, "plan_dish", plan({ recipe: "D9" }))).toEqual([]);
   });
 
@@ -238,7 +265,8 @@ describe("the cards", () => {
     const [dish, shopping] = toSuggestions(b.household, b.refs, b.names, "plan_dish", plan());
     expect(shopping).toMatchObject({ kind: "shopping" });
     expect((shopping as Extract<KakakSuggestion, { kind: "shopping" }>).entries).toHaveLength(10);
-    expect(dish).toMatchObject({ missing: ["Bahan 10", "Bahan 11"] });
+    expect(dish).toMatchObject({ missing: ["Bahan 10", "Bahan 11"], overflow: true });
+    expect(describeSuggestion(dish, "en").note).toBe("Also missing, not added to the shopping list: Bahan 10, Bahan 11.");
   });
 
   it("checks again at the servings asked for, while Kitchen amounts is on (Codex, PR #156)", () => {

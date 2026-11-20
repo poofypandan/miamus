@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleAlert,
+  CircleHelp,
   CookingPot,
   Eye,
   Gauge,
@@ -19,6 +20,7 @@ import {
   Refrigerator,
   RotateCcw,
   Send,
+  ShoppingBasket,
   ShoppingCart,
   Undo2,
   WifiOff,
@@ -781,6 +783,26 @@ function SuggestionCard({
                   );
                 })}
               </dl>
+              {/* The app's own answer (Fable S0): it stays when her sentence is dropped. */}
+              {card.checks?.map((check, c) => (
+                <p
+                  key={c}
+                  data-kakak-check={check.tone}
+                  className={cn(
+                    "flex items-start gap-1.5 text-sm font-medium",
+                    check.tone === "ready" ? "text-emerald-700" : check.tone === "missing" ? "text-amber-700" : "text-muted-foreground"
+                  )}
+                >
+                  {check.tone === "ready" ? (
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+                  ) : check.tone === "muted" ? (
+                    <CircleHelp className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                  ) : (
+                    <ShoppingBasket className="mt-0.5 size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+                  )}
+                  <span>{check.text}</span>
+                </p>
+              ))}
               {card.note && <p className="text-xs text-muted-foreground">{card.note}</p>}
               {item.kind === "chore" && open && (
                 <>
