@@ -323,8 +323,12 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="heard-from" className="text-sm font-medium text-gray-900">
-            {t("Who introduced you to Miamus?", "Siapa yang mengenalkan Anda pada Miamus?")}{" "}
-            <span className="font-normal text-muted-foreground">{t("(optional)", "(opsional)")}</span>
+            {/* One inline run, so "(optional)" wraps with the words rather
+                than standing apart as the Label's second flex item. */}
+            <span>
+              {t("Who introduced you to Miamus?", "Siapa yang mengenalkan Anda pada Miamus?")}{" "}
+              <span className="font-normal text-muted-foreground">{t("(optional)", "(opsional)")}</span>
+            </span>
           </Label>
           <Input
             id="heard-from"
