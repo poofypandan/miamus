@@ -237,7 +237,7 @@ describe("the cards", () => {
       // Owner, 20 Nov (three sections): "Missing 1: Santan", then quietly what is already on the list.
       checks: [
         { tone: "missing", text: "Missing 1: Santan" },
-        { tone: "muted", text: "On the shopping list: Santan" },
+        { tone: "listed", text: "On the shopping list: Santan" },
         { tone: "muted", text: "Not on your list: Serai" },
       ],
       note: undefined,

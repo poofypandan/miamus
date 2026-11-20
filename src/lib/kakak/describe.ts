@@ -399,7 +399,7 @@ function dishChecks(item: MenuDish, locale: Locale): NonNullable<CardItem["check
     out.push({ tone: "missing", text: `${locale === "id" ? "Kurang" : "Missing"} ${check.missing.length}: ${names}` });
     const listed = check.missing.filter((m) => m.listed).map((m) => m.name);
     if (listed.length) {
-      out.push({ tone: "muted", text: `${locale === "id" ? "Sudah di daftar belanja" : "On the shopping list"}: ${listed.join(", ")}` });
+      out.push({ tone: "listed", text: `${locale === "id" ? "Sudah di daftar belanja" : "On the shopping list"}: ${listed.join(", ")}` });
     }
   } else {
     const line = cookLine(check, locale, { later: item.relative !== "today" });
