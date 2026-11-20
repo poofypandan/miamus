@@ -21,10 +21,11 @@ import { LEGAL } from "@/config/legal";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { LandingLanguageSwitch, LocaleLink } from "../landing-links";
 import type { LandingFeature, LandingStaffPoint } from "../landing-copy";
-import { Garden, KakakMarkPlaceholder, Kite, KiteString } from "./one-day-art";
+import { Garden, KakakMarkD, Kite, KiteString } from "./one-day-art";
 import { ONE_DAY_COPY, type Accented, type OneDayCopy } from "./one-day-copy";
 import { fontSerif } from "./one-day-fonts";
 import { OneDayMotion } from "./one-day-motion";
+import { ONE_DAY_FILM, ONE_DAY_PICTURES, SHOW_FILM_PLATE } from "./one-day-readiness";
 import { RequestAccessButton } from "./request-access-button";
 import s from "./one-day.module.css";
 
@@ -88,10 +89,34 @@ function Mark({ size }: { size: number }) {
 }
 
 /**
- * Where an app picture goes. Sized like the real crop, so nothing moves when
- * the capture replaces it, and plainly marked as a placeholder.
+ * An app picture: the capture once it exists (ONE_DAY_PICTURES), otherwise a
+ * placeholder sized like the real crop, so nothing moves when the capture
+ * replaces it, and plainly marked. next.config.ts refuses to switch the page
+ * on while any of these is still a placeholder.
  */
-function Picture({ ratio, text, t }: { ratio: string; text: string; t: OneDayCopy }) {
+function Picture({
+  name,
+  width,
+  height,
+  text,
+  t,
+  locale,
+}: {
+  name: keyof typeof ONE_DAY_PICTURES;
+  width: number;
+  height: number;
+  text: string;
+  t: OneDayCopy;
+  locale: OwnerLocale;
+}) {
+  const src = ONE_DAY_PICTURES[name]?.[locale];
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- a fixed-size capture below the fold; next/image would add a loader for nothing
+      <img src={src} alt={text} width={width} height={height} loading="lazy" decoding="async" className={s.capture} />
+    );
+  }
+  const ratio = `${width} / ${height}`;
   return (
     <div className={s.picture} style={{ aspectRatio: ratio }} data-placeholder="app-picture">
       <span className={s.pictureLabel}>
@@ -196,7 +221,7 @@ export function OneDayPage({
               </div>
               <Who label={t.sayOnce.tag} />
               <div className={s.app} style={{ ["--d" as string]: `${0.6 + words.length * 0.17}s` }}>
-                <Picture ratio="720 / 452" text={t.pictures.card} t={t} />
+                <Picture name="card" width={720} height={452} text={t.pictures.card} t={t} locale={locale} />
               </div>
             </div>
           </div>
@@ -213,7 +238,7 @@ export function OneDayPage({
             </div>
             <div className={s.talk} data-reveal>
               <div className={s.app}>
-                <Picture ratio="720 / 540" text={t.pictures.staff} t={t} />
+                <Picture name="staff" width={720} height={540} text={t.pictures.staff} t={t} locale={locale} />
               </div>
               <Who label={t.reaches.tag} />
             </div>
@@ -231,13 +256,13 @@ export function OneDayPage({
             </div>
             <div className={`${s.talk} ${s.areaV}`} data-reveal>
               <div className={s.app}>
-                <Picture ratio="716 / 148" text={t.pictures.status} t={t} />
+                <Picture name="status" width={716} height={148} text={t.pictures.status} t={t} locale={locale} />
               </div>
               <Who label={t.keeps.tag} />
             </div>
             <figure className={s.areaQ} data-reveal>
               <blockquote className={s.plate}>
-                <KakakMarkPlaceholder label={t.kakakMarkLabel} />
+                <KakakMarkD size={36} label={t.kakakMarkLabel} />
                 <span>{t.keeps.quote}</span>
               </blockquote>
               <figcaption className={s.by}>{t.keeps.quoteBy}</figcaption>
@@ -311,15 +336,32 @@ export function OneDayPage({
             <h2 className={s.skyH} data-reveal>
               <Line text={t.film.heading} />
             </h2>
-            <div className={s.frame} role="img" aria-label={t.film.soon} data-reveal>
-              <span className={s.soon}>
-                <Film {...ICON} className="size-5" />
-                <span>{t.film.soon}</span>
-              </span>
-            </div>
-            <p className={s.body} data-reveal>
-              {t.film.body}
-            </p>
+            {/* Until the film exists, the dusk line stands alone: an empty
+                frame is the one thing that would look unfinished. The plate is
+                the owners' call (SHOW_FILM_PLATE). */}
+            {ONE_DAY_FILM ? (
+              <video
+                className={s.film}
+                src={ONE_DAY_FILM.src}
+                poster={ONE_DAY_FILM.poster}
+                controls
+                playsInline
+                preload="none"
+                data-reveal
+              />
+            ) : SHOW_FILM_PLATE ? (
+              <>
+                <div className={s.frame} role="img" aria-label={t.film.soon} data-reveal data-placeholder="film">
+                  <span className={s.soon}>
+                    <Film {...ICON} className="size-5" />
+                    <span>{t.film.soon}</span>
+                  </span>
+                </div>
+                <p className={s.body} data-reveal>
+                  {t.film.body}
+                </p>
+              </>
+            ) : null}
           </div>
         </section>
 

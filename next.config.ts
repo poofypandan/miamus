@@ -1,5 +1,20 @@
 import type { NextConfig } from "next";
+import { oneDayBlockers } from "./src/components/landing/one-day/one-day-readiness";
 import { parseOneDayLanding } from "./src/lib/landing-flag";
+
+/**
+ * The "One day" landing page may be switched on only when nothing on it is a
+ * placeholder and every promise it makes is true (one-day-readiness.ts).
+ * Thrown while the config's routes are read, so `next build` (and `next
+ * dev`) stop with the reasons, and nothing half-ready can deploy.
+ */
+export function assertOneDayCanGoOn(blockers: string[] = oneDayBlockers()) {
+  if (blockers.length === 0) return;
+  throw new Error(
+    `LANDING_ONE_DAY=on, but the "One day" landing page isn't ready:\n- ${blockers.join("\n- ")}\n` +
+      "Set LANDING_ONE_DAY=preview (or unset it) until these are done."
+  );
+}
 
 /**
  * This build's identity, for the over-the-air update check (Phase 137).
@@ -88,6 +103,7 @@ const nextConfig: NextConfig = {
   // lives at those paths. Off or preview: nothing changes here.
   async rewrites() {
     if (parseOneDayLanding(process.env.LANDING_ONE_DAY) !== "on") return [];
+    assertOneDayCanGoOn();
     return {
       beforeFiles: [
         { source: "/welcome", destination: "/welcome/one-day" },
@@ -99,6 +115,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     if (parseOneDayLanding(process.env.LANDING_ONE_DAY) !== "on") return [];
+    assertOneDayCanGoOn();
     return [
       { source: "/welcome/one-day", destination: "/welcome", permanent: false },
       { source: "/selamat-datang/sehari", destination: "/selamat-datang", permanent: false },

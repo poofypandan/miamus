@@ -32,9 +32,13 @@ test("the English page is server-rendered, links to both doors, and signs off as
     "href",
     "mailto:support@poofylabs.dev"
   );
-  // The app pictures and Kakak's mark are plainly placeholders for now.
+  // The app pictures are plainly placeholders until re-captured (and the
+  // build refuses to switch the page on while they are). Kakak's mark is D.
   await expect(page.locator('[data-placeholder="app-picture"]')).toHaveCount(3);
-  await expect(page.locator('[data-placeholder="kakak-mark-d"]')).toHaveCount(1);
+  await expect(page.locator("blockquote").getByRole("img", { name: "Kakak" })).toBeVisible();
+  // No film yet: the dusk line stands alone, with no empty frame.
+  await expect(page.getByRole("heading", { name: "More time for your family." })).toBeAttached();
+  await expect(page.locator('[data-placeholder="film"]')).toHaveCount(0);
   // A signed-out visitor stays on the page.
   await expect(page).toHaveURL(/\/welcome\/one-day$/);
 });

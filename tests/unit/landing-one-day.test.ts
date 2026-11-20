@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import * as readiness from "@/components/landing/one-day/one-day-readiness";
+import { oneDayBlockers } from "@/components/landing/one-day/one-day-readiness";
 import { ONE_DAY_COPY, ONE_DAY_PREVIEW_HREF } from "@/components/landing/one-day/one-day-copy";
 import { LANDING_HREF } from "@/components/landing/landing-copy";
 import { LEGAL } from "@/config/legal";
@@ -126,17 +128,44 @@ describe("serving it at /welcome", () => {
     }
   });
 
-  it("when on, serves the new page at /welcome and /selamat-datang, before today's page files", async () => {
-    const { rewrites, redirects } = await routing("on");
-    expect(rewrites).toMatchObject({
-      beforeFiles: [
-        { source: "/welcome", destination: ONE_DAY_PREVIEW_HREF.en },
-        { source: "/selamat-datang", destination: ONE_DAY_PREVIEW_HREF.id },
-      ],
-    });
-    expect(redirects).toEqual([
-      { source: ONE_DAY_PREVIEW_HREF.en, destination: "/welcome", permanent: false },
-      { source: ONE_DAY_PREVIEW_HREF.id, destination: "/selamat-datang", permanent: false },
-    ]);
+  it("refuses to switch on while a placeholder is on the page or a promise isn't true yet", async () => {
+    await expect(routing("on")).rejects.toThrow(/isn't ready[\s\S]*still a placeholder[\s\S]*PR #157/);
+  });
+
+  it("when on and ready, serves the new page at /welcome and /selamat-datang, before today's page files", async () => {
+    const ready = vi.spyOn(readiness, "oneDayBlockers").mockReturnValue([]);
+    try {
+      const { rewrites, redirects } = await routing("on");
+      expect(rewrites).toMatchObject({
+        beforeFiles: [
+          { source: "/welcome", destination: ONE_DAY_PREVIEW_HREF.en },
+          { source: "/selamat-datang", destination: ONE_DAY_PREVIEW_HREF.id },
+        ],
+      });
+      expect(redirects).toEqual([
+        { source: ONE_DAY_PREVIEW_HREF.en, destination: "/welcome", permanent: false },
+        { source: ONE_DAY_PREVIEW_HREF.id, destination: "/selamat-datang", permanent: false },
+      ]);
+    } finally {
+      ready.mockRestore();
+    }
+  });
+});
+
+describe("what the page still waits for", () => {
+  it("lists every app picture that is still a placeholder, and the why question", () => {
+    const blockers = oneDayBlockers({ card: null, staff: { en: "/a.webp", id: "/b.webp" }, status: null }, false);
+    expect(blockers).toHaveLength(3);
+    expect(blockers.join(" ")).toMatch(/"card"[\s\S]*"status"[\s\S]*PR #157/);
+  });
+
+  it("is ready once every picture is captured and the question is live", () => {
+    const all = { en: "/a.webp", id: "/b.webp" };
+    expect(oneDayBlockers({ card: all, staff: all, status: all }, true)).toEqual([]);
+  });
+
+  it("blocks today: the pictures are placeholders until re-captured from the live app", () => {
+    expect(Object.values(readiness.ONE_DAY_PICTURES).every((src) => src === null)).toBe(true);
+    expect(readiness.oneDayBlockers().length).toBeGreaterThan(0);
   });
 });
