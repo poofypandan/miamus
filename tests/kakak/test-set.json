@@ -8475,7 +8475,9 @@
               ]
             ],
             "avoids": [
-              "rendang",
+              "sisa rendang",
+              "rendang di",
+              "kulkas",
               "lapis",
               "sop",
               "ml",
@@ -8493,7 +8495,7 @@
           }
         ]
       ],
-      "note": "E1: nothing ready to eat is noted. She says so, and may offer what can be cooked. Never makes up a leftover. No card."
+      "note": "E1: nothing ready to eat is noted. She says so, and may offer what can be cooked. Never makes up a leftover. No card. A recipe such as Rendang daging may be offered (run 44737820659 did), so only a leftover rendang is refused."
     }
   ]
 }
