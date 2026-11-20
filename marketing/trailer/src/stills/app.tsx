@@ -56,7 +56,7 @@ export const CROPS = {
   /** Staff: the "Pel teras" selesai toast's tick and line only (the toast's empty right half left out). */
   sariSelesai: { src: "staff/done.png", rect: { x: 22, y: 779, w: 168, h: 46 }, minText: 13, minTextFrom: "sonner toast title, 13px" },
   /** Today: the status card inside its own border; the bubble takes the card's tint, so there is no box in a box. */
-  statusIn: { src: "en/status.png", rect: { x: 19, y: 172, w: 244, h: 72 }, minText: 13, minTextFrom: '"33 of 41 done · nothing late", text-[13px]' },
+  statusIn: { src: "en/status.png", rect: { x: 21.5, y: 174, w: 239, h: 68 }, minText: 13, minTextFrom: '"33 of 41 done · nothing late", text-[13px]' },
   /** Kakak's sheet, idle: the mic and "Tap and talk", trimmed above the next control's edge. */
   micIn: { src: "en/k0-open.png", rect: { x: 110, y: 155, w: 170, h: 124 }, minText: 14, minTextFrom: '"Tap and talk", text-sm', press: { x: 159, y: 166, w: 72, h: 72, r: 36 } },
   /* A3 (after #152 and #153, main 23f6060): the app's new cards, captured whole controls only, never Kakak's avatar. */

@@ -71,7 +71,9 @@ function Dawn({ f, base }: { f: number; base: number }) {
   const l2 = useLine("L2", base);
   const title = l2 ? ramp(f, l2.from - 6, l2.from + 10) : 1;
   const onceAt = l2 ? l2.to - 16 : 45;
-  const once = ramp(f, onceAt - 4, onceAt + 10, easeOut);
+  // A4 (24, should): the words are gone before Kakak's disc rises in the crossfade (10.5 s), so her mark never sits on ghost text.
+  const clear = 1 - ramp(f, 64, 74);
+  const once = ramp(f, onceAt - 4, onceAt + 10, easeOut) * clear;
   const merged = ramp(f, 70, 86);
   return (
     <>
@@ -94,7 +96,7 @@ function Dawn({ f, base }: { f: number; base: number }) {
         {merged > 0 && <circle cx={win.x} cy={win.y} r={30 + 22 * merged} fill="url(#a2fly)" opacity={merged} />}
       </svg>
       <div style={{ position: "absolute", left: CLEAR.left, width: CLEAR.right - CLEAR.left, top: 330, textAlign: "center", color: CREAM, textShadow: "0 2px 18px rgba(20,10,30,0.35)" }}>
-        <div style={{ font: `600 84px/1.12 ${FONT}`, letterSpacing: -1, opacity: title }}>
+        <div style={{ font: `600 84px/1.12 ${FONT}`, letterSpacing: -1, opacity: title * clear }}>
           What if you only had
           <br />
           to say it
@@ -140,12 +142,12 @@ function KakakRise({ f, base }: { f: number; base: number }) {
           <linearGradient id="a2tr" gradientUnits="userSpaceOnUse" x1={phone.x} y1={phone.y} x2={end.x} y2={end.y}><stop offset="0" stopColor="#ffd9b8" stopOpacity="0.95" /><stop offset="1" stopColor="#ffe9d8" stopOpacity="0.15" /></linearGradient>
         </defs>
         <circle cx={phone.x} cy={phone.y} r={54} fill="url(#a2ph)" opacity={Math.max(trail * (1 - 0.6 * ramp(f, s0, s0 + 20)), sink)} />
-        <path d={path} stroke="url(#a2tr)" strokeWidth={7} fill="none" strokeLinecap="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - trail} opacity={1 - sink} />
+        <path d={path} stroke="url(#a2tr)" strokeWidth={7} fill="none" strokeLinecap="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - trail} opacity={(1 - sink) * (1 - ramp(f, 60, 75))} />
         {[0.2, 0.42, 0.63, 0.82].map((t, i) => {
           if (trail < t) return null;
           const x = phone.x + (end.x - phone.x) * t + Math.sin(t * 9 + f * 0.05) * 26 - 30 * (1 - t);
           const y = phone.y + (end.y + 30 - phone.y) * t;
-          return <circle key={i} cx={x} cy={y} r={5 - i * 0.6} fill="#fff3df" opacity={(0.85 - i * 0.12) * (1 - sink)} />;
+          return <circle key={i} cx={x} cy={y} r={5 - i * 0.6} fill="#fff3df" opacity={(0.85 - i * 0.12) * (1 - sink) * (1 - ramp(f, 60, 75))} />;
         })}
       </svg>
       {f >= s0 - 15 && (

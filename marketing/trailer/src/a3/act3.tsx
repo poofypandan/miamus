@@ -152,7 +152,8 @@ function MamaTells({ t }: { t: number }) {
   const { cue, pulse } = useVoice();
   const frame = Math.round(t * FPS);
   const light = lightAt(lerp(6.8, 6.94, rs(t, 15, 24, lin)));
-  const cam = camMix(MEDIUM6, camFor(1.79, MAMA, { x: 300, y: 1270 }), rs(t, 15, 24, lin));
+  // A4 (24, should): for the card (from 20.3) the camera widens a little, so Mama sits lower and the card's top is at 13 %.
+  const cam = camFor(lerp(lerp(1.75, 1.79, rs(t, 15, 24, lin)), 1.5, rs(t, 20.3, 20.68)), MAMA, { x: 300, y: 1270 });
   const speak = rs(t, 16.5, 16.78) * (1 - rs(t, 20.48, 20.78));
   const ph = phoneOf(cam, 1 - speak);
   const head = P(cam, MAMA.x + 8, MAMA.y - 286);
@@ -210,7 +211,7 @@ function MamaTells({ t }: { t: number }) {
           { id: "looksBtn", scale: 2.72, vis: rs(t, 21.66, 21.9, easeOut) },
         ]}
         x={33}
-        y={200}
+        y={250}
         to={phoneOf(cam, 1)}
         open={life(t, fps, 20.7, 22.76)}
         press={{ at: 22.6, part: 1 }}
@@ -327,7 +328,9 @@ export function HandOver({ t, beat: b = BEAT60 }: { t: number; beat?: Beat }) {
   const frame = Math.round(t * FPS);
   const light = lightAt(lerp(b.tod[0], b.tod[1], rs(t, b.t0, b.end, lin)));
   const cam = camAt(b, t);
-  const phoneUp = b.up.some(([a, e]) => t >= a && t < e);
+  // A4 (24, should): Sari's phone and mop poses cross-fade over four frames at each change, no one-frame jump.
+  const h = 2 / FPS;
+  const upK = Math.max(...b.up.map(([a, e]) => rs(t, a - h, a + h, lin) * (1 - rs(t, e - h, e + h, lin))));
   const mop = sariMop(b, t);
   const flyU = (tt: number) => rs(tt, b.fly[0], b.fly[1], (x) => x * x * (3 - 2 * x));
   // The wet sheen on the deck she stands on, wiped along it behind the mop (in her own layer, so it stays under her).
@@ -338,12 +341,21 @@ export function HandOver({ t, beat: b = BEAT60 }: { t: number; beat?: Beat }) {
     <g transform={`translate(${SARI.x} ${SARI.y}) scale(${SARI_S})`}>
       {w && wk > 0.01 && (
         <g opacity={wk}>
-          <rect x={92 + w.a * 38 - 34} y={-7} width={(w.b - w.a) * 38 + 68} height={13} rx={6.5} fill="rgba(120,100,80,0.18)" />
-          <rect x={92 + w.a * 38 - 28} y={-5} width={(w.b - w.a) * 38 + 56} height={6} rx={3} fill={css(sheen, 0.7)} />
+          <rect x={92 + w.a * 38 - 36} y={-8} width={(w.b - w.a) * 38 + 72} height={15} rx={7.5} fill="rgba(110,90,70,0.3)" />
+          <rect x={92 + w.a * 38 - 30} y={-6} width={(w.b - w.a) * 38 + 60} height={9} rx={4.5} fill={css(sheen, 0.92)} />
         </g>
       )}
       <GroundShadow light={light} />
-      <Staff light={light} top="#3f8f8a" legs="#39445a" bun tool="mop" phone={phoneUp} mop={phoneUp ? undefined : mop} />
+      {upK < 0.999 && (
+        <g opacity={1 - upK}>
+          <Staff light={light} top="#3f8f8a" legs="#39445a" bun tool="mop" mop={mop} />
+        </g>
+      )}
+      {upK > 0.001 && (
+        <g opacity={upK}>
+          <Staff light={light} top="#3f8f8a" legs="#39445a" bun tool="mop" phone />
+        </g>
+      )}
     </g>
   );
   const sPhone = P(cam, FLY.p3.x, FLY.p3.y);
@@ -499,7 +511,7 @@ function MamaGolden({ t }: { t: number }) {
   return (
     <>
       <World light={light} frame={1100 + frame - 1050} cam={cam} mama={1} mamaAt={{ ...MAMA, s: 1 }} mamaPose={{ shade: 0, phone: lerp(1, 0.001, down), read: 1 - down }} birds={1} extra={DOG(light, frame)} />
-      <AppCard parts={[{ id: "statusIn", scale: 3.4 }]} x={70} y={330} pad={14} fill="#f1fcf8" inner={0} to={phoneOf(cam, 1)} open={life(t, fps, 35.04, 36.86)} t={t} />
+      <AppCard parts={[{ id: "statusIn", scale: 3.4 }]} x={70} y={330} pad={14} fill="#f1fcf8" inner={40} to={phoneOf(cam, 1)} open={life(t, fps, 35.04, 36.86)} t={t} />
       <Plate t={t} from={l8.from} to={l8.to} until={36.95} text={<>And you? You'll only<br />hear from me…</>} pulse={pulse} />
       <Plate t={t} from={l9.from} to={l9.to} until={38.84} text="…when something isn't done." pulse={pulse} />
       <Grade />
@@ -568,7 +580,7 @@ function QuietPhone({ t }: { t: number }) {
           <rect x={-190} y={-404} width={380} height={808} rx={44} fill="url(#a3glass)" />
           <g clipPath="url(#a3screen)">
             {/* The lock screen's last light, going out. No UI on it. */}
-            <rect x={-190} y={-404} width={380} height={808} fill="url(#a3lit)" opacity={0.5 * (1 - dark)} />
+            <rect x={-190} y={-404} width={380} height={808} fill="url(#a3lit)" opacity={0} />
             <rect x={-190} y={-404} width={380} height={808} fill="url(#a3sheen)" />
             <g filter="url(#a3soft)" opacity={0.24 * dark}>
               <path d={`M ${-150 + slide * 60} 404 Q ${-30 + slide * 120} 130 ${66 - 150 + slide * 300} ${-150 + 60 - slide * 60}`} stroke="rgba(255,240,220,0.8)" strokeWidth={2.4} fill="none" />
