@@ -66,19 +66,19 @@ test("by default a new account asks, and is told it will be emailed once approve
   // Two questions first (migrations/175): the first is required, and its
   // suggestions fill the box, so nothing needs typing.
   await expect(ask).toBeDisabled();
-  const helpWith = page.getByLabel("What would you like Miamus to help with?");
-  await page.getByRole("button", { name: "Running the house with staff" }).click();
+  const helpWith = page.getByLabel("What can Miamus help with at home?");
+  await page.getByRole("button", { name: "Staff at home" }).click();
   await page.getByRole("button", { name: "Pets" }).click();
-  await expect(helpWith).toHaveValue("Running the house with staff, Pets");
+  await expect(helpWith).toHaveValue("Staff at home, Pets");
   await expect(page.getByRole("button", { name: "Pets" })).toHaveAttribute("aria-pressed", "true");
   // A second tap takes it out again; typing adds to the rest.
   await page.getByRole("button", { name: "Pets" }).click();
-  await expect(helpWith).toHaveValue("Running the house with staff");
-  await page.getByRole("button", { name: "Repairs in a new house" }).click();
-  await expect(helpWith).toHaveValue("Running the house with staff, Repairs in a new house");
-  await page.getByLabel("Who told you about Miamus? (optional)").fill("  My sister Dewi ");
+  await expect(helpWith).toHaveValue("Staff at home");
+  await page.getByRole("button", { name: "Repairs", exact: true }).click();
+  await expect(helpWith).toHaveValue("Staff at home, Repairs");
+  await page.getByLabel("Who introduced you to Miamus? (optional)").fill("  My sister Dewi ");
   await expect(
-    page.getByText("Your request shares your Google name and email, and your answers, with Poofy Labs", { exact: false })
+    page.getByText("Sending this shares your Google name and email and your answers with Poofy Labs", { exact: false })
   ).toBeVisible();
   await expect(ask).toBeEnabled();
   await ask.click();
@@ -89,7 +89,7 @@ test("by default a new account asks, and is told it will be emailed once approve
   const asked = calls.rpc.filter((c) => c.name === "request_household_access");
   expect(asked).toHaveLength(1);
   expect(asked[0].body).toEqual({
-    p_wants_help_with: "Running the house with staff, Repairs in a new house",
+    p_wants_help_with: "Staff at home, Repairs",
     p_heard_from: "My sister Dewi",
   });
   expect(calls.rpc.some((c) => c.name === "create_household")).toBe(false);
@@ -184,7 +184,7 @@ test("waiting: they choose WhatsApp, leave a number, and can switch back to emai
 
   await page.goto("/onboarding");
   // Typed rather than tapped; the second question left empty is sent as null.
-  await page.getByLabel("What would you like Miamus to help with?").fill("Our two dogs", { timeout: 20_000 });
+  await page.getByLabel("What can Miamus help with at home?").fill("Our two dogs", { timeout: 20_000 });
   await page.getByRole("button", { name: "Request access" }).click();
   await expect(page.getByRole("heading", { name: "Request sent" })).toBeVisible();
   expect(calls.rpc.find((c) => c.name === "request_household_access")?.body).toEqual({
@@ -220,6 +220,34 @@ test("waiting: they choose WhatsApp, leave a number, and can switch back to emai
   await expect(page.getByText("We'll write to sam@example.test.")).toBeVisible();
 });
 
+// The north star's stop rule allows no new field that needs typing: the
+// first question is required only because one tap answers it (Fable's look,
+// manager, 20 Nov).
+test("one tap on a suggestion, nothing typed, is enough to ask", async ({ context, page }) => {
+  const calls = await signUp(
+    context,
+    "en",
+    { status: 403, json: { code: "42501", message: "household_not_approved", details: null, hint: null } },
+    "pending",
+    "none"
+  );
+
+  await page.goto("/onboarding");
+  const ask = page.getByRole("button", { name: "Request access" });
+  await expect(ask).toBeDisabled({ timeout: 20_000 });
+  // The helper comes first.
+  await expect(page.getByRole("button", { name: "A helper I can talk to" })).toBeVisible();
+  await page.getByRole("button", { name: "A helper I can talk to" }).click();
+  await expect(ask).toBeEnabled();
+  await ask.click();
+
+  await expect(page.getByRole("heading", { name: "Request sent" })).toBeVisible();
+  expect(calls.rpc.find((c) => c.name === "request_household_access")?.body).toEqual({
+    p_wants_help_with: "A helper I can talk to",
+    p_heard_from: null,
+  });
+});
+
 test("Bahasa Indonesia: the two questions on Request access", async ({ context, page }) => {
   const calls = await signUp(
     context,
@@ -234,19 +262,19 @@ test("Bahasa Indonesia: the two questions on Request access", async ({ context, 
   await expect(ask).toBeDisabled({ timeout: 20_000 });
   await expect(page.getByText("Ketuk yang sesuai, atau tulis sendiri.")).toBeVisible();
   await page.getByRole("button", { name: "Dapur dan belanja" }).click();
-  await page.getByRole("button", { name: "Bilang ke Kakak tanpa banyak mengetuk" }).click();
-  await expect(page.getByLabel("Ingin dibantu Miamus dalam hal apa?")).toHaveValue(
-    "Dapur dan belanja, Bilang ke Kakak tanpa banyak mengetuk"
+  await page.getByRole("button", { name: "Asisten yang bisa diajak bicara" }).click();
+  await expect(page.getByLabel("Miamus bisa bantu apa di rumah Anda?")).toHaveValue(
+    "Dapur dan belanja, Asisten yang bisa diajak bicara"
   );
-  await expect(page.getByRole("button", { name: "Bilang ke Kakak tanpa banyak mengetuk" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByLabel("Siapa yang memberi tahu Anda tentang Miamus? (opsional)").fill("Instagram");
+  await expect(page.getByRole("button", { name: "Asisten yang bisa diajak bicara" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByLabel("Siapa yang mengenalkan Anda pada Miamus? (opsional)").fill("Instagram");
   await expect(
-    page.getByText("Permintaan ini membagikan nama dan email Google Anda, serta jawaban Anda, kepada Poofy Labs", { exact: false })
+    page.getByText("Permintaan ini mengirim nama dan email Google Anda serta jawaban Anda ke Poofy Labs", { exact: false })
   ).toBeVisible();
   await ask.click();
   await expect(page.getByRole("heading", { name: "Permintaan terkirim" })).toBeVisible();
   expect(calls.rpc.find((c) => c.name === "request_household_access")?.body).toEqual({
-    p_wants_help_with: "Dapur dan belanja, Bilang ke Kakak tanpa banyak mengetuk",
+    p_wants_help_with: "Dapur dan belanja, Asisten yang bisa diajak bicara",
     p_heard_from: "Instagram",
   });
 });

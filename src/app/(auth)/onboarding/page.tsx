@@ -197,25 +197,29 @@ function LanguageScreen() {
 // --- Asking -----------------------------------------------------------------------
 
 /**
- * The suggestions under "What would you like Miamus to help with?" (owner,
+ * The suggestions under "What can Miamus help with at home?" (owner,
  * 2026-11-20). A tap puts the words in the box, a second tap takes them out
  * (toggleSuggestion), so most people type nothing (the north star). The
  * answer is stored as they leave it, in their language. No commas inside a
  * suggestion: the answer's parts are split on them.
  */
+// Wording and order from Fable's look (20 Nov): short, matching nouns, the
+// helper first (it is what makes Miamus different), and no "Kakak" at the
+// door, where a newcomer hasn't met her yet.
 const HELP_SUGGESTIONS: { icon: typeof House; label: [string, string] }[] = [
-  { icon: UsersRound, label: ["Running the house with staff", "Mengatur rumah bersama staf"] },
+  { icon: Mic, label: ["A helper I can talk to", "Asisten yang bisa diajak bicara"] },
+  { icon: UsersRound, label: ["Staff at home", "Staf di rumah"] },
   { icon: PawPrint, label: ["Pets", "Hewan peliharaan"] },
   { icon: ChefHat, label: ["Kitchen and groceries", "Dapur dan belanja"] },
-  { icon: Wrench, label: ["Repairs in a new house", "Perbaikan di rumah baru"] },
-  { icon: Mic, label: ["Talking to Kakak instead of tapping", "Bilang ke Kakak tanpa banyak mengetuk"] },
+  { icon: Wrench, label: ["Repairs", "Perbaikan rumah"] },
 ];
 
 /**
  * Asking for access, with two questions (owner, 2026-11-20; migrations/175):
- * what they'd like Miamus to help with (required here, up to 300
- * characters, with the suggestions above) and who told them about it
- * (optional, up to 100). Only platform admins read the answers, on the
+ * what Miamus can help with at home (required here, up to 300 characters,
+ * but one tap on a suggestion answers it: the north star's stop rule allows
+ * no new field that needs typing) and who introduced them (optional, up to
+ * 100). Only platform admins read the answers, on the
  * approvals page; they are never in a notification.
  */
 function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess) => void }) {
@@ -276,7 +280,7 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
       <form onSubmit={(e) => void request(e)} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="wants-help-with" className="text-sm font-medium text-gray-900">
-            {t("What would you like Miamus to help with?", "Ingin dibantu Miamus dalam hal apa?")}
+            {t("What can Miamus help with at home?", "Miamus bisa bantu apa di rumah Anda?")}
           </Label>
           <p id="wants-help-with-hint" className="text-xs text-muted-foreground">
             {t("Tap any that fit, or write your own.", "Ketuk yang sesuai, atau tulis sendiri.")}
@@ -305,7 +309,7 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
             aria-describedby="wants-help-with-hint"
             value={helpWith}
             onChange={(e) => setHelpWith(e.target.value)}
-            placeholder={t("A few words is enough", "Beberapa kata saja cukup")}
+            placeholder={t("A few words will do", "Cukup beberapa kata")}
             maxLength={WANTS_HELP_MAX}
             rows={2}
             required
@@ -319,14 +323,14 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="heard-from" className="text-sm font-medium text-gray-900">
-            {t("Who told you about Miamus?", "Siapa yang memberi tahu Anda tentang Miamus?")}{" "}
+            {t("Who introduced you to Miamus?", "Siapa yang mengenalkan Anda pada Miamus?")}{" "}
             <span className="font-normal text-muted-foreground">{t("(optional)", "(opsional)")}</span>
           </Label>
           <Input
             id="heard-from"
             value={heardFrom}
             onChange={(e) => setHeardFrom(e.target.value)}
-            placeholder={t("A friend's name, or where you saw it", "Nama teman, atau di mana Anda melihatnya")}
+            placeholder={t("A name, or where you saw it", "Nama, atau di mana Anda melihatnya")}
             maxLength={HEARD_FROM_MAX}
             autoComplete="off"
             className="min-h-[48px] bg-white"
@@ -343,8 +347,8 @@ function RequestScreen({ onRequested }: { onRequested: (access: HouseholdAccess)
       </form>
       <p className="text-xs leading-relaxed text-muted-foreground">
         {t(
-          `Your request shares your Google name and email, and your answers, with ${LEGAL.operatorName}, who runs Miamus. See the `,
-          `Permintaan ini membagikan nama dan email Google Anda, serta jawaban Anda, kepada ${LEGAL.operatorName}, pengelola Miamus. Lihat `
+          `Sending this shares your Google name and email and your answers with ${LEGAL.operatorName}, who runs Miamus. See the `,
+          `Permintaan ini mengirim nama dan email Google Anda serta jawaban Anda ke ${LEGAL.operatorName}, pengelola Miamus. Lihat `
         )}
         <PrivacyLink />.
       </p>

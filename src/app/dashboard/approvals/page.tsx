@@ -296,7 +296,7 @@ function RequestAnswers({ request }: { request: AccessRequest }) {
     <dl className="mt-2 flex flex-col gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs">
       {help && (
         <div className="flex flex-col">
-          <dt className="text-muted-foreground">{t("Wants help with", "Ingin dibantu dalam")}</dt>
+          <dt className="text-muted-foreground">{t("Wants help with", "Ingin dibantu")}</dt>
           <dd className="break-words whitespace-pre-line text-gray-900">{help}</dd>
         </div>
       )}

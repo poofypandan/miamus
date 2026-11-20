@@ -102,7 +102,7 @@ const withAnswers = [
     decided_at: null,
     auto: false,
     locale: "id",
-    wants_help_with: "Running the house with staff, Repairs in a new house",
+    wants_help_with: "Staff at home, Repairs",
     heard_from: "My sister Dewi",
   },
   {
@@ -129,8 +129,8 @@ for (const locale of ["en", "id"] as const) {
     await page.goto("/dashboard/approvals");
     await expect(page.getByText("Maya Putri")).toBeVisible({ timeout: 20_000 });
     const card = page.locator("[data-slot=card]").filter({ hasText: "Maya Putri" });
-    await expect(card).toContainText(locale === "id" ? "Ingin dibantu dalam" : "Wants help with");
-    await expect(card).toContainText("Running the house with staff, Repairs in a new house");
+    await expect(card).toContainText(locale === "id" ? "Ingin dibantu" : "Wants help with");
+    await expect(card).toContainText("Staff at home, Repairs");
     await expect(card).toContainText(locale === "id" ? "Tahu Miamus dari" : "Heard about Miamus from");
     await expect(card).toContainText("My sister Dewi");
 

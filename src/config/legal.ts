@@ -231,9 +231,10 @@ export const LEGAL = {
   // from its history right after (zero retention is Enterprise-only); it may
   // keep logs, and backups up to 30 days. Otherwise the phone reads aloud.
   // 2026-11-20.1: two questions when asking for access (owner, 2026-11-20;
-  // migrations/175) — what the person would like Miamus to help with
-  // (required on the screen, up to 300 characters) and, optionally, who
-  // told them about Miamus (up to 100). Used to understand what people want
+  // migrations/175) — what Miamus can help with at home (required on the
+  // screen, but one tap on a suggestion answers it; up to 300 characters)
+  // and, optionally, who introduced them to Miamus (up to 100; may be
+  // another person's name). Used to understand what people want
   // and how they hear about Miamus; only Poofy Labs sees them (the approvals
   // page); never in a notification. Cleared 12 months after the request by
   // the nightly prune, or deleted sooner with the request (a rejected one

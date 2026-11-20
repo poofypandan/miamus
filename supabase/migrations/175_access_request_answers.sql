@@ -5,9 +5,11 @@
 -- and who sent them, ahead of invite links. Request access (/onboarding,
 -- the "none" state) now asks:
 --
---   "What would you like Miamus to help with?"   required on the screen,
---        up to 300 characters, with tappable suggestions that fill the box.
---   "Who told you about Miamus?"                 optional, up to 100.
+--   "What can Miamus help with at home?"   required on the screen, up to
+--        300 characters, but one tap on a suggestion answers it (no typing
+--        needed: the north star's stop rule).
+--   "Who introduced you to Miamus?"        optional, up to 100; may be
+--        another person's name.
 --
 -- NEW
 --   household_access_requests.wants_help_with   text, nullable
@@ -222,7 +224,7 @@ begin
    where r.notify_whatsapp is not null
      and r.requested_at < now() - interval '30 days';
 
-  -- Why they wanted Miamus and who told them: kept 12 months from the
+  -- Why they wanted Miamus and who introduced them: kept 12 months from the
   -- request (privacy policy, section 7; migrations/175).
   update public.household_access_requests r
      set wants_help_with = null,

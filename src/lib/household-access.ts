@@ -44,9 +44,9 @@ export interface AccessRequest {
   locale?: string | null;
   /** The WhatsApp number they asked to be told on (628…), if any (migrations/143). */
   whatsapp?: string | null;
-  /** "What would you like Miamus to help with?", as they answered it (migrations/175). */
+  /** "What can Miamus help with at home?", as they answered it (migrations/175). */
   wants_help_with?: string | null;
-  /** "Who told you about Miamus?", if they answered (migrations/175). */
+  /** "Who introduced you to Miamus?", if they answered (migrations/175). */
   heard_from?: string | null;
 }
 
@@ -72,7 +72,7 @@ export function hasSuggestion(text: string, phrase: string): boolean {
 }
 
 /**
- * A suggestion tapped under "What would you like Miamus to help with?" (the
+ * A suggestion tapped under "What can Miamus help with at home?" (the
  * north star: less typing). Not in the answer yet: added at the end, after a
  * comma. Already there: taken out again. Anything they typed stays. When
  * adding it would pass `max`, the answer is left as it is.
