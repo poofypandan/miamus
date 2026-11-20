@@ -229,3 +229,20 @@ test("id: Tambah staf: a name already on the list is said, Tugas rumah and Hewan
   expect((sent[0] as { chores: unknown[] }).chores).toEqual([]);
   await expect.poll(() => staff.find((p) => p.id === NEW_ID)?.hidden_areas).toEqual(["kitchen", "repairs"]);
 });
+
+test("en: rooms that fail to load offer Try again, instead of a spinner that never ends (Codex, PR #170)", async ({ context, page }) => {
+  const staff = roster();
+  const roomsFail = { on: true };
+  await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true }, rooms: [], roomsFail });
+  await page.goto("/dashboard?module=access&page=staff");
+  await page.getByRole("button", { name: "Add staff" }).click({ timeout: 20_000 });
+  const sheet = page.getByTestId("add-staff-sheet");
+  await sheet.getByLabel("Name").fill("Sri");
+  await sheet.getByRole("button", { name: "Kitchen" }).click();
+  await expect(sheet.getByText("Couldn't load your rooms.")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Add Sri" })).toBeDisabled();
+  roomsFail.on = false;
+  await sheet.getByRole("button", { name: "Try again" }).click();
+  await expect(sheet.getByRole("checkbox", { name: /Wash the dishes/ })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Add Sri" })).toBeEnabled();
+});

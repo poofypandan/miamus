@@ -19,7 +19,7 @@ import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { useToday } from "@/hooks/use-today";
 import { dataProvider } from "@/lib/data";
 import { formatDateLocal } from "@/lib/scheduleEngine";
-import { applyHouseholdSetup } from "@/lib/setup-apply";
+import { applyHouseholdSetup, isMockBackend, type ApplyOutcome } from "@/lib/setup-apply";
 import { cadenceLabel } from "@/lib/setup-templates";
 import type { StaffArea } from "@/lib/staff-areas";
 import {
@@ -90,10 +90,10 @@ function AddStaffForm({
 }) {
   const t = useT();
   const locale = useOwnerLocale();
-  const { activeHouseholdId, refresh, updateHouseholdTask } = useHousehold();
+  const { activeHouseholdId, refresh, updateHouseholdTask, createHouseholdTasks } = useHousehold();
   const { petsOn } = useHouseholdProfile();
   const { repairs: repairsOn } = useHouseholdFeatures();
-  const { locations } = useHouseholdLocations();
+  const { locations, failed: roomsFailed, reload: reloadRooms } = useHouseholdLocations();
   const today = formatDateLocal(useToday());
   const { rows: chores, loaded: choresLoaded, failed: choresFailed, reload: reloadChores } = useSetUpChores(today);
   const [name, setName] = useState("");
@@ -129,6 +129,37 @@ function AddStaffForm({
     return (id: string | null) => (id ? (byId.get(id) ?? null) : null);
   }, [roster]);
 
+  /**
+   * Demo mode (no Supabase, the mock provider): no apply_household_setup to
+   * call, so the person and their chores go through the provider's own
+   * actions, as the old name field did (Codex, PR #170).
+   */
+  async function addInMock(person: string, payload: ReturnType<typeof addStaffPayload>): Promise<ApplyOutcome> {
+    try {
+      const profile = await dataProvider.createStaffProfile(person);
+      const chores = payload.chores.filter((c) => c.assignee && "staff" in c.assignee);
+      if (chores.length > 0) {
+        await createHouseholdTasks(
+          chores.map((c) => ({
+            title: c.title,
+            category: c.category,
+            assigned_to: profile.id,
+            due_date: c.due_date,
+            recurrence: c.recurrence,
+          }))
+        );
+      }
+      return {
+        ok: true,
+        result: { rooms_added: 0, chores_added: chores.length, bills_added: 0, staff_added: 1, skipped: 0 },
+        staff: { [NEW_STAFF_KEY]: profile.id },
+      };
+    } catch (err) {
+      console.error("Add staff (demo)", err);
+      return { ok: false, reason: "failed" };
+    }
+  }
+
   function toggleJob(job: StaffArea) {
     setJobs((prev) => {
       const next = new Set(prev);
@@ -151,10 +182,10 @@ function AddStaffForm({
     if (!canAdd || !lock.acquire()) return;
     setSaving(true);
     const person = clean;
-    const outcome = await applyHouseholdSetup(
-      activeHouseholdId,
-      addStaffPayload({ name: person, starters, ticked, locations: locations ?? [] })
-    );
+    const payload = addStaffPayload({ name: person, starters, ticked, locations: locations ?? [] });
+    const outcome = (await isMockBackend())
+      ? await addInMock(person, payload)
+      : await applyHouseholdSetup(activeHouseholdId, payload);
     const id = outcome.ok ? outcome.staff[NEW_STAFF_KEY] : undefined;
     if (!outcome.ok || !id) {
       lock.release();
@@ -332,14 +363,19 @@ function AddStaffForm({
         {kitchen && (
           <div className="flex flex-col gap-1">
             <p className="text-xs font-medium">{t(`Kitchen chores for ${shown}`, `Tugas dapur untuk ${shown}`)}</p>
-            {!startersReady && choresFailed ? (
+            {!startersReady && (choresFailed || roomsFailed) ? (
               // Without every chore read, a move can't be told from a new one
               // (as the starter list, code review PR #90).
               <div className="flex items-center justify-between gap-3 py-2">
                 <p className="text-xs text-muted-foreground">
-                  {t("Couldn't load your chores.", "Tugas Anda gagal dimuat.")}
+                  {choresFailed
+                    ? t("Couldn't load your chores.", "Tugas Anda gagal dimuat.")
+                    : t("Couldn't load your rooms.", "Ruangan Anda gagal dimuat.")}
                 </p>
-                <Button type="button" variant="outline" size="sm" className="min-h-10 rounded-lg" onClick={reloadChores}>
+                <Button type="button" variant="outline" size="sm" className="min-h-10 rounded-lg" onClick={() => {
+                    if (choresFailed) reloadChores();
+                    if (roomsFailed) reloadRooms();
+                  }}>
                   {t("Try again", "Coba lagi")}
                 </Button>
               </div>

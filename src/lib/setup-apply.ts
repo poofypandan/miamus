@@ -21,6 +21,12 @@ function staffIds(value: unknown): Record<string, string> {
   );
 }
 
+/** No Supabase configured: the app runs on the mock provider (demo mode). */
+export async function isMockBackend(): Promise<boolean> {
+  const { supabase } = await import("@/lib/supabase/client");
+  return !supabase;
+}
+
 export async function applyHouseholdSetup(householdId: string, payload: ApplyPayload): Promise<ApplyOutcome> {
   const { supabase } = await import("@/lib/supabase/client");
   if (!supabase) return { ok: false, reason: "failed" };
