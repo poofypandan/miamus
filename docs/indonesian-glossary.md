@@ -423,6 +423,10 @@ people are **staf** and **admin**.
 | Sri is added · {n} chores are Sri's from today. | **Sri sudah ditambahkan** · **{n} tugas jadi milik Sri mulai hari ini.** | Staff onboarding step 2: the sheet after Add. |
 | Sri is already on the staff list. | **Sri sudah ada di daftar staf.** | Staff onboarding step 2: the same name typed again. |
 | A name can't have < or > in it. | **Nama tidak boleh berisi < atau >.** | Staff onboarding step 2: under the name. The first-run card's button is **Tambah staf** too (was Tambah Orang). |
+| Send welcome on WhatsApp · Show QR code · Hide QR code · Send welcome | **Kirim sambutan lewat WhatsApp · Tampilkan kode QR · Sembunyikan kode QR · Kirim sambutan** | Staff onboarding step 3: the owner's buttons after Add staff, and on the row of someone added this week who hasn't signed in. |
+| The welcome (staff read it) | **Halo Sri, selamat datang. Ini Miamus, aplikasi rumah kita. Buka link ini lalu buat PIN 4 angka: {link}** / **Miamus mencatat tugas, foto, dan cuti Anda. Info: {origin}/privasi** | Staff onboarding step 3 (owner decisions 10): her name, her own link, and the line privacy policy section 9 asks admins to tell staff. No emoji. |
+| Are you Sri? This link is for Sri. Yes · No | **Anda Sri?** **Link ini untuk Sri.** **Ya · Bukan** | Staff onboarding step 3: the join page, opened from her own link. **Bukan** shows everyone's names, as before. |
+| Sri points their phone's camera at it, opens the link and makes a PIN. | **Sri mengarahkan kamera HP-nya ke sini, membuka link-nya, lalu membuat PIN.** | Staff onboarding step 3: under the QR code. |
 
 ## Formatting
 

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { SendStaffMessageButton } from "@/components/setup/send-staff-message";
+import { StaffWelcome } from "@/components/dashboard/staff-welcome";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
@@ -251,8 +251,8 @@ function AddStaffForm({
           </SheetTitle>
           <SheetDescription>
             {t(
-              `Send the welcome on WhatsApp. ${added.name} opens the link, taps their name and makes a 4-digit PIN.`,
-              `Kirim sambutan lewat WhatsApp. ${added.name} membuka link, mengetuk namanya, lalu membuat PIN 4 angka.`
+              `Send the welcome on WhatsApp, or show ${added.name} the QR code. They open the link, tap Ya and make a 4-digit PIN.`,
+              `Kirim sambutan lewat WhatsApp, atau tunjukkan kode QR ke ${added.name}. Dia membuka link, mengetuk Ya, lalu membuat PIN 4 angka.`
             )}
           </SheetDescription>
         </SheetHeader>
@@ -264,8 +264,10 @@ function AddStaffForm({
             )}
           </p>
         )}
+        <div className="px-4">
+          <StaffWelcome person={{ id: added.id, name: added.name }} />
+        </div>
         <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          <SendStaffMessageButton />
           <Button variant="ghost" className="min-h-[48px]" onClick={onClose}>
             {t("Done", "Selesai")}
           </Button>

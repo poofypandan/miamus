@@ -99,6 +99,52 @@ export function staffInOneGoMessage(code: string, origin: string, claim: string,
   );
 }
 
+/**
+ * The link in a personal welcome (staff onboarding, step 3): the house link
+ * with her roster id too (`&s=`), so the names step asks "Anda Sri?"
+ * instead of showing everyone. All three ride in the fragment, which never
+ * reaches a server. The id only picks the name to ask about: claiming it
+ * still needs the claim code (audit L5).
+ */
+export function welcomeLink(code: string, origin: string, claim: string, staffId: string): string {
+  const pretty = code.length === 6 ? `${code.slice(0, 3)}-${code.slice(3)}` : code;
+  return `${origin}/join/code#c=${pretty}&k=${claim}&s=${staffId}`;
+}
+
+/**
+ * The personal welcome (staff onboarding, step 3; owner decision 10): her
+ * name, the link, and one line on what Miamus records about her, which is
+ * what privacy policy section 9 asks admins to tell staff. Staff text, so
+ * Bahasa Indonesia whatever the owner reads. No emoji.
+ */
+export function personalWelcomeMessage({
+  name,
+  code,
+  origin,
+  claim,
+  staffId,
+  videoUrl,
+}: {
+  name: string;
+  code: string;
+  origin: string;
+  claim: string;
+  staffId: string;
+  videoUrl?: string | null;
+}): string {
+  return (
+    `Halo ${name.trim()}, selamat datang. Ini Miamus, aplikasi rumah kita. Buka link ini lalu buat PIN 4 angka: ${welcomeLink(code, origin, claim, staffId)}` +
+    `\nMiamus mencatat tugas, foto, dan cuti Anda. Info: ${origin}/privasi` +
+    (videoUrl ? `\nVideo 15 detik: ${videoUrl}` : "")
+  );
+}
+
+/** The roster id from /join/code#…&s=<uuid>, or null. */
+export function staffFromFragment(hash: string): string | null {
+  const match = /(?:^#|&)s=([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:&|$)/.exec(hash);
+  return match ? match[1].toLowerCase() : null;
+}
+
 /** The claim code from /join/code#c=…&k=ABCDEFGHJK, or null. */
 export function claimFromFragment(hash: string): string | null {
   const match = /(?:^#|&)k=([A-Za-z2-9]{10})(?:&|$)/.exec(hash);
