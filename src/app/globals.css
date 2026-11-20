@@ -57,6 +57,10 @@
   --color-attention-tint: var(--attention-tint);
   --color-urgent: var(--urgent);
   --color-urgent-tint: var(--urgent-tint);
+  /* One white and one black (05, question 3): bg-white and text-white are
+     the film's warm white, bg-black the ink. */
+  --color-white: #fffdf8;
+  --color-black: #1f1a17;
   /* Two warm shadows in the whole app: under surfaces, and under what
      floats (Kakak, Lapor, toasts, sheets). Added here, used from PR 3. */
   --shadow-card: 0 1px 2px rgb(60 40 20 / 0.04), 0 10px 28px -14px rgb(60 40 20 / 0.16);
@@ -116,7 +120,9 @@
   /* A hairline that works on paper and on warm white alike. */
   --border: rgb(31 26 23 / 0.1);
   --input: rgb(31 26 23 / 0.14);
-  --ring: #a39a91;
+  /* Crisp on warm white: #a39a91 at 50% read as a muddy double outline
+     (Fable's look at PR 1). */
+  --ring: #5c534c;
   /* Chevrons, placeholders, disabled: marks and large text only (3.2:1). */
   --subtle-foreground: #978d83;
   --done: #1f8a55;
