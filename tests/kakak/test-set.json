@@ -6488,6 +6488,95 @@
         ]
       ],
       "note": "Two rooms named Lounge, on LT1 and LT2: ask which."
+    },
+    {
+      "id": "K301",
+      "sentence": "How do I add my new maid?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Settings"
+              ],
+              [
+                "Staff"
+              ],
+              [
+                "WhatsApp",
+                "link"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Staff onboarding step 1: the guide's Adding a new staff member, with the screen's name. No tool yet (add_staff comes in step 5)."
+    },
+    {
+      "id": "K302",
+      "sentence": "Gimana cara jelasin aplikasinya ke Sri?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "link",
+                "WhatsApp"
+              ],
+              [
+                "PIN"
+              ],
+              [
+                "Selesai",
+                "foto"
+              ]
+            ],
+            "avoids": [
+              "pembantu",
+              "ponsel"
+            ]
+          }
+        ]
+      ],
+      "note": "Staff onboarding step 1: Sri isn't on the list; the guide's Hari pertama staf baru (link, PIN, Sebelum / Sesudah / Selesai)."
+    },
+    {
+      "id": "K303",
+      "sentence": "Budi doesn't work for us any more. What do I do?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "about_miamus",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Settings"
+              ],
+              [
+                "Staff"
+              ],
+              [
+                "Remove",
+                "remove"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Staff onboarding step 1: the guide's When someone leaves. Step 5 turns this into remove_staff."
     }
   ]
 }

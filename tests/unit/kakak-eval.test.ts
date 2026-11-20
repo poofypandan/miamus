@@ -401,9 +401,10 @@ describe("the test set", () => {
     // 116, plus 23 on 2026-11-14: K131–K144 (questions about Miamus, thanks) and
     // K146–K154 (a new ingredient, amounts), plus K117–K126 (what a staff
     // member sees, Phase 178 follow-up), plus K155–K160 on 2026-11-16 (room shorthand:
-    // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2). All for tuning;
-    // the holdout is as it was.
-    expect(testSet.cases).toHaveLength(155);
+    // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2), plus K301–K303 on
+    // 2026-11-20 (staff onboarding step 1: how to add, explain to, and remove a staff
+    // member, answered from the guide). All for tuning; the holdout is as it was.
+    expect(testSet.cases).toHaveLength(158);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 

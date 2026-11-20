@@ -98,8 +98,8 @@ function HouseCodeCard() {
             <p className="text-sm font-medium">{t("House code", "Kode rumah")}</p>
             <p className="text-xs text-muted-foreground">
               {t(
-                "If a staff phone gets signed out, they tap “Saya staf”, type this code, pick their name and enter their PIN.",
-                "Kalau HP staf keluar dari Miamus, mereka ketuk “Saya staf”, ketik kode ini, pilih nama, lalu masukkan PIN."
+                "If a staff phone gets signed out, they tap “Saya staf”, type this code, pick their name and enter their PIN. The code changes when you remove someone; phones already signed in stay signed in.",
+                "Kalau HP staf keluar dari Miamus, mereka ketuk “Saya staf”, ketik kode ini, pilih nama, lalu masukkan PIN. Kodenya berganti saat Anda menghapus staf; HP yang sudah masuk tetap masuk."
               )}
             </p>
           </div>
