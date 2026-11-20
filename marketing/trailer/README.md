@@ -89,7 +89,9 @@ anything else.
   plate. `src/motion/turn-e.tsx` (`m5-60-en`) is the fifth, calmer: slower
   lights, no light to the plate, the footnote "Kakak is your AI helper". One of
   the five stays at the rebuild. `src/motion/turn-f.tsx` (`m6-60-en`) is the
-  sixth: the rising light keeps clear of the type (one of the six stays).
+  sixth: the rising light keeps clear of the type. `src/motion/turn-g.tsx`
+  (`m7-60-en`) is the seventh: centred on the frame (x 540), not on the safe
+  band (x 491). One of the seven stays.
 - **The check** (`scripts/motion-check.mjs`): after a render, lists (a)
   one-frame jumps of the whole picture that are not intended cuts, (b) moves
   that start or stop inside one frame, (c) anything on screen for under 8
