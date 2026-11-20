@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { BookOpen, ChevronRight, Languages, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { RecipeDetailSheet } from "@/components/kitchen/recipe-detail-sheet";
 import { RecipeFormSheet } from "@/components/kitchen/recipe-form-sheet";
+import { CookStatus, useCookCheck } from "@/components/kitchen/cook-status";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { readyFirst } from "@/lib/can-cook";
+import { pushInPlace } from "@/lib/in-place-navigation";
 import { useHousehold } from "@/context/household-context";
 import { useRecipes } from "@/hooks/use-recipes";
 import { missingIndonesian, servingsLabel, sortRecipes, staffText, type RecipeLang, type RecipeWithLines } from "@/lib/recipes";
@@ -40,8 +45,29 @@ export function RecipesView({
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ recipe: RecipeWithLines | null; focus?: "indonesian" } | null>(null);
 
+  // Can we cook it? (D18): each recipe at its own servings, against what's
+  // at home now; the pill "Ready to cook now" puts the ready ones first, in
+  // the URL as &ready=1 like every toggle (CLAUDE.md, State Persistence).
+  const checkOf = useCookCheck(!owner);
+  const params = useSearchParams();
+  const pathname = usePathname();
+  const readyView = params.get("ready") === "1";
+  function setReadyView(next: boolean) {
+    const search = new URLSearchParams(params.toString());
+    if (next) search.set("ready", "1");
+    else search.delete("ready");
+    const text = search.toString();
+    pushInPlace(text ? `${pathname}?${text}` : pathname);
+  }
+  const checks = useMemo(() => new Map(recipes.map((r) => [r.id, checkOf(r)])), [recipes, checkOf]);
+  const anyChecked = [...checks.values()].some((c) => c.state !== "unknown");
+  const showPill = recipes.length > 1 && anyChecked;
+
   const shownName = (r: RecipeWithLines) => (owner ? r.name : staffText(r).name);
-  const sorted = useMemo(() => sortRecipes(recipes, owner ? (r) => r.name : (r) => staffText(r).name), [recipes, owner]);
+  const sorted = useMemo(() => {
+    const byName = sortRecipes(recipes, owner ? (r) => r.name : (r) => staffText(r).name);
+    return readyView && showPill ? readyFirst(byName, (r) => checks.get(r.id)!) : byName;
+  }, [recipes, owner, readyView, showPill, checks]);
   const q = query.trim().toLowerCase();
   const shown = q
     ? sorted.filter((r) => r.name.toLowerCase().includes(q) || (r.name_id ?? "").toLowerCase().includes(q))
@@ -69,6 +95,18 @@ export function RecipesView({
         <Button className="min-h-12 w-full rounded-xl text-base" onClick={() => setEditing({ recipe: null })}>
           <Plus /> {tr("New recipe", "Resep baru")}
         </Button>
+      )}
+
+      {showPill && (
+        <SegmentedControl
+          ariaLabel={tr("Recipes", "Resep")}
+          segments={[
+            { value: "all", label: tr("All", "Semua") },
+            { value: "ready", label: tr("Ready to cook now", "Bahan lengkap") },
+          ]}
+          value={readyView ? "ready" : "all"}
+          onChange={(v) => setReadyView(v === "ready")}
+        />
       )}
 
       {recipes.length >= SEARCH_FROM && (
@@ -130,6 +168,7 @@ export function RecipesView({
                     {shownName(recipe)}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">{detail}</span>
+                  <CookStatus check={checks.get(recipe.id) ?? checkOf(recipe)} lang={lang} size={owner ? "xs" : "sm"} />
                   {missing && (
                     <span className="flex items-center gap-1 truncate text-xs font-medium text-amber-700">
                       <Languages className="size-3 shrink-0" />

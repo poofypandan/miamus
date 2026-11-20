@@ -10,6 +10,7 @@ import { useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRecipeHints } from "@/hooks/use-recipe-hints";
 import { RecipeHintCard } from "@/components/kitchen/recipe-hint-card";
+import { CookStatus, useCookCheck } from "@/components/kitchen/cook-status";
 import {
   RECIPE_LIMITS,
   STAFF_STEPS_MISSING,
@@ -69,6 +70,9 @@ export function RecipeDetailSheet({
  * `servings` starts the stepper at the dish's servings, `title` replaces the
  * recipe's name (the dish's), `before` sits under the title (the kitchen
  * notes and the dish's note) and `footer` at the bottom (Sudah dimasak).
+ * Above the ingredients, Can we cook it? (D18) at the stepper's servings:
+ * `cook` null leaves it out (a dish already cooked, or a past day), and
+ * `cook.later` says "now" for a dish on a later day.
  */
 export function RecipeBody({
   recipe,
@@ -80,6 +84,7 @@ export function RecipeBody({
   title,
   before,
   footer,
+  cook = {},
 }: {
   recipe: RecipeWithLines;
   lang: RecipeLang;
@@ -91,6 +96,7 @@ export function RecipeBody({
   before?: ReactNode;
   /** A node, or a function of the servings on the stepper (cooking uses them; Codex, PR #101). */
   footer?: ReactNode | ((servings: number) => ReactNode);
+  cook?: { later?: boolean } | null;
 }) {
   const { inventoryItems } = useHousehold();
   const id = lang === "id";
@@ -109,6 +115,7 @@ export function RecipeBody({
   // Recipes that learn (Phase 177): owners only, above the ingredients, also inside a dish.
   const hint = useRecipeHints({ enabled: owner }).find((h) => h.recipe.id === recipe.id) ?? null;
   const big = !owner || asStaff;
+  const check = useCookCheck(forStaff)(recipe, servings);
 
   return (
     <div className="flex flex-col">
@@ -170,6 +177,7 @@ export function RecipeBody({
           <h3 id="recipe-ingredients" className={cn("font-semibold text-gray-900", big ? "text-lg" : "text-base")}>
             {readLang === "id" ? "Bahan" : "Ingredients"}
           </h3>
+          {cook && <CookStatus check={check} lang={readLang} later={cook.later} unchecked size={big ? "base" : "sm"} />}
           {recipe.ingredients.length === 0 ? (
             <p className="text-sm text-muted-foreground">{readLang === "id" ? "Belum ada bahan." : "No ingredients yet."}</p>
           ) : (

@@ -25,6 +25,7 @@ import { DishSheet } from "@/components/kitchen/dish-sheet";
 import { KitchenNotesSheet } from "@/components/kitchen/kitchen-notes-sheet";
 import { RecipeHintCard } from "@/components/kitchen/recipe-hint-card";
 import { RecipesView } from "@/components/kitchen/recipes-view";
+import { CookStatus, useCookCheck } from "@/components/kitchen/cook-status";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useAllHeldDishes, useMenuWeek } from "@/hooks/use-menu";
 import { useRecipeHints } from "@/hooks/use-recipe-hints";
@@ -50,6 +51,8 @@ import {
 import { addDishes, deleteDishes, loadMenuWeek } from "@/lib/menu-store";
 import { loadRecipes } from "@/lib/recipes-store";
 import { useHousehold } from "@/context/household-context";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { amountsOn } from "@/lib/features";
 import { servingsLabel, type RecipeLang, type RecipeWithLines } from "@/lib/recipes";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { MenuDish, MenuMeal } from "@/types/database";
@@ -85,6 +88,8 @@ export function MenuView() {
   const held = useAllHeldDishes();
   const { recipes } = useRecipes();
   const cook = useCookFlow(lang, false);
+  const features = useHouseholdFeatures();
+  const amounts = amountsOn(features);
   // Recipes that learn (Phase 177): one card at a time, the recipe cooked most recently first.
   const hint = useRecipeHints()[0] ?? null;
   // Add missing adds up only fresh data: the week, the recipes and the items
@@ -120,7 +125,11 @@ export function MenuView() {
     }
     if (next.recipes !== undefined) {
       if (next.recipes) q.set("recipes", "1");
-      else q.delete("recipes");
+      else {
+        q.delete("recipes");
+        // The Recipes pill belongs to the recipe box: it starts on All next time.
+        q.delete("ready");
+      }
     }
     const query = q.toString();
     pushInPlace(query ? `${pathname}?${query}` : pathname);
@@ -201,12 +210,24 @@ export function MenuView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="empty:hidden">
-        <WhatsNewCard id="cooking-changes-2026-11" />
-      </div>
-      <div className="empty:hidden">
-        <WhatsNewCard id="menu-2026-11" />
-      </div>
+      {/* The week's one card waits for the switches: an older card must not
+          take the slot while Kitchen amounts is still unknown. */}
+      {features.ready && (
+        <>
+          <div className="empty:hidden">
+            <WhatsNewCard id="ready-to-cook-2026-11" />
+          </div>
+          {/* Changing what cooking used is about amounts: only with Kitchen amounts on. */}
+          {amounts && (
+            <div className="empty:hidden">
+              <WhatsNewCard id="cooking-changes-2026-11" />
+            </div>
+          )}
+          <div className="empty:hidden">
+            <WhatsNewCard id="menu-2026-11" />
+          </div>
+        </>
+      )}
 
       <div className="flex items-center gap-2">
         <div className="flex min-w-0 flex-1 flex-col">
@@ -386,6 +407,7 @@ function DayCard({
   const tr = (en: string, ind: string) => (id ? ind : en);
   const isToday = day === today;
   const past = day < today;
+  const checkOf = useCookCheck(false);
   const addLabel = tr(`Add a dish, ${weekdayLong(day, lang)}`, `Tambah masakan, ${weekdayLong(day, lang)}`);
 
   return (
@@ -441,6 +463,10 @@ function DayCard({
                           )}
                         </span>
                         {dish.notes && <span className="truncate text-xs text-muted-foreground">{dish.notes}</span>}
+                        {/* Can we cook it? (D18): uncooked dishes today or later, against what's there now. */}
+                        {recipe && !dish.cooked_at && !past && (
+                          <CookStatus check={checkOf(recipe, servings)} lang={lang} later={day > today} size="xs" />
+                        )}
                       </span>
                       {servings !== null && (
                         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{servingsLabel(servings, lang)}</span>

@@ -138,7 +138,7 @@ test("an owner writes an English recipe with its Indonesian version for staff, a
   // What the cook reads.
   await page.getByRole("tab", { name: "For staff" }).click();
   await expect(page.getByRole("heading", { name: "Soto ayam" })).toBeVisible();
-  await expect(page.getByText("Daun jeruk")).toBeVisible();
+  await expect(page.getByText("Daun jeruk", { exact: true })).toBeVisible();
   await expect(page.getByText("secukupnya")).toBeVisible();
   await expect(page.getByText("Rebus ayam.")).toBeVisible();
 });
@@ -203,7 +203,7 @@ test("a staff phone reads the recipe in Bahasa Indonesia, read only, and scales 
   await expect(page.getByRole("heading", { name: "Soto ayam" })).toBeVisible();
   await expect(page.getByText("Untuk", { exact: true })).toBeVisible();
   await expect(page.getByText("2 sdm", { exact: true })).toBeVisible();
-  await expect(page.getByText("Kecap manis")).toBeVisible();
+  await expect(page.getByText("Kecap manis", { exact: true })).toBeVisible();
   await expect(page.getByText("Masukkan bumbu dan daun jeruk.")).toBeVisible();
   await expect(page.getByRole("button", { name: /Ubah resep|Edit recipe/ })).toHaveCount(0);
   await expect(page.getByText(/Boil|Lime leaves|to taste/)).toHaveCount(0);
@@ -230,7 +230,7 @@ test("an English recipe without Indonesian steps: staff see the ingredients and 
   await page.getByRole("button", { name: /Soto ayam/ }).click({ timeout: 20_000 });
 
   await expect(page.getByRole("heading", { name: "Soto ayam" })).toBeVisible();
-  await expect(page.getByText("Kecap manis")).toBeVisible();
+  await expect(page.getByText("Kecap manis", { exact: true })).toBeVisible();
   await expect(page.getByText("Cara membuat belum ada dalam Bahasa Indonesia.")).toBeVisible();
   await expect(page.getByText(/Boil the chicken|Add the spices|Serve with rice/)).toHaveCount(0);
 });
@@ -246,10 +246,9 @@ test("the owner's staff preview of a recipe without Indonesian steps shows what 
   await expect(page.getByText("Boil the chicken for 30 minutes.")).toHaveCount(0);
 });
 
-test("Kitchen switched off: no Menu pill, and a Menu link opens Food", async ({ context, page }) => {
+test("Kitchen amounts switched off: the Menu pill and recipes are still there (20 Nov)", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, features: { kitchen: false }, recipes: [soto()] });
-  await page.goto("/dashboard?module=inventory&kitchen=menu");
-  await expect(page.getByRole("tab", { name: "Food" })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("tab", { name: "Menu" })).toHaveCount(0);
-  await expect(page.getByText("Chicken soto")).toHaveCount(0);
+  await page.goto("/dashboard?module=inventory&kitchen=menu&recipes=1");
+  await expect(page.getByRole("tab", { name: "Menu" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: /Chicken soto/ })).toBeVisible();
 });

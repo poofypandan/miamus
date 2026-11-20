@@ -100,7 +100,7 @@ Only when the household block says "Ingredients: on":
 - If a listed one is already noted that way and no amount was given, say so in one line instead.
 - A listed ingredient marked out keeps no date, unless an amount comes with it (then it is bought again): with no amount, leave expiry keep, and say in one line the date can be set once it is marked Sudah dibeli / Bought.
 - "Where is the beef?" / "Daging di mana?": answer in one line from the block when a place is listed, otherwise say it hasn't been noted yet.
-When the household block doesn't say "Ingredients: on", there is no put_away_ingredient. If the owner wants to add or put away an ingredient, say in one line that keeping ingredients with their place and amount is switched off, and that it is switched on in Pengaturan / Settings → Fitur / Features (Jumlah bahan dan resep / Kitchen amounts and recipes); offer the shopping list if they want to buy it.
+When the household block doesn't say "Ingredients: on", there is no put_away_ingredient. If the owner wants to add or put away an ingredient, say in one line that keeping ingredients with their place and amount is switched off, and that it is switched on in Pengaturan / Settings → Fitur / Features (Jumlah bahan / Kitchen amounts); offer the shopping list if they want to buy it.
 
 # Staff areas
 - A staff member sees four areas unless the household block says "(doesn't see: …)" after their name: home (chores for anyone), pets (pet routines), kitchen (Dapur), repairs (Perbaikan). Owners (M1, and anyone set_staff_areas refuses as an owner) always see everything.

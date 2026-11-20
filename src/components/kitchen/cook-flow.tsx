@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, CookingPot, Loader2, Minus, Plus, Refrigerator, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { readActiveStaffId } from "@/components/auth/staff-login-gate";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { amountsOn, countedItems } from "@/lib/features";
 import { useRecipes } from "@/hooks/use-recipes";
 import { useToday } from "@/hooks/use-today";
 import { CookingRuleError } from "@/lib/cooked-uses";
@@ -104,6 +105,8 @@ export function useCookFlow(
   const { inventoryItems, applyInventoryRows, listsFresh, syncFailed, refresh } = useHousehold();
   const { recipes, fresh: recipesFresh, errored: recipesErrored } = useRecipes();
   const { flags } = useHouseholdFeatures();
+  // With Kitchen amounts off nothing is counted off stock (features countedItems).
+  const stockItems = useMemo(() => countedItems(inventoryItems, amountsOn(flags)), [inventoryItems, flags]);
   const today = formatDateLocal(useToday());
   const [pending, setPending] = useState<Pending | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -121,7 +124,7 @@ export function useCookFlow(
       recipesErrored,
       listsFresh,
       listsFailed: syncFailed,
-      items: inventoryItems,
+      items: [...stockItems],
     });
   }
 
@@ -134,7 +137,7 @@ export function useCookFlow(
       return;
     }
     const recipe = recipeOf(dish, recipes);
-    const { lines, uncounted } = changeLines(dish, recipe, inventoryItems, forStaff);
+    const { lines, uncounted } = changeLines(dish, recipe, stockItems, forStaff);
     setPending({ mode: "change", dish, title: dishTitle(dish, recipe, forStaff), lines, uncounted, initial: lines });
   }
 
@@ -249,7 +252,7 @@ export function useCookFlow(
     }
     const recipe = recipeOf(dish, recipes);
     const title = dishTitle(dish, recipe, forStaff);
-    const { counted, uncounted } = cookLines(recipe, servings ?? dishServings(dish, recipe), inventoryItems, forStaff);
+    const { counted, uncounted } = cookLines(recipe, servings ?? dishServings(dish, recipe), stockItems, forStaff);
     if (counted.length === 0) {
       void finish(dish, title, []);
       return;
