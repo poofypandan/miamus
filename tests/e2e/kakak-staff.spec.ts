@@ -55,9 +55,17 @@ async function stubStaffWrites(page: Page, staff: Record<string, unknown>[]) {
   await page.route("**/rest/v1/rpc/apply_household_setup*", async (route) => {
     const { p_draft } = route.request().postDataJSON() as { p_draft: { staff: { name: string }[]; chores: unknown[] } };
     calls.push(["apply", p_draft]);
-    staff.push(person(NEW_ID, p_draft.staff[0].name, { has_pin: false, created_at: new Date().toISOString() }));
+    // Bringing someone back sends their chores with no new person.
+    if (p_draft.staff.length > 0) staff.push(person(NEW_ID, p_draft.staff[0].name, { has_pin: false, created_at: new Date().toISOString() }));
     await route.fulfill({
-      json: { rooms_added: 0, chores_added: p_draft.chores.length, bills_added: 0, staff_added: 1, skipped: 0, staff: { "s:new": NEW_ID } },
+      json: {
+        rooms_added: 0,
+        chores_added: p_draft.chores.length,
+        bills_added: 0,
+        staff_added: p_draft.staff.length,
+        skipped: 0,
+        staff: p_draft.staff.length > 0 ? { "s:new": NEW_ID } : {},
+      },
     });
   });
   await page.route("**/rest/v1/rpc/archive_staff_profile*", async (route) => {
@@ -204,4 +212,30 @@ test("id: someone named on the remove card left meanwhile: nothing is removed, a
   await page.getByRole("button", { name: "Hapus Syam" }).click();
   await expect(page.getByText("Ari sudah tidak ada di daftar staf. Bilang ke Kakak siapa yang mengambil tugasnya.")).toBeVisible();
   expect(calls).toEqual([]);
+});
+
+test("en: Yanti is back for the kitchen: her kitchen chores come with her, once they are read (Codex, PR #173)", async ({ context, page }) => {
+  const staff = [...roster(), person(YANTI, "Yanti", { has_pin: false, archived_at: "2026-09-01T00:00:00Z", created_at: "2026-03-01T00:00:00Z" })];
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true }, staff, household: { hasPets: true }, chores: [] });
+  // The household's chores answer slowly: the card must wait for them.
+  await page.route("**/rest/v1/household_tasks*", async (route) => {
+    await new Promise((r) => setTimeout(r, 1500));
+    await route.fallback();
+  });
+  await answerKakak(page, "Welcome back, Yanti. Kitchen it is.", {
+    kind: "add_staff",
+    name: "Yanti",
+    areas: ["kitchen"],
+    starterChores: true,
+    trialDays: 0,
+  });
+  const calls = await stubStaffWrites(page, staff);
+  await tellKakak(page, "en", "Yanti is back, she cooks for us");
+  await page.getByRole("button", { name: "Bring Yanti back" }).click({ timeout: 20_000 });
+  await expect(page.getByTestId("add-staff-sheet").getByText("Yanti is back")).toBeVisible({ timeout: 20_000 });
+  expect(calls.map(([kind]) => kind)).toEqual(["restore", "apply"]);
+  const [, draft] = calls[1] as [string, { staff: unknown[]; chores: { title: string; assignee: unknown }[] }];
+  expect(draft.staff).toEqual([]);
+  expect(draft.chores.map((c) => c.title)).toEqual(["Cuci piring", "Bersihkan dapur dan kompor", "Bersihkan kulkas"]);
+  expect(draft.chores.every((c) => JSON.stringify(c.assignee) === JSON.stringify({ profile: YANTI }))).toBe(true);
 });

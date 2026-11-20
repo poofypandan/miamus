@@ -373,6 +373,9 @@ function AddStaffForm({
   useEffect(() => {
     if (!preset?.autoSave || autoTried.current || added || saving || !rosterReady) return;
     if (former) {
+      // The card's kitchen chores come too, so wait until they are read
+      // (Codex, PR #173), as Add does through canAdd.
+      if (!startersReady) return;
       autoTried.current = true;
       void bringBack(former, true);
     } else if (canAdd) {
