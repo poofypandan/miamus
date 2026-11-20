@@ -59,7 +59,8 @@ export function TodayStatus({
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {/* The screen's one large line (21 Nov, PR 4): 30 px, readable at arm's length. */}
         {/* Outside cn(): its class merger takes text-title for a colour and drops it. */}
-        <span className={`text-title ${ok ? "text-done-foreground" : "text-attention"}`}>
+        {/* 26 px under 375 px wide, so "Semua lancar" stays on one line beside the ring (Fable's look). */}
+        <span className={`text-title max-[374px]:text-[1.625rem] max-[374px]:leading-8 ${ok ? "text-done-foreground" : "text-attention"}`}>
           {title}
         </span>
         {detail && <span className="text-sm text-gray-600">{detail}</span>}

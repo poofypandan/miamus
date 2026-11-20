@@ -25,6 +25,7 @@ import { PetsQuestionCard } from "@/components/dashboard/pets-question-card";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { DatePill } from "@/components/agenda/date-pill";
 import { StaffProgressCard } from "@/components/dashboard/staff-progress-card";
+import { LatestList, latestRows } from "@/components/agenda/latest-list";
 import { NextList } from "@/components/agenda/next-list";
 import { PeopleCircles } from "@/components/agenda/people-circles";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -953,7 +954,6 @@ export function AgendaTab() {
           (showDay || (allEntries.length === 0 && brandNew)) && <>
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
-              {rangePill("sm")}
             </div>
             {/* Under the heading, as the Pets tab's photo filters sit under
                 theirs (Phase 134). Not on an empty day — unless a filter is
@@ -1163,8 +1163,15 @@ export function AgendaTab() {
             <SheetTitle>{t("Latest", "Terbaru")}</SheetTitle>
             <SheetDescription>{t("Finished today, the latest first.", "Selesai hari ini, yang terbaru di atas.")}</SheetDescription>
           </SheetHeader>
-          <div className="flex flex-col gap-2 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-            {finished.map((entry) => renderEntry(entry))}
+          <div className="px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+            <LatestList
+              rows={latestRows(finished, staffName)}
+              onOpen={(row) => {
+                if (row.entry.kind !== "chore") return;
+                setLatestOpen(false);
+                openChore(row.entry.occurrence);
+              }}
+            />
           </div>
         </SheetContent>
       </Sheet>

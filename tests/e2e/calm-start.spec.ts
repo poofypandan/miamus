@@ -155,7 +155,7 @@ test("an established household sees one What's new card a week, not the backlog"
   await expect(whatsNew(page)).toHaveCount(0);
   // The next one waits a week, on this phone.
   await page.reload();
-  await expect(page.getByRole("tab", { name: "Day", exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("date-pill")).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(1000);
   await expect(whatsNew(page)).toHaveCount(0);
 });
@@ -166,7 +166,7 @@ test("a household made since the sign-up question is never asked about pets", as
     household: { hasPets: null, pets: false, createdAt: new Date().toISOString() },
   });
   await page.goto("/dashboard");
-  await expect(page.getByRole("tab", { name: "Day", exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("date-pill")).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(1000);
   await expect(page.getByText("Any pets at home?")).toHaveCount(0);
 });

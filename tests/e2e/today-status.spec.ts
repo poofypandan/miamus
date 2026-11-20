@@ -99,23 +99,27 @@ test("all clear: All on track first, no Waiting group, the pill down with the li
   await expect(page.getByTestId("waiting-for-you")).toBeHidden();
   await expect(page.getByText("Waiting for you")).toHaveCount(0);
 
-  // The order: status, then each person, then the day with its pill.
+  // The order: status, then each person, then the day (Today v3: Day | Week
+  // lives in the date pill's sheet, not under See all).
   const progress = page.getByRole("region", { name: "Today's progress" });
-  const pill = page.getByRole("tablist", { name: "Agenda range" });
+  const day = page.getByRole("heading", { name: "Today", exact: true });
   await expect(progress).toBeVisible();
   expect(await top(page, status(page))).toBeLessThan(await top(page, progress));
-  expect(await top(page, progress)).toBeLessThan(await top(page, pill));
+  expect(await top(page, progress)).toBeLessThan(await top(page, day));
 
   // A tap on the status line opens Latest: what has been finished (Today v3).
   await status(page).click();
   await expect(page.getByRole("dialog", { name: "Latest" })).toBeVisible();
+  await expect(page.getByTestId("latest-list")).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // Week keeps its pill on top; back on Day it is with the list again.
-  await pill.getByRole("tab", { name: "Week" }).click();
+  // Week from the date pill's sheet keeps its pill on top; back on Day the
+  // status returns.
+  await page.getByTestId("date-pill").click();
+  await page.getByRole("dialog").getByRole("tab", { name: "Week" }).click();
   await expect(status(page)).toHaveCount(0);
-  await expect(page.getByRole("tablist", { name: "Agenda range" })).toBeVisible();
-  await page.getByRole("tablist", { name: "Agenda range" }).getByRole("tab", { name: "Day" }).click();
+  await expect(page.getByRole("tablist", { name: "Agenda range" }).first()).toBeVisible();
+  await page.getByRole("tablist", { name: "Agenda range" }).first().getByRole("tab", { name: "Day" }).click();
   await expect(status(page)).toBeVisible();
 });
 
