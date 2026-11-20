@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pickLaunchStart } from "@/lib/launch-clock";
 import manifest from "@/app/manifest";
+import { IPHONE_SCREENS, iosStartupImages, markCentreY } from "@/lib/ios-launch-screens";
 
 describe("pickLaunchStart (the launch mark's one clock)", () => {
   it("uses the mark's own start when it has been animating since first paint", () => {
@@ -31,5 +32,22 @@ describe("the launch stage's white", () => {
     const m = manifest();
     expect(m.background_color).toBe("#ffffff");
     expect(m.theme_color).toBe("#ffffff");
+  });
+});
+
+describe("the iPhone launch screens", () => {
+  it("lists one portrait image per screen size, each with its exact media query", () => {
+    const links = iosStartupImages();
+    expect(links).toHaveLength(IPHONE_SCREENS.length);
+    expect(new Set(links.map((l) => l.url)).size).toBe(links.length);
+    expect(links.find((l) => l.url === "/apple-splash/393x852-3x")?.media).toBe(
+      "(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    );
+  });
+
+  it("puts the mark at the launch stage's centre: below the status bar, halfway down the rest", () => {
+    // iPhone 15: a 59pt bar, then 793pt of page whose middle is 396.5pt down.
+    expect(markCentreY({ height: 852, statusBar: 59 })).toBe(455.5);
+    expect(markCentreY({ height: 667, statusBar: 20 })).toBe(343.5);
   });
 });

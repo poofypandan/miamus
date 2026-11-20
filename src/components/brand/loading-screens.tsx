@@ -10,6 +10,7 @@ import {
 } from "@/components/brand/brand-mark";
 import { hasLaunched } from "@/lib/launch-state";
 import { alignToLaunchClock } from "@/lib/launch-clock";
+import { LAUNCH_MARK_SIZE } from "@/components/brand/launch-mark-size";
 import { RUMAH } from "@/components/staff/staff-splash";
 import { cn } from "@/lib/utils";
 import { useUiLabels } from "@/components/ui/ui-labels";
@@ -58,18 +59,6 @@ export function MiamusPromise({ text }: { text: string }) {
   );
 }
 
-/**
- * The launch mark's size (20 Nov): large, to meet the phone's own splash.
- *
- * Android draws an installed web app's splash itself, at a size no web page
- * can change: the home-screen icon, cut to a 160dp circle. A web page's CSS
- * pixel is that same dp, so a 160px mark is the splash's size exactly, and the
- * hand-over from the phone's picture to ours is invisible. iPhones draw no
- * icon on launch at all (a plain white screen), so nothing there pulls the
- * other way. It was 88px, and the jump from the big circle to the small
- * square was the first thing owners saw.
- */
-export const LAUNCH_MARK_SIZE = 160;
 
 /**
  * The Miamus mark as the app icon's rounded square, the roof and then the M

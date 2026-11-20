@@ -6,6 +6,7 @@ import { ServiceWorkerRegistrar } from "@/components/shared/service-worker-regis
 import { UpdatePrompt } from "@/components/shared/update-prompt";
 import { NavigationCover } from "@/components/brand/brand-cover";
 import { NewVoiceSwitch } from "@/components/kakak/new-voice-switch";
+import { iosStartupImages } from "@/lib/ios-launch-screens";
 import "./globals.css";
 
 // Named "--font-sans" (not the font's own "--font-plus-jakarta-sans") to
@@ -49,6 +50,9 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     // The label under the home-screen icon, so the short name.
     title: "Miamus",
+    // What an iPhone shows while the app opens: the launch stage's white and
+    // mark, one image per screen size (lib/ios-launch-screens, 20 Nov).
+    startupImage: iosStartupImages(),
   },
   // Next 15 renders `appleWebApp.capable` as the standardised
   // `mobile-web-app-capable` only. Older iOS Safari still keys standalone
