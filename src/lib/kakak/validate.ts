@@ -155,7 +155,7 @@ export function amountGiven(input: Record<string, unknown>): AmountGiven | null 
 }
 
 const STAFF_AREA_FIELDS = ["staff", "show", "hide"] as const;
-const DISH_FIELDS = ["recipe", "dish_name", "day", "meal", "servings", "add_missing"] as const;
+const DISH_FIELDS = ["recipe", "dish_name", "day", "meal", "servings", "add_missing", "put_on_menu"] as const;
 
 /** set_staff_areas' show or hide: a list of areas, each once. Null when it isn't one. */
 function areaList(errors: string[], field: string, value: unknown): StaffArea[] | null {
@@ -393,7 +393,15 @@ export function validateToolCall(
         if (input.add_missing === true) {
           errors.push("add_missing needs a saved recipe: with no recipe nothing can be checked; set it false and say there is no saved recipe");
         }
+        // Paid run 44723348875, K167: "Gulai kambing malam ini, bahannya
+        // ada?" became a menu card nobody asked for. Her own put_on_menu
+        // says whether the owner asked to plan it; only then does a dish
+        // with no recipe get a card.
+        if (input.put_on_menu === false) {
+          errors.push("with no saved recipe, a dish goes on the menu only when the owner asked to cook or plan it: reply in one line that there is no saved recipe for it, and where to add one, with no card");
+        }
       }
+      bool(errors, "put_on_menu", input.put_on_menu);
       dayInRange(errors, "day", input.day, today, inAYear);
       oneOf(errors, "meal", input.meal, DISH_MEALS);
       if (!Number.isInteger(input.servings) || (input.servings as number) < 0 || (input.servings as number) > 50) {

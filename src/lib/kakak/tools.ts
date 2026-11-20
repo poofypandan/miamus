@@ -383,7 +383,7 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
     input_schema: {
       type: "object",
       additionalProperties: false,
-      required: ["recipe", "dish_name", "day", "meal", "servings", "add_missing"],
+      required: ["recipe", "dish_name", "day", "meal", "servings", "add_missing", "put_on_menu"],
       properties: {
         recipe: { type: "string", description: "A saved recipe reference (D1, …), or \"none\" when there is no saved recipe for it." },
         dish_name: {
@@ -400,6 +400,11 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
           type: "boolean",
           description:
             "True when the recipe is missing something and the owner asked whether they have everything, or asked to add what's missing. False when nothing is missing, there is no recipe, or the owner said not to.",
+        },
+        put_on_menu: {
+          type: "boolean",
+          description:
+            "True when the owner said to cook or plan this dish, or to put it on the menu ('Kamis siang masak ayam bakar madu', 'put opor on Saturday'). False when they only asked whether the ingredients are there ('Gulai kambing malam ini, bahannya ada?'). A dish with no saved recipe needs true.",
         },
       },
     },

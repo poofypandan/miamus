@@ -730,7 +730,7 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
             : `(Practice) You have everything for ${dish}.`;
     return message(model, [
       text(line),
-      toolUse("plan_dish", { recipe: recipe.ref, dish_name: "none", day, meal, servings: 0, add_missing: addMissing }),
+      toolUse("plan_dish", { recipe: recipe.ref, dish_name: "none", day, meal, servings: 0, add_missing: addMissing, put_on_menu: true }),
     ]);
   }
 

@@ -3572,36 +3572,67 @@
                   "items": {
                     "items": [
                       {
-                        "item": null,
+                        "item": "I13",
                         "status": {
                           "anyOf": [
                             "low",
                             "out"
                           ]
                         },
-                        "note": {
-                          "textHas": [
-                            [
-                              "santan"
-                            ]
+                        "note": null
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "masak"
+                      ],
+                      [
+                        "opor"
+                      ]
+                    ]
+                  },
+                  "assignee": "S2",
+                  "due_date": "2026-11-13"
+                }
+              },
+              {
+                "tool": "add_to_shopping_list",
+                "fields": {
+                  "items": {
+                    "items": [
+                      {
+                        "item": "I12",
+                        "status": {
+                          "anyOf": [
+                            "low",
+                            "out"
                           ]
-                        }
+                        },
+                        "note": null
                       },
                       {
-                        "item": null,
+                        "item": "I13",
                         "status": {
                           "anyOf": [
                             "low",
                             "out"
                           ]
                         },
-                        "note": {
-                          "textHas": [
-                            [
-                              "ayam"
-                            ]
-                          ]
-                        }
+                        "note": null
                       }
                     ]
                   }
@@ -3610,7 +3641,8 @@
             ]
           }
         ]
-      ]
+      ],
+      "note": "Since #156 the shared household lists Santan (I12, Out, so already on the shopping list) and Ayam (I13). Ayam goes on the list as I13; Santan is already there, so leaving it out is right, and naming I12 is fine too. The case expected two new notes before those items existed (run 44723348875)."
     },
     {
       "id": "K081",

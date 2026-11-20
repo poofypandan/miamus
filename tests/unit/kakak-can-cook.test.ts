@@ -96,6 +96,7 @@ const plan = (over: Record<string, unknown> = {}) => ({
   meal: "dinner",
   servings: 0,
   add_missing: true,
+  put_on_menu: true,
   ...over,
 });
 
@@ -573,5 +574,28 @@ describe("her answer is never missing (paid run 44705966410, 20 Nov)", () => {
     const long = `${line} Santan sudah ada di daftar belanja, dan Serai belum bisa Kakak cek karena belum ada di daftar, jadi mungkin perlu ditambahkan dulu.`;
     expect(long.length).toBeGreaterThan(200);
     expect(guardReplyText("suggestions", long, "id").text).toBe("");
+  });
+});
+
+describe("a dish with no saved recipe gets a card only when the owner asked to plan it (paid run 44723348875, K167)", () => {
+  it("refuses recipe \"none\" with put_on_menu false, and accepts it with true", () => {
+    const { household } = built({}, "id");
+    const typed = plan({ recipe: "none", dish_name: "Gulai kambing", add_missing: false });
+    expect(validateToolCall(household, "plan_dish", typed)).toEqual({ ok: true });
+    const asked = validateToolCall(household, "plan_dish", { ...typed, put_on_menu: false });
+    expect(asked.ok).toBe(false);
+    if (!asked.ok) expect(asked.errors.join(" ")).toContain("only when the owner asked to cook or plan it");
+  });
+
+  it("a saved recipe may still be checked with a card when the owner only asked", () => {
+    const { household } = built({}, "id");
+    expect(validateToolCall(household, "plan_dish", plan({ put_on_menu: false }))).toEqual({ ok: true });
+  });
+
+  it("put_on_menu is required, as every other field", () => {
+    const { household } = built({}, "id");
+    const { put_on_menu: _dropped, ...without } = plan();
+    void _dropped;
+    expect(validateToolCall(household, "plan_dish", without).ok).toBe(false);
   });
 });
