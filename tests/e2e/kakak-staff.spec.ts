@@ -279,5 +279,6 @@ test("en: Yanti is back on a new trial while her old reminder is still open: the
   const due = new Date();
   due.setDate(due.getDate() + 14);
   const day = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
-  expect(patched).toContainEqual([`eq.${OLD}`, { due_date: day, remind_days_before: 0 }]);
+  // To the owner confirming now, so it is in their My tasks.
+  expect(patched).toContainEqual([`eq.${OLD}`, { due_date: day, remind_days_before: 0, assigned_to: OWNER_PROFILE_ID }]);
 });

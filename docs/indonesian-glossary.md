@@ -439,6 +439,7 @@ people are **staf** and **admin**.
 | Sri leaves today · Their work goes to · Remove Sri | **Sri berhenti hari ini** · **Tugasnya diberikan ke** · **Hapus Sri** | Staff onboarding step 5: Kakak's remove card. "Berhenti", never "dipecat". |
 | New: tell Kakak about your staff | **Baru: bilang ke Kakak soal staf** | Staff onboarding step 5: the Kakak What's new card. |
 | Checking your staff list… | **Memeriksa daftar staf…** | Staff onboarding step 5: Add staff waits for the roster before it can check the name (with **Coba lagi**). |
+| Checking your chores… | **Memeriksa tugas Anda…** | Staff onboarding step 5: under Trial, while the open chores are read (a reminder may already be there). |
 
 ## Formatting
 

@@ -282,9 +282,14 @@ function AddStaffForm({
     return (chores ?? []).find((c) => isSetUp(c, today) && nameKey(c.title) === nameKey(title))?.id ?? null;
   }
 
-  /** Moves an open trial reminder to the new day; false when that failed. */
+  /**
+   * Moves an open trial reminder to the new day, and to the owner confirming
+   * now (another co-owner may have set the first trial; Codex, PR #173), so
+   * it is in their My tasks as the sheet says. False when that failed.
+   */
   async function moveTrialReminder(id: string, due: string): Promise<boolean> {
-    return updateHouseholdTask(id, { due_date: due, remind_days_before: 0 })
+    const me = await dataProvider.ensureMyMemberProfile(activeHouseholdId).catch(() => null);
+    return updateHouseholdTask(id, { due_date: due, remind_days_before: 0, ...(me?.id ? { assigned_to: me.id } : {}) })
       .then(() => true)
       .catch((err) => {
         console.error("Trial reminder not moved", err);
@@ -641,6 +646,26 @@ function AddStaffForm({
               );
             })}
           </div>
+          {/* A trial waits for the open chores (a reminder may already be
+              there): their loading and Try again show here too, whatever the
+              person does (Codex, PR #173). */}
+          {trial > 0 && !choresLoaded && (
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground" role="status">
+              {choresFailed ? (
+                <>
+                  {t("Couldn't load your chores.", "Tugas Anda gagal dimuat.")}
+                  <button type="button" className="font-medium text-gray-900 underline" onClick={reloadChores}>
+                    {t("Try again", "Coba lagi")}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Loader2 className="size-3 animate-spin" aria-hidden />
+                  {t("Checking your chores…", "Memeriksa tugas Anda…")}
+                </>
+              )}
+            </p>
+          )}
           {trial > 0 && (
             <p className="text-[11px] text-muted-foreground">
               {t(

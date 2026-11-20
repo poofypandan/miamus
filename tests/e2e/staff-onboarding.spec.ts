@@ -511,3 +511,24 @@ test("en: rooms that fail to load offer Try again, instead of a spinner that nev
   await expect(sheet.getByRole("checkbox", { name: /Wash the dishes/ })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Add Sri" })).toBeEnabled();
 });
+
+test("en: a trial for someone who does Chores: chores that fail to load say so, with Try again (Codex, PR #173)", async ({ context, page }) => {
+  const staff = roster();
+  await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true }, chores: [] });
+  let fail = true;
+  await page.route("**/rest/v1/household_tasks*", async (route) => {
+    if (fail && route.request().method() === "GET") return route.fulfill({ status: 500, json: { message: "down" } });
+    await route.fallback();
+  });
+  await page.goto("/dashboard?module=access&page=staff");
+  await page.getByRole("button", { name: "Add staff" }).click({ timeout: 20_000 });
+  const sheet = page.getByTestId("add-staff-sheet");
+  await sheet.getByLabel("Name").fill("Wati");
+  await sheet.getByRole("button", { name: "Chores" }).click();
+  await sheet.getByRole("button", { name: "2 weeks" }).click();
+  await expect(sheet.getByText("Couldn't load your chores.")).toBeVisible({ timeout: 20_000 });
+  await expect(sheet.getByRole("button", { name: "Add Wati" })).toBeDisabled();
+  fail = false;
+  await sheet.getByRole("button", { name: "Try again" }).click();
+  await expect(sheet.getByRole("button", { name: "Add Wati" })).toBeEnabled();
+});
