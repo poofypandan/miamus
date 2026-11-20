@@ -72,7 +72,7 @@ function RepairDetail({ repairId, fallback, onClose }: { repairId: string; fallb
   const formatTime = useFormatTime();
   const placeName = useLocationName();
   const { allProfiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
   const today = formatDateLocal(useToday());
   const [busy, setBusy] = useState(false);
   const [dismissing, setDismissing] = useState(false);

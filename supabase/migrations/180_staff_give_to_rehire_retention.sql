@@ -54,7 +54,7 @@ grant select (claimable_from, forgotten_at) on public.staff_profiles to authenti
 -- archive_staff_profile, re-created from 147 (its newest definition) with the
 -- changes above. Everything else is 147's.
 drop function if exists public.archive_staff_profile(uuid);
-create function public.archive_staff_profile(p_staff_id uuid, p_give_to uuid default null)
+create or replace function public.archive_staff_profile(p_staff_id uuid, p_give_to uuid default null)
 returns staff_profiles
 language plpgsql
 security definer
@@ -85,15 +85,19 @@ begin
 
   -- Who takes their work (staff onboarding, owner decision 7): someone else
   -- still on this household's staff list, or nobody (Anyone), as before.
-  if p_give_to is not null and not exists (
-    select 1 from staff_profiles g
+  -- Locked, so two owners removing each other's give_to at once can't leave
+  -- work on someone who has just left (code review, PR #172).
+  if p_give_to is not null then
+    perform 1 from staff_profiles g
      where g.id = p_give_to
        and g.household_id = v_row.household_id
        and g.id <> p_staff_id
        and g.user_id is null
        and g.archived_at is null
-  ) then
-    raise exception 'give_to_not_staff' using errcode = '22023';
+       for update;
+    if not found then
+      raise exception 'give_to_not_staff' using errcode = '22023';
+    end if;
   end if;
 
   update staff_profiles

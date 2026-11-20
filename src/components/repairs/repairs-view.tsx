@@ -151,7 +151,7 @@ export function RepairRow({ repair, onOpen, first }: { repair: Repair; onOpen: (
   const formatTime = useFormatTime();
   const placeName = useLocationName();
   const { allProfiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
   const stage = repairStage(repair, visits, undefined, walkIns);
   const place = placeName(repair.location_id, repair.spot);
   const attention = stage.kind === "check" || stage.kind === "reported" || stage.kind === "working";

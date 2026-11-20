@@ -41,6 +41,7 @@ const COPY = {
     add: "Add staff",
     remove: "Remove Syam",
     confirm: "Remove Syam",
+    anything: "Anything of Syam's still open goes to:",
     toast: "Syam removed. Other staff phones stay signed in.",
     signIn: "The code changes when you remove someone; phones already signed in stay signed in.",
     entry: "Adding a new staff member",
@@ -51,6 +52,7 @@ const COPY = {
     add: "Tambah staf",
     remove: "Hapus Syam",
     confirm: "Hapus Syam",
+    anything: "Tugas Syam yang masih terbuka diberikan ke:",
     toast: "Syam dihapus. HP staf lain tetap masuk.",
     signIn: "Kodenya berganti saat Anda menghapus staf; HP yang sudah masuk tetap masuk.",
     entry: "Menambah staf baru",
@@ -85,6 +87,10 @@ for (const locale of ["en", "id"] as const) {
     await expect(page.getByRole("button", { name: c.add })).toBeVisible({ timeout: 20_000 });
     await shot(page, `pr1-${locale}-1-staff`);
     await page.getByRole("button", { name: c.remove }).click();
+    // Nothing of Syam's is counted, but who takes anything still open is
+    // asked anyway (code review, PR #172): Ari, the one other person here.
+    await expect(page.getByRole("dialog").getByText(c.anything)).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("button", { name: "Ari" })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("dialog").getByRole("button", { name: c.confirm, exact: true }).click();
     await expect(page.getByText(c.toast)).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);

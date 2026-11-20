@@ -56,7 +56,7 @@ export function ShoppingTab() {
   const t = useT();
   const { petsOn } = useHouseholdProfile();
   const { allProfiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
   const flags = useHouseholdFeatures();
   const showAmounts = amountsOn(flags);
   // D6: with Kitchen amounts on, fresh food and pantry browse under Food →
