@@ -12,7 +12,7 @@
 
 import { cookCheck } from "@/lib/can-cook";
 import { ROUTINE_KINDS } from "@/lib/pet-routine-kinds";
-import type { RecipeWithLines } from "@/lib/recipes";
+import { lineName, type RecipeWithLines } from "@/lib/recipes";
 import { isIngredient, isStockUnit } from "@/lib/kitchen-units";
 import { hiddenAreasOf } from "@/lib/staff-areas";
 import type { FoodPlace, InventoryCategory, InventoryItem, InventoryUnit, MenuMeal, RoutineKind } from "@/types/database";
@@ -363,7 +363,7 @@ export function buildContext(
     }
   }
 
-  const { recipes, menu } = kitchenFor(rows, refs, today);
+  const { recipes, menu } = kitchenFor(rows, refs, today, ingredientsOn);
 
   return {
     household: {
@@ -403,6 +403,7 @@ function kitchenFor(
   rows: ContextRows,
   refs: RefMap,
   today: string,
+  ingredientsOn = false,
 ): { recipes: NonNullable<KakakHousehold["recipes"]>; menu: NonNullable<KakakHousehold["menu"]> } {
   const recipes: NonNullable<KakakHousehold["recipes"]> = [];
   refs.recipes = {};
@@ -422,6 +423,18 @@ function kitchenFor(
   );
   const amounts = rows.kitchenOn === true;
   const byId = new Map<string, string>();
+  // Uses soon (PR C1): an ingredient's use-by date, already in the block
+  // while Ingredients are on, within USES_SOON_DAYS of today.
+  const soonUntil = addDays(today, USES_SOON_DAYS);
+  const expiresOn = new Map<string, string>();
+  if (ingredientsOn) {
+    for (const item of rows.items) {
+      const day = typeof item.expires_on === "string" ? item.expires_on.slice(0, 10) : "";
+      if (!DAY.test(day) || day < today || day > soonUntil || item.stock_status === "out") continue;
+      if (!isIngredient({ category: item.category as InventoryCategory })) continue;
+      expiresOn.set(item.id, day);
+    }
+  }
   for (const row of [...(rows.recipes ?? [])].sort((a, b) => byAge({ ...a }, { ...b }))) {
     const ref = `D${recipes.length + 1}`;
     const recipe = {
@@ -447,6 +460,16 @@ function kitchenFor(
     });
     const name = cleanName(row.name, 60);
     const nameId = row.name_id && cleanName(row.name_id, 60) !== name ? cleanName(row.name_id, 60) : null;
+    const usesSoon: { name: string; expiresOn: string }[] = [];
+    for (const line of recipe.ingredients) {
+      const day = line.item_id ? expiresOn.get(line.item_id) : undefined;
+      if (!day) continue;
+      // Named as the recipe screen and the missing list name it ("Beras (Merah)").
+      const name = cleanName(lineName(line, items, false, recipe.written_in), 60);
+      if (!name || usesSoon.some((u) => u.name === name)) continue;
+      usesSoon.push({ name, expiresOn: day });
+    }
+    usesSoon.sort((a, b) => a.expiresOn.localeCompare(b.expiresOn));
     recipes.push({
       ref,
       name,
@@ -455,6 +478,7 @@ function kitchenFor(
       missing: check.missing.map((m) => cleanName(m.name, 60)),
       ...(check.missing.some((m) => m.listed) ? { onList: check.missing.filter((m) => m.listed).map((m) => cleanName(m.name, 60)) } : {}),
       unchecked: check.unchecked.map((n) => cleanName(n, 60)),
+      ...(usesSoon.length ? { usesSoon } : {}),
     });
     refs.recipes[ref] = {
       id: row.id,
@@ -475,7 +499,29 @@ function kitchenFor(
       title: cleanName(dish.title, 80),
       recipe: dish.recipe_id ? (byId.get(dish.recipe_id) ?? null) : null,
     }));
-  return { recipes, menu };
+  return { recipes: recipes.sort(byUsefulness), menu };
+}
+
+/** How many days ahead "uses soon" looks (PR C1): today, tomorrow and the day after. */
+export const USES_SOON_DAYS = 2;
+
+const STATE_ORDER: Record<string, number> = { ready: 0, missing: 1, unknown: 2 };
+
+/**
+ * The order the recipe lines are listed in (PR C1, display only: the
+ * D-refs keep their age order, so they never move): ready first, then the
+ * fewest missing, then what couldn't be checked; within each, one that uses
+ * something soon first, soonest first. The 40-recipe cap then keeps the
+ * most useful lines. Stable, so ties keep their age order.
+ */
+function byUsefulness(a: NonNullable<KakakHousehold["recipes"]>[number], b: NonNullable<KakakHousehold["recipes"]>[number]): number {
+  const soonA = a.usesSoon?.[0]?.expiresOn ?? "9999-12-31";
+  const soonB = b.usesSoon?.[0]?.expiresOn ?? "9999-12-31";
+  return (
+    STATE_ORDER[a.state] - STATE_ORDER[b.state] ||
+    soonA.localeCompare(soonB) ||
+    (a.state === "missing" ? a.missing.length - b.missing.length : 0)
+  );
 }
 
 /** Today and now in Asia/Jakarta (UTC+7, no daylight saving). */

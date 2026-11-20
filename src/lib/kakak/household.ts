@@ -148,6 +148,12 @@ export interface KakakRecipe {
   onList?: string[];
   /** Lines that couldn't be checked, by name. */
   unchecked: string[];
+  /**
+   * PR C1: its linked ingredients that expire within two days (only while
+   * Ingredients are on, when the date is already in the block), soonest
+   * first. Absent when none.
+   */
+  usesSoon?: { name: string; expiresOn: string }[];
 }
 
 /** Recipes past this many are counted, not listed: the block stays small (about 30 tokens a recipe). */
@@ -313,7 +319,7 @@ function recipeLines(household: KakakHousehold): string[] {
   const lines = [""];
   if (recipes.length) {
     lines.push(
-      "Saved recipes, checked by the app against what is at home now (ready, or what is missing; not checked: lines that aren't on the lists). Only names, never amounts:",
+      "Saved recipes, checked by the app against what is at home now (ready, or what is missing; not checked: lines that aren't on the lists; uses soon: an ingredient expiring within two days). Listed ready first, then fewest missing. Only names, never amounts:",
     );
     for (const recipe of recipes.slice(0, MAX_RECIPES_IN_BLOCK)) {
       const name = recipe.nameId ? `${recipe.name} (${recipe.nameId})` : recipe.name;
@@ -325,6 +331,9 @@ function recipeLines(household: KakakHousehold): string[] {
       }
       if (recipe.unchecked.length) parts.push(`not checked: ${recipe.unchecked.join(", ")}`);
       if (parts.length === 0) parts.push("no ingredients listed");
+      if (recipe.usesSoon?.length) {
+        parts.push(`uses soon: ${recipe.usesSoon.map((u) => `${u.name} (expires ${u.expiresOn})`).join(", ")}`);
+      }
       lines.push(`- ${recipe.ref}: ${name} — ${parts.join("; ")}`);
     }
     if (recipes.length > MAX_RECIPES_IN_BLOCK) {

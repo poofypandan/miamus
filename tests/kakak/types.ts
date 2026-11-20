@@ -112,6 +112,17 @@ export interface KakakCase {
   paths: ExpectedTurn[][];
   /** Why the expectation is what it is, for reviewers. */
   note?: string;
+  /**
+   * PR C1: this case's own saved recipes and menu, in place of the shared
+   * household's (nothing ready, a use-soon ingredient, no recipes). Applied
+   * by householdForCase everywhere a case is run, checked or graded.
+   */
+  household?: Partial<Pick<KakakHousehold, "recipes" | "menu">>;
+}
+
+/** The household a case runs against: the shared one, with the case's own recipes and menu. */
+export function householdForCase(household: KakakHousehold, kakakCase: Pick<KakakCase, "household" | "ownerLocale">): KakakHousehold {
+  return { ...household, ...(kakakCase.household ?? {}), ownerLocale: kakakCase.ownerLocale };
 }
 
 /** tests/kakak/test-set.json. The household is tests/kakak/household.json. */

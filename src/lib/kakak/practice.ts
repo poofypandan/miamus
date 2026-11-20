@@ -358,7 +358,10 @@ function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-type Intent = "shopping" | "food" | "ingredient" | "new_ingredient" | "pet" | "staff_areas" | "chore" | "thanks" | "question" | "cook";
+type Intent = "shopping" | "food" | "ingredient" | "new_ingredient" | "pet" | "staff_areas" | "chore" | "thanks" | "question" | "cook" | "tonight";
+
+/** "Masak apa malam ini?" / "What can we cook tonight?" (PR C1). */
+const WHAT_TO_COOK = /\b(masak apa|what can we cook|what should we cook|what to cook)\b/;
 
 /**
  * Can we cook it? (20 Nov): a saved recipe named in the sentence (any word
@@ -526,6 +529,8 @@ function guideEntryFor(question: string, locale: Locale): GuideEntry | null {
 
 function intentOf(household: KakakHousehold, text: string): Intent {
   if (THANKS.test(text.trim())) return "thanks";
+  // "…Put the first one on the menu" is the follow-up, not the question: the cook intent below.
+  if (has(text, WHAT_TO_COOK) && !has(text, /\b(menu|put|taruh|masukkan)\b/)) return "tonight";
   if (recipeFrom(household, text)) return "cook";
   // "Sembunyikan Dapur dari Syam" (Phase 178): before "Dapur" reads as a room.
   if (staffAreasFrom(household, text)) return "staff_areas";
@@ -708,6 +713,25 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
     if (after && after.ref !== before?.ref) return message(model, [text(copy.noChange)]);
   }
   const canAsk = asked < 1;
+
+  if (intent === "tonight") {
+    // The block's order is the answer: ready first, then fewest missing.
+    const id = household.ownerLocale === "id";
+    const top = (household.recipes ?? []).slice(0, 3);
+    if (top.length === 0) {
+      return message(model, [
+        text(id ? "(Latihan) Belum ada resep tersimpan. Tambahkan di Dapur → Menu." : "(Practice) There are no saved recipes yet. Add them in Kitchen → Menu."),
+      ]);
+    }
+    const one = (recipe: (typeof top)[number]) =>
+      recipe.state === "ready"
+        ? recipe.name
+        : recipe.missing.length
+          ? `${recipe.name} (${id ? "kurang" : "missing"} ${recipe.missing.join(", ")})`
+          : `${recipe.name} (${id ? "belum bisa dicek" : "can't check"})`;
+    const names = top.map(one).join(", ");
+    return message(model, [text(id ? `(Latihan) Malam ini bisa masak: ${names}.` : `(Practice) Tonight you could cook: ${names}.`)]);
+  }
 
   if (intent === "cook") {
     const recipe = recipeFrom(household, first)!;

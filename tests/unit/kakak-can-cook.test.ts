@@ -11,7 +11,7 @@ import { KAKAK_CLIENT_VERSION } from "@/lib/kakak/client";
 import { buildContext, type ContextRecipeRow, type ContextRows } from "@/lib/kakak/context";
 import { describeSuggestion, savedSummary } from "@/lib/kakak/describe";
 import { dishAnswerFromBlock, dishAnswerLine } from "@/lib/kakak/dish-answer";
-import { runKakakTurn, type TurnDeps, type TurnResult } from "@/lib/kakak/engine";
+import { kakakSystem, runKakakTurn, type TurnDeps, type TurnResult } from "@/lib/kakak/engine";
 import { MAX_RECIPES_IN_BLOCK, renderHouseholdBlock, type KakakHousehold } from "@/lib/kakak/household";
 import { practiceClient } from "@/lib/kakak/practice";
 import { correctionFor, guardReplyText, replyProblems, watchesAmounts } from "@/lib/kakak/reply-guard";
@@ -103,15 +103,16 @@ const plan = (over: Record<string, unknown> = {}) => ({
 describe("what Kakak is told", () => {
   it("each saved recipe as the app checked it, by name only, with amounts only while Kitchen amounts is on", () => {
     const { household, refs } = built();
+    // Listed ready first, then fewest missing (PR C1); the D-refs keep their age order.
     expect(household.recipes).toEqual([
-      { ref: "D1", name: "Opor ayam", state: "missing", missing: ["Santan"], onList: ["Santan"], unchecked: ["Serai"] },
       { ref: "D2", name: "Nasi goreng", state: "ready", missing: [], unchecked: [] },
+      { ref: "D1", name: "Opor ayam", state: "missing", missing: ["Santan"], onList: ["Santan"], unchecked: ["Serai"] },
       { ref: "D3", name: "Chicken soto", nameId: "Soto ayam", state: "missing", missing: ["Bihun"], onList: ["Bihun"], unchecked: [] },
       { ref: "D4", name: "Sayur asem", state: "unknown", missing: [], unchecked: ["Asam jawa"] },
     ]);
     // Kitchen amounts on: 0.5 kg of chicken is short of 1 kg, though it is Enough.
     const on = built({ kitchenOn: true, featuresRead: true });
-    expect(on.household.recipes?.[0].missing).toEqual(["Ayam", "Santan"]);
+    expect(on.household.recipes?.find((r) => r.ref === "D1")?.missing).toEqual(["Ayam", "Santan"]);
     // The server keeps the ids and the status each goes on the list with.
     expect(on.refs.recipes?.D1).toMatchObject({
       id: id(41),
@@ -126,7 +127,7 @@ describe("what Kakak is told", () => {
 
   it("names a missing item with its variant, as the recipe screen does (Codex, PR #156)", () => {
     const withVariant = built({ items: rows.items.map((i) => (i.id === id(31) ? { ...i, variant: "Kara" } : i)) });
-    expect(withVariant.household.recipes?.[0].missing).toEqual(["Santan (Kara)"]);
+    expect(withVariant.household.recipes?.find((r) => r.ref === "D1")?.missing).toEqual(["Santan (Kara)"]);
     expect(withVariant.refs.recipes?.D1.missing[0].name).toBe("Santan (Kara)");
   });
 
@@ -350,6 +351,23 @@ describe("the reply guard and amounts", () => {
 });
 
 describe("practice mode", () => {
+  it("answers \"Masak apa malam ini?\" from the block's order, with no card (PR C1)", async () => {
+    const { household, refs, names } = built({}, "id");
+    const deps: TurnDeps = {
+      client: practiceClient(household),
+      model: "claude-opus-5-5",
+      effort: "low",
+      household,
+      refs,
+      names,
+      begin: async () => ({ ok: true, requestId: id(850), callsLeft: 40 }),
+      record: async () => undefined,
+    };
+    const result: TurnResult = await runKakakTurn(deps, null, "Masak apa malam ini?");
+    if (result.kind !== "message") throw new Error(`expected a message, got ${result.kind}`);
+    expect(result.text).toBe("(Latihan) Malam ini bisa masak: Nasi goreng, Opor ayam (kurang Santan), Chicken soto (kurang Bihun).");
+  });
+
   it("checks a saved recipe and offers the two cards, with no AI", async () => {
     const { household, refs, names } = built({}, "id");
     let n = 0;
@@ -597,5 +615,59 @@ describe("a dish with no saved recipe gets a card only when the owner asked to p
     const { put_on_menu: _dropped, ...without } = plan();
     void _dropped;
     expect(validateToolCall(household, "plan_dish", without).ok).toBe(false);
+  });
+});
+
+describe("what can we cook tonight? (PR C1)", () => {
+  // Ingredients on: Kitchen amounts and Food at home, so a use-by date is shown and sent.
+  const ingredientsOn = { kitchenOn: true, foodOn: true, featuresRead: true } as Partial<ContextRows>;
+  const withDates = (ayam: string | null, beras: string | null, over: Record<string, unknown> = {}) =>
+    [
+      item(30, "Ayam", { category: "fresh_food", track_amount: true, unit: "kg", quantity: 2, stock_status: "ok", expires_on: ayam, ...over }),
+      item(31, "Santan", { stock_status: "ok" }),
+      item(32, "Beras", { expires_on: beras }),
+      item(33, "Bihun", { stock_status: "low" }),
+    ] as ContextRows["items"];
+
+  it("lists ready first, then the fewest missing; the D-refs keep their age order", () => {
+    const on = built({ kitchenOn: true, featuresRead: true });
+    // Opor misses two with amounts on (0.5 kg of 1 kg chicken, and Santan); soto misses one.
+    expect(on.household.recipes?.map((r) => r.ref)).toEqual(["D2", "D3", "D1", "D4"]);
+    expect(on.refs.recipes?.D1.name).toBe("Opor ayam");
+  });
+
+  it("marks what uses an ingredient expiring within two days, and puts it first in its group", () => {
+    const { household } = built({ ...ingredientsOn, items: withDates("2026-11-12", null) });
+    // Opor (ready now: 2 kg of chicken, santan Enough) uses Ayam tomorrow: before Nasi goreng.
+    expect(household.recipes?.map((r) => r.ref).slice(0, 2)).toEqual(["D1", "D2"]);
+    expect(household.recipes?.[0].usesSoon).toEqual([{ name: "Ayam", expiresOn: "2026-11-12" }]);
+    const block = renderHouseholdBlock(household);
+    expect(block).toContain("- D1: Opor ayam — ready; not checked: Serai; uses soon: Ayam (expires 2026-11-12)");
+    expect(block).toContain("Listed ready first, then fewest missing.");
+  });
+
+  it("never for a date in the past, past two days, an item that is out, or while Ingredients are off", () => {
+    for (const ayam of ["2026-11-10", "2026-11-14"]) {
+      expect(built({ ...ingredientsOn, items: withDates(ayam, null) }).household.recipes?.some((r) => r.usesSoon)).toBe(false);
+    }
+    expect(built({ ...ingredientsOn, items: withDates("2026-11-13", null) }).household.recipes?.find((r) => r.ref === "D1")?.usesSoon).toHaveLength(1);
+    expect(built({ ...ingredientsOn, items: withDates("2026-11-12", null, { stock_status: "out" }) }).household.recipes?.some((r) => r.usesSoon)).toBe(false);
+    expect(built({ kitchenOn: true, foodOn: false, featuresRead: true, items: withDates("2026-11-12", null) }).household.recipes?.some((r) => r.usesSoon)).toBe(false);
+    expect(built({ items: withDates("2026-11-12", null) }).household.recipes?.some((r) => r.usesSoon)).toBe(false);
+  });
+
+  it("past the cap of 40, the most useful recipes are the ones listed", () => {
+    const many = Array.from({ length: MAX_RECIPES_IN_BLOCK }, (_, i) => recipe(100 + i, `Masakan ${i + 1}`, [line({ item_id: id(31), name: "Santan" })]));
+    // The newest recipe is the only ready one: it still makes the list.
+    const ready = recipe(200, "Nasi goreng baru", [line({ item_id: id(32), name: "Beras" })], { created_at: "2026-12-01" });
+    const block = renderHouseholdBlock(built({ recipes: [...many, ready] }).household);
+    expect(block).toContain("Nasi goreng baru — ready");
+    expect(block).toContain("and 1 more saved recipes not listed here");
+  });
+
+  it("her instructions answer \"what can we cook tonight?\" with a short reply, ready first", () => {
+    const system = JSON.stringify(kakakSystem(built().household));
+    expect(system).toContain("Masak apa malam ini?");
+    expect(system).toContain("Never call a recipe ready unless the block says ready");
   });
 });

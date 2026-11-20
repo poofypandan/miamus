@@ -476,8 +476,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Ask Kakak: can we cook it?", id: "Tanya Kakak: bahannya lengkap?" },
     body: {
-      en: "Ask Kakak \"We're making opor tonight. Do we have everything?\" She answers from your saved recipes and what is at home, and her card puts the dish on the menu and what is missing on Shopping. With no saved recipe, she says so; add it in Kitchen → Menu.",
-      id: "Tanya Kakak \"Malam ini opor, bahannya lengkap?\" Kakak menjawab dari resep yang tersimpan dan stok di rumah, lalu kartunya memasukkan masakan ke menu dan yang kurang ke Belanja. Kalau resepnya belum ada, Kakak bilang; tambahkan di Dapur → Menu.",
+      en: "Ask Kakak \"We're making opor tonight. Do we have everything?\" or \"What can we cook tonight?\" She answers from your saved recipes and what is at home; her card puts the dish on the menu and what is missing on Shopping. No saved recipe? Add it in Kitchen → Menu.",
+      id: "Tanya Kakak \"Malam ini opor, bahannya lengkap?\" atau \"Masak apa malam ini?\" Kakak menjawab dari resep tersimpan dan stok di rumah; kartunya memasukkan masakan ke menu dan yang kurang ke Belanja. Resep belum ada? Tambahkan di Dapur → Menu.",
     },
     where: "kitchen_menu",
     covers: ["kakak-cook-2026-11"],

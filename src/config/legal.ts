@@ -240,6 +240,10 @@ export const LEGAL = {
   // the missing items for the shopping list, saved only when the admin
   // confirms. No new kind of personal data stored, no new service or
   // region; Anthropic's retention is unchanged.
+  // Same version, no policy change (PR C1, "What can we cook tonight?"):
+  // the recipe lines are listed ready first, and say "uses soon" with an
+  // ingredient's use-by date, which is already sent while Ingredients are
+  // on. Nothing new is sent or stored.
   policyVersion: "2026-11-20.1",
   effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
