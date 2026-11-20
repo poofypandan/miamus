@@ -120,6 +120,8 @@ export function useCookFlow(
   // back too: only within that toast's time, never on a much later undo
   // (Mark not cooked hours later), when the statuses may be true.
   // Out clears an item's use-by date (migrations/154), so the date is kept too (Codex, PR #164).
+  const savingChips = useRef(new Set<string>());
+  const [savingIds, setSavingIds] = useState<string[]>([]);
   const marks = useRef(new Map<string, { at: number; before: Map<string, { status: StockStatus; expiresOn: string | null }> }>());
 
   // Whether amounts are counted depends on the Kitchen switch: until it is
@@ -285,6 +287,20 @@ export function useCookFlow(
 
   /** One tap on a chip: Habis, then Hampir habis, then back to how it was. */
   async function markRanOut(dishId: string, item: InventoryItem) {
+    // One write per chip at a time: a tap while the last is still on its way
+    // waits, so a late answer never erases a newer mark (Codex, PR #164).
+    if (savingChips.current.has(item.id)) return;
+    savingChips.current.add(item.id);
+    setSavingIds([...savingChips.current]);
+    try {
+      await markOnce(dishId, item);
+    } finally {
+      savingChips.current.delete(item.id);
+      setSavingIds([...savingChips.current]);
+    }
+  }
+
+  async function markOnce(dishId: string, item: InventoryItem) {
     const entry = marks.current.get(dishId) ?? { at: Date.now(), before: new Map() };
     marks.current.set(dishId, entry);
     const made = entry.before;
@@ -381,6 +397,7 @@ export function useCookFlow(
         asked={ranOut}
         lang={lang}
         items={inventoryItems}
+        saving={savingIds}
         onTap={(item) => ranOut && void markRanOut(ranOut.dishId, item)}
         onClose={() => {
           if (!ranOut) return;
@@ -588,12 +605,15 @@ function RanOutSheet({
   asked,
   lang,
   items,
+  saving,
   onTap,
   onClose,
 }: {
   asked: { title: string; items: InventoryItem[] } | null;
   lang: RecipeLang;
   items: readonly InventoryItem[];
+  /** Chips whose last tap is still on its way: they wait. */
+  saving: readonly string[];
   onTap: (item: InventoryItem) => void;
   onClose: () => void;
 }) {
@@ -622,6 +642,8 @@ function RanOutSheet({
                   key={item.id}
                   type="button"
                   aria-pressed={changed}
+                  aria-busy={saving.includes(item.id)}
+                  disabled={saving.includes(item.id)}
                   onClick={() => onTap(item)}
                   className={cn(
                     "flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-base",
