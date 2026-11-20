@@ -17,7 +17,9 @@ import {
   giveToChoices,
   hiddenAreasFor,
   isClaimable,
+  staffNameKey,
   suggestGiveTo,
+  trialNameFrom,
   kitchenStarters,
   staffWithName,
 } from "@/lib/staff-onboarding";
@@ -330,5 +332,20 @@ describe("a removed name, in the screen's language", () => {
     expect(name("a")).toBe("Ari");
     expect(name("nope")).toBe("Someone");
     expect(name(null)).toBe("Someone");
+  });
+});
+
+describe("names as people say them (Codex, PR #173)", () => {
+  it("ignore a leading honorific, so Kakak's Sri finds Mbak Sri, here or gone", () => {
+    expect(staffNameKey("Mbak Sri")).toBe("sri");
+    expect(staffNameKey("  Bu   Sri ")).toBe("sri");
+    expect(staffNameKey("Sri")).toBe("sri");
+    expect(staffNameKey("Mbakyu")).toBe("mbakyu");
+    const roster = [staff("s", "Mbak Sri", { archived_at: "2026-10-01T00:00:00Z" }), staff("a", "Pak Budi")];
+    expect(formerStaffWithName("Sri", roster)?.id).toBe("s");
+    expect(staffWithName("budi", roster)?.id).toBe("a");
+  });
+  it("match a trial reminder by the name in it, whatever the owner's language", () => {
+    expect(staffNameKey(trialNameFrom("Decide on Yanti's trial"))).toBe(staffNameKey(trialNameFrom("Putuskan masa percobaan Yanti")));
   });
 });

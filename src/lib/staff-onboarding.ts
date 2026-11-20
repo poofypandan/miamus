@@ -49,14 +49,22 @@ export function cleanStaffName(name: string): string {
 }
 
 /**
- * Someone on the staff list now with this name (case and spaces ignored).
+ * A name as people say it: case, spaces and a leading honorific ignored
+ * ("Mbak Sri" is Sri), as Kakak is told to write names (Codex, PR #173).
+ */
+export function staffNameKey(name: string | null | undefined): string {
+  return nameKey(name).replace(/^(mbak|mba|mas|bik|bi|bu|ibu|pak|bapak|kak|teh|ceu|mang|om|tante) /, "");
+}
+
+/**
+ * Someone on the staff list now with this name (case, spaces and an honorific ignored).
  * apply_household_setup would take that person rather than add a second
  * one, so the sheet says so instead.
  */
 export function staffWithName(name: string, roster: readonly StaffProfile[]): StaffProfile | null {
-  const key = nameKey(cleanStaffName(name));
+  const key = staffNameKey(cleanStaffName(name));
   if (!key) return null;
-  return roster.find((p) => !p.user_id && !p.archived_at && nameKey(p.name) === key) ?? null;
+  return roster.find((p) => !p.user_id && !p.archived_at && staffNameKey(p.name) === key) ?? null;
 }
 
 export interface StarterChore {
@@ -259,9 +267,9 @@ export function isClaimable(person: Pick<StaffProfile, "created_at" | "claimable
 
 /** Someone who left, with the name still kept (not yet "Former staff"), matched by name. */
 export function formerStaffWithName(name: string, roster: readonly StaffProfile[]): StaffProfile | null {
-  const key = nameKey(cleanStaffName(name));
+  const key = staffNameKey(cleanStaffName(name));
   if (!key) return null;
-  return roster.find((p) => !p.user_id && p.archived_at && !p.forgotten_at && nameKey(p.name) === key) ?? null;
+  return roster.find((p) => !p.user_id && p.archived_at && !p.forgotten_at && staffNameKey(p.name) === key) ?? null;
 }
 
 // --- Step 6: the trial reminder (owner decision 3) -----------------------------------------

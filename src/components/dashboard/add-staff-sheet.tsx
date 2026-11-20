@@ -20,7 +20,7 @@ import { useToday } from "@/hooks/use-today";
 import { dataProvider } from "@/lib/data";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { applyHouseholdSetup, isMockBackend, type ApplyOutcome } from "@/lib/setup-apply";
-import { cadenceLabel, nameKey } from "@/lib/setup-templates";
+import { cadenceLabel } from "@/lib/setup-templates";
 import { isSetUp } from "@/lib/rooms-view";
 import type { StaffArea } from "@/lib/staff-areas";
 import {
@@ -32,6 +32,8 @@ import {
   choresToMove,
   cleanStaffName,
   formerStaffWithName,
+  staffNameKey,
+  trialNameFrom,
   TRIAL_CHOICES,
   trialChore,
   hiddenAreasFor,
@@ -279,7 +281,10 @@ function AddStaffForm({
    * title, so that one is moved to the new day instead (Codex, PR #173).
    */
   function openTrialReminder(title: string): string | null {
-    return (chores ?? []).find((c) => isSetUp(c, today) && nameKey(c.title) === nameKey(title))?.id ?? null;
+    // By the name in it, in either owner's language (Codex, PR #173).
+    const name = staffNameKey(trialNameFrom(title));
+    if (!name) return null;
+    return (chores ?? []).find((c) => isSetUp(c, today) && staffNameKey(trialNameFrom(c.title)) === name)?.id ?? null;
   }
 
   /**
