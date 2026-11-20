@@ -53,11 +53,20 @@ export interface WorldProps {
 
 const R = (seed: string) => random(`miamus-${seed}`);
 
+/**
+ * Each garden's own prefix for the ids of the gradients that change with the light (sky, sun, lamps, lawn). Two
+ * gardens are on screen together whenever one scene fades over another, and an SVG `url(#sky)` finds the first
+ * element with that id in the whole page: the upper garden was painted with the lower one's sky, lamps and lawn
+ * until the lower one was removed, and then changed in one frame (the jump at 5.00 s; trailer-reset 33).
+ */
+const WorldId = React.createContext("");
+
 /* ------------------------------------------------------------------ */
 /* Sky                                                                 */
 /* ------------------------------------------------------------------ */
 
 function Sky({ light, frame }: { light: Light; frame: number }) {
+  const uid = React.useContext(WorldId);
   const top = -2600;
   const span = HORIZON + 60 - top;
   const at = (y: number) => ((y - top) / span).toFixed(4);
@@ -65,20 +74,20 @@ function Sky({ light, frame }: { light: Light; frame: number }) {
   return (
     <>
       <defs>
-        <linearGradient id="sky" gradientUnits="userSpaceOnUse" x1={0} y1={top} x2={0} y2={HORIZON + 60}>
+        <linearGradient id={`${uid}sky`} gradientUnits="userSpaceOnUse" x1={0} y1={top} x2={0} y2={HORIZON + 60}>
           <stop offset={0} stopColor={css(deep)} />
           <stop offset={at(-200)} stopColor={css(light.skyTop)} />
           <stop offset={at(HORIZON * light.midAt)} stopColor={css(light.skyMid)} />
           <stop offset={at(HORIZON - 30)} stopColor={css(light.skyLow)} />
           <stop offset={1} stopColor={css(mix(light.skyLow, light.sun, 0.35))} />
         </linearGradient>
-        <radialGradient id="sunHalo" gradientUnits="userSpaceOnUse" cx={light.sunX} cy={light.sunY} r={980}>
+        <radialGradient id={`${uid}sunHalo`} gradientUnits="userSpaceOnUse" cx={light.sunX} cy={light.sunY} r={980}>
           <stop offset={0} stopColor={css(light.sun, 0.62 * light.glow)} />
           <stop offset={0.22} stopColor={css(light.sun, 0.3 * light.glow)} />
           <stop offset={0.55} stopColor={css(light.sun, 0.1 * light.glow)} />
           <stop offset={1} stopColor={css(light.sun, 0)} />
         </radialGradient>
-        <radialGradient id="sunCore" gradientUnits="userSpaceOnUse" cx={light.sunX} cy={light.sunY} r={210}>
+        <radialGradient id={`${uid}sunCore`} gradientUnits="userSpaceOnUse" cx={light.sunX} cy={light.sunY} r={210}>
           <stop offset={0} stopColor={css(mix(light.sun, [255, 255, 255], 0.75), 0.95 * Math.min(1, light.glow * 1.3))} />
           <stop offset={0.3} stopColor={css(mix(light.sun, [255, 255, 255], 0.35), 0.75 * light.glow)} />
           <stop offset={1} stopColor={css(light.sun, 0)} />
@@ -90,8 +99,8 @@ function Sky({ light, frame }: { light: Light; frame: number }) {
           <feGaussianBlur stdDeviation="34" />
         </filter>
       </defs>
-      <rect x={-1200} y={top} width={W + 2400} height={span + 400} fill="url(#sky)" />
-      <rect x={-1200} y={top} width={W + 2400} height={span + 400} fill="url(#sunHalo)" />
+      <rect x={-1200} y={top} width={W + 2400} height={span + 400} fill={`url(#${uid}sky)`} />
+      <rect x={-1200} y={top} width={W + 2400} height={span + 400} fill={`url(#${uid}sunHalo)`} />
       <Stars light={light} frame={frame} />
       {light.glow > 0.5 && light.sunY < HORIZON + 60 && (
         <g filter="url(#softer)" opacity={(light.glow - 0.5) * 2}>
@@ -109,7 +118,7 @@ function Sky({ light, frame }: { light: Light; frame: number }) {
           })}
         </g>
       )}
-      <rect x={-1200} y={top} width={W + 2400} height={span + 400} fill="url(#sunCore)" />
+      <rect x={-1200} y={top} width={W + 2400} height={span + 400} fill={`url(#${uid}sunCore)`} />
       {light.sunY < HORIZON + 90 && (
         <circle cx={light.sunX} cy={light.sunY} r={54 + 22 * light.glow} fill={css(mix(light.sun, [255, 255, 255], 0.55))} opacity={Math.min(1, 0.55 + light.glow)} />
       )}
@@ -332,6 +341,7 @@ function Bougainvillea({ light }: { light: Light }) {
 }
 
 function House({ light }: { light: Light }) {
+  const uid = React.useContext(WorldId);
   const wall = shade("#f5eddf", light, 0.12);
   const wallShade = shade("#dccfbc", light, 0.12);
   const roof = shade("#c8704b", light, 0.12);
@@ -345,12 +355,12 @@ function House({ light }: { light: Light }) {
   return (
     <g>
       <defs>
-        <radialGradient id="lampGlow" gradientUnits="userSpaceOnUse" cx={734} cy={1210} r={420}>
+        <radialGradient id={`${uid}lampGlow`} gradientUnits="userSpaceOnUse" cx={734} cy={1210} r={420}>
           <stop offset={0} stopColor={`rgba(255,205,120,${(0.5 * lamp).toFixed(3)})`} />
           <stop offset={0.5} stopColor={`rgba(255,190,110,${(0.16 * lamp).toFixed(3)})`} />
           <stop offset={1} stopColor="rgba(255,190,110,0)" />
         </radialGradient>
-        <linearGradient id="spill" gradientUnits="userSpaceOnUse" x1={0} y1={1300} x2={0} y2={1560}>
+        <linearGradient id={`${uid}spill`} gradientUnits="userSpaceOnUse" x1={0} y1={1300} x2={0} y2={1560}>
           <stop offset={0} stopColor={`rgba(255,206,128,${(0.42 * lamp).toFixed(3)})`} />
           <stop offset={1} stopColor="rgba(255,206,128,0)" />
         </linearGradient>
@@ -388,8 +398,8 @@ function House({ light }: { light: Light }) {
       {/* Lamplight: a glow at the doors and its spill across the grass. */}
       {lamp > 0.02 && (
         <>
-          <rect x={300} y={860} width={900} height={760} fill="url(#lampGlow)" />
-          <path d="M 640 1318 L 836 1318 L 980 1560 L 520 1560 Z" fill="url(#spill)" />
+          <rect x={300} y={860} width={900} height={760} fill={`url(#${uid}lampGlow)`} />
+          <path d="M 640 1318 L 836 1318 L 980 1560 L 520 1560 Z" fill={`url(#${uid}spill)`} />
         </>
       )}
     </g>
@@ -401,22 +411,23 @@ function House({ light }: { light: Light }) {
 /* ------------------------------------------------------------------ */
 
 function Lawn({ light }: { light: Light }) {
+  const uid = React.useContext(WorldId);
   const far = shadeRgb("#8eb565", light, 0.2, 0.4);
   const near = shadeRgb("#55823f", light, 0, 0.42);
   return (
     <g>
       <defs>
-        <linearGradient id="lawn" gradientUnits="userSpaceOnUse" x1={0} y1={GROUND - 20} x2={0} y2={1980}>
+        <linearGradient id={`${uid}lawn`} gradientUnits="userSpaceOnUse" x1={0} y1={GROUND - 20} x2={0} y2={1980}>
           <stop offset={0} stopColor={css(far)} />
           <stop offset={1} stopColor={css(near)} />
         </linearGradient>
-        <radialGradient id="lawnSun" gradientUnits="userSpaceOnUse" cx={light.sunX} cy={GROUND + 10} r={900} gradientTransform={`translate(0 ${GROUND + 10}) scale(1 0.42) translate(0 ${-(GROUND + 10)})`}>
+        <radialGradient id={`${uid}lawnSun`} gradientUnits="userSpaceOnUse" cx={light.sunX} cy={GROUND + 10} r={900} gradientTransform={`translate(0 ${GROUND + 10}) scale(1 0.42) translate(0 ${-(GROUND + 10)})`}>
           <stop offset={0} stopColor={css(light.sun, 0.5 * light.glow)} />
           <stop offset={1} stopColor={css(light.sun, 0)} />
         </radialGradient>
       </defs>
-      <path d="M -400 1296 C 0 1280 300 1286 620 1300 L 1500 1300 L 1500 2400 L -400 2400 Z" fill="url(#lawn)" />
-      <path d="M -400 1296 C 0 1280 300 1286 620 1300 L 1500 1300 L 1500 2400 L -400 2400 Z" fill="url(#lawnSun)" />
+      <path d="M -400 1296 C 0 1280 300 1286 620 1300 L 1500 1300 L 1500 2400 L -400 2400 Z" fill={`url(#${uid}lawn)`} />
+      <path d="M -400 1296 C 0 1280 300 1286 620 1300 L 1500 1300 L 1500 2400 L -400 2400 Z" fill={`url(#${uid}lawnSun)`} />
       {/* Mown in stripes: wider as they come toward us. */}
       {[0, 1, 2, 3, 4, 5, 6].map((k) => {
         const y0 = GROUND + 10 + 26 * (1.62 ** k - 1);
@@ -557,6 +568,7 @@ export const MAMA_AT = { x: 286, y: 1458 };
 
 export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child = 0, mama = 0, mamaPose, childPose, dogs = 0, kite = 0, kiteLift = 0, birds = 0, blur = 0, house = 1, laundry = 0, sprinkler = 0, mamaAt, extra, runDog = 1, mamaShow = 1 }) => {
   const pose = kitePose(frame, kiteLift);
+  const uid = `w${React.useId().replace(/[^a-zA-Z0-9]/g, "")}-`;
   // Low sun: long shadows, away from it.
   const sunUp = light.sunY < HORIZON + 30 ? Math.min(1, light.glow * 1.2) : 0;
   const reach = Math.max(0.5, Math.min(3.0, 560 / (HORIZON - light.sunY + 90)));
@@ -709,6 +721,6 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
       {child > 0.5 && box("the girl", CHILD_AT.x, CHILD_AT.y, 32, 150, 1)}
     </>
   );
-  if (blur <= 0) return <>{svg}{people}</>;
-  return <div style={{ position: "absolute", inset: 0, filter: `blur(${blur}px)`, transform: "scale(1.06)" }}>{svg}</div>;
+  if (blur <= 0) return <WorldId.Provider value={uid}>{svg}{people}</WorldId.Provider>;
+  return <WorldId.Provider value={uid}><div style={{ position: "absolute", inset: 0, filter: `blur(${blur}px)`, transform: "scale(1.06)" }}>{svg}</div></WorldId.Provider>;
 };
