@@ -174,6 +174,16 @@ export const GUIDE: readonly GuideEntry[] = [
     where: "settings_staff",
   },
   {
+    id: "staff-trial",
+    group: "start",
+    title: { en: "A trial", id: "Masa percobaan" },
+    body: {
+      en: "On Add staff, Trial: 2 weeks or 1 month puts a reminder in My tasks on Today when it ends. Keep Sri marks it done; Sri is leaving opens the remove card. Nothing changes for them during the trial.",
+      id: "Di Tambah staf, Masa percobaan 2 minggu atau 1 bulan menaruh pengingat di Tugas saya di Hari ini saat selesai. Pertahankan Sri menandainya selesai; Sri berhenti membuka kartu hapus. Tidak ada yang berubah untuknya selama masa percobaan.",
+    },
+    where: "today",
+  },
+  {
     id: "staff-leaves",
     group: "start",
     title: { en: "When someone leaves", id: "Kalau staf berhenti" },

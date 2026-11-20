@@ -441,6 +441,10 @@ people are **staf** and **admin**.
 | Checking your staff list… | **Memeriksa daftar staf…** | Staff onboarding step 5: Add staff waits for the roster before it can check the name (with **Coba lagi**). |
 | Checking your chores… | **Memeriksa tugas Anda…** | Staff onboarding step 5: under Trial, while the open chores are read (a reminder may already be there). |
 
+| Trial · No trial · 2 weeks · 1 month | **Masa percobaan · Tanpa masa percobaan · 2 minggu · 1 bulan** | Staff onboarding (owner decision 3): the chips on Add staff. A trial only adds the owner's own reminder chore; nothing changes for the staff member. |
+| Decide on Sri's trial · Keep Sri · Sri is leaving | **Putuskan masa percobaan Sri · Pertahankan Sri · Sri berhenti** | Staff onboarding step 6: the owner's reminder chore in My tasks / Tugas saya, titled in the owner's language, and its two buttons. |
+| This is your work for today. Take a Before photo, an After photo, then tap Done. | **Ini tugas Anda hari ini. Foto Sebelum, foto Sesudah, lalu ketuk Selesai.** | Staff onboarding step 8 (owner decision 4): one line on Tugas Hari Ini, the day they joined only, gone once tapped or once a task is finished. |
+
 ## Formatting
 
 - Dates: `toLocaleDateString("id-ID")` (e.g. "6 Nov").

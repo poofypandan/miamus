@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { UiLabelsProvider } from "@/components/ui/ui-labels";
 import { readCachedOwnerLocale, type OwnerLocale } from "@/lib/owner-locale";
 import { useSearchParams } from "next/navigation";
-import { CheckCheck, Hand, Stethoscope, UserRound } from "lucide-react";
+import { Camera, CheckCheck, Hand, Stethoscope, UserRound } from "lucide-react";
+import { dismissFirstDayLine, showsFirstDayLine } from "@/lib/first-day";
 import { DateRibbon } from "@/components/date-ribbon";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { TodayButton } from "@/components/agenda/today-button";
@@ -476,6 +477,12 @@ function TasksView() {
             never a colleague's. */}
         {!loading && <MyProgressLine staffId={staffId} />}
 
+        {/* Their first day (staff onboarding step 8, decision 4): one quiet
+            line, gone once tapped or once a task is finished. */}
+        {!loading && dateStr === formatDateLocal(today) && (
+          <FirstDayLine staffId={staffId} anyDone={chores.some((c) => c.status === "completed")} />
+        )}
+
         {/* Supervising a repair (Phase 174): the strip, for that person only. */}
         {repairsOn && <SupervisingStrip />}
 
@@ -633,5 +640,36 @@ function OnDutyBadge() {
       <UserRound className="size-3.5" />
       {staffName ?? "Admin"}
     </span>
+  );
+}
+
+/** "Ini tugas Anda hari ini…" (step 8): the day they joined only. Staff text, Bahasa Indonesia. */
+function FirstDayLine({ staffId, anyDone }: { staffId: string | null; anyDone: boolean }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    setShown(showsFirstDayLine(staffId));
+  }, [staffId]);
+  useEffect(() => {
+    if (shown && anyDone) {
+      dismissFirstDayLine();
+      setShown(false);
+    }
+  }, [shown, anyDone]);
+  if (!shown) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        dismissFirstDayLine();
+        setShown(false);
+      }}
+      className="flex items-start gap-2 rounded-xl border bg-card px-3 py-2.5 text-left text-sm text-gray-700 active:bg-muted"
+      data-testid="first-day-line"
+    >
+      <Camera className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <span>
+        Ini tugas Anda hari ini. Foto <strong>Sebelum</strong>, foto <strong>Sesudah</strong>, lalu ketuk <strong>Selesai</strong>.
+      </span>
+    </button>
   );
 }
