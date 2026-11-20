@@ -201,7 +201,7 @@ describe("the cards", () => {
 
   it("one call is one Menu section (Fable (a)); a Buy row only for what isn't on the shopping list yet", () => {
     const cards = toSuggestions(household, refs, names, "plan_dish", plan());
-    // Santan is Out, so already on the list: no Buy row, the check line says "To buy".
+    // Santan is Out, so already on the list: no Buy row; the card says "On the shopping list".
     expect(describeSuggestion(cards[0], "en").rows.map((r) => r.label)).toEqual(["What", "When"]);
     expect(cards).toEqual([
       {
@@ -221,10 +221,11 @@ describe("the cards", () => {
     for (const card of cards) expect(isSaveableSuggestion(card)).toBe(true);
   });
 
-  it("without add_missing: the Menu card alone, saying what is missing and that it isn't added", () => {
+  it("without add_missing: the Menu card alone, saying what is missing, what is already on the list, and what isn't added", () => {
     const [dish, ...rest] = toSuggestions(household, refs, names, "plan_dish", plan({ add_missing: false, servings: 6 }));
     expect(rest).toEqual([]);
-    expect(dish).toMatchObject({ kind: "menu_dish", servings: 6, missing: ["Santan"] });
+    // Santan is Out: already on the list, so nothing "not added".
+    expect(dish).toMatchObject({ kind: "menu_dish", servings: 6, missing: [] });
     // The card says "Today" (Fable W5) and always carries the app's own answer (Fable S0).
     expect(describeSuggestion(dish, "en")).toEqual({
       heading: "Menu",
@@ -233,16 +234,25 @@ describe("the cards", () => {
         { label: "When", value: "Today · Dinner" },
         { label: "For", value: "6 servings" },
       ],
+      // Owner, 20 Nov (three sections): "Missing 1: Santan", then quietly what is already on the list.
       checks: [
-        { tone: "listed", text: "To buy: Santan" },
+        { tone: "missing", text: "Missing 1: Santan" },
+        { tone: "muted", text: "On the shopping list: Santan" },
         { tone: "muted", text: "Not on your list: Serai" },
       ],
-      note: "Missing, not added to the shopping list: Santan.",
+      note: undefined,
     });
     const id = describeSuggestion(dish, "id");
     expect(id.rows[1]).toEqual({ label: "Kapan", value: "Hari ini · Makan malam" });
-    expect(id.checks?.[0].text).toBe("Perlu dibeli: Santan");
-    expect(id.note).toBe("Kurang, tidak ditambahkan ke daftar belanja: Santan.");
+    expect(id.checks?.map((c) => c.text)).toEqual(["Kurang 1: Santan", "Sudah di daftar belanja: Santan", "Belum ada di daftar: Serai"]);
+    // Something not on the list yet (Kitchen amounts on, short): a Buy row when added, the note when not.
+    const on = built({ kitchenOn: true, featuresRead: true });
+    const [added] = toSuggestions(on.household, on.refs, on.names, "plan_dish", plan());
+    expect(describeSuggestion(added, "en").rows).toContainEqual({ label: "Buy", value: "Ayam" });
+    expect(describeSuggestion(added, "en").checks?.slice(0, 2).map((c) => c.text)).toEqual(["Missing 2: Ayam, Santan", "On the shopping list: Santan"]);
+    const [kept] = toSuggestions(on.household, on.refs, on.names, "plan_dish", plan({ add_missing: false }));
+    expect(describeSuggestion(kept, "en").note).toBe("Missing, not added to the shopping list: Ayam.");
+    expect(describeSuggestion(kept, "id").note).toBe("Kurang, tidak ditambahkan ke daftar belanja: Ayam.");
     // Tomorrow, and later: the ready line says "now".
     const [ready] = toSuggestions(household, refs, names, "plan_dish", plan({ recipe: "D2", day: "2026-11-13", add_missing: false }));
     expect(describeSuggestion(ready, "en").rows[1].value).toBe("Friday 13 Nov · Dinner");

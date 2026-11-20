@@ -392,9 +392,20 @@ function dishChecks(item: MenuDish, locale: Locale): NonNullable<CardItem["check
     missingLines: [],
   };
   const out: NonNullable<CardItem["checks"]> = [];
-  const line = cookLine(check, locale, { later: item.relative !== "today" });
-  const tone = cookTone(check);
-  if (line && tone) out.push({ tone, text: line });
+  if (check.state === "missing") {
+    // The card answers the question asked (owner, 20 Nov, three sections):
+    // "Missing 1: Santan", then quietly what is already on the list.
+    const names = check.missing.map((m) => m.name).join(", ");
+    out.push({ tone: "missing", text: `${locale === "id" ? "Kurang" : "Missing"} ${check.missing.length}: ${names}` });
+    const listed = check.missing.filter((m) => m.listed).map((m) => m.name);
+    if (listed.length) {
+      out.push({ tone: "muted", text: `${locale === "id" ? "Sudah di daftar belanja" : "On the shopping list"}: ${listed.join(", ")}` });
+    }
+  } else {
+    const line = cookLine(check, locale, { later: item.relative !== "today" });
+    const tone = cookTone(check);
+    if (line && tone) out.push({ tone, text: line });
+  }
   const notListed = uncheckedLine(check, locale);
   if (notListed) out.push({ tone: "muted", text: notListed });
   return out;

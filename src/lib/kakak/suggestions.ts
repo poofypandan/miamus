@@ -355,7 +355,8 @@ export function toSuggestions(
       ? { state: check.state, missing: check.missing.map((m) => ({ name: m.name, listed: m.listed })), unchecked: check.unchecked }
       : null,
     // Not added: all of it; added: what the shopping card can't hold (10 at most).
-    missing: (add ? fresh.slice(10) : missing).map((m) => m.name),
+    // Not added: what isn't on the list yet (the rest says "On the shopping list").
+    missing: (add ? fresh.slice(10) : missing.filter((m) => !m.listed)).map((m) => m.name),
     overflow: add && fresh.length > 10,
     toBuy: fresh.slice(0, 10).map((m) => ({ itemId: m.itemId, name: m.name, status: m.status })),
   };
