@@ -14,7 +14,7 @@ import { ease, easeOut, lerp, ramp, springAt } from "../ui/kit";
 import { project, type Cam } from "../world/camera";
 import { World } from "../world/World";
 import { lightAt } from "../world/tod";
-import { Caption, CLEAR, CREAM, CX, FONT, Grade, INK, KAKAK, KAKAK_LINE, KAKAK_TINT, P, SERIF, SkyTitle, W, H, heartPath } from "../stills/kit";
+import { Caption, CLEAR, CREAM, CX, FONT, Grade, INK, KAKAK, KAKAK_LINE, KAKAK_TINT, P, RiseWord, SERIF, SkyTitle, W, H, heartPath, wordTimes } from "../stills/kit";
 
 /** Fix 11: in this shot her name is already in the sky, so the tab reads just this, at 44 px. */
 const TAB5 = "Miamus's AI helper";
@@ -40,8 +40,9 @@ function Dusk({ f, base }: { f: number; base: number }) {
   const light = lightAt(lerp(18.6, 18.85, ramp(f, 0, 90, (t) => t)));
   const cam: Cam = { x: -20, y: lerp(252, 232, ramp(f, -12, 90, (t) => t)), z: lerp(1.05, 1.08, ramp(f, -12, 90, (t) => t)) };
   const l1 = useLine("L1", base);
-  const a = l1 ? ramp(f, l1.from - 4, l1.from + 10) : 1;
-  const b = l1 ? ramp(f, l1.from + (l1.to - l1.from) * 0.42 - 4, l1.from + (l1.to - l1.from) * 0.42 + 10) : 1;
+  // A4 (owner: smoother, like v17): the words arrive one by one with her voice, each rising and easing in.
+  const rows1 = [["Running", "a", "home"], ["takes", "a", "lot", "of", "asking."]];
+  const at1 = l1 ? wordTimes(rows1, l1.from / 30, (l1.from + (l1.to - l1.from) * 0.8) / 30) : rows1.map((r) => r.map(() => -1));
   return (
     <>
       <World light={light} frame={170 + f} cam={cam} birds={0} />
@@ -54,9 +55,9 @@ function Dusk({ f, base }: { f: number; base: number }) {
         );
       })}
       <SkyTitle y={360}>
-        <span style={{ opacity: a }}>Running a home</span>
-        <br />
-        <span style={{ opacity: b }}>takes a lot of asking.</span>
+        {rows1.map((r, i) => (
+          <div key={i}>{r.map((w, j) => <RiseWord key={j} w={w} t={f / 30} at={at1[i][j]} gap={j < r.length - 1} />)}</div>
+        ))}
       </SkyTitle>
       <Grade />
     </>
@@ -69,11 +70,15 @@ function Dawn({ f, base }: { f: number; base: number }) {
   const cam: Cam = { x: -20, y: lerp(214, 196, ramp(f, -15, 90, (t) => t)), z: 1.06 };
   const win = project(cam, 0.8, 959, 1144);
   const l2 = useLine("L2", base);
-  const title = l2 ? ramp(f, l2.from - 6, l2.from + 10) : 1;
   const onceAt = l2 ? l2.to - 16 : 45;
+  // A4 (owner: smoother, like v17): "What if you only had to say it" arrives word by word on her voice, each word
+  // rising and easing in; "once?" lands on its own beat and its underline draws in one stroke.
+  const rows2 = [["What", "if", "you", "only", "had"], ["to", "say", "it"]];
+  const at2 = wordTimes(rows2, (l2 ? l2.from : 0) / 30, (onceAt - 8) / 30);
   // A4 (24, should): the words are gone before Kakak's disc rises in the crossfade (10.5 s), so her mark never sits on ghost text.
   const clear = 1 - ramp(f, 64, 74);
   const once = ramp(f, onceAt - 4, onceAt + 10, easeOut) * clear;
+  const stroke = ramp(f, onceAt + 4, onceAt + 16, easeOut);
   const merged = ramp(f, 70, 86);
   return (
     <>
@@ -95,13 +100,16 @@ function Dawn({ f, base }: { f: number; base: number }) {
         })}
         {merged > 0 && <circle cx={win.x} cy={win.y} r={30 + 22 * merged} fill="url(#a2fly)" opacity={merged} />}
       </svg>
-      <div style={{ position: "absolute", left: CLEAR.left, width: CLEAR.right - CLEAR.left, top: 330, textAlign: "center", color: CREAM, textShadow: "0 2px 18px rgba(20,10,30,0.35)" }}>
-        <div style={{ font: `600 84px/1.12 ${FONT}`, letterSpacing: -1, opacity: title * clear }}>
-          What if you only had
-          <br />
-          to say it
+      <div style={{ position: "absolute", left: CLEAR.left, width: CLEAR.right - CLEAR.left, top: 330, textAlign: "center", color: CREAM, textShadow: "0 2px 18px rgba(20,10,30,0.35)", transform: `translateY(${(-(1 - clear) * 26).toFixed(2)}px)` }}>
+        <div style={{ font: `600 84px/1.12 ${FONT}`, letterSpacing: -1, opacity: clear }}>
+          {rows2.map((r, i) => (
+            <div key={i}>{r.map((w, j) => <RiseWord key={j} w={w} t={f / 30} at={at2[i][j]} gap={j < r.length - 1} />)}</div>
+          ))}
         </div>
-        <div style={{ display: "inline-block", marginTop: 6, font: `italic 500 150px/1.05 ${SERIF}`, letterSpacing: -2, borderBottom: `8px solid ${KAKAK}`, paddingBottom: 6, opacity: once, transform: `translateY(${(1 - once) * 24}px) scale(${0.92 + 0.08 * once})` }}>once?</div>
+        <div style={{ position: "relative", display: "inline-block", marginTop: 6, font: `italic 500 150px/1.05 ${SERIF}`, letterSpacing: -2, paddingBottom: 14, opacity: once, transform: `translateY(${(1 - once) * 24}px) scale(${0.92 + 0.08 * once})` }}>
+          once?
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 8, borderRadius: 4, background: KAKAK, transform: `scaleX(${stroke.toFixed(3)})`, transformOrigin: "0 50%" }} />
+        </div>
       </div>
       <Grade />
     </>
@@ -132,7 +140,9 @@ function KakakRise({ f, base }: { f: number; base: number }) {
   const ly = lerp(232, phone.y - 125 * 0.3, sink);
   const sc = lerp(1, 0.18, sink);
   const path = `M ${phone.x} ${phone.y} C ${phone.x - 70} ${phone.y - 260}, ${end.x - 120} ${end.y + 300}, ${end.x} ${end.y + 30}`;
-  const cap = l3 ? ramp(f, l3.from - 3, l3.from + 6) * (1 - ramp(f, l3.to + 2, l3.to + 10)) : 1;
+  // A4 (v17's caption plate): a gentle entrance, rising 16 px, and an eased exit.
+  const capIn = l3 ? ramp(f, l3.from - 5, l3.from + 7) : 1;
+  const cap = capIn * (l3 ? 1 - ramp(f, l3.to + 2, l3.to + 10) : 1);
   return (
     <>
       <World light={light} frame={340 + f} cam={cam} mama={1} mamaAt={{ ...at, s: 1 }} mamaPose={{ shade: 1, phone: 1 }} birds={1} />
@@ -162,8 +172,8 @@ function KakakRise({ f, base }: { f: number; base: number }) {
         </div>
       )}
       {cap > 0.01 && (
-        <div style={{ position: "absolute", inset: 0, opacity: cap }}>
-          <Caption text={<>Hi, I'm Kakak.<br />Just tell me what you need.</>} tab={TAB5} tabSize={44} pulse={v.pulse ?? 0} />
+        <div style={{ position: "absolute", inset: 0, opacity: cap, transform: `translateY(${((1 - capIn) * 16).toFixed(2)}px)` }}>
+          <Caption text={"Hi, I'm Kakak.\nJust tell me what you need."} tab={TAB5} tabSize={44} pulse={v.pulse ?? 0} glow={l3 && f <= l3.to ? v.level : 0} lit={l3 ? { t: f / 30, from: l3.from / 30, to: l3.to / 30 } : undefined} />
         </div>
       )}
       <Grade />

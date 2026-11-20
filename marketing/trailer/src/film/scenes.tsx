@@ -208,7 +208,7 @@ export function Hook({ locale, t0, fast }: SceneProps) {
       {!fast && mama && (
         <SpeechBubble {...MAMA_BUBBLE} to={head(cam, MAMA_HEAD)} at={mama.from} out={T.fall - 2}>
           {splitAtComma(copy.lines.M1).map((l, i) => (
-            <div key={i} style={{ fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, fontSize: 60, lineHeight: 1.12, letterSpacing: -0.4 }}>{l}</div>
+            <div key={i} style={{ fontFamily: FONT, fontWeight: 600, fontSize: 60, lineHeight: 1.12, letterSpacing: -0.4 }}>{l}</div>
           ))}
         </SpeechBubble>
       )}

@@ -204,7 +204,6 @@ export function MamaCaptions({ cues, kakak = [] }: { cues: CaptionCue[]; kakak?:
           fontFamily: FONT,
           fontSize: 41,
           fontWeight: 600,
-          fontStyle: "italic",
           lineHeight: 1.2,
           letterSpacing: -0.3,
           color: "#2a2420",

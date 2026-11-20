@@ -26,7 +26,7 @@ import { Dog } from "../world/Figures";
 import { lightAt, mix, css, shadeRgb, type Light } from "../world/tod";
 import { CROPS, type Crop, type CropId, CropImg } from "../stills/app";
 import { GroundShadow, SmallChild, Staff } from "../stills/staff";
-import { Bubble, Caption, Grade, INK, KAKAK, MAMA, P, PAPER, SERIF, Shafts, Tag, W, H, camFor } from "../stills/kit";
+import { Bubble, Caption, Grade, INK, KAKAK, MAMA, MAMA_TRACK, P, PAPER, RiseWord, Shafts, Tag, W, H, camFor, mamaFont } from "../stills/kit";
 import { COPY } from "../film/copy";
 
 const FPS = 30;
@@ -91,17 +91,23 @@ function AppCard({ parts, x, y, w, to, open, press, t, pad = 14, gap = 30, fill 
 function life(t: number, fps: number, at: number, close = Infinity) {
   if (t < at - 0.04) return 0;
   const o = springAt(t * FPS, fps, at * FPS, { damping: 15, stiffness: 190, mass: 0.7 });
-  return Math.max(0, Math.min(1, o)) * (1 - rs(t, close, close + 0.16, lin));
+  return Math.max(0, Math.min(1, o)) * (1 - rs(t, close, close + 0.16, ease));
 }
 
-/** A plate on its voice cue: in from just before the word, out after it, unless held (`until`). */
-function Plate({ t, from, to, until, text, pulse }: { t: number; from: number; to: number; until?: number; text: React.ReactNode; pulse: number }) {
+/**
+ * A plate on its voice cue: in from just before the word, out after it, unless held (`until`).
+ * A4 (owner: smoother, like v17): it rises 16 px as it eases in, its words brighten as she says them, her mark
+ * glows with her voice, and it eases out (no straight-line fades). `text`: "\n" breaks a line.
+ */
+function Plate({ t, from, to, until, text, pulse, level = 0 }: { t: number; from: number; to: number; until?: number; text: string; pulse: number; level?: number }) {
   const end = until ?? to + 0.25;
-  const o = rs(t, from - 0.15, from + 0.08) * (1 - rs(t, end, end + 0.2, lin));
+  const inT = rs(t, from - 0.17, from + 0.2);
+  const o = inT * (1 - rs(t, end, end + 0.2, ease));
   if (o < 0.01) return null;
+  const on = t <= to;
   return (
-    <div style={{ position: "absolute", inset: 0, opacity: o }}>
-      <Caption text={text} pulse={t <= to ? pulse : 0} />
+    <div style={{ position: "absolute", inset: 0, opacity: o, transform: `translateY(${((1 - inT) * 16).toFixed(2)}px)` }}>
+      <Caption text={text} pulse={on ? pulse : 0} glow={on ? level : 0} lit={{ t, from, to }} />
     </div>
   );
 }
@@ -126,7 +132,7 @@ function useVoice() {
     const c = v.cue(id);
     return c ? { from: c.from / FPS, to: c.to / FPS } : { from: 0, to: 0 };
   };
-  return { cue, pulse: v.pulse ?? 0 };
+  return { cue, pulse: v.pulse ?? 0, level: v.level ?? 0 };
 }
 
 /* ------------------------------------------------------------------ */
@@ -139,6 +145,8 @@ const DOG = (light: Light, frame: number) => (
     <Dog kind="sit" light={light} frame={frame} coat="#e9c99c" />
   </g>
 );
+/** Mama's sentence size: 72 px, so the upright type keeps "every Monday at 9." on one line (A4 notes). */
+const MS = 72;
 const SAY = [["Kak,", "have", "Sari"], ["mop", "the", "terrace"], ["every", "Monday", "at", "9."]];
 /** Where her phone is, from the reading pose (read 1) to the speaking pose (read 0). */
 const phoneOf = (cam: Cam, read: number, at = MAMA) => {
@@ -149,7 +157,7 @@ const phoneOf = (cam: Cam, read: number, at = MAMA) => {
 
 function MamaTells({ t }: { t: number }) {
   const { fps } = useVideoConfig();
-  const { cue, pulse } = useVoice();
+  const { cue, pulse, level } = useVoice();
   const frame = Math.round(t * FPS);
   const light = lightAt(lerp(6.8, 6.94, rs(t, 15, 24, lin)));
   // A4 (24, should): for the card (from 20.3) the camera widens a little, so Mama sits lower and the card's top is at 13 %.
@@ -163,7 +171,7 @@ function MamaTells({ t }: { t: number }) {
   const lines = SAY.map((line) =>
     line.map((w) => {
       const on = t1 + (words[wi++]?.[1] ?? 0);
-      return { w, o: rs(t, on - 0.06, on + 0.1) };
+      return { w, on };
     })
   );
   const say = life(t, fps, 16.58, 20.62);
@@ -187,16 +195,12 @@ function MamaTells({ t }: { t: number }) {
       )}
       {say > 0.01 && (
         <div data-moving={say < 0.995 ? "" : undefined} style={{ position: "absolute", inset: 0, opacity: Math.min(1, say * 1.6), transform: `scale(${0.88 + 0.12 * say})`, transformOrigin: `${head.x}px ${head.y}px` }}>
-          <Bubble x={120} y={250} w={798} h={Math.round(3 * 78 * 1.16 + 100)} to={{ x: head.x + 10, y: head.y - 14 }} label="Mama's words">
-            <div style={{ padding: "50px 56px", font: `italic 500 78px/1.16 ${SERIF}`, color: INK, letterSpacing: -0.6 }}>
+          <Bubble x={120} y={250} w={798} h={Math.round(3 * MS * 1.16 + 100)} to={{ x: head.x + 10, y: head.y - 14 }} label="Mama's words">
+            <div style={{ padding: "50px 56px", font: mamaFont(MS), color: INK, letterSpacing: MAMA_TRACK }}>
+              {/* A4 (owner: smoother, like v17): each word rises a little and eases in on its onset. */}
               {lines.map((line, i) => (
                 <div key={i}>
-                  {line.map((w, j) => (
-                    <React.Fragment key={j}>
-                      {j > 0 && " "}
-                      <span style={{ opacity: w.o }}>{w.w}</span>
-                    </React.Fragment>
-                  ))}
+                  {line.map((w, j) => <RiseWord key={j} w={w.w} t={t} at={w.on} rise={18} dur={0.3} gap={j < line.length - 1} />)}
                 </div>
               ))}
             </div>
@@ -220,7 +224,7 @@ function MamaTells({ t }: { t: number }) {
       {/* "Saved" holds, then closes into the firefly's light at her phone (23.82–24.0), the thing that travels. */}
       <AppCard parts={[{ id: "savedLine", scale: 2.95 }]} x={170} y={560} pad={14} fill="#ffffff" inner={0} to={phoneOf(cam, 1)} open={life(t, fps, 22.9, 23.82)} t={t} />
       <SeedLight t={t} at={phoneOf(cam, 1)} from={23.8} />
-      <Plate t={t} from={l4.from} to={l4.to} text="I'll take it from there." pulse={pulse} />
+      <Plate t={t} from={l4.from} to={l4.to} text="I'll take it from there." pulse={pulse} level={level} />
       <Grade />
     </>
   );
@@ -324,7 +328,7 @@ function wiped(b: Beat, t: number) {
 
 export function HandOver({ t, beat: b = BEAT60 }: { t: number; beat?: Beat }) {
   const { fps } = useVideoConfig();
-  const { cue, pulse } = useVoice();
+  const { cue, pulse, level } = useVoice();
   const frame = Math.round(t * FPS);
   const light = lightAt(lerp(b.tod[0], b.tod[1], rs(t, b.t0, b.end, lin)));
   const cam = camAt(b, t);
@@ -402,8 +406,8 @@ export function HandOver({ t, beat: b = BEAT60 }: { t: number; beat?: Beat }) {
         </svg>
       )}
       <AppCard parts={[{ id: "sariSelesai", scale: 2.95 }]} x={278} y={600} pad={14} fill="#ffffff" inner={0} to={{ x: sPhone.x, y: sPhone.y - 14 }} open={life(t, fps, b.toast)} t={t} />
-      {b.plates && <Plate t={t} from={l5.from} to={l5.to} text={<>And everyone at home<br />knows what to do.</>} pulse={pulse} />}
-      {b.plates && <Plate t={t} from={l7.from} to={l7.to} until={31.98} text="They run the home." pulse={pulse} />}
+      {b.plates && <Plate t={t} from={l5.from} to={l5.to} text={"And everyone at home\nknows what to do."} pulse={pulse} level={level} />}
+      {b.plates && <Plate t={t} from={l7.from} to={l7.to} until={31.98} text="They run the home." pulse={pulse} level={level} />}
       <Grade />
     </>
   );
@@ -434,7 +438,7 @@ function blendLight(a: Light, b: Light, k: number): Light {
 }
 
 function Household({ t }: { t: number }) {
-  const { cue, pulse } = useVoice();
+  const { cue, pulse, level } = useVoice();
   const frame = Math.round(t * FPS);
   const k = rs(t, 32, 35, ease);
   // A4 fix C: a hard cut at 32.0, then the light goes from the morning to gold as a direct blend of the two, never
@@ -487,8 +491,8 @@ function Household({ t }: { t: number }) {
       {people.map((p) => (
         <PersonBox key={`b-${p.name}`} label={p.name} box={staffBox(cam, p, p.s)} />
       ))}
-      <Plate t={t} from={l7.from} to={l7.to} text="I just keep track." pulse={pulse} />
-      <Plate t={t} from={l8.from} to={l8.to} until={99} text={<>And you? You'll only<br />hear from me…</>} pulse={pulse} />
+      <Plate t={t} from={l7.from} to={l7.to} text="I just keep track." pulse={pulse} level={level} />
+      <Plate t={t} from={l8.from} to={l8.to} until={99} text={"And you? You'll only\nhear from me…"} pulse={pulse} level={level} />
       <Grade />
     </>
   );
@@ -500,7 +504,7 @@ function Household({ t }: { t: number }) {
 
 function MamaGolden({ t }: { t: number }) {
   const { fps } = useVideoConfig();
-  const { cue, pulse } = useVoice();
+  const { cue, pulse, level } = useVoice();
   const frame = Math.round(t * FPS);
   const light = lightAt(lerp(17.28, 17.42, rs(t, 35, 39, lin)));
   const cam = camMix(MEDIUM6, camFor(1.82, MAMA, { x: 300, y: 1270 }), rs(t, 35, 39, lin));
@@ -512,8 +516,8 @@ function MamaGolden({ t }: { t: number }) {
     <>
       <World light={light} frame={1100 + frame - 1050} cam={cam} mama={1} mamaAt={{ ...MAMA, s: 1 }} mamaPose={{ shade: 0, phone: lerp(1, 0.001, down), read: 1 - down }} birds={1} extra={DOG(light, frame)} />
       <AppCard parts={[{ id: "statusIn", scale: 3.4 }]} x={70} y={330} pad={14} fill="#f1fcf8" inner={40} to={phoneOf(cam, 1)} open={life(t, fps, 35.04, 36.86)} t={t} />
-      <Plate t={t} from={l8.from} to={l8.to} until={36.95} text={<>And you? You'll only<br />hear from me…</>} pulse={pulse} />
-      <Plate t={t} from={l9.from} to={l9.to} until={38.84} text="…when something isn't done." pulse={pulse} />
+      <Plate t={t} from={l8.from} to={l8.to} until={36.95} text={"And you? You'll only\nhear from me…"} pulse={pulse} level={level} />
+      <Plate t={t} from={l9.from} to={l9.to} until={38.84} text="…when something isn't done." pulse={pulse} level={level} />
       <Grade />
     </>
   );
@@ -637,14 +641,14 @@ function ShortTell({ t }: { t: number }) {
   const ph = P(WIDE15, MAMA.x - 23, MAMA.y - 259);
   const say = life(t, fps, 2.9, 5.5);
   const dim = 1 - 0.55 * rs(t, 4.8, 5.0);
-  const h = Math.round(3 * 78 * 1.16 + 100);
+  const h = Math.round(3 * MS * 1.16 + 100);
   return (
     <>
       <World light={light} frame={100 + frame - 90} cam={WIDE15} child={1} mama={1} mamaPose={{ shade: 1, phone: 1 }} dogs={1} kite={1} birds={1} />
       {say > 0.01 && (
         <div data-moving={say < 0.995 ? "" : undefined} style={{ position: "absolute", inset: 0, opacity: Math.min(1, say * 1.6) * dim, transform: `scale(${0.88 + 0.12 * say})`, transformOrigin: `${head.x}px ${head.y}px` }}>
           <Bubble x={120} y={232} w={798} h={h} to={{ x: head.x + 4, y: head.y + 4 }} label="Mama's words">
-            <div style={{ padding: "50px 56px", font: `italic 500 78px/1.16 ${SERIF}`, color: INK, letterSpacing: -0.6 }}>
+            <div style={{ padding: "50px 56px", font: mamaFont(MS), color: INK, letterSpacing: MAMA_TRACK }}>
               {SAY15.map((l) => <div key={l}>{l}</div>)}
             </div>
           </Bubble>
@@ -658,22 +662,27 @@ function ShortTell({ t }: { t: number }) {
 
 /** Kakak's plate in the 15: the tab at 44 px, held through both her lines (3.15–7.63), the words following her voice. */
 function ShortPlate({ t }: { t: number }) {
-  const { cue, pulse } = useVoice();
+  const { cue, pulse, level } = useVoice();
   const s1 = cue("S1");
   const s2 = cue("S2");
-  const o = rs(t, (s1.from || 3.15) - 0.15, (s1.from || 3.15) + 0.05) * (1 - rs(t, (s2.to || 7.63) + 0.1, (s2.to || 7.63) + 0.3, lin));
+  const a = { from: s1.from || 3.15, to: s1.to || 5.5 };
+  const b = { from: s2.from || 5.72, to: s2.to || 7.63 };
+  // A4 (owner: smoother, like v17): the plate rises as it eases in, the words brighten with her voice, eased fades.
+  const inT = rs(t, a.from - 0.17, a.from + 0.05);
+  const o = inT * (1 - rs(t, b.to + 0.1, b.to + 0.3, ease));
   if (o < 0.01) return null;
-  const k = rs(t, (s2.from || 5.72) - 0.08, (s2.from || 5.72) + 0.08, lin);
+  const k = rs(t, b.from - 0.08, b.from + 0.08, ease);
+  const speaking = (t >= a.from && t <= a.to) || (t >= b.from && t <= b.to);
   return (
-    <div style={{ position: "absolute", inset: 0, opacity: o }}>
+    <div style={{ position: "absolute", inset: 0, opacity: o, transform: `translateY(${((1 - inT) * 16).toFixed(2)}px)` }}>
       {k < 1 && (
         <div style={{ position: "absolute", inset: 0, opacity: 1 - k }}>
-          <Caption text="Hi, I'm Kakak. Tell me once," tab={TAB15} tabSize={44} pulse={pulse} />
+          <Caption text="Hi, I'm Kakak. Tell me once," tab={TAB15} tabSize={44} pulse={pulse} glow={speaking ? level : 0} lit={{ t, ...a }} />
         </div>
       )}
       {k > 0 && (
         <div style={{ position: "absolute", inset: 0, opacity: k }}>
-          <Caption text={<>and everyone at home<br />knows what to do.</>} tab={TAB15} tabSize={44} pulse={pulse} />
+          <Caption text={"and everyone at home\nknows what to do."} tab={TAB15} tabSize={44} pulse={pulse} glow={speaking ? level : 0} lit={{ t, ...b }} />
         </div>
       )}
     </div>
