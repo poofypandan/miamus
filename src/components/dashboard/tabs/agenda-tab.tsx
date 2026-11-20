@@ -138,6 +138,7 @@ export function AgendaTab() {
     pendingIds,
     leaveRequests,
     routineProposals,
+    refresh: refreshHousehold,
   } = useHousehold();
   const householdName = useHouseholdName();
   // "Who lives here?" (Phase 162): with pets off, Today says nothing about
@@ -196,6 +197,8 @@ export function AgendaTab() {
     try {
       await dataProvider.archiveStaffProfile(person.id, choice.giveTo);
       await reloadStaff();
+      // Their chores and routines changed hands: shown at once (as Kakak's card, PR #173).
+      void refreshHousehold({ silent: true });
       // The decision is made: the reminder is done.
       await finish(leaving.occurrence).catch(() => null);
       const to = choice.giveTo ? (allProfiles ?? []).find((p) => p.id === choice.giveTo)?.name : null;
