@@ -47,6 +47,8 @@ export interface WorldProps {
   extra?: React.ReactNode;
   /** A2: the running dog's presence, 0–1 (off in the close two-shot, where only half of it was in frame). */
   runDog?: number;
+  /** Motion kit: how much of Mama shows, 0–1, when she is already standing on her mark (a soft arrival, no walk). */
+  mamaShow?: number;
 }
 
 const R = (seed: string) => random(`miamus-${seed}`);
@@ -553,7 +555,7 @@ function Sprinkler({ light, frame, show }: { light: Light; frame: number; show: 
 export const CHILD_AT = { x: 372, y: 1452 };
 export const MAMA_AT = { x: 286, y: 1458 };
 
-export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child = 0, mama = 0, mamaPose, childPose, dogs = 0, kite = 0, kiteLift = 0, birds = 0, blur = 0, house = 1, laundry = 0, sprinkler = 0, mamaAt, extra, runDog = 1 }) => {
+export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child = 0, mama = 0, mamaPose, childPose, dogs = 0, kite = 0, kiteLift = 0, birds = 0, blur = 0, house = 1, laundry = 0, sprinkler = 0, mamaAt, extra, runDog = 1, mamaShow = 1 }) => {
   const pose = kitePose(frame, kiteLift);
   // Low sun: long shadows, away from it.
   const sunUp = light.sunY < HORIZON + 30 ? Math.min(1, light.glow * 1.2) : 0;
@@ -609,7 +611,7 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
               </g>
             )}
             {mama > 0.02 && (
-              <g transform={`translate(${mamaX} ${mamaY}) scale(${mamaS}) matrix(1 0 ${-shadow.kx} ${-shadow.ky} 0 0)`} opacity={mama}>
+              <g transform={`translate(${mamaX} ${mamaY}) scale(${mamaS}) matrix(1 0 ${-shadow.kx} ${-shadow.ky} 0 0)`} opacity={mama * mamaShow}>
                 <Mama flat frame={frame} arrive={mama} pose={mamaPose} />
               </g>
             )}
@@ -652,7 +654,7 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
           </g>
         )}
         {mama > 0.02 && (
-          <g transform={`translate(${mamaX} ${mamaY}) scale(${mamaS})`} opacity={Math.min(1, mama * 14)}>
+          <g transform={`translate(${mamaX} ${mamaY}) scale(${mamaS})`} opacity={Math.min(1, mama * 14) * mamaShow}>
             {rim.o > 0.05 && (
               <g transform={`translate(${rim.dx} -1)`} fill={rim.fill} stroke={rim.fill}>
                 <Mama flat frame={frame} arrive={mama} pose={mamaPose} />

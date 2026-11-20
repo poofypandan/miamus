@@ -69,6 +69,23 @@ repo root:
 After a build like this, run a normal build again before using the app for
 anything else.
 
+## Motion: the kit and the check
+
+- **The kit** (`src/motion/kit.ts`, trailer-reset 28): the film's moves by
+  name (`arrive`, `leave`, `handOver`, `word`, `plate`, `footnote`, `draw`,
+  `travel`, `drift`, three springs, and `path` / `cameraPath` for one camera
+  and one light on one clock). Soft by default; there is no easing argument
+  and no straight line. A shot hangs every time from a voice cue or from the
+  beat before it (`after`, `each`). `src/motion/turn.tsx` is 5.0–15.0 s of the
+  60 built on it (composition `m1-60-en`); `src/motion/onsets.ts` holds
+  measured word times.
+- **The check** (`scripts/motion-check.mjs`): after a render, lists (a)
+  one-frame jumps of the whole picture that are not intended cuts, (b) moves
+  that start or stop inside one frame, (c) anything on screen for under 8
+  frames. `npm run motion-check -- <film.mp4> --from=5 --to=15 --cuts=15`, or
+  `--motion-check` on `npm run render` and `npm run a3`. It measures; it does
+  not judge taste. Flying birds and fast small lights show up in (b) and (c).
+
 ## Changing things
 
 - **A word on screen or a caption:** `src/film/copy.ts`. If Kakak says it,

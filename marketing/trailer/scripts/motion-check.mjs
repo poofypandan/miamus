@@ -10,7 +10,8 @@
 //   (b) EDGES   moves that start or stop inside one frame: a part of the picture goes from rest to (nearly) its top
 //               speed in one frame, or from top speed to rest ("start", "stop"), or does its whole move in three
 //               frames or fewer ("pop");
-//   (c) FLASHES anything that is on screen for under 8 frames: it appears from a still picture and is gone again.
+//   (c) FLASHES anything that is on screen for under 8 frames: it appears from a still picture and is gone again,
+//               in place. Something that travels through (a firefly, a mark flying to a phone) is not a flash.
 //
 // How: every frame is shrunk to 135 x 240 grey (which also averages the film grain away) and cut into a 15 x 30
 // grid. For each cell the script follows how much it changes per frame, above that cell's own resting level (grain,
@@ -50,6 +51,8 @@ export const T = {
   FLASH_MIN: 6,
   /** (c) frames a thing must stay (at half its strength or more) to be read. */
   FLASH_FRAMES: 8,
+  /** (c) a neighbouring cell this busy (as a share of the flash's own speed) just before or after means it travels. */
+  TRAVEL: 0.3,
 };
 
 function decode(file) {
@@ -145,7 +148,8 @@ export function motionCheck(file, { from = 0, to = Infinity, cuts = [] } = {}) {
   // (b) Edges: per cell, each run of activity is a move; then cells that touch in the same frame are one event.
   const marks = new Map(); // "frame kind" -> [{ c, v }]
   const put = (f, kind, c, v) => {
-    if (f < f0 || f >= f1 || skip(f)) return;
+    // The first frames of a file have no "before" to rest in (a clip cut out of a film starts mid-move).
+    if (f < f0 || f >= f1 || f < 3 || skip(f)) return;
     const k = `${f} ${kind}`;
     if (!marks.has(k)) marks.set(k, []);
     marks.get(k).push({ c, v });
@@ -204,7 +208,21 @@ export function motionCheck(file, { from = 0, to = Infinity, cuts = [] } = {}) {
       if (back < 0) continue;
       let held = 0;
       for (let k = 0; k <= back; k++) if (dev[k] >= 0.5 * dev[pk]) held++;
-      if (held < T.FLASH_FRAMES) found.push({ c, s, r: s + back, held, v: dev[pk] });
+      if (held >= T.FLASH_FRAMES) continue;
+      // A thing that travels came from the cell next door, or goes on into it: that cell is busy just before this
+      // one lights up, or just after it clears. A flash has quiet neighbours on both sides of its moment.
+      const r = s + back;
+      let own = 0;
+      for (let k = s; k <= r; k++) own = Math.max(own, a[k]);
+      let travels = false;
+      const cx = c % COLS, cy = Math.floor(c / COLS);
+      for (let dy = -1; dy <= 1 && !travels; dy++) for (let dx = -1; dx <= 1 && !travels; dx++) {
+        const nx = cx + dx, ny = cy + dy;
+        if ((!dx && !dy) || nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+        const nb = e[ny * COLS + nx];
+        for (let k = 1; k <= 5; k++) if ((nb[s - k] ?? 0) >= T.TRAVEL * own || (nb[r + k] ?? 0) >= T.TRAVEL * own) travels = true;
+      }
+      if (!travels) found.push({ c, s, r, held, v: dev[pk] });
     }
   }
   // Cells that touch and overlap in time are one thing. A thing that travels (a firefly crossing cells) lives longer

@@ -18,13 +18,15 @@ import { loadFonts } from "../theme";
 import { Captions } from "../ui/kakak";
 import { Grain, ramp } from "../ui/kit";
 import { Act2 } from "./act2";
+import { Turn } from "../motion/turn";
 import { Act3, Act3Short } from "../a3/act3";
 import { FrameCheck } from "../stills/readability";
 
 loadFonts();
 
 /** A3: `act3` animates Act 3 of the 60 (src/a3/act3.tsx); `check` runs the frame check on every frame ("strict" fails the render). */
-export type A2Props = { cut: "60" | "15"; audio: string | null; act3?: boolean; check?: "log" | "strict" };
+/** `motion`: 5–15 s of the 60 on the motion kit (src/motion/turn.tsx; the blind motion test, trailer-reset 28). */
+export type A2Props = { cut: "60" | "15"; audio: string | null; act3?: boolean; check?: "log" | "strict"; motion?: boolean };
 type VoCut = { cues: { id: string; from: number; to: number }[]; env: number[]; pulse?: number[] };
 
 function Scene({ span, children }: { span: Span; children: React.ReactNode }) {
@@ -61,7 +63,7 @@ function Faded({ frames, children }: { frames: number; children: React.ReactNode
   return <AbsoluteFill style={{ opacity: frames > 0 ? ramp(f, 0, frames) : 1 }}>{children}</AbsoluteFill>;
 }
 
-export const A2Film: React.FC<A2Props> = ({ cut, audio, act3 = false, check }) => {
+export const A2Film: React.FC<A2Props> = ({ cut, audio, act3 = false, check, motion = false }) => {
   const frame = useCurrentFrame();
   const copy = COPY.en;
   const vo = (voData as Record<string, VoCut>)[`${cut}-en`];
@@ -78,7 +80,7 @@ export const A2Film: React.FC<A2Props> = ({ cut, audio, act3 = false, check }) =
             <Scene span={S60.hook}><Hook {...p} t0={0} /></Scene>
             <Sequence from={S60.turn[0] - lead} durationInFrames={S60.kakak[1] - S60.turn[0] + lead} layout="none">
               <Faded frames={lead}>
-                <Act2 base={S60.turn[0]} lead={lead} />
+                {motion ? <Turn base={S60.turn[0]} lead={lead} /> : <Act2 base={S60.turn[0]} lead={lead} />}
               </Faded>
             </Sequence>
             {act3 ? (
