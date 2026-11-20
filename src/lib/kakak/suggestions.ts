@@ -15,8 +15,10 @@ import type { InventoryUnit, RoutineKind, RoutineProof } from "@/types/database"
 import type { RefMap, RefNames } from "./context";
 import type { KakakHousehold } from "./household";
 import {
+  DISH_MEALS,
   FOOD_PLACES,
   INGREDIENT_EXPIRY,
+  NONE,
   INGREDIENT_SHELVES,
   PET_ROUTINE_TOOL_KINDS,
   TOOL_WEEKDAYS,
@@ -218,7 +220,28 @@ export interface StaffAreasSuggestion {
   owedAreas: StaffArea[];
 }
 
+/**
+ * A dish on the menu (Can we cook it?, 20 Nov): saved as the owner's dish
+ * form saves it (menu-store addDishes). What the recipe is missing comes as
+ * a second card, an ordinary shopping one, worked out by the server from the
+ * app's own check (context.ts refs.recipes), never by Kakak.
+ */
+export interface MenuDishSuggestion {
+  kind: "menu_dish";
+  /** The saved recipe, or null for a typed dish. */
+  recipeId: string | null;
+  /** The dish's title: the recipe's name, or what the owner said. */
+  title: string;
+  day: string;
+  meal: (typeof DISH_MEALS)[number];
+  /** Null: the recipe's own servings (or none, for a typed dish). */
+  servings: number | null;
+  /** What the recipe is missing, for the card's quiet line when it isn't added. */
+  missing: string[];
+}
+
 export type KakakSuggestion =
+  | MenuDishSuggestion
   | ChoreSuggestion
   | ShoppingSuggestion
   | PetRoutineSuggestion
@@ -230,9 +253,11 @@ export type KakakSuggestion =
 /**
  * The oldest page (lib/kakak/client.ts KAKAK_CLIENT_VERSION) that can show
  * and save this suggestion: 2 (2026-11-14) for a new ingredient or an
- * amount, 3 for what a staff member sees (Phase 178 follow-up), else 1.
+ * amount, 3 for what a staff member sees (Phase 178 follow-up), 4 for a
+ * dish on the menu (Can we cook it?), else 1.
  */
 export function clientVersionFor(item: KakakSuggestion): number {
+  if (item.kind === "menu_dish") return 4;
   if (item.kind === "staff_areas") return 3;
   if (item.kind === "new_ingredient" || (item.kind === "ingredient" && Boolean(item.amount || item.amountSkipped))) return 2;
   return 1;
@@ -270,6 +295,50 @@ export function toIsoDays(value: unknown): number[] | null {
 
 function str(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+/**
+ * One checked tool call → its cards: one, except plan_dish, which is the
+ * dish and, when the owner wants what is missing added, a shopping card
+ * with the recipe's missing items (Can we cook it?, 20 Nov). Empty for
+ * ask_question and whatever toSuggestion drops.
+ */
+export function toSuggestions(
+  household: KakakHousehold,
+  refs: RefMap,
+  names: RefNames,
+  name: string,
+  input: Record<string, unknown>,
+): KakakSuggestion[] {
+  if (name !== "plan_dish") {
+    const one = toSuggestion(household, refs, names, name, input);
+    return one ? [one] : [];
+  }
+  const ref = str(input.recipe);
+  const recipe = ref && ref !== NONE ? refs.recipes?.[ref] : undefined;
+  if (ref && ref !== NONE && !recipe) return [];
+  const typed = str(input.dish_name);
+  const title = recipe ? recipe.name : typed && typed !== NONE ? typed.slice(0, 80) : null;
+  if (!title || !isDay(input.day) || !(DISH_MEALS as readonly unknown[]).includes(input.meal)) return [];
+  const servings = Number.isInteger(input.servings) && (input.servings as number) >= 1 && (input.servings as number) <= 50 ? (input.servings as number) : null;
+  const missing = recipe?.missing ?? [];
+  const add = input.add_missing === true && missing.length > 0;
+  const dish: MenuDishSuggestion = {
+    kind: "menu_dish",
+    recipeId: recipe?.id ?? null,
+    title,
+    day: input.day as string,
+    meal: input.meal as MenuDishSuggestion["meal"],
+    servings,
+    // Not added: all of it; added: what the shopping card can't hold (10 at most).
+    missing: (add ? missing.slice(10) : missing).map((m) => m.name),
+  };
+  if (!add) return [dish];
+  const shopping: ShoppingSuggestion = {
+    kind: "shopping",
+    entries: missing.slice(0, 10).map((m) => ({ type: "item", itemId: m.itemId, name: m.name, status: m.status })),
+  };
+  return [dish, shopping];
 }
 
 /**
@@ -564,6 +633,17 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
   if (!value || typeof value !== "object") return false;
   const s = value as Record<string, unknown>;
   switch (s.kind) {
+    case "menu_dish":
+      return (
+        okId(s.recipeId, true) &&
+        okText(s.title, 80, false) &&
+        isDay(s.day) &&
+        (DISH_MEALS as readonly unknown[]).includes(s.meal) &&
+        (s.servings === null || (Number.isInteger(s.servings) && (s.servings as number) >= 1 && (s.servings as number) <= 50)) &&
+        Array.isArray(s.missing) &&
+        s.missing.length <= 200 &&
+        s.missing.every((m) => typeof m === "string")
+      );
     case "chore":
       return (
         okText(s.title, 80, false) &&

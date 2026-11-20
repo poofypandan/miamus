@@ -13,6 +13,8 @@ import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { reloadStaffProfiles } from "@/hooks/use-staff-profiles";
 import { dataProvider } from "@/lib/data";
 import { stockStatus } from "@/lib/inventory";
+import { MENU_LIMITS, nextPosition } from "@/lib/menu";
+import { addDishes, deleteDishes, getMenuSnapshot } from "@/lib/menu-store";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { hiddenAreasOf, withAreas, type StaffArea } from "@/lib/staff-areas";
 import { petRoutineRows } from "./pet-routine-rows";
@@ -217,6 +219,27 @@ export function useKakakSave() {
                   throw new Error("The ingredient's date was not kept (it is marked Out)");
                 }
               }
+              break;
+            }
+            case "menu_dish": {
+              // Can we cook it? (20 Nov): as the owner's dish form adds one,
+              // after what the phone holds of that day and meal.
+              const menu = getMenuSnapshot();
+              const held = menu.household === household.activeHouseholdId ? menu.dishes : [];
+              const taken = held.filter((d) => d.day === item.day && d.meal === item.meal).length;
+              if (taken >= MENU_LIMITS.dishesPerMeal) throw new Error("That meal already has as many dishes as it can hold");
+              const [dish] = await addDishes([
+                {
+                  day: item.day,
+                  meal: item.meal,
+                  recipe_id: item.recipeId,
+                  title: item.title,
+                  servings: item.servings,
+                  notes: null,
+                  position: nextPosition(held, item.day, item.meal),
+                },
+              ]);
+              undos.push(() => deleteDishes([dish.id]));
               break;
             }
             case "staff_areas": {

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleAlert,
+  CookingPot,
   Eye,
   Gauge,
   Hourglass,
@@ -464,7 +465,9 @@ function Conversation({
         </Button>
       )}
 
-      {/* Kakak's card, short by default (19 Nov): the newest card first, under the one-a-week rule. */}
+      {/* Can we cook it? (20 Nov): the newest card first, under the one-a-week rule. */}
+      {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-cook-2026-11" />}
+      {/* Kakak's card, short by default (19 Nov), under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-short-card-2026-11" />}
       {/* Kakak's new look (the warm seal, 20 Nov): after the short card, in its own week. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-warm-seal-2026-11" />}
@@ -1053,6 +1056,7 @@ const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
   ingredient: Carrot,
   new_ingredient: Carrot,
   staff_areas: Eye,
+  menu_dish: CookingPot,
 };
 
 type T = (en: string, id: string) => string;

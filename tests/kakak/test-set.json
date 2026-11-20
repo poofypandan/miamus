@@ -6488,6 +6488,589 @@
         ]
       ],
       "note": "Two rooms named Lounge, on LT1 and LT2: ask which."
+    },
+    {
+      "id": "K161",
+      "sentence": "Kak, malam ini kita masak opor. Bahannya lengkap?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "santan"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The film's sentence. Opor (D1) misses Santan; Serai isn't checked. One line, one card: tonight's dinner and Santan on Shopping."
+    },
+    {
+      "id": "K162",
+      "sentence": "We're making opor tonight. Do we have everything?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "santan",
+                "coconut milk"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The film's English sentence. 'Everything but coconut milk' (the item's own name, Santan, is fine too)."
+    },
+    {
+      "id": "K163",
+      "sentence": "Nasi goreng besok siang, bahannya ada semua?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "lengkap",
+                "ada semua",
+                "semua ada",
+                "sudah ada"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Nasi goreng (D2) is ready and already on tomorrow's lunch: say so, plan nothing twice."
+    },
+    {
+      "id": "K164",
+      "sentence": "Sabtu malam soto ayam ya, cek bahannya",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D3",
+                  "dish_name": "none",
+                  "day": "2026-11-14",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "ayam"
+              ],
+              [
+                "bihun"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Several missing: Ayam (running low) and Bihun (out)."
+    },
+    {
+      "id": "K165",
+      "sentence": "Besok malam sayur asem, bahannya lengkap nggak?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D4",
+                  "dish_name": "none",
+                  "day": "2026-11-12",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "belum bisa",
+                "tidak bisa",
+                "belum dicek",
+                "tidak dicek",
+                "belum ada di daftar",
+                "tidak ada di daftar"
+              ]
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "belum bisa",
+                "tidak bisa",
+                "belum dicek",
+                "tidak dicek",
+                "belum ada di daftar",
+                "tidak ada di daftar"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Nothing in sayur asem (D4) is on the lists: she can't check it and says so, never 'lengkap'."
+    },
+    {
+      "id": "K166",
+      "sentence": "Jumat malam masak rendang, bahannya cukup?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "which rendang",
+            "answersInclude": [
+              [
+                "daging",
+                "sapi"
+              ],
+              [
+                "ayam"
+              ]
+            ],
+            "reply": "Rendang daging"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D5",
+                  "dish_name": "none",
+                  "day": "2026-11-13",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "mustNever": [
+        "guess_lookalike"
+      ],
+      "note": "Two saved recipes match (Rendang daging D5, Rendang ayam D6): ask which, never guess."
+    },
+    {
+      "id": "K167",
+      "sentence": "Gulai kambing malam ini, bahannya ada?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "invents_ingredient"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "resep"
+              ],
+              [
+                "Dapur",
+                "Menu"
+              ]
+            ],
+            "avoids": [
+              "bawang",
+              "kemiri",
+              "lengkuas",
+              "daun salam",
+              "ketumbar",
+              "garlic",
+              "shallot",
+              "galangal",
+              "coriander",
+              "candlenut",
+              "santan",
+              "cabai",
+              "jahe"
+            ]
+          }
+        ]
+      ],
+      "note": "No saved recipe: she says she has no recipe for it and where to add one. Never a guessed ingredient list."
+    },
+    {
+      "id": "K168",
+      "sentence": "Opor for 8 on Saturday evening, and add whatever is missing",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-14",
+                  "meal": "dinner",
+                  "servings": 8,
+                  "add_missing": true
+                }
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "id": "K169",
+      "sentence": "Besok malam opor ya, tapi jangan tambah ke daftar belanja",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-12",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": false
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "The owner says not to add to Shopping: add_missing false."
+    },
+    {
+      "id": "K170",
+      "sentence": "Tonight masak nasi goreng, cek bahannya dong",
+      "ownerLocale": "id",
+      "lang": "mixed",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D2",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "lengkap",
+                "ada semua",
+                "semua ada"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Ready: 'Bahan nasi goreng lengkap', and tonight's dinner."
+    },
+    {
+      "id": "K171",
+      "sentence": "How much coconut milk do we need for opor?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Kitchen",
+                "Menu",
+                "recipe"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "She is never given amounts: she points to the recipe in Kitchen → Menu."
+    },
+    {
+      "id": "K172",
+      "sentence": "Apa saja bahan opor?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "invents_ingredient"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Dapur",
+                "Menu",
+                "resep"
+              ]
+            ],
+            "avoids": [
+              "bawang",
+              "kemiri",
+              "lengkuas",
+              "daun salam",
+              "ketumbar",
+              "garlic",
+              "shallot",
+              "galangal",
+              "coriander",
+              "candlenut"
+            ]
+          }
+        ]
+      ],
+      "note": "She sees only what is missing or unchecked, not the full list: points to the recipe, invents nothing."
+    },
+    {
+      "id": "K173",
+      "sentence": "Put opor on Sunday lunch",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-15",
+                  "meal": "lunch",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "id": "K174",
+      "sentence": "Kamis siang masak ayam bakar madu",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "invents_ingredient"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "none",
+                  "dish_name": {
+                    "textHas": [
+                      [
+                        "ayam bakar"
+                      ]
+                    ]
+                  },
+                  "day": "2026-11-12",
+                  "meal": "lunch",
+                  "servings": 0,
+                  "add_missing": false
+                }
+              }
+            ],
+            "avoids": [
+              "bawang",
+              "kemiri",
+              "lengkuas",
+              "daun salam",
+              "ketumbar",
+              "garlic",
+              "shallot",
+              "galangal",
+              "coriander",
+              "candlenut"
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "resep"
+              ]
+            ],
+            "avoids": [
+              "bawang",
+              "kemiri",
+              "lengkuas",
+              "daun salam",
+              "ketumbar",
+              "garlic",
+              "shallot",
+              "galangal",
+              "coriander",
+              "candlenut"
+            ]
+          }
+        ]
+      ],
+      "note": "No saved recipe, but the owner asked to plan it: a typed dish with add_missing false, or she says there's no recipe. Never an ingredient list."
     }
   ]
 }

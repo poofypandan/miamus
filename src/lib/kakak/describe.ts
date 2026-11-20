@@ -140,6 +140,11 @@ const PLACES: Record<string, [string, string]> = {
   pantry: ["Cupboard", "Lemari"],
   counter: ["Counter", "Meja"],
 };
+const MEAL_WORDS: Record<string, [string, string]> = {
+  breakfast: ["Breakfast", "Sarapan"],
+  lunch: ["Lunch", "Makan siang"],
+  dinner: ["Dinner", "Makan malam"],
+};
 const SOURCES: Record<string, [string, string]> = {
   home: ["Cooked at home", "Dimasak di rumah"],
   gift: ["From someone", "Dari orang"],
@@ -154,6 +159,22 @@ const SOURCES: Record<string, [string, string]> = {
 export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody?: StaffArea[]): CardItem {
   const t = translator(locale);
   switch (item.kind) {
+    case "menu_dish": {
+      // Can we cook it? (20 Nov): What · When · For. What the recipe is
+      // missing is its own Shopping list card; left off it, a quiet line.
+      const rows: CardRow[] = [
+        { label: t("What", "Apa"), value: item.title },
+        { label: t("When", "Kapan"), value: `${cardDate(item.day, locale)} · ${t(...MEAL_WORDS[item.meal])}` },
+      ];
+      if (item.servings) rows.push({ label: t("For", "Untuk"), value: t(`${item.servings} servings`, `${item.servings} porsi`) });
+      return {
+        heading: t("Menu", "Menu"),
+        rows,
+        note: item.missing.length
+          ? t(`Also missing, not added to the shopping list: ${item.missing.join(", ")}.`, `Juga kurang, tidak ditambahkan ke daftar belanja: ${item.missing.join(", ")}.`)
+          : undefined,
+      };
+    }
     case "chore": {
       const rows: CardRow[] = [
         {
@@ -377,7 +398,9 @@ export function savedSummary(items: KakakSuggestion[], locale: Locale): string {
             ? first.nameEn
             : first.kind === "staff_areas"
               ? t(`What ${first.staffName} sees`, `Yang dilihat ${first.staffName}`)
-              : first.name;
+              : first.kind === "menu_dish"
+                ? first.title
+                : first.name;
   const more = items.length > 1 ? t(` and ${items.length - 1} more`, ` dan ${items.length - 1} lainnya`) : "";
   return t(`Saved — ${name}${more}`, `Tersimpan — ${name}${more}`);
 }
