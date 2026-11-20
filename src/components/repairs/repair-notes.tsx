@@ -34,7 +34,7 @@ export function RepairNotes({
   const tr = (en: string, id: string) => (ind ? id : en);
   const { notes, reload } = useRepairs();
   const { allProfiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(allProfiles, tr("Someone", "Seseorang"), tr("Former staff", "Mantan staf"));
+  const staffName = useStaffNameLookup(allProfiles, tr("Someone", "Seseorang"));
   const [body, setBody] = useState("");
   const [photo, setPhoto] = useState<File | string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);

@@ -94,7 +94,7 @@ function LeaveApproval() {
   const { profiles, allProfiles } = useStaffProfiles();
   const locale = useOwnerLocale();
   const t = useT();
-  const nameOf = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
+  const nameOf = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
 
   // The context's copy when it has one — it updates the moment a decision is
   // saved. Otherwise fetched directly: a link opened cold can arrive before

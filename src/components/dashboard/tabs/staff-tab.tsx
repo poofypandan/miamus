@@ -183,7 +183,7 @@ export function StaffTab() {
   // Feedback (roadmap item 9): a sheet over the list, not a page of its own.
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
 
   const petName = useMemo(() => {
     const byId = new Map(pets.map((p) => [p.id, p.name]));

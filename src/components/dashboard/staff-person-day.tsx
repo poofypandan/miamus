@@ -114,7 +114,7 @@ function TaskRow({ task, ownerId }: { task: ProgressTask; ownerId: string | null
   const locale = useOwnerLocale();
   const time = useFormatTime();
   const { allProfiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
 
   const tone: ProgressTone = task.late ? "red" : task.state === "couldnt" ? "amber" : "neutral";
   const title = task.kind === "routine" && task.petName ? `${task.title} · ${task.petName}` : task.title;

@@ -25,6 +25,7 @@ import type { HouseholdLocation, HouseholdTask, StaffProfile } from "@/types/dat
 
 import { claimFromFragment, codeFromFragment, personalWelcomeMessage, staffFromFragment, welcomeLink } from "@/lib/setup-apply";
 import { qrPath } from "@/lib/qr";
+import { formerStaffLabel, staffNameLookup } from "@/hooks/use-staff-profiles";
 const STAFF_ENTRIES = ["add-staff", "staff-first-day", "staff-leaves", "staff-back", "kitchen-chores"] as const;
 
 describe("the guide's staff entries", () => {
@@ -304,5 +305,25 @@ describe("Add staff knows who used to work here", () => {
     expect(formerStaffWithName(" sri ", roster)?.id).toBe("s");
     expect(formerStaffWithName("Mantan staf", roster)).toBeNull();
     expect(formerStaffWithName("Wati", roster)).toBeNull();
+  });
+});
+
+// Step 4: a removed name reads "Former staff" / "Mantan staf" in the screen's own language.
+describe("a removed name, in the screen's language", () => {
+  const roster = [
+    staff("a", "Ari"),
+    staff("w", "Mantan staf", { archived_at: "2025-01-01T00:00:00Z", forgotten_at: "2026-01-01T00:00:00Z" }),
+  ];
+  it("reads Former staff for an English owner and Mantan staf for an Indonesian owner or on a staff screen", () => {
+    expect(formerStaffLabel("en")).toBe("Former staff");
+    expect(formerStaffLabel("id")).toBe("Mantan staf");
+    expect(staffNameLookup(roster, "Someone", formerStaffLabel("en"))("w")).toBe("Former staff");
+    expect(staffNameLookup(roster, "Seseorang", formerStaffLabel("id"))("w")).toBe("Mantan staf");
+  });
+  it("leaves everyone else as they are, and an unknown id as the fallback", () => {
+    const name = staffNameLookup(roster, "Someone", "Former staff");
+    expect(name("a")).toBe("Ari");
+    expect(name("nope")).toBe("Someone");
+    expect(name(null)).toBe("Someone");
   });
 });

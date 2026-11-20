@@ -71,7 +71,7 @@ export function RoomsView() {
   const { allProfiles } = useStaffProfiles();
   const locale = useOwnerLocale();
   const t = useT();
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const today = formatDateLocal(useToday());
   const { job, setJob } = useChoresView();
   const { rows: chores, failed } = useSetUpChores(today);

@@ -145,7 +145,7 @@ export function AgendaTab() {
   // onboarding, which greets rather than reports (Phase 120).
   const brandNew = pets.length === 0 && householdTasks.length === 0;
   const { allProfiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const roomName = useLocationName();
   const allChores = useChoreOccurrences();
   // Couldn't-do records (Phase 165), for the rows and the evening summary.

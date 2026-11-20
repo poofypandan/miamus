@@ -88,7 +88,7 @@ function TodayChores() {
   // different things. An absent assigned_to is genuinely unassigned and is
   // spelled out on the badge; an id this roster cannot resolve — a profile
   // still loading — is a name we don't have, not an empty chore.
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const roomName = useLocationName();
   const occurrences = useChoreOccurrences();
   const today = useToday();

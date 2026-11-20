@@ -43,7 +43,7 @@ export function TimelineRow({ group, pets }: { group: AgendaGroup; pets: TaskEnt
   // Couldn't-do records on this block's open pets (Phase 165).
   const { exceptions } = useTaskExceptions();
   const { allProfiles } = useStaffProfiles();
-  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"), t("Former staff", "Mantan staf"));
+  const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const explained = useMemo(
     () => groupExceptions(exceptions, formatDateLocal(selectedDate), group),
     [exceptions, selectedDate, group]
