@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { handOverStart, pickLaunchStart } from "@/lib/launch-clock";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import manifest from "@/app/manifest";
+import { LAUNCH_BACKGROUND } from "@/components/brand/brand-mark";
 import { IPHONE_SCREENS, iosStartupImages, markCentreY } from "@/lib/ios-launch-screens";
 
 describe("pickLaunchStart (the launch mark's one clock)", () => {
@@ -28,16 +31,19 @@ describe("handOverStart (the staff cover's mark-to-rules hand-over)", () => {
   });
 });
 
-describe("the launch stage's white", () => {
+describe("the launch stage's paper", () => {
   // Android paints its splash in background_color; the status bar takes
-  // theme_color; the launch stage is the page background. One white for all
-  // three, or the hand-over from the phone's splash shows as a colour step.
-  // (layout.tsx's viewport.themeColor is the same #ffffff; it loads fonts
-  // and cannot be imported here.)
-  it("is the manifest's splash colour and theme colour", () => {
+  // theme_color; the launch stage is the page background. One paper for all
+  // of them, or the hand-over from the phone's splash shows as a colour step.
+  // (layout.tsx's viewport.themeColor uses the same LAUNCH_BACKGROUND; it
+  // loads fonts and cannot be imported here.)
+  it("is the manifest's splash colour and theme colour, and the page's --background", () => {
     const m = manifest();
-    expect(m.background_color).toBe("#ffffff");
-    expect(m.theme_color).toBe("#ffffff");
+    expect(LAUNCH_BACKGROUND).toBe("#f5f2ec");
+    expect(m.background_color).toBe(LAUNCH_BACKGROUND);
+    expect(m.theme_color).toBe(LAUNCH_BACKGROUND);
+    const css = readFileSync(fileURLToPath(new URL("../../src/app/globals.css", import.meta.url)), "utf8");
+    expect(css).toMatch(new RegExp(`--background: ${LAUNCH_BACKGROUND};`));
   });
 });
 

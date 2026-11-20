@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { BRAND_PAPER, BrandMark } from "@/components/brand/brand-mark";
+import { BrandMark, LAUNCH_BACKGROUND } from "@/components/brand/brand-mark";
 import { LAUNCH_MARK_SIZE } from "@/components/brand/launch-mark-size";
 import { IPHONE_SCREENS, markCentreY } from "@/lib/ios-launch-screens";
 
@@ -12,7 +12,7 @@ export function generateStaticParams() {
 }
 
 /**
- * One iPhone launch screen (lib/ios-launch-screens): white, the settled mark
+ * One iPhone launch screen (lib/ios-launch-screens): warm paper, the settled mark
  * at the launch stage's size and centre, in the phone's own pixels.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +26,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const top = Math.round(markCentreY(screen) * screen.dpr - mark / 2);
   return new ImageResponse(
     (
-      <div style={{ width, height, display: "flex", position: "relative", background: BRAND_PAPER }}>
+      <div style={{ width, height, display: "flex", position: "relative", background: LAUNCH_BACKGROUND }}>
         <div style={{ position: "absolute", left: (width - mark) / 2, top, display: "flex" }}>
           <BrandMark size={mark} rounded />
         </div>

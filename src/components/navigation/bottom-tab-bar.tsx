@@ -82,7 +82,7 @@ export function BottomTabBar() {
       // pb-safe keeps the tabs clear of the iOS home indicator and Android's
       // gesture bar; the solid background fills that inset rather than
       // leaving page content showing through beneath the tabs.
-      className="sticky bottom-0 z-40 w-full border-t bg-background pb-safe shadow-[0_-1px_8px_rgba(0,0,0,0.04)]"
+      className="sticky bottom-0 z-40 w-full border-t bg-card pb-safe shadow-[0_-1px_8px_rgba(0,0,0,0.04)]"
     >
       <div className="flex h-16">
         {enabledModules(flags).map((module) => {
@@ -115,7 +115,7 @@ export function BottomTabBar() {
                 active ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Icon className="size-6 shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+              <Icon className="size-6 shrink-0" style={{ strokeWidth: active ? 2 : 1.6 }} />
               <span className="w-full truncate text-center">{label}</span>
             </Link>
           );

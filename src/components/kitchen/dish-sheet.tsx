@@ -151,7 +151,7 @@ function DishBody({
   );
 
   const footer = (shown: number | null) => (
-    <div className="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-2 border-t bg-background px-4 pt-3 pb-[env(safe-area-inset-bottom)]">
+    <div className="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-2 border-t bg-popover px-4 pt-3 pb-[env(safe-area-inset-bottom)]">
       {dish.cooked_at ? (
         <p className="flex min-h-11 items-center gap-2 text-base font-medium text-emerald-700">
           <CheckCircle2 className="size-5 shrink-0" strokeWidth={1.75} />

@@ -349,18 +349,18 @@ function TimelineAvatarStatus({
       {suspended ? (
         <Stethoscope
           aria-label={t("At the vet", "Dirawat di klinik")}
-          className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-indigo-600"
+          className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-card text-indigo-600"
         />
       ) : (
         <>
           {item.status === "completed" && (
-            <CheckCircle2 className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-emerald-500" />
+            <CheckCircle2 className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-card text-emerald-500" />
           )}
           {item.status !== "completed" && explained && (
-            <CircleSlash className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-amber-600" />
+            <CircleSlash className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-card text-amber-600" />
           )}
           {item.status === "overdue" && !explained && (
-            <XCircle className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-background text-red-500" />
+            <XCircle className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-card text-red-500" />
           )}
         </>
       )}
