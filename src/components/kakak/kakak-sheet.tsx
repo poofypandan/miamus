@@ -517,7 +517,7 @@ function Conversation({
       <AddStaffSheet
         open={!!staffAdd}
         preset={staffAdd?.preset}
-        roster={allProfiles ?? []}
+        roster={allProfiles}
         reload={reloadRoster}
         onAdded={() => {
           staffAdded.current = true;

@@ -137,8 +137,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "Adding a new staff member", id: "Menambah staf baru" },
     body: {
-      en: "Settings → Staff → Add staff: their name, and what they do (Kitchen, Chores, Pets, Repairs), which sets what they see. Kitchen ticks the usual kitchen chores. Then send the welcome on WhatsApp or show the QR code. Staff under 18 need a parent's or guardian's consent.",
-      id: "Pengaturan → Staf → Tambah staf: namanya, dan apa yang dikerjakan (Dapur, Tugas rumah, Hewan, Perbaikan), yang mengatur yang dia lihat. Dapur mencentang tugas dapur yang biasa. Lalu kirim sambutan atau tunjukkan kode QR. Staf di bawah 18 tahun perlu izin orang tua atau wali.",
+      en: "Settings → Staff → Add staff: their name, and what they do (Kitchen, Chores, Pets, Repairs), which sets what they see. Kitchen ticks the usual chores; a trial adds a reminder. Then send the welcome or the QR code. Staff under 18 need a parent's or guardian's consent.",
+      id: "Pengaturan → Staf → Tambah staf: namanya, dan apa yang dikerjakan (Dapur, Tugas rumah, Hewan, Perbaikan), yang mengatur yang dia lihat. Dapur mencentang tugas biasa; masa percobaan menambah pengingat. Lalu kirim sambutan. Staf di bawah 18 tahun perlu izin orang tua atau wali.",
     },
     where: "settings_staff",
     covers: ["add-staff-2026-11"],

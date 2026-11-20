@@ -81,8 +81,11 @@ export function AddStaffSheet({
 }: {
   open: boolean;
   onClose: () => void;
-  /** Everyone on the roster, including owners and people no longer here. */
-  roster: StaffProfile[];
+  /**
+   * Everyone on the roster, including owners and people no longer here; null
+   * until it has loaded (nothing is added before the name can be checked).
+   */
+  roster: StaffProfile[] | null;
   reload: () => Promise<void>;
   preset?: AddStaffPreset;
   /** After the person is added or brought back. */
@@ -110,12 +113,17 @@ function AddStaffForm({
   onAdded,
 }: {
   onClose: () => void;
-  roster: StaffProfile[];
+  roster: StaffProfile[] | null;
   reload: () => Promise<void>;
   preset?: AddStaffPreset;
   onAdded?: (person: { id: string; name: string }) => void;
 }) {
   const t = useT();
+  // The name is checked against who is here and who left before anything is
+  // saved, by hand or from Kakak's card (Codex, PR #173): a roster that
+  // hasn't loaded is not an empty one.
+  const rosterReady = roster !== null;
+  const people = useMemo(() => roster ?? [], [roster]);
   const locale = useOwnerLocale();
   const { activeHouseholdId, refresh, updateHouseholdTask, createHouseholdTasks } = useHousehold();
   const { petsOn } = useHouseholdProfile();
@@ -140,10 +148,10 @@ function AddStaffForm({
   const lock = useSubmitLock();
 
   const clean = cleanStaffName(name);
-  const taken = staffWithName(clean, roster);
+  const taken = staffWithName(clean, people);
   // Someone who left with this name (step 4): offered back, with a fresh
   // welcome link, instead of a second "Sri" (migrations/180).
-  const former = taken ? null : formerStaffWithName(clean, roster);
+  const former = taken ? null : formerStaffWithName(clean, people);
   // The roster refuses these (migrations/147): said here, not as a failed save.
   const badName = /[<>]/.test(clean);
   const kitchen = jobs.has("kitchen");
@@ -159,12 +167,12 @@ function AddStaffForm({
   );
   // Until every set-up chore is read, a "move" can't be told from a new one: wait.
   const startersReady = !kitchen || (choresLoaded && locations !== null);
-  const canAdd = clean.length > 0 && jobs.size > 0 && !taken && !badName && !saving && startersReady;
+  const canAdd = rosterReady && clean.length > 0 && jobs.size > 0 && !taken && !badName && !saving && startersReady;
 
   const ownerOf = useMemo(() => {
-    const byId = new Map(roster.map((p) => [p.id, p.name]));
+    const byId = new Map(people.map((p) => [p.id, p.name]));
     return (id: string | null) => (id ? (byId.get(id) ?? null) : null);
-  }, [roster]);
+  }, [people]);
 
   /**
    * Demo mode (no Supabase, the mock provider): no apply_household_setup to
@@ -317,7 +325,7 @@ function AddStaffForm({
   // Kakak's card was the confirmation (step 5): save once everything is read.
   const autoTried = useRef(false);
   useEffect(() => {
-    if (!preset?.autoSave || autoTried.current || added || saving) return;
+    if (!preset?.autoSave || autoTried.current || added || saving || !rosterReady) return;
     if (former) {
       autoTried.current = true;
       void bringBack(former);
@@ -407,7 +415,15 @@ function AddStaffForm({
             autoComplete="off"
             enterKeyHint="done"
           />
-          {badName ? (
+          {!rosterReady ? (
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground" role="status">
+              <Loader2 className="size-3 animate-spin" aria-hidden />
+              {t("Checking your staff list…", "Memeriksa daftar staf…")}
+              <button type="button" className="font-medium text-gray-900 underline" onClick={() => void reload()}>
+                {t("Try again", "Coba lagi")}
+              </button>
+            </p>
+          ) : badName ? (
             <p className="text-[11px] text-destructive" role="status">
               {t("A name can't have < or > in it.", "Nama tidak boleh berisi < atau >.")}
             </p>

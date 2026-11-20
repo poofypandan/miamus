@@ -786,7 +786,7 @@ function StaffRoster({
       <Button className="min-h-[48px] rounded-xl" onClick={() => setAdding(true)}>
         <UserPlus /> {t("Add staff", "Tambah staf")}
       </Button>
-      <AddStaffSheet open={adding} onClose={() => setAdding(false)} roster={allProfiles ?? []} reload={reload} />
+      <AddStaffSheet open={adding} onClose={() => setAdding(false)} roster={allProfiles} reload={reload} />
 
       {/* Kept visible rather than hidden away: their name is still on months
           of finished work, so an owner who finds it there needs somewhere
