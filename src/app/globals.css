@@ -57,6 +57,67 @@
   --color-attention-tint: var(--attention-tint);
   --color-urgent: var(--urgent);
   --color-urgent-tint: var(--urgent-tint);
+  /* One warm grey ramp (21 Nov, Fable's look at PR 1): the gray, zinc,
+     slate, neutral and stone scales all become it, so the ~450 hard-coded
+     text-gray-900/700/600/500 and friends stop reading cool blue on paper,
+     without touching a screen. 500 is 4.6:1 on paper and 5.1 on warm
+     white (Tailwind's gray-500 was 4.3 on paper); 600 is
+     --muted-foreground, 900 the ink. PR 8 still moves them to tokens. */
+  --color-gray-50: #f8f6f1;
+  --color-gray-100: #f3efe8;
+  --color-gray-200: #e9e4da;
+  --color-gray-300: #d6cfc4;
+  --color-gray-400: #9a9087;
+  --color-gray-500: #756c64;
+  --color-gray-600: #5c534c;
+  --color-gray-700: #473f39;
+  --color-gray-800: #2f2925;
+  --color-gray-900: #1f1a17;
+  --color-gray-950: #14100e;
+  --color-zinc-50: #f8f6f1;
+  --color-zinc-100: #f3efe8;
+  --color-zinc-200: #e9e4da;
+  --color-zinc-300: #d6cfc4;
+  --color-zinc-400: #9a9087;
+  --color-zinc-500: #756c64;
+  --color-zinc-600: #5c534c;
+  --color-zinc-700: #473f39;
+  --color-zinc-800: #2f2925;
+  --color-zinc-900: #1f1a17;
+  --color-zinc-950: #14100e;
+  --color-slate-50: #f8f6f1;
+  --color-slate-100: #f3efe8;
+  --color-slate-200: #e9e4da;
+  --color-slate-300: #d6cfc4;
+  --color-slate-400: #9a9087;
+  --color-slate-500: #756c64;
+  --color-slate-600: #5c534c;
+  --color-slate-700: #473f39;
+  --color-slate-800: #2f2925;
+  --color-slate-900: #1f1a17;
+  --color-slate-950: #14100e;
+  --color-neutral-50: #f8f6f1;
+  --color-neutral-100: #f3efe8;
+  --color-neutral-200: #e9e4da;
+  --color-neutral-300: #d6cfc4;
+  --color-neutral-400: #9a9087;
+  --color-neutral-500: #756c64;
+  --color-neutral-600: #5c534c;
+  --color-neutral-700: #473f39;
+  --color-neutral-800: #2f2925;
+  --color-neutral-900: #1f1a17;
+  --color-neutral-950: #14100e;
+  --color-stone-50: #f8f6f1;
+  --color-stone-100: #f3efe8;
+  --color-stone-200: #e9e4da;
+  --color-stone-300: #d6cfc4;
+  --color-stone-400: #9a9087;
+  --color-stone-500: #756c64;
+  --color-stone-600: #5c534c;
+  --color-stone-700: #473f39;
+  --color-stone-800: #2f2925;
+  --color-stone-900: #1f1a17;
+  --color-stone-950: #14100e;
   /* One white and one black (05, question 3): bg-white and text-white are
      the film's warm white, bg-black the ink. */
   --color-white: #fffdf8;
