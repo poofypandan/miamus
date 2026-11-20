@@ -395,7 +395,8 @@ export function buildContext(
       ...(rows.featuresRead && rows.kitchenOn !== true ? { kitchenOff: true } : {}),
       ...(recipes.length ? { recipes } : {}),
       ...(menu.length ? { menu } : {}),
-      ...(rows.foodOn !== false && rows.foods ? { foods: foodsFor(rows.foods) } : {}),
+      // Only once the switches were read: a failed read never assumes Food at home is on (Codex, PR #166).
+      ...(rows.featuresRead && rows.foodOn !== false && rows.foods ? { foods: foodsFor(rows.foods) } : {}),
     },
     refs,
     names,

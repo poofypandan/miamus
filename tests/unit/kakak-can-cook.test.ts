@@ -715,6 +715,8 @@ describe("Kakak sees ready-to-eat food (E1)", () => {
     expect(off.foods).toBeUndefined();
     expect(renderHouseholdBlock(off)).not.toContain("Rendang");
     expect(built({ foodOn: true, featuresRead: true }).household.foods).toBeUndefined();
+    // The switches not read: nothing sent, never assumed on (Codex, PR #166).
+    expect(built({ foods, foodOn: null, featuresRead: false } as Partial<ContextRows>).household.foods).toBeUndefined();
   });
 
   it("her instructions answer \"what should we eat?\" from the list, and never suggest food past its date", () => {
