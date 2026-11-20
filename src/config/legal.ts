@@ -237,7 +237,7 @@ export const LEGAL = {
   // verification, when we look, and that the full-access keys never leave
   // the database provider. The Indonesian photo line now also says the
   // photo's own location data is removed on the phone (the English already
-  // did; PR #159 makes that true when compression fails, too). Nothing
+  // did; PR #161 makes that true when compression fails, too). Nothing
   // stored, collected or shared changes. Set effectiveDate to the merge day.
   policyVersion: "2026-11-20.1",
   effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
