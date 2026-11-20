@@ -25,6 +25,9 @@ export const RemotionRoot: React.FC = () => (
     {/* A2: Acts 1, 2 and 4 moving, Act 3 as the C1.6 stills (trailer-reset 16); English, half resolution until C2. */}
     <Composition id="a2-60-en" component={A2Film} durationInFrames={60 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "60", audio: "audio/a2-60-en.wav" } as A2Props} />
     <Composition id="a2-15-en" component={A2Film} durationInFrames={15 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "15", audio: "audio/a2-15-en.wav" } as A2Props} />
+    {/* A3: Act 3 of the 60 moving, with the frame check on every frame (trailer-reset 23); English, half resolution until C2. */}
+    <Composition id="a3-60-en" component={A2Film} durationInFrames={60 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "60", audio: "audio/a3-60-en.wav", act3: true, check: "log" } as A2Props} />
+    <Composition id="a3-15-en" component={A2Film} durationInFrames={15 * FPS} fps={FPS} width={W} height={H} defaultProps={{ cut: "15", audio: "audio/a3-15-en.wav", act3: true, check: "log" } as A2Props} />
     <Composition id="world-test" component={WorldTest} durationInFrames={600} fps={FPS} width={W} height={H} defaultProps={{ tod: 17.6 } as WorldTestProps} />
   </>
 );

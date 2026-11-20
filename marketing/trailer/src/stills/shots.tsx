@@ -544,7 +544,8 @@ function B2() {
   const ph = P(WIDE15, MAMA.x - 23, MAMA.y - 259);
   return (
     <Wide15 frame={150}>
-      <AppBubble id="looksRight" x={56} y={560} scale={3.2} pad={14} to={ph} pressed />
+      {/* A3: the new card's whole button (#152), at the card's one scale, 2.72×. */}
+      <AppBubble id="looksBtn" x={33} y={600} scale={2.72} pad={14} to={ph} pressed />
       <Caption text="Hi, I'm Kakak. Tell me once," tab={TAB} tabSize={44} />
     </Wide15>
   );

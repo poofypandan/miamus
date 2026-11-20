@@ -11,7 +11,8 @@
     "frames": "node scripts/frames.mjs",
     "typecheck": "tsc --noEmit",
     "c15": "node scripts/c15.mjs",
-    "a2": "node scripts/a2.mjs"
+    "a2": "node scripts/a2.mjs",
+    "a3": "node scripts/a3.mjs"
   },
   "dependencies": {
     "@fontsource/fraunces": "5.3.0",

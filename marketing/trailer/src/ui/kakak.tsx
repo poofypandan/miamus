@@ -136,6 +136,7 @@ function CaptionPlate({ cue, level, pulse = 0 }: { cue: CaptionCue; level: numbe
       }}
     >
       <div
+        data-bubble="caption"
         style={{
           display: "flex",
           alignItems: "center",

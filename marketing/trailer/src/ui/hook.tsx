@@ -56,6 +56,7 @@ function One({ text, reply, x, y, rot, size, at, fall, i, big, from }: { text: s
   const cy = from ? from.y + (y - from.y) * fly : y;
   return (
     <div
+      data-moving={s < 0.999 || gone > 0 ? "" : undefined}
       style={{
         position: "absolute",
         left: cx,

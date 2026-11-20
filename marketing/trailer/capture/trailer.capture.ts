@@ -175,34 +175,59 @@ for (const locale of ["en", "id"] as Locale[]) {
   });
 }
 
+/** A control's box in CSS px, for the film's crops (taps.json, key `box.<name>`). */
+async function boxOf(key: string, target: Locator) {
+  const b = await target.boundingBox();
+  if (b) (taps as Record<string, unknown>)[`box.${key}`] = { x: Math.round(b.x * 10) / 10, y: Math.round(b.y * 10) / 10, w: Math.round(b.width * 10) / 10, h: Math.round(b.height * 10) / 10 };
+  saveTaps();
+}
+
+/*
+ * Staff (A3, after #153): the task card on Sari's list is where she works. Its two photo places, Sebelum and
+ * Sesudah, are the buttons; Selesai appears once both are in, and that tap finishes it. The chore's sheet is
+ * still captured for the 15's title block.
+ */
 test("staff: Pel teras, with photos", async ({ context, page }) => {
   await installDemo(context, page, { staff: true }, { play: true, terraceToDo: true, at: "08:58" });
   await servePhotos(page);
   await page.goto("/staff");
-  const card = page.getByRole("button", { name: /Pel teras/ }).first();
+  const card = page.locator("div.rounded-xl", { has: page.getByText("Pel teras", { exact: true }) }).last();
   await card.waitFor({ timeout: 30_000 });
+  await card.scrollIntoViewIfNeeded();
   await still(page, "staff", "list", 2000);
-  await tapAt("staff.card", card);
-  await card.click();
-  await page.getByRole("button", { name: "Ambil Foto Sebelum" }).waitFor();
+  await boxOf("staff.card", card);
+  await boxOf("staff.title", card.getByText("Pel teras", { exact: true }));
+  await boxOf("staff.before", card.getByRole("button", { name: /^Sebelum/ }));
+  await boxOf("staff.after", card.getByRole("button", { name: /^Sesudah/ }));
+  await tapAt("staff.before", card.getByRole("button", { name: /^Sebelum/ }));
+
+  // The sheet (tap the name), as before: the 15's title block.
+  await card.getByText("Pel teras", { exact: true }).click();
+  await page.getByRole("dialog").waitFor();
   await still(page, "staff", "sheet", 900);
-  // The before photo as she starts, the after photo when she's done.
-  for (const [label, name, key, time] of [
-    ["Ambil Foto Sebelum", "terrace-before", "before", "09:02"],
-    ["Ambil Foto Sesudah", "terrace", "after", "09:24"],
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").waitFor({ state: "detached" }).catch(() => undefined);
+  await page.waitForTimeout(600);
+
+  for (const [place, name, key, time] of [
+    ["Sebelum", "terrace-before", "before", "09:02"],
+    ["Sesudah", "terrace", "after", "09:24"],
   ] as const) {
     await at(page, time);
-    const button = page.getByRole("button", { name: label, exact: true });
-    await tapAt(`staff.${key}`, button);
+    const button = card.getByRole("button", { name: new RegExp(`^${place}`) });
     const chooser = page.waitForEvent("filechooser", { timeout: 10_000 });
     await button.click();
     await (await chooser).setFiles({ name: `${name}.jpg`, mimeType: "image/jpeg", buffer: await photo(name) });
-    // Wait for the photo to finish saving, so the still shows it, not the spinner.
+    await card.getByRole("img", { name: `Foto ${place}` }).waitFor({ timeout: 20_000 });
     await page.getByText(/Menyimpan foto/).first().waitFor({ state: "detached", timeout: 20_000 }).catch(() => undefined);
-    await still(page, "staff", `photo-${key}`, 1500);
+    await still(page, "staff", `card-${key}`, 1500);
   }
-  const finish = page.getByRole("button", { name: "Selesaikan" });
+  const finish = card.getByRole("button", { name: "Selesai", exact: true });
+  await boxOf("staff.card2", card);
+  await boxOf("staff.selesai", finish);
   await tapAt("staff.finish", finish);
   await finish.click();
-  await still(page, "staff", "done", 900);
+  await page.getByText('"Pel teras" selesai').waitFor({ timeout: 30_000 });
+  await still(page, "staff", "done", 500);
+  await boxOf("staff.toast", page.getByText('"Pel teras" selesai').locator("xpath=ancestor::li[1]"));
 });

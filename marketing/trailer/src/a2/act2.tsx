@@ -16,7 +16,8 @@ import { World } from "../world/World";
 import { lightAt } from "../world/tod";
 import { Caption, CLEAR, CREAM, CX, FONT, Grade, INK, KAKAK, KAKAK_LINE, KAKAK_TINT, P, SERIF, SkyTitle, W, H, heartPath } from "../stills/kit";
 
-const TAB = "Kakak · Miamus's AI helper";
+/** Fix 11: in this shot her name is already in the sky, so the tab reads just this, at 44 px. */
+const TAB5 = "Miamus's AI helper";
 const SCRAPS: [string, number, number, number][] = [
   ["Done yet?", 96, 1352, -8],
   ["Laundry in?", 560, 1420, 6],
@@ -115,20 +116,21 @@ function KakakRise({ f, base }: { f: number; base: number }) {
   const phone = P(cam, at.x - 23, at.y - 259);
   const end = { x: CX, y: 520 };
   const l3 = useLine("L3", base);
-  // She arrives with her first word (11.2 s), and goes back into the phone at 14.0 s.
+  // A3 (trailer-reset 23, fix 11): the lock-up rises out of the phone in the quiet after "once?" and has settled as
+  // her first word (11.2 s) brings the plate in; she goes back into the phone at 14.0 s.
   const s0 = l3 ? l3.from : 6;
-  const trail = ramp(f, s0 - 2, s0 + 14, easeOut);
-  const disc = springAt(f, fps, s0 + 8, { damping: 14, stiffness: 120, mass: 0.9 });
-  const roof = ramp(f, s0 + 12, s0 + 26, easeOut);
-  const heart = springAt(f, fps, s0 + 24, { damping: 9, stiffness: 180, mass: 0.7 });
-  const name = ramp(f, s0 + 26, s0 + 40, easeOut);
+  const trail = ramp(f, s0 - 20, s0 - 6, easeOut);
+  const disc = springAt(f, fps, s0 - 15, { damping: 14, stiffness: 120, mass: 0.9 });
+  const roof = ramp(f, s0 - 12, s0 - 3, easeOut);
+  const heart = springAt(f, fps, s0 - 6, { damping: 9, stiffness: 180, mass: 0.7 });
+  const name = ramp(f, s0 - 5, s0 + 6, easeOut);
   const sink = ramp(f, 90, 110, ease);
-  const beat = f > s0 + 34 ? 0.06 * (v.pulse ?? 0) : 0;
+  const beat = f > s0 + 4 ? 0.06 * (v.pulse ?? 0) : 0;
   const lx = lerp(CX, phone.x, sink);
   const ly = lerp(232, phone.y - 125 * 0.3, sink);
   const sc = lerp(1, 0.18, sink);
   const path = `M ${phone.x} ${phone.y} C ${phone.x - 70} ${phone.y - 260}, ${end.x - 120} ${end.y + 300}, ${end.x} ${end.y + 30}`;
-  const cap = l3 ? ramp(f, l3.from - 5, l3.from + 7) * (1 - ramp(f, l3.to + 2, l3.to + 10)) : 1;
+  const cap = l3 ? ramp(f, l3.from - 3, l3.from + 6) * (1 - ramp(f, l3.to + 2, l3.to + 10)) : 1;
   return (
     <>
       <World light={light} frame={340 + f} cam={cam} mama={1} mamaAt={{ ...at, s: 1 }} mamaPose={{ shade: 1, phone: 1 }} birds={1} />
@@ -137,7 +139,7 @@ function KakakRise({ f, base }: { f: number; base: number }) {
           <radialGradient id="a2ph"><stop offset="0" stopColor="#ffe9d2" stopOpacity="0.95" /><stop offset="1" stopColor="#ffb98f" stopOpacity="0" /></radialGradient>
           <linearGradient id="a2tr" gradientUnits="userSpaceOnUse" x1={phone.x} y1={phone.y} x2={end.x} y2={end.y}><stop offset="0" stopColor="#ffd9b8" stopOpacity="0.95" /><stop offset="1" stopColor="#ffe9d8" stopOpacity="0.15" /></linearGradient>
         </defs>
-        <circle cx={phone.x} cy={phone.y} r={54} fill="url(#a2ph)" opacity={Math.max(trail * (1 - 0.6 * ramp(f, s0 + 20, s0 + 40)), sink)} />
+        <circle cx={phone.x} cy={phone.y} r={54} fill="url(#a2ph)" opacity={Math.max(trail * (1 - 0.6 * ramp(f, s0, s0 + 20)), sink)} />
         <path d={path} stroke="url(#a2tr)" strokeWidth={7} fill="none" strokeLinecap="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - trail} opacity={1 - sink} />
         {[0.2, 0.42, 0.63, 0.82].map((t, i) => {
           if (trail < t) return null;
@@ -146,8 +148,8 @@ function KakakRise({ f, base }: { f: number; base: number }) {
           return <circle key={i} cx={x} cy={y} r={5 - i * 0.6} fill="#fff3df" opacity={(0.85 - i * 0.12) * (1 - sink)} />;
         })}
       </svg>
-      {f >= s0 + 8 && (
-        <div style={{ position: "absolute", left: lx, top: ly, transform: `translateX(-50%) scale(${sc})`, transformOrigin: "50% 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 22, opacity: 1 - ramp(f, 104, 112), filter: "drop-shadow(0 6px 26px rgba(60,20,10,0.35))" }}>
+      {f >= s0 - 15 && (
+        <div data-moving={sink > 0 || name < 1 ? "" : undefined} style={{ position: "absolute", left: lx, top: ly, transform: `translateX(-50%) scale(${sc})`, transformOrigin: "50% 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 22, opacity: 1 - ramp(f, 104, 112), filter: "drop-shadow(0 6px 26px rgba(60,20,10,0.35))" }}>
           <div style={{ width: 250, height: 250, borderRadius: "50%", background: KAKAK_TINT, border: `6px solid ${KAKAK_LINE}`, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", transform: `scale(${0.6 + 0.4 * disc})`, opacity: Math.min(1, disc * 1.6) }}>
             <svg width={160} height={160} viewBox="92 78 328 328" style={{ display: "block" }}>
               <polyline points="112,214 256,104 400,214" stroke={KAKAK} strokeWidth={40} strokeLinecap="round" strokeLinejoin="round" fill="none" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - roof} opacity={roof > 0 ? 1 : 0} />
@@ -159,7 +161,7 @@ function KakakRise({ f, base }: { f: number; base: number }) {
       )}
       {cap > 0.01 && (
         <div style={{ position: "absolute", inset: 0, opacity: cap }}>
-          <Caption text={<>Hi, I'm Kakak.<br />Just tell me what you need.</>} tab={TAB} pulse={v.pulse ?? 0} />
+          <Caption text={<>Hi, I'm Kakak.<br />Just tell me what you need.</>} tab={TAB5} tabSize={44} pulse={v.pulse ?? 0} />
         </div>
       )}
       <Grade />

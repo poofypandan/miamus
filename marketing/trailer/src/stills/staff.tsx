@@ -6,7 +6,12 @@ import React from "react";
 import { shade, type Light } from "../world/tod";
 
 export type Tool = "mop" | "can" | "tray" | "none" | "phone";
-export function Staff({ light, top, legs, hair = "#2a1c18", bun = false, hat, tool = "none", phone = false, flip = false, armUp = 0 }: { light: Light; top: string; legs: string; hair?: string; bun?: boolean; hat?: "brim" | "cap"; tool?: Tool; phone?: boolean; flip?: boolean; armUp?: number }) {
+/**
+ * A3 (trailer-reset 23, fix 4): `mop` puts both hands on the mop and leans her into it. lean 0–1 tips the body from
+ * the hips toward the mop; sweep -1…1 slides the mop head along the deck (a stroke is -1 to 1).
+ */
+export function Staff({ light, top, legs, hair = "#2a1c18", bun = false, hat, tool = "none", phone = false, flip = false, armUp = 0, mop }: { light: Light; top: string; legs: string; hair?: string; bun?: boolean; hat?: "brim" | "cap"; tool?: Tool; phone?: boolean; flip?: boolean; armUp?: number; mop?: { lean: number; sweep: number } }) {
+  if (mop && tool === "mop" && !phone) return <Mopping light={light} top={top} legs={legs} hair={hair} bun={bun} lean={mop.lean} sweep={mop.sweep} />;
   const c = (base: string, own = 0.45) => shade(base, light, 0.03, own);
   const skin = c("#c98f6a", 0.25);
   const limb = { strokeWidth: 10, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
@@ -76,6 +81,44 @@ export function Staff({ light, top, legs, hair = "#2a1c18", bun = false, hat, to
         </g>
       )}
       {hat === "cap" && <path d="M -22 -246 C -22 -272 22 -272 22 -246 Z" fill={c("#3c4a63", 0.5)} />}
+    </g>
+  );
+}
+
+/** Sari at work: both hands on the mop, leaning into the stroke (A3). */
+function Mopping({ light, top, legs, hair, bun, lean, sweep }: { light: Light; top: string; legs: string; hair: string; bun: boolean; lean: number; sweep: number }) {
+  const c = (base: string, own = 0.45) => shade(base, light, 0.03, own);
+  const skin = c("#c98f6a", 0.25);
+  const limb = { strokeWidth: 10, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
+  const a = ((lean * 15 + sweep * 3) * Math.PI) / 180;
+  const pivot = { x: 0, y: -108 };
+  const rot = (x: number, y: number) => ({ x: pivot.x + (x - pivot.x) * Math.cos(a) - (y - pivot.y) * Math.sin(a), y: pivot.y + (x - pivot.x) * Math.sin(a) + (y - pivot.y) * Math.cos(a) });
+  const head = { x: 92 + sweep * 38, y: -8 };
+  const topEnd = { x: 40 + sweep * 16 + lean * 18, y: -192 + lean * 24 };
+  const on = (t: number) => ({ x: head.x + (topEnd.x - head.x) * t, y: head.y + (topEnd.y - head.y) * t });
+  const hR = on(0.8);
+  const hL = on(0.55);
+  const shR = rot(23, -206);
+  const shL = rot(-23, -206);
+  const elR = { x: (shR.x + hR.x) / 2 + 8, y: (shR.y + hR.y) / 2 + 12 };
+  const elL = { x: (shL.x + hL.x) / 2 - 2, y: (shL.y + hL.y) / 2 + 18 };
+  const deg = (a * 180) / Math.PI;
+  return (
+    <g>
+      <path d={`M -13 -112 L ${-15 - lean * 4} -9`} stroke={c(legs, 0.3)} {...limb} strokeWidth={15} />
+      <path d={`M 13 -112 L ${18 + lean * 6} -9`} stroke={c(legs, 0.3)} {...limb} strokeWidth={15} />
+      <ellipse cx={-16 - lean * 4} cy={-4} rx={12} ry={5} fill={c("#6b4a34", 0.2)} />
+      <ellipse cx={19 + lean * 6} cy={-4} rx={12} ry={5} fill={c("#6b4a34", 0.2)} />
+      <path d={`M ${topEnd.x} ${topEnd.y} L ${head.x} ${head.y}`} stroke={c("#8a6a4c", 0.2)} strokeWidth={5} strokeLinecap="round" />
+      <path d={`M ${head.x - 28} -10 L ${head.x + 28} -10 L ${head.x + 32} 4 L ${head.x - 32} 4 Z`} fill={c("#e9e2d6", 0.4)} />
+      <g transform={`rotate(${deg} ${pivot.x} ${pivot.y})`}>
+        <path d="M -25 -212 C -10 -221 10 -221 25 -212 C 24 -180 23 -140 24 -106 Q 0 -99 -24 -106 C -23 -140 -24 -180 -25 -212 Z" fill={c(top, 0.55)} />
+        <path d="M -6 -222 L 6 -222 L 6 -210 L -6 -210 Z" fill={skin} />
+        <circle cx={0} cy={-241} r={21.5} fill={c(hair, 0)} />
+        {bun && <circle cx={0} cy={-222} r={11} fill={c(hair, 0)} />}
+      </g>
+      <path d={`M ${shL.x} ${shL.y} L ${elL.x} ${elL.y} L ${hL.x} ${hL.y}`} stroke={skin} {...limb} />
+      <path d={`M ${shR.x} ${shR.y} L ${elR.x} ${elR.y} L ${hR.x} ${hR.y}`} stroke={skin} {...limb} />
     </g>
   );
 }

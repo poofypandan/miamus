@@ -40,8 +40,8 @@ export function SpeechBubble({
   const o = Math.min(1, pop * 1.8) * (out === undefined ? 1 : 1 - ramp(frame, out, out + 12));
   if (o <= 0) return null;
   // It rises a little as it appears, like a thought leaving the speaker.
-  const y = cy + (1 - pop) * 46;
-  const s = 0.82 + 0.18 * pop;
+  const y = cy + (1 - pop) * 12; // A3: a smaller rise, so the bubble never dips onto a head as it pops (frame check)
+  const s = 0.82 + 0.18 * Math.min(1, pop); // A3: no overshoot past its size (it grazed Mama's head for two frames)
   const r = radius ?? Math.min(h / 2, 70);
   const left = cx - w / 2;
   const top = y - h / 2;
@@ -68,6 +68,8 @@ export function SpeechBubble({
   const box = { x: left, y: top, width: w, height: h, rx: r };
   return (
     <div style={{ position: "absolute", inset: 0, opacity: o, transform: `scale(${s})`, transformOrigin: `${cx}px ${y + h / 2}px` }}>
+      {/* A3: the body's box, for the frame check (no bubble over a person; src/stills/readability.tsx). */}
+      <div data-bubble="speech" style={{ position: "absolute", left, top, width: w, height: h, pointerEvents: "none" }} />
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0, overflow: "visible", filter: "drop-shadow(0 10px 22px rgba(40,18,10,0.28))" }}>
         {/* The line under everything, then the cream over it, so tail and body read as one shape. */}
         <g stroke={BUBBLE.line} strokeWidth={7} strokeLinejoin="round" fill={BUBBLE.line}>

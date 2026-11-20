@@ -47,6 +47,8 @@ export function measure(root: HTMLElement): Hit[] {
   const hits: Hit[] = [];
   const zoom = root.getBoundingClientRect().width / root.offsetWidth || 1; // Studio preview scales the frame
   root.querySelectorAll("*").forEach((el) => {
+    // A3: a piece in mid-move (opening, folding, pressed) is measured when it is at rest, not while it scales.
+    if (el.closest("[data-moving]")) return;
     if (el instanceof SVGTextElement || el instanceof SVGTSpanElement) {
       if (el instanceof SVGTSpanElement) return;
       const text = (el.textContent ?? "").trim();
@@ -120,6 +122,42 @@ export function Readable({ label, children }: { label: string; children: React.R
       done = true;
     };
   }, [handle, label]);
+  return (
+    <div ref={ref} style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * A3 (trailer-reset 23, rules for A2 to A4): the frame check on every frame of the film, not once per still.
+ * Wrap the whole composition. Each frame: the 38 px floor (pieces at rest) and no bubble over a person.
+ * Logs one "FRAMECHECK {json}" line per failing frame; `strict` also cancels the render on the first one.
+ */
+export function FrameCheck({ frame, strict, children }: { frame: number; strict: boolean; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handle = delayRender(`frame check ${frame}`);
+    let live = true;
+    document.fonts.ready.then(() =>
+      requestAnimationFrame(() => {
+        if (!live || !ref.current) return continueRender(handle);
+        const small = measure(ref.current).filter((h) => h.px < MIN_TEXT_PX - 0.05);
+        const clashes = overlaps(ref.current);
+        if (small.length || clashes.length) {
+          console.log("FRAMECHECK " + JSON.stringify({ frame, t: +(frame / 30).toFixed(2), small, clashes }));
+          if (strict) {
+            cancelRender(new Error(`Frame check failed at ${(frame / 30).toFixed(2)} s: ${[...small.map((h) => `"${h.text}" ${h.px.toFixed(1)} px`), ...clashes.map((c) => `${c.bubble} covers ${c.person} (${c.px} px²)`)].join("; ")}`));
+            return;
+          }
+        }
+        continueRender(handle);
+      })
+    );
+    return () => {
+      live = false;
+    };
+  }, [frame]);
   return (
     <div ref={ref} style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       {children}

@@ -18,10 +18,13 @@ import { loadFonts } from "../theme";
 import { Captions } from "../ui/kakak";
 import { Grain, ramp } from "../ui/kit";
 import { Act2 } from "./act2";
+import { Act3 } from "../a3/act3";
+import { FrameCheck } from "../stills/readability";
 
 loadFonts();
 
-export type A2Props = { cut: "60" | "15"; audio: string | null };
+/** A3: `act3` animates Act 3 of the 60 (src/a3/act3.tsx); `check` runs the frame check on every frame ("strict" fails the render). */
+export type A2Props = { cut: "60" | "15"; audio: string | null; act3?: boolean; check?: "log" | "strict" };
 type VoCut = { cues: { id: string; from: number; to: number }[]; env: number[]; pulse?: number[] };
 
 function Scene({ span, children }: { span: Span; children: React.ReactNode }) {
@@ -58,7 +61,7 @@ function Faded({ frames, children }: { frames: number; children: React.ReactNode
   return <AbsoluteFill style={{ opacity: frames > 0 ? ramp(f, 0, frames) : 1 }}>{children}</AbsoluteFill>;
 }
 
-export const A2Film: React.FC<A2Props> = ({ cut, audio }) => {
+export const A2Film: React.FC<A2Props> = ({ cut, audio, act3 = false, check }) => {
   const frame = useCurrentFrame();
   const copy = COPY.en;
   const vo = (voData as Record<string, VoCut>)[`${cut}-en`];
@@ -66,7 +69,7 @@ export const A2Film: React.FC<A2Props> = ({ cut, audio }) => {
   const voice = { level: vo.env[frame] ?? 0, pulse: vo.pulse?.[frame] ?? 0, cue: (id: string) => cues.find((c) => c.id === id) ?? null };
   const p = { locale: "en" as const };
   const lead = 12; // the hook crossfades into the dusk over 0.4 s
-  return (
+  const film = (
     <AbsoluteFill style={{ backgroundColor: "#0e0f24" }}>
       {audio && <Audio src={staticFile(audio)} />}
       <Voice.Provider value={voice}>
@@ -78,7 +81,13 @@ export const A2Film: React.FC<A2Props> = ({ cut, audio }) => {
                 <Act2 base={S60.turn[0]} lead={lead} />
               </Faded>
             </Sequence>
-            <StillsStretch cut="60" from={15} to={41} />
+            {act3 ? (
+              <Sequence from={S60.cards[0]} durationInFrames={len(S60.cards)} layout="none">
+                <Act3 from={S60.cards[0]} />
+              </Sequence>
+            ) : (
+              <StillsStretch cut="60" from={15} to={41} />
+            )}
             <Sequence from={S60.ending[0] - 9} durationInFrames={len(S60.ending) + 9} layout="none">
               <Faded frames={9}>
                 <Sequence from={9} layout="none">
@@ -100,4 +109,5 @@ export const A2Film: React.FC<A2Props> = ({ cut, audio }) => {
       <Grain />
     </AbsoluteFill>
   );
+  return check ? <FrameCheck frame={frame} strict={check === "strict"}>{film}</FrameCheck> : film;
 };

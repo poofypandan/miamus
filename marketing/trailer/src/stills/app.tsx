@@ -59,11 +59,23 @@ export const CROPS = {
   statusIn: { src: "en/status.png", rect: { x: 19, y: 172, w: 244, h: 72 }, minText: 13, minTextFrom: '"33 of 41 done · nothing late", text-[13px]' },
   /** Kakak's sheet, idle: the mic and "Tap and talk", trimmed above the next control's edge. */
   micIn: { src: "en/k0-open.png", rect: { x: 110, y: 155, w: 170, h: 124 }, minText: 14, minTextFrom: '"Tap and talk", text-sm', press: { x: 159, y: 166, w: 72, h: 72, r: 36 } },
+  /* A3 (after #152 and #153, main 23f6060): the app's new cards, captured whole controls only, never Kakak's avatar. */
+  /**
+   * Kakak's short card (#152): the What, Who and When rows, inside the card's own border. "CHORE" (text-xs, 12 px)
+   * is left out: at Fable's one scale, 2.72×, it would be 32.6 px, under the floor; the border would be a box in a box.
+   */
+  cardRows2: { src: "en/k0-card.png", rect: { x: 19, y: 502, w: 353, h: 120 }, minText: 14, minTextFrom: '"What", "Who", "When", text-sm' },
+  /** Kakak's short card: the whole "Looks right" button under it (#152). */
+  looksBtn: { src: "en/k0-card.png", rect: { x: 14, y: 642, w: 362, h: 52 }, minText: 16, minTextFrom: '"Looks right", text-base', press: { x: 17, y: 645, w: 356, h: 46, r: 12 } },
+  /** Sari's task card on her list (#153): "Pel teras", "09.00" and the Sebelum place whole (Sesudah left out whole). */
+  sariCard: { src: "staff/list.png", rect: { x: 22, y: 295, w: 172, h: 197 }, minText: 12, minTextFrom: '"Ketuk untuk foto", text-xs', press: { x: 29, y: 364.5, w: 162, h: 121.5, r: 12 } },
+  /** Sari's task card with both photos in: its whole "Selesai" button (#153), not the photos (they carry time stamps). */
+  selesai: { src: "staff/card-after.png", rect: { x: 27, y: 490, w: 336, h: 54 }, minText: 16, minTextFrom: '"Selesai", Button text-base', press: { x: 29, y: 494, w: 332, h: 48, r: 12 } },
 } satisfies Record<string, Crop>;
 export type CropId = keyof typeof CROPS;
 
 /** One crop drawn at a scale, with its readability tag (no tag when the crop has no text). */
-function CropImg({ id, scale, x = 0, y = 0, radius = 0 }: { id: CropId; scale: number; x?: number; y?: number; radius?: number }) {
+export function CropImg({ id, scale, x = 0, y = 0, radius = 0 }: { id: CropId; scale: number; x?: number; y?: number; radius?: number }) {
   const c: Crop = CROPS[id];
   return (
     <div

@@ -152,7 +152,10 @@ export const ENDING15 = { tug: 0, point: 6, bell: 1, shade: [16, 30] as Span, ho
  * "Saved" (8c, 23.1), the firefly leaving (9a, 24.0) and landing in Sari's phone (9c, 26.4), her photo button (10,
  * 27.0; the shutter just after), the after photo and "selesai" (11b, 31.4). Kakak's disc arrives at 11.47 (act2.tsx).
  */
-export const A2_60 = { kakak: 11.47, listen: 15.3, card: 20.75, saved: 23.15, handOver: 24.0, lands: 26.4, before: 28.0, after: 31.45, done: 31.55 };
+// A3 (Act 3 moving, src/a3/act3.tsx): Kakak's disc lands at 10.72 (fix 11); the mic press 16.3; the card opens 20.7;
+// "Saved" 23.32; the firefly leaves 24.05 and lands 26.4; Sari's Sebelum shutter 28.3; the after photo 30.9; her tap on
+// Selesai and the toast 31.22.
+export const A2_60 = { kakak: 10.72, listen: 16.3, card: 20.75, saved: 23.32, handOver: 24.05, lands: 26.4, before: 28.3, after: 30.9, done: 31.22 };
 export const A2_15 = { card: 4.85, saved: 5.2, toSari: 5.7, done: 7.7 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */

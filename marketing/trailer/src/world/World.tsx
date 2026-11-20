@@ -1,6 +1,6 @@
 import React from "react";
 import { random } from "remotion";
-import { type Cam, H, STILL, W, layer } from "./camera";
+import { type Cam, H, STILL, W, layer, project } from "./camera";
 import { type Light, css, mix, shade, shadeRgb } from "./tod";
 import { Child, type ChildPose, Dog, Kite, Mama, type MamaPose, kitePose } from "./Figures";
 
@@ -688,6 +688,25 @@ export const World: React.FC<WorldProps> = ({ light, frame, cam = STILL, child =
       </g>
     </svg>
   );
-  if (blur <= 0) return svg;
+  // A3: the family's head-and-body boxes on the frame, for the frame check (no bubble over a person, every frame).
+  // Two boxes per figure, head-and-shoulders over the body, so the box follows the figure rather than the sky beside her head.
+  const rect = (key: string, label: string, x0: number, y0: number, x1: number, y1: number) => {
+    const a = project(cam, 0.92, x0, y0);
+    const b = project(cam, 0.92, x1, y1);
+    return <div key={key} data-person={label} style={{ position: "absolute", left: a.x, top: a.y, width: b.x - a.x, height: b.y - a.y, pointerEvents: "none" }} />;
+  };
+  const box = (label: string, x: number, y: number, hw: number, h: number, s: number) => (
+    <React.Fragment key={label}>
+      {rect(`${label}-h`, label, x - hw * 0.6 * s, y - h * s, x + hw * 0.6 * s, y - h * 0.7 * s)}
+      {rect(`${label}-b`, label, x - hw * s, y - h * 0.7 * s, x + hw * s, y)}
+    </React.Fragment>
+  );
+  const people = blur > 0 ? null : (
+    <>
+      {mama > 0.5 && box("Mama", mamaX, mamaY, 50, 292, mamaS)}
+      {child > 0.5 && box("the girl", CHILD_AT.x, CHILD_AT.y, 32, 150, 1)}
+    </>
+  );
+  if (blur <= 0) return <>{svg}{people}</>;
   return <div style={{ position: "absolute", inset: 0, filter: `blur(${blur}px)`, transform: "scale(1.06)" }}>{svg}</div>;
 };

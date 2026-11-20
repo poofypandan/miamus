@@ -104,12 +104,17 @@ export function KakakMark({ size, pulse = 0 }: { size: number; pulse?: number })
   );
 }
 
-/** Kakak's spoken line: one warm near-black plate on the caption line, readable from its first frame. At most two lines. */
-export function Caption({ text, tab, tabSize = 38, y = CLEAR.bottom, mark = true, pulse = 0 }: { text: React.ReactNode; tab?: string; tabSize?: number; y?: number; mark?: boolean; pulse?: number }) {
+/** A one-line plate's top edge: every plate hangs from here (A3, trailer-reset 23 fix 5), so a two-line plate grows down. */
+export const PLATE_TOP = CLEAR.bottom - 96;
+/**
+ * Kakak's spoken line: one warm near-black plate on the caption line, readable from its first frame. At most two lines.
+ * A3: the plate hangs from PLATE_TOP (its tab, if any, sits above that line), so it never rises into people's feet.
+ */
+export function Caption({ text, tab, tabSize = 38, y = PLATE_TOP, mark = true, pulse = 0 }: { text: React.ReactNode; tab?: string; tabSize?: number; y?: number; mark?: boolean; pulse?: number }) {
   return (
-    <div style={{ position: "absolute", left: CLEAR.left, width: CLEAR.right - CLEAR.left, top: y, transform: "translateY(-100%)", display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", maxWidth: "100%" }}>
-        {tab && <div style={{ marginLeft: 30, marginBottom: -2, padding: "10px 24px 12px", borderRadius: "18px 18px 0 0", background: CREAM, color: INK, font: `600 ${tabSize}px/1 ${FONT}`, whiteSpace: "nowrap" }}>{tab}</div>}
+    <div style={{ position: "absolute", left: CLEAR.left, width: CLEAR.right - CLEAR.left, top: y, display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "flex-start", maxWidth: "100%" }}>
+        {tab && <div style={{ position: "absolute", bottom: "100%", left: 30, marginBottom: -2, padding: "10px 24px 12px", borderRadius: "18px 18px 0 0", background: CREAM, color: INK, font: `600 ${tabSize}px/1 ${FONT}`, whiteSpace: "nowrap" }}>{tab}</div>}
         <div data-bubble="caption" style={{ display: "flex", alignItems: "center", gap: 20, padding: mark ? "16px 34px 16px 18px" : "18px 34px", borderRadius: 34, background: "rgba(38,29,26,0.93)", color: CREAM, font: `600 50px/1.18 ${FONT}`, letterSpacing: -0.4, boxShadow: "0 12px 30px rgba(40,20,10,0.28)" }}>
           {mark && <KakakMark size={64} pulse={pulse} />}
           <div>{text}</div>
@@ -140,7 +145,7 @@ export const Check = ({ size, color = "#fff", stroke = 3 }: { size: number; colo
  */
 export function Tag({ x, y, name, tilt = -2, tick = true }: { x: number; y: number; name: string; tilt?: number; tick?: boolean }) {
   return (
-    <div style={{ position: "absolute", left: x, top: y, transform: `translate(-50%, -100%) rotate(${tilt}deg)`, display: "flex", alignItems: "center", gap: 10, padding: "10px 20px 12px 16px", borderRadius: 10, background: CREAM, boxShadow: "0 6px 14px rgba(70,35,20,0.2)", font: `600 40px/1 ${FONT}`, color: INK, whiteSpace: "nowrap" }}>
+    <div data-bubble={`label: ${name}`} style={{ position: "absolute", left: x, top: y, transform: `translate(-50%, -100%) rotate(${tilt}deg)`, display: "flex", alignItems: "center", gap: 10, padding: "10px 20px 12px 16px", borderRadius: 10, background: CREAM, boxShadow: "0 6px 14px rgba(70,35,20,0.2)", font: `600 40px/1 ${FONT}`, color: INK, whiteSpace: "nowrap" }}>
       {tick && (
         <svg width={34} height={34} viewBox="0 0 24 24" fill="none" stroke={KAKAK} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
           <path d="M4.5 12.8c1.6 1.4 3 2.9 4.3 4.6C11.6 12.6 15 8.6 19.6 5.6" />
