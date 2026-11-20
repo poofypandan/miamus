@@ -291,7 +291,12 @@ function Conversation({
     const roster = await dataProvider.listStaffProfiles();
     const person = roster.find((p) => p.id === item.staffId && !p.archived_at && !p.user_id);
     if (!person) throw new Error("Kakak's staff member is no longer on the roster");
-    const to = item.giveTo && roster.some((p) => p.id === item.giveTo?.staffId && !p.archived_at && !p.user_id) ? item.giveTo : null;
+    // A named recipient who has left since is never quietly turned into
+    // Anyone (Codex, PR #173): the owner chooses again.
+    const to = item.giveTo;
+    if (to && !roster.some((p) => p.id === to.staffId && !p.archived_at && !p.user_id)) {
+      throw new GiveToGone(to.name);
+    }
     await dataProvider.archiveStaffProfile(person.id, to?.staffId ?? null);
     void reloadStaffProfiles();
     toast.success(
@@ -341,7 +346,14 @@ function Conversation({
         onSaved?.();
       } catch (error) {
         console.error("Kakak staff card", error);
-        toast.error(t("Something went wrong. Nothing was saved.", "Ada yang salah. Tidak ada yang disimpan."));
+        toast.error(
+          error instanceof GiveToGone
+            ? t(
+                `${error.person} isn't on the staff list any more. Tell Kakak who takes the work instead.`,
+                `${error.person} sudah tidak ada di daftar staf. Bilang ke Kakak siapa yang mengambil tugasnya.`
+              )
+            : t("Something went wrong. Nothing was saved.", "Ada yang salah. Tidak ada yang disimpan.")
+        );
       } finally {
         setSaving(false);
       }
@@ -1261,5 +1273,12 @@ function failure(reason: KakakFailure, t: T): { text: string; problem: Problem }
         text: t("Something went wrong. Nothing was saved.", "Ada yang salah. Tidak ada yang disimpan."),
         problem: { icon: CircleAlert, next: "retry" },
       };
+  }
+}
+
+/** The remove card's recipient left after Kakak prepared it. */
+class GiveToGone extends Error {
+  constructor(readonly person: string) {
+    super("give_to_not_staff");
   }
 }

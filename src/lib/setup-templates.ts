@@ -606,8 +606,8 @@ export function assigneeFor(job: SetupJob, staff: DraftStaff[]): string | null {
   return withJob.length === 1 ? withJob[0].key : null;
 }
 
-/** A draft person, the caller themself (resolved by the database), or Anyone. */
-export type ApplyAssignee = { staff: string } | { me: true } | null;
+/** A draft person, the caller themself (resolved by the database), someone already on the roster (migrations/147), or Anyone. */
+export type ApplyAssignee = { staff: string } | { me: true } | { profile: string } | null;
 
 /** What apply_household_setup (migrations/147) takes. */
 export interface ApplyPayload {

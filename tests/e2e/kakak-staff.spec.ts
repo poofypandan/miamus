@@ -159,6 +159,8 @@ test("en: Yanti is back: the phone knows she left, and the card brings her back"
   await page.getByRole("button", { name: "Bring Yanti back" }).click({ timeout: 20_000 });
   await expect(page.getByTestId("add-staff-sheet").getByText("Yanti is back")).toBeVisible();
   expect(calls).toEqual([["restore", { p_staff_id: YANTI }]]);
+  // The confirmed card applies on the way back (Codex, PR #173): she sees the house only.
+  await expect.poll(() => staff.find((p) => p.id === YANTI)?.hidden_areas).toEqual(["pets", "kitchen", "repairs"]);
 });
 
 test("en: on a two-week trial: Sri is added and My tasks gets the owner's reminder to decide, in the same save", async ({ context, page }) => {
@@ -183,4 +185,23 @@ test("en: on a two-week trial: Sri is added and My tasks gets the owner's remind
   expect(draft.chores).toEqual([
     expect.objectContaining({ title: "Decide on Sri's trial", assignee: { me: true }, remind: 0, recurrence: "none", category: "errand" }),
   ]);
+});
+
+test("id: someone named on the remove card left meanwhile: nothing is removed, and the owner is asked again (Codex, PR #173)", async ({ context, page }) => {
+  const staff = roster();
+  await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true }, staff, household: { hasPets: true } });
+  await answerKakak(page, "Baik. Tugas Syam Kakak berikan ke Ari.", {
+    kind: "remove_staff",
+    staffId: SYAM,
+    staffName: "Syam",
+    giveTo: { staffId: STAFF_ID, name: "Ari" },
+  });
+  const calls = await stubStaffWrites(page, staff);
+  await tellKakak(page, "id", "Syam sudah tidak kerja di sini");
+  await expect(page.getByText("Syam berhenti hari ini")).toBeVisible({ timeout: 20_000 });
+  // Another owner removed Ari after Kakak prepared the card.
+  staff.find((p) => p.id === STAFF_ID)!.archived_at = new Date().toISOString();
+  await page.getByRole("button", { name: "Hapus Syam" }).click();
+  await expect(page.getByText("Ari sudah tidak ada di daftar staf. Bilang ke Kakak siapa yang mengambil tugasnya.")).toBeVisible();
+  expect(calls).toEqual([]);
 });

@@ -205,13 +205,56 @@ function AddStaffForm({
     }
   }
 
-  async function bringBack(person: StaffProfile) {
+  /**
+   * Someone who left, back on the list with a fresh welcome (180). From
+   * Kakak's card (withCard) the confirmed card applies too, as for someone
+   * new: what they do, the ticked chores (given to them by id) and the trial
+   * reminder (Codex, PR #173). By hand they come back with what they saw
+   * before, as the line above the button says.
+   */
+  async function bringBack(person: StaffProfile, withCard = false) {
     if (saving || !lock.acquire()) return;
     setSaving(true);
     try {
       await dataProvider.restoreStaffProfile(person.id);
+      let chores = 0;
+      let trialOn: string | undefined;
+      if (withCard) {
+        if (jobs.size > 0) {
+          await dataProvider.setStaffHiddenAreas(person.id, hiddenAreasFor(jobs)).catch((err) => {
+            console.error("Bring back: areas not saved", err);
+            toast.error(
+              t(
+                `${person.name} is back, but what they see wasn't saved. Tap the eye beside ${person.name} to set it.`,
+                `${person.name} sudah kembali, tetapi yang dia lihat belum tersimpan. Ketuk ikon mata di samping ${person.name} untuk mengaturnya.`
+              ),
+              { duration: 10000 }
+            );
+          });
+        }
+        const payload = addStaffPayload({ name: person.name, starters, ticked, locations: locations ?? [] });
+        const theirs = payload.chores.map((c) => ({ ...c, assignee: { profile: person.id } as const }));
+        const reminder = trial > 0 ? trialChore(person.name, trial, today, locale) : null;
+        if (reminder) await dataProvider.ensureMyMemberProfile(activeHouseholdId).catch(() => null);
+        const all = reminder ? [...theirs, reminder] : theirs;
+        if (all.length > 0) {
+          const outcome = await applyHouseholdSetup(activeHouseholdId, { ...payload, staff: [], chores: all });
+          if (outcome.ok) {
+            chores = outcome.result.chores_added - (reminder ? 1 : 0);
+            trialOn = reminder ? dayLabel(reminder.due_date) : undefined;
+          } else {
+            toast.error(
+              t(`${person.name} is back, but their chores weren't added. Add them in Home → Chores.`, `${person.name} sudah kembali, tetapi tugasnya belum ditambahkan. Tambahkan di Rumah → Tugas.`),
+              { duration: 10000 }
+            );
+          }
+        }
+        const moves = choresToMove(starters, ticked);
+        const moved = await Promise.allSettled(moves.map((taskId) => updateHouseholdTask(taskId, { assigned_to: person.id })));
+        chores += moved.filter((r) => r.status === "fulfilled").length;
+      }
       await Promise.allSettled([reload(), refresh({ silent: true })]);
-      setAdded({ id: person.id, name: person.name, chores: 0, back: true });
+      setAdded({ id: person.id, name: person.name, chores: Math.max(0, chores), back: true, trialOn });
       onAdded?.({ id: person.id, name: person.name });
     } catch (err) {
       console.error(err);
@@ -220,6 +263,15 @@ function AddStaffForm({
     } finally {
       setSaving(false);
     }
+  }
+
+  /** "Thu 4 Dec" / "Kam 4 Des": the trial reminder's day. */
+  function dayLabel(day: string): string {
+    return new Date(`${day}T00:00:00`).toLocaleDateString(locale === "id" ? "id-ID" : "en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    });
   }
 
   function toggleJob(job: StaffArea) {
@@ -310,13 +362,7 @@ function AddStaffForm({
       id,
       name: person,
       chores: Math.max(0, chores),
-      trialOn: trialReminder
-        ? new Date(`${trialReminder.due_date}T00:00:00`).toLocaleDateString(locale === "id" ? "id-ID" : "en-GB", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-          })
-        : undefined,
+      trialOn: trialReminder ? dayLabel(trialReminder.due_date) : undefined,
     });
     setSaving(false);
     onAdded?.({ id, name: person });
@@ -328,7 +374,7 @@ function AddStaffForm({
     if (!preset?.autoSave || autoTried.current || added || saving || !rosterReady) return;
     if (former) {
       autoTried.current = true;
-      void bringBack(former);
+      void bringBack(former, true);
     } else if (canAdd) {
       autoTried.current = true;
       void add();
