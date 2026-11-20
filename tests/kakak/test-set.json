@@ -7071,6 +7071,235 @@
         ]
       ],
       "note": "No saved recipe, but the owner asked to plan it: a typed dish with add_missing false, or she says there's no recipe. Never an ingredient list."
+    },
+    {
+      "id": "K175",
+      "sentence": "Kak, Sari mops the terrace every morning. Joko picks up Maya at 1. Opor tonight: do we have everything?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "pel",
+                        "mengepel"
+                      ],
+                      [
+                        "teras"
+                      ]
+                    ]
+                  },
+                  "assignee": "S1",
+                  "due_date": {
+                    "dateBetween": [
+                      "2026-11-11",
+                      "2026-11-12"
+                    ]
+                  },
+                  "due_time": {
+                    "timeBetween": [
+                      "05:00",
+                      "10:00"
+                    ],
+                    "orNull": true
+                  },
+                  "recurrence": "daily",
+                  "room": "R1",
+                  "category": "cleaning"
+                }
+              },
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "jemput"
+                      ],
+                      [
+                        "maya"
+                      ]
+                    ]
+                  },
+                  "assignee": "S7",
+                  "due_date": "2026-11-11",
+                  "due_time": "13:00",
+                  "category": {
+                    "anyOf": [
+                      "errand",
+                      "maintenance",
+                      "cleaning",
+                      "groceries"
+                    ]
+                  },
+                  "room": {
+                    "anyOf": [
+                      null
+                    ]
+                  }
+                }
+              },
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "santan",
+                "coconut milk"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The film's sentence (owner, 20 Nov, decision 7): one turn, one card with the daily mopping, the one-off pickup and opor tonight with Santan on Shopping. Maya isn't on the list: the pickup is a chore for Joko."
+    },
+    {
+      "id": "K176",
+      "sentence": "Kak, Sari pel teras setiap pagi. Joko jemput Maya jam 1. Malam ini opor: bahannya lengkap?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "pel",
+                        "mengepel"
+                      ],
+                      [
+                        "teras"
+                      ]
+                    ]
+                  },
+                  "assignee": "S1",
+                  "due_date": {
+                    "dateBetween": [
+                      "2026-11-11",
+                      "2026-11-12"
+                    ]
+                  },
+                  "due_time": {
+                    "timeBetween": [
+                      "05:00",
+                      "10:00"
+                    ],
+                    "orNull": true
+                  },
+                  "recurrence": "daily",
+                  "room": "R1",
+                  "category": "cleaning"
+                }
+              },
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "jemput"
+                      ],
+                      [
+                        "maya"
+                      ]
+                    ]
+                  },
+                  "assignee": "S7",
+                  "due_date": "2026-11-11",
+                  "due_time": "13:00",
+                  "category": {
+                    "anyOf": [
+                      "errand",
+                      "maintenance",
+                      "cleaning",
+                      "groceries"
+                    ]
+                  },
+                  "room": {
+                    "anyOf": [
+                      null
+                    ]
+                  }
+                }
+              },
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "santan"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The film's sentence in Bahasa Indonesia; the same three suggestions."
     }
   ]
 }

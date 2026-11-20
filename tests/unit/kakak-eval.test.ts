@@ -402,8 +402,8 @@ describe("the test set", () => {
     // K146–K154 (a new ingredient, amounts), plus K117–K126 (what a staff
     // member sees, Phase 178 follow-up), plus K155–K160 on 2026-11-16 (room shorthand:
     // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2), plus K161–K174
-    // on 2026-11-20 (Can we cook it?). All for tuning; the holdout is as it was.
-    expect(testSet.cases).toHaveLength(169);
+    // and K175–K176 on 2026-11-20 (Can we cook it?, the film's sentence). All for tuning; the holdout is as it was.
+    expect(testSet.cases).toHaveLength(171);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 

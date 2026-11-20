@@ -3,6 +3,7 @@
 // strict and is checked whole by validateToolCall, one call becomes the
 // Menu card and the Shopping list card, and the guard and the eval keep her
 // from stating an amount or an ingredient she was never given.
+import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -330,5 +331,76 @@ describe("the eval's Can we cook it? cases", () => {
   it("counts an invented recipe reference as a must-never", () => {
     const result = gradeCase(evalHousehold, kase("K173"), [card("Of course.", plan({ recipe: "D9", day: "2026-11-15", meal: "lunch" }))]);
     expect(result.mustNever.join(" ")).toContain('invented reference recipe="D9"');
+  });
+});
+
+describe("the film's sentence: two chores and a dish from one turn (owner, 20 Nov, decision 7)", () => {
+  it("one turn returns both chores and plan_dish's two cards, all saveable", async () => {
+    const withSari = built({
+      staff: [
+        { id: id(1), name: "Dewi", created_at: "2026-01-01", user_id: OWNER, archived_at: null },
+        { id: id(2), name: "Sari", created_at: "2026-01-02", user_id: null, archived_at: null },
+        { id: id(3), name: "Joko", created_at: "2026-01-03", user_id: null, archived_at: null },
+      ],
+      rooms: [{ id: id(20), name: "Teras", created_at: "2026-01-01" }],
+    });
+    const chore = (over: Record<string, unknown>) => ({
+      title: "Pel teras",
+      title_en: "Mop the terrace",
+      category: "cleaning",
+      assignee: "S1",
+      due_date: "2026-11-11",
+      due_time: null,
+      recurrence: "daily",
+      recurrence_until: null,
+      requires_supervision: false,
+      room: "R1",
+      new_room_name: null,
+      new_room_floor: null,
+      notes: null,
+      remind_days_before: null,
+      ...over,
+    });
+    const content = [
+      { type: "text", text: "Of course. Sari mops the terrace every morning, Joko picks up Maya at 1, and for opor you have everything but Santan." },
+      { type: "tool_use", id: "toolu_1", name: "create_chore", input: chore({}) },
+      {
+        type: "tool_use",
+        id: "toolu_2",
+        name: "create_chore",
+        input: chore({ title: "Jemput Maya", title_en: "Pick up Maya", category: "errand", assignee: "S2", due_time: "13:00", recurrence: "none", room: null }),
+      },
+      { type: "tool_use", id: "toolu_3", name: "plan_dish", input: plan() },
+    ];
+    const fetch = async () =>
+      new Response(
+        JSON.stringify({
+          id: "msg_1",
+          type: "message",
+          role: "assistant",
+          model: "claude-opus-5-5",
+          content,
+          stop_reason: "tool_use",
+          stop_sequence: null,
+          usage: { input_tokens: 1000, output_tokens: 200, cache_read_input_tokens: 3000, cache_creation_input_tokens: 0 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    const client = new Anthropic({ apiKey: "k", authToken: null, baseURL: "http://fake.test", maxRetries: 0, fetch });
+    const deps: TurnDeps = {
+      client,
+      model: "claude-opus-5-5",
+      effort: "medium",
+      household: withSari.household,
+      refs: withSari.refs,
+      names: withSari.names,
+      begin: async () => ({ ok: true, requestId: id(700), callsLeft: 5 }),
+      record: async () => undefined,
+    };
+    const result = await runKakakTurn(deps, null, "Kak, Sari mops the terrace every morning. Joko picks up Maya at 1. Opor tonight: do we have everything?");
+    if (result.kind !== "suggestions") throw new Error(`expected suggestions, got ${result.kind}`);
+    expect(result.items.map((i) => i.kind)).toEqual(["chore", "chore", "menu_dish", "shopping"]);
+    for (const item of result.items) expect(isSaveableSuggestion(item)).toBe(true);
+    expect(result.text).toContain("everything but Santan");
   });
 });

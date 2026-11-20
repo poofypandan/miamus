@@ -9,7 +9,8 @@
     { "ref": "S3", "name": "Budi", "hidden": ["kitchen"] },
     { "ref": "S4", "name": "Yanti" },
     { "ref": "S5", "name": "Yati" },
-    { "ref": "S6", "name": "Syam" }
+    { "ref": "S6", "name": "Syam" },
+    { "ref": "S7", "name": "Joko" }
   ],
   "pets": [
     { "ref": "P1", "name": "Mochi", "kind": "dog", "meals": ["07:00", "17:00"], "potty": [] },
