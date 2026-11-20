@@ -78,7 +78,10 @@ anything else.
   and no straight line. A shot hangs every time from a voice cue or from the
   beat before it (`after`, `each`). `src/motion/turn.tsx` is 5.0–15.0 s of the
   60 built on it (composition `m1-60-en`); `src/motion/onsets.ts` holds
-  measured word times.
+  measured word times. `src/motion/turn-b.tsx` (`m2-60-en`) is the second pass
+  after the owner's pick: the same motion in v17's composition (sky frame,
+  line 1 in the plate, the thread and pulse that lead the eye to the plate).
+  One of the two goes at the rebuild.
 - **The check** (`scripts/motion-check.mjs`): after a render, lists (a)
   one-frame jumps of the whole picture that are not intended cuts, (b) moves
   that start or stop inside one frame, (c) anything on screen for under 8
