@@ -86,7 +86,9 @@ anything else.
   Kakak's lock-up on the centre line, one firefly from her mark to her plate.
   `src/motion/turn-d.tsx` (`m4-60-en`) is the fourth: Mama walks out of the
   house, and one light travels from her phone to Kakak's mark and down to her
-  plate. One of the four stays at the rebuild.
+  plate. `src/motion/turn-e.tsx` (`m5-60-en`) is the fifth, calmer: slower
+  lights, no light to the plate, the footnote "Kakak is an AI helper". One of
+  the five stays at the rebuild.
 - **The check** (`scripts/motion-check.mjs`): after a render, lists (a)
   one-frame jumps of the whole picture that are not intended cuts, (b) moves
   that start or stop inside one frame, (c) anything on screen for under 8
