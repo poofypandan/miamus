@@ -28,6 +28,28 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 20 Nov (Can we cook it?, Kakak on top): in the Kakak sheet, for
+    // households with Kakak only, under the calm-start rules.
+    id: "kakak-cook-2026-11",
+    date: "2026-11-20",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: ask Kakak if you can cook it", id: "Baru: tanya Kakak, bahannya lengkap?" },
+    steps: {
+      en: [
+        "Say what you're cooking: \"We're making opor tonight. Do we have everything?\" Kakak checks your saved recipe against what is at home and answers in one line.",
+        "Her card puts the dish on the menu and what is missing on the shopping list. Nothing is saved until you tap Looks right.",
+        "No saved recipe for it? She says so. Add it once in Kitchen → Menu and she can check it next time.",
+      ],
+      id: [
+        "Sebutkan yang mau dimasak: \"Malam ini opor, bahannya lengkap?\" Kakak mengecek resep yang tersimpan dengan stok di rumah, lalu menjawab singkat.",
+        "Kartunya memasukkan masakan ke menu dan yang kurang ke daftar belanja. Tidak ada yang tersimpan sebelum Anda ketuk Sudah benar.",
+        "Resepnya belum ada? Kakak akan bilang. Tambahkan sekali di Dapur → Menu, nanti Kakak bisa mengeceknya.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 20 Nov (Can we cook it?, D18): shown on Kitchen → Menu, under the
     // calm-start rules (one card a week, never to new households).
     id: "ready-to-cook-2026-11",

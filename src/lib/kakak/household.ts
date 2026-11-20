@@ -10,7 +10,7 @@
 // to the model.
 
 import type { StaffArea } from "@/lib/staff-areas";
-import type { FoodPlace, RoutineKind } from "@/types/database";
+import type { FoodPlace, MenuMeal, RoutineKind } from "@/types/database";
 
 export type KakakLocale = "id" | "en";
 
@@ -121,7 +121,37 @@ export interface KakakHousehold {
   billsOff?: boolean;
   /** Kitchen amounts: ingredients' places and amounts (recipes and the menu are on for every home since 20 Nov). */
   kitchenOff?: boolean;
+  /**
+   * Can we cook it? (owner, 20 Nov): each saved recipe as the app checked it
+   * against what is at home when the conversation began (lib/can-cook.ts),
+   * at the recipe's own servings. Only names: the recipe's (and its
+   * Indonesian name when different), the items it is missing and the lines
+   * that couldn't be checked. Never an amount, a step or the full list, and
+   * Kakak never works it out herself. Absent with no recipes, so every
+   * other block reads exactly as before.
+   */
+  recipes?: KakakRecipe[];
+  /** The menu from today for 7 days (Phase 170 PR C), for "is it on the menu already?". Absent when empty. */
+  menu?: { day: string; meal: MenuMeal; title: string; recipe: string | null }[];
 }
+
+/** One saved recipe in the block (D1, D2, …). */
+export interface KakakRecipe {
+  ref: string;
+  name: string;
+  /** Its Indonesian name, only when it has one that differs. */
+  nameId?: string | null;
+  state: "ready" | "missing" | "unknown";
+  /** The items it is missing, by name. */
+  missing: string[];
+  /** Of those, the ones already on the shopping list (Running low or Out): Fable S1. Absent when none. */
+  onList?: string[];
+  /** Lines that couldn't be checked, by name. */
+  unchecked: string[];
+}
+
+/** Recipes past this many are counted, not listed: the block stays small (about 30 tokens a recipe). */
+export const MAX_RECIPES_IN_BLOCK = 40;
 
 const WEEKDAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const WEEKDAYS_ID = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
@@ -187,6 +217,8 @@ export function householdRefs(household: KakakHousehold): {
   /** The references that are a floor (whole floor), which a new room may sit on. */
   floors: Set<string>;
   items: Set<string>;
+  /** Saved recipes (D1, …): Can we cook it? (20 Nov). */
+  recipes: Set<string>;
 } {
   return {
     people: new Set([household.owner.ref, ...household.people.map((p) => p.ref)]),
@@ -195,6 +227,7 @@ export function householdRefs(household: KakakHousehold): {
     rooms: new Set(household.rooms.map((r) => r.ref)),
     floors: new Set(household.rooms.filter((r) => r.wholeFloor).map((r) => r.ref)),
     items: new Set(household.items.map((i) => i.ref)),
+    recipes: new Set((household.recipes ?? []).map((r) => r.ref)),
   };
 }
 
@@ -250,6 +283,7 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
       "Ingredients: on. Items marked (ingredient) are under Dapur / Kitchen → Makanan / Food → Bahan masakan / Ingredients; a place or date is listed only when someone noted it.",
     );
   }
+  lines.push(...recipeLines(household));
   lines.push("");
   // Today and the calendar go last so the shared instructions before this
   // block, and the rest of this block within a conversation, stay cached.
@@ -260,6 +294,50 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   lines.push(`First day of next month: ${dayLine(firstDayOfNextMonth(household.today))}.`);
   lines.push("</household>");
   return lines.join("\n");
+}
+
+/**
+ * The saved recipes and the coming week's menu (Can we cook it?, 20 Nov),
+ * or nothing for a home with neither, so its block reads as before:
+ *
+ *   Saved recipes, checked by the app against what is at home now …:
+ *   - D1: Opor ayam — missing: Santan; not checked: Serai
+ *   - D2: Nasi goreng — ready
+ *   Menu, from today:
+ *   - 2026-11-12 lunch: Nasi goreng (D2)
+ */
+function recipeLines(household: KakakHousehold): string[] {
+  const recipes = household.recipes ?? [];
+  const menu = household.menu ?? [];
+  if (recipes.length === 0 && menu.length === 0) return [];
+  const lines = [""];
+  if (recipes.length) {
+    lines.push(
+      "Saved recipes, checked by the app against what is at home now (ready, or what is missing; not checked: lines that aren't on the lists). Only names, never amounts:",
+    );
+    for (const recipe of recipes.slice(0, MAX_RECIPES_IN_BLOCK)) {
+      const name = recipe.nameId ? `${recipe.name} (${recipe.nameId})` : recipe.name;
+      const parts: string[] = [];
+      if (recipe.state === "ready") parts.push("ready");
+      if (recipe.missing.length) {
+        const listed = new Set(recipe.onList ?? []);
+        parts.push(`missing: ${recipe.missing.map((name) => (listed.has(name) ? `${name} (already on the shopping list)` : name)).join(", ")}`);
+      }
+      if (recipe.unchecked.length) parts.push(`not checked: ${recipe.unchecked.join(", ")}`);
+      if (parts.length === 0) parts.push("no ingredients listed");
+      lines.push(`- ${recipe.ref}: ${name} — ${parts.join("; ")}`);
+    }
+    if (recipes.length > MAX_RECIPES_IN_BLOCK) {
+      lines.push(`- and ${recipes.length - MAX_RECIPES_IN_BLOCK} more saved recipes not listed here`);
+    }
+  } else {
+    lines.push("Saved recipes: none yet.");
+  }
+  if (menu.length) {
+    lines.push("Menu, from today:");
+    for (const dish of menu) lines.push(`- ${dish.day} ${dish.meal}: ${dish.title}${dish.recipe ? ` (${dish.recipe})` : ""}`);
+  }
+  return lines;
 }
 
 /**

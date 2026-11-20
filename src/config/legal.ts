@@ -230,8 +230,18 @@ export const LEGAL = {
   // 35 days, migrations/172), and asks ElevenLabs to delete each generation
   // from its history right after (zero retention is Enterprise-only); it may
   // keep logs, and backups up to 30 days. Otherwise the phone reads aloud.
-  policyVersion: "2026-11-15.1",
-  effectiveDate: { en: "15 November 2026", id: "15 November 2026" },
+  // 2026-11-20.1: Can we cook it? (Kakak on top; migrations/174 only lets
+  // the request record name the new tool) — each Kakak request now also
+  // carries the household's saved recipe names and, per recipe, the names
+  // of the ingredients it is missing or that can't be checked (worked out
+  // by the app from the items' status, and their amounts while Kitchen
+  // amounts is on; amounts and steps are never sent), and the dishes on the
+  // menu for the coming week. Kakak may suggest a dish for the menu, and
+  // the missing items for the shopping list, saved only when the admin
+  // confirms. No new kind of personal data stored, no new service or
+  // region; Anthropic's retention is unchanged.
+  policyVersion: "2026-11-20.1",
+  effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on
