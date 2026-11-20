@@ -30,7 +30,10 @@ const person = (id: string, name: string, over: Record<string, unknown> = {}) =>
 const roster = () => [person(STAFF_ID, "Ari"), person(SYAM, "Syam"), person(OWNER_PROFILE_ID, "Moshe", { user_id: OWNER })];
 
 async function shot(page: Page, name: string) {
-  if (DIR) await page.screenshot({ path: `${DIR}/${name}.png`, fullPage: true });
+  if (!DIR) return;
+  // Let the launch screen, sheets and dialogs finish moving first.
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: `${DIR}/${name}.png`, fullPage: true });
 }
 
 const COPY = {
@@ -84,6 +87,7 @@ for (const locale of ["en", "id"] as const) {
     await page.getByRole("button", { name: c.remove }).click();
     await page.getByRole("dialog").getByRole("button", { name: c.confirm, exact: true }).click();
     await expect(page.getByText(c.toast)).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await shot(page, `pr1-${locale}-2-removed-toast`);
     expect(archived).toEqual([SYAM]);
     expect(codeReads).toBe(0);
