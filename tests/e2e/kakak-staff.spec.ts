@@ -239,3 +239,45 @@ test("en: Yanti is back for the kitchen: her kitchen chores come with her, once 
   expect(draft.chores.map((c) => c.title)).toEqual(["Cuci piring", "Bersihkan dapur dan kompor", "Bersihkan kulkas"]);
   expect(draft.chores.every((c) => JSON.stringify(c.assignee) === JSON.stringify({ profile: YANTI }))).toBe(true);
 });
+
+test("en: Yanti is back on a new trial while her old reminder is still open: the reminder moves to the new day (Codex, PR #173)", async ({ context, page }) => {
+  const OLD = "00000000-0000-4000-8000-0000000006b1";
+  const staff = [...roster(), person(YANTI, "Yanti", { has_pin: false, archived_at: "2026-09-01T00:00:00Z", created_at: "2026-03-01T00:00:00Z" })];
+  await installStub(context, {
+    owner: { locale: "en" },
+    kakak: { allowed: true, enabled: true },
+    staff,
+    household: { hasPets: true },
+    chores: [
+      {
+        id: OLD, household_id: HOUSEHOLD_ID, title: "Decide on Yanti's trial", category: "errand", status: "pending",
+        due_date: "2099-01-01", recurrence: "none", recurrence_interval: 1, recurrence_until: null,
+        parent_task_id: null, assigned_to: OWNER_PROFILE_ID, location_id: null,
+      },
+    ],
+  });
+  const patched: unknown[] = [];
+  await page.route("**/rest/v1/household_tasks*", async (route) => {
+    if (route.request().method() === "PATCH") patched.push([new URL(route.request().url()).searchParams.get("id"), route.request().postDataJSON()]);
+    await route.fallback();
+  });
+  await answerKakak(page, "Welcome back, Yanti, on a two-week trial.", {
+    kind: "add_staff",
+    name: "Yanti",
+    areas: ["home"],
+    starterChores: false,
+    trialDays: 14,
+  });
+  const calls = await stubStaffWrites(page, staff);
+  await tellKakak(page, "en", "Yanti is back on a two-week trial");
+  await page.getByRole("button", { name: "Bring Yanti back" }).click({ timeout: 20_000 });
+  const sheet = page.getByTestId("add-staff-sheet");
+  await expect(sheet.getByText("Yanti is back")).toBeVisible({ timeout: 20_000 });
+  await expect(sheet.getByText("My tasks reminds you to decide on Yanti's trial.", { exact: false })).toBeVisible();
+  // No second reminder: the open one is moved.
+  expect(calls.map(([kind]) => kind)).toEqual(["restore"]);
+  const due = new Date();
+  due.setDate(due.getDate() + 14);
+  const day = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
+  expect(patched).toContainEqual([`eq.${OLD}`, { due_date: day, remind_days_before: 0 }]);
+});

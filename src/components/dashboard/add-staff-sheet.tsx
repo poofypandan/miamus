@@ -20,7 +20,8 @@ import { useToday } from "@/hooks/use-today";
 import { dataProvider } from "@/lib/data";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { applyHouseholdSetup, isMockBackend, type ApplyOutcome } from "@/lib/setup-apply";
-import { cadenceLabel } from "@/lib/setup-templates";
+import { cadenceLabel, nameKey } from "@/lib/setup-templates";
+import { isSetUp } from "@/lib/rooms-view";
 import type { StaffArea } from "@/lib/staff-areas";
 import {
   NEW_STAFF_KEY,
@@ -167,7 +168,9 @@ function AddStaffForm({
   );
   // Until every set-up chore is read, a "move" can't be told from a new one: wait.
   const startersReady = !kitchen || (choresLoaded && locations !== null);
-  const canAdd = rosterReady && clean.length > 0 && jobs.size > 0 && !taken && !badName && !saving && startersReady;
+  // A trial needs every open chore read, to find a reminder already there.
+  const trialReady = trial === 0 || choresLoaded;
+  const canAdd = trialReady && rosterReady && clean.length > 0 && jobs.size > 0 && !taken && !badName && !saving && startersReady;
 
   const ownerOf = useMemo(() => {
     const byId = new Map(people.map((p) => [p.id, p.name]));
@@ -235,13 +238,18 @@ function AddStaffForm({
         const payload = addStaffPayload({ name: person.name, starters, ticked, locations: locations ?? [] });
         const theirs = payload.chores.map((c) => ({ ...c, assignee: { profile: person.id } as const }));
         const reminder = trial > 0 ? trialChore(person.name, trial, today, locale) : null;
-        if (reminder) await dataProvider.ensureMyMemberProfile(activeHouseholdId).catch(() => null);
-        const all = reminder ? [...theirs, reminder] : theirs;
+        const openReminder = reminder ? openTrialReminder(reminder.title) : null;
+        if (reminder && openReminder && (await moveTrialReminder(openReminder, reminder.due_date))) {
+          trialOn = dayLabel(reminder.due_date);
+        }
+        const newReminder = reminder && !openReminder ? reminder : null;
+        if (newReminder) await dataProvider.ensureMyMemberProfile(activeHouseholdId).catch(() => null);
+        const all = newReminder ? [...theirs, newReminder] : theirs;
         if (all.length > 0) {
           const outcome = await applyHouseholdSetup(activeHouseholdId, { ...payload, staff: [], chores: all });
           if (outcome.ok) {
-            chores = outcome.result.chores_added - (reminder ? 1 : 0);
-            trialOn = reminder ? dayLabel(reminder.due_date) : undefined;
+            chores = outcome.result.chores_added - (newReminder ? 1 : 0);
+            if (newReminder) trialOn = dayLabel(newReminder.due_date);
           } else {
             toast.error(
               t(`${person.name} is back, but their chores weren't added. Add them in Home → Chores.`, `${person.name} sudah kembali, tetapi tugasnya belum ditambahkan. Tambahkan di Rumah → Tugas.`),
@@ -263,6 +271,25 @@ function AddStaffForm({
     } finally {
       setSaving(false);
     }
+  }
+
+  /**
+   * A trial reminder for this name that is still open (someone brought back
+   * mid-trial): apply_household_setup would skip a second one with the same
+   * title, so that one is moved to the new day instead (Codex, PR #173).
+   */
+  function openTrialReminder(title: string): string | null {
+    return (chores ?? []).find((c) => isSetUp(c, today) && nameKey(c.title) === nameKey(title))?.id ?? null;
+  }
+
+  /** Moves an open trial reminder to the new day; false when that failed. */
+  async function moveTrialReminder(id: string, due: string): Promise<boolean> {
+    return updateHouseholdTask(id, { due_date: due, remind_days_before: 0 })
+      .then(() => true)
+      .catch((err) => {
+        console.error("Trial reminder not moved", err);
+        return false;
+      });
   }
 
   /** "Thu 4 Dec" / "Kam 4 Des": the trial reminder's day. */
@@ -299,7 +326,9 @@ function AddStaffForm({
     const payload = addStaffPayload({ name: person, starters, ticked, locations: locations ?? [] });
     const mock = await isMockBackend();
     // In demo mode the trial reminder isn't made (no owner roster row to give it to).
-    const trialReminder = trial > 0 && !mock ? trialChore(person, trial, today, locale) : null;
+    const trialWanted = trial > 0 && !mock ? trialChore(person, trial, today, locale) : null;
+    const openReminder = trialWanted ? openTrialReminder(trialWanted.title) : null;
+    const trialReminder = trialWanted && !openReminder ? trialWanted : null;
     if (trialReminder) {
       // "For you" needs the owner's own roster row (apply_household_setup
       // refuses no_owner_profile): made here if it is missing.
@@ -356,13 +385,14 @@ function AddStaffForm({
       );
     }
 
+    const trialMoved = trialWanted && openReminder ? await moveTrialReminder(openReminder, trialWanted.due_date) : false;
     const chores = (outcome.result.chores_added ?? 0) - (trialReminder ? 1 : 0) + (moves.length - notMoved);
     await Promise.allSettled([reload(), refresh({ silent: true })]);
     setAdded({
       id,
       name: person,
       chores: Math.max(0, chores),
-      trialOn: trialReminder ? dayLabel(trialReminder.due_date) : undefined,
+      trialOn: trialReminder || trialMoved ? dayLabel((trialReminder ?? trialWanted)!.due_date) : undefined,
     });
     setSaving(false);
     onAdded?.({ id, name: person });
@@ -375,7 +405,7 @@ function AddStaffForm({
     if (former) {
       // The card's kitchen chores come too, so wait until they are read
       // (Codex, PR #173), as Add does through canAdd.
-      if (!startersReady) return;
+      if (!startersReady || !trialReady) return;
       autoTried.current = true;
       void bringBack(former, true);
     } else if (canAdd) {
