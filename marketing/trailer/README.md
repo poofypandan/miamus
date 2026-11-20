@@ -57,6 +57,9 @@ From `marketing/trailer/`:
                                    # the A2 sound: node audio/cues.mjs; .tools/venv-main/bin/python audio/sfx.py;
                                    #   .tools/venv-main/bin/python audio/mix.py --voice eleven-lyly-v14 --mama mama-aita-v14 --music felt --out-name "a2-{cut}-{locale}.wav"
                                    #   (stems in audio/out/: vo/eleven-lyly-v14, vo/mama-aita-v14, music-*-felt.wav, copied from the v17 sound build)
+    npm run a3 -- <out-dir>        # A3 (src/a3/): the whole 60 moving, and the 15; half-res MP4s on public/audio/a3-*.wav, sheets, and
+                                   #   framecheck-<cut>.json (the 38 px floor and no bubble over a person, on every frame; --strict fails the render)
+                                   # the A3 sound: as A2's, with --out-name "a3-{cut}-{locale}.wav"
 
 `npm run capture` needs the app built against the stub host first, from the
 repo root:
