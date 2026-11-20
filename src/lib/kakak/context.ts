@@ -68,6 +68,8 @@ export interface ContextRoomRow {
 export interface ContextItemRow {
   id: string;
   name: string;
+  /** "Brown" in "Rice (Brown)": only in what the recipe check names (Codex, PR #156). */
+  variant?: string | null;
   scope: string;
   created_at: string;
   /** Phase 176: which shelf; Fresh Food and Pantry are ingredients. Absent on an older read. */
@@ -389,7 +391,8 @@ function kitchenFor(
       ({
         id: item.id,
         name: item.name,
-        variant: null,
+        // "Rice (Brown)", as the recipe screen names it (Codex, PR #156).
+        variant: typeof item.variant === "string" && item.variant.trim() ? item.variant : null,
         stock_status: item.stock_status === "low" || item.stock_status === "out" ? item.stock_status : "ok",
         track_amount: item.track_amount === true,
         unit: isStockUnit(item.unit) ? item.unit : "pcs",

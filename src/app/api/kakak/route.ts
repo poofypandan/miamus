@@ -86,7 +86,7 @@ async function readItems(supabase: Awaited<ReturnType<typeof createSupabaseServe
   // ItemStock) and are never sent to Anthropic.
   const items = await supabase
     .from("inventory_items")
-    .select("id, name, scope, created_at, category, stock_status, kept_in, expires_on, track_amount, unit, quantity")
+    .select("id, name, variant, scope, created_at, category, stock_status, kept_in, expires_on, track_amount, unit, quantity")
     .eq("household_id", householdId);
   if (items.error?.code !== "42703") return items;
   console.error("Kakak: ingredient places not read", items.error.message);

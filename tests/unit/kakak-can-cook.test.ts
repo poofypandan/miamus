@@ -122,6 +122,12 @@ describe("what Kakak is told", () => {
     expect(refs.recipes?.D3.missing).toEqual([{ itemId: id(33), name: "Bihun", status: "low" }]);
   });
 
+  it("names a missing item with its variant, as the recipe screen does (Codex, PR #156)", () => {
+    const withVariant = built({ items: rows.items.map((i) => (i.id === id(31) ? { ...i, variant: "Kara" } : i)) });
+    expect(withVariant.household.recipes?.[0].missing).toEqual(["Santan (Kara)"]);
+    expect(withVariant.refs.recipes?.D1.missing[0].name).toBe("Santan (Kara)");
+  });
+
   it("the menu from today for 7 days, not cooked, in order", () => {
     expect(built().household.menu).toEqual([{ day: "2026-11-12", meal: "lunch", title: "Nasi goreng", recipe: "D2" }]);
   });
