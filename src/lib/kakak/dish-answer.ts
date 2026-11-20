@@ -23,7 +23,18 @@ function oneDish(dish: MenuDishSuggestion, locale: KakakLocale): string {
   const check = dish.check!;
   const title = dish.title;
   const later = dish.relative !== "today";
+  // What couldn't be checked is said too, so "everything" never covers it (Codex, PR #156).
+  const notChecked = check.unchecked.length
+    ? locale === "id"
+      ? ` ${list(check.unchecked, locale)} belum bisa Kakak cek; belum ada di daftar.`
+      : ` I couldn't check ${list(check.unchecked, locale)}; ${check.unchecked.length === 1 ? "it isn't" : "they aren't"} on your list.`
+    : "";
   if (check.state === "ready") {
+    if (notChecked) {
+      return locale === "id"
+        ? `Untuk ${title}, semua yang ada di daftar tersedia${later ? " saat ini" : ""}.${notChecked}`
+        : `For ${title}, everything on your list is there${later ? " right now" : ""}.${notChecked}`;
+    }
     if (locale === "id") return later ? `Bahan ${title} lengkap saat ini.` : `Bahan ${title} lengkap.`;
     return later ? `You have everything for ${title} right now.` : `You have everything for ${title}.`;
   }
@@ -35,12 +46,12 @@ function oneDish(dish: MenuDishSuggestion, locale: KakakLocale): string {
   const names = list(check.missing.map((m) => m.name), locale);
   const listed = check.missing.filter((m) => m.listed).map((m) => m.name);
   const first = locale === "id" ? `Untuk ${title}, semua ada kecuali ${names}.` : `For ${title}, you have everything but ${names}.`;
-  if (listed.length === 0) return first;
+  if (listed.length === 0) return `${first}${notChecked}`;
   const onList =
     locale === "id"
       ? `${list(listed, locale)} sudah ada di daftar belanja.`
       : `${list(listed, locale)} ${listed.length === 1 ? "is" : "are"} already on the shopping list.`;
-  return `${first} ${onList}`;
+  return `${first} ${onList}${notChecked}`;
 }
 
 /** "Santan", "Santan and Serai", "Santan, Serai and 2 more". */

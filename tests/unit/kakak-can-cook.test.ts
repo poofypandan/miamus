@@ -487,8 +487,16 @@ describe("her answer is never missing (paid run 44705966410, 20 Nov)", () => {
 
   it("words the app's own check the way her instructions do, in the owner's language", () => {
     const missing = dish({ state: "missing", missing: [{ name: "Santan", listed: true }], unchecked: ["Serai"] });
-    expect(dishAnswerLine([missing], "en")).toBe("For Opor ayam, you have everything but Santan. Santan is already on the shopping list.");
-    expect(dishAnswerLine([missing], "id")).toBe("Untuk Opor ayam, semua ada kecuali Santan. Santan sudah ada di daftar belanja.");
+    expect(dishAnswerLine([missing], "en")).toBe(
+      "For Opor ayam, you have everything but Santan. Santan is already on the shopping list. I couldn't check Serai; it isn't on your list.",
+    );
+    expect(dishAnswerLine([missing], "id")).toBe(
+      "Untuk Opor ayam, semua ada kecuali Santan. Santan sudah ada di daftar belanja. Serai belum bisa Kakak cek; belum ada di daftar.",
+    );
+    // Ready with something unchecked never says "everything" (Codex, PR #156).
+    const readyButSerai = dish({ state: "ready", missing: [], unchecked: ["Serai"] });
+    expect(dishAnswerLine([readyButSerai], "en")).toBe("For Opor ayam, everything on your list is there. I couldn't check Serai; it isn't on your list.");
+    expect(dishAnswerLine([readyButSerai], "id")).toBe("Untuk Opor ayam, semua yang ada di daftar tersedia. Serai belum bisa Kakak cek; belum ada di daftar.");
     const two = dish({ state: "missing", missing: [{ name: "Ayam", listed: false }, { name: "Bihun", listed: false }], unchecked: [] });
     expect(dishAnswerLine([two], "en")).toBe("For Opor ayam, you have everything but Ayam and Bihun.");
     expect(dishAnswerLine([dish({ state: "ready", missing: [], unchecked: [] })], "id")).toBe("Bahan Opor ayam lengkap.");
@@ -550,7 +558,9 @@ describe("her answer is never missing (paid run 44705966410, 20 Nov)", () => {
     const fixture = JSON.parse(readFileSync(join(__dirname, "../kakak/household.json"), "utf8")) as KakakHousehold;
     const household = { ...fixture, ownerLocale: "id" as const };
     const call = { name: "plan_dish", input: { recipe: "D1", dish_name: "none", day: household.today, meal: "dinner", servings: 0, add_missing: true } };
-    expect(dishAnswerFromBlock(household, [call])).toBe("Untuk Opor ayam, semua ada kecuali Santan. Santan sudah ada di daftar belanja.");
+    expect(dishAnswerFromBlock(household, [call])).toBe(
+      "Untuk Opor ayam, semua ada kecuali Santan. Santan sudah ada di daftar belanja. Serai belum bisa Kakak cek; belum ada di daftar.",
+    );
     // Another number of servings is checked again by the app only.
     expect(dishAnswerFromBlock(household, [{ ...call, input: { ...call.input, servings: 8 } }])).toBe("");
   });
