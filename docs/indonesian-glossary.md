@@ -416,6 +416,12 @@ people are **staf** and **admin**.
 | {name} removed. Other staff phones stay signed in. | **{name} dihapus. HP staf lain tetap masuk.** | Staff onboarding step 1 (20 Nov): the toast after removing someone. The new house code is no longer in it: it shows on **Masuk staf**, where it is needed. |
 | The code changes when you remove someone; phones already signed in stay signed in. | **Kodenya berganti saat Anda menghapus staf; HP yang sudah masuk tetap masuk.** | Staff onboarding step 1: under the house code on **Masuk staf**. |
 | Adding a new staff member · A new staff member's first day · When someone leaves · Bringing someone back · Kitchen chores | **Menambah staf baru · Hari pertama staf baru · Kalau staf berhenti · Mengembalikan staf · Tugas dapur** | Staff onboarding step 1: the guide's entries (`src/lib/guide.ts`). No job title for the person (owner decision 8, 20 Nov): the area says it, **Dapur**. |
+| Add staff · Their name, and what they do. Miamus sets up the rest. | **Tambah staf** · **Namanya, dan apa yang dikerjakan. Sisanya diatur Miamus.** | Staff onboarding step 2: the sheet on Settings → Staff, in place of **Tambah Orang**. |
+| What does Sri do? Kitchen · Chores · Pets · Repairs | **Apa yang dikerjakan Sri?** **Dapur · Tugas rumah · Hewan · Perbaikan** | Staff onboarding step 2: the chips are the staff areas in plain words, never a job title (owner decision 8). **Tugas rumah** is the chip for "Tugas untuk siapa saja". |
+| Kitchen chores for Sri · now Ari's, move to Sri? · for anyone now, give to Sri? | **Tugas dapur untuk Sri** · **sekarang milik Ari, pindahkan ke Sri?** · **sekarang untuk siapa saja, berikan ke Sri?** | Staff onboarding step 2: the starter list, and a chore the home already has. |
+| Get tomorrow's ingredients ready · Take out the kitchen rubbish · Clean the freezer | **Siapkan bahan untuk besok · Buang sampah dapur · Bersihkan freezer** | Staff onboarding (owner decision 6): three more chore titles for whoever has the kitchen, unticked. Staff read the Indonesian. |
+| Sri is added · {n} chores are Sri's from today. | **Sri sudah ditambahkan** · **{n} tugas jadi milik Sri mulai hari ini.** | Staff onboarding step 2: the sheet after Add. |
+| Sri is already on the staff list. | **Sri sudah ada di daftar staf.** | Staff onboarding step 2: the same name typed again. |
 
 ## Formatting
 

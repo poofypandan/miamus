@@ -86,7 +86,7 @@ test("a new household sees the first page, and its steps tick off from real data
   // Add a person goes to Household, Staff.
   await card.getByRole("link", { name: "Add a person" }).click();
   await expect(page).toHaveURL(/module=access&page=staff/);
-  await expect(page.getByRole("button", { name: "Add Person" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add staff" })).toBeVisible();
 
   // Sari is on the roster: Set up stays open until there is a first task,
   // and now offers that instead.

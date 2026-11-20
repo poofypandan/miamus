@@ -5,7 +5,21 @@
  */
 import type { ApplyPayload, ApplyResult } from "@/lib/setup-templates";
 
-export type ApplyOutcome = { ok: true; result: ApplyResult } | { ok: false; reason: "failed" | "offline" };
+export type ApplyOutcome =
+  | {
+      ok: true;
+      result: ApplyResult;
+      /** Draft staff key → their roster id, as the call returns it (Add staff needs the new id). */
+      staff: Record<string, string>;
+    }
+  | { ok: false; reason: "failed" | "offline" };
+
+function staffIds(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+  );
+}
 
 export async function applyHouseholdSetup(householdId: string, payload: ApplyPayload): Promise<ApplyOutcome> {
   const { supabase } = await import("@/lib/supabase/client");
@@ -30,6 +44,7 @@ export async function applyHouseholdSetup(householdId: string, payload: ApplyPay
       staff_added: n("staff_added"),
       skipped: n("skipped"),
     },
+    staff: staffIds(raw.staff),
   };
 }
 

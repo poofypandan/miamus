@@ -28,6 +28,26 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 20 Nov (staff onboarding, step 2): Add staff in one sheet. A card on
+    // Settings → Staff, where the button is, under the calm-start rules.
+    // Staff screens don't change, so there is no staff card.
+    id: "add-staff-2026-11",
+    date: "2026-11-20",
+    audience: "owner",
+    title: { en: "New: add staff in one go", id: "Baru: tambah staf sekaligus" },
+    steps: {
+      en: [
+        "Settings → Staff → Add staff: their name, and what they do: Kitchen, Chores, Pets or Repairs. That sets what they see, so nobody starts out seeing everything.",
+        "With Kitchen, the usual kitchen chores come ticked and are theirs by name. Then send the WhatsApp message from the same sheet.",
+      ],
+      id: [
+        "Pengaturan → Staf → Tambah staf: namanya, dan apa yang dikerjakan: Dapur, Tugas rumah, Hewan, atau Perbaikan. Pilihan itu mengatur yang dia lihat, jadi tidak ada yang langsung melihat semuanya.",
+        "Dengan Dapur, tugas dapur yang biasa sudah dicentang dan langsung jadi miliknya. Lalu kirim pesan WhatsApp dari lembar yang sama.",
+      ],
+    },
+    tryLabel: { en: "Show me", id: "Lihat" },
+  },
+  {
     // 20 Nov (the warm seal, Kakak's new mark): her look, so a short note. In
     // the Kakak sheet after the short-card note, under the calm-start rules.
     id: "kakak-warm-seal-2026-11",

@@ -69,7 +69,7 @@ for (const locale of ["en", "id"] as const) {
     const say = await captions(page, "owner-staff-phones", locale);
 
     await page.goto("/dashboard?module=access&page=staff");
-    const add = page.getByRole("button", { name: locale === "id" ? "Tambah Orang" : "Add Person" });
+    const add = page.getByRole("button", { name: locale === "id" ? "Tambah staf" : "Add staff" });
     await add.waitFor({ timeout: 20_000 });
     await say.show();
     await add.click();
