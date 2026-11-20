@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, Camera, Check, CheckCircle2, CircleSlash, CloudOff, CloudUpload, Eye, Hand, Loader2, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,11 +23,10 @@ import { photoSrc, photoTakenAt } from "@/lib/photos";
 import { useRepairs } from "@/hooks/use-repairs";
 import { RepairNotes } from "@/components/repairs/repair-notes";
 import { cn } from "@/lib/utils";
-import { choreDraftKey, clearChoreDraft, readChoreDraft, writeChoreDraft } from "@/lib/chore-draft";
-import { classifySubmitError, reloadForUpdate } from "@/lib/submit-errors";
-import { choreChangedMessage, choreSettledMessageId, isChoreAlreadySettled, isChoreChanged } from "@/lib/chore-settled";
-import { discardPhoto } from "@/lib/photo-queue";
-import { recordChoreRefusal, refusalOf } from "@/lib/chore-refusals";
+import { choreDraftKey } from "@/lib/chore-draft";
+import { isChoreChanged } from "@/lib/chore-settled";
+import { useChoreProof, useClearProofWhenSettled } from "@/hooks/use-chore-proof";
+import { useFinishChore } from "@/hooks/use-finish-chore";
 import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import { CouldntDoSheet } from "@/components/staff/couldnt-do-sheet";
@@ -89,26 +88,22 @@ function FinishChoreBody({
     activeHouseholdId,
     materialiseChoreOccurrence,
     claimHouseholdTask,
-    finishChore,
     pendingIds,
-    refresh,
   } = useHousehold();
   const { staffId } = useStaffIdentity();
   // Photos already uploaded for this day's chore, restored from the device
   // (Phase 133): the tab may have been killed between the before shot and
   // the after shot. Read synchronously, so the steps open already filled.
+  // Shared with the staff card (19 Nov): a photo taken there is here too.
   const draftKey = choreDraftKey(activeHouseholdId, occurrence.template.id, occurrence.date);
-  const [beforeUrl, setBeforeUrl] = useState<string | null>(
-    () => readChoreDraft(draftKey)?.before ?? null
-  );
-  const [afterUrl, setAfterUrl] = useState<string | null>(
-    () => readChoreDraft(draftKey)?.after ?? null
-  );
+  const { before: beforeUrl, after: afterUrl, setBefore: setBeforeUrl, setAfter: setAfterUrl } = useChoreProof(draftKey);
   // An upload in flight has no URL yet; finishing then would race it.
   const [uploadingBefore, setUploadingBefore] = useState(false);
   const [uploadingAfter, setUploadingAfter] = useState(false);
   const uploading = uploadingBefore || uploadingAfter;
-  const [busy, setBusy] = useState(false);
+  const { busy, setBusy, finish, explainFailure, refusedAsChanged } = useFinishChore(occurrence, draftKey, () =>
+    onOpenChange(false)
+  );
   // "Tidak bisa dikerjakan" (Phase 165): the reason sheet, and the record
   // already filed for this day, if any.
   const [couldntOpen, setCouldntOpen] = useState(false);
@@ -124,73 +119,19 @@ function FinishChoreBody({
   // draft and the photos on the phone are still what the save will send.
   const waitingToSend = !!occurrence.row && pendingIds.has(occurrence.row.id);
 
-  // Every change to the photos is saved as it happens — an upload landing, or
-  // a photo removed to retake it. Removing both drops the draft.
-  useEffect(() => {
-    if (done) return;
-    writeChoreDraft(draftKey, { before: beforeUrl, after: afterUrl });
-  }, [draftKey, beforeUrl, afterUrl, done]);
+  // Every change to the photos is saved as it happens (useChoreProof) — an
+  // upload landing, or a photo removed to retake it. Removing both drops the
+  // draft.
 
   // Finished, here or on another phone: nothing is owed any more — including
-  // any proof still waiting on this phone to upload (Phase 138). Finished
-  // here, both are already in storage and discarding is a no-op.
-  useEffect(() => {
-    if (!done || waitingToSend) return;
-    clearChoreDraft(draftKey);
-    if (beforeUrl) void discardPhoto(beforeUrl);
-    if (afterUrl) void discardPhoto(afterUrl);
-  }, [draftKey, done, waitingToSend, beforeUrl, afterUrl]);
+  // any proof still waiting on this phone to upload (Phase 138).
+  useClearProofWhenSettled(draftKey, done && !waitingToSend);
 
   // Proof the storage server refused outright (Phase 138): it has to be
   // retaken, and finishing is held until it is.
   const beforeState = useQueuedPhoto(beforeUrl).state;
   const afterState = useQueuedPhoto(afterUrl).state;
   const photoFailed = beforeState === "failed" || afterState === "failed";
-
-  /**
-   * Explains a failed save (Phase 133). Nothing here touches the photos: they
-   * stay on screen and in the draft whatever went wrong, so trying again — or
-   * reopening after a reload — needs no retake.
-   *
-   * "reloading": the app is about to reload onto a new version; stay busy so
-   * the button cannot be tapped into the same stale code again. "explained":
-   * a message is up. null: the server refused, and the caller says how.
-   */
-  function explainFailure(err: unknown): "reloading" | "explained" | null {
-    console.error(err);
-    const failure = classifySubmitError(err);
-    if (failure === "update" && reloadForUpdate()) {
-      // The draft is already written, so the reloaded app reopens this chore
-      // with both photos in place.
-      toast.info("Aplikasi telah diperbarui. Memuat ulang...");
-      return "reloading";
-    }
-    // An update that a reload already failed to fix is, as far as anyone
-    // holding the phone can tell, a connection that is not working.
-    if (failure !== "other") {
-      toast.error("Koneksi terputus. Data aman, silakan coba lagi.");
-      return "explained";
-    }
-    return null;
-  }
-
-  /**
-   * The server will never take this save: the chore changed since the phone
-   * loaded it (its days, turned off, done), or the day was never one of its
-   * days (isChoreChanged). Trying again only bounced the photos back with
-   * "Gagal", so: say what happened, close, and reload the list as it is now.
-   * The draft and its photos stay on the phone — if the chore is still on the
-   * list, reopening it finds them in place; if not, nothing was thrown away
-   * without saying so, and the draft expires on its own (lib/chore-draft).
-   */
-  function refusedAsChanged(kind: "finish" | "claim", err: unknown) {
-    recordChoreRefusal(
-      refusalOf(kind, { templateId: occurrence.template.id, rowId: occurrence.row?.id ?? null, date: occurrence.date }, err)
-    );
-    toast.info(choreChangedMessage("id", task.title, !!(beforeUrl || afterUrl)), { duration: 10_000 });
-    onOpenChange(false);
-    void refresh({ silent: true });
-  }
 
   /**
    * The row this day's work belongs to, creating it if the occurrence is
@@ -218,7 +159,7 @@ function FinishChoreBody({
       toast.success(`"${task.title}" jadi tugas Anda`);
     } catch (err) {
       if (isChoreChanged(err)) {
-        refusedAsChanged("claim", err);
+        refusedAsChanged("claim", err, !!(beforeUrl || afterUrl));
         return;
       }
       // A dropped connection is not a lost race; say which it was.
@@ -243,59 +184,7 @@ function FinishChoreBody({
   const bothPhotos = !!beforeUrl && !!afterUrl;
 
   async function handleFinish() {
-    if (!beforeUrl || !afterUrl) {
-      toast.error(
-        !beforeUrl
-          ? "Ambil foto sebelum dulu, sebelum mulai bekerja"
-          : "Ambil foto sesudah dulu sebagai bukti"
-      );
-      return;
-    }
-    setBusy(true);
-    let reloading = false;
-    try {
-      // Kept on the phone and sent from there (Phase 161): photos first, then
-      // the completion. No answer — no signal, or a weak one that times out —
-      // and it waits on the phone and goes by itself; the chore shows as
-      // done meanwhile, marked as waiting. The draft stays until it is sent.
-      const { queued } = await finishChore({
-        templateId: occurrence.template.id,
-        date: occurrence.date,
-        rowId: occurrence.row?.id ?? null,
-        // Under the assignee on screen, not the template's: a chore covered
-        // for someone on leave is filed under whoever covers it (Phase 140).
-        assignedTo: occurrence.task.assigned_to,
-        before: beforeUrl,
-        after: afterUrl,
-        title: task.title,
-      });
-      if (queued) {
-        toast.info("Tugas selesai, disimpan di HP. Akan dikirim otomatis saat sinyal bagus.");
-      } else {
-        clearChoreDraft(draftKey);
-        toast.success(`"${task.title}" selesai`);
-      }
-      onOpenChange(false);
-    } catch (err) {
-      // Finished by someone else, or cancelled, before this reached the
-      // server (audit M4): theirs stands, these photos are not used.
-      if (isChoreAlreadySettled(err)) {
-        clearChoreDraft(draftKey);
-        toast.info(choreSettledMessageId(err.state, task.title), { duration: 8000 });
-        onOpenChange(false);
-        void refresh({ silent: true });
-        return;
-      }
-      if (isChoreChanged(err)) {
-        refusedAsChanged("finish", err);
-        return;
-      }
-      const handled = explainFailure(err);
-      reloading = handled === "reloading";
-      if (!handled) toast.error("Gagal menyimpan. Foto tetap tersimpan, coba lagi.");
-    } finally {
-      if (!reloading) setBusy(false);
-    }
+    await finish(beforeUrl, afterUrl);
   }
 
   // Photos are filed under the template's id, not the occurrence's: a repeat's

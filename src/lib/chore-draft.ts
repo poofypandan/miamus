@@ -42,6 +42,24 @@ interface StoredDraft extends ChoreDraft {
   savedAt: number;
 }
 
+/**
+ * Told whenever a draft is written or cleared, from anywhere (19 Nov): the
+ * staff card and the chore's sheet both show it (hooks/use-chore-proof.ts),
+ * and a queued send or a moved phone clears it from outside either.
+ */
+const changeListeners = new Set<(key: string) => void>();
+
+export function onChoreDraftChange(listener: (key: string) => void): () => void {
+  changeListeners.add(listener);
+  return () => {
+    changeListeners.delete(listener);
+  };
+}
+
+function changed(key: string) {
+  changeListeners.forEach((listener) => listener(key));
+}
+
 export function choreDraftKey(householdId: string, templateId: string, date: string): string {
   return `${PREFIX}${householdId}:${templateId}:${date}`;
 }
@@ -70,13 +88,14 @@ export function writeChoreDraft(key: string, draft: ChoreDraft): void {
   try {
     if (!draft.before && !draft.after) {
       window.localStorage.removeItem(key);
-      return;
+    } else {
+      const stored: StoredDraft = { ...draft, savedAt: Date.now() };
+      window.localStorage.setItem(key, JSON.stringify(stored));
     }
-    const stored: StoredDraft = { ...draft, savedAt: Date.now() };
-    window.localStorage.setItem(key, JSON.stringify(stored));
   } catch {
     // Full or blocked storage: the photos still work for this session.
   }
+  changed(key);
 }
 
 export function clearChoreDraft(key: string): void {
@@ -85,4 +104,5 @@ export function clearChoreDraft(key: string): void {
   } catch {
     // Nothing to clear.
   }
+  changed(key);
 }

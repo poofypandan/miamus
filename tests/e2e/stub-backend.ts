@@ -170,6 +170,11 @@ export interface StubOptions {
    */
   couldntTip?: boolean;
   /**
+   * Leave the staff task card tip to show (19 Nov). Closed by default, like
+   * couldntTip: the newest tip would take the slot the older tests look at.
+   */
+  taskCardTip?: boolean;
+  /**
    * Notifications on a staff phone (Phase 166, migrations/141): what
    * my_phone_push_people answers the phone; with pushKey, the phone also
    * gets the VAPID key. set_my_push_person calls are recorded in seen.
@@ -369,7 +374,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   }
   if (options.staffPhone) {
     await context.addInitScript(
-      ([household, staff, couldntTip, staffName]) => {
+      ([household, staff, couldntTip, staffName, taskCardTip]) => {
         // Only on the first load of each test: a reload must see what the
         // app itself wrote since.
         if (sessionStorage.getItem("stub-seeded")) return;
@@ -378,9 +383,10 @@ export async function installStub(context: BrowserContext, options: StubOptions 
         localStorage.setItem("banyuwangi11:staffId", staff);
         localStorage.setItem("banyuwangi11:staffName", staffName);
         if (!couldntTip) localStorage.setItem("miamus.whats-new.staff-couldnt-do-2026-11", "seen");
+        if (!taskCardTip) localStorage.setItem("miamus.whats-new.staff-task-card-2026-11", "seen");
       },
       // The phone's own person: Ari, or the first of options.staff (the demo's Syam).
-      [HOUSEHOLD_ID, STAFF_ID, options.couldntTip ? "1" : "", String(options.staff?.[0]?.name ?? "Ari")]
+      [HOUSEHOLD_ID, STAFF_ID, options.couldntTip ? "1" : "", String(options.staff?.[0]?.name ?? "Ari"), options.taskCardTip ? "1" : ""]
     );
   }
 

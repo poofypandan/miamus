@@ -86,10 +86,16 @@ test("an admin tells Kakak, answers her question, confirms the card, and can und
   expect(kakak.asked[0]).toMatchObject({ householdId: HOUSEHOLD_ID, reply: "Ari mops the terrace at 9", history: null });
   await page.getByRole("button", { name: "Monday" }).click();
 
-  // The card, in plain words; the history went back with the answer.
+  // The card, short and in plain words: What, Who, When (the repeat folded in).
   await expect(page.getByText("Pel teras (Mop the terrace)")).toBeVisible();
-  await expect(page.getByText("Monday 16 Nov, 09:00")).toBeVisible();
-  await expect(page.locator("dd").getByText("Every Monday", { exact: true })).toBeVisible();
+  await expect(page.locator("dd").getByText("Every Monday, 09:00", { exact: true })).toBeVisible();
+  await expect(page.locator("dt")).toHaveText(["What", "Who", "When"]);
+  // The chips wait behind Change; the first day is there too.
+  await expect(page.getByRole("group", { name: "How often" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Change" }).click();
+  await expect(page.getByRole("button", { name: "Change", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("dd").getByText("Monday 16 Nov", { exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "How often" })).toBeVisible();
   expect(kakak.asked[1]).toMatchObject({ reply: "Monday" });
   expect((kakak.asked[1].history as { messages: unknown[] }).messages).toHaveLength(2);
   expect(stub.tasks).toHaveLength(0); // nothing saved before Looks right
@@ -222,7 +228,7 @@ test("practice mode: the real Kakak route answers with no AI, and saving still w
   await expect(page.getByText(/^Mode latihan:/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Ari pel teras setiap Senin jam 9", { exact: true })).toBeVisible();
   await expect(page.getByText("Pel teras", { exact: true })).toBeVisible();
-  await expect(page.locator("dd").getByText("Setiap Senin", { exact: true })).toBeVisible();
+  await expect(page.locator("dd").getByText("Setiap Senin, 09.00", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Sudah benar" }).click();
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", assigned_to: STAFF_ID, due_time: "09:00", recurrence: "weekly" });
@@ -239,7 +245,7 @@ test("practice mode: a tapped example becomes a card in one go", async ({ contex
 
   await expect(page.getByText(/^Practice mode:/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Siram tanaman (Waters the plants)")).toBeVisible();
-  await expect(page.locator("dd").getByText("Every Monday", { exact: true })).toBeVisible();
+  await expect(page.locator("dd").getByText(/^Every Monday, /)).toBeVisible();
   await page.getByRole("button", { name: "Looks right" }).click();
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0]).toMatchObject({ title: "Siram tanaman", assigned_to: STAFF_ID, due_time: "08:00", recurrence: "weekly" });
@@ -254,18 +260,20 @@ test("the card's chips change how often and who, with no call to Kakak", async (
   await page.getByRole("textbox", { name: "What should I set up?" }).fill("Ari mops the terrace at 9");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByRole("button", { name: "Monday" }).click();
-  await expect(page.locator("dd").getByText("Every Monday", { exact: true })).toBeVisible();
+  await expect(page.locator("dd").getByText("Every Monday, 09:00", { exact: true })).toBeVisible();
 
+  await page.getByRole("button", { name: "Change" }).click();
   const often = page.getByRole("group", { name: "How often" });
   await expect(often.getByRole("button", { name: "Every Monday" })).toHaveAttribute("aria-pressed", "true");
   await often.getByRole("button", { name: "One time" }).click();
-  await expect(page.locator("dd").getByText("Every Monday", { exact: true })).toHaveCount(0);
+  await expect(page.locator("dd").getByText("Monday 16 Nov, 09:00", { exact: true })).toBeVisible();
+  await expect(page.locator("dd").getByText("Every Monday, 09:00", { exact: true })).toHaveCount(0);
   await page.getByRole("group", { name: "Who" }).getByRole("button", { name: "Anyone" }).click();
   await expect(page.locator("dd", { hasText: "Anyone" })).toBeVisible();
   expect(kakak.asked).toHaveLength(2); // the chips asked Kakak nothing
 
   // A typed change afterwards tells Kakak what the chips set; the owner's line shows only their words.
-  await page.getByRole("button", { name: "Change" }).click();
+  await page.getByRole("button", { name: "Or tell Kakak what to change" }).click();
   await page.getByRole("textbox", { name: "What should change?" }).fill("at 10 instead");
   await page.getByRole("button", { name: "Send" }).click();
   await expect.poll(() => kakak.asked.length).toBe(3);
@@ -305,6 +313,7 @@ test("Remind me on the card: Kakak's choice shows, a chip changes it, and it is 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("textbox", { name: "What should I set up?" }).fill("Ari mops the terrace Monday at 9, remind me the day before");
   await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Change" }).click();
 
   const remind = page.getByRole("group", { name: "Remind me" });
   await expect(remind.getByRole("button", { name: "1 day before" })).toHaveAttribute("aria-pressed", "true");
@@ -338,6 +347,7 @@ test("Remind me Off on the card saves no reminder", async ({ context, page }) =>
   await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("textbox", { name: "Mau Kakak atur apa?" }).fill("Ari pel teras tiap Senin jam 9, ingatkan pada harinya");
   await page.getByRole("button", { name: "Kirim" }).click();
+  await page.getByRole("button", { name: "Ubah" }).click();
   const remind = page.getByRole("group", { name: "Ingatkan saya" });
   await expect(remind.getByRole("button", { name: "Pada harinya" })).toHaveAttribute("aria-pressed", "true");
   await remind.getByRole("button", { name: "Mati" }).click();
@@ -755,4 +765,41 @@ test("a conversation that is full says so and offers Start again, not another wa
   await page.getByRole("button", { name: "Mulai lagi" }).click();
   await expect(page.getByRole("textbox", { name: "Mau Kakak atur apa?" })).toBeVisible();
   await expect(page.getByTestId("kakak-said")).toHaveCount(0);
+});
+
+test("the short card leaves out a room the task's name says, and keeps it under Change", async ({ context, page }) => {
+  const TERAS = "00000000-0000-4000-8000-000000190001";
+  const DAPUR = "00000000-0000-4000-8000-000000190002";
+  const rooms = [
+    { id: TERAS, household_id: HOUSEHOLD_ID, name: "Teras", kind: "room", parent_id: null, sort_order: 0, created_at: "2026-10-01T00:00:00Z" },
+    { id: DAPUR, household_id: HOUSEHOLD_ID, name: "Dapur", kind: "room", parent_id: null, sort_order: 1, created_at: "2026-10-01T00:00:00Z" },
+  ];
+  await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true }, rooms });
+  await page.route("**/api/kakak", (route) =>
+    route.fulfill({
+      json: {
+        kind: "suggestions",
+        text: "Ini yang akan Kakak tambahkan:",
+        items: [
+          { ...chore, locationId: TERAS, roomName: "Teras" },
+          { ...chore, title: "Lap meja", titleEn: "Wipe the table", locationId: DAPUR, roomName: "Dapur" },
+        ],
+        requestId: "00000000-0000-4000-8000-0000000000a8",
+        history: { messages: [] },
+      },
+    }),
+  );
+  await page.route("**/api/kakak/outcome", (route) => route.fulfill({ json: { ok: true } }));
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("textbox", { name: "Mau Kakak atur apa?" }).fill("Ari pel teras dan lap meja dapur setiap Senin jam 9");
+  await page.getByRole("button", { name: "Kirim" }).click();
+
+  // "Pel teras" says Teras: no room row. "Lap meja" doesn't say Dapur: it shows.
+  await expect(page.getByRole("button", { name: "Simpan 2" })).toBeVisible();
+  await expect(page.locator("dd").getByText("Dapur", { exact: true })).toBeVisible();
+  await expect(page.locator("dd").getByText("Teras", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Ubah", exact: true }).click();
+  await expect(page.locator("dd").getByText("Teras", { exact: true })).toBeVisible();
 });

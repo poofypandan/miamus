@@ -28,6 +28,49 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 20 Nov (the warm seal, Kakak's new mark): her look, so a short note. In
+    // the Kakak sheet after the short-card note, under the calm-start rules.
+    id: "kakak-warm-seal-2026-11",
+    date: "2026-11-20",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: Kakak's new look", id: "Baru: tampilan baru Kakak" },
+    steps: {
+      en: [
+        "Kakak has a new mark: the Miamus roof and a heart on a terracotta circle. Her replies sit on her own soft colour, so you can tell at a glance who is speaking.",
+        "Her heart moves a little: it beats while she thinks, follows her voice when Read replies aloud is on, and settles once when something is saved. It stays still if your phone is set to reduce motion.",
+      ],
+      id: [
+        "Kakak punya tanda baru: atap Miamus dan hati di lingkaran terakota. Jawabannya ada di warna lembutnya sendiri, jadi langsung terlihat siapa yang bicara.",
+        "Hatinya sedikit bergerak: berdetak saat Kakak berpikir, mengikuti suaranya saat Bacakan jawaban Kakak menyala, dan bergerak sekali saat ada yang tersimpan. Tetap diam kalau HP Anda diatur untuk mengurangi gerakan.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
+    // 19 Nov (product change #1): Kakak's card, short by default. A card in
+    // the Kakak sheet before the first try, for households with Kakak only,
+    // under the calm-start rules (one card a week, never to new households).
+    id: "kakak-short-card-2026-11",
+    date: "2026-11-19",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: a shorter card from Kakak", id: "Baru: kartu Kakak lebih ringkas" },
+    steps: {
+      en: [
+        "Kakak's card now shows what, who and when, with the repeat on the same line: \u201cEvery Monday, 09:00\u201d. Looks right is always in reach.",
+        "Change opens the rest on the card: how often, who, Remind me, the room and any notes. One tap each, and nothing goes back to Kakak.",
+        "Something those can't say? Under Change, tap Or tell Kakak what to change.",
+      ],
+      id: [
+        "Kartu Kakak sekarang menampilkan apa, siapa, dan kapan, dengan pengulangannya di baris yang sama: \u201cSetiap Senin, 09.00\u201d. Tombol Sudah benar selalu terjangkau.",
+        "Ubah membuka sisanya di kartu: seberapa sering, siapa, Ingatkan saya, ruangan, dan catatan. Sekali ketuk, tanpa dikirim lagi ke Kakak.",
+        "Ada yang tidak bisa diatur di situ? Di Ubah, ketuk Atau bilang ke Kakak apa yang diubah.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 2026-11-14 (Phase 180 step 1, and a new ingredient with its amount):
     // a card in the Kakak sheet before the first try, for households with
     // Kakak only, under the calm-start rules (one card a week, never to new
@@ -669,6 +712,16 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    // 19 Nov (product change #2): the task card with its two photo places.
+    id: "staff-task-card-2026-11",
+    date: "2026-11-19",
+    title: "Baru: foto langsung di kartu tugas",
+    lines: [
+      "Setiap tugas Anda punya dua kotak foto: Sebelum dan Sesudah. Ambil foto Sebelum saat mulai, ambil foto Sesudah saat selesai bekerja, lalu ketuk Selesai. Foto yang kurang bagus masih bisa diambil ulang sebelum ketuk Selesai.",
+      "Tidak bisa dikerjakan? Ketuk tiga titik di kartunya. Ketuk nama tugas untuk melihat detailnya.",
+    ],
+  },
   {
     // Phase 177: once Today has a menu, while the Kitchen switch is on.
     id: "staff-cooking-changes-2026-11",
