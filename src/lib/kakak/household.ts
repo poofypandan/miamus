@@ -144,6 +144,8 @@ export interface KakakRecipe {
   state: "ready" | "missing" | "unknown";
   /** The items it is missing, by name. */
   missing: string[];
+  /** Of those, the ones already on the shopping list (Running low or Out): Fable S1. Absent when none. */
+  onList?: string[];
   /** Lines that couldn't be checked, by name. */
   unchecked: string[];
 }
@@ -317,7 +319,10 @@ function recipeLines(household: KakakHousehold): string[] {
       const name = recipe.nameId ? `${recipe.name} (${recipe.nameId})` : recipe.name;
       const parts: string[] = [];
       if (recipe.state === "ready") parts.push("ready");
-      if (recipe.missing.length) parts.push(`missing: ${recipe.missing.join(", ")}`);
+      if (recipe.missing.length) {
+        const listed = new Set(recipe.onList ?? []);
+        parts.push(`missing: ${recipe.missing.map((name) => (listed.has(name) ? `${name} (already on the shopping list)` : name)).join(", ")}`);
+      }
       if (recipe.unchecked.length) parts.push(`not checked: ${recipe.unchecked.join(", ")}`);
       if (parts.length === 0) parts.push("no ingredients listed");
       lines.push(`- ${recipe.ref}: ${name} — ${parts.join("; ")}`);

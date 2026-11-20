@@ -175,6 +175,8 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
         { label: t("When", "Kapan"), value: `${day} · ${t(...MEAL_WORDS[item.meal])}` },
       ];
       if (item.servings) rows.push({ label: t("For", "Untuk"), value: t(`${item.servings} servings`, `${item.servings} porsi`) });
+      // Fable (a): a Buy row only for what saving puts on the list.
+      for (const entry of item.toBuy ?? []) rows.push({ label: t("Buy", "Beli"), value: entry.name });
       const list = item.missing.join(", ");
       return {
         heading: t("Menu", "Menu"),
@@ -360,6 +362,20 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
 
 type MenuDish = Extract<KakakSuggestion, { kind: "menu_dish" }>;
 
+/** "Opor ayam, tonight" / "Opor ayam, malam ini" (Fable W6); the date further out. */
+function dishSummary(item: MenuDish, locale: Locale): string {
+  const t = translator(locale);
+  const when =
+    item.relative === "today"
+      ? item.meal === "dinner"
+        ? t("tonight", "malam ini")
+        : t("today", "hari ini")
+      : item.relative === "tomorrow"
+        ? t("tomorrow", "besok")
+        : cardDate(item.day, locale);
+  return `${item.title}, ${when}`;
+}
+
 /**
  * The dish card's answer, from the app's own check, never from Kakak's
  * words (Fable S0): the same lines as the Menu screens, "now" for a later
@@ -437,7 +453,7 @@ export function savedSummary(items: KakakSuggestion[], locale: Locale): string {
             : first.kind === "staff_areas"
               ? t(`What ${first.staffName} sees`, `Yang dilihat ${first.staffName}`)
               : first.kind === "menu_dish"
-                ? first.title
+                ? dishSummary(first, locale)
                 : first.name;
   const more = items.length > 1 ? t(` and ${items.length - 1} more`, ` dan ${items.length - 1} lainnya`) : "";
   return t(`Saved — ${name}${more}`, `Tersimpan — ${name}${more}`);

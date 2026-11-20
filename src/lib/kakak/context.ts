@@ -453,6 +453,7 @@ function kitchenFor(
       ...(nameId ? { nameId } : {}),
       state: check.state,
       missing: check.missing.map((m) => cleanName(m.name, 60)),
+      ...(check.missing.some((m) => m.listed) ? { onList: check.missing.filter((m) => m.listed).map((m) => cleanName(m.name, 60)) } : {}),
       unchecked: check.unchecked.map((n) => cleanName(n, 60)),
     });
     refs.recipes[ref] = {

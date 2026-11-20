@@ -7723,6 +7723,40 @@
         ]
       ],
       "note": "Fable A10: saved as 'Sayur asem'; she finds it despite the spelling."
+    },
+    {
+      "id": "K188",
+      "sentence": "Opor malam ini ya, tambahkan yang kurang ke belanja",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "avoids": [
+              "kakak tambahkan santan",
+              "menambahkan santan",
+              "tambahkan santan"
+            ]
+          }
+        ]
+      ],
+      "note": "Fable S1 (with the three-section card): Santan is Out, so already on the shopping list. Her line may say so; it must never say she is adding it."
     }
   ]
 }

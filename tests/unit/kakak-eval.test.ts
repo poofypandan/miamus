@@ -403,7 +403,7 @@ describe("the test set", () => {
     // member sees, Phase 178 follow-up), plus K155–K160 on 2026-11-16 (room shorthand:
     // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2), plus K161–K174
     // and K175–K176 (the film's sentence) and K177–K187 (Fable's A1–A10) on 2026-11-20. All for tuning; the holdout is as it was.
-    expect(testSet.cases).toHaveLength(182);
+    expect(testSet.cases).toHaveLength(183);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 

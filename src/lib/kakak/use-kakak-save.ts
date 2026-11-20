@@ -240,6 +240,14 @@ export function useKakakSave() {
                 },
               ]);
               undos.push(() => deleteDishes([dish.id]));
+              // Fable (a): what the card adds to the shopping list, as Add
+              // missing marks it; Undo puts each back as it was.
+              for (const entry of item.toBuy ?? []) {
+                const current = household.inventoryItems.find((i) => i.id === entry.itemId);
+                const before: StockStatus = current ? stockStatus(current) : "ok";
+                await household.setInventoryStatus(entry.itemId, entry.status);
+                undos.push(() => household.setInventoryStatus(entry.itemId, before));
+              }
               break;
             }
             case "staff_areas": {

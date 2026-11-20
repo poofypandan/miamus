@@ -244,10 +244,16 @@ export interface MenuDishSuggestion {
    * loses the answer. Null for a typed dish (no saved recipe).
    */
   check?: { state: "ready" | "missing" | "unknown"; missing: { name: string; listed: boolean }[]; unchecked: string[] } | null;
-  /** What is missing and not on the shopping card: all of it, or (`overflow`) what didn't fit. */
+  /** What is missing and not added: all of it when the owner said not to, or (`overflow`) what didn't fit. */
   missing: string[];
-  /** `missing` is what is past the ten the shopping card holds (Fable W4). */
+  /** `missing` is what is past the ten the card can add (Fable W4). */
   overflow?: boolean;
+  /**
+   * Fable (a): one ask is one section. The items saving puts on the
+   * shopping list, only those not on it yet (a missing item that is Running
+   * low or Out is already on To buy, so writing it changes nothing).
+   */
+  toBuy?: { itemId: string; name: string; status: "low" | "out" }[];
 }
 
 export type KakakSuggestion =
@@ -308,9 +314,8 @@ function str(value: unknown): string | null {
 }
 
 /**
- * One checked tool call → its cards: one, except plan_dish, which is the
- * dish and, when the owner wants what is missing added, a shopping card
- * with the recipe's missing items (Can we cook it?, 20 Nov). Empty for
+ * One checked tool call → its cards: one each (plan_dish is one section,
+ * with what it adds to the shopping list as rows: Fable (a)). Empty for
  * ask_question and whatever toSuggestion drops.
  */
 export function toSuggestions(
@@ -335,6 +340,8 @@ export function toSuggestions(
   const check = recipe ? (servings && recipe.checkFor ? recipe.checkFor(servings) : recipe) : null;
   const missing = check?.missing ?? [];
   const add = input.add_missing === true && missing.length > 0;
+  // Only what isn't on the shopping list yet changes anything (Fable S1).
+  const fresh = add ? missing.filter((m) => !m.listed) : [];
   const day = input.day as string;
   const dish: MenuDishSuggestion = {
     kind: "menu_dish",
@@ -348,15 +355,11 @@ export function toSuggestions(
       ? { state: check.state, missing: check.missing.map((m) => ({ name: m.name, listed: m.listed })), unchecked: check.unchecked }
       : null,
     // Not added: all of it; added: what the shopping card can't hold (10 at most).
-    missing: (add ? missing.slice(10) : missing).map((m) => m.name),
-    overflow: add && missing.length > 10,
+    missing: (add ? fresh.slice(10) : missing).map((m) => m.name),
+    overflow: add && fresh.length > 10,
+    toBuy: fresh.slice(0, 10).map((m) => ({ itemId: m.itemId, name: m.name, status: m.status })),
   };
-  if (!add) return [dish];
-  const shopping: ShoppingSuggestion = {
-    kind: "shopping",
-    entries: missing.slice(0, 10).map((m) => ({ type: "item", itemId: m.itemId, name: m.name, status: m.status })),
-  };
-  return [dish, shopping];
+  return [dish];
 }
 
 /**
@@ -663,6 +666,10 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         s.missing.every((m) => typeof m === "string") &&
         (s.relative == null || s.relative === "today" || s.relative === "tomorrow") &&
         (s.overflow == null || typeof s.overflow === "boolean") &&
+        (s.toBuy == null ||
+          (Array.isArray(s.toBuy) &&
+            s.toBuy.length <= 10 &&
+            s.toBuy.every((e: Record<string, unknown>) => okId(e?.itemId, false) && okText(e.name, 80, false) && (e.status === "low" || e.status === "out")))) &&
         (s.check == null || okCheck(s.check))
       );
     case "chore":

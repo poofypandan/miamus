@@ -52,9 +52,9 @@
   ],
   "ingredientsOn": true,
   "recipes": [
-    { "ref": "D1", "name": "Opor ayam", "state": "missing", "missing": ["Santan"], "unchecked": ["Serai"] },
+    { "ref": "D1", "name": "Opor ayam", "state": "missing", "missing": ["Santan"], "onList": ["Santan"], "unchecked": ["Serai"] },
     { "ref": "D2", "name": "Nasi goreng", "state": "ready", "missing": [], "unchecked": [] },
-    { "ref": "D3", "name": "Soto ayam", "state": "missing", "missing": ["Ayam", "Bihun"], "unchecked": [] },
+    { "ref": "D3", "name": "Soto ayam", "state": "missing", "missing": ["Ayam", "Bihun"], "onList": ["Bihun"], "unchecked": [] },
     { "ref": "D4", "name": "Sayur asem", "state": "unknown", "missing": [], "unchecked": ["Asam jawa", "Kacang panjang"] },
     { "ref": "D5", "name": "Rendang daging", "state": "ready", "missing": [], "unchecked": [] },
     { "ref": "D6", "name": "Rendang ayam", "state": "missing", "missing": ["Ayam"], "unchecked": [] }
